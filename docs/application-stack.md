@@ -2,7 +2,9 @@
 
 ## Status
 
-This document captures the current proposed application architecture and technology stack. It is intended as a working design direction rather than a final implementation specification.
+This document captures the current proposed application architecture and technology stack. It is intended as a working design direction rather than a final implementation specification. Domain table schemas live in the Source, Interpretation, and Conclusion data-model docs, not here.
+
+**MVP implementation:** ship only what the next dogfood step needs (Source catalog and ingest first). Do not pre-build Interpretation, Conclusion, GEDCOM, or unused FFI RPCs. Architecture already constrains *how* those later pieces attach; it does not require implementing them yet.
 
 The primary goals are:
 
@@ -51,19 +53,18 @@ This is attractive because it runs on macOS, Windows, Linux, and servers; is wel
 The Go core would own functionality such as:
 
 ```text
-domain model
+domain model (Source, Interpretation, Conclusion)
 database access
 schema migrations
 query logic
-GEDCOM import/export
-validation
+file ingest and derivatives
+typed-graph validation
 search
-relationship traversal
-merge logic
-duplicate detection
-change history
-sync algorithms
-media metadata
+sameness / membership closure
+canonical merge
+audit / revision history
+sync algorithms (future)
+import adapters (GEDCOM and others, later)
 ```
 
 The platform UI should not reimplement this logic.
@@ -89,7 +90,7 @@ FFI boundary
 Go genealogy core
        │
        ▼
-SQLite + media
+SQLite + files
 ```
 
 ## 4. Future Windows Client
@@ -109,7 +110,7 @@ Go genealogy core
 SQLite
 ```
 
-This avoids rewriting genealogy rules, persistence logic, migrations, GEDCOM support, search, merge logic, synchronization, validation, and most non-UI application behavior.
+This avoids rewriting genealogy rules, persistence logic, migrations, search, merge logic, synchronization, validation, and most non-UI application behavior.
 
 The Windows application would still require its own UI implementation and platform integration. This is an intentional tradeoff: native UIs require more development effort than a shared web UI, but provide better platform integration and allow each application to behave naturally on its host operating system.
 
@@ -133,49 +134,49 @@ Linux      .so
 
 The platform applications call exported functions from that library. The FFI should be treated as a deliberate application boundary and should not expose the internal Go object graph directly.
 
-Avoid a very granular interface such as `getPersonName()`, `getPersonBirthDate()`, `getPersonParents()`, and `getPersonSources()`. Prefer application-level operations such as `getPersonWorkspace()`, `searchPeople()`, `createClaim()`, `updateSource()`, `importGEDCOM()`, and `mergePeople()`.
+Avoid a very granular interface such as `getSourceTitle()`, `getArtifactMimeType()`, or (later) `getPersonBirthDate()`. Prefer application-level operations. The first slice is Source-layer, for example `createSource()`, `addArtifact()`, `ingestFile()`, `getSourceWorkspace()`, `listSources()`. Later slices add Interpretation and Conclusion operations (`createCitation()`, `createObservation()`, `createSamenessClaim()`, `getPersonWorkspace()`) without changing this granularity rule.
 
 This minimizes coupling and reduces FFI chatter.
 
 ## 7. FFI Data Format
 
-Structured data crossing the FFI boundary needs a language-neutral representation. Two primary candidates are JSON and Protocol Buffers.
+**Decision:** Protocol Buffers for all structured FFI payloads, from the first slice.
 
-### JSON
-
-Advantages include simplicity, easy inspection and logging, trivial Go and Swift support, easy test fixtures, and sufficient performance for most genealogy operations.
+A `.proto` tree is the language-independent specification of the application API. Generated types in Go, Swift, and later C# stay aligned. Field numbers support evolution. The same messages can later ride a sync or HTTP adapter without a second schema. Performance is not the motivation; the contract and codegen are.
 
 ```text
-Swift object
-    │
-JSON encode
-    ▼
-byte buffer
-    │
-FFI
-    ▼
-Go
-    │
-JSON decode
-    ▼
-domain operation
-```
-
-### Protocol Buffers
-
-Protocol Buffers may eventually provide a stronger contract. A `.proto` definition could generate Go, Swift, and C# types and therefore become a language-independent specification of the application API.
-
-```text
-                genealogy.proto
+                api/proto/*.proto
                       │
           ┌───────────┼───────────┐
           ▼           ▼           ▼
          Go         Swift         C#
 ```
 
-Protocol Buffers would primarily be adopted for explicit interface schemas, generated cross-language types, API evolution, and potentially sharing message definitions with synchronization. Performance is not the main motivation.
+```text
+Swift generated message
+    │
+protobuf encode
+    ▼
+byte buffer
+    │
+FFI (C ABI)
+    ▼
+Go
+    │
+protobuf decode
+    ▼
+domain use-case
+```
 
-An initial implementation could reasonably use JSON and move toward protobuf if maintaining the interface manually becomes cumbersome.
+JSON remains useful for logs, debug dumps, and tests if a message is printed; it is not the FFI codec. The Mac and Go builds both need `protoc` (and the Swift/Go protobuf plugins).
+
+Structured messages carry ids, catalog fields, and small metadata. **File bytes do not go in protobuf** (no `bytes` fields for scans).
+
+**Read path:** Go returns `file_id`, MIME type, `original_filename`, and a path **relative to the project directory** (e.g. `objects/8f/ce/8fce3b…`). Swift already holds the folder it opened and reads the file with AppKit/SwiftUI. SQLite still stores no absolute paths.
+
+**Write path:** ingest only through a use-case (`ingestFile` / equivalent). Swift must not rewrite `objects/` itself.
+
+A later fetch-from-cloud cache can fill the same relative path before display. App Sandbox, if used, is security-scoped access to the **whole project directory**, not per-file bookmarks in the proto.
 
 ## 8. Asynchronous Behavior
 
@@ -184,12 +185,12 @@ FFI calls themselves are ordinary synchronous native calls. A long-running Go op
 The Swift application should generally expose asynchronous APIs such as:
 
 ```swift
-let person = try await store.person(id: personID)
+let source = try await store.source(id: sourceID)
 ```
 
 Internally, the operation may invoke a synchronous Go function on non-UI execution.
 
-Long-running tasks may warrant true asynchronous operations within the Go core, including large GEDCOM imports, search index rebuilding, media processing, synchronization, bulk validation, duplicate detection, and large exports. The Go runtime can use goroutines internally.
+Long-running tasks may warrant true asynchronous operations within the Go core, including file ingest and derivative generation, search index rebuilding, large imports, synchronization, and large exports. The Go runtime can use goroutines internally.
 
 ## 9. Persistence
 
@@ -213,108 +214,107 @@ SQLite
 
 Swift or C# should not independently issue queries against the same database. This creates a single authoritative persistence implementation across platforms.
 
-## 10. SQLite Packaging
+## 10. SQLite driver
 
-A deliberate decision will be required regarding the Go SQLite driver.
-
-### Native SQLite through cgo
+**Decision:** Official SQLite C amalgamation via cgo, using [`github.com/mattn/go-sqlite3`](https://github.com/mattn/go-sqlite3).
 
 ```text
 Go
  │
-cgo
+cgo (mattn/go-sqlite3)
  │
-SQLite C implementation
+SQLite C amalgamation (bundled in the driver, not the OS libsqlite)
 ```
 
-This provides the standard SQLite implementation but adds native build-toolchain requirements. Because the application already needs native platform-specific builds, this is considered acceptable.
+Open the database through `database/sql` with that driver. Connection hygiene for SQLite:
 
-### Pure-Go SQLite implementation
+- **WAL** and a **busy timeout** in the DSN (and `PRAGMA foreign_keys = ON` on each connection).
+- **Tiny pool:** `SetMaxOpenConns` small (typically 1 for writers, or a single shared connection). `database/sql`’s default pool fights SQLite.
 
-This simplifies cross-compilation and removes the C dependency. It is also viable, provided compatibility and required SQLite features are satisfactory.
+Enable compile features the product needs with driver build tags (at least `fts5` and JSON when those land). Do not link against macOS’s system SQLite.
 
-The current preference is not to optimize prematurely around avoiding cgo. A mature SQLite implementation with controlled application builds is likely preferable.
+**Escape hatch:** if the cgo + Swift dylib build becomes untenable, a pure-Go engine (`modernc.org/sqlite` or similar) can open the same `.sqlite` files. That is a packaging change, not a schema change.
 
 ## 11. Bundled SQLite
 
-The application should preferably control its SQLite implementation rather than depending on whichever SQLite build happens to be installed by the operating system.
+The application controls its SQLite implementation through the amalgamation above, rather than whichever SQLite the OS ships.
 
-This makes functionality consistent across macOS, Windows, and Linux and allows the project to standardize features such as FTS5, JSON functionality, R-tree indexes, custom functions, and selected SQLite extensions.
+That keeps FTS5, JSON, R-tree, custom functions, and `STRICT` behavior consistent across macOS, Windows, and Linux. The SQLite **file** remains portable across platforms.
 
-The SQLite file itself remains portable across platforms.
+## 12. Project directory (document format)
 
-## 12. Local Genealogy File
-
-A genealogy project should ideally be a portable, self-contained object.
+**Decision:** A project is an **ordinary directory**. That directory is the portable, documented interchange format. It is not a proprietary container, zip-as-working-copy, or a single SQLite file that embeds scans.
 
 ```text
-Robins Family.genealogy/
-├── genealogy.sqlite
-├── media/
-├── thumbnails/
-└── metadata.json
+Robins Family.genealogy/          # folder; Mac may show a package icon (optional)
+├── genealogy.sqlite              # catalog (open schema; use any SQLite viewer)
+├── genealogy.sqlite-wal          # present while the app is open (WAL)
+├── genealogy.sqlite-shm
+├── objects/                      # ingested Files (see Source layer)
+└── derivatives/                  # thumbnails, previews; disposable
 ```
 
-On macOS this could appear to users as a single document/package even though it contains multiple files internally. The same contents should remain intelligible to future Windows or Linux applications.
+On macOS the folder may be registered as a document package so Finder shows one icon; the bytes remain a directory. Windows and Linux see a folder. Copying a project to another machine is **copy this whole directory** (after quit or including WAL/SHM). The same Go core opens it; there are no Mac-only paths in the database.
 
-Platform-specific absolute paths should not be stored in the genealogy database.
+**Interchange:** Document the **directory layout + schema**. The `.sqlite` file is an inspectable catalog, not a complete project by itself (evidence bytes live under `objects/`). Users may browse tables and files with other tools. Provenance must not rely on obfuscation.
 
-## 13. Media Storage
+**Where it may live (v0 / MVP):** the **app runs on the local machine** and the **project directory lives on a local disk** (internal SSD, or USB that is not a sync client). Network-open and cloud-open are out of scope.
+
+**Backups (not MVP):** later, copy or sync a **closed** project directory (or an object-store export) to a home server, internet backup, or S3-compatible storage. Variants can include scheduled copy-on-quit or periodic snapshots. Those are optional features. They must not turn iCloud/Dropbox/SMB into the live working copy.
+
+**Where a live database must not live:**
+
+- **iCloud Drive, Dropbox, Google Drive, etc.** — they sync files, they do not provide SQLite’s locking. Silent corruption.
+- **SMB/NFS/AFP network shares (typical NAS)** — SQLite needs working POSIX/Windows locking and, in WAL mode, the main DB and WAL on the same reliable lock domain. Consumer NAS locking is famously incomplete. “Home server folder, Mac opens it over the LAN” is the same class of risk as iCloud, even if the NAS is not on the internet.
+
+**Working-copy encryption (MVP):** none. The catalog and `objects/` are **readable** (inspectable SQLite, real JPEG/PDF bytes). Secrecy for a stolen disk is **OS volume encryption** (FileVault, BitLocker, LUKS), not Provenance.
+
+**Later (not MVP):** optional **locked** projects (user key; encrypt catalog **and** objects). Convert readable ↔ locked is a full rewrite. **Backup/export** payloads may be encrypted separately without changing the live readable directory.
+
+**Object names:** Files on disk are named by **SHA-256 of their bytes** (see [`source-layer-data-model.md`](source-layer-data-model.md)), sharded as `objects/{hh}/{hh}/{checksum_hex}`. `original_filename` stays in SQLite. Hash names are identity, not encryption: a JPEG is still a JPEG in Preview.
+
+**Concurrency (MVP):** one live **writer** per project directory. A second Provenance process opening the same folder is **refused** (or the existing window is focused). Two engines must not edit one `genealogy.sqlite`. In-process: one Go core, WAL, busy timeout, tiny pool (§10); Swift does not open the SQLite file. Split views of one tree are a **later UI** on that single engine. Quit before writing the catalog with another tool; the CLI uses the same exclusive-open rule.
+
+Platform-specific absolute paths must not be stored in the genealogy database.
+
+## 13. File ingest
 
 Documents, photographs, scans, PDFs, and other evidence should normally be **ingested into the genealogy project**, rather than referencing their original filesystem locations.
 
-This prevents research from depending on fragile absolute paths. A copied genealogy project should retain its associated evidence.
+This prevents research from depending on fragile absolute paths. A copied genealogy project should retain its associated evidence. A Source with no Artifact, and an Artifact with no File, remain valid (physical-only evidence, or a catalog stub).
 
-## 14. Media Model
+## 14. Artifact and File model
 
-The domain model should distinguish a semantic media record from physical blob storage.
-
-```text
-MediaAsset
-    │
-    ▼
-Blob
-    │
-    ▼
-Storage
-```
-
-Example:
+The Source-layer model is authoritative ([`source-layer-data-model.md`](source-layer-data-model.md)). The stack must not invent a parallel media catalog.
 
 ```text
-MediaAsset
-  id
-  title
-  original_filename
-  MIME type
-  blob_hash
-
-Blob
-  hash
-  size
-
-Storage
-  local path
-  optional remote storage state
+Source
+  └── Artifact  →  File (optional)
+                     └── file_derivatives (thumbnails, …)
 ```
 
-Citations and other genealogy records should reference a `MediaAsset` ID, not filesystem paths or cloud URLs. This prevents storage implementation details from leaking into the genealogy model.
+- **Source** is the evidentiary catalog object (`SRC-…`).
+- **Artifact** is one representation of that Source (`ART-…`): a scan, PDF, photo, or a placeholder with no File yet.
+- **File** is an immutable, content-addressed byte stream (`checksum_sha256`). Storage path is derived from the checksum, not stored as a competing truth. MIME type, size, and `original_filename` live on the File.
+- **Citations** (Interpretation) reference an Artifact, not a filesystem path, cloud URL, or File id as the citation target. Displaying the scan uses the Artifact's current File.
 
-## 15. Content-Addressed Media
+Replacing a scan ingests a new File and updates the Artifact pointer. Old Files stay for audit reconstruction.
 
-Media blobs should be considered for content-addressed storage.
+## 15. Content-addressed Files
+
+File blobs are content-addressed as in the Source layer:
 
 ```text
 SHA-256(file contents)
         │
         ▼
-7f82375d...
+8fce3b...
         │
         ▼
-media/7f/7f82375d...
+objects/8f/ce/8fce3b...
 ```
 
-Benefits include automatic duplicate detection, integrity checking, efficient synchronization, immutable blob identity, independence from filenames, and straightforward local/cloud reconciliation. The original filename remains metadata rather than storage identity.
+Benefits include automatic duplicate detection, integrity checking, efficient synchronization, immutable blob identity, independence from OS filename rules, and the same paths on every platform. The object is still a normal JPEG/PDF: hash names are identity, not encryption. `original_filename` remains File metadata.
 
 ## 16. Local-First Identity
 
@@ -326,29 +326,29 @@ Three identities should be kept conceptually separate:
 OS user
    │
    ▼
-Local researcher / actor
+Local User (contributor UUID)
    │
    ▼
 Optional cloud account
 ```
 
-The operating system controls access to local files. A local **Actor** identifies who created or modified research records. Research records may contain `created_by = actor_id`.
+The operating system controls access to local files. A local **User** ([`user-identity-model.md`](user-identity-model.md)) is a UUIDv7 stored in **application support** and copied into each project’s `users` table for audit. The project directory does not know which machine it is on. On open, the app compares install UUID to Users already in the file: match; or “continue as this person”; or “that’s not me” (new User, new writes only). Cloud accounts later attach to `users.id`; they are not the OS profile.
 
-This ensures authorship remains meaningful even if cloud services later disappear.
+This ensures attribution remains meaningful even if cloud services later disappear.
 
 ## 17. Cloud Accounts
 
 A cloud account becomes necessary only when the user enables online services such as synchronization, collaboration, sharing, remote backup, or family invitations.
 
-The account should be associated with an existing local Actor rather than replacing it.
+The account should be associated with an existing local User rather than replacing it.
 
 ```text
-Actor
+User
    │
    └── optional CloudAccount
 ```
 
-Cloud authentication therefore answers, “Who is making this network request?” The Actor answers, “Who authored this research?” These should remain separate concepts.
+Cloud authentication therefore answers, “Who is making this network request?” The User answers, “Who authored this research?” These should remain separate concepts.
 
 ## 18. Authorization
 
@@ -358,7 +358,7 @@ For collaborative projects, the server may maintain workspace membership separat
 WorkspaceMembership
   workspace_id
   account_id
-  actor_id
+  user_id
   role
 ```
 
@@ -404,21 +404,21 @@ Persistence details should not dictate the domain model.
 
 ## 21. Cloud Media
 
-When collaboration is enabled, local media blobs can be synchronized into object storage such as S3, R2, B2, or an equivalent service.
+When collaboration is enabled, local File blobs can be synchronized into object storage such as S3, R2, B2, or an equivalent service.
 
-The genealogy database should still not store provider-specific URLs. It should retain stable blob or media identifiers. The synchronization layer maps those identifiers to cloud object keys.
+The genealogy database should still not store provider-specific URLs. It should retain stable File ids and checksums. The synchronization layer maps those identifiers to cloud object keys.
 
-## 22. Lazy Media Synchronization
+## 22. Lazy File Synchronization
 
-A shared tree could eventually contain many gigabytes of scans and photographs. A new collaborator should not necessarily be required to download every original file immediately.
+A shared tree could eventually contain many gigabytes of scans and photographs. A new collaborator should not necessarily be required to download every original File immediately.
 
-A useful model would synchronize media metadata, filenames, hashes, dimensions, MIME types, and thumbnails first, while fetching full-resolution blobs on demand.
+A useful model would synchronize Artifact/File catalog rows, filenames, hashes, MIME types, and derivatives first, while fetching full-resolution blobs on demand.
 
 ```text
-User opens media
+User opens an Artifact
       │
       ▼
-Is blob local?
+Is File local?
    │       │
   yes      no
    │       │
@@ -465,7 +465,7 @@ The Go domain logic should not know whether it was invoked through FFI, HTTP, CL
 
 A conventional server-backed web client would not provide the same degree of local-first ownership as the desktop application.
 
-A future local-first web version could instead use a browser-local database and media cache with a sync client connecting to the Go server. Potential browser storage technologies include SQLite compiled to WebAssembly and persistent browser filesystem/storage APIs.
+A future local-first web version could instead use a browser-local database and File cache with a sync client connecting to the Go server. Potential browser storage technologies include SQLite compiled to WebAssembly and persistent browser filesystem/storage APIs.
 
 This is considered feasible but is not necessary for the initial application.
 
@@ -498,11 +498,11 @@ A possible repository structure is:
 │   ├── application/
 │   ├── database/
 │   ├── migrations/
-│   ├── gedcom/
+│   ├── import/          # later adapters (GEDCOM, …)
 │   ├── search/
 │   ├── merge/
 │   ├── sync/
-│   ├── media/
+│   ├── files/
 │   └── validation/
 │
 ├── api/
@@ -557,7 +557,7 @@ An account may provide sync, sharing, backup, and collaboration, but should not 
 
 ### Genealogy semantics remain platform-independent
 
-Core concepts such as sources, interpretations, claims, conclusions, citations, actors, relationships, events, places, media, and change history must not depend on SwiftUI, WinUI, HTTP, or any particular storage provider.
+Core concepts such as sources, artifacts, files, interpretations, claims, conclusions, citations, users, relationships, events, places, and change history must not depend on SwiftUI, WinUI, HTTP, or any particular storage provider.
 
 ### Platform UIs are replaceable clients
 
@@ -573,7 +573,7 @@ Domain objects reference stable IDs. They should not directly reference absolute
 
 ### Auditability is first-class
 
-Authorship and change history are part of the research record, not merely application metadata.
+Authorship and change history are part of the research record ([`audit-revision-history.md`](audit-revision-history.md)), not `created_by` columns on domain tables.
 
 ## 28. Current Preferred Initial Stack
 
@@ -590,24 +590,27 @@ Core
 
 Interop
   C ABI / FFI
-  initially JSON or Protocol Buffers
+  Protocol Buffers (generated Go / Swift types)
+  Go core as xcframework/dylib (cgo + mattn); spike before Source UI
 
 Persistence
-  SQLite
+  SQLite via github.com/mattn/go-sqlite3 (cgo, bundled amalgamation)
+  WAL + busy timeout; small connection pool
 
 Media
-  project-local files
-  content-addressed blobs where practical
+  project-local content-addressed Files
+  derivatives beside objects, not a second catalog
 
 Document format
-  portable project/package
-  SQLite + media + metadata
+  project = directory (sqlite + objects/ + derivatives/)
+  interchange = that directory, not sqlite-alone
+  live DB on local disk only (not iCloud / Dropbox / SMB NAS)
 
 Accounts
   none required for local use
 
 Identity
-  local Actor
+  local User (UUID + display name)
 
 Cloud
   none required initially
@@ -643,25 +646,19 @@ Web
 
 ## 29. Decisions Still Open
 
-The architecture leaves several implementation decisions intentionally unresolved:
+Settled:
 
-- JSON versus Protocol Buffers for the first FFI API;
-- specific Go SQLite driver;
-- cgo SQLite versus a pure-Go implementation;
-- precise document/package format;
-- whether the SQLite database itself is directly exposed/documented as an interoperability format;
-- content-addressed storage details;
-- encryption strategy;
-- local database locking and concurrent access;
-- exact Actor model;
-- sync protocol;
-- mutation/change-log format;
-- server-side persistence model;
-- conflict-resolution semantics;
-- eventual Linux frontend toolkit;
-- eventual web frontend stack.
+- **FFI codec:** Protocol Buffers (see §7).
+- **SQLite:** cgo + official amalgamation, `github.com/mattn/go-sqlite3` (see §10). WAL, busy timeout, tiny `MaxOpenConns`.
+- **Project format:** inspectable directory; sqlite is the catalog; Files on disk as SHA-256 object names (`objects/{hh}/{hh}/{hex}`); copy whole folder across Mac/Windows (see §12).
+- **Runtime:** app and live project on **local disk** only. Backups to NAS/internet/object storage are post-MVP (copy or sync a closed project).
+- **Encryption:** live project is plaintext; rely on OS disk encryption. Optional locked projects and encrypted backups are post-MVP (see §12).
+- **Locking:** one writer per project; second process refused. Multi-pane UI later, same engine (see §12).
+- **Identity:** install-local User UUID vs project `users`; adopt or mint on first open. Cloud maps onto that UUID later ([`user-identity-model.md`](user-identity-model.md)). OS profile is not the IdP.
+- **File display:** protobuf has relative paths + metadata only; Swift reads bytes from the project directory (§7).
+- **Build order:** implement only the use-cases needed for the current step. First FFI RPCs are Source-shaped (`OpenProject`, `CreateSource`, `IngestFile`, …). Person/GEDCOM verbs wait until that step exists. Adding a proto method later is expected; freezing a full ABI up front is not.
 
-These can be decided independently without changing the core direction described above.
+**Deferred (post-MVP):** sync protocol, mutation/change-log format, server-side persistence, conflict-resolution semantics, Linux frontend, web frontend. They do not block the Source-layer prototype.
 
 ## 30. Summary
 
@@ -677,10 +674,10 @@ Go Core
    │
    ├── genealogy domain logic
    ├── SQLite
-   ├── GEDCOM
-   ├── media
+   ├── files
    ├── validation
-   └── future sync
+   ├── audit
+   └── future: import adapters, sync
 ```
 
 This allows development to begin as a polished native macOS application without committing the underlying genealogy system to Apple.
@@ -688,3 +685,27 @@ This allows development to begin as a polished native macOS application without 
 If commercialization later warrants Windows support, a native Windows client can be built against the same Go core. Linux and web clients can follow without changing the fundamental storage or domain model.
 
 The architecture prioritizes local-first operation, ownership, privacy, interoperability, and long-term durability while preserving a practical route to a multi-platform commercial product.
+
+Authoritative domain schemas: [`source-layer-data-model.md`](source-layer-data-model.md), [`interpretation-layer-data-model.md`](interpretation-layer-data-model.md), [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md). This document owns runtime and packaging, not table shapes.
+
+---
+
+# 31. Architectural risks to address
+
+These are known tensions. Several are already constrained by §12 and §29 (no live iCloud/NAS, directory is the format, GEDCOM is an adapter, exclusive writer, MVP-only RPCs). Remaining items to pin for implementation are called out below.
+
+1. **File bytes and FFI** — **Decided:** relative path + metadata in protobuf; Swift reads the object on disk; ingest-only writes (§7).
+
+2. **Synced and network filesystems** — Live projects are local-disk only (§12). Backups (NAS, internet, object storage, scheduled copy-on-quit) are post-MVP. Product still needs to refuse iCloud/Dropbox/SMB as the working copy.
+
+3. **Import adapters vs core** — GEDCOM (and similar) maps poorly onto Source / Interpretation / Conclusion. Keep import as a later adapter so the engine is not designed around a GEDCOM person table.
+
+4. **Typed-graph validation vs convention** — Core validation should reject malformed rows (value column vs `value_type`, FK shape), not one-grain Places or empty Persons. Warnings and badges are UI.
+
+5. **cgo SQLite + Swift dylib** — **MVP plan: A.** Spike mattn/go-sqlite3 inside a Go xcframework loaded by Swift (open DB, trivial write, round-trip) **before** Source UI. If that build is untenable, fall back to a local Go process (B) or pure-Go SQLite in the dylib (C). On-disk project format does not change.
+
+6. **Project wrapper vs source of truth** — The directory is the format. No parallel `metadata.json` catalog. Optional Mac package icon must not hide or encrypt contents.
+
+7. **Sync of the research graph** — Replicating Observations, Sameness components, and identity anchors is much harder than syncing a person table. Shared Go structs on a PostgreSQL server do not by themselves define conflict semantics. Stay TBD until a real multi-device need exists.
+
+8. **First FFI surface** — **Not an architecture fork.** Implementation order only: add RPCs when a screen needs them. Coarse use-cases stay the rule (§7); the *list* of methods grows with the prototype.

@@ -260,7 +260,9 @@ SHA-256: 8fce3b...
 storage: objects/8f/ce/8fce3b...
 ```
 
-The exact sharding convention is an implementation detail.
+The exact sharding convention (`objects/{first two hex}/{next two}/{full hex}`) is fixed as above unless a migration notes otherwise.
+
+The stored object is the **original file bytes** (JPEG, PNG, PDF, …). Hash names do not encrypt or wrap the payload. A user who opens the object in a normal viewer sees the picture or document. The ingest filename is `files.original_filename`, not the path on disk.
 
 This keeps projects relocatable and prevents `storage_path` and checksum from becoming competing sources of truth.
 

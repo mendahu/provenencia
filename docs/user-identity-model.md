@@ -28,7 +28,7 @@ That question is answered by a globally unique User UUID and a display name.
 
 # 2. Local-first identity
 
-On first use, Provenance creates a local user identity with a UUIDv7 and asks for a display name.
+Contributor identity is a UUIDv7 plus a display name. It is created on **first create-project or first open** on an install (mint a new User, or adopt one already in the folder). It is stored in **application support** and copied into each project’s `users` table.
 
 For example:
 
@@ -51,6 +51,24 @@ Revision 1
 No email address, password, network connection, or online service is required.
 
 The desktop application should reuse the same local User UUID when the researcher creates additional projects. This keeps the identity globally stable rather than generating a new contributor identity per project.
+
+The **project file does not record which machine it is on.** The OS account is not an identity provider. The install stores “I am `U1`” in **application support** (outside the project directory). Opening a project compares that to `users` / audit history in the folder.
+
+```text
+First create-project or first open on this install
+  → mint or adopt a User UUID
+  → persist it in application support for later compares
+
+Open, local UUID matches a User already in the project
+  → keep writing as that User (e.g. new MacBook after copying *your* folder)
+
+Open, no local UUID yet, project already has User U1
+  → ask: “Continue as Jake Robins?” → adopt U1 into application support
+  → or “That’s not me” → mint U2, insert into this project’s `users`, new writes as U2
+     (U1’s history stays; both live in the same file)
+```
+
+A spouse opening a copied folder on her machine chooses “that’s not me,” gets her own UUID on **her** install, and her revisions sit beside the original contributor’s. Cloud login later **maps onto** an existing `users.id`; it does not replace it ([`application-stack.md`](application-stack.md) §17).
 
 ---
 
@@ -188,7 +206,7 @@ A future membership model answers:
 What may this contributor do in this project?
 ```
 
-The MVP does not need a membership table because there is only one local user.
+The MVP does not need a membership/roles table. A copied project may already contain more than one User; that is attribution, not authorization.
 
 ## 6.3 Cryptographic/synchronization identity
 
@@ -229,13 +247,11 @@ In particular, email should not be used as the User identity because it is mutab
 # 8. MVP lifecycle
 
 ```text
-1. Researcher installs Provenance on macOS or Windows.
-2. Provenance creates a local UUIDv7 User identity.
-3. Researcher enters a display name.
-4. Researcher creates a project.
-5. The project stores that User row.
-6. Audit transactions reference that User UUID.
-7. No authentication or collaboration infrastructure is involved.
+1. Researcher installs Provenance.
+2. First create-project or first open: mint or adopt a User UUID; store it in application support; ask for a display name if minting.
+3. Create-project copies that User into the project; open-project compares install UUID to users in the folder (match / “that’s me” / “not me”).
+4. Audit transactions reference the writer’s User UUID.
+5. No authentication or collaboration infrastructure is involved.
 ```
 
 If collaboration is added later:
