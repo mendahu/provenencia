@@ -35,6 +35,14 @@ Conclusion
 
 The boundaries are intentional. Evidence should be preserved without forcing interpretation, and interpretation should remain revisable without rewriting the evidence from which it was derived.
 
+## 1.0 Rigorous science and a casual tree
+
+The data model is built so **good science is convenient**: Citations, Observation-sized assertions, sameness with exhibit, Reconciliation with a stored value and optional pins, provenance badges on working subjects. Use-case write-ups in these docs often describe that path — how the author wants to do genealogy.
+
+The same model must **allow a family tree with little or no evidence**. Empty canonical Persons, asserted Places, names typed only as Reconciliation, no Sources: that is a valid project. It will not withstand genealogical proof review. That is acceptable. The application should encourage and surface rigor (warnings, badges, “unlinked” filters, suggested Citations), not refuse to save a tree because the user skipped science.
+
+Layer boundaries still matter when evidence *is* entered: do not rewrite a Source to match a later conclusion. They do not require every handle to have a Source.
+
 ## 1.1 Source
 
 The Source layer answers:
@@ -116,27 +124,26 @@ Location
 
 These are rows in one `canonical_entities` table distinguished by `kind`, not parallel per-kind tables.
 
-Canonical does not mean complete, final, or universally authoritative. A person entity may be unnamed and provisional. A Place may be only partially located. Two canonical entities may later be discovered to represent the same real-world entity and be merged.
+Canonical does not mean complete, final, or universally authoritative. A Person may be unnamed. A Place may be an asserted handle with no Interpretation Node. Two canonical entities may later be merged.
 
-Interpretation keeps source-local Nodes separate for traceability: two Sources that mention the same historical person normally produce two `person` Nodes. The Conclusion layer correlates those Nodes and gives the researcher a durable working subject.
+Interpretation keeps source-local Nodes separate for traceability: two Sources that mention the same historical person normally produce two `person` Nodes. The Conclusion layer gives the researcher a durable **working subject** (the canonical row). Creating that row is origination of the handle, not a third claim type.
 
-The primary bridge is therefore **sameness**, not field-level resolution onto a Record:
+The two Conclusion **claims** are **sameness** (Node co-reference) and **reconciliation** (committed Property values on a handle):
 
 ```text
 Node A ── sameness claim (same_as / distinct_from) ── Node B
 
 canonical_entities E (kind = person)
-  representative_node_id → one Node in an accepted same_as component
-  members(E) = Nodes reachable from that representative via accepted same_as
+  identity_anchor_id → optional Node (live same_as cluster when set)
+  members(E) = ∅, or Nodes reachable from that anchor via accepted same_as
+  argument → optional existence rationale on the handle
 ```
 
-Sameness Claims are higher-order than Observations. An Observation says what a particular Source appears to assert about a Node. A Sameness Claim says the researcher concludes that two Nodes do or do not co-refer, with its own evidence chain.
+Sameness Claims are higher-order than Observations. An Observation says what a particular Source appears to assert about a Node. A Sameness Claim says the researcher concludes that two Nodes do or do not co-refer, with its own evidence chain. Exhibit pins do not retarget Observations.
 
-The same sameness and promotion pattern applies across Node Types that need working subjects (`person`, `event`, `relationship`, `participation`, `location`, and later `place`). Canonical entities are durable handles for Node clusters (ref, label, notes, merge). Domain payload and association links are derived from the Interpretation graph, not duplicated onto canonical rows.
+The same handle pattern applies across Node Types (`person`, `event`, `place`, `relationship`, `participation`, `location`). Domain payload is projected from member-Node Observations and overridden by Reconciliation Claims. For `value_type = 'node'`, Reconciliation points at another **canonical** entity (`value_entity_id`), so a nodeless Place can still be an association end.
 
-When a promoted cluster carries conflicting member Observations, soft display merges may be computed automatically. Durable conclusions about a Property on a canonical entity are **Reconciliation Claims**.
-
-Places as a domain are parked for a later rewrite; `kind = place` may exist in the unified table, but Place-specific structure is out of scope for that draft.
+**Convention:** Places work best as thin features at one grain; Locations as M:N event–place membership; gazetteer packs as ordinary Sources; extra grains as additional Location handles rather than `same_as` between town and colony. The schema does not enforce grain. See [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §1 and §8.
 
 Authoritative schema: [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md).
 
@@ -190,7 +197,7 @@ Generic persistence bookkeeping such as `created_at`, `updated_at`, and user att
 
 # 3. Cross-layer examples
 
-See also the worked examples in [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md#10-cross-layer-examples).
+See also the worked examples in [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md#12-cross-layer-examples).
 
 ## 3.1 Photograph and testimony
 
@@ -208,7 +215,7 @@ Testimony Source
   Node N2 (person, home Source = testimony)
 
 Conclusion
-  canonical_entities E1 (kind=person, representative_node_id = N1)
+  canonical_entities E1 (kind=person, identity_anchor_id = N1)
   sameness_claim: N1 same_as N2 (accepted), with evidence Observations
   members(E1) = {N1, N2}
 ```
@@ -228,7 +235,7 @@ Letter Source L
 
 Conclusion
   sameness_claim: NC same_as NL (accepted), evidence cites both Sources' Observations
-  canonical_entities E (kind=person, representative → NC or NL); members = {NC, NL}
+  canonical_entities E (kind=person, identity_anchor → NC or NL); members = {NC, NL}
   reconciliation_claim on E, property birth_date:
     value → DateValue(2 JAN 1800)   # researcher choice, or synthesized
     evidence → the birth_date Observations (and related letter Observations as needed)
@@ -248,7 +255,7 @@ Observations on person Node ND:
 
 Conclusion
   sameness_claims may later correlate ND with other person Nodes
-  canonical person entity created/extended via representative + accepted same_as closure
+  canonical person entity created/extended via identity_anchor + accepted same_as closure
 ```
 
 ---

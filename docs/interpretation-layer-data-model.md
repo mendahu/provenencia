@@ -28,6 +28,8 @@ Nodes provide stable identity for source-local things. Observations provide atom
 
 The database should enforce generic graph integrity and primitive typing. It should not attempt to encode the entire genealogy ontology into rigid table structure.
 
+**Invariants** are that graph shape (Citation, subject Node, Property, typed value, polarity). **Conventions** are how to get useful genealogy out of it (one grain of Place, Observations that match what the Citation appears to say, seeded `location` ends). UI may warn; writers must not reject rows because a convention was skipped. See [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §1.
+
 ## 1.3 Interpretation vocabulary is extensible
 
 Node Types and Properties are first-class data. Provenance ships with a useful seeded vocabulary, but researchers may add new Node Types and Properties without a database schema migration.
@@ -469,6 +471,8 @@ These names describe application semantics, not different SQL structures. Every 
 
 `relationship`, `participation`, and `location` are examples of bridge-like Nodes. `source` is a reification Node: it lets the Interpretation graph talk about evidentiary objects, not only historical persons, events, and places. Structurally, however, the database does not distinguish these categories. Any Node can be related to any other Node through a Node-valued Observation. The application vocabulary defines what those relationships mean and which combinations are semantically useful.
 
+Inferred associations that no Source asserted (for example an extra Location grain) belong on Conclusion handles and Reconciliation Claims, not as extra Observations on the wrong Citation. See [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md).
+
 ## 4.2 `nodes`
 
 A Node gives stable identity to a source-local thing or association encountered during interpretation.
@@ -575,6 +579,8 @@ person        -> birth_date
 
 event         -> event_type
 event         -> date
+
+place         -> toponym
 
 participation -> person
 participation -> event
@@ -731,7 +737,7 @@ CREATE TABLE observations (
 
 **Value population (application invariant):** exactly one value representation must be populated, and it must match `properties.value_type`. Provenance does **not** enforce that cross-table rule in SQLite for now (no XOR/`value_type` trigger or typed bridge tables). Writers — repository code, importers, sync — are responsible for correct population.
 
-**Read-side tolerance:** if a row is malformed, readers should prefer the column that matches the Property's `value_type` and ignore any other non-null value columns. A row with *no* usable value for that `value_type` is invalid and should be surfaced as an error or omitted rather than guessed. The same sparse-column pattern and rules apply later to Reconciliation Claims.
+**Read-side tolerance:** if a row is malformed, readers should prefer the column that matches the Property's `value_type` and ignore any other non-null value columns. A row with *no* usable value for that `value_type` is invalid and should be surfaced as an error or omitted rather than guessed. Reconciliation Claims use the same sparse-column idea, except `value_type = 'node'` is stored as `value_entity_id` (a canonical handle) rather than `value_node_id`. See [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md).
 
 Reading uncertainty belongs in Citation transcription or description when needed. Alternative or competing interpretations are modeled as separate Observations rather than a numeric confidence score on a single row. Researcher commentary about a particular Observation belongs in `observation_notes`.
 

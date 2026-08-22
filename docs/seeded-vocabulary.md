@@ -231,7 +231,7 @@ Schema: [`interpretation-layer-data-model.md`](interpretation-layer-data-model.m
 key             ref_prefix    summary
 person          PER           A person represented by interpreted evidence.
 event           EVT           An occurrence represented by interpreted evidence.
-place           PLC           A geographic or named place represented by interpreted evidence.
+place           PLC           A geographic feature at one grain (town, township, colony, farm, …).
 relationship    REL           A general association when evidence is not a more specific event/context structure.
 participation   PTN           Association between a person and an event, including role.
 location        LOC           Association between an event and a place.
@@ -259,6 +259,7 @@ place               node          app target hint: place
 participant         node          app target hint: person
 mentions            node          app target hint: source
 remark              text          free-text commentary about a source Node
+toponym             text          place name as interpreted from a Source (not a personal NameValue)
 ```
 
 Target Node Type hints are application-only (not SQL allow-lists). See the Interpretation doc.
@@ -275,6 +276,8 @@ person          occupation
 
 event           event_type
 event           date
+
+place           toponym
 
 participation   person
 participation   event
@@ -414,6 +417,12 @@ rejected          -- retained for audit; not the working value
 ## 5.3 Reconciliation `origin`
 
 Not used. Soft blends are display-only. A Reconciliation Claim is a researcher-persisted row or it is absent.
+
+## 5.4 Canonical handles
+
+There is no `origination_claims` table and no `representative_node_id`. A `canonical_entities` row may have a nullable `identity_anchor_id` and optional `argument`. For node-typed Reconciliation values, Conclusion uses `value_entity_id` (canonical), not Observation `value_node_id`.
+
+Handle provenance badges (from records / inferred / asserted / unlinked) are computed, not seeded workflow enums.
 
 ---
 
