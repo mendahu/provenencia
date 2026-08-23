@@ -32,7 +32,7 @@ Treat SwiftUI like React: it renders. It does not own SQLite, identity, or genea
 SwiftUI View  →  small Swift model / store  →  FFI  →  Go core
 ```
 
-Views may format strings and enable/disable buttons. They must not open `provenance.sqlite` or mint UUIDs.
+Views may format strings and enable/disable buttons. They must not open `provenance.sqlite` or mint UUIDs. Launch and the open picker only `stat` that the catalog file exists (`InstallPaths`); Go still owns a real open.
 
 ---
 

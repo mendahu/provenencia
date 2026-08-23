@@ -37,11 +37,25 @@ struct OnboardingModelTests {
         let folders = try makeFolders()
         let project = folders.documentsDirectory.appendingPathComponent("Robins Family.provenance", isDirectory: true)
         try FileManager.default.createDirectory(at: project, withIntermediateDirectories: true)
+        try touchCatalog(project)
         let store = FakeStore(identity: jane, activeProjectDir: project.path)
         let model = OnboardingModel(store: store, folders: folders)
         await model.load()
         #expect(model.phase == .home)
         #expect(model.projectBasename == "Robins Family.provenance")
+        #expect(model.researcherLocked)
+    }
+
+    @Test func loadWithIdentityAndDirMissingCatalogClearsPointerAndShowsError() async throws {
+        let folders = try makeFolders()
+        let project = folders.documentsDirectory.appendingPathComponent("Robins Family.provenance", isDirectory: true)
+        try FileManager.default.createDirectory(at: project, withIntermediateDirectories: true)
+        let store = FakeStore(identity: jane, activeProjectDir: project.path)
+        let model = OnboardingModel(store: store, folders: folders)
+        await model.load()
+        #expect(model.phase == .chooseFile)
+        #expect(store.activeProjectDir == nil)
+        #expect(model.errorText == "The last project could not be found. Create or open a project.")
         #expect(model.researcherLocked)
     }
 
@@ -189,6 +203,7 @@ struct OnboardingModelTests {
         let folders = try makeFolders()
         let project = folders.documentsDirectory.appendingPathComponent("Robins Family.provenance", isDirectory: true)
         try FileManager.default.createDirectory(at: project, withIntermediateDirectories: true)
+        try touchCatalog(project)
         let store = FakeStore(identity: jane, activeProjectDir: project.path)
         let model = OnboardingModel(store: store, folders: folders)
         await model.load()
@@ -205,6 +220,11 @@ struct OnboardingModelTests {
         let folders = try makeFolders()
         let keep = folders.documentsDirectory.appendingPathComponent("Keep.provenance", isDirectory: true)
         try FileManager.default.createDirectory(at: keep, withIntermediateDirectories: true)
+        try touchCatalog(keep)
+        try FileManager.default.createDirectory(
+            at: folders.documentsDirectory.appendingPathComponent("Husk.provenance", isDirectory: true),
+            withIntermediateDirectories: true
+        )
         try FileManager.default.createDirectory(
             at: folders.documentsDirectory.appendingPathComponent("plain", isDirectory: true),
             withIntermediateDirectories: true
@@ -233,6 +253,10 @@ struct OnboardingModelTests {
         try FileManager.default.createDirectory(at: documents, withIntermediateDirectories: true)
         return OnboardingFolders(identityDirectory: identity, documentsDirectory: documents)
     }
+}
+
+private func touchCatalog(_ project: URL) throws {
+    try Data().write(to: project.appendingPathComponent(InstallPaths.catalogFile))
 }
 
 private enum StoreBoom: Error, LocalizedError {
