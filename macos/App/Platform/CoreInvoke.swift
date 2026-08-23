@@ -24,6 +24,7 @@ enum CoreMethod {
     static let openProject = Int32(Provenance_Engine_V1_Method.openProject.rawValue)
     static let removeActiveProject = Int32(Provenance_Engine_V1_Method.removeActiveProject.rawValue)
     static let listProjectUsers = Int32(Provenance_Engine_V1_Method.listProjectUsers.rawValue)
+    static let signOut = Int32(Provenance_Engine_V1_Method.signOut.rawValue)
 }
 
 func provenanceInvoke(method: Int32, request: Data) throws -> Data {

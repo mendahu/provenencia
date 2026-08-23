@@ -31,7 +31,7 @@ func Complete(identityDir, parent, displayName, familyName string) (Result, erro
 		return Result{}, err
 	}
 
-	id, err := loadOrMint(identityDir, displayName)
+	id, err := loadOrMint(identityDir, displayName, true)
 	if err != nil {
 		return Result{}, err
 	}
@@ -45,8 +45,8 @@ func Complete(identityDir, parent, displayName, familyName string) (Result, erro
 		_ = proj.Close()
 		return Result{}, err
 	}
-	dir := proj.Dir()
-	if err := proj.Close(); err != nil {
+	dir, err := closeCatalog(proj)
+	if err != nil {
 		return Result{}, err
 	}
 	if err := rememberActive(identityDir, dir); err != nil {
@@ -59,24 +59,52 @@ func rememberActive(identityDir, projectDir string) error {
 	return session.Save(identityDir, session.Active{ProjectDir: projectDir})
 }
 
-func loadOrMint(identityDir, displayName string) (identity.Identity, error) {
+func closeCatalog(proj *database.Catalog) (string, error) {
+	dir := proj.Dir()
+	if err := proj.Close(); err != nil {
+		return "", err
+	}
+	return dir, nil
+}
+
+func persistIdentityAndActive(identityDir, dir string, id identity.Identity) (Result, error) {
+	if err := identity.Save(identityDir, id); err != nil {
+		return Result{}, err
+	}
+	if err := rememberActive(identityDir, dir); err != nil {
+		return Result{}, err
+	}
+	return Result{ProjectDir: dir, Identity: id}, nil
+}
+
+// persistNow writes identity.json immediately (Complete). Open mint passes false (H2).
+func loadOrMint(identityDir, displayName string, persistNow bool) (identity.Identity, error) {
 	got, err := identity.Load(identityDir)
 	if errors.Is(err, identity.ErrNotFound) {
+		if displayName == "" {
+			return identity.Identity{}, ErrBlankName
+		}
 		minted, err := identity.Mint(displayName)
 		if err != nil {
 			return identity.Identity{}, err
 		}
-		if err := identity.Save(identityDir, minted); err != nil {
-			return identity.Identity{}, err
+		if persistNow {
+			if err := identity.Save(identityDir, minted); err != nil {
+				return identity.Identity{}, err
+			}
 		}
 		return minted, nil
 	}
 	if err != nil {
 		return identity.Identity{}, err
 	}
-	got.DisplayName = displayName
-	if err := identity.Save(identityDir, *got); err != nil {
-		return identity.Identity{}, err
+	if displayName != "" {
+		got.DisplayName = displayName
+	}
+	if persistNow {
+		if err := identity.Save(identityDir, *got); err != nil {
+			return identity.Identity{}, err
+		}
 	}
 	return *got, nil
 }

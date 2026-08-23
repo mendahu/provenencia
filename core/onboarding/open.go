@@ -13,13 +13,13 @@ import (
 
 var ErrUnknownUser = errors.New("user not in project")
 
-// ListContributors opens the catalog briefly and returns users rows as identities.
+// ListContributors peeks at users without migrating or taking the exclusive lock.
 func ListContributors(projectDir string) ([]identity.Identity, error) {
 	projectDir = strings.TrimSpace(projectDir)
 	if projectDir == "" {
 		return nil, database.ErrNotAProject
 	}
-	proj, err := database.Open(projectDir)
+	proj, err := database.OpenReadOnly(projectDir)
 	if err != nil {
 		return nil, err
 	}
@@ -79,24 +79,18 @@ func adopt(identityDir, projectDir, adoptUserID string) (Result, error) {
 		_ = proj.Close()
 		return Result{}, err
 	}
-	dir := proj.Dir()
-	if err := proj.Close(); err != nil {
+	dir, err := closeCatalog(proj)
+	if err != nil {
 		return Result{}, err
 	}
 
 	// A different UUID on disk is replaced: this Mac is now that catalog contributor.
 	id := identity.Identity{UserID: uid, DisplayName: name}
-	if err := identity.Save(identityDir, id); err != nil {
-		return Result{}, err
-	}
-	if err := rememberActive(identityDir, dir); err != nil {
-		return Result{}, err
-	}
-	return Result{ProjectDir: dir, Identity: id}, nil
+	return persistIdentityAndActive(identityDir, dir, id)
 }
 
 func openMint(identityDir, projectDir, displayName string) (Result, error) {
-	id, err := resolveOpenIdentity(identityDir, displayName)
+	id, err := loadOrMint(identityDir, displayName, false)
 	if err != nil {
 		return Result{}, err
 	}
@@ -110,32 +104,9 @@ func openMint(identityDir, projectDir, displayName string) (Result, error) {
 		_ = proj.Close()
 		return Result{}, err
 	}
-	dir := proj.Dir()
-	if err := proj.Close(); err != nil {
-		return Result{}, err
-	}
-	if err := identity.Save(identityDir, id); err != nil {
-		return Result{}, err
-	}
-	if err := rememberActive(identityDir, dir); err != nil {
-		return Result{}, err
-	}
-	return Result{ProjectDir: dir, Identity: id}, nil
-}
-
-func resolveOpenIdentity(identityDir, displayName string) (identity.Identity, error) {
-	got, err := identity.Load(identityDir)
-	if errors.Is(err, identity.ErrNotFound) {
-		if displayName == "" {
-			return identity.Identity{}, ErrBlankName
-		}
-		return identity.Mint(displayName)
-	}
+	dir, err := closeCatalog(proj)
 	if err != nil {
-		return identity.Identity{}, err
+		return Result{}, err
 	}
-	if displayName != "" {
-		got.DisplayName = displayName
-	}
-	return *got, nil
+	return persistIdentityAndActive(identityDir, dir, id)
 }

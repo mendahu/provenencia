@@ -5,6 +5,7 @@ package database
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -36,6 +37,14 @@ func (c *Catalog) Dir() string {
 }
 
 func dsn(sqlitePath string) string {
+	return dsnOpts(sqlitePath, false)
+}
+
+func dsnReadOnly(sqlitePath string) string {
+	return dsnOpts(sqlitePath, true)
+}
+
+func dsnOpts(sqlitePath string, readOnly bool) string {
 	u := url.URL{
 		Scheme: "file",
 		Path:   filepath.ToSlash(sqlitePath),
@@ -43,7 +52,11 @@ func dsn(sqlitePath string) string {
 	q := url.Values{}
 	q.Set("_busy_timeout", "100")
 	q.Set("_foreign_keys", "1")
-	q.Set("_journal_mode", "WAL")
+	if readOnly {
+		q.Set("mode", "ro")
+	} else {
+		q.Set("_journal_mode", "WAL")
+	}
 	u.RawQuery = q.Encode()
 	return u.String()
 }
@@ -53,7 +66,11 @@ func catalogPath(dir string) string {
 }
 
 func openDB(sqlitePath string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", dsn(sqlitePath))
+	return openDBURI(dsn(sqlitePath))
+}
+
+func openDBURI(uri string) (*sql.DB, error) {
+	db, err := sql.Open("sqlite3", uri)
 	if err != nil {
 		return nil, err
 	}
@@ -129,18 +146,8 @@ func Create(parent, folderName string) (*Catalog, error) {
 
 // Open opens an existing project directory by catalog content, not folder suffix.
 func Open(dir string) (*Catalog, error) {
-	st, err := os.Stat(dir)
+	sqlitePath, err := locateCatalog(dir)
 	if err != nil {
-		return nil, err
-	}
-	if !st.IsDir() {
-		return nil, ErrNotAProject
-	}
-	sqlitePath := catalogPath(dir)
-	if _, err := os.Stat(sqlitePath); err != nil {
-		if os.IsNotExist(err) {
-			return nil, ErrNotAProject
-		}
 		return nil, err
 	}
 	db, err := openDB(sqlitePath)
@@ -160,6 +167,56 @@ func Open(dir string) (*Catalog, error) {
 		return nil, err
 	}
 	return &Catalog{dir: dir, db: db}, nil
+}
+
+// OpenReadOnly opens a catalog for queries without migrating or taking the exclusive lock.
+func OpenReadOnly(dir string) (*Catalog, error) {
+	sqlitePath, err := locateCatalog(dir)
+	if err != nil {
+		return nil, err
+	}
+	db, err := openDBURI(dsnReadOnly(sqlitePath))
+	if err != nil {
+		return nil, mapLockErr(err)
+	}
+	if err := checkApplicationID(db); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if err := refuseNewerFormat(db); err != nil {
+		db.Close()
+		return nil, err
+	}
+	return &Catalog{dir: dir, db: db}, nil
+}
+
+func locateCatalog(dir string) (string, error) {
+	st, err := os.Stat(dir)
+	if err != nil {
+		return "", err
+	}
+	if !st.IsDir() {
+		return "", ErrNotAProject
+	}
+	sqlitePath := catalogPath(dir)
+	if _, err := os.Stat(sqlitePath); err != nil {
+		if os.IsNotExist(err) {
+			return "", ErrNotAProject
+		}
+		return "", err
+	}
+	return sqlitePath, nil
+}
+
+func refuseNewerFormat(db *sql.DB) error {
+	var ver int
+	if err := db.QueryRow(`PRAGMA user_version`).Scan(&ver); err != nil {
+		return err
+	}
+	if ver > formatVersion {
+		return fmt.Errorf("%w: %d", ErrUnsupportedVersion, ver)
+	}
+	return nil
 }
 
 func (c *Catalog) Close() error {

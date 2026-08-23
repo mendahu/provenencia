@@ -284,4 +284,5 @@ private struct ThrowingStore: GenealogyStore {
         adoptUserID _: String
     ) async throws -> OnboardingResult { throw StoreBoom.boom }
     func removeActiveProject(identityDir _: String) async throws { throw StoreBoom.boom }
+    func signOut(identityDir _: String) async throws { throw StoreBoom.boom }
 }

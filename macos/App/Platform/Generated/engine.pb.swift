@@ -34,6 +34,7 @@ public nonisolated enum Provenance_Engine_V1_Method: SwiftProtobuf.Enum, Swift.C
   case openProject // = 7
   case removeActiveProject // = 8
   case listProjectUsers // = 9
+  case signOut // = 10
   case UNRECOGNIZED(Int)
 
   public init() {
@@ -52,6 +53,7 @@ public nonisolated enum Provenance_Engine_V1_Method: SwiftProtobuf.Enum, Swift.C
     case 7: self = .openProject
     case 8: self = .removeActiveProject
     case 9: self = .listProjectUsers
+    case 10: self = .signOut
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -68,6 +70,7 @@ public nonisolated enum Provenance_Engine_V1_Method: SwiftProtobuf.Enum, Swift.C
     case .openProject: return 7
     case .removeActiveProject: return 8
     case .listProjectUsers: return 9
+    case .signOut: return 10
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -84,6 +87,7 @@ public nonisolated enum Provenance_Engine_V1_Method: SwiftProtobuf.Enum, Swift.C
     .openProject,
     .removeActiveProject,
     .listProjectUsers,
+    .signOut,
   ]
 
 }
@@ -338,12 +342,34 @@ public nonisolated struct Provenance_Engine_V1_ListProjectUsersResponse: Sendabl
   public init() {}
 }
 
+public nonisolated struct Provenance_Engine_V1_SignOutRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var identityDir: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Provenance_Engine_V1_SignOutResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate nonisolated let _protobuf_package = "provenance.engine.v1"
 
 nonisolated extension Provenance_Engine_V1_Method: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0METHOD_UNSPECIFIED\0\u{1}METHOD_PING\0\u{1}METHOD_GET_VERSION\0\u{1}METHOD_GET_INSTALL_IDENTITY\0\u{1}METHOD_COMPLETE_ONBOARDING\0\u{1}METHOD_REMOVE_INSTALL_IDENTITY\0\u{1}METHOD_GET_ACTIVE_PROJECT\0\u{1}METHOD_OPEN_PROJECT\0\u{1}METHOD_REMOVE_ACTIVE_PROJECT\0\u{1}METHOD_LIST_PROJECT_USERS\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0METHOD_UNSPECIFIED\0\u{1}METHOD_PING\0\u{1}METHOD_GET_VERSION\0\u{1}METHOD_GET_INSTALL_IDENTITY\0\u{1}METHOD_COMPLETE_ONBOARDING\0\u{1}METHOD_REMOVE_INSTALL_IDENTITY\0\u{1}METHOD_GET_ACTIVE_PROJECT\0\u{1}METHOD_OPEN_PROJECT\0\u{1}METHOD_REMOVE_ACTIVE_PROJECT\0\u{1}METHOD_LIST_PROJECT_USERS\0\u{1}METHOD_SIGN_OUT\0")
 }
 
 nonisolated extension Provenance_Engine_V1_PingRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
@@ -948,6 +974,55 @@ nonisolated extension Provenance_Engine_V1_ListProjectUsersResponse: SwiftProtob
 
   public static func ==(lhs: Provenance_Engine_V1_ListProjectUsersResponse, rhs: Provenance_Engine_V1_ListProjectUsersResponse) -> Bool {
     if lhs.users != rhs.users {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenance_Engine_V1_SignOutRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SignOutRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}identity_dir\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.identityDir) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.identityDir.isEmpty {
+      try visitor.visitSingularStringField(value: self.identityDir, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenance_Engine_V1_SignOutRequest, rhs: Provenance_Engine_V1_SignOutRequest) -> Bool {
+    if lhs.identityDir != rhs.identityDir {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenance_Engine_V1_SignOutResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SignOutResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenance_Engine_V1_SignOutResponse, rhs: Provenance_Engine_V1_SignOutResponse) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
