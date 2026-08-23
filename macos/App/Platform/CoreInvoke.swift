@@ -4,9 +4,20 @@ enum CoreInvokeError: Error {
     case failed(Int32, message: String)
 }
 
+extension CoreInvokeError: LocalizedError {
+    var errorDescription: String? {
+        switch self {
+        case .failed(_, let message):
+            return message
+        }
+    }
+}
+
 enum CoreMethod {
     static let ping = Int32(Provenance_Engine_V1_Method.ping.rawValue)
     static let getVersion = Int32(Provenance_Engine_V1_Method.getVersion.rawValue)
+    static let getInstallIdentity = Int32(Provenance_Engine_V1_Method.getInstallIdentity.rawValue)
+    static let completeOnboarding = Int32(Provenance_Engine_V1_Method.completeOnboarding.rawValue)
 }
 
 func provenanceInvoke(method: Int32, request: Data) throws -> Data {

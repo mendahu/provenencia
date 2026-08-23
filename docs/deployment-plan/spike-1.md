@@ -132,7 +132,7 @@ The stack already calls this out: **cgo SQLite inside a Go xcframework loaded by
 
 ## PR sequence
 
-PR1–PR7 are done. Remaining PRs (8–9) are unchecked.
+PR1–PR8 are done. Remaining PR (9) is unchecked.
 
 Small, reviewable chunks. Each PR should leave `main` buildable. Later PRs may add UI on a stub that the next PR fills in.
 
@@ -144,7 +144,7 @@ PR1 repo scaffold
                  ├─ PR5 install identity file (Go) (done)
                  │    └─ PR6 onboarding use-case (person + family name → identity + project) (done)
                  │         └─ PR7 FFI GetInstallIdentity + CompleteOnboarding (done)
-                 │              └─ PR8 SwiftUI first-run + Application Support path + returning launch
+                 │              └─ PR8 SwiftUI first-run + Application Support path + returning launch (done)
                  └─ PR9 (optional same milestone) last-project pointer / reopen
 ```
 
@@ -159,7 +159,7 @@ PR5 can start once PR3 proves the dylib; it should not land identity writes that
 | **5** | Install identity store | Done. Go `core/identity`: `{dir}/identity.json` (`user_id` UUIDv7 + `display_name`). Caller passes `dir`; no Mac path hardcoded. No FFI, no `users` insert. | 4 | File format pinned in this PR. |
 | **6** | Onboarding use-case | Done. Go `core/onboarding.Complete`: mint/load identity, sanitize family name, `Create` `*.provenance`, upsert `users`. No FFI. | 4, 5 | No Source tables. |
 | **7** | Onboarding FFI | Done. `GetInstallIdentity` / `CompleteOnboarding` over the existing C ABI; paths in protobuf; failed calls return UTF-8 `err.Error()` in `out`. No Swift UI. | 6 | Go still does not hardcode Mac paths. |
-| **8** | Onboarding UI + install path | First-run: two fields (your name, family/project name), validation, progress/error, success/home stub showing the project name. Returning user skips the prompts. **Swift** resolves Application Support (`Provenance/identity.json`) and passes that directory to Go. | 7 | SwiftUI + platform path; no genealogy screens. |
+| **8** | Onboarding UI + install path | Done. First-run two fields, home stub with project basename; returning user skips the form if identity exists. Swift resolves Application Support `Provenance/` and Documents. | 7 | No last-project reopen (PR9). |
 | **9** | Reopen last project | Remember last project folder (bookmark/security-scoped if needed) so relaunch is one click, not a file picker every time. | 8 | Can slip to Spike 2 if bookmarks fight us. |
 
 Do not combine 3 with 8. Do not put ingest or `sources` into 4 “while we’re in migrations.”
