@@ -132,14 +132,14 @@ The stack already calls this out: **cgo SQLite inside a Go xcframework loaded by
 
 ## PR sequence
 
-PR1 is done (repo scaffold). PR2 is done (protobuf FFI hello: Swift `GetVersion` → Go). Remaining PRs are unchecked.
+PR1–PR3 are done. Remaining PRs (4–8) are unchecked.
 
 Small, reviewable chunks. Each PR should leave `main` buildable. Later PRs may add UI on a stub that the next PR fills in.
 
 ```text
 PR1 repo scaffold
   └─ PR2 proto + FFI hello
-       └─ PR3 cgo SQLite xcframework spike
+       └─ PR3 cgo SQLite dylib spike (done)
             └─ PR4 migrations + users + create/open project (Go)
                  ├─ PR5 install identity file (Go + Mac path)
                  │    └─ PR6 onboarding use-case (person + family name → identity + project)
@@ -153,7 +153,7 @@ PR5 can start once PR3 proves the dylib; it should not land identity writes that
 | --- | --- | --- | --- | --- |
 | **1** | Repository scaffold | Done. `go.mod`, stub `core/` / `api/proto/` / `cmd/` / `macos/` Xcode app (macOS 14) that launches a blank window. README: how to open and run on a Mac. | — | No genealogy yet. |
 | **2** | Proto + FFI hello | Done. `engine.proto`, codegen, Swift `GenealogyStore` / `GoStore` calls `Ping` / `GetVersion` over one C ABI; Go returns protobuf. See `api/proto/README.md`. | 1 | No SQLite yet. |
-| **3** | SQLite-in-dylib spike | Go opens a temp or fixture `.sqlite` via mattn/cgo, writes a row, Swift triggers it and reads success. CI or a local script that builds the xcframework. | 2 | **Gate.** If this fails, choose fallback before continuing. |
+| **3** | SQLite-in-dylib spike | Done. Temp SQLite via mattn/cgo inside `libprovenance.dylib`; Swift `sqliteProbe()`. Existing c-shared dylib pipeline, not an xcframework. | 2 | **Gate.** If this fails, choose fallback before continuing. |
 | **4** | Project format + `users` | Create/open `*.provenance` directory; `provenance.sqlite`; set `application_id`; migrations; `users` table; exclusive open. Go tests, no Swift UI required. Optional tiny CLI in `cmd/` for create. | 3 | Schema: only what Spike 1 needs. Refuse foreign catalogs. |
 | **5** | Install identity store | Read/write Application Support identity file; mint UUIDv7; Swift (or Go via FFI) owns the path through a platform callback if Go should not hardcode Mac paths. | 3 (4 preferred) | File format pinned in this PR. |
 | **6** | Onboarding use-case | Given display name + project/family name: mint or load identity, create `{name}.provenance`, upsert `users`. Tests for sanitize and “already exists.” | 4, 5 | No Source tables. |

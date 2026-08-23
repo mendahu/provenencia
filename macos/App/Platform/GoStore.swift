@@ -19,4 +19,14 @@ struct GoStore: GenealogyStore {
             return resp.version
         }.value
     }
+
+    // TEMPORARY (Spike 1 PR3): dylib SQLite probe. Remove when project open/create exists.
+    func sqliteProbe() async throws -> (ok: Bool, detail: String) {
+        try await Task.detached {
+            let req = Provenance_Engine_V1_SqliteProbeRequest()
+            let out = try provenanceInvoke(method: CoreMethod.sqliteProbe, request: try req.serializedData())
+            let resp = try Provenance_Engine_V1_SqliteProbeResponse(serializedBytes: out)
+            return (resp.ok, resp.detail)
+        }.value
+    }
 }

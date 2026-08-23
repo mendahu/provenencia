@@ -29,6 +29,8 @@ const (
 	Method_METHOD_UNSPECIFIED Method = 0
 	Method_METHOD_PING        Method = 1
 	Method_METHOD_GET_VERSION Method = 2
+	// TEMPORARY (Spike 1 PR3): dylib packaging probe. Remove when PR4 create/open exists.
+	Method_METHOD_SQLITE_PROBE Method = 3
 )
 
 // Enum value maps for Method.
@@ -37,11 +39,13 @@ var (
 		0: "METHOD_UNSPECIFIED",
 		1: "METHOD_PING",
 		2: "METHOD_GET_VERSION",
+		3: "METHOD_SQLITE_PROBE",
 	}
 	Method_value = map[string]int32{
-		"METHOD_UNSPECIFIED": 0,
-		"METHOD_PING":        1,
-		"METHOD_GET_VERSION": 2,
+		"METHOD_UNSPECIFIED":  0,
+		"METHOD_PING":         1,
+		"METHOD_GET_VERSION":  2,
+		"METHOD_SQLITE_PROBE": 3,
 	}
 )
 
@@ -240,6 +244,96 @@ func (x *GetVersionResponse) GetVersion() string {
 	return ""
 }
 
+// TEMPORARY (Spike 1 PR3): empty request for the dylib SQLite probe. Remove with METHOD_SQLITE_PROBE.
+type SqliteProbeRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SqliteProbeRequest) Reset() {
+	*x = SqliteProbeRequest{}
+	mi := &file_engine_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SqliteProbeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SqliteProbeRequest) ProtoMessage() {}
+
+func (x *SqliteProbeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SqliteProbeRequest.ProtoReflect.Descriptor instead.
+func (*SqliteProbeRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{4}
+}
+
+// TEMPORARY (Spike 1 PR3): probe result. Remove with METHOD_SQLITE_PROBE.
+type SqliteProbeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Ok            bool                   `protobuf:"varint,1,opt,name=ok,proto3" json:"ok,omitempty"`
+	Detail        string                 `protobuf:"bytes,2,opt,name=detail,proto3" json:"detail,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SqliteProbeResponse) Reset() {
+	*x = SqliteProbeResponse{}
+	mi := &file_engine_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SqliteProbeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SqliteProbeResponse) ProtoMessage() {}
+
+func (x *SqliteProbeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SqliteProbeResponse.ProtoReflect.Descriptor instead.
+func (*SqliteProbeResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *SqliteProbeResponse) GetOk() bool {
+	if x != nil {
+		return x.Ok
+	}
+	return false
+}
+
+func (x *SqliteProbeResponse) GetDetail() string {
+	if x != nil {
+		return x.Detail
+	}
+	return ""
+}
+
 var File_engine_proto protoreflect.FileDescriptor
 
 const file_engine_proto_rawDesc = "" +
@@ -251,11 +345,16 @@ const file_engine_proto_rawDesc = "" +
 	"\amessage\x18\x01 \x01(\tR\amessage\"\x13\n" +
 	"\x11GetVersionRequest\".\n" +
 	"\x12GetVersionResponse\x12\x18\n" +
-	"\aversion\x18\x01 \x01(\tR\aversion*I\n" +
+	"\aversion\x18\x01 \x01(\tR\aversion\"\x14\n" +
+	"\x12SqliteProbeRequest\"=\n" +
+	"\x13SqliteProbeResponse\x12\x0e\n" +
+	"\x02ok\x18\x01 \x01(\bR\x02ok\x12\x16\n" +
+	"\x06detail\x18\x02 \x01(\tR\x06detail*b\n" +
 	"\x06Method\x12\x16\n" +
 	"\x12METHOD_UNSPECIFIED\x10\x00\x12\x0f\n" +
 	"\vMETHOD_PING\x10\x01\x12\x16\n" +
-	"\x12METHOD_GET_VERSION\x10\x02B0Z.github.com/mendahu/provenance/api/proto/engineb\x06proto3"
+	"\x12METHOD_GET_VERSION\x10\x02\x12\x17\n" +
+	"\x13METHOD_SQLITE_PROBE\x10\x03B0Z.github.com/mendahu/provenance/api/proto/engineb\x06proto3"
 
 var (
 	file_engine_proto_rawDescOnce sync.Once
@@ -270,13 +369,15 @@ func file_engine_proto_rawDescGZIP() []byte {
 }
 
 var file_engine_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_engine_proto_goTypes = []any{
-	(Method)(0),                // 0: provenance.engine.v1.Method
-	(*PingRequest)(nil),        // 1: provenance.engine.v1.PingRequest
-	(*PingResponse)(nil),       // 2: provenance.engine.v1.PingResponse
-	(*GetVersionRequest)(nil),  // 3: provenance.engine.v1.GetVersionRequest
-	(*GetVersionResponse)(nil), // 4: provenance.engine.v1.GetVersionResponse
+	(Method)(0),                 // 0: provenance.engine.v1.Method
+	(*PingRequest)(nil),         // 1: provenance.engine.v1.PingRequest
+	(*PingResponse)(nil),        // 2: provenance.engine.v1.PingResponse
+	(*GetVersionRequest)(nil),   // 3: provenance.engine.v1.GetVersionRequest
+	(*GetVersionResponse)(nil),  // 4: provenance.engine.v1.GetVersionResponse
+	(*SqliteProbeRequest)(nil),  // 5: provenance.engine.v1.SqliteProbeRequest
+	(*SqliteProbeResponse)(nil), // 6: provenance.engine.v1.SqliteProbeResponse
 }
 var file_engine_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -297,7 +398,7 @@ func file_engine_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_engine_proto_rawDesc), len(file_engine_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   4,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -68,6 +68,20 @@ func TestCall(t *testing.T) {
 			},
 		},
 		{
+			name:   "TEMPORARY sqlite probe succeeds",
+			method: MethodSqliteProbe,
+			in:     mustMarshal(&engine.SqliteProbeRequest{}),
+			check: func(t *testing.T, out []byte) {
+				var resp engine.SqliteProbeResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				if !resp.GetOk() {
+					t.Fatalf("probe failed: %s", resp.GetDetail())
+				}
+			},
+		},
+		{
 			name:    "unspecified method",
 			method:  MethodUnspecified,
 			wantErr: true,
