@@ -27,9 +27,6 @@ public nonisolated enum Provenance_Engine_V1_Method: SwiftProtobuf.Enum, Swift.C
   case unspecified // = 0
   case ping // = 1
   case getVersion // = 2
-
-  /// TEMPORARY (Spike 1 PR3): dylib packaging probe. Remove when PR4 create/open exists.
-  case sqliteProbe // = 3
   case UNRECOGNIZED(Int)
 
   public init() {
@@ -41,7 +38,6 @@ public nonisolated enum Provenance_Engine_V1_Method: SwiftProtobuf.Enum, Swift.C
     case 0: self = .unspecified
     case 1: self = .ping
     case 2: self = .getVersion
-    case 3: self = .sqliteProbe
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -51,7 +47,6 @@ public nonisolated enum Provenance_Engine_V1_Method: SwiftProtobuf.Enum, Swift.C
     case .unspecified: return 0
     case .ping: return 1
     case .getVersion: return 2
-    case .sqliteProbe: return 3
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -61,7 +56,6 @@ public nonisolated enum Provenance_Engine_V1_Method: SwiftProtobuf.Enum, Swift.C
     .unspecified,
     .ping,
     .getVersion,
-    .sqliteProbe,
   ]
 
 }
@@ -112,38 +106,12 @@ public nonisolated struct Provenance_Engine_V1_GetVersionResponse: Sendable {
   public init() {}
 }
 
-/// TEMPORARY (Spike 1 PR3): empty request for the dylib SQLite probe. Remove with METHOD_SQLITE_PROBE.
-public nonisolated struct Provenance_Engine_V1_SqliteProbeRequest: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-/// TEMPORARY (Spike 1 PR3): probe result. Remove with METHOD_SQLITE_PROBE.
-public nonisolated struct Provenance_Engine_V1_SqliteProbeResponse: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var ok: Bool = false
-
-  public var detail: String = String()
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate nonisolated let _protobuf_package = "provenance.engine.v1"
 
 nonisolated extension Provenance_Engine_V1_Method: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0METHOD_UNSPECIFIED\0\u{1}METHOD_PING\0\u{1}METHOD_GET_VERSION\0\u{1}METHOD_SQLITE_PROBE\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0METHOD_UNSPECIFIED\0\u{1}METHOD_PING\0\u{1}METHOD_GET_VERSION\0")
 }
 
 nonisolated extension Provenance_Engine_V1_PingRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
@@ -250,60 +218,6 @@ nonisolated extension Provenance_Engine_V1_GetVersionResponse: SwiftProtobuf.Mes
 
   public static func ==(lhs: Provenance_Engine_V1_GetVersionResponse, rhs: Provenance_Engine_V1_GetVersionResponse) -> Bool {
     if lhs.version != rhs.version {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Provenance_Engine_V1_SqliteProbeRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".SqliteProbeRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    // Load everything into unknown fields
-    while try decoder.nextFieldNumber() != nil {}
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Provenance_Engine_V1_SqliteProbeRequest, rhs: Provenance_Engine_V1_SqliteProbeRequest) -> Bool {
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Provenance_Engine_V1_SqliteProbeResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".SqliteProbeResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}ok\0\u{1}detail\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularBoolField(value: &self.ok) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.detail) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.ok != false {
-      try visitor.visitSingularBoolField(value: self.ok, fieldNumber: 1)
-    }
-    if !self.detail.isEmpty {
-      try visitor.visitSingularStringField(value: self.detail, fieldNumber: 2)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Provenance_Engine_V1_SqliteProbeResponse, rhs: Provenance_Engine_V1_SqliteProbeResponse) -> Bool {
-    if lhs.ok != rhs.ok {return false}
-    if lhs.detail != rhs.detail {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

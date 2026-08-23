@@ -1,6 +1,6 @@
 import SwiftUI
 
-// TEMPORARY (Spike 1 PR3): placeholder window that prints the Go core version and SQLite probe.
+// TEMPORARY (Spike 1 PR2): placeholder window that prints the Go core version.
 // Not a product screen. Remove with VersionSmokeModel when onboarding (PR7) lands.
 struct VersionSmokeView: View {
     @State private var model: VersionSmokeModel
@@ -18,10 +18,6 @@ struct VersionSmokeView: View {
             Text(model.versionText.isEmpty ? "…" : model.versionText)
                 .font(.title2)
                 .accessibilityIdentifier("versionSmoke.version")
-            // TEMPORARY (Spike 1 PR3): sqlite probe line. Remove with sqliteProbe().
-            Text(model.sqliteText.isEmpty ? "…" : model.sqliteText)
-                .font(.body)
-                .accessibilityIdentifier("versionSmoke.sqlite")
             if let errorText = model.errorText {
                 Text(errorText)
                     .foregroundStyle(.red)

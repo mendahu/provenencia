@@ -1,0 +1,13 @@
+---
+description: Catalog format is user_version SQL files, not timestamped web migrations
+globs: core/database/migrations/**,core/database/migrate.go,core/database/migrate_test.go
+alwaysApply: false
+---
+
+# Catalog migrations
+
+Follow the project skill `.cursor/skills/add-catalog-migration/SKILL.md`.
+
+- Next step = next six-digit file under `core/database/migrations/`. No CLI; `Open`/`Create` apply it.
+- Do not edit shipped `NNNNNN.sql`. Do not use timestamps. `user_version` is not product `VERSION`.
+- `go test ./core/database/` is the lint (names, gaps, empty SQL, embed matches init).

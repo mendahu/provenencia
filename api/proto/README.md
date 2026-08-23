@@ -33,7 +33,7 @@ Do not add per-field C getters.
 
 ## Rebuild the Mac library
 
-SQLite (`mattn/go-sqlite3`) is compiled into this dylib. **TEMPORARY (Spike 1 PR3):** `METHOD_SQLITE_PROBE` is a temp-file packaging check; remove it when PR4 create/open exists. There are still no Source tables or `provenance.sqlite` layout. After Go FFI changes:
+SQLite (`mattn/go-sqlite3`) is compiled into this dylib. Create/open of `*.provenance` catalogs lives in Go (`core/database`); there are no Create/Open RPCs yet and no Source tables. After Go FFI changes:
 
 ```sh
 ./scripts/build-macos-core.sh
