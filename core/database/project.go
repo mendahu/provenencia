@@ -1,3 +1,5 @@
+// Package database owns the *.provenance folder catalog (provenance.sqlite).
+// Identity files, FFI RPCs, and Source ingest do not live here.
 package database
 
 import (
@@ -17,7 +19,6 @@ const ApplicationID = 0x50524F56
 
 const (
 	catalogFile    = "provenance.sqlite"
-	formatVersion  = 1
 	projectSuffix  = ".provenance"
 	objectsDir     = "objects"
 	derivativesDir = "derivatives"
@@ -81,44 +82,6 @@ func mapLockErr(err error) error {
 		return ErrAlreadyOpen
 	}
 	return err
-}
-
-func migrate(db *sql.DB) error {
-	var ver int
-	if err := db.QueryRow(`PRAGMA user_version`).Scan(&ver); err != nil {
-		return err
-	}
-	if ver > formatVersion {
-		return fmt.Errorf("%w: %d", ErrUnsupportedVersion, ver)
-	}
-	if ver < 1 {
-		if _, err := db.Exec(`CREATE TABLE users (
-			id BLOB PRIMARY KEY,
-			display_name TEXT NOT NULL
-		) STRICT`); err != nil {
-			return err
-		}
-		if _, err := db.Exec(fmt.Sprintf(`PRAGMA user_version = %d`, formatVersion)); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func setApplicationID(db *sql.DB) error {
-	_, err := db.Exec(fmt.Sprintf(`PRAGMA application_id = %d`, ApplicationID))
-	return err
-}
-
-func checkApplicationID(db *sql.DB) error {
-	var id int
-	if err := db.QueryRow(`PRAGMA application_id`).Scan(&id); err != nil {
-		return err
-	}
-	if id != ApplicationID {
-		return ErrNotAProject
-	}
-	return nil
 }
 
 // Create writes a new *.provenance folder with an empty catalog and takes an exclusive lock.

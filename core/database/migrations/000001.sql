@@ -1,0 +1,4 @@
+CREATE TABLE users (
+	id BLOB PRIMARY KEY,
+	display_name TEXT NOT NULL
+) STRICT;
