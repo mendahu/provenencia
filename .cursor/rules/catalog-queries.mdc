@@ -1,0 +1,13 @@
+---
+description: Catalog table queries live in nested domain packages, not database/ root files
+globs: core/database/**/*.go
+alwaysApply: false
+---
+
+# Catalog query packages
+
+Follow the project skill `.cursor/skills/add-catalog-query/SKILL.md`.
+
+- One folder per domain: `core/database/<domain>/` (see `users/`). Functions take `*database.Catalog` and `DB()`.
+- Do not add per-table files to `core/database/` or methods on `Catalog`. Domain errors stay in the table package.
+- DDL still goes through catalog migrations, not query packages.
