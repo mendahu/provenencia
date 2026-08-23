@@ -1,30 +1,38 @@
 # Provenance
 
-Local-first genealogy software. Native macOS client over a shared Go core. Domain and stack notes live in [`docs/`](docs/). Mac UI patterns: [`docs/macos-client-patterns.md`](docs/macos-client-patterns.md). Product versioning: [`docs/versioning.md`](docs/versioning.md). Implementation milestones: [`docs/deployment-plan/`](docs/deployment-plan/).
+Local-first genealogy software. Native macOS client over a shared Go core. Domain and stack notes live in [`docs/`](docs/). Mac UI patterns: [`docs/macos-client-patterns.md`](docs/macos-client-patterns.md). Product versioning: [`docs/versioning.md`](docs/versioning.md). Implementation milestones: [`docs/deployment-plan/`](docs/deployment-plan/). FFI protobuf: [`api/proto/README.md`](api/proto/README.md).
 
 **Requires macOS 14 (Sonoma) or later.**
 
 ## Run the Mac app
 
 1. Install Xcode (this repo was last built with Xcode 26; any current Xcode that can target macOS 14 is fine).
-2. Open [`macos/Provenance.xcodeproj`](macos/Provenance.xcodeproj).
-3. Select the **Provenance** scheme and **My Mac**.
-4. Run (⌘R). You should get an empty window. There is no onboarding or database yet (Spike 1 PR1).
+2. If you changed Go FFI code, rebuild the embedded library: `./scripts/build-macos-core.sh`
+3. Open **[`macos/Provenance.xcodeproj`](macos/Provenance.xcodeproj)** (the file that ends in `.xcodeproj`). Do not open the `macos/App` folder; that is source, not the Xcode project. From Terminal: `open macos/Provenance.xcodeproj`
+4. Select the **Provenance** scheme and **My Mac**.
+5. Run (⌘R). The window should show the product version from Go (`VERSION` / `core.Version`, currently `0.0.0`). There is no onboarding or database yet.
 
 From the command line:
 
 ```sh
+./scripts/build-macos-core.sh
 xcodebuild -project macos/Provenance.xcodeproj -scheme Provenance -destination 'platform=macOS' build
 ```
 
+The first `xcodebuild` resolves the SwiftProtobuf package from GitHub.
+
 ## Go core
 
-The Go module is `github.com/mendahu/provenance`. It requires **Go 1.27** or later (`core/` is a stub until later PRs add protobuf FFI and SQLite).
+The Go module is `github.com/mendahu/provenance`. It requires **Go 1.27** or later.
 
 ```sh
-go test ./...
+go test ./api/... ./core/...
 ```
 
 PRs to `main` that are **not drafts** run this in GitHub Actions (`.github/workflows/go-test.yml`).
 
-The Mac app does not link the Go core yet.
+Regenerate protobuf (needs `protoc`, `protoc-gen-go`, `protoc-gen-swift`):
+
+```sh
+./scripts/generate-proto.sh
+```

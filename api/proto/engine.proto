@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package provenance.engine.v1;
+
+option go_package = "github.com/mendahu/provenance/api/proto/engine";
+
+// Method identifies the FFI operation. The C ABI is one call that takes this
+// discriminant plus a protobuf payload; it is not a per-field getter surface.
+enum Method {
+  METHOD_UNSPECIFIED = 0;
+  METHOD_PING = 1;
+  METHOD_GET_VERSION = 2;
+}
+
+message PingRequest {
+  string message = 1;
+}
+
+message PingResponse {
+  string message = 1;
+}
+
+message GetVersionRequest {}
+
+message GetVersionResponse {
+  string version = 1;
+}
