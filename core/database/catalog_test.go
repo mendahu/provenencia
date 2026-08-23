@@ -2,8 +2,10 @@ package database
 
 import (
 	"errors"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -126,6 +128,28 @@ func TestCreateOpen(t *testing.T) {
 			},
 		},
 		{
+			name: "create and reopen folder with query special chars",
+			run: func(t *testing.T, parent string) {
+				c, err := Create(parent, "Weird?Hash# Name.provenance")
+				if err != nil {
+					t.Fatal(err)
+				}
+				dir := c.Dir()
+				if err := c.Close(); err != nil {
+					t.Fatal(err)
+				}
+				c2, err := Open(dir)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer c2.Close()
+				var n int
+				if err := c2.db.QueryRow(`SELECT COUNT(*) FROM users`).Scan(&n); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
 			name: "second open fails then reopen after close",
 			run: func(t *testing.T, parent string) {
 				c, err := Create(parent, "Lock.provenance")
@@ -153,6 +177,43 @@ func TestCreateOpen(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			parent := t.TempDir()
 			tt.run(t, parent)
+		})
+	}
+}
+
+func TestDSN(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+	}{
+		{name: "question mark", path: "/tmp/foo?bar/provenance.sqlite"},
+		{name: "hash", path: "/tmp/foo#bar/provenance.sqlite"},
+		{name: "space", path: "/tmp/foo bar/provenance.sqlite"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := dsn(tt.path)
+			u, err := url.Parse(got)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if u.Scheme != "file" {
+				t.Fatalf("scheme %q", u.Scheme)
+			}
+			if u.Path != tt.path {
+				t.Fatalf("path %q want %q", u.Path, tt.path)
+			}
+			q := u.Query()
+			if q.Get("_busy_timeout") != "100" || q.Get("_foreign_keys") != "1" || q.Get("_journal_mode") != "WAL" {
+				t.Fatalf("query %v", q)
+			}
+			cut := strings.Index(got, "?")
+			if cut < 0 {
+				t.Fatal("missing query")
+			}
+			if strings.Contains(got[:cut], "?") {
+				t.Fatalf("unencoded ? in path %s", got)
+			}
 		})
 	}
 }
