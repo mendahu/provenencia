@@ -1,0 +1,44 @@
+---
+description: Prefer table-driven Go tests
+globs: "**/*_test.go"
+alwaysApply: false
+---
+
+# Go tests
+
+Use **table-driven** tests (`[]struct{ name string; ... }` + `t.Run(tt.name, ...)`).
+
+```go
+func TestFoo(t *testing.T) {
+	tests := []struct {
+		name    string
+		in      string
+		want    string
+		wantErr bool
+	}{
+		{name: "ok", in: "a", want: "A"},
+		{name: "empty", in: "", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := Foo(tt.in)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != tt.want {
+				t.Fatalf("got %q want %q", got, tt.want)
+			}
+		})
+	}
+}
+```
+
+- One `TestX` per behavior family, not `TestXSuccess` / `TestXEmpty` / `TestXError` as separate functions unless the setup cannot share a table.
+- Name rows so `go test -v` reads as a spec.
+- Keep `t.Helper()` on shared marshal/setup funcs.

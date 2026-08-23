@@ -8,44 +8,87 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func TestCallPing(t *testing.T) {
-	in, err := proto.Marshal(&engine.PingRequest{Message: "hello"})
-	if err != nil {
-		t.Fatal(err)
+func TestCall(t *testing.T) {
+	mustMarshal := func(m proto.Message) []byte {
+		t.Helper()
+		b, err := proto.Marshal(m)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return b
 	}
-	out, err := Call(MethodPing, in)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var resp engine.PingResponse
-	if err := proto.Unmarshal(out, &resp); err != nil {
-		t.Fatal(err)
-	}
-	if resp.GetMessage() != "hello" {
-		t.Fatalf("got %q", resp.GetMessage())
-	}
-}
 
-func TestCallGetVersion(t *testing.T) {
-	in, err := proto.Marshal(&engine.GetVersionRequest{})
-	if err != nil {
-		t.Fatal(err)
+	tests := []struct {
+		name    string
+		method  int32
+		in      []byte
+		wantErr bool
+		check   func(t *testing.T, out []byte)
+	}{
+		{
+			name:   "ping echoes message",
+			method: MethodPing,
+			in:     mustMarshal(&engine.PingRequest{Message: "hello"}),
+			check: func(t *testing.T, out []byte) {
+				var resp engine.PingResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				if resp.GetMessage() != "hello" {
+					t.Fatalf("got %q", resp.GetMessage())
+				}
+			},
+		},
+		{
+			name:   "ping echoes empty string",
+			method: MethodPing,
+			in:     mustMarshal(&engine.PingRequest{Message: ""}),
+			check: func(t *testing.T, out []byte) {
+				var resp engine.PingResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				if resp.GetMessage() != "" {
+					t.Fatalf("got %q", resp.GetMessage())
+				}
+			},
+		},
+		{
+			name:   "get version matches core.Version",
+			method: MethodGetVersion,
+			in:     mustMarshal(&engine.GetVersionRequest{}),
+			check: func(t *testing.T, out []byte) {
+				var resp engine.GetVersionResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				if resp.GetVersion() != core.Version {
+					t.Fatalf("got %q want %q", resp.GetVersion(), core.Version)
+				}
+			},
+		},
+		{
+			name:    "unknown method",
+			method:  99,
+			wantErr: true,
+		},
 	}
-	out, err := Call(MethodGetVersion, in)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var resp engine.GetVersionResponse
-	if err := proto.Unmarshal(out, &resp); err != nil {
-		t.Fatal(err)
-	}
-	if resp.GetVersion() != core.Version {
-		t.Fatalf("got %q want %q", resp.GetVersion(), core.Version)
-	}
-}
 
-func TestCallUnknownMethod(t *testing.T) {
-	if _, err := Call(99, nil); err == nil {
-		t.Fatal("expected error")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out, err := Call(tt.method, tt.in)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tt.check != nil {
+				tt.check(t, out)
+			}
+		})
 	}
 }
