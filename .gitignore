@@ -16,3 +16,4 @@ timeline.xctimeline
 playground.xcworkspace
 
 macos/Core/libprovenance.h
+macos/Core/libprovenance.dylib

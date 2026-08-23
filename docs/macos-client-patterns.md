@@ -17,7 +17,7 @@ Audience: someone comfortable with JavaScript and Go, new to Apple platforms.
 | `Features/Onboarding/` | File vs new, then contributor or names; home stub; relaunch uses active project. | `OnboardingView` |
 | `Resources/` | Assets, entitlements, bridging header | |
 
-The Go dylib stays in [`macos/Core/`](../macos/Core/) (build artifact), not inside the Swift source tree.
+The Go dylib is written to [`macos/Core/`](../macos/Core/) as a **build artifact** (gitignored). Do not commit `libprovenance.dylib`.
 
 Open **`macos/Provenance.xcodeproj`**, not `macos/App`. The latter is the source tree; it is not an Xcode project.
 
