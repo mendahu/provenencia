@@ -616,6 +616,10 @@ Accounts
 Identity
   local User (UUID + display name)
 
+Versioning
+  one SemVer product version (VERSION + core.Version + Xcode MARKETING_VERSION)
+  see docs/versioning.md; project format version is separate (SQLite user_version)
+
 Cloud
   none required initially
 ```
@@ -660,6 +664,7 @@ Settled:
 - **Locking:** one writer per project; second process refused. Multi-pane UI later, same engine (see §12).
 - **Identity:** install-local User UUID vs project `users`; adopt or mint on first open. Cloud maps onto that UUID later ([`user-identity-model.md`](user-identity-model.md)). OS profile is not the IdP.
 - **File display:** protobuf has relative paths + metadata only; Swift reads bytes from the project directory (§7).
+- **Versioning:** one product SemVer for all clients and the Go core ([`versioning.md`](versioning.md)). Project format (`user_version`) is separate.
 - **Build order:** implement only the use-cases needed for the current step. First FFI RPCs are Source-shaped (`OpenProject`, `CreateSource`, `IngestFile`, …). Person/GEDCOM verbs wait until that step exists. Adding a proto method later is expected; freezing a full ABI up front is not.
 
 **Deferred (post-MVP):** sync protocol, mutation/change-log format, server-side persistence, conflict-resolution semantics, Linux frontend, web frontend. They do not block the Source-layer prototype.

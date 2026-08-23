@@ -1,0 +1,15 @@
+---
+description: SwiftUI Mac client stays thin; testable models; Go owns domain
+globs: macos/**/*.swift
+alwaysApply: false
+---
+
+# macOS UI
+
+Full notes: `docs/macos-client-patterns.md`.
+
+- SwiftUI views describe UI only. Genealogy, SQLite, and identity stay in Go (FFI later).
+- Keep `body` cheap and free of I/O. Put validation and actions on a model; inject a `GenealogyStore` protocol with a `FakeStore` for tests and previews.
+- Prefer SwiftUI; wrap AppKit (panels, menus, `NSColor`) in small helpers.
+- If a control will be UI-tested, give it a stable `.accessibilityIdentifier`.
+- Do not add XCUITest for logic that `go test` already covers.
