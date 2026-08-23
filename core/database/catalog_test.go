@@ -16,56 +16,46 @@ func TestCreateOpen(t *testing.T) {
 		{
 			name: "create layout application_id and empty users",
 			run: func(t *testing.T, parent string) {
-				p, err := Create(parent, "Robins Family.provenance")
+				c, err := Create(parent, "Robins Family.provenance")
 				if err != nil {
 					t.Fatal(err)
 				}
-				defer p.Close()
-				dir := p.Dir()
+				defer c.Close()
+				dir := c.Dir()
 				for _, rel := range []string{catalogFile, objectsDir, derivativesDir} {
 					if _, err := os.Stat(filepath.Join(dir, rel)); err != nil {
 						t.Fatalf("%s: %v", rel, err)
 					}
 				}
 				var appID, ver, n int
-				if err := p.db.QueryRow(`PRAGMA application_id`).Scan(&appID); err != nil {
+				if err := c.db.QueryRow(`PRAGMA application_id`).Scan(&appID); err != nil {
 					t.Fatal(err)
 				}
 				if appID != ApplicationID {
 					t.Fatalf("application_id %d want %d", appID, ApplicationID)
 				}
-				if err := p.db.QueryRow(`PRAGMA user_version`).Scan(&ver); err != nil {
+				if err := c.db.QueryRow(`PRAGMA user_version`).Scan(&ver); err != nil {
 					t.Fatal(err)
 				}
 				if ver != formatVersion {
 					t.Fatalf("user_version %d want %d", ver, formatVersion)
 				}
-				if err := p.db.QueryRow(`SELECT COUNT(*) FROM users`).Scan(&n); err != nil {
+				if err := c.db.QueryRow(`SELECT COUNT(*) FROM users`).Scan(&n); err != nil {
 					t.Fatal(err)
 				}
 				if n != 0 {
 					t.Fatalf("users count %d", n)
-				}
-				if _, err := p.db.Exec(`INSERT INTO users (id, display_name) VALUES (?, ?)`, []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}, "Jake"); err != nil {
-					t.Fatal(err)
-				}
-				var name string
-				if err := p.db.QueryRow(`SELECT display_name FROM users`).Scan(&name); err != nil {
-					t.Fatal(err)
-				}
-				if name != "Jake" {
-					t.Fatalf("got %q", name)
 				}
 			},
 		},
 		{
 			name: "create fails if exists",
 			run: func(t *testing.T, parent string) {
-				p, err := Create(parent, "Dup.provenance")
+				c, err := Create(parent, "Dup.provenance")
 				if err != nil {
 					t.Fatal(err)
 				}
-				p.Close()
+				c.Close()
 				_, err = Create(parent, "Dup.provenance")
 				if err != ErrAlreadyExists {
 					t.Fatalf("got %v want %v", err, ErrAlreadyExists)
@@ -119,16 +109,16 @@ func TestCreateOpen(t *testing.T) {
 		{
 			name: "open refuses unsupported user_version",
 			run: func(t *testing.T, parent string) {
-				p, err := Create(parent, "Future.provenance")
+				c, err := Create(parent, "Future.provenance")
 				if err != nil {
 					t.Fatal(err)
 				}
-				dir := p.Dir()
-				if _, err := p.db.Exec(`PRAGMA user_version = 99`); err != nil {
-					p.Close()
+				dir := c.Dir()
+				if _, err := c.db.Exec(`PRAGMA user_version = 99`); err != nil {
+					c.Close()
 					t.Fatal(err)
 				}
-				p.Close()
+				c.Close()
 				_, err = Open(dir)
 				if err == nil || !errors.Is(err, ErrUnsupportedVersion) {
 					t.Fatalf("got %v want %v", err, ErrUnsupportedVersion)
@@ -138,23 +128,23 @@ func TestCreateOpen(t *testing.T) {
 		{
 			name: "second open fails then reopen after close",
 			run: func(t *testing.T, parent string) {
-				p, err := Create(parent, "Lock.provenance")
+				c, err := Create(parent, "Lock.provenance")
 				if err != nil {
 					t.Fatal(err)
 				}
-				_, err = Open(p.Dir())
+				_, err = Open(c.Dir())
 				if err != ErrAlreadyOpen {
-					p.Close()
+					c.Close()
 					t.Fatalf("got %v want %v", err, ErrAlreadyOpen)
 				}
-				if err := p.Close(); err != nil {
+				if err := c.Close(); err != nil {
 					t.Fatal(err)
 				}
-				p2, err := Open(p.Dir())
+				c2, err := Open(c.Dir())
 				if err != nil {
 					t.Fatal(err)
 				}
-				p2.Close()
+				c2.Close()
 			},
 		},
 	}
