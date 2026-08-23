@@ -17,6 +17,7 @@ From the command line:
 ```sh
 ./scripts/build-macos-core.sh
 xcodebuild -project macos/Provenance.xcodeproj -scheme Provenance -destination 'platform=macOS' build
+xcodebuild test -project macos/Provenance.xcodeproj -scheme Provenance -destination 'platform=macOS'
 ```
 
 The first `xcodebuild` resolves the SwiftProtobuf package from GitHub.

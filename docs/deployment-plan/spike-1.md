@@ -183,7 +183,7 @@ From a code review of the Spike 1 codebase (Go core, FFI layer, Swift client). O
 
 - **H1 — Fix the SQLite DSN path bug and harden folder-name sanitization.** Done. `dsn()` builds a `file:` URL so `?`/`#` in paths stay in the filename; `FolderName` also replaces Windows-reserved basename characters (`*?"<>|`).
 - **H2 — Fix side-effect ordering and silent identity replacement in `onboarding.Open`.** Done. Identity is written only after a successful catalog open; adopt of a different catalog UUID replaces `identity.json` (tested).
-- **H3 — Add a Swift unit test target for `OnboardingModel`.** Swift coverage is zero while `OnboardingModel` carries the launch matrix (identity × active pointer × valid dir), the two-screen flow, adopt preselection, and sign-out — all testable against `FakeStore` with injected `OnboardingFolders`. Annotate `OnboardingModel` with `@MainActor` as part of this.
+- **H3 — Add a Swift unit test target for `OnboardingModel`.** Done. Unit target + `OnboardingModel` / `InstallPaths` coverage via `FakeStore`.
 - **H4 — Validate the active project as a catalog, not just a directory.** `InstallPaths.isProjectDirectory` only checks “is a directory,” so a stale folder whose `provenance.sqlite` was deleted still lands on home. Also require `provenance.sqlite` to exist.
 - **H5 — Stop growing the repo by ~14 MB per dylib rebuild.** `macos/Core/libprovenance.dylib` is committed and rebuilt on every FFI change. Prefer an Xcode run-script build phase invoking `scripts/build-macos-core.sh` (drop the binary from git); Git LFS is the fallback.
 

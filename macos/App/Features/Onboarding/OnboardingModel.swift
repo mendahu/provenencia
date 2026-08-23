@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 
+@MainActor
 @Observable
 final class OnboardingModel {
     enum Phase {
@@ -10,11 +11,9 @@ final class OnboardingModel {
         case home
     }
 
-    enum Mode: String, CaseIterable, Identifiable {
+    enum Mode: String {
         case create
         case open
-
-        var id: String { rawValue }
     }
 
     /// Empty string means “add a new contributor.”
@@ -120,10 +119,10 @@ final class OnboardingModel {
         phase = .chooseFile
     }
 
-    func selectMode(_ mode: Mode) {
+    func selectMode(_ mode: Mode) async {
         self.mode = mode
         if mode == .open {
-            Task { await refreshDocumentsProjects() }
+            await refreshDocumentsProjects()
         }
     }
 
