@@ -19,7 +19,7 @@ description: >-
 
 `dispatch_test.go` stays router-only (unspecified / unknown method).
 
-After C ABI or handler behavior changes that ship in the dylib: `./scripts/build-macos-core.sh`.
+After C ABI or handler behavior changes, the next Mac app build regenerates `macos/Core/libprovenance.dylib` (do not commit it). You can also run `./scripts/build-macos-core.sh`.
 
 ## Handler tests (`runRPC`)
 

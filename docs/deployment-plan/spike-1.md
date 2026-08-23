@@ -185,7 +185,7 @@ From a code review of the Spike 1 codebase (Go core, FFI layer, Swift client). O
 - **H2 — Fix side-effect ordering and silent identity replacement in `onboarding.Open`.** Done. Identity is written only after a successful catalog open; adopt of a different catalog UUID replaces `identity.json` (tested).
 - **H3 — Add a Swift unit test target for `OnboardingModel`.** Done. Unit target + `OnboardingModel` / `InstallPaths` coverage via `FakeStore`.
 - **H4 — Validate the active project as a catalog, not just a directory.** Done. `isProjectDirectory` / picker require `provenance.sqlite` to exist (no DB open).
-- **H5 — Stop growing the repo by ~14 MB per dylib rebuild.** `macos/Core/libprovenance.dylib` is committed and rebuilt on every FFI change. Prefer an Xcode run-script build phase invoking `scripts/build-macos-core.sh` (drop the binary from git); Git LFS is the fallback.
+- **H5 — Stop growing the repo by ~14 MB per dylib rebuild.** Done. Dylib gitignored; Xcode + CI build via `scripts/build-macos-core.sh`.
 
 ### Medium value
 

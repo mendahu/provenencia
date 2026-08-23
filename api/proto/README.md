@@ -33,10 +33,6 @@ Do not add per-field C getters.
 
 ## Rebuild the Mac library
 
-SQLite (`mattn/go-sqlite3`) is compiled into this dylib. Identity and session RPCs take directory paths in protobuf (caller supplies Application Support / Documents; Go does not hardcode them). There are no Source tables. After Go FFI changes:
+SQLite (`mattn/go-sqlite3`) is compiled into this dylib. Identity and session RPCs take directory paths in protobuf (caller supplies Application Support / Documents; Go does not hardcode them). There are no Source tables.
 
-```sh
-./scripts/build-macos-core.sh
-```
-
-That writes a universal (`arm64` + `x86_64`) `macos/Core/libprovenance.dylib` with install name `@rpath/libprovenance.dylib` and `MACOSX_DEPLOYMENT_TARGET=14.0` for the Xcode target to embed.
+Building the Mac app (⌘R or `xcodebuild`) runs [`scripts/build-macos-core.sh`](../../scripts/build-macos-core.sh). You can run that script from a terminal too. It writes a universal (`arm64` + `x86_64`) `macos/Core/libprovenance.dylib` with install name `@rpath/libprovenance.dylib` and `MACOSX_DEPLOYMENT_TARGET=14.0`. **Do not commit the dylib.**
