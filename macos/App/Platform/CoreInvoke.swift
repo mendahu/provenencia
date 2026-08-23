@@ -1,4 +1,5 @@
 import Foundation
+import SwiftProtobuf
 
 enum CoreInvokeError: Error {
     case failed(Int32, message: String)
@@ -45,4 +46,14 @@ func provenanceInvoke(method: Int32, request: Data) throws -> Data {
         return Data()
     }
     return Data(bytes: outPtr, count: outLen)
+}
+
+func provenanceCall<Request: Message & Sendable, Response: Message & Sendable>(
+    method: Int32,
+    request: Request
+) async throws -> Response {
+    try await Task.detached {
+        let out = try provenanceInvoke(method: method, request: try request.serializedData())
+        return try Response(serializedBytes: out)
+    }.value
 }
