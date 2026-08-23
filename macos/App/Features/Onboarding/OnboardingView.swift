@@ -30,12 +30,12 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Welcome to Provenance")
                 .font(.title2)
-            Text("Your name is the contributor identity. The family name labels this project folder.")
+            Text("Your researcher name is how work is attributed. The family name labels this project folder.")
                 .foregroundStyle(.secondary)
-            TextField("Your name", text: $model.displayName)
+            TextField("Researcher name", text: $model.displayName, prompt: Text("Jane Smith"))
                 .textFieldStyle(.roundedBorder)
                 .accessibilityIdentifier("onboarding.displayName")
-            TextField("Family / project name", text: $model.familyName)
+            TextField("Family / project name", text: $model.familyName, prompt: Text("Smith Family"))
                 .textFieldStyle(.roundedBorder)
                 .accessibilityIdentifier("onboarding.familyName")
             if let errorText = model.errorText {

@@ -10,7 +10,7 @@ Local-first genealogy software. Native macOS client over a shared Go core. Domai
 2. If you changed Go FFI code, rebuild the embedded library: `./scripts/build-macos-core.sh`
 3. Open **[`macos/Provenance.xcodeproj`](macos/Provenance.xcodeproj)** (the file that ends in `.xcodeproj`). Do not open the `macos/App` folder; that is source, not the Xcode project. From Terminal: `open macos/Provenance.xcodeproj`
 4. Select the **Provenance** scheme and **My Mac**.
-5. Run (⌘R). First launch asks for **your name** and a **family / project name**, then writes `~/Library/Application Support/Provenance/identity.json` and `{Name}.provenance` under Documents. A later launch skips the form if that identity file exists. Last-project reopen is spike PR9.
+5. Run (⌘R). First launch asks for **researcher name** and a **family / project name**, then writes `~/Library/Application Support/Provenance/identity.json` and `{Name}.provenance` under Documents. A later launch skips the form if that identity file exists. Last-project reopen is spike PR9.
 
 From the command line:
 
