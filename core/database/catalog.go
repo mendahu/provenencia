@@ -5,7 +5,7 @@ package database
 import (
 	"database/sql"
 	"errors"
-	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -36,7 +36,16 @@ func (c *Catalog) Dir() string {
 }
 
 func dsn(sqlitePath string) string {
-	return fmt.Sprintf("file:%s?_busy_timeout=100&_foreign_keys=1&_journal_mode=WAL", sqlitePath)
+	u := url.URL{
+		Scheme: "file",
+		Path:   filepath.ToSlash(sqlitePath),
+	}
+	q := url.Values{}
+	q.Set("_busy_timeout", "100")
+	q.Set("_foreign_keys", "1")
+	q.Set("_journal_mode", "WAL")
+	u.RawQuery = q.Encode()
+	return u.String()
 }
 
 func catalogPath(dir string) string {

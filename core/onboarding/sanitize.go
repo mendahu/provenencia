@@ -15,7 +15,7 @@ func FolderName(familyName string) (string, error) {
 	var b strings.Builder
 	for _, r := range s {
 		switch r {
-		case 0, '/', '\\', ':':
+		case 0, '/', '\\', ':', '*', '?', '"', '<', '>', '|':
 			b.WriteByte('-')
 		default:
 			b.WriteRune(r)
