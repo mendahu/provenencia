@@ -12,4 +12,5 @@ Full notes: `docs/macos-client-patterns.md`.
 - Keep `body` cheap and free of I/O. Put validation and actions on a model; inject a `GenealogyStore` protocol with a `FakeStore` for tests and previews.
 - Prefer SwiftUI; wrap AppKit (panels, menus, `NSColor`) in small helpers.
 - If a control will be UI-tested, give it a stable `.accessibilityIdentifier`.
-- Do not add XCUITest for logic that `go test` already covers.
+- Put new screens under `macos/App/Features/<Feature>/` (view + model together). FFI/store types stay in `Platform/`. Do not add more files to a flat target root.
+- `Features/VersionSmoke/` is a temporary FFI probe; do not grow product UI there.
