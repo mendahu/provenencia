@@ -1,6 +1,6 @@
 # Provenance
 
-Local-first genealogy software. Native macOS client over a shared Go core. Domain and stack notes live in [`docs/`](docs/). Product versioning: [`docs/versioning.md`](docs/versioning.md). Implementation milestones: [`docs/deployment-plan/`](docs/deployment-plan/).
+Local-first genealogy software. Native macOS client over a shared Go core. Domain and stack notes live in [`docs/`](docs/). Mac UI patterns: [`docs/macos-client-patterns.md`](docs/macos-client-patterns.md). Product versioning: [`docs/versioning.md`](docs/versioning.md). Implementation milestones: [`docs/deployment-plan/`](docs/deployment-plan/).
 
 **Requires macOS 14 (Sonoma) or later.**
 
@@ -24,5 +24,7 @@ The Go module is `github.com/mendahu/provenance`. It requires **Go 1.27** or lat
 ```sh
 go test ./...
 ```
+
+PRs to `main` that are **not drafts** run this in GitHub Actions (`.github/workflows/go-test.yml`).
 
 The Mac app does not link the Go core yet.
