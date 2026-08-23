@@ -7,6 +7,7 @@ enum CoreInvokeError: Error {
 enum CoreMethod {
     static let ping = Int32(Provenance_Engine_V1_Method.ping.rawValue)
     static let getVersion = Int32(Provenance_Engine_V1_Method.getVersion.rawValue)
+    static let sqliteProbe = Int32(Provenance_Engine_V1_Method.sqliteProbe.rawValue)
 }
 
 func provenanceInvoke(method: Int32, request: Data) throws -> Data {

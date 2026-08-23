@@ -16,4 +16,6 @@ jobs:
           go-version-file: go.mod
           cache: true
       - name: Run unit tests
+        env:
+          CGO_ENABLED: "1"
         run: go test ./api/... ./core/...

@@ -9,4 +9,8 @@ struct FakeStore: GenealogyStore {
     func version() async throws -> String {
         "0.0.0"
     }
+
+    func sqliteProbe() async throws -> (ok: Bool, detail: String) {
+        (true, "fake")
+    }
 }

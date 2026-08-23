@@ -10,6 +10,7 @@ enum Method {
   METHOD_UNSPECIFIED = 0;
   METHOD_PING = 1;
   METHOD_GET_VERSION = 2;
+  METHOD_SQLITE_PROBE = 3;
 }
 
 message PingRequest {
@@ -24,4 +25,11 @@ message GetVersionRequest {}
 
 message GetVersionResponse {
   string version = 1;
+}
+
+message SqliteProbeRequest {}
+
+message SqliteProbeResponse {
+  bool ok = 1;
+  string detail = 2;
 }

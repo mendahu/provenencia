@@ -10,7 +10,7 @@ Local-first genealogy software. Native macOS client over a shared Go core. Domai
 2. If you changed Go FFI code, rebuild the embedded library: `./scripts/build-macos-core.sh`
 3. Open **[`macos/Provenance.xcodeproj`](macos/Provenance.xcodeproj)** (the file that ends in `.xcodeproj`). Do not open the `macos/App` folder; that is source, not the Xcode project. From Terminal: `open macos/Provenance.xcodeproj`
 4. Select the **Provenance** scheme and **My Mac**.
-5. Run (⌘R). The window should show the product version from Go (`VERSION` / `core.Version`, currently `0.0.0`). There is no onboarding or database yet.
+5. Run (⌘R). The window should show the product version from Go (`VERSION` / `core.Version`, currently `0.0.0`) and a SQLite probe result. There is no project database or onboarding yet.
 
 From the command line:
 

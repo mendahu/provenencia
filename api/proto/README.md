@@ -33,7 +33,7 @@ Do not add per-field C getters.
 
 ## Rebuild the Mac library
 
-No SQLite in this library yet (Spike 1 PR3). After Go FFI changes:
+SQLite (`mattn/go-sqlite3`) is compiled into this dylib. Spike 1 PR3 only exposes a temp-file probe (`METHOD_SQLITE_PROBE`); there are still no Source tables or `provenance.sqlite` layout. After Go FFI changes:
 
 ```sh
 ./scripts/build-macos-core.sh
