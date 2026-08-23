@@ -132,6 +132,8 @@ The stack already calls this out: **cgo SQLite inside a Go xcframework loaded by
 
 ## PR sequence
 
+PR1 is done (repo scaffold: Go module + blank macOS 14 SwiftUI app). Remaining PRs are unchecked.
+
 Small, reviewable chunks. Each PR should leave `main` buildable. Later PRs may add UI on a stub that the next PR fills in.
 
 ```text
@@ -149,7 +151,7 @@ PR5 can start once PR3 proves the dylib; it should not land identity writes that
 
 | PR | Title | Does | Depends on | Notes |
 | --- | --- | --- | --- | --- |
-| **1** | Repository scaffold | `go.mod`, empty `core/` / `api/proto/` / `cmd/` / `macos/` Xcode (or SPM) app that launches a blank window. README: how to open and run on a Mac. | — | No genealogy yet. |
+| **1** | Repository scaffold | Done. `go.mod`, stub `core/` / `api/proto/` / `cmd/` / `macos/` Xcode app (macOS 14) that launches a blank window. README: how to open and run on a Mac. | — | No genealogy yet. |
 | **2** | Proto + FFI hello | One `.proto`, codegen, Swift calls `Ping` / `GetVersion`, Go returns a string. Document `protoc` plugins. | 1 | Proves the boundary before SQLite. |
 | **3** | SQLite-in-dylib spike | Go opens a temp or fixture `.sqlite` via mattn/cgo, writes a row, Swift triggers it and reads success. CI or a local script that builds the xcframework. | 2 | **Gate.** If this fails, choose fallback before continuing. |
 | **4** | Project format + `users` | Create/open `*.provenance` directory; `provenance.sqlite`; set `application_id`; migrations; `users` table; exclusive open. Go tests, no Swift UI required. Optional tiny CLI in `cmd/` for create. | 3 | Schema: only what Spike 1 needs. Refuse foreign catalogs. |
