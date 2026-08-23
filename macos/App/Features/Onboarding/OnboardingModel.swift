@@ -5,9 +5,20 @@ import Observation
 final class OnboardingModel {
     enum Phase {
         case loading
-        case form
+        case chooseFile
+        case identify
         case home
     }
+
+    enum Mode: String, CaseIterable, Identifiable {
+        case create
+        case open
+
+        var id: String { rawValue }
+    }
+
+    /// Empty string means “add a new contributor.”
+    static let newContributorID = ""
 
     var displayName = ""
     var familyName = ""
@@ -16,8 +27,13 @@ final class OnboardingModel {
     var phase: Phase = .loading
     var sessionDisplayName = ""
     var projectBasename = ""
-    /// True when identity.json loaded; researcher name is not collected again.
     var researcherLocked = false
+    var identityUserID = ""
+    var mode: Mode = .create
+    var availableProjects: [URL] = []
+    var selectedProject: URL?
+    var catalogUsers: [InstallIdentity] = []
+    var selectedContributorID: String = newContributorID
 
     private let store: any GenealogyStore
     private let folders: OnboardingFolders?
@@ -28,33 +44,55 @@ final class OnboardingModel {
     }
 
     var canContinue: Bool {
-        let familyOK = !trimmed(familyName).isEmpty
-        let nameOK = researcherLocked || !trimmed(displayName).isEmpty
-        return nameOK && familyOK && !isBusy
+        guard !isBusy else {
+            return false
+        }
+        switch phase {
+        case .chooseFile:
+            return mode == .create || selectedProject != nil
+        case .identify:
+            if mode == .create {
+                let nameOK = researcherLocked || !trimmed(displayName).isEmpty
+                return nameOK && !trimmed(familyName).isEmpty
+            }
+            if selectedContributorID == Self.newContributorID {
+                return researcherLocked || !trimmed(displayName).isEmpty
+            }
+            return catalogUsers.contains { $0.userID == selectedContributorID }
+        default:
+            return false
+        }
     }
 
     func load() async {
         errorText = nil
         researcherLocked = false
+        identityUserID = ""
+        selectedProject = nil
+        catalogUsers = []
         do {
-            let loc = try resolvedFolders()
-            let projects = try InstallPaths.provenanceProjects(in: loc.documentsDirectory)
-            if let id = try await store.installIdentity(identityDir: loc.identityDirectory.path) {
+            let identityDir = try identityDir()
+            if let id = try await store.installIdentity(identityDir: identityDir.path) {
                 sessionDisplayName = id.displayName
                 displayName = id.displayName
+                identityUserID = id.userID
                 researcherLocked = true
-                if projects.isEmpty {
-                    phase = .form
-                } else {
-                    projectBasename = ""
-                    phase = .home
+                if let active = try await store.activeProject(identityDir: identityDir.path) {
+                    if InstallPaths.isProjectDirectory(active) {
+                        projectBasename = URL(fileURLWithPath: active).lastPathComponent
+                        phase = .home
+                        return
+                    }
+                    try await store.removeActiveProject(identityDir: identityDir.path)
+                    errorText = "The last project could not be found. Create or open a project."
                 }
+                phase = .chooseFile
                 return
             }
-            phase = .form
+            phase = .chooseFile
         } catch {
             errorText = error.localizedDescription
-            phase = .form
+            phase = .chooseFile
         }
     }
 
@@ -62,6 +100,101 @@ final class OnboardingModel {
         guard canContinue else {
             return
         }
+        switch phase {
+        case .chooseFile:
+            await goToIdentify()
+        case .identify:
+            if mode == .create {
+                await createProject()
+            } else if let selectedProject {
+                await open(selectedProject)
+            }
+        default:
+            break
+        }
+    }
+
+    func goBack() {
+        errorText = nil
+        catalogUsers = []
+        phase = .chooseFile
+    }
+
+    func selectMode(_ mode: Mode) {
+        self.mode = mode
+        if mode == .open {
+            Task { await refreshDocumentsProjects() }
+        }
+    }
+
+    func choose(_ url: URL) {
+        selectedProject = url
+        if !availableProjects.contains(where: { $0.path == url.path }) {
+            availableProjects.append(url)
+        }
+        mode = .open
+    }
+
+    func signOut() async {
+        isBusy = true
+        errorText = nil
+        defer { isBusy = false }
+        do {
+            let identityDir = try identityDir()
+            try await store.removeActiveProject(identityDir: identityDir.path)
+            try await store.removeInstallIdentity(identityDir: identityDir.path)
+            displayName = ""
+            familyName = ""
+            sessionDisplayName = ""
+            projectBasename = ""
+            identityUserID = ""
+            researcherLocked = false
+            selectedProject = nil
+            catalogUsers = []
+            selectedContributorID = Self.newContributorID
+            availableProjects = []
+            mode = .create
+            phase = .chooseFile
+        } catch {
+            errorText = error.localizedDescription
+        }
+    }
+
+    private func refreshDocumentsProjects() async {
+        do {
+            let loc = try resolvedFolders()
+            availableProjects = try InstallPaths.provenanceProjects(in: loc.documentsDirectory)
+        } catch {
+            errorText = error.localizedDescription
+        }
+    }
+
+    private func goToIdentify() async {
+        if mode == .create {
+            selectedContributorID = Self.newContributorID
+            phase = .identify
+            return
+        }
+        guard let selectedProject else {
+            return
+        }
+        isBusy = true
+        errorText = nil
+        defer { isBusy = false }
+        do {
+            catalogUsers = try await store.listProjectUsers(projectDir: selectedProject.path)
+            if !identityUserID.isEmpty, catalogUsers.contains(where: { $0.userID == identityUserID }) {
+                selectedContributorID = identityUserID
+            } else {
+                selectedContributorID = Self.newContributorID
+            }
+            phase = .identify
+        } catch {
+            errorText = error.localizedDescription
+        }
+    }
+
+    private func createProject() async {
         isBusy = true
         errorText = nil
         defer { isBusy = false }
@@ -73,30 +206,44 @@ final class OnboardingModel {
                 displayName: trimmed(displayName),
                 familyName: trimmed(familyName)
             )
-            sessionDisplayName = result.displayName
-            projectBasename = URL(fileURLWithPath: result.projectDir).lastPathComponent
-            phase = .home
+            applyOpened(result)
         } catch {
             errorText = error.localizedDescription
         }
     }
 
-    func signOut() async {
+    private func open(_ url: URL) async {
         isBusy = true
         errorText = nil
         defer { isBusy = false }
         do {
             let loc = try resolvedFolders()
-            try await store.removeInstallIdentity(identityDir: loc.identityDirectory.path)
-            displayName = ""
-            familyName = ""
-            sessionDisplayName = ""
-            projectBasename = ""
-            researcherLocked = false
-            phase = .form
+            let adopt = selectedContributorID == Self.newContributorID ? "" : selectedContributorID
+            let result = try await store.openProject(
+                identityDir: loc.identityDirectory.path,
+                projectDir: url.path,
+                displayName: trimmed(displayName),
+                adoptUserID: adopt
+            )
+            applyOpened(result)
         } catch {
             errorText = error.localizedDescription
         }
+    }
+
+    private func applyOpened(_ result: OnboardingResult) {
+        sessionDisplayName = result.displayName
+        projectBasename = URL(fileURLWithPath: result.projectDir).lastPathComponent
+        researcherLocked = true
+        displayName = result.displayName
+        phase = .home
+    }
+
+    private func identityDir() throws -> URL {
+        if let folders {
+            return folders.identityDirectory
+        }
+        return try OnboardingFolders.liveIdentity()
     }
 
     private func resolvedFolders() throws -> OnboardingFolders {

@@ -62,6 +62,32 @@ func TestUpsert(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "list empty then two",
+			run: func(t *testing.T, c *database.Catalog) {
+				got, err := List(c)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(got) != 0 {
+					t.Fatalf("got %d", len(got))
+				}
+				id2 := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
+				if err := Upsert(c, id2, "Ann"); err != nil {
+					t.Fatal(err)
+				}
+				if err := Upsert(c, id, "Jake"); err != nil {
+					t.Fatal(err)
+				}
+				got, err = List(c)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(got) != 2 || got[0].DisplayName != "Ann" || got[1].DisplayName != "Jake" {
+					t.Fatalf("%+v", got)
+				}
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -10,17 +10,16 @@ Authoritative models: [`application-stack.md`](../application-stack.md), [`user-
 
 ## Goal
 
-A new researcher launches the macOS app with no cloud account. The app asks who they are (contributor) and what to call this research (project / family name), mints a contributor identity, writes it on the machine, and creates a named project folder.
+A new researcher launches the macOS app with no cloud account. The app asks whether they already have a project, then either mints a contributor or adopts one from an existing file, writes identity on the machine, and opens or creates a named project folder.
 
 ```text
 Launch
-  → no install identity yet
-  → ask display name (person)
-  → ask project / family name (this file)
-  → mint UUIDv7 User
+  → have a file already? / create new
+  → create: display name + family name → mint User
+  → open: list users in the catalog → adopt that UUID or mint a new one
   → write identity file (Application Support)
-  → create {Family Name}.provenance on local disk
-  → insert users row in provenance.sqlite
+  → create or open {Family Name}.provenance
+  → users row matches identity
   → idle “you’re in” screen
 ```
 
@@ -38,14 +37,13 @@ That is enough to prove the stack: SwiftUI → protobuf FFI → Go core → SQLi
 - Install-local identity file in Application Support (outside the project). Same UUID reused for later projects.
 - First-run UI: collect **your name** (contributor display name) and a **project / family name** (this document). No email, password, or login.
 - Create a first project as part of onboarding. Default parent: Documents. Folder basename is the project name plus `.provenance` (for example `Robins Family.provenance`).
-- Returning launch: if the identity file exists, skip the name prompt and open (or offer to open) the last project.
+- Returning launch: if an active project is stored and still on disk, skip the picker and open it. Identity plus folders in Documents is not enough.
 - Developer path: `open` the Xcode project / run the Mac target and talk to a live Go core and SQLite file on this machine.
 
 ## Out of scope (later spikes / MVP)
 
 - Source catalog, file ingest, Interpretation, Conclusion, GEDCOM, search, merge, sync, cloud accounts.
 - Full audit/revision tables and `create_project` as an audited revision. Spike 1 may insert `users` without a complete audit log; the next spike that mutates research data should add audit before those writes.
-- “That’s not me” / adopt-existing-user when opening someone else’s copied folder. First-run **mint** only. Mismatch UX is the natural follow-on once create/open is real.
 - Windows, Linux, web, CLI product commands (a tiny Go test binary for the core is fine).
 - App Sandbox polish, notarization, Sparkle, icons-as-document-package beyond “it is a folder.”
 - Encryption, iCloud/Dropbox/SMB as working copy (still refused if we detect it; no need to over-build the detector).
@@ -57,13 +55,13 @@ That is enough to prove the stack: SwiftUI → protobuf FFI → Go core → SQLi
 ### Product
 
 1. No network and no account to use the app.
-2. First launch with no identity file: prompt for **your name** and a **project / family name**. Empty/whitespace values are rejected. These are two different fields.
+2. First launch with no identity file: ask whether they already have a project or want a new one. Then either collect **your name** and a **project / family name**, or list contributors in the opened file so they can adopt an existing `users.id` or mint a new one. Empty/whitespace names are rejected.
 3. Confirming creates:
    - a UUIDv7 contributor id;
    - an identity file in Application Support for this install (your name + UUID only — not the project name);
    - a project directory `{sanitized family name}.provenance` with `provenance.sqlite`;
    - a `users` row with that id and display name.
-4. Quit and relaunch: do not ask for your name again; the same UUID is used. Reopen the last project when PR9 exists.
+4. Quit and relaunch: do not ask for your name again; the same UUID is used. Reopen the last project when an active-project pointer exists.
 5. Display name is attribution text, not a login. It need not be unique.
 6. Project / family name labels **this file** in Finder and the window title. It is not the User identity. Spike 1 does not need a separate title table: the folder basename is the name. Renaming the project later can be a Finder rename or a later use-case.
 7. Sanitize the folder name for the filesystem (`/`, `:`, leading dots, etc.). If `{Name}.provenance` already exists in the chosen parent, fail with a clear error (do not silently overwrite).
@@ -105,9 +103,8 @@ Go opens SQLite with WAL, busy timeout, `PRAGMA foreign_keys = ON`, tiny connect
 
 Coarse use-cases only, for example:
 
-- `GetInstallIdentity` / `EnsureInstallIdentity` (or equivalent)
-- `CreateProject` (parent path + project/family name → `{name}.provenance`)
-- `OpenProject`
+- `GetInstallIdentity` / `CompleteOnboarding`
+- `OpenProject` / `GetActiveProject` / `RemoveActiveProject`
 - `GetCurrentUser`
 
 No Source RPCs. File bytes never in protobuf.
@@ -120,7 +117,7 @@ Jake can, on his MacBook, without a server:
 2. Launch, enter your name and a family/project name, finish onboarding.
 3. Find the identity file on disk with a UUID and **your** name.
 4. Find `{Family Name}.provenance` (e.g. under Documents) and open `provenance.sqlite` to see the matching `users` row.
-5. Relaunch and land past onboarding as that same user.
+5. Relaunch and land past onboarding as that same user when an active project is stored.
 
 ---
 
@@ -132,7 +129,7 @@ The stack already calls this out: **cgo SQLite inside a Go xcframework loaded by
 
 ## PR sequence
 
-PR1–PR8 are done. Remaining PR (9) is unchecked.
+PR1–PR9 are done.
 
 Small, reviewable chunks. Each PR should leave `main` buildable. Later PRs may add UI on a stub that the next PR fills in.
 
@@ -145,7 +142,7 @@ PR1 repo scaffold
                  │    └─ PR6 onboarding use-case (person + family name → identity + project) (done)
                  │         └─ PR7 FFI GetInstallIdentity + CompleteOnboarding (done)
                  │              └─ PR8 SwiftUI first-run + Application Support path + returning launch (done)
-                 └─ PR9 (optional same milestone) last-project pointer / reopen
+                 └─ PR9 last-project pointer / reopen (done)
 ```
 
 PR5 can start once PR3 proves the dylib; it should not land identity writes that skip the database. Prefer merging PR4 before PR6 so onboarding has a real catalog.
@@ -159,8 +156,8 @@ PR5 can start once PR3 proves the dylib; it should not land identity writes that
 | **5** | Install identity store | Done. Go `core/identity`: `{dir}/identity.json` (`user_id` UUIDv7 + `display_name`). Caller passes `dir`; no Mac path hardcoded. No FFI, no `users` insert. | 4 | File format pinned in this PR. |
 | **6** | Onboarding use-case | Done. Go `core/onboarding.Complete`: mint/load identity, sanitize family name, `Create` `*.provenance`, upsert `users`. No FFI. | 4, 5 | No Source tables. |
 | **7** | Onboarding FFI | Done. `GetInstallIdentity` / `CompleteOnboarding` over the existing C ABI; paths in protobuf; failed calls return UTF-8 `err.Error()` in `out`. No Swift UI. | 6 | Go still does not hardcode Mac paths. |
-| **8** | Onboarding UI + install path | Done. First-run two fields, home stub with project basename; returning user skips the form if identity exists. Swift resolves Application Support `Provenance/` and Documents. | 7 | No last-project reopen (PR9). |
-| **9** | Reopen last project | Remember last project folder (bookmark/security-scoped if needed) so relaunch is one click, not a file picker every time. | 8 | Can slip to Spike 2 if bookmarks fight us. |
+| **8** | Onboarding UI + install path | Done. First-run two fields, home stub with project basename; returning user skips the form if identity exists. Swift resolves Application Support `Provenance/` and Documents. | 7 | Last-project reopen is PR9. |
+| **9** | Reopen last project | Done. `active-project.json` next to identity; two-screen create/open then identity; adopt a catalog user on a new Mac or mint. Relaunch goes home if the active folder still exists. | 8 | Path in Application Support, not security-scoped bookmarks. |
 
 Do not combine 3 with 8. Do not put ingest or `sources` into 4 “while we’re in migrations.”
 

@@ -3,7 +3,7 @@ import Foundation
 enum InstallPaths {
     static let appSupportFolder = "Provenance"
 
-    /// `{Application Support}/Provenance`. Only `identity.json` in this folder is the install identity.
+    /// `{Application Support}/Provenance`. Holds `identity.json` and `active-project.json`.
     static func identityDirectory(fileManager: FileManager = .default) throws -> URL {
         let base = try fileManager.url(
             for: .applicationSupportDirectory,
@@ -24,7 +24,7 @@ enum InstallPaths {
     }
 
     /// Folder names ending in `.provenance` under Documents. Does not open SQLite.
-    /// Several such folders are listed only as “some project exists”; we do not pick one (spike PR9).
+    /// Call only after the user chooses to open an existing file (macOS Files and Folders TCC).
     static func provenanceProjects(
         in documents: URL,
         fileManager: FileManager = .default
@@ -43,11 +43,23 @@ enum InstallPaths {
                 && ((try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false)
         }
     }
+
+    static func isProjectDirectory(_ path: String, fileManager: FileManager = .default) -> Bool {
+        var isDir: ObjCBool = false
+        guard fileManager.fileExists(atPath: path, isDirectory: &isDir), isDir.boolValue else {
+            return false
+        }
+        return true
+    }
 }
 
 struct OnboardingFolders: Sendable {
     var identityDirectory: URL
     var documentsDirectory: URL
+
+    static func liveIdentity() throws -> URL {
+        try InstallPaths.identityDirectory()
+    }
 
     static func live() throws -> OnboardingFolders {
         OnboardingFolders(
