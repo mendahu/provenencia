@@ -10,6 +10,8 @@ enum Method {
   METHOD_UNSPECIFIED = 0;
   METHOD_PING = 1;
   METHOD_GET_VERSION = 2;
+  METHOD_GET_INSTALL_IDENTITY = 3;
+  METHOD_COMPLETE_ONBOARDING = 4;
 }
 
 message PingRequest {
@@ -24,4 +26,27 @@ message GetVersionRequest {}
 
 message GetVersionResponse {
   string version = 1;
+}
+
+message GetInstallIdentityRequest {
+  string identity_dir = 1;
+}
+
+message GetInstallIdentityResponse {
+  bool found = 1;
+  string user_id = 2;
+  string display_name = 3;
+}
+
+message CompleteOnboardingRequest {
+  string identity_dir = 1;
+  string parent_dir = 2;
+  string display_name = 3;
+  string family_name = 4;
+}
+
+message CompleteOnboardingResponse {
+  string project_dir = 1;
+  string user_id = 2;
+  string display_name = 3;
 }

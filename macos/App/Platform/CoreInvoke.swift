@@ -1,7 +1,7 @@
 import Foundation
 
 enum CoreInvokeError: Error {
-    case failed(Int32)
+    case failed(Int32, message: String)
 }
 
 enum CoreMethod {
@@ -24,7 +24,11 @@ func provenanceInvoke(method: Int32, request: Data) throws -> Data {
         }
     }
     if status != 0 {
-        throw CoreInvokeError.failed(status)
+        var message = "core call failed (\(status))"
+        if let outPtr, outLen > 0 {
+            message = String(decoding: Data(bytes: outPtr, count: outLen), as: UTF8.self)
+        }
+        throw CoreInvokeError.failed(status, message: message)
     }
     guard let outPtr, outLen > 0 else {
         return Data()

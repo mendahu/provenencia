@@ -63,7 +63,7 @@ That is enough to prove the stack: SwiftUI → protobuf FFI → Go core → SQLi
    - an identity file in Application Support for this install (your name + UUID only — not the project name);
    - a project directory `{sanitized family name}.provenance` with `provenance.sqlite`;
    - a `users` row with that id and display name.
-4. Quit and relaunch: do not ask for your name again; the same UUID is used. Reopen the last project when PR8 exists.
+4. Quit and relaunch: do not ask for your name again; the same UUID is used. Reopen the last project when PR9 exists.
 5. Display name is attribution text, not a login. It need not be unique.
 6. Project / family name labels **this file** in Finder and the window title. It is not the User identity. Spike 1 does not need a separate title table: the folder basename is the name. Renaming the project later can be a Finder rename or a later use-case.
 7. Sanitize the folder name for the filesystem (`/`, `:`, leading dots, etc.). If `{Name}.provenance` already exists in the chosen parent, fail with a clear error (do not silently overwrite).
@@ -132,7 +132,7 @@ The stack already calls this out: **cgo SQLite inside a Go xcframework loaded by
 
 ## PR sequence
 
-PR1–PR6 are done. Remaining PRs (7–8) are unchecked.
+PR1–PR7 are done. Remaining PRs (8–9) are unchecked.
 
 Small, reviewable chunks. Each PR should leave `main` buildable. Later PRs may add UI on a stub that the next PR fills in.
 
@@ -143,8 +143,9 @@ PR1 repo scaffold
             └─ PR4 migrations + users + create/open project (Go) (done)
                  ├─ PR5 install identity file (Go) (done)
                  │    └─ PR6 onboarding use-case (person + family name → identity + project) (done)
-                 │         └─ PR7 SwiftUI first-run + Application Support path + returning launch
-                 └─ PR8 (optional same milestone) last-project pointer / reopen
+                 │         └─ PR7 FFI GetInstallIdentity + CompleteOnboarding (done)
+                 │              └─ PR8 SwiftUI first-run + Application Support path + returning launch
+                 └─ PR9 (optional same milestone) last-project pointer / reopen
 ```
 
 PR5 can start once PR3 proves the dylib; it should not land identity writes that skip the database. Prefer merging PR4 before PR6 so onboarding has a real catalog.
@@ -157,10 +158,11 @@ PR5 can start once PR3 proves the dylib; it should not land identity writes that
 | **4** | Project format + `users` | Done. Create/open `*.provenance` in Go; `application_id` `'PROV'`; `user_version` 1; empty `users`; exclusive open. No FFI create/open, no CLI. | 3 | Schema: only what Spike 1 needs. Refuse foreign catalogs. |
 | **5** | Install identity store | Done. Go `core/identity`: `{dir}/identity.json` (`user_id` UUIDv7 + `display_name`). Caller passes `dir`; no Mac path hardcoded. No FFI, no `users` insert. | 4 | File format pinned in this PR. |
 | **6** | Onboarding use-case | Done. Go `core/onboarding.Complete`: mint/load identity, sanitize family name, `Create` `*.provenance`, upsert `users`. No FFI. | 4, 5 | No Source tables. |
-| **7** | Onboarding UI + install path | First-run: two fields (your name, family/project name), validation, progress/error, success/home stub showing the project name. Returning user skips the prompts. **Swift** resolves Application Support (`Provenance/identity.json`) and passes that directory to Go over FFI (`EnsureInstallIdentity` / `GetInstallIdentity` or equivalent). Go still does not hardcode Mac paths. | 6 | SwiftUI + platform path; no genealogy screens. |
-| **8** | Reopen last project | Remember last project folder (bookmark/security-scoped if needed) so relaunch is one click, not a file picker every time. | 7 | Can slip to Spike 2 if bookmarks fight us. |
+| **7** | Onboarding FFI | Done. `GetInstallIdentity` / `CompleteOnboarding` over the existing C ABI; paths in protobuf; failed calls return UTF-8 `err.Error()` in `out`. No Swift UI. | 6 | Go still does not hardcode Mac paths. |
+| **8** | Onboarding UI + install path | First-run: two fields (your name, family/project name), validation, progress/error, success/home stub showing the project name. Returning user skips the prompts. **Swift** resolves Application Support (`Provenance/identity.json`) and passes that directory to Go. | 7 | SwiftUI + platform path; no genealogy screens. |
+| **9** | Reopen last project | Remember last project folder (bookmark/security-scoped if needed) so relaunch is one click, not a file picker every time. | 8 | Can slip to Spike 2 if bookmarks fight us. |
 
-Do not combine 3 with 7. Do not put ingest or `sources` into 4 “while we’re in migrations.”
+Do not combine 3 with 8. Do not put ingest or `sources` into 4 “while we’re in migrations.”
 
 ### Suggested PR descriptions (why, not a task dump)
 
@@ -170,8 +172,9 @@ Do not combine 3 with 7. Do not put ingest or `sources` into 4 “while we’re 
 - **4** — Make the inspectable project directory real, with a `users` table.
 - **5** — Keep contributor UUID off the project folder and on the install.
 - **6** — One core operation for “I am this person; this file is the Robins family.”
-- **7** — The only user-visible milestone: first-run names → identity + named `.provenance` folder; Swift supplies the Application Support path.
-- **8** — Make the second launch feel like an app, not a demo.
+- **7** — Expose onboarding over FFI so Swift can pass directories without embedding Mac paths in Go.
+- **8** — The only user-visible milestone: first-run names → identity + named `.provenance` folder; Swift supplies the Application Support path.
+- **9** — Make the second launch feel like an app, not a demo.
 
 ---
 

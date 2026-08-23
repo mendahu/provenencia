@@ -28,21 +28,34 @@ func bytesFromC(ptr *C.uint8_t, n C.size_t) []byte {
 func provenance_call(method C.int32_t, in *C.uint8_t, inLen C.size_t, out **C.uint8_t, outLen *C.size_t) C.int {
 	resp, err := ffi.Call(int32(method), bytesFromC(in, inLen))
 	if err != nil {
-		return 1
+		return copyOut(err.Error(), out, outLen, 1)
 	}
 	if len(resp) == 0 {
 		*out = nil
 		*outLen = 0
 		return 0
 	}
-	buf := C.malloc(C.size_t(len(resp)))
+	return copyOutBytes(resp, out, outLen, 0)
+}
+
+func copyOut(s string, out **C.uint8_t, outLen *C.size_t, status C.int) C.int {
+	return copyOutBytes([]byte(s), out, outLen, status)
+}
+
+func copyOutBytes(b []byte, out **C.uint8_t, outLen *C.size_t, status C.int) C.int {
+	if len(b) == 0 {
+		*out = nil
+		*outLen = 0
+		return status
+	}
+	buf := C.malloc(C.size_t(len(b)))
 	if buf == nil {
 		return 2
 	}
-	C.memcpy(buf, unsafe.Pointer(&resp[0]), C.size_t(len(resp)))
+	C.memcpy(buf, unsafe.Pointer(&b[0]), C.size_t(len(b)))
 	*out = (*C.uint8_t)(buf)
-	*outLen = C.size_t(len(resp))
-	return 0
+	*outLen = C.size_t(len(b))
+	return status
 }
 
 //export provenance_free
