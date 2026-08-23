@@ -28,7 +28,7 @@ struct OnboardingView: View {
 
     private var form: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(model.researcherLocked ? "You're signed in" : "Welcome to Provenance")
+            Text(model.researcherLocked ? "Welcome Back!" : "Welcome to Provenance")
                 .font(.title2)
             Text(model.researcherLocked
                 ? "You're signed in as \(model.displayName). Name this project folder, or sign out to use a different researcher on this Mac. Existing project folders stay in Documents."
