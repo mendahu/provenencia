@@ -3,19 +3,51 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		AA0000000000000000000001 /* ProvenanceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000010 /* ProvenanceApp.swift */; };
 		AA0000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000011 /* ContentView.swift */; };
 		AA0000000000000000000003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000012 /* Assets.xcassets */; };
+		AA0000000000000000000004 /* engine.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000013 /* engine.pb.swift */; };
+		AA0000000000000000000005 /* GenealogyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000014 /* GenealogyStore.swift */; };
+		AA0000000000000000000006 /* FakeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000015 /* FakeStore.swift */; };
+		AA0000000000000000000007 /* GoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000016 /* GoStore.swift */; };
+		AA0000000000000000000008 /* CoreInvoke.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000017 /* CoreInvoke.swift */; };
+		AA000000000000000000000C /* RootModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001C /* RootModel.swift */; };
+		AA0000000000000000000009 /* libprovenance.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000018 /* libprovenance.dylib */; };
+		AA000000000000000000000A /* libprovenance.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000018 /* libprovenance.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		AA000000000000000000000B /* SwiftProtobuf in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000091 /* SwiftProtobuf */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		AA0000000000000000000062 /* Embed Libraries */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				AA000000000000000000000A /* libprovenance.dylib in Embed Libraries */,
+			);
+			name = "Embed Libraries";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		AA0000000000000000000010 /* ProvenanceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProvenanceApp.swift; sourceTree = "<group>"; };
 		AA0000000000000000000011 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000012 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AA0000000000000000000013 /* engine.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = engine.pb.swift; sourceTree = "<group>"; };
+		AA0000000000000000000014 /* GenealogyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenealogyStore.swift; sourceTree = "<group>"; };
+		AA0000000000000000000015 /* FakeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FakeStore.swift; sourceTree = "<group>"; };
+		AA0000000000000000000016 /* GoStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoStore.swift; sourceTree = "<group>"; };
+		AA0000000000000000000017 /* CoreInvoke.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreInvoke.swift; sourceTree = "<group>"; };
+		AA000000000000000000001C /* RootModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootModel.swift; sourceTree = "<group>"; };
+		AA0000000000000000000018 /* libprovenance.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libprovenance.dylib; sourceTree = "<group>"; };
+		AA0000000000000000000019 /* Provenance-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Provenance-Bridging-Header.h"; sourceTree = "<group>"; };
+		AA000000000000000000001A /* Provenance.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Provenance.entitlements; sourceTree = "<group>"; };
 		AA0000000000000000000020 /* Provenance.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Provenance.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -24,6 +56,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA000000000000000000000B /* SwiftProtobuf in Frameworks */,
+				AA0000000000000000000009 /* libprovenance.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -34,6 +68,7 @@
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000041 /* Provenance */,
+				AA0000000000000000000043 /* Core */,
 				AA0000000000000000000042 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -43,9 +78,33 @@
 			children = (
 				AA0000000000000000000010 /* ProvenanceApp.swift */,
 				AA0000000000000000000011 /* ContentView.swift */,
+				AA000000000000000000001C /* RootModel.swift */,
+				AA0000000000000000000014 /* GenealogyStore.swift */,
+				AA0000000000000000000015 /* FakeStore.swift */,
+				AA0000000000000000000016 /* GoStore.swift */,
+				AA0000000000000000000017 /* CoreInvoke.swift */,
+				AA0000000000000000000044 /* Generated */,
 				AA0000000000000000000012 /* Assets.xcassets */,
+				AA0000000000000000000019 /* Provenance-Bridging-Header.h */,
+				AA000000000000000000001A /* Provenance.entitlements */,
 			);
 			path = Provenance;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000043 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000018 /* libprovenance.dylib */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000044 /* Generated */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000013 /* engine.pb.swift */,
+			);
+			path = Generated;
 			sourceTree = "<group>";
 		};
 		AA0000000000000000000042 /* Products */ = {
@@ -66,12 +125,16 @@
 				AA0000000000000000000060 /* Sources */,
 				AA0000000000000000000030 /* Frameworks */,
 				AA0000000000000000000061 /* Resources */,
+				AA0000000000000000000062 /* Embed Libraries */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			name = Provenance;
+			packageProductDependencies = (
+				AA0000000000000000000091 /* SwiftProtobuf */,
+			);
 			productName = Provenance;
 			productReference = AA0000000000000000000020 /* Provenance.app */;
 			productType = "com.apple.product-type.application";
@@ -92,7 +155,7 @@
 				};
 			};
 			buildConfigurationList = AA0000000000000000000070 /* Build configuration list for PBXProject "Provenance" */;
-			compatibilityVersion = "Xcode 14.0";
+			compatibilityVersion = "Xcode 15.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -100,6 +163,9 @@
 				Base,
 			);
 			mainGroup = AA0000000000000000000040;
+			packageReferences = (
+				AA0000000000000000000090 /* XCRemoteSwiftPackageReference "swift-protobuf" */,
+			);
 			productRefGroup = AA0000000000000000000042 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -127,6 +193,12 @@
 			files = (
 				AA0000000000000000000001 /* ProvenanceApp.swift in Sources */,
 				AA0000000000000000000002 /* ContentView.swift in Sources */,
+				AA000000000000000000000C /* RootModel.swift in Sources */,
+				AA0000000000000000000005 /* GenealogyStore.swift in Sources */,
+				AA0000000000000000000006 /* FakeStore.swift in Sources */,
+				AA0000000000000000000007 /* GoStore.swift in Sources */,
+				AA0000000000000000000008 /* CoreInvoke.swift in Sources */,
+				AA0000000000000000000004 /* engine.pb.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -173,12 +245,17 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Provenance/Provenance.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Core",
+				);
 				INFOPLIST_KEY_CFBundleDisplayName = Provenance;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.reference";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -186,11 +263,16 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Core",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 0.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = app.provenance;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "Provenance/Provenance-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
@@ -200,12 +282,17 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Provenance/Provenance.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Core",
+				);
 				INFOPLIST_KEY_CFBundleDisplayName = Provenance;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.reference";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -213,11 +300,16 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Core",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 0.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = app.provenance;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "Provenance/Provenance-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
@@ -244,6 +336,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		AA0000000000000000000090 /* XCRemoteSwiftPackageReference "swift-protobuf" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-protobuf.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.28.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AA0000000000000000000091 /* SwiftProtobuf */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA0000000000000000000090 /* XCRemoteSwiftPackageReference "swift-protobuf" */;
+			productName = SwiftProtobuf;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = AA0000000000000000000000 /* Project object */;
 }
