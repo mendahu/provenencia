@@ -3,9 +3,9 @@ package onboarding
 import (
 	"errors"
 	"strings"
-)
 
-const projectSuffix = ".provenance"
+	"github.com/mendahu/provenance/core/database"
+)
 
 var ErrInvalidFamilyName = errors.New("invalid family name")
 
@@ -27,8 +27,8 @@ func FolderName(familyName string) (string, error) {
 	if s == "" {
 		return "", ErrInvalidFamilyName
 	}
-	if strings.HasSuffix(s, projectSuffix) {
+	if strings.HasSuffix(s, database.Suffix) {
 		return s, nil
 	}
-	return s + projectSuffix, nil
+	return s + database.Suffix, nil
 }

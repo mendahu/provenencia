@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/mendahu/provenance/core/database"
+	"github.com/mendahu/provenance/core/database/users"
 	"github.com/mendahu/provenance/core/identity"
 )
 
@@ -39,7 +40,7 @@ func Complete(identityDir, parent, displayName, familyName string) (Result, erro
 		return Result{}, err
 	}
 	uid := id.UserID
-	if err := proj.UpsertUser(uid[:], displayName); err != nil {
+	if err := users.Upsert(proj, uid[:], displayName); err != nil {
 		_ = proj.Close()
 		return Result{}, err
 	}

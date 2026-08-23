@@ -1,12 +1,14 @@
 package onboarding
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/mendahu/provenance/core/database"
+	"github.com/mendahu/provenance/core/database/users"
 	"github.com/mendahu/provenance/core/identity"
 )
 
@@ -19,6 +21,8 @@ func TestFolderName(t *testing.T) {
 	}{
 		{name: "plain", in: "Robins Family", want: "Robins Family.provenance"},
 		{name: "slash", in: "Robins/Family", want: "Robins-Family.provenance"},
+		{name: "backslash", in: "Robins\\Family", want: "Robins-Family.provenance"},
+		{name: "nul", in: "Robins\x00Family", want: "Robins-Family.provenance"},
 		{name: "colon", in: "Robins:Family", want: "Robins-Family.provenance"},
 		{name: "leading dots", in: "...Robins", want: "Robins.provenance"},
 		{name: "already suffix", in: "Robins Family.provenance", want: "Robins Family.provenance"},
@@ -71,15 +75,35 @@ func TestComplete(t *testing.T) {
 					t.Fatal(err)
 				}
 				defer p.Close()
-				name, err := p.LookupUser(res.Identity.UserID[:])
+				name, err := users.Lookup(p, res.Identity.UserID[:])
 				if err != nil {
 					t.Fatal(err)
 				}
 				if name != "Jake Robins" {
 					t.Fatalf("users %q", name)
 				}
-				if filepath.Base(res.ProjectDir) != "Robins Family.provenance" {
+				if filepath.Base(res.ProjectDir) != "Robins Family"+database.Suffix {
 					t.Fatalf("dir %s", res.ProjectDir)
+				}
+				raw, err := os.ReadFile(filepath.Join(ident, identity.FileName))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var m map[string]string
+				if err := json.Unmarshal(raw, &m); err != nil {
+					t.Fatal(err)
+				}
+				if _, ok := m["family_name"]; ok {
+					t.Fatal("identity.json must not store family name")
+				}
+				if _, ok := m["project"]; ok {
+					t.Fatal("identity.json must not store project")
+				}
+				if m["user_id"] == "" || m["display_name"] != "Jake Robins" {
+					t.Fatalf("json %v", m)
+				}
+				if len(m) != 2 {
+					t.Fatalf("unexpected identity keys %v", m)
 				}
 			},
 		},
@@ -109,7 +133,7 @@ func TestComplete(t *testing.T) {
 					t.Fatal(err)
 				}
 				defer p.Close()
-				name, err := p.LookupUser(b.Identity.UserID[:])
+				name, err := users.Lookup(p, b.Identity.UserID[:])
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -143,6 +167,41 @@ func TestComplete(t *testing.T) {
 				}
 				if filepath.Base(res.ProjectDir) != "A-B.provenance" {
 					t.Fatalf("got %s", res.ProjectDir)
+				}
+			},
+		},
+		{
+			name: "dots-only family does not write identity",
+			run: func(t *testing.T, ident, parent string) {
+				_, err := Complete(ident, parent, "Jake", "...")
+				if !errors.Is(err, ErrInvalidFamilyName) {
+					t.Fatalf("got %v", err)
+				}
+				ents, err := os.ReadDir(ident)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(ents) != 0 {
+					t.Fatalf("identity dir touched: %v", ents)
+				}
+			},
+		},
+		{
+			name: "corrupt identity json",
+			run: func(t *testing.T, ident, parent string) {
+				if err := os.WriteFile(filepath.Join(ident, identity.FileName), []byte("{"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+				_, err := Complete(ident, parent, "Jake", "Family")
+				if err == nil {
+					t.Fatal("expected error")
+				}
+				ents, err := os.ReadDir(parent)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(ents) != 0 {
+					t.Fatalf("parent touched: %v", ents)
 				}
 			},
 		},

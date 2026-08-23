@@ -18,29 +18,21 @@ import (
 const ApplicationID = 0x50524F56
 
 const (
-	catalogFile    = "provenance.sqlite"
-	projectSuffix  = ".provenance"
+	catalogFile = "provenance.sqlite"
+	// Suffix is the project folder extension. It is a Finder hint, not catalog ownership.
+	Suffix         = ".provenance"
 	objectsDir     = "objects"
 	derivativesDir = "derivatives"
 )
 
-var (
-	ErrAlreadyExists      = errors.New("project already exists")
-	ErrAlreadyOpen        = errors.New("project already open")
-	ErrNotAProject        = errors.New("not a provenance catalog")
-	ErrUnsupportedVersion = errors.New("unsupported catalog version")
-	ErrInvalidFolderName  = errors.New("folder name must end in .provenance")
-	ErrInvalidUser        = errors.New("invalid user id or display name")
-)
-
-// Project is an exclusive connection to one provenance.sqlite catalog.
-type Project struct {
+// Catalog is an exclusive connection to one provenance.sqlite file.
+type Catalog struct {
 	dir string
 	db  *sql.DB
 }
 
-func (p *Project) Dir() string {
-	return p.dir
+func (c *Catalog) Dir() string {
+	return c.dir
 }
 
 func dsn(sqlitePath string) string {
@@ -86,8 +78,8 @@ func mapLockErr(err error) error {
 }
 
 // Create writes a new *.provenance folder with an empty catalog and takes an exclusive lock.
-func Create(parent, folderName string) (*Project, error) {
-	if !strings.HasSuffix(folderName, projectSuffix) {
+func Create(parent, folderName string) (*Catalog, error) {
+	if !strings.HasSuffix(folderName, Suffix) {
 		return nil, ErrInvalidFolderName
 	}
 	dir := filepath.Join(parent, folderName)
@@ -123,11 +115,11 @@ func Create(parent, folderName string) (*Project, error) {
 		_ = os.RemoveAll(dir)
 		return nil, err
 	}
-	return &Project{dir: dir, db: db}, nil
+	return &Catalog{dir: dir, db: db}, nil
 }
 
 // Open opens an existing project directory by catalog content, not folder suffix.
-func Open(dir string) (*Project, error) {
+func Open(dir string) (*Catalog, error) {
 	st, err := os.Stat(dir)
 	if err != nil {
 		return nil, err
@@ -158,38 +150,22 @@ func Open(dir string) (*Project, error) {
 		db.Close()
 		return nil, err
 	}
-	return &Project{dir: dir, db: db}, nil
+	return &Catalog{dir: dir, db: db}, nil
 }
 
-func (p *Project) Close() error {
-	if p == nil || p.db == nil {
+func (c *Catalog) Close() error {
+	if c == nil || c.db == nil {
 		return nil
 	}
-	err := p.db.Close()
-	p.db = nil
+	err := c.db.Close()
+	c.db = nil
 	return err
 }
 
-// UpsertUser inserts or updates a users row. id must be a 16-byte UUIDv7 blob.
-func (p *Project) UpsertUser(id []byte, displayName string) error {
-	if p == nil || p.db == nil {
-		return errors.New("project closed")
+// DB is the exclusive SQLite handle. Nested table packages use this; callers should not.
+func (c *Catalog) DB() (*sql.DB, error) {
+	if c == nil || c.db == nil {
+		return nil, ErrClosed
 	}
-	name := strings.TrimSpace(displayName)
-	if len(id) != 16 || name == "" {
-		return ErrInvalidUser
-	}
-	_, err := p.db.Exec(`INSERT INTO users (id, display_name) VALUES (?, ?)
-		ON CONFLICT(id) DO UPDATE SET display_name = excluded.display_name`, id, name)
-	return err
-}
-
-// LookupUser returns the display name for id, or sql.ErrNoRows.
-func (p *Project) LookupUser(id []byte) (string, error) {
-	if p == nil || p.db == nil {
-		return "", errors.New("project closed")
-	}
-	var name string
-	err := p.db.QueryRow(`SELECT display_name FROM users WHERE id = ?`, id).Scan(&name)
-	return name, err
+	return c.db, nil
 }
