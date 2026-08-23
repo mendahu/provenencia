@@ -2,9 +2,9 @@
 
 ## Status
 
-Implementation milestone. Not the MVP. The stopping point is: Jake can build and run Provenance on his MacBook, complete first-run onboarding, and see a durable local identity in Application Support plus a matching `users` row in a real project database.
+**Done.** Archived after Spike 1: macOS app + Go dylib, first-run onboarding, install identity, and a real `*.provenance` catalog. Not the MVP. Remaining from the retro: L6 (sign the dylib) and L7 (`0.1.0` tag).
 
-Authoritative models: [`application-stack.md`](../application-stack.md), [`user-identity-model.md`](../user-identity-model.md). This note only sequences the first slice of those decisions.
+Authoritative models: [`application-stack.md`](../../application-stack.md), [`user-identity-model.md`](../../user-identity-model.md). This note sequenced the first slice of those decisions.
 
 ---
 
@@ -125,6 +125,8 @@ Jake can, on his MacBook, without a server:
 
 The stack already calls this out: **cgo SQLite inside a Go xcframework loaded by Swift**. If that build is untenable, stop and switch to a local Go process or pure-Go SQLite before any onboarding UI. Do not paper over a broken dylib with a fake in-memory store.
 
+**Outcome:** Retired. Plan A shipped as `libprovenance.dylib` (`-buildmode=c-shared`, not an xcframework). Fallbacks unused. See [`application-stack.md`](../../application-stack.md) §31 item 5.
+
 ---
 
 ## PR sequence
@@ -204,7 +206,7 @@ From a code review of the Spike 1 codebase (Go core, FFI layer, Swift client). O
 - **L4 — C ABI polish.** Done. Bridging header uses `const uint8_t *in` and documents status 0/1/2. Go `//export` stays non-const (cgo).
 - **L5 — Split `OnboardingView` into per-screen subview files.** Done. Shell + choose-file / identify / home / chrome.
 - **L6 — Ship-prep signing.** The app relies on `disable-library-validation` for the unsigned dylib. Before distribution, sign the dylib with the same team identity and drop that entitlement.
-- **L7 — Version bump.** Spike 1 is done and user-visible; set `VERSION` / `core.Version` / `MARKETING_VERSION` to `0.1.0` and tag `v0.1.0` per [`versioning.md`](../versioning.md).
+- **L7 — Version bump.** Spike 1 is done and user-visible; set `VERSION` / `core.Version` / `MARKETING_VERSION` to `0.1.0` and tag `v0.1.0` per [`versioning.md`](../../versioning.md).
 
 Suggested order: H1 and H2 first (small, real bugs), then H3 + H4 together (the test target pays for itself immediately), then H5 / M4 as infrastructure, with the rest as filler PRs between feature work.
 
