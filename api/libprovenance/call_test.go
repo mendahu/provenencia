@@ -96,11 +96,15 @@ func TestProvenanceCall(t *testing.T) {
 			},
 		},
 		{
-			name:       "unknown method no leaked out",
-			method:     99,
-			in:         mustMarshal(&engine.PingRequest{}),
+			name:   "unknown method carries error text",
+			method: 99,
+			in:     mustMarshal(&engine.PingRequest{}),
 			wantStatus: 1,
-			wantOutNil: true,
+			check: func(t *testing.T, out []byte) {
+				if string(out) != "unknown method 99" {
+					t.Fatalf("got %q", out)
+				}
+			},
 		},
 	}
 

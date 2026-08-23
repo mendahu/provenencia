@@ -18,7 +18,7 @@ type Result struct {
 }
 
 // Complete mints or loads install identity, creates a *.provenance folder, and upserts users.
-// identityDir and parent are supplied by the caller (Swift will pass Application Support / Documents in PR7).
+// identityDir and parent are supplied by the caller (Swift passes Application Support / Documents in PR8).
 func Complete(identityDir, parent, displayName, familyName string) (Result, error) {
 	displayName = strings.TrimSpace(displayName)
 	familyName = strings.TrimSpace(familyName)

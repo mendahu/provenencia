@@ -26,9 +26,11 @@ const (
 type Method int32
 
 const (
-	Method_METHOD_UNSPECIFIED Method = 0
-	Method_METHOD_PING        Method = 1
-	Method_METHOD_GET_VERSION Method = 2
+	Method_METHOD_UNSPECIFIED          Method = 0
+	Method_METHOD_PING                 Method = 1
+	Method_METHOD_GET_VERSION          Method = 2
+	Method_METHOD_GET_INSTALL_IDENTITY Method = 3
+	Method_METHOD_COMPLETE_ONBOARDING  Method = 4
 )
 
 // Enum value maps for Method.
@@ -37,11 +39,15 @@ var (
 		0: "METHOD_UNSPECIFIED",
 		1: "METHOD_PING",
 		2: "METHOD_GET_VERSION",
+		3: "METHOD_GET_INSTALL_IDENTITY",
+		4: "METHOD_COMPLETE_ONBOARDING",
 	}
 	Method_value = map[string]int32{
-		"METHOD_UNSPECIFIED": 0,
-		"METHOD_PING":        1,
-		"METHOD_GET_VERSION": 2,
+		"METHOD_UNSPECIFIED":          0,
+		"METHOD_PING":                 1,
+		"METHOD_GET_VERSION":          2,
+		"METHOD_GET_INSTALL_IDENTITY": 3,
+		"METHOD_COMPLETE_ONBOARDING":  4,
 	}
 )
 
@@ -240,6 +246,238 @@ func (x *GetVersionResponse) GetVersion() string {
 	return ""
 }
 
+type GetInstallIdentityRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	IdentityDir   string                 `protobuf:"bytes,1,opt,name=identity_dir,json=identityDir,proto3" json:"identity_dir,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetInstallIdentityRequest) Reset() {
+	*x = GetInstallIdentityRequest{}
+	mi := &file_engine_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetInstallIdentityRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetInstallIdentityRequest) ProtoMessage() {}
+
+func (x *GetInstallIdentityRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetInstallIdentityRequest.ProtoReflect.Descriptor instead.
+func (*GetInstallIdentityRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *GetInstallIdentityRequest) GetIdentityDir() string {
+	if x != nil {
+		return x.IdentityDir
+	}
+	return ""
+}
+
+type GetInstallIdentityResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Found         bool                   `protobuf:"varint,1,opt,name=found,proto3" json:"found,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	DisplayName   string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetInstallIdentityResponse) Reset() {
+	*x = GetInstallIdentityResponse{}
+	mi := &file_engine_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetInstallIdentityResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetInstallIdentityResponse) ProtoMessage() {}
+
+func (x *GetInstallIdentityResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetInstallIdentityResponse.ProtoReflect.Descriptor instead.
+func (*GetInstallIdentityResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *GetInstallIdentityResponse) GetFound() bool {
+	if x != nil {
+		return x.Found
+	}
+	return false
+}
+
+func (x *GetInstallIdentityResponse) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *GetInstallIdentityResponse) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+type CompleteOnboardingRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	IdentityDir   string                 `protobuf:"bytes,1,opt,name=identity_dir,json=identityDir,proto3" json:"identity_dir,omitempty"`
+	ParentDir     string                 `protobuf:"bytes,2,opt,name=parent_dir,json=parentDir,proto3" json:"parent_dir,omitempty"`
+	DisplayName   string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	FamilyName    string                 `protobuf:"bytes,4,opt,name=family_name,json=familyName,proto3" json:"family_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CompleteOnboardingRequest) Reset() {
+	*x = CompleteOnboardingRequest{}
+	mi := &file_engine_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompleteOnboardingRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompleteOnboardingRequest) ProtoMessage() {}
+
+func (x *CompleteOnboardingRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompleteOnboardingRequest.ProtoReflect.Descriptor instead.
+func (*CompleteOnboardingRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *CompleteOnboardingRequest) GetIdentityDir() string {
+	if x != nil {
+		return x.IdentityDir
+	}
+	return ""
+}
+
+func (x *CompleteOnboardingRequest) GetParentDir() string {
+	if x != nil {
+		return x.ParentDir
+	}
+	return ""
+}
+
+func (x *CompleteOnboardingRequest) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *CompleteOnboardingRequest) GetFamilyName() string {
+	if x != nil {
+		return x.FamilyName
+	}
+	return ""
+}
+
+type CompleteOnboardingResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	DisplayName   string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CompleteOnboardingResponse) Reset() {
+	*x = CompleteOnboardingResponse{}
+	mi := &file_engine_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompleteOnboardingResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompleteOnboardingResponse) ProtoMessage() {}
+
+func (x *CompleteOnboardingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompleteOnboardingResponse.ProtoReflect.Descriptor instead.
+func (*CompleteOnboardingResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *CompleteOnboardingResponse) GetProjectDir() string {
+	if x != nil {
+		return x.ProjectDir
+	}
+	return ""
+}
+
+func (x *CompleteOnboardingResponse) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *CompleteOnboardingResponse) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
 var File_engine_proto protoreflect.FileDescriptor
 
 const file_engine_proto_rawDesc = "" +
@@ -251,11 +489,31 @@ const file_engine_proto_rawDesc = "" +
 	"\amessage\x18\x01 \x01(\tR\amessage\"\x13\n" +
 	"\x11GetVersionRequest\".\n" +
 	"\x12GetVersionResponse\x12\x18\n" +
-	"\aversion\x18\x01 \x01(\tR\aversion*I\n" +
+	"\aversion\x18\x01 \x01(\tR\aversion\">\n" +
+	"\x19GetInstallIdentityRequest\x12!\n" +
+	"\fidentity_dir\x18\x01 \x01(\tR\videntityDir\"n\n" +
+	"\x1aGetInstallIdentityResponse\x12\x14\n" +
+	"\x05found\x18\x01 \x01(\bR\x05found\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12!\n" +
+	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\"\xa1\x01\n" +
+	"\x19CompleteOnboardingRequest\x12!\n" +
+	"\fidentity_dir\x18\x01 \x01(\tR\videntityDir\x12\x1d\n" +
+	"\n" +
+	"parent_dir\x18\x02 \x01(\tR\tparentDir\x12!\n" +
+	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12\x1f\n" +
+	"\vfamily_name\x18\x04 \x01(\tR\n" +
+	"familyName\"y\n" +
+	"\x1aCompleteOnboardingResponse\x12\x1f\n" +
+	"\vproject_dir\x18\x01 \x01(\tR\n" +
+	"projectDir\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12!\n" +
+	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName*\x8a\x01\n" +
 	"\x06Method\x12\x16\n" +
 	"\x12METHOD_UNSPECIFIED\x10\x00\x12\x0f\n" +
 	"\vMETHOD_PING\x10\x01\x12\x16\n" +
-	"\x12METHOD_GET_VERSION\x10\x02B0Z.github.com/mendahu/provenance/api/proto/engineb\x06proto3"
+	"\x12METHOD_GET_VERSION\x10\x02\x12\x1f\n" +
+	"\x1bMETHOD_GET_INSTALL_IDENTITY\x10\x03\x12\x1e\n" +
+	"\x1aMETHOD_COMPLETE_ONBOARDING\x10\x04B0Z.github.com/mendahu/provenance/api/proto/engineb\x06proto3"
 
 var (
 	file_engine_proto_rawDescOnce sync.Once
@@ -270,13 +528,17 @@ func file_engine_proto_rawDescGZIP() []byte {
 }
 
 var file_engine_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_engine_proto_goTypes = []any{
-	(Method)(0),                // 0: provenance.engine.v1.Method
-	(*PingRequest)(nil),        // 1: provenance.engine.v1.PingRequest
-	(*PingResponse)(nil),       // 2: provenance.engine.v1.PingResponse
-	(*GetVersionRequest)(nil),  // 3: provenance.engine.v1.GetVersionRequest
-	(*GetVersionResponse)(nil), // 4: provenance.engine.v1.GetVersionResponse
+	(Method)(0),                        // 0: provenance.engine.v1.Method
+	(*PingRequest)(nil),                // 1: provenance.engine.v1.PingRequest
+	(*PingResponse)(nil),               // 2: provenance.engine.v1.PingResponse
+	(*GetVersionRequest)(nil),          // 3: provenance.engine.v1.GetVersionRequest
+	(*GetVersionResponse)(nil),         // 4: provenance.engine.v1.GetVersionResponse
+	(*GetInstallIdentityRequest)(nil),  // 5: provenance.engine.v1.GetInstallIdentityRequest
+	(*GetInstallIdentityResponse)(nil), // 6: provenance.engine.v1.GetInstallIdentityResponse
+	(*CompleteOnboardingRequest)(nil),  // 7: provenance.engine.v1.CompleteOnboardingRequest
+	(*CompleteOnboardingResponse)(nil), // 8: provenance.engine.v1.CompleteOnboardingResponse
 }
 var file_engine_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -297,7 +559,7 @@ func file_engine_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_engine_proto_rawDesc), len(file_engine_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   4,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

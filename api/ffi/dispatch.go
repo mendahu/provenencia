@@ -3,35 +3,29 @@ package ffi
 import (
 	"fmt"
 
-	"github.com/mendahu/provenance/api/proto/engine"
-	"github.com/mendahu/provenance/core"
-	"google.golang.org/protobuf/proto"
+	"github.com/mendahu/provenance/api/ffi/handlers"
 )
 
 // Method values match provenance.engine.v1.Method in engine.proto.
 const (
-	MethodUnspecified int32 = 0
-	MethodPing        int32 = 1
-	MethodGetVersion  int32 = 2
+	MethodUnspecified        int32 = 0
+	MethodPing               int32 = 1
+	MethodGetVersion         int32 = 2
+	MethodGetInstallIdentity int32 = 3
+	MethodCompleteOnboarding int32 = 4
 )
 
-// Call dispatches one coarse FFI operation. in/out are protobuf bytes.
+// Call routes one coarse FFI operation to api/ffi/handlers.
 func Call(method int32, in []byte) ([]byte, error) {
 	switch method {
 	case MethodPing:
-		var req engine.PingRequest
-		if err := proto.Unmarshal(in, &req); err != nil {
-			return nil, fmt.Errorf("ping: unmarshal: %w", err)
-		}
-		return proto.Marshal(&engine.PingResponse{Message: req.GetMessage()})
+		return handlers.Ping(in)
 	case MethodGetVersion:
-		var req engine.GetVersionRequest
-		if len(in) > 0 {
-			if err := proto.Unmarshal(in, &req); err != nil {
-				return nil, fmt.Errorf("get_version: unmarshal: %w", err)
-			}
-		}
-		return proto.Marshal(&engine.GetVersionResponse{Version: core.Version})
+		return handlers.GetVersion(in)
+	case MethodGetInstallIdentity:
+		return handlers.GetInstallIdentity(in)
+	case MethodCompleteOnboarding:
+		return handlers.CompleteOnboarding(in)
 	default:
 		return nil, fmt.Errorf("unknown method %d", method)
 	}

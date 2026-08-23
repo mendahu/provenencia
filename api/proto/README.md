@@ -26,14 +26,14 @@ Regenerate:
 
 A single pair of exports (see `api/libprovenance`):
 
-- `provenance_call(method, in, in_len, out, out_len)` — `method` is `provenance.engine.v1.Method`; `in`/`out` are protobuf bytes for that RPC.
+- `provenance_call(method, in, in_len, out, out_len)` — `method` is `provenance.engine.v1.Method`; on success `in`/`out` are protobuf bytes for that RPC. On failure (status `1`) `out` is UTF-8 `err.Error()`, not protobuf.
 - `provenance_free` — caller frees `out`.
 
 Do not add per-field C getters.
 
 ## Rebuild the Mac library
 
-SQLite (`mattn/go-sqlite3`) is compiled into this dylib. Create/open of `*.provenance` catalogs lives in Go (`core/database`); there are no Create/Open RPCs yet and no Source tables. After Go FFI changes:
+SQLite (`mattn/go-sqlite3`) is compiled into this dylib. `GetInstallIdentity` and `CompleteOnboarding` take directory paths in protobuf (caller supplies Application Support / Documents; Go does not hardcode them). There are no generic Create/Open RPCs and no Source tables. After Go FFI changes:
 
 ```sh
 ./scripts/build-macos-core.sh
