@@ -198,11 +198,11 @@ From a code review of the Spike 1 codebase (Go core, FFI layer, Swift client). O
 
 ### Low value
 
-- **L1 — Handler/test file organization.** `OpenProject` / `ListProjectUsers` live in `handlers/onboarding.go` but their tests live in `session_test.go`; align them. Consider renaming `core/session` (reads like auth sessions) to something like `core/installstate` before more code depends on it.
-- **L2 — Dead code sweep.** Obsolete blank import of `core/database` in `api/libprovenance/main.go`; unnecessary `len(in) > 0` guard in `handlers/version.go`; unused `Mode` conformances (`CaseIterable`, `Identifiable`); `FakeStore` force unwrap; stray untracked `macos/Provenance/` folder on disk.
-- **L3 — Extract a shared JSON file-store helper** for `core/identity` and `core/session` (Load/Save/Remove/ErrNotFound are near-identical). Optional.
-- **L4 — C ABI polish.** Make `in` const in the bridging header and Go export; document the status codes (0/1/2) in the header rather than only in `api/proto/README.md`.
-- **L5 — Split `OnboardingView` (~290 lines) into per-screen subview files** once the flow stabilizes.
+- **L1 — Handler/test file organization.** Done. Open/List tests live in `onboarding_test.go`; last-opened project is `core/installstate`.
+- **L2 — Dead code sweep.** Done. Dropped the blank `core/database` import in `libprovenance`; `GetVersion` always unmarshals. Mode/`FakeStore` leftovers were already gone on `main`.
+- **L3 — Extract a shared JSON file-store helper** for `core/identity` and `core/installstate`. Done. `core/jsonfile` Read/Write/Remove; validation stays in the domain packages.
+- **L4 — C ABI polish.** Done. Bridging header uses `const uint8_t *in` and documents status 0/1/2. Go `//export` stays non-const (cgo).
+- **L5 — Split `OnboardingView` into per-screen subview files.** Done. Shell + choose-file / identify / home / chrome.
 - **L6 — Ship-prep signing.** The app relies on `disable-library-validation` for the unsigned dylib. Before distribution, sign the dylib with the same team identity and drop that entitlement.
 - **L7 — Version bump.** Spike 1 is done and user-visible; set `VERSION` / `core.Version` / `MARKETING_VERSION` to `0.1.0` and tag `v0.1.0` per [`versioning.md`](../versioning.md).
 

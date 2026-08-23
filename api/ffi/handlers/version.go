@@ -10,10 +10,8 @@ import (
 
 func GetVersion(in []byte) ([]byte, error) {
 	var req engine.GetVersionRequest
-	if len(in) > 0 {
-		if err := proto.Unmarshal(in, &req); err != nil {
-			return nil, fmt.Errorf("get_version: unmarshal: %w", err)
-		}
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, fmt.Errorf("get_version: unmarshal: %w", err)
 	}
 	return proto.Marshal(&engine.GetVersionResponse{Version: core.Version})
 }

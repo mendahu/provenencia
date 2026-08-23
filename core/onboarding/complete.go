@@ -7,7 +7,7 @@ import (
 	"github.com/mendahu/provenance/core/database"
 	"github.com/mendahu/provenance/core/database/users"
 	"github.com/mendahu/provenance/core/identity"
-	"github.com/mendahu/provenance/core/session"
+	"github.com/mendahu/provenance/core/installstate"
 )
 
 var ErrBlankName = errors.New("name is empty")
@@ -56,7 +56,7 @@ func Complete(identityDir, parent, displayName, familyName string) (Result, erro
 }
 
 func rememberActive(identityDir, projectDir string) error {
-	return session.Save(identityDir, session.Active{ProjectDir: projectDir})
+	return installstate.Save(identityDir, installstate.Active{ProjectDir: projectDir})
 }
 
 func closeCatalog(proj *database.Catalog) (string, error) {

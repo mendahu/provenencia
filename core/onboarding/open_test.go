@@ -9,7 +9,7 @@ import (
 	"github.com/mendahu/provenance/core/database"
 	"github.com/mendahu/provenance/core/database/users"
 	"github.com/mendahu/provenance/core/identity"
-	"github.com/mendahu/provenance/core/session"
+	"github.com/mendahu/provenance/core/installstate"
 )
 
 func TestOpen(t *testing.T) {
@@ -24,7 +24,7 @@ func TestOpen(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err := session.Remove(ident); err != nil {
+				if err := installstate.Remove(ident); err != nil {
 					t.Fatal(err)
 				}
 				res, err := Open(ident, created.ProjectDir, "", "")
@@ -34,7 +34,7 @@ func TestOpen(t *testing.T) {
 				if res.Identity.UserID != created.Identity.UserID {
 					t.Fatal("uuid changed")
 				}
-				act, err := session.Load(ident)
+				act, err := installstate.Load(ident)
 				if err != nil {
 					t.Fatal(err)
 				}

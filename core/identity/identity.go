@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/mendahu/provenance/core/jsonfile"
 )
 
 const FileName = "identity.json"
@@ -54,9 +54,9 @@ func Mint(displayName string) (Identity, error) {
 
 // Load reads identity.json from dir. A missing file is ErrNotFound; it does not mint.
 func Load(dir string) (*Identity, error) {
-	b, err := os.ReadFile(path(dir))
+	b, err := jsonfile.Read(path(dir))
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, jsonfile.ErrNotFound) {
 			return nil, ErrNotFound
 		}
 		return nil, err
@@ -77,22 +77,10 @@ func Save(dir string, id Identity) error {
 		return err
 	}
 	id.DisplayName = strings.TrimSpace(id.DisplayName)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
-	}
-	b, err := json.MarshalIndent(id, "", "  ")
-	if err != nil {
-		return err
-	}
-	b = append(b, '\n')
-	return os.WriteFile(path(dir), b, 0o600)
+	return jsonfile.Write(path(dir), id)
 }
 
 // Remove deletes identity.json under dir. Missing file is not an error.
 func Remove(dir string) error {
-	err := os.Remove(path(dir))
-	if err != nil && os.IsNotExist(err) {
-		return nil
-	}
-	return err
+	return jsonfile.Remove(path(dir))
 }
