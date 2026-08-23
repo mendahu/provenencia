@@ -13,6 +13,9 @@ enum Method {
   METHOD_GET_INSTALL_IDENTITY = 3;
   METHOD_COMPLETE_ONBOARDING = 4;
   METHOD_REMOVE_INSTALL_IDENTITY = 5;
+  METHOD_GET_ACTIVE_PROJECT = 6;
+  METHOD_OPEN_PROJECT = 7;
+  METHOD_REMOVE_ACTIVE_PROJECT = 8;
 }
 
 message PingRequest {
@@ -57,3 +60,30 @@ message RemoveInstallIdentityRequest {
 }
 
 message RemoveInstallIdentityResponse {}
+
+message GetActiveProjectRequest {
+  string identity_dir = 1;
+}
+
+message GetActiveProjectResponse {
+  bool found = 1;
+  string project_dir = 2;
+}
+
+message OpenProjectRequest {
+  string identity_dir = 1;
+  string project_dir = 2;
+  string display_name = 3;
+}
+
+message OpenProjectResponse {
+  string project_dir = 1;
+  string user_id = 2;
+  string display_name = 3;
+}
+
+message RemoveActiveProjectRequest {
+  string identity_dir = 1;
+}
+
+message RemoveActiveProjectResponse {}

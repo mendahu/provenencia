@@ -3,7 +3,7 @@ import Foundation
 enum InstallPaths {
     static let appSupportFolder = "Provenance"
 
-    /// `{Application Support}/Provenance`. Only `identity.json` in this folder is the install identity.
+    /// `{Application Support}/Provenance`. Holds `identity.json` and `active-project.json`.
     static func identityDirectory(fileManager: FileManager = .default) throws -> URL {
         let base = try fileManager.url(
             for: .applicationSupportDirectory,
@@ -24,7 +24,7 @@ enum InstallPaths {
     }
 
     /// Folder names ending in `.provenance` under Documents. Does not open SQLite.
-    /// Several such folders are listed only as “some project exists”; we do not pick one (spike PR9).
+    /// Used for the open-existing picker; launch home uses the stored active project, not this list.
     static func provenanceProjects(
         in documents: URL,
         fileManager: FileManager = .default
@@ -42,6 +42,14 @@ enum InstallPaths {
             url.pathExtension == "provenance"
                 && ((try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false)
         }
+    }
+
+    static func isProjectDirectory(_ path: String, fileManager: FileManager = .default) -> Bool {
+        var isDir: ObjCBool = false
+        guard fileManager.fileExists(atPath: path, isDirectory: &isDir), isDir.boolValue else {
+            return false
+        }
+        return true
     }
 }
 

@@ -22,4 +22,11 @@ protocol GenealogyStore: Sendable {
         familyName: String
     ) async throws -> OnboardingResult
     func removeInstallIdentity(identityDir: String) async throws
+    func activeProject(identityDir: String) async throws -> String?
+    func openProject(
+        identityDir: String,
+        projectDir: String,
+        displayName: String
+    ) async throws -> OnboardingResult
+    func removeActiveProject(identityDir: String) async throws
 }

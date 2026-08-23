@@ -23,3 +23,19 @@ func CompleteOnboarding(in []byte) ([]byte, error) {
 		DisplayName: res.Identity.DisplayName,
 	})
 }
+
+func OpenProject(in []byte) ([]byte, error) {
+	var req engine.OpenProjectRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, fmt.Errorf("open_project: unmarshal: %w", err)
+	}
+	res, err := onboarding.Open(req.GetIdentityDir(), req.GetProjectDir(), req.GetDisplayName())
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(&engine.OpenProjectResponse{
+		ProjectDir:  res.ProjectDir,
+		UserId:      res.Identity.UserID.String(),
+		DisplayName: res.Identity.DisplayName,
+	})
+}

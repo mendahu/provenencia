@@ -30,6 +30,7 @@ func TestCompleteOnboarding(t *testing.T) {
 			after: func(t *testing.T, out []byte, req proto.Message) {
 				assertOnboardingWroteProject(t, out, "Robins Family")
 				assertIdentityMatchesComplete(t, out, req)
+				assertActiveMatchesComplete(t, out, req)
 			},
 		},
 		{

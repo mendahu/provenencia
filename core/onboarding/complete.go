@@ -7,6 +7,7 @@ import (
 	"github.com/mendahu/provenance/core/database"
 	"github.com/mendahu/provenance/core/database/users"
 	"github.com/mendahu/provenance/core/identity"
+	"github.com/mendahu/provenance/core/session"
 )
 
 var ErrBlankName = errors.New("name is empty")
@@ -48,7 +49,14 @@ func Complete(identityDir, parent, displayName, familyName string) (Result, erro
 	if err := proj.Close(); err != nil {
 		return Result{}, err
 	}
+	if err := rememberActive(identityDir, dir); err != nil {
+		return Result{}, err
+	}
 	return Result{ProjectDir: dir, Identity: id}, nil
+}
+
+func rememberActive(identityDir, projectDir string) error {
+	return session.Save(identityDir, session.Active{ProjectDir: projectDir})
 }
 
 func loadOrMint(identityDir, displayName string) (identity.Identity, error) {

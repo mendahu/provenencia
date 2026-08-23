@@ -174,3 +174,23 @@ func assertIdentityMatchesComplete(t *testing.T, out []byte, req proto.Message) 
 		UserId: done.GetUserId(),
 	})
 }
+
+func assertActiveMatchesComplete(t *testing.T, out []byte, req proto.Message) {
+	t.Helper()
+	var done engine.CompleteOnboardingResponse
+	if err := proto.Unmarshal(out, &done); err != nil {
+		t.Fatal(err)
+	}
+	cr, ok := req.(*engine.CompleteOnboardingRequest)
+	if !ok {
+		t.Fatalf("req %T", req)
+	}
+	got, err := GetActiveProject(marshalProto(t, &engine.GetActiveProjectRequest{IdentityDir: cr.GetIdentityDir()}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertWantFields(t, got, &engine.GetActiveProjectResponse{
+		Found:      true,
+		ProjectDir: done.GetProjectDir(),
+	})
+}

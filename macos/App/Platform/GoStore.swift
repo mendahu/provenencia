@@ -62,4 +62,46 @@ struct GoStore: GenealogyStore {
             request: req
         )
     }
+
+    func activeProject(identityDir: String) async throws -> String? {
+        var req = Provenance_Engine_V1_GetActiveProjectRequest()
+        req.identityDir = identityDir
+        let resp: Provenance_Engine_V1_GetActiveProjectResponse = try await provenanceCall(
+            method: CoreMethod.getActiveProject,
+            request: req
+        )
+        guard resp.found else {
+            return nil
+        }
+        return resp.projectDir
+    }
+
+    func openProject(
+        identityDir: String,
+        projectDir: String,
+        displayName: String
+    ) async throws -> OnboardingResult {
+        var req = Provenance_Engine_V1_OpenProjectRequest()
+        req.identityDir = identityDir
+        req.projectDir = projectDir
+        req.displayName = displayName
+        let resp: Provenance_Engine_V1_OpenProjectResponse = try await provenanceCall(
+            method: CoreMethod.openProject,
+            request: req
+        )
+        return OnboardingResult(
+            projectDir: resp.projectDir,
+            userID: resp.userID,
+            displayName: resp.displayName
+        )
+    }
+
+    func removeActiveProject(identityDir: String) async throws {
+        var req = Provenance_Engine_V1_RemoveActiveProjectRequest()
+        req.identityDir = identityDir
+        let _: Provenance_Engine_V1_RemoveActiveProjectResponse = try await provenanceCall(
+            method: CoreMethod.removeActiveProject,
+            request: req
+        )
+    }
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenance/core/database"
 	"github.com/mendahu/provenance/core/database/users"
 	"github.com/mendahu/provenance/core/identity"
+	"github.com/mendahu/provenance/core/session"
 )
 
 func TestFolderName(t *testing.T) {
@@ -105,6 +106,13 @@ func TestComplete(t *testing.T) {
 				if len(m) != 2 {
 					t.Fatalf("unexpected identity keys %v", m)
 				}
+				act, err := session.Load(ident)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if act.ProjectDir != res.ProjectDir {
+					t.Fatalf("active %s want %s", act.ProjectDir, res.ProjectDir)
+				}
 			},
 		},
 		{
@@ -139,6 +147,13 @@ func TestComplete(t *testing.T) {
 				}
 				if name != "Jake R." {
 					t.Fatalf("users %q", name)
+				}
+				act, err := session.Load(ident)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if act.ProjectDir != b.ProjectDir {
+					t.Fatalf("active %s", act.ProjectDir)
 				}
 			},
 		},

@@ -33,7 +33,7 @@ Do not add per-field C getters.
 
 ## Rebuild the Mac library
 
-SQLite (`mattn/go-sqlite3`) is compiled into this dylib. `GetInstallIdentity` and `CompleteOnboarding` take directory paths in protobuf (caller supplies Application Support / Documents; Go does not hardcode them). There are no generic Create/Open RPCs and no Source tables. After Go FFI changes:
+SQLite (`mattn/go-sqlite3`) is compiled into this dylib. Identity and session RPCs take directory paths in protobuf (caller supplies Application Support / Documents; Go does not hardcode them). There are no Source tables. After Go FFI changes:
 
 ```sh
 ./scripts/build-macos-core.sh
