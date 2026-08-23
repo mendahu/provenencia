@@ -40,8 +40,10 @@ func ListContributors(projectDir string) ([]identity.Identity, error) {
 }
 
 // Open opens an existing *.provenance folder and remembers it as the active project.
-// If adoptUserID is set, identity.json is written from that catalog users row (new Mac).
-// Otherwise it mints or loads install identity and upserts users. Corrupt identity.json is not overwritten.
+// If adoptUserID is set, identity.json is written from that catalog users row
+// (replacing a different UUID already on this Mac). Otherwise it mints or loads
+// install identity and upserts users after the catalog opens successfully.
+// Corrupt identity.json is not overwritten.
 func Open(identityDir, projectDir, displayName, adoptUserID string) (Result, error) {
 	projectDir = strings.TrimSpace(projectDir)
 	displayName = strings.TrimSpace(displayName)
@@ -82,6 +84,7 @@ func adopt(identityDir, projectDir, adoptUserID string) (Result, error) {
 		return Result{}, err
 	}
 
+	// A different UUID on disk is replaced: this Mac is now that catalog contributor.
 	id := identity.Identity{UserID: uid, DisplayName: name}
 	if err := identity.Save(identityDir, id); err != nil {
 		return Result{}, err
@@ -93,7 +96,7 @@ func adopt(identityDir, projectDir, adoptUserID string) (Result, error) {
 }
 
 func openMint(identityDir, projectDir, displayName string) (Result, error) {
-	id, err := loadOrMintOpen(identityDir, displayName)
+	id, err := resolveOpenIdentity(identityDir, displayName)
 	if err != nil {
 		return Result{}, err
 	}
@@ -111,35 +114,28 @@ func openMint(identityDir, projectDir, displayName string) (Result, error) {
 	if err := proj.Close(); err != nil {
 		return Result{}, err
 	}
+	if err := identity.Save(identityDir, id); err != nil {
+		return Result{}, err
+	}
 	if err := rememberActive(identityDir, dir); err != nil {
 		return Result{}, err
 	}
 	return Result{ProjectDir: dir, Identity: id}, nil
 }
 
-func loadOrMintOpen(identityDir, displayName string) (identity.Identity, error) {
+func resolveOpenIdentity(identityDir, displayName string) (identity.Identity, error) {
 	got, err := identity.Load(identityDir)
 	if errors.Is(err, identity.ErrNotFound) {
 		if displayName == "" {
 			return identity.Identity{}, ErrBlankName
 		}
-		minted, err := identity.Mint(displayName)
-		if err != nil {
-			return identity.Identity{}, err
-		}
-		if err := identity.Save(identityDir, minted); err != nil {
-			return identity.Identity{}, err
-		}
-		return minted, nil
+		return identity.Mint(displayName)
 	}
 	if err != nil {
 		return identity.Identity{}, err
 	}
 	if displayName != "" {
 		got.DisplayName = displayName
-		if err := identity.Save(identityDir, *got); err != nil {
-			return identity.Identity{}, err
-		}
 	}
 	return *got, nil
 }
