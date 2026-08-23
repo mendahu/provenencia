@@ -1,0 +1,22 @@
+---
+description: macOS unit tests use Swift Testing in macos/ProvenanceTests, FakeStore only
+globs: macos/ProvenanceTests/**/*.swift
+alwaysApply: false
+---
+
+# Swift tests
+
+Follow the project skill `.cursor/skills/add-swift-test/SKILL.md`.
+
+- Files live in `macos/ProvenanceTests/`, not next to app sources. Swift Testing (`@Test`, `#expect`), `@testable import Provenance`.
+- Inject `FakeStore` and temp `OnboardingFolders`. No `GoStore`, dylib, or generated protobuf tests.
+- `@MainActor` when exercising `OnboardingModel`. Wire new files into the ProvenanceTests target in `project.pbxproj` only.
+
+```swift
+@Test func loadWithNoIdentityShowsChooseFileUnlocked() async throws {
+    let (model, _, _) = try harness()
+    await model.load()
+    #expect(model.phase == .chooseFile)
+    #expect(!model.researcherLocked)
+}
+```
