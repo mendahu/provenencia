@@ -16,25 +16,39 @@ final class OnboardingModel {
     var phase: Phase = .loading
     var sessionDisplayName = ""
     var projectBasename = ""
+    /// True when identity.json loaded; researcher name is not collected again.
+    var researcherLocked = false
 
     private let store: any GenealogyStore
+    private let folders: OnboardingFolders?
 
-    init(store: any GenealogyStore) {
+    init(store: any GenealogyStore, folders: OnboardingFolders? = nil) {
         self.store = store
+        self.folders = folders
     }
 
     var canContinue: Bool {
-        !trimmed(displayName).isEmpty && !trimmed(familyName).isEmpty && !isBusy
+        let familyOK = !trimmed(familyName).isEmpty
+        let nameOK = researcherLocked || !trimmed(displayName).isEmpty
+        return nameOK && familyOK && !isBusy
     }
 
     func load() async {
         errorText = nil
+        researcherLocked = false
         do {
-            let dir = try InstallPaths.identityDirectory().path
-            if let id = try await store.installIdentity(identityDir: dir) {
+            let loc = try resolvedFolders()
+            let projects = try InstallPaths.provenanceProjects(in: loc.documentsDirectory)
+            if let id = try await store.installIdentity(identityDir: loc.identityDirectory.path) {
                 sessionDisplayName = id.displayName
-                projectBasename = ""
-                phase = .home
+                displayName = id.displayName
+                researcherLocked = true
+                if projects.isEmpty {
+                    phase = .form
+                } else {
+                    projectBasename = ""
+                    phase = .home
+                }
                 return
             }
             phase = .form
@@ -52,11 +66,10 @@ final class OnboardingModel {
         errorText = nil
         defer { isBusy = false }
         do {
-            let identityDir = try InstallPaths.identityDirectory().path
-            let parentDir = try InstallPaths.documentsDirectory().path
+            let loc = try resolvedFolders()
             let result = try await store.completeOnboarding(
-                identityDir: identityDir,
-                parentDir: parentDir,
+                identityDir: loc.identityDirectory.path,
+                parentDir: loc.documentsDirectory.path,
                 displayName: trimmed(displayName),
                 familyName: trimmed(familyName)
             )
@@ -66,6 +79,13 @@ final class OnboardingModel {
         } catch {
             errorText = error.localizedDescription
         }
+    }
+
+    private func resolvedFolders() throws -> OnboardingFolders {
+        if let folders {
+            return folders
+        }
+        return try OnboardingFolders.live()
     }
 
     private func trimmed(_ s: String) -> String {

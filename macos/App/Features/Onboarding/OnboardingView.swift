@@ -3,8 +3,8 @@ import SwiftUI
 struct OnboardingView: View {
     @State private var model: OnboardingModel
 
-    init(store: any GenealogyStore = GoStore()) {
-        _model = State(initialValue: OnboardingModel(store: store))
+    init(store: any GenealogyStore = GoStore(), folders: OnboardingFolders? = nil) {
+        _model = State(initialValue: OnboardingModel(store: store, folders: folders))
     }
 
     var body: some View {
@@ -28,12 +28,15 @@ struct OnboardingView: View {
 
     private var form: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Welcome to Provenance")
+            Text(model.researcherLocked ? "Create a project" : "Welcome to Provenance")
                 .font(.title2)
-            Text("Your researcher name is how work is attributed. The family name labels this project folder.")
+            Text(model.researcherLocked
+                ? "Your researcher identity is already on this Mac. Name this project folder."
+                : "Your researcher name is how work is attributed. The family name labels this project folder.")
                 .foregroundStyle(.secondary)
             TextField("Researcher name", text: $model.displayName, prompt: Text("Jane Smith"))
                 .textFieldStyle(.roundedBorder)
+                .disabled(model.researcherLocked)
                 .accessibilityIdentifier("onboarding.displayName")
             TextField("Family / project name", text: $model.familyName, prompt: Text("Smith Family"))
                 .textFieldStyle(.roundedBorder)
@@ -77,9 +80,19 @@ struct OnboardingView: View {
 }
 
 #Preview("Form") {
-    OnboardingView(store: FakeStore())
+    OnboardingView(store: FakeStore(), folders: .previewEmpty)
+}
+
+#Preview("Identity only") {
+    OnboardingView(
+        store: FakeStore(identity: InstallIdentity(userID: "1", displayName: "Jane Smith")),
+        folders: .previewEmpty
+    )
 }
 
 #Preview("Returning") {
-    OnboardingView(store: FakeStore(identity: InstallIdentity(userID: "1", displayName: "Jake Robins")))
+    OnboardingView(
+        store: FakeStore(identity: InstallIdentity(userID: "1", displayName: "Jane Smith")),
+        folders: .previewWithProject
+    )
 }
