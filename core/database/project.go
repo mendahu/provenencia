@@ -30,6 +30,7 @@ var (
 	ErrNotAProject        = errors.New("not a provenance catalog")
 	ErrUnsupportedVersion = errors.New("unsupported catalog version")
 	ErrInvalidFolderName  = errors.New("folder name must end in .provenance")
+	ErrInvalidUser        = errors.New("invalid user id or display name")
 )
 
 // Project is an exclusive connection to one provenance.sqlite catalog.
@@ -167,4 +168,28 @@ func (p *Project) Close() error {
 	err := p.db.Close()
 	p.db = nil
 	return err
+}
+
+// UpsertUser inserts or updates a users row. id must be a 16-byte UUIDv7 blob.
+func (p *Project) UpsertUser(id []byte, displayName string) error {
+	if p == nil || p.db == nil {
+		return errors.New("project closed")
+	}
+	name := strings.TrimSpace(displayName)
+	if len(id) != 16 || name == "" {
+		return ErrInvalidUser
+	}
+	_, err := p.db.Exec(`INSERT INTO users (id, display_name) VALUES (?, ?)
+		ON CONFLICT(id) DO UPDATE SET display_name = excluded.display_name`, id, name)
+	return err
+}
+
+// LookupUser returns the display name for id, or sql.ErrNoRows.
+func (p *Project) LookupUser(id []byte) (string, error) {
+	if p == nil || p.db == nil {
+		return "", errors.New("project closed")
+	}
+	var name string
+	err := p.db.QueryRow(`SELECT display_name FROM users WHERE id = ?`, id).Scan(&name)
+	return name, err
 }

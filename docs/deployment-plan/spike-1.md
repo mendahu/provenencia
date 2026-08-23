@@ -132,7 +132,7 @@ The stack already calls this out: **cgo SQLite inside a Go xcframework loaded by
 
 ## PR sequence
 
-PR1–PR5 are done. Remaining PRs (6–8) are unchecked.
+PR1–PR6 are done. Remaining PRs (7–8) are unchecked.
 
 Small, reviewable chunks. Each PR should leave `main` buildable. Later PRs may add UI on a stub that the next PR fills in.
 
@@ -142,7 +142,7 @@ PR1 repo scaffold
        └─ PR3 cgo SQLite dylib spike (done)
             └─ PR4 migrations + users + create/open project (Go) (done)
                  ├─ PR5 install identity file (Go) (done)
-                 │    └─ PR6 onboarding use-case (person + family name → identity + project)
+                 │    └─ PR6 onboarding use-case (person + family name → identity + project) (done)
                  │         └─ PR7 SwiftUI first-run + Application Support path + returning launch
                  └─ PR8 (optional same milestone) last-project pointer / reopen
 ```
@@ -156,7 +156,7 @@ PR5 can start once PR3 proves the dylib; it should not land identity writes that
 | **3** | SQLite-in-dylib spike | Done. Temp SQLite via mattn/cgo inside `libprovenance.dylib`; Swift `sqliteProbe()`. Existing c-shared dylib pipeline, not an xcframework. | 2 | **Gate.** If this fails, choose fallback before continuing. |
 | **4** | Project format + `users` | Done. Create/open `*.provenance` in Go; `application_id` `'PROV'`; `user_version` 1; empty `users`; exclusive open. No FFI create/open, no CLI. | 3 | Schema: only what Spike 1 needs. Refuse foreign catalogs. |
 | **5** | Install identity store | Done. Go `core/identity`: `{dir}/identity.json` (`user_id` UUIDv7 + `display_name`). Caller passes `dir`; no Mac path hardcoded. No FFI, no `users` insert. | 4 | File format pinned in this PR. |
-| **6** | Onboarding use-case | Given display name + project/family name: mint or load identity, create `{name}.provenance`, upsert `users`. Tests for sanitize and “already exists.” Go-only unless this PR adds FFI. | 4, 5 | No Source tables. |
+| **6** | Onboarding use-case | Done. Go `core/onboarding.Complete`: mint/load identity, sanitize family name, `Create` `*.provenance`, upsert `users`. No FFI. | 4, 5 | No Source tables. |
 | **7** | Onboarding UI + install path | First-run: two fields (your name, family/project name), validation, progress/error, success/home stub showing the project name. Returning user skips the prompts. **Swift** resolves Application Support (`Provenance/identity.json`) and passes that directory to Go over FFI (`EnsureInstallIdentity` / `GetInstallIdentity` or equivalent). Go still does not hardcode Mac paths. | 6 | SwiftUI + platform path; no genealogy screens. |
 | **8** | Reopen last project | Remember last project folder (bookmark/security-scoped if needed) so relaunch is one click, not a file picker every time. | 7 | Can slip to Spike 2 if bookmarks fight us. |
 
