@@ -31,9 +31,7 @@ func provenanceInvoke(method: Int32, request: Data) throws -> Data {
     var outPtr: UnsafeMutablePointer<UInt8>?
     var outLen: Int = 0
     let status: Int32 = request.withUnsafeBytes { raw in
-        let inPtr = raw.bindMemory(to: UInt8.self).baseAddress.map {
-            UnsafeMutablePointer(mutating: $0)
-        }
+        let inPtr = raw.bindMemory(to: UInt8.self).baseAddress
         return provenance_call(method, inPtr, request.count, &outPtr, &outLen)
     }
     defer {

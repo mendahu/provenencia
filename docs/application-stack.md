@@ -595,7 +595,7 @@ Core
 Interop
   C ABI / FFI
   Protocol Buffers (generated Go / Swift types)
-  Go core as xcframework/dylib (cgo + mattn); spike before Source UI
+  Go core as c-shared dylib (cgo + mattn); Spike 1 proved Swift can load it
 
 Persistence
   SQLite via github.com/mattn/go-sqlite3 (cgo, bundled amalgamation)
@@ -701,7 +701,7 @@ Authoritative domain schemas: [`source-layer-data-model.md`](source-layer-data-m
 
 # 31. Architectural risks to address
 
-These are known tensions. Several are already constrained by §12 and §29 (no live iCloud/NAS, directory is the format, GEDCOM is an adapter, exclusive writer, MVP-only RPCs). Remaining items to pin for implementation are called out below.
+These are known tensions. Several are already constrained by §12 and §29 (no live iCloud/NAS, directory is the format, GEDCOM is an adapter, exclusive writer, MVP-only RPCs). Remaining items to pin for implementation are called out below. Spike 1 burned the SQLite-in-dylib packaging risk (item 5).
 
 1. **File bytes and FFI** — **Decided:** relative path + metadata in protobuf; Swift reads the object on disk; ingest-only writes (§7).
 
@@ -711,7 +711,7 @@ These are known tensions. Several are already constrained by §12 and §29 (no l
 
 4. **Typed-graph validation vs convention** — Core validation should reject malformed rows (value column vs `value_type`, FK shape), not one-grain Places or empty Persons. Warnings and badges are UI.
 
-5. **cgo SQLite + Swift dylib** — **MVP plan: A.** Spike mattn/go-sqlite3 inside a Go xcframework loaded by Swift (open DB, trivial write, round-trip) **before** Source UI. If that build is untenable, fall back to a local Go process (B) or pure-Go SQLite in the dylib (C). On-disk project format does not change.
+5. **cgo SQLite + Swift dylib** — **Retired (Spike 1).** Plan A: `mattn/go-sqlite3` in `libprovenance.dylib` (`-buildmode=c-shared`, not an xcframework). Swift loads it; create/open writes a real `provenance.sqlite` via protobuf FFI. Fallbacks unused: local Go process (B), pure-Go SQLite (C). Signing the dylib / dropping `disable-library-validation` is ship-prep, not this risk. On-disk project format did not change.
 
 6. **Project wrapper vs source of truth** — The directory is the format. No parallel `metadata.json` catalog. Optional Mac package icon must not hide or encrypt contents.
 

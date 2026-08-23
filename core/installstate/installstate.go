@@ -1,12 +1,14 @@
-package session
+// Package installstate is the last opened project for this install (not an auth session).
+package installstate
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/mendahu/provenance/core/jsonfile"
 )
 
 const FileName = "active-project.json"
@@ -34,16 +36,16 @@ func validate(a Active) error {
 
 // Load reads active-project.json from dir. A missing file is ErrNotFound.
 func Load(dir string) (*Active, error) {
-	b, err := os.ReadFile(path(dir))
+	b, err := jsonfile.Read(path(dir))
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, jsonfile.ErrNotFound) {
 			return nil, ErrNotFound
 		}
 		return nil, err
 	}
 	var a Active
 	if err := json.Unmarshal(b, &a); err != nil {
-		return nil, fmt.Errorf("session: %w", err)
+		return nil, fmt.Errorf("installstate: %w", err)
 	}
 	a.ProjectDir = strings.TrimSpace(a.ProjectDir)
 	if err := validate(a); err != nil {
@@ -58,22 +60,10 @@ func Save(dir string, a Active) error {
 	if err := validate(a); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
-	}
-	b, err := json.MarshalIndent(a, "", "  ")
-	if err != nil {
-		return err
-	}
-	b = append(b, '\n')
-	return os.WriteFile(path(dir), b, 0o600)
+	return jsonfile.Write(path(dir), a)
 }
 
 // Remove deletes active-project.json under dir. Missing file is not an error.
 func Remove(dir string) error {
-	err := os.Remove(path(dir))
-	if err != nil && os.IsNotExist(err) {
-		return nil
-	}
-	return err
+	return jsonfile.Remove(path(dir))
 }

@@ -1,4 +1,4 @@
-package session
+package installstate
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestSession(t *testing.T) {
+func TestInstallState(t *testing.T) {
 	tests := []struct {
 		name string
 		run  func(t *testing.T, dir string)

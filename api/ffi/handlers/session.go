@@ -6,7 +6,7 @@ import (
 
 	"github.com/mendahu/provenance/api/proto/engine"
 	"github.com/mendahu/provenance/core/identity"
-	"github.com/mendahu/provenance/core/session"
+	"github.com/mendahu/provenance/core/installstate"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -15,8 +15,8 @@ func GetActiveProject(in []byte) ([]byte, error) {
 	if err := proto.Unmarshal(in, &req); err != nil {
 		return nil, fmt.Errorf("get_active_project: unmarshal: %w", err)
 	}
-	a, err := session.Load(req.GetIdentityDir())
-	if errors.Is(err, session.ErrNotFound) {
+	a, err := installstate.Load(req.GetIdentityDir())
+	if errors.Is(err, installstate.ErrNotFound) {
 		return proto.Marshal(&engine.GetActiveProjectResponse{Found: false})
 	}
 	if err != nil {
@@ -33,7 +33,7 @@ func RemoveActiveProject(in []byte) ([]byte, error) {
 	if err := proto.Unmarshal(in, &req); err != nil {
 		return nil, fmt.Errorf("remove_active_project: unmarshal: %w", err)
 	}
-	if err := session.Remove(req.GetIdentityDir()); err != nil {
+	if err := installstate.Remove(req.GetIdentityDir()); err != nil {
 		return nil, err
 	}
 	return proto.Marshal(&engine.RemoveActiveProjectResponse{})
@@ -45,7 +45,7 @@ func SignOut(in []byte) ([]byte, error) {
 		return nil, fmt.Errorf("sign_out: unmarshal: %w", err)
 	}
 	dir := req.GetIdentityDir()
-	if err := session.Remove(dir); err != nil {
+	if err := installstate.Remove(dir); err != nil {
 		return nil, err
 	}
 	if err := identity.Remove(dir); err != nil {

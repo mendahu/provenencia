@@ -13,8 +13,6 @@ import (
 	"unsafe"
 
 	"github.com/mendahu/provenance/api/ffi"
-	// Keep mattn SQLite in this dylib until Create/Open is an FFI RPC.
-	_ "github.com/mendahu/provenance/core/database"
 )
 
 func bytesFromC(ptr *C.uint8_t, n C.size_t) []byte {

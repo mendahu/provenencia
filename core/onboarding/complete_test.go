@@ -10,7 +10,7 @@ import (
 	"github.com/mendahu/provenance/core/database"
 	"github.com/mendahu/provenance/core/database/users"
 	"github.com/mendahu/provenance/core/identity"
-	"github.com/mendahu/provenance/core/session"
+	"github.com/mendahu/provenance/core/installstate"
 )
 
 func TestFolderName(t *testing.T) {
@@ -111,7 +111,7 @@ func TestComplete(t *testing.T) {
 				if len(m) != 2 {
 					t.Fatalf("unexpected identity keys %v", m)
 				}
-				act, err := session.Load(ident)
+				act, err := installstate.Load(ident)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -153,7 +153,7 @@ func TestComplete(t *testing.T) {
 				if name != "Jake R." {
 					t.Fatalf("users %q", name)
 				}
-				act, err := session.Load(ident)
+				act, err := installstate.Load(ident)
 				if err != nil {
 					t.Fatal(err)
 				}

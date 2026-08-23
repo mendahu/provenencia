@@ -24,9 +24,9 @@ Regenerate:
 
 ## C ABI
 
-A single pair of exports (see `api/libprovenance`):
+A single pair of exports (see `api/libprovenance`). Status codes and `const` on `in` are documented on the Mac bridging header [`macos/App/Resources/Provenance-Bridging-Header.h`](../../macos/App/Resources/Provenance-Bridging-Header.h).
 
-- `provenance_call(method, in, in_len, out, out_len)` — `method` is `provenance.engine.v1.Method`; on success `in`/`out` are protobuf bytes for that RPC. On failure (status `1`) `out` is UTF-8 `err.Error()`, not protobuf.
+- `provenance_call(method, in, in_len, out, out_len)` — `method` is `provenance.engine.v1.Method`; payloads are protobuf bytes. The Go export cannot use C `const` on `in` (`cgo //export`).
 - `provenance_free` — caller frees `out`.
 
 Do not add per-field C getters.
