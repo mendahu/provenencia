@@ -29,6 +29,7 @@ public nonisolated enum Provenance_Engine_V1_Method: SwiftProtobuf.Enum, Swift.C
   case getVersion // = 2
   case getInstallIdentity // = 3
   case completeOnboarding // = 4
+  case removeInstallIdentity // = 5
   case UNRECOGNIZED(Int)
 
   public init() {
@@ -42,6 +43,7 @@ public nonisolated enum Provenance_Engine_V1_Method: SwiftProtobuf.Enum, Swift.C
     case 2: self = .getVersion
     case 3: self = .getInstallIdentity
     case 4: self = .completeOnboarding
+    case 5: self = .removeInstallIdentity
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -53,6 +55,7 @@ public nonisolated enum Provenance_Engine_V1_Method: SwiftProtobuf.Enum, Swift.C
     case .getVersion: return 2
     case .getInstallIdentity: return 3
     case .completeOnboarding: return 4
+    case .removeInstallIdentity: return 5
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -64,6 +67,7 @@ public nonisolated enum Provenance_Engine_V1_Method: SwiftProtobuf.Enum, Swift.C
     .getVersion,
     .getInstallIdentity,
     .completeOnboarding,
+    .removeInstallIdentity,
   ]
 
 }
@@ -176,12 +180,34 @@ public nonisolated struct Provenance_Engine_V1_CompleteOnboardingResponse: Senda
   public init() {}
 }
 
+public nonisolated struct Provenance_Engine_V1_RemoveInstallIdentityRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var identityDir: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Provenance_Engine_V1_RemoveInstallIdentityResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate nonisolated let _protobuf_package = "provenance.engine.v1"
 
 nonisolated extension Provenance_Engine_V1_Method: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0METHOD_UNSPECIFIED\0\u{1}METHOD_PING\0\u{1}METHOD_GET_VERSION\0\u{1}METHOD_GET_INSTALL_IDENTITY\0\u{1}METHOD_COMPLETE_ONBOARDING\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0METHOD_UNSPECIFIED\0\u{1}METHOD_PING\0\u{1}METHOD_GET_VERSION\0\u{1}METHOD_GET_INSTALL_IDENTITY\0\u{1}METHOD_COMPLETE_ONBOARDING\0\u{1}METHOD_REMOVE_INSTALL_IDENTITY\0")
 }
 
 nonisolated extension Provenance_Engine_V1_PingRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
@@ -443,6 +469,55 @@ nonisolated extension Provenance_Engine_V1_CompleteOnboardingResponse: SwiftProt
     if lhs.projectDir != rhs.projectDir {return false}
     if lhs.userID != rhs.userID {return false}
     if lhs.displayName != rhs.displayName {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenance_Engine_V1_RemoveInstallIdentityRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".RemoveInstallIdentityRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}identity_dir\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.identityDir) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.identityDir.isEmpty {
+      try visitor.visitSingularStringField(value: self.identityDir, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenance_Engine_V1_RemoveInstallIdentityRequest, rhs: Provenance_Engine_V1_RemoveInstallIdentityRequest) -> Bool {
+    if lhs.identityDir != rhs.identityDir {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenance_Engine_V1_RemoveInstallIdentityResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".RemoveInstallIdentityResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenance_Engine_V1_RemoveInstallIdentityResponse, rhs: Provenance_Engine_V1_RemoveInstallIdentityResponse) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -13,8 +13,8 @@ Audience: someone comfortable with JavaScript and Go, new to Apple platforms.
 | `App/` | Process entry: scenes, menus. Stay thin. | `ProvenanceApp.swift` |
 | `Platform/` | Reused for the whole Mac client: store protocol, FFI, fakes. Not a screen. | `GenealogyStore`, `GoStore`, `CoreInvoke` |
 | `Platform/Generated/` | `protoc` output. Do not edit by hand. | `engine.pb.swift` |
-| `Features/<Name>/` | One product flow (view + model). Onboarding, workspace, etc. later. | — |
-| `Features/VersionSmoke/` | **Temporary** FFI probe (version on screen). Delete when a real root UI exists. | `VersionSmokeView` |
+| `Features/<Name>/` | One product flow (view + model). | `Onboarding` |
+| `Features/Onboarding/` | First-run names and home stub. | `OnboardingView` |
 | `Resources/` | Assets, entitlements, bridging header | |
 
 The Go dylib stays in [`macos/Core/`](../macos/Core/) (build artifact), not inside the Swift source tree.

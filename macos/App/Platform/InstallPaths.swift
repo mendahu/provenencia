@@ -1,0 +1,71 @@
+import Foundation
+
+enum InstallPaths {
+    static let appSupportFolder = "Provenance"
+
+    /// `{Application Support}/Provenance`. Only `identity.json` in this folder is the install identity.
+    static func identityDirectory(fileManager: FileManager = .default) throws -> URL {
+        let base = try fileManager.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )
+        return base.appendingPathComponent(appSupportFolder, isDirectory: true)
+    }
+
+    static func documentsDirectory(fileManager: FileManager = .default) throws -> URL {
+        try fileManager.url(
+            for: .documentDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )
+    }
+
+    /// Folder names ending in `.provenance` under Documents. Does not open SQLite.
+    /// Several such folders are listed only as “some project exists”; we do not pick one (spike PR9).
+    static func provenanceProjects(
+        in documents: URL,
+        fileManager: FileManager = .default
+    ) throws -> [URL] {
+        var isDir: ObjCBool = false
+        guard fileManager.fileExists(atPath: documents.path, isDirectory: &isDir), isDir.boolValue else {
+            return []
+        }
+        let urls = try fileManager.contentsOfDirectory(
+            at: documents,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        )
+        return urls.filter { url in
+            url.pathExtension == "provenance"
+                && ((try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false)
+        }
+    }
+}
+
+struct OnboardingFolders: Sendable {
+    var identityDirectory: URL
+    var documentsDirectory: URL
+
+    static func live() throws -> OnboardingFolders {
+        OnboardingFolders(
+            identityDirectory: try InstallPaths.identityDirectory(),
+            documentsDirectory: try InstallPaths.documentsDirectory()
+        )
+    }
+
+    static var previewEmpty: OnboardingFolders {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("provenance-preview-empty-\(UUID().uuidString)")
+        return OnboardingFolders(identityDirectory: root, documentsDirectory: root)
+    }
+
+    static var previewWithProject: OnboardingFolders {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("provenance-preview-proj-\(UUID().uuidString)")
+        let docs = root.appendingPathComponent("Documents", isDirectory: true)
+        let project = docs.appendingPathComponent("Smith Family.provenance", isDirectory: true)
+        try? FileManager.default.createDirectory(at: project, withIntermediateDirectories: true)
+        return OnboardingFolders(identityDirectory: root.appendingPathComponent("identity", isDirectory: true), documentsDirectory: docs)
+    }
+}

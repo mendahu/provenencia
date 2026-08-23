@@ -132,6 +132,32 @@ func TestIdentity(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "remove missing is ok",
+			run: func(t *testing.T, dir string) {
+				if err := Remove(dir); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
+			name: "remove then load is not found",
+			run: func(t *testing.T, dir string) {
+				id, err := Mint("Jake")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := Save(dir, id); err != nil {
+					t.Fatal(err)
+				}
+				if err := Remove(dir); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := Load(dir); err != ErrNotFound {
+					t.Fatalf("got %v", err)
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {

@@ -1,12 +1,25 @@
 import Foundation
+import SwiftProtobuf
 
 enum CoreInvokeError: Error {
     case failed(Int32, message: String)
 }
 
+extension CoreInvokeError: LocalizedError {
+    var errorDescription: String? {
+        switch self {
+        case .failed(_, let message):
+            return message
+        }
+    }
+}
+
 enum CoreMethod {
     static let ping = Int32(Provenance_Engine_V1_Method.ping.rawValue)
     static let getVersion = Int32(Provenance_Engine_V1_Method.getVersion.rawValue)
+    static let getInstallIdentity = Int32(Provenance_Engine_V1_Method.getInstallIdentity.rawValue)
+    static let completeOnboarding = Int32(Provenance_Engine_V1_Method.completeOnboarding.rawValue)
+    static let removeInstallIdentity = Int32(Provenance_Engine_V1_Method.removeInstallIdentity.rawValue)
 }
 
 func provenanceInvoke(method: Int32, request: Data) throws -> Data {
@@ -34,4 +47,14 @@ func provenanceInvoke(method: Int32, request: Data) throws -> Data {
         return Data()
     }
     return Data(bytes: outPtr, count: outLen)
+}
+
+func provenanceCall<Request: Message & Sendable, Response: Message & Sendable>(
+    method: Int32,
+    request: Request
+) async throws -> Response {
+    try await Task.detached {
+        let out = try provenanceInvoke(method: method, request: try request.serializedData())
+        return try Response(serializedBytes: out)
+    }.value
 }
