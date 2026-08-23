@@ -19,7 +19,7 @@ xcodebuild -project macos/Provenance.xcodeproj -scheme Provenance -destination '
 
 ## Go core
 
-The Go module is `github.com/mendahu/provenance`. `core/` is a stub until later PRs add protobuf FFI and SQLite.
+The Go module is `github.com/mendahu/provenance`. It requires **Go 1.27** or later (`core/` is a stub until later PRs add protobuf FFI and SQLite).
 
 ```sh
 go test ./...
