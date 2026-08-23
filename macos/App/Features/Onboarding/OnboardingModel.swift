@@ -140,8 +140,7 @@ final class OnboardingModel {
         defer { isBusy = false }
         do {
             let identityDir = try identityDir()
-            try await store.removeActiveProject(identityDir: identityDir.path)
-            try await store.removeInstallIdentity(identityDir: identityDir.path)
+            try await store.signOut(identityDir: identityDir.path)
             displayName = ""
             familyName = ""
             sessionDisplayName = ""

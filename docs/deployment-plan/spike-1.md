@@ -189,11 +189,11 @@ From a code review of the Spike 1 codebase (Go core, FFI layer, Swift client). O
 
 ### Medium value
 
-- **M1 — Derive dispatch method constants from the generated proto enum.** `api/ffi/dispatch.go` hand-copies `Method…` int32 constants that must match `engine.proto`. Use `int32(engine.Method_METHOD_…)` to remove drift risk.
-- **M2 — Deduplicate the onboarding use-cases.** `loadOrMint` / `loadOrMintOpen` differ only in blank-name policy; the open→upsert→close→remember-active sequence appears in both `adopt` and `openMint`. Shared helpers, pure refactor on existing tests. Do after H2.
-- **M3 — Make `ListContributors` read-only.** Previewing “who is in this file?” currently calls `database.Open`, which runs migrations and takes the exclusive lock on a file the user has not agreed to open. Add a read-only open path (no migrate) for this query.
+- **M1 — Derive dispatch method constants from the generated proto enum.** Done. `dispatch.go` uses `int32(engine.Method_METHOD_…)`.
+- **M2 — Deduplicate the onboarding use-cases.** Done. Shared `loadOrMint` (persist timing) and close/`rememberActive` helpers; H2 identity-after-open unchanged.
+- **M3 — Make `ListContributors` read-only.** Done. `database.OpenReadOnly` (`mode=ro`, no migrate, no exclusive lock).
 - **M4 — Add a macOS CI job that builds the app.** Done. Non-draft PRs to `main` run `xcodebuild test` (unsigned) on `macos-15` via `.github/workflows/macos-test.yml`.
-- **M5 — Collapse sign-out into one `SignOut` RPC.** Swift makes two FFI calls (`RemoveActiveProject`, `RemoveInstallIdentity`) with a partial-failure window. One coarse RPC clearing both files is more atomic.
+- **M5 — Collapse sign-out into one `SignOut` RPC.** Done. One FFI call removes active-project.json then identity.json; stale last-project still uses `RemoveActiveProject` only.
 - **M6 — Map sentinel errors to user-facing copy.** The UI shows raw `err.Error()` text including full paths. Map the known sentinels (`ErrAlreadyExists`, `ErrAlreadyOpen`, `ErrNotAProject`, `ErrUnsupportedVersion`) to friendly strings in Swift; an error-code field over FFI can wait.
 
 ### Low value

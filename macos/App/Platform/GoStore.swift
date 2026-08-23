@@ -116,4 +116,13 @@ struct GoStore: GenealogyStore {
             request: req
         )
     }
+
+    func signOut(identityDir: String) async throws {
+        var req = Provenance_Engine_V1_SignOutRequest()
+        req.identityDir = identityDir
+        let _: Provenance_Engine_V1_SignOutResponse = try await provenanceCall(
+            method: CoreMethod.signOut,
+            request: req
+        )
+    }
 }

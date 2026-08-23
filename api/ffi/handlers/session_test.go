@@ -70,6 +70,49 @@ func TestRemoveActiveProject(t *testing.T) {
 	})
 }
 
+func TestSignOut(t *testing.T) {
+	runRPC(t, SignOut, []rpcTest{
+		{
+			name: "missing files ok",
+			reqFn: func(t *testing.T) proto.Message {
+				return &engine.SignOutRequest{IdentityDir: t.TempDir()}
+			},
+			want:  &engine.SignOutResponse{},
+			exact: true,
+		},
+		{
+			name: "clears identity and active",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _ := saveIdentity(t, "Jake")
+				if err := session.Save(dir, session.Active{ProjectDir: "/tmp/A.provenance"}); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.SignOutRequest{IdentityDir: dir}
+			},
+			want:  &engine.SignOutResponse{},
+			exact: true,
+			after: func(t *testing.T, _ []byte, req proto.Message) {
+				r := req.(*engine.SignOutRequest)
+				got, err := GetActiveProject(marshalProto(t, &engine.GetActiveProjectRequest{IdentityDir: r.GetIdentityDir()}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				assertWantFields(t, got, &engine.GetActiveProjectResponse{Found: false})
+				ident, err := GetInstallIdentity(marshalProto(t, &engine.GetInstallIdentityRequest{IdentityDir: r.GetIdentityDir()}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				assertIdentityNotFound(t, ident, nil)
+			},
+		},
+		{
+			name:    "bad proto",
+			raw:     []byte{0xff, 0xff, 0xff, 0xff},
+			wantErr: true,
+		},
+	})
+}
+
 func TestOpenProject(t *testing.T) {
 	runRPC(t, OpenProject, []rpcTest{
 		{

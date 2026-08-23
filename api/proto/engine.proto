@@ -17,6 +17,7 @@ enum Method {
   METHOD_OPEN_PROJECT = 7;
   METHOD_REMOVE_ACTIVE_PROJECT = 8;
   METHOD_LIST_PROJECT_USERS = 9;
+  METHOD_SIGN_OUT = 10;
 }
 
 message PingRequest {
@@ -102,3 +103,9 @@ message ProjectUser {
 message ListProjectUsersResponse {
   repeated ProjectUser users = 1;
 }
+
+message SignOutRequest {
+  string identity_dir = 1;
+}
+
+message SignOutResponse {}

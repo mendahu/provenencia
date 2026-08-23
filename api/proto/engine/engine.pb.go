@@ -36,21 +36,23 @@ const (
 	Method_METHOD_OPEN_PROJECT            Method = 7
 	Method_METHOD_REMOVE_ACTIVE_PROJECT   Method = 8
 	Method_METHOD_LIST_PROJECT_USERS      Method = 9
+	Method_METHOD_SIGN_OUT                Method = 10
 )
 
 // Enum value maps for Method.
 var (
 	Method_name = map[int32]string{
-		0: "METHOD_UNSPECIFIED",
-		1: "METHOD_PING",
-		2: "METHOD_GET_VERSION",
-		3: "METHOD_GET_INSTALL_IDENTITY",
-		4: "METHOD_COMPLETE_ONBOARDING",
-		5: "METHOD_REMOVE_INSTALL_IDENTITY",
-		6: "METHOD_GET_ACTIVE_PROJECT",
-		7: "METHOD_OPEN_PROJECT",
-		8: "METHOD_REMOVE_ACTIVE_PROJECT",
-		9: "METHOD_LIST_PROJECT_USERS",
+		0:  "METHOD_UNSPECIFIED",
+		1:  "METHOD_PING",
+		2:  "METHOD_GET_VERSION",
+		3:  "METHOD_GET_INSTALL_IDENTITY",
+		4:  "METHOD_COMPLETE_ONBOARDING",
+		5:  "METHOD_REMOVE_INSTALL_IDENTITY",
+		6:  "METHOD_GET_ACTIVE_PROJECT",
+		7:  "METHOD_OPEN_PROJECT",
+		8:  "METHOD_REMOVE_ACTIVE_PROJECT",
+		9:  "METHOD_LIST_PROJECT_USERS",
+		10: "METHOD_SIGN_OUT",
 	}
 	Method_value = map[string]int32{
 		"METHOD_UNSPECIFIED":             0,
@@ -63,6 +65,7 @@ var (
 		"METHOD_OPEN_PROJECT":            7,
 		"METHOD_REMOVE_ACTIVE_PROJECT":   8,
 		"METHOD_LIST_PROJECT_USERS":      9,
+		"METHOD_SIGN_OUT":                10,
 	}
 )
 
@@ -1017,6 +1020,86 @@ func (x *ListProjectUsersResponse) GetUsers() []*ProjectUser {
 	return nil
 }
 
+type SignOutRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	IdentityDir   string                 `protobuf:"bytes,1,opt,name=identity_dir,json=identityDir,proto3" json:"identity_dir,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SignOutRequest) Reset() {
+	*x = SignOutRequest{}
+	mi := &file_engine_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SignOutRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SignOutRequest) ProtoMessage() {}
+
+func (x *SignOutRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SignOutRequest.ProtoReflect.Descriptor instead.
+func (*SignOutRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *SignOutRequest) GetIdentityDir() string {
+	if x != nil {
+		return x.IdentityDir
+	}
+	return ""
+}
+
+type SignOutResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SignOutResponse) Reset() {
+	*x = SignOutResponse{}
+	mi := &file_engine_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SignOutResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SignOutResponse) ProtoMessage() {}
+
+func (x *SignOutResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SignOutResponse.ProtoReflect.Descriptor instead.
+func (*SignOutResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{20}
+}
+
 var File_engine_proto protoreflect.FileDescriptor
 
 const file_engine_proto_rawDesc = "" +
@@ -1077,7 +1160,10 @@ const file_engine_proto_rawDesc = "" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\"S\n" +
 	"\x18ListProjectUsersResponse\x127\n" +
-	"\x05users\x18\x01 \x03(\v2!.provenance.engine.v1.ProjectUserR\x05users*\xa7\x02\n" +
+	"\x05users\x18\x01 \x03(\v2!.provenance.engine.v1.ProjectUserR\x05users\"3\n" +
+	"\x0eSignOutRequest\x12!\n" +
+	"\fidentity_dir\x18\x01 \x01(\tR\videntityDir\"\x11\n" +
+	"\x0fSignOutResponse*\xbc\x02\n" +
 	"\x06Method\x12\x16\n" +
 	"\x12METHOD_UNSPECIFIED\x10\x00\x12\x0f\n" +
 	"\vMETHOD_PING\x10\x01\x12\x16\n" +
@@ -1088,7 +1174,9 @@ const file_engine_proto_rawDesc = "" +
 	"\x19METHOD_GET_ACTIVE_PROJECT\x10\x06\x12\x17\n" +
 	"\x13METHOD_OPEN_PROJECT\x10\a\x12 \n" +
 	"\x1cMETHOD_REMOVE_ACTIVE_PROJECT\x10\b\x12\x1d\n" +
-	"\x19METHOD_LIST_PROJECT_USERS\x10\tB0Z.github.com/mendahu/provenance/api/proto/engineb\x06proto3"
+	"\x19METHOD_LIST_PROJECT_USERS\x10\t\x12\x13\n" +
+	"\x0fMETHOD_SIGN_OUT\x10\n" +
+	"B0Z.github.com/mendahu/provenance/api/proto/engineb\x06proto3"
 
 var (
 	file_engine_proto_rawDescOnce sync.Once
@@ -1103,7 +1191,7 @@ func file_engine_proto_rawDescGZIP() []byte {
 }
 
 var file_engine_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_engine_proto_goTypes = []any{
 	(Method)(0),                           // 0: provenance.engine.v1.Method
 	(*PingRequest)(nil),                   // 1: provenance.engine.v1.PingRequest
@@ -1125,6 +1213,8 @@ var file_engine_proto_goTypes = []any{
 	(*ListProjectUsersRequest)(nil),       // 17: provenance.engine.v1.ListProjectUsersRequest
 	(*ProjectUser)(nil),                   // 18: provenance.engine.v1.ProjectUser
 	(*ListProjectUsersResponse)(nil),      // 19: provenance.engine.v1.ListProjectUsersResponse
+	(*SignOutRequest)(nil),                // 20: provenance.engine.v1.SignOutRequest
+	(*SignOutResponse)(nil),               // 21: provenance.engine.v1.SignOutResponse
 }
 var file_engine_proto_depIdxs = []int32{
 	18, // 0: provenance.engine.v1.ListProjectUsersResponse.users:type_name -> provenance.engine.v1.ProjectUser
@@ -1146,7 +1236,7 @@ func file_engine_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_engine_proto_rawDesc), len(file_engine_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   19,
+			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

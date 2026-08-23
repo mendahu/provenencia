@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/mendahu/provenance/api/proto/engine"
+	"github.com/mendahu/provenance/core/identity"
 	"github.com/mendahu/provenance/core/session"
 	"google.golang.org/protobuf/proto"
 )
@@ -36,4 +37,19 @@ func RemoveActiveProject(in []byte) ([]byte, error) {
 		return nil, err
 	}
 	return proto.Marshal(&engine.RemoveActiveProjectResponse{})
+}
+
+func SignOut(in []byte) ([]byte, error) {
+	var req engine.SignOutRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, fmt.Errorf("sign_out: unmarshal: %w", err)
+	}
+	dir := req.GetIdentityDir()
+	if err := session.Remove(dir); err != nil {
+		return nil, err
+	}
+	if err := identity.Remove(dir); err != nil {
+		return nil, err
+	}
+	return proto.Marshal(&engine.SignOutResponse{})
 }

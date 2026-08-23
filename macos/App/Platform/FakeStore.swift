@@ -91,4 +91,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     func removeActiveProject(identityDir _: String) async throws {
         activeProjectDir = nil
     }
+
+    func signOut(identityDir _: String) async throws {
+        activeProjectDir = nil
+        identity = nil
+    }
 }

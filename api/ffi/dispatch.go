@@ -4,20 +4,21 @@ import (
 	"fmt"
 
 	"github.com/mendahu/provenance/api/ffi/handlers"
+	"github.com/mendahu/provenance/api/proto/engine"
 )
 
-// Method values match provenance.engine.v1.Method in engine.proto.
 const (
-	MethodUnspecified           int32 = 0
-	MethodPing                  int32 = 1
-	MethodGetVersion            int32 = 2
-	MethodGetInstallIdentity    int32 = 3
-	MethodCompleteOnboarding    int32 = 4
-	MethodRemoveInstallIdentity int32 = 5
-	MethodGetActiveProject      int32 = 6
-	MethodOpenProject           int32 = 7
-	MethodRemoveActiveProject   int32 = 8
-	MethodListProjectUsers      int32 = 9
+	MethodUnspecified           = int32(engine.Method_METHOD_UNSPECIFIED)
+	MethodPing                  = int32(engine.Method_METHOD_PING)
+	MethodGetVersion            = int32(engine.Method_METHOD_GET_VERSION)
+	MethodGetInstallIdentity    = int32(engine.Method_METHOD_GET_INSTALL_IDENTITY)
+	MethodCompleteOnboarding    = int32(engine.Method_METHOD_COMPLETE_ONBOARDING)
+	MethodRemoveInstallIdentity = int32(engine.Method_METHOD_REMOVE_INSTALL_IDENTITY)
+	MethodGetActiveProject      = int32(engine.Method_METHOD_GET_ACTIVE_PROJECT)
+	MethodOpenProject           = int32(engine.Method_METHOD_OPEN_PROJECT)
+	MethodRemoveActiveProject   = int32(engine.Method_METHOD_REMOVE_ACTIVE_PROJECT)
+	MethodListProjectUsers      = int32(engine.Method_METHOD_LIST_PROJECT_USERS)
+	MethodSignOut               = int32(engine.Method_METHOD_SIGN_OUT)
 )
 
 // Call routes one coarse FFI operation to api/ffi/handlers.
@@ -41,6 +42,8 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.RemoveActiveProject(in)
 	case MethodListProjectUsers:
 		return handlers.ListProjectUsers(in)
+	case MethodSignOut:
+		return handlers.SignOut(in)
 	default:
 		return nil, fmt.Errorf("unknown method %d", method)
 	}
