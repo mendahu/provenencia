@@ -40,3 +40,33 @@ func TestGetInstallIdentity(t *testing.T) {
 		},
 	})
 }
+
+func TestRemoveInstallIdentity(t *testing.T) {
+	runRPC(t, RemoveInstallIdentity, []rpcTest{
+		{
+			name: "missing is ok",
+			reqFn: func(t *testing.T) proto.Message {
+				return &engine.RemoveInstallIdentityRequest{IdentityDir: t.TempDir()}
+			},
+			want:  &engine.RemoveInstallIdentityResponse{},
+			exact: true,
+		},
+		{
+			name: "deletes identity json",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _ := saveIdentity(t, "Jake")
+				return &engine.RemoveInstallIdentityRequest{IdentityDir: dir}
+			},
+			want:  &engine.RemoveInstallIdentityResponse{},
+			exact: true,
+			after: func(t *testing.T, _ []byte, req proto.Message) {
+				r := req.(*engine.RemoveInstallIdentityRequest)
+				out, err := GetInstallIdentity(marshalProto(t, &engine.GetInstallIdentityRequest{IdentityDir: r.GetIdentityDir()}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				assertIdentityNotFound(t, out, nil)
+			},
+		},
+	})
+}

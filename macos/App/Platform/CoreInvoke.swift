@@ -19,6 +19,7 @@ enum CoreMethod {
     static let getVersion = Int32(Provenance_Engine_V1_Method.getVersion.rawValue)
     static let getInstallIdentity = Int32(Provenance_Engine_V1_Method.getInstallIdentity.rawValue)
     static let completeOnboarding = Int32(Provenance_Engine_V1_Method.completeOnboarding.rawValue)
+    static let removeInstallIdentity = Int32(Provenance_Engine_V1_Method.removeInstallIdentity.rawValue)
 }
 
 func provenanceInvoke(method: Int32, request: Data) throws -> Data {

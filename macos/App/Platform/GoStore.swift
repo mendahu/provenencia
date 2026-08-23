@@ -53,4 +53,13 @@ struct GoStore: GenealogyStore {
             displayName: resp.displayName
         )
     }
+
+    func removeInstallIdentity(identityDir: String) async throws {
+        var req = Provenance_Engine_V1_RemoveInstallIdentityRequest()
+        req.identityDir = identityDir
+        let _: Provenance_Engine_V1_RemoveInstallIdentityResponse = try await provenanceCall(
+            method: CoreMethod.removeInstallIdentity,
+            request: req
+        )
+    }
 }

@@ -27,3 +27,14 @@ func GetInstallIdentity(in []byte) ([]byte, error) {
 		DisplayName: id.DisplayName,
 	})
 }
+
+func RemoveInstallIdentity(in []byte) ([]byte, error) {
+	var req engine.RemoveInstallIdentityRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, fmt.Errorf("remove_install_identity: unmarshal: %w", err)
+	}
+	if err := identity.Remove(req.GetIdentityDir()); err != nil {
+		return nil, err
+	}
+	return proto.Marshal(&engine.RemoveInstallIdentityResponse{})
+}

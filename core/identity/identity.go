@@ -87,3 +87,12 @@ func Save(dir string, id Identity) error {
 	b = append(b, '\n')
 	return os.WriteFile(path(dir), b, 0o600)
 }
+
+// Remove deletes identity.json under dir. Missing file is not an error.
+func Remove(dir string) error {
+	err := os.Remove(path(dir))
+	if err != nil && os.IsNotExist(err) {
+		return nil
+	}
+	return err
+}

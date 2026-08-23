@@ -28,10 +28,10 @@ struct OnboardingView: View {
 
     private var form: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(model.researcherLocked ? "Create a project" : "Welcome to Provenance")
+            Text(model.researcherLocked ? "You're signed in" : "Welcome to Provenance")
                 .font(.title2)
             Text(model.researcherLocked
-                ? "Your researcher identity is already on this Mac. Name this project folder."
+                ? "You're signed in as \(model.displayName). Name this project folder, or sign out to use a different researcher on this Mac. Existing project folders stay in Documents."
                 : "Your researcher name is how work is attributed. The family name labels this project folder.")
                 .foregroundStyle(.secondary)
             TextField("Researcher name", text: $model.displayName, prompt: Text("Jane Smith"))
@@ -50,6 +50,12 @@ struct OnboardingView: View {
                 if model.isBusy {
                     ProgressView()
                 }
+                if model.researcherLocked {
+                    Button("Sign out") {
+                        Task { await model.signOut() }
+                    }
+                    .accessibilityIdentifier("onboarding.signOut")
+                }
                 Button("Continue") {
                     Task { await model.submit() }
                 }
@@ -63,7 +69,7 @@ struct OnboardingView: View {
 
     private var home: some View {
         VStack(spacing: 12) {
-            Text("You're in")
+            Text("You're signed in")
                 .font(.title2)
                 .accessibilityIdentifier("onboarding.home")
             Text(model.sessionDisplayName)
@@ -74,6 +80,10 @@ struct OnboardingView: View {
                     .foregroundStyle(.secondary)
                     .accessibilityIdentifier("onboarding.home.project")
             }
+            Button("Sign out") {
+                Task { await model.signOut() }
+            }
+            .accessibilityIdentifier("onboarding.signOut")
         }
         .padding(32)
     }

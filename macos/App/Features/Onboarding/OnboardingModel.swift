@@ -81,6 +81,24 @@ final class OnboardingModel {
         }
     }
 
+    func signOut() async {
+        isBusy = true
+        errorText = nil
+        defer { isBusy = false }
+        do {
+            let loc = try resolvedFolders()
+            try await store.removeInstallIdentity(identityDir: loc.identityDirectory.path)
+            displayName = ""
+            familyName = ""
+            sessionDisplayName = ""
+            projectBasename = ""
+            researcherLocked = false
+            phase = .form
+        } catch {
+            errorText = error.localizedDescription
+        }
+    }
+
     private func resolvedFolders() throws -> OnboardingFolders {
         if let folders {
             return folders

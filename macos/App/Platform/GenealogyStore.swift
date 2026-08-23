@@ -21,4 +21,5 @@ protocol GenealogyStore: Sendable {
         displayName: String,
         familyName: String
     ) async throws -> OnboardingResult
+    func removeInstallIdentity(identityDir: String) async throws
 }

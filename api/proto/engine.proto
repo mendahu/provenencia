@@ -12,6 +12,7 @@ enum Method {
   METHOD_GET_VERSION = 2;
   METHOD_GET_INSTALL_IDENTITY = 3;
   METHOD_COMPLETE_ONBOARDING = 4;
+  METHOD_REMOVE_INSTALL_IDENTITY = 5;
 }
 
 message PingRequest {
@@ -50,3 +51,9 @@ message CompleteOnboardingResponse {
   string user_id = 2;
   string display_name = 3;
 }
+
+message RemoveInstallIdentityRequest {
+  string identity_dir = 1;
+}
+
+message RemoveInstallIdentityResponse {}
