@@ -175,6 +175,41 @@ Do not combine 3 with 8. Do not put ingest or `sources` into 4 “while we’re 
 
 ---
 
+## Retrospective — improvement backlog
+
+From a code review of the Spike 1 codebase (Go core, FFI layer, Swift client). Overall: separation of concerns is good (thin dispatch router, domain packages, store protocol + fake in Swift), Go test coverage is strong and table-driven. The real gaps are zero Swift tests, a few correctness bugs around edge-case input and side-effect ordering, and repo hygiene around the committed dylib. Each item below is one PR.
+
+### High value
+
+- **H1 — Fix the SQLite DSN path bug and harden folder-name sanitization.** `dsn()` in `core/database/catalog.go` builds `file:%s?…` by string formatting; a project folder containing `?` or `#` (legal on macOS, not stripped by `FolderName`) truncates the path and corrupts the DSN options. Reachable via project naming and `NSOpenPanel`. Escape the path; extend `core/onboarding/sanitize.go` to also replace Windows-reserved characters (`*?"<>|`) so the same folders open on the future Windows client. Table tests for both.
+- **H2 — Fix side-effect ordering and silent identity replacement in `onboarding.Open`.** `openMint` mints and saves `identity.json` before `database.Open` runs, so opening a bad folder with no identity leaves a minted identity behind. `adopt` silently overwrites an existing `identity.json` with a different UUID if the user picks another contributor. Open the catalog first, then write identity; decide adopt-over-existing-identity explicitly and pin it with a test.
+- **H3 — Add a Swift unit test target for `OnboardingModel`.** Swift coverage is zero while `OnboardingModel` carries the launch matrix (identity × active pointer × valid dir), the two-screen flow, adopt preselection, and sign-out — all testable against `FakeStore` with injected `OnboardingFolders`. Annotate `OnboardingModel` with `@MainActor` as part of this.
+- **H4 — Validate the active project as a catalog, not just a directory.** `InstallPaths.isProjectDirectory` only checks “is a directory,” so a stale folder whose `provenance.sqlite` was deleted still lands on home. Also require `provenance.sqlite` to exist.
+- **H5 — Stop growing the repo by ~14 MB per dylib rebuild.** `macos/Core/libprovenance.dylib` is committed and rebuilt on every FFI change. Prefer an Xcode run-script build phase invoking `scripts/build-macos-core.sh` (drop the binary from git); Git LFS is the fallback.
+
+### Medium value
+
+- **M1 — Derive dispatch method constants from the generated proto enum.** `api/ffi/dispatch.go` hand-copies `Method…` int32 constants that must match `engine.proto`. Use `int32(engine.Method_METHOD_…)` to remove drift risk.
+- **M2 — Deduplicate the onboarding use-cases.** `loadOrMint` / `loadOrMintOpen` differ only in blank-name policy; the open→upsert→close→remember-active sequence appears in both `adopt` and `openMint`. Shared helpers, pure refactor on existing tests. Do after H2.
+- **M3 — Make `ListContributors` read-only.** Previewing “who is in this file?” currently calls `database.Open`, which runs migrations and takes the exclusive lock on a file the user has not agreed to open. Add a read-only open path (no migrate) for this query.
+- **M4 — Add a macOS CI job that builds the app.** CI runs Go tests on Linux only; Swift compile breakage is caught only locally. Add `xcodebuild build` (no signing) on a macOS runner, plus the H3 test target once it exists.
+- **M5 — Collapse sign-out into one `SignOut` RPC.** Swift makes two FFI calls (`RemoveActiveProject`, `RemoveInstallIdentity`) with a partial-failure window. One coarse RPC clearing both files is more atomic.
+- **M6 — Map sentinel errors to user-facing copy.** The UI shows raw `err.Error()` text including full paths. Map the known sentinels (`ErrAlreadyExists`, `ErrAlreadyOpen`, `ErrNotAProject`, `ErrUnsupportedVersion`) to friendly strings in Swift; an error-code field over FFI can wait.
+
+### Low value
+
+- **L1 — Handler/test file organization.** `OpenProject` / `ListProjectUsers` live in `handlers/onboarding.go` but their tests live in `session_test.go`; align them. Consider renaming `core/session` (reads like auth sessions) to something like `core/installstate` before more code depends on it.
+- **L2 — Dead code sweep.** Obsolete blank import of `core/database` in `api/libprovenance/main.go`; unnecessary `len(in) > 0` guard in `handlers/version.go`; unused `Mode` conformances (`CaseIterable`, `Identifiable`); `FakeStore` force unwrap; stray untracked `macos/Provenance/` folder on disk.
+- **L3 — Extract a shared JSON file-store helper** for `core/identity` and `core/session` (Load/Save/Remove/ErrNotFound are near-identical). Optional.
+- **L4 — C ABI polish.** Make `in` const in the bridging header and Go export; document the status codes (0/1/2) in the header rather than only in `api/proto/README.md`.
+- **L5 — Split `OnboardingView` (~290 lines) into per-screen subview files** once the flow stabilizes.
+- **L6 — Ship-prep signing.** The app relies on `disable-library-validation` for the unsigned dylib. Before distribution, sign the dylib with the same team identity and drop that entitlement.
+- **L7 — Version bump.** Spike 1 is done and user-visible; set `VERSION` / `core.Version` / `MARKETING_VERSION` to `0.1.0` and tag `v0.1.0` per [`versioning.md`](../versioning.md).
+
+Suggested order: H1 and H2 first (small, real bugs), then H3 + H4 together (the test target pays for itself immediately), then H5 / M4 as infrastructure, with the rest as filler PRs between feature work.
+
+---
+
 ## After Spike 1
 
 Next likely spike: open/create project without onboarding, “continue as / that’s not me,” then Source catalog. Audit should arrive with the first researched mutation, not as a decorative table in Spike 1 unless it is cheaper to add an empty `audit_transactions` migration in PR4 to avoid a later rewrite. Prefer empty audit tables in PR4 if the audit doc’s first migration is already small; do not implement revision UI.
