@@ -30,7 +30,7 @@ The Go module is `github.com/mendahu/provenance`. It requires **Go 1.27** or lat
 go test ./api/... ./core/...
 ```
 
-PRs to `main` that are **not drafts** run this in GitHub Actions (`.github/workflows/go-test.yml`).
+PRs to `main` that are **not drafts** run this in GitHub Actions (`.github/workflows/go-test.yml`). The same PRs run Swift tests on a macOS runner (`.github/workflows/macos-test.yml`).
 
 Regenerate protobuf (needs `protoc`, `protoc-gen-go`, `protoc-gen-swift`):
 

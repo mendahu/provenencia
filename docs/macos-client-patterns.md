@@ -88,7 +88,7 @@ Previews (`#Preview`) are Storybook-like. They are not CI tests.
 
 Host logic so it can be tested **without** the live Go store. The unit-test bundle still hosts in Provenance.app. Add a UI-test target when the happy path is worth locking.
 
-CI for Go runs on Linux. Swift tests need a **macOS** GitHub runner (M4).
+CI for Go runs on Linux. Swift tests run on a macOS GitHub runner (`.github/workflows/macos-test.yml`).
 
 ---
 

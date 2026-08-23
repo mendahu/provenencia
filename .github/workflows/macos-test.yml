@@ -1,0 +1,25 @@
+name: macOS tests
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  test:
+    if: github.event.pull_request.draft == false
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show Xcode
+        run: xcodebuild -version
+      - name: Run unit tests
+        env:
+          NSUnbufferedIO: "YES"
+        run: |
+          xcodebuild test \
+            -project macos/Provenance.xcodeproj \
+            -scheme Provenance \
+            -destination 'platform=macOS' \
+            -only-testing:ProvenanceTests \
+            CODE_SIGNING_ALLOWED=NO
