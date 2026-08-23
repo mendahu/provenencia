@@ -6,6 +6,7 @@ import Observation
 @Observable
 final class VersionSmokeModel {
     var versionText = ""
+    // TEMPORARY (Spike 1 PR3): sqlite probe caption. Remove with sqliteProbe().
     var sqliteText = ""
     var errorText: String?
 

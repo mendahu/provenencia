@@ -26,9 +26,10 @@ const (
 type Method int32
 
 const (
-	Method_METHOD_UNSPECIFIED  Method = 0
-	Method_METHOD_PING         Method = 1
-	Method_METHOD_GET_VERSION  Method = 2
+	Method_METHOD_UNSPECIFIED Method = 0
+	Method_METHOD_PING        Method = 1
+	Method_METHOD_GET_VERSION Method = 2
+	// TEMPORARY (Spike 1 PR3): dylib packaging probe. Remove when PR4 create/open exists.
 	Method_METHOD_SQLITE_PROBE Method = 3
 )
 
@@ -243,6 +244,7 @@ func (x *GetVersionResponse) GetVersion() string {
 	return ""
 }
 
+// TEMPORARY (Spike 1 PR3): empty request for the dylib SQLite probe. Remove with METHOD_SQLITE_PROBE.
 type SqliteProbeRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -279,6 +281,7 @@ func (*SqliteProbeRequest) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{4}
 }
 
+// TEMPORARY (Spike 1 PR3): probe result. Remove with METHOD_SQLITE_PROBE.
 type SqliteProbeResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Ok            bool                   `protobuf:"varint,1,opt,name=ok,proto3" json:"ok,omitempty"`

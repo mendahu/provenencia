@@ -27,6 +27,8 @@ public nonisolated enum Provenance_Engine_V1_Method: SwiftProtobuf.Enum, Swift.C
   case unspecified // = 0
   case ping // = 1
   case getVersion // = 2
+
+  /// TEMPORARY (Spike 1 PR3): dylib packaging probe. Remove when PR4 create/open exists.
   case sqliteProbe // = 3
   case UNRECOGNIZED(Int)
 
@@ -110,6 +112,7 @@ public nonisolated struct Provenance_Engine_V1_GetVersionResponse: Sendable {
   public init() {}
 }
 
+/// TEMPORARY (Spike 1 PR3): empty request for the dylib SQLite probe. Remove with METHOD_SQLITE_PROBE.
 public nonisolated struct Provenance_Engine_V1_SqliteProbeRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -120,6 +123,7 @@ public nonisolated struct Provenance_Engine_V1_SqliteProbeRequest: Sendable {
   public init() {}
 }
 
+/// TEMPORARY (Spike 1 PR3): probe result. Remove with METHOD_SQLITE_PROBE.
 public nonisolated struct Provenance_Engine_V1_SqliteProbeResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for

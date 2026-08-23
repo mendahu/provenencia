@@ -14,6 +14,7 @@ const (
 	MethodUnspecified int32 = 0
 	MethodPing        int32 = 1
 	MethodGetVersion  int32 = 2
+	// TEMPORARY (Spike 1 PR3): remove with database.Probe / METHOD_SQLITE_PROBE.
 	MethodSqliteProbe int32 = 3
 )
 
@@ -35,6 +36,7 @@ func Call(method int32, in []byte) ([]byte, error) {
 		}
 		return proto.Marshal(&engine.GetVersionResponse{Version: core.Version})
 	case MethodSqliteProbe:
+		// TEMPORARY (Spike 1 PR3): temp-file SQLite round trip. Remove when PR4 lands.
 		var req engine.SqliteProbeRequest
 		if len(in) > 0 {
 			if err := proto.Unmarshal(in, &req); err != nil {

@@ -68,7 +68,7 @@ func TestCall(t *testing.T) {
 			},
 		},
 		{
-			name:   "sqlite probe succeeds",
+			name:   "TEMPORARY sqlite probe succeeds",
 			method: MethodSqliteProbe,
 			in:     mustMarshal(&engine.SqliteProbeRequest{}),
 			check: func(t *testing.T, out []byte) {

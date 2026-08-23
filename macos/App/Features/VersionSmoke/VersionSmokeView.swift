@@ -18,6 +18,7 @@ struct VersionSmokeView: View {
             Text(model.versionText.isEmpty ? "…" : model.versionText)
                 .font(.title2)
                 .accessibilityIdentifier("versionSmoke.version")
+            // TEMPORARY (Spike 1 PR3): sqlite probe line. Remove with sqliteProbe().
             Text(model.sqliteText.isEmpty ? "…" : model.sqliteText)
                 .font(.body)
                 .accessibilityIdentifier("versionSmoke.sqlite")

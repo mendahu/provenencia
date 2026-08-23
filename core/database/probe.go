@@ -8,8 +8,8 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// Probe opens a temporary SQLite file with mattn/cgo, writes a STRICT row, and reads it back.
-// It is a packaging spike, not the Provenance project catalog.
+// TEMPORARY (Spike 1 PR3): packaging spike, not the project catalog.
+// Delete this file when create/open provenance.sqlite exists (PR4).
 func Probe() error {
 	f, err := os.CreateTemp("", "provenance-sqlite-probe-*.sqlite")
 	if err != nil {

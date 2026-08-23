@@ -2,6 +2,7 @@ package database
 
 import "testing"
 
+// TEMPORARY (Spike 1 PR3): delete with probe.go when PR4 lands.
 func TestProbe(t *testing.T) {
 	tests := []struct {
 		name    string

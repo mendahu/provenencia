@@ -10,6 +10,7 @@ enum Method {
   METHOD_UNSPECIFIED = 0;
   METHOD_PING = 1;
   METHOD_GET_VERSION = 2;
+  // TEMPORARY (Spike 1 PR3): dylib packaging probe. Remove when PR4 create/open exists.
   METHOD_SQLITE_PROBE = 3;
 }
 
@@ -27,8 +28,10 @@ message GetVersionResponse {
   string version = 1;
 }
 
+// TEMPORARY (Spike 1 PR3): empty request for the dylib SQLite probe. Remove with METHOD_SQLITE_PROBE.
 message SqliteProbeRequest {}
 
+// TEMPORARY (Spike 1 PR3): probe result. Remove with METHOD_SQLITE_PROBE.
 message SqliteProbeResponse {
   bool ok = 1;
   string detail = 2;

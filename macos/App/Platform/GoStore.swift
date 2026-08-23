@@ -20,6 +20,7 @@ struct GoStore: GenealogyStore {
         }.value
     }
 
+    // TEMPORARY (Spike 1 PR3): dylib SQLite probe. Remove when project open/create exists.
     func sqliteProbe() async throws -> (ok: Bool, detail: String) {
         try await Task.detached {
             let req = Provenance_Engine_V1_SqliteProbeRequest()

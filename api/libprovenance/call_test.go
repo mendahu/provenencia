@@ -66,7 +66,7 @@ func TestProvenanceCall(t *testing.T) {
 			},
 		},
 		{
-			name:   "sqlite probe through malloc",
+			name:   "TEMPORARY sqlite probe through malloc",
 			method: ffi.MethodSqliteProbe,
 			in:     mustMarshal(&engine.SqliteProbeRequest{}),
 			check: func(t *testing.T, out []byte) {
