@@ -89,6 +89,18 @@ func TestOpen(t *testing.T) {
 			},
 		},
 		{
+			name: "no identity failed open does not write identity",
+			run: func(t *testing.T, ident, parent string) {
+				_, err := Open(ident, parent, "Jake", "")
+				if !errors.Is(err, database.ErrNotAProject) {
+					t.Fatalf("got %v", err)
+				}
+				if _, err := identity.Load(ident); !errors.Is(err, identity.ErrNotFound) {
+					t.Fatalf("got %v want not found", err)
+				}
+			},
+		},
+		{
 			name: "not a project",
 			run: func(t *testing.T, ident, parent string) {
 				id, err := identity.Mint("Jake")
@@ -170,6 +182,60 @@ func TestOpen(t *testing.T) {
 				_, err = Open(ident, created.ProjectDir, "", "00000000-0000-7000-8000-000000000099")
 				if !errors.Is(err, ErrUnknownUser) {
 					t.Fatalf("got %v", err)
+				}
+			},
+		},
+		{
+			name: "adopt same uuid does not mint",
+			run: func(t *testing.T, ident, parent string) {
+				created, err := Complete(ident, parent, "Jake", "One")
+				if err != nil {
+					t.Fatal(err)
+				}
+				res, err := Open(ident, created.ProjectDir, "", created.Identity.UserID.String())
+				if err != nil {
+					t.Fatal(err)
+				}
+				if res.Identity.UserID != created.Identity.UserID {
+					t.Fatal("uuid changed")
+				}
+			},
+		},
+		{
+			name: "adopt replaces different existing identity",
+			run: func(t *testing.T, ident, parent string) {
+				u1, err := identity.Mint("Local")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := identity.Save(ident, u1); err != nil {
+					t.Fatal(err)
+				}
+				created, err := Complete(t.TempDir(), parent, "Jake", "Shared")
+				if err != nil {
+					t.Fatal(err)
+				}
+				res, err := Open(ident, created.ProjectDir, "", created.Identity.UserID.String())
+				if err != nil {
+					t.Fatal(err)
+				}
+				if res.Identity.UserID != created.Identity.UserID {
+					t.Fatal("did not adopt catalog user")
+				}
+				loaded, err := identity.Load(ident)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if loaded.UserID != created.Identity.UserID || loaded.DisplayName != "Jake" {
+					t.Fatalf("%+v", loaded)
+				}
+				p, err := database.Open(created.ProjectDir)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer p.Close()
+				if _, err := users.Lookup(p, u1.UserID[:]); err == nil {
+					t.Fatal("u1 should not be in users")
 				}
 			},
 		},
