@@ -246,15 +246,19 @@ That keeps FTS5, JSON, R-tree, custom functions, and `STRICT` behavior consisten
 **Decision:** A project is an **ordinary directory**. That directory is the portable, documented interchange format. It is not a proprietary container, zip-as-working-copy, or a single SQLite file that embeds scans.
 
 ```text
-Robins Family.genealogy/          # folder; Mac may show a package icon (optional)
-├── genealogy.sqlite              # catalog (open schema; use any SQLite viewer)
-├── genealogy.sqlite-wal          # present while the app is open (WAL)
-├── genealogy.sqlite-shm
+Robins Family.provenance/         # folder; Mac may show a package icon (optional)
+├── provenance.sqlite             # catalog (open schema; use any SQLite viewer)
+├── provenance.sqlite-wal         # present while the app is open (WAL)
+├── provenance.sqlite-shm
 ├── objects/                      # ingested Files (see Source layer)
 └── derivatives/                  # thumbnails, previews; disposable
 ```
 
-On macOS the folder may be registered as a document package so Finder shows one icon; the bytes remain a directory. Windows and Linux see a folder. Copying a project to another machine is **copy this whole directory** (after quit or including WAL/SHM). The same Go core opens it; there are no Mac-only paths in the database.
+The public wrapper suffix is **`.provenance`**, not `.genealogy`. It is a branding and Finder hint. Any app can create a folder with that suffix; Provenance must not treat the name as proof of ownership.
+
+On macOS, register the folder as a document package with an exported reverse-DNS UTI (for example `app.provenance.project`) whose imported filename extension is `provenance`. Windows and Linux see a directory. Copying a project to another machine is **copy this whole directory** (after quit or including WAL/SHM). The same Go core opens it; there are no Mac-only paths in the database.
+
+**Open by content:** the suffix and UTI are hints. Create/open must verify `provenance.sqlite`, a documented SQLite `application_id` (32-bit, assigned at implementation), and a schema/`user_version` this engine understands. A `.provenance` folder with a foreign catalog is refused, not migrated. Do not add a parallel `metadata.json` merely to claim the folder.
 
 **Interchange:** Document the **directory layout + schema**. The `.sqlite` file is an inspectable catalog, not a complete project by itself (evidence bytes live under `objects/`). Users may browse tables and files with other tools. Provenance must not rely on obfuscation.
 
@@ -273,7 +277,7 @@ On macOS the folder may be registered as a document package so Finder shows one 
 
 **Object names:** Files on disk are named by **SHA-256 of their bytes** (see [`source-layer-data-model.md`](source-layer-data-model.md)), sharded as `objects/{hh}/{hh}/{checksum_hex}`. `original_filename` stays in SQLite. Hash names are identity, not encryption: a JPEG is still a JPEG in Preview.
 
-**Concurrency (MVP):** one live **writer** per project directory. A second Provenance process opening the same folder is **refused** (or the existing window is focused). Two engines must not edit one `genealogy.sqlite`. In-process: one Go core, WAL, busy timeout, tiny pool (§10); Swift does not open the SQLite file. Split views of one tree are a **later UI** on that single engine. Quit before writing the catalog with another tool; the CLI uses the same exclusive-open rule.
+**Concurrency (MVP):** one live **writer** per project directory. A second Provenance process opening the same folder is **refused** (or the existing window is focused). Two engines must not edit one `provenance.sqlite`. In-process: one Go core, WAL, busy timeout, tiny pool (§10); Swift does not open the SQLite file. Split views of one tree are a **later UI** on that single engine. Quit before writing the catalog with another tool; the CLI uses the same exclusive-open rule.
 
 Platform-specific absolute paths must not be stored in the genealogy database.
 
@@ -602,7 +606,7 @@ Media
   derivatives beside objects, not a second catalog
 
 Document format
-  project = directory (sqlite + objects/ + derivatives/)
+  project = *.provenance directory (provenance.sqlite + objects/ + derivatives/)
   interchange = that directory, not sqlite-alone
   live DB on local disk only (not iCloud / Dropbox / SMB NAS)
 
@@ -650,7 +654,7 @@ Settled:
 
 - **FFI codec:** Protocol Buffers (see §7).
 - **SQLite:** cgo + official amalgamation, `github.com/mattn/go-sqlite3` (see §10). WAL, busy timeout, tiny `MaxOpenConns`.
-- **Project format:** inspectable directory; sqlite is the catalog; Files on disk as SHA-256 object names (`objects/{hh}/{hh}/{hex}`); copy whole folder across Mac/Windows (see §12).
+- **Project format:** inspectable directory named `*.provenance`; catalog is `provenance.sqlite`; Files on disk as SHA-256 object names (`objects/{hh}/{hh}/{hex}`); copy whole folder across Mac/Windows. Suffix is a hint; ownership is `application_id` + schema (see §12).
 - **Runtime:** app and live project on **local disk** only. Backups to NAS/internet/object storage are post-MVP (copy or sync a closed project).
 - **Encryption:** live project is plaintext; rely on OS disk encryption. Optional locked projects and encrypted backups are post-MVP (see §12).
 - **Locking:** one writer per project; second process refused. Multi-pane UI later, same engine (see §12).
