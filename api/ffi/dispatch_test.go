@@ -68,6 +68,17 @@ func TestCall(t *testing.T) {
 			},
 		},
 		{
+			name:    "unspecified method",
+			method:  MethodUnspecified,
+			wantErr: true,
+		},
+		{
+			name:    "ping rejects invalid protobuf",
+			method:  MethodPing,
+			in:      []byte{0xff, 0xff, 0xff, 0xff},
+			wantErr: true,
+		},
+		{
 			name:    "unknown method",
 			method:  99,
 			wantErr: true,

@@ -10,8 +10,9 @@ import (
 
 // Method values match provenance.engine.v1.Method in engine.proto.
 const (
-	MethodPing       int32 = 1
-	MethodGetVersion int32 = 2
+	MethodUnspecified int32 = 0
+	MethodPing        int32 = 1
+	MethodGetVersion  int32 = 2
 )
 
 // Call dispatches one coarse FFI operation. in/out are protobuf bytes.
