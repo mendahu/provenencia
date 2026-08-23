@@ -16,6 +16,7 @@ enum Method {
   METHOD_GET_ACTIVE_PROJECT = 6;
   METHOD_OPEN_PROJECT = 7;
   METHOD_REMOVE_ACTIVE_PROJECT = 8;
+  METHOD_LIST_PROJECT_USERS = 9;
 }
 
 message PingRequest {
@@ -74,6 +75,7 @@ message OpenProjectRequest {
   string identity_dir = 1;
   string project_dir = 2;
   string display_name = 3;
+  string adopt_user_id = 4;
 }
 
 message OpenProjectResponse {
@@ -87,3 +89,16 @@ message RemoveActiveProjectRequest {
 }
 
 message RemoveActiveProjectResponse {}
+
+message ListProjectUsersRequest {
+  string project_dir = 1;
+}
+
+message ProjectUser {
+  string user_id = 1;
+  string display_name = 2;
+}
+
+message ListProjectUsersResponse {
+  repeated ProjectUser users = 1;
+}

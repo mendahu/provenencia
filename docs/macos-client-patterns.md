@@ -14,7 +14,7 @@ Audience: someone comfortable with JavaScript and Go, new to Apple platforms.
 | `Platform/` | Reused for the whole Mac client: store protocol, FFI, fakes. Not a screen. | `GenealogyStore`, `GoStore`, `CoreInvoke` |
 | `Platform/Generated/` | `protoc` output. Do not edit by hand. | `engine.pb.swift` |
 | `Features/<Name>/` | One product flow (view + model). | `Onboarding` |
-| `Features/Onboarding/` | First-run create/open picker and home stub; relaunch uses active project. | `OnboardingView` |
+| `Features/Onboarding/` | File vs new, then contributor or names; home stub; relaunch uses active project. | `OnboardingView` |
 | `Resources/` | Assets, entitlements, bridging header | |
 
 The Go dylib stays in [`macos/Core/`](../macos/Core/) (build artifact), not inside the Swift source tree.

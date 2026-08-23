@@ -119,5 +119,51 @@ func TestOpenProject(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "adopts user",
+			reqFn: func(t *testing.T) proto.Message {
+				other := t.TempDir()
+				parent := t.TempDir()
+				res, err := onboarding.Complete(other, parent, "Jake", "One")
+				if err != nil {
+					t.Fatal(err)
+				}
+				return &engine.OpenProjectRequest{
+					IdentityDir: t.TempDir(),
+					ProjectDir:  res.ProjectDir,
+					AdoptUserId: res.Identity.UserID.String(),
+				}
+			},
+			want: &engine.OpenProjectResponse{DisplayName: "Jake"},
+		},
+	})
+}
+
+func TestListProjectUsers(t *testing.T) {
+	runRPC(t, ListProjectUsers, []rpcTest{
+		{
+			name:    "bad proto",
+			raw:     []byte{0xff, 0xff, 0xff, 0xff},
+			wantErr: true,
+		},
+		{
+			name: "lists users",
+			reqFn: func(t *testing.T) proto.Message {
+				res, err := onboarding.Complete(t.TempDir(), t.TempDir(), "Jake", "One")
+				if err != nil {
+					t.Fatal(err)
+				}
+				return &engine.ListProjectUsersRequest{ProjectDir: res.ProjectDir}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var resp engine.ListProjectUsersResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				if len(resp.GetUsers()) != 1 || resp.GetUsers()[0].GetDisplayName() != "Jake" {
+					t.Fatalf("%v", resp.GetUsers())
+				}
+			},
+		},
 	})
 }

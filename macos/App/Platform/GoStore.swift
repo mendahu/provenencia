@@ -79,12 +79,14 @@ struct GoStore: GenealogyStore {
     func openProject(
         identityDir: String,
         projectDir: String,
-        displayName: String
+        displayName: String,
+        adoptUserID: String
     ) async throws -> OnboardingResult {
         var req = Provenance_Engine_V1_OpenProjectRequest()
         req.identityDir = identityDir
         req.projectDir = projectDir
         req.displayName = displayName
+        req.adoptUserID = adoptUserID
         let resp: Provenance_Engine_V1_OpenProjectResponse = try await provenanceCall(
             method: CoreMethod.openProject,
             request: req
@@ -94,6 +96,16 @@ struct GoStore: GenealogyStore {
             userID: resp.userID,
             displayName: resp.displayName
         )
+    }
+
+    func listProjectUsers(projectDir: String) async throws -> [InstallIdentity] {
+        var req = Provenance_Engine_V1_ListProjectUsersRequest()
+        req.projectDir = projectDir
+        let resp: Provenance_Engine_V1_ListProjectUsersResponse = try await provenanceCall(
+            method: CoreMethod.listProjectUsers,
+            request: req
+        )
+        return resp.users.map { InstallIdentity(userID: $0.userID, displayName: $0.displayName) }
     }
 
     func removeActiveProject(identityDir: String) async throws {

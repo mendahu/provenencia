@@ -10,17 +10,16 @@ Authoritative models: [`application-stack.md`](../application-stack.md), [`user-
 
 ## Goal
 
-A new researcher launches the macOS app with no cloud account. The app asks who they are (contributor) and what to call this research (project / family name), mints a contributor identity, writes it on the machine, and creates a named project folder.
+A new researcher launches the macOS app with no cloud account. The app asks whether they already have a project, then either mints a contributor or adopts one from an existing file, writes identity on the machine, and opens or creates a named project folder.
 
 ```text
 Launch
-  → no install identity yet
-  → ask display name (person)
-  → ask project / family name (this file)
-  → mint UUIDv7 User
+  → have a file already? / create new
+  → create: display name + family name → mint User
+  → open: list users in the catalog → adopt that UUID or mint a new one
   → write identity file (Application Support)
-  → create {Family Name}.provenance on local disk
-  → insert users row in provenance.sqlite
+  → create or open {Family Name}.provenance
+  → users row matches identity
   → idle “you’re in” screen
 ```
 
@@ -45,7 +44,6 @@ That is enough to prove the stack: SwiftUI → protobuf FFI → Go core → SQLi
 
 - Source catalog, file ingest, Interpretation, Conclusion, GEDCOM, search, merge, sync, cloud accounts.
 - Full audit/revision tables and `create_project` as an audited revision. Spike 1 may insert `users` without a complete audit log; the next spike that mutates research data should add audit before those writes.
-- “That’s not me” / adopt-existing-user when opening someone else’s copied folder. First-run **mint** only. Mismatch UX is the natural follow-on once create/open is real.
 - Windows, Linux, web, CLI product commands (a tiny Go test binary for the core is fine).
 - App Sandbox polish, notarization, Sparkle, icons-as-document-package beyond “it is a folder.”
 - Encryption, iCloud/Dropbox/SMB as working copy (still refused if we detect it; no need to over-build the detector).
@@ -57,7 +55,7 @@ That is enough to prove the stack: SwiftUI → protobuf FFI → Go core → SQLi
 ### Product
 
 1. No network and no account to use the app.
-2. First launch with no identity file: prompt for **your name** and a **project / family name**. Empty/whitespace values are rejected. These are two different fields.
+2. First launch with no identity file: ask whether they already have a project or want a new one. Then either collect **your name** and a **project / family name**, or list contributors in the opened file so they can adopt an existing `users.id` or mint a new one. Empty/whitespace names are rejected.
 3. Confirming creates:
    - a UUIDv7 contributor id;
    - an identity file in Application Support for this install (your name + UUID only — not the project name);
@@ -159,7 +157,7 @@ PR5 can start once PR3 proves the dylib; it should not land identity writes that
 | **6** | Onboarding use-case | Done. Go `core/onboarding.Complete`: mint/load identity, sanitize family name, `Create` `*.provenance`, upsert `users`. No FFI. | 4, 5 | No Source tables. |
 | **7** | Onboarding FFI | Done. `GetInstallIdentity` / `CompleteOnboarding` over the existing C ABI; paths in protobuf; failed calls return UTF-8 `err.Error()` in `out`. No Swift UI. | 6 | Go still does not hardcode Mac paths. |
 | **8** | Onboarding UI + install path | Done. First-run two fields, home stub with project basename; returning user skips the form if identity exists. Swift resolves Application Support `Provenance/` and Documents. | 7 | Last-project reopen is PR9. |
-| **9** | Reopen last project | Done. `active-project.json` next to identity; create/open picker until a project is opened; relaunch goes home if that folder still exists. `OpenProject` upserts `users`. No sandbox bookmarks. | 8 | Path in Application Support, not security-scoped bookmarks. |
+| **9** | Reopen last project | Done. `active-project.json` next to identity; two-screen create/open then identity; adopt a catalog user on a new Mac or mint. Relaunch goes home if the active folder still exists. | 8 | Path in Application Support, not security-scoped bookmarks. |
 
 Do not combine 3 with 8. Do not put ingest or `sources` into 4 “while we’re in migrations.”
 

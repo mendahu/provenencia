@@ -35,6 +35,7 @@ const (
 	Method_METHOD_GET_ACTIVE_PROJECT      Method = 6
 	Method_METHOD_OPEN_PROJECT            Method = 7
 	Method_METHOD_REMOVE_ACTIVE_PROJECT   Method = 8
+	Method_METHOD_LIST_PROJECT_USERS      Method = 9
 )
 
 // Enum value maps for Method.
@@ -49,6 +50,7 @@ var (
 		6: "METHOD_GET_ACTIVE_PROJECT",
 		7: "METHOD_OPEN_PROJECT",
 		8: "METHOD_REMOVE_ACTIVE_PROJECT",
+		9: "METHOD_LIST_PROJECT_USERS",
 	}
 	Method_value = map[string]int32{
 		"METHOD_UNSPECIFIED":             0,
@@ -60,6 +62,7 @@ var (
 		"METHOD_GET_ACTIVE_PROJECT":      6,
 		"METHOD_OPEN_PROJECT":            7,
 		"METHOD_REMOVE_ACTIVE_PROJECT":   8,
+		"METHOD_LIST_PROJECT_USERS":      9,
 	}
 )
 
@@ -671,6 +674,7 @@ type OpenProjectRequest struct {
 	IdentityDir   string                 `protobuf:"bytes,1,opt,name=identity_dir,json=identityDir,proto3" json:"identity_dir,omitempty"`
 	ProjectDir    string                 `protobuf:"bytes,2,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
 	DisplayName   string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	AdoptUserId   string                 `protobuf:"bytes,4,opt,name=adopt_user_id,json=adoptUserId,proto3" json:"adopt_user_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -722,6 +726,13 @@ func (x *OpenProjectRequest) GetProjectDir() string {
 func (x *OpenProjectRequest) GetDisplayName() string {
 	if x != nil {
 		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *OpenProjectRequest) GetAdoptUserId() string {
+	if x != nil {
+		return x.AdoptUserId
 	}
 	return ""
 }
@@ -866,6 +877,146 @@ func (*RemoveActiveProjectResponse) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{15}
 }
 
+type ListProjectUsersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListProjectUsersRequest) Reset() {
+	*x = ListProjectUsersRequest{}
+	mi := &file_engine_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListProjectUsersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListProjectUsersRequest) ProtoMessage() {}
+
+func (x *ListProjectUsersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListProjectUsersRequest.ProtoReflect.Descriptor instead.
+func (*ListProjectUsersRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *ListProjectUsersRequest) GetProjectDir() string {
+	if x != nil {
+		return x.ProjectDir
+	}
+	return ""
+}
+
+type ProjectUser struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	DisplayName   string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProjectUser) Reset() {
+	*x = ProjectUser{}
+	mi := &file_engine_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProjectUser) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProjectUser) ProtoMessage() {}
+
+func (x *ProjectUser) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProjectUser.ProtoReflect.Descriptor instead.
+func (*ProjectUser) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *ProjectUser) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *ProjectUser) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+type ListProjectUsersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Users         []*ProjectUser         `protobuf:"bytes,1,rep,name=users,proto3" json:"users,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListProjectUsersResponse) Reset() {
+	*x = ListProjectUsersResponse{}
+	mi := &file_engine_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListProjectUsersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListProjectUsersResponse) ProtoMessage() {}
+
+func (x *ListProjectUsersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListProjectUsersResponse.ProtoReflect.Descriptor instead.
+func (*ListProjectUsersResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *ListProjectUsersResponse) GetUsers() []*ProjectUser {
+	if x != nil {
+		return x.Users
+	}
+	return nil
+}
+
 var File_engine_proto protoreflect.FileDescriptor
 
 const file_engine_proto_rawDesc = "" +
@@ -904,12 +1055,13 @@ const file_engine_proto_rawDesc = "" +
 	"\x18GetActiveProjectResponse\x12\x14\n" +
 	"\x05found\x18\x01 \x01(\bR\x05found\x12\x1f\n" +
 	"\vproject_dir\x18\x02 \x01(\tR\n" +
-	"projectDir\"{\n" +
+	"projectDir\"\x9f\x01\n" +
 	"\x12OpenProjectRequest\x12!\n" +
 	"\fidentity_dir\x18\x01 \x01(\tR\videntityDir\x12\x1f\n" +
 	"\vproject_dir\x18\x02 \x01(\tR\n" +
 	"projectDir\x12!\n" +
-	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\"r\n" +
+	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12\"\n" +
+	"\radopt_user_id\x18\x04 \x01(\tR\vadoptUserId\"r\n" +
 	"\x13OpenProjectResponse\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +
@@ -917,7 +1069,15 @@ const file_engine_proto_rawDesc = "" +
 	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\"?\n" +
 	"\x1aRemoveActiveProjectRequest\x12!\n" +
 	"\fidentity_dir\x18\x01 \x01(\tR\videntityDir\"\x1d\n" +
-	"\x1bRemoveActiveProjectResponse*\x88\x02\n" +
+	"\x1bRemoveActiveProjectResponse\":\n" +
+	"\x17ListProjectUsersRequest\x12\x1f\n" +
+	"\vproject_dir\x18\x01 \x01(\tR\n" +
+	"projectDir\"I\n" +
+	"\vProjectUser\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12!\n" +
+	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\"S\n" +
+	"\x18ListProjectUsersResponse\x127\n" +
+	"\x05users\x18\x01 \x03(\v2!.provenance.engine.v1.ProjectUserR\x05users*\xa7\x02\n" +
 	"\x06Method\x12\x16\n" +
 	"\x12METHOD_UNSPECIFIED\x10\x00\x12\x0f\n" +
 	"\vMETHOD_PING\x10\x01\x12\x16\n" +
@@ -927,7 +1087,8 @@ const file_engine_proto_rawDesc = "" +
 	"\x1eMETHOD_REMOVE_INSTALL_IDENTITY\x10\x05\x12\x1d\n" +
 	"\x19METHOD_GET_ACTIVE_PROJECT\x10\x06\x12\x17\n" +
 	"\x13METHOD_OPEN_PROJECT\x10\a\x12 \n" +
-	"\x1cMETHOD_REMOVE_ACTIVE_PROJECT\x10\bB0Z.github.com/mendahu/provenance/api/proto/engineb\x06proto3"
+	"\x1cMETHOD_REMOVE_ACTIVE_PROJECT\x10\b\x12\x1d\n" +
+	"\x19METHOD_LIST_PROJECT_USERS\x10\tB0Z.github.com/mendahu/provenance/api/proto/engineb\x06proto3"
 
 var (
 	file_engine_proto_rawDescOnce sync.Once
@@ -942,7 +1103,7 @@ func file_engine_proto_rawDescGZIP() []byte {
 }
 
 var file_engine_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_engine_proto_goTypes = []any{
 	(Method)(0),                           // 0: provenance.engine.v1.Method
 	(*PingRequest)(nil),                   // 1: provenance.engine.v1.PingRequest
@@ -961,13 +1122,17 @@ var file_engine_proto_goTypes = []any{
 	(*OpenProjectResponse)(nil),           // 14: provenance.engine.v1.OpenProjectResponse
 	(*RemoveActiveProjectRequest)(nil),    // 15: provenance.engine.v1.RemoveActiveProjectRequest
 	(*RemoveActiveProjectResponse)(nil),   // 16: provenance.engine.v1.RemoveActiveProjectResponse
+	(*ListProjectUsersRequest)(nil),       // 17: provenance.engine.v1.ListProjectUsersRequest
+	(*ProjectUser)(nil),                   // 18: provenance.engine.v1.ProjectUser
+	(*ListProjectUsersResponse)(nil),      // 19: provenance.engine.v1.ListProjectUsersResponse
 }
 var file_engine_proto_depIdxs = []int32{
-	0, // [0:0] is the sub-list for method output_type
-	0, // [0:0] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	18, // 0: provenance.engine.v1.ListProjectUsersResponse.users:type_name -> provenance.engine.v1.ProjectUser
+	1,  // [1:1] is the sub-list for method output_type
+	1,  // [1:1] is the sub-list for method input_type
+	1,  // [1:1] is the sub-list for extension type_name
+	1,  // [1:1] is the sub-list for extension extendee
+	0,  // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_engine_proto_init() }
@@ -981,7 +1146,7 @@ func file_engine_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_engine_proto_rawDesc), len(file_engine_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   16,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

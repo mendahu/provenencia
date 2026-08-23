@@ -27,7 +27,7 @@ func TestOpen(t *testing.T) {
 				if err := session.Remove(ident); err != nil {
 					t.Fatal(err)
 				}
-				res, err := Open(ident, created.ProjectDir, "")
+				res, err := Open(ident, created.ProjectDir, "", "")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -63,7 +63,7 @@ func TestOpen(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				res, err := Open(ident, created.ProjectDir, "Jake")
+				res, err := Open(ident, created.ProjectDir, "Jake", "")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -82,7 +82,7 @@ func TestOpen(t *testing.T) {
 		{
 			name: "no identity blank name",
 			run: func(t *testing.T, ident, parent string) {
-				_, err := Open(ident, parent, "")
+				_, err := Open(ident, parent, "", "")
 				if !errors.Is(err, ErrBlankName) {
 					t.Fatalf("got %v", err)
 				}
@@ -98,7 +98,7 @@ func TestOpen(t *testing.T) {
 				if err := identity.Save(ident, id); err != nil {
 					t.Fatal(err)
 				}
-				_, err = Open(ident, parent, "")
+				_, err = Open(ident, parent, "", "")
 				if !errors.Is(err, database.ErrNotAProject) {
 					t.Fatalf("got %v", err)
 				}
@@ -114,7 +114,7 @@ func TestOpen(t *testing.T) {
 				if err := os.WriteFile(filepath.Join(ident, identity.FileName), []byte("{"), 0o600); err != nil {
 					t.Fatal(err)
 				}
-				_, err = Open(ident, created.ProjectDir, "Jake")
+				_, err = Open(ident, created.ProjectDir, "Jake", "")
 				if err == nil {
 					t.Fatal("expected error")
 				}
@@ -123,8 +123,52 @@ func TestOpen(t *testing.T) {
 		{
 			name: "blank project dir",
 			run: func(t *testing.T, ident, parent string) {
-				_, err := Open(ident, "  ", "Jake")
+				_, err := Open(ident, "  ", "Jake", "")
 				if !errors.Is(err, database.ErrNotAProject) {
+					t.Fatalf("got %v", err)
+				}
+			},
+		},
+		{
+			name: "adopts catalog user with no identity",
+			run: func(t *testing.T, ident, parent string) {
+				other := t.TempDir()
+				created, err := Complete(other, parent, "Jake", "Shared")
+				if err != nil {
+					t.Fatal(err)
+				}
+				listed, err := ListContributors(created.ProjectDir)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(listed) != 1 || listed[0].UserID != created.Identity.UserID {
+					t.Fatalf("%+v", listed)
+				}
+				res, err := Open(ident, created.ProjectDir, "", created.Identity.UserID.String())
+				if err != nil {
+					t.Fatal(err)
+				}
+				if res.Identity.UserID != created.Identity.UserID {
+					t.Fatal("did not adopt")
+				}
+				loaded, err := identity.Load(ident)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if loaded.UserID != created.Identity.UserID || loaded.DisplayName != "Jake" {
+					t.Fatalf("%+v", loaded)
+				}
+			},
+		},
+		{
+			name: "adopt unknown user",
+			run: func(t *testing.T, ident, parent string) {
+				created, err := Complete(t.TempDir(), parent, "Jake", "One")
+				if err != nil {
+					t.Fatal(err)
+				}
+				_, err = Open(ident, created.ProjectDir, "", "00000000-0000-7000-8000-000000000099")
+				if !errors.Is(err, ErrUnknownUser) {
 					t.Fatalf("got %v", err)
 				}
 			},

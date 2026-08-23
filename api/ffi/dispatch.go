@@ -17,6 +17,7 @@ const (
 	MethodGetActiveProject      int32 = 6
 	MethodOpenProject           int32 = 7
 	MethodRemoveActiveProject   int32 = 8
+	MethodListProjectUsers      int32 = 9
 )
 
 // Call routes one coarse FFI operation to api/ffi/handlers.
@@ -38,6 +39,8 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.OpenProject(in)
 	case MethodRemoveActiveProject:
 		return handlers.RemoveActiveProject(in)
+	case MethodListProjectUsers:
+		return handlers.ListProjectUsers(in)
 	default:
 		return nil, fmt.Errorf("unknown method %d", method)
 	}

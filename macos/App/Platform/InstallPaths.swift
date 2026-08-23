@@ -24,7 +24,7 @@ enum InstallPaths {
     }
 
     /// Folder names ending in `.provenance` under Documents. Does not open SQLite.
-    /// Used for the open-existing picker; launch home uses the stored active project, not this list.
+    /// Call only after the user chooses to open an existing file (macOS Files and Folders TCC).
     static func provenanceProjects(
         in documents: URL,
         fileManager: FileManager = .default
@@ -56,6 +56,10 @@ enum InstallPaths {
 struct OnboardingFolders: Sendable {
     var identityDirectory: URL
     var documentsDirectory: URL
+
+    static func liveIdentity() throws -> URL {
+        try InstallPaths.identityDirectory()
+    }
 
     static func live() throws -> OnboardingFolders {
         OnboardingFolders(
