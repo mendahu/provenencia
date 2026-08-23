@@ -206,7 +206,7 @@ From a code review of the Spike 1 codebase (Go core, FFI layer, Swift client). O
 - **L4 — C ABI polish.** Done. Bridging header uses `const uint8_t *in` and documents status 0/1/2. Go `//export` stays non-const (cgo).
 - **L5 — Split `OnboardingView` into per-screen subview files.** Done. Shell + choose-file / identify / home / chrome.
 - **L6 — Ship-prep signing.** The app relies on `disable-library-validation` for the unsigned dylib. Before distribution, sign the dylib with the same team identity and drop that entitlement.
-- **L7 — Version bump.** Spike 1 is done and user-visible; set `VERSION` / `core.Version` / `MARKETING_VERSION` to `0.1.0` and tag `v0.1.0` per [`versioning.md`](../../versioning.md).
+- **L7 — Version bump.** Done in product files (`0.1.0`). Tag `v0.1.0` on `main` after this lands, per [`versioning.md`](../../versioning.md).
 
 Suggested order: H1 and H2 first (small, real bugs), then H3 + H4 together (the test target pays for itself immediately), then H5 / M4 as infrastructure, with the rest as filler PRs between feature work.
 

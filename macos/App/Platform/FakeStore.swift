@@ -28,7 +28,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     func version() async throws -> String {
-        "0.0.0"
+        "0.1.0"
     }
 
     func installIdentity(identityDir _: String) async throws -> InstallIdentity? {
