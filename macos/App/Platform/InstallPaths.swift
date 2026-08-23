@@ -2,6 +2,8 @@ import Foundation
 
 enum InstallPaths {
     static let appSupportFolder = "Provenance"
+    /// Filename of the catalog inside a `.provenance` folder. Existence only; Swift does not open SQLite.
+    static let catalogFile = "provenance.sqlite"
 
     /// `{Application Support}/Provenance`. Holds `identity.json` and `active-project.json`.
     static func identityDirectory(fileManager: FileManager = .default) throws -> URL {
@@ -23,7 +25,7 @@ enum InstallPaths {
         )
     }
 
-    /// Folder names ending in `.provenance` under Documents. Does not open SQLite.
+    /// `.provenance` folders under Documents that contain `provenance.sqlite` (name + file exists; does not open SQLite).
     /// Call only after the user chooses to open an existing file (macOS Files and Folders TCC).
     static func provenanceProjects(
         in documents: URL,
@@ -39,14 +41,18 @@ enum InstallPaths {
             options: [.skipsHiddenFiles]
         )
         return urls.filter { url in
-            url.pathExtension == "provenance"
-                && ((try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false)
+            url.pathExtension == "provenance" && isProjectDirectory(url.path, fileManager: fileManager)
         }
     }
 
     static func isProjectDirectory(_ path: String, fileManager: FileManager = .default) -> Bool {
         var isDir: ObjCBool = false
         guard fileManager.fileExists(atPath: path, isDirectory: &isDir), isDir.boolValue else {
+            return false
+        }
+        let catalog = URL(fileURLWithPath: path).appendingPathComponent(catalogFile)
+        var isCatalogDir: ObjCBool = false
+        guard fileManager.fileExists(atPath: catalog.path, isDirectory: &isCatalogDir), !isCatalogDir.boolValue else {
             return false
         }
         return true
@@ -78,6 +84,7 @@ struct OnboardingFolders: Sendable {
         let docs = root.appendingPathComponent("Documents", isDirectory: true)
         let project = docs.appendingPathComponent("Smith Family.provenance", isDirectory: true)
         try? FileManager.default.createDirectory(at: project, withIntermediateDirectories: true)
+        try? Data().write(to: project.appendingPathComponent(InstallPaths.catalogFile))
         return OnboardingFolders(identityDirectory: root.appendingPathComponent("identity", isDirectory: true), documentsDirectory: docs)
     }
 }

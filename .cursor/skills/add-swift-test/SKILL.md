@@ -66,6 +66,6 @@ xcodebuild test -project macos/Provenance.xcodeproj -scheme Provenance -destinat
 ## Do not
 
 - Mix test sources into `macos/App/`
-- Call the live store or require `provenance.sqlite` unless the user is implementing that product change (H4)
+- Call `GoStore` / the dylib. Fixtures that pretend to be a project should include `provenance.sqlite` (file exists; do not open the DB).
 - Bump `VERSION` for tests-only
 - Skip signing flags in local `xcodebuild`; CI sets `CODE_SIGNING_ALLOWED=NO`
