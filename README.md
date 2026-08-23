@@ -17,6 +17,7 @@ From the command line:
 ```sh
 ./scripts/build-macos-core.sh
 xcodebuild -project macos/Provenance.xcodeproj -scheme Provenance -destination 'platform=macOS' build
+xcodebuild test -project macos/Provenance.xcodeproj -scheme Provenance -destination 'platform=macOS'
 ```
 
 The first `xcodebuild` resolves the SwiftProtobuf package from GitHub.
@@ -29,7 +30,7 @@ The Go module is `github.com/mendahu/provenance`. It requires **Go 1.27** or lat
 go test ./api/... ./core/...
 ```
 
-PRs to `main` that are **not drafts** run this in GitHub Actions (`.github/workflows/go-test.yml`).
+PRs to `main` that are **not drafts** run this in GitHub Actions (`.github/workflows/go-test.yml`). The same PRs run Swift tests on a macOS runner (`.github/workflows/macos-test.yml`).
 
 Regenerate protobuf (needs `protoc`, `protoc-gen-go`, `protoc-gen-swift`):
 

@@ -42,10 +42,10 @@ struct OnboardingView: View {
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 16) {
                     fileChoice("Create new", subtitle: "Start a new project folder", selected: model.mode == .create) {
-                        model.selectMode(.create)
+                        Task { await model.selectMode(.create) }
                     }
                     fileChoice("I have a file", subtitle: "Open a project you already have", selected: model.mode == .open) {
-                        model.selectMode(.open)
+                        Task { await model.selectMode(.open) }
                     }
                 }
                 .accessibilityElement(children: .contain)

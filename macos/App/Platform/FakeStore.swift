@@ -48,7 +48,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             displayName: displayName
         )
         activeProjectDir = result.projectDir
-        catalogUsers = [identity!]
+        catalogUsers = [InstallIdentity(userID: lastResult.userID, displayName: displayName)]
         return result
     }
 

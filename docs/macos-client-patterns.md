@@ -82,13 +82,13 @@ Previews (`#Preview`) are Storybook-like. They are not CI tests.
 | Layer | Tool | What belongs there |
 | --- | --- | --- |
 | Domain, SQLite, identity, project folders | `go test` | Almost all product behavior |
-| Path trim, ViewModel validation, error mapping | XCTest or swift-testing | Pure Swift, no window |
+| Path trim, `OnboardingModel`, `InstallPaths` | `ProvenanceTests` (Swift Testing) | FakeStore + temp folders; no dylib. `xcodebuild test -scheme Provenance` |
 | First-run happy path | One XCUITest later | Optional; needs identifiers |
 | Pixel snapshots | Third-party, sparingly | Easy to churn across macOS versions |
 
-Host logic so it can be tested **without** launching Provenance.app. Add a UI-test target when onboarding exists and the happy path is worth locking.
+Host logic so it can be tested **without** the live Go store. The unit-test bundle still hosts in Provenance.app. Add a UI-test target when the happy path is worth locking.
 
-CI for Go runs on Linux. XCTest/XCUITest need a **macOS** GitHub runner when we add them.
+CI for Go runs on Linux. Swift tests run on a macOS GitHub runner (`.github/workflows/macos-test.yml`).
 
 ---
 

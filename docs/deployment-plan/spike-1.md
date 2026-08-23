@@ -183,7 +183,7 @@ From a code review of the Spike 1 codebase (Go core, FFI layer, Swift client). O
 
 - **H1 — Fix the SQLite DSN path bug and harden folder-name sanitization.** Done. `dsn()` builds a `file:` URL so `?`/`#` in paths stay in the filename; `FolderName` also replaces Windows-reserved basename characters (`*?"<>|`).
 - **H2 — Fix side-effect ordering and silent identity replacement in `onboarding.Open`.** Done. Identity is written only after a successful catalog open; adopt of a different catalog UUID replaces `identity.json` (tested).
-- **H3 — Add a Swift unit test target for `OnboardingModel`.** Swift coverage is zero while `OnboardingModel` carries the launch matrix (identity × active pointer × valid dir), the two-screen flow, adopt preselection, and sign-out — all testable against `FakeStore` with injected `OnboardingFolders`. Annotate `OnboardingModel` with `@MainActor` as part of this.
+- **H3 — Add a Swift unit test target for `OnboardingModel`.** Done. Unit target + `OnboardingModel` / `InstallPaths` coverage via `FakeStore`.
 - **H4 — Validate the active project as a catalog, not just a directory.** `InstallPaths.isProjectDirectory` only checks “is a directory,” so a stale folder whose `provenance.sqlite` was deleted still lands on home. Also require `provenance.sqlite` to exist.
 - **H5 — Stop growing the repo by ~14 MB per dylib rebuild.** `macos/Core/libprovenance.dylib` is committed and rebuilt on every FFI change. Prefer an Xcode run-script build phase invoking `scripts/build-macos-core.sh` (drop the binary from git); Git LFS is the fallback.
 
@@ -192,7 +192,7 @@ From a code review of the Spike 1 codebase (Go core, FFI layer, Swift client). O
 - **M1 — Derive dispatch method constants from the generated proto enum.** `api/ffi/dispatch.go` hand-copies `Method…` int32 constants that must match `engine.proto`. Use `int32(engine.Method_METHOD_…)` to remove drift risk.
 - **M2 — Deduplicate the onboarding use-cases.** `loadOrMint` / `loadOrMintOpen` differ only in blank-name policy; the open→upsert→close→remember-active sequence appears in both `adopt` and `openMint`. Shared helpers, pure refactor on existing tests. Do after H2.
 - **M3 — Make `ListContributors` read-only.** Previewing “who is in this file?” currently calls `database.Open`, which runs migrations and takes the exclusive lock on a file the user has not agreed to open. Add a read-only open path (no migrate) for this query.
-- **M4 — Add a macOS CI job that builds the app.** CI runs Go tests on Linux only; Swift compile breakage is caught only locally. Add `xcodebuild build` (no signing) on a macOS runner, plus the H3 test target once it exists.
+- **M4 — Add a macOS CI job that builds the app.** Done. Non-draft PRs to `main` run `xcodebuild test` (unsigned) on `macos-15` via `.github/workflows/macos-test.yml`.
 - **M5 — Collapse sign-out into one `SignOut` RPC.** Swift makes two FFI calls (`RemoveActiveProject`, `RemoveInstallIdentity`) with a partial-failure window. One coarse RPC clearing both files is more atomic.
 - **M6 — Map sentinel errors to user-facing copy.** The UI shows raw `err.Error()` text including full paths. Map the known sentinels (`ErrAlreadyExists`, `ErrAlreadyOpen`, `ErrNotAProject`, `ErrUnsupportedVersion`) to friendly strings in Swift; an error-code field over FFI can wait.
 

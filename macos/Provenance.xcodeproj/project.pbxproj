@@ -20,7 +20,19 @@
 		AA000000000000000000000B /* SwiftProtobuf in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000091 /* SwiftProtobuf */; };
 		AA000000000000000000000C /* OnboardingModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001C /* OnboardingModel.swift */; };
 		AA000000000000000000000D /* InstallPaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001D /* InstallPaths.swift */; };
+		AA00000000000000000000B3 /* OnboardingModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000B0 /* OnboardingModelTests.swift */; };
+		AA00000000000000000000B4 /* InstallPathsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000B1 /* InstallPathsTests.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		AA00000000000000000000BD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA0000000000000000000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA0000000000000000000050;
+			remoteInfo = Provenance;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
 		AA0000000000000000000062 /* Embed Libraries */ = {
@@ -51,6 +63,9 @@
 		AA000000000000000000001C /* OnboardingModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingModel.swift; sourceTree = "<group>"; };
 		AA000000000000000000001D /* InstallPaths.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstallPaths.swift; sourceTree = "<group>"; };
 		AA0000000000000000000020 /* Provenance.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Provenance.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA00000000000000000000B0 /* OnboardingModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingModelTests.swift; sourceTree = "<group>"; };
+		AA00000000000000000000B1 /* InstallPathsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstallPathsTests.swift; sourceTree = "<group>"; };
+		AA00000000000000000000B2 /* ProvenanceTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ProvenanceTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -63,6 +78,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA00000000000000000000B8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -70,6 +92,7 @@
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000041 /* App */,
+				AA00000000000000000000B5 /* ProvenanceTests */,
 				AA0000000000000000000043 /* Core */,
 				AA0000000000000000000042 /* Products */,
 			);
@@ -90,6 +113,7 @@
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000020 /* Provenance.app */,
+				AA00000000000000000000B2 /* ProvenanceTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -158,6 +182,15 @@
 			path = Resources;
 			sourceTree = "<group>";
 		};
+		AA00000000000000000000B5 /* ProvenanceTests */ = {
+			isa = PBXGroup;
+			children = (
+				AA00000000000000000000B0 /* OnboardingModelTests.swift */,
+				AA00000000000000000000B1 /* InstallPathsTests.swift */,
+			);
+			path = ProvenanceTests;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -182,6 +215,24 @@
 			productReference = AA0000000000000000000020 /* Provenance.app */;
 			productType = "com.apple.product-type.application";
 		};
+		AA00000000000000000000B6 /* ProvenanceTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA00000000000000000000BC /* Build configuration list for PBXNativeTarget "ProvenanceTests" */;
+			buildPhases = (
+				AA00000000000000000000B7 /* Sources */,
+				AA00000000000000000000B8 /* Frameworks */,
+				AA00000000000000000000B9 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AA00000000000000000000BE /* PBXTargetDependency */,
+			);
+			name = ProvenanceTests;
+			productName = ProvenanceTests;
+			productReference = AA00000000000000000000B2 /* ProvenanceTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -193,6 +244,9 @@
 				LastUpgradeCheck = 2660;
 				TargetAttributes = {
 					AA0000000000000000000050 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					AA00000000000000000000B6 = {
 						CreatedOnToolsVersion = 16.0;
 					};
 				};
@@ -214,6 +268,7 @@
 			projectRoot = "";
 			targets = (
 				AA0000000000000000000050 /* Provenance */,
+				AA00000000000000000000B6 /* ProvenanceTests */,
 			);
 		};
 /* End PBXProject section */
@@ -224,6 +279,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA0000000000000000000003 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA00000000000000000000B9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -246,7 +308,24 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA00000000000000000000B7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA00000000000000000000B3 /* OnboardingModelTests.swift in Sources */,
+				AA00000000000000000000B4 /* InstallPathsTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AA00000000000000000000BE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA0000000000000000000050 /* Provenance */;
+			targetProxy = AA00000000000000000000BD /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		AA0000000000000000000080 /* Debug */ = {
@@ -422,6 +501,46 @@
 			};
 			name = Release;
 		};
+		AA00000000000000000000BA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.provenance.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Provenance.app/Contents/MacOS/Provenance";
+			};
+			name = Debug;
+		};
+		AA00000000000000000000BB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.provenance.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Provenance.app/Contents/MacOS/Provenance";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -439,6 +558,15 @@
 			buildConfigurations = (
 				AA0000000000000000000082 /* Debug */,
 				AA0000000000000000000083 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA00000000000000000000BC /* Build configuration list for PBXNativeTarget "ProvenanceTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA00000000000000000000BA /* Debug */,
+				AA00000000000000000000BB /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
