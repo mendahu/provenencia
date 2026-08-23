@@ -9,9 +9,4 @@ struct FakeStore: GenealogyStore {
     func version() async throws -> String {
         "0.0.0"
     }
-
-    // TEMPORARY (Spike 1 PR3): dylib SQLite probe. Remove when project open/create exists.
-    func sqliteProbe() async throws -> (ok: Bool, detail: String) {
-        (true, "fake")
-    }
 }
