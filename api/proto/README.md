@@ -4,7 +4,7 @@ The Mac (and later Windows) client talks to the Go core over a **C ABI** whose p
 
 ## Schema
 
-[`engine.proto`](engine.proto) is the source of truth. Generated Go lives in [`engine/`](engine/); generated Swift in [`macos/Provenance/Generated/`](../../macos/Provenance/Generated/). Commit both after regenerating so `go test` and Xcode do not require `protoc` on every machine.
+[`engine.proto`](engine.proto) is the source of truth. Generated Go lives in [`engine/`](engine/); generated Swift in [`macos/App/Platform/Generated/`](../../macos/App/Platform/Generated/). Commit both after regenerating so `go test` and Xcode do not require `protoc` on every machine.
 
 ## Plugins
 
@@ -24,7 +24,7 @@ Regenerate:
 
 ## C ABI
 
-A single pair of exports (see `cmd/libprovenance`):
+A single pair of exports (see `api/libprovenance`):
 
 - `provenance_call(method, in, in_len, out, out_len)` — `method` is `provenance.engine.v1.Method`; `in`/`out` are protobuf bytes for that RPC.
 - `provenance_free` — caller frees `out`.

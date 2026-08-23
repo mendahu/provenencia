@@ -17,12 +17,12 @@ if ! command -v protoc-gen-swift >/dev/null; then
   exit 1
 fi
 
-mkdir -p api/proto/engine macos/Provenance/Generated
+mkdir -p api/proto/engine macos/App/Platform/Generated
 
 protoc \
   --proto_path=api/proto \
   --go_out=api/proto/engine \
   --go_opt=paths=source_relative \
-  --swift_out=macos/Provenance/Generated \
+  --swift_out=macos/App/Platform/Generated \
   --swift_opt=Visibility=Public \
   api/proto/engine.proto

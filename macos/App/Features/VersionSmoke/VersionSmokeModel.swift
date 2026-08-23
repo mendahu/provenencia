@@ -1,8 +1,10 @@
 import Foundation
 import Observation
 
+// TEMPORARY (Spike 1 PR2): only exists to prove GetVersion over FFI.
+// Delete this type when a real root/workspace model exists.
 @Observable
-final class RootModel {
+final class VersionSmokeModel {
     var versionText = ""
     var errorText: String?
 

@@ -6,7 +6,23 @@ Working notes for the Swift/SwiftUI Mac client. Domain rules and persistence sta
 
 Audience: someone comfortable with JavaScript and Go, new to Apple platforms.
 
+## Folder layout (`macos/App/`)
+
+| Folder | Scope | Examples |
+| --- | --- | --- |
+| `App/` | Process entry: scenes, menus. Stay thin. | `ProvenanceApp.swift` |
+| `Platform/` | Reused for the whole Mac client: store protocol, FFI, fakes. Not a screen. | `GenealogyStore`, `GoStore`, `CoreInvoke` |
+| `Platform/Generated/` | `protoc` output. Do not edit by hand. | `engine.pb.swift` |
+| `Features/<Name>/` | One product flow (view + model). Onboarding, workspace, etc. later. | — |
+| `Features/VersionSmoke/` | **Temporary** FFI probe (version on screen). Delete when a real root UI exists. | `VersionSmokeView` |
+| `Resources/` | Assets, entitlements, bridging header | |
+
+The Go dylib stays in [`macos/Core/`](../macos/Core/) (build artifact), not inside the Swift source tree.
+
+Open **`macos/Provenance.xcodeproj`**, not `macos/App`. The latter is the source tree; it is not an Xcode project.
+
 ---
+
 
 ## 1. SwiftUI describes UI; Go is the engine
 

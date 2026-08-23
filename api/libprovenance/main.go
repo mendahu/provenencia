@@ -1,3 +1,5 @@
+// Package main is the C-shared library entrypoint (not a CLI).
+// go build -buildmode=c-shared requires package main; dispatch lives in api/ffi.
 package main
 
 /*

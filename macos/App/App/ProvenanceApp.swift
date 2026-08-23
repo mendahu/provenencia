@@ -4,7 +4,8 @@ import SwiftUI
 struct ProvenanceApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            // TEMPORARY (Spike 1 PR2): replace with onboarding / workspace when those screens exist.
+            VersionSmokeView()
         }
         .windowResizability(.contentSize)
     }
