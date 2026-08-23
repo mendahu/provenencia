@@ -1,4 +1,5 @@
 package core
 
-// Version is the Go core version. The macOS client will load this engine via FFI in later PRs.
+// Version is the Provenance product version (same string as the repo-root VERSION file).
+// Native clients must report this value; it is not a Go-core-only number.
 const Version = "0.0.0"

@@ -1,6 +1,6 @@
 # Provenance
 
-Local-first genealogy software. Native macOS client over a shared Go core. Domain and stack notes live in [`docs/`](docs/). Implementation milestones: [`docs/deployment-plan/`](docs/deployment-plan/).
+Local-first genealogy software. Native macOS client over a shared Go core. Domain and stack notes live in [`docs/`](docs/). Product versioning: [`docs/versioning.md`](docs/versioning.md). Implementation milestones: [`docs/deployment-plan/`](docs/deployment-plan/).
 
 **Requires macOS 14 (Sonoma) or later.**
 
