@@ -81,6 +81,8 @@ Previews (`#Preview`) are Storybook-like. They are not CI tests.
 
 User-facing Mac UI copy goes through typed `L10n` (`LocalizedStringResource` in [`macos/App/Platform/L10n.swift`](../macos/App/Platform/L10n.swift)). Views and models must not hard-code English (or raw catalog keys).
 
+Agent workflow: [`.cursor/skills/add-localized-string/SKILL.md`](../.cursor/skills/add-localized-string/SKILL.md). Enforcement when editing Mac UI: [`.cursor/rules/macos-l10n.mdc`](../.cursor/rules/macos-l10n.mdc).
+
 - **Catalogs:** [`Localizable.xcstrings`](../macos/App/Resources/Localizable.xcstrings) for UI strings; [`InfoPlist.xcstrings`](../macos/App/Resources/InfoPlist.xcstrings) for Info.plist TCC/copy keys.
 - **Keys:** semantic dotted names (`onboarding.chooseFile.welcomeTitle`), with English in `defaultValue` and in the catalog.
 - **Call sites:** `Text(L10n.Onboarding.welcomeTitle)`, `Button(L10n.Onboarding.continueAction)`, or `String(localized: L10n.Onboarding.missingProject)` for `String` / AppKit. Interpolated copy uses `%@` in the catalog and `String(format:locale:_:)` inside `L10n` helpers.
