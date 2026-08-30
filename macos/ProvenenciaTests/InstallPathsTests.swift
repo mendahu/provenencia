@@ -1,21 +1,21 @@
 import Foundation
 import Testing
-@testable import Provenance
+@testable import Provenencia
 
 struct InstallPathsTests {
-    @Test func provenanceProjectsIgnoresMissingDirFilesHusksAndNonProvenanceFolders() throws {
+    @Test func provenenciaProjectsIgnoresMissingDirFilesHusksAndNonProvenenciaFolders() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("install-paths-\(UUID().uuidString)", isDirectory: true)
         let docs = root.appendingPathComponent("Documents", isDirectory: true)
         try FileManager.default.createDirectory(at: docs, withIntermediateDirectories: true)
 
-        let keep = docs.appendingPathComponent("Smith Family.provenance", isDirectory: true)
+        let keep = docs.appendingPathComponent("Smith Family.provenencia", isDirectory: true)
         try FileManager.default.createDirectory(at: keep, withIntermediateDirectories: true)
         try touchCatalog(keep)
 
-        let husk = docs.appendingPathComponent("Empty Husk.provenance", isDirectory: true)
+        let husk = docs.appendingPathComponent("Empty Husk.provenencia", isDirectory: true)
         try FileManager.default.createDirectory(at: husk, withIntermediateDirectories: true)
 
-        let notADir = docs.appendingPathComponent("notes.provenance")
+        let notADir = docs.appendingPathComponent("notes.provenencia")
         try Data("file".utf8).write(to: notADir)
 
         try FileManager.default.createDirectory(
@@ -23,11 +23,11 @@ struct InstallPathsTests {
             withIntermediateDirectories: true
         )
 
-        let found = try InstallPaths.provenanceProjects(in: docs)
-        #expect(found.map(\.lastPathComponent).sorted() == ["Smith Family.provenance"])
+        let found = try InstallPaths.provenenciaProjects(in: docs)
+        #expect(found.map(\.lastPathComponent).sorted() == ["Smith Family.provenencia"])
 
         let missing = root.appendingPathComponent("no-such-docs", isDirectory: true)
-        #expect(try InstallPaths.provenanceProjects(in: missing).isEmpty)
+        #expect(try InstallPaths.provenenciaProjects(in: missing).isEmpty)
     }
 
     @Test func isProjectDirectoryRequiresCatalogFile() throws {

@@ -1,7 +1,7 @@
 ---
 name: add-ffi-handler
 description: >-
-  Adds a Provenance FFI RPC handler under api/ffi/handlers and tests it with runRPC.
+  Adds a Provenencia FFI RPC handler under api/ffi/handlers and tests it with runRPC.
   Use when adding or changing engine.proto Method, ffi.Call cases, handler functions,
   GetInstallIdentity/CompleteOnboarding-style RPCs, or handler table tests.
 ---
@@ -19,7 +19,7 @@ description: >-
 
 `dispatch_test.go` stays router-only (unspecified / unknown method).
 
-After C ABI or handler behavior changes, the next Mac app build regenerates `macos/Core/libprovenance.dylib` (do not commit it). You can also run `./scripts/build-macos-core.sh`.
+After C ABI or handler behavior changes, the next Mac app build regenerates `macos/Core/libprovenencia.dylib` (do not commit it). You can also run `./scripts/build-macos-core.sh`.
 
 ## Handler tests (`runRPC`)
 

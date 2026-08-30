@@ -6,11 +6,11 @@ struct OnboardingChooseFileView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 20) {
-                Text("Welcome to Provenance")
+                Text("Welcome to Provenencia")
                     .font(.title2)
                 Text(model.researcherLocked
                     ? "You're signed in as \(model.displayName). Open a project you already have, or create a new one."
-                    : "Do you already have a Provenance project, or do you want to start a new one?")
+                    : "Do you already have a Provenencia project, or do you want to start a new one?")
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 16) {

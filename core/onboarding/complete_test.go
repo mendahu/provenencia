@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/mendahu/provenance/core/database"
-	"github.com/mendahu/provenance/core/database/users"
-	"github.com/mendahu/provenance/core/identity"
-	"github.com/mendahu/provenance/core/installstate"
+	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/identity"
+	"github.com/mendahu/provenencia/core/installstate"
 )
 
 func TestFolderName(t *testing.T) {
@@ -20,18 +20,18 @@ func TestFolderName(t *testing.T) {
 		want    string
 		wantErr error
 	}{
-		{name: "plain", in: "Robins Family", want: "Robins Family.provenance"},
-		{name: "slash", in: "Robins/Family", want: "Robins-Family.provenance"},
-		{name: "backslash", in: "Robins\\Family", want: "Robins-Family.provenance"},
-		{name: "nul", in: "Robins\x00Family", want: "Robins-Family.provenance"},
-		{name: "colon", in: "Robins:Family", want: "Robins-Family.provenance"},
-		{name: "star", in: "Robins*Family", want: "Robins-Family.provenance"},
-		{name: "question", in: "Robins?Family", want: "Robins-Family.provenance"},
-		{name: "quote", in: "Robins\"Family", want: "Robins-Family.provenance"},
-		{name: "lt gt", in: "Robins<Family>", want: "Robins-Family-.provenance"},
-		{name: "pipe", in: "Robins|Family", want: "Robins-Family.provenance"},
-		{name: "leading dots", in: "...Robins", want: "Robins.provenance"},
-		{name: "already suffix", in: "Robins Family.provenance", want: "Robins Family.provenance"},
+		{name: "plain", in: "Robins Family", want: "Robins Family.provenencia"},
+		{name: "slash", in: "Robins/Family", want: "Robins-Family.provenencia"},
+		{name: "backslash", in: "Robins\\Family", want: "Robins-Family.provenencia"},
+		{name: "nul", in: "Robins\x00Family", want: "Robins-Family.provenencia"},
+		{name: "colon", in: "Robins:Family", want: "Robins-Family.provenencia"},
+		{name: "star", in: "Robins*Family", want: "Robins-Family.provenencia"},
+		{name: "question", in: "Robins?Family", want: "Robins-Family.provenencia"},
+		{name: "quote", in: "Robins\"Family", want: "Robins-Family.provenencia"},
+		{name: "lt gt", in: "Robins<Family>", want: "Robins-Family-.provenencia"},
+		{name: "pipe", in: "Robins|Family", want: "Robins-Family.provenencia"},
+		{name: "leading dots", in: "...Robins", want: "Robins.provenencia"},
+		{name: "already suffix", in: "Robins Family.provenencia", want: "Robins Family.provenencia"},
 		{name: "only dots", in: "...", wantErr: ErrInvalidFamilyName},
 		{name: "blank", in: "  ", wantErr: ErrInvalidFamilyName},
 	}
@@ -185,7 +185,7 @@ func TestComplete(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if filepath.Base(res.ProjectDir) != "A-B.provenance" {
+				if filepath.Base(res.ProjectDir) != "A-B.provenencia" {
 					t.Fatalf("got %s", res.ProjectDir)
 				}
 			},

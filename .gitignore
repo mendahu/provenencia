@@ -15,5 +15,5 @@ DerivedData/
 timeline.xctimeline
 playground.xcworkspace
 
-macos/Core/libprovenance.h
-macos/Core/libprovenance.dylib
+macos/Core/libprovenencia.h
+macos/Core/libprovenencia.dylib

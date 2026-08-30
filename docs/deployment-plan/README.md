@@ -12,6 +12,6 @@ Spike 1 is complete. The next spike (open/create without onboarding, then Source
 
 | Spike | Goal |
 | --- | --- |
-| [Spike 1](archive/spike-1.md) | Scaffold the macOS app, local SQLite project, and first-run onboarding. **Retired the cgo SQLite + Swift dylib risk** (plan A: `mattn/go-sqlite3` inside `libprovenance.dylib`). |
+| [Spike 1](archive/spike-1.md) | Scaffold the macOS app, local SQLite project, and first-run onboarding. **Retired the cgo SQLite + Swift dylib risk** (plan A: `mattn/go-sqlite3` inside `libprovenencia.dylib`). |
 
 Older milestone notes live in [`archive/`](archive/).

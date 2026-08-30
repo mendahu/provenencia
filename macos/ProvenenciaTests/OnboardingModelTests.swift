@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import Provenance
+@testable import Provenencia
 
 @Suite
 @MainActor
@@ -35,20 +35,20 @@ struct OnboardingModelTests {
 
     @Test func loadWithIdentityAndExistingActiveDirShowsHome() async throws {
         let folders = try makeFolders()
-        let project = folders.documentsDirectory.appendingPathComponent("Robins Family.provenance", isDirectory: true)
+        let project = folders.documentsDirectory.appendingPathComponent("Robins Family.provenencia", isDirectory: true)
         try FileManager.default.createDirectory(at: project, withIntermediateDirectories: true)
         try touchCatalog(project)
         let store = FakeStore(identity: jane, activeProjectDir: project.path)
         let model = OnboardingModel(store: store, folders: folders)
         await model.load()
         #expect(model.phase == .home)
-        #expect(model.projectBasename == "Robins Family.provenance")
+        #expect(model.projectBasename == "Robins Family.provenencia")
         #expect(model.researcherLocked)
     }
 
     @Test func loadWithIdentityAndDirMissingCatalogClearsPointerAndShowsError() async throws {
         let folders = try makeFolders()
-        let project = folders.documentsDirectory.appendingPathComponent("Robins Family.provenance", isDirectory: true)
+        let project = folders.documentsDirectory.appendingPathComponent("Robins Family.provenencia", isDirectory: true)
         try FileManager.default.createDirectory(at: project, withIntermediateDirectories: true)
         let store = FakeStore(identity: jane, activeProjectDir: project.path)
         let model = OnboardingModel(store: store, folders: folders)
@@ -61,7 +61,7 @@ struct OnboardingModelTests {
 
     @Test func loadWithMissingActivePathClearsPointerAndShowsError() async throws {
         let missing = FileManager.default.temporaryDirectory
-            .appendingPathComponent("missing-\(UUID().uuidString).provenance", isDirectory: true)
+            .appendingPathComponent("missing-\(UUID().uuidString).provenencia", isDirectory: true)
         let (model, store, _) = try harness(identity: jane, active: missing.path)
         await model.load()
         #expect(model.phase == .chooseFile)
@@ -87,7 +87,7 @@ struct OnboardingModelTests {
 
         model.mode = .open
         #expect(!model.canContinue)
-        model.selectedProject = URL(fileURLWithPath: "/tmp/x.provenance")
+        model.selectedProject = URL(fileURLWithPath: "/tmp/x.provenencia")
         #expect(model.canContinue)
 
         model.phase = .identify
@@ -120,7 +120,7 @@ struct OnboardingModelTests {
 
     @Test func chooseAppendsURLAndSetsOpen() async throws {
         let (model, _, _) = try harness()
-        let url = URL(fileURLWithPath: "/tmp/Picked.provenance")
+        let url = URL(fileURLWithPath: "/tmp/Picked.provenencia")
         model.choose(url)
         #expect(model.mode == .open)
         #expect(model.selectedProject == url)
@@ -150,14 +150,14 @@ struct OnboardingModelTests {
         #expect(model.phase == .identify)
         await model.submit()
         #expect(model.phase == .home)
-        #expect(model.projectBasename == "Robins.provenance")
+        #expect(model.projectBasename == "Robins.provenencia")
         #expect(store.identity?.displayName == "Jane Smith")
-        #expect(store.activeProjectDir == folders.documentsDirectory.appendingPathComponent("Robins.provenance").path)
+        #expect(store.activeProjectDir == folders.documentsDirectory.appendingPathComponent("Robins.provenencia").path)
     }
 
     @Test func submitOpenWithAdoptCallsStoreAndLandsHome() async throws {
         let folders = try makeFolders()
-        let project = folders.documentsDirectory.appendingPathComponent("Shared.provenance", isDirectory: true)
+        let project = folders.documentsDirectory.appendingPathComponent("Shared.provenencia", isDirectory: true)
         try FileManager.default.createDirectory(at: project, withIntermediateDirectories: true)
         let store = FakeStore(identity: nil, catalogUsers: [jane, jake])
         let model = OnboardingModel(store: store, folders: folders)
@@ -176,7 +176,7 @@ struct OnboardingModelTests {
 
     @Test func goToIdentifyPreselectsMatchingIdentityUser() async throws {
         let folders = try makeFolders()
-        let project = folders.documentsDirectory.appendingPathComponent("Shared.provenance", isDirectory: true)
+        let project = folders.documentsDirectory.appendingPathComponent("Shared.provenencia", isDirectory: true)
         try FileManager.default.createDirectory(at: project, withIntermediateDirectories: true)
         let store = FakeStore(identity: jane, catalogUsers: [jane, jake])
         let model = OnboardingModel(store: store, folders: folders)
@@ -189,7 +189,7 @@ struct OnboardingModelTests {
 
     @Test func goToIdentifyDefaultsToNewContributorWhenIdentityNotInCatalog() async throws {
         let folders = try makeFolders()
-        let project = folders.documentsDirectory.appendingPathComponent("Shared.provenance", isDirectory: true)
+        let project = folders.documentsDirectory.appendingPathComponent("Shared.provenencia", isDirectory: true)
         try FileManager.default.createDirectory(at: project, withIntermediateDirectories: true)
         let store = FakeStore(identity: jane, catalogUsers: [jake])
         let model = OnboardingModel(store: store, folders: folders)
@@ -201,7 +201,7 @@ struct OnboardingModelTests {
 
     @Test func signOutClearsIdentityActiveAndReturnsUnlockedChooseFile() async throws {
         let folders = try makeFolders()
-        let project = folders.documentsDirectory.appendingPathComponent("Robins Family.provenance", isDirectory: true)
+        let project = folders.documentsDirectory.appendingPathComponent("Robins Family.provenencia", isDirectory: true)
         try FileManager.default.createDirectory(at: project, withIntermediateDirectories: true)
         try touchCatalog(project)
         let store = FakeStore(identity: jane, activeProjectDir: project.path)
@@ -216,24 +216,24 @@ struct OnboardingModelTests {
         #expect(store.activeProjectDir == nil)
     }
 
-    @Test func selectModeOpenFillsAvailableProjectsFromProvenanceFolders() async throws {
+    @Test func selectModeOpenFillsAvailableProjectsFromProvenenciaFolders() async throws {
         let folders = try makeFolders()
-        let keep = folders.documentsDirectory.appendingPathComponent("Keep.provenance", isDirectory: true)
+        let keep = folders.documentsDirectory.appendingPathComponent("Keep.provenencia", isDirectory: true)
         try FileManager.default.createDirectory(at: keep, withIntermediateDirectories: true)
         try touchCatalog(keep)
         try FileManager.default.createDirectory(
-            at: folders.documentsDirectory.appendingPathComponent("Husk.provenance", isDirectory: true),
+            at: folders.documentsDirectory.appendingPathComponent("Husk.provenencia", isDirectory: true),
             withIntermediateDirectories: true
         )
         try FileManager.default.createDirectory(
             at: folders.documentsDirectory.appendingPathComponent("plain", isDirectory: true),
             withIntermediateDirectories: true
         )
-        try Data("x".utf8).write(to: folders.documentsDirectory.appendingPathComponent("file.provenance"))
+        try Data("x".utf8).write(to: folders.documentsDirectory.appendingPathComponent("file.provenencia"))
         let model = OnboardingModel(store: FakeStore(), folders: folders)
         await model.selectMode(.open)
         #expect(model.mode == .open)
-        #expect(model.availableProjects.map(\.lastPathComponent).sorted() == ["Keep.provenance"])
+        #expect(model.availableProjects.map(\.lastPathComponent).sorted() == ["Keep.provenencia"])
     }
 
     private func harness(

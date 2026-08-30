@@ -1,8 +1,8 @@
-# Provenance Genealogy — Structured Date Model
+# Provenencia Genealogy — Structured Date Model
 
 ## Status
 
-Draft architecture notes. This document is the authoritative schema and design reference for Provenance's shared genealogical date value model.
+Draft architecture notes. This document is the authoritative schema and design reference for Provenencia's shared genealogical date value model.
 
 Structured dates are cross-layer infrastructure. They may be referenced by Source metadata, Interpretations, Claims, Conclusions, and other future domain objects that need to represent genealogical dates faithfully.
 

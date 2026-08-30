@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/mendahu/provenance/core/database"
-	"github.com/mendahu/provenance/core/database/users"
-	"github.com/mendahu/provenance/core/identity"
-	"github.com/mendahu/provenance/core/installstate"
+	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/identity"
+	"github.com/mendahu/provenencia/core/installstate"
 )
 
 func TestOpen(t *testing.T) {

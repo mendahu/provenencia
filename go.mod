@@ -1,4 +1,4 @@
-module github.com/mendahu/provenance
+module github.com/mendahu/provenencia
 
 go 1.27
 

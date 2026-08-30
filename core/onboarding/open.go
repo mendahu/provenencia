@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/mendahu/provenance/core/database"
-	"github.com/mendahu/provenance/core/database/users"
-	"github.com/mendahu/provenance/core/identity"
+	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/identity"
 )
 
 var ErrUnknownUser = errors.New("user not in project")
@@ -39,7 +39,7 @@ func ListContributors(projectDir string) ([]identity.Identity, error) {
 	return out, nil
 }
 
-// Open opens an existing *.provenance folder and remembers it as the active project.
+// Open opens an existing *.provenencia folder and remembers it as the active project.
 // If adoptUserID is set, identity.json is written from that catalog users row
 // (replacing a different UUID already on this Mac). Otherwise it mints or loads
 // install identity and upserts users after the catalog opens successfully.

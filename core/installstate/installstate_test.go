@@ -15,7 +15,7 @@ func TestInstallState(t *testing.T) {
 		{
 			name: "round trip json",
 			run: func(t *testing.T, dir string) {
-				want := Active{ProjectDir: "/tmp/Smith Family.provenance"}
+				want := Active{ProjectDir: "/tmp/Smith Family.provenencia"}
 				if err := Save(dir, want); err != nil {
 					t.Fatal(err)
 				}
@@ -67,7 +67,7 @@ func TestInstallState(t *testing.T) {
 		{
 			name: "remove then load is not found",
 			run: func(t *testing.T, dir string) {
-				if err := Save(dir, Active{ProjectDir: "/tmp/A.provenance"}); err != nil {
+				if err := Save(dir, Active{ProjectDir: "/tmp/A.provenencia"}); err != nil {
 					t.Fatal(err)
 				}
 				if err := Remove(dir); err != nil {

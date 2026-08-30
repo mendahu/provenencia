@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/mendahu/provenance/core/jsonfile"
+	"github.com/mendahu/provenencia/core/jsonfile"
 )
 
 const FileName = "identity.json"

@@ -1,14 +1,14 @@
-# Provenance product versioning
+# Provenencia product versioning
 
 ## Status
 
-Working policy. The product uses **one SemVer tree** for every native client and the Go core. The `.provenance` on-disk format has its own number and must not be confused with the app version.
+Working policy. The product uses **one SemVer tree** for every native client and the Go core. The `.provenencia` on-disk format has its own number and must not be confused with the app version.
 
 ---
 
 ## Product version (SemVer)
 
-Provenance is a single product. macOS, a future Windows client, and the linked Go core all report the **same** `MAJOR.MINOR.PATCH`.
+Provenencia is a single product. macOS, a future Windows client, and the linked Go core all report the **same** `MAJOR.MINOR.PATCH`.
 
 There is no `mac@1.4` vs `windows@1.1` vs `core@3.2` for users or release notes. A platform that has not shipped a milestone yet is simply behind; when it ships, it uses that milestone’s product version (for example both say `0.2.0`).
 
@@ -20,7 +20,7 @@ There is no `mac@1.4` vs `windows@1.1` vs `core@3.2` for users or release notes.
 | --- | --- |
 | **MAJOR** | Incompatible change users or other clients cannot ignore (typically a project-format break that old apps cannot open, or a deliberate reset after 1.0). |
 | **MINOR** | Backward-compatible features (new screens, new RPCs old clients can ignore, additive schema that old apps still open). |
-| **PATCH** | Bugfixes, packaging, and platform-only hotfixes. A Windows-only crash fix that you release is still **Provenance `x.y.z+1`**, not a Windows-private version. |
+| **PATCH** | Bugfixes, packaging, and platform-only hotfixes. A Windows-only crash fix that you release is still **Provenencia `x.y.z+1`**, not a Windows-private version. |
 
 Do **not** bump the product version for docs-only or comment-only changes.
 
@@ -42,7 +42,7 @@ Keep these in lockstep on every product bump:
 | --- | --- |
 | [`VERSION`](../VERSION) | file contents |
 | [`core/version.go`](../core/version.go) | `core.Version` |
-| [`macos/Provenance.xcodeproj`](../macos/Provenance.xcodeproj) | `MARKETING_VERSION` (Debug and Release) |
+| [`macos/Provenencia.xcodeproj`](../macos/Provenencia.xcodeproj) | `MARKETING_VERSION` (Debug and Release) |
 | git | annotated tag `vMAJOR.MINOR.PATCH` when cutting a release |
 
 Later: Windows assembly/file marketing version; About panels; Sparkle / WinGet metadata.
@@ -61,10 +61,10 @@ Document format bumps in the data-model / migration notes when those exist. Prod
 
 ## User-visible
 
-Ship the product version in **Provenance → About** (and the Windows equivalent). Optional later: project-info UI showing format/`user_version`.
+Ship the product version in **Provenencia → About** (and the Windows equivalent). Optional later: project-info UI showing format/`user_version`.
 
 ---
 
 ## Go toolchain vs product version
 
-`go 1.27` in `go.mod` is the **language toolchain**, not Provenance `1.27.0`. Do not conflate them.
+`go 1.27` in `go.mod` is the **language toolchain**, not Provenencia `1.27.0`. Do not conflate them.

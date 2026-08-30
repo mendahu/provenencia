@@ -2,7 +2,7 @@
 
 ## Status
 
-**Done.** Archived after Spike 1: macOS app + Go dylib, first-run onboarding, install identity, and a real `*.provenance` catalog. Not the MVP. Remaining from the retro: L6 (sign the dylib) and L7 (`0.1.0` tag).
+**Done.** Archived after Spike 1: macOS app + Go dylib, first-run onboarding, install identity, and a real `*.provenencia` catalog. Not the MVP. Remaining from the retro: L6 (sign the dylib) and L7 (`0.1.0` tag).
 
 Authoritative models: [`application-stack.md`](../../application-stack.md), [`user-identity-model.md`](../../user-identity-model.md). This note sequenced the first slice of those decisions.
 
@@ -18,7 +18,7 @@ Launch
   → create: display name + family name → mint User
   → open: list users in the catalog → adopt that UUID or mint a new one
   → write identity file (Application Support)
-  → create or open {Family Name}.provenance
+  → create or open {Family Name}.provenencia
   → users row matches identity
   → idle “you’re in” screen
 ```
@@ -32,11 +32,11 @@ That is enough to prove the stack: SwiftUI → protobuf FFI → Go core → SQLi
 - Repository layout for `core/`, `api/`, `cmd/`, `macos/` as sketched in the stack doc.
 - Go core as an xcframework/dylib with cgo SQLite (`github.com/mattn/go-sqlite3`).
 - Protocol Buffers for FFI payloads.
-- Project directory on **local disk**: `*.provenance` folder with `provenance.sqlite` (+ WAL/SHM while open), empty `objects/` and `derivatives/` as needed.
+- Project directory on **local disk**: `*.provenencia` folder with `provenencia.sqlite` (+ WAL/SHM while open), empty `objects/` and `derivatives/` as needed.
 - Schema enough for identity: `users` (`id` BLOB UUIDv7, `display_name` TEXT), SQLite `STRICT`, migrations owned by Go.
 - Install-local identity file in Application Support (outside the project). Same UUID reused for later projects.
 - First-run UI: collect **your name** (contributor display name) and a **project / family name** (this document). No email, password, or login.
-- Create a first project as part of onboarding. Default parent: Documents. Folder basename is the project name plus `.provenance` (for example `Robins Family.provenance`).
+- Create a first project as part of onboarding. Default parent: Documents. Folder basename is the project name plus `.provenencia` (for example `Robins Family.provenencia`).
 - Returning launch: if an active project is stored and still on disk, skip the picker and open it. Identity plus folders in Documents is not enough.
 - Developer path: `open` the Xcode project / run the Mac target and talk to a live Go core and SQLite file on this machine.
 
@@ -59,12 +59,12 @@ That is enough to prove the stack: SwiftUI → protobuf FFI → Go core → SQLi
 3. Confirming creates:
    - a UUIDv7 contributor id;
    - an identity file in Application Support for this install (your name + UUID only — not the project name);
-   - a project directory `{sanitized family name}.provenance` with `provenance.sqlite`;
+   - a project directory `{sanitized family name}.provenencia` with `provenencia.sqlite`;
    - a `users` row with that id and display name.
 4. Quit and relaunch: do not ask for your name again; the same UUID is used. Reopen the last project when an active-project pointer exists.
 5. Display name is attribution text, not a login. It need not be unique.
 6. Project / family name labels **this file** in Finder and the window title. It is not the User identity. Spike 1 does not need a separate title table: the folder basename is the name. Renaming the project later can be a Finder rename or a later use-case.
-7. Sanitize the folder name for the filesystem (`/`, `:`, leading dots, etc.). If `{Name}.provenance` already exists in the chosen parent, fail with a clear error (do not silently overwrite).
+7. Sanitize the folder name for the filesystem (`/`, `:`, leading dots, etc.). If `{Name}.provenencia` already exists in the chosen parent, fail with a clear error (do not silently overwrite).
 8. OS account is not the identity provider. Do not key identity off macOS username or iCloud. Do not default the project name to the macOS account name without asking.
 
 ### Identity file
@@ -72,7 +72,7 @@ That is enough to prove the stack: SwiftUI → protobuf FFI → Go core → SQLi
 Store under the app’s Application Support directory (not inside the project), for example:
 
 ```text
-~/Library/Application Support/Provenance/identity.json
+~/Library/Application Support/Provenencia/identity.json
 ```
 
 Minimum contents (JSON is fine for v0; this is install-local, not the portable project format):
@@ -91,8 +91,8 @@ Do not put passwords, tokens, or email in this file.
 ### Project on disk
 
 ```text
-Some Family.provenance/
-├── provenance.sqlite
+Some Family.provenencia/
+├── provenencia.sqlite
 ├── objects/
 └── derivatives/
 ```
@@ -116,7 +116,7 @@ Jake can, on his MacBook, without a server:
 1. Build the Mac app and the Go dylib in a documented local workflow.
 2. Launch, enter your name and a family/project name, finish onboarding.
 3. Find the identity file on disk with a UUID and **your** name.
-4. Find `{Family Name}.provenance` (e.g. under Documents) and open `provenance.sqlite` to see the matching `users` row.
+4. Find `{Family Name}.provenencia` (e.g. under Documents) and open `provenencia.sqlite` to see the matching `users` row.
 5. Relaunch and land past onboarding as that same user when an active project is stored.
 
 ---
@@ -125,7 +125,7 @@ Jake can, on his MacBook, without a server:
 
 The stack already calls this out: **cgo SQLite inside a Go xcframework loaded by Swift**. If that build is untenable, stop and switch to a local Go process or pure-Go SQLite before any onboarding UI. Do not paper over a broken dylib with a fake in-memory store.
 
-**Outcome:** Retired. Plan A shipped as `libprovenance.dylib` (`-buildmode=c-shared`, not an xcframework). Fallbacks unused. See [`application-stack.md`](../../application-stack.md) §31 item 5.
+**Outcome:** Retired. Plan A shipped as `libprovenencia.dylib` (`-buildmode=c-shared`, not an xcframework). Fallbacks unused. See [`application-stack.md`](../../application-stack.md) §31 item 5.
 
 ---
 
@@ -153,12 +153,12 @@ PR5 can start once PR3 proves the dylib; it should not land identity writes that
 | --- | --- | --- | --- | --- |
 | **1** | Repository scaffold | Done. `go.mod`, stub `core/` / `api/proto/` / `cmd/` / `macos/` Xcode app (macOS 14) that launches a blank window. README: how to open and run on a Mac. | — | No genealogy yet. |
 | **2** | Proto + FFI hello | Done. `engine.proto`, codegen, Swift `GenealogyStore` / `GoStore` calls `Ping` / `GetVersion` over one C ABI; Go returns protobuf. See `api/proto/README.md`. | 1 | No SQLite yet. |
-| **3** | SQLite-in-dylib spike | Done. Temp SQLite via mattn/cgo inside `libprovenance.dylib`; Swift `sqliteProbe()`. Existing c-shared dylib pipeline, not an xcframework. | 2 | **Gate.** If this fails, choose fallback before continuing. |
-| **4** | Project format + `users` | Done. Create/open `*.provenance` in Go; `application_id` `'PROV'`; `user_version` 1; empty `users`; exclusive open. No FFI create/open, no CLI. | 3 | Schema: only what Spike 1 needs. Refuse foreign catalogs. |
+| **3** | SQLite-in-dylib spike | Done. Temp SQLite via mattn/cgo inside `libprovenencia.dylib`; Swift `sqliteProbe()`. Existing c-shared dylib pipeline, not an xcframework. | 2 | **Gate.** If this fails, choose fallback before continuing. |
+| **4** | Project format + `users` | Done. Create/open `*.provenencia` in Go; `application_id` `'PROV'`; `user_version` 1; empty `users`; exclusive open. No FFI create/open, no CLI. | 3 | Schema: only what Spike 1 needs. Refuse foreign catalogs. |
 | **5** | Install identity store | Done. Go `core/identity`: `{dir}/identity.json` (`user_id` UUIDv7 + `display_name`). Caller passes `dir`; no Mac path hardcoded. No FFI, no `users` insert. | 4 | File format pinned in this PR. |
-| **6** | Onboarding use-case | Done. Go `core/onboarding.Complete`: mint/load identity, sanitize family name, `Create` `*.provenance`, upsert `users`. No FFI. | 4, 5 | No Source tables. |
+| **6** | Onboarding use-case | Done. Go `core/onboarding.Complete`: mint/load identity, sanitize family name, `Create` `*.provenencia`, upsert `users`. No FFI. | 4, 5 | No Source tables. |
 | **7** | Onboarding FFI | Done. `GetInstallIdentity` / `CompleteOnboarding` over the existing C ABI; paths in protobuf; failed calls return UTF-8 `err.Error()` in `out`. No Swift UI. | 6 | Go still does not hardcode Mac paths. |
-| **8** | Onboarding UI + install path | Done. First-run two fields, home stub with project basename; returning user skips the form if identity exists. Swift resolves Application Support `Provenance/` and Documents. | 7 | Last-project reopen is PR9. |
+| **8** | Onboarding UI + install path | Done. First-run two fields, home stub with project basename; returning user skips the form if identity exists. Swift resolves Application Support `Provenencia/` and Documents. | 7 | Last-project reopen is PR9. |
 | **9** | Reopen last project | Done. `active-project.json` next to identity; two-screen create/open then identity; adopt a catalog user on a new Mac or mint. Relaunch goes home if the active folder still exists. | 8 | Path in Application Support, not security-scoped bookmarks. |
 
 Do not combine 3 with 8. Do not put ingest or `sources` into 4 “while we’re in migrations.”
@@ -172,7 +172,7 @@ Do not combine 3 with 8. Do not put ingest or `sources` into 4 “while we’re 
 - **5** — Keep contributor UUID off the project folder and on the install.
 - **6** — One core operation for “I am this person; this file is the Robins family.”
 - **7** — Expose onboarding over FFI so Swift can pass directories without embedding Mac paths in Go.
-- **8** — The only user-visible milestone: first-run names → identity + named `.provenance` folder; Swift supplies the Application Support path.
+- **8** — The only user-visible milestone: first-run names → identity + named `.provenencia` folder; Swift supplies the Application Support path.
 - **9** — Make the second launch feel like an app, not a demo.
 
 ---
@@ -186,7 +186,7 @@ From a code review of the Spike 1 codebase (Go core, FFI layer, Swift client). O
 - **H1 — Fix the SQLite DSN path bug and harden folder-name sanitization.** Done. `dsn()` builds a `file:` URL so `?`/`#` in paths stay in the filename; `FolderName` also replaces Windows-reserved basename characters (`*?"<>|`).
 - **H2 — Fix side-effect ordering and silent identity replacement in `onboarding.Open`.** Done. Identity is written only after a successful catalog open; adopt of a different catalog UUID replaces `identity.json` (tested).
 - **H3 — Add a Swift unit test target for `OnboardingModel`.** Done. Unit target + `OnboardingModel` / `InstallPaths` coverage via `FakeStore`.
-- **H4 — Validate the active project as a catalog, not just a directory.** Done. `isProjectDirectory` / picker require `provenance.sqlite` to exist (no DB open).
+- **H4 — Validate the active project as a catalog, not just a directory.** Done. `isProjectDirectory` / picker require `provenencia.sqlite` to exist (no DB open).
 - **H5 — Stop growing the repo by ~14 MB per dylib rebuild.** Done. Dylib gitignored; Xcode + CI build via `scripts/build-macos-core.sh`.
 
 ### Medium value
@@ -201,7 +201,7 @@ From a code review of the Spike 1 codebase (Go core, FFI layer, Swift client). O
 ### Low value
 
 - **L1 — Handler/test file organization.** Done. Open/List tests live in `onboarding_test.go`; last-opened project is `core/installstate`.
-- **L2 — Dead code sweep.** Done. Dropped the blank `core/database` import in `libprovenance`; `GetVersion` always unmarshals. Mode/`FakeStore` leftovers were already gone on `main`.
+- **L2 — Dead code sweep.** Done. Dropped the blank `core/database` import in `libprovenencia`; `GetVersion` always unmarshals. Mode/`FakeStore` leftovers were already gone on `main`.
 - **L3 — Extract a shared JSON file-store helper** for `core/identity` and `core/installstate`. Done. `core/jsonfile` Read/Write/Remove; validation stays in the domain packages.
 - **L4 — C ABI polish.** Done. Bridging header uses `const uint8_t *in` and documents status 0/1/2. Go `//export` stays non-const (cgo).
 - **L5 — Split `OnboardingView` into per-screen subview files.** Done. Shell + choose-file / identify / home / chrome.

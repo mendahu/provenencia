@@ -1,8 +1,8 @@
-# Provenance Genealogy — Structured Name Model
+# Provenencia Genealogy — Structured Name Model
 
 ## Status
 
-Draft architecture notes. This document is the authoritative schema and design reference for Provenance's shared personal name value model.
+Draft architecture notes. This document is the authoritative schema and design reference for Provenencia's shared personal name value model.
 
 Structured names are cross-layer infrastructure. They may be referenced by Interpretations, Conclusions, and other future domain objects that need to represent personal names for display, search, and reconciliation without forcing a single cultural naming schema.
 

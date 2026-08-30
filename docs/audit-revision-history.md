@@ -1,8 +1,8 @@
-# Provenance Genealogy — Audit and Revision History
+# Provenencia Genealogy — Audit and Revision History
 
 ## Status
 
-Draft architecture notes. This document defines the cross-cutting audit and revision model used by Provenance.
+Draft architecture notes. This document defines the cross-cutting audit and revision model used by Provenencia.
 
 Audit history is **first-class research data**. It is part of the database design from the first schema version rather than a feature to retrofit after research data already exists.
 
@@ -12,11 +12,11 @@ The audit model applies across the Source, Interpretation, and Conclusion layers
 
 # 1. Design philosophy
 
-## 1.1 Research changes are provenance
+## 1.1 Research changes are provenencia
 
 Genealogical research is iterative. Sources are described, interpretations are revised, identities are resolved, claims are accepted or rejected, and earlier conclusions may later be changed.
 
-Those changes are themselves useful provenance.
+Those changes are themselves useful provenencia.
 
 The audit history should answer questions such as:
 
@@ -51,7 +51,7 @@ Both actions remain visible.
 
 ## 1.3 Diffs are authoritative
 
-Provenance does not store a full duplicate snapshot of every changed row at every revision.
+Provenencia does not store a full duplicate snapshot of every changed row at every revision.
 
 Instead, each revision stores **lossless field-level diffs** containing both the old and new values. Because historical reconstruction is expected to be relatively infrequent, an old state may be rebuilt by replaying the revision stream.
 
@@ -72,7 +72,7 @@ The audit log records that those domain objects changed. It does not substitute 
 
 ## 1.5 Strict SQLite typing
 
-All Provenance tables should use SQLite `STRICT` tables unless a specific technical reason requires otherwise.
+All Provenencia tables should use SQLite `STRICT` tables unless a specific technical reason requires otherwise.
 
 This keeps the SQLite implementation closer to the strong typing expected from a relational schema and prevents values of unrelated storage classes from being silently accepted into columns.
 
@@ -340,7 +340,7 @@ To reconstruct a particular entity, the application may replay only changes for 
 
 Because reconstruction is expected to be infrequent, the initial design favors correctness and audit clarity over optimized historical reads.
 
-If historical reconstruction later becomes expensive, Provenance may introduce **derived checkpoints** or cached snapshots at intervals. Such snapshots would be performance artifacts only; the append-only diff stream would remain authoritative and disposable checkpoints could always be rebuilt from it.
+If historical reconstruction later becomes expensive, Provenencia may introduce **derived checkpoints** or cached snapshots at intervals. Such snapshots would be performance artifacts only; the append-only diff stream would remain authoritative and disposable checkpoints could always be rebuilt from it.
 
 ---
 
@@ -420,4 +420,4 @@ The first implementation should follow these rules:
 11. Generic creation/update timestamps and user IDs are not duplicated across domain tables.
 12. Audit history supplements rather than replaces Source, Interpretation, Conclusion, Claim, and merge semantics.
 
-The goal is not merely to know that data changed. Provenance should be able to explain **how the research database arrived at its current state**.
+The goal is not merely to know that data changed. Provenencia should be able to explain **how the research database arrived at its current state**.

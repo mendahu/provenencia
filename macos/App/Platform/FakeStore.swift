@@ -6,7 +6,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var activeProjectDir: String?
     var catalogUsers: [InstallIdentity]
     var lastResult = OnboardingResult(
-        projectDir: "/tmp/Robins Family.provenance",
+        projectDir: "/tmp/Robins Family.provenencia",
         userID: "00000000-0000-7000-8000-000000000001",
         displayName: "Jake Robins"
     )
@@ -43,7 +43,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     ) async throws -> OnboardingResult {
         identity = InstallIdentity(userID: lastResult.userID, displayName: displayName)
         let result = OnboardingResult(
-            projectDir: parentDir + "/" + familyName + ".provenance",
+            projectDir: parentDir + "/" + familyName + ".provenencia",
             userID: lastResult.userID,
             displayName: displayName
         )

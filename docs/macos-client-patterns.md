@@ -10,16 +10,16 @@ Audience: someone comfortable with JavaScript and Go, new to Apple platforms.
 
 | Folder | Scope | Examples |
 | --- | --- | --- |
-| `App/` | Process entry: scenes, menus. Stay thin. | `ProvenanceApp.swift` |
+| `App/` | Process entry: scenes, menus. Stay thin. | `ProvenenciaApp.swift` |
 | `Platform/` | Reused for the whole Mac client: store protocol, FFI, fakes. Not a screen. | `GenealogyStore`, `GoStore`, `CoreInvoke` |
 | `Platform/Generated/` | `protoc` output. Do not edit by hand. | `engine.pb.swift` |
 | `Features/<Name>/` | One product flow (view + model). | `Onboarding` |
 | `Features/Onboarding/` | File vs new, then contributor or names; home stub; relaunch uses active project. | `OnboardingView` |
 | `Resources/` | Assets, entitlements, bridging header | |
 
-The Go dylib is written to [`macos/Core/`](../macos/Core/) as a **build artifact** (gitignored). Do not commit `libprovenance.dylib`.
+The Go dylib is written to [`macos/Core/`](../macos/Core/) as a **build artifact** (gitignored). Do not commit `libprovenencia.dylib`.
 
-Open **`macos/Provenance.xcodeproj`**, not `macos/App`. The latter is the source tree; it is not an Xcode project.
+Open **`macos/Provenencia.xcodeproj`**, not `macos/App`. The latter is the source tree; it is not an Xcode project.
 
 ---
 
@@ -32,7 +32,7 @@ Treat SwiftUI like React: it renders. It does not own SQLite, identity, or genea
 SwiftUI View  →  small Swift model / store  →  FFI  →  Go core
 ```
 
-Views may format strings and enable/disable buttons. They must not open `provenance.sqlite` or mint UUIDs. Launch and the open picker only `stat` that the catalog file exists (`InstallPaths`); Go still owns a real open.
+Views may format strings and enable/disable buttons. They must not open `provenencia.sqlite` or mint UUIDs. Launch and the open picker only `stat` that the catalog file exists (`InstallPaths`); Go still owns a real open.
 
 ---
 
@@ -82,11 +82,11 @@ Previews (`#Preview`) are Storybook-like. They are not CI tests.
 | Layer | Tool | What belongs there |
 | --- | --- | --- |
 | Domain, SQLite, identity, project folders | `go test` | Almost all product behavior |
-| Path trim, `OnboardingModel`, `InstallPaths` | `ProvenanceTests` (Swift Testing) | FakeStore + temp folders; no dylib. `xcodebuild test -scheme Provenance` |
+| Path trim, `OnboardingModel`, `InstallPaths` | `ProvenenciaTests` (Swift Testing) | FakeStore + temp folders; no dylib. `xcodebuild test -scheme Provenencia` |
 | First-run happy path | One XCUITest later | Optional; needs identifiers |
 | Pixel snapshots | Third-party, sparingly | Easy to churn across macOS versions |
 
-Host logic so it can be tested **without** the live Go store. The unit-test bundle still hosts in Provenance.app. Add a UI-test target when the happy path is worth locking.
+Host logic so it can be tested **without** the live Go store. The unit-test bundle still hosts in Provenencia.app. Add a UI-test target when the happy path is worth locking.
 
 CI for Go runs on Linux. Swift tests run on a macOS GitHub runner (`.github/workflows/macos-test.yml`).
 
@@ -94,8 +94,8 @@ CI for Go runs on Linux. Swift tests run on a macOS GitHub runner (`.github/work
 
 ## 7. Bundle and windows
 
-- **Bundle id** (`app.provenance`) is the OS identity of the app (defaults, later UTIs), not the product SemVer.
-- **`App` / `Scene` / `View`:** process entry and windows vs content inside a window. Keep `ProvenanceApp` thin (scenes, menus). Screens live in their own files.
-- **`WindowGroup`** is a generic window. A real `.provenance` document flow may later use a document scene; do not force that until we open files.
+- **Bundle id** (`app.provenencia`) is the OS identity of the app (defaults, later UTIs), not the product SemVer.
+- **`App` / `Scene` / `View`:** process entry and windows vs content inside a window. Keep `ProvenenciaApp` thin (scenes, menus). Screens live in their own files.
+- **`WindowGroup`** is a generic window. A real `.provenencia` document flow may later use a document scene; do not force that until we open files.
 
 Product version remains [`versioning.md`](versioning.md) (`VERSION` / About box), not the bundle id.

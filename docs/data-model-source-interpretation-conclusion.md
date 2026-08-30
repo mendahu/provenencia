@@ -1,8 +1,8 @@
-# Provenance Genealogy — Data Model Philosophy
+# Provenencia Genealogy — Data Model Philosophy
 
 ## Status
 
-Draft architecture notes. This document describes the relationship between Provenance's three principal research layers.
+Draft architecture notes. This document describes the relationship between Provenencia's three principal research layers.
 
 Authoritative layer schemas:
 
@@ -23,7 +23,7 @@ Cross-cutting audit/revision: [`audit-revision-history.md`](audit-revision-histo
 
 # 1. The three layers
 
-Provenance uses an evidence-first model with three principal layers:
+Provenencia uses an evidence-first model with three principal layers:
 
 ```text
 Source
@@ -37,7 +37,7 @@ The boundaries are intentional. Evidence should be preserved without forcing int
 
 ## 1.0 Rigorous science and a casual tree
 
-The data model is built so **good science is convenient**: Citations, Observation-sized assertions, sameness with exhibit, Reconciliation with a stored value and optional pins, provenance badges on working subjects. Use-case write-ups in these docs often describe that path — how the author wants to do genealogy.
+The data model is built so **good science is convenient**: Citations, Observation-sized assertions, sameness with exhibit, Reconciliation with a stored value and optional pins, provenencia badges on working subjects. Use-case write-ups in these docs often describe that path — how the author wants to do genealogy.
 
 The same model must **allow a family tree with little or no evidence**. Empty canonical Persons, asserted Places, names typed only as Reconciliation, no Sources: that is a valid project. It will not withstand genealogical proof review. That is acceptable. The application should encourage and surface rigor (warnings, badges, “unlinked” filters, suggested Citations), not refuse to save a tree because the user skipped science.
 
@@ -91,7 +91,7 @@ The value may be a scalar/structured value or another Node. A Node-valued Observ
 
 The Interpretation layer is an extensible, schema-described property graph. It stores explicit normalized assertions derived from evidence but does not persist relationships or conclusions that can merely be inferred from those assertions. Genealogical inference and higher-order semantics belong to application and Conclusion logic.
 
-A Node's assertion provenance is derived through its Observations:
+A Node's assertion provenencia is derived through its Observations:
 
 ```text
 Node

@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mendahu/provenance/core/jsonfile"
+	"github.com/mendahu/provenencia/core/jsonfile"
 )
 
 const FileName = "active-project.json"

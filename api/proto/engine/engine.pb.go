@@ -1104,7 +1104,7 @@ var File_engine_proto protoreflect.FileDescriptor
 
 const file_engine_proto_rawDesc = "" +
 	"\n" +
-	"\fengine.proto\x12\x14provenance.engine.v1\"'\n" +
+	"\fengine.proto\x12\x15provenencia.engine.v1\"'\n" +
 	"\vPingRequest\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\"(\n" +
 	"\fPingResponse\x12\x18\n" +
@@ -1158,9 +1158,9 @@ const file_engine_proto_rawDesc = "" +
 	"projectDir\"I\n" +
 	"\vProjectUser\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12!\n" +
-	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\"S\n" +
-	"\x18ListProjectUsersResponse\x127\n" +
-	"\x05users\x18\x01 \x03(\v2!.provenance.engine.v1.ProjectUserR\x05users\"3\n" +
+	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\"T\n" +
+	"\x18ListProjectUsersResponse\x128\n" +
+	"\x05users\x18\x01 \x03(\v2\".provenencia.engine.v1.ProjectUserR\x05users\"3\n" +
 	"\x0eSignOutRequest\x12!\n" +
 	"\fidentity_dir\x18\x01 \x01(\tR\videntityDir\"\x11\n" +
 	"\x0fSignOutResponse*\xbc\x02\n" +
@@ -1176,7 +1176,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x1cMETHOD_REMOVE_ACTIVE_PROJECT\x10\b\x12\x1d\n" +
 	"\x19METHOD_LIST_PROJECT_USERS\x10\t\x12\x13\n" +
 	"\x0fMETHOD_SIGN_OUT\x10\n" +
-	"B0Z.github.com/mendahu/provenance/api/proto/engineb\x06proto3"
+	"B1Z/github.com/mendahu/provenencia/api/proto/engineb\x06proto3"
 
 var (
 	file_engine_proto_rawDescOnce sync.Once
@@ -1193,31 +1193,31 @@ func file_engine_proto_rawDescGZIP() []byte {
 var file_engine_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_engine_proto_goTypes = []any{
-	(Method)(0),                           // 0: provenance.engine.v1.Method
-	(*PingRequest)(nil),                   // 1: provenance.engine.v1.PingRequest
-	(*PingResponse)(nil),                  // 2: provenance.engine.v1.PingResponse
-	(*GetVersionRequest)(nil),             // 3: provenance.engine.v1.GetVersionRequest
-	(*GetVersionResponse)(nil),            // 4: provenance.engine.v1.GetVersionResponse
-	(*GetInstallIdentityRequest)(nil),     // 5: provenance.engine.v1.GetInstallIdentityRequest
-	(*GetInstallIdentityResponse)(nil),    // 6: provenance.engine.v1.GetInstallIdentityResponse
-	(*CompleteOnboardingRequest)(nil),     // 7: provenance.engine.v1.CompleteOnboardingRequest
-	(*CompleteOnboardingResponse)(nil),    // 8: provenance.engine.v1.CompleteOnboardingResponse
-	(*RemoveInstallIdentityRequest)(nil),  // 9: provenance.engine.v1.RemoveInstallIdentityRequest
-	(*RemoveInstallIdentityResponse)(nil), // 10: provenance.engine.v1.RemoveInstallIdentityResponse
-	(*GetActiveProjectRequest)(nil),       // 11: provenance.engine.v1.GetActiveProjectRequest
-	(*GetActiveProjectResponse)(nil),      // 12: provenance.engine.v1.GetActiveProjectResponse
-	(*OpenProjectRequest)(nil),            // 13: provenance.engine.v1.OpenProjectRequest
-	(*OpenProjectResponse)(nil),           // 14: provenance.engine.v1.OpenProjectResponse
-	(*RemoveActiveProjectRequest)(nil),    // 15: provenance.engine.v1.RemoveActiveProjectRequest
-	(*RemoveActiveProjectResponse)(nil),   // 16: provenance.engine.v1.RemoveActiveProjectResponse
-	(*ListProjectUsersRequest)(nil),       // 17: provenance.engine.v1.ListProjectUsersRequest
-	(*ProjectUser)(nil),                   // 18: provenance.engine.v1.ProjectUser
-	(*ListProjectUsersResponse)(nil),      // 19: provenance.engine.v1.ListProjectUsersResponse
-	(*SignOutRequest)(nil),                // 20: provenance.engine.v1.SignOutRequest
-	(*SignOutResponse)(nil),               // 21: provenance.engine.v1.SignOutResponse
+	(Method)(0),                           // 0: provenencia.engine.v1.Method
+	(*PingRequest)(nil),                   // 1: provenencia.engine.v1.PingRequest
+	(*PingResponse)(nil),                  // 2: provenencia.engine.v1.PingResponse
+	(*GetVersionRequest)(nil),             // 3: provenencia.engine.v1.GetVersionRequest
+	(*GetVersionResponse)(nil),            // 4: provenencia.engine.v1.GetVersionResponse
+	(*GetInstallIdentityRequest)(nil),     // 5: provenencia.engine.v1.GetInstallIdentityRequest
+	(*GetInstallIdentityResponse)(nil),    // 6: provenencia.engine.v1.GetInstallIdentityResponse
+	(*CompleteOnboardingRequest)(nil),     // 7: provenencia.engine.v1.CompleteOnboardingRequest
+	(*CompleteOnboardingResponse)(nil),    // 8: provenencia.engine.v1.CompleteOnboardingResponse
+	(*RemoveInstallIdentityRequest)(nil),  // 9: provenencia.engine.v1.RemoveInstallIdentityRequest
+	(*RemoveInstallIdentityResponse)(nil), // 10: provenencia.engine.v1.RemoveInstallIdentityResponse
+	(*GetActiveProjectRequest)(nil),       // 11: provenencia.engine.v1.GetActiveProjectRequest
+	(*GetActiveProjectResponse)(nil),      // 12: provenencia.engine.v1.GetActiveProjectResponse
+	(*OpenProjectRequest)(nil),            // 13: provenencia.engine.v1.OpenProjectRequest
+	(*OpenProjectResponse)(nil),           // 14: provenencia.engine.v1.OpenProjectResponse
+	(*RemoveActiveProjectRequest)(nil),    // 15: provenencia.engine.v1.RemoveActiveProjectRequest
+	(*RemoveActiveProjectResponse)(nil),   // 16: provenencia.engine.v1.RemoveActiveProjectResponse
+	(*ListProjectUsersRequest)(nil),       // 17: provenencia.engine.v1.ListProjectUsersRequest
+	(*ProjectUser)(nil),                   // 18: provenencia.engine.v1.ProjectUser
+	(*ListProjectUsersResponse)(nil),      // 19: provenencia.engine.v1.ListProjectUsersResponse
+	(*SignOutRequest)(nil),                // 20: provenencia.engine.v1.SignOutRequest
+	(*SignOutResponse)(nil),               // 21: provenencia.engine.v1.SignOutResponse
 }
 var file_engine_proto_depIdxs = []int32{
-	18, // 0: provenance.engine.v1.ListProjectUsersResponse.users:type_name -> provenance.engine.v1.ProjectUser
+	18, // 0: provenencia.engine.v1.ListProjectUsersResponse.users:type_name -> provenencia.engine.v1.ProjectUser
 	1,  // [1:1] is the sub-list for method output_type
 	1,  // [1:1] is the sub-list for method input_type
 	1,  // [1:1] is the sub-list for extension type_name

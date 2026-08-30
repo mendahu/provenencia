@@ -3,8 +3,8 @@ package handlers
 import (
 	"testing"
 
-	"github.com/mendahu/provenance/api/proto/engine"
-	"github.com/mendahu/provenance/core"
+	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core"
 )
 
 func TestGetVersion(t *testing.T) {

@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "AA0000000000000000000050"
-               BuildableName = "Provenance.app"
-               BlueprintName = "Provenance"
-               ReferencedContainer = "container:Provenance.xcodeproj">
+               BuildableName = "Provenencia.app"
+               BlueprintName = "Provenencia"
+               ReferencedContainer = "container:Provenencia.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
@@ -29,9 +29,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "AA00000000000000000000B6"
-               BuildableName = "ProvenanceTests.xctest"
-               BlueprintName = "ProvenanceTests"
-               ReferencedContainer = "container:Provenance.xcodeproj">
+               BuildableName = "ProvenenciaTests.xctest"
+               BlueprintName = "ProvenenciaTests"
+               ReferencedContainer = "container:Provenencia.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -48,9 +48,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "AA00000000000000000000B6"
-               BuildableName = "ProvenanceTests.xctest"
-               BlueprintName = "ProvenanceTests"
-               ReferencedContainer = "container:Provenance.xcodeproj">
+               BuildableName = "ProvenenciaTests.xctest"
+               BlueprintName = "ProvenenciaTests"
+               ReferencedContainer = "container:Provenencia.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -70,9 +70,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "AA0000000000000000000050"
-            BuildableName = "Provenance.app"
-            BlueprintName = "Provenance"
-            ReferencedContainer = "container:Provenance.xcodeproj">
+            BuildableName = "Provenencia.app"
+            BlueprintName = "Provenencia"
+            ReferencedContainer = "container:Provenencia.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -87,9 +87,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "AA0000000000000000000050"
-            BuildableName = "Provenance.app"
-            BlueprintName = "Provenance"
-            ReferencedContainer = "container:Provenance.xcodeproj">
+            BuildableName = "Provenencia.app"
+            BlueprintName = "Provenencia"
+            ReferencedContainer = "container:Provenencia.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

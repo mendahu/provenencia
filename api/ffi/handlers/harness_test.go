@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/mendahu/provenance/api/proto/engine"
-	"github.com/mendahu/provenance/core/database"
-	"github.com/mendahu/provenance/core/identity"
+	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/identity"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -150,7 +150,7 @@ func assertOnboardingWroteProject(t *testing.T, out []byte, familyBase string) {
 	if filepath.Base(done.GetProjectDir()) != familyBase+database.Suffix {
 		t.Fatalf("project %s", done.GetProjectDir())
 	}
-	if _, err := os.Stat(filepath.Join(done.GetProjectDir(), "provenance.sqlite")); err != nil {
+	if _, err := os.Stat(filepath.Join(done.GetProjectDir(), "provenencia.sqlite")); err != nil {
 		t.Fatal(err)
 	}
 }

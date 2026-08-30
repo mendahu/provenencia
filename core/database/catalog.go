@@ -1,4 +1,4 @@
-// Package database owns the *.provenance folder catalog (provenance.sqlite).
+// Package database owns the *.provenencia folder catalog (provenencia.sqlite).
 // Identity files, FFI RPCs, and Source ingest do not live here.
 package database
 
@@ -15,18 +15,18 @@ import (
 )
 
 // ApplicationID is the SQLite application_id FourCC 'PROV' (0x50524F56).
-// Folder suffix .provenance is a hint; ownership is this id plus user_version.
+// Folder suffix .provenencia is a hint; ownership is this id plus user_version.
 const ApplicationID = 0x50524F56
 
 const (
-	catalogFile = "provenance.sqlite"
+	catalogFile = "provenencia.sqlite"
 	// Suffix is the project folder extension. It is a Finder hint, not catalog ownership.
-	Suffix         = ".provenance"
+	Suffix         = ".provenencia"
 	objectsDir     = "objects"
 	derivativesDir = "derivatives"
 )
 
-// Catalog is an exclusive connection to one provenance.sqlite file.
+// Catalog is an exclusive connection to one provenencia.sqlite file.
 type Catalog struct {
 	dir string
 	db  *sql.DB
@@ -103,7 +103,7 @@ func mapLockErr(err error) error {
 	return err
 }
 
-// Create writes a new *.provenance folder with an empty catalog and takes an exclusive lock.
+// Create writes a new *.provenencia folder with an empty catalog and takes an exclusive lock.
 func Create(parent, folderName string) (*Catalog, error) {
 	if !strings.HasSuffix(folderName, Suffix) {
 		return nil, ErrInvalidFolderName

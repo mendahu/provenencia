@@ -104,7 +104,7 @@ func onboardingChooseFolder(_ model: OnboardingModel) {
     panel.allowsMultipleSelection = false
     panel.treatsFilePackagesAsDirectories = true
     panel.prompt = "Open"
-    panel.message = "Choose a Provenance project folder."
+    panel.message = "Choose a Provenencia project folder."
     guard panel.runModal() == .OK, let url = panel.url else {
         return
     }

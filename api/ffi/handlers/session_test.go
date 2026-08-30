@@ -3,8 +3,8 @@ package handlers
 import (
 	"testing"
 
-	"github.com/mendahu/provenance/api/proto/engine"
-	"github.com/mendahu/provenance/core/installstate"
+	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/installstate"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -21,12 +21,12 @@ func TestGetActiveProject(t *testing.T) {
 			name: "found",
 			reqFn: func(t *testing.T) proto.Message {
 				dir := t.TempDir()
-				if err := installstate.Save(dir, installstate.Active{ProjectDir: "/tmp/A.provenance"}); err != nil {
+				if err := installstate.Save(dir, installstate.Active{ProjectDir: "/tmp/A.provenencia"}); err != nil {
 					t.Fatal(err)
 				}
 				return &engine.GetActiveProjectRequest{IdentityDir: dir}
 			},
-			want: &engine.GetActiveProjectResponse{Found: true, ProjectDir: "/tmp/A.provenance"},
+			want: &engine.GetActiveProjectResponse{Found: true, ProjectDir: "/tmp/A.provenencia"},
 		},
 		{
 			name:    "bad proto",
@@ -50,7 +50,7 @@ func TestRemoveActiveProject(t *testing.T) {
 			name: "deletes active json",
 			reqFn: func(t *testing.T) proto.Message {
 				dir := t.TempDir()
-				if err := installstate.Save(dir, installstate.Active{ProjectDir: "/tmp/A.provenance"}); err != nil {
+				if err := installstate.Save(dir, installstate.Active{ProjectDir: "/tmp/A.provenencia"}); err != nil {
 					t.Fatal(err)
 				}
 				return &engine.RemoveActiveProjectRequest{IdentityDir: dir}
@@ -83,7 +83,7 @@ func TestSignOut(t *testing.T) {
 			name: "clears identity and active",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _ := saveIdentity(t, "Jake")
-				if err := installstate.Save(dir, installstate.Active{ProjectDir: "/tmp/A.provenance"}); err != nil {
+				if err := installstate.Save(dir, installstate.Active{ProjectDir: "/tmp/A.provenencia"}); err != nil {
 					t.Fatal(err)
 				}
 				return &engine.SignOutRequest{IdentityDir: dir}

@@ -1,7 +1,7 @@
 ---
 name: add-catalog-query
 description: >-
-  Adds Provenance catalog table access as a nested domain package under core/database.
+  Adds Provenencia catalog table access as a nested domain package under core/database.
   Use when adding or changing SQLite queries, Upsert/Lookup/List for a catalog table,
   core/database/users or a new core/database/<table>/ folder, or when the user asks
   for database query functions without putting another file in core/database/.
@@ -34,7 +34,7 @@ Package name is the folder name (`users`, later `sources`, …). Call sites use 
 
 ## Tests
 
-Table-driven, in the same folder. `database.Create` a temp `*.provenance`, `defer Close()`, cover happy path, validation, and closed catalog.
+Table-driven, in the same folder. `database.Create` a temp `*.provenencia`, `defer Close()`, cover happy path, validation, and closed catalog.
 
 Run `CGO_ENABLED=1 go test ./core/database/...` (and the use-case package you called from).
 

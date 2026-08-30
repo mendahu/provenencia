@@ -1,8 +1,8 @@
-# Provenance Genealogy — Source Layer Data Model
+# Provenencia Genealogy — Source Layer Data Model
 
 ## Status
 
-Draft architecture notes. This document is the authoritative schema and design reference for the Provenance Source layer.
+Draft architecture notes. This document is the authoritative schema and design reference for the Provenencia Source layer.
 
 The Source layer answers:
 
@@ -39,11 +39,11 @@ Alice Smith and Robert Jones
 
 then its `author` metadata may preserve that exact string. The Source layer does not need to split the authors or resolve either one to a canonical Person.
 
-Dates are the intentional exception: date-valued metadata may additionally reference Provenance's shared structured genealogical date representation so dates can be sorted and filtered. That cross-layer value model is defined in [`structured-date-model.md`](structured-date-model.md).
+Dates are the intentional exception: date-valued metadata may additionally reference Provenencia's shared structured genealogical date representation so dates can be sorted and filtered. That cross-layer value model is defined in [`structured-date-model.md`](structured-date-model.md).
 
 ## 1.3 Offline-first ingestion
 
-Digital evidence added to Provenance is ingested into application-managed local storage. External URLs and locations may be retained as Source provenance, but they are not runtime dependencies for opening an Artifact.
+Digital evidence added to Provenencia is ingested into application-managed local storage. External URLs and locations may be retained as Source provenencia, but they are not runtime dependencies for opening an Artifact.
 
 ## 1.4 Immutable digital objects
 
@@ -130,7 +130,7 @@ CREATE TABLE sources (
 
 `description` is catalog text about the Source itself. Researcher commentary that may accumulate over time belongs in `source_notes` rather than a single inline notes field.
 
-External provenance such as an originating URL belongs conceptually to the Source rather than the Artifact. The exact Source-level acquisition/provenance representation can be refined separately when its use cases require more structure.
+External provenencia such as an originating URL belongs conceptually to the Source rather than the Artifact. The exact Source-level acquisition/provenencia representation can be refined separately when its use cases require more structure.
 
 ## 4.1 `source_notes`
 
@@ -433,7 +433,7 @@ The audit tables are cross-cutting infrastructure and are defined separately in 
 3. Source metadata is descriptive and minimally structured.
 4. Metadata values are text by default; shared structured genealogical dates are the intentional exception.
 5. Source types may suggest metadata fields but do not require them.
-6. External provenance belongs to the Source and must not be required to access ingested evidence.
+6. External provenencia belongs to the Source and must not be required to access ingested evidence.
 7. Artifacts are concrete representations of Sources and do not have an `artifact_type` taxonomy.
 8. An Artifact has zero or one primary File.
 9. Multiple evidentiary representations are multiple Artifacts under the same Source.

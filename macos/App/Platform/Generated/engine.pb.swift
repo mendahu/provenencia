@@ -22,7 +22,7 @@ fileprivate nonisolated struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobu
 
 /// Method identifies the FFI operation. The C ABI is one call that takes this
 /// discriminant plus a protobuf payload; it is not a per-field getter surface.
-public nonisolated enum Provenance_Engine_V1_Method: SwiftProtobuf.Enum, Swift.CaseIterable {
+public nonisolated enum Provenencia_Engine_V1_Method: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case unspecified // = 0
   case ping // = 1
@@ -76,7 +76,7 @@ public nonisolated enum Provenance_Engine_V1_Method: SwiftProtobuf.Enum, Swift.C
   }
 
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  public static let allCases: [Provenance_Engine_V1_Method] = [
+  public static let allCases: [Provenencia_Engine_V1_Method] = [
     .unspecified,
     .ping,
     .getVersion,
@@ -92,7 +92,7 @@ public nonisolated enum Provenance_Engine_V1_Method: SwiftProtobuf.Enum, Swift.C
 
 }
 
-public nonisolated struct Provenance_Engine_V1_PingRequest: Sendable {
+public nonisolated struct Provenencia_Engine_V1_PingRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -104,7 +104,7 @@ public nonisolated struct Provenance_Engine_V1_PingRequest: Sendable {
   public init() {}
 }
 
-public nonisolated struct Provenance_Engine_V1_PingResponse: Sendable {
+public nonisolated struct Provenencia_Engine_V1_PingResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -116,7 +116,7 @@ public nonisolated struct Provenance_Engine_V1_PingResponse: Sendable {
   public init() {}
 }
 
-public nonisolated struct Provenance_Engine_V1_GetVersionRequest: Sendable {
+public nonisolated struct Provenencia_Engine_V1_GetVersionRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -126,7 +126,7 @@ public nonisolated struct Provenance_Engine_V1_GetVersionRequest: Sendable {
   public init() {}
 }
 
-public nonisolated struct Provenance_Engine_V1_GetVersionResponse: Sendable {
+public nonisolated struct Provenencia_Engine_V1_GetVersionResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -138,7 +138,7 @@ public nonisolated struct Provenance_Engine_V1_GetVersionResponse: Sendable {
   public init() {}
 }
 
-public nonisolated struct Provenance_Engine_V1_GetInstallIdentityRequest: Sendable {
+public nonisolated struct Provenencia_Engine_V1_GetInstallIdentityRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -150,7 +150,7 @@ public nonisolated struct Provenance_Engine_V1_GetInstallIdentityRequest: Sendab
   public init() {}
 }
 
-public nonisolated struct Provenance_Engine_V1_GetInstallIdentityResponse: Sendable {
+public nonisolated struct Provenencia_Engine_V1_GetInstallIdentityResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -166,7 +166,7 @@ public nonisolated struct Provenance_Engine_V1_GetInstallIdentityResponse: Senda
   public init() {}
 }
 
-public nonisolated struct Provenance_Engine_V1_CompleteOnboardingRequest: Sendable {
+public nonisolated struct Provenencia_Engine_V1_CompleteOnboardingRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -184,7 +184,7 @@ public nonisolated struct Provenance_Engine_V1_CompleteOnboardingRequest: Sendab
   public init() {}
 }
 
-public nonisolated struct Provenance_Engine_V1_CompleteOnboardingResponse: Sendable {
+public nonisolated struct Provenencia_Engine_V1_CompleteOnboardingResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -200,7 +200,7 @@ public nonisolated struct Provenance_Engine_V1_CompleteOnboardingResponse: Senda
   public init() {}
 }
 
-public nonisolated struct Provenance_Engine_V1_RemoveInstallIdentityRequest: Sendable {
+public nonisolated struct Provenencia_Engine_V1_RemoveInstallIdentityRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -212,7 +212,7 @@ public nonisolated struct Provenance_Engine_V1_RemoveInstallIdentityRequest: Sen
   public init() {}
 }
 
-public nonisolated struct Provenance_Engine_V1_RemoveInstallIdentityResponse: Sendable {
+public nonisolated struct Provenencia_Engine_V1_RemoveInstallIdentityResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -222,7 +222,7 @@ public nonisolated struct Provenance_Engine_V1_RemoveInstallIdentityResponse: Se
   public init() {}
 }
 
-public nonisolated struct Provenance_Engine_V1_GetActiveProjectRequest: Sendable {
+public nonisolated struct Provenencia_Engine_V1_GetActiveProjectRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -234,7 +234,7 @@ public nonisolated struct Provenance_Engine_V1_GetActiveProjectRequest: Sendable
   public init() {}
 }
 
-public nonisolated struct Provenance_Engine_V1_GetActiveProjectResponse: Sendable {
+public nonisolated struct Provenencia_Engine_V1_GetActiveProjectResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -248,7 +248,7 @@ public nonisolated struct Provenance_Engine_V1_GetActiveProjectResponse: Sendabl
   public init() {}
 }
 
-public nonisolated struct Provenance_Engine_V1_OpenProjectRequest: Sendable {
+public nonisolated struct Provenencia_Engine_V1_OpenProjectRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -266,7 +266,7 @@ public nonisolated struct Provenance_Engine_V1_OpenProjectRequest: Sendable {
   public init() {}
 }
 
-public nonisolated struct Provenance_Engine_V1_OpenProjectResponse: Sendable {
+public nonisolated struct Provenencia_Engine_V1_OpenProjectResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -282,7 +282,7 @@ public nonisolated struct Provenance_Engine_V1_OpenProjectResponse: Sendable {
   public init() {}
 }
 
-public nonisolated struct Provenance_Engine_V1_RemoveActiveProjectRequest: Sendable {
+public nonisolated struct Provenencia_Engine_V1_RemoveActiveProjectRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -294,7 +294,7 @@ public nonisolated struct Provenance_Engine_V1_RemoveActiveProjectRequest: Senda
   public init() {}
 }
 
-public nonisolated struct Provenance_Engine_V1_RemoveActiveProjectResponse: Sendable {
+public nonisolated struct Provenencia_Engine_V1_RemoveActiveProjectResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -304,7 +304,7 @@ public nonisolated struct Provenance_Engine_V1_RemoveActiveProjectResponse: Send
   public init() {}
 }
 
-public nonisolated struct Provenance_Engine_V1_ListProjectUsersRequest: Sendable {
+public nonisolated struct Provenencia_Engine_V1_ListProjectUsersRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -316,7 +316,7 @@ public nonisolated struct Provenance_Engine_V1_ListProjectUsersRequest: Sendable
   public init() {}
 }
 
-public nonisolated struct Provenance_Engine_V1_ProjectUser: Sendable {
+public nonisolated struct Provenencia_Engine_V1_ProjectUser: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -330,19 +330,19 @@ public nonisolated struct Provenance_Engine_V1_ProjectUser: Sendable {
   public init() {}
 }
 
-public nonisolated struct Provenance_Engine_V1_ListProjectUsersResponse: Sendable {
+public nonisolated struct Provenencia_Engine_V1_ListProjectUsersResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var users: [Provenance_Engine_V1_ProjectUser] = []
+  public var users: [Provenencia_Engine_V1_ProjectUser] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 }
 
-public nonisolated struct Provenance_Engine_V1_SignOutRequest: Sendable {
+public nonisolated struct Provenencia_Engine_V1_SignOutRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -354,7 +354,7 @@ public nonisolated struct Provenance_Engine_V1_SignOutRequest: Sendable {
   public init() {}
 }
 
-public nonisolated struct Provenance_Engine_V1_SignOutResponse: Sendable {
+public nonisolated struct Provenencia_Engine_V1_SignOutResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -366,13 +366,13 @@ public nonisolated struct Provenance_Engine_V1_SignOutResponse: Sendable {
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
-fileprivate nonisolated let _protobuf_package = "provenance.engine.v1"
+fileprivate nonisolated let _protobuf_package = "provenencia.engine.v1"
 
-nonisolated extension Provenance_Engine_V1_Method: SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Provenencia_Engine_V1_Method: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0METHOD_UNSPECIFIED\0\u{1}METHOD_PING\0\u{1}METHOD_GET_VERSION\0\u{1}METHOD_GET_INSTALL_IDENTITY\0\u{1}METHOD_COMPLETE_ONBOARDING\0\u{1}METHOD_REMOVE_INSTALL_IDENTITY\0\u{1}METHOD_GET_ACTIVE_PROJECT\0\u{1}METHOD_OPEN_PROJECT\0\u{1}METHOD_REMOVE_ACTIVE_PROJECT\0\u{1}METHOD_LIST_PROJECT_USERS\0\u{1}METHOD_SIGN_OUT\0")
 }
 
-nonisolated extension Provenance_Engine_V1_PingRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Provenencia_Engine_V1_PingRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PingRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}message\0")
 
@@ -395,14 +395,14 @@ nonisolated extension Provenance_Engine_V1_PingRequest: SwiftProtobuf.Message, S
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenance_Engine_V1_PingRequest, rhs: Provenance_Engine_V1_PingRequest) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_PingRequest, rhs: Provenencia_Engine_V1_PingRequest) -> Bool {
     if lhs.message != rhs.message {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Provenance_Engine_V1_PingResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Provenencia_Engine_V1_PingResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PingResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}message\0")
 
@@ -425,14 +425,14 @@ nonisolated extension Provenance_Engine_V1_PingResponse: SwiftProtobuf.Message, 
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenance_Engine_V1_PingResponse, rhs: Provenance_Engine_V1_PingResponse) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_PingResponse, rhs: Provenencia_Engine_V1_PingResponse) -> Bool {
     if lhs.message != rhs.message {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Provenance_Engine_V1_GetVersionRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Provenencia_Engine_V1_GetVersionRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GetVersionRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
@@ -445,13 +445,13 @@ nonisolated extension Provenance_Engine_V1_GetVersionRequest: SwiftProtobuf.Mess
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenance_Engine_V1_GetVersionRequest, rhs: Provenance_Engine_V1_GetVersionRequest) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_GetVersionRequest, rhs: Provenencia_Engine_V1_GetVersionRequest) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Provenance_Engine_V1_GetVersionResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Provenencia_Engine_V1_GetVersionResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GetVersionResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}version\0")
 
@@ -474,14 +474,14 @@ nonisolated extension Provenance_Engine_V1_GetVersionResponse: SwiftProtobuf.Mes
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenance_Engine_V1_GetVersionResponse, rhs: Provenance_Engine_V1_GetVersionResponse) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_GetVersionResponse, rhs: Provenencia_Engine_V1_GetVersionResponse) -> Bool {
     if lhs.version != rhs.version {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Provenance_Engine_V1_GetInstallIdentityRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Provenencia_Engine_V1_GetInstallIdentityRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GetInstallIdentityRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}identity_dir\0")
 
@@ -504,14 +504,14 @@ nonisolated extension Provenance_Engine_V1_GetInstallIdentityRequest: SwiftProto
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenance_Engine_V1_GetInstallIdentityRequest, rhs: Provenance_Engine_V1_GetInstallIdentityRequest) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_GetInstallIdentityRequest, rhs: Provenencia_Engine_V1_GetInstallIdentityRequest) -> Bool {
     if lhs.identityDir != rhs.identityDir {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Provenance_Engine_V1_GetInstallIdentityResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Provenencia_Engine_V1_GetInstallIdentityResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GetInstallIdentityResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}found\0\u{3}user_id\0\u{3}display_name\0")
 
@@ -542,7 +542,7 @@ nonisolated extension Provenance_Engine_V1_GetInstallIdentityResponse: SwiftProt
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenance_Engine_V1_GetInstallIdentityResponse, rhs: Provenance_Engine_V1_GetInstallIdentityResponse) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_GetInstallIdentityResponse, rhs: Provenencia_Engine_V1_GetInstallIdentityResponse) -> Bool {
     if lhs.found != rhs.found {return false}
     if lhs.userID != rhs.userID {return false}
     if lhs.displayName != rhs.displayName {return false}
@@ -551,7 +551,7 @@ nonisolated extension Provenance_Engine_V1_GetInstallIdentityResponse: SwiftProt
   }
 }
 
-nonisolated extension Provenance_Engine_V1_CompleteOnboardingRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Provenencia_Engine_V1_CompleteOnboardingRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CompleteOnboardingRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}identity_dir\0\u{3}parent_dir\0\u{3}display_name\0\u{3}family_name\0")
 
@@ -586,7 +586,7 @@ nonisolated extension Provenance_Engine_V1_CompleteOnboardingRequest: SwiftProto
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenance_Engine_V1_CompleteOnboardingRequest, rhs: Provenance_Engine_V1_CompleteOnboardingRequest) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_CompleteOnboardingRequest, rhs: Provenencia_Engine_V1_CompleteOnboardingRequest) -> Bool {
     if lhs.identityDir != rhs.identityDir {return false}
     if lhs.parentDir != rhs.parentDir {return false}
     if lhs.displayName != rhs.displayName {return false}
@@ -596,7 +596,7 @@ nonisolated extension Provenance_Engine_V1_CompleteOnboardingRequest: SwiftProto
   }
 }
 
-nonisolated extension Provenance_Engine_V1_CompleteOnboardingResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Provenencia_Engine_V1_CompleteOnboardingResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CompleteOnboardingResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}display_name\0")
 
@@ -627,7 +627,7 @@ nonisolated extension Provenance_Engine_V1_CompleteOnboardingResponse: SwiftProt
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenance_Engine_V1_CompleteOnboardingResponse, rhs: Provenance_Engine_V1_CompleteOnboardingResponse) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_CompleteOnboardingResponse, rhs: Provenencia_Engine_V1_CompleteOnboardingResponse) -> Bool {
     if lhs.projectDir != rhs.projectDir {return false}
     if lhs.userID != rhs.userID {return false}
     if lhs.displayName != rhs.displayName {return false}
@@ -636,7 +636,7 @@ nonisolated extension Provenance_Engine_V1_CompleteOnboardingResponse: SwiftProt
   }
 }
 
-nonisolated extension Provenance_Engine_V1_RemoveInstallIdentityRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Provenencia_Engine_V1_RemoveInstallIdentityRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".RemoveInstallIdentityRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}identity_dir\0")
 
@@ -659,14 +659,14 @@ nonisolated extension Provenance_Engine_V1_RemoveInstallIdentityRequest: SwiftPr
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenance_Engine_V1_RemoveInstallIdentityRequest, rhs: Provenance_Engine_V1_RemoveInstallIdentityRequest) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_RemoveInstallIdentityRequest, rhs: Provenencia_Engine_V1_RemoveInstallIdentityRequest) -> Bool {
     if lhs.identityDir != rhs.identityDir {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Provenance_Engine_V1_RemoveInstallIdentityResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Provenencia_Engine_V1_RemoveInstallIdentityResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".RemoveInstallIdentityResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
@@ -679,13 +679,13 @@ nonisolated extension Provenance_Engine_V1_RemoveInstallIdentityResponse: SwiftP
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenance_Engine_V1_RemoveInstallIdentityResponse, rhs: Provenance_Engine_V1_RemoveInstallIdentityResponse) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_RemoveInstallIdentityResponse, rhs: Provenencia_Engine_V1_RemoveInstallIdentityResponse) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Provenance_Engine_V1_GetActiveProjectRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Provenencia_Engine_V1_GetActiveProjectRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GetActiveProjectRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}identity_dir\0")
 
@@ -708,14 +708,14 @@ nonisolated extension Provenance_Engine_V1_GetActiveProjectRequest: SwiftProtobu
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenance_Engine_V1_GetActiveProjectRequest, rhs: Provenance_Engine_V1_GetActiveProjectRequest) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_GetActiveProjectRequest, rhs: Provenencia_Engine_V1_GetActiveProjectRequest) -> Bool {
     if lhs.identityDir != rhs.identityDir {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Provenance_Engine_V1_GetActiveProjectResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Provenencia_Engine_V1_GetActiveProjectResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GetActiveProjectResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}found\0\u{3}project_dir\0")
 
@@ -742,7 +742,7 @@ nonisolated extension Provenance_Engine_V1_GetActiveProjectResponse: SwiftProtob
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenance_Engine_V1_GetActiveProjectResponse, rhs: Provenance_Engine_V1_GetActiveProjectResponse) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_GetActiveProjectResponse, rhs: Provenencia_Engine_V1_GetActiveProjectResponse) -> Bool {
     if lhs.found != rhs.found {return false}
     if lhs.projectDir != rhs.projectDir {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -750,7 +750,7 @@ nonisolated extension Provenance_Engine_V1_GetActiveProjectResponse: SwiftProtob
   }
 }
 
-nonisolated extension Provenance_Engine_V1_OpenProjectRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Provenencia_Engine_V1_OpenProjectRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".OpenProjectRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}identity_dir\0\u{3}project_dir\0\u{3}display_name\0\u{3}adopt_user_id\0")
 
@@ -785,7 +785,7 @@ nonisolated extension Provenance_Engine_V1_OpenProjectRequest: SwiftProtobuf.Mes
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenance_Engine_V1_OpenProjectRequest, rhs: Provenance_Engine_V1_OpenProjectRequest) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_OpenProjectRequest, rhs: Provenencia_Engine_V1_OpenProjectRequest) -> Bool {
     if lhs.identityDir != rhs.identityDir {return false}
     if lhs.projectDir != rhs.projectDir {return false}
     if lhs.displayName != rhs.displayName {return false}
@@ -795,7 +795,7 @@ nonisolated extension Provenance_Engine_V1_OpenProjectRequest: SwiftProtobuf.Mes
   }
 }
 
-nonisolated extension Provenance_Engine_V1_OpenProjectResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Provenencia_Engine_V1_OpenProjectResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".OpenProjectResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}display_name\0")
 
@@ -826,7 +826,7 @@ nonisolated extension Provenance_Engine_V1_OpenProjectResponse: SwiftProtobuf.Me
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenance_Engine_V1_OpenProjectResponse, rhs: Provenance_Engine_V1_OpenProjectResponse) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_OpenProjectResponse, rhs: Provenencia_Engine_V1_OpenProjectResponse) -> Bool {
     if lhs.projectDir != rhs.projectDir {return false}
     if lhs.userID != rhs.userID {return false}
     if lhs.displayName != rhs.displayName {return false}
@@ -835,7 +835,7 @@ nonisolated extension Provenance_Engine_V1_OpenProjectResponse: SwiftProtobuf.Me
   }
 }
 
-nonisolated extension Provenance_Engine_V1_RemoveActiveProjectRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Provenencia_Engine_V1_RemoveActiveProjectRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".RemoveActiveProjectRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}identity_dir\0")
 
@@ -858,14 +858,14 @@ nonisolated extension Provenance_Engine_V1_RemoveActiveProjectRequest: SwiftProt
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenance_Engine_V1_RemoveActiveProjectRequest, rhs: Provenance_Engine_V1_RemoveActiveProjectRequest) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_RemoveActiveProjectRequest, rhs: Provenencia_Engine_V1_RemoveActiveProjectRequest) -> Bool {
     if lhs.identityDir != rhs.identityDir {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Provenance_Engine_V1_RemoveActiveProjectResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Provenencia_Engine_V1_RemoveActiveProjectResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".RemoveActiveProjectResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
@@ -878,13 +878,13 @@ nonisolated extension Provenance_Engine_V1_RemoveActiveProjectResponse: SwiftPro
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenance_Engine_V1_RemoveActiveProjectResponse, rhs: Provenance_Engine_V1_RemoveActiveProjectResponse) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_RemoveActiveProjectResponse, rhs: Provenencia_Engine_V1_RemoveActiveProjectResponse) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Provenance_Engine_V1_ListProjectUsersRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Provenencia_Engine_V1_ListProjectUsersRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ListProjectUsersRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0")
 
@@ -907,14 +907,14 @@ nonisolated extension Provenance_Engine_V1_ListProjectUsersRequest: SwiftProtobu
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenance_Engine_V1_ListProjectUsersRequest, rhs: Provenance_Engine_V1_ListProjectUsersRequest) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_ListProjectUsersRequest, rhs: Provenencia_Engine_V1_ListProjectUsersRequest) -> Bool {
     if lhs.projectDir != rhs.projectDir {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Provenance_Engine_V1_ProjectUser: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Provenencia_Engine_V1_ProjectUser: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ProjectUser"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{3}display_name\0")
 
@@ -941,7 +941,7 @@ nonisolated extension Provenance_Engine_V1_ProjectUser: SwiftProtobuf.Message, S
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenance_Engine_V1_ProjectUser, rhs: Provenance_Engine_V1_ProjectUser) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_ProjectUser, rhs: Provenencia_Engine_V1_ProjectUser) -> Bool {
     if lhs.userID != rhs.userID {return false}
     if lhs.displayName != rhs.displayName {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -949,7 +949,7 @@ nonisolated extension Provenance_Engine_V1_ProjectUser: SwiftProtobuf.Message, S
   }
 }
 
-nonisolated extension Provenance_Engine_V1_ListProjectUsersResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Provenencia_Engine_V1_ListProjectUsersResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ListProjectUsersResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}users\0")
 
@@ -972,14 +972,14 @@ nonisolated extension Provenance_Engine_V1_ListProjectUsersResponse: SwiftProtob
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenance_Engine_V1_ListProjectUsersResponse, rhs: Provenance_Engine_V1_ListProjectUsersResponse) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_ListProjectUsersResponse, rhs: Provenencia_Engine_V1_ListProjectUsersResponse) -> Bool {
     if lhs.users != rhs.users {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Provenance_Engine_V1_SignOutRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Provenencia_Engine_V1_SignOutRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SignOutRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}identity_dir\0")
 
@@ -1002,14 +1002,14 @@ nonisolated extension Provenance_Engine_V1_SignOutRequest: SwiftProtobuf.Message
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenance_Engine_V1_SignOutRequest, rhs: Provenance_Engine_V1_SignOutRequest) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_SignOutRequest, rhs: Provenencia_Engine_V1_SignOutRequest) -> Bool {
     if lhs.identityDir != rhs.identityDir {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Provenance_Engine_V1_SignOutResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Provenencia_Engine_V1_SignOutResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SignOutResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
@@ -1022,7 +1022,7 @@ nonisolated extension Provenance_Engine_V1_SignOutResponse: SwiftProtobuf.Messag
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenance_Engine_V1_SignOutResponse, rhs: Provenance_Engine_V1_SignOutResponse) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_SignOutResponse, rhs: Provenencia_Engine_V1_SignOutResponse) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

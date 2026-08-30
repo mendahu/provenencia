@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/mendahu/provenance/api/proto/engine"
-	"github.com/mendahu/provenance/core/identity"
+	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/identity"
 	"google.golang.org/protobuf/proto"
 )
 

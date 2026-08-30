@@ -50,7 +50,7 @@ struct OnboardingView: View {
 
 #Preview("Returning") {
     let folders = OnboardingFolders.previewWithProject
-    let project = folders.documentsDirectory.appendingPathComponent("Smith Family.provenance")
+    let project = folders.documentsDirectory.appendingPathComponent("Smith Family.provenencia")
     return OnboardingView(
         store: FakeStore(
             identity: InstallIdentity(userID: "1", displayName: "Jane Smith"),

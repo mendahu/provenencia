@@ -1,11 +1,11 @@
 ---
-description: Unified SemVer for Provenance product, clients, and Go core
+description: Unified SemVer for Provenencia product, clients, and Go core
 alwaysApply: true
 ---
 
 # Product versioning
 
-Provenance has **one SemVer tree** for macOS, future Windows, and the Go core. Users and git tags see `MAJOR.MINOR.PATCH` from repo-root `VERSION`. Clients are not versioned independently.
+Provenencia has **one SemVer tree** for macOS, future Windows, and the Go core. Users and git tags see `MAJOR.MINOR.PATCH` from repo-root `VERSION`. Clients are not versioned independently.
 
 - Authoritative doc: `docs/versioning.md`
 - On a product bump, update together: `VERSION`, `core.Version` in `core/version.go`, Xcode `MARKETING_VERSION` (both configurations). Tag releases `vMAJOR.MINOR.PATCH`.
@@ -14,4 +14,4 @@ Provenance has **one SemVer tree** for macOS, future Windows, and the Go core. U
 - `go 1.27` in `go.mod` is the toolchain, not the product version.
 - Docs-only changes: do not bump `VERSION`. Platform-only hotfix that you release: still bump product PATCH.
 
-Example: shipping a Windows-only crash fix as a release is Provenance `0.1.1`, not `windows@2.0.0`.
+Example: shipping a Windows-only crash fix as a release is Provenencia `0.1.1`, not `windows@2.0.0`.

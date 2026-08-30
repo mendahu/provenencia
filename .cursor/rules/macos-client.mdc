@@ -13,5 +13,5 @@ Full notes: `docs/macos-client-patterns.md`.
 - Prefer SwiftUI; wrap AppKit (panels, menus, `NSColor`) in small helpers.
 - If a control will be UI-tested, give it a stable `.accessibilityIdentifier`.
 - Put new screens under `macos/App/Features/<Feature>/` (view + model together). FFI/store types stay in `Platform/`. Do not add more files to a flat target root.
-- Unit tests go in `macos/ProvenanceTests/` (Swift Testing). Follow `.cursor/skills/add-swift-test/SKILL.md`. Do not co-locate `*Tests.swift` under `App/`.
+- Unit tests go in `macos/ProvenenciaTests/` (Swift Testing). Follow `.cursor/skills/add-swift-test/SKILL.md`. Do not co-locate `*Tests.swift` under `App/`.
 - `Features/VersionSmoke/` is a temporary FFI probe; do not grow product UI there.

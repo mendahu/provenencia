@@ -4,10 +4,10 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/mendahu/provenance/core/database"
-	"github.com/mendahu/provenance/core/database/users"
-	"github.com/mendahu/provenance/core/identity"
-	"github.com/mendahu/provenance/core/installstate"
+	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/identity"
+	"github.com/mendahu/provenencia/core/installstate"
 )
 
 var ErrBlankName = errors.New("name is empty")
@@ -18,7 +18,7 @@ type Result struct {
 	Identity   identity.Identity
 }
 
-// Complete mints or loads install identity, creates a *.provenance folder, and upserts users.
+// Complete mints or loads install identity, creates a *.provenencia folder, and upserts users.
 // identityDir and parent are supplied by the caller (Swift: Application Support / Documents).
 func Complete(identityDir, parent, displayName, familyName string) (Result, error) {
 	displayName = strings.TrimSpace(displayName)

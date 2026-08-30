@@ -1,8 +1,8 @@
-# Provenance Genealogy — Conclusion Layer Data Model
+# Provenencia Genealogy — Conclusion Layer Data Model
 
 ## Status
 
-Draft architecture notes. This document is the authoritative schema and design reference for the Provenance Conclusion layer.
+Draft architecture notes. This document is the authoritative schema and design reference for the Provenencia Conclusion layer.
 
 The Conclusion layer answers:
 
@@ -90,7 +90,7 @@ Attribute-level conflicts across member Observations are handled by soft display
 
 ## 2.5 Resolver logic is application-level
 
-The database preserves multiple source-backed values. Resolvers may synthesize display without creating Claims. **Provenance badges** on a handle (from records / inferred / asserted / unlinked) are computed from whether an identity anchor exists, whether Reconciliations pin Observations, and whether `argument` is set. They are not a stored enum.
+The database preserves multiple source-backed values. Resolvers may synthesize display without creating Claims. **Provenencia badges** on a handle (from records / inferred / asserted / unlinked) are computed from whether an identity anchor exists, whether Reconciliations pin Observations, and whether `argument` is set. They are not a stored enum.
 
 ## 2.6 Persistence conventions
 
@@ -256,7 +256,7 @@ CREATE TABLE canonical_entity_notes (
 
 One notes table covers every kind because there is a single parent table and a real foreign key.
 
-## 6.1 Handle provenance (UI, not a column)
+## 6.1 Handle provenencia (UI, not a column)
 
 Compute a badge from the row and its claims. Suggested labels:
 

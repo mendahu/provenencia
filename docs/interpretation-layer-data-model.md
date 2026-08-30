@@ -1,8 +1,8 @@
-# Provenance Genealogy — Interpretation Layer Data Model
+# Provenencia Genealogy — Interpretation Layer Data Model
 
 ## Status
 
-Draft architecture notes. This document is the authoritative schema and design reference for the Provenance Interpretation layer.
+Draft architecture notes. This document is the authoritative schema and design reference for the Provenencia Interpretation layer.
 
 The Interpretation layer answers:
 
@@ -32,7 +32,7 @@ The database should enforce generic graph integrity and primitive typing. It sho
 
 ## 1.3 Interpretation vocabulary is extensible
 
-Node Types and Properties are first-class data. Provenance ships with a useful seeded vocabulary, but researchers may add new Node Types and Properties without a database schema migration.
+Node Types and Properties are first-class data. Provenencia ships with a useful seeded vocabulary, but researchers may add new Node Types and Properties without a database schema migration.
 
 All Properties, including user-defined Properties, declare a value type. Unknown or custom vocabulary remains preservable and generically usable even when the core application has no specialized semantics for it.
 
@@ -547,7 +547,7 @@ Application semantics attach to stable `key` values, matching `node_types`. Seed
 
 Open text values such as `event_type` and `role` are seeded with common defaults for pickers but remain researcher-extensible; see [`seeded-vocabulary.md`](seeded-vocabulary.md). The schema does not close those sets or require particular roles for particular event types; first-class workflows recognize well-known values in application logic.
 
-Interactions between `source` Nodes should stay deliberately lightweight. Provenance does not seed a structured source-quality ontology (`is_authentic`, defect codes, and similar).
+Interactions between `source` Nodes should stay deliberately lightweight. Provenencia does not seed a structured source-quality ontology (`is_authentic`, defect codes, and similar).
 
 Two common shapes:
 
@@ -597,7 +597,7 @@ This is a vocabulary/schema relationship, not historical research data. It says 
 
 The vocabulary should be seeded with common definitions but remain researcher-extensible.
 
-For Node-valued Properties, allowed **target** Node Types (for example, `participation.person` should target a `person` Node) are an **application invariant** for now — the same posture as Observation value population. Seeded Properties get first-class UI/validation behavior; user-defined node Properties may remain unconstrained or warn-only. Provenance does not persist target-type allow-lists in SQL yet (no `target_node_type_key` on `properties`, and no target join table). That can be added later if pickers and importers need a shared declarative vocabulary.
+For Node-valued Properties, allowed **target** Node Types (for example, `participation.person` should target a `person` Node) are an **application invariant** for now — the same posture as Observation value population. Seeded Properties get first-class UI/validation behavior; user-defined node Properties may remain unconstrained or warn-only. Provenencia does not persist target-type allow-lists in SQL yet (no `target_node_type_key` on `properties`, and no target join table). That can be added later if pickers and importers need a shared declarative vocabulary.
 
 Malformed edges (wrong target type) may be warned about or ignored by typed workflows; the generic graph still stores the Observation.
 
@@ -735,7 +735,7 @@ CREATE TABLE observations (
 
 `ref` is a required short human-readable reference for UI and discussion (prefix `OBS`).
 
-**Value population (application invariant):** exactly one value representation must be populated, and it must match `properties.value_type`. Provenance does **not** enforce that cross-table rule in SQLite for now (no XOR/`value_type` trigger or typed bridge tables). Writers — repository code, importers, sync — are responsible for correct population.
+**Value population (application invariant):** exactly one value representation must be populated, and it must match `properties.value_type`. Provenencia does **not** enforce that cross-table rule in SQLite for now (no XOR/`value_type` trigger or typed bridge tables). Writers — repository code, importers, sync — are responsible for correct population.
 
 **Read-side tolerance:** if a row is malformed, readers should prefer the column that matches the Property's `value_type` and ignore any other non-null value columns. A row with *no* usable value for that `value_type` is invalid and should be surfaced as an error or omitted rather than guessed. Reconciliation Claims use the same sparse-column idea, except `value_type = 'node'` is stored as `value_entity_id` (a canonical handle) rather than `value_node_id`. See [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md).
 
