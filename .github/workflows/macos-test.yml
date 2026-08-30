@@ -22,8 +22,8 @@ jobs:
           NSUnbufferedIO: "YES"
         run: |
           xcodebuild test \
-            -project macos/Provenance.xcodeproj \
-            -scheme Provenance \
+            -project macos/Provenencia.xcodeproj \
+            -scheme Provenencia \
             -destination 'platform=macOS' \
-            -only-testing:ProvenanceTests \
+            -only-testing:ProvenenciaTests \
             CODE_SIGNING_ALLOWED=NO

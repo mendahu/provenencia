@@ -3,7 +3,7 @@ package users
 import (
 	"testing"
 
-	"github.com/mendahu/provenance/core/database"
+	"github.com/mendahu/provenencia/core/database"
 )
 
 func TestUpsert(t *testing.T) {
@@ -91,7 +91,7 @@ func TestUpsert(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c, err := database.Create(t.TempDir(), "T.provenance")
+			c, err := database.Create(t.TempDir(), "T.provenencia")
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -12,7 +12,7 @@ import "C"
 import (
 	"unsafe"
 
-	"github.com/mendahu/provenance/api/ffi"
+	"github.com/mendahu/provenencia/api/ffi"
 )
 
 func bytesFromC(ptr *C.uint8_t, n C.size_t) []byte {
@@ -22,8 +22,8 @@ func bytesFromC(ptr *C.uint8_t, n C.size_t) []byte {
 	return C.GoBytes(unsafe.Pointer(ptr), C.int(n))
 }
 
-//export provenance_call
-func provenance_call(method C.int32_t, in *C.uint8_t, inLen C.size_t, out **C.uint8_t, outLen *C.size_t) C.int {
+//export provenencia_call
+func provenencia_call(method C.int32_t, in *C.uint8_t, inLen C.size_t, out **C.uint8_t, outLen *C.size_t) C.int {
 	resp, err := ffi.Call(int32(method), bytesFromC(in, inLen))
 	if err != nil {
 		return copyOut(err.Error(), out, outLen, 1)
@@ -56,8 +56,8 @@ func copyOutBytes(b []byte, out **C.uint8_t, outLen *C.size_t, status C.int) C.i
 	return status
 }
 
-//export provenance_free
-func provenance_free(p unsafe.Pointer) {
+//export provenencia_free
+func provenencia_free(p unsafe.Pointer) {
 	if p != nil {
 		C.free(p)
 	}

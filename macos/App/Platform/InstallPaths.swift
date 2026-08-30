@@ -1,11 +1,11 @@
 import Foundation
 
 enum InstallPaths {
-    static let appSupportFolder = "Provenance"
-    /// Filename of the catalog inside a `.provenance` folder. Existence only; Swift does not open SQLite.
-    static let catalogFile = "provenance.sqlite"
+    static let appSupportFolder = "Provenencia"
+    /// Filename of the catalog inside a `.provenencia` folder. Existence only; Swift does not open SQLite.
+    static let catalogFile = "provenencia.sqlite"
 
-    /// `{Application Support}/Provenance`. Holds `identity.json` and `active-project.json`.
+    /// `{Application Support}/Provenencia`. Holds `identity.json` and `active-project.json`.
     static func identityDirectory(fileManager: FileManager = .default) throws -> URL {
         let base = try fileManager.url(
             for: .applicationSupportDirectory,
@@ -25,9 +25,9 @@ enum InstallPaths {
         )
     }
 
-    /// `.provenance` folders under Documents that contain `provenance.sqlite` (name + file exists; does not open SQLite).
+    /// `.provenencia` folders under Documents that contain `provenencia.sqlite` (name + file exists; does not open SQLite).
     /// Call only after the user chooses to open an existing file (macOS Files and Folders TCC).
-    static func provenanceProjects(
+    static func provenenciaProjects(
         in documents: URL,
         fileManager: FileManager = .default
     ) throws -> [URL] {
@@ -41,7 +41,7 @@ enum InstallPaths {
             options: [.skipsHiddenFiles]
         )
         return urls.filter { url in
-            url.pathExtension == "provenance" && isProjectDirectory(url.path, fileManager: fileManager)
+            url.pathExtension == "provenencia" && isProjectDirectory(url.path, fileManager: fileManager)
         }
     }
 
@@ -75,14 +75,14 @@ struct OnboardingFolders: Sendable {
     }
 
     static var previewEmpty: OnboardingFolders {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent("provenance-preview-empty-\(UUID().uuidString)")
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("provenencia-preview-empty-\(UUID().uuidString)")
         return OnboardingFolders(identityDirectory: root, documentsDirectory: root)
     }
 
     static var previewWithProject: OnboardingFolders {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent("provenance-preview-proj-\(UUID().uuidString)")
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("provenencia-preview-proj-\(UUID().uuidString)")
         let docs = root.appendingPathComponent("Documents", isDirectory: true)
-        let project = docs.appendingPathComponent("Smith Family.provenance", isDirectory: true)
+        let project = docs.appendingPathComponent("Smith Family.provenencia", isDirectory: true)
         try? FileManager.default.createDirectory(at: project, withIntermediateDirectories: true)
         try? Data().write(to: project.appendingPathComponent(InstallPaths.catalogFile))
         return OnboardingFolders(identityDirectory: root.appendingPathComponent("identity", isDirectory: true), documentsDirectory: docs)

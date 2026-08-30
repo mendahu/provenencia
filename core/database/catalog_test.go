@@ -18,7 +18,7 @@ func TestCreateOpen(t *testing.T) {
 		{
 			name: "create layout application_id and empty users",
 			run: func(t *testing.T, parent string) {
-				c, err := Create(parent, "Robins Family.provenance")
+				c, err := Create(parent, "Robins Family.provenencia")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -53,19 +53,19 @@ func TestCreateOpen(t *testing.T) {
 		{
 			name: "create fails if exists",
 			run: func(t *testing.T, parent string) {
-				c, err := Create(parent, "Dup.provenance")
+				c, err := Create(parent, "Dup.provenencia")
 				if err != nil {
 					t.Fatal(err)
 				}
 				c.Close()
-				_, err = Create(parent, "Dup.provenance")
+				_, err = Create(parent, "Dup.provenencia")
 				if err != ErrAlreadyExists {
 					t.Fatalf("got %v want %v", err, ErrAlreadyExists)
 				}
 			},
 		},
 		{
-			name: "create requires provenance suffix",
+			name: "create requires provenencia suffix",
 			run: func(t *testing.T, parent string) {
 				_, err := Create(parent, "Robins Family")
 				if err != ErrInvalidFolderName {
@@ -89,7 +89,7 @@ func TestCreateOpen(t *testing.T) {
 		{
 			name: "open refuses wrong application_id",
 			run: func(t *testing.T, parent string) {
-				dir := filepath.Join(parent, "foreign.provenance")
+				dir := filepath.Join(parent, "foreign.provenencia")
 				if err := os.MkdirAll(dir, 0o755); err != nil {
 					t.Fatal(err)
 				}
@@ -111,7 +111,7 @@ func TestCreateOpen(t *testing.T) {
 		{
 			name: "open refuses unsupported user_version",
 			run: func(t *testing.T, parent string) {
-				c, err := Create(parent, "Future.provenance")
+				c, err := Create(parent, "Future.provenencia")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -130,7 +130,7 @@ func TestCreateOpen(t *testing.T) {
 		{
 			name: "create and reopen folder with query special chars",
 			run: func(t *testing.T, parent string) {
-				c, err := Create(parent, "Weird?Hash# Name.provenance")
+				c, err := Create(parent, "Weird?Hash# Name.provenencia")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -152,7 +152,7 @@ func TestCreateOpen(t *testing.T) {
 		{
 			name: "second open fails then reopen after close",
 			run: func(t *testing.T, parent string) {
-				c, err := Create(parent, "Lock.provenance")
+				c, err := Create(parent, "Lock.provenencia")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -174,7 +174,7 @@ func TestCreateOpen(t *testing.T) {
 		{
 			name: "open read-only refuses wrong application_id",
 			run: func(t *testing.T, parent string) {
-				dir := filepath.Join(parent, "foreign-ro.provenance")
+				dir := filepath.Join(parent, "foreign-ro.provenencia")
 				if err := os.MkdirAll(dir, 0o755); err != nil {
 					t.Fatal(err)
 				}
@@ -196,7 +196,7 @@ func TestCreateOpen(t *testing.T) {
 		{
 			name: "open read-only then exclusive open",
 			run: func(t *testing.T, parent string) {
-				c, err := Create(parent, "Peek.provenance")
+				c, err := Create(parent, "Peek.provenencia")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -221,7 +221,7 @@ func TestCreateOpen(t *testing.T) {
 		{
 			name: "open read-only refuses unsupported user_version",
 			run: func(t *testing.T, parent string) {
-				c, err := Create(parent, "FutureRO.provenance")
+				c, err := Create(parent, "FutureRO.provenencia")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -252,9 +252,9 @@ func TestDSN(t *testing.T) {
 		name string
 		path string
 	}{
-		{name: "question mark", path: "/tmp/foo?bar/provenance.sqlite"},
-		{name: "hash", path: "/tmp/foo#bar/provenance.sqlite"},
-		{name: "space", path: "/tmp/foo bar/provenance.sqlite"},
+		{name: "question mark", path: "/tmp/foo?bar/provenencia.sqlite"},
+		{name: "hash", path: "/tmp/foo#bar/provenencia.sqlite"},
+		{name: "space", path: "/tmp/foo bar/provenencia.sqlite"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -285,7 +285,7 @@ func TestDSN(t *testing.T) {
 }
 
 func TestDSNReadOnly(t *testing.T) {
-	got := dsnReadOnly("/tmp/foo/provenance.sqlite")
+	got := dsnReadOnly("/tmp/foo/provenencia.sqlite")
 	u, err := url.Parse(got)
 	if err != nil {
 		t.Fatal(err)

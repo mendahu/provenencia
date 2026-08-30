@@ -1,4 +1,4 @@
-# Provenance Genealogy — User and Contributor Identity Model
+# Provenencia Genealogy — User and Contributor Identity Model
 
 ## Status
 
@@ -6,7 +6,7 @@ Draft architecture notes. This document defines the MVP contributor identity mod
 
 The MVP requirement is deliberately small:
 
-> A researcher must be able to create and use a Provenance project locally without authentication, while every audited research change has a durable contributor identity that can later participate in a broader collaboration model without rewriting history.
+> A researcher must be able to create and use a Provenencia project locally without authentication, while every audited research change has a durable contributor identity that can later participate in a broader collaboration model without rewriting history.
 
 ---
 
@@ -247,7 +247,7 @@ In particular, email should not be used as the User identity because it is mutab
 # 8. MVP lifecycle
 
 ```text
-1. Researcher installs Provenance.
+1. Researcher installs Provenencia.
 2. First create-project or first open: mint or adopt a User UUID; store it in application support; ask for a display name if minting.
 3. Create-project copies that User into the project; open-project compares install UUID to users in the folder (match / “that’s me” / “not me”).
 4. Audit transactions reference the writer’s User UUID.

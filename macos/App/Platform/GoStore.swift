@@ -2,9 +2,9 @@ import Foundation
 
 struct GoStore: GenealogyStore {
     func ping(_ message: String) async throws -> String {
-        var req = Provenance_Engine_V1_PingRequest()
+        var req = Provenencia_Engine_V1_PingRequest()
         req.message = message
-        let resp: Provenance_Engine_V1_PingResponse = try await provenanceCall(
+        let resp: Provenencia_Engine_V1_PingResponse = try await provenenciaCall(
             method: CoreMethod.ping,
             request: req
         )
@@ -12,17 +12,17 @@ struct GoStore: GenealogyStore {
     }
 
     func version() async throws -> String {
-        let resp: Provenance_Engine_V1_GetVersionResponse = try await provenanceCall(
+        let resp: Provenencia_Engine_V1_GetVersionResponse = try await provenenciaCall(
             method: CoreMethod.getVersion,
-            request: Provenance_Engine_V1_GetVersionRequest()
+            request: Provenencia_Engine_V1_GetVersionRequest()
         )
         return resp.version
     }
 
     func installIdentity(identityDir: String) async throws -> InstallIdentity? {
-        var req = Provenance_Engine_V1_GetInstallIdentityRequest()
+        var req = Provenencia_Engine_V1_GetInstallIdentityRequest()
         req.identityDir = identityDir
-        let resp: Provenance_Engine_V1_GetInstallIdentityResponse = try await provenanceCall(
+        let resp: Provenencia_Engine_V1_GetInstallIdentityResponse = try await provenenciaCall(
             method: CoreMethod.getInstallIdentity,
             request: req
         )
@@ -38,12 +38,12 @@ struct GoStore: GenealogyStore {
         displayName: String,
         familyName: String
     ) async throws -> OnboardingResult {
-        var req = Provenance_Engine_V1_CompleteOnboardingRequest()
+        var req = Provenencia_Engine_V1_CompleteOnboardingRequest()
         req.identityDir = identityDir
         req.parentDir = parentDir
         req.displayName = displayName
         req.familyName = familyName
-        let resp: Provenance_Engine_V1_CompleteOnboardingResponse = try await provenanceCall(
+        let resp: Provenencia_Engine_V1_CompleteOnboardingResponse = try await provenenciaCall(
             method: CoreMethod.completeOnboarding,
             request: req
         )
@@ -55,18 +55,18 @@ struct GoStore: GenealogyStore {
     }
 
     func removeInstallIdentity(identityDir: String) async throws {
-        var req = Provenance_Engine_V1_RemoveInstallIdentityRequest()
+        var req = Provenencia_Engine_V1_RemoveInstallIdentityRequest()
         req.identityDir = identityDir
-        let _: Provenance_Engine_V1_RemoveInstallIdentityResponse = try await provenanceCall(
+        let _: Provenencia_Engine_V1_RemoveInstallIdentityResponse = try await provenenciaCall(
             method: CoreMethod.removeInstallIdentity,
             request: req
         )
     }
 
     func activeProject(identityDir: String) async throws -> String? {
-        var req = Provenance_Engine_V1_GetActiveProjectRequest()
+        var req = Provenencia_Engine_V1_GetActiveProjectRequest()
         req.identityDir = identityDir
-        let resp: Provenance_Engine_V1_GetActiveProjectResponse = try await provenanceCall(
+        let resp: Provenencia_Engine_V1_GetActiveProjectResponse = try await provenenciaCall(
             method: CoreMethod.getActiveProject,
             request: req
         )
@@ -82,12 +82,12 @@ struct GoStore: GenealogyStore {
         displayName: String,
         adoptUserID: String
     ) async throws -> OnboardingResult {
-        var req = Provenance_Engine_V1_OpenProjectRequest()
+        var req = Provenencia_Engine_V1_OpenProjectRequest()
         req.identityDir = identityDir
         req.projectDir = projectDir
         req.displayName = displayName
         req.adoptUserID = adoptUserID
-        let resp: Provenance_Engine_V1_OpenProjectResponse = try await provenanceCall(
+        let resp: Provenencia_Engine_V1_OpenProjectResponse = try await provenenciaCall(
             method: CoreMethod.openProject,
             request: req
         )
@@ -99,9 +99,9 @@ struct GoStore: GenealogyStore {
     }
 
     func listProjectUsers(projectDir: String) async throws -> [InstallIdentity] {
-        var req = Provenance_Engine_V1_ListProjectUsersRequest()
+        var req = Provenencia_Engine_V1_ListProjectUsersRequest()
         req.projectDir = projectDir
-        let resp: Provenance_Engine_V1_ListProjectUsersResponse = try await provenanceCall(
+        let resp: Provenencia_Engine_V1_ListProjectUsersResponse = try await provenenciaCall(
             method: CoreMethod.listProjectUsers,
             request: req
         )
@@ -109,18 +109,18 @@ struct GoStore: GenealogyStore {
     }
 
     func removeActiveProject(identityDir: String) async throws {
-        var req = Provenance_Engine_V1_RemoveActiveProjectRequest()
+        var req = Provenencia_Engine_V1_RemoveActiveProjectRequest()
         req.identityDir = identityDir
-        let _: Provenance_Engine_V1_RemoveActiveProjectResponse = try await provenanceCall(
+        let _: Provenencia_Engine_V1_RemoveActiveProjectResponse = try await provenenciaCall(
             method: CoreMethod.removeActiveProject,
             request: req
         )
     }
 
     func signOut(identityDir: String) async throws {
-        var req = Provenance_Engine_V1_SignOutRequest()
+        var req = Provenencia_Engine_V1_SignOutRequest()
         req.identityDir = identityDir
-        let _: Provenance_Engine_V1_SignOutResponse = try await provenanceCall(
+        let _: Provenencia_Engine_V1_SignOutResponse = try await provenenciaCall(
             method: CoreMethod.signOut,
             request: req
         )

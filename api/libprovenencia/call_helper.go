@@ -21,11 +21,11 @@ func callForTest(method int32, in []byte) (status int, out []byte, outWasNil boo
 	}
 	var outPtr *C.uint8_t
 	var outLen C.size_t
-	st := provenance_call(C.int32_t(method), inPtr, inLen, &outPtr, &outLen)
+	st := provenencia_call(C.int32_t(method), inPtr, inLen, &outPtr, &outLen)
 	outWasNil = outPtr == nil
 	if outPtr != nil {
 		out = C.GoBytes(unsafe.Pointer(outPtr), C.int(outLen))
-		provenance_free(unsafe.Pointer(outPtr))
+		provenencia_free(unsafe.Pointer(outPtr))
 	}
 	return int(st), out, outWasNil
 }

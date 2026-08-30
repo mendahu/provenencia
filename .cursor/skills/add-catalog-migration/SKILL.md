@@ -1,8 +1,8 @@
 ---
 name: add-catalog-migration
 description: >-
-  Adds a Provenance SQLite catalog format step (user_version, migrations/NNNNNN.sql).
-  Use when adding or changing core/database migrations, CREATE TABLE in provenance.sqlite,
+  Adds a Provenencia SQLite catalog format step (user_version, migrations/NNNNNN.sql).
+  Use when adding or changing core/database migrations, CREATE TABLE in provenencia.sqlite,
   user_version, schema format, or when the user asks to add a migration.
 ---
 
@@ -23,6 +23,6 @@ Product SemVer (`VERSION`) is a separate bump. Do not bump it for a format chang
 
 ## Do not
 
-- Run a command against a researcher’s `*.provenance` folder except by opening it with this engine
+- Run a command against a researcher’s `*.provenencia` folder except by opening it with this engine
 - Add `golang-migrate` or a `schema_migrations` table
 - Put identity / FFI / ingest in the SQL

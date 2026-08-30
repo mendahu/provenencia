@@ -6,20 +6,20 @@ import (
 	"os"
 	"testing"
 
-	"github.com/mendahu/provenance/api/ffi"
-	"github.com/mendahu/provenance/api/proto/engine"
+	"github.com/mendahu/provenencia/api/ffi"
+	"github.com/mendahu/provenencia/api/proto/engine"
 	"google.golang.org/protobuf/proto"
 )
 
 func TestMain(m *testing.M) {
 	if os.Getenv("CGO_ENABLED") == "0" {
-		fmt.Fprintln(os.Stderr, "CGO_ENABLED=0: api/libprovenance tests require cgo")
+		fmt.Fprintln(os.Stderr, "CGO_ENABLED=0: api/libprovenencia tests require cgo")
 		os.Exit(1)
 	}
 	os.Exit(m.Run())
 }
 
-func TestProvenanceCall(t *testing.T) {
+func TestProvenenciaCall(t *testing.T) {
 	mustMarshal := func(m proto.Message) []byte {
 		t.Helper()
 		b, err := proto.Marshal(m)

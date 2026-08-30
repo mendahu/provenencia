@@ -1,8 +1,8 @@
-# Provenance Genealogy — Seeded Vocabulary
+# Provenencia Genealogy — Seeded Vocabulary
 
 ## Status
 
-Draft **horizon catalog** of keys and open-vocabulary values Provenance may seed as workflows need them.
+Draft **horizon catalog** of keys and open-vocabulary values Provenencia may seed as workflows need them.
 
 This document is the place to record intended types, metadata fields, Properties, and picker values so they do not fork across layer docs. It is **not** a required insert list for the first implementation.
 
@@ -110,7 +110,7 @@ export_date             date        GEDCOM
 report_date             date        DNA match report
 ```
 
-`url` and `accessed_date` describe Source provenance. The bytes of a capture still live on an Artifact/File.
+`url` and `accessed_date` describe Source provenencia. The bytes of a capture still live on an Artifact/File.
 
 ## 2.3 `source_type_metadata_fields`
 
@@ -422,7 +422,7 @@ Not used. Soft blends are display-only. A Reconciliation Claim is a researcher-p
 
 There is no `origination_claims` table and no `representative_node_id`. A `canonical_entities` row may have a nullable `identity_anchor_id` and optional `argument`. For node-typed Reconciliation values, Conclusion uses `value_entity_id` (canonical), not Observation `value_node_id`.
 
-Handle provenance badges (from records / inferred / asserted / unlinked) are computed, not seeded workflow enums.
+Handle provenencia badges (from records / inferred / asserted / unlinked) are computed, not seeded workflow enums.
 
 ---
 

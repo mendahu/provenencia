@@ -3,7 +3,7 @@ package handlers
 import (
 	"fmt"
 
-	"github.com/mendahu/provenance/api/proto/engine"
+	"github.com/mendahu/provenencia/api/proto/engine"
 	"google.golang.org/protobuf/proto"
 )
 

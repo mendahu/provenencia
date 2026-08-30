@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/mendahu/provenance/core/database"
+	"github.com/mendahu/provenencia/core/database"
 )
 
 var ErrInvalid = errors.New("invalid user id or display name")

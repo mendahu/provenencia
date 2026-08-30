@@ -3,7 +3,7 @@ package handlers
 import (
 	"testing"
 
-	"github.com/mendahu/provenance/api/proto/engine"
+	"github.com/mendahu/provenencia/api/proto/engine"
 )
 
 func TestPing(t *testing.T) {

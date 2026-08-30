@@ -105,7 +105,7 @@ func migrate(db *sql.DB) error {
 }
 
 // setApplicationID stamps FourCC 'PROV' on a new catalog.
-// The .provenance suffix is not proof of ownership.
+// The .provenencia suffix is not proof of ownership.
 func setApplicationID(db *sql.DB) error {
 	_, err := db.Exec(fmt.Sprintf(`PRAGMA application_id = %d`, ApplicationID))
 	return err

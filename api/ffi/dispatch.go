@@ -3,8 +3,8 @@ package ffi
 import (
 	"fmt"
 
-	"github.com/mendahu/provenance/api/ffi/handlers"
-	"github.com/mendahu/provenance/api/proto/engine"
+	"github.com/mendahu/provenencia/api/ffi/handlers"
+	"github.com/mendahu/provenencia/api/proto/engine"
 )
 
 const (

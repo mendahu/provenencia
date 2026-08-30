@@ -4,12 +4,12 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/mendahu/provenance/core/database"
+	"github.com/mendahu/provenencia/core/database"
 )
 
 var ErrInvalidFamilyName = errors.New("invalid family name")
 
-// FolderName turns a project/family name into a *.provenance directory basename.
+// FolderName turns a project/family name into a *.provenencia directory basename.
 func FolderName(familyName string) (string, error) {
 	s := strings.TrimSpace(familyName)
 	var b strings.Builder

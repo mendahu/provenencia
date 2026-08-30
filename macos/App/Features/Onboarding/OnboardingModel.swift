@@ -161,7 +161,7 @@ final class OnboardingModel {
     private func refreshDocumentsProjects() async {
         do {
             let loc = try resolvedFolders()
-            availableProjects = try InstallPaths.provenanceProjects(in: loc.documentsDirectory)
+            availableProjects = try InstallPaths.provenenciaProjects(in: loc.documentsDirectory)
         } catch {
             errorText = error.localizedDescription
         }

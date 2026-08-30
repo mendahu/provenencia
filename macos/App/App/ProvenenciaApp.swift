@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct ProvenanceApp: App {
+struct ProvenenciaApp: App {
     var body: some Scene {
         WindowGroup {
             OnboardingView()
