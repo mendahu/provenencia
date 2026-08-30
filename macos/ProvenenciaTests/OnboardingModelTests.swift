@@ -55,7 +55,7 @@ struct OnboardingModelTests {
         await model.load()
         #expect(model.phase == .chooseFile)
         #expect(store.activeProjectDir == nil)
-        #expect(model.errorText == "The last project could not be found. Create or open a project.")
+        #expect(model.errorText == String(localized: L10n.Onboarding.missingProject))
         #expect(model.researcherLocked)
     }
 
@@ -66,7 +66,7 @@ struct OnboardingModelTests {
         await model.load()
         #expect(model.phase == .chooseFile)
         #expect(store.activeProjectDir == nil)
-        #expect(model.errorText == "The last project could not be found. Create or open a project.")
+        #expect(model.errorText == String(localized: L10n.Onboarding.missingProject))
         #expect(model.researcherLocked)
     }
 

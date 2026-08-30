@@ -5,7 +5,7 @@ struct OnboardingHomeView: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Text("You're signed in")
+            Text(L10n.Onboarding.signedInTitle)
                 .font(.title2)
                 .accessibilityIdentifier("onboarding.home")
             Text(model.sessionDisplayName)
@@ -16,7 +16,7 @@ struct OnboardingHomeView: View {
                     .foregroundStyle(.secondary)
                     .accessibilityIdentifier("onboarding.home.project")
             }
-            Button("Sign out") {
+            Button(L10n.Onboarding.signOut) {
                 Task { await model.signOut() }
             }
             .accessibilityIdentifier("onboarding.signOut")

@@ -7,32 +7,49 @@ struct OnboardingIdentifyView: View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 16) {
                 if model.mode == .create {
-                    Text("Name this research")
+                    Text(L10n.Onboarding.nameResearchTitle)
                         .font(.title2)
-                    Text("Your researcher name is how work is attributed. The family name labels this project folder.")
+                    Text(L10n.Onboarding.nameResearchBody)
                         .foregroundStyle(.secondary)
-                    TextField("Researcher name", text: $model.displayName, prompt: Text("Jane Smith"))
+                    TextField(
+                        L10n.Onboarding.researcherName,
+                        text: $model.displayName,
+                        prompt: Text(L10n.Onboarding.researcherNamePrompt)
+                    )
                         .textFieldStyle(.roundedBorder)
                         .disabled(model.researcherLocked)
                         .accessibilityIdentifier("onboarding.displayName")
-                    TextField("Family / project name", text: $model.familyName, prompt: Text("Smith Family"))
+                    TextField(
+                        L10n.Onboarding.familyName,
+                        text: $model.familyName,
+                        prompt: Text(L10n.Onboarding.familyNamePrompt)
+                    )
                         .textFieldStyle(.roundedBorder)
                         .accessibilityIdentifier("onboarding.familyName")
                 } else {
-                    Text("Who are you in this file?")
+                    Text(L10n.Onboarding.whoAreYouTitle)
                         .font(.title2)
-                    Text("These are the contributors already in \(model.selectedProject?.lastPathComponent ?? "this project"). Choose yourself to keep the same ID, or add a new contributor.")
+                    Text(
+                        L10n.Onboarding.contributorsBody(
+                            projectName: model.selectedProject?.lastPathComponent
+                                ?? String(localized: L10n.Onboarding.thisProject)
+                        )
+                    )
                         .foregroundStyle(.secondary)
-                    Picker("Contributor", selection: $model.selectedContributorID) {
+                    Picker(L10n.Onboarding.contributorPicker, selection: $model.selectedContributorID) {
                         ForEach(model.catalogUsers, id: \.userID) { user in
                             Text(user.displayName).tag(user.userID)
                         }
-                        Text("I’m not listed — add me").tag(OnboardingModel.newContributorID)
+                        Text(L10n.Onboarding.notListed).tag(OnboardingModel.newContributorID)
                     }
                     .pickerStyle(.radioGroup)
                     .accessibilityIdentifier("onboarding.contributor")
                     if model.selectedContributorID == OnboardingModel.newContributorID {
-                        TextField("Researcher name", text: $model.displayName, prompt: Text("Jane Smith"))
+                        TextField(
+                            L10n.Onboarding.researcherName,
+                            text: $model.displayName,
+                            prompt: Text(L10n.Onboarding.researcherNamePrompt)
+                        )
                             .textFieldStyle(.roundedBorder)
                             .disabled(model.researcherLocked)
                             .accessibilityIdentifier("onboarding.displayName")
@@ -48,13 +65,13 @@ struct OnboardingIdentifyView: View {
             OnboardingFooter(
                 model: model,
                 leading: {
-                    Button("Back") {
+                    Button(L10n.Onboarding.back) {
                         model.goBack()
                     }
                     .accessibilityIdentifier("onboarding.back")
                 },
                 trailing: {
-                    Button("Continue") {
+                    Button(L10n.Onboarding.continueAction) {
                         Task { await model.submit() }
                     }
                     .keyboardShortcut(.defaultAction)

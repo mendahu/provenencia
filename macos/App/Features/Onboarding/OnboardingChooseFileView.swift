@@ -6,18 +6,26 @@ struct OnboardingChooseFileView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 20) {
-                Text("Welcome to Provenencia")
+                Text(L10n.Onboarding.welcomeTitle)
                     .font(.title2)
                 Text(model.researcherLocked
-                    ? "You're signed in as \(model.displayName). Open a project you already have, or create a new one."
-                    : "Do you already have a Provenencia project, or do you want to start a new one?")
+                    ? L10n.Onboarding.bodySignedIn(displayName: model.displayName)
+                    : String(localized: L10n.Onboarding.bodyChoose))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 16) {
-                    OnboardingFileChoice("Create new", subtitle: "Start a new project folder", selected: model.mode == .create) {
+                    OnboardingFileChoice(
+                        L10n.Onboarding.createNewTitle,
+                        subtitle: L10n.Onboarding.createNewSubtitle,
+                        selected: model.mode == .create
+                    ) {
                         Task { await model.selectMode(.create) }
                     }
-                    OnboardingFileChoice("I have a file", subtitle: "Open a project you already have", selected: model.mode == .open) {
+                    OnboardingFileChoice(
+                        L10n.Onboarding.haveFileTitle,
+                        subtitle: L10n.Onboarding.haveFileSubtitle,
+                        selected: model.mode == .open
+                    ) {
                         Task { await model.selectMode(.open) }
                     }
                 }
@@ -37,14 +45,14 @@ struct OnboardingChooseFileView: View {
                 model: model,
                 leading: {
                     if model.researcherLocked {
-                        Button("Sign out") {
+                        Button(L10n.Onboarding.signOut) {
                             Task { await model.signOut() }
                         }
                         .accessibilityIdentifier("onboarding.signOut")
                     }
                 },
                 trailing: {
-                    Button("Continue") {
+                    Button(L10n.Onboarding.continueAction) {
                         Task { await model.submit() }
                     }
                     .keyboardShortcut(.defaultAction)

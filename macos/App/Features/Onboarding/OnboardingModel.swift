@@ -83,7 +83,7 @@ final class OnboardingModel {
                         return
                     }
                     try await store.removeActiveProject(identityDir: identityDir.path)
-                    errorText = "The last project could not be found. Create or open a project."
+                    errorText = String(localized: L10n.Onboarding.missingProject)
                 }
                 phase = .chooseFile
                 return
