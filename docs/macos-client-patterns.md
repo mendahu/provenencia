@@ -11,11 +11,11 @@ Audience: someone comfortable with JavaScript and Go, new to Apple platforms.
 | Folder | Scope | Examples |
 | --- | --- | --- |
 | `App/` | Process entry: scenes, menus. Stay thin. | `ProvenenciaApp.swift` |
-| `Platform/` | Reused for the whole Mac client: store protocol, FFI, fakes. Not a screen. | `GenealogyStore`, `GoStore`, `CoreInvoke` |
+| `Platform/` | Reused for the whole Mac client: store protocol, FFI, fakes, `L10n`. Not a screen. | `GenealogyStore`, `GoStore`, `CoreInvoke`, `L10n` |
 | `Platform/Generated/` | `protoc` output. Do not edit by hand. | `engine.pb.swift` |
 | `Features/<Name>/` | One product flow (view + model). | `Onboarding` |
 | `Features/Onboarding/` | File vs new, then contributor or names; home stub; relaunch uses active project. | `OnboardingView` |
-| `Resources/` | Assets, entitlements, bridging header | |
+| `Resources/` | Assets, entitlements, bridging header, String Catalogs | `Localizable.xcstrings`, `InfoPlist.xcstrings` |
 
 The Go dylib is written to [`macos/Core/`](../macos/Core/) as a **build artifact** (gitignored). Do not commit `libprovenencia.dylib`.
 
@@ -77,7 +77,24 @@ Previews (`#Preview`) are Storybook-like. They are not CI tests.
 
 ---
 
-## 6. Testing ladder
+## 6. Localization
+
+User-facing Mac UI copy goes through typed `L10n` (`LocalizedStringResource` in [`macos/App/Platform/L10n.swift`](../macos/App/Platform/L10n.swift)). Views and models must not hard-code English (or raw catalog keys).
+
+Agent workflow: [`.cursor/skills/add-localized-string/SKILL.md`](../.cursor/skills/add-localized-string/SKILL.md). Enforcement when editing Mac UI: [`.cursor/rules/macos-l10n.mdc`](../.cursor/rules/macos-l10n.mdc).
+
+- **Catalogs:** [`Localizable.xcstrings`](../macos/App/Resources/Localizable.xcstrings) for UI strings; [`InfoPlist.xcstrings`](../macos/App/Resources/InfoPlist.xcstrings) for Info.plist TCC/copy keys.
+- **Keys:** semantic dotted names (`onboarding.chooseFile.welcomeTitle`), with English in `defaultValue` and in the catalog.
+- **Call sites:** `Text(L10n.Onboarding.welcomeTitle)` is fine. For `Button` / `TextField` / `Picker` titles on our macOS 14 deployment target (CI Xcode 16), use `String(localized: L10n.…)` — those inits require `StringProtocol`, not `LocalizedStringResource`. AppKit: `String(localized: L10n.…)`. Interpolated copy uses `%@` in the catalog and `String(format:locale:_:)` inside `L10n` helpers.
+- **Add a string:** add a `LocalizedStringResource` under `L10n`, use it at the call site, and add the matching key/`en` value in the String Catalog (or build once so extraction can pick it up). Prune unused `L10n` members and catalog keys together.
+- **Add a language later:** Xcode → String Catalog → add locale → translate. No call-site changes.
+- **Go/FFI errors:** still English `err.Error()` text until mapped to `L10n` (prefer stable codes later). Brand name `Provenencia` stays untranslated.
+
+Keep using `.accessibilityIdentifier` for UI tests, not localized titles (§5).
+
+---
+
+## 7. Testing ladder
 
 | Layer | Tool | What belongs there |
 | --- | --- | --- |
@@ -92,7 +109,7 @@ CI for Go runs on Linux. Swift tests run on a macOS GitHub runner (`.github/work
 
 ---
 
-## 7. Bundle and windows
+## 8. Bundle and windows
 
 - **Bundle id** (`app.provenencia`) is the OS identity of the app (defaults, later UTIs), not the product SemVer.
 - **`App` / `Scene` / `View`:** process entry and windows vs content inside a window. Keep `ProvenenciaApp` thin (scenes, menus). Screens live in their own files.

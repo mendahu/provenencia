@@ -14,6 +14,9 @@
 		AA00000000000000000000D6 /* OnboardingHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000D2 /* OnboardingHomeView.swift */; };
 		AA00000000000000000000D7 /* OnboardingChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000D3 /* OnboardingChrome.swift */; };
 		AA0000000000000000000003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000012 /* Assets.xcassets */; };
+		AA00000000000000000000E3 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000E0 /* Localizable.xcstrings */; };
+		AA00000000000000000000E4 /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000E1 /* InfoPlist.xcstrings */; };
+		AA00000000000000000000E5 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000E2 /* L10n.swift */; };
 		AA0000000000000000000004 /* engine.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000013 /* engine.pb.swift */; };
 		AA0000000000000000000005 /* GenealogyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000014 /* GenealogyStore.swift */; };
 		AA0000000000000000000006 /* FakeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000015 /* FakeStore.swift */; };
@@ -83,6 +86,9 @@
 		AA00000000000000000000D2 /* OnboardingHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingHomeView.swift; sourceTree = "<group>"; };
 		AA00000000000000000000D3 /* OnboardingChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingChrome.swift; sourceTree = "<group>"; };
 		AA0000000000000000000012 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AA00000000000000000000E0 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		AA00000000000000000000E1 /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
+		AA00000000000000000000E2 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		AA0000000000000000000013 /* engine.pb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = engine.pb.swift; sourceTree = "<group>"; };
 		AA0000000000000000000014 /* GenealogyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenealogyStore.swift; sourceTree = "<group>"; };
 		AA0000000000000000000015 /* FakeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FakeStore.swift; sourceTree = "<group>"; };
@@ -181,6 +187,7 @@
 				AA0000000000000000000016 /* GoStore.swift */,
 				AA0000000000000000000017 /* CoreInvoke.swift */,
 				AA000000000000000000001D /* InstallPaths.swift */,
+				AA00000000000000000000E2 /* L10n.swift */,
 				AA0000000000000000000044 /* Generated */,
 			);
 			path = Platform;
@@ -211,6 +218,8 @@
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000012 /* Assets.xcassets */,
+				AA00000000000000000000E0 /* Localizable.xcstrings */,
+				AA00000000000000000000E1 /* InfoPlist.xcstrings */,
 				AA0000000000000000000019 /* Provenencia-Bridging-Header.h */,
 				AA000000000000000000001A /* Provenencia.entitlements */,
 			);
@@ -315,6 +324,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA0000000000000000000003 /* Assets.xcassets in Resources */,
+				AA00000000000000000000E3 /* Localizable.xcstrings in Resources */,
+				AA00000000000000000000E4 /* InfoPlist.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -340,6 +351,7 @@
 				AA00000000000000000000D7 /* OnboardingChrome.swift in Sources */,
 				AA000000000000000000000C /* OnboardingModel.swift in Sources */,
 				AA000000000000000000000D /* InstallPaths.swift in Sources */,
+				AA00000000000000000000E5 /* L10n.swift in Sources */,
 				AA0000000000000000000005 /* GenealogyStore.swift in Sources */,
 				AA0000000000000000000006 /* FakeStore.swift in Sources */,
 				AA0000000000000000000007 /* GoStore.swift in Sources */,
@@ -482,7 +494,6 @@
 				);
 				INFOPLIST_KEY_CFBundleDisplayName = Provenencia;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.reference";
-				INFOPLIST_KEY_NSDocumentsFolderUsageDescription = "Provenencia looks in Documents for existing .provenencia project folders and can save new ones there.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -523,7 +534,6 @@
 				);
 				INFOPLIST_KEY_CFBundleDisplayName = Provenencia;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.reference";
-				INFOPLIST_KEY_NSDocumentsFolderUsageDescription = "Provenencia looks in Documents for existing .provenencia project folders and can save new ones there.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

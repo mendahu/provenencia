@@ -2,12 +2,12 @@ import AppKit
 import SwiftUI
 
 struct OnboardingFileChoice: View {
-    let title: String
-    let subtitle: String
+    let title: LocalizedStringResource
+    let subtitle: LocalizedStringResource
     let selected: Bool
     let action: () -> Void
 
-    init(_ title: String, subtitle: String, selected: Bool, action: @escaping () -> Void) {
+    init(_ title: LocalizedStringResource, subtitle: LocalizedStringResource, selected: Bool, action: @escaping () -> Void) {
         self.title = title
         self.subtitle = subtitle
         self.selected = selected
@@ -45,29 +45,29 @@ struct OnboardingOpenPicker: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Project folder")
+            Text(L10n.Onboarding.projectFolder)
                 .font(.headline)
             if model.availableProjects.isEmpty {
                 HStack(alignment: .center, spacing: 12) {
-                    Text("No project folders in Documents.")
+                    Text(L10n.Onboarding.noProjectsInDocuments)
                         .foregroundStyle(.secondary)
                     Spacer(minLength: 0)
-                    Button("Choose…") {
+                    Button(String(localized: L10n.Onboarding.chooseFolder)) {
                         onboardingChooseFolder(model)
                     }
                     .accessibilityIdentifier("onboarding.chooseFolder")
                 }
             } else {
                 HStack(alignment: .center, spacing: 12) {
-                    Picker("Existing project", selection: $model.selectedProject) {
-                        Text("Select a project").tag(Optional<URL>.none)
+                    Picker(String(localized: L10n.Onboarding.existingProjectPicker), selection: $model.selectedProject) {
+                        Text(L10n.Onboarding.selectProject).tag(Optional<URL>.none)
                         ForEach(model.availableProjects, id: \.path) { url in
                             Text(url.lastPathComponent).tag(Optional(url))
                         }
                     }
                     .labelsHidden()
                     .accessibilityIdentifier("onboarding.existingProject")
-                    Button("Choose…") {
+                    Button(String(localized: L10n.Onboarding.chooseFolder)) {
                         onboardingChooseFolder(model)
                     }
                     .accessibilityIdentifier("onboarding.chooseFolder")
@@ -103,8 +103,8 @@ func onboardingChooseFolder(_ model: OnboardingModel) {
     panel.canChooseDirectories = true
     panel.allowsMultipleSelection = false
     panel.treatsFilePackagesAsDirectories = true
-    panel.prompt = "Open"
-    panel.message = "Choose a Provenencia project folder."
+    panel.prompt = String(localized: L10n.Onboarding.openPanelPrompt)
+    panel.message = String(localized: L10n.Onboarding.openPanelMessage)
     guard panel.runModal() == .OK, let url = panel.url else {
         return
     }

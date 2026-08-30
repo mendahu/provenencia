@@ -1,0 +1,26 @@
+---
+description: Mac UI copy goes through typed L10n + String Catalogs; keep both in sync
+globs: macos/App/**/*.{swift,xcstrings}
+alwaysApply: false
+---
+
+# macOS localization
+
+Follow the project skill `.cursor/skills/add-localized-string/SKILL.md`. Full notes: `docs/macos-client-patterns.md` § Localization.
+
+- User-facing copy: `L10n.*` only. No hard-coded English (or raw catalog keys) in views/models.
+- Add/change a string in **both** [`macos/App/Platform/L10n.swift`](macos/App/Platform/L10n.swift) and [`Localizable.xcstrings`](macos/App/Resources/Localizable.xcstrings) (or `InfoPlist.xcstrings` for Info.plist keys). Prune both when removing.
+- Keys: semantic dotted (`onboarding.chooseFile.welcomeTitle`). Nest by feature under `L10n`.
+- Interpolated copy: static key + `%@` in catalog/`defaultValue`, then `String(format:locale:_:)`.
+- Stable `.accessibilityIdentifier` for UI tests — not localized titles.
+- Do not localize Go/FFI `err.Error()` unless asked. No SwiftGen.
+
+```swift
+// ❌ BAD
+Text("Welcome to Provenencia")
+Button(L10n.Onboarding.signOut) { … }  // needs StringProtocol on macOS 14 / CI Xcode 16
+
+// ✅ GOOD
+Text(L10n.Onboarding.welcomeTitle)
+Button(String(localized: L10n.Onboarding.signOut)) { … }
+```
