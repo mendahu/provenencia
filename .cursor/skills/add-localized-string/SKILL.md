@@ -64,11 +64,13 @@ Catalog `value` must use the same `%@` placeholders.
 
 ```swift
 Text(L10n.Onboarding.welcomeTitle)
-Button(L10n.Onboarding.continueAction) { … }
+Button(String(localized: L10n.Onboarding.continueAction)) { … }
+TextField(String(localized: L10n.Onboarding.researcherName), text: $name, prompt: Text(L10n.Onboarding.researcherNamePrompt))
 panel.prompt = String(localized: L10n.Onboarding.openPanelPrompt)
 errorText = String(localized: L10n.Onboarding.missingProject)
 ```
 
+`Text(…)` accepts `LocalizedStringResource`. `Button` / `TextField` / `Picker` title inits on our macOS 14 deployment target need `StringProtocol` — wrap with `String(localized:)`.
 7. Accessibility: keep `.accessibilityIdentifier("dotted.name")`. Do not UI-test by localized title.
 8. Go/FFI `error.localizedDescription` may stay English until explicitly mapped to `L10n` (prefer stable codes later).
 

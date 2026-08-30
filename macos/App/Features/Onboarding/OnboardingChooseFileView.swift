@@ -45,14 +45,14 @@ struct OnboardingChooseFileView: View {
                 model: model,
                 leading: {
                     if model.researcherLocked {
-                        Button(L10n.Onboarding.signOut) {
+                        Button(String(localized: L10n.Onboarding.signOut)) {
                             Task { await model.signOut() }
                         }
                         .accessibilityIdentifier("onboarding.signOut")
                     }
                 },
                 trailing: {
-                    Button(L10n.Onboarding.continueAction) {
+                    Button(String(localized: L10n.Onboarding.continueAction)) {
                         Task { await model.submit() }
                     }
                     .keyboardShortcut(.defaultAction)

@@ -12,7 +12,7 @@ struct OnboardingIdentifyView: View {
                     Text(L10n.Onboarding.nameResearchBody)
                         .foregroundStyle(.secondary)
                     TextField(
-                        L10n.Onboarding.researcherName,
+                        String(localized: L10n.Onboarding.researcherName),
                         text: $model.displayName,
                         prompt: Text(L10n.Onboarding.researcherNamePrompt)
                     )
@@ -20,7 +20,7 @@ struct OnboardingIdentifyView: View {
                         .disabled(model.researcherLocked)
                         .accessibilityIdentifier("onboarding.displayName")
                     TextField(
-                        L10n.Onboarding.familyName,
+                        String(localized: L10n.Onboarding.familyName),
                         text: $model.familyName,
                         prompt: Text(L10n.Onboarding.familyNamePrompt)
                     )
@@ -36,7 +36,7 @@ struct OnboardingIdentifyView: View {
                         )
                     )
                         .foregroundStyle(.secondary)
-                    Picker(L10n.Onboarding.contributorPicker, selection: $model.selectedContributorID) {
+                    Picker(String(localized: L10n.Onboarding.contributorPicker), selection: $model.selectedContributorID) {
                         ForEach(model.catalogUsers, id: \.userID) { user in
                             Text(user.displayName).tag(user.userID)
                         }
@@ -46,7 +46,7 @@ struct OnboardingIdentifyView: View {
                     .accessibilityIdentifier("onboarding.contributor")
                     if model.selectedContributorID == OnboardingModel.newContributorID {
                         TextField(
-                            L10n.Onboarding.researcherName,
+                            String(localized: L10n.Onboarding.researcherName),
                             text: $model.displayName,
                             prompt: Text(L10n.Onboarding.researcherNamePrompt)
                         )
@@ -65,13 +65,13 @@ struct OnboardingIdentifyView: View {
             OnboardingFooter(
                 model: model,
                 leading: {
-                    Button(L10n.Onboarding.back) {
+                    Button(String(localized: L10n.Onboarding.back)) {
                         model.goBack()
                     }
                     .accessibilityIdentifier("onboarding.back")
                 },
                 trailing: {
-                    Button(L10n.Onboarding.continueAction) {
+                    Button(String(localized: L10n.Onboarding.continueAction)) {
                         Task { await model.submit() }
                     }
                     .keyboardShortcut(.defaultAction)

@@ -18,7 +18,9 @@ Follow the project skill `.cursor/skills/add-localized-string/SKILL.md`. Full no
 ```swift
 // ❌ BAD
 Text("Welcome to Provenencia")
+Button(L10n.Onboarding.signOut) { … }  // needs StringProtocol on macOS 14 / CI Xcode 16
 
 // ✅ GOOD
 Text(L10n.Onboarding.welcomeTitle)
+Button(String(localized: L10n.Onboarding.signOut)) { … }
 ```

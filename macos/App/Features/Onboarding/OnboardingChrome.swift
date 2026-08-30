@@ -52,14 +52,14 @@ struct OnboardingOpenPicker: View {
                     Text(L10n.Onboarding.noProjectsInDocuments)
                         .foregroundStyle(.secondary)
                     Spacer(minLength: 0)
-                    Button(L10n.Onboarding.chooseFolder) {
+                    Button(String(localized: L10n.Onboarding.chooseFolder)) {
                         onboardingChooseFolder(model)
                     }
                     .accessibilityIdentifier("onboarding.chooseFolder")
                 }
             } else {
                 HStack(alignment: .center, spacing: 12) {
-                    Picker(L10n.Onboarding.existingProjectPicker, selection: $model.selectedProject) {
+                    Picker(String(localized: L10n.Onboarding.existingProjectPicker), selection: $model.selectedProject) {
                         Text(L10n.Onboarding.selectProject).tag(Optional<URL>.none)
                         ForEach(model.availableProjects, id: \.path) { url in
                             Text(url.lastPathComponent).tag(Optional(url))
@@ -67,7 +67,7 @@ struct OnboardingOpenPicker: View {
                     }
                     .labelsHidden()
                     .accessibilityIdentifier("onboarding.existingProject")
-                    Button(L10n.Onboarding.chooseFolder) {
+                    Button(String(localized: L10n.Onboarding.chooseFolder)) {
                         onboardingChooseFolder(model)
                     }
                     .accessibilityIdentifier("onboarding.chooseFolder")

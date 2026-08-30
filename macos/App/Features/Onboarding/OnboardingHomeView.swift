@@ -16,7 +16,7 @@ struct OnboardingHomeView: View {
                     .foregroundStyle(.secondary)
                     .accessibilityIdentifier("onboarding.home.project")
             }
-            Button(L10n.Onboarding.signOut) {
+            Button(String(localized: L10n.Onboarding.signOut)) {
                 Task { await model.signOut() }
             }
             .accessibilityIdentifier("onboarding.signOut")
