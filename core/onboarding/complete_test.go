@@ -8,9 +8,11 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/identity"
 	"github.com/mendahu/provenencia/core/installstate"
+	"github.com/mendahu/provenencia/core/ref"
 )
 
 func TestFolderName(t *testing.T) {
@@ -20,18 +22,20 @@ func TestFolderName(t *testing.T) {
 		want    string
 		wantErr error
 	}{
-		{name: "plain", in: "Robins Family", want: "Robins Family.provenencia"},
-		{name: "slash", in: "Robins/Family", want: "Robins-Family.provenencia"},
-		{name: "backslash", in: "Robins\\Family", want: "Robins-Family.provenencia"},
-		{name: "nul", in: "Robins\x00Family", want: "Robins-Family.provenencia"},
-		{name: "colon", in: "Robins:Family", want: "Robins-Family.provenencia"},
-		{name: "star", in: "Robins*Family", want: "Robins-Family.provenencia"},
-		{name: "question", in: "Robins?Family", want: "Robins-Family.provenencia"},
-		{name: "quote", in: "Robins\"Family", want: "Robins-Family.provenencia"},
-		{name: "lt gt", in: "Robins<Family>", want: "Robins-Family-.provenencia"},
-		{name: "pipe", in: "Robins|Family", want: "Robins-Family.provenencia"},
-		{name: "leading dots", in: "...Robins", want: "Robins.provenencia"},
-		{name: "already suffix", in: "Robins Family.provenencia", want: "Robins Family.provenencia"},
+		{name: "plain", in: "Robins Family", want: "robins-family.provenencia"},
+		{name: "slash", in: "Robins/Family", want: "robins-family.provenencia"},
+		{name: "backslash", in: "Robins\\Family", want: "robins-family.provenencia"},
+		{name: "nul", in: "Robins\x00Family", want: "robins-family.provenencia"},
+		{name: "colon", in: "Robins:Family", want: "robins-family.provenencia"},
+		{name: "star", in: "Robins*Family", want: "robins-family.provenencia"},
+		{name: "question", in: "Robins?Family", want: "robins-family.provenencia"},
+		{name: "quote", in: "Robins\"Family", want: "robins-family.provenencia"},
+		{name: "lt gt", in: "Robins<Family>", want: "robins-family.provenencia"},
+		{name: "pipe", in: "Robins|Family", want: "robins-family.provenencia"},
+		{name: "leading dots", in: "...Robins", want: "robins.provenencia"},
+		{name: "already suffix", in: "Robins Family.provenencia", want: "robins-family.provenencia"},
+		{name: "collapse spaces", in: "  Robins   Family  ", want: "robins-family.provenencia"},
+		{name: "unicode", in: "García Family", want: "garcía-family.provenencia"},
 		{name: "only dots", in: "...", wantErr: ErrInvalidFamilyName},
 		{name: "blank", in: "  ", wantErr: ErrInvalidFamilyName},
 	}
@@ -76,19 +80,29 @@ func TestComplete(t *testing.T) {
 				if loaded.DisplayName != "Jake Robins" || loaded.UserID != res.Identity.UserID {
 					t.Fatalf("identity mismatch")
 				}
+				if !ref.Valid(loaded.Ref) || loaded.Ref != res.Identity.Ref {
+					t.Fatalf("ref %q", loaded.Ref)
+				}
 				p, err := database.Open(res.ProjectDir)
 				if err != nil {
 					t.Fatal(err)
 				}
 				defer p.Close()
-				name, err := users.Lookup(p, res.Identity.UserID[:])
+				u, err := users.Lookup(p, res.Identity.UserID[:])
 				if err != nil {
 					t.Fatal(err)
 				}
-				if name != "Jake Robins" {
-					t.Fatalf("users %q", name)
+				if u.DisplayName != "Jake Robins" || u.Ref != loaded.Ref {
+					t.Fatalf("users %+v", u)
 				}
-				if filepath.Base(res.ProjectDir) != "Robins Family"+database.Suffix {
+				info, err := project.Get(p)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if info.Label != "Robins Family" {
+					t.Fatalf("label %q", info.Label)
+				}
+				if filepath.Base(res.ProjectDir) != "robins-family"+database.Suffix {
 					t.Fatalf("dir %s", res.ProjectDir)
 				}
 				raw, err := os.ReadFile(filepath.Join(ident, identity.FileName))
@@ -102,13 +116,10 @@ func TestComplete(t *testing.T) {
 				if _, ok := m["family_name"]; ok {
 					t.Fatal("identity.json must not store family name")
 				}
-				if _, ok := m["project"]; ok {
-					t.Fatal("identity.json must not store project")
-				}
-				if m["user_id"] == "" || m["display_name"] != "Jake Robins" {
+				if m["user_id"] == "" || m["display_name"] != "Jake Robins" || !ref.Valid(m["ref"]) {
 					t.Fatalf("json %v", m)
 				}
-				if len(m) != 2 {
+				if len(m) != 3 {
 					t.Fatalf("unexpected identity keys %v", m)
 				}
 				act, err := installstate.Load(ident)
@@ -134,6 +145,9 @@ func TestComplete(t *testing.T) {
 				if a.Identity.UserID != b.Identity.UserID {
 					t.Fatal("uuid changed")
 				}
+				if a.Identity.Ref != b.Identity.Ref {
+					t.Fatal("ref changed")
+				}
 				loaded, err := identity.Load(ident)
 				if err != nil {
 					t.Fatal(err)
@@ -146,12 +160,12 @@ func TestComplete(t *testing.T) {
 					t.Fatal(err)
 				}
 				defer p.Close()
-				name, err := users.Lookup(p, b.Identity.UserID[:])
+				u, err := users.Lookup(p, b.Identity.UserID[:])
 				if err != nil {
 					t.Fatal(err)
 				}
-				if name != "Jake R." {
-					t.Fatalf("users %q", name)
+				if u.DisplayName != "Jake R." {
+					t.Fatalf("users %q", u.DisplayName)
 				}
 				act, err := installstate.Load(ident)
 				if err != nil {
@@ -179,13 +193,13 @@ func TestComplete(t *testing.T) {
 			},
 		},
 		{
-			name: "sanitize slash in family name",
+			name: "slug slash in family name",
 			run: func(t *testing.T, ident, parent string) {
 				res, err := Complete(ident, parent, "Jake", "A/B")
 				if err != nil {
 					t.Fatal(err)
 				}
-				if filepath.Base(res.ProjectDir) != "A-B.provenencia" {
+				if filepath.Base(res.ProjectDir) != "a-b.provenencia" {
 					t.Fatalf("got %s", res.ProjectDir)
 				}
 			},

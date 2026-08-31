@@ -18,6 +18,7 @@ enum Method {
   METHOD_REMOVE_ACTIVE_PROJECT = 8;
   METHOD_LIST_PROJECT_USERS = 9;
   METHOD_SIGN_OUT = 10;
+  METHOD_GET_PROJECT_INFO = 11;
 }
 
 message PingRequest {
@@ -42,6 +43,7 @@ message GetInstallIdentityResponse {
   bool found = 1;
   string user_id = 2;
   string display_name = 3;
+  string ref = 4;
 }
 
 message CompleteOnboardingRequest {
@@ -55,6 +57,8 @@ message CompleteOnboardingResponse {
   string project_dir = 1;
   string user_id = 2;
   string display_name = 3;
+  string ref = 4;
+  ProjectInfo project = 5;
 }
 
 message RemoveInstallIdentityRequest {
@@ -83,6 +87,8 @@ message OpenProjectResponse {
   string project_dir = 1;
   string user_id = 2;
   string display_name = 3;
+  string ref = 4;
+  ProjectInfo project = 5;
 }
 
 message RemoveActiveProjectRequest {
@@ -98,6 +104,7 @@ message ListProjectUsersRequest {
 message ProjectUser {
   string user_id = 1;
   string display_name = 2;
+  string ref = 3;
 }
 
 message ListProjectUsersResponse {
@@ -109,3 +116,21 @@ message SignOutRequest {
 }
 
 message SignOutResponse {}
+
+message GetProjectInfoRequest {
+  string project_dir = 1;
+}
+
+message ProjectInfo {
+  string label = 1;
+  string folder_name = 2;
+  string created_at = 3;
+  string updated_at = 4;
+  string updated_by_user_id = 5;
+  string updated_by_display_name = 6;
+  string updated_by_ref = 7;
+}
+
+message GetProjectInfoResponse {
+  ProjectInfo project = 1;
+}

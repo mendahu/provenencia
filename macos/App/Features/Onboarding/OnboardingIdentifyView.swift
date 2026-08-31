@@ -26,6 +26,12 @@ struct OnboardingIdentifyView: View {
                     )
                         .textFieldStyle(.roundedBorder)
                         .accessibilityIdentifier("onboarding.familyName")
+                    if !model.folderNamePreview.isEmpty {
+                        Text(L10n.Onboarding.folderNamePreview(folderName: model.folderNamePreview))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("onboarding.folderPreview")
+                    }
                 } else {
                     Text(L10n.Onboarding.whoAreYouTitle)
                         .font(.title2)
@@ -38,7 +44,10 @@ struct OnboardingIdentifyView: View {
                         .foregroundStyle(.secondary)
                     Picker(String(localized: L10n.Onboarding.contributorPicker), selection: $model.selectedContributorID) {
                         ForEach(model.catalogUsers, id: \.userID) { user in
-                            Text(user.displayName).tag(user.userID)
+                            Text(L10n.Onboarding.contributorOption(
+                                displayName: user.displayName,
+                                ref: user.ref
+                            )).tag(user.userID)
                         }
                         Text(L10n.Onboarding.notListed).tag(OnboardingModel.newContributorID)
                     }

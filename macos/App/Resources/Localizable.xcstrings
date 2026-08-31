@@ -121,6 +121,30 @@
         }
       }
     },
+    "onboarding.home.created" : {
+      "comment" : "Home screen created date; argument is localized date",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Created %@"
+          }
+        }
+      }
+    },
+    "onboarding.home.folder" : {
+      "comment" : "Home screen project folder line; argument is folder basename",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Folder: %@"
+          }
+        }
+      }
+    },
     "onboarding.home.signedInTitle" : {
       "comment" : "Home screen headline after successful open/create",
       "extractionState" : "manual",
@@ -129,6 +153,54 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "You're signed in"
+          }
+        }
+      }
+    },
+    "onboarding.home.updated" : {
+      "comment" : "Home screen updated date; argument is localized date",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Updated %@"
+          }
+        }
+      }
+    },
+    "onboarding.home.updatedBy" : {
+      "comment" : "Home screen last editor; arguments are display name then USR-… ref",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last edited by %@ (%@)"
+          }
+        }
+      }
+    },
+    "onboarding.home.updatedByName" : {
+      "comment" : "Home screen last editor without ref; argument is display name",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last edited by %@"
+          }
+        }
+      }
+    },
+    "onboarding.identify.contributorOption" : {
+      "comment" : "Contributor row; arguments are display name then USR-… ref",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ (%@)"
           }
         }
       }
@@ -181,6 +253,18 @@
         }
       }
     },
+    "onboarding.identify.folderNamePreview" : {
+      "comment" : "Live preview of kebab-case project folder name; argument is folder basename",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Folder: %@"
+          }
+        }
+      }
+    },
     "onboarding.identify.nameResearchBody" : {
       "comment" : "Create-mode identify helper copy",
       "extractionState" : "manual",
@@ -188,7 +272,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Your researcher name is how work is attributed. The family name labels this project folder."
+            "value" : "Your researcher name is how work is attributed. The project name is a label; the folder on disk uses a simple slug."
           }
         }
       }

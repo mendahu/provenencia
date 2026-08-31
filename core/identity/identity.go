@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/jsonfile"
+	"github.com/mendahu/provenencia/core/ref"
 )
 
 const FileName = "identity.json"
@@ -17,12 +18,14 @@ var (
 	ErrNotFound    = errors.New("identity file not found")
 	ErrInvalidName = errors.New("display name is empty")
 	ErrInvalidID   = errors.New("user id must be UUIDv7")
+	ErrInvalidRef  = errors.New("user ref is invalid")
 )
 
 // Identity is the install-local contributor (not a project catalog row).
 type Identity struct {
 	UserID      uuid.UUID `json:"user_id"`
 	DisplayName string    `json:"display_name"`
+	Ref         string    `json:"ref"`
 }
 
 func path(dir string) string {
@@ -36,10 +39,13 @@ func validate(id Identity) error {
 	if id.UserID.Version() != 7 {
 		return ErrInvalidID
 	}
+	if ref.Validate(id.Ref) != nil {
+		return ErrInvalidRef
+	}
 	return nil
 }
 
-// Mint returns a new UUIDv7 identity. It does not write disk.
+// Mint returns a new UUIDv7 identity with a USR-… ref. It does not write disk.
 func Mint(displayName string) (Identity, error) {
 	name := strings.TrimSpace(displayName)
 	if name == "" {
@@ -49,10 +55,15 @@ func Mint(displayName string) (Identity, error) {
 	if err != nil {
 		return Identity{}, err
 	}
-	return Identity{UserID: id, DisplayName: name}, nil
+	userRef, err := ref.Mint(ref.PrefixUser)
+	if err != nil {
+		return Identity{}, err
+	}
+	return Identity{UserID: id, DisplayName: name, Ref: userRef}, nil
 }
 
 // Load reads identity.json from dir. A missing file is ErrNotFound; it does not mint.
+// Legacy files without ref get a minted USR-… and are rewritten.
 func Load(dir string) (*Identity, error) {
 	b, err := jsonfile.Read(path(dir))
 	if err != nil {
@@ -64,6 +75,22 @@ func Load(dir string) (*Identity, error) {
 	var id Identity
 	if err := json.Unmarshal(b, &id); err != nil {
 		return nil, fmt.Errorf("identity: %w", err)
+	}
+	id.DisplayName = strings.TrimSpace(id.DisplayName)
+	id.Ref = strings.TrimSpace(id.Ref)
+	if id.Ref == "" {
+		userRef, err := ref.Mint(ref.PrefixUser)
+		if err != nil {
+			return nil, err
+		}
+		id.Ref = userRef
+		if err := validate(id); err != nil {
+			return nil, err
+		}
+		if err := Save(dir, id); err != nil {
+			return nil, err
+		}
+		return &id, nil
 	}
 	if err := validate(id); err != nil {
 		return nil, err
@@ -77,6 +104,7 @@ func Save(dir string, id Identity) error {
 		return err
 	}
 	id.DisplayName = strings.TrimSpace(id.DisplayName)
+	id.Ref = strings.TrimSpace(id.Ref)
 	return jsonfile.Write(path(dir), id)
 }
 

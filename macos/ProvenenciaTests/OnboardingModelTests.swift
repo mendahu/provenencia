@@ -7,11 +7,13 @@ import Testing
 struct OnboardingModelTests {
     private let jane = InstallIdentity(
         userID: "00000000-0000-7000-8000-000000000001",
-        displayName: "Jane Smith"
+        displayName: "Jane Smith",
+        ref: "USR-A1B2C"
     )
     private let jake = InstallIdentity(
         userID: "00000000-0000-7000-8000-000000000002",
-        displayName: "Jake Robins"
+        displayName: "Jake Robins",
+        ref: "USR-D3E4F"
     )
 
     @Test func loadWithNoIdentityShowsChooseFileUnlocked() async throws {
@@ -39,11 +41,44 @@ struct OnboardingModelTests {
         try FileManager.default.createDirectory(at: project, withIntermediateDirectories: true)
         try touchCatalog(project)
         let store = FakeStore(identity: jane, activeProjectDir: project.path)
+        store.projectInfos[project.path] = ProjectInfo(
+            label: "Robins Family",
+            folderName: "Robins Family.provenencia",
+            createdAt: "2026-01-02T03:04:05Z",
+            updatedAt: "2026-01-03T03:04:05Z",
+            updatedByUserID: jane.userID,
+            updatedByDisplayName: jane.displayName,
+            updatedByRef: jane.ref
+        )
         let model = OnboardingModel(store: store, folders: folders)
         await model.load()
         #expect(model.phase == .home)
         #expect(model.projectBasename == "Robins Family.provenencia")
+        #expect(model.projectLabel == "Robins Family")
+        #expect(model.sessionRef == jane.ref)
+        #expect(model.projectUpdatedByRef == jane.ref)
         #expect(model.researcherLocked)
+    }
+
+    @Test func folderNamePreviewIsKebabSlug() async throws {
+        let (model, _, _) = try harness()
+        model.familyName = "Robins Family"
+        #expect(model.folderNamePreview == "robins-family.provenencia")
+    }
+
+    @Test func createProjectStoresLabelAndSlugFolder() async throws {
+        let (model, store, _) = try harness()
+        await model.load()
+        model.mode = .create
+        model.phase = .identify
+        model.displayName = "Jake"
+        model.familyName = "Robins Family"
+        await model.submit()
+        #expect(model.phase == .home)
+        #expect(model.projectLabel == "Robins Family")
+        #expect(model.projectBasename == "robins-family.provenencia")
+        #expect(store.activeProjectDir?.hasSuffix("robins-family.provenencia") == true)
+        #expect(!model.sessionRef.isEmpty)
     }
 
     @Test func loadWithIdentityAndDirMissingCatalogClearsPointerAndShowsError() async throws {
@@ -150,9 +185,11 @@ struct OnboardingModelTests {
         #expect(model.phase == .identify)
         await model.submit()
         #expect(model.phase == .home)
-        #expect(model.projectBasename == "Robins.provenencia")
+        #expect(model.projectBasename == "robins.provenencia")
+        #expect(model.projectLabel == "Robins")
         #expect(store.identity?.displayName == "Jane Smith")
-        #expect(store.activeProjectDir == folders.documentsDirectory.appendingPathComponent("Robins.provenencia").path)
+        #expect(!model.sessionRef.isEmpty)
+        #expect(store.activeProjectDir == folders.documentsDirectory.appendingPathComponent("robins.provenencia").path)
     }
 
     @Test func submitOpenWithAdoptCallsStoreAndLandsHome() async throws {
@@ -285,4 +322,5 @@ private struct ThrowingStore: GenealogyStore {
     ) async throws -> OnboardingResult { throw StoreBoom.boom }
     func removeActiveProject(identityDir _: String) async throws { throw StoreBoom.boom }
     func signOut(identityDir _: String) async throws { throw StoreBoom.boom }
+    func projectInfo(projectDir _: String) async throws -> ProjectInfo { throw StoreBoom.boom }
 }

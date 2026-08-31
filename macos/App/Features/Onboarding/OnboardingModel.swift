@@ -25,7 +25,13 @@ final class OnboardingModel {
     var errorText: String?
     var phase: Phase = .loading
     var sessionDisplayName = ""
+    var sessionRef = ""
     var projectBasename = ""
+    var projectLabel = ""
+    var projectCreatedAt = ""
+    var projectUpdatedAt = ""
+    var projectUpdatedByDisplayName = ""
+    var projectUpdatedByRef = ""
     var researcherLocked = false
     var identityUserID = ""
     var mode: Mode = .create
@@ -40,6 +46,14 @@ final class OnboardingModel {
     init(store: any GenealogyStore, folders: OnboardingFolders? = nil) {
         self.store = store
         self.folders = folders
+    }
+
+    var folderNamePreview: String {
+        let trimmedLabel = trimmed(familyName)
+        guard !trimmedLabel.isEmpty else {
+            return ""
+        }
+        return ProjectSlug.folderName(from: trimmedLabel)
     }
 
     var canContinue: Bool {
@@ -69,16 +83,18 @@ final class OnboardingModel {
         identityUserID = ""
         selectedProject = nil
         catalogUsers = []
+        clearProjectMeta()
         do {
             let identityDir = try identityDir()
             if let id = try await store.installIdentity(identityDir: identityDir.path) {
                 sessionDisplayName = id.displayName
+                sessionRef = id.ref
                 displayName = id.displayName
                 identityUserID = id.userID
                 researcherLocked = true
                 if let active = try await store.activeProject(identityDir: identityDir.path) {
                     if InstallPaths.isProjectDirectory(active) {
-                        projectBasename = URL(fileURLWithPath: active).lastPathComponent
+                        await applyProjectInfo(path: active)
                         phase = .home
                         return
                     }
@@ -144,7 +160,8 @@ final class OnboardingModel {
             displayName = ""
             familyName = ""
             sessionDisplayName = ""
-            projectBasename = ""
+            sessionRef = ""
+            clearProjectMeta()
             identityUserID = ""
             researcherLocked = false
             selectedProject = nil
@@ -231,10 +248,42 @@ final class OnboardingModel {
 
     private func applyOpened(_ result: OnboardingResult) {
         sessionDisplayName = result.displayName
-        projectBasename = URL(fileURLWithPath: result.projectDir).lastPathComponent
+        sessionRef = result.ref
+        identityUserID = result.userID
+        applyProject(result.project, path: result.projectDir)
         researcherLocked = true
         displayName = result.displayName
         phase = .home
+    }
+
+    private func applyProjectInfo(path: String) async {
+        projectBasename = URL(fileURLWithPath: path).lastPathComponent
+        do {
+            let info = try await store.projectInfo(projectDir: path)
+            applyProject(info, path: path)
+        } catch {
+            projectLabel = ProjectSlug.labelFromFolder(path)
+        }
+    }
+
+    private func applyProject(_ info: ProjectInfo, path: String) {
+        projectBasename = info.folderName.isEmpty
+            ? URL(fileURLWithPath: path).lastPathComponent
+            : info.folderName
+        projectLabel = info.label
+        projectCreatedAt = info.createdAt
+        projectUpdatedAt = info.updatedAt
+        projectUpdatedByDisplayName = info.updatedByDisplayName
+        projectUpdatedByRef = info.updatedByRef
+    }
+
+    private func clearProjectMeta() {
+        projectBasename = ""
+        projectLabel = ""
+        projectCreatedAt = ""
+        projectUpdatedAt = ""
+        projectUpdatedByDisplayName = ""
+        projectUpdatedByRef = ""
     }
 
     private func identityDir() throws -> URL {

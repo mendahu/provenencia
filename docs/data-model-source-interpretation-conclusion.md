@@ -159,11 +159,12 @@ Structured genealogical dates use the shared model in [`structured-date-model.md
 
 Structured personal names use the shared model in [`structured-name-model.md`](structured-name-model.md).
 
-Selected user-facing rows receive a required short human-readable `ref`, unique within the project (application: unique across all ref-bearing tables).
+Selected user-facing rows receive a required short human-readable `ref`, unique within the project (application: unique across all ref-bearing tables). Implementation details (minting, schema, UI): [`catalog-refs.md`](catalog-refs.md).
 
 Catalog and Interpretation rows that are not typed Nodes use `{PREFIX}-{token}`:
 
 ```text
+USR   contributors     e.g. USR-F4N2P
 SRC   sources          e.g. SRC-F4N2P
 ART   artifacts        e.g. ART-3K9M2
 CIT   citations        e.g. CIT-3K9M2
@@ -184,7 +185,7 @@ node         {type_prefix}-C-{token}
 
 `C` means candidate (source-local, not the concluded Person/Event/…). It is not “canonical.” **Hypothetical (`H`) is not used:** a census person Node is cited evidence, not a guess.
 
-`C` is a fixed application layer code, not a column and not user-extensible. Do not use `C` as a `ref_prefix`. Catalog prefixes `SRC`, `ART`, `CIT`, `OBS` stay reserved.
+`C` is a fixed application layer code, not a column and not user-extensible. Do not use `C` as a `ref_prefix`. Catalog prefixes `USR`, `SRC`, `ART`, `CIT`, `OBS` stay reserved.
 
 Creating a Node Type includes a `ref_prefix` that is unique and not in that reserved set. The Node Type / canonical `kind` is immutable; a mistaken type is a new row, not an in-place change.
 

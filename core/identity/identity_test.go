@@ -28,7 +28,7 @@ func TestIdentity(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if got.UserID != id.UserID || got.DisplayName != "Jake Robins" {
+				if got.UserID != id.UserID || got.DisplayName != "Jake Robins" || got.Ref != id.Ref {
 					t.Fatalf("got %+v want %+v", got, id)
 				}
 				raw, err := os.ReadFile(filepath.Join(dir, FileName))
@@ -39,7 +39,7 @@ func TestIdentity(t *testing.T) {
 				if err := json.Unmarshal(raw, &m); err != nil {
 					t.Fatal(err)
 				}
-				if m["user_id"] != id.UserID.String() || m["display_name"] != "Jake Robins" {
+				if m["user_id"] != id.UserID.String() || m["display_name"] != "Jake Robins" || m["ref"] != id.Ref {
 					t.Fatalf("json %v", m)
 				}
 			},
@@ -85,6 +85,42 @@ func TestIdentity(t *testing.T) {
 				}
 				if a.UserID == uuid.Nil {
 					t.Fatal("nil uuid")
+				}
+				if a.Ref == "" || b.Ref == "" || a.Ref == b.Ref {
+					t.Fatalf("refs %q %q", a.Ref, b.Ref)
+				}
+			},
+		},
+		{
+			name: "load upgrades missing ref",
+			run: func(t *testing.T, dir string) {
+				id, err := Mint("Jake")
+				if err != nil {
+					t.Fatal(err)
+				}
+				raw, err := json.Marshal(map[string]string{
+					"user_id":      id.UserID.String(),
+					"display_name": "Jake",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(filepath.Join(dir, FileName), raw, 0o600); err != nil {
+					t.Fatal(err)
+				}
+				got, err := Load(dir)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got.Ref == "" || got.UserID != id.UserID {
+					t.Fatalf("%+v", got)
+				}
+				again, err := Load(dir)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if again.Ref != got.Ref {
+					t.Fatalf("ref changed on reload")
 				}
 			},
 		},

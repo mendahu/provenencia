@@ -36,14 +36,14 @@ struct OnboardingView: View {
 
 #Preview("Identity, no active") {
     OnboardingView(
-        store: FakeStore(identity: InstallIdentity(userID: "1", displayName: "Jane Smith")),
+        store: FakeStore(identity: InstallIdentity(userID: "1", displayName: "Jane Smith", ref: "USR-A1B2C")),
         folders: .previewEmpty
     )
 }
 
 #Preview("Open picker") {
     OnboardingView(
-        store: FakeStore(identity: InstallIdentity(userID: "1", displayName: "Jane Smith")),
+        store: FakeStore(identity: InstallIdentity(userID: "1", displayName: "Jane Smith", ref: "USR-A1B2C")),
         folders: .previewWithProject
     )
 }
@@ -53,7 +53,7 @@ struct OnboardingView: View {
     let project = folders.documentsDirectory.appendingPathComponent("Smith Family.provenencia")
     return OnboardingView(
         store: FakeStore(
-            identity: InstallIdentity(userID: "1", displayName: "Jane Smith"),
+            identity: InstallIdentity(userID: "1", displayName: "Jane Smith", ref: "USR-A1B2C"),
             activeProjectDir: project.path
         ),
         folders: folders

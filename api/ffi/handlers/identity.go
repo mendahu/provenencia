@@ -25,6 +25,7 @@ func GetInstallIdentity(in []byte) ([]byte, error) {
 		Found:       true,
 		UserId:      id.UserID.String(),
 		DisplayName: id.DisplayName,
+		Ref:         id.Ref,
 	})
 }
 
