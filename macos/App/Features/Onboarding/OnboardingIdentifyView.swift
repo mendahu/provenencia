@@ -52,10 +52,18 @@ struct OnboardingIdentifyView: View {
                         .foregroundStyle(.secondary)
                     Picker(String(localized: L10n.Onboarding.contributorPicker), selection: $model.selectedContributorID) {
                         ForEach(model.catalogUsers, id: \.userID) { user in
-                            Text(L10n.Onboarding.contributorOption(
+                            HStack(spacing: 6) {
+                                Text(user.displayName)
+                                if !user.ref.isEmpty {
+                                    Text(L10n.Onboarding.contributorRef(ref: user.ref))
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .tag(user.userID)
+                            .accessibilityLabel(L10n.Onboarding.contributorOption(
                                 displayName: user.displayName,
                                 ref: user.ref
-                            )).tag(user.userID)
+                            ))
                         }
                         Text(L10n.Onboarding.notListed).tag(OnboardingModel.newContributorID)
                     }

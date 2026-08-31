@@ -144,9 +144,18 @@ enum L10n {
             let format = String(localized: LocalizedStringResource(
                 "onboarding.identify.contributorOption",
                 defaultValue: "%@ (%@)",
-                comment: "Contributor row; arguments are display name then USR-… ref"
+                comment: "Contributor accessibility/combined label; arguments are display name then USR-… ref"
             ))
             return String(format: format, locale: .current, displayName, ref)
+        }
+
+        static func contributorRef(ref: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "onboarding.identify.contributorRef",
+                defaultValue: "(%@)",
+                comment: "Parenthesized short ref beside a display name; argument is USR-… ref"
+            ))
+            return String(format: format, locale: .current, ref)
         }
 
         static let notListed = LocalizedStringResource(

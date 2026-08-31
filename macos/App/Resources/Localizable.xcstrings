@@ -1,6 +1,9 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "" : {
+
+    },
     "onboarding.chooseFile.bodyChoose" : {
       "comment" : "Onboarding choose-file body when researcher is not locked",
       "extractionState" : "manual",
@@ -194,13 +197,25 @@
       }
     },
     "onboarding.identify.contributorOption" : {
-      "comment" : "Contributor row; arguments are display name then USR-… ref",
+      "comment" : "Contributor accessibility/combined label; arguments are display name then USR-… ref",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ (%@)"
+          }
+        }
+      }
+    },
+    "onboarding.identify.contributorRef" : {
+      "comment" : "Parenthesized short ref beside a display name; argument is USR-… ref",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "(%@)"
           }
         }
       }

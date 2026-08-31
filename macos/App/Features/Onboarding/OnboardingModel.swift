@@ -139,15 +139,28 @@ final class OnboardingModel {
         self.mode = mode
         if mode == .open {
             await refreshDocumentsProjects()
+            await refreshSelectedProjectInfo()
+        } else {
+            clearProjectMeta()
         }
     }
 
-    func choose(_ url: URL) {
+    func choose(_ url: URL) async {
         selectedProject = url
         if !availableProjects.contains(where: { $0.path == url.path }) {
             availableProjects.append(url)
         }
         mode = .open
+        await refreshSelectedProjectInfo()
+    }
+
+    /// Loads catalog project metadata for the current picker selection (open flow).
+    func refreshSelectedProjectInfo() async {
+        guard let selectedProject else {
+            clearProjectMeta()
+            return
+        }
+        await applyProjectInfo(path: selectedProject.path)
     }
 
     func signOut() async {
@@ -262,7 +275,10 @@ final class OnboardingModel {
             let info = try await store.projectInfo(projectDir: path)
             applyProject(info, path: path)
         } catch {
+            clearProjectMeta()
+            projectBasename = URL(fileURLWithPath: path).lastPathComponent
             projectLabel = ProjectSlug.labelFromFolder(path)
+            errorText = error.localizedDescription
         }
     }
 

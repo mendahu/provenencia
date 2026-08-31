@@ -73,7 +73,79 @@ struct OnboardingOpenPicker: View {
                     .accessibilityIdentifier("onboarding.chooseFolder")
                 }
             }
+            if model.selectedProject != nil {
+                OnboardingProjectMetaLines(
+                    label: model.projectLabel,
+                    showFolder: false,
+                    folderName: model.projectBasename,
+                    createdAt: model.projectCreatedAt,
+                    updatedAt: model.projectUpdatedAt,
+                    updatedByDisplayName: model.projectUpdatedByDisplayName,
+                    updatedByRef: model.projectUpdatedByRef,
+                    accessibilityPrefix: "onboarding.open"
+                )
+            }
         }
+        .onChange(of: model.selectedProject) { _, _ in
+            Task { await model.refreshSelectedProjectInfo() }
+        }
+    }
+}
+
+/// Shared project bookkeeping lines for open-picker preview and home.
+struct OnboardingProjectMetaLines: View {
+    let label: String
+    var showFolder: Bool = true
+    let folderName: String
+    let createdAt: String
+    let updatedAt: String
+    let updatedByDisplayName: String
+    let updatedByRef: String
+    var accessibilityPrefix: String = "onboarding.project"
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if !label.isEmpty {
+                Text(label)
+                    .accessibilityIdentifier("\(accessibilityPrefix).projectLabel")
+            }
+            if showFolder, !folderName.isEmpty {
+                Text(L10n.Onboarding.homeFolder(folderName: folderName))
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("\(accessibilityPrefix).project")
+            }
+            if !createdAt.isEmpty {
+                Text(L10n.Onboarding.homeCreated(date: Self.formatDate(createdAt)))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("\(accessibilityPrefix).created")
+            }
+            if !updatedAt.isEmpty {
+                Text(L10n.Onboarding.homeUpdated(date: Self.formatDate(updatedAt)))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("\(accessibilityPrefix).updated")
+            }
+            if !updatedByDisplayName.isEmpty {
+                Text(L10n.Onboarding.homeUpdatedBy(
+                    displayName: updatedByDisplayName,
+                    ref: updatedByRef
+                ))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("\(accessibilityPrefix).updatedBy")
+            }
+        }
+        .padding(.top, 4)
+    }
+
+    private static func formatDate(_ rfc3339: String) -> String {
+        let parser = ISO8601DateFormatter()
+        parser.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = parser.date(from: rfc3339) ?? ISO8601DateFormatter().date(from: rfc3339) {
+            return date.formatted(date: .abbreviated, time: .shortened)
+        }
+        return rfc3339
     }
 }
 
@@ -108,5 +180,5 @@ func onboardingChooseFolder(_ model: OnboardingModel) {
     guard panel.runModal() == .OK, let url = panel.url else {
         return
     }
-    model.choose(url)
+    Task { await model.choose(url) }
 }

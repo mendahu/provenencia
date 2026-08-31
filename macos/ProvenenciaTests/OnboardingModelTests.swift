@@ -156,11 +156,11 @@ struct OnboardingModelTests {
     @Test func chooseAppendsURLAndSetsOpen() async throws {
         let (model, _, _) = try harness()
         let url = URL(fileURLWithPath: "/tmp/Picked.provenencia")
-        model.choose(url)
+        await model.choose(url)
         #expect(model.mode == .open)
         #expect(model.selectedProject == url)
         #expect(model.availableProjects.map(\.path) == [url.path])
-        model.choose(url)
+        await model.choose(url)
         #expect(model.availableProjects.count == 1)
     }
 
@@ -199,7 +199,7 @@ struct OnboardingModelTests {
         let store = FakeStore(identity: nil, catalogUsers: [jane, jake])
         let model = OnboardingModel(store: store, folders: folders)
         await model.load()
-        model.choose(project)
+        await model.choose(project)
         await model.submit()
         #expect(model.phase == .identify)
         #expect(model.selectedContributorID == OnboardingModel.newContributorID)
@@ -218,7 +218,7 @@ struct OnboardingModelTests {
         let store = FakeStore(identity: jane, catalogUsers: [jane, jake])
         let model = OnboardingModel(store: store, folders: folders)
         await model.load()
-        model.choose(project)
+        await model.choose(project)
         await model.submit()
         #expect(model.phase == .identify)
         #expect(model.selectedContributorID == jane.userID)
@@ -231,7 +231,7 @@ struct OnboardingModelTests {
         let store = FakeStore(identity: jane, catalogUsers: [jake])
         let model = OnboardingModel(store: store, folders: folders)
         await model.load()
-        model.choose(project)
+        await model.choose(project)
         await model.submit()
         #expect(model.selectedContributorID == OnboardingModel.newContributorID)
     }
