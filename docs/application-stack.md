@@ -246,7 +246,7 @@ That keeps FTS5, JSON, R-tree, custom functions, and `STRICT` behavior consisten
 **Decision:** A project is an **ordinary directory**. That directory is the portable, documented interchange format. It is not a proprietary container, zip-as-working-copy, or a single SQLite file that embeds scans.
 
 ```text
-Robins Family.provenencia/         # folder; Mac may show a package icon (optional)
+Robins Family.provenencia/         # folder; basename is a kebab slug of the project label
 ├── provenencia.sqlite             # catalog (open schema; use any SQLite viewer)
 ├── provenencia.sqlite-wal         # present while the app is open (WAL)
 ├── provenencia.sqlite-shm
@@ -254,7 +254,7 @@ Robins Family.provenencia/         # folder; Mac may show a package icon (option
 └── derivatives/                  # thumbnails, previews; disposable
 ```
 
-The public wrapper suffix is **`.provenencia`**, not `.genealogy`. It is a branding and Finder hint. Any app can create a folder with that suffix; Provenencia must not treat the name as proof of ownership.
+The public wrapper suffix is **`.provenencia`**, not `.genealogy`. It is a branding and Finder hint. Any app can create a folder with that suffix; Provenencia must not treat the name as proof of ownership. The **project label** (user-facing title) lives in the catalog `project` table; the folder basename is a kebab-case slug of that label (for example label `Robins Family` → `robins-family.provenencia`).
 
 On macOS, register the folder as a document package with an exported reverse-DNS UTI (for example `app.provenencia.project`) whose imported filename extension is `provenencia`. Windows and Linux see a directory. Copying a project to another machine is **copy this whole directory** (after quit or including WAL/SHM). The same Go core opens it; there are no Mac-only paths in the database.
 
@@ -614,7 +614,7 @@ Accounts
   none required for local use
 
 Identity
-  local User (UUID + display name)
+  local User (UUID + display name + USR-… ref)
 
 Versioning
   one SemVer product version (VERSION + core.Version + Xcode MARKETING_VERSION)

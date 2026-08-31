@@ -35,6 +35,7 @@ public nonisolated enum Provenencia_Engine_V1_Method: SwiftProtobuf.Enum, Swift.
   case removeActiveProject // = 8
   case listProjectUsers // = 9
   case signOut // = 10
+  case getProjectInfo // = 11
   case UNRECOGNIZED(Int)
 
   public init() {
@@ -54,6 +55,7 @@ public nonisolated enum Provenencia_Engine_V1_Method: SwiftProtobuf.Enum, Swift.
     case 8: self = .removeActiveProject
     case 9: self = .listProjectUsers
     case 10: self = .signOut
+    case 11: self = .getProjectInfo
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -71,6 +73,7 @@ public nonisolated enum Provenencia_Engine_V1_Method: SwiftProtobuf.Enum, Swift.
     case .removeActiveProject: return 8
     case .listProjectUsers: return 9
     case .signOut: return 10
+    case .getProjectInfo: return 11
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -88,6 +91,7 @@ public nonisolated enum Provenencia_Engine_V1_Method: SwiftProtobuf.Enum, Swift.
     .removeActiveProject,
     .listProjectUsers,
     .signOut,
+    .getProjectInfo,
   ]
 
 }
@@ -161,6 +165,8 @@ public nonisolated struct Provenencia_Engine_V1_GetInstallIdentityResponse: Send
 
   public var displayName: String = String()
 
+  public var ref: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -195,9 +201,22 @@ public nonisolated struct Provenencia_Engine_V1_CompleteOnboardingResponse: Send
 
   public var displayName: String = String()
 
+  public var ref: String = String()
+
+  public var project: Provenencia_Engine_V1_ProjectInfo {
+    get {_project ?? Provenencia_Engine_V1_ProjectInfo()}
+    set {_project = newValue}
+  }
+  /// Returns true if `project` has been explicitly set.
+  public var hasProject: Bool {self._project != nil}
+  /// Clears the value of `project`. Subsequent reads from it will return its default value.
+  public mutating func clearProject() {self._project = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _project: Provenencia_Engine_V1_ProjectInfo? = nil
 }
 
 public nonisolated struct Provenencia_Engine_V1_RemoveInstallIdentityRequest: Sendable {
@@ -277,9 +296,22 @@ public nonisolated struct Provenencia_Engine_V1_OpenProjectResponse: Sendable {
 
   public var displayName: String = String()
 
+  public var ref: String = String()
+
+  public var project: Provenencia_Engine_V1_ProjectInfo {
+    get {_project ?? Provenencia_Engine_V1_ProjectInfo()}
+    set {_project = newValue}
+  }
+  /// Returns true if `project` has been explicitly set.
+  public var hasProject: Bool {self._project != nil}
+  /// Clears the value of `project`. Subsequent reads from it will return its default value.
+  public mutating func clearProject() {self._project = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _project: Provenencia_Engine_V1_ProjectInfo? = nil
 }
 
 public nonisolated struct Provenencia_Engine_V1_RemoveActiveProjectRequest: Sendable {
@@ -325,6 +357,8 @@ public nonisolated struct Provenencia_Engine_V1_ProjectUser: Sendable {
 
   public var displayName: String = String()
 
+  public var ref: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -364,12 +398,69 @@ public nonisolated struct Provenencia_Engine_V1_SignOutResponse: Sendable {
   public init() {}
 }
 
+public nonisolated struct Provenencia_Engine_V1_GetProjectInfoRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var projectDir: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Provenencia_Engine_V1_ProjectInfo: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var label: String = String()
+
+  public var folderName: String = String()
+
+  public var createdAt: String = String()
+
+  public var updatedAt: String = String()
+
+  public var updatedByUserID: String = String()
+
+  public var updatedByDisplayName: String = String()
+
+  public var updatedByRef: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Provenencia_Engine_V1_GetProjectInfoResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var project: Provenencia_Engine_V1_ProjectInfo {
+    get {_project ?? Provenencia_Engine_V1_ProjectInfo()}
+    set {_project = newValue}
+  }
+  /// Returns true if `project` has been explicitly set.
+  public var hasProject: Bool {self._project != nil}
+  /// Clears the value of `project`. Subsequent reads from it will return its default value.
+  public mutating func clearProject() {self._project = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _project: Provenencia_Engine_V1_ProjectInfo? = nil
+}
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate nonisolated let _protobuf_package = "provenencia.engine.v1"
 
 nonisolated extension Provenencia_Engine_V1_Method: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0METHOD_UNSPECIFIED\0\u{1}METHOD_PING\0\u{1}METHOD_GET_VERSION\0\u{1}METHOD_GET_INSTALL_IDENTITY\0\u{1}METHOD_COMPLETE_ONBOARDING\0\u{1}METHOD_REMOVE_INSTALL_IDENTITY\0\u{1}METHOD_GET_ACTIVE_PROJECT\0\u{1}METHOD_OPEN_PROJECT\0\u{1}METHOD_REMOVE_ACTIVE_PROJECT\0\u{1}METHOD_LIST_PROJECT_USERS\0\u{1}METHOD_SIGN_OUT\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0METHOD_UNSPECIFIED\0\u{1}METHOD_PING\0\u{1}METHOD_GET_VERSION\0\u{1}METHOD_GET_INSTALL_IDENTITY\0\u{1}METHOD_COMPLETE_ONBOARDING\0\u{1}METHOD_REMOVE_INSTALL_IDENTITY\0\u{1}METHOD_GET_ACTIVE_PROJECT\0\u{1}METHOD_OPEN_PROJECT\0\u{1}METHOD_REMOVE_ACTIVE_PROJECT\0\u{1}METHOD_LIST_PROJECT_USERS\0\u{1}METHOD_SIGN_OUT\0\u{1}METHOD_GET_PROJECT_INFO\0")
 }
 
 nonisolated extension Provenencia_Engine_V1_PingRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
@@ -513,7 +604,7 @@ nonisolated extension Provenencia_Engine_V1_GetInstallIdentityRequest: SwiftProt
 
 nonisolated extension Provenencia_Engine_V1_GetInstallIdentityResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GetInstallIdentityResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}found\0\u{3}user_id\0\u{3}display_name\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}found\0\u{3}user_id\0\u{3}display_name\0\u{1}ref\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -524,6 +615,7 @@ nonisolated extension Provenencia_Engine_V1_GetInstallIdentityResponse: SwiftPro
       case 1: try { try decoder.decodeSingularBoolField(value: &self.found) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.userID) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.displayName) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.ref) }()
       default: break
       }
     }
@@ -539,6 +631,9 @@ nonisolated extension Provenencia_Engine_V1_GetInstallIdentityResponse: SwiftPro
     if !self.displayName.isEmpty {
       try visitor.visitSingularStringField(value: self.displayName, fieldNumber: 3)
     }
+    if !self.ref.isEmpty {
+      try visitor.visitSingularStringField(value: self.ref, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -546,6 +641,7 @@ nonisolated extension Provenencia_Engine_V1_GetInstallIdentityResponse: SwiftPro
     if lhs.found != rhs.found {return false}
     if lhs.userID != rhs.userID {return false}
     if lhs.displayName != rhs.displayName {return false}
+    if lhs.ref != rhs.ref {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -598,7 +694,7 @@ nonisolated extension Provenencia_Engine_V1_CompleteOnboardingRequest: SwiftProt
 
 nonisolated extension Provenencia_Engine_V1_CompleteOnboardingResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CompleteOnboardingResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}display_name\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}display_name\0\u{1}ref\0\u{1}project\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -609,12 +705,18 @@ nonisolated extension Provenencia_Engine_V1_CompleteOnboardingResponse: SwiftPro
       case 1: try { try decoder.decodeSingularStringField(value: &self.projectDir) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.userID) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.displayName) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.ref) }()
+      case 5: try { try decoder.decodeSingularMessageField(value: &self._project) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.projectDir.isEmpty {
       try visitor.visitSingularStringField(value: self.projectDir, fieldNumber: 1)
     }
@@ -624,6 +726,12 @@ nonisolated extension Provenencia_Engine_V1_CompleteOnboardingResponse: SwiftPro
     if !self.displayName.isEmpty {
       try visitor.visitSingularStringField(value: self.displayName, fieldNumber: 3)
     }
+    if !self.ref.isEmpty {
+      try visitor.visitSingularStringField(value: self.ref, fieldNumber: 4)
+    }
+    try { if let v = self._project {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -631,6 +739,8 @@ nonisolated extension Provenencia_Engine_V1_CompleteOnboardingResponse: SwiftPro
     if lhs.projectDir != rhs.projectDir {return false}
     if lhs.userID != rhs.userID {return false}
     if lhs.displayName != rhs.displayName {return false}
+    if lhs.ref != rhs.ref {return false}
+    if lhs._project != rhs._project {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -797,7 +907,7 @@ nonisolated extension Provenencia_Engine_V1_OpenProjectRequest: SwiftProtobuf.Me
 
 nonisolated extension Provenencia_Engine_V1_OpenProjectResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".OpenProjectResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}display_name\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}display_name\0\u{1}ref\0\u{1}project\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -808,12 +918,18 @@ nonisolated extension Provenencia_Engine_V1_OpenProjectResponse: SwiftProtobuf.M
       case 1: try { try decoder.decodeSingularStringField(value: &self.projectDir) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.userID) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.displayName) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.ref) }()
+      case 5: try { try decoder.decodeSingularMessageField(value: &self._project) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.projectDir.isEmpty {
       try visitor.visitSingularStringField(value: self.projectDir, fieldNumber: 1)
     }
@@ -823,6 +939,12 @@ nonisolated extension Provenencia_Engine_V1_OpenProjectResponse: SwiftProtobuf.M
     if !self.displayName.isEmpty {
       try visitor.visitSingularStringField(value: self.displayName, fieldNumber: 3)
     }
+    if !self.ref.isEmpty {
+      try visitor.visitSingularStringField(value: self.ref, fieldNumber: 4)
+    }
+    try { if let v = self._project {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -830,6 +952,8 @@ nonisolated extension Provenencia_Engine_V1_OpenProjectResponse: SwiftProtobuf.M
     if lhs.projectDir != rhs.projectDir {return false}
     if lhs.userID != rhs.userID {return false}
     if lhs.displayName != rhs.displayName {return false}
+    if lhs.ref != rhs.ref {return false}
+    if lhs._project != rhs._project {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -916,7 +1040,7 @@ nonisolated extension Provenencia_Engine_V1_ListProjectUsersRequest: SwiftProtob
 
 nonisolated extension Provenencia_Engine_V1_ProjectUser: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ProjectUser"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{3}display_name\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{3}display_name\0\u{1}ref\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -926,6 +1050,7 @@ nonisolated extension Provenencia_Engine_V1_ProjectUser: SwiftProtobuf.Message, 
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.userID) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.displayName) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.ref) }()
       default: break
       }
     }
@@ -938,12 +1063,16 @@ nonisolated extension Provenencia_Engine_V1_ProjectUser: SwiftProtobuf.Message, 
     if !self.displayName.isEmpty {
       try visitor.visitSingularStringField(value: self.displayName, fieldNumber: 2)
     }
+    if !self.ref.isEmpty {
+      try visitor.visitSingularStringField(value: self.ref, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_ProjectUser, rhs: Provenencia_Engine_V1_ProjectUser) -> Bool {
     if lhs.userID != rhs.userID {return false}
     if lhs.displayName != rhs.displayName {return false}
+    if lhs.ref != rhs.ref {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1023,6 +1152,130 @@ nonisolated extension Provenencia_Engine_V1_SignOutResponse: SwiftProtobuf.Messa
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_SignOutResponse, rhs: Provenencia_Engine_V1_SignOutResponse) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_GetProjectInfoRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GetProjectInfoRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.projectDir) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.projectDir.isEmpty {
+      try visitor.visitSingularStringField(value: self.projectDir, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_GetProjectInfoRequest, rhs: Provenencia_Engine_V1_GetProjectInfoRequest) -> Bool {
+    if lhs.projectDir != rhs.projectDir {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_ProjectInfo: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ProjectInfo"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}label\0\u{3}folder_name\0\u{3}created_at\0\u{3}updated_at\0\u{3}updated_by_user_id\0\u{3}updated_by_display_name\0\u{3}updated_by_ref\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.label) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.folderName) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.createdAt) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.updatedAt) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.updatedByUserID) }()
+      case 6: try { try decoder.decodeSingularStringField(value: &self.updatedByDisplayName) }()
+      case 7: try { try decoder.decodeSingularStringField(value: &self.updatedByRef) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.label.isEmpty {
+      try visitor.visitSingularStringField(value: self.label, fieldNumber: 1)
+    }
+    if !self.folderName.isEmpty {
+      try visitor.visitSingularStringField(value: self.folderName, fieldNumber: 2)
+    }
+    if !self.createdAt.isEmpty {
+      try visitor.visitSingularStringField(value: self.createdAt, fieldNumber: 3)
+    }
+    if !self.updatedAt.isEmpty {
+      try visitor.visitSingularStringField(value: self.updatedAt, fieldNumber: 4)
+    }
+    if !self.updatedByUserID.isEmpty {
+      try visitor.visitSingularStringField(value: self.updatedByUserID, fieldNumber: 5)
+    }
+    if !self.updatedByDisplayName.isEmpty {
+      try visitor.visitSingularStringField(value: self.updatedByDisplayName, fieldNumber: 6)
+    }
+    if !self.updatedByRef.isEmpty {
+      try visitor.visitSingularStringField(value: self.updatedByRef, fieldNumber: 7)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_ProjectInfo, rhs: Provenencia_Engine_V1_ProjectInfo) -> Bool {
+    if lhs.label != rhs.label {return false}
+    if lhs.folderName != rhs.folderName {return false}
+    if lhs.createdAt != rhs.createdAt {return false}
+    if lhs.updatedAt != rhs.updatedAt {return false}
+    if lhs.updatedByUserID != rhs.updatedByUserID {return false}
+    if lhs.updatedByDisplayName != rhs.updatedByDisplayName {return false}
+    if lhs.updatedByRef != rhs.updatedByRef {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_GetProjectInfoResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GetProjectInfoResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}project\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._project) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._project {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_GetProjectInfoResponse, rhs: Provenencia_Engine_V1_GetProjectInfoResponse) -> Bool {
+    if lhs._project != rhs._project {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

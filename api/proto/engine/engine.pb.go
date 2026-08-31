@@ -37,6 +37,7 @@ const (
 	Method_METHOD_REMOVE_ACTIVE_PROJECT   Method = 8
 	Method_METHOD_LIST_PROJECT_USERS      Method = 9
 	Method_METHOD_SIGN_OUT                Method = 10
+	Method_METHOD_GET_PROJECT_INFO        Method = 11
 )
 
 // Enum value maps for Method.
@@ -53,6 +54,7 @@ var (
 		8:  "METHOD_REMOVE_ACTIVE_PROJECT",
 		9:  "METHOD_LIST_PROJECT_USERS",
 		10: "METHOD_SIGN_OUT",
+		11: "METHOD_GET_PROJECT_INFO",
 	}
 	Method_value = map[string]int32{
 		"METHOD_UNSPECIFIED":             0,
@@ -66,6 +68,7 @@ var (
 		"METHOD_REMOVE_ACTIVE_PROJECT":   8,
 		"METHOD_LIST_PROJECT_USERS":      9,
 		"METHOD_SIGN_OUT":                10,
+		"METHOD_GET_PROJECT_INFO":        11,
 	}
 )
 
@@ -313,6 +316,7 @@ type GetInstallIdentityResponse struct {
 	Found         bool                   `protobuf:"varint,1,opt,name=found,proto3" json:"found,omitempty"`
 	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	DisplayName   string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Ref           string                 `protobuf:"bytes,4,opt,name=ref,proto3" json:"ref,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -364,6 +368,13 @@ func (x *GetInstallIdentityResponse) GetUserId() string {
 func (x *GetInstallIdentityResponse) GetDisplayName() string {
 	if x != nil {
 		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *GetInstallIdentityResponse) GetRef() string {
+	if x != nil {
+		return x.Ref
 	}
 	return ""
 }
@@ -441,6 +452,8 @@ type CompleteOnboardingResponse struct {
 	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
 	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	DisplayName   string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Ref           string                 `protobuf:"bytes,4,opt,name=ref,proto3" json:"ref,omitempty"`
+	Project       *ProjectInfo           `protobuf:"bytes,5,opt,name=project,proto3" json:"project,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -494,6 +507,20 @@ func (x *CompleteOnboardingResponse) GetDisplayName() string {
 		return x.DisplayName
 	}
 	return ""
+}
+
+func (x *CompleteOnboardingResponse) GetRef() string {
+	if x != nil {
+		return x.Ref
+	}
+	return ""
+}
+
+func (x *CompleteOnboardingResponse) GetProject() *ProjectInfo {
+	if x != nil {
+		return x.Project
+	}
+	return nil
 }
 
 type RemoveInstallIdentityRequest struct {
@@ -745,6 +772,8 @@ type OpenProjectResponse struct {
 	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
 	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	DisplayName   string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Ref           string                 `protobuf:"bytes,4,opt,name=ref,proto3" json:"ref,omitempty"`
+	Project       *ProjectInfo           `protobuf:"bytes,5,opt,name=project,proto3" json:"project,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -798,6 +827,20 @@ func (x *OpenProjectResponse) GetDisplayName() string {
 		return x.DisplayName
 	}
 	return ""
+}
+
+func (x *OpenProjectResponse) GetRef() string {
+	if x != nil {
+		return x.Ref
+	}
+	return ""
+}
+
+func (x *OpenProjectResponse) GetProject() *ProjectInfo {
+	if x != nil {
+		return x.Project
+	}
+	return nil
 }
 
 type RemoveActiveProjectRequest struct {
@@ -928,6 +971,7 @@ type ProjectUser struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	DisplayName   string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Ref           string                 `protobuf:"bytes,3,opt,name=ref,proto3" json:"ref,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -972,6 +1016,13 @@ func (x *ProjectUser) GetUserId() string {
 func (x *ProjectUser) GetDisplayName() string {
 	if x != nil {
 		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *ProjectUser) GetRef() string {
+	if x != nil {
+		return x.Ref
 	}
 	return ""
 }
@@ -1100,6 +1151,186 @@ func (*SignOutResponse) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{20}
 }
 
+type GetProjectInfoRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetProjectInfoRequest) Reset() {
+	*x = GetProjectInfoRequest{}
+	mi := &file_engine_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetProjectInfoRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetProjectInfoRequest) ProtoMessage() {}
+
+func (x *GetProjectInfoRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetProjectInfoRequest.ProtoReflect.Descriptor instead.
+func (*GetProjectInfoRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *GetProjectInfoRequest) GetProjectDir() string {
+	if x != nil {
+		return x.ProjectDir
+	}
+	return ""
+}
+
+type ProjectInfo struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	Label                string                 `protobuf:"bytes,1,opt,name=label,proto3" json:"label,omitempty"`
+	FolderName           string                 `protobuf:"bytes,2,opt,name=folder_name,json=folderName,proto3" json:"folder_name,omitempty"`
+	CreatedAt            string                 `protobuf:"bytes,3,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt            string                 `protobuf:"bytes,4,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	UpdatedByUserId      string                 `protobuf:"bytes,5,opt,name=updated_by_user_id,json=updatedByUserId,proto3" json:"updated_by_user_id,omitempty"`
+	UpdatedByDisplayName string                 `protobuf:"bytes,6,opt,name=updated_by_display_name,json=updatedByDisplayName,proto3" json:"updated_by_display_name,omitempty"`
+	UpdatedByRef         string                 `protobuf:"bytes,7,opt,name=updated_by_ref,json=updatedByRef,proto3" json:"updated_by_ref,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *ProjectInfo) Reset() {
+	*x = ProjectInfo{}
+	mi := &file_engine_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProjectInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProjectInfo) ProtoMessage() {}
+
+func (x *ProjectInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProjectInfo.ProtoReflect.Descriptor instead.
+func (*ProjectInfo) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *ProjectInfo) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *ProjectInfo) GetFolderName() string {
+	if x != nil {
+		return x.FolderName
+	}
+	return ""
+}
+
+func (x *ProjectInfo) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+func (x *ProjectInfo) GetUpdatedAt() string {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return ""
+}
+
+func (x *ProjectInfo) GetUpdatedByUserId() string {
+	if x != nil {
+		return x.UpdatedByUserId
+	}
+	return ""
+}
+
+func (x *ProjectInfo) GetUpdatedByDisplayName() string {
+	if x != nil {
+		return x.UpdatedByDisplayName
+	}
+	return ""
+}
+
+func (x *ProjectInfo) GetUpdatedByRef() string {
+	if x != nil {
+		return x.UpdatedByRef
+	}
+	return ""
+}
+
+type GetProjectInfoResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Project       *ProjectInfo           `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetProjectInfoResponse) Reset() {
+	*x = GetProjectInfoResponse{}
+	mi := &file_engine_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetProjectInfoResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetProjectInfoResponse) ProtoMessage() {}
+
+func (x *GetProjectInfoResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetProjectInfoResponse.ProtoReflect.Descriptor instead.
+func (*GetProjectInfoResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *GetProjectInfoResponse) GetProject() *ProjectInfo {
+	if x != nil {
+		return x.Project
+	}
+	return nil
+}
+
 var File_engine_proto protoreflect.FileDescriptor
 
 const file_engine_proto_rawDesc = "" +
@@ -1113,23 +1344,26 @@ const file_engine_proto_rawDesc = "" +
 	"\x12GetVersionResponse\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\">\n" +
 	"\x19GetInstallIdentityRequest\x12!\n" +
-	"\fidentity_dir\x18\x01 \x01(\tR\videntityDir\"n\n" +
+	"\fidentity_dir\x18\x01 \x01(\tR\videntityDir\"\x80\x01\n" +
 	"\x1aGetInstallIdentityResponse\x12\x14\n" +
 	"\x05found\x18\x01 \x01(\bR\x05found\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12!\n" +
-	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\"\xa1\x01\n" +
+	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12\x10\n" +
+	"\x03ref\x18\x04 \x01(\tR\x03ref\"\xa1\x01\n" +
 	"\x19CompleteOnboardingRequest\x12!\n" +
 	"\fidentity_dir\x18\x01 \x01(\tR\videntityDir\x12\x1d\n" +
 	"\n" +
 	"parent_dir\x18\x02 \x01(\tR\tparentDir\x12!\n" +
 	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12\x1f\n" +
 	"\vfamily_name\x18\x04 \x01(\tR\n" +
-	"familyName\"y\n" +
+	"familyName\"\xc9\x01\n" +
 	"\x1aCompleteOnboardingResponse\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12!\n" +
-	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\"A\n" +
+	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12\x10\n" +
+	"\x03ref\x18\x04 \x01(\tR\x03ref\x12<\n" +
+	"\aproject\x18\x05 \x01(\v2\".provenencia.engine.v1.ProjectInfoR\aproject\"A\n" +
 	"\x1cRemoveInstallIdentityRequest\x12!\n" +
 	"\fidentity_dir\x18\x01 \x01(\tR\videntityDir\"\x1f\n" +
 	"\x1dRemoveInstallIdentityResponse\"<\n" +
@@ -1144,26 +1378,45 @@ const file_engine_proto_rawDesc = "" +
 	"\vproject_dir\x18\x02 \x01(\tR\n" +
 	"projectDir\x12!\n" +
 	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12\"\n" +
-	"\radopt_user_id\x18\x04 \x01(\tR\vadoptUserId\"r\n" +
+	"\radopt_user_id\x18\x04 \x01(\tR\vadoptUserId\"\xc2\x01\n" +
 	"\x13OpenProjectResponse\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12!\n" +
-	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\"?\n" +
+	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12\x10\n" +
+	"\x03ref\x18\x04 \x01(\tR\x03ref\x12<\n" +
+	"\aproject\x18\x05 \x01(\v2\".provenencia.engine.v1.ProjectInfoR\aproject\"?\n" +
 	"\x1aRemoveActiveProjectRequest\x12!\n" +
 	"\fidentity_dir\x18\x01 \x01(\tR\videntityDir\"\x1d\n" +
 	"\x1bRemoveActiveProjectResponse\":\n" +
 	"\x17ListProjectUsersRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
-	"projectDir\"I\n" +
+	"projectDir\"[\n" +
 	"\vProjectUser\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12!\n" +
-	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\"T\n" +
+	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x10\n" +
+	"\x03ref\x18\x03 \x01(\tR\x03ref\"T\n" +
 	"\x18ListProjectUsersResponse\x128\n" +
 	"\x05users\x18\x01 \x03(\v2\".provenencia.engine.v1.ProjectUserR\x05users\"3\n" +
 	"\x0eSignOutRequest\x12!\n" +
 	"\fidentity_dir\x18\x01 \x01(\tR\videntityDir\"\x11\n" +
-	"\x0fSignOutResponse*\xbc\x02\n" +
+	"\x0fSignOutResponse\"8\n" +
+	"\x15GetProjectInfoRequest\x12\x1f\n" +
+	"\vproject_dir\x18\x01 \x01(\tR\n" +
+	"projectDir\"\x8c\x02\n" +
+	"\vProjectInfo\x12\x14\n" +
+	"\x05label\x18\x01 \x01(\tR\x05label\x12\x1f\n" +
+	"\vfolder_name\x18\x02 \x01(\tR\n" +
+	"folderName\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x03 \x01(\tR\tcreatedAt\x12\x1d\n" +
+	"\n" +
+	"updated_at\x18\x04 \x01(\tR\tupdatedAt\x12+\n" +
+	"\x12updated_by_user_id\x18\x05 \x01(\tR\x0fupdatedByUserId\x125\n" +
+	"\x17updated_by_display_name\x18\x06 \x01(\tR\x14updatedByDisplayName\x12$\n" +
+	"\x0eupdated_by_ref\x18\a \x01(\tR\fupdatedByRef\"V\n" +
+	"\x16GetProjectInfoResponse\x12<\n" +
+	"\aproject\x18\x01 \x01(\v2\".provenencia.engine.v1.ProjectInfoR\aproject*\xd9\x02\n" +
 	"\x06Method\x12\x16\n" +
 	"\x12METHOD_UNSPECIFIED\x10\x00\x12\x0f\n" +
 	"\vMETHOD_PING\x10\x01\x12\x16\n" +
@@ -1176,7 +1429,8 @@ const file_engine_proto_rawDesc = "" +
 	"\x1cMETHOD_REMOVE_ACTIVE_PROJECT\x10\b\x12\x1d\n" +
 	"\x19METHOD_LIST_PROJECT_USERS\x10\t\x12\x13\n" +
 	"\x0fMETHOD_SIGN_OUT\x10\n" +
-	"B1Z/github.com/mendahu/provenencia/api/proto/engineb\x06proto3"
+	"\x12\x1b\n" +
+	"\x17METHOD_GET_PROJECT_INFO\x10\vB1Z/github.com/mendahu/provenencia/api/proto/engineb\x06proto3"
 
 var (
 	file_engine_proto_rawDescOnce sync.Once
@@ -1191,7 +1445,7 @@ func file_engine_proto_rawDescGZIP() []byte {
 }
 
 var file_engine_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_engine_proto_goTypes = []any{
 	(Method)(0),                           // 0: provenencia.engine.v1.Method
 	(*PingRequest)(nil),                   // 1: provenencia.engine.v1.PingRequest
@@ -1215,14 +1469,20 @@ var file_engine_proto_goTypes = []any{
 	(*ListProjectUsersResponse)(nil),      // 19: provenencia.engine.v1.ListProjectUsersResponse
 	(*SignOutRequest)(nil),                // 20: provenencia.engine.v1.SignOutRequest
 	(*SignOutResponse)(nil),               // 21: provenencia.engine.v1.SignOutResponse
+	(*GetProjectInfoRequest)(nil),         // 22: provenencia.engine.v1.GetProjectInfoRequest
+	(*ProjectInfo)(nil),                   // 23: provenencia.engine.v1.ProjectInfo
+	(*GetProjectInfoResponse)(nil),        // 24: provenencia.engine.v1.GetProjectInfoResponse
 }
 var file_engine_proto_depIdxs = []int32{
-	18, // 0: provenencia.engine.v1.ListProjectUsersResponse.users:type_name -> provenencia.engine.v1.ProjectUser
-	1,  // [1:1] is the sub-list for method output_type
-	1,  // [1:1] is the sub-list for method input_type
-	1,  // [1:1] is the sub-list for extension type_name
-	1,  // [1:1] is the sub-list for extension extendee
-	0,  // [0:1] is the sub-list for field type_name
+	23, // 0: provenencia.engine.v1.CompleteOnboardingResponse.project:type_name -> provenencia.engine.v1.ProjectInfo
+	23, // 1: provenencia.engine.v1.OpenProjectResponse.project:type_name -> provenencia.engine.v1.ProjectInfo
+	18, // 2: provenencia.engine.v1.ListProjectUsersResponse.users:type_name -> provenencia.engine.v1.ProjectUser
+	23, // 3: provenencia.engine.v1.GetProjectInfoResponse.project:type_name -> provenencia.engine.v1.ProjectInfo
+	4,  // [4:4] is the sub-list for method output_type
+	4,  // [4:4] is the sub-list for method input_type
+	4,  // [4:4] is the sub-list for extension type_name
+	4,  // [4:4] is the sub-list for extension extendee
+	0,  // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_engine_proto_init() }
@@ -1236,7 +1496,7 @@ func file_engine_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_engine_proto_rawDesc), len(file_engine_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   21,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -1,0 +1,13 @@
+---
+description: Short human refs (USR-/SRC-/PER-C-) mint via core/ref; see catalog-refs skill
+globs: core/ref/**/*.go,core/database/**/*.go,core/identity/**/*.go,core/onboarding/**/*.go
+alwaysApply: false
+---
+
+# Catalog refs
+
+Follow the project skill `.cursor/skills/add-catalog-ref/SKILL.md`. Product notes: `docs/catalog-refs.md`.
+
+- Mint/validate only through `core/ref` (`Mint`, `Validate`). Do not hand-roll tokens or mint in SQL.
+- Machine id stays UUIDv7; `ref` is display/search only — never a foreign key; never recycle.
+- Reserved prefixes: `USR`, `SRC`, `ART`, `CIT`, `OBS`. Candidate Nodes use `{PREFIX}-C-{TOKEN}` via a shared helper when implemented — do not invent a parallel generator.

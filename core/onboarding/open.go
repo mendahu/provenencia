@@ -7,23 +7,27 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/identity"
 )
 
 var ErrUnknownUser = errors.New("user not in project")
 
-// ListContributors peeks at users without migrating or taking the exclusive lock.
+// ListContributors opens the catalog (migrates if needed), ensures user refs, and lists contributors.
 func ListContributors(projectDir string) ([]identity.Identity, error) {
 	projectDir = strings.TrimSpace(projectDir)
 	if projectDir == "" {
 		return nil, database.ErrNotAProject
 	}
-	proj, err := database.OpenReadOnly(projectDir)
+	proj, err := database.Open(projectDir)
 	if err != nil {
 		return nil, err
 	}
 	defer proj.Close()
+	if err := users.EnsureRefs(proj); err != nil {
+		return nil, err
+	}
 	rows, err := users.List(proj)
 	if err != nil {
 		return nil, err
@@ -34,7 +38,7 @@ func ListContributors(projectDir string) ([]identity.Identity, error) {
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, identity.Identity{UserID: id, DisplayName: row.DisplayName})
+		out = append(out, identity.Identity{UserID: id, DisplayName: row.DisplayName, Ref: row.Ref})
 	}
 	return out, nil
 }
@@ -70,11 +74,20 @@ func adopt(identityDir, projectDir, adoptUserID string) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	name, err := users.Lookup(proj, uid[:])
+	if err := users.EnsureRefs(proj); err != nil {
+		_ = proj.Close()
+		return Result{}, err
+	}
+	u, err := users.Lookup(proj, uid[:])
 	if errors.Is(err, sql.ErrNoRows) {
 		_ = proj.Close()
 		return Result{}, ErrUnknownUser
 	}
+	if err != nil {
+		_ = proj.Close()
+		return Result{}, err
+	}
+	info, err := ensureProject(proj, projectDir, uid[:])
 	if err != nil {
 		_ = proj.Close()
 		return Result{}, err
@@ -84,9 +97,8 @@ func adopt(identityDir, projectDir, adoptUserID string) (Result, error) {
 		return Result{}, err
 	}
 
-	// A different UUID on disk is replaced: this Mac is now that catalog contributor.
-	id := identity.Identity{UserID: uid, DisplayName: name}
-	return persistIdentityAndActive(identityDir, dir, id)
+	id := identity.Identity{UserID: uid, DisplayName: u.DisplayName, Ref: u.Ref}
+	return persistIdentityAndActive(identityDir, dir, id, info)
 }
 
 func openMint(identityDir, projectDir, displayName string) (Result, error) {
@@ -99,8 +111,17 @@ func openMint(identityDir, projectDir, displayName string) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
+	if err := users.EnsureRefs(proj); err != nil {
+		_ = proj.Close()
+		return Result{}, err
+	}
 	uid := id.UserID
-	if err := users.Upsert(proj, uid[:], id.DisplayName); err != nil {
+	if err := users.Upsert(proj, uid[:], id.DisplayName, id.Ref); err != nil {
+		_ = proj.Close()
+		return Result{}, err
+	}
+	info, err := ensureProject(proj, projectDir, uid[:])
+	if err != nil {
 		_ = proj.Close()
 		return Result{}, err
 	}
@@ -108,5 +129,61 @@ func openMint(identityDir, projectDir, displayName string) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	return persistIdentityAndActive(identityDir, dir, id)
+	return persistIdentityAndActive(identityDir, dir, id, info)
+}
+
+func ensureProject(proj *database.Catalog, projectDir string, updatedBy []byte) (project.Info, error) {
+	info, err := project.Get(proj)
+	if err == nil {
+		return info, nil
+	}
+	if !errors.Is(err, project.ErrMissing) {
+		return project.Info{}, err
+	}
+	now := project.NowUTC()
+	info = project.Info{
+		Label:     project.LabelFromDir(projectDir),
+		CreatedAt: now,
+		UpdatedAt: now,
+		UpdatedBy: updatedBy,
+	}
+	if info.Label == "" {
+		info.Label = "Untitled"
+	}
+	if err := project.Upsert(proj, info); err != nil {
+		return project.Info{}, err
+	}
+	return info, nil
+}
+
+// ProjectInfo loads project bookkeeping from an existing catalog (migrates if needed).
+func ProjectInfo(projectDir string) (project.Info, error) {
+	projectDir = strings.TrimSpace(projectDir)
+	if projectDir == "" {
+		return project.Info{}, database.ErrNotAProject
+	}
+	proj, err := database.Open(projectDir)
+	if err != nil {
+		return project.Info{}, err
+	}
+	defer proj.Close()
+	if err := users.EnsureRefs(proj); err != nil {
+		return project.Info{}, err
+	}
+	info, err := project.Get(proj)
+	if errors.Is(err, project.ErrMissing) {
+		rows, listErr := users.List(proj)
+		if listErr != nil {
+			return project.Info{}, listErr
+		}
+		var updatedBy []byte
+		if len(rows) > 0 {
+			updatedBy = rows[0].ID
+		}
+		if len(updatedBy) != 16 {
+			return project.Info{Label: project.LabelFromDir(projectDir)}, nil
+		}
+		return ensureProject(proj, projectDir, updatedBy)
+	}
+	return info, err
 }

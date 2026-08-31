@@ -46,12 +46,12 @@ func TestOpen(t *testing.T) {
 					t.Fatal(err)
 				}
 				defer p.Close()
-				name, err := users.Lookup(p, res.Identity.UserID[:])
+				u, err := users.Lookup(p, res.Identity.UserID[:])
 				if err != nil {
 					t.Fatal(err)
 				}
-				if name != "Jake" {
-					t.Fatalf("users %q", name)
+				if u.DisplayName != "Jake" {
+					t.Fatalf("users %q", u.DisplayName)
 				}
 			},
 		},

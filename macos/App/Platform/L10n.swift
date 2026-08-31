@@ -73,7 +73,7 @@ enum L10n {
 
         static let nameResearchBody = LocalizedStringResource(
             "onboarding.identify.nameResearchBody",
-            defaultValue: "Your researcher name is how work is attributed. The family name labels this project folder.",
+            defaultValue: "Your researcher name is how work is attributed. The project name is a label; the folder on disk uses a simple slug.",
             comment: "Create-mode identify helper copy"
         )
 
@@ -100,6 +100,15 @@ enum L10n {
             defaultValue: "Smith Family",
             comment: "Placeholder for family / project name field"
         )
+
+        static func folderNamePreview(folderName: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "onboarding.identify.folderNamePreview",
+                defaultValue: "Folder: %@",
+                comment: "Live preview of kebab-case project folder name; argument is folder basename"
+            ))
+            return String(format: format, locale: .current, folderName)
+        }
 
         static let whoAreYouTitle = LocalizedStringResource(
             "onboarding.identify.whoAreYouTitle",
@@ -128,6 +137,27 @@ enum L10n {
             comment: "Accessibility label for contributor picker"
         )
 
+        static func contributorOption(displayName: String, ref: String) -> String {
+            if ref.isEmpty {
+                return displayName
+            }
+            let format = String(localized: LocalizedStringResource(
+                "onboarding.identify.contributorOption",
+                defaultValue: "%@ (%@)",
+                comment: "Contributor accessibility/combined label; arguments are display name then USR-… ref"
+            ))
+            return String(format: format, locale: .current, displayName, ref)
+        }
+
+        static func contributorRef(ref: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "onboarding.identify.contributorRef",
+                defaultValue: "(%@)",
+                comment: "Parenthesized short ref beside a display name; argument is USR-… ref"
+            ))
+            return String(format: format, locale: .current, ref)
+        }
+
         static let notListed = LocalizedStringResource(
             "onboarding.identify.notListed",
             defaultValue: "I’m not listed — add me",
@@ -139,6 +169,50 @@ enum L10n {
             defaultValue: "You're signed in",
             comment: "Home screen headline after successful open/create"
         )
+
+        static func homeFolder(folderName: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "onboarding.home.folder",
+                defaultValue: "Folder: %@",
+                comment: "Home screen project folder line; argument is folder basename"
+            ))
+            return String(format: format, locale: .current, folderName)
+        }
+
+        static func homeCreated(date: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "onboarding.home.created",
+                defaultValue: "Created %@",
+                comment: "Home screen created date; argument is localized date"
+            ))
+            return String(format: format, locale: .current, date)
+        }
+
+        static func homeUpdated(date: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "onboarding.home.updated",
+                defaultValue: "Updated %@",
+                comment: "Home screen updated date; argument is localized date"
+            ))
+            return String(format: format, locale: .current, date)
+        }
+
+        static func homeUpdatedBy(displayName: String, ref: String) -> String {
+            if ref.isEmpty {
+                let format = String(localized: LocalizedStringResource(
+                    "onboarding.home.updatedByName",
+                    defaultValue: "Last edited by %@",
+                    comment: "Home screen last editor without ref; argument is display name"
+                ))
+                return String(format: format, locale: .current, displayName)
+            }
+            let format = String(localized: LocalizedStringResource(
+                "onboarding.home.updatedBy",
+                defaultValue: "Last edited by %@ (%@)",
+                comment: "Home screen last editor; arguments are display name then USR-… ref"
+            ))
+            return String(format: format, locale: .current, displayName, ref)
+        }
 
         static let projectFolder = LocalizedStringResource(
             "onboarding.open.projectFolder",

@@ -29,7 +29,7 @@ struct GoStore: GenealogyStore {
         guard resp.found else {
             return nil
         }
-        return InstallIdentity(userID: resp.userID, displayName: resp.displayName)
+        return InstallIdentity(userID: resp.userID, displayName: resp.displayName, ref: resp.ref)
     }
 
     func completeOnboarding(
@@ -50,7 +50,9 @@ struct GoStore: GenealogyStore {
         return OnboardingResult(
             projectDir: resp.projectDir,
             userID: resp.userID,
-            displayName: resp.displayName
+            displayName: resp.displayName,
+            ref: resp.ref,
+            project: Self.mapProject(resp.project)
         )
     }
 
@@ -94,7 +96,9 @@ struct GoStore: GenealogyStore {
         return OnboardingResult(
             projectDir: resp.projectDir,
             userID: resp.userID,
-            displayName: resp.displayName
+            displayName: resp.displayName,
+            ref: resp.ref,
+            project: Self.mapProject(resp.project)
         )
     }
 
@@ -105,7 +109,9 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.listProjectUsers,
             request: req
         )
-        return resp.users.map { InstallIdentity(userID: $0.userID, displayName: $0.displayName) }
+        return resp.users.map {
+            InstallIdentity(userID: $0.userID, displayName: $0.displayName, ref: $0.ref)
+        }
     }
 
     func removeActiveProject(identityDir: String) async throws {
@@ -123,6 +129,28 @@ struct GoStore: GenealogyStore {
         let _: Provenencia_Engine_V1_SignOutResponse = try await provenenciaCall(
             method: CoreMethod.signOut,
             request: req
+        )
+    }
+
+    func projectInfo(projectDir: String) async throws -> ProjectInfo {
+        var req = Provenencia_Engine_V1_GetProjectInfoRequest()
+        req.projectDir = projectDir
+        let resp: Provenencia_Engine_V1_GetProjectInfoResponse = try await provenenciaCall(
+            method: CoreMethod.getProjectInfo,
+            request: req
+        )
+        return Self.mapProject(resp.project)
+    }
+
+    private static func mapProject(_ p: Provenencia_Engine_V1_ProjectInfo) -> ProjectInfo {
+        ProjectInfo(
+            label: p.label,
+            folderName: p.folderName,
+            createdAt: p.createdAt,
+            updatedAt: p.updatedAt,
+            updatedByUserID: p.updatedByUserID,
+            updatedByDisplayName: p.updatedByDisplayName,
+            updatedByRef: p.updatedByRef
         )
     }
 }

@@ -19,6 +19,7 @@ const (
 	MethodRemoveActiveProject   = int32(engine.Method_METHOD_REMOVE_ACTIVE_PROJECT)
 	MethodListProjectUsers      = int32(engine.Method_METHOD_LIST_PROJECT_USERS)
 	MethodSignOut               = int32(engine.Method_METHOD_SIGN_OUT)
+	MethodGetProjectInfo        = int32(engine.Method_METHOD_GET_PROJECT_INFO)
 )
 
 // Call routes one coarse FFI operation to api/ffi/handlers.
@@ -44,6 +45,8 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.ListProjectUsers(in)
 	case MethodSignOut:
 		return handlers.SignOut(in)
+	case MethodGetProjectInfo:
+		return handlers.GetProjectInfo(in)
 	default:
 		return nil, fmt.Errorf("unknown method %d", method)
 	}

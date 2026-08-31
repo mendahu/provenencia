@@ -28,7 +28,7 @@ That question is answered by a globally unique User UUID and a display name.
 
 # 2. Local-first identity
 
-Contributor identity is a UUIDv7 plus a display name. It is created on **first create-project or first open** on an install (mint a new User, or adopt one already in the folder). It is stored in **application support** and copied into each project’s `users` table.
+Contributor identity is a UUIDv7, a display name, and a short `USR-…` ref. It is created on **first create-project or first open** on an install (mint a new User, or adopt one already in the folder). It is stored in **application support** and copied into each project’s `users` table.
 
 For example:
 
@@ -36,6 +36,7 @@ For example:
 User U1
   id = 019c...
   display_name = "Jake Robins"
+  ref = "USR-F4N2P"
 ```
 
 That UUID becomes the durable contributor identity used by audit history.
@@ -79,7 +80,8 @@ The MVP `users` table is intentionally minimal.
 ```sql
 CREATE TABLE users (
     id              BLOB PRIMARY KEY,          -- UUIDv7, 16 bytes
-    display_name    TEXT NOT NULL
+    display_name    TEXT NOT NULL,
+    ref             TEXT UNIQUE                -- USR-F4N2P; required by the app
 ) STRICT;
 ```
 
@@ -106,6 +108,10 @@ A. García
 ```
 
 If the display name changes, that durable project-data change is itself auditable.
+
+## 3.3 `ref`
+
+`ref` is a short user-facing identifier in the shared `{PREFIX}-{token}` form with prefix `USR` (for example `USR-F4N2P`). It distinguishes contributors who share a display name. Machine identity remains the UUID. The same `ref` is stored on the install-local `identity.json` and copied into each project’s `users` row.
 
 ---
 
@@ -286,7 +292,7 @@ Everything else in this document's future-extension section is intentionally def
 
 1. MVP supports one local user per desktop application identity.
 2. No authentication or network access is required.
-3. `users` contains only `id` and `display_name` in the MVP.
+3. `users` contains `id`, `display_name`, and `ref` (`USR-…`) in the MVP.
 4. User IDs are globally unique UUIDv7 values rather than project-local integers.
 5. The same local User UUID should be reused across projects created by that desktop identity.
 6. `audit_transactions.user_id` references the durable User UUID.

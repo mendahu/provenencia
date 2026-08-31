@@ -36,7 +36,7 @@ That is enough to prove the stack: SwiftUI → protobuf FFI → Go core → SQLi
 - Schema enough for identity: `users` (`id` BLOB UUIDv7, `display_name` TEXT), SQLite `STRICT`, migrations owned by Go.
 - Install-local identity file in Application Support (outside the project). Same UUID reused for later projects.
 - First-run UI: collect **your name** (contributor display name) and a **project / family name** (this document). No email, password, or login.
-- Create a first project as part of onboarding. Default parent: Documents. Folder basename is the project name plus `.provenencia` (for example `Robins Family.provenencia`).
+- Create a first project as part of onboarding. Default parent: Documents. Folder basename is a kebab slug of the project label plus `.provenencia` (for example label `Robins Family` → `robins-family.provenencia`).
 - Returning launch: if an active project is stored and still on disk, skip the picker and open it. Identity plus folders in Documents is not enough.
 - Developer path: `open` the Xcode project / run the Mac target and talk to a live Go core and SQLite file on this machine.
 
@@ -63,7 +63,7 @@ That is enough to prove the stack: SwiftUI → protobuf FFI → Go core → SQLi
    - a `users` row with that id and display name.
 4. Quit and relaunch: do not ask for your name again; the same UUID is used. Reopen the last project when an active-project pointer exists.
 5. Display name is attribution text, not a login. It need not be unique.
-6. Project / family name labels **this file** in Finder and the window title. It is not the User identity. Spike 1 does not need a separate title table: the folder basename is the name. Renaming the project later can be a Finder rename or a later use-case.
+6. Project / family **label** is stored in the catalog `project` table. The folder basename is a kebab-case slug of that label (for example `Robins Family` → `robins-family.provenencia`). It is not the User identity.
 7. Sanitize the folder name for the filesystem (`/`, `:`, leading dots, etc.). If `{Name}.provenencia` already exists in the chosen parent, fail with a clear error (do not silently overwrite).
 8. OS account is not the identity provider. Do not key identity off macOS username or iCloud. Do not default the project name to the macOS account name without asking.
 
@@ -80,11 +80,12 @@ Minimum contents (JSON is fine for v0; this is install-local, not the portable p
 ```json
 {
   "user_id": "<uuidv7 canonical string>",
-  "display_name": "Jake Robins"
+  "display_name": "Jake Robins",
+  "ref": "USR-F4N2P"
 }
 ```
 
-`user_id` in the file must match `users.id` in the project (16-byte BLOB in SQLite). Display name in the file may be a cache of the last known name; the project `users` row is what later audit UI will show.
+`user_id` in the file must match `users.id` in the project (16-byte BLOB in SQLite). Display name in the file may be a cache of the last known name; the project `users` row is what later audit UI will show. `ref` is the short `USR-…` identifier shared with the catalog.
 
 Do not put passwords, tokens, or email in this file.
 

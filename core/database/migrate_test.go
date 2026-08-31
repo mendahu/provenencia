@@ -99,6 +99,9 @@ func TestShippedMigrations(t *testing.T) {
 				if !strings.Contains(steps[0].sql, "CREATE TABLE users") {
 					t.Fatalf("000001.sql missing users: %s", steps[0].sql)
 				}
+				if ver < 2 || !strings.Contains(steps[1].sql, "CREATE TABLE project") {
+					t.Fatalf("000002.sql missing project: ver=%d sql=%s", ver, steps[1].sql)
+				}
 			},
 		},
 	}
