@@ -11,26 +11,34 @@ struct OnboardingIdentifyView: View {
                         .font(.title2)
                     Text(L10n.Onboarding.nameResearchBody)
                         .foregroundStyle(.secondary)
-                    TextField(
-                        String(localized: L10n.Onboarding.researcherName),
-                        text: $model.displayName,
-                        prompt: Text(L10n.Onboarding.researcherNamePrompt)
-                    )
-                        .textFieldStyle(.roundedBorder)
-                        .disabled(model.researcherLocked)
-                        .accessibilityIdentifier("onboarding.displayName")
-                    TextField(
-                        String(localized: L10n.Onboarding.familyName),
-                        text: $model.familyName,
-                        prompt: Text(L10n.Onboarding.familyNamePrompt)
-                    )
-                        .textFieldStyle(.roundedBorder)
-                        .accessibilityIdentifier("onboarding.familyName")
-                    if !model.folderNamePreview.isEmpty {
-                        Text(L10n.Onboarding.folderNamePreview(folderName: model.folderNamePreview))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .accessibilityIdentifier("onboarding.folderPreview")
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(L10n.Onboarding.researcherName)
+                            .font(.headline)
+                        TextField(
+                            "",
+                            text: $model.displayName,
+                            prompt: Text(L10n.Onboarding.researcherNamePrompt)
+                        )
+                            .textFieldStyle(.roundedBorder)
+                            .disabled(model.researcherLocked)
+                            .accessibilityIdentifier("onboarding.displayName")
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(L10n.Onboarding.familyName)
+                            .font(.headline)
+                        TextField(
+                            "",
+                            text: $model.familyName,
+                            prompt: Text(L10n.Onboarding.familyNamePrompt)
+                        )
+                            .textFieldStyle(.roundedBorder)
+                            .accessibilityIdentifier("onboarding.familyName")
+                        if !model.folderNamePreview.isEmpty {
+                            Text(L10n.Onboarding.folderNamePreview(folderName: model.folderNamePreview))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .accessibilityIdentifier("onboarding.folderPreview")
+                        }
                     }
                 } else {
                     Text(L10n.Onboarding.whoAreYouTitle)
@@ -54,14 +62,18 @@ struct OnboardingIdentifyView: View {
                     .pickerStyle(.radioGroup)
                     .accessibilityIdentifier("onboarding.contributor")
                     if model.selectedContributorID == OnboardingModel.newContributorID {
-                        TextField(
-                            String(localized: L10n.Onboarding.researcherName),
-                            text: $model.displayName,
-                            prompt: Text(L10n.Onboarding.researcherNamePrompt)
-                        )
-                            .textFieldStyle(.roundedBorder)
-                            .disabled(model.researcherLocked)
-                            .accessibilityIdentifier("onboarding.displayName")
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(L10n.Onboarding.researcherName)
+                                .font(.headline)
+                            TextField(
+                                "",
+                                text: $model.displayName,
+                                prompt: Text(L10n.Onboarding.researcherNamePrompt)
+                            )
+                                .textFieldStyle(.roundedBorder)
+                                .disabled(model.researcherLocked)
+                                .accessibilityIdentifier("onboarding.displayName")
+                        }
                     }
                 }
                 if let errorText = model.errorText {
