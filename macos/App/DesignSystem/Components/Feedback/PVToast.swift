@@ -39,11 +39,18 @@ enum PVToastTone {
 ///
 /// See `DesignSystem/README.md` / `PVButton.swift` for the component
 /// pattern this follows.
+///
+/// Auto-dismisses after `autoDismissAfter` (default 5 seconds) by calling
+/// `onDismiss`, unless it's `nil` — pass `autoDismissAfter: nil` to keep a
+/// toast on screen until the user (or the caller) dismisses it explicitly.
 struct PVToast: View {
+    static let defaultAutoDismissDelay: TimeInterval = 5
+
     let tone: PVToastTone
     var title: String?
     var message: String?
     var onDismiss: (() -> Void)?
+    var autoDismissAfter: TimeInterval? = PVToast.defaultAutoDismissDelay
 
     var body: some View {
         HStack(alignment: .top, spacing: PVSpacing.space5) {
@@ -89,6 +96,11 @@ struct PVToast: View {
         .clipShape(RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous))
         .pvShadow(PVElevation.lg)
         .accessibilityElement(children: .combine)
+        .task {
+            guard let autoDismissAfter else { return }
+            try? await Task.sleep(for: .seconds(autoDismissAfter))
+            onDismiss?()
+        }
     }
 }
 
@@ -96,7 +108,7 @@ struct PVToast: View {
     VStack(spacing: PVSpacing.space5) {
         PVToast(tone: .danger, message: "Project already open.", onDismiss: {})
         PVToast(tone: .info, title: "Heads up", message: "This project was last opened on another Mac.")
-        PVToast(tone: .success, message: "Project created.")
+        PVToast(tone: .success, message: "Project created.", autoDismissAfter: nil)
     }
     .padding(PVSpacing.space9)
     .background(PVColor.surfacePage)
