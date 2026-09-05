@@ -35,7 +35,7 @@ struct PVField<Content: View>: View {
                 HStack(spacing: PVSpacing.space1) {
                     Text(label)
                     if required {
-                        Text("*").foregroundStyle(PVColor.danger)
+                        Text(L10n.DesignSystem.requiredMarker).foregroundStyle(PVColor.danger)
                     }
                 }
                 .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
