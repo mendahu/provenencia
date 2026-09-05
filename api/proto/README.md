@@ -26,10 +26,10 @@ Regenerate:
 
 A single pair of exports (see `api/libprovenencia`). Status codes and `const` on `in` are documented on the Mac bridging header [`macos/App/Resources/Provenencia-Bridging-Header.h`](../../macos/App/Resources/Provenencia-Bridging-Header.h).
 
-- `provenencia_call(method, in, in_len, out, out_len)` — `method` is `provenencia.engine.v1.Method`; payloads are protobuf bytes. The Go export cannot use C `const` on `in` (`cgo //export`).
+- `provenencia_call(method, in, in_len, out, out_len)` — `method` is `provenencia.engine.v1.Method`. On success (`status` 0), `out` is the method’s response protobuf (or empty). On failure (`status` 1), `out` is a protobuf [`Error`](engine.proto) (`code`, `kind`, `params`) — not UTF-8 English. The Go export cannot use C `const` on `in` (`cgo //export`).
 - `provenencia_free` — caller frees `out`.
 
-Do not add per-field C getters.
+Do not add per-field C getters. New user-visible failures need a [`core/apperr`](../../core/apperr) code plus a matching `L10n.Errors` / String Catalog entry.
 
 ## Rebuild the Mac library
 

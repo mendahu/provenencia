@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -11,7 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/installstate"
 )
 
-var ErrBlankName = errors.New("Name is empty.")
+var ErrBlankName = apperr.New(apperr.CodeOnboardingBlankName, apperr.KindUser)
 
 // Result is the created/opened project path and the install identity used.
 type Result struct {

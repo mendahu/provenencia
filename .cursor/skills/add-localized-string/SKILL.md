@@ -4,8 +4,8 @@ description: >-
   Adds or updates Provenencia macOS UI copy via typed L10n and String Catalogs.
   Use when adding or changing user-facing SwiftUI/AppKit strings, L10n.swift,
   Localizable.xcstrings, InfoPlist.xcstrings, localization, i18n, l10n, or when
-  replacing hard-coded English in macos/App. Not for Go/FFI err.Error() text
-  unless the user asks to map errors to L10n.
+  replacing hard-coded English in macos/App. Also use when mapping a new FFI
+  error code under L10n.Errors.
 ---
 
 # Add or update a localized string
@@ -72,7 +72,7 @@ errorText = String(localized: L10n.Onboarding.missingProject)
 
 `Text(…)` accepts `LocalizedStringResource`. `Button` / `TextField` / `Picker` title inits on our macOS 14 deployment target need `StringProtocol` — wrap with `String(localized:)`.
 7. Accessibility: keep `.accessibilityIdentifier("dotted.name")`. Do not UI-test by localized title.
-8. Go/FFI `error.localizedDescription` may stay English until explicitly mapped to `L10n` (prefer stable codes later).
+8. Go/FFI failures arrive as protobuf `Error` codes. Add `L10n.Errors` + catalog keys (`error.<domain>.<name>`) when introducing a new user-visible code; map via `L10n.Errors.message`.
 
 ## Do not
 

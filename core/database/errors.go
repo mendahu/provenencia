@@ -1,12 +1,12 @@
 package database
 
-import "errors"
+import "github.com/mendahu/provenencia/core/apperr"
 
 var (
-	ErrAlreadyExists      = errors.New("Project already exists.")
-	ErrAlreadyOpen        = errors.New("Project already open.")
-	ErrNotAProject        = errors.New("Not a Provenencia catalog.")
-	ErrUnsupportedVersion = errors.New("Unsupported catalog version.")
-	ErrInvalidFolderName  = errors.New("Folder name must end in .provenencia.")
-	ErrClosed             = errors.New("Catalog closed.")
+	ErrAlreadyExists      = apperr.New(apperr.CodeCatalogAlreadyExists, apperr.KindConflict)
+	ErrAlreadyOpen        = apperr.New(apperr.CodeCatalogAlreadyOpen, apperr.KindConflict)
+	ErrNotAProject        = apperr.New(apperr.CodeCatalogNotAProject, apperr.KindUser)
+	ErrUnsupportedVersion = apperr.New(apperr.CodeCatalogUnsupportedVersion, apperr.KindUser)
+	ErrInvalidFolderName  = apperr.New(apperr.CodeCatalogInvalidFolderName, apperr.KindUser)
+	ErrClosed             = apperr.New(apperr.CodeCatalogClosed, apperr.KindConflict)
 )

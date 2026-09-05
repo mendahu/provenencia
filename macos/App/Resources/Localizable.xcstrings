@@ -1,525 +1,763 @@
 {
-  "sourceLanguage" : "en",
-  "strings" : {
-    "" : {
-
-    },
-    "designSystem.field.requiredMarker" : {
-      "comment" : "Marks a required PVField as required, shown beside its label",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "*"
+  "sourceLanguage": "en",
+  "strings": {
+    "designSystem.field.requiredMarker": {
+      "comment": "Marks a required PVField as required, shown beside its label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "*"
           }
         }
       }
     },
-    "designSystem.toast.dismiss" : {
-      "comment" : "Accessibility label for a PVToast's dismiss button",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dismiss"
+    "designSystem.toast.dismiss": {
+      "comment": "Accessibility label for a PVToast's dismiss button",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dismiss"
           }
         }
       }
     },
-    "onboarding.chooseFile.bodyChoose" : {
-      "comment" : "Onboarding choose-file body when researcher is not locked",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Do you already have a Provenencia project, or do you want to start a new one?"
+    "error.catalog.already_exists": {
+      "comment": "FFI error catalog.already_exists",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Project already exists."
           }
         }
       }
     },
-    "onboarding.chooseFile.bodySignedIn" : {
-      "comment" : "Onboarding choose-file body when researcher is locked; argument is display name",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You're signed in as %@. Open a project you already have, or create a new one."
+    "error.catalog.already_open": {
+      "comment": "FFI error catalog.already_open",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Project already open."
           }
         }
       }
     },
-    "onboarding.chooseFile.createNewFolderNote" : {
-      "comment" : "Info note shown when create-new mode is selected, explaining where the project folder is written",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The folder is written to ~/Documents when you continue. You name the research on the next screen."
+    "error.catalog.closed": {
+      "comment": "FFI error catalog.closed",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Catalog closed."
           }
         }
       }
     },
-    "onboarding.chooseFile.createNewSubtitle" : {
-      "comment" : "Create-new mode card subtitle",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start a new project folder"
+    "error.catalog.invalid_folder_name": {
+      "comment": "FFI error catalog.invalid_folder_name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folder name must end in .provenencia."
           }
         }
       }
     },
-    "onboarding.chooseFile.createNewTitle" : {
-      "comment" : "Create-new mode card title",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Create new"
+    "error.catalog.not_a_project": {
+      "comment": "FFI error catalog.not_a_project",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not a Provenencia catalog."
           }
         }
       }
     },
-    "onboarding.chooseFile.haveFileSubtitle" : {
-      "comment" : "Open-existing mode card subtitle",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open a project you already have"
+    "error.catalog.unsupported_version": {
+      "comment": "FFI error catalog.unsupported_version; argument is catalog user_version",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unsupported catalog version (%@)."
           }
         }
       }
     },
-    "onboarding.chooseFile.haveFileTitle" : {
-      "comment" : "Open-existing mode card title",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "I have a file"
+    "error.file.not_found": {
+      "comment": "FFI error file.not_found",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File not found."
           }
         }
       }
     },
-    "onboarding.chooseFile.welcomeTitle" : {
-      "comment" : "Onboarding choose-file headline",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Welcome to Provenencia"
+    "error.identity.invalid_id": {
+      "comment": "FFI error identity.invalid_id",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "User ID must be UUIDv7."
           }
         }
       }
     },
-    "onboarding.common.back" : {
-      "comment" : "Back button",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Back"
+    "error.identity.invalid_name": {
+      "comment": "FFI error identity.invalid_name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Display name is empty."
           }
         }
       }
     },
-    "onboarding.common.continue" : {
-      "comment" : "Continue button",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Continue"
+    "error.identity.invalid_ref": {
+      "comment": "FFI error identity.invalid_ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "User ref is invalid."
           }
         }
       }
     },
-    "onboarding.common.signOut" : {
-      "comment" : "Sign out button",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sign out"
+    "error.identity.not_found": {
+      "comment": "FFI error identity.not_found",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identity file not found."
           }
         }
       }
     },
-    "onboarding.home.created" : {
-      "comment" : "Home screen created date; argument is localized date",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Created %@"
+    "error.install.invalid": {
+      "comment": "FFI error install.invalid",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Project dir is empty."
           }
         }
       }
     },
-    "onboarding.home.folder" : {
-      "comment" : "Home screen project folder line; argument is folder basename",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Folder: %@"
+    "error.install.not_found": {
+      "comment": "FFI error install.not_found",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active project file not found."
           }
         }
       }
     },
-    "onboarding.home.signedInTitle" : {
-      "comment" : "Home screen headline after successful open/create",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You're signed in"
+    "error.internal.unknown": {
+      "comment": "FFI error internal.unknown and other unmapped codes",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Something went wrong. Please try again."
           }
         }
       }
     },
-    "onboarding.home.updated" : {
-      "comment" : "Home screen updated date; argument is localized date",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Updated %@"
+    "error.onboarding.blank_name": {
+      "comment": "FFI error onboarding.blank_name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name is empty."
           }
         }
       }
     },
-    "onboarding.home.updatedBy" : {
-      "comment" : "Home screen last editor; arguments are display name then USR-… ref",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Last edited by %@ (%@)"
+    "error.onboarding.invalid_family_name": {
+      "comment": "FFI error onboarding.invalid_family_name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid family name."
           }
         }
       }
     },
-    "onboarding.home.updatedByName" : {
-      "comment" : "Home screen last editor without ref; argument is display name",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Last edited by %@"
+    "error.onboarding.unknown_user": {
+      "comment": "FFI error onboarding.unknown_user",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "User not in project."
           }
         }
       }
     },
-    "onboarding.identify.contributorOption" : {
-      "comment" : "Contributor accessibility/combined label; arguments are display name then USR-… ref",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ (%@)"
+    "error.project.invalid_metadata": {
+      "comment": "FFI error project.invalid_metadata",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid project metadata."
           }
         }
       }
     },
-    "onboarding.identify.contributorRef" : {
-      "comment" : "Parenthesized short ref beside a display name; argument is USR-… ref",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "(%@)"
+    "error.project.missing_metadata": {
+      "comment": "FFI error project.missing_metadata",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Project metadata missing."
           }
         }
       }
     },
-    "onboarding.identify.contributorPicker" : {
-      "comment" : "Accessibility label for contributor picker",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Contributor"
+    "error.users.invalid": {
+      "comment": "FFI error users.invalid",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid user ID, display name, or ref."
           }
         }
       }
     },
-    "onboarding.identify.contributorsBody" : {
-      "comment" : "Open-mode identify body; argument is project folder name",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "These are the contributors already in %@. Choose yourself to keep the same ID, or add a new contributor."
+    "onboarding.chooseFile.bodyChoose": {
+      "comment": "Onboarding choose-file body when researcher is not locked",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Do you already have a Provenencia project, or do you want to start a new one?"
           }
         }
       }
     },
-    "onboarding.identify.familyName" : {
-      "comment" : "Family / project name field label",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Family / project name"
+    "onboarding.chooseFile.bodySignedIn": {
+      "comment": "Onboarding choose-file body when researcher is locked; argument is display name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You're signed in as %@. Open a project you already have, or create a new one."
           }
         }
       }
     },
-    "onboarding.identify.familyNamePrompt" : {
-      "comment" : "Placeholder for family / project name field",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Smith Family"
+    "onboarding.chooseFile.createNewFolderNote": {
+      "comment": "Info note shown when create-new mode is selected, explaining where the project folder is written",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The folder is written to ~/Documents when you continue. You name the research on the next screen."
           }
         }
       }
     },
-    "onboarding.identify.folderNamePreview" : {
-      "comment" : "Live preview of kebab-case project folder name; argument is folder basename",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Folder: %@"
+    "onboarding.chooseFile.createNewSubtitle": {
+      "comment": "Create-new mode card subtitle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start a new project folder"
           }
         }
       }
     },
-    "onboarding.identify.nameResearchBody" : {
-      "comment" : "Create-mode identify helper copy",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your researcher name is how work is attributed. The project name is a label; the folder on disk uses a simple slug."
+    "onboarding.chooseFile.createNewTitle": {
+      "comment": "Create-new mode card title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create new"
           }
         }
       }
     },
-    "onboarding.identify.nameResearchTitle" : {
-      "comment" : "Create-mode identify headline",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Name this research"
+    "onboarding.chooseFile.haveFileSubtitle": {
+      "comment": "Open-existing mode card subtitle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open a project you already have"
           }
         }
       }
     },
-    "onboarding.identify.newContributorIDNote" : {
-      "comment" : "Note under the new-contributor name field explaining an ID will be assigned",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A new ID is minted on continue"
+    "onboarding.chooseFile.haveFileTitle": {
+      "comment": "Open-existing mode card title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I have a file"
           }
         }
       }
     },
-    "onboarding.identify.notListed" : {
-      "comment" : "Picker option to add a new contributor",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "I’m not listed — add me"
+    "onboarding.chooseFile.welcomeTitle": {
+      "comment": "Onboarding choose-file headline",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Welcome to Provenencia"
           }
         }
       }
     },
-    "onboarding.identify.researcherName" : {
-      "comment" : "Researcher name field label",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Researcher name"
+    "onboarding.common.back": {
+      "comment": "Back button",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back"
           }
         }
       }
     },
-    "onboarding.identify.researcherNamePrompt" : {
-      "comment" : "Placeholder for researcher name field",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jane Smith"
+    "onboarding.common.continue": {
+      "comment": "Continue button",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue"
           }
         }
       }
     },
-    "onboarding.identify.thisProject" : {
-      "comment" : "Fallback project name when folder basename is unknown",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "this project"
+    "onboarding.common.signOut": {
+      "comment": "Sign out button",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign out"
           }
         }
       }
     },
-    "onboarding.identify.whoAreYouTitle" : {
-      "comment" : "Open-mode identify headline",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Who are you in this file?"
+    "onboarding.home.created": {
+      "comment": "Home screen created date; argument is localized date",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Created %@"
           }
         }
       }
     },
-    "onboarding.loading.footerNote" : {
-      "comment" : "Footer note on the loading screen, reassuring no project is auto-opened",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No project is opened until you choose one"
+    "onboarding.home.folder": {
+      "comment": "Home screen project folder line; argument is folder basename",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folder: %@"
           }
         }
       }
     },
-    "onboarding.missingProject" : {
-      "comment" : "Error when the last active project folder is missing",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The last project could not be found. Create or open a project."
+    "onboarding.home.signedInTitle": {
+      "comment": "Home screen headline after successful open/create",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You're signed in"
           }
         }
       }
     },
-    "onboarding.open.chooseFolder" : {
-      "comment" : "Button to open a folder picker",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose…"
+    "onboarding.home.updated": {
+      "comment": "Home screen updated date; argument is localized date",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updated %@"
           }
         }
       }
     },
-    "onboarding.open.existingProjectPicker" : {
-      "comment" : "Accessibility label for existing-project picker",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Existing project"
+    "onboarding.home.updatedBy": {
+      "comment": "Home screen last editor; arguments are display name then USR-… ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last edited by %@ (%@)"
           }
         }
       }
     },
-    "onboarding.open.noProjectsInDocuments" : {
-      "comment" : "Empty state when Documents has no .provenencia folders",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No project folders in Documents."
+    "onboarding.home.updatedByName": {
+      "comment": "Home screen last editor without ref; argument is display name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last edited by %@"
           }
         }
       }
     },
-    "onboarding.open.openPanelMessage" : {
-      "comment" : "NSOpenPanel message for choosing a project folder",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose a Provenencia project folder."
+    "onboarding.identify.contributorOption": {
+      "comment": "Contributor accessibility/combined label; arguments are display name then USR-… ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (%@)"
           }
         }
       }
     },
-    "onboarding.open.openPanelPrompt" : {
-      "comment" : "NSOpenPanel confirm button",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open"
+    "onboarding.identify.contributorPicker": {
+      "comment": "Accessibility label for contributor picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contributor"
           }
         }
       }
     },
-    "onboarding.open.projectFolder" : {
-      "comment" : "Section label above project folder picker",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Project folder"
+    "onboarding.identify.contributorRef": {
+      "comment": "Parenthesized short ref beside a display name; argument is USR-… ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(%@)"
           }
         }
       }
     },
-    "onboarding.open.selectProject" : {
-      "comment" : "Placeholder row in existing-project picker",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Select a project"
+    "onboarding.identify.contributorsBody": {
+      "comment": "Open-mode identify body; argument is project folder name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These are the contributors already in %@. Choose yourself to keep the same ID, or add a new contributor."
           }
         }
       }
-    }
+    },
+    "onboarding.identify.familyName": {
+      "comment": "Family / project name field label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Family / project name"
+          }
+        }
+      }
+    },
+    "onboarding.identify.familyNamePrompt": {
+      "comment": "Placeholder for family / project name field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Smith Family"
+          }
+        }
+      }
+    },
+    "onboarding.identify.folderNamePreview": {
+      "comment": "Live preview of kebab-case project folder name; argument is folder basename",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folder: %@"
+          }
+        }
+      }
+    },
+    "onboarding.identify.nameResearchBody": {
+      "comment": "Create-mode identify helper copy",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your researcher name is how work is attributed. The project name is a label; the folder on disk uses a simple slug."
+          }
+        }
+      }
+    },
+    "onboarding.identify.nameResearchTitle": {
+      "comment": "Create-mode identify headline",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name this research"
+          }
+        }
+      }
+    },
+    "onboarding.identify.newContributorIDNote": {
+      "comment": "Note under the new-contributor name field explaining an ID will be assigned",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A new ID is minted on continue"
+          }
+        }
+      }
+    },
+    "onboarding.identify.notListed": {
+      "comment": "Picker option to add a new contributor",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I’m not listed — add me"
+          }
+        }
+      }
+    },
+    "onboarding.identify.researcherName": {
+      "comment": "Researcher name field label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Researcher name"
+          }
+        }
+      }
+    },
+    "onboarding.identify.researcherNamePrompt": {
+      "comment": "Placeholder for researcher name field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jane Smith"
+          }
+        }
+      }
+    },
+    "onboarding.identify.thisProject": {
+      "comment": "Fallback project name when folder basename is unknown",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "this project"
+          }
+        }
+      }
+    },
+    "onboarding.identify.whoAreYouTitle": {
+      "comment": "Open-mode identify headline",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Who are you in this file?"
+          }
+        }
+      }
+    },
+    "onboarding.loading.footerNote": {
+      "comment": "Footer note on the loading screen, reassuring no project is auto-opened",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No project is opened until you choose one"
+          }
+        }
+      }
+    },
+    "onboarding.missingProject": {
+      "comment": "Error when the last active project folder is missing",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The last project could not be found. Create or open a project."
+          }
+        }
+      }
+    },
+    "onboarding.open.chooseFolder": {
+      "comment": "Button to open a folder picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose…"
+          }
+        }
+      }
+    },
+    "onboarding.open.existingProjectPicker": {
+      "comment": "Accessibility label for existing-project picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Existing project"
+          }
+        }
+      }
+    },
+    "onboarding.open.noProjectsInDocuments": {
+      "comment": "Empty state when Documents has no .provenencia folders",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No project folders in Documents."
+          }
+        }
+      }
+    },
+    "onboarding.open.openPanelMessage": {
+      "comment": "NSOpenPanel message for choosing a project folder",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a Provenencia project folder."
+          }
+        }
+      }
+    },
+    "onboarding.open.openPanelPrompt": {
+      "comment": "NSOpenPanel confirm button",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open"
+          }
+        }
+      }
+    },
+    "onboarding.open.projectFolder": {
+      "comment": "Section label above project folder picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Project folder"
+          }
+        }
+      }
+    },
+    "onboarding.open.selectProject": {
+      "comment": "Placeholder row in existing-project picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select a project"
+          }
+        }
+      }
+    },
+    "": {}
   },
-  "version" : "1.0"
+  "version": "1.0"
 }

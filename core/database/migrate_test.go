@@ -1,9 +1,12 @@
 package database
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"testing/fstest"
+
+	"github.com/mendahu/provenencia/core/apperr"
 )
 
 func TestParseMigrations(t *testing.T) {
@@ -66,7 +69,10 @@ func TestParseMigrations(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			steps, ver, err := parseMigrations(tt.files, "migrations")
 			if tt.errSub != "" {
-				if err == nil || !strings.Contains(err.Error(), tt.errSub) {
+				if err == nil || !errors.Is(err, apperr.New(apperr.CodeInternalMigrations, apperr.KindInternal)) {
+					t.Fatalf("err %v want internal.migrations", err)
+				}
+				if !strings.Contains(err.Error(), tt.errSub) {
 					t.Fatalf("err %v want substring %q", err, tt.errSub)
 				}
 				return

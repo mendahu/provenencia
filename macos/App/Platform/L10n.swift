@@ -294,4 +294,169 @@ enum L10n {
             comment: "Footer note on the loading screen, reassuring no project is auto-opened"
         )
     }
+
+    /// Maps stable Go/FFI error codes to localized user-facing copy.
+    enum Errors {
+        static let catalogAlreadyExists = LocalizedStringResource(
+            "error.catalog.already_exists",
+            defaultValue: "Project already exists.",
+            comment: "FFI error catalog.already_exists"
+        )
+        static let catalogAlreadyOpen = LocalizedStringResource(
+            "error.catalog.already_open",
+            defaultValue: "Project already open.",
+            comment: "FFI error catalog.already_open"
+        )
+        static let catalogNotAProject = LocalizedStringResource(
+            "error.catalog.not_a_project",
+            defaultValue: "Not a Provenencia catalog.",
+            comment: "FFI error catalog.not_a_project"
+        )
+        static func catalogUnsupportedVersion(version: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "error.catalog.unsupported_version",
+                defaultValue: "Unsupported catalog version (%@).",
+                comment: "FFI error catalog.unsupported_version; argument is catalog user_version"
+            ))
+            return String(format: format, locale: .current, version)
+        }
+        static let catalogInvalidFolderName = LocalizedStringResource(
+            "error.catalog.invalid_folder_name",
+            defaultValue: "Folder name must end in .provenencia.",
+            comment: "FFI error catalog.invalid_folder_name"
+        )
+        static let catalogClosed = LocalizedStringResource(
+            "error.catalog.closed",
+            defaultValue: "Catalog closed.",
+            comment: "FFI error catalog.closed"
+        )
+        static let projectInvalidMetadata = LocalizedStringResource(
+            "error.project.invalid_metadata",
+            defaultValue: "Invalid project metadata.",
+            comment: "FFI error project.invalid_metadata"
+        )
+        static let projectMissingMetadata = LocalizedStringResource(
+            "error.project.missing_metadata",
+            defaultValue: "Project metadata missing.",
+            comment: "FFI error project.missing_metadata"
+        )
+        static let usersInvalid = LocalizedStringResource(
+            "error.users.invalid",
+            defaultValue: "Invalid user ID, display name, or ref.",
+            comment: "FFI error users.invalid"
+        )
+        static let identityNotFound = LocalizedStringResource(
+            "error.identity.not_found",
+            defaultValue: "Identity file not found.",
+            comment: "FFI error identity.not_found"
+        )
+        static let identityInvalidName = LocalizedStringResource(
+            "error.identity.invalid_name",
+            defaultValue: "Display name is empty.",
+            comment: "FFI error identity.invalid_name"
+        )
+        static let identityInvalidID = LocalizedStringResource(
+            "error.identity.invalid_id",
+            defaultValue: "User ID must be UUIDv7.",
+            comment: "FFI error identity.invalid_id"
+        )
+        static let identityInvalidRef = LocalizedStringResource(
+            "error.identity.invalid_ref",
+            defaultValue: "User ref is invalid.",
+            comment: "FFI error identity.invalid_ref"
+        )
+        static let installNotFound = LocalizedStringResource(
+            "error.install.not_found",
+            defaultValue: "Active project file not found.",
+            comment: "FFI error install.not_found"
+        )
+        static let installInvalid = LocalizedStringResource(
+            "error.install.invalid",
+            defaultValue: "Project dir is empty.",
+            comment: "FFI error install.invalid"
+        )
+        static let onboardingBlankName = LocalizedStringResource(
+            "error.onboarding.blank_name",
+            defaultValue: "Name is empty.",
+            comment: "FFI error onboarding.blank_name"
+        )
+        static let onboardingInvalidFamilyName = LocalizedStringResource(
+            "error.onboarding.invalid_family_name",
+            defaultValue: "Invalid family name.",
+            comment: "FFI error onboarding.invalid_family_name"
+        )
+        static let onboardingUnknownUser = LocalizedStringResource(
+            "error.onboarding.unknown_user",
+            defaultValue: "User not in project.",
+            comment: "FFI error onboarding.unknown_user"
+        )
+        static let fileNotFound = LocalizedStringResource(
+            "error.file.not_found",
+            defaultValue: "File not found.",
+            comment: "FFI error file.not_found"
+        )
+        static let unknown = LocalizedStringResource(
+            "error.internal.unknown",
+            defaultValue: "Something went wrong. Please try again.",
+            comment: "FFI error internal.unknown and other unmapped codes"
+        )
+
+        /// Resolves a wire error code (+ params) to localized UI copy.
+        static func message(code: String, params: [String] = []) -> String {
+            switch code {
+            case "catalog.already_exists":
+                return String(localized: catalogAlreadyExists)
+            case "catalog.already_open":
+                return String(localized: catalogAlreadyOpen)
+            case "catalog.not_a_project":
+                return String(localized: catalogNotAProject)
+            case "catalog.unsupported_version":
+                return catalogUnsupportedVersion(version: params.first ?? "?")
+            case "catalog.invalid_folder_name":
+                return String(localized: catalogInvalidFolderName)
+            case "catalog.closed":
+                return String(localized: catalogClosed)
+            case "project.invalid_metadata":
+                return String(localized: projectInvalidMetadata)
+            case "project.missing_metadata":
+                return String(localized: projectMissingMetadata)
+            case "users.invalid":
+                return String(localized: usersInvalid)
+            case "identity.not_found":
+                return String(localized: identityNotFound)
+            case "identity.invalid_name":
+                return String(localized: identityInvalidName)
+            case "identity.invalid_id":
+                return String(localized: identityInvalidID)
+            case "identity.invalid_ref":
+                return String(localized: identityInvalidRef)
+            case "install.not_found":
+                return String(localized: installNotFound)
+            case "install.invalid":
+                return String(localized: installInvalid)
+            case "onboarding.blank_name":
+                return String(localized: onboardingBlankName)
+            case "onboarding.invalid_family_name":
+                return String(localized: onboardingInvalidFamilyName)
+            case "onboarding.unknown_user":
+                return String(localized: onboardingUnknownUser)
+            case "file.not_found":
+                return String(localized: fileNotFound)
+            default:
+                return String(localized: unknown)
+            }
+        }
+
+        static func message(for error: Error) -> String {
+            if let coded = error as? CoreInvokeError {
+                switch coded {
+                case .coded(_, let code, _, let params):
+                    return message(code: code, params: params)
+                case .failed:
+                    return String(localized: unknown)
+                }
+            }
+            return String(localized: unknown)
+        }
+    }
 }

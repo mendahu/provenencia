@@ -1,14 +1,14 @@
 package users
 
 import (
-	"errors"
 	"strings"
 
+	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/ref"
 )
 
-var ErrInvalid = errors.New("Invalid user ID, display name, or ref.")
+var ErrInvalid = apperr.New(apperr.CodeUsersInvalid, apperr.KindUser)
 
 const (
 	sqlUpsert = `INSERT INTO users (id, display_name, ref) VALUES (?, ?, ?)

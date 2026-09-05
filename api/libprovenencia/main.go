@@ -13,6 +13,7 @@ import (
 	"unsafe"
 
 	"github.com/mendahu/provenencia/api/ffi"
+	"github.com/mendahu/provenencia/core/apperr"
 )
 
 func bytesFromC(ptr *C.uint8_t, n C.size_t) []byte {
@@ -26,7 +27,14 @@ func bytesFromC(ptr *C.uint8_t, n C.size_t) []byte {
 func provenencia_call(method C.int32_t, in *C.uint8_t, inLen C.size_t, out **C.uint8_t, outLen *C.size_t) C.int {
 	resp, err := ffi.Call(int32(method), bytesFromC(in, inLen))
 	if err != nil {
-		return copyOut(err.Error(), out, outLen, 1)
+		payload, encErr := ffi.EncodeError(err)
+		if encErr != nil {
+			payload, encErr = ffi.EncodeError(apperr.New(apperr.CodeInternalUnknown, apperr.KindInternal))
+			if encErr != nil {
+				return 2
+			}
+		}
+		return copyOutBytes(payload, out, outLen, 1)
 	}
 	if len(resp) == 0 {
 		*out = nil
@@ -34,10 +42,6 @@ func provenencia_call(method C.int32_t, in *C.uint8_t, inLen C.size_t, out **C.u
 		return 0
 	}
 	return copyOutBytes(resp, out, outLen, 0)
-}
-
-func copyOut(s string, out **C.uint8_t, outLen *C.size_t, status C.int) C.int {
-	return copyOutBytes([]byte(s), out, outLen, status)
 }
 
 func copyOutBytes(b []byte, out **C.uint8_t, outLen *C.size_t, status C.int) C.int {

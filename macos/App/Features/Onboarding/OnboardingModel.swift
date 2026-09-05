@@ -320,21 +320,8 @@ final class OnboardingModel {
         s.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// Formats an error as a proper sentence (capitalized, terminal
-    /// punctuation) before it reaches `errorText`. Most Go/FFI errors are
-    /// already full sentences, but this is a safety net for any that
-    /// aren't — `error.localizedDescription` is otherwise shown to the
-    /// user verbatim (per `docs/macos-client-patterns.md` §6, Go/FFI error
-    /// text stays English until mapped to `L10n`).
+    /// Maps a store/FFI error to localized toast copy via stable error codes.
     private func formattedError(_ error: Error) -> String {
-        var text = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let first = text.first else {
-            return text
-        }
-        text.replaceSubrange(text.startIndex...text.startIndex, with: first.uppercased())
-        if let last = text.last, !".!?".contains(last) {
-            text += "."
-        }
-        return text
+        L10n.Errors.message(for: error)
     }
 }

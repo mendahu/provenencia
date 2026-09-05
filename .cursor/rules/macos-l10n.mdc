@@ -13,7 +13,7 @@ Follow the project skill `.cursor/skills/add-localized-string/SKILL.md`. Full no
 - Keys: semantic dotted (`onboarding.chooseFile.welcomeTitle`). Nest by feature under `L10n`.
 - Interpolated copy: static key + `%@` in catalog/`defaultValue`, then `String(format:locale:_:)`.
 - Stable `.accessibilityIdentifier` for UI tests — not localized titles.
-- Do not localize Go/FFI `err.Error()` unless asked. No SwiftGen.
+- Do not localize by matching English Go strings. FFI failures are protobuf codes → `L10n.Errors`. No SwiftGen.
 
 ```swift
 // ❌ BAD

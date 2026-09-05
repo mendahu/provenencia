@@ -96,6 +96,54 @@ public nonisolated enum Provenencia_Engine_V1_Method: SwiftProtobuf.Enum, Swift.
 
 }
 
+/// ErrorKind classifies a failure for client UX (tone, retry hints). Copy still
+/// comes from the client's L10n map keyed by Error.code.
+public nonisolated enum Provenencia_Engine_V1_ErrorKind: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case unspecified // = 0
+  case user // = 1
+  case conflict // = 2
+  case notFound // = 3
+  case `internal` // = 4
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .unspecified
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .unspecified
+    case 1: self = .user
+    case 2: self = .conflict
+    case 3: self = .notFound
+    case 4: self = .internal
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .unspecified: return 0
+    case .user: return 1
+    case .conflict: return 2
+    case .notFound: return 3
+    case .internal: return 4
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Provenencia_Engine_V1_ErrorKind] = [
+    .unspecified,
+    .user,
+    .conflict,
+    .notFound,
+    .internal,
+  ]
+
+}
+
 public nonisolated struct Provenencia_Engine_V1_PingRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -455,12 +503,36 @@ public nonisolated struct Provenencia_Engine_V1_GetProjectInfoResponse: Sendable
   fileprivate var _project: Provenencia_Engine_V1_ProjectInfo? = nil
 }
 
+/// Error is the protobuf payload on provenencia_call status 1 (failure).
+/// Success payloads remain method-specific response messages.
+public nonisolated struct Provenencia_Engine_V1_Error: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// e.g. "catalog.already_exists"
+  public var code: String = String()
+
+  public var kind: Provenencia_Engine_V1_ErrorKind = .unspecified
+
+  /// ordered args for L10n format strings
+  public var params: [String] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate nonisolated let _protobuf_package = "provenencia.engine.v1"
 
 nonisolated extension Provenencia_Engine_V1_Method: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0METHOD_UNSPECIFIED\0\u{1}METHOD_PING\0\u{1}METHOD_GET_VERSION\0\u{1}METHOD_GET_INSTALL_IDENTITY\0\u{1}METHOD_COMPLETE_ONBOARDING\0\u{1}METHOD_REMOVE_INSTALL_IDENTITY\0\u{1}METHOD_GET_ACTIVE_PROJECT\0\u{1}METHOD_OPEN_PROJECT\0\u{1}METHOD_REMOVE_ACTIVE_PROJECT\0\u{1}METHOD_LIST_PROJECT_USERS\0\u{1}METHOD_SIGN_OUT\0\u{1}METHOD_GET_PROJECT_INFO\0")
+}
+
+nonisolated extension Provenencia_Engine_V1_ErrorKind: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0ERROR_KIND_UNSPECIFIED\0\u{1}ERROR_KIND_USER\0\u{1}ERROR_KIND_CONFLICT\0\u{1}ERROR_KIND_NOT_FOUND\0\u{1}ERROR_KIND_INTERNAL\0")
 }
 
 nonisolated extension Provenencia_Engine_V1_PingRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
@@ -1276,6 +1348,46 @@ nonisolated extension Provenencia_Engine_V1_GetProjectInfoResponse: SwiftProtobu
 
   public static func ==(lhs: Provenencia_Engine_V1_GetProjectInfoResponse, rhs: Provenencia_Engine_V1_GetProjectInfoResponse) -> Bool {
     if lhs._project != rhs._project {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_Error: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".Error"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}code\0\u{1}kind\0\u{1}params\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.code) }()
+      case 2: try { try decoder.decodeSingularEnumField(value: &self.kind) }()
+      case 3: try { try decoder.decodeRepeatedStringField(value: &self.params) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.code.isEmpty {
+      try visitor.visitSingularStringField(value: self.code, fieldNumber: 1)
+    }
+    if self.kind != .unspecified {
+      try visitor.visitSingularEnumField(value: self.kind, fieldNumber: 2)
+    }
+    if !self.params.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.params, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_Error, rhs: Provenencia_Engine_V1_Error) -> Bool {
+    if lhs.code != rhs.code {return false}
+    if lhs.kind != rhs.kind {return false}
+    if lhs.params != rhs.params {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

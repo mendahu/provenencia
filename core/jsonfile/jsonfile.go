@@ -3,12 +3,13 @@ package jsonfile
 
 import (
 	"encoding/json"
-	"errors"
 	"os"
 	"path/filepath"
+
+	"github.com/mendahu/provenencia/core/apperr"
 )
 
-var ErrNotFound = errors.New("File not found.")
+var ErrNotFound = apperr.New(apperr.CodeFileNotFound, apperr.KindNotFound)
 
 // Read returns the file bytes. A missing path is ErrNotFound.
 func Read(path string) ([]byte, error) {

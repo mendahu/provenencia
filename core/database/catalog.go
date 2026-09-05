@@ -5,10 +5,10 @@ package database
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/mattn/go-sqlite3"
@@ -214,7 +214,7 @@ func refuseNewerFormat(db *sql.DB) error {
 		return err
 	}
 	if ver > formatVersion {
-		return fmt.Errorf("%w: %d", ErrUnsupportedVersion, ver)
+		return ErrUnsupportedVersion.WithParams(strconv.Itoa(ver))
 	}
 	return nil
 }

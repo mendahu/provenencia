@@ -9,4 +9,4 @@ alwaysApply: false
 Follow the project skill `.cursor/skills/add-ffi-handler/SKILL.md`.
 
 - `dispatch.go` only routes to `api/ffi/handlers`. New RPCs get a handler file and `runRPC` table tests, not a `run` closure in the table.
-- Failed `provenencia_call` still returns UTF-8 `err.Error()` in `out` (not protobuf).
+- Failed `provenencia_call` returns protobuf `Error` in `out` (status 1), not UTF-8 English. Domain errors use `core/apperr` codes.

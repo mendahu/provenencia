@@ -110,7 +110,7 @@ struct OnboardingModelTests {
         let model = OnboardingModel(store: ThrowingStore(), folders: folders)
         await model.load()
         #expect(model.phase == .chooseFile)
-        #expect(model.errorText != nil)
+        #expect(model.errorText == String(localized: L10n.Errors.unknown))
     }
 
     @Test func canContinueCreateOpenAndIdentify() async throws {
@@ -296,15 +296,18 @@ private func touchCatalog(_ project: URL) throws {
     try Data().write(to: project.appendingPathComponent(InstallPaths.catalogFile))
 }
 
-private enum StoreBoom: Error, LocalizedError {
+private enum StoreBoom: Error {
     case boom
-    var errorDescription: String? { "store failed" }
 }
 
 private struct ThrowingStore: GenealogyStore {
-    func ping(_ message: String) async throws -> String { throw StoreBoom.boom }
+    func ping(_ message: String) async throws -> String {
+        throw CoreInvokeError.coded(status: 1, code: "internal.unknown", kind: .internal, params: [])
+    }
     func version() async throws -> String { throw StoreBoom.boom }
-    func installIdentity(identityDir _: String) async throws -> InstallIdentity? { throw StoreBoom.boom }
+    func installIdentity(identityDir _: String) async throws -> InstallIdentity? {
+        throw CoreInvokeError.coded(status: 1, code: "internal.unknown", kind: .internal, params: [])
+    }
     func completeOnboarding(
         identityDir _: String,
         parentDir _: String,

@@ -99,6 +99,63 @@ func (Method) EnumDescriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{0}
 }
 
+// ErrorKind classifies a failure for client UX (tone, retry hints). Copy still
+// comes from the client's L10n map keyed by Error.code.
+type ErrorKind int32
+
+const (
+	ErrorKind_ERROR_KIND_UNSPECIFIED ErrorKind = 0
+	ErrorKind_ERROR_KIND_USER        ErrorKind = 1
+	ErrorKind_ERROR_KIND_CONFLICT    ErrorKind = 2
+	ErrorKind_ERROR_KIND_NOT_FOUND   ErrorKind = 3
+	ErrorKind_ERROR_KIND_INTERNAL    ErrorKind = 4
+)
+
+// Enum value maps for ErrorKind.
+var (
+	ErrorKind_name = map[int32]string{
+		0: "ERROR_KIND_UNSPECIFIED",
+		1: "ERROR_KIND_USER",
+		2: "ERROR_KIND_CONFLICT",
+		3: "ERROR_KIND_NOT_FOUND",
+		4: "ERROR_KIND_INTERNAL",
+	}
+	ErrorKind_value = map[string]int32{
+		"ERROR_KIND_UNSPECIFIED": 0,
+		"ERROR_KIND_USER":        1,
+		"ERROR_KIND_CONFLICT":    2,
+		"ERROR_KIND_NOT_FOUND":   3,
+		"ERROR_KIND_INTERNAL":    4,
+	}
+)
+
+func (x ErrorKind) Enum() *ErrorKind {
+	p := new(ErrorKind)
+	*p = x
+	return p
+}
+
+func (x ErrorKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ErrorKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_engine_proto_enumTypes[1].Descriptor()
+}
+
+func (ErrorKind) Type() protoreflect.EnumType {
+	return &file_engine_proto_enumTypes[1]
+}
+
+func (x ErrorKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ErrorKind.Descriptor instead.
+func (ErrorKind) EnumDescriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{1}
+}
+
 type PingRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
@@ -1331,6 +1388,68 @@ func (x *GetProjectInfoResponse) GetProject() *ProjectInfo {
 	return nil
 }
 
+// Error is the protobuf payload on provenencia_call status 1 (failure).
+// Success payloads remain method-specific response messages.
+type Error struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"` // e.g. "catalog.already_exists"
+	Kind          ErrorKind              `protobuf:"varint,2,opt,name=kind,proto3,enum=provenencia.engine.v1.ErrorKind" json:"kind,omitempty"`
+	Params        []string               `protobuf:"bytes,3,rep,name=params,proto3" json:"params,omitempty"` // ordered args for L10n format strings
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Error) Reset() {
+	*x = Error{}
+	mi := &file_engine_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Error) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Error) ProtoMessage() {}
+
+func (x *Error) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Error.ProtoReflect.Descriptor instead.
+func (*Error) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *Error) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *Error) GetKind() ErrorKind {
+	if x != nil {
+		return x.Kind
+	}
+	return ErrorKind_ERROR_KIND_UNSPECIFIED
+}
+
+func (x *Error) GetParams() []string {
+	if x != nil {
+		return x.Params
+	}
+	return nil
+}
+
 var File_engine_proto protoreflect.FileDescriptor
 
 const file_engine_proto_rawDesc = "" +
@@ -1416,7 +1535,11 @@ const file_engine_proto_rawDesc = "" +
 	"\x17updated_by_display_name\x18\x06 \x01(\tR\x14updatedByDisplayName\x12$\n" +
 	"\x0eupdated_by_ref\x18\a \x01(\tR\fupdatedByRef\"V\n" +
 	"\x16GetProjectInfoResponse\x12<\n" +
-	"\aproject\x18\x01 \x01(\v2\".provenencia.engine.v1.ProjectInfoR\aproject*\xd9\x02\n" +
+	"\aproject\x18\x01 \x01(\v2\".provenencia.engine.v1.ProjectInfoR\aproject\"i\n" +
+	"\x05Error\x12\x12\n" +
+	"\x04code\x18\x01 \x01(\tR\x04code\x124\n" +
+	"\x04kind\x18\x02 \x01(\x0e2 .provenencia.engine.v1.ErrorKindR\x04kind\x12\x16\n" +
+	"\x06params\x18\x03 \x03(\tR\x06params*\xd9\x02\n" +
 	"\x06Method\x12\x16\n" +
 	"\x12METHOD_UNSPECIFIED\x10\x00\x12\x0f\n" +
 	"\vMETHOD_PING\x10\x01\x12\x16\n" +
@@ -1430,7 +1553,13 @@ const file_engine_proto_rawDesc = "" +
 	"\x19METHOD_LIST_PROJECT_USERS\x10\t\x12\x13\n" +
 	"\x0fMETHOD_SIGN_OUT\x10\n" +
 	"\x12\x1b\n" +
-	"\x17METHOD_GET_PROJECT_INFO\x10\vB1Z/github.com/mendahu/provenencia/api/proto/engineb\x06proto3"
+	"\x17METHOD_GET_PROJECT_INFO\x10\v*\x88\x01\n" +
+	"\tErrorKind\x12\x1a\n" +
+	"\x16ERROR_KIND_UNSPECIFIED\x10\x00\x12\x13\n" +
+	"\x0fERROR_KIND_USER\x10\x01\x12\x17\n" +
+	"\x13ERROR_KIND_CONFLICT\x10\x02\x12\x18\n" +
+	"\x14ERROR_KIND_NOT_FOUND\x10\x03\x12\x17\n" +
+	"\x13ERROR_KIND_INTERNAL\x10\x04B1Z/github.com/mendahu/provenencia/api/proto/engineb\x06proto3"
 
 var (
 	file_engine_proto_rawDescOnce sync.Once
@@ -1444,45 +1573,48 @@ func file_engine_proto_rawDescGZIP() []byte {
 	return file_engine_proto_rawDescData
 }
 
-var file_engine_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
+var file_engine_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_engine_proto_goTypes = []any{
 	(Method)(0),                           // 0: provenencia.engine.v1.Method
-	(*PingRequest)(nil),                   // 1: provenencia.engine.v1.PingRequest
-	(*PingResponse)(nil),                  // 2: provenencia.engine.v1.PingResponse
-	(*GetVersionRequest)(nil),             // 3: provenencia.engine.v1.GetVersionRequest
-	(*GetVersionResponse)(nil),            // 4: provenencia.engine.v1.GetVersionResponse
-	(*GetInstallIdentityRequest)(nil),     // 5: provenencia.engine.v1.GetInstallIdentityRequest
-	(*GetInstallIdentityResponse)(nil),    // 6: provenencia.engine.v1.GetInstallIdentityResponse
-	(*CompleteOnboardingRequest)(nil),     // 7: provenencia.engine.v1.CompleteOnboardingRequest
-	(*CompleteOnboardingResponse)(nil),    // 8: provenencia.engine.v1.CompleteOnboardingResponse
-	(*RemoveInstallIdentityRequest)(nil),  // 9: provenencia.engine.v1.RemoveInstallIdentityRequest
-	(*RemoveInstallIdentityResponse)(nil), // 10: provenencia.engine.v1.RemoveInstallIdentityResponse
-	(*GetActiveProjectRequest)(nil),       // 11: provenencia.engine.v1.GetActiveProjectRequest
-	(*GetActiveProjectResponse)(nil),      // 12: provenencia.engine.v1.GetActiveProjectResponse
-	(*OpenProjectRequest)(nil),            // 13: provenencia.engine.v1.OpenProjectRequest
-	(*OpenProjectResponse)(nil),           // 14: provenencia.engine.v1.OpenProjectResponse
-	(*RemoveActiveProjectRequest)(nil),    // 15: provenencia.engine.v1.RemoveActiveProjectRequest
-	(*RemoveActiveProjectResponse)(nil),   // 16: provenencia.engine.v1.RemoveActiveProjectResponse
-	(*ListProjectUsersRequest)(nil),       // 17: provenencia.engine.v1.ListProjectUsersRequest
-	(*ProjectUser)(nil),                   // 18: provenencia.engine.v1.ProjectUser
-	(*ListProjectUsersResponse)(nil),      // 19: provenencia.engine.v1.ListProjectUsersResponse
-	(*SignOutRequest)(nil),                // 20: provenencia.engine.v1.SignOutRequest
-	(*SignOutResponse)(nil),               // 21: provenencia.engine.v1.SignOutResponse
-	(*GetProjectInfoRequest)(nil),         // 22: provenencia.engine.v1.GetProjectInfoRequest
-	(*ProjectInfo)(nil),                   // 23: provenencia.engine.v1.ProjectInfo
-	(*GetProjectInfoResponse)(nil),        // 24: provenencia.engine.v1.GetProjectInfoResponse
+	(ErrorKind)(0),                        // 1: provenencia.engine.v1.ErrorKind
+	(*PingRequest)(nil),                   // 2: provenencia.engine.v1.PingRequest
+	(*PingResponse)(nil),                  // 3: provenencia.engine.v1.PingResponse
+	(*GetVersionRequest)(nil),             // 4: provenencia.engine.v1.GetVersionRequest
+	(*GetVersionResponse)(nil),            // 5: provenencia.engine.v1.GetVersionResponse
+	(*GetInstallIdentityRequest)(nil),     // 6: provenencia.engine.v1.GetInstallIdentityRequest
+	(*GetInstallIdentityResponse)(nil),    // 7: provenencia.engine.v1.GetInstallIdentityResponse
+	(*CompleteOnboardingRequest)(nil),     // 8: provenencia.engine.v1.CompleteOnboardingRequest
+	(*CompleteOnboardingResponse)(nil),    // 9: provenencia.engine.v1.CompleteOnboardingResponse
+	(*RemoveInstallIdentityRequest)(nil),  // 10: provenencia.engine.v1.RemoveInstallIdentityRequest
+	(*RemoveInstallIdentityResponse)(nil), // 11: provenencia.engine.v1.RemoveInstallIdentityResponse
+	(*GetActiveProjectRequest)(nil),       // 12: provenencia.engine.v1.GetActiveProjectRequest
+	(*GetActiveProjectResponse)(nil),      // 13: provenencia.engine.v1.GetActiveProjectResponse
+	(*OpenProjectRequest)(nil),            // 14: provenencia.engine.v1.OpenProjectRequest
+	(*OpenProjectResponse)(nil),           // 15: provenencia.engine.v1.OpenProjectResponse
+	(*RemoveActiveProjectRequest)(nil),    // 16: provenencia.engine.v1.RemoveActiveProjectRequest
+	(*RemoveActiveProjectResponse)(nil),   // 17: provenencia.engine.v1.RemoveActiveProjectResponse
+	(*ListProjectUsersRequest)(nil),       // 18: provenencia.engine.v1.ListProjectUsersRequest
+	(*ProjectUser)(nil),                   // 19: provenencia.engine.v1.ProjectUser
+	(*ListProjectUsersResponse)(nil),      // 20: provenencia.engine.v1.ListProjectUsersResponse
+	(*SignOutRequest)(nil),                // 21: provenencia.engine.v1.SignOutRequest
+	(*SignOutResponse)(nil),               // 22: provenencia.engine.v1.SignOutResponse
+	(*GetProjectInfoRequest)(nil),         // 23: provenencia.engine.v1.GetProjectInfoRequest
+	(*ProjectInfo)(nil),                   // 24: provenencia.engine.v1.ProjectInfo
+	(*GetProjectInfoResponse)(nil),        // 25: provenencia.engine.v1.GetProjectInfoResponse
+	(*Error)(nil),                         // 26: provenencia.engine.v1.Error
 }
 var file_engine_proto_depIdxs = []int32{
-	23, // 0: provenencia.engine.v1.CompleteOnboardingResponse.project:type_name -> provenencia.engine.v1.ProjectInfo
-	23, // 1: provenencia.engine.v1.OpenProjectResponse.project:type_name -> provenencia.engine.v1.ProjectInfo
-	18, // 2: provenencia.engine.v1.ListProjectUsersResponse.users:type_name -> provenencia.engine.v1.ProjectUser
-	23, // 3: provenencia.engine.v1.GetProjectInfoResponse.project:type_name -> provenencia.engine.v1.ProjectInfo
-	4,  // [4:4] is the sub-list for method output_type
-	4,  // [4:4] is the sub-list for method input_type
-	4,  // [4:4] is the sub-list for extension type_name
-	4,  // [4:4] is the sub-list for extension extendee
-	0,  // [0:4] is the sub-list for field type_name
+	24, // 0: provenencia.engine.v1.CompleteOnboardingResponse.project:type_name -> provenencia.engine.v1.ProjectInfo
+	24, // 1: provenencia.engine.v1.OpenProjectResponse.project:type_name -> provenencia.engine.v1.ProjectInfo
+	19, // 2: provenencia.engine.v1.ListProjectUsersResponse.users:type_name -> provenencia.engine.v1.ProjectUser
+	24, // 3: provenencia.engine.v1.GetProjectInfoResponse.project:type_name -> provenencia.engine.v1.ProjectInfo
+	1,  // 4: provenencia.engine.v1.Error.kind:type_name -> provenencia.engine.v1.ErrorKind
+	5,  // [5:5] is the sub-list for method output_type
+	5,  // [5:5] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_engine_proto_init() }
@@ -1495,8 +1627,8 @@ func file_engine_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_engine_proto_rawDesc), len(file_engine_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   24,
+			NumEnums:      2,
+			NumMessages:   25,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

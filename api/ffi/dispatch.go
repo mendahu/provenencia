@@ -1,10 +1,11 @@
 package ffi
 
 import (
-	"fmt"
+	"strconv"
 
 	"github.com/mendahu/provenencia/api/ffi/handlers"
 	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/apperr"
 )
 
 const (
@@ -48,6 +49,6 @@ func Call(method int32, in []byte) ([]byte, error) {
 	case MethodGetProjectInfo:
 		return handlers.GetProjectInfo(in)
 	default:
-		return nil, fmt.Errorf("unknown method %d", method)
+		return nil, apperr.New(apperr.CodeInternalUnknownMethod, apperr.KindInternal, strconv.Itoa(int(method)))
 	}
 }
