@@ -15,10 +15,10 @@ import (
 const FileName = "identity.json"
 
 var (
-	ErrNotFound    = errors.New("identity file not found")
-	ErrInvalidName = errors.New("display name is empty")
-	ErrInvalidID   = errors.New("user id must be UUIDv7")
-	ErrInvalidRef  = errors.New("user ref is invalid")
+	ErrNotFound    = errors.New("Identity file not found.")
+	ErrInvalidName = errors.New("Display name is empty.")
+	ErrInvalidID   = errors.New("User ID must be UUIDv7.")
+	ErrInvalidRef  = errors.New("User ref is invalid.")
 )
 
 // Identity is the install-local contributor (not a project catalog row).

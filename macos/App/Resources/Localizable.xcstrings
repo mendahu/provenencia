@@ -16,6 +16,18 @@
         }
       }
     },
+    "designSystem.toast.dismiss" : {
+      "comment" : "Accessibility label for a PVToast's dismiss button",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dismiss"
+          }
+        }
+      }
+    },
     "onboarding.chooseFile.bodyChoose" : {
       "comment" : "Onboarding choose-file body when researcher is not locked",
       "extractionState" : "manual",

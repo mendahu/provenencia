@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 )
 
-var ErrNotFound = errors.New("file not found")
+var ErrNotFound = errors.New("File not found.")
 
 // Read returns the file bytes. A missing path is ErrNotFound.
 func Read(path string) ([]byte, error) {

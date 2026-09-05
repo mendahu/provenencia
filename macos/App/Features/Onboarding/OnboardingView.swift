@@ -33,6 +33,15 @@ struct OnboardingView: View {
         .frame(minWidth: 700, minHeight: 460)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(PVColor.surfacePage)
+        .overlay(alignment: .top) {
+            if let errorText = model.errorText {
+                PVToast(tone: .danger, message: errorText, onDismiss: { model.errorText = nil })
+                    .accessibilityIdentifier("onboarding.error")
+                    .padding(.top, PVSpacing.space6)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(PVMotion.easeStandard, value: model.errorText)
         .task {
             await model.load()
         }

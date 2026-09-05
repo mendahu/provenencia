@@ -8,7 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 )
 
-var ErrInvalidFamilyName = errors.New("invalid family name")
+var ErrInvalidFamilyName = errors.New("Invalid family name.")
 
 // FolderName turns a project/family label into a kebab-case *.provenencia basename.
 // Example: "Robins Family" → "robins-family.provenencia".

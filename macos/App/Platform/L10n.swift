@@ -7,6 +7,12 @@ enum L10n {
             defaultValue: "*",
             comment: "Marks a required PVField as required, shown beside its label"
         )
+
+        static let toastDismiss = LocalizedStringResource(
+            "designSystem.toast.dismiss",
+            defaultValue: "Dismiss",
+            comment: "Accessibility label for a PVToast's dismiss button"
+        )
     }
 
     enum Onboarding {

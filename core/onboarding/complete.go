@@ -11,7 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/installstate"
 )
 
-var ErrBlankName = errors.New("name is empty")
+var ErrBlankName = errors.New("Name is empty.")
 
 // Result is the created/opened project path and the install identity used.
 type Result struct {

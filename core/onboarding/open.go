@@ -12,7 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/identity"
 )
 
-var ErrUnknownUser = errors.New("user not in project")
+var ErrUnknownUser = errors.New("User not in project.")
 
 // ListContributors opens the catalog (migrates if needed), ensures user refs, and lists contributors.
 func ListContributors(projectDir string) ([]identity.Identity, error) {
