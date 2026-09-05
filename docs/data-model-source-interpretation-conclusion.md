@@ -19,6 +19,8 @@ Seed catalog for new projects: [`seeded-vocabulary.md`](seeded-vocabulary.md).
 
 Cross-cutting audit/revision: [`audit-revision-history.md`](audit-revision-history.md).
 
+Researcher judgment (Source credibility, Citation transcription certainty, Claim confidence): [`research-judgment-model.md`](research-judgment-model.md).
+
 ---
 
 # 1. The three layers
@@ -147,6 +149,20 @@ The same handle pattern applies across Node Types (`person`, `event`, `place`, `
 
 Authoritative schema: [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md).
 
+## 1.4 Researcher judgment along the chain
+
+The evidence trail answers what we possess, what a Source appears to say, and what we conclude. Separately, researchers need structured ways to record **how much they trust** evidence and conclusions:
+
+| Judgment | Layer home | Shape |
+|---|---|---|
+| Source credibility | Interpretation assessment entity (not a `sources` column) | Three-point trust scale, baseline middle |
+| Citation transcription certainty | Columns on `citations` | Boolean uncertain flag + optional note (media-agnostic) |
+| Claim confidence | Sameness / Reconciliation Claims | Three-point confidence scale, baseline middle; orthogonal to claim `status` |
+
+Subject- and fact-level “likelihood” pills are **derived in the UI**, not stored. Observation polarity and competing Observations stay the Interpretation model for alternate readings — not a confidence score on one Observation row.
+
+Authoritative rules and schemas: [`research-judgment-model.md`](research-judgment-model.md).
+
 ---
 
 # 2. Shared persistence conventions
@@ -272,4 +288,5 @@ To avoid competing schema definitions:
 - [`structured-name-model.md`](structured-name-model.md) is authoritative for shared NameValue persistence.
 - [`seeded-vocabulary.md`](seeded-vocabulary.md) is the horizon catalog for intended keys and starter open-vocabulary lists (not a v1 ship list).
 - [`audit-revision-history.md`](audit-revision-history.md) is authoritative for audit and revision history.
+- [`research-judgment-model.md`](research-judgment-model.md) is authoritative for Source credibility assessments, Citation transcription certainty, and Claim confidence.
 - This document summarizes three-layer philosophy and cross-layer examples; it does not own layer schemas.

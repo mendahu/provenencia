@@ -27,8 +27,9 @@ Items marked **TBD** are expected seeds whose exact set is still being refined.
 3. Seeds are data inserted into a project database, not SQL enums.
 4. Built-in / shipped keys are not structurally privileged subclasses; they are convenient defaults with optional first-class UX.
 5. Open text vocabularies (`event_type`, `role`, name part `type`, and similar) stay extensible even when a starter list exists for pickers.
-6. Do not seed a structured source-quality ontology (`is_authentic`, defect codes, and similar) unless a concrete workflow requires it.
+6. Do not seed a fine-grained source-quality ontology (`is_authentic`, defect codes, and similar) on Source catalog rows or as Observation defect codes unless a concrete workflow requires it. First-class **Source credibility** uses the three-point assessment vocabulary in §3.0 and [`research-judgment-model.md`](research-judgment-model.md), not ad hoc Source metadata.
 7. Expanding this catalog does not require a schema migration when the underlying tables already use open keys.
+8. Source credibility grades and Claim confidence grades share a three-point *shape* but **must not share keys or labels** — they answer different questions.
 
 ---
 
@@ -223,7 +224,20 @@ gedcom_file
 
 # 3. Interpretation layer
 
-Schema: [`interpretation-layer-data-model.md`](interpretation-layer-data-model.md).
+Schema: [`interpretation-layer-data-model.md`](interpretation-layer-data-model.md). Judgment semantics: [`research-judgment-model.md`](research-judgment-model.md).
+
+## 3.0 Source credibility grades
+
+Open vocabulary for `source_credibility_assessments.credibility_key`. Three-point scale with a baseline middle. **Do not** reuse Claim confidence keys.
+
+```text
+key             sort_order    label (draft product copy)
+low_trust       1             Low trust
+standard        2             Standard
+high_trust      3             High trust
+```
+
+Missing assessment may display as Standard without inserting a row.
 
 ## 3.1 `node_types`
 
@@ -424,10 +438,24 @@ There is no `origination_claims` table and no `representative_node_id`. A `canon
 
 Handle provenencia badges (from records / inferred / asserted / unlinked) are computed, not seeded workflow enums.
 
+## 5.5 Claim confidence grades
+
+Open vocabulary for `sameness_claims.confidence_key` and `reconciliation_claims.confidence_key`. Three-point scale with a baseline middle. **Do not** reuse Source credibility keys — same shape, different semantics ([`research-judgment-model.md`](research-judgment-model.md)).
+
+```text
+key                 sort_order    label (draft product copy)
+low_confidence      1             Low confidence
+moderate            2             Moderate
+high_confidence     3             High confidence
+```
+
+`confidence_key` is nullable. Claim `status` remains the separate workflow vocabulary in §5.1–5.2.
+
 ---
 
 # 6. Documentation ownership
 
 - This document is the horizon catalog for intended keys, starter open-vocabulary lists, and project-default settings. It does not require every listed row to ship in the first app version.
 - Layer and shared-value documents remain authoritative for table schemas and invariants.
+- [`research-judgment-model.md`](research-judgment-model.md) is authoritative for judgment semantics (Source credibility, Citation transcription certainty, Claim confidence).
 - When a key is actually seeded in product, update this catalog if needed; do not fork competing lists into layer docs.
