@@ -1,14 +1,14 @@
 package onboarding
 
 import (
-	"errors"
 	"strings"
 	"unicode"
 
+	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 )
 
-var ErrInvalidFamilyName = errors.New("Invalid family name.")
+var ErrInvalidFamilyName = apperr.New(apperr.CodeOnboardingInvalidFamilyName, apperr.KindUser)
 
 // FolderName turns a project/family label into a kebab-case *.provenencia basename.
 // Example: "Robins Family" → "robins-family.provenencia".

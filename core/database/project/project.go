@@ -6,12 +6,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 )
 
 var (
-	ErrInvalid = errors.New("Invalid project metadata.")
-	ErrMissing = errors.New("Project metadata missing.")
+	ErrInvalid = apperr.New(apperr.CodeProjectInvalidMetadata, apperr.KindUser)
+	ErrMissing = apperr.New(apperr.CodeProjectMissingMetadata, apperr.KindNotFound)
 )
 
 const (

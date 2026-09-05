@@ -1,15 +1,39 @@
 import Foundation
 import SwiftProtobuf
 
-enum CoreInvokeError: Error {
-    case failed(Int32, message: String)
+enum CoreErrorKind: Equatable, Sendable {
+    case unspecified
+    case user
+    case conflict
+    case notFound
+    case `internal`
+
+    init(_ proto: Provenencia_Engine_V1_ErrorKind) {
+        switch proto {
+        case .user: self = .user
+        case .conflict: self = .conflict
+        case .notFound: self = .notFound
+        case .internal: self = .internal
+        case .unspecified, .UNRECOGNIZED:
+            self = .unspecified
+        }
+    }
+}
+
+enum CoreInvokeError: Error, Equatable {
+    /// FFI status 1 with a decoded protobuf Error.
+    case coded(status: Int32, code: String, kind: CoreErrorKind, params: [String])
+    /// Non-zero status that could not be decoded as Error (e.g. malloc failure).
+    case failed(status: Int32)
 }
 
 extension CoreInvokeError: LocalizedError {
     var errorDescription: String? {
         switch self {
-        case .failed(_, let message):
-            return message
+        case .coded(_, let code, _, let params):
+            return L10n.Errors.message(code: code, params: params)
+        case .failed:
+            return String(localized: L10n.Errors.unknown)
         }
     }
 }
@@ -41,11 +65,18 @@ func provenenciaInvoke(method: Int32, request: Data) throws -> Data {
         }
     }
     if status != 0 {
-        var message = "core call failed (\(status))"
-        if let outPtr, outLen > 0 {
-            message = String(decoding: Data(bytes: outPtr, count: outLen), as: UTF8.self)
+        if status == 1, let outPtr, outLen > 0 {
+            let data = Data(bytes: outPtr, count: outLen)
+            if let decoded = try? Provenencia_Engine_V1_Error(serializedBytes: data), !decoded.code.isEmpty {
+                throw CoreInvokeError.coded(
+                    status: status,
+                    code: decoded.code,
+                    kind: CoreErrorKind(decoded.kind),
+                    params: decoded.params
+                )
+            }
         }
-        throw CoreInvokeError.failed(status, message: message)
+        throw CoreInvokeError.failed(status: status)
     }
     guard let outPtr, outLen > 0 else {
         return Data()

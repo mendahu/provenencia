@@ -106,7 +106,7 @@ struct PVToast: View {
 
 #Preview {
     VStack(spacing: PVSpacing.space5) {
-        PVToast(tone: .danger, message: "Project already open.", onDismiss: {})
+        PVToast(tone: .danger, message: String(localized: L10n.Errors.catalogAlreadyOpen), onDismiss: {})
         PVToast(tone: .info, title: "Heads up", message: "This project was last opened on another Mac.")
         PVToast(tone: .success, message: "Project created.", autoDismissAfter: nil)
     }

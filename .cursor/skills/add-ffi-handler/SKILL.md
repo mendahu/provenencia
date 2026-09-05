@@ -47,8 +47,11 @@ Do not unmarshal in the table row. Add a `t.Helper()` in `harness_test.go` if a 
 
 Run `CGO_ENABLED=1 go test ./api/ffi/...`.
 
+User-visible handler failures must return `core/apperr` coded errors (sentinels or `apperr.New`). Add a matching `L10n.Errors` / String Catalog entry for any new code. `provenencia_call` status 1 encodes protobuf `Error`, not English text.
+
 ## Do not
 
-- Grow `dispatch.go` with unmarshal or `core/` imports
-- Add handler tests under `api/ffi/` itself (except router tests)
+- Grow `dispatch.go` with unmarshal or domain logic (unknown-method → `apperr` is OK)
+- Add handler tests under `api/ffi/` itself (except router / EncodeError tests)
 - Hardcode Application Support / Documents in Go
+- Return English user-facing `errors.New("…")` from handlers or core for UI paths

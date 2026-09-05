@@ -96,13 +96,23 @@ func TestProvenenciaCall(t *testing.T) {
 			},
 		},
 		{
-			name:   "unknown method carries error text",
-			method: 99,
-			in:     mustMarshal(&engine.PingRequest{}),
+			name:       "unknown method carries Error protobuf",
+			method:     99,
+			in:         mustMarshal(&engine.PingRequest{}),
 			wantStatus: 1,
 			check: func(t *testing.T, out []byte) {
-				if string(out) != "unknown method 99" {
-					t.Fatalf("got %q", out)
+				var msg engine.Error
+				if err := proto.Unmarshal(out, &msg); err != nil {
+					t.Fatal(err)
+				}
+				if msg.GetCode() != "internal.unknown_method" {
+					t.Fatalf("code = %q", msg.GetCode())
+				}
+				if msg.GetKind() != engine.ErrorKind_ERROR_KIND_INTERNAL {
+					t.Fatalf("kind = %v", msg.GetKind())
+				}
+				if len(msg.GetParams()) != 1 || msg.GetParams()[0] != "99" {
+					t.Fatalf("params = %v", msg.GetParams())
 				}
 			},
 		},

@@ -2,10 +2,11 @@ package ref
 
 import (
 	"crypto/rand"
-	"fmt"
 	"regexp"
 	"strings"
 	"unicode"
+
+	"github.com/mendahu/provenencia/core/apperr"
 )
 
 // Crockford base32 alphabet without I, L, O, U (ambiguous with 1/0).
@@ -23,8 +24,8 @@ const (
 )
 
 var (
-	ErrInvalidPrefix = fmt.Errorf("ref: invalid prefix")
-	ErrInvalid       = fmt.Errorf("ref: invalid format")
+	ErrInvalidPrefix = apperr.New(apperr.CodeRefInvalidPrefix, apperr.KindInternal)
+	ErrInvalid       = apperr.New(apperr.CodeRefInvalid, apperr.KindInternal)
 )
 
 var validRef = regexp.MustCompile(`^[A-Z]{3}-[0-9A-HJKMNP-TV-Z]{5}$`)

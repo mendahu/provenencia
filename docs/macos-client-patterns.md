@@ -88,7 +88,7 @@ Agent workflow: [`.cursor/skills/add-localized-string/SKILL.md`](../.cursor/skil
 - **Call sites:** `Text(L10n.Onboarding.welcomeTitle)` is fine. For `Button` / `TextField` / `Picker` titles on our macOS 14 deployment target (CI Xcode 16), use `String(localized: L10n.…)` — those inits require `StringProtocol`, not `LocalizedStringResource`. AppKit: `String(localized: L10n.…)`. Interpolated copy uses `%@` in the catalog and `String(format:locale:_:)` inside `L10n` helpers.
 - **Add a string:** add a `LocalizedStringResource` under `L10n`, use it at the call site, and add the matching key/`en` value in the String Catalog (or build once so extraction can pick it up). Prune unused `L10n` members and catalog keys together.
 - **Add a language later:** Xcode → String Catalog → add locale → translate. No call-site changes.
-- **Go/FFI errors:** still English `err.Error()` text until mapped to `L10n` (prefer stable codes later). Brand name `Provenencia` stays untranslated.
+- **Go/FFI errors:** status `1` returns a protobuf `Error` (`code`, `kind`, `params`) — never English prose. Map codes with `L10n.Errors` (`error.<domain>.<name>` catalog keys). Unknown codes use `error.internal.unknown`. Brand name `Provenencia` stays untranslated.
 
 Keep using `.accessibilityIdentifier` for UI tests, not localized titles (§5).
 

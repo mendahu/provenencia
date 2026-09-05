@@ -6,13 +6,14 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/identity"
 )
 
-var ErrUnknownUser = errors.New("User not in project.")
+var ErrUnknownUser = apperr.New(apperr.CodeOnboardingUnknownUser, apperr.KindNotFound)
 
 // ListContributors opens the catalog (migrates if needed), ensures user refs, and lists contributors.
 func ListContributors(projectDir string) ([]identity.Identity, error) {

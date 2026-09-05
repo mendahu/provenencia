@@ -8,14 +8,15 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/jsonfile"
 )
 
 const FileName = "active-project.json"
 
 var (
-	ErrNotFound = errors.New("Active project file not found.")
-	ErrInvalid  = errors.New("Project dir is empty.")
+	ErrNotFound = apperr.New(apperr.CodeInstallNotFound, apperr.KindNotFound)
+	ErrInvalid  = apperr.New(apperr.CodeInstallInvalid, apperr.KindUser)
 )
 
 // Active is the last project this install opened (not a catalog row).

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/jsonfile"
 	"github.com/mendahu/provenencia/core/ref"
 )
@@ -15,10 +16,10 @@ import (
 const FileName = "identity.json"
 
 var (
-	ErrNotFound    = errors.New("Identity file not found.")
-	ErrInvalidName = errors.New("Display name is empty.")
-	ErrInvalidID   = errors.New("User ID must be UUIDv7.")
-	ErrInvalidRef  = errors.New("User ref is invalid.")
+	ErrNotFound    = apperr.New(apperr.CodeIdentityNotFound, apperr.KindNotFound)
+	ErrInvalidName = apperr.New(apperr.CodeIdentityInvalidName, apperr.KindUser)
+	ErrInvalidID   = apperr.New(apperr.CodeIdentityInvalidID, apperr.KindUser)
+	ErrInvalidRef  = apperr.New(apperr.CodeIdentityInvalidRef, apperr.KindUser)
 )
 
 // Identity is the install-local contributor (not a project catalog row).

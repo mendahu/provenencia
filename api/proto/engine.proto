@@ -134,3 +134,21 @@ message ProjectInfo {
 message GetProjectInfoResponse {
   ProjectInfo project = 1;
 }
+
+// ErrorKind classifies a failure for client UX (tone, retry hints). Copy still
+// comes from the client's L10n map keyed by Error.code.
+enum ErrorKind {
+  ERROR_KIND_UNSPECIFIED = 0;
+  ERROR_KIND_USER = 1;
+  ERROR_KIND_CONFLICT = 2;
+  ERROR_KIND_NOT_FOUND = 3;
+  ERROR_KIND_INTERNAL = 4;
+}
+
+// Error is the protobuf payload on provenencia_call status 1 (failure).
+// Success payloads remain method-specific response messages.
+message Error {
+  string code = 1;              // e.g. "catalog.already_exists"
+  ErrorKind kind = 2;
+  repeated string params = 3;   // ordered args for L10n format strings
+}

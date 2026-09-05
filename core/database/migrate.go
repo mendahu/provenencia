@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/mendahu/provenencia/core/apperr"
 )
 
 // Catalog format is SQLite user_version, not product SemVer and not a
@@ -50,11 +52,11 @@ func parseMigrations(fsys fs.FS, dir string) ([]migration, int, error) {
 		}
 		base := strings.TrimSuffix(name, ".sql")
 		if len(base) != 6 {
-			return nil, 0, fmt.Errorf("migrations: want NNNNNN.sql, got %q", name)
+			return nil, 0, apperr.New(apperr.CodeInternalMigrations, apperr.KindInternal, "want NNNNNN.sql, got "+name)
 		}
 		n, err := strconv.Atoi(base)
 		if err != nil || n < 1 {
-			return nil, 0, fmt.Errorf("migrations: bad name %q", name)
+			return nil, 0, apperr.New(apperr.CodeInternalMigrations, apperr.KindInternal, "bad name "+name)
 		}
 		body, err := fs.ReadFile(fsys, dir+"/"+name)
 		if err != nil {
@@ -62,18 +64,18 @@ func parseMigrations(fsys fs.FS, dir string) ([]migration, int, error) {
 		}
 		sqlText := strings.TrimSpace(string(body))
 		if sqlText == "" {
-			return nil, 0, fmt.Errorf("migrations: empty %q", name)
+			return nil, 0, apperr.New(apperr.CodeInternalMigrations, apperr.KindInternal, "empty "+name)
 		}
 		steps = append(steps, migration{to: n, sql: sqlText})
 	}
 	sort.Slice(steps, func(i, j int) bool { return steps[i].to < steps[j].to })
 	for i, s := range steps {
 		if s.to != i+1 {
-			return nil, 0, fmt.Errorf("migrations: missing step %d", i+1)
+			return nil, 0, apperr.New(apperr.CodeInternalMigrations, apperr.KindInternal, fmt.Sprintf("missing step %d", i+1))
 		}
 	}
 	if len(steps) == 0 {
-		return nil, 0, fmt.Errorf("migrations: none")
+		return nil, 0, apperr.New(apperr.CodeInternalMigrations, apperr.KindInternal, "none")
 	}
 	return steps, steps[len(steps)-1].to, nil
 }
@@ -87,7 +89,7 @@ func migrate(db *sql.DB) error {
 		return err
 	}
 	if ver > formatVersion {
-		return fmt.Errorf("%w: %d", ErrUnsupportedVersion, ver)
+		return ErrUnsupportedVersion.WithParams(strconv.Itoa(ver))
 	}
 	for _, step := range migrations {
 		if ver >= step.to {
