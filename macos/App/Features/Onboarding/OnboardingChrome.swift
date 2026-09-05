@@ -201,6 +201,7 @@ struct OnboardingProjectMetaLines: View {
                     .accessibilityIdentifier("\(accessibilityPrefix).updatedBy")
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(PVSpacing.space5)
         .background(
             RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
