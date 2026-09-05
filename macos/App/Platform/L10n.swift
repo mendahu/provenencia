@@ -269,5 +269,23 @@ enum L10n {
             defaultValue: "The last project could not be found. Create or open a project.",
             comment: "Error when the last active project folder is missing"
         )
+
+        static let createNewFolderNote = LocalizedStringResource(
+            "onboarding.chooseFile.createNewFolderNote",
+            defaultValue: "The folder is written to ~/Documents when you continue. You name the research on the next screen.",
+            comment: "Info note shown when create-new mode is selected, explaining where the project folder is written"
+        )
+
+        static let newContributorIDNote = LocalizedStringResource(
+            "onboarding.identify.newContributorIDNote",
+            defaultValue: "A new ID is minted on continue",
+            comment: "Note under the new-contributor name field explaining an ID will be assigned"
+        )
+
+        static let loadingFooterNote = LocalizedStringResource(
+            "onboarding.loading.footerNote",
+            defaultValue: "No project is opened until you choose one",
+            comment: "Footer note on the loading screen, reassuring no project is auto-opened"
+        )
     }
 }

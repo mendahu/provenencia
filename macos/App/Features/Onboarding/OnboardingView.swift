@@ -11,8 +11,17 @@ struct OnboardingView: View {
         Group {
             switch model.phase {
             case .loading:
-                ProgressView()
-                    .accessibilityIdentifier("onboarding.loading")
+                VStack(spacing: PVSpacing.space6) {
+                    Text(verbatim: "Provenencia")
+                        .font(PVFont.display(size: PVTypeScale.h1))
+                        .foregroundStyle(PVColor.textDisplay)
+                    ProgressView()
+                        .tint(PVColor.accent)
+                    Text(L10n.Onboarding.loadingFooterNote)
+                        .font(PVFont.body(size: PVTypeScale.caption, italic: true))
+                        .foregroundStyle(PVColor.textMuted)
+                }
+                .accessibilityIdentifier("onboarding.loading")
             case .chooseFile:
                 OnboardingChooseFileView(model: model)
             case .identify:
@@ -21,9 +30,9 @@ struct OnboardingView: View {
                 OnboardingHomeView(model: model)
             }
         }
-        .frame(minWidth: 640, minHeight: 420)
+        .frame(minWidth: 700, minHeight: 460)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(PVColor.surfacePage)
         .task {
             await model.load()
         }
