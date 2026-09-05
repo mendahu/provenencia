@@ -40,6 +40,18 @@
         }
       }
     },
+    "onboarding.chooseFile.createNewFolderNote" : {
+      "comment" : "Info note shown when create-new mode is selected, explaining where the project folder is written",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The folder is written to ~/Documents when you continue. You name the research on the next screen."
+          }
+        }
+      }
+    },
     "onboarding.chooseFile.createNewSubtitle" : {
       "comment" : "Create-new mode card subtitle",
       "extractionState" : "manual",
@@ -316,6 +328,18 @@
         }
       }
     },
+    "onboarding.identify.newContributorIDNote" : {
+      "comment" : "Note under the new-contributor name field explaining an ID will be assigned",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A new ID is minted on continue"
+          }
+        }
+      }
+    },
     "onboarding.identify.notListed" : {
       "comment" : "Picker option to add a new contributor",
       "extractionState" : "manual",
@@ -372,6 +396,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Who are you in this file?"
+          }
+        }
+      }
+    },
+    "onboarding.loading.footerNote" : {
+      "comment" : "Footer note on the loading screen, reassuring no project is auto-opened",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No project is opened until you choose one"
           }
         }
       }

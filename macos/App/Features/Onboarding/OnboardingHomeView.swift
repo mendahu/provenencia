@@ -4,17 +4,19 @@ struct OnboardingHomeView: View {
     @Bindable var model: OnboardingModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: PVSpacing.space5) {
             Text(L10n.Onboarding.signedInTitle)
-                .font(.title2)
+                .font(PVFont.display(size: PVTypeScale.h2))
+                .foregroundStyle(PVColor.textDisplay)
                 .accessibilityIdentifier("onboarding.home")
-            HStack(spacing: 6) {
+            HStack(spacing: PVSpacing.space3) {
                 Text(model.sessionDisplayName)
-                    .font(.title3)
+                    .font(PVFont.body(size: PVTypeScale.h3))
+                    .foregroundStyle(PVColor.textPrimary)
                 if !model.sessionRef.isEmpty {
                     Text(L10n.Onboarding.contributorRef(ref: model.sessionRef))
-                        .font(.title3)
-                        .foregroundStyle(.secondary)
+                        .font(PVFont.mono(size: PVTypeScale.caption))
+                        .foregroundStyle(PVColor.textMuted)
                 }
             }
             .accessibilityElement(children: .combine)
@@ -33,7 +35,7 @@ struct OnboardingHomeView: View {
                 updatedByRef: model.projectUpdatedByRef,
                 accessibilityPrefix: "onboarding.home"
             )
-            Button(String(localized: L10n.Onboarding.signOut)) {
+            PVButton(L10n.Onboarding.signOut, variant: .ghost) {
                 Task { await model.signOut() }
             }
             .accessibilityIdentifier("onboarding.signOut")

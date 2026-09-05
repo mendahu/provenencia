@@ -5,88 +5,111 @@ struct OnboardingIdentifyView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: PVSpacing.space7) {
                 if model.mode == .create {
                     Text(L10n.Onboarding.nameResearchTitle)
-                        .font(.title2)
+                        .font(PVFont.display(size: PVTypeScale.h2))
+                        .foregroundStyle(PVColor.textDisplay)
                     Text(L10n.Onboarding.nameResearchBody)
-                        .foregroundStyle(.secondary)
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(L10n.Onboarding.researcherName)
-                            .font(.headline)
-                        TextField(
-                            "",
+                        .font(PVFont.body(size: PVTypeScale.bodySmall))
+                        .foregroundStyle(PVColor.textSecondary)
+                    PVField(label: L10n.Onboarding.researcherName) {
+                        PVInput(
                             text: $model.displayName,
-                            prompt: Text(L10n.Onboarding.researcherNamePrompt)
+                            isReadOnly: model.researcherLocked,
+                            prompt: L10n.Onboarding.researcherNamePrompt
                         )
-                            .textFieldStyle(.roundedBorder)
-                            .disabled(model.researcherLocked)
-                            .accessibilityIdentifier("onboarding.displayName")
+                        .accessibilityIdentifier("onboarding.displayName")
                     }
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(L10n.Onboarding.familyName)
-                            .font(.headline)
-                        TextField(
-                            "",
-                            text: $model.familyName,
-                            prompt: Text(L10n.Onboarding.familyNamePrompt)
-                        )
-                            .textFieldStyle(.roundedBorder)
+                    VStack(alignment: .leading, spacing: PVSpacing.space3) {
+                        PVField(label: L10n.Onboarding.familyName) {
+                            PVInput(
+                                text: $model.familyName,
+                                prompt: L10n.Onboarding.familyNamePrompt
+                            )
                             .accessibilityIdentifier("onboarding.familyName")
+                        }
                         if !model.folderNamePreview.isEmpty {
                             Text(L10n.Onboarding.folderNamePreview(folderName: model.folderNamePreview))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .font(PVFont.mono(size: PVTypeScale.caption))
+                                .foregroundStyle(PVColor.textMuted)
+                                .padding(.horizontal, PVSpacing.space4)
+                                .padding(.vertical, PVSpacing.space3)
+                                .background(
+                                    RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                                        .fill(PVColor.surfaceSunken)
+                                )
                                 .accessibilityIdentifier("onboarding.folderPreview")
                         }
                     }
                 } else {
                     Text(L10n.Onboarding.whoAreYouTitle)
-                        .font(.title2)
+                        .font(PVFont.display(size: PVTypeScale.h2))
+                        .foregroundStyle(PVColor.textDisplay)
                     Text(
                         L10n.Onboarding.contributorsBody(
                             projectName: model.selectedProject?.lastPathComponent
                                 ?? String(localized: L10n.Onboarding.thisProject)
                         )
                     )
-                        .foregroundStyle(.secondary)
-                    Picker(String(localized: L10n.Onboarding.contributorPicker), selection: $model.selectedContributorID) {
-                        ForEach(model.catalogUsers, id: \.userID) { user in
-                            HStack(spacing: 6) {
-                                Text(user.displayName)
-                                if !user.ref.isEmpty {
-                                    Text(L10n.Onboarding.contributorRef(ref: user.ref))
-                                        .foregroundStyle(.secondary)
-                                }
+                        .font(PVFont.body(size: PVTypeScale.bodySmall))
+                        .foregroundStyle(PVColor.textSecondary)
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(model.catalogUsers.enumerated()), id: \.element.userID) { index, user in
+                            OnboardingContributorRow(
+                                title: user.displayName,
+                                subtitle: user.ref.isEmpty ? nil : user.ref,
+                                selected: model.selectedContributorID == user.userID,
+                                divider: index == 0 ? .none : .solid
+                            ) {
+                                model.selectedContributorID = user.userID
                             }
-                            .tag(user.userID)
                             .accessibilityLabel(L10n.Onboarding.contributorOption(
                                 displayName: user.displayName,
                                 ref: user.ref
                             ))
                         }
-                        Text(L10n.Onboarding.notListed).tag(OnboardingModel.newContributorID)
+                        OnboardingContributorRow(
+                            title: String(localized: L10n.Onboarding.notListed),
+                            selected: model.selectedContributorID == OnboardingModel.newContributorID,
+                            divider: .dashed
+                        ) {
+                            model.selectedContributorID = OnboardingModel.newContributorID
+                        }
                     }
-                    .pickerStyle(.radioGroup)
+                    .background(PVColor.surfaceCard)
+                    .clipShape(RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
+                            .strokeBorder(PVColor.borderSubtle, lineWidth: 1)
+                    )
+                    .accessibilityElement(children: .contain)
                     .accessibilityIdentifier("onboarding.contributor")
                     if model.selectedContributorID == OnboardingModel.newContributorID {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(L10n.Onboarding.researcherName)
-                                .font(.headline)
-                            TextField(
-                                "",
-                                text: $model.displayName,
-                                prompt: Text(L10n.Onboarding.researcherNamePrompt)
-                            )
-                                .textFieldStyle(.roundedBorder)
-                                .disabled(model.researcherLocked)
+                        VStack(alignment: .leading, spacing: PVSpacing.space3) {
+                            PVField(label: L10n.Onboarding.researcherName) {
+                                PVInput(
+                                    text: $model.displayName,
+                                    isReadOnly: model.researcherLocked,
+                                    prompt: L10n.Onboarding.researcherNamePrompt
+                                )
                                 .accessibilityIdentifier("onboarding.displayName")
+                            }
+                            Text(L10n.Onboarding.newContributorIDNote)
+                                .font(PVFont.mono(size: PVTypeScale.micro))
+                                .foregroundStyle(PVColor.textMuted)
                         }
+                        .padding(PVSpacing.space5)
+                        .background(
+                            RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
+                                .fill(PVColor.surfaceSunken)
+                        )
                     }
                 }
                 if let errorText = model.errorText {
                     Text(errorText)
-                        .foregroundStyle(.red)
+                        .font(PVFont.body(size: PVTypeScale.bodySmall))
+                        .foregroundStyle(PVColor.danger)
                         .accessibilityIdentifier("onboarding.error")
                 }
             }
@@ -94,13 +117,13 @@ struct OnboardingIdentifyView: View {
             OnboardingFooter(
                 model: model,
                 leading: {
-                    Button(String(localized: L10n.Onboarding.back)) {
+                    PVButton(L10n.Onboarding.back, variant: .ghost) {
                         model.goBack()
                     }
                     .accessibilityIdentifier("onboarding.back")
                 },
                 trailing: {
-                    Button(String(localized: L10n.Onboarding.continueAction)) {
+                    PVButton(L10n.Onboarding.continueAction, variant: .primary) {
                         Task { await model.submit() }
                     }
                     .keyboardShortcut(.defaultAction)

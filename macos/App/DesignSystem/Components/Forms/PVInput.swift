@@ -32,17 +32,20 @@ struct PVInput: View {
     private let size: PVControlSize
     private let mono: Bool
     private let isReadOnly: Bool
+    private let prompt: LocalizedStringResource?
 
     init(
         text: Binding<String>,
         size: PVControlSize = .md,
         mono: Bool = false,
-        isReadOnly: Bool = false
+        isReadOnly: Bool = false,
+        prompt: LocalizedStringResource? = nil
     ) {
         self._text = text
         self.size = size
         self.mono = mono
         self.isReadOnly = isReadOnly
+        self.prompt = prompt
     }
 
     @FocusState private var isFocused: Bool
@@ -52,6 +55,10 @@ struct PVInput: View {
             if isReadOnly {
                 Text(text)
                     .frame(maxWidth: .infinity, alignment: .leading)
+            } else if let prompt {
+                TextField("", text: $text, prompt: Text(prompt))
+                    .textFieldStyle(.plain)
+                    .focused($isFocused)
             } else {
                 TextField("", text: $text)
                     .textFieldStyle(.plain)
