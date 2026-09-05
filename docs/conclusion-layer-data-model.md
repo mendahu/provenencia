@@ -8,7 +8,7 @@ The Conclusion layer answers:
 
 > What does the researcher currently conclude about the historical world after considering one or more sources?
 
-Cross-layer philosophy is summarized in [`data-model-source-interpretation-conclusion.md`](data-model-source-interpretation-conclusion.md). Interpretation subjects (Nodes, Observations, Properties) are defined in [`interpretation-layer-data-model.md`](interpretation-layer-data-model.md). Shared date and name value models are [`structured-date-model.md`](structured-date-model.md) and [`structured-name-model.md`](structured-name-model.md). Audit history is [`audit-revision-history.md`](audit-revision-history.md).
+Cross-layer philosophy is summarized in [`data-model-source-interpretation-conclusion.md`](data-model-source-interpretation-conclusion.md). Interpretation subjects (Nodes, Observations, Properties) are defined in [`interpretation-layer-data-model.md`](interpretation-layer-data-model.md). Shared date and name value models are [`structured-date-model.md`](structured-date-model.md) and [`structured-name-model.md`](structured-name-model.md). Audit history is [`audit-revision-history.md`](audit-revision-history.md). Researcher judgment (Claim confidence, and how it relates to Source credibility and Citation certainty) is [`research-judgment-model.md`](research-judgment-model.md).
 
 This draft treats canonical rows as the **working set** (handles the researcher is investigating). The Conclusion **claims** are still only two kinds: Sameness and Reconciliation. Creating a handle is not a third claim type; the entity row is the origination.
 
@@ -147,6 +147,20 @@ SQLite enforces foreign keys and basic checks. Cluster membership, kind/anchor c
 
 A Sameness Claim asserts that two Nodes do or do not refer to the same historical thing.
 
+Claim confidence grades (shared with Reconciliation Claims):
+
+```sql
+CREATE TABLE claim_confidence_grades (
+    key         TEXT PRIMARY KEY,
+    label       TEXT NOT NULL,
+    sort_order  INTEGER NOT NULL,
+    builtin     INTEGER NOT NULL DEFAULT 1,
+    CHECK (builtin IN (0, 1))
+) STRICT;
+```
+
+Seed keys: [`seeded-vocabulary.md`](seeded-vocabulary.md) §5.5. Semantics: [`research-judgment-model.md`](research-judgment-model.md).
+
 ```sql
 CREATE TABLE sameness_claims (
     id              BLOB PRIMARY KEY,
@@ -155,6 +169,7 @@ CREATE TABLE sameness_claims (
     node_type_key   TEXT NOT NULL,
     relation        TEXT NOT NULL,
     status          TEXT NOT NULL,
+    confidence_key  TEXT REFERENCES claim_confidence_grades(key),
     argument        TEXT,
 
     CHECK (relation IN ('same_as', 'distinct_from')),
@@ -176,6 +191,8 @@ There is at most one Sameness Claim per unordered Node pair. Endpoint order is c
 `status` is workflow state: `provisional`, `accepted`, or `rejected`. Only **accepted** `same_as` Claims participate in membership closure. `distinct_from` never enlarges membership regardless of status. See [`seeded-vocabulary.md`](seeded-vocabulary.md).
 
 `provisional` is a real persisted conclusion-in-progress, not a missing row. The UI should surface provisional Claims differently from accepted ones (for example a distinct stroke, badge, or filter) so researchers can see candidates without treating them as membership. Rejected Claims remain in history for audit and should not drive the working graph.
+
+`confidence_key` is optional epistemic stance (three-point Claim confidence vocabulary). It is **orthogonal to `status`**: accepted + low confidence and provisional + high confidence are both valid. Do not overload `provisional` to mean “I am unsure.” Authoritative rules: [`research-judgment-model.md`](research-judgment-model.md). Grade keys: [`seeded-vocabulary.md`](seeded-vocabulary.md).
 
 `argument` holds the researcher's reasoning chain for the claim — correlation narrative, circumstantial synthesis, or a short note when a single Observation already makes the case. Reasoning stays here rather than scattered across evidence rows.
 
@@ -289,6 +306,7 @@ CREATE TABLE reconciliation_claims (
     entity_id       BLOB NOT NULL REFERENCES canonical_entities(id) ON DELETE CASCADE,
     property_key    TEXT NOT NULL REFERENCES properties(key),
     status          TEXT NOT NULL,
+    confidence_key  TEXT REFERENCES claim_confidence_grades(key),
     argument        TEXT,
 
     value_text      TEXT,
@@ -313,9 +331,11 @@ Exactly one value representation must be populated, and it must match `propertie
 
 As with Observations, typed-column matching is an **application write invariant** for now. Readers prefer the column matching `value_type` if extras are present. The concluded value may match one exhibit Observation, be copied from a related Node's value, or be synthesized (for example a DateValue spanning Apr–May 1985).
 
-There is at most one Reconciliation Claim per `(entity, property)`. Changing the concluded value or `status` updates that row (and is audited).
+There is at most one Reconciliation Claim per `(entity, property)`. Changing the concluded value, `status`, or `confidence_key` updates that row (and is audited).
 
 `status` matches Sameness Claims: `provisional`, `accepted`, or `rejected`. **Only `accepted` is the committed concluded value.** `provisional` is a persisted working choice the UI should show differently. `rejected` is kept for audit and is not the working value.
+
+`confidence_key` matches Sameness Claims: optional three-point Claim confidence, orthogonal to `status`. See [`research-judgment-model.md`](research-judgment-model.md). Grades live in `claim_confidence_grades` (§4).
 
 From a modeling standpoint a Property on an entity either has a Reconciliation Claim or it does not. Soft blends of member Observations are **stateless display**. They are never persisted as automatic claims. There is no `origin` column and no `association_endpoints` table: association ends are ordinary Properties (`event`, `place`, `person`, `participant`) resolved like any other.
 
@@ -492,6 +512,7 @@ These are **schema and application invariants** (see §1). Grain, gazetteer use,
 16. Person name format is a Property (`name_format`) or the project default, not a column on `canonical_entities`.
 17. Association ends are Properties on the association entity (projected from member Observations and/or Reconciliation), not a separate endpoints table.
 18. There is no `origination_claims` table; the canonical row is the working-subject insert.
+19. Optional `confidence_key` on Sameness and Reconciliation Claims is epistemic stance only; it does not replace `status` and must use Claim confidence vocabulary, not Source credibility keys ([`research-judgment-model.md`](research-judgment-model.md)).
 
 ---
 
@@ -619,4 +640,5 @@ To avoid competing schema definitions:
 - [`structured-name-model.md`](structured-name-model.md) is authoritative for shared NameValue persistence.
 - [`seeded-vocabulary.md`](seeded-vocabulary.md) is the horizon catalog for intended keys and starter open-vocabulary lists (not a v1 ship list).
 - [`audit-revision-history.md`](audit-revision-history.md) is authoritative for audit and revision history.
+- [`research-judgment-model.md`](research-judgment-model.md) is authoritative for Claim confidence (and related Source/Citation judgment).
 - [`data-model-source-interpretation-conclusion.md`](data-model-source-interpretation-conclusion.md) summarizes the three-layer philosophy and points here for schema detail.

@@ -10,7 +10,7 @@ The Interpretation layer answers:
 
 Cross-layer philosophy and the relationship among Source, Interpretation, and Conclusion are summarized in [`data-model-source-interpretation-conclusion.md`](data-model-source-interpretation-conclusion.md).
 
-The authoritative Source-layer schema is [`source-layer-data-model.md`](source-layer-data-model.md). Conclusion-layer schema is [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md). Shared date and name value models are [`structured-date-model.md`](structured-date-model.md) and [`structured-name-model.md`](structured-name-model.md). Seeded keys and open-vocabulary starters are [`seeded-vocabulary.md`](seeded-vocabulary.md). Audit history is [`audit-revision-history.md`](audit-revision-history.md).
+The authoritative Source-layer schema is [`source-layer-data-model.md`](source-layer-data-model.md). Conclusion-layer schema is [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md). Shared date and name value models are [`structured-date-model.md`](structured-date-model.md) and [`structured-name-model.md`](structured-name-model.md). Seeded keys and open-vocabulary starters are [`seeded-vocabulary.md`](seeded-vocabulary.md). Audit history is [`audit-revision-history.md`](audit-revision-history.md). Researcher judgment (Source credibility assessments, Citation transcription certainty, Claim confidence) is [`research-judgment-model.md`](research-judgment-model.md).
 
 ---
 
@@ -102,12 +102,16 @@ Each Citation is independently resolvable from its `artifact_id` and locator. Ci
 
 ```sql
 CREATE TABLE citations (
-    id              BLOB PRIMARY KEY,
-    ref             TEXT UNIQUE NOT NULL,      -- e.g. CIT-3K9M2
-    artifact_id     BLOB NOT NULL REFERENCES artifacts(id) ON DELETE CASCADE,
-    locator_json    TEXT NOT NULL,
-    transcription   TEXT,
-    description     TEXT
+    id                        BLOB PRIMARY KEY,
+    ref                       TEXT UNIQUE NOT NULL,      -- e.g. CIT-3K9M2
+    artifact_id               BLOB NOT NULL REFERENCES artifacts(id) ON DELETE CASCADE,
+    locator_json              TEXT NOT NULL,
+    transcription             TEXT,
+    description               TEXT,
+    transcription_uncertain   INTEGER NOT NULL DEFAULT 0,
+    transcription_note        TEXT,
+
+    CHECK (transcription_uncertain IN (0, 1))
 ) STRICT;
 ```
 
@@ -115,6 +119,8 @@ CREATE TABLE citations (
 `transcription` preserves the researcher's reading of textual or spoken content within the cited evidence. It is intended to remain faithful to the evidence, including uncertainty where appropriate, rather than silently normalizing abbreviations, names, places, or other values. For example, `Wm Robins` may be transcribed as written and normalized to `William Robins` later through an Observation.
 
 `description` records what the researcher observes in the cited evidence. It is media-neutral and may describe visual, textual, audio, or other characteristics. It is not specifically an accessibility `alt_text` field.
+
+`transcription_uncertain` is a media-agnostic boolean: when set, the transcription (or equivalent representation of spoken/visual content) may not faithfully represent the cited Artifact portion — faint ink, damaged scan, garbled audio, muddy video, and similar. Optional `transcription_note` records why (for example `garbled audio ~1:02` or `surname damaged`). In-line marks such as `[?]` in `transcription` remain valid and complementary. This is not Claim confidence and not Source credibility; see [`research-judgment-model.md`](research-judgment-model.md).
 
 Researcher commentary about the Citation itself belongs in `citation_notes`.
 
@@ -547,16 +553,16 @@ Application semantics attach to stable `key` values, matching `node_types`. Seed
 
 Open text values such as `event_type` and `role` are seeded with common defaults for pickers but remain researcher-extensible; see [`seeded-vocabulary.md`](seeded-vocabulary.md). The schema does not close those sets or require particular roles for particular event types; first-class workflows recognize well-known values in application logic.
 
-Interactions between `source` Nodes should stay deliberately lightweight. Provenencia does not seed a structured source-quality ontology (`is_authentic`, defect codes, and similar).
+Interactions between `source` Nodes should stay deliberately lightweight. Provenencia does not seed a fine-grained source-quality ontology (`is_authentic`, defect codes, and similar) as Observation Properties.
 
-Two common shapes:
+**First-class Source credibility** — the researcher's reusable three-point trust rating of a Source — lives in `source_credibility_assessments`, not on the `sources` catalog row and not as a required Observation. Authoritative rules: [`research-judgment-model.md`](research-judgment-model.md). Cited commentary about a Source (another Source challenges authenticity, bare references, free-text remarks) continues to use Observations on the Source Node:
 
 ```text
 mentions   -> node   # bare source-to-source reference; target is typically a source Node
 remark     -> text   # free-text commentary about a source Node
 ```
 
-A book that merely cites a marriage certificate can record `BookSource -- mentions --> CertificateSource` with no remark. A letter that challenges a certificate can add text `remark` Observations and, when needed, ordinary person-level Observations as well. Structured Properties beyond this may be added later only if a concrete workflow requires them.
+A book that merely cites a marriage certificate can record `BookSource -- mentions --> CertificateSource` with no remark. A letter that challenges a certificate can add text `remark` Observations and, when needed, ordinary person-level Observations as well. Structured Properties beyond this may be added later only if a concrete workflow requires them. First-class credibility grades: §5.3.
 
 ## 5.2 `node_type_properties`
 
@@ -600,6 +606,31 @@ The vocabulary should be seeded with common definitions but remain researcher-ex
 For Node-valued Properties, allowed **target** Node Types (for example, `participation.person` should target a `person` Node) are an **application invariant** for now — the same posture as Observation value population. Seeded Properties get first-class UI/validation behavior; user-defined node Properties may remain unconstrained or warn-only. Provenencia does not persist target-type allow-lists in SQL yet (no `target_node_type_key` on `properties`, and no target join table). That can be added later if pickers and importers need a shared declarative vocabulary.
 
 Malformed edges (wrong target type) may be warned about or ignored by typed workflows; the generic graph still stores the Observation.
+
+## 5.3 `source_credibility_assessments`
+
+Interpretation-layer entity for the researcher's working credibility grade of a Source. Semantics and grade vocabulary: [`research-judgment-model.md`](research-judgment-model.md). Seed keys: [`seeded-vocabulary.md`](seeded-vocabulary.md) §3.0.
+
+```sql
+CREATE TABLE source_credibility_grades (
+    key         TEXT PRIMARY KEY,
+    label       TEXT NOT NULL,
+    sort_order  INTEGER NOT NULL,
+    builtin     INTEGER NOT NULL DEFAULT 1,
+    CHECK (builtin IN (0, 1))
+) STRICT;
+
+CREATE TABLE source_credibility_assessments (
+    id                  BLOB PRIMARY KEY,
+    source_id           BLOB NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+    credibility_key     TEXT NOT NULL REFERENCES source_credibility_grades(key),
+    argument            TEXT,
+
+    UNIQUE (source_id)
+) STRICT;
+```
+
+At most one working assessment per Source. Updates are audited. Missing assessment may display as baseline (`standard`) without inserting a row.
 
 ---
 
@@ -739,7 +770,7 @@ CREATE TABLE observations (
 
 **Read-side tolerance:** if a row is malformed, readers should prefer the column that matches the Property's `value_type` and ignore any other non-null value columns. A row with *no* usable value for that `value_type` is invalid and should be surfaced as an error or omitted rather than guessed. Reconciliation Claims use the same sparse-column idea, except `value_type = 'node'` is stored as `value_entity_id` (a canonical handle) rather than `value_node_id`. See [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md).
 
-Reading uncertainty belongs in Citation transcription or description when needed. Alternative or competing interpretations are modeled as separate Observations rather than a numeric confidence score on a single row. Researcher commentary about a particular Observation belongs in `observation_notes`.
+Reading uncertainty belongs in Citation `transcription` / `transcription_uncertain` / `transcription_note` (and description when needed). Alternative or competing interpretations are modeled as separate Observations rather than a numeric confidence score on a single Observation row. Researcher commentary about a particular Observation belongs in `observation_notes`. Epistemic confidence about a *conclusion* belongs on Claims; see [`research-judgment-model.md`](research-judgment-model.md).
 
 ```sql
 CREATE TABLE observation_notes (
@@ -791,6 +822,8 @@ The current design aims to preserve these invariants:
 19. Derived genealogical semantics are not duplicated into the Interpretation graph merely for convenience.
 20. Unknown/custom Node Types, Properties, and open vocabulary values (such as event types and roles) remain preservable and generically usable without first-class application support.
 21. First-class application behavior may recognize seeded keys and values; it must not require the schema to close those vocabularies or encode every genealogical edge case.
+22. Source credibility assessments are Interpretation entities (`source_credibility_assessments`), not columns on `sources` and not Observation confidence scores.
+23. Citation transcription certainty is the boolean `transcription_uncertain` (+ optional note), media-agnostic; it is not Claim confidence.
 
 ---
 
@@ -805,4 +838,5 @@ To avoid competing schema definitions:
 - [`structured-date-model.md`](structured-date-model.md) is authoritative for shared DateValue persistence.
 - [`structured-name-model.md`](structured-name-model.md) is authoritative for shared NameValue persistence.
 - [`audit-revision-history.md`](audit-revision-history.md) is authoritative for audit and revision history.
+- [`research-judgment-model.md`](research-judgment-model.md) is authoritative for Source credibility, Citation transcription certainty, and Claim confidence semantics.
 - [`data-model-source-interpretation-conclusion.md`](data-model-source-interpretation-conclusion.md) summarizes the three-layer philosophy and cross-layer examples.

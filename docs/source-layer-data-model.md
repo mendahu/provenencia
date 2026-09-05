@@ -8,7 +8,7 @@ The Source layer answers:
 
 > What evidence do we possess?
 
-It preserves evidence as acquired and descriptive catalog information about that evidence while deliberately avoiding genealogical interpretation. People, events, places, relationships, transcriptions, identity resolution, and conclusions belong to later layers.
+It preserves evidence as acquired and descriptive catalog information about that evidence while deliberately avoiding genealogical interpretation. People, events, places, relationships, transcriptions, identity resolution, conclusions, and structured Source **credibility** assessments belong to later layers (credibility: [`research-judgment-model.md`](research-judgment-model.md)).
 
 ---
 
@@ -428,7 +428,7 @@ The audit tables are cross-cutting infrastructure and are defined separately in 
 
 # 11. Current architectural rules
 
-1. Sources are evidentiary objects and remain free of genealogical interpretation.
+1. Sources are evidentiary objects and remain free of genealogical interpretation. Structured Source **credibility** is an Interpretation assessment entity, not a column on `sources`; see [`research-judgment-model.md`](research-judgment-model.md).
 2. Source types use a seeded, controlled, user-extensible vocabulary rather than an enum.
 3. Source metadata is descriptive and minimally structured.
 4. Metadata values are text by default; shared structured genealogical dates are the intentional exception.
