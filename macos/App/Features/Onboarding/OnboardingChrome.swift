@@ -6,7 +6,6 @@ struct OnboardingFileChoice: View {
     let subtitle: LocalizedStringResource
     let icon: String
     let selected: Bool
-    let compact: Bool
     let action: () -> Void
 
     init(
@@ -14,50 +13,33 @@ struct OnboardingFileChoice: View {
         subtitle: LocalizedStringResource,
         icon: String,
         selected: Bool,
-        compact: Bool = false,
         action: @escaping () -> Void
     ) {
         self.title = title
         self.subtitle = subtitle
         self.icon = icon
         self.selected = selected
-        self.compact = compact
         self.action = action
     }
 
     var body: some View {
         Button(action: action) {
-            Group {
-                if compact {
-                    HStack(spacing: PVSpacing.space4) {
-                        PVIcon(icon, size: 16)
-                        titleText
+            VStack(alignment: .leading, spacing: PVSpacing.space4) {
+                HStack(spacing: PVSpacing.space4) {
+                    PVIcon(icon, size: 16)
+                    titleText
+                    if selected {
                         Spacer(minLength: 0)
-                        if selected {
-                            checkIcon
-                        }
+                        checkIcon
                     }
-                    .padding(.horizontal, PVSpacing.space5)
-                    .padding(.vertical, PVSpacing.space4)
-                } else {
-                    VStack(alignment: .leading, spacing: PVSpacing.space4) {
-                        HStack(spacing: PVSpacing.space4) {
-                            PVIcon(icon, size: 16)
-                            titleText
-                            if selected {
-                                Spacer(minLength: 0)
-                                checkIcon
-                            }
-                        }
-                        Text(subtitle)
-                            .font(PVFont.body(size: PVTypeScale.bodySmall))
-                            .foregroundStyle(selected ? PVColor.accentSoftForeground : PVColor.textSecondary)
-                            .multilineTextAlignment(.leading)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(PVSpacing.space6)
                 }
+                Text(subtitle)
+                    .font(PVFont.body(size: PVTypeScale.bodySmall))
+                    .foregroundStyle(selected ? PVColor.accentSoftForeground : PVColor.textSecondary)
+                    .multilineTextAlignment(.leading)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(PVSpacing.space6)
             .background(
                 RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
                     .fill(selected ? PVColor.surfaceSelected : PVColor.surfaceCard)
@@ -99,7 +81,7 @@ struct OnboardingOpenPicker: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space4) {
+        VStack(alignment: .leading, spacing: PVSpacing.space6) {
             Text(L10n.Onboarding.projectFolder)
                 .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
                 .tracking(PVTypeScale.micro * PVTracking.caps)
@@ -146,6 +128,7 @@ struct OnboardingOpenPicker: View {
                     updatedByRef: model.projectUpdatedByRef,
                     accessibilityPrefix: "onboarding.open"
                 )
+                .padding(.top, PVSpacing.space2)
             }
         }
         .onChange(of: model.selectedProject) { _, _ in

@@ -20,8 +20,7 @@ struct OnboardingChooseFileView: View {
                         L10n.Onboarding.createNewTitle,
                         subtitle: L10n.Onboarding.createNewSubtitle,
                         icon: "folder-plus",
-                        selected: model.mode == .create,
-                        compact: model.mode == .open
+                        selected: model.mode == .create
                     ) {
                         Task { await model.selectMode(.create) }
                     }
@@ -29,8 +28,7 @@ struct OnboardingChooseFileView: View {
                         L10n.Onboarding.haveFileTitle,
                         subtitle: L10n.Onboarding.haveFileSubtitle,
                         icon: "folder-open",
-                        selected: model.mode == .open,
-                        compact: model.mode == .open
+                        selected: model.mode == .open
                     ) {
                         Task { await model.selectMode(.open) }
                     }
