@@ -1,6 +1,14 @@
 import Foundation
 
 enum L10n {
+    enum DesignSystem {
+        static let requiredMarker = LocalizedStringResource(
+            "designSystem.field.requiredMarker",
+            defaultValue: "*",
+            comment: "Marks a required PVField as required, shown beside its label"
+        )
+    }
+
     enum Onboarding {
         static let welcomeTitle = LocalizedStringResource(
             "onboarding.chooseFile.welcomeTitle",

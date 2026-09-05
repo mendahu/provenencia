@@ -4,6 +4,18 @@
     "" : {
 
     },
+    "designSystem.field.requiredMarker" : {
+      "comment" : "Marks a required PVField as required, shown beside its label",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "*"
+          }
+        }
+      }
+    },
     "onboarding.chooseFile.bodyChoose" : {
       "comment" : "Onboarding choose-file body when researcher is not locked",
       "extractionState" : "manual",
