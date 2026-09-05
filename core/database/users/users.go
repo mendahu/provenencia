@@ -8,7 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/ref"
 )
 
-var ErrInvalid = errors.New("invalid user id, display name, or ref")
+var ErrInvalid = errors.New("Invalid user ID, display name, or ref.")
 
 const (
 	sqlUpsert = `INSERT INTO users (id, display_name, ref) VALUES (?, ?, ?)

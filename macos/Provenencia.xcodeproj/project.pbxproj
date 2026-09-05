@@ -16,6 +16,7 @@
 		56FF85A0EB2688B0B226A023 /* PVTypography.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2789221068BF64015C43CA5 /* PVTypography.swift */; };
 		60591A4DC996FC9EB9F29023 /* PVColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4094CD05F31CFF0AA37C888A /* PVColor.swift */; };
 		6D245285E4AB8AAFDE78E313 /* PVIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36412B0A6A6851ADB45A7AA8 /* PVIcon.swift */; };
+		854A784AE802C0EF7A484971 /* PVToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FC0B0A893C7248A08303738 /* PVToast.swift */; };
 		AA0000000000000000000001 /* ProvenenciaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000010 /* ProvenenciaApp.swift */; };
 		AA0000000000000000000002 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000011 /* OnboardingView.swift */; };
 		AA0000000000000000000003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000012 /* Assets.xcassets */; };
@@ -78,6 +79,7 @@
 		4094CD05F31CFF0AA37C888A /* PVColor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVColor.swift; sourceTree = "<group>"; };
 		40F72A548E04F25E0AA30CDB /* PVInput.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVInput.swift; sourceTree = "<group>"; };
 		6AAC04817D6F4CCC9CDC9B17 /* README.md */ = {isa = PBXFileReference; includeInIndex = 1; path = README.md; sourceTree = "<group>"; };
+		8FC0B0A893C7248A08303738 /* PVToast.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVToast.swift; sourceTree = "<group>"; };
 		9A63753F8D90991976A28F13 /* PVElevation.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVElevation.swift; sourceTree = "<group>"; };
 		9BEB8D3B3D1A6C08B3733B13 /* PVSpacing.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSpacing.swift; sourceTree = "<group>"; };
 		A0AE6B1748FA280F95478205 /* PVButton.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVButton.swift; sourceTree = "<group>"; };
@@ -165,6 +167,15 @@
 			);
 			name = Forms;
 			path = Forms;
+			sourceTree = "<group>";
+		};
+		7CE27BCE83A155C8F77EF85E /* Feedback */ = {
+			isa = PBXGroup;
+			children = (
+				8FC0B0A893C7248A08303738 /* PVToast.swift */,
+			);
+			name = Feedback;
+			path = Feedback;
 			sourceTree = "<group>";
 		};
 		A6C6775E822CC039D1AF078F /* Core */ = {
@@ -296,6 +307,7 @@
 			children = (
 				A6C6775E822CC039D1AF078F /* Core */,
 				751809A4EF38DC6F6B1B17A4 /* Forms */,
+				7CE27BCE83A155C8F77EF85E /* Feedback */,
 			);
 			name = Components;
 			path = Components;
@@ -459,6 +471,7 @@
 				080D24179717B185C273478D /* PVField.swift in Sources */,
 				ECC25906B62C6453A5CB9D25 /* PVInput.swift in Sources */,
 				504C4A2D17A9AC30A47D4E37 /* PVSelect.swift in Sources */,
+				854A784AE802C0EF7A484971 /* PVToast.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

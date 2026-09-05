@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	ErrInvalid = errors.New("invalid project metadata")
-	ErrMissing = errors.New("project metadata missing")
+	ErrInvalid = errors.New("Invalid project metadata.")
+	ErrMissing = errors.New("Project metadata missing.")
 )
 
 const (

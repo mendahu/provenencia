@@ -106,7 +106,7 @@ final class OnboardingModel {
             }
             phase = .chooseFile
         } catch {
-            errorText = error.localizedDescription
+            errorText = formattedError(error)
             phase = .chooseFile
         }
     }
@@ -184,7 +184,7 @@ final class OnboardingModel {
             mode = .create
             phase = .chooseFile
         } catch {
-            errorText = error.localizedDescription
+            errorText = formattedError(error)
         }
     }
 
@@ -193,7 +193,7 @@ final class OnboardingModel {
             let loc = try resolvedFolders()
             availableProjects = try InstallPaths.provenenciaProjects(in: loc.documentsDirectory)
         } catch {
-            errorText = error.localizedDescription
+            errorText = formattedError(error)
         }
     }
 
@@ -218,7 +218,7 @@ final class OnboardingModel {
             }
             phase = .identify
         } catch {
-            errorText = error.localizedDescription
+            errorText = formattedError(error)
         }
     }
 
@@ -236,7 +236,7 @@ final class OnboardingModel {
             )
             applyOpened(result)
         } catch {
-            errorText = error.localizedDescription
+            errorText = formattedError(error)
         }
     }
 
@@ -255,7 +255,7 @@ final class OnboardingModel {
             )
             applyOpened(result)
         } catch {
-            errorText = error.localizedDescription
+            errorText = formattedError(error)
         }
     }
 
@@ -278,7 +278,7 @@ final class OnboardingModel {
             clearProjectMeta()
             projectBasename = URL(fileURLWithPath: path).lastPathComponent
             projectLabel = ProjectSlug.labelFromFolder(path)
-            errorText = error.localizedDescription
+            errorText = formattedError(error)
         }
     }
 
@@ -318,5 +318,23 @@ final class OnboardingModel {
 
     private func trimmed(_ s: String) -> String {
         s.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Formats an error as a proper sentence (capitalized, terminal
+    /// punctuation) before it reaches `errorText`. Most Go/FFI errors are
+    /// already full sentences, but this is a safety net for any that
+    /// aren't — `error.localizedDescription` is otherwise shown to the
+    /// user verbatim (per `docs/macos-client-patterns.md` §6, Go/FFI error
+    /// text stays English until mapped to `L10n`).
+    private func formattedError(_ error: Error) -> String {
+        var text = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let first = text.first else {
+            return text
+        }
+        text.replaceSubrange(text.startIndex...text.startIndex, with: first.uppercased())
+        if let last = text.last, !".!?".contains(last) {
+            text += "."
+        }
+        return text
     }
 }

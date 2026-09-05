@@ -57,12 +57,6 @@ struct OnboardingChooseFileView: View {
                 if model.mode == .open {
                     OnboardingOpenPicker(model: model)
                 }
-                if let errorText = model.errorText {
-                    Text(errorText)
-                        .font(PVFont.body(size: PVTypeScale.bodySmall))
-                        .foregroundStyle(PVColor.danger)
-                        .accessibilityIdentifier("onboarding.error")
-                }
             }
             Spacer(minLength: 24)
             OnboardingFooter(

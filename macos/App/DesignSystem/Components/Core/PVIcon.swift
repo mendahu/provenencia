@@ -9,9 +9,10 @@ import SwiftUI
 /// one file to extend when a screen needs an icon name that isn't mapped
 /// yet.
 ///
-/// Only the names the Onboarding Flow board actually uses are mapped so
-/// far. See `DesignSystem/README.md` for the full component/token pattern
-/// this file follows (canonical example: `PVButton.swift`).
+/// Only the names actually consumed so far (the Onboarding Flow board's
+/// icons, plus `PVToast`'s tone icons and dismiss glyph) are mapped. See
+/// `DesignSystem/README.md` for the full component/token pattern this file
+/// follows (canonical example: `PVButton.swift`).
 struct PVIcon: View {
     private let name: String
     private let size: CGFloat
@@ -39,7 +40,11 @@ enum PVIconMap {
         "folder-open": "folder",
         "check": "checkmark",
         "info": "info.circle",
-        "chevron-down": "chevron.down"
+        "chevron-down": "chevron.down",
+        "check-check": "checkmark.circle.fill",
+        "triangle-alert": "exclamationmark.triangle.fill",
+        "octagon-alert": "exclamationmark.octagon.fill",
+        "x": "xmark"
     ]
 
     static func sfSymbol(for lucideName: String) -> String {

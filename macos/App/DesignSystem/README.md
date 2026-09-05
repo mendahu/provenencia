@@ -78,7 +78,9 @@ guess at colors/spacing/sizes.
 
 ## What's built vs. not yet
 
-Only the components the **Onboarding Flow** board actually uses are built:
+The components the **Onboarding Flow** board actually uses, plus `Toast`
+(added when onboarding needed a way to surface errors that wasn't an inline
+red `Text`):
 
 | Component | File | 
 |---|---|
@@ -87,8 +89,9 @@ Only the components the **Onboarding Flow** board actually uses are built:
 | Field | `Components/Forms/PVField.swift` |
 | Input | `Components/Forms/PVInput.swift` |
 | Select | `Components/Forms/PVSelect.swift` |
+| Toast | `Components/Feedback/PVToast.swift` |
 
-The other 18 design-system components have **no files yet** — add them on
+The other 17 design-system components have **no files yet** — add them on
 demand, following the pattern above, when a screen needs one:
 
 | Component | Category | Purpose |
@@ -100,7 +103,6 @@ demand, following the pattern above, when a screen needs one:
 | Tooltip | Core | Hover label |
 | Dialog | Feedback | Modal dialog |
 | EmptyState | Feedback | "Nothing here yet" placeholder |
-| Toast | Feedback | Transient notification |
 | Checkbox | Forms | Checkbox control |
 | Radio | Forms | Radio control |
 | Switch | Forms | Toggle switch |

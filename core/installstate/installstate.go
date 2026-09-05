@@ -14,8 +14,8 @@ import (
 const FileName = "active-project.json"
 
 var (
-	ErrNotFound = errors.New("active project file not found")
-	ErrInvalid  = errors.New("project dir is empty")
+	ErrNotFound = errors.New("Active project file not found.")
+	ErrInvalid  = errors.New("Project dir is empty.")
 )
 
 // Active is the last project this install opened (not a catalog row).
