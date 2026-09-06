@@ -44,7 +44,7 @@ Place the label toggle somewhere obvious in chrome (sidebar edge, rail footer, o
 
 ### 3.2 Session and project identity in chrome
 
-Today’s onboarding home surfaces: logo mark, “You’re signed in”, contributor **display name** + parenthesized **`USR-…`**, project **label**, folder basename, created/updated bookkeeping, and **Sign out**. Relocate identity and project cues into chrome; **move Sign Out out of the window** into the macOS app menu (see W-11).
+Today’s onboarding home surfaces: logo mark, “You’re signed in”, contributor **display name** + parenthesized **`USR-…`**, project **label**, folder basename, and **Sign out**. Relocate identity and project cues into chrome; **move Sign Out out of the window** into the macOS app menu (see W-11). Do **not** bring created/updated/updated-by project bookkeeping into this chrome.
 
 | ID | Requirement |
 | --- | --- |
@@ -53,7 +53,6 @@ Today’s onboarding home surfaces: logo mark, “You’re signed in”, contrib
 | W-9 | Always surface the **project label** (human title from the catalog `project` table), not only the folder path. |
 | W-10 | Surface the **project folder basename** (e.g. `robins-family.provenencia`) in a secondary/muted style — useful for disk orientation. |
 | W-11 | Provide **Sign Out** only in the macOS **app menu** (`Provenencia` → Sign Out), not as a button or link in window chrome / sidebar. Annotate this on the board (menu-bar callout is enough; Claude Design need not pixel-perfect the system menu). Same action as today’s onboarding Sign Out (clears session / returns to onboarding). Do **not** duplicate Sign Out in the sidebar to “save a click.” |
-| W-12 | Optional in this board: created/updated/updated-by project bookkeeping. If omitted from chrome, note that it can live under a future Project/Settings destination — do not invent a heavy project dashboard. |
 
 ### 3.3 Navigation destinations
 
@@ -103,6 +102,7 @@ Produce frames sufficient to review:
 - Audit history browser, sync, accounts, Windows layouts.
 - Multi-window document model or tabbed documents.
 - Sign Out (or Log Out) controls inside the window / sidebar — app menu only.
+- Project created / updated / updated-by bookkeeping in workspace chrome.
 
 ---
 
