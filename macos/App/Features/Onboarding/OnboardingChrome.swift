@@ -117,15 +117,10 @@ struct OnboardingOpenPicker: View {
                     .accessibilityIdentifier("onboarding.chooseFolder")
                 }
             }
-            if model.selectedProject != nil {
+            if model.selectedProject != nil, let project = model.project {
                 OnboardingProjectMetaLines(
-                    label: model.projectLabel,
+                    project,
                     showFolder: false,
-                    folderName: model.projectBasename,
-                    createdAt: model.projectCreatedAt,
-                    updatedAt: model.projectUpdatedAt,
-                    updatedByDisplayName: model.projectUpdatedByDisplayName,
-                    updatedByRef: model.projectUpdatedByRef,
                     accessibilityPrefix: "onboarding.open"
                 )
                 .padding(.top, PVSpacing.space2)
@@ -139,45 +134,50 @@ struct OnboardingOpenPicker: View {
 
 /// Shared project bookkeeping lines for open-picker preview and home.
 struct OnboardingProjectMetaLines: View {
-    let label: String
+    let project: ProjectInfo
     var showFolder: Bool = true
-    let folderName: String
-    let createdAt: String
-    let updatedAt: String
-    let updatedByDisplayName: String
-    let updatedByRef: String
     var accessibilityPrefix: String = "onboarding.project"
+
+    init(
+        _ project: ProjectInfo,
+        showFolder: Bool = true,
+        accessibilityPrefix: String = "onboarding.project"
+    ) {
+        self.project = project
+        self.showFolder = showFolder
+        self.accessibilityPrefix = accessibilityPrefix
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space2) {
-            if !label.isEmpty {
-                Text(label)
+            if !project.label.isEmpty {
+                Text(project.label)
                     .font(PVFont.body(size: PVTypeScale.h4, weight: PVFontWeight.semibold))
                     .foregroundStyle(PVColor.textPrimary)
                     .accessibilityIdentifier("\(accessibilityPrefix).projectLabel")
             }
-            if showFolder, !folderName.isEmpty {
-                Text(L10n.Onboarding.homeFolder(folderName: folderName))
+            if showFolder, !project.folderName.isEmpty {
+                Text(L10n.Onboarding.homeFolder(folderName: project.folderName))
                     .font(PVFont.mono(size: PVTypeScale.caption))
                     .foregroundStyle(PVColor.textMuted)
                     .accessibilityIdentifier("\(accessibilityPrefix).project")
             }
-            if !createdAt.isEmpty {
-                Text(L10n.Onboarding.homeCreated(date: Self.formatDate(createdAt)))
+            if !project.createdAt.isEmpty {
+                Text(L10n.Onboarding.homeCreated(date: Self.formatDate(project.createdAt)))
                     .font(PVFont.mono(size: PVTypeScale.caption))
                     .foregroundStyle(PVColor.textMuted)
                     .accessibilityIdentifier("\(accessibilityPrefix).created")
             }
-            if !updatedAt.isEmpty {
-                Text(L10n.Onboarding.homeUpdated(date: Self.formatDate(updatedAt)))
+            if !project.updatedAt.isEmpty {
+                Text(L10n.Onboarding.homeUpdated(date: Self.formatDate(project.updatedAt)))
                     .font(PVFont.mono(size: PVTypeScale.caption))
                     .foregroundStyle(PVColor.textMuted)
                     .accessibilityIdentifier("\(accessibilityPrefix).updated")
             }
-            if !updatedByDisplayName.isEmpty {
+            if !project.updatedByDisplayName.isEmpty {
                 Text(L10n.Onboarding.homeUpdatedBy(
-                    displayName: updatedByDisplayName,
-                    ref: updatedByRef
+                    displayName: project.updatedByDisplayName,
+                    ref: project.updatedByRef
                 ))
                     .font(PVFont.mono(size: PVTypeScale.caption))
                     .foregroundStyle(PVColor.textMuted)
