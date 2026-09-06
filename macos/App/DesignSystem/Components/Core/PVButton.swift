@@ -120,6 +120,7 @@ private struct PVButtonBody: View {
 
     @State private var isHovering = false
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let palette = PVButtonPalette.palette(for: variant)
@@ -139,9 +140,9 @@ private struct PVButtonBody: View {
                     .stroke(showHover ? (palette.hoverBorder ?? palette.border) : palette.border, lineWidth: 1)
             )
             .opacity(isEnabled ? 1 : 0.45)
-            .scaleEffect(configuration.isPressed ? PVMotion.pressScale : 1)
-            .animation(PVMotion.fastStandard, value: isHovering)
-            .animation(PVMotion.instantStandard, value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? PVMotion.pressScale : 1)
+            .pvAnimation(PVMotion.fastStandard, value: isHovering)
+            .pvAnimation(PVMotion.instantStandard, value: configuration.isPressed)
             .onHover { isHovering = $0 }
     }
 }

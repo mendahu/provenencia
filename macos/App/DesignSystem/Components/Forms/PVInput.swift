@@ -21,7 +21,7 @@ struct PVInputChrome: ViewModifier {
                     .stroke(isFocused ? PVColor.borderFocus : PVColor.borderDefault, lineWidth: 1)
             )
             .modifier(PVInputRestingShadow(isFocused: isFocused))
-            .animation(PVMotion.fastStandard, value: isFocused)
+            .pvAnimation(PVMotion.fastStandard, value: isFocused)
     }
 }
 

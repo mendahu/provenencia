@@ -52,7 +52,7 @@ func TestProject(t *testing.T) {
 		{
 			name: "rejects blank label",
 			run: func(t *testing.T, c *database.Catalog) {
-				if err := Upsert(c, Info{Label: "  ", CreatedAt: NowUTC(), UpdatedAt: NowUTC(), UpdatedBy: id}); err != ErrInvalid {
+				if err := Upsert(c, Info{Label: "  ", CreatedAt: NowUTC(), UpdatedAt: NowUTC(), UpdatedBy: id}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},

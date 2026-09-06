@@ -2,6 +2,7 @@ package identity
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -48,7 +49,7 @@ func TestIdentity(t *testing.T) {
 			name: "load missing is ErrNotFound",
 			run: func(t *testing.T, dir string) {
 				_, err := Load(dir)
-				if err != ErrNotFound {
+				if !errors.Is(err, ErrNotFound) {
 					t.Fatalf("got %v want %v", err, ErrNotFound)
 				}
 			},
@@ -61,7 +62,7 @@ func TestIdentity(t *testing.T) {
 					t.Fatal(err)
 				}
 				id.DisplayName = "  \t"
-				if err := Save(dir, id); err != ErrInvalidName {
+				if err := Save(dir, id); !errors.Is(err, ErrInvalidName) {
 					t.Fatalf("got %v want %v", err, ErrInvalidName)
 				}
 			},
@@ -154,7 +155,7 @@ func TestIdentity(t *testing.T) {
 			name: "save rejects non v7",
 			run: func(t *testing.T, dir string) {
 				id := Identity{UserID: uuid.New(), DisplayName: "X"}
-				if err := Save(dir, id); err != ErrInvalidID {
+				if err := Save(dir, id); !errors.Is(err, ErrInvalidID) {
 					t.Fatalf("got %v want %v", err, ErrInvalidID)
 				}
 			},
@@ -163,7 +164,7 @@ func TestIdentity(t *testing.T) {
 			name: "mint rejects blank name",
 			run: func(t *testing.T, dir string) {
 				_, err := Mint("   ")
-				if err != ErrInvalidName {
+				if !errors.Is(err, ErrInvalidName) {
 					t.Fatalf("got %v want %v", err, ErrInvalidName)
 				}
 			},
@@ -189,7 +190,7 @@ func TestIdentity(t *testing.T) {
 				if err := Remove(dir); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := Load(dir); err != ErrNotFound {
+				if _, err := Load(dir); !errors.Is(err, ErrNotFound) {
 					t.Fatalf("got %v", err)
 				}
 			},

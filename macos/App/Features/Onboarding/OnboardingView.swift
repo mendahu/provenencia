@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct OnboardingView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var model: OnboardingModel
 
     init(store: any GenealogyStore = GoStore(), folders: OnboardingFolders? = nil) {
@@ -35,17 +36,33 @@ struct OnboardingView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(PVColor.surfacePage)
         .overlay(alignment: .topTrailing) {
-            if let errorText = model.errorText {
-                PVToast(tone: .danger, message: errorText, onDismiss: { model.errorText = nil })
-                    .accessibilityIdentifier("onboarding.error")
-                    .padding(.top, PVSpacing.space6)
-                    .padding(.trailing, PVSpacing.space6)
-                    .transition(.move(edge: .trailing).combined(with: .opacity))
+            if let error = model.error {
+                PVToast(
+                    tone: toastTone(for: error),
+                    message: error.localizedDescription,
+                    onDismiss: { model.error = nil }
+                )
+                .accessibilityIdentifier("onboarding.error")
+                .padding(.top, PVSpacing.space6)
+                .padding(.trailing, PVSpacing.space6)
+                .transition(.move(edge: .trailing).combined(with: .opacity))
             }
         }
-        .animation(PVMotion.easeStandard, value: model.errorText)
+        .animation(reduceMotion ? nil : PVMotion.easeStandard, value: model.error?.localizedDescription)
         .task {
             await model.load()
+        }
+    }
+
+    private func toastTone(for error: Error) -> PVToastTone {
+        guard case .coded(_, _, let kind, _) = error as? CoreInvokeError else {
+            return .danger
+        }
+        switch kind {
+        case .user, .conflict, .notFound:
+            return .warning
+        case .internal, .unspecified:
+            return .danger
         }
     }
 }

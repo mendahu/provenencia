@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Builds macos/Core/libprovenencia.dylib for the Xcode app target.
+# Xcode lists Go inputs in macos/Core/go-sources.xcfilelist — refresh that
+# file when adding/removing .go under api/ or core/ so the build phase re-runs.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"

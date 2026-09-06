@@ -55,7 +55,7 @@ struct OnboardingChooseFileView: View {
             }
         } footer: {
             OnboardingFooter(
-                model: model,
+                isBusy: model.isBusy,
                 leading: {
                     if model.researcherLocked {
                         PVButton(L10n.Onboarding.signOut, variant: .ghost) {

@@ -5,7 +5,6 @@ package apperr
 
 import (
 	"errors"
-	"fmt"
 )
 
 // Kind classifies a failure for client UX. Copy still comes from L10n by Code.
@@ -20,30 +19,30 @@ const (
 
 // Stable wire codes. Permanent once shipped.
 const (
-	CodeCatalogAlreadyExists       = "catalog.already_exists"
-	CodeCatalogAlreadyOpen         = "catalog.already_open"
-	CodeCatalogNotAProject         = "catalog.not_a_project"
-	CodeCatalogUnsupportedVersion  = "catalog.unsupported_version"
-	CodeCatalogInvalidFolderName   = "catalog.invalid_folder_name"
-	CodeCatalogClosed              = "catalog.closed"
-	CodeProjectInvalidMetadata     = "project.invalid_metadata"
-	CodeProjectMissingMetadata     = "project.missing_metadata"
-	CodeUsersInvalid               = "users.invalid"
-	CodeIdentityNotFound           = "identity.not_found"
-	CodeIdentityInvalidName        = "identity.invalid_name"
-	CodeIdentityInvalidID          = "identity.invalid_id"
-	CodeIdentityInvalidRef         = "identity.invalid_ref"
-	CodeInstallNotFound            = "install.not_found"
-	CodeInstallInvalid             = "install.invalid"
-	CodeOnboardingBlankName        = "onboarding.blank_name"
+	CodeCatalogAlreadyExists        = "catalog.already_exists"
+	CodeCatalogAlreadyOpen          = "catalog.already_open"
+	CodeCatalogNotAProject          = "catalog.not_a_project"
+	CodeCatalogUnsupportedVersion   = "catalog.unsupported_version"
+	CodeCatalogInvalidFolderName    = "catalog.invalid_folder_name"
+	CodeCatalogClosed               = "catalog.closed"
+	CodeProjectInvalidMetadata      = "project.invalid_metadata"
+	CodeProjectMissingMetadata      = "project.missing_metadata"
+	CodeUsersInvalid                = "users.invalid"
+	CodeIdentityNotFound            = "identity.not_found"
+	CodeIdentityInvalidName         = "identity.invalid_name"
+	CodeIdentityInvalidID           = "identity.invalid_id"
+	CodeIdentityInvalidRef          = "identity.invalid_ref"
+	CodeInstallNotFound             = "install.not_found"
+	CodeInstallInvalid              = "install.invalid"
+	CodeOnboardingBlankName         = "onboarding.blank_name"
 	CodeOnboardingInvalidFamilyName = "onboarding.invalid_family_name"
-	CodeOnboardingUnknownUser      = "onboarding.unknown_user"
-	CodeRefInvalidPrefix           = "ref.invalid_prefix"
-	CodeRefInvalid                 = "ref.invalid"
-	CodeFileNotFound               = "file.not_found"
-	CodeInternalUnknown            = "internal.unknown"
-	CodeInternalUnknownMethod      = "internal.unknown_method"
-	CodeInternalMigrations         = "internal.migrations"
+	CodeOnboardingUnknownUser       = "onboarding.unknown_user"
+	CodeRefInvalidPrefix            = "ref.invalid_prefix"
+	CodeRefInvalid                  = "ref.invalid"
+	CodeFileNotFound                = "file.not_found"
+	CodeInternalUnknown             = "internal.unknown"
+	CodeInternalUnknownMethod       = "internal.unknown_method"
+	CodeInternalMigrations          = "internal.migrations"
 )
 
 // Error is a coded application error. Params are ordered L10n format args.
@@ -62,10 +61,7 @@ func (e *Error) Error() string {
 	if e == nil {
 		return CodeInternalUnknown
 	}
-	if len(e.params) == 0 {
-		return e.code
-	}
-	return fmt.Sprintf("%s: %v", e.code, e.params)
+	return e.code
 }
 
 func (e *Error) Code() string {

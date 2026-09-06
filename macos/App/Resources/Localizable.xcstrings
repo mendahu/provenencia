@@ -481,18 +481,6 @@
         }
       }
     },
-    "onboarding.identify.contributorPicker": {
-      "comment": "Accessibility label for contributor picker",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Contributor"
-          }
-        }
-      }
-    },
     "onboarding.identify.contributorRef": {
       "comment": "Parenthesized short ref beside a display name; argument is USR-… ref",
       "extractionState": "manual",
@@ -681,18 +669,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Choose…"
-          }
-        }
-      }
-    },
-    "onboarding.open.existingProjectPicker": {
-      "comment": "Accessibility label for existing-project picker",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Existing project"
           }
         }
       }

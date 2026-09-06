@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct OnboardingHomeView: View {
-    @Bindable var model: OnboardingModel
+    var model: OnboardingModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space5) {

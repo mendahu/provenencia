@@ -98,7 +98,7 @@ struct OnboardingIdentifyView: View {
             }
         } footer: {
             OnboardingFooter(
-                model: model,
+                isBusy: model.isBusy,
                 leading: {
                     PVButton(L10n.Onboarding.back, variant: .ghost) {
                         model.goBack()

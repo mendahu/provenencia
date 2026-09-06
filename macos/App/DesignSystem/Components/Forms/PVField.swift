@@ -3,7 +3,7 @@ import SwiftUI
 /// A label (+ optional hint/error) wrapper around arbitrary field content —
 /// mirrors `components/forms/Field.jsx`. Generic over its content, the same
 /// shape `OnboardingFooter` already uses in
-/// `Features/Onboarding/OnboardingChrome.swift`, so this isn't a new
+/// `Features/Onboarding/` screens, so this isn't a new
 /// pattern for the codebase, just this file's version of it.
 ///
 /// See `DesignSystem/README.md` / `PVButton.swift` for the component

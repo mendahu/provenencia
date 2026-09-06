@@ -72,8 +72,13 @@ func TestParseMigrations(t *testing.T) {
 				if err == nil || !errors.Is(err, apperr.New(apperr.CodeInternalMigrations, apperr.KindInternal)) {
 					t.Fatalf("err %v want internal.migrations", err)
 				}
-				if !strings.Contains(err.Error(), tt.errSub) {
-					t.Fatalf("err %v want substring %q", err, tt.errSub)
+				var ae *apperr.Error
+				if !errors.As(err, &ae) {
+					t.Fatalf("err %T want *apperr.Error", err)
+				}
+				joined := strings.Join(ae.Params(), " ")
+				if !strings.Contains(joined, tt.errSub) {
+					t.Fatalf("params %v want substring %q", ae.Params(), tt.errSub)
 				}
 				return
 			}

@@ -2,6 +2,7 @@ import Foundation
 import Testing
 @testable import Provenencia
 
+@Suite
 struct InstallPathsTests {
     @Test func provenenciaProjectsIgnoresMissingDirFilesHusksAndNonProvenenciaFolders() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("install-paths-\(UUID().uuidString)", isDirectory: true)
