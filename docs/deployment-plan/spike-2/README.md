@@ -122,7 +122,7 @@ S2-04 Design — Types / metadata extension
         │
         ▼
 S2-05 PR — Audit tables + write helper (done)   ◄── gate for research mutations
-S2-06 PR — date_values schema + helpers
+S2-06 PR — date_values schema + helpers (done)
 S2-07 PR — Source vocabulary tables + small seed
 S2-08 PR — sources + source_notes CRUD (+ audit)
 S2-09 PR — files store + ingest (+ audit on File create)
@@ -222,7 +222,7 @@ Design **S2-01…04** can start immediately; **S2-01** should land a reviewable 
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | — (can parallel S2-05; must merge before date metadata writes in S2-11) |
-| **Deliverables** | Migration for `date_values` ([`structured-date-model.md`](../../structured-date-model.md)). Go insert/lookup helpers for a **small** set of kinds needed by Source metadata (exact / year-only / `ABT` / simple range as required by dogfood — document chosen subset in the PR). Unit tests. No parser UI. |
+| **Deliverables** | Done. Migration `000004` + `core/database/datevalues` Insert/Lookup for exact (optional time through ms), year, ABT, and cascading ranges; tests. |
 | **Context** | Shared infrastructure, not Source-owned. Keep vocabulary flexible; do not freeze a full GEDCOM date language in this PR. |
 
 ---

@@ -486,7 +486,7 @@ func TestRecord(t *testing.T) {
 			},
 		},
 		{
-			name: "create migrates audit tables to user_version 3",
+			name: "create migrates audit tables",
 			run: func(t *testing.T, c *database.Catalog) {
 				db, err := c.DB()
 				if err != nil {
@@ -496,8 +496,8 @@ func TestRecord(t *testing.T) {
 				if err := db.QueryRow(`PRAGMA user_version`).Scan(&ver); err != nil {
 					t.Fatal(err)
 				}
-				if ver != 3 {
-					t.Fatalf("user_version %d want 3", ver)
+				if ver < 3 {
+					t.Fatalf("user_version %d want >= 3", ver)
 				}
 				for _, table := range []string{"audit_transactions", "audit_changes"} {
 					var name string
