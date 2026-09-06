@@ -40,11 +40,11 @@ Design the **post-onboarding application shell**: a durable workspace with a **s
 | W-5b | **Short window (sidebar content taller than the viewport):** the **sidebar scrolls vertically**. Do not clip nav items or session/footer chrome without a way to reach them; prefer a single scrolling sidebar column (logo + destinations + session block) over shrinking hit targets. Content host scrolling is independent and not specified here. |
 | W-6 | Preserve room for macOS window chrome (traffic lights); do not draw a fake title bar that fights the system. |
 
-Place the label toggle somewhere obvious in chrome (sidebar edge, rail footer, or near the logo). Project label / folder (W-9…W-10) and Sign out (W-11) still need a collapsed strategy (e.g. content-area header for project identity; sign-out as an icon or via the account control). Do not drop Sign out entirely.
+Place the label toggle somewhere obvious in chrome (sidebar edge, rail footer, or near the logo). Project label / folder (W-9…W-10) still need a collapsed strategy if they live in the rail (e.g. slim content-area header). **Sign Out** is menu-bar only (W-11) — do not reserve sidebar space for it.
 
 ### 3.2 Session and project identity in chrome
 
-Today’s onboarding home surfaces: logo mark, “You’re signed in”, contributor **display name** + parenthesized **`USR-…`**, project **label**, folder basename, created/updated bookkeeping, and **Sign out**. The workspace must relocate that information into chrome (not delete it).
+Today’s onboarding home surfaces: logo mark, “You’re signed in”, contributor **display name** + parenthesized **`USR-…`**, project **label**, folder basename, created/updated bookkeeping, and **Sign out**. Relocate identity and project cues into chrome; **move Sign Out out of the window** into the macOS app menu (see W-11).
 
 | ID | Requirement |
 | --- | --- |
@@ -52,7 +52,7 @@ Today’s onboarding home surfaces: logo mark, “You’re signed in”, contrib
 | W-8 | Surface the contributor **`USR-…` ref** in monospace. **Expanded sidebar:** show it near the display name. **Collapsed sidebar:** do not show the ref inline; include it (with the display name) in the **hover tooltip** on the account icon from W-7 (e.g. `Jane Smith` / `USR-A1B2C`). Accessibility labels must expose the same data when collapsed. |
 | W-9 | Always surface the **project label** (human title from the catalog `project` table), not only the folder path. |
 | W-10 | Surface the **project folder basename** (e.g. `robins-family.provenencia`) in a secondary/muted style — useful for disk orientation. |
-| W-11 | Provide a **Sign out** control that is reachable from chrome without opening Settings. |
+| W-11 | Provide **Sign Out** only in the macOS **app menu** (`Provenencia` → Sign Out), not as a button or link in window chrome / sidebar. Annotate this on the board (menu-bar callout is enough; Claude Design need not pixel-perfect the system menu). Same action as today’s onboarding Sign Out (clears session / returns to onboarding). Do **not** duplicate Sign Out in the sidebar to “save a click.” |
 | W-12 | Optional in this board: created/updated/updated-by project bookkeeping. If omitted from chrome, note that it can live under a future Project/Settings destination — do not invent a heavy project dashboard. |
 
 ### 3.3 Navigation destinations
@@ -87,10 +87,11 @@ Produce frames sufficient to review:
 
 1. Workspace, Sources selected, **empty** content placeholder — sidebar **expanded** (labels visible).
 2. Workspace, a **disabled** placeholder destination hovered or focused (shows disabled treatment).
-3. Same workspace with sidebar **collapsed** via the toggle — icon-only rail; account icon for the signed-in user; tooltip on hover showing display name + `USR-…`; show where the toggle lives and how project/sign-out compress.
+3. Same workspace with sidebar **collapsed** via the toggle — icon-only rail; account icon for the signed-in user; tooltip on hover showing display name + `USR-…`; show where the toggle lives and how project identity compresses (no Sign Out in chrome).
 4. Workspace at a **short** height — sidebar scrolled (show that overflow destinations / session chrome remain reachable).
-5. Chrome detail: contributor + `USR-…` + project label + sign out (callout or zoomed region) in the **expanded** state.
-6. Optional: after-onboarding entry state if it differs from (1).
+5. Chrome detail: contributor + `USR-…` + project label in the **expanded** state (no Sign Out button).
+6. Callout or note: **Provenencia → Sign Out** in the macOS app menu.
+7. Optional: after-onboarding entry state if it differs from (1).
 
 ---
 
@@ -101,6 +102,7 @@ Produce frames sufficient to review:
 - Custom type/field editors (S2-04).
 - Audit history browser, sync, accounts, Windows layouts.
 - Multi-window document model or tabbed documents.
+- Sign Out (or Log Out) controls inside the window / sidebar — app menu only.
 
 ---
 
@@ -109,10 +111,10 @@ Produce frames sufficient to review:
 - [ ] Sidebar + one content column reads as a single composition.
 - [ ] Sources is the only fully active research destination.
 - [ ] Contributor (`USR-…`) and project identity are always reachable (expanded text or collapsed account tooltip / documented project placement).
-- [ ] Sign out is reachable from chrome.
+- [ ] Sign Out is specified in the app menu only — absent from window chrome.
 - [ ] Placeholders cannot be mistaken for finished features.
 - [ ] Visual language matches onboarding / design-system tokens.
 - [ ] A toggle expands/collapses nav labels; width does not auto-collapse the rail.
 - [ ] Collapsed account control is a user icon with hover tooltip for name + `USR-…`.
-- [ ] Short windows scroll the sidebar instead of clipping destinations or sign-out.
+- [ ] Short windows scroll the sidebar instead of clipping destinations or session identity.
 - [ ] Board notes any chrome decisions S2-02+ must inherit (nav width, header presence, where content padding starts).
