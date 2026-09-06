@@ -25,10 +25,8 @@ The project also contains one mockup board, `Onboarding Flow.dc.html`,
 showing the 8 window states of this app's actual onboarding flow. Per that
 project's own sync log, it was built by reading the shipped
 `OnboardingView`/`OnboardingChooseFileView`/`OnboardingIdentifyView`/
-`OnboardingHomeView`/`OnboardingChrome` SwiftUI files — so it's meant to
-restyle those exact screens once this scaffolding is reviewed. **This task
-does not touch those files.** Restyling them to use `PV*` tokens and
-components is the natural next task.
+`OnboardingHomeView`/`OnboardingChrome` SwiftUI files. Those screens have
+since been restyled to consume `PV*` tokens and components directly.
 
 ## Token file map
 
@@ -90,6 +88,7 @@ red `Text`):
 | Input | `Components/Forms/PVInput.swift` |
 | Select | `Components/Forms/PVSelect.swift` |
 | Toast | `Components/Feedback/PVToast.swift` |
+| LogoMark | `Components/Core/PVLogoMark.swift` |
 
 The other 17 design-system components have **no files yet** — add them on
 demand, following the pattern above, when a screen needs one:
@@ -148,6 +147,26 @@ To add a new weight or style later: download it from
 `Resources/Fonts/`, and add it to the Xcode project's Resources phase (see
 "Xcode project registration" below) — no code changes needed since
 `PVFont` resolves by family + weight, not by filename.
+
+## Brand assets
+
+The logo mark (a seal roundel enclosing a stylized "P," drawn in the `iron`
+palette) lives in two places:
+
+- **`Assets.xcassets/LogoMark.imageset`** — the in-app mark, used via
+  `PVLogoMark`. Two SVGs: `logo-mark.svg` (light, `iron-700`/`iron-300`) and
+  `logo-mark-dark.svg` (dark, `iron-300`/`iron-100` — the same light↔dark
+  relationship `PVColor.accent` uses), registered as light/dark `appearances`
+  in `Contents.json` exactly like `AccentColor.colorset`. Never reference
+  `Image("LogoMark")` directly — go through `PVLogoMark` so new placements
+  stay consistent.
+- **`Assets.xcassets/AppIcon.appiconset`** — the real macOS app icon, the
+  classic 10-slot format (16/32/128/256/512pt, each @1x/@2x). Generated (not
+  hand-exported) from the *same* `logo-mark.svg`, composed onto a
+  warm-parchment background (`PVPalette.paper50`) at ~80% fill via
+  `scripts/generate-app-icon.sh` (requires `rsvg-convert`, `brew install
+  librsvg`). Rerun that script and commit the resulting PNGs if the mark or
+  brand color ever changes — don't hand-edit the PNGs.
 
 ## Platform deviations
 

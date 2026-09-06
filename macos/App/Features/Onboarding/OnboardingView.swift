@@ -12,6 +12,7 @@ struct OnboardingView: View {
             switch model.phase {
             case .loading:
                 VStack(spacing: PVSpacing.space6) {
+                    PVLogoMark(size: 56)
                     Text(verbatim: "Provenencia")
                         .font(PVFont.display(size: PVTypeScale.h1))
                         .foregroundStyle(PVColor.textDisplay)

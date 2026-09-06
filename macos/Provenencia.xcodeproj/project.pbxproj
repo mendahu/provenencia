@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		01574F7767F9B0AF5550AFAD /* PVMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = C355704657FB6A572BF7FD6A /* PVMotion.swift */; };
+		07D60E0FE9704E4723AE18DD /* PVLogoMark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11ADAF744C32587CD34CDD23 /* PVLogoMark.swift */; };
 		080D24179717B185C273478D /* PVField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16D4D3531F81FABFCDDE4F84 /* PVField.swift */; };
 		1538A09B7711459456E31FCD /* PVRadius.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B7FCE6BAF87CC79B6907492 /* PVRadius.swift */; };
 		210C39BBEED71061425C528F /* PVElevation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A63753F8D90991976A28F13 /* PVElevation.swift */; };
@@ -71,6 +72,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		11ADAF744C32587CD34CDD23 /* PVLogoMark.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVLogoMark.swift; sourceTree = "<group>"; };
 		16D4D3531F81FABFCDDE4F84 /* PVField.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVField.swift; sourceTree = "<group>"; };
 		1B183C69AA74C2C22006FC05 /* Fonts */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder; name = Fonts; path = Fonts; sourceTree = "<group>"; };
 		28FB7FB1DE947EE962F4BA83 /* PVSelect.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSelect.swift; sourceTree = "<group>"; };
@@ -183,6 +185,7 @@
 			children = (
 				A0AE6B1748FA280F95478205 /* PVButton.swift */,
 				36412B0A6A6851ADB45A7AA8 /* PVIcon.swift */,
+				11ADAF744C32587CD34CDD23 /* PVLogoMark.swift */,
 			);
 			name = Core;
 			path = Core;
@@ -472,6 +475,7 @@
 				ECC25906B62C6453A5CB9D25 /* PVInput.swift in Sources */,
 				504C4A2D17A9AC30A47D4E37 /* PVSelect.swift in Sources */,
 				854A784AE802C0EF7A484971 /* PVToast.swift in Sources */,
+				07D60E0FE9704E4723AE18DD /* PVLogoMark.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
