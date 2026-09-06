@@ -4,6 +4,14 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "macos/**"
+      - "api/**"
+      - "core/**"
+      - "go.mod"
+      - "go.sum"
+      - "scripts/build-macos-core.sh"
+      - ".github/workflows/macos-test.yml"
 
 jobs:
   test:
