@@ -118,6 +118,9 @@ func TestShippedMigrations(t *testing.T) {
 					!strings.Contains(steps[2].sql, "CREATE TABLE audit_changes") {
 					t.Fatalf("000003.sql missing audit tables: ver=%d sql=%s", ver, steps[2].sql)
 				}
+				if ver < 4 || !strings.Contains(steps[3].sql, "CREATE TABLE date_values") {
+					t.Fatalf("000004.sql missing date_values: ver=%d sql=%s", ver, steps[3].sql)
+				}
 			},
 		},
 	}
