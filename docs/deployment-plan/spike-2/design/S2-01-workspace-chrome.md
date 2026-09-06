@@ -40,7 +40,7 @@ Design the **post-onboarding application shell**: a durable workspace with a **s
 | W-5b | **Short window (sidebar content taller than the viewport):** the **sidebar scrolls vertically**. Do not clip nav items or session/footer chrome without a way to reach them; prefer a single scrolling sidebar column (logo + destinations + session block) over shrinking hit targets. Content host scrolling is independent and not specified here. |
 | W-6 | Preserve room for macOS window chrome (traffic lights); do not draw a fake title bar that fights the system. |
 
-Place the label toggle somewhere obvious in chrome (sidebar edge, rail footer, or near the logo). When collapsed (icon-only), session strings (W-7…W-10) will not all fit as full text in the rail — pick a compression strategy and show both expanded and collapsed: e.g. contributor initials/avatar with tooltip for name + `USR-…`, project label in a slim content-area header, sign-out as an icon. Do not drop Sign out (W-11) entirely.
+Place the label toggle somewhere obvious in chrome (sidebar edge, rail footer, or near the logo). Project label / folder (W-9…W-10) and Sign out (W-11) still need a collapsed strategy (e.g. content-area header for project identity; sign-out as an icon or via the account control). Do not drop Sign out entirely.
 
 ### 3.2 Session and project identity in chrome
 
@@ -48,8 +48,8 @@ Today’s onboarding home surfaces: logo mark, “You’re signed in”, contrib
 
 | ID | Requirement |
 | --- | --- |
-| W-7 | Always surface the **contributor display name** somewhere in chrome (sidebar footer, header strip, or both). |
-| W-8 | Always surface the contributor **`USR-…` ref** in monospace near the display name when present. |
+| W-7 | Surface the **contributor display name** in chrome (sidebar footer is typical). **Expanded sidebar:** show the name as text. **Collapsed sidebar:** replace the name with a **user account icon**; do not show the name inline in the rail. |
+| W-8 | Surface the contributor **`USR-…` ref** in monospace. **Expanded sidebar:** show it near the display name. **Collapsed sidebar:** do not show the ref inline; include it (with the display name) in the **hover tooltip** on the account icon from W-7 (e.g. `Jane Smith` / `USR-A1B2C`). Accessibility labels must expose the same data when collapsed. |
 | W-9 | Always surface the **project label** (human title from the catalog `project` table), not only the folder path. |
 | W-10 | Surface the **project folder basename** (e.g. `robins-family.provenencia`) in a secondary/muted style — useful for disk orientation. |
 | W-11 | Provide a **Sign out** control that is reachable from chrome without opening Settings. |
@@ -87,9 +87,9 @@ Produce frames sufficient to review:
 
 1. Workspace, Sources selected, **empty** content placeholder — sidebar **expanded** (labels visible).
 2. Workspace, a **disabled** placeholder destination hovered or focused (shows disabled treatment).
-3. Same workspace with sidebar **collapsed** via the toggle — icon-only rail; show where the toggle lives and how session/sign-out compress.
+3. Same workspace with sidebar **collapsed** via the toggle — icon-only rail; account icon for the signed-in user; tooltip on hover showing display name + `USR-…`; show where the toggle lives and how project/sign-out compress.
 4. Workspace at a **short** height — sidebar scrolled (show that overflow destinations / session chrome remain reachable).
-5. Chrome detail: contributor + `USR-…` + project label + sign out (callout or zoomed region) in the expanded state.
+5. Chrome detail: contributor + `USR-…` + project label + sign out (callout or zoomed region) in the **expanded** state.
 6. Optional: after-onboarding entry state if it differs from (1).
 
 ---
@@ -108,11 +108,11 @@ Produce frames sufficient to review:
 
 - [ ] Sidebar + one content column reads as a single composition.
 - [ ] Sources is the only fully active research destination.
-- [ ] Contributor (`USR-…`) and project identity are always visible without hunting.
+- [ ] Contributor (`USR-…`) and project identity are always reachable (expanded text or collapsed account tooltip / documented project placement).
 - [ ] Sign out is reachable from chrome.
 - [ ] Placeholders cannot be mistaken for finished features.
 - [ ] Visual language matches onboarding / design-system tokens.
 - [ ] A toggle expands/collapses nav labels; width does not auto-collapse the rail.
-- [ ] Collapsed and expanded states are both designed (including session/sign-out compression).
+- [ ] Collapsed account control is a user icon with hover tooltip for name + `USR-…`.
 - [ ] Short windows scroll the sidebar instead of clipping destinations or sign-out.
 - [ ] Board notes any chrome decisions S2-02+ must inherit (nav width, header presence, where content padding starts).
