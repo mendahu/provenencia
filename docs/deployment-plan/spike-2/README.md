@@ -6,14 +6,16 @@
 
 Authoritative models:
 
-- [`source-layer-data-model.md`](../source-layer-data-model.md)
-- [`artifact-file-storage.md`](../artifact-file-storage.md) (pointer → Source layer)
-- [`seeded-vocabulary.md`](../seeded-vocabulary.md) §2
-- [`audit-revision-history.md`](../audit-revision-history.md)
-- [`structured-date-model.md`](../structured-date-model.md)
-- [`catalog-refs.md`](../catalog-refs.md)
-- [`application-stack.md`](../application-stack.md) (FFI granularity, `objects/` ingest)
-- [`macos-client-patterns.md`](../macos-client-patterns.md)
+- [`source-layer-data-model.md`](../../source-layer-data-model.md)
+- [`artifact-file-storage.md`](../../artifact-file-storage.md) (pointer → Source layer)
+- [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §2
+- [`audit-revision-history.md`](../../audit-revision-history.md)
+- [`structured-date-model.md`](../../structured-date-model.md)
+- [`catalog-refs.md`](../../catalog-refs.md)
+- [`application-stack.md`](../../application-stack.md) (FFI granularity, `objects/` ingest)
+- [`macos-client-patterns.md`](../../macos-client-patterns.md)
+
+Claude Design handoffs for **S2-01…S2-04** live in [`design/`](design/) — self-contained requirement briefs, not the task list below.
 
 Spike 1 left an explicit gate: **the first researched mutation must write audit**, not decorative empty tables without a write path. This spike owns that gate.
 
@@ -52,15 +54,15 @@ Onboarding (Spike 1) → signed in
 - Audit write path (`audit_transactions` / `audit_changes`) used by every Source-layer mutation.
 - Shared `date_values` table (schema + minimal Go helpers) so date-typed Source metadata can land without a second migration later.
 - Full Source-layer table set from the Source doc: `source_types`, `sources`, `source_notes`, `source_metadata_fields`, `source_type_metadata_fields`, `source_metadata`, `artifacts`, `files`, `file_derivatives`.
-- Small **seed** of types/fields (not the entire [`seeded-vocabulary.md`](../seeded-vocabulary.md) horizon list). Prefer photograph + book + one vital/census-shaped type unless design picks a different dogfood set.
+- Small **seed** of types/fields (not the entire [`seeded-vocabulary.md`](../../seeded-vocabulary.md) horizon list). Prefer photograph + book + one vital/census-shaped type unless design picks a different dogfood set.
 - Go domain packages for CRUD + ingest; FFI use-cases (coarse verbs); SwiftUI Source catalog UI inside the workspace, consuming `GenealogyStore`.
 - Claude Design boards for workspace chrome, Source catalog IA, create/edit flows, artifact + ingest, and vocabulary extension.
-- Refs: mint `SRC-…` / `ART-…` via `core/ref` on insert ([`catalog-refs.md`](../catalog-refs.md)).
+- Refs: mint `SRC-…` / `ART-…` via `core/ref` on insert ([`catalog-refs.md`](../../catalog-refs.md)).
 
 ## Out of scope (later spikes)
 
 - Interpretation (Citations, Observations, Nodes) and Conclusion — may appear as **disabled or “Coming soon”** sidebar items only.
-- Source **credibility** assessments ([`research-judgment-model.md`](../research-judgment-model.md)).
+- Source **credibility** assessments ([`research-judgment-model.md`](../../research-judgment-model.md)).
 - Full GEDCOM / import adapters.
 - Destructive primary File deletion; orphan GC of historically referenced Files.
 - Rich audit UI / timeline browser (writes must exist; browsing history can wait).
@@ -72,13 +74,13 @@ Onboarding (Spike 1) → signed in
 
 ## Non-negotiable constraints (from docs)
 
-1. **Audit atomicity** — domain write + audit revision in one SQLite transaction ([`audit-revision-history.md`](../audit-revision-history.md) §5).
+1. **Audit atomicity** — domain write + audit revision in one SQLite transaction ([`audit-revision-history.md`](../../audit-revision-history.md) §5).
 2. **No `created_at` / `updated_by` on Source tables** — attribution lives in audit.
-3. **File bytes never travel over protobuf** — ingest use-case; read path returns relative `objects/…` path; Swift reads bytes ([`application-stack.md`](../application-stack.md)).
+3. **File bytes never travel over protobuf** — ingest use-case; read path returns relative `objects/…` path; Swift reads bytes ([`application-stack.md`](../../application-stack.md)).
 4. **Content-addressed immutability** — `objects/{hh}/{hh}/{full hex}`; replace scan = new File + Artifact pointer update.
 5. **Derivatives belong to Files**, not Artifacts; generation need not audit.
 6. **Swift stays thin** — Go owns schema, ingest, validation; models + `FakeStore` for tests.
-7. **Seed small; grow from use** ([`seeded-vocabulary.md`](../seeded-vocabulary.md) §1).
+7. **Seed small; grow from use** ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) §1).
 
 ---
 
@@ -144,12 +146,14 @@ Design **S2-01…04** can start immediately; **S2-01** should land a reviewable 
 
 ### S2-01 — Design: App workspace chrome (sidebar + content)
 
+**Claude Design brief:** [`design/S2-01-workspace-chrome.md`](design/S2-01-workspace-chrome.md)
+
 | | |
 | --- | --- |
 | **Kind** | Design (Claude Design) |
 | **Depends on** | — |
 | **Deliverables** | Board for the post-onboarding **app workspace**: left (or leading) sidebar / nav rail with destinations; main content host; how project label + contributor identity + sign-out live in the chrome (header, footer of sidebar, or both). Selected vs idle nav states. Collapsed/narrow window behavior if needed for macOS. Placeholder treatment for areas not in Spike 2 (Interpretation, Conclusion, Settings — exact labels TBD). Transition from Spike 1 onboarding into this shell. |
-| **Context** | [`application-stack.md`](../application-stack.md) (Mac owns windows/navigation); design system README lists `SidebarNav` as add-on-demand — this board decides whether to port that component or a bespoke onboarding-aligned rail. Preserve Provenencia visual language (tokens already in `macos/App/DesignSystem/`). One clear composition: sidebar + one primary content column, not a multi-panel dashboard. |
+| **Context** | [`application-stack.md`](../../application-stack.md) (Mac owns windows/navigation); design system README lists `SidebarNav` as add-on-demand — this board decides whether to port that component or a bespoke onboarding-aligned rail. Preserve Provenencia visual language (tokens already in `macos/App/DesignSystem/`). One clear composition: sidebar + one primary content column, not a multi-panel dashboard. |
 | **Out** | Source list/detail layouts (S2-02); full Settings product. |
 | **Feeds** | S2-14 (and constrains how S2-15+ mount content) |
 
@@ -157,18 +161,22 @@ Design **S2-01…04** can start immediately; **S2-01** should land a reviewable 
 
 ### S2-02 — Design: Source catalog IA and create/edit
 
+**Claude Design brief:** [`design/S2-02-source-catalog.md`](design/S2-02-source-catalog.md)
+
 | | |
 | --- | --- |
 | **Kind** | Design (Claude Design) |
 | **Depends on** | S2-01 (content area of the workspace; can parallelize once chrome frames exist) |
 | **Deliverables** | Board for: Sources destination → Source list → Source detail (identity strip with `SRC-…`, type, title, description, notes list, metadata form). Create-Source flow (type picker → essentials → save). Empty states. Lives **inside** the workspace content host from S2-01 — not a separate window chrome. |
-| **Context** | [`source-layer-data-model.md`](../source-layer-data-model.md) §§3–5; existing onboarding visual language. |
+| **Context** | [`source-layer-data-model.md`](../../source-layer-data-model.md) §§3–5; existing onboarding visual language. |
 | **Out** | No Citations/Observations; no credibility grade UI. |
 | **Feeds** | S2-15, S2-16 |
 
 ---
 
 ### S2-03 — Design: Artifacts, ingest, fileless evidence
+
+**Claude Design brief:** [`design/S2-03-artifacts-ingest.md`](design/S2-03-artifacts-ingest.md)
 
 | | |
 | --- | --- |
@@ -183,12 +191,14 @@ Design **S2-01…04** can start immediately; **S2-01** should land a reviewable 
 
 ### S2-04 — Design: Extensible types and metadata fields
 
+**Claude Design brief:** [`design/S2-04-extensible-vocabulary.md`](design/S2-04-extensible-vocabulary.md)
+
 | | |
 | --- | --- |
 | **Kind** | Design (Claude Design) |
 | **Depends on** | S2-02 |
 | **Deliverables** | UX to add a project-local Source type; add a metadata field (`text` / `date`); attach suggested fields to a type; pick suggested fields when editing a Source; use a field not suggested for the type. Builtin vs custom affordance (label only — not a privileged subclass). Decide whether vocabulary admin is a Sources subflow or its own sidebar destination (default: subflow / sheet from Sources unless the board argues otherwise). |
-| **Context** | Source doc §§3, 5; [`seeded-vocabulary.md`](../seeded-vocabulary.md) §1–2 (seed small). Agree the **dogfood seed set** (proposed default below) and write it on the board. |
+| **Context** | Source doc §§3, 5; [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §1–2 (seed small). Agree the **dogfood seed set** (proposed default below) and write it on the board. |
 | **Proposed seed (amend in Design)** | Types: `photograph`, `book`, `birth_certificate`. Fields: enough for those three type suggestion lists to feel real (subset of §2.2–2.3, not the full horizon). |
 | **Feeds** | S2-07 seed content, S2-18 |
 
@@ -200,8 +210,8 @@ Design **S2-01…04** can start immediately; **S2-01** should land a reviewable 
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | — (merge before any Source mutation PR) |
-| **Deliverables** | Migration: `audit_transactions`, `audit_changes` per [`audit-revision-history.md`](../audit-revision-history.md). Go package (e.g. `core/database/audit` or `core/audit`) that allocates next `revision`, inserts transaction + changes, and is intended to run inside the caller’s `BEGIN`. Table-driven tests for create/update/delete JSON shape and monotonic revision. No UI. |
-| **Context** | Spike 1 explicit gate. Skills: [`add-catalog-migration`](../../.cursor/skills/add-catalog-migration/SKILL.md), [`add-catalog-query`](../../.cursor/skills/add-catalog-query/SKILL.md). Entity types will include `source`, `artifact`, `file`, `source_metadata`, etc. as later PRs land — helper should accept `entity_type` string. |
+| **Deliverables** | Migration: `audit_transactions`, `audit_changes` per [`audit-revision-history.md`](../../audit-revision-history.md). Go package (e.g. `core/database/audit` or `core/audit`) that allocates next `revision`, inserts transaction + changes, and is intended to run inside the caller’s `BEGIN`. Table-driven tests for create/update/delete JSON shape and monotonic revision. No UI. |
+| **Context** | Spike 1 explicit gate. Skills: [`add-catalog-migration`](../../../.cursor/skills/add-catalog-migration/SKILL.md), [`add-catalog-query`](../../../.cursor/skills/add-catalog-query/SKILL.md). Entity types will include `source`, `artifact`, `file`, `source_metadata`, etc. as later PRs land — helper should accept `entity_type` string. |
 | **Notes** | Do not audit the audit tables. `user_id` from install/session UUID already in `users`. |
 
 ---
@@ -212,7 +222,7 @@ Design **S2-01…04** can start immediately; **S2-01** should land a reviewable 
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | — (can parallel S2-05; must merge before date metadata writes in S2-11) |
-| **Deliverables** | Migration for `date_values` ([`structured-date-model.md`](../structured-date-model.md)). Go insert/lookup helpers for a **small** set of kinds needed by Source metadata (exact / year-only / `ABT` / simple range as required by dogfood — document chosen subset in the PR). Unit tests. No parser UI. |
+| **Deliverables** | Migration for `date_values` ([`structured-date-model.md`](../../structured-date-model.md)). Go insert/lookup helpers for a **small** set of kinds needed by Source metadata (exact / year-only / `ABT` / simple range as required by dogfood — document chosen subset in the PR). Unit tests. No parser UI. |
 | **Context** | Shared infrastructure, not Source-owned. Keep vocabulary flexible; do not freeze a full GEDCOM date language in this PR. |
 
 ---
@@ -236,7 +246,7 @@ Design **S2-01…04** can start immediately; **S2-01** should land a reviewable 
 | **Kind** | PR |
 | **Depends on** | S2-05, S2-07 |
 | **Deliverables** | Migration: `sources`, `source_notes`. Mint `SRC-…` on create. Domain ops: create/update Source; add/update/delete note; list Sources (enough for catalog); get Source by id/ref. Every mutation goes through audit (`action_type` e.g. `create_source`, `update_source`, …). Go tests with Fake/real catalog. |
-| **Context** | Source doc §4; [`catalog-refs.md`](../catalog-refs.md); `ref.PrefixSource`. |
+| **Context** | Source doc §4; [`catalog-refs.md`](../../catalog-refs.md); `ref.PrefixSource`. |
 | **Out** | FFI/UI; metadata; artifacts. |
 
 ---
@@ -294,7 +304,7 @@ Design **S2-01…04** can start immediately; **S2-01** should land a reviewable 
 | **Kind** | PR |
 | **Depends on** | S2-08…S2-11 (S2-12 optional) |
 | **Deliverables** | Proto methods + handlers for coarse ops, e.g. `ListSources`, `GetSourceWorkspace`, `CreateSource`, `UpdateSource`, `AddSourceNote`, `SetSourceMetadata`, `CreateArtifact`, `IngestArtifactFile` (path in request), `ListSourceTypes` / `CreateSourceType` / `CreateMetadataField` as needed by UI. Map `apperr` codes; add L10n cases for new codes. Handler tests via `runRPC`. **No** file bytes in protobuf. |
-| **Context** | Skills: [`add-ffi-handler`](../../.cursor/skills/add-ffi-handler/SKILL.md); stack § FFI granularity. Extend `GenealogyStore` + `FakeStore` in the same PR or with S2-15 — prefer same PR if FakeStore otherwise blocks Swift tests. |
+| **Context** | Skills: [`add-ffi-handler`](../../../.cursor/skills/add-ffi-handler/SKILL.md); stack § FFI granularity. Extend `GenealogyStore` + `FakeStore` in the same PR or with S2-15 — prefer same PR if FakeStore otherwise blocks Swift tests. |
 
 ---
 
@@ -305,7 +315,7 @@ Design **S2-01…04** can start immediately; **S2-01** should land a reviewable 
 | **Kind** | PR |
 | **Depends on** | S2-01 (design enough); Spike 1 onboarding “signed in” as the entry point to replace |
 | **Deliverables** | Replace the permanent onboarding home as the post-sign-in shell with an **app workspace**: sidebar (or nav rail) + content host. Destinations: at least **Sources** (may show an empty placeholder pane until S2-15) and session/project affordances (project label, contributor, sign-out) matching S2-01. Other destinations stubbed/disabled per the board. Selection state drives which content view is shown. Unit tests for navigation selection if modeled explicitly. L10n for nav labels. Design-system component only if S2-01 chose to port `SidebarNav`; otherwise keep chrome in `Features/Workspace/` (or similar) without inventing a second design language. |
-| **Context** | [`macos-client-patterns.md`](../macos-client-patterns.md); [`application-stack.md`](../application-stack.md) (navigation is a Mac concern). This step is **chrome only** — no Source CRUD UI. |
+| **Context** | [`macos-client-patterns.md`](../../macos-client-patterns.md); [`application-stack.md`](../../application-stack.md) (navigation is a Mac concern). This step is **chrome only** — no Source CRUD UI. |
 | **Out** | Source list/detail (S2-15+); interpreting other layers. |
 | **Notes** | May merge **before** S2-13 if placeholders do not call new RPCs. Do not bury this inside the Source catalog PR. |
 
@@ -362,8 +372,8 @@ Design **S2-01…04** can start immediately; **S2-01** should land a reviewable 
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | S2-14, S2-16, S2-17, S2-18 |
-| **Deliverables** | Empty/error copy pass; accessibility identifiers for workspace nav + Source flows; Go+Swift test gaps closed for happy paths and one failure each (duplicate type key, ingest missing file, audit present after create). Update [`deployment-plan/README.md`](README.md) when archiving this spike. Optional: short “how to dogfood Source catalog” note in README or spike retro. |
-| **Out** | Product SemVer bump only if cutting a release ([`versioning.md`](../versioning.md)). |
+| **Deliverables** | Empty/error copy pass; accessibility identifiers for workspace nav + Source flows; Go+Swift test gaps closed for happy paths and one failure each (duplicate type key, ingest missing file, audit present after create). Update [`deployment-plan/README.md`](../README.md) when archiving this spike. Optional: short “how to dogfood Source catalog” note in README or spike retro. |
+| **Out** | Product SemVer bump only if cutting a release ([`versioning.md`](../../versioning.md)). |
 
 ---
 

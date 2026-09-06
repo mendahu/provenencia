@@ -1,0 +1,111 @@
+# S2-01 — App workspace chrome (sidebar + content)
+
+**Kind:** Claude Design board  
+**Spike:** Provenencia Spike 2 (Source layer validation)  
+**Implements later as:** PR S2-14  
+**Depends on:** nothing (start here)  
+**Blocks:** Source list/detail boards (S2-02+) should assume this chrome exists
+
+Paste this entire document into Claude Design as the requirements for one board/flow.
+
+---
+
+## 1. Objective
+
+Design the **post-onboarding application shell**: a durable workspace with a **side navigation** and a **single main content host**. Spike 1’s centered “You’re signed in” home must not remain the permanent product chrome. This board is **chrome only** — do not design the Source catalog list or Source editor here (that is S2-02).
+
+---
+
+## 2. Product context (must respect)
+
+1. Provenencia is an offline-first macOS genealogy app. After onboarding, the researcher has an install identity (`display name` + `USR-…` ref) and an open project (catalog label + folder basename such as `robins-family.provenencia`).
+2. The Mac client owns windows, navigation, menus, and presentation. Genealogy rules stay out of the UI layer.
+3. Visual language: “modern but archival” — warm parchment surfaces, serif display type, Spectral body, IBM Plex Mono for refs/ids, iron-gall accent. Match the shipped onboarding restyle / design-system tokens; do not introduce a purple dashboard aesthetic or a second logo system.
+4. Composition rule for this shell: **one clear layout** = leading sidebar (or nav rail) + **one** primary content column. Not a multi-panel IDE, not a card dashboard, not floating widgets on a hero.
+5. Spike 2 only ships **Sources** as a real destination. Other research layers exist in the data model but are out of product scope for this sprint — they may appear as disabled / “Coming soon” nav items only.
+
+---
+
+## 3. Requirements
+
+### 3.1 Shell structure
+
+| ID | Requirement |
+| --- | --- |
+| W-1 | Provide a full-window **app workspace** used after onboarding succeeds (create or open project). |
+| W-2 | Include a **leading sidebar or nav rail** listing primary destinations. |
+| W-3 | Include a **content host** region that swaps when the selected destination changes. Exactly one primary content surface is visible at a time. |
+| W-4 | Show **selected vs idle** states for nav items clearly (do not rely on color alone — use weight, indicator, or surface). |
+| W-5 | Define behavior for a **narrow / short** macOS window (collapse labels to icons, allow scroll, or document a minimum width). Do not assume an infinitely wide canvas. |
+| W-6 | Preserve room for macOS window chrome (traffic lights); do not draw a fake title bar that fights the system. |
+
+### 3.2 Session and project identity in chrome
+
+Today’s onboarding home surfaces: logo mark, “You’re signed in”, contributor **display name** + parenthesized **`USR-…`**, project **label**, folder basename, created/updated bookkeeping, and **Sign out**. The workspace must relocate that information into chrome (not delete it).
+
+| ID | Requirement |
+| --- | --- |
+| W-7 | Always surface the **contributor display name** somewhere in chrome (sidebar footer, header strip, or both). |
+| W-8 | Always surface the contributor **`USR-…` ref** in monospace near the display name when present. |
+| W-9 | Always surface the **project label** (human title from the catalog `project` table), not only the folder path. |
+| W-10 | Surface the **project folder basename** (e.g. `robins-family.provenencia`) in a secondary/muted style — useful for disk orientation. |
+| W-11 | Provide a **Sign out** control that is reachable from chrome without opening Settings. |
+| W-12 | Optional in this board: created/updated/updated-by project bookkeeping. If omitted from chrome, note that it can live under a future Project/Settings destination — do not invent a heavy project dashboard. |
+
+### 3.3 Navigation destinations
+
+| ID | Requirement |
+| --- | --- |
+| W-13 | Include an active **Sources** destination (primary Spike 2 entry). Content for Sources may be a labeled empty placeholder on this board. |
+| W-14 | Include **placeholder** destinations for areas not built in Spike 2. Suggested labels (amend if clearer): **Interpretation**, **People** (or Conclusion), **Settings**. Exact copy is designer’s call; must read as not-yet-available. |
+| W-15 | Placeholders must be visually distinct from the active Sources item (disabled styling, lock, or “Soon” caption) — they must not look clickable-and-broken. |
+| W-16 | Decide and document where **vocabulary admin** (custom Source types/fields) will live at the chrome level: default recommendation is **not** its own top-level nav item (prefer a Sources subflow / sheet in S2-04). If the board disagrees, say so explicitly. |
+
+### 3.4 Entry from onboarding
+
+| ID | Requirement |
+| --- | --- |
+| W-17 | Show at least one frame for **transition**: onboarding complete → workspace with Sources selected (or empty content host ready for Sources). |
+| W-18 | Returning launch (active project already open) should land directly in this workspace, not a separate “welcome back” marketing screen. |
+
+### 3.5 Brand and components
+
+| ID | Requirement |
+| --- | --- |
+| W-19 | Include the **logo mark** somewhere restrained in chrome (sidebar top is typical) — brand-present, not a full-bleed hero. |
+| W-20 | Prefer design-system controls already used in onboarding (`Button`, `Icon`, `LogoMark`). Decide whether to introduce a `SidebarNav`-style component; if yes, specify states (idle / hover / selected / disabled). |
+| W-21 | Do not put Interpretation credibility badges, evidence-grade chips, or lineage colors into this chrome — those belong to later research UI. |
+
+---
+
+## 4. Screen / frame inventory (minimum)
+
+Produce frames sufficient to review:
+
+1. Workspace, Sources selected, **empty** content placeholder.
+2. Workspace, a **disabled** placeholder destination hovered or focused (shows disabled treatment).
+3. Workspace at a **narrow** width (or annotated collapse behavior).
+4. Chrome detail: contributor + `USR-…` + project label + sign out (callout or zoomed region).
+5. Optional: after-onboarding entry state if it differs from (1).
+
+---
+
+## 5. Out of scope (do not design here)
+
+- Source list rows, create-Source wizard, metadata forms (S2-02).
+- Artifact ingest / file preview (S2-03).
+- Custom type/field editors (S2-04).
+- Audit history browser, sync, accounts, Windows layouts.
+- Multi-window document model or tabbed documents.
+
+---
+
+## 6. Acceptance checklist
+
+- [ ] Sidebar + one content column reads as a single composition.
+- [ ] Sources is the only fully active research destination.
+- [ ] Contributor (`USR-…`) and project identity are always visible without hunting.
+- [ ] Sign out is reachable from chrome.
+- [ ] Placeholders cannot be mistaken for finished features.
+- [ ] Visual language matches onboarding / design-system tokens.
+- [ ] Board notes any chrome decisions S2-02+ must inherit (nav width, header presence, where content padding starts).

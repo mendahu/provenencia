@@ -8,7 +8,12 @@ Authoritative domain and stack decisions remain in the sibling docs under [`docs
 
 | Spike | Goal |
 | --- | --- |
-| [Spike 2](spike-2.md) | Validate the Source layer: app workspace chrome (sidebar), audit + schema + Go CRUD/ingest + FFI + macOS Source catalog UI (create Sources, Artifacts, Files, extensible types/metadata). Design steps in Claude Design interleaved with PRs. |
+| [Spike 2](spike-2/) | Validate the Source layer: app workspace chrome (sidebar), audit + schema + Go CRUD/ingest + FFI + macOS Source catalog UI (create Sources, Artifacts, Files, extensible types/metadata). Design steps in Claude Design interleaved with PRs. |
+
+Spike 2 contents:
+
+- [`spike-2/README.md`](spike-2/README.md) — task list (S2-01…S2-19)
+- [`spike-2/design/`](spike-2/design/) — Claude Design requirement briefs for S2-01…S2-04
 
 ## Completed
 
