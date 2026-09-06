@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="Provenencia mark">
+  <circle cx="24" cy="24" r="22.6" fill="none" stroke="#8FB1C0" stroke-width="1.5"></circle>
+  <circle cx="24" cy="24" r="19.4" fill="none" stroke="#DCE7EC" stroke-width="0.7" stroke-dasharray="2.6 4.17"></circle>
+
+  <g transform="translate(1.6,0)" fill="#8FB1C0">
+    <rect x="17.4" y="12" width="3.5" height="23.9"></rect>
+    <rect x="13.65" y="34.3" width="11" height="1.8"></rect>
+    <rect x="13.65" y="12" width="7.25" height="1.8"></rect>
+  </g>
+  <path transform="translate(1.6,0)" d="M20.6 13.7 H25.3 A5.75 5.75 0 0 1 25.3 25.3 H20.6" fill="none" stroke="#8FB1C0" stroke-width="3.4"></path>
+</svg>

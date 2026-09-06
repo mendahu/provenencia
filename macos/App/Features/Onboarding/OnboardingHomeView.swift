@@ -5,6 +5,8 @@ struct OnboardingHomeView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space5) {
+            PVLogoMark(size: 36)
+                .opacity(0.85)
             Text(L10n.Onboarding.signedInTitle)
                 .font(PVFont.display(size: PVTypeScale.h2))
                 .foregroundStyle(PVColor.textDisplay)
