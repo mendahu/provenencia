@@ -113,6 +113,11 @@ func TestShippedMigrations(t *testing.T) {
 				if ver < 2 || !strings.Contains(steps[1].sql, "CREATE TABLE project") {
 					t.Fatalf("000002.sql missing project: ver=%d sql=%s", ver, steps[1].sql)
 				}
+				if ver < 3 ||
+					!strings.Contains(steps[2].sql, "CREATE TABLE audit_transactions") ||
+					!strings.Contains(steps[2].sql, "CREATE TABLE audit_changes") {
+					t.Fatalf("000003.sql missing audit tables: ver=%d sql=%s", ver, steps[2].sql)
+				}
 			},
 		},
 	}
