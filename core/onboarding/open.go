@@ -16,7 +16,7 @@ import (
 var ErrUnknownUser = apperr.New(apperr.CodeOnboardingUnknownUser, apperr.KindNotFound)
 
 // ListContributors opens the catalog (migrates if needed), ensures user refs, and lists contributors.
-func ListContributors(projectDir string) ([]identity.Identity, error) {
+func ListContributors(projectDir string) ([]users.User, error) {
 	projectDir = strings.TrimSpace(projectDir)
 	if projectDir == "" {
 		return nil, database.ErrNotAProject
@@ -29,19 +29,7 @@ func ListContributors(projectDir string) ([]identity.Identity, error) {
 	if err := users.EnsureRefs(proj); err != nil {
 		return nil, err
 	}
-	rows, err := users.List(proj)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]identity.Identity, 0, len(rows))
-	for _, row := range rows {
-		id, err := uuid.FromBytes(row.ID)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, identity.Identity{UserID: id, DisplayName: row.DisplayName, Ref: row.Ref})
-	}
-	return out, nil
+	return users.List(proj)
 }
 
 // Open opens an existing *.provenencia folder and remembers it as the active project.

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/onboarding"
 	"google.golang.org/protobuf/proto"
@@ -55,11 +56,15 @@ func ListProjectUsers(in []byte) ([]byte, error) {
 		return nil, err
 	}
 	resp := &engine.ListProjectUsersResponse{}
-	for _, id := range ids {
+	for _, u := range ids {
+		id, err := uuid.FromBytes(u.ID)
+		if err != nil {
+			return nil, err
+		}
 		resp.Users = append(resp.Users, &engine.ProjectUser{
-			UserId:      id.UserID.String(),
-			DisplayName: id.DisplayName,
-			Ref:         id.Ref,
+			UserId:      id.String(),
+			DisplayName: u.DisplayName,
+			Ref:         u.Ref,
 		})
 	}
 	return proto.Marshal(resp)

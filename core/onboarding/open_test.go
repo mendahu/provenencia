@@ -152,7 +152,8 @@ func TestOpen(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if len(listed) != 1 || listed[0].UserID != created.Identity.UserID {
+				uid := created.Identity.UserID
+				if len(listed) != 1 || string(listed[0].ID) != string(uid[:]) || listed[0].DisplayName != "Jake" {
 					t.Fatalf("%+v", listed)
 				}
 				res, err := Open(ident, created.ProjectDir, "", created.Identity.UserID.String())
