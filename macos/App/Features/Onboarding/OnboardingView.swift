@@ -31,7 +31,7 @@ struct OnboardingView: View {
                 OnboardingHomeView(model: model)
             }
         }
-        .frame(minWidth: 700, minHeight: 460)
+        .frame(minWidth: PVSpacing.widthWindowMin, minHeight: 460)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(PVColor.surfacePage)
         .overlay(alignment: .topTrailing) {
@@ -50,26 +50,27 @@ struct OnboardingView: View {
     }
 }
 
+#if DEBUG
 #Preview("Choose file") {
-    OnboardingView(store: FakeStore(), folders: .previewEmpty)
+    OnboardingView(store: FakeStore(), folders: .previewEmpty())
 }
 
 #Preview("Identity, no active") {
     OnboardingView(
         store: FakeStore(identity: InstallIdentity(userID: "1", displayName: "Jane Smith", ref: "USR-A1B2C")),
-        folders: .previewEmpty
+        folders: .previewEmpty()
     )
 }
 
 #Preview("Open picker") {
     OnboardingView(
         store: FakeStore(identity: InstallIdentity(userID: "1", displayName: "Jane Smith", ref: "USR-A1B2C")),
-        folders: .previewWithProject
+        folders: .previewWithProject()
     )
 }
 
 #Preview("Returning") {
-    let folders = OnboardingFolders.previewWithProject
+    let folders = OnboardingFolders.previewWithProject()
     let project = folders.documentsDirectory.appendingPathComponent("Smith Family.provenencia")
     return OnboardingView(
         store: FakeStore(
@@ -79,3 +80,4 @@ struct OnboardingView: View {
         folders: folders
     )
 }
+#endif

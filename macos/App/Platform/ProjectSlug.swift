@@ -1,10 +1,29 @@
 import Foundation
 
 /// Mirrors Go `onboarding.FolderName` for create-flow slug previews.
+/// Empty / unslugifiable labels return `""` (Go returns `ErrInvalidFamilyName`).
 enum ProjectSlug {
     private static let suffix = ".provenencia"
 
-    /// Returns `{kebab-slug}.provenencia` for a project label.
+    /// Shared success cases with `core/onboarding.TestFolderName` (keep in sync).
+    static let folderNameFixtures: [(label: String, folder: String)] = [
+        ("Robins Family", "robins-family.provenencia"),
+        ("Robins/Family", "robins-family.provenencia"),
+        ("Robins\\Family", "robins-family.provenencia"),
+        ("Robins:Family", "robins-family.provenencia"),
+        ("Robins*Family", "robins-family.provenencia"),
+        ("Robins?Family", "robins-family.provenencia"),
+        ("Robins\"Family", "robins-family.provenencia"),
+        ("Robins<Family>", "robins-family.provenencia"),
+        ("Robins|Family", "robins-family.provenencia"),
+        ("...Robins", "robins.provenencia"),
+        ("Robins Family.provenencia", "robins-family.provenencia"),
+        ("  Robins   Family  ", "robins-family.provenencia"),
+        ("García Family", "garcía-family.provenencia"),
+        ("A/B", "a-b.provenencia"),
+    ]
+
+    /// Returns `{kebab-slug}.provenencia`, or `""` when the label cannot form a slug.
     static func folderName(from label: String) -> String {
         var s = label.trimmingCharacters(in: .whitespacesAndNewlines)
         if s.lowercased().hasSuffix(suffix) {
@@ -26,7 +45,7 @@ enum ProjectSlug {
         while out.hasPrefix("-") { out.removeFirst() }
         while out.hasSuffix("-") { out.removeLast() }
         if out.isEmpty {
-            return suffix
+            return ""
         }
         return out + suffix
     }

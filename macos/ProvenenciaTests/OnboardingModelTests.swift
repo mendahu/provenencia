@@ -105,7 +105,7 @@ struct OnboardingModelTests {
     }
 
     @Test func loadWhenStoreThrowsShowsErrorAndChooseFile() async {
-        let folders = (try? makeFolders()) ?? OnboardingFolders.previewEmpty
+        let folders = (try? makeFolders()) ?? OnboardingFolders.previewEmpty()
         let model = OnboardingModel(store: ThrowingStore(), folders: folders)
         await model.load()
         #expect(model.phase == .chooseFile)

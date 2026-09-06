@@ -1,29 +1,30 @@
 import SwiftUI
 
-/// Wraps SF Symbols behind the same semantic names the web design system
-/// uses for its Lucide icons — mirrors `components/core/Icon.jsx`, whose
-/// own doc comment (in the source design system's readme) calls it "a
-/// wrapper over the substituted icon set, so swapping icon systems later
-/// is a one-file change." On macOS, Lucide (a web-only substitution, per
-/// that readme) becomes SF Symbols instead; `PVIconMap` below is the
-/// one file to extend when a screen needs an icon name that isn't mapped
-/// yet.
-///
-/// Only the names actually consumed so far (the Onboarding Flow board's
-/// icons, plus `PVToast`'s tone icons and dismiss glyph) are mapped. See
-/// `DesignSystem/README.md` for the full component/token pattern this file
-/// follows (canonical example: `PVButton.swift`).
+/// Compile-checked SF Symbol names used by the design system.
+enum PVSymbol: String {
+    case folderPlus = "folder.badge.plus"
+    case folderOpen = "folder"
+    case check = "checkmark"
+    case info = "info.circle"
+    case chevronDown = "chevron.down"
+    case success = "checkmark.circle.fill"
+    case warning = "exclamationmark.triangle.fill"
+    case danger = "exclamationmark.octagon.fill"
+    case dismiss = "xmark"
+}
+
+/// Renders a design-system icon via SF Symbols.
 struct PVIcon: View {
-    private let name: String
+    private let symbol: PVSymbol
     private let size: CGFloat
 
-    init(_ name: String, size: CGFloat = 16) {
-        self.name = name
+    init(_ symbol: PVSymbol, size: CGFloat = 16) {
+        self.symbol = symbol
         self.size = size
     }
 
     var body: some View {
-        Image(systemName: PVIconMap.sfSymbol(for: name))
+        Image(systemName: symbol.rawValue)
             .resizable()
             .scaledToFit()
             .frame(width: size, height: size)
@@ -31,34 +32,13 @@ struct PVIcon: View {
     }
 }
 
-/// Lucide name -> SF Symbol name. Add an entry here when a new icon name
-/// is needed; falls back to `question.mark` (visibly wrong, easy to spot)
-/// rather than crashing on an unmapped name.
-enum PVIconMap {
-    private static let symbols: [String: String] = [
-        "folder-plus": "folder.badge.plus",
-        "folder-open": "folder",
-        "check": "checkmark",
-        "info": "info.circle",
-        "chevron-down": "chevron.down",
-        "check-check": "checkmark.circle.fill",
-        "triangle-alert": "exclamationmark.triangle.fill",
-        "octagon-alert": "exclamationmark.octagon.fill",
-        "x": "xmark"
-    ]
-
-    static func sfSymbol(for lucideName: String) -> String {
-        symbols[lucideName] ?? "questionmark"
-    }
-}
-
 #Preview {
     HStack(spacing: PVSpacing.space6) {
-        PVIcon("folder-plus")
-        PVIcon("folder-open")
-        PVIcon("check")
-        PVIcon("info")
-        PVIcon("chevron-down")
+        PVIcon(.folderPlus)
+        PVIcon(.folderOpen)
+        PVIcon(.check)
+        PVIcon(.info)
+        PVIcon(.chevronDown)
     }
     .foregroundStyle(PVColor.accent)
     .padding(PVSpacing.space9)

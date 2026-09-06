@@ -42,6 +42,7 @@
 		AA00000000000000000000E5 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000E2 /* L10n.swift */; };
 		AA00000000000000000000F1 /* ProjectSlug.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000F0 /* ProjectSlug.swift */; };
 		AA00000000000000000000F3 /* ProjectSlugTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000F2 /* ProjectSlugTests.swift */; };
+		AA00000000000000000000F5 /* OnboardingPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000F4 /* OnboardingPage.swift */; };
 		CA918E2A0BCB420DA8CD87E5 /* PVButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0AE6B1748FA280F95478205 /* PVButton.swift */; };
 		DC8E6C8D157C17756D4C2AC8 /* Fonts in Resources */ = {isa = PBXBuildFile; fileRef = 1B183C69AA74C2C22006FC05 /* Fonts */; };
 		ECC25906B62C6453A5CB9D25 /* PVInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40F72A548E04F25E0AA30CDB /* PVInput.swift */; };
@@ -111,6 +112,7 @@
 		AA00000000000000000000E2 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		AA00000000000000000000F0 /* ProjectSlug.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectSlug.swift; sourceTree = "<group>"; };
 		AA00000000000000000000F2 /* ProjectSlugTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectSlugTests.swift; sourceTree = "<group>"; };
+		AA00000000000000000000F4 /* OnboardingPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingPage.swift; sourceTree = "<group>"; };
 		C355704657FB6A572BF7FD6A /* PVMotion.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVMotion.swift; sourceTree = "<group>"; };
 		E2789221068BF64015C43CA5 /* PVTypography.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVTypography.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -277,6 +279,7 @@
 				AA00000000000000000000D1 /* OnboardingIdentifyView.swift */,
 				AA00000000000000000000D2 /* OnboardingHomeView.swift */,
 				AA00000000000000000000D3 /* OnboardingChrome.swift */,
+				AA00000000000000000000F4 /* OnboardingPage.swift */,
 				AA000000000000000000001C /* OnboardingModel.swift */,
 			);
 			path = Onboarding;
@@ -454,6 +457,7 @@
 				AA00000000000000000000D5 /* OnboardingIdentifyView.swift in Sources */,
 				AA00000000000000000000D6 /* OnboardingHomeView.swift in Sources */,
 				AA00000000000000000000D7 /* OnboardingChrome.swift in Sources */,
+				AA00000000000000000000F5 /* OnboardingPage.swift in Sources */,
 				AA000000000000000000000C /* OnboardingModel.swift in Sources */,
 				AA000000000000000000000D /* InstallPaths.swift in Sources */,
 				AA00000000000000000000F1 /* ProjectSlug.swift in Sources */,

@@ -39,6 +39,8 @@ struct OnboardingHomeView: View {
             }
             .accessibilityIdentifier("onboarding.signOut")
         }
-        .padding(32)
+        .padding(PVSpacing.space9)
+        .frame(maxWidth: PVSpacing.measureForm, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     }
 }

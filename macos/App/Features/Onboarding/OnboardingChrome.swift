@@ -4,14 +4,14 @@ import SwiftUI
 struct OnboardingFileChoice: View {
     let title: LocalizedStringResource
     let subtitle: LocalizedStringResource
-    let icon: String
+    let icon: PVSymbol
     let selected: Bool
     let action: () -> Void
 
     init(
         _ title: LocalizedStringResource,
         subtitle: LocalizedStringResource,
-        icon: String,
+        icon: PVSymbol,
         selected: Bool,
         action: @escaping () -> Void
     ) {
@@ -60,7 +60,7 @@ struct OnboardingFileChoice: View {
     }
 
     private var checkIcon: some View {
-        PVIcon("check", size: 15)
+        PVIcon(.check, size: 15)
             .foregroundStyle(PVColor.accent)
     }
 }

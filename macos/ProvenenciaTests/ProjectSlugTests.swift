@@ -3,11 +3,19 @@ import Testing
 
 @Suite
 struct ProjectSlugTests {
-    @Test func folderNameFromLabel() {
-        #expect(ProjectSlug.folderName(from: "Robins Family") == "robins-family.provenencia")
-        #expect(ProjectSlug.folderName(from: "A/B") == "a-b.provenencia")
-        #expect(ProjectSlug.folderName(from: "  Robins   Family  ") == "robins-family.provenencia")
-        #expect(ProjectSlug.folderName(from: "Robins Family.provenencia") == "robins-family.provenencia")
+    @Test func folderNameFixturesMatchGo() {
+        for fixture in ProjectSlug.folderNameFixtures {
+            #expect(
+                ProjectSlug.folderName(from: fixture.label) == fixture.folder,
+                "\(fixture.label) → \(fixture.folder)"
+            )
+        }
+    }
+
+    @Test func folderNameEmptyAlignsWithGoInvalid() {
+        #expect(ProjectSlug.folderName(from: "  ") == "")
+        #expect(ProjectSlug.folderName(from: "...") == "")
+        #expect(ProjectSlug.folderName(from: "") == "")
     }
 
     @Test func labelFromFolder() {
