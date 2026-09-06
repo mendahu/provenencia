@@ -121,7 +121,7 @@ S2-03 Design — Artifact + ingest + fileless
 S2-04 Design — Types / metadata extension
         │
         ▼
-S2-05 PR — Audit tables + write helper          ◄── gate for research mutations
+S2-05 PR — Audit tables + write helper (done)   ◄── gate for research mutations
 S2-06 PR — date_values schema + helpers
 S2-07 PR — Source vocabulary tables + small seed
 S2-08 PR — sources + source_notes CRUD (+ audit)
@@ -210,7 +210,7 @@ Design **S2-01…04** can start immediately; **S2-01** should land a reviewable 
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | — (merge before any Source mutation PR) |
-| **Deliverables** | Migration: `audit_transactions`, `audit_changes` per [`audit-revision-history.md`](../../audit-revision-history.md). Go package (e.g. `core/database/audit` or `core/audit`) that allocates next `revision`, inserts transaction + changes, and is intended to run inside the caller’s `BEGIN`. Table-driven tests for create/update/delete JSON shape and monotonic revision. No UI. |
+| **Deliverables** | Done. Migration `000003` + `core/database/audit.Record` on `sql.Tx`; create/update/delete JSON and monotonic revision tested. |
 | **Context** | Spike 1 explicit gate. Skills: [`add-catalog-migration`](../../../.cursor/skills/add-catalog-migration/SKILL.md), [`add-catalog-query`](../../../.cursor/skills/add-catalog-query/SKILL.md). Entity types will include `source`, `artifact`, `file`, `source_metadata`, etc. as later PRs land — helper should accept `entity_type` string. |
 | **Notes** | Do not audit the audit tables. `user_id` from install/session UUID already in `users`. |
 

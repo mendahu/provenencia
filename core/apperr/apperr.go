@@ -28,6 +28,7 @@ const (
 	CodeProjectInvalidMetadata      = "project.invalid_metadata"
 	CodeProjectMissingMetadata      = "project.missing_metadata"
 	CodeUsersInvalid                = "users.invalid"
+	CodeAuditInvalid                = "audit.invalid"
 	CodeIdentityNotFound            = "identity.not_found"
 	CodeIdentityInvalidName         = "identity.invalid_name"
 	CodeIdentityInvalidID           = "identity.invalid_id"
