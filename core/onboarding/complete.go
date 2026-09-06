@@ -14,11 +14,20 @@ import (
 
 var ErrBlankName = apperr.New(apperr.CodeOnboardingBlankName, apperr.KindUser)
 
+// ResolvedInfo is project bookkeeping plus updated-by display fields resolved
+// from the catalog users row in the same open that loaded the project.
+type ResolvedInfo struct {
+	Info                 project.Info
+	UpdatedByUserID      string
+	UpdatedByDisplayName string
+	UpdatedByRef         string
+}
+
 // Result is the created/opened project path and the install identity used.
 type Result struct {
 	ProjectDir string
 	Identity   identity.Identity
-	Project    project.Info
+	Project    ResolvedInfo
 }
 
 // Complete mints or loads install identity, creates a *.provenencia folder, and upserts users.
@@ -67,7 +76,16 @@ func Complete(identityDir, parent, displayName, familyName string) (Result, erro
 	if err := rememberActive(identityDir, dir); err != nil {
 		return Result{}, err
 	}
-	return Result{ProjectDir: dir, Identity: id, Project: info}, nil
+	return Result{
+		ProjectDir: dir,
+		Identity:   id,
+		Project: ResolvedInfo{
+			Info:                 info,
+			UpdatedByUserID:      id.UserID.String(),
+			UpdatedByDisplayName: id.DisplayName,
+			UpdatedByRef:         id.Ref,
+		},
+	}, nil
 }
 
 func rememberActive(identityDir, projectDir string) error {
@@ -82,14 +100,14 @@ func closeCatalog(proj *database.Catalog) (string, error) {
 	return dir, nil
 }
 
-func persistIdentityAndActive(identityDir, dir string, id identity.Identity, info project.Info) (Result, error) {
+func persistIdentityAndActive(identityDir, dir string, id identity.Identity, resolved ResolvedInfo) (Result, error) {
 	if err := identity.Save(identityDir, id); err != nil {
 		return Result{}, err
 	}
 	if err := rememberActive(identityDir, dir); err != nil {
 		return Result{}, err
 	}
-	return Result{ProjectDir: dir, Identity: id, Project: info}, nil
+	return Result{ProjectDir: dir, Identity: id, Project: resolved}, nil
 }
 
 // persistNow writes identity.json immediately (Complete). Open mint passes false (H2).

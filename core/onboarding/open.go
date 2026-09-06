@@ -93,13 +93,18 @@ func adopt(identityDir, projectDir, adoptUserID string) (Result, error) {
 		_ = proj.Close()
 		return Result{}, err
 	}
+	resolved, err := resolveUpdatedBy(proj, info)
+	if err != nil {
+		_ = proj.Close()
+		return Result{}, err
+	}
 	dir, err := closeCatalog(proj)
 	if err != nil {
 		return Result{}, err
 	}
 
 	id := identity.Identity{UserID: uid, DisplayName: u.DisplayName, Ref: u.Ref}
-	return persistIdentityAndActive(identityDir, dir, id, info)
+	return persistIdentityAndActive(identityDir, dir, id, resolved)
 }
 
 func openMint(identityDir, projectDir, displayName string) (Result, error) {
@@ -126,11 +131,16 @@ func openMint(identityDir, projectDir, displayName string) (Result, error) {
 		_ = proj.Close()
 		return Result{}, err
 	}
+	resolved, err := resolveUpdatedBy(proj, info)
+	if err != nil {
+		_ = proj.Close()
+		return Result{}, err
+	}
 	dir, err := closeCatalog(proj)
 	if err != nil {
 		return Result{}, err
 	}
-	return persistIdentityAndActive(identityDir, dir, id, info)
+	return persistIdentityAndActive(identityDir, dir, id, resolved)
 }
 
 func ensureProject(proj *database.Catalog, projectDir string, updatedBy []byte) (project.Info, error) {
@@ -157,34 +167,58 @@ func ensureProject(proj *database.Catalog, projectDir string, updatedBy []byte) 
 	return info, nil
 }
 
-// ProjectInfo loads project bookkeeping from an existing catalog (migrates if needed).
-func ProjectInfo(projectDir string) (project.Info, error) {
+// resolveUpdatedBy fills updated-by display fields from the users row while the catalog is open.
+func resolveUpdatedBy(proj *database.Catalog, info project.Info) (ResolvedInfo, error) {
+	out := ResolvedInfo{Info: info}
+	if len(info.UpdatedBy) != 16 {
+		return out, nil
+	}
+	if uid, err := uuid.FromBytes(info.UpdatedBy); err == nil {
+		out.UpdatedByUserID = uid.String()
+	}
+	u, err := users.Lookup(proj, info.UpdatedBy)
+	if err != nil {
+		return ResolvedInfo{}, err
+	}
+	out.UpdatedByDisplayName = u.DisplayName
+	out.UpdatedByRef = u.Ref
+	return out, nil
+}
+
+// ProjectInfo loads project bookkeeping from an existing catalog (migrates if needed)
+// and resolves updated-by display fields in the same open.
+func ProjectInfo(projectDir string) (ResolvedInfo, error) {
 	projectDir = strings.TrimSpace(projectDir)
 	if projectDir == "" {
-		return project.Info{}, database.ErrNotAProject
+		return ResolvedInfo{}, database.ErrNotAProject
 	}
 	proj, err := database.Open(projectDir)
 	if err != nil {
-		return project.Info{}, err
+		return ResolvedInfo{}, err
 	}
 	defer proj.Close()
 	if err := users.EnsureRefs(proj); err != nil {
-		return project.Info{}, err
+		return ResolvedInfo{}, err
 	}
 	info, err := project.Get(proj)
 	if errors.Is(err, project.ErrMissing) {
 		rows, listErr := users.List(proj)
 		if listErr != nil {
-			return project.Info{}, listErr
+			return ResolvedInfo{}, listErr
 		}
 		var updatedBy []byte
 		if len(rows) > 0 {
 			updatedBy = rows[0].ID
 		}
 		if len(updatedBy) != 16 {
-			return project.Info{Label: project.LabelFromDir(projectDir)}, nil
+			return ResolvedInfo{Info: project.Info{Label: project.LabelFromDir(projectDir)}}, nil
 		}
-		return ensureProject(proj, projectDir, updatedBy)
+		info, err = ensureProject(proj, projectDir, updatedBy)
+		if err != nil {
+			return ResolvedInfo{}, err
+		}
+	} else if err != nil {
+		return ResolvedInfo{}, err
 	}
-	return info, err
+	return resolveUpdatedBy(proj, info)
 }
