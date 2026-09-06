@@ -9,7 +9,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
-	"github.com/mendahu/provenencia/core/jsonfile"
 	"github.com/mendahu/provenencia/core/ref"
 )
 
@@ -29,11 +28,11 @@ type Identity struct {
 	Ref         string    `json:"ref"`
 }
 
-func path(dir string) string {
+func identityPath(dir string) string {
 	return filepath.Join(dir, FileName)
 }
 
-func validate(id Identity) error {
+func validateIdentity(id Identity) error {
 	if strings.TrimSpace(id.DisplayName) == "" {
 		return ErrInvalidName
 	}
@@ -66,9 +65,9 @@ func Mint(displayName string) (Identity, error) {
 // Load reads identity.json from dir. A missing file is ErrNotFound; it does not mint.
 // Legacy files without ref get a minted USR-… and are rewritten.
 func Load(dir string) (*Identity, error) {
-	b, err := jsonfile.Read(path(dir))
+	b, err := readJSONFile(identityPath(dir))
 	if err != nil {
-		if errors.Is(err, jsonfile.ErrNotFound) {
+		if errors.Is(err, errFileNotFound) {
 			return nil, ErrNotFound
 		}
 		return nil, err
@@ -85,7 +84,7 @@ func Load(dir string) (*Identity, error) {
 			return nil, err
 		}
 		id.Ref = userRef
-		if err := validate(id); err != nil {
+		if err := validateIdentity(id); err != nil {
 			return nil, err
 		}
 		if err := Save(dir, id); err != nil {
@@ -93,7 +92,7 @@ func Load(dir string) (*Identity, error) {
 		}
 		return &id, nil
 	}
-	if err := validate(id); err != nil {
+	if err := validateIdentity(id); err != nil {
 		return nil, err
 	}
 	return &id, nil
@@ -101,15 +100,15 @@ func Load(dir string) (*Identity, error) {
 
 // Save writes identity.json under dir (creating dir if needed).
 func Save(dir string, id Identity) error {
-	if err := validate(id); err != nil {
+	if err := validateIdentity(id); err != nil {
 		return err
 	}
 	id.DisplayName = strings.TrimSpace(id.DisplayName)
 	id.Ref = strings.TrimSpace(id.Ref)
-	return jsonfile.Write(path(dir), id)
+	return writeJSONFile(identityPath(dir), id)
 }
 
 // Remove deletes identity.json under dir. Missing file is not an error.
 func Remove(dir string) error {
-	return jsonfile.Remove(path(dir))
+	return removeJSONFile(identityPath(dir))
 }

@@ -9,7 +9,6 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/identity"
-	"github.com/mendahu/provenencia/core/installstate"
 )
 
 func TestOpen(t *testing.T) {
@@ -24,7 +23,7 @@ func TestOpen(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err := installstate.Remove(ident); err != nil {
+				if err := identity.RemoveActive(ident); err != nil {
 					t.Fatal(err)
 				}
 				res, err := Open(ident, created.ProjectDir, "", "")
@@ -34,7 +33,7 @@ func TestOpen(t *testing.T) {
 				if res.Identity.UserID != created.Identity.UserID {
 					t.Fatal("uuid changed")
 				}
-				act, err := installstate.Load(ident)
+				act, err := identity.LoadActive(ident)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -153,7 +152,8 @@ func TestOpen(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if len(listed) != 1 || listed[0].UserID != created.Identity.UserID {
+				uid := created.Identity.UserID
+				if len(listed) != 1 || string(listed[0].ID) != string(uid[:]) || listed[0].DisplayName != "Jake" {
 					t.Fatalf("%+v", listed)
 				}
 				res, err := Open(ident, created.ProjectDir, "", created.Identity.UserID.String())
@@ -295,7 +295,7 @@ func TestProjectInfo(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err := installstate.Remove(ident); err != nil {
+				if err := identity.RemoveActive(ident); err != nil {
 					t.Fatal(err)
 				}
 				res, err := Open(ident, created.ProjectDir, "", "")
