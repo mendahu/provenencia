@@ -21,7 +21,7 @@ struct OnboardingModelTests {
         await model.load()
         #expect(model.phase == .chooseFile)
         #expect(!model.researcherLocked)
-        #expect(model.identityUserID.isEmpty)
+        #expect(model.session == nil)
         #expect(model.errorText == nil)
     }
 
@@ -30,8 +30,7 @@ struct OnboardingModelTests {
         await model.load()
         #expect(model.phase == .chooseFile)
         #expect(model.researcherLocked)
-        #expect(model.identityUserID == jane.userID)
-        #expect(model.sessionDisplayName == jane.displayName)
+        #expect(model.session == jane)
         #expect(model.errorText == nil)
     }
 
@@ -53,10 +52,10 @@ struct OnboardingModelTests {
         let model = OnboardingModel(store: store, folders: folders)
         await model.load()
         #expect(model.phase == .home)
-        #expect(model.projectBasename == "Robins Family.provenencia")
-        #expect(model.projectLabel == "Robins Family")
-        #expect(model.sessionRef == jane.ref)
-        #expect(model.projectUpdatedByRef == jane.ref)
+        #expect(model.project?.folderName == "Robins Family.provenencia")
+        #expect(model.project?.label == "Robins Family")
+        #expect(model.session?.ref == jane.ref)
+        #expect(model.project?.updatedByRef == jane.ref)
         #expect(model.researcherLocked)
     }
 
@@ -75,10 +74,10 @@ struct OnboardingModelTests {
         model.familyName = "Robins Family"
         await model.submit()
         #expect(model.phase == .home)
-        #expect(model.projectLabel == "Robins Family")
-        #expect(model.projectBasename == "robins-family.provenencia")
+        #expect(model.project?.label == "Robins Family")
+        #expect(model.project?.folderName == "robins-family.provenencia")
         #expect(store.activeProjectDir?.hasSuffix("robins-family.provenencia") == true)
-        #expect(!model.sessionRef.isEmpty)
+        #expect(model.session?.ref.isEmpty == false)
     }
 
     @Test func loadWithIdentityAndDirMissingCatalogClearsPointerAndShowsError() async throws {
@@ -134,13 +133,13 @@ struct OnboardingModelTests {
         model.familyName = "Smith"
         #expect(model.canContinue)
 
-        model.researcherLocked = true
+        model.session = jane
         model.displayName = ""
         model.familyName = "Smith"
         #expect(model.canContinue)
 
         model.mode = .open
-        model.researcherLocked = false
+        model.session = nil
         model.selectedContributorID = OnboardingModel.newContributorID
         model.displayName = ""
         #expect(!model.canContinue)
@@ -185,10 +184,10 @@ struct OnboardingModelTests {
         #expect(model.phase == .identify)
         await model.submit()
         #expect(model.phase == .home)
-        #expect(model.projectBasename == "robins.provenencia")
-        #expect(model.projectLabel == "Robins")
+        #expect(model.project?.folderName == "robins.provenencia")
+        #expect(model.project?.label == "Robins")
         #expect(store.identity?.displayName == "Jane Smith")
-        #expect(!model.sessionRef.isEmpty)
+        #expect(model.session?.ref.isEmpty == false)
         #expect(store.activeProjectDir == folders.documentsDirectory.appendingPathComponent("robins.provenencia").path)
     }
 
@@ -208,7 +207,7 @@ struct OnboardingModelTests {
         #expect(model.phase == .home)
         #expect(store.identity == jane)
         #expect(store.activeProjectDir == project.path)
-        #expect(model.sessionDisplayName == jane.displayName)
+        #expect(model.session?.displayName == jane.displayName)
     }
 
     @Test func goToIdentifyPreselectsMatchingIdentityUser() async throws {
@@ -248,7 +247,7 @@ struct OnboardingModelTests {
         await model.signOut()
         #expect(model.phase == .chooseFile)
         #expect(!model.researcherLocked)
-        #expect(model.identityUserID.isEmpty)
+        #expect(model.session == nil)
         #expect(store.identity == nil)
         #expect(store.activeProjectDir == nil)
     }

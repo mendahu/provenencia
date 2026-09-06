@@ -24,16 +24,10 @@ final class OnboardingModel {
     var isBusy = false
     var errorText: String?
     var phase: Phase = .loading
-    var sessionDisplayName = ""
-    var sessionRef = ""
-    var projectBasename = ""
-    var projectLabel = ""
-    var projectCreatedAt = ""
-    var projectUpdatedAt = ""
-    var projectUpdatedByDisplayName = ""
-    var projectUpdatedByRef = ""
-    var researcherLocked = false
-    var identityUserID = ""
+    /// Install identity for this Mac once known (locks the researcher name field).
+    var session: InstallIdentity?
+    /// Catalog project metadata for the active or selected project.
+    var project: ProjectInfo?
     var mode: Mode = .create
     var availableProjects: [URL] = []
     var selectedProject: URL?
@@ -47,6 +41,8 @@ final class OnboardingModel {
         self.store = store
         self.folders = folders
     }
+
+    var researcherLocked: Bool { session != nil }
 
     var folderNamePreview: String {
         let trimmedLabel = trimmed(familyName)
@@ -79,22 +75,18 @@ final class OnboardingModel {
 
     func load() async {
         errorText = nil
-        researcherLocked = false
-        identityUserID = ""
+        session = nil
         selectedProject = nil
         catalogUsers = []
-        clearProjectMeta()
+        project = nil
         do {
             let identityDir = try identityDir()
             if let id = try await store.installIdentity(identityDir: identityDir.path) {
-                sessionDisplayName = id.displayName
-                sessionRef = id.ref
+                session = id
                 displayName = id.displayName
-                identityUserID = id.userID
-                researcherLocked = true
                 if let active = try await store.activeProject(identityDir: identityDir.path) {
                     if InstallPaths.isProjectDirectory(active) {
-                        await applyProjectInfo(path: active)
+                        await loadProjectInfo(path: active)
                         phase = .home
                         return
                     }
@@ -106,7 +98,7 @@ final class OnboardingModel {
             }
             phase = .chooseFile
         } catch {
-            errorText = formattedError(error)
+            errorText = L10n.Errors.message(for: error)
             phase = .chooseFile
         }
     }
@@ -141,7 +133,7 @@ final class OnboardingModel {
             await refreshDocumentsProjects()
             await refreshSelectedProjectInfo()
         } else {
-            clearProjectMeta()
+            project = nil
         }
     }
 
@@ -157,10 +149,10 @@ final class OnboardingModel {
     /// Loads catalog project metadata for the current picker selection (open flow).
     func refreshSelectedProjectInfo() async {
         guard let selectedProject else {
-            clearProjectMeta()
+            project = nil
             return
         }
-        await applyProjectInfo(path: selectedProject.path)
+        await loadProjectInfo(path: selectedProject.path)
     }
 
     func signOut() async {
@@ -172,11 +164,8 @@ final class OnboardingModel {
             try await store.signOut(identityDir: identityDir.path)
             displayName = ""
             familyName = ""
-            sessionDisplayName = ""
-            sessionRef = ""
-            clearProjectMeta()
-            identityUserID = ""
-            researcherLocked = false
+            session = nil
+            project = nil
             selectedProject = nil
             catalogUsers = []
             selectedContributorID = Self.newContributorID
@@ -184,7 +173,7 @@ final class OnboardingModel {
             mode = .create
             phase = .chooseFile
         } catch {
-            errorText = formattedError(error)
+            errorText = L10n.Errors.message(for: error)
         }
     }
 
@@ -193,7 +182,7 @@ final class OnboardingModel {
             let loc = try resolvedFolders()
             availableProjects = try InstallPaths.provenenciaProjects(in: loc.documentsDirectory)
         } catch {
-            errorText = formattedError(error)
+            errorText = L10n.Errors.message(for: error)
         }
     }
 
@@ -211,14 +200,14 @@ final class OnboardingModel {
         defer { isBusy = false }
         do {
             catalogUsers = try await store.listProjectUsers(projectDir: selectedProject.path)
-            if !identityUserID.isEmpty, catalogUsers.contains(where: { $0.userID == identityUserID }) {
-                selectedContributorID = identityUserID
+            if let userID = session?.userID, catalogUsers.contains(where: { $0.userID == userID }) {
+                selectedContributorID = userID
             } else {
                 selectedContributorID = Self.newContributorID
             }
             phase = .identify
         } catch {
-            errorText = formattedError(error)
+            errorText = L10n.Errors.message(for: error)
         }
     }
 
@@ -236,7 +225,7 @@ final class OnboardingModel {
             )
             applyOpened(result)
         } catch {
-            errorText = formattedError(error)
+            errorText = L10n.Errors.message(for: error)
         }
     }
 
@@ -255,51 +244,41 @@ final class OnboardingModel {
             )
             applyOpened(result)
         } catch {
-            errorText = formattedError(error)
+            errorText = L10n.Errors.message(for: error)
         }
     }
 
     private func applyOpened(_ result: OnboardingResult) {
-        sessionDisplayName = result.displayName
-        sessionRef = result.ref
-        identityUserID = result.userID
-        applyProject(result.project, path: result.projectDir)
-        researcherLocked = true
+        session = InstallIdentity(userID: result.userID, displayName: result.displayName, ref: result.ref)
+        project = normalizedProject(result.project, path: result.projectDir)
         displayName = result.displayName
         phase = .home
     }
 
-    private func applyProjectInfo(path: String) async {
-        projectBasename = URL(fileURLWithPath: path).lastPathComponent
+    private func loadProjectInfo(path: String) async {
         do {
             let info = try await store.projectInfo(projectDir: path)
-            applyProject(info, path: path)
+            project = normalizedProject(info, path: path)
         } catch {
-            clearProjectMeta()
-            projectBasename = URL(fileURLWithPath: path).lastPathComponent
-            projectLabel = ProjectSlug.labelFromFolder(path)
-            errorText = formattedError(error)
+            project = ProjectInfo(
+                label: ProjectSlug.labelFromFolder(path),
+                folderName: URL(fileURLWithPath: path).lastPathComponent,
+                createdAt: "",
+                updatedAt: "",
+                updatedByUserID: "",
+                updatedByDisplayName: "",
+                updatedByRef: ""
+            )
+            errorText = L10n.Errors.message(for: error)
         }
     }
 
-    private func applyProject(_ info: ProjectInfo, path: String) {
-        projectBasename = info.folderName.isEmpty
-            ? URL(fileURLWithPath: path).lastPathComponent
-            : info.folderName
-        projectLabel = info.label
-        projectCreatedAt = info.createdAt
-        projectUpdatedAt = info.updatedAt
-        projectUpdatedByDisplayName = info.updatedByDisplayName
-        projectUpdatedByRef = info.updatedByRef
-    }
-
-    private func clearProjectMeta() {
-        projectBasename = ""
-        projectLabel = ""
-        projectCreatedAt = ""
-        projectUpdatedAt = ""
-        projectUpdatedByDisplayName = ""
-        projectUpdatedByRef = ""
+    private func normalizedProject(_ info: ProjectInfo, path: String) -> ProjectInfo {
+        var info = info
+        if info.folderName.isEmpty {
+            info.folderName = URL(fileURLWithPath: path).lastPathComponent
+        }
+        return info
     }
 
     private func identityDir() throws -> URL {
@@ -318,10 +297,5 @@ final class OnboardingModel {
 
     private func trimmed(_ s: String) -> String {
         s.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    /// Maps a store/FFI error to localized toast copy via stable error codes.
-    private func formattedError(_ error: Error) -> String {
-        L10n.Errors.message(for: error)
     }
 }

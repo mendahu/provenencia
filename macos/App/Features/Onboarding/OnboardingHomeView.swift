@@ -12,31 +12,28 @@ struct OnboardingHomeView: View {
                 .foregroundStyle(PVColor.textDisplay)
                 .accessibilityIdentifier("onboarding.home")
             HStack(spacing: PVSpacing.space3) {
-                Text(model.sessionDisplayName)
+                Text(model.session?.displayName ?? "")
                     .font(PVFont.body(size: PVTypeScale.h3))
                     .foregroundStyle(PVColor.textPrimary)
-                if !model.sessionRef.isEmpty {
-                    Text(L10n.Onboarding.contributorRef(ref: model.sessionRef))
+                if let ref = model.session?.ref, !ref.isEmpty {
+                    Text(L10n.Onboarding.contributorRef(ref: ref))
                         .font(PVFont.mono(size: PVTypeScale.caption))
                         .foregroundStyle(PVColor.textMuted)
                 }
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel(L10n.Onboarding.contributorOption(
-                displayName: model.sessionDisplayName,
-                ref: model.sessionRef
+                displayName: model.session?.displayName ?? "",
+                ref: model.session?.ref ?? ""
             ))
             .accessibilityIdentifier("onboarding.home.displayName")
-            OnboardingProjectMetaLines(
-                label: model.projectLabel,
-                showFolder: true,
-                folderName: model.projectBasename,
-                createdAt: model.projectCreatedAt,
-                updatedAt: model.projectUpdatedAt,
-                updatedByDisplayName: model.projectUpdatedByDisplayName,
-                updatedByRef: model.projectUpdatedByRef,
-                accessibilityPrefix: "onboarding.home"
-            )
+            if let project = model.project {
+                OnboardingProjectMetaLines(
+                    project,
+                    showFolder: true,
+                    accessibilityPrefix: "onboarding.home"
+                )
+            }
             PVButton(L10n.Onboarding.signOut, variant: .ghost) {
                 Task { await model.signOut() }
             }
