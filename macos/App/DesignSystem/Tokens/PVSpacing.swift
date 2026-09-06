@@ -32,10 +32,14 @@ enum PVSpacing {
     /// `PVTypeScale.body` in Spectral is roughly 480pt / 340pt).
     static let measureProse: CGFloat = 480
     static let measureNarrow: CGFloat = 340
+    /// Onboarding form column width (choose-file / identify pages).
+    static let measureForm: CGFloat = 560
 
     static let widthSidebar: CGFloat = 264
     static let widthInspector: CGFloat = 340
     static let widthContentMax: CGFloat = 1180
+    /// Minimum onboarding window width.
+    static let widthWindowMin: CGFloat = 700
 
     /// Control heights. **Deliberately not the web `--control-h-*` pixel
     /// values (28/34/42)** — the source design system's own readme

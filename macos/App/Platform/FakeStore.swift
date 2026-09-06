@@ -1,3 +1,4 @@
+#if DEBUG
 import Foundation
 
 /// In-memory `GenealogyStore` for SwiftUI previews and tests. Not used in the shipped app.
@@ -161,3 +162,4 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         )
     }
 }
+#endif

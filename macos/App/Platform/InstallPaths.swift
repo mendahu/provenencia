@@ -74,12 +74,13 @@ struct OnboardingFolders: Sendable {
         )
     }
 
-    static var previewEmpty: OnboardingFolders {
+#if DEBUG
+    static func previewEmpty() -> OnboardingFolders {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("provenencia-preview-empty-\(UUID().uuidString)")
         return OnboardingFolders(identityDirectory: root, documentsDirectory: root)
     }
 
-    static var previewWithProject: OnboardingFolders {
+    static func previewWithProject() -> OnboardingFolders {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("provenencia-preview-proj-\(UUID().uuidString)")
         let docs = root.appendingPathComponent("Documents", isDirectory: true)
         let project = docs.appendingPathComponent("Smith Family.provenencia", isDirectory: true)
@@ -87,4 +88,5 @@ struct OnboardingFolders: Sendable {
         try? Data().write(to: project.appendingPathComponent(InstallPaths.catalogFile))
         return OnboardingFolders(identityDirectory: root.appendingPathComponent("identity", isDirectory: true), documentsDirectory: docs)
     }
+#endif
 }

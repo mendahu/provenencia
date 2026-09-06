@@ -1,32 +1,50 @@
 import SwiftUI
 
-/// Sizes a `PVInput`/`PVSelect` control. Shared so a `PVField` can mix the
-/// two without their heights disagreeing.
-enum PVControlSize {
-    case sm, md, lg
+/// Shared chrome for single-line inputs (focus ring, inset rest shadow).
+struct PVInputChrome: ViewModifier {
+    var size: PVControlSize = .md
+    var mono: Bool = false
+    var isFocused: Bool = false
 
-    var height: CGFloat {
-        switch self {
-        case .sm: return PVSpacing.controlHeightSmall
-        case .md: return PVSpacing.controlHeightMedium
-        case .lg: return PVSpacing.controlHeightLarge
-        }
-    }
-
-    var font: Font {
-        self == .sm ? PVFont.body(size: PVTypeScale.caption) : PVFont.body(size: PVTypeScale.bodySmall)
+    func body(content: Content) -> some View {
+        content
+            .font(mono ? PVFont.mono(size: size == .sm ? PVTypeScale.caption : PVTypeScale.bodySmall) : size.font)
+            .foregroundStyle(PVColor.textPrimary)
+            .padding(.horizontal, PVSpacing.space3 + PVSpacing.space1)
+            .frame(height: size.height)
+            .background(
+                RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                    .fill(PVColor.surfaceRaised)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                    .stroke(isFocused ? PVColor.borderFocus : PVColor.borderDefault, lineWidth: 1)
+            )
+            .modifier(PVInputRestingShadow(isFocused: isFocused))
+            .animation(PVMotion.fastStandard, value: isFocused)
     }
 }
 
-/// A styled single-line text field — mirrors `components/forms/Input.jsx`
-/// (focus ring, inset shadow at rest, optional `mono` face for anything a
-/// researcher would cite exactly). `isReadOnly` renders static text instead
-/// of a `TextField`, matching the read-only fields the Onboarding Flow
-/// board shows (e.g. a name carried over from a prior screen) — SwiftUI
-/// has no direct "read-only but still looks editable" `TextField` mode.
-///
-/// See `DesignSystem/README.md` / `PVButton.swift` for the component
-/// pattern this follows.
+/// TextField style that applies `PVInputChrome`. Pass `isFocused` from a
+/// `@FocusState` at the call site when you need the focus ring.
+struct PVTextFieldStyle: TextFieldStyle {
+    var size: PVControlSize = .md
+    var mono: Bool = false
+    var isFocused: Bool = false
+
+    func _body(configuration: TextField<Self._Label>) -> some View {
+        configuration
+            .modifier(PVInputChrome(size: size, mono: mono, isFocused: isFocused))
+    }
+}
+
+extension TextFieldStyle where Self == PVTextFieldStyle {
+    static func pv(size: PVControlSize = .md, mono: Bool = false, isFocused: Bool = false) -> PVTextFieldStyle {
+        PVTextFieldStyle(size: size, mono: mono, isFocused: isFocused)
+    }
+}
+
+/// Convenience field with optional read-only rendering and owned focus state.
 struct PVInput: View {
     @Binding private var text: String
     private let size: PVControlSize
@@ -55,36 +73,20 @@ struct PVInput: View {
             if isReadOnly {
                 Text(text)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .modifier(PVInputChrome(size: size, mono: mono, isFocused: false))
             } else if let prompt {
                 TextField("", text: $text, prompt: Text(prompt))
-                    .textFieldStyle(.plain)
+                    .textFieldStyle(.pv(size: size, mono: mono, isFocused: isFocused))
                     .focused($isFocused)
             } else {
                 TextField("", text: $text)
-                    .textFieldStyle(.plain)
+                    .textFieldStyle(.pv(size: size, mono: mono, isFocused: isFocused))
                     .focused($isFocused)
             }
         }
-        .font(mono ? PVFont.mono(size: size == .sm ? PVTypeScale.caption : PVTypeScale.bodySmall) : size.font)
-        .foregroundStyle(PVColor.textPrimary)
-        .padding(.horizontal, PVSpacing.space3 + PVSpacing.space1)
-        .frame(height: size.height)
-        .background(
-            RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                .fill(PVColor.surfaceRaised)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                .stroke(isFocused ? PVColor.borderFocus : PVColor.borderDefault, lineWidth: 1)
-        )
-        .modifier(PVInputRestingShadow(isFocused: isFocused))
-        .animation(PVMotion.fastStandard, value: isFocused)
     }
 }
 
-/// Applies the focus ring when focused, or the resting inset shadow
-/// otherwise — split out so `PVInput`'s `body` reads top-to-bottom like
-/// the web `Input.jsx` styles object.
 private struct PVInputRestingShadow: ViewModifier {
     let isFocused: Bool
 

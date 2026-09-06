@@ -15,6 +15,7 @@ import (
 )
 
 func TestFolderName(t *testing.T) {
+	// Keep success rows in sync with macos ProjectSlug.folderNameFixtures.
 	tests := []struct {
 		name    string
 		in      string
@@ -35,6 +36,7 @@ func TestFolderName(t *testing.T) {
 		{name: "already suffix", in: "Robins Family.provenencia", want: "robins-family.provenencia"},
 		{name: "collapse spaces", in: "  Robins   Family  ", want: "robins-family.provenencia"},
 		{name: "unicode", in: "García Family", want: "garcía-family.provenencia"},
+		{name: "a slash b", in: "A/B", want: "a-b.provenencia"},
 		{name: "only dots", in: "...", wantErr: ErrInvalidFamilyName},
 		{name: "blank", in: "  ", wantErr: ErrInvalidFamilyName},
 	}

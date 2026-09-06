@@ -1,10 +1,7 @@
 import SwiftUI
 
-/// A tone. Matches the web `tone` prop — mirrors `components/feedback/Toast.jsx`,
-/// read directly out of the compiled component bundle: each tone pairs a
-/// semantic color with a Lucide icon (`info`, `check-check`, `triangle-alert`,
-/// `octagon-alert`), substituted here to their SF Symbol equivalents in
-/// `PVIconMap`.
+/// A tone. Matches the web `tone` prop — mirrors `components/feedback/Toast.jsx`.
+/// Each tone pairs a semantic color with a `PVSymbol`.
 enum PVToastTone {
     case info, success, warning, danger
 
@@ -17,12 +14,12 @@ enum PVToastTone {
         }
     }
 
-    fileprivate var iconName: String {
+    fileprivate var icon: PVSymbol {
         switch self {
-        case .info: return "info"
-        case .success: return "check-check"
-        case .warning: return "triangle-alert"
-        case .danger: return "octagon-alert"
+        case .info: return .info
+        case .success: return .success
+        case .warning: return .warning
+        case .danger: return .danger
         }
     }
 }
@@ -54,7 +51,7 @@ struct PVToast: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: PVSpacing.space5) {
-            PVIcon(tone.iconName, size: 15)
+            PVIcon(tone.icon, size: 15)
                 .foregroundStyle(tone.color)
                 .padding(.top, 2)
             VStack(alignment: .leading, spacing: PVSpacing.space1) {
@@ -72,7 +69,7 @@ struct PVToast: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             if let onDismiss {
                 Button(action: onDismiss) {
-                    PVIcon("x", size: 13)
+                    PVIcon(.dismiss, size: 13)
                         .foregroundStyle(PVColor.textSecondary)
                 }
                 .buttonStyle(.plain)

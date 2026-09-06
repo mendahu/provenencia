@@ -48,7 +48,7 @@ struct PVSelect: View {
                     .foregroundStyle(PVColor.textPrimary)
                     .lineLimit(1)
                 Spacer(minLength: 0)
-                PVIcon("chevron-down", size: 14)
+                PVIcon(.chevronDown, size: 14)
                     .foregroundStyle(PVColor.textFaint)
             }
             .font(size.font)
