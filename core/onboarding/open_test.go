@@ -247,3 +247,73 @@ func TestOpen(t *testing.T) {
 		})
 	}
 }
+
+func TestProjectInfo(t *testing.T) {
+	tests := []struct {
+		name string
+		run  func(t *testing.T)
+	}{
+		{
+			name: "resolves updated-by from catalog",
+			run: func(t *testing.T) {
+				created, err := Complete(t.TempDir(), t.TempDir(), "Jake", "One")
+				if err != nil {
+					t.Fatal(err)
+				}
+				info, err := ProjectInfo(created.ProjectDir)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if info.Info.Label != "One" {
+					t.Fatalf("label %q", info.Info.Label)
+				}
+				if info.UpdatedByUserID != created.Identity.UserID.String() {
+					t.Fatalf("user id %q", info.UpdatedByUserID)
+				}
+				if info.UpdatedByDisplayName != "Jake" {
+					t.Fatalf("display %q", info.UpdatedByDisplayName)
+				}
+				if info.UpdatedByRef != created.Identity.Ref {
+					t.Fatalf("ref %q", info.UpdatedByRef)
+				}
+			},
+		},
+		{
+			name: "not a project",
+			run: func(t *testing.T) {
+				_, err := ProjectInfo(t.TempDir())
+				if !errors.Is(err, database.ErrNotAProject) {
+					t.Fatalf("got %v", err)
+				}
+			},
+		},
+		{
+			name: "open result includes resolved fields",
+			run: func(t *testing.T) {
+				ident := t.TempDir()
+				created, err := Complete(ident, t.TempDir(), "Jake", "One")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := installstate.Remove(ident); err != nil {
+					t.Fatal(err)
+				}
+				res, err := Open(ident, created.ProjectDir, "", "")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if res.Project.UpdatedByDisplayName != "Jake" {
+					t.Fatalf("display %q", res.Project.UpdatedByDisplayName)
+				}
+				if res.Project.UpdatedByUserID != created.Identity.UserID.String() {
+					t.Fatalf("user id %q", res.Project.UpdatedByUserID)
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.run(t)
+		})
+	}
+}

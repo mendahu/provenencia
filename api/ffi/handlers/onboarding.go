@@ -4,11 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/api/proto/engine"
-	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/project"
-	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/onboarding"
 	"google.golang.org/protobuf/proto"
 )
@@ -22,19 +18,12 @@ func CompleteOnboarding(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	pi := projectInfoProto(
-		res.ProjectDir,
-		res.Project,
-		res.Identity.UserID.String(),
-		res.Identity.DisplayName,
-		res.Identity.Ref,
-	)
 	return proto.Marshal(&engine.CompleteOnboardingResponse{
 		ProjectDir:  res.ProjectDir,
 		UserId:      res.Identity.UserID.String(),
 		DisplayName: res.Identity.DisplayName,
 		Ref:         res.Identity.Ref,
-		Project:     pi,
+		Project:     projectInfoProto(res.ProjectDir, res.Project),
 	})
 }
 
@@ -47,16 +36,12 @@ func OpenProject(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	pi, err := enrichProjectInfo(res.ProjectDir, res.Project)
-	if err != nil {
-		return nil, err
-	}
 	return proto.Marshal(&engine.OpenProjectResponse{
 		ProjectDir:  res.ProjectDir,
 		UserId:      res.Identity.UserID.String(),
 		DisplayName: res.Identity.DisplayName,
 		Ref:         res.Identity.Ref,
-		Project:     pi,
+		Project:     projectInfoProto(res.ProjectDir, res.Project),
 	})
 }
 
@@ -89,42 +74,19 @@ func GetProjectInfo(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	pi, err := enrichProjectInfo(req.GetProjectDir(), info)
-	if err != nil {
-		return nil, err
-	}
-	return proto.Marshal(&engine.GetProjectInfoResponse{Project: pi})
+	return proto.Marshal(&engine.GetProjectInfoResponse{
+		Project: projectInfoProto(req.GetProjectDir(), info),
+	})
 }
 
-func enrichProjectInfo(projectDir string, info project.Info) (*engine.ProjectInfo, error) {
-	byID, byName, byRef := "", "", ""
-	if len(info.UpdatedBy) == 16 {
-		if uid, err := uuid.FromBytes(info.UpdatedBy); err == nil {
-			byID = uid.String()
-		}
-		proj, err := database.Open(projectDir)
-		if err != nil {
-			return nil, err
-		}
-		u, err := users.Lookup(proj, info.UpdatedBy)
-		_ = proj.Close()
-		if err != nil {
-			return nil, err
-		}
-		byName = u.DisplayName
-		byRef = u.Ref
-	}
-	return projectInfoProto(projectDir, info, byID, byName, byRef), nil
-}
-
-func projectInfoProto(projectDir string, info project.Info, byID, byName, byRef string) *engine.ProjectInfo {
+func projectInfoProto(projectDir string, info onboarding.ResolvedInfo) *engine.ProjectInfo {
 	return &engine.ProjectInfo{
-		Label:                info.Label,
+		Label:                info.Info.Label,
 		FolderName:           filepath.Base(projectDir),
-		CreatedAt:            info.CreatedAt,
-		UpdatedAt:            info.UpdatedAt,
-		UpdatedByUserId:      byID,
-		UpdatedByDisplayName: byName,
-		UpdatedByRef:         byRef,
+		CreatedAt:            info.Info.CreatedAt,
+		UpdatedAt:            info.Info.UpdatedAt,
+		UpdatedByUserId:      info.UpdatedByUserID,
+		UpdatedByDisplayName: info.UpdatedByDisplayName,
+		UpdatedByRef:         info.UpdatedByRef,
 	}
 }
