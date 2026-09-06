@@ -9,7 +9,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/identity"
-	"github.com/mendahu/provenencia/core/installstate"
 )
 
 var ErrBlankName = apperr.New(apperr.CodeOnboardingBlankName, apperr.KindUser)
@@ -73,7 +72,7 @@ func Complete(identityDir, parent, displayName, familyName string) (Result, erro
 	if err != nil {
 		return Result{}, err
 	}
-	if err := installstate.Save(identityDir, installstate.Active{ProjectDir: dir}); err != nil {
+	if err := identity.SaveActive(identityDir, identity.Active{ProjectDir: dir}); err != nil {
 		return Result{}, err
 	}
 	return Result{
@@ -100,7 +99,7 @@ func persistIdentityAndActive(identityDir, dir string, id identity.Identity, res
 	if err := identity.Save(identityDir, id); err != nil {
 		return Result{}, err
 	}
-	if err := installstate.Save(identityDir, installstate.Active{ProjectDir: dir}); err != nil {
+	if err := identity.SaveActive(identityDir, identity.Active{ProjectDir: dir}); err != nil {
 		return Result{}, err
 	}
 	return Result{ProjectDir: dir, Identity: id, Project: resolved}, nil

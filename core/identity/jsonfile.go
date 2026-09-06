@@ -1,5 +1,4 @@
-// Package jsonfile writes small install-local JSON files (mkdir, indent, 0o600).
-package jsonfile
+package identity
 
 import (
 	"encoding/json"
@@ -9,22 +8,20 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 )
 
-var ErrNotFound = apperr.New(apperr.CodeFileNotFound, apperr.KindNotFound)
+var errFileNotFound = apperr.New(apperr.CodeFileNotFound, apperr.KindNotFound)
 
-// Read returns the file bytes. A missing path is ErrNotFound.
-func Read(path string) ([]byte, error) {
+func readJSONFile(path string) ([]byte, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, ErrNotFound
+			return nil, errFileNotFound
 		}
 		return nil, err
 	}
 	return b, nil
 }
 
-// Write marshals v with indent, a trailing newline, and mode 0o600.
-func Write(path string, v any) error {
+func writeJSONFile(path string, v any) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
@@ -36,8 +33,7 @@ func Write(path string, v any) error {
 	return os.WriteFile(path, b, 0o600)
 }
 
-// Remove deletes path. A missing file is not an error.
-func Remove(path string) error {
+func removeJSONFile(path string) error {
 	err := os.Remove(path)
 	if err != nil && os.IsNotExist(err) {
 		return nil

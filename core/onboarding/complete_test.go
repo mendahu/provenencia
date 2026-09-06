@@ -11,7 +11,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/identity"
-	"github.com/mendahu/provenencia/core/installstate"
 	"github.com/mendahu/provenencia/core/ref"
 )
 
@@ -122,7 +121,7 @@ func TestComplete(t *testing.T) {
 				if len(m) != 3 {
 					t.Fatalf("unexpected identity keys %v", m)
 				}
-				act, err := installstate.Load(ident)
+				act, err := identity.LoadActive(ident)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -167,7 +166,7 @@ func TestComplete(t *testing.T) {
 				if u.DisplayName != "Jake R." {
 					t.Fatalf("users %q", u.DisplayName)
 				}
-				act, err := installstate.Load(ident)
+				act, err := identity.LoadActive(ident)
 				if err != nil {
 					t.Fatal(err)
 				}

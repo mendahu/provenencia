@@ -9,7 +9,6 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/identity"
-	"github.com/mendahu/provenencia/core/installstate"
 )
 
 func TestOpen(t *testing.T) {
@@ -24,7 +23,7 @@ func TestOpen(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err := installstate.Remove(ident); err != nil {
+				if err := identity.RemoveActive(ident); err != nil {
 					t.Fatal(err)
 				}
 				res, err := Open(ident, created.ProjectDir, "", "")
@@ -34,7 +33,7 @@ func TestOpen(t *testing.T) {
 				if res.Identity.UserID != created.Identity.UserID {
 					t.Fatal("uuid changed")
 				}
-				act, err := installstate.Load(ident)
+				act, err := identity.LoadActive(ident)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -295,7 +294,7 @@ func TestProjectInfo(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err := installstate.Remove(ident); err != nil {
+				if err := identity.RemoveActive(ident); err != nil {
 					t.Fatal(err)
 				}
 				res, err := Open(ident, created.ProjectDir, "", "")

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
-	"github.com/mendahu/provenencia/core/installstate"
+	"github.com/mendahu/provenencia/core/identity"
 	"github.com/mendahu/provenencia/core/onboarding"
 	"google.golang.org/protobuf/proto"
 )
@@ -67,7 +67,7 @@ func TestOpenProject(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err := installstate.Remove(ident); err != nil {
+				if err := identity.RemoveActive(ident); err != nil {
 					t.Fatal(err)
 				}
 				return &engine.OpenProjectRequest{

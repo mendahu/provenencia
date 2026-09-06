@@ -1,4 +1,4 @@
-package installstate
+package identity
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestInstallState(t *testing.T) {
+func TestActive(t *testing.T) {
 	tests := []struct {
 		name string
 		run  func(t *testing.T, dir string)
@@ -16,17 +16,17 @@ func TestInstallState(t *testing.T) {
 			name: "round trip json",
 			run: func(t *testing.T, dir string) {
 				want := Active{ProjectDir: "/tmp/Smith Family.provenencia"}
-				if err := Save(dir, want); err != nil {
+				if err := SaveActive(dir, want); err != nil {
 					t.Fatal(err)
 				}
-				got, err := Load(dir)
+				got, err := LoadActive(dir)
 				if err != nil {
 					t.Fatal(err)
 				}
 				if got.ProjectDir != want.ProjectDir {
 					t.Fatalf("got %+v want %+v", got, want)
 				}
-				raw, err := os.ReadFile(filepath.Join(dir, FileName))
+				raw, err := os.ReadFile(filepath.Join(dir, ActiveFileName))
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -40,26 +40,26 @@ func TestInstallState(t *testing.T) {
 			},
 		},
 		{
-			name: "load missing is ErrNotFound",
+			name: "load missing is ErrActiveNotFound",
 			run: func(t *testing.T, dir string) {
-				_, err := Load(dir)
-				if err != ErrNotFound {
-					t.Fatalf("got %v want %v", err, ErrNotFound)
+				_, err := LoadActive(dir)
+				if err != ErrActiveNotFound {
+					t.Fatalf("got %v want %v", err, ErrActiveNotFound)
 				}
 			},
 		},
 		{
 			name: "save rejects blank dir",
 			run: func(t *testing.T, dir string) {
-				if err := Save(dir, Active{ProjectDir: "  \t"}); err != ErrInvalid {
-					t.Fatalf("got %v want %v", err, ErrInvalid)
+				if err := SaveActive(dir, Active{ProjectDir: "  \t"}); err != ErrActiveInvalid {
+					t.Fatalf("got %v want %v", err, ErrActiveInvalid)
 				}
 			},
 		},
 		{
 			name: "remove missing is ok",
 			run: func(t *testing.T, dir string) {
-				if err := Remove(dir); err != nil {
+				if err := RemoveActive(dir); err != nil {
 					t.Fatal(err)
 				}
 			},
@@ -67,13 +67,13 @@ func TestInstallState(t *testing.T) {
 		{
 			name: "remove then load is not found",
 			run: func(t *testing.T, dir string) {
-				if err := Save(dir, Active{ProjectDir: "/tmp/A.provenencia"}); err != nil {
+				if err := SaveActive(dir, Active{ProjectDir: "/tmp/A.provenencia"}); err != nil {
 					t.Fatal(err)
 				}
-				if err := Remove(dir); err != nil {
+				if err := RemoveActive(dir); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := Load(dir); err != ErrNotFound {
+				if _, err := LoadActive(dir); err != ErrActiveNotFound {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -81,10 +81,10 @@ func TestInstallState(t *testing.T) {
 		{
 			name: "corrupt json",
 			run: func(t *testing.T, dir string) {
-				if err := os.WriteFile(filepath.Join(dir, FileName), []byte("{"), 0o600); err != nil {
+				if err := os.WriteFile(filepath.Join(dir, ActiveFileName), []byte("{"), 0o600); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := Load(dir); err == nil {
+				if _, err := LoadActive(dir); err == nil {
 					t.Fatal("expected error")
 				}
 			},
