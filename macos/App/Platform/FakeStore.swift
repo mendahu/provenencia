@@ -38,14 +38,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         self.catalogUsers = catalogUsers
     }
 
-    func ping(_ message: String) async throws -> String {
-        message
-    }
-
-    func version() async throws -> String {
-        "0.1.0"
-    }
-
     func installIdentity(identityDir _: String) async throws -> InstallIdentity? {
         identity
     }
@@ -82,10 +74,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         catalogUsers = [InstallIdentity(userID: userID, displayName: displayName, ref: ref)]
         projectInfos[projectDir] = info
         return result
-    }
-
-    func removeInstallIdentity(identityDir _: String) async throws {
-        identity = nil
     }
 
     func activeProject(identityDir _: String) async throws -> String? {

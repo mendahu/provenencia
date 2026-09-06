@@ -301,10 +301,6 @@ private enum StoreBoom: Error {
 }
 
 private struct ThrowingStore: GenealogyStore {
-    func ping(_ message: String) async throws -> String {
-        throw CoreInvokeError.coded(status: 1, code: "internal.unknown", kind: .internal, params: [])
-    }
-    func version() async throws -> String { throw StoreBoom.boom }
     func installIdentity(identityDir _: String) async throws -> InstallIdentity? {
         throw CoreInvokeError.coded(status: 1, code: "internal.unknown", kind: .internal, params: [])
     }
@@ -314,7 +310,6 @@ private struct ThrowingStore: GenealogyStore {
         displayName _: String,
         familyName _: String
     ) async throws -> OnboardingResult { throw StoreBoom.boom }
-    func removeInstallIdentity(identityDir _: String) async throws { throw StoreBoom.boom }
     func activeProject(identityDir _: String) async throws -> String? { throw StoreBoom.boom }
     func listProjectUsers(projectDir _: String) async throws -> [InstallIdentity] { throw StoreBoom.boom }
     func openProject(

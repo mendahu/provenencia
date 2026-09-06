@@ -117,8 +117,3 @@ func From(err error) *Error {
 	}
 	return New(CodeInternalUnknown, KindInternal)
 }
-
-// CodeOf returns the stable code for err, or internal.unknown.
-func CodeOf(err error) string {
-	return From(err).Code()
-}

@@ -55,9 +55,6 @@ func Lookup(c *database.Catalog, id []byte) (User, error) {
 	if err != nil {
 		return User{}, err
 	}
-	if u.Ref == "" {
-		u.Ref = ""
-	}
 	return u, nil
 }
 

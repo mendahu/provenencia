@@ -73,7 +73,7 @@ func Complete(identityDir, parent, displayName, familyName string) (Result, erro
 	if err != nil {
 		return Result{}, err
 	}
-	if err := rememberActive(identityDir, dir); err != nil {
+	if err := installstate.Save(identityDir, installstate.Active{ProjectDir: dir}); err != nil {
 		return Result{}, err
 	}
 	return Result{
@@ -88,10 +88,6 @@ func Complete(identityDir, parent, displayName, familyName string) (Result, erro
 	}, nil
 }
 
-func rememberActive(identityDir, projectDir string) error {
-	return installstate.Save(identityDir, installstate.Active{ProjectDir: projectDir})
-}
-
 func closeCatalog(proj *database.Catalog) (string, error) {
 	dir := proj.Dir()
 	if err := proj.Close(); err != nil {
@@ -104,7 +100,7 @@ func persistIdentityAndActive(identityDir, dir string, id identity.Identity, res
 	if err := identity.Save(identityDir, id); err != nil {
 		return Result{}, err
 	}
-	if err := rememberActive(identityDir, dir); err != nil {
+	if err := installstate.Save(identityDir, installstate.Active{ProjectDir: dir}); err != nil {
 		return Result{}, err
 	}
 	return Result{ProjectDir: dir, Identity: id, Project: resolved}, nil

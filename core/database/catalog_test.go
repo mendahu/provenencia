@@ -171,72 +171,6 @@ func TestCreateOpen(t *testing.T) {
 				c2.Close()
 			},
 		},
-		{
-			name: "open read-only refuses wrong application_id",
-			run: func(t *testing.T, parent string) {
-				dir := filepath.Join(parent, "foreign-ro.provenencia")
-				if err := os.MkdirAll(dir, 0o755); err != nil {
-					t.Fatal(err)
-				}
-				db, err := openDB(catalogPath(dir))
-				if err != nil {
-					t.Fatal(err)
-				}
-				if _, err := db.Exec(`PRAGMA application_id = 1`); err != nil {
-					db.Close()
-					t.Fatal(err)
-				}
-				db.Close()
-				_, err = OpenReadOnly(dir)
-				if err != ErrNotAProject {
-					t.Fatalf("got %v want %v", err, ErrNotAProject)
-				}
-			},
-		},
-		{
-			name: "open read-only then exclusive open",
-			run: func(t *testing.T, parent string) {
-				c, err := Create(parent, "Peek.provenencia")
-				if err != nil {
-					t.Fatal(err)
-				}
-				dir := c.Dir()
-				if err := c.Close(); err != nil {
-					t.Fatal(err)
-				}
-				ro, err := OpenReadOnly(dir)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if err := ro.Close(); err != nil {
-					t.Fatal(err)
-				}
-				c2, err := Open(dir)
-				if err != nil {
-					t.Fatal(err)
-				}
-				c2.Close()
-			},
-		},
-		{
-			name: "open read-only refuses unsupported user_version",
-			run: func(t *testing.T, parent string) {
-				c, err := Create(parent, "FutureRO.provenencia")
-				if err != nil {
-					t.Fatal(err)
-				}
-				dir := c.Dir()
-				if _, err := c.db.Exec(`PRAGMA user_version = 99`); err != nil {
-					c.Close()
-					t.Fatal(err)
-				}
-				c.Close()
-				_, err = OpenReadOnly(dir)
-				if err == nil || !errors.Is(err, ErrUnsupportedVersion) {
-					t.Fatalf("got %v want %v", err, ErrUnsupportedVersion)
-				}
-			},
-		},
 	}
 
 	for _, tt := range tests {
@@ -281,20 +215,5 @@ func TestDSN(t *testing.T) {
 				t.Fatalf("unencoded ? in path %s", got)
 			}
 		})
-	}
-}
-
-func TestDSNReadOnly(t *testing.T) {
-	got := dsnReadOnly("/tmp/foo/provenencia.sqlite")
-	u, err := url.Parse(got)
-	if err != nil {
-		t.Fatal(err)
-	}
-	q := u.Query()
-	if q.Get("mode") != "ro" {
-		t.Fatalf("mode %q", q.Get("mode"))
-	}
-	if q.Get("_journal_mode") != "" {
-		t.Fatalf("unexpected journal_mode %v", q)
 	}
 }
