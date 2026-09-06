@@ -15,4 +15,3 @@ Full notes: `docs/macos-client-patterns.md`.
 - User-facing copy goes through typed `L10n` + String Catalogs. Follow `.cursor/skills/add-localized-string/SKILL.md`. Do not hard-code English in views/models.
 - Put new screens under `macos/App/Features/<Feature>/` (view + model together). FFI/store types stay in `Platform/`. Do not add more files to a flat target root.
 - Unit tests go in `macos/ProvenenciaTests/` (Swift Testing). Follow `.cursor/skills/add-swift-test/SKILL.md`. Do not co-locate `*Tests.swift` under `App/`.
-- `Features/VersionSmoke/` is a temporary FFI probe; do not grow product UI there.

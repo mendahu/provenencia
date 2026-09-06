@@ -2,6 +2,7 @@ package identity
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -43,7 +44,7 @@ func TestActive(t *testing.T) {
 			name: "load missing is ErrActiveNotFound",
 			run: func(t *testing.T, dir string) {
 				_, err := LoadActive(dir)
-				if err != ErrActiveNotFound {
+				if !errors.Is(err, ErrActiveNotFound) {
 					t.Fatalf("got %v want %v", err, ErrActiveNotFound)
 				}
 			},
@@ -51,7 +52,7 @@ func TestActive(t *testing.T) {
 		{
 			name: "save rejects blank dir",
 			run: func(t *testing.T, dir string) {
-				if err := SaveActive(dir, Active{ProjectDir: "  \t"}); err != ErrActiveInvalid {
+				if err := SaveActive(dir, Active{ProjectDir: "  \t"}); !errors.Is(err, ErrActiveInvalid) {
 					t.Fatalf("got %v want %v", err, ErrActiveInvalid)
 				}
 			},
@@ -73,7 +74,7 @@ func TestActive(t *testing.T) {
 				if err := RemoveActive(dir); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := LoadActive(dir); err != ErrActiveNotFound {
+				if _, err := LoadActive(dir); !errors.Is(err, ErrActiveNotFound) {
 					t.Fatalf("got %v", err)
 				}
 			},

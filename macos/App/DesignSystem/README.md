@@ -23,10 +23,9 @@ side, re-transcribe it here by hand.**
 
 The project also contains one mockup board, `Onboarding Flow.dc.html`,
 showing the 8 window states of this app's actual onboarding flow. Per that
-project's own sync log, it was built by reading the shipped
-`OnboardingView`/`OnboardingChooseFileView`/`OnboardingIdentifyView`/
-`OnboardingHomeView`/`OnboardingChrome` SwiftUI files. Those screens have
-since been restyled to consume `PV*` tokens and components directly.
+project's own sync log, it was built by reading the shipped onboarding
+SwiftUI files. Those screens have been restyled to consume `PV*` tokens and
+components directly.
 
 ## Token file map
 
@@ -46,7 +45,7 @@ at call sites — never a literal color, font, or number.
 ## The component pattern
 
 `Components/Core/PVButton.swift` is the **canonical example** — read its
-header comment before adding component #2. In short:
+header comment before adding a new component. In short:
 
 - A component lives at `Components/<Category>/PV<Name>.swift`, where
   `<Category>` mirrors the web design system's own `components/<category>/`
@@ -69,7 +68,7 @@ header comment before adding component #2. In short:
 - Each component file ends with a `#Preview` using static sample data (no
   live `GenealogyStore` needed).
 
-To add component #2: pick its category folder (create it if this is the
+To add another component: pick its category folder (create it if this is the
 first component in that category), copy `PVButton.swift`'s shape, and read
 its exact CSS/JS spec out of the source design-system project first — don't
 guess at colors/spacing/sizes.

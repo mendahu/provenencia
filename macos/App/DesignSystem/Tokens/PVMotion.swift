@@ -31,3 +31,20 @@ enum PVMotion {
     /// `easeStandard` at `durationInstant` — used for the button press scale.
     static let instantStandard = Animation.timingCurve(0.2, 0.6, 0.2, 1, duration: durationInstant)
 }
+
+extension View {
+    /// Applies `animation` unless Reduce Motion is enabled.
+    func pvAnimation<V: Equatable>(_ animation: Animation?, value: V) -> some View {
+        modifier(PVAnimationModifier(animation: animation, value: value))
+    }
+}
+
+private struct PVAnimationModifier<V: Equatable>: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let animation: Animation?
+    let value: V
+
+    func body(content: Content) -> some View {
+        content.animation(reduceMotion ? nil : animation, value: value)
+    }
+}

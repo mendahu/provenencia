@@ -36,7 +36,11 @@
 		AA00000000000000000000D4 /* OnboardingChooseFileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000D0 /* OnboardingChooseFileView.swift */; };
 		AA00000000000000000000D5 /* OnboardingIdentifyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000D1 /* OnboardingIdentifyView.swift */; };
 		AA00000000000000000000D6 /* OnboardingHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000D2 /* OnboardingHomeView.swift */; };
-		AA00000000000000000000D7 /* OnboardingChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000D3 /* OnboardingChrome.swift */; };
+		AA00000000000000000000D7 /* OnboardingFileChoice.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000D3 /* OnboardingFileChoice.swift */; };
+		AA0000000000000000000101 /* OnboardingOpenPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000100 /* OnboardingOpenPicker.swift */; };
+		AA0000000000000000000103 /* OnboardingProjectMetaLines.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000102 /* OnboardingProjectMetaLines.swift */; };
+		AA0000000000000000000105 /* OnboardingFooter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000104 /* OnboardingFooter.swift */; };
+		AA0000000000000000000107 /* OnboardingContributorRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000106 /* OnboardingContributorRow.swift */; };
 		AA00000000000000000000E3 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000E0 /* Localizable.xcstrings */; };
 		AA00000000000000000000E4 /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000E1 /* InfoPlist.xcstrings */; };
 		AA00000000000000000000E5 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000E2 /* L10n.swift */; };
@@ -106,7 +110,11 @@
 		AA00000000000000000000D0 /* OnboardingChooseFileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingChooseFileView.swift; sourceTree = "<group>"; };
 		AA00000000000000000000D1 /* OnboardingIdentifyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingIdentifyView.swift; sourceTree = "<group>"; };
 		AA00000000000000000000D2 /* OnboardingHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingHomeView.swift; sourceTree = "<group>"; };
-		AA00000000000000000000D3 /* OnboardingChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingChrome.swift; sourceTree = "<group>"; };
+		AA00000000000000000000D3 /* OnboardingFileChoice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFileChoice.swift; sourceTree = "<group>"; };
+		AA0000000000000000000100 /* OnboardingOpenPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingOpenPicker.swift; sourceTree = "<group>"; };
+		AA0000000000000000000102 /* OnboardingProjectMetaLines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingProjectMetaLines.swift; sourceTree = "<group>"; };
+		AA0000000000000000000104 /* OnboardingFooter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFooter.swift; sourceTree = "<group>"; };
+		AA0000000000000000000106 /* OnboardingContributorRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingContributorRow.swift; sourceTree = "<group>"; };
 		AA00000000000000000000E0 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		AA00000000000000000000E1 /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
 		AA00000000000000000000E2 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
@@ -278,7 +286,11 @@
 				AA00000000000000000000D0 /* OnboardingChooseFileView.swift */,
 				AA00000000000000000000D1 /* OnboardingIdentifyView.swift */,
 				AA00000000000000000000D2 /* OnboardingHomeView.swift */,
-				AA00000000000000000000D3 /* OnboardingChrome.swift */,
+				AA00000000000000000000D3 /* OnboardingFileChoice.swift */,
+				AA0000000000000000000100 /* OnboardingOpenPicker.swift */,
+				AA0000000000000000000102 /* OnboardingProjectMetaLines.swift */,
+				AA0000000000000000000104 /* OnboardingFooter.swift */,
+				AA0000000000000000000106 /* OnboardingContributorRow.swift */,
 				AA00000000000000000000F4 /* OnboardingPage.swift */,
 				AA000000000000000000001C /* OnboardingModel.swift */,
 			);
@@ -426,11 +438,11 @@
 /* Begin PBXShellScriptBuildPhase section */
 		AA00000000000000000000C0 /* Build Go core */ = {
 			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			inputFileListPaths = (
+				"$(SRCROOT)/Core/go-sources.xcfilelist",
 			);
 			inputPaths = (
 			);
@@ -456,7 +468,11 @@
 				AA00000000000000000000D4 /* OnboardingChooseFileView.swift in Sources */,
 				AA00000000000000000000D5 /* OnboardingIdentifyView.swift in Sources */,
 				AA00000000000000000000D6 /* OnboardingHomeView.swift in Sources */,
-				AA00000000000000000000D7 /* OnboardingChrome.swift in Sources */,
+				AA00000000000000000000D7 /* OnboardingFileChoice.swift in Sources */,
+				AA0000000000000000000101 /* OnboardingOpenPicker.swift in Sources */,
+				AA0000000000000000000103 /* OnboardingProjectMetaLines.swift in Sources */,
+				AA0000000000000000000105 /* OnboardingFooter.swift in Sources */,
+				AA0000000000000000000107 /* OnboardingContributorRow.swift in Sources */,
 				AA00000000000000000000F5 /* OnboardingPage.swift in Sources */,
 				AA000000000000000000000C /* OnboardingModel.swift in Sources */,
 				AA000000000000000000000D /* InstallPaths.swift in Sources */,
@@ -633,6 +649,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = app.provenencia;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_OBJC_BRIDGING_HEADER = "App/Resources/Provenencia-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};
@@ -674,6 +691,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = app.provenencia;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_OBJC_BRIDGING_HEADER = "App/Resources/Provenencia-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};
@@ -694,6 +712,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = app.provenencia.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Provenencia.app/Contents/MacOS/Provenencia";
 			};
@@ -714,6 +733,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = app.provenencia.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Provenencia.app/Contents/MacOS/Provenencia";
 			};

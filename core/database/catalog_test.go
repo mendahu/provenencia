@@ -59,7 +59,7 @@ func TestCreateOpen(t *testing.T) {
 				}
 				c.Close()
 				_, err = Create(parent, "Dup.provenencia")
-				if err != ErrAlreadyExists {
+				if !errors.Is(err, ErrAlreadyExists) {
 					t.Fatalf("got %v want %v", err, ErrAlreadyExists)
 				}
 			},
@@ -68,7 +68,7 @@ func TestCreateOpen(t *testing.T) {
 			name: "create requires provenencia suffix",
 			run: func(t *testing.T, parent string) {
 				_, err := Create(parent, "Robins Family")
-				if err != ErrInvalidFolderName {
+				if !errors.Is(err, ErrInvalidFolderName) {
 					t.Fatalf("got %v want %v", err, ErrInvalidFolderName)
 				}
 			},
@@ -81,7 +81,7 @@ func TestCreateOpen(t *testing.T) {
 					t.Fatal(err)
 				}
 				_, err := Open(dir)
-				if err != ErrNotAProject {
+				if !errors.Is(err, ErrNotAProject) {
 					t.Fatalf("got %v want %v", err, ErrNotAProject)
 				}
 			},
@@ -103,7 +103,7 @@ func TestCreateOpen(t *testing.T) {
 				}
 				db.Close()
 				_, err = Open(dir)
-				if err != ErrNotAProject {
+				if !errors.Is(err, ErrNotAProject) {
 					t.Fatalf("got %v want %v", err, ErrNotAProject)
 				}
 			},
@@ -157,7 +157,7 @@ func TestCreateOpen(t *testing.T) {
 					t.Fatal(err)
 				}
 				_, err = Open(c.Dir())
-				if err != ErrAlreadyOpen {
+				if !errors.Is(err, ErrAlreadyOpen) {
 					c.Close()
 					t.Fatalf("got %v want %v", err, ErrAlreadyOpen)
 				}

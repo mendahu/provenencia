@@ -22,7 +22,7 @@ struct OnboardingModelTests {
         #expect(model.phase == .chooseFile)
         #expect(!model.researcherLocked)
         #expect(model.session == nil)
-        #expect(model.errorText == nil)
+        #expect(model.error == nil)
     }
 
     @Test func loadWithIdentityAndNoActiveShowsChooseFileLocked() async throws {
@@ -31,7 +31,7 @@ struct OnboardingModelTests {
         #expect(model.phase == .chooseFile)
         #expect(model.researcherLocked)
         #expect(model.session == jane)
-        #expect(model.errorText == nil)
+        #expect(model.error == nil)
     }
 
     @Test func loadWithIdentityAndExistingActiveDirShowsHome() async throws {
@@ -89,7 +89,7 @@ struct OnboardingModelTests {
         await model.load()
         #expect(model.phase == .chooseFile)
         #expect(store.activeProjectDir == nil)
-        #expect(model.errorText == String(localized: L10n.Onboarding.missingProject))
+        #expect(model.error?.localizedDescription == String(localized: L10n.Onboarding.missingProject))
         #expect(model.researcherLocked)
     }
 
@@ -100,7 +100,7 @@ struct OnboardingModelTests {
         await model.load()
         #expect(model.phase == .chooseFile)
         #expect(store.activeProjectDir == nil)
-        #expect(model.errorText == String(localized: L10n.Onboarding.missingProject))
+        #expect(model.error?.localizedDescription == String(localized: L10n.Onboarding.missingProject))
         #expect(model.researcherLocked)
     }
 
@@ -109,7 +109,7 @@ struct OnboardingModelTests {
         let model = OnboardingModel(store: ThrowingStore(), folders: folders)
         await model.load()
         #expect(model.phase == .chooseFile)
-        #expect(model.errorText == String(localized: L10n.Errors.unknown))
+        #expect(model.error?.localizedDescription == String(localized: L10n.Errors.unknown))
     }
 
     @Test func canContinueCreateOpenAndIdentify() async throws {
@@ -166,11 +166,11 @@ struct OnboardingModelTests {
     @Test func goBackReturnsToChooseFile() async throws {
         let (model, _, _) = try harness()
         model.phase = .identify
-        model.errorText = "x"
+        model.error = StoreBoom.boom
         model.catalogUsers = [jane]
         model.goBack()
         #expect(model.phase == .chooseFile)
-        #expect(model.errorText == nil)
+        #expect(model.error == nil)
         #expect(model.catalogUsers.isEmpty)
     }
 

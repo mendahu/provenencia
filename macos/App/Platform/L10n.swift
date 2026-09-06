@@ -145,12 +145,6 @@ enum L10n {
             return String(format: format, locale: .current, projectName)
         }
 
-        static let contributorPicker = LocalizedStringResource(
-            "onboarding.identify.contributorPicker",
-            defaultValue: "Contributor",
-            comment: "Accessibility label for contributor picker"
-        )
-
         static func contributorOption(displayName: String, ref: String) -> String {
             if ref.isEmpty {
                 return displayName
@@ -244,12 +238,6 @@ enum L10n {
             "onboarding.open.chooseFolder",
             defaultValue: "Choose…",
             comment: "Button to open a folder picker"
-        )
-
-        static let existingProjectPicker = LocalizedStringResource(
-            "onboarding.open.existingProjectPicker",
-            defaultValue: "Existing project",
-            comment: "Accessibility label for existing-project picker"
         )
 
         static let selectProject = LocalizedStringResource(
@@ -458,5 +446,9 @@ enum L10n {
             }
             return String(localized: unknown)
         }
+
+        /// `ref.invalid` / `ref.invalid_prefix` are KindInternal minting failures and
+        /// intentionally fall through to `unknown` — clients never surface them as
+        /// distinct copy.
     }
 }

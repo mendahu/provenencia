@@ -1,6 +1,7 @@
 package users
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -50,7 +51,7 @@ func TestUpsert(t *testing.T) {
 		{
 			name: "rejects short id",
 			run: func(t *testing.T, c *database.Catalog) {
-				if err := Upsert(c, []byte{1}, "Jake", mustRef(t)); err != ErrInvalid {
+				if err := Upsert(c, []byte{1}, "Jake", mustRef(t)); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -58,7 +59,7 @@ func TestUpsert(t *testing.T) {
 		{
 			name: "rejects blank name",
 			run: func(t *testing.T, c *database.Catalog) {
-				if err := Upsert(c, id, "  ", mustRef(t)); err != ErrInvalid {
+				if err := Upsert(c, id, "  ", mustRef(t)); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -66,7 +67,7 @@ func TestUpsert(t *testing.T) {
 		{
 			name: "rejects bad ref",
 			run: func(t *testing.T, c *database.Catalog) {
-				if err := Upsert(c, id, "Jake", "nope"); err != ErrInvalid {
+				if err := Upsert(c, id, "Jake", "nope"); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -75,7 +76,7 @@ func TestUpsert(t *testing.T) {
 			name: "rejects closed catalog",
 			run: func(t *testing.T, c *database.Catalog) {
 				c.Close()
-				if err := Upsert(c, id, "Jake", mustRef(t)); err != database.ErrClosed {
+				if err := Upsert(c, id, "Jake", mustRef(t)); !errors.Is(err, database.ErrClosed) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -119,5 +120,56 @@ func TestUpsert(t *testing.T) {
 			defer c.Close()
 			tt.run(t, c)
 		})
+	}
+}
+
+func TestEnsureRefs(t *testing.T) {
+	idNull := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+	idEmpty := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
+	c, err := database.Create(t.TempDir(), "T.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO users (id, display_name, ref) VALUES (?, ?, NULL)`, idNull, "Null Ref"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO users (id, display_name, ref) VALUES (?, ?, '')`, idEmpty, "Empty Ref"); err != nil {
+		t.Fatal(err)
+	}
+	if err := EnsureRefs(c); err != nil {
+		t.Fatal(err)
+	}
+	gotNull, err := Lookup(c, idNull)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gotEmpty, err := Lookup(c, idEmpty)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gotNull.Ref == "" || ref.Validate(gotNull.Ref) != nil {
+		t.Fatalf("null backfill: %+v", gotNull)
+	}
+	if gotEmpty.Ref == "" || ref.Validate(gotEmpty.Ref) != nil {
+		t.Fatalf("empty backfill: %+v", gotEmpty)
+	}
+	if gotNull.Ref == gotEmpty.Ref {
+		t.Fatalf("expected distinct refs, both %q", gotNull.Ref)
+	}
+	first := gotNull.Ref
+	if err := EnsureRefs(c); err != nil {
+		t.Fatal(err)
+	}
+	again, err := Lookup(c, idNull)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again.Ref != first {
+		t.Fatalf("EnsureRefs should be idempotent: %q -> %q", first, again.Ref)
 	}
 }

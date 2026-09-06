@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Observation
 
@@ -22,7 +23,7 @@ final class OnboardingModel {
     var displayName = ""
     var familyName = ""
     var isBusy = false
-    var errorText: String?
+    var error: Error?
     var phase: Phase = .loading
     /// Install identity for this Mac once known (locks the researcher name field).
     var session: InstallIdentity?
@@ -74,7 +75,7 @@ final class OnboardingModel {
     }
 
     func load() async {
-        errorText = nil
+        error = nil
         session = nil
         selectedProject = nil
         catalogUsers = []
@@ -91,14 +92,14 @@ final class OnboardingModel {
                         return
                     }
                     try await store.removeActiveProject(identityDir: identityDir.path)
-                    errorText = String(localized: L10n.Onboarding.missingProject)
+                    present(L10n.Onboarding.missingProject)
                 }
                 phase = .chooseFile
                 return
             }
             phase = .chooseFile
         } catch {
-            errorText = L10n.Errors.message(for: error)
+            present(error)
             phase = .chooseFile
         }
     }
@@ -122,7 +123,7 @@ final class OnboardingModel {
     }
 
     func goBack() {
-        errorText = nil
+        error = nil
         catalogUsers = []
         phase = .chooseFile
     }
@@ -146,6 +147,21 @@ final class OnboardingModel {
         await refreshSelectedProjectInfo()
     }
 
+    /// Presents the AppKit folder picker and adopts the chosen project directory.
+    func chooseFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.treatsFilePackagesAsDirectories = true
+        panel.prompt = String(localized: L10n.Onboarding.openPanelPrompt)
+        panel.message = String(localized: L10n.Onboarding.openPanelMessage)
+        guard panel.runModal() == .OK, let url = panel.url else {
+            return
+        }
+        Task { await choose(url) }
+    }
+
     /// Loads catalog project metadata for the current picker selection (open flow).
     func refreshSelectedProjectInfo() async {
         guard let selectedProject else {
@@ -157,7 +173,7 @@ final class OnboardingModel {
 
     func signOut() async {
         isBusy = true
-        errorText = nil
+        error = nil
         defer { isBusy = false }
         do {
             let identityDir = try identityDir()
@@ -173,7 +189,7 @@ final class OnboardingModel {
             mode = .create
             phase = .chooseFile
         } catch {
-            errorText = L10n.Errors.message(for: error)
+            present(error)
         }
     }
 
@@ -182,7 +198,7 @@ final class OnboardingModel {
             let loc = try resolvedFolders()
             availableProjects = try InstallPaths.provenenciaProjects(in: loc.documentsDirectory)
         } catch {
-            errorText = L10n.Errors.message(for: error)
+            present(error)
         }
     }
 
@@ -196,7 +212,7 @@ final class OnboardingModel {
             return
         }
         isBusy = true
-        errorText = nil
+        error = nil
         defer { isBusy = false }
         do {
             catalogUsers = try await store.listProjectUsers(projectDir: selectedProject.path)
@@ -207,13 +223,13 @@ final class OnboardingModel {
             }
             phase = .identify
         } catch {
-            errorText = L10n.Errors.message(for: error)
+            present(error)
         }
     }
 
     private func createProject() async {
         isBusy = true
-        errorText = nil
+        error = nil
         defer { isBusy = false }
         do {
             let loc = try resolvedFolders()
@@ -225,13 +241,13 @@ final class OnboardingModel {
             )
             applyOpened(result)
         } catch {
-            errorText = L10n.Errors.message(for: error)
+            present(error)
         }
     }
 
     private func open(_ url: URL) async {
         isBusy = true
-        errorText = nil
+        error = nil
         defer { isBusy = false }
         do {
             let loc = try resolvedFolders()
@@ -244,7 +260,7 @@ final class OnboardingModel {
             )
             applyOpened(result)
         } catch {
-            errorText = L10n.Errors.message(for: error)
+            present(error)
         }
     }
 
@@ -269,7 +285,7 @@ final class OnboardingModel {
                 updatedByDisplayName: "",
                 updatedByRef: ""
             )
-            errorText = L10n.Errors.message(for: error)
+            present(error)
         }
     }
 
@@ -297,5 +313,26 @@ final class OnboardingModel {
 
     private func trimmed(_ s: String) -> String {
         s.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func present(_ error: Error) {
+        self.error = error
+    }
+
+    private func present(_ resource: LocalizedStringResource) {
+        self.error = LocalizedMessageError(resource)
+    }
+}
+
+/// Client-only localized message (e.g. missing active project) for toast display.
+private struct LocalizedMessageError: LocalizedError {
+    let resource: LocalizedStringResource
+
+    init(_ resource: LocalizedStringResource) {
+        self.resource = resource
+    }
+
+    var errorDescription: String? {
+        String(localized: resource)
     }
 }
