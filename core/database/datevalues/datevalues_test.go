@@ -16,7 +16,7 @@ func TestInsertLookup(t *testing.T) {
 		run  func(t *testing.T, c *database.Catalog)
 	}{
 		{
-			name: "exact round trip",
+			name: "exact day round trip",
 			run: func(t *testing.T, c *database.Catalog) {
 				id, err := Insert(c, Value{
 					Kind:       KindExact,
@@ -39,8 +39,58 @@ func TestInsertLookup(t *testing.T) {
 					got.StartDay == nil || *got.StartDay != 14 {
 					t.Fatalf("start %+v %+v %+v", got.StartYear, got.StartMonth, got.StartDay)
 				}
-				if got.EndYear != nil || got.EndMonth != nil || got.EndDay != nil {
-					t.Fatalf("end should be nil")
+				if got.StartHour != nil || got.EndYear != nil {
+					t.Fatalf("unexpected time/end: %+v", got)
+				}
+			},
+		},
+		{
+			name: "exact with time through millisecond",
+			run: func(t *testing.T, c *database.Catalog) {
+				id, err := Insert(c, Value{
+					Kind:             KindExact,
+					StartYear:        intVal(2020),
+					StartMonth:       intVal(1),
+					StartDay:         intVal(2),
+					StartHour:        intVal(15),
+					StartMinute:      intVal(30),
+					StartSecond:      intVal(45),
+					StartMillisecond: intVal(123),
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				got, err := Lookup(c, id)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got.StartHour == nil || *got.StartHour != 15 ||
+					got.StartMinute == nil || *got.StartMinute != 30 ||
+					got.StartSecond == nil || *got.StartSecond != 45 ||
+					got.StartMillisecond == nil || *got.StartMillisecond != 123 {
+					t.Fatalf("time %+v", got)
+				}
+			},
+		},
+		{
+			name: "exact with hour only",
+			run: func(t *testing.T, c *database.Catalog) {
+				id, err := Insert(c, Value{
+					Kind:       KindExact,
+					StartYear:  intVal(2020),
+					StartMonth: intVal(6),
+					StartDay:   intVal(1),
+					StartHour:  intVal(9),
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				got, err := Lookup(c, id)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got.StartHour == nil || *got.StartHour != 9 || got.StartMinute != nil {
+					t.Fatalf("got %+v", got)
 				}
 			},
 		},
@@ -61,8 +111,8 @@ func TestInsertLookup(t *testing.T) {
 				if got.Kind != KindYear || got.StartYear == nil || *got.StartYear != 1985 {
 					t.Fatalf("got %+v", got)
 				}
-				if got.StartMonth != nil || got.StartDay != nil {
-					t.Fatalf("month/day want nil")
+				if got.StartMonth != nil || got.StartDay != nil || got.StartHour != nil {
+					t.Fatalf("finer want nil")
 				}
 			},
 		},
@@ -109,7 +159,7 @@ func TestInsertLookup(t *testing.T) {
 			},
 		},
 		{
-			name: "range round trip",
+			name: "year range round trip",
 			run: func(t *testing.T, c *database.Catalog) {
 				id, err := Insert(c, Value{
 					Kind:      KindRange,
@@ -126,6 +176,58 @@ func TestInsertLookup(t *testing.T) {
 				if got.Kind != KindRange ||
 					got.StartYear == nil || *got.StartYear != 1880 ||
 					got.EndYear == nil || *got.EndYear != 1885 {
+					t.Fatalf("got %+v", got)
+				}
+			},
+		},
+		{
+			name: "datetime range round trip",
+			run: func(t *testing.T, c *database.Catalog) {
+				id, err := Insert(c, Value{
+					Kind:        KindRange,
+					StartYear:   intVal(2020),
+					StartMonth:  intVal(1),
+					StartDay:    intVal(1),
+					StartHour:   intVal(10),
+					StartMinute: intVal(0),
+					EndYear:     intVal(2020),
+					EndMonth:    intVal(1),
+					EndDay:      intVal(1),
+					EndHour:     intVal(11),
+					EndMinute:   intVal(30),
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				got, err := Lookup(c, id)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got.StartHour == nil || *got.StartHour != 10 ||
+					got.EndMinute == nil || *got.EndMinute != 30 {
+					t.Fatalf("got %+v", got)
+				}
+			},
+		},
+		{
+			name: "month range round trip",
+			run: func(t *testing.T, c *database.Catalog) {
+				id, err := Insert(c, Value{
+					Kind:       KindRange,
+					StartYear:  intVal(1880),
+					StartMonth: intVal(1),
+					EndYear:    intVal(1880),
+					EndMonth:   intVal(6),
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				got, err := Lookup(c, id)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got.StartMonth == nil || *got.StartMonth != 1 ||
+					got.EndMonth == nil || *got.EndMonth != 6 {
 					t.Fatalf("got %+v", got)
 				}
 			},
@@ -167,12 +269,40 @@ func TestInsertLookup(t *testing.T) {
 			},
 		},
 		{
+			name: "rejects minute without hour",
+			run: func(t *testing.T, c *database.Catalog) {
+				_, err := Insert(c, Value{
+					Kind:        KindExact,
+					StartYear:   intVal(2020),
+					StartMonth:  intVal(1),
+					StartDay:    intVal(1),
+					StartMinute: intVal(30),
+				})
+				if !errors.Is(err, ErrInvalid) {
+					t.Fatalf("got %v", err)
+				}
+			},
+		},
+		{
 			name: "rejects year with month set",
 			run: func(t *testing.T, c *database.Catalog) {
 				_, err := Insert(c, Value{
 					Kind:       KindYear,
 					StartYear:  intVal(1985),
 					StartMonth: intVal(5),
+				})
+				if !errors.Is(err, ErrInvalid) {
+					t.Fatalf("got %v", err)
+				}
+			},
+		},
+		{
+			name: "rejects year with hour set",
+			run: func(t *testing.T, c *database.Catalog) {
+				_, err := Insert(c, Value{
+					Kind:      KindYear,
+					StartYear: intVal(1985),
+					StartHour: intVal(12),
 				})
 				if !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
@@ -193,13 +323,18 @@ func TestInsertLookup(t *testing.T) {
 			},
 		},
 		{
-			name: "rejects range with month components",
+			name: "rejects range end time before start time",
 			run: func(t *testing.T, c *database.Catalog) {
 				_, err := Insert(c, Value{
 					Kind:       KindRange,
-					StartYear:  intVal(1880),
+					StartYear:  intVal(2020),
 					StartMonth: intVal(1),
-					EndYear:    intVal(1885),
+					StartDay:   intVal(1),
+					StartHour:  intVal(12),
+					EndYear:    intVal(2020),
+					EndMonth:   intVal(1),
+					EndDay:     intVal(1),
+					EndHour:    intVal(11),
 				})
 				if !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
