@@ -6,7 +6,9 @@ Authoritative domain and stack decisions remain in the sibling docs under [`docs
 
 ## Current
 
-Spike 1 is complete. The next spike (open/create without onboarding, then Source catalog) is not written yet.
+| Spike | Goal |
+| --- | --- |
+| [Spike 2](spike-2.md) | Validate the Source layer: app workspace chrome (sidebar), audit + schema + Go CRUD/ingest + FFI + macOS Source catalog UI (create Sources, Artifacts, Files, extensible types/metadata). Design steps in Claude Design interleaved with PRs. |
 
 ## Completed
 
