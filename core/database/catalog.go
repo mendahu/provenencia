@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/mattn/go-sqlite3"
@@ -37,14 +36,6 @@ func (c *Catalog) Dir() string {
 }
 
 func dsn(sqlitePath string) string {
-	return dsnOpts(sqlitePath, false)
-}
-
-func dsnReadOnly(sqlitePath string) string {
-	return dsnOpts(sqlitePath, true)
-}
-
-func dsnOpts(sqlitePath string, readOnly bool) string {
 	u := url.URL{
 		Scheme: "file",
 		Path:   filepath.ToSlash(sqlitePath),
@@ -52,11 +43,7 @@ func dsnOpts(sqlitePath string, readOnly bool) string {
 	q := url.Values{}
 	q.Set("_busy_timeout", "100")
 	q.Set("_foreign_keys", "1")
-	if readOnly {
-		q.Set("mode", "ro")
-	} else {
-		q.Set("_journal_mode", "WAL")
-	}
+	q.Set("_journal_mode", "WAL")
 	u.RawQuery = q.Encode()
 	return u.String()
 }
@@ -169,27 +156,6 @@ func Open(dir string) (*Catalog, error) {
 	return &Catalog{dir: dir, db: db}, nil
 }
 
-// OpenReadOnly opens a catalog for queries without migrating or taking the exclusive lock.
-func OpenReadOnly(dir string) (*Catalog, error) {
-	sqlitePath, err := locateCatalog(dir)
-	if err != nil {
-		return nil, err
-	}
-	db, err := openDBURI(dsnReadOnly(sqlitePath))
-	if err != nil {
-		return nil, mapLockErr(err)
-	}
-	if err := checkApplicationID(db); err != nil {
-		db.Close()
-		return nil, err
-	}
-	if err := refuseNewerFormat(db); err != nil {
-		db.Close()
-		return nil, err
-	}
-	return &Catalog{dir: dir, db: db}, nil
-}
-
 func locateCatalog(dir string) (string, error) {
 	st, err := os.Stat(dir)
 	if err != nil {
@@ -206,17 +172,6 @@ func locateCatalog(dir string) (string, error) {
 		return "", err
 	}
 	return sqlitePath, nil
-}
-
-func refuseNewerFormat(db *sql.DB) error {
-	var ver int
-	if err := db.QueryRow(`PRAGMA user_version`).Scan(&ver); err != nil {
-		return err
-	}
-	if ver > formatVersion {
-		return ErrUnsupportedVersion.WithParams(strconv.Itoa(ver))
-	}
-	return nil
 }
 
 func (c *Catalog) Close() error {

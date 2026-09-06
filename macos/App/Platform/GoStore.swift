@@ -1,24 +1,6 @@
 import Foundation
 
 struct GoStore: GenealogyStore {
-    func ping(_ message: String) async throws -> String {
-        var req = Provenencia_Engine_V1_PingRequest()
-        req.message = message
-        let resp: Provenencia_Engine_V1_PingResponse = try await provenenciaCall(
-            method: CoreMethod.ping,
-            request: req
-        )
-        return resp.message
-    }
-
-    func version() async throws -> String {
-        let resp: Provenencia_Engine_V1_GetVersionResponse = try await provenenciaCall(
-            method: CoreMethod.getVersion,
-            request: Provenencia_Engine_V1_GetVersionRequest()
-        )
-        return resp.version
-    }
-
     func installIdentity(identityDir: String) async throws -> InstallIdentity? {
         var req = Provenencia_Engine_V1_GetInstallIdentityRequest()
         req.identityDir = identityDir
@@ -53,15 +35,6 @@ struct GoStore: GenealogyStore {
             displayName: resp.displayName,
             ref: resp.ref,
             project: Self.mapProject(resp.project)
-        )
-    }
-
-    func removeInstallIdentity(identityDir: String) async throws {
-        var req = Provenencia_Engine_V1_RemoveInstallIdentityRequest()
-        req.identityDir = identityDir
-        let _: Provenencia_Engine_V1_RemoveInstallIdentityResponse = try await provenenciaCall(
-            method: CoreMethod.removeInstallIdentity,
-            request: req
         )
     }
 

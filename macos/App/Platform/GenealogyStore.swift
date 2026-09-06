@@ -25,8 +25,6 @@ struct OnboardingResult: Sendable, Equatable {
 }
 
 protocol GenealogyStore: Sendable {
-    func ping(_ message: String) async throws -> String
-    func version() async throws -> String
     func installIdentity(identityDir: String) async throws -> InstallIdentity?
     func completeOnboarding(
         identityDir: String,
@@ -34,7 +32,6 @@ protocol GenealogyStore: Sendable {
         displayName: String,
         familyName: String
     ) async throws -> OnboardingResult
-    func removeInstallIdentity(identityDir: String) async throws
     func signOut(identityDir: String) async throws
     func activeProject(identityDir: String) async throws -> String?
     func listProjectUsers(projectDir: String) async throws -> [InstallIdentity]

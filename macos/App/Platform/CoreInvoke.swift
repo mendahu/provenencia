@@ -39,11 +39,8 @@ extension CoreInvokeError: LocalizedError {
 }
 
 enum CoreMethod {
-    static let ping = Int32(Provenencia_Engine_V1_Method.ping.rawValue)
-    static let getVersion = Int32(Provenencia_Engine_V1_Method.getVersion.rawValue)
     static let getInstallIdentity = Int32(Provenencia_Engine_V1_Method.getInstallIdentity.rawValue)
     static let completeOnboarding = Int32(Provenencia_Engine_V1_Method.completeOnboarding.rawValue)
-    static let removeInstallIdentity = Int32(Provenencia_Engine_V1_Method.removeInstallIdentity.rawValue)
     static let getActiveProject = Int32(Provenencia_Engine_V1_Method.getActiveProject.rawValue)
     static let openProject = Int32(Provenencia_Engine_V1_Method.openProject.rawValue)
     static let removeActiveProject = Int32(Provenencia_Engine_V1_Method.removeActiveProject.rawValue)
