@@ -36,11 +36,11 @@ Design the **post-onboarding application shell**: a durable workspace with a **s
 | W-2 | Include a **leading sidebar or nav rail** listing primary destinations. |
 | W-3 | Include a **content host** region that swaps when the selected destination changes. Exactly one primary content surface is visible at a time. |
 | W-4 | Show **selected vs idle** states for nav items clearly (do not rely on color alone — use weight, indicator, or surface). |
-| W-5 | **Narrow window (width &lt; 1000 pt):** collapse the sidebar to an **icon-only rail**. Hide destination **text labels**; icons remain and keep the same selected/idle/disabled treatments (tooltips or accessibility labels must still expose the destination name). Expand back to labeled sidebar at ≥ 1000 pt. Use logical points (SwiftUI), not raw Retina pixels. The app’s existing minimum window width is 700 pt (`PVSpacing.widthWindowMin`) — the icon rail must remain usable down to that minimum. |
+| W-5 | Provide a **user-controlled toggle** that expands or collapses sidebar destination **labels**. Expanded: icons + text labels. Collapsed: **icon-only rail** (labels hidden). Do **not** auto-collapse based on window width — the researcher chooses. Persist the preference for the install if practical (board need not specify storage; engineering can use UserDefaults). Collapsed icons keep the same selected/idle/disabled treatments; tooltips or accessibility labels must still expose the destination name. |
 | W-5b | **Short window (sidebar content taller than the viewport):** the **sidebar scrolls vertically**. Do not clip nav items or session/footer chrome without a way to reach them; prefer a single scrolling sidebar column (logo + destinations + session block) over shrinking hit targets. Content host scrolling is independent and not specified here. |
 | W-6 | Preserve room for macOS window chrome (traffic lights); do not draw a fake title bar that fights the system. |
 
-When the rail is icon-only (W-5), session strings (W-7…W-10) will not all fit as full text in the rail. The board must pick a compression strategy and show it: e.g. contributor initials/avatar control with tooltip for name + `USR-…`, project label relocated to a slim content-area header, sign-out as an icon. Do not drop Sign out (W-11) entirely.
+Place the label toggle somewhere obvious in chrome (sidebar edge, rail footer, or near the logo). When collapsed (icon-only), session strings (W-7…W-10) will not all fit as full text in the rail — pick a compression strategy and show both expanded and collapsed: e.g. contributor initials/avatar with tooltip for name + `USR-…`, project label in a slim content-area header, sign-out as an icon. Do not drop Sign out (W-11) entirely.
 
 ### 3.2 Session and project identity in chrome
 
@@ -85,11 +85,11 @@ Today’s onboarding home surfaces: logo mark, “You’re signed in”, contrib
 
 Produce frames sufficient to review:
 
-1. Workspace, Sources selected, **empty** content placeholder.
+1. Workspace, Sources selected, **empty** content placeholder — sidebar **expanded** (labels visible).
 2. Workspace, a **disabled** placeholder destination hovered or focused (shows disabled treatment).
-3. Workspace at a **narrow** width (&lt; 1000 pt) — icon-only rail, labels hidden.
+3. Same workspace with sidebar **collapsed** via the toggle — icon-only rail; show where the toggle lives and how session/sign-out compress.
 4. Workspace at a **short** height — sidebar scrolled (show that overflow destinations / session chrome remain reachable).
-5. Chrome detail: contributor + `USR-…` + project label + sign out (callout or zoomed region). How these compress in the icon-only rail must be visible in frame 3 or a callout (icon + tooltip is acceptable for names; project label may move to content header if the rail cannot fit it — document the choice).
+5. Chrome detail: contributor + `USR-…` + project label + sign out (callout or zoomed region) in the expanded state.
 6. Optional: after-onboarding entry state if it differs from (1).
 
 ---
@@ -112,6 +112,7 @@ Produce frames sufficient to review:
 - [ ] Sign out is reachable from chrome.
 - [ ] Placeholders cannot be mistaken for finished features.
 - [ ] Visual language matches onboarding / design-system tokens.
-- [ ] At &lt; 1000 pt width, nav is icon-only; at ≥ 1000 pt, labels return.
+- [ ] A toggle expands/collapses nav labels; width does not auto-collapse the rail.
+- [ ] Collapsed and expanded states are both designed (including session/sign-out compression).
 - [ ] Short windows scroll the sidebar instead of clipping destinations or sign-out.
 - [ ] Board notes any chrome decisions S2-02+ must inherit (nav width, header presence, where content padding starts).
