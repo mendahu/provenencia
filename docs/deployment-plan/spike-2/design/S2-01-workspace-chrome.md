@@ -22,7 +22,7 @@ Design the **post-onboarding application shell**: a durable workspace with a **s
 2. The Mac client owns windows, navigation, menus, and presentation. Genealogy rules stay out of the UI layer.
 3. Visual language: “modern but archival” — warm parchment surfaces, serif display type, Spectral body, IBM Plex Mono for refs/ids, iron-gall accent. Match the shipped onboarding restyle / design-system tokens; do not introduce a purple dashboard aesthetic or a second logo system.
 4. Composition rule for this shell: **one clear layout** = leading sidebar (or nav rail) + **one** primary content column. Not a multi-panel IDE, not a card dashboard, not floating widgets on a hero.
-5. Spike 2 only ships **Sources** as a real destination. Other research layers exist in the data model but are out of product scope for this sprint — they may appear as disabled / “Coming soon” nav items only.
+5. Spike 2 sidebar destinations that are in scope: **Sources**, **Source types**, and **Source fields**. Do **not** add disabled / “Coming soon” items for Interpretation, People, Settings, or other future areas — add those nav entries only when those features ship.
 
 ---
 
@@ -58,10 +58,10 @@ Today’s onboarding home surfaces: logo mark, “You’re signed in”, contrib
 
 | ID | Requirement |
 | --- | --- |
-| W-13 | Include an active **Sources** destination (primary Spike 2 entry). Content for Sources may be a labeled empty placeholder on this board. |
-| W-14 | Include **placeholder** destinations for areas not built in Spike 2. Suggested labels (amend if clearer): **Interpretation**, **People** (or Conclusion), **Settings**. Exact copy is designer’s call; must read as not-yet-available. |
-| W-15 | Placeholders must be visually distinct from the active Sources item (disabled styling, lock, or “Soon” caption) — they must not look clickable-and-broken. |
-| W-16 | Decide and document where **vocabulary admin** (custom Source types/fields) will live at the chrome level: default recommendation is **not** its own top-level nav item (prefer a Sources subflow / sheet in S2-04). If the board disagrees, say so explicitly. |
+| W-13 | Include an active **Sources** destination (primary catalog entry). Content for Sources may be a labeled empty placeholder on this board (list/detail is S2-02). |
+| W-16 | Include two additional **top-level** sidebar destinations for vocabulary admin: **Source types** and **Source fields** (exact labels designer’s call; must read as distinct). Each selects its own content host pane (empty placeholder OK on this board; full editors are S2-04). Do **not** bury these under Sources as a sheet/subflow for Spike 2 — if the nav grows crowded later, we can reconsider grouping. |
+
+Do **not** add placeholder nav items for unimplemented product areas (Interpretation, People/Conclusion, Settings, etc.).
 
 ### 3.4 Entry from onboarding
 
@@ -84,13 +84,13 @@ Today’s onboarding home surfaces: logo mark, “You’re signed in”, contrib
 
 Produce frames sufficient to review:
 
-1. Workspace, Sources selected, **empty** content placeholder — sidebar **expanded** (labels visible).
-2. Workspace, a **disabled** placeholder destination hovered or focused (shows disabled treatment).
-3. Same workspace with sidebar **collapsed** via the toggle — icon-only rail; account icon for the signed-in user; tooltip on hover showing display name + `USR-…`; show where the toggle lives and how project identity compresses (no Sign Out in chrome).
+1. Workspace, **Sources** selected, empty content placeholder — sidebar **expanded** (labels visible); show all three destinations: Sources, Source types, Source fields.
+2. Workspace, **Source types** selected (empty content placeholder) — proves top-level nav swap.
+3. Same workspace with sidebar **collapsed** via the toggle — icon-only rail for all three destinations; account icon + tooltip; show where the toggle lives and how project identity compresses (no Sign Out in chrome).
 4. Workspace at a **short** height — sidebar scrolled (show that overflow destinations / session chrome remain reachable).
 5. Chrome detail: contributor + `USR-…` + project label in the **expanded** state (no Sign Out button).
 6. Callout or note: **Provenencia → Sign Out** in the macOS app menu.
-7. Optional: after-onboarding entry state if it differs from (1).
+7. Optional: after-onboarding entry state if it differs from (1); optional **Source fields** selected frame if it differs from (2).
 
 ---
 
@@ -103,16 +103,17 @@ Produce frames sufficient to review:
 - Multi-window document model or tabbed documents.
 - Sign Out (or Log Out) controls inside the window / sidebar — app menu only.
 - Project created / updated / updated-by bookkeeping in workspace chrome.
+- Disabled / “Coming soon” sidebar items for future layers (Interpretation, People, Settings, …).
+- Nesting Source types / Source fields under Sources as the primary IA for Spike 2.
 
 ---
 
 ## 6. Acceptance checklist
 
 - [ ] Sidebar + one content column reads as a single composition.
-- [ ] Sources is the only fully active research destination.
+- [ ] Top-level nav includes Sources, Source types, and Source fields — and nothing else for future layers.
 - [ ] Contributor (`USR-…`) and project identity are always reachable (expanded text or collapsed account tooltip / documented project placement).
 - [ ] Sign Out is specified in the app menu only — absent from window chrome.
-- [ ] Placeholders cannot be mistaken for finished features.
 - [ ] Visual language matches onboarding / design-system tokens.
 - [ ] A toggle expands/collapses nav labels; width does not auto-collapse the rail.
 - [ ] Collapsed account control is a user icon with hover tooltip for name + `USR-…`.

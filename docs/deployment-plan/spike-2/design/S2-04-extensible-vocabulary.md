@@ -3,8 +3,8 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 2 (Source layer validation)  
 **Implements later as:** PR S2-18 (Swift UI); seed choices feed PR S2-07  
-**Depends on:** S2-02 Source catalog (uses types/fields while editing Sources)  
-**Related briefs:** S2-01 (prefer not adding a top-level nav item unless justified here)
+**Depends on:** S2-01 workspace chrome (Source types + Source fields are top-level nav destinations)  
+**Related briefs:** S2-02 Source catalog (uses types/fields while editing Sources)
 
 Paste this entire document into Claude Design as the requirements for one board/flow.
 
@@ -61,9 +61,8 @@ Also **lock the dogfood seed set** (which builtin types/fields appear in mocks a
 
 | ID | Requirement |
 | --- | --- |
-| V-1 | Decide where vocabulary admin lives. **Default:** sheet, secondary screen, or settings subsection **reached from Sources** (e.g. “Manage types & fields”) — **not** a new top-level sidebar item unless the board argues strongly. |
-| V-2 | Document that decision for S2-01/S2-14 implementers. |
-| V-3 | Using a type/field on a Source stays in the S2-02 create/edit flows; admin is for defining vocabulary. |
+| V-1 | Vocabulary admin content lives in the **Source types** and **Source fields** top-level sidebar destinations from S2-01 (not a Sources sheet/subflow). |
+| V-3 | Using a type/field on a Source stays in the S2-02 create/edit flows; these destinations are for defining vocabulary. |
 
 ### 3.2 Manage Source types
 
@@ -135,14 +134,13 @@ Also **lock the dogfood seed set** (which builtin types/fields appear in mocks a
 
 ## 4. Screen / frame inventory (minimum)
 
-1. Entry point from Sources → vocabulary admin.
-2. Types list (builtin + one custom).
-3. Create custom type.
-4. Fields list + create field (`text` and `date` examples).
-5. Type → suggested fields editor (reorder/add).
-6. Source create/edit using a **custom** type and a **custom** field.
-7. Source edit adding a **non-suggested** existing field.
-8. Seed set callout (table or notes panel) for engineering handoff.
+1. **Source types** destination — types list (builtin + one custom).
+2. Create custom type (within Source types).
+3. **Source fields** destination — fields list + create field (`text` and `date` examples).
+4. Type → suggested fields editor (reorder/add) — may live on the type detail within Source types.
+5. Source create/edit using a **custom** type and a **custom** field (S2-02 surface).
+6. Source edit adding a **non-suggested** existing field.
+7. Seed set callout (table or notes panel) for engineering handoff.
 
 ---
 
@@ -158,7 +156,7 @@ Also **lock the dogfood seed set** (which builtin types/fields appear in mocks a
 
 ## 6. Acceptance checklist
 
-- [ ] IA decision recorded (Sources subflow vs sidebar).
+- [ ] Source types and Source fields are designed as top-level workspace destinations (per S2-01).
 - [ ] Builtin vs custom is visible but not a second class of behavior for *using* vocabulary.
 - [ ] Create type + create field + suggest fields covered.
 - [ ] Only `text` and `date` field types.

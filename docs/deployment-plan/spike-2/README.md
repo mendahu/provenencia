@@ -50,7 +50,7 @@ Onboarding (Spike 1) → signed in
 
 ## In scope
 
-- **App workspace chrome**: side navigation + content host that all research UIs plug into (this spike ships Sources as the first real destination; other nav items may be placeholders).
+- **App workspace chrome**: side navigation + content host. Spike 2 destinations: **Sources**, **Source types**, **Source fields** (no “coming soon” stubs for later layers).
 - Audit write path (`audit_transactions` / `audit_changes`) used by every Source-layer mutation.
 - Shared `date_values` table (schema + minimal Go helpers) so date-typed Source metadata can land without a second migration later.
 - Full Source-layer table set from the Source doc: `source_types`, `sources`, `source_notes`, `source_metadata_fields`, `source_type_metadata_fields`, `source_metadata`, `artifacts`, `files`, `file_derivatives`.
@@ -61,7 +61,7 @@ Onboarding (Spike 1) → signed in
 
 ## Out of scope (later spikes)
 
-- Interpretation (Citations, Observations, Nodes) and Conclusion — may appear as **disabled or “Coming soon”** sidebar items only.
+- Interpretation (Citations, Observations, Nodes) and Conclusion — do not add sidebar placeholders for them in this spike.
 - Source **credibility** assessments ([`research-judgment-model.md`](../../research-judgment-model.md)).
 - Full GEDCOM / import adapters.
 - Destructive primary File deletion; orphan GC of historically referenced Files.
@@ -89,9 +89,9 @@ Onboarding (Spike 1) → signed in
 Jake can, on his MacBook, without a server:
 
 1. Finish Spike 1 onboarding and land in an **app workspace** with a sidebar (not the old single “you’re signed in” home as the permanent shell).
-2. Use the sidebar to open Sources (and see placeholders for areas not in this spike).
+2. Use the sidebar to open Sources, Source types, and Source fields.
 3. Create a Source of a seeded type, edit title/description, add a note, set text (and at least one date) metadata fields suggested for that type.
-4. Add a custom Source type and/or metadata field and use them on a Source.
+4. Add a custom Source type and/or metadata field (from their nav destinations) and use them on a Source.
 5. Add a fileless Artifact and an Artifact with an ingested image/PDF; confirm `files` row + bytes under `objects/`.
 6. Inspect `provenencia.sqlite`: Source-layer rows present; audit revisions recorded for creates/updates; `SRC-…` / `ART-…` refs present.
 7. Relaunch: workspace returns; catalog still lists the Sources; File still opens from the relative path.
@@ -152,9 +152,9 @@ Design **S2-01…04** can start immediately; **S2-01** should land a reviewable 
 | --- | --- |
 | **Kind** | Design (Claude Design) |
 | **Depends on** | — |
-| **Deliverables** | Board for the post-onboarding **app workspace**: left (or leading) sidebar / nav rail with destinations; main content host; how project label + contributor identity + sign-out live in the chrome (header, footer of sidebar, or both). Selected vs idle nav states. Collapsed/narrow window behavior if needed for macOS. Placeholder treatment for areas not in Spike 2 (Interpretation, Conclusion, Settings — exact labels TBD). Transition from Spike 1 onboarding into this shell. |
+| **Deliverables** | Board for the post-onboarding **app workspace**: left (or leading) sidebar / nav rail with destinations **Sources**, **Source types**, and **Source fields**; main content host; how project label + contributor identity live in the chrome; Sign Out in the app menu only; label expand/collapse toggle; selected vs idle nav states; short-window sidebar scroll. Transition from Spike 1 onboarding into this shell. No “coming soon” nav stubs. |
 | **Context** | [`application-stack.md`](../../application-stack.md) (Mac owns windows/navigation); design system README lists `SidebarNav` as add-on-demand — this board decides whether to port that component or a bespoke onboarding-aligned rail. Preserve Provenencia visual language (tokens already in `macos/App/DesignSystem/`). One clear composition: sidebar + one primary content column, not a multi-panel dashboard. |
-| **Out** | Source list/detail layouts (S2-02); full Settings product. |
+| **Out** | Source list/detail layouts (S2-02); full type/field editors (S2-04); Settings product; future-layer nav stubs. |
 | **Feeds** | S2-14 (and constrains how S2-15+ mount content) |
 
 ---
@@ -197,7 +197,7 @@ Design **S2-01…04** can start immediately; **S2-01** should land a reviewable 
 | --- | --- |
 | **Kind** | Design (Claude Design) |
 | **Depends on** | S2-02 |
-| **Deliverables** | UX to add a project-local Source type; add a metadata field (`text` / `date`); attach suggested fields to a type; pick suggested fields when editing a Source; use a field not suggested for the type. Builtin vs custom affordance (label only — not a privileged subclass). Decide whether vocabulary admin is a Sources subflow or its own sidebar destination (default: subflow / sheet from Sources unless the board argues otherwise). |
+| **Deliverables** | UX for the **Source types** and **Source fields** destinations: add a project-local Source type; add a metadata field (`text` / `date`); attach suggested fields to a type; pick suggested fields when editing a Source; use a field not suggested for the type. Builtin vs custom affordance (label only — not a privileged subclass). Top-level nav placement is fixed by S2-01. |
 | **Context** | Source doc §§3, 5; [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §1–2 (seed small). Agree the **dogfood seed set** (proposed default below) and write it on the board. |
 | **Proposed seed (amend in Design)** | Types: `photograph`, `book`, `birth_certificate`. Fields: enough for those three type suggestion lists to feel real (subset of §2.2–2.3, not the full horizon). |
 | **Feeds** | S2-07 seed content, S2-18 |
@@ -314,9 +314,9 @@ Design **S2-01…04** can start immediately; **S2-01** should land a reviewable 
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | S2-01 (design enough); Spike 1 onboarding “signed in” as the entry point to replace |
-| **Deliverables** | Replace the permanent onboarding home as the post-sign-in shell with an **app workspace**: sidebar (or nav rail) + content host. Destinations: at least **Sources** (may show an empty placeholder pane until S2-15) and session/project affordances (project label, contributor, sign-out) matching S2-01. Other destinations stubbed/disabled per the board. Selection state drives which content view is shown. Unit tests for navigation selection if modeled explicitly. L10n for nav labels. Design-system component only if S2-01 chose to port `SidebarNav`; otherwise keep chrome in `Features/Workspace/` (or similar) without inventing a second design language. |
+| **Deliverables** | Replace the permanent onboarding home as the post-sign-in shell with an **app workspace**: sidebar (or nav rail) + content host. Destinations: **Sources**, **Source types**, **Source fields** (empty panes OK until later PRs); session/project affordances matching S2-01; **Sign Out** via app menu only. Selection state drives which content view is shown. Unit tests for navigation selection if modeled explicitly. L10n for nav labels. Design-system component only if S2-01 chose to port `SidebarNav`; otherwise keep chrome in `Features/Workspace/` (or similar) without inventing a second design language. |
 | **Context** | [`macos-client-patterns.md`](../../macos-client-patterns.md); [`application-stack.md`](../../application-stack.md) (navigation is a Mac concern). This step is **chrome only** — no Source CRUD UI. |
-| **Out** | Source list/detail (S2-15+); interpreting other layers. |
+| **Out** | Source list/detail (S2-15+); full type/field editors (S2-18); interpreting other layers. |
 | **Notes** | May merge **before** S2-13 if placeholders do not call new RPCs. Do not bury this inside the Source catalog PR. |
 
 ---
@@ -361,7 +361,7 @@ Design **S2-01…04** can start immediately; **S2-01** should land a reviewable 
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | S2-04, S2-16, S2-13 |
-| **Deliverables** | UI to create custom Source type; create metadata field; attach field to type (sort order); use custom type/field in create/edit. Builtin rows not deletable (or delete refused with clear error). Placement per S2-04 (subflow vs sidebar item). |
+| **Deliverables** | UI to create custom Source type; create metadata field; attach field to type (sort order); use custom type/field in create/edit. Builtin rows not deletable (or delete refused with clear error). Mounted in the **Source types** / **Source fields** destinations from S2-01. |
 | **Context** | S2-04 board; vocabulary principles. |
 
 ---
@@ -426,7 +426,7 @@ Prefer **many small PRs** over combining schema+UI. Do not fold the workspace sh
 
 Likely next spikes (not scheduled here):
 
-1. Fill sidebar destinations beyond Sources (Interpretation entry, Settings).
+1. Fill sidebar destinations beyond Sources / types / fields (Interpretation entry, Settings) when those features exist.
 2. Audit history UI / “what changed” for a Source.
 3. Citation → Observation → Node (Interpretation) on top of Artifacts.
 4. Project open/create UX polish beyond Spike 1 onboarding.
