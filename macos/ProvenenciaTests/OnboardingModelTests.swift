@@ -409,14 +409,16 @@ private struct ThrowingStore: GenealogyStore {
         projectDir _: String,
         userID _: String,
         label _: String,
-        description _: String
+        description _: String,
+        iconKey _: String
     ) async throws -> CatalogSourceType { throw StoreBoom.boom }
     func updateSourceType(
         projectDir _: String,
         userID _: String,
         typeID _: String,
         label _: String,
-        description _: String
+        description _: String,
+        iconKey _: String
     ) async throws -> CatalogSourceType { throw StoreBoom.boom }
     func deleteSourceType(
         projectDir _: String,

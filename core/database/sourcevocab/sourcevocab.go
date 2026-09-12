@@ -177,6 +177,7 @@ func Install(c *database.Catalog) error {
 			Origin:      sourcetypes.OriginProvenencia,
 			Label:       t.Label,
 			Description: t.Description,
+			IconKey:     t.IconKey,
 		})
 		if err != nil {
 			return err

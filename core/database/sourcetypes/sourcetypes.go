@@ -29,20 +29,21 @@ const (
 	OriginProvenencia = "provenencia"
 	OriginUser        = "user"
 
-	sqlUpsert = `INSERT INTO source_types (id, key, origin, label, description)
-		VALUES (?, ?, ?, ?, ?)
+	sqlUpsert = `INSERT INTO source_types (id, key, origin, label, description, icon_key)
+		VALUES (?, ?, ?, ?, ?, ?)
 		ON CONFLICT(key, origin) DO UPDATE SET
 			label = excluded.label,
-			description = excluded.description`
-	sqlLookup = `SELECT id, key, origin, label, COALESCE(description, '')
+			description = excluded.description,
+			icon_key = excluded.icon_key`
+	sqlLookup = `SELECT id, key, origin, label, COALESCE(description, ''), icon_key
 		FROM source_types WHERE key = ? AND origin = ?`
-	sqlGetByID = `SELECT id, key, origin, label, COALESCE(description, '')
+	sqlGetByID = `SELECT id, key, origin, label, COALESCE(description, ''), icon_key
 		FROM source_types WHERE id = ?`
-	sqlList = `SELECT t.id, t.key, t.origin, t.label, COALESCE(t.description, ''),
+	sqlList = `SELECT t.id, t.key, t.origin, t.label, COALESCE(t.description, ''), t.icon_key,
 			(SELECT COUNT(*) FROM sources s WHERE s.source_type_id = t.id),
 			(SELECT COUNT(*) FROM source_type_metadata_fields j WHERE j.source_type_id = t.id)
 		FROM source_types t ORDER BY t.label COLLATE NOCASE, t.origin, t.key`
-	sqlUpdate = `UPDATE source_types SET label = ?, description = ? WHERE id = ?`
+	sqlUpdate = `UPDATE source_types SET label = ?, description = ?, icon_key = ? WHERE id = ?`
 	sqlDelete = `DELETE FROM source_types WHERE id = ?`
 	sqlInUse  = `SELECT 1 FROM sources WHERE source_type_id = ? LIMIT 1`
 	sqlUsedBy = `SELECT COUNT(*) FROM sources WHERE source_type_id = ?`
@@ -56,6 +57,8 @@ type Type struct {
 	Origin      string
 	Label       string
 	Description string
+	// IconKey references the closed design-system type_* set.
+	IconKey string
 	// UsedBy is how many sources reference this type. Only List and
 	// Update populate it; the other readers leave it 0.
 	UsedBy int
@@ -83,6 +86,11 @@ func Upsert(c *database.Catalog, t Type) ([]byte, error) {
 	t.Origin = strings.TrimSpace(t.Origin)
 	t.Label = strings.TrimSpace(t.Label)
 	t.Description = strings.TrimSpace(t.Description)
+	iconKey, err := NormalizeIconKey(t.IconKey)
+	if err != nil {
+		return nil, err
+	}
+	t.IconKey = iconKey
 	if t.Key == "" || t.Label == "" || !originOK(t.Origin) {
 		return nil, ErrInvalid
 	}
@@ -109,7 +117,7 @@ func Upsert(c *database.Catalog, t Type) ([]byte, error) {
 	} else {
 		desc = t.Description
 	}
-	if _, err := db.Exec(sqlUpsert, id, t.Key, t.Origin, t.Label, desc); err != nil {
+	if _, err := db.Exec(sqlUpsert, id, t.Key, t.Origin, t.Label, desc, t.IconKey); err != nil {
 		return nil, err
 	}
 	return append([]byte(nil), id...), nil
@@ -127,7 +135,9 @@ func Lookup(c *database.Catalog, key, origin string) (Type, error) {
 		return Type{}, ErrInvalid
 	}
 	var t Type
-	err = db.QueryRow(sqlLookup, key, origin).Scan(&t.ID, &t.Key, &t.Origin, &t.Label, &t.Description)
+	err = db.QueryRow(sqlLookup, key, origin).Scan(
+		&t.ID, &t.Key, &t.Origin, &t.Label, &t.Description, &t.IconKey,
+	)
 	if err != nil {
 		return Type{}, err
 	}
@@ -148,7 +158,10 @@ func List(c *database.Catalog) ([]Type, error) {
 	var out []Type
 	for rows.Next() {
 		var t Type
-		if err := rows.Scan(&t.ID, &t.Key, &t.Origin, &t.Label, &t.Description, &t.UsedBy, &t.SuggestedFields); err != nil {
+		if err := rows.Scan(
+			&t.ID, &t.Key, &t.Origin, &t.Label, &t.Description, &t.IconKey,
+			&t.UsedBy, &t.SuggestedFields,
+		); err != nil {
 			return nil, err
 		}
 		out = append(out, t)
@@ -158,9 +171,9 @@ func List(c *database.Catalog) ([]Type, error) {
 
 // Create mints a kebab-case key from label (see core/slug.Kebab) and
 // inserts a new user-origin type. Returns ErrInvalid if the label cannot
-// form a key, or ErrDuplicateKey (params: the colliding key) if a
-// user-origin type with that key already exists.
-func Create(c *database.Catalog, label, description string) (Type, error) {
+// form a key or icon_key is unknown, or ErrDuplicateKey (params: the
+// colliding key) if a user-origin type with that key already exists.
+func Create(c *database.Catalog, label, description, iconKey string) (Type, error) {
 	key := slug.Kebab(label)
 	if key == "" {
 		return Type{}, ErrInvalid
@@ -171,18 +184,18 @@ func Create(c *database.Catalog, label, description string) (Type, error) {
 		return Type{}, err
 	}
 	if _, err := Upsert(c, Type{
-		Key: key, Origin: OriginUser, Label: label, Description: description,
+		Key: key, Origin: OriginUser, Label: label, Description: description, IconKey: iconKey,
 	}); err != nil {
 		return Type{}, err
 	}
 	return Lookup(c, key, OriginUser)
 }
 
-// Update patches label and description for a project type (user or
-// provenencia) by id. Key and origin are immutable after create, so a
-// rename keeps existing sources attached. Returns ErrLocked for
-// plugin-origin types.
-func Update(c *database.Catalog, id []byte, label, description string) (Type, error) {
+// Update patches label, description, and icon_key for a project type (user
+// or provenencia) by id. Key and origin are immutable after create, so a
+// rename keeps existing sources attached. Empty icon_key keeps the row's
+// current icon. Returns ErrLocked for plugin-origin types.
+func Update(c *database.Catalog, id []byte, label, description, iconKey string) (Type, error) {
 	db, err := c.DB()
 	if err != nil {
 		return Type{}, err
@@ -199,13 +212,22 @@ func Update(c *database.Catalog, id []byte, label, description string) (Type, er
 	if existing.Origin != OriginUser && existing.Origin != OriginProvenencia {
 		return Type{}, ErrLocked
 	}
+	normalizedIcon := existing.IconKey
+	if strings.TrimSpace(iconKey) != "" {
+		normalizedIcon, err = NormalizeIconKey(iconKey)
+		if err != nil {
+			return Type{}, err
+		}
+	} else if normalizedIcon == "" {
+		normalizedIcon = DefaultIconKey
+	}
 	var desc any
 	if description == "" {
 		desc = nil
 	} else {
 		desc = description
 	}
-	if _, err := db.Exec(sqlUpdate, label, desc, id); err != nil {
+	if _, err := db.Exec(sqlUpdate, label, desc, normalizedIcon, id); err != nil {
 		return Type{}, err
 	}
 	return GetByID(c, id)
@@ -221,7 +243,9 @@ func GetByID(c *database.Catalog, id []byte) (Type, error) {
 		return Type{}, ErrInvalid
 	}
 	var t Type
-	err = db.QueryRow(sqlGetByID, id).Scan(&t.ID, &t.Key, &t.Origin, &t.Label, &t.Description)
+	err = db.QueryRow(sqlGetByID, id).Scan(
+		&t.ID, &t.Key, &t.Origin, &t.Label, &t.Description, &t.IconKey,
+	)
 	if err != nil {
 		return Type{}, err
 	}

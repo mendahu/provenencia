@@ -16,6 +16,7 @@ final class SourceTypesModel {
     struct Draft: Equatable {
         var label: String
         var description: String
+        var iconKey: String = PVEvidenceIconKey.defaultTypeIcon.rawValue
     }
 
     /// Column ids the list can sort by. They double as `PVTable` column ids.
@@ -125,7 +126,9 @@ final class SourceTypesModel {
 
     var isDirty: Bool {
         guard case .editing = mode, let type = selectedType, let draft else { return false }
-        return draft.label != type.label || draft.description != type.description
+        return draft.label != type.label
+            || draft.description != type.description
+            || draft.iconKey != type.iconKey
     }
 
     var canSubmit: Bool {
@@ -250,7 +253,7 @@ final class SourceTypesModel {
         // Always keep `draft` non-nil here. The locked (.viewing) panel does
         // not bind it, but going edit/add → view with `draft = nil` in the
         // same turn tears down `Binding($model.draft)` and traps.
-        draft = Draft(label: type.label, description: type.description)
+        draft = Draft(label: type.label, description: type.description, iconKey: type.iconKey)
         mode = CatalogOrigin.isPlugin(type.origin) ? .viewing(id: id) : .editing(id: id)
         Task { await loadSuggestions(for: id) }
     }
@@ -265,7 +268,7 @@ final class SourceTypesModel {
         assignPick = ""
         suggestions = []
         mode = .adding(resumeID: resumeID)
-        draft = Draft(label: "", description: "")
+        draft = Draft(label: "", description: "", iconKey: PVEvidenceIconKey.defaultTypeIcon.rawValue)
     }
 
     func cancelAdd() {
@@ -282,7 +285,7 @@ final class SourceTypesModel {
 
     func revertEdit() {
         guard case .editing(let id) = mode, let type = types.first(where: { $0.id == id }) else { return }
-        draft = Draft(label: type.label, description: type.description)
+        draft = Draft(label: type.label, description: type.description, iconKey: type.iconKey)
         formError = nil
     }
 
@@ -305,12 +308,12 @@ final class SourceTypesModel {
             case .adding:
                 let created = try await store.createSourceType(
                     projectDir: projectDir, userID: userID,
-                    label: label, description: draft.description
+                    label: label, description: draft.description, iconKey: draft.iconKey
                 )
                 types.append(created)
                 query = ""
                 mode = .editing(id: created.id)
-                self.draft = Draft(label: created.label, description: created.description)
+                self.draft = Draft(label: created.label, description: created.description, iconKey: created.iconKey)
                 // A new type suggests nothing yet (S2-03 T-15) — assigning
                 // happens on the detail the save lands you on.
                 suggestions = []
@@ -323,11 +326,11 @@ final class SourceTypesModel {
             case .editing(let id):
                 let updated = try await store.updateSourceType(
                     projectDir: projectDir, userID: userID, typeID: id,
-                    label: label, description: draft.description
+                    label: label, description: draft.description, iconKey: draft.iconKey
                 )
                 replace(updated)
                 mode = .editing(id: updated.id)
-                self.draft = Draft(label: updated.label, description: updated.description)
+                self.draft = Draft(label: updated.label, description: updated.description, iconKey: updated.iconKey)
                 toast = VocabularyToast(
                     title: String(localized: L10n.SourceTypes.toastUpdatedTitle),
                     body: L10n.SourceTypes.toastUpdatedBody(label: updated.label, key: updated.key),

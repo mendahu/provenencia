@@ -31,6 +31,9 @@ func TestSourceDefs(t *testing.T) {
 				if typ.Type.GetKey() != "deed" || typ.Type.GetOrigin() != "user" || typ.Type.GetLabel() != "Deed" {
 					t.Fatalf("%+v", typ.Type)
 				}
+				if typ.Type.GetIconKey() != sourcetypes.DefaultIconKey {
+					t.Fatalf("icon_key %+v", typ.Type)
+				}
 				cr := req.(*engine.CreateSourceTypeRequest)
 				fout, err := CreateMetadataField(marshalProto(t, &engine.CreateMetadataFieldRequest{
 					ProjectDir: cr.ProjectDir, UserId: cr.UserId, Label: "Folio", DataType: "text",
@@ -80,14 +83,33 @@ func TestCreateSourceTypeMintsKeyFromLabel(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "rejects duplicate key under user origin",
+			name: "rejects unknown icon_key",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, _ := sourceFixture(t)
-				return &engine.CreateSourceTypeRequest{ProjectDir: dir, UserId: userID, Label: "Deed"}
+				return &engine.CreateSourceTypeRequest{
+					ProjectDir: dir, UserId: userID, Label: "Weird", IconKey: "not_a_key",
+				}
 			},
-			calls:     2,
 			wantErr:   true,
-			wantErrIs: sourcetypes.ErrDuplicateKey,
+			wantErrIs: sourcetypes.ErrInvalid,
+		},
+		{
+			name: "defaults empty icon_key to type_evidence",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _ := sourceFixture(t)
+				return &engine.CreateSourceTypeRequest{
+					ProjectDir: dir, UserId: userID, Label: "Loose scrap",
+				}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var resp engine.CreateSourceTypeResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				if resp.Type.GetIconKey() != sourcetypes.DefaultIconKey {
+					t.Fatalf("%+v", resp.Type)
+				}
+			},
 		},
 	})
 }

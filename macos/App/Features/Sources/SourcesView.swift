@@ -250,7 +250,8 @@ struct SourcesView: View {
                         projectDir: model.pageProjectDir,
                         relPath: source.thumbnailRelPath,
                         mediaType: source.thumbnailMediaType,
-                        originalFilename: source.thumbnailOriginalFilename
+                        originalFilename: source.thumbnailOriginalFilename,
+                        typeIconKey: model.typeIconKey(for: source)
                     )
                 },
                 onActivate: { model.openSource(id: $0) },
@@ -299,7 +300,9 @@ struct SourcesView: View {
                     isInvalid: model.typeError != nil,
                     label: L10n.Sources.formType,
                     accessibilityIdentifierPrefix: "sources.add.type"
-                )
+                ) { option, query in
+                    sourceTypeComboRow(option: option, query: query)
+                }
                 .onChange(of: model.draft.sourceTypeID) { _, newValue in
                     if !newValue.isEmpty { model.typeError = nil }
                 }
@@ -319,6 +322,19 @@ struct SourcesView: View {
                 PVInput(text: $model.draft.description)
                     .accessibilityIdentifier("sources.add.description")
             }
+        }
+    }
+
+    private func sourceTypeComboRow(option: PVComboBoxOption, query: String) -> some View {
+        HStack(spacing: PVSpacing.space3) {
+            if let type = model.types.first(where: { $0.id == option.value }) {
+                PVEvidenceIcon(
+                    PVEvidenceIconKey(catalogKey: type.iconKey),
+                    size: .row,
+                    decorative: true
+                )
+            }
+            PVComboBoxPlainRow(option: option, query: query)
         }
     }
 }

@@ -115,6 +115,14 @@ struct SourceTypesDetailPane: View {
                         .font(PVFont.body(size: PVTypeScale.bodySmall))
                         .foregroundStyle(PVColor.textSecondary)
                 }
+                VocabularyLabeledSection(label: L10n.SourceTypes.formIcon) {
+                    PVEvidenceIcon(
+                        PVEvidenceIconKey(catalogKey: type.iconKey),
+                        size: .tile,
+                        decorative: false
+                    )
+                    .accessibilityIdentifier("sourceTypes.detail.icon")
+                }
             }
             .padding(.top, PVSpacing.space7)
             .overlay(alignment: .top) {
@@ -147,6 +155,13 @@ struct SourceTypesDetailPane: View {
                     )
                     .accessibilityIdentifier("sourceTypes.form.description")
                 }
+                PVField(
+                    label: L10n.SourceTypes.formIcon,
+                    hint: L10n.SourceTypes.formIconHint,
+                    required: true
+                ) {
+                    iconPicker(selection: draft.iconKey)
+                }
                 VocabularyFormActions(
                     primaryLabel: primaryLabel,
                     secondaryLabel: secondaryLabel,
@@ -163,6 +178,39 @@ struct SourceTypesDetailPane: View {
                 PVDivider()
             }
         }
+    }
+
+    private func iconPicker(selection: Binding<String>) -> some View {
+        let columns = [GridItem(.adaptive(minimum: 44), spacing: PVSpacing.space3)]
+        return LazyVGrid(columns: columns, spacing: PVSpacing.space3) {
+            ForEach(PVEvidenceIconKey.typeKeys, id: \.rawValue) { key in
+                let selected = selection.wrappedValue == key.rawValue
+                Button {
+                    selection.wrappedValue = key.rawValue
+                } label: {
+                    PVEvidenceIcon(key, size: .tile, decorative: true)
+                        .padding(PVSpacing.space2)
+                        .background(
+                            RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                                .fill(selected ? PVColor.surfaceSunken : Color.clear)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                                .stroke(
+                                    selected ? PVColor.borderStrong : PVColor.borderSubtle,
+                                    lineWidth: selected ? 2 : 1
+                                )
+                        )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text(key.accessibilityName))
+                .accessibilityAddTraits(selected ? .isSelected : [])
+                .accessibilityIdentifier("sourceTypes.form.icon.\(key.rawValue)")
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text(L10n.SourceTypes.formIconAccessibility))
+        .accessibilityIdentifier("sourceTypes.form.icon")
     }
 
     private var primaryLabel: LocalizedStringResource {

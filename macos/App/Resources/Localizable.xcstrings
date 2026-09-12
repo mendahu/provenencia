@@ -135,6 +135,258 @@
         }
       }
     },
+    "designSystem.evidenceIcon.typeCertificate": {
+      "comment": "Accessibility name for the type_certificate evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Certificate source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeBook": {
+      "comment": "Accessibility name for the type_book evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Book source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeDocument": {
+      "comment": "Accessibility name for the type_document evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Document source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeScroll": {
+      "comment": "Accessibility name for the type_scroll evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Register source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typePhotograph": {
+      "comment": "Accessibility name for the type_photograph evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photograph source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeNewspaper": {
+      "comment": "Accessibility name for the type_newspaper evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Newspaper source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeMap": {
+      "comment": "Accessibility name for the type_map evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Map source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeMicrofilm": {
+      "comment": "Accessibility name for the type_microfilm evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microfilm source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeCassette": {
+      "comment": "Accessibility name for the type_cassette evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Magnetic tape source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeOralHistory": {
+      "comment": "Accessibility name for the type_oral_history evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oral history source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeVideo": {
+      "comment": "Accessibility name for the type_video evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moving image source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeWebsite": {
+      "comment": "Accessibility name for the type_website evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Website source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeCensus": {
+      "comment": "Accessibility name for the type_census evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Census source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeDna": {
+      "comment": "Accessibility name for the type_dna evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DNA match source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeGedcom": {
+      "comment": "Accessibility name for the type_gedcom evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GEDCOM source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeGrave": {
+      "comment": "Accessibility name for the type_grave evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Memorial source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeScrapbook": {
+      "comment": "Accessibility name for the type_scrapbook evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scrapbook source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeEvidence": {
+      "comment": "Accessibility name for the type_evidence evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidence source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeFolderArchive": {
+      "comment": "Accessibility name for the type_folder_archive evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archival container source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeEmail": {
+      "comment": "Accessibility name for the type_email evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correspondence source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typePostcard": {
+      "comment": "Accessibility name for the type_postcard evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Postcard source type"
+          }
+        }
+      }
+    },
     "designSystem.evidenceIcon.fileImageMissing": {
       "comment": "Accessibility name for the file_image_missing evidence glyph",
       "extractionState": "manual",
@@ -4035,6 +4287,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "A bound register of baptisms, marriages or burials kept by a parish"
+          }
+        }
+      }
+    },
+    "sourceTypes.form.icon": {
+      "comment": "Add/edit form field: evidence icon for this type",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Icon"
+          }
+        }
+      }
+    },
+    "sourceTypes.form.iconHint": {
+      "comment": "Hint under the source-type icon picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shown on Sources and fileless Artifacts when there is no image thumbnail"
+          }
+        }
+      }
+    },
+    "sourceTypes.form.iconPicker": {
+      "comment": "Accessibility label for the type icon picker grid",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source type icon"
           }
         }
       }

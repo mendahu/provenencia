@@ -81,6 +81,10 @@ final class SourcesModel {
         types.first { $0.id == source.sourceTypeID }?.label ?? ""
     }
 
+    func typeIconKey(for source: CatalogSource) -> String? {
+        types.first { $0.id == source.sourceTypeID }?.iconKey
+    }
+
     var visibleSources: [CatalogSource] {
         var rows = sources
         if !typeFilterID.isEmpty {

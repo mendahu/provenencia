@@ -226,6 +226,17 @@ struct SourcesModelTests {
         #expect(model.openedSourceID == nil)
     }
 
+    @Test func typeIconKeyResolvesFromSourceType() async {
+        var photo = photoType()
+        photo.iconKey = "type_photograph"
+        let model = makeModel(
+            sources: [source(id: "s1", title: "Album", typeID: "t1")],
+            types: [photo]
+        )
+        await model.load()
+        #expect(model.typeIconKey(for: model.sources[0]) == "type_photograph")
+    }
+
     @Test func applyUpdatedSourceMergesCoverWhenIdentityOmitsThumbs() async {
         var row = source(id: "s1", title: "Deed", typeID: "t1")
         row.thumbnailMediaType = "application/pdf"

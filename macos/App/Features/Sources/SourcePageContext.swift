@@ -44,9 +44,9 @@ final class SourcePageContext {
 
     var source: CatalogSource? { workspace?.source }
 
-    /// Syncs list-row cover fields from workspace Artifacts (first raster, else
-    /// first File MIME/filename) and notifies the Sources list. Call after
-    /// ingest / create that can change the leading thumbnail.
+    /// Syncs list-row cover fields from workspace Artifacts and notifies the
+    /// Sources list. Preference: raster → clear MIME (type icon via
+    /// `sourceTypeID`) → MIME only when the type has no icon_key → empty.
     func publishCoverToList() {
         guard var source = workspace?.source else { return }
         let arts = workspace?.artifacts ?? []
@@ -54,14 +54,24 @@ final class SourcePageContext {
             source.thumbnailRelPath = raster.thumbnailRelPath
             source.thumbnailMediaType = ""
             source.thumbnailOriginalFilename = ""
-        } else if let file = arts.first(where: { $0.file != nil })?.file {
-            source.thumbnailRelPath = ""
-            source.thumbnailMediaType = file.mediaType
-            source.thumbnailOriginalFilename = file.originalFilename
         } else {
-            source.thumbnailRelPath = ""
-            source.thumbnailMediaType = ""
-            source.thumbnailOriginalFilename = ""
+            let typeIcon = workspace?.types
+                .first { $0.id == source.sourceTypeID }?
+                .iconKey
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if !typeIcon.isEmpty {
+                source.thumbnailRelPath = ""
+                source.thumbnailMediaType = ""
+                source.thumbnailOriginalFilename = ""
+            } else if let file = arts.first(where: { $0.file != nil })?.file {
+                source.thumbnailRelPath = ""
+                source.thumbnailMediaType = file.mediaType
+                source.thumbnailOriginalFilename = file.originalFilename
+            } else {
+                source.thumbnailRelPath = ""
+                source.thumbnailMediaType = ""
+                source.thumbnailOriginalFilename = ""
+            }
         }
         workspace?.source = source
         onSourceUpdated?(source)

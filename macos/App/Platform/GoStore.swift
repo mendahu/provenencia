@@ -448,13 +448,15 @@ struct GoStore: GenealogyStore {
         projectDir: String,
         userID: String,
         label: String,
-        description: String
+        description: String,
+        iconKey: String
     ) async throws -> CatalogSourceType {
         var req = Provenencia_Engine_V1_CreateSourceTypeRequest()
         req.projectDir = projectDir
         req.userID = userID
         req.label = label
         req.description_p = description
+        req.iconKey = iconKey
         let resp: Provenencia_Engine_V1_CreateSourceTypeResponse = try await provenenciaCall(
             method: CoreMethod.createSourceType,
             request: req
@@ -467,7 +469,8 @@ struct GoStore: GenealogyStore {
         userID: String,
         typeID: String,
         label: String,
-        description: String
+        description: String,
+        iconKey: String
     ) async throws -> CatalogSourceType {
         var req = Provenencia_Engine_V1_UpdateSourceTypeRequest()
         req.projectDir = projectDir
@@ -475,6 +478,7 @@ struct GoStore: GenealogyStore {
         req.typeID = typeID
         req.label = label
         req.description_p = description
+        req.iconKey = iconKey
         let resp: Provenencia_Engine_V1_UpdateSourceTypeResponse = try await provenenciaCall(
             method: CoreMethod.updateSourceType,
             request: req
@@ -733,6 +737,7 @@ struct GoStore: GenealogyStore {
             origin: t.origin,
             label: t.label,
             description: t.description_p,
+            iconKey: t.iconKey.isEmpty ? PVEvidenceIconKey.defaultTypeIcon.rawValue : t.iconKey,
             usedBy: Int(t.usedBy),
             suggestedFieldCount: Int(t.suggestedFieldCount)
         )

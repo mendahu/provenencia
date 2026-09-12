@@ -232,6 +232,7 @@ struct SourceTypesModelTests {
         #expect(!model.isAdding)
         #expect(model.selectedType?.key == "parish-register")
         #expect(model.selectedType?.origin == "user")
+        #expect(model.selectedType?.iconKey == PVEvidenceIconKey.defaultTypeIcon.rawValue)
         #expect(model.suggestions.isEmpty)
         #expect(model.toast?.title == String(localized: L10n.SourceTypes.toastAddedTitle))
         #expect(counts.sourceTypes?.total == 2)
@@ -302,6 +303,20 @@ struct SourceTypesModelTests {
         #expect(model.selectedType?.label == "Printed book")
         #expect(model.selectedType?.key == "book")
         #expect(model.toast?.title == String(localized: L10n.SourceTypes.toastUpdatedTitle))
+    }
+
+    @Test func changingIconMarksDirtyAndPersists() async {
+        let model = makeModel(types: [userType()])
+        await model.load()
+        model.select("t2")
+        #expect(model.draft?.iconKey == PVEvidenceIconKey.defaultTypeIcon.rawValue)
+
+        model.draft?.iconKey = "type_scrapbook"
+        #expect(model.isDirty)
+        await model.submit()
+
+        #expect(model.selectedType?.iconKey == "type_scrapbook")
+        #expect(!model.isDirty)
     }
 
     @Test func revertingDiscardsUnsavedEdits() async {

@@ -47,6 +47,11 @@ struct SourceTypesListPane: View {
                 sortable: true
             ) { type in
                 HStack(spacing: PVSpacing.space2) {
+                    PVEvidenceIcon(
+                        PVEvidenceIconKey(catalogKey: type.iconKey),
+                        size: .inline,
+                        decorative: true
+                    )
                     Text(type.label)
                         .font(PVFont.body(size: PVTypeScale.bodySmall))
                         .foregroundStyle(PVColor.textPrimary)
