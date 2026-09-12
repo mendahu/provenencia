@@ -142,7 +142,8 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 | Table | `Components/Data/PVTable.swift` (added for S2-22, extracted from the Source fields list; see "The table tradeoff" below) |
 | Confirm | `Components/Feedback/PVConfirm.swift` (added for S2-22's delete confirmation; the macOS answer to `ConfirmDialog.jsx`, which the web spec says not to port — see "Confirmations are system chrome" below) |
 | ComboBox | `Components/Forms/PVComboBox.swift` (added for S2-16's assign-field control, where the pool is the whole Source fields vocabulary; single-select subset only — see "The combo box subset" below) |
-| Thumbnail | `Components/Core/PVThumbnail.swift` (added for S2-17 Sources list rows; image / glyph / empty / loading tile) |
+| Thumbnail | `Components/Core/PVThumbnail.swift` (added for S2-17 Sources list rows; image / evidence glyph / SF glyph / empty / loading tile) |
+| EvidenceIcon | `Components/Research/PVEvidenceIcon.swift` (PR1 `file_*` MIME stand-ins; see `EVIDENCE-ICONS.md`; not SF Symbols) |
 | List | `Components/Data/PVList.swift` (added for S2-17 evidence browse — not `PVTable`; Files remounts it in S2-21) |
 | Dialog | `Components/Feedback/PVDialog.swift` (added for S2-17 Add Source; sheet form with content slot + footer — see note below) |
 | Breadcrumbs | `Components/Navigation/PVBreadcrumbs.swift` (added for S2-18 Source page trail; Sources → `SRC-…`) |

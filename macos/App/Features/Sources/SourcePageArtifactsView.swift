@@ -111,6 +111,8 @@ struct SourcePageArtifactsView: View {
                     CachedThumbnail(
                         projectDir: model.pageProjectDir,
                         relPath: art.thumbnailRelPath,
+                        mediaType: art.file?.mediaType ?? "",
+                        originalFilename: art.file?.originalFilename ?? "",
                         size: SourcePageLayout.artifactRowThumbnailSize
                     )
                     Text(art.label.isEmpty ? art.ref : art.label)
@@ -187,6 +189,8 @@ struct SourcePageArtifactsView: View {
                         CachedThumbnail(
                             projectDir: model.pageProjectDir,
                             relPath: art.thumbnailRelPath,
+                            mediaType: file.mediaType,
+                            originalFilename: file.originalFilename,
                             size: 56
                         )
                         VStack(alignment: .leading, spacing: PVSpacing.space2) {

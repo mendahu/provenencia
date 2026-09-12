@@ -24,6 +24,15 @@ func writePNG(t *testing.T, path string) {
 	}
 }
 
+func writePDF(t *testing.T, path string) {
+	t.Helper()
+	// Minimal bytes that http.DetectContentType reports as application/pdf.
+	const body = "%PDF-1.1\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n"
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestEnsureFileThumbnail(t *testing.T) {
 	runRPC(t, EnsureFileThumbnail, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
@@ -223,6 +232,116 @@ func TestListSourcesAndWorkspaceThumbnails(t *testing.T) {
 				}
 				if len(list.Sources) != 1 || list.Sources[0].GetThumbnailRelPath() != "" {
 					t.Fatalf("want empty thumb %+v", list.Sources)
+				}
+				if list.Sources[0].GetThumbnailMediaType() != "" {
+					t.Fatalf("want empty media type %+v", list.Sources[0])
+				}
+			},
+		},
+		{
+			name: "pdf-only source has empty raster and pdf media type",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, typeID := sourceFixture(t)
+				cout, err := CreateSource(marshalProto(t, &engine.CreateSourceRequest{
+					ProjectDir: dir, UserId: userID, SourceTypeId: typeID, Title: "Deed",
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var created engine.CreateSourceResponse
+				if err := proto.Unmarshal(cout, &created); err != nil {
+					t.Fatal(err)
+				}
+				aout, err := CreateArtifact(marshalProto(t, &engine.CreateArtifactRequest{
+					ProjectDir: dir, UserId: userID, SourceId: created.Source.Id, Label: "Scan",
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var art engine.CreateArtifactResponse
+				if err := proto.Unmarshal(aout, &art); err != nil {
+					t.Fatal(err)
+				}
+				path := filepath.Join(t.TempDir(), "deed.pdf")
+				writePDF(t, path)
+				if _, err := IngestArtifactFile(marshalProto(t, &engine.IngestArtifactFileRequest{
+					ProjectDir: dir, UserId: userID, ArtifactId: art.Artifact.Id, Path: path,
+				})); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.ListSourcesRequest{ProjectDir: dir}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var list engine.ListSourcesResponse
+				if err := proto.Unmarshal(out, &list); err != nil {
+					t.Fatal(err)
+				}
+				if len(list.Sources) != 1 {
+					t.Fatalf("sources %+v", list.Sources)
+				}
+				s := list.Sources[0]
+				if s.GetThumbnailRelPath() != "" {
+					t.Fatalf("want empty raster for pdf, got %q", s.GetThumbnailRelPath())
+				}
+				if s.GetThumbnailMediaType() != "application/pdf" {
+					t.Fatalf("media type %q", s.GetThumbnailMediaType())
+				}
+				if s.GetThumbnailOriginalFilename() != "deed.pdf" {
+					t.Fatalf("filename %q", s.GetThumbnailOriginalFilename())
+				}
+			},
+		},
+		{
+			name: "pdf then png prefers raster of later png",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, typeID := sourceFixture(t)
+				cout, err := CreateSource(marshalProto(t, &engine.CreateSourceRequest{
+					ProjectDir: dir, UserId: userID, SourceTypeId: typeID, Title: "Mixed",
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var created engine.CreateSourceResponse
+				if err := proto.Unmarshal(cout, &created); err != nil {
+					t.Fatal(err)
+				}
+				for _, label := range []string{"PDF", "PNG"} {
+					aout, err := CreateArtifact(marshalProto(t, &engine.CreateArtifactRequest{
+						ProjectDir: dir, UserId: userID, SourceId: created.Source.Id, Label: label,
+					}))
+					if err != nil {
+						t.Fatal(err)
+					}
+					var art engine.CreateArtifactResponse
+					if err := proto.Unmarshal(aout, &art); err != nil {
+						t.Fatal(err)
+					}
+					var path string
+					if label == "PDF" {
+						path = filepath.Join(t.TempDir(), "first.pdf")
+						writePDF(t, path)
+					} else {
+						path = filepath.Join(t.TempDir(), "second.png")
+						writePNG(t, path)
+					}
+					if _, err := IngestArtifactFile(marshalProto(t, &engine.IngestArtifactFileRequest{
+						ProjectDir: dir, UserId: userID, ArtifactId: art.Artifact.Id, Path: path,
+					})); err != nil {
+						t.Fatal(err)
+					}
+				}
+				return &engine.ListSourcesRequest{ProjectDir: dir}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var list engine.ListSourcesResponse
+				if err := proto.Unmarshal(out, &list); err != nil {
+					t.Fatal(err)
+				}
+				if len(list.Sources) != 1 || list.Sources[0].GetThumbnailRelPath() == "" {
+					t.Fatalf("want png raster thumb %+v", list.Sources)
+				}
+				if list.Sources[0].GetThumbnailMediaType() != "" {
+					t.Fatalf("raster cover should not set media type %+v", list.Sources[0])
 				}
 			},
 		},

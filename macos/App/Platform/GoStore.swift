@@ -666,7 +666,9 @@ struct GoStore: GenealogyStore {
             sourceTypeID: s.sourceTypeID,
             title: s.title,
             description: s.description_p,
-            thumbnailRelPath: s.thumbnailRelPath
+            thumbnailRelPath: s.thumbnailRelPath,
+            thumbnailMediaType: s.thumbnailMediaType,
+            thumbnailOriginalFilename: s.thumbnailOriginalFilename
         )
     }
 

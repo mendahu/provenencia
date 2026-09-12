@@ -305,6 +305,35 @@ struct SourcePageModelTests {
         #expect(model.artifacts.items.isEmpty)
     }
 
+    @Test func createArtifactWithPDFPublishesCoverToList() async throws {
+        final class CoverBox: @unchecked Sendable {
+            var source: CatalogSource?
+        }
+        let box = CoverBox()
+        let store = makeStore()
+        let model = SourcePageModel(
+            sourceID: sourceID,
+            projectDir: projectDir,
+            userID: userID,
+            sessionDisplayName: "Jake",
+            store: store,
+            onSourceUpdated: { box.source = $0 }
+        )
+        await model.load()
+        model.artifacts.openAdd()
+        model.artifacts.draft.label = "Deed"
+        let path = FileManager.default.temporaryDirectory
+            .appendingPathComponent("deed-\(UUID().uuidString).pdf").path
+        try Data("%PDF-1.1".utf8).write(to: URL(fileURLWithPath: path))
+        model.artifacts.draft.filePath = path
+        await model.artifacts.create()
+        #expect(model.artifacts.items.count == 1)
+        #expect(box.source?.thumbnailMediaType == "application/pdf")
+        #expect(box.source?.thumbnailOriginalFilename.hasSuffix(".pdf") == true)
+        #expect(box.source?.thumbnailRelPath.isEmpty == true)
+        #expect(model.source?.thumbnailMediaType == "application/pdf")
+    }
+
     @Test func ingestMissingFileSurfacesIngestInvalid() async {
         let store = makeStore()
         store.ingestArtifactFileError = CoreInvokeError.coded(

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"errors"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
@@ -77,22 +78,46 @@ func thumbnailRelPath(c *database.Catalog, sourceFileID []byte) (relPath string,
 	return rel, false, nil
 }
 
-// firstSourceThumbnailRelPath returns the thumbnail for the first Artifact
-// (by ref) that has a primary File, or empty when none / skipped.
-func firstSourceThumbnailRelPath(c *database.Catalog, sourceID []byte) (string, error) {
+// sourceCoverThumb is the ListSources cover payload for a Source.
+type sourceCoverThumb struct {
+	RelPath          string
+	MediaType        string
+	OriginalFilename string
+}
+
+// sourceCoverThumbnail prefers the first Artifact (by ref) with a successful
+// raster thumbnail. Otherwise it returns empty path plus MIME/filename from
+// the first file-bearing Artifact so clients can render a file-type glyph.
+func sourceCoverThumbnail(c *database.Catalog, sourceID []byte) (sourceCoverThumb, error) {
 	arts, err := artifacts.ListBySource(c, sourceID)
 	if err != nil {
-		return "", err
+		return sourceCoverThumb{}, err
 	}
+	var firstFile sourceCoverThumb
 	for _, a := range arts {
 		if len(a.FileID) != 16 {
 			continue
 		}
+		f, err := files.Lookup(c, a.FileID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				continue
+			}
+			return sourceCoverThumb{}, err
+		}
+		if firstFile.MediaType == "" && firstFile.OriginalFilename == "" {
+			firstFile = sourceCoverThumb{
+				MediaType:        f.MediaType,
+				OriginalFilename: f.OriginalFilename,
+			}
+		}
 		rel, _, err := thumbnailRelPath(c, a.FileID)
 		if err != nil {
-			return "", err
+			return sourceCoverThumb{}, err
 		}
-		return rel, nil
+		if rel != "" {
+			return sourceCoverThumb{RelPath: rel}, nil
+		}
 	}
-	return "", nil
+	return firstFile, nil
 }

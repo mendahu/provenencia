@@ -99,6 +99,114 @@
         }
       }
     },
+    "designSystem.evidenceIcon.fileAudio": {
+      "comment": "Accessibility name for the file_audio evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio file"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.fileDoc": {
+      "comment": "Accessibility name for the file_doc evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Word-processed file"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.fileGeneric": {
+      "comment": "Accessibility name for the file_generic evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File of unknown type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.fileImageMissing": {
+      "comment": "Accessibility name for the file_image_missing evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Image file, preview unavailable"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.filePdf": {
+      "comment": "Accessibility name for the file_pdf evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PDF file"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.fileSheet": {
+      "comment": "Accessibility name for the file_sheet evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spreadsheet file"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.fileSlides": {
+      "comment": "Accessibility name for the file_slides evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Presentation file"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.fileTxt": {
+      "comment": "Accessibility name for the file_txt evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plain text file"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.fileVideo": {
+      "comment": "Accessibility name for the file_video evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video file"
+          }
+        }
+      }
+    },
     "designSystem.thumbnail.empty": {
       "comment": "Accessibility label for an empty PVThumbnail placeholder",
       "extractionState": "manual",

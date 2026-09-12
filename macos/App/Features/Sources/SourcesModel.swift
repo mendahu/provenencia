@@ -263,10 +263,21 @@ final class SourcesModel {
         openedSourceID = nil
     }
 
-    /// Keeps the list row in sync when the Source page edits identity.
+    /// Keeps the list row in sync when the Source page edits identity or cover.
+    /// Identity `updateSource` responses omit thumbnail enrichment — preserve
+    /// existing cover fields when the incoming row leaves them empty.
     func applyUpdatedSource(_ source: CatalogSource) {
         if let idx = sources.firstIndex(where: { $0.id == source.id }) {
-            sources[idx] = source
+            var merged = source
+            let incomingHasCover = !merged.thumbnailRelPath.isEmpty
+                || !merged.thumbnailMediaType.isEmpty
+                || !merged.thumbnailOriginalFilename.isEmpty
+            if !incomingHasCover {
+                merged.thumbnailRelPath = sources[idx].thumbnailRelPath
+                merged.thumbnailMediaType = sources[idx].thumbnailMediaType
+                merged.thumbnailOriginalFilename = sources[idx].thumbnailOriginalFilename
+            }
+            sources[idx] = merged
         }
     }
 

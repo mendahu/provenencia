@@ -180,6 +180,7 @@ final class SourceArtifactsSection {
             descriptions[art.id] = art.description
             isAdding = false
             draftLabelError = nil
+            context.publishCoverToList()
             context.toast = VocabularyToast(
                 title: L10n.Sources.toastArtifactCreatedTitle(ref: art.ref),
                 body: art.fileID.isEmpty
@@ -210,6 +211,7 @@ final class SourceArtifactsSection {
                 path: path
             )
             replace(ingested.artifact)
+            context.publishCoverToList()
             context.toast = VocabularyToast(
                 title: L10n.Sources.toastFileAttachedTitle,
                 body: L10n.Sources.toastFileAttachedBody(name: ingested.file.originalFilename),

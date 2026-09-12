@@ -30,11 +30,13 @@ func ListSources(in []byte) ([]byte, error) {
 		out = &engine.ListSourcesResponse{}
 		for _, s := range rows {
 			sp := sourceProto(s)
-			thumb, err := firstSourceThumbnailRelPath(c, s.ID)
+			cover, err := sourceCoverThumbnail(c, s.ID)
 			if err != nil {
 				return err
 			}
-			sp.ThumbnailRelPath = thumb
+			sp.ThumbnailRelPath = cover.RelPath
+			sp.ThumbnailMediaType = cover.MediaType
+			sp.ThumbnailOriginalFilename = cover.OriginalFilename
 			out.Sources = append(out.Sources, sp)
 		}
 		return nil
