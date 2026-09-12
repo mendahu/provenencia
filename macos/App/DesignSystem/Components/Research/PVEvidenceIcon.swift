@@ -115,6 +115,62 @@ enum PVEvidenceIconKey: String, CaseIterable, Sendable {
         }
     }
 
+    /// Short title in the Source-type icon picker grid and form tile.
+    var typePickerTitle: LocalizedStringResource {
+        switch self {
+        case .typeCertificate: L10n.DesignSystem.evidenceIconTypeCertificateTitle
+        case .typeBook: L10n.DesignSystem.evidenceIconTypeBookTitle
+        case .typeDocument: L10n.DesignSystem.evidenceIconTypeDocumentTitle
+        case .typeScroll: L10n.DesignSystem.evidenceIconTypeScrollTitle
+        case .typePhotograph: L10n.DesignSystem.evidenceIconTypePhotographTitle
+        case .typeNewspaper: L10n.DesignSystem.evidenceIconTypeNewspaperTitle
+        case .typeMap: L10n.DesignSystem.evidenceIconTypeMapTitle
+        case .typeMicrofilm: L10n.DesignSystem.evidenceIconTypeMicrofilmTitle
+        case .typeCassette: L10n.DesignSystem.evidenceIconTypeCassetteTitle
+        case .typeOralHistory: L10n.DesignSystem.evidenceIconTypeOralHistoryTitle
+        case .typeVideo: L10n.DesignSystem.evidenceIconTypeVideoTitle
+        case .typeWebsite: L10n.DesignSystem.evidenceIconTypeWebsiteTitle
+        case .typeCensus: L10n.DesignSystem.evidenceIconTypeCensusTitle
+        case .typeDNA: L10n.DesignSystem.evidenceIconTypeDNATitle
+        case .typeGEDCOM: L10n.DesignSystem.evidenceIconTypeGEDCOMTitle
+        case .typeGrave: L10n.DesignSystem.evidenceIconTypeGraveTitle
+        case .typeScrapbook: L10n.DesignSystem.evidenceIconTypeScrapbookTitle
+        case .typeEvidence: L10n.DesignSystem.evidenceIconTypeEvidenceTitle
+        case .typeFolderArchive: L10n.DesignSystem.evidenceIconTypeFolderArchiveTitle
+        case .typeEmail: L10n.DesignSystem.evidenceIconTypeEmailTitle
+        case .typePostcard: L10n.DesignSystem.evidenceIconTypePostcardTitle
+        default: accessibilityName
+        }
+    }
+
+    /// One-line metaphor shown under the icon picker dialog while this mark is selected.
+    var typeMetaphor: LocalizedStringResource {
+        switch self {
+        case .typeCertificate: L10n.DesignSystem.evidenceIconTypeCertificateMetaphor
+        case .typeBook: L10n.DesignSystem.evidenceIconTypeBookMetaphor
+        case .typeDocument: L10n.DesignSystem.evidenceIconTypeDocumentMetaphor
+        case .typeScroll: L10n.DesignSystem.evidenceIconTypeScrollMetaphor
+        case .typePhotograph: L10n.DesignSystem.evidenceIconTypePhotographMetaphor
+        case .typeNewspaper: L10n.DesignSystem.evidenceIconTypeNewspaperMetaphor
+        case .typeMap: L10n.DesignSystem.evidenceIconTypeMapMetaphor
+        case .typeMicrofilm: L10n.DesignSystem.evidenceIconTypeMicrofilmMetaphor
+        case .typeCassette: L10n.DesignSystem.evidenceIconTypeCassetteMetaphor
+        case .typeOralHistory: L10n.DesignSystem.evidenceIconTypeOralHistoryMetaphor
+        case .typeVideo: L10n.DesignSystem.evidenceIconTypeVideoMetaphor
+        case .typeWebsite: L10n.DesignSystem.evidenceIconTypeWebsiteMetaphor
+        case .typeCensus: L10n.DesignSystem.evidenceIconTypeCensusMetaphor
+        case .typeDNA: L10n.DesignSystem.evidenceIconTypeDNAMetaphor
+        case .typeGEDCOM: L10n.DesignSystem.evidenceIconTypeGEDCOMMetaphor
+        case .typeGrave: L10n.DesignSystem.evidenceIconTypeGraveMetaphor
+        case .typeScrapbook: L10n.DesignSystem.evidenceIconTypeScrapbookMetaphor
+        case .typeEvidence: L10n.DesignSystem.evidenceIconTypeEvidenceMetaphor
+        case .typeFolderArchive: L10n.DesignSystem.evidenceIconTypeFolderArchiveMetaphor
+        case .typeEmail: L10n.DesignSystem.evidenceIconTypeEmailMetaphor
+        case .typePostcard: L10n.DesignSystem.evidenceIconTypePostcardMetaphor
+        default: L10n.DesignSystem.evidenceIconTypeEvidenceMetaphor
+        }
+    }
+
     static var fileKeys: [PVEvidenceIconKey] { allCases.filter { $0.family == .file } }
     static var typeKeys: [PVEvidenceIconKey] { allCases.filter { $0.family == .type } }
 }

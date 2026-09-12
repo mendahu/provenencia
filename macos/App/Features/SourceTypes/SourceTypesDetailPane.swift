@@ -6,6 +6,7 @@ import SwiftUI
 /// is selected — S2-03 §3.2/3.3.
 struct SourceTypesDetailPane: View {
     @Bindable var model: SourceTypesModel
+    @State private var iconPickerOpen = false
 
     var body: some View {
         ScrollView {
@@ -13,6 +14,24 @@ struct SourceTypesDetailPane: View {
         }
         .background(PVColor.surfaceCard)
         .accessibilityIdentifier("sourceTypes.detail")
+        .sheet(isPresented: $iconPickerOpen) {
+            SourceTypeIconPickerSheet(
+                selection: Binding(
+                    get: {
+                        model.draft?.iconKey ?? PVEvidenceIconKey.defaultTypeIcon.rawValue
+                    },
+                    set: { newValue in
+                        guard var draft = model.draft else { return }
+                        draft.iconKey = newValue
+                        model.draft = draft
+                    }
+                ),
+                onDone: { iconPickerOpen = false }
+            )
+        }
+        .onChange(of: panelIdentity) { _, _ in
+            iconPickerOpen = false
+        }
     }
 
     @ViewBuilder
@@ -70,7 +89,10 @@ struct SourceTypesDetailPane: View {
             title: panelTitle,
             origin: model.isAdding ? CatalogOrigin.user : (model.selectedType?.origin ?? CatalogOrigin.user),
             keyText: panelKey,
-            usageLine: model.selectedType.map { String(localized: L10n.SourceTypes.usage(count: $0.usedBy)) },
+            iconKey: panelIconKey,
+            usageLine: model.isAdding ? nil : model.selectedType.map {
+                String(localized: L10n.SourceTypes.usage(count: $0.usedBy))
+            },
             keyHint: model.isAdding ? L10n.SourceTypes.keyHintAdd : L10n.SourceTypes.keyHintEdit,
             showsDelete: model.showsDelete,
             canDelete: model.canDeleteSelectedType,
@@ -78,6 +100,13 @@ struct SourceTypesDetailPane: View {
             identifierPrefix: "sourceTypes",
             onDelete: { model.askDelete() }
         )
+    }
+
+    private var panelIconKey: String? {
+        if model.isAdding {
+            return model.draft?.iconKey
+        }
+        return model.selectedType?.iconKey ?? model.draft?.iconKey
     }
 
     private var panelTitle: String {
@@ -115,14 +144,6 @@ struct SourceTypesDetailPane: View {
                         .font(PVFont.body(size: PVTypeScale.bodySmall))
                         .foregroundStyle(PVColor.textSecondary)
                 }
-                VocabularyLabeledSection(label: L10n.SourceTypes.formIcon) {
-                    PVEvidenceIcon(
-                        PVEvidenceIconKey(catalogKey: type.iconKey),
-                        size: .tile,
-                        decorative: false
-                    )
-                    .accessibilityIdentifier("sourceTypes.detail.icon")
-                }
             }
             .padding(.top, PVSpacing.space7)
             .overlay(alignment: .top) {
@@ -148,19 +169,19 @@ struct SourceTypesDetailPane: View {
                     )
                     .accessibilityIdentifier("sourceTypes.form.label")
                 }
+                PVField(
+                    label: L10n.SourceTypes.formIcon,
+                    hint: L10n.SourceTypes.formIconHint,
+                    required: true
+                ) {
+                    iconFieldButton(selection: draft.iconKey)
+                }
                 PVField(label: L10n.SourceTypes.formDescription, hint: L10n.SourceTypes.formDescriptionHint) {
                     PVInput(
                         text: draft.description,
                         prompt: model.isAdding ? L10n.SourceTypes.formDescriptionPlaceholder : nil
                     )
                     .accessibilityIdentifier("sourceTypes.form.description")
-                }
-                PVField(
-                    label: L10n.SourceTypes.formIcon,
-                    hint: L10n.SourceTypes.formIconHint,
-                    required: true
-                ) {
-                    iconPicker(selection: draft.iconKey)
                 }
                 VocabularyFormActions(
                     primaryLabel: primaryLabel,
@@ -180,36 +201,56 @@ struct SourceTypesDetailPane: View {
         }
     }
 
-    private func iconPicker(selection: Binding<String>) -> some View {
-        let columns = [GridItem(.adaptive(minimum: 44), spacing: PVSpacing.space3)]
-        return LazyVGrid(columns: columns, spacing: PVSpacing.space3) {
-            ForEach(PVEvidenceIconKey.typeKeys, id: \.rawValue) { key in
-                let selected = selection.wrappedValue == key.rawValue
-                Button {
-                    selection.wrappedValue = key.rawValue
-                } label: {
-                    PVEvidenceIcon(key, size: .tile, decorative: true)
-                        .padding(PVSpacing.space2)
-                        .background(
-                            RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                                .fill(selected ? PVColor.surfaceSunken : Color.clear)
-                        )
+    private func iconFieldButton(selection: Binding<String>) -> some View {
+        let key = PVEvidenceIconKey(catalogKey: selection.wrappedValue)
+        return Button {
+            iconPickerOpen = true
+        } label: {
+            HStack(spacing: PVSpacing.space5) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                        .fill(PVColor.surfaceSunken)
                         .overlay(
                             RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                                .stroke(
-                                    selected ? PVColor.borderStrong : PVColor.borderSubtle,
-                                    lineWidth: selected ? 2 : 1
-                                )
+                                .stroke(PVColor.borderSubtle, lineWidth: 1)
                         )
+                    PVEvidenceIcon(key, size: 28, decorative: true)
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text(key.accessibilityName))
-                .accessibilityAddTraits(selected ? .isSelected : [])
-                .accessibilityIdentifier("sourceTypes.form.icon.\(key.rawValue)")
+                .frame(width: 44, height: 44)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(key.typePickerTitle)
+                        .font(PVFont.body(size: PVTypeScale.bodySmall))
+                        .foregroundStyle(PVColor.textPrimary)
+                        .lineLimit(1)
+                    Text(key.rawValue)
+                        .font(PVFont.mono(size: PVTypeScale.micro))
+                        .foregroundStyle(PVColor.textFaint)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Text(L10n.SourceTypes.formIconChange)
+                    .font(PVFont.body(size: PVTypeScale.micro))
+                    .foregroundStyle(PVColor.textLink)
             }
+            .padding(.horizontal, PVSpacing.space5)
+            .padding(.vertical, PVSpacing.space4)
+            .background(
+                RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                    .fill(PVColor.surfaceCard)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                    .stroke(PVColor.borderDefault, lineWidth: 1)
+            )
+            .pvInsetShadow(cornerRadius: PVRadius.sm)
         }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text(L10n.SourceTypes.formIconAccessibility))
+        .buttonStyle(.plain)
+        .accessibilityLabel(
+            L10n.SourceTypes.formIconChangeAccessibility(
+                name: String(localized: key.typePickerTitle)
+            )
+        )
         .accessibilityIdentifier("sourceTypes.form.icon")
     }
 
@@ -431,5 +472,111 @@ struct SourceTypesDetailPane: View {
     /// option's subtext rather than being flattened into the label.
     private var poolOptions: [PVComboBoxOption] {
         model.assignPool.map { PVComboBoxOption(value: $0.id, label: $0.label, subtext: $0.key) }
+    }
+}
+
+/// Modal grid of closed `type_*` marks — S2-03 board §08 / design pane
+/// "Choose an icon". Selection updates the draft immediately; Done dismisses.
+private struct SourceTypeIconPickerSheet: View {
+    @Binding var selection: String
+    let onDone: () -> Void
+
+    private let columns = [GridItem(.adaptive(minimum: 108), spacing: PVSpacing.space4)]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: PVSpacing.space7) {
+                VStack(alignment: .leading, spacing: PVSpacing.space2) {
+                    Text(L10n.SourceTypes.iconPickerTitle)
+                        .font(PVFont.display(size: PVTypeScale.h3))
+                        .foregroundStyle(PVColor.textDisplay)
+                    Text(L10n.SourceTypes.iconPickerSubtitle)
+                        .font(PVFont.body(size: PVTypeScale.bodySmall))
+                        .foregroundStyle(PVColor.textSecondary)
+                        .lineSpacing((PVLineHeight.relaxed - 1) * PVTypeScale.bodySmall)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                LazyVGrid(columns: columns, spacing: PVSpacing.space4) {
+                    ForEach(PVEvidenceIconKey.typeKeys, id: \.rawValue) { key in
+                        iconCell(key)
+                    }
+                }
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel(Text(L10n.SourceTypes.iconPickerGroupLabel))
+            }
+            .padding(.horizontal, PVSpacing.space7)
+            .padding(.vertical, PVSpacing.space9)
+
+            HStack(alignment: .center, spacing: PVSpacing.space5) {
+                Text(selectedKey.typeMetaphor)
+                    .font(PVFont.body(size: PVTypeScale.micro, italic: true))
+                    .foregroundStyle(PVColor.textMuted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button(String(localized: L10n.SourceTypes.iconPickerDone)) {
+                    onDone()
+                }
+                .buttonStyle(.pv(.ghost, size: .lg))
+                .keyboardShortcut(.defaultAction)
+                .accessibilityIdentifier("sourceTypes.iconPicker.done")
+            }
+            .padding(.horizontal, PVSpacing.space8)
+            .padding(.vertical, PVSpacing.space8)
+            .overlay(alignment: .top) {
+                PVDivider()
+            }
+        }
+        .frame(width: 660)
+        .background(PVColor.surfaceCard)
+        .accessibilityIdentifier("sourceTypes.iconPicker")
+    }
+
+    private var selectedKey: PVEvidenceIconKey {
+        PVEvidenceIconKey(catalogKey: selection)
+    }
+
+    private func iconCell(_ key: PVEvidenceIconKey) -> some View {
+        let selected = selection == key.rawValue
+        return Button {
+            selection = key.rawValue
+        } label: {
+            VStack(spacing: PVSpacing.space4) {
+                PVEvidenceIcon(key, size: 40, decorative: true)
+                Text(key.typePickerTitle)
+                    .font(PVFont.body(size: PVTypeScale.micro))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, PVSpacing.space4)
+            .padding(.vertical, PVSpacing.space5)
+            .foregroundStyle(selected ? PVColor.accent : PVColor.textSecondary)
+            .background(
+                RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                    .fill(selected ? PVColor.surfaceActive : PVColor.surfaceCard)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                    .stroke(selected ? PVColor.accent : PVColor.borderSubtle, lineWidth: 1)
+            )
+            .modifier(SelectedIconShadow(selected: selected))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(key.typePickerTitle))
+        .accessibilityAddTraits(selected ? [.isSelected, .isButton] : .isButton)
+        .accessibilityIdentifier("sourceTypes.iconPicker.\(key.rawValue)")
+    }
+}
+
+private struct SelectedIconShadow: ViewModifier {
+    let selected: Bool
+
+    func body(content: Content) -> some View {
+        if selected {
+            content.pvShadow(PVElevation.sm)
+        } else {
+            content
+        }
     }
 }
