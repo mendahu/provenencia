@@ -248,7 +248,9 @@ struct SourcesView: View {
                 thumbnail: { source in
                     CachedThumbnail(
                         projectDir: model.pageProjectDir,
-                        relPath: source.thumbnailRelPath
+                        relPath: source.thumbnailRelPath,
+                        mediaType: source.thumbnailMediaType,
+                        originalFilename: source.thumbnailOriginalFilename
                     )
                 },
                 onActivate: { model.openSource(id: $0) },

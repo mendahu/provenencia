@@ -1488,10 +1488,14 @@ type Source struct {
 	SourceTypeId string                 `protobuf:"bytes,3,opt,name=source_type_id,json=sourceTypeId,proto3" json:"source_type_id,omitempty"`
 	Title        string                 `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
 	Description  string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
-	// Thumbnail JPEG under objects/… for list cells (empty = placeholder).
+	// Thumbnail JPEG under objects/… for list cells (empty = no raster).
 	ThumbnailRelPath string `protobuf:"bytes,6,opt,name=thumbnail_rel_path,json=thumbnailRelPath,proto3" json:"thumbnail_rel_path,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// When thumbnail_rel_path is empty but a File exists under some Artifact,
+	// MIME of the cover-candidate File for client file-type glyph fallback.
+	ThumbnailMediaType        string `protobuf:"bytes,7,opt,name=thumbnail_media_type,json=thumbnailMediaType,proto3" json:"thumbnail_media_type,omitempty"`
+	ThumbnailOriginalFilename string `protobuf:"bytes,8,opt,name=thumbnail_original_filename,json=thumbnailOriginalFilename,proto3" json:"thumbnail_original_filename,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *Source) Reset() {
@@ -1562,6 +1566,20 @@ func (x *Source) GetDescription() string {
 func (x *Source) GetThumbnailRelPath() string {
 	if x != nil {
 		return x.ThumbnailRelPath
+	}
+	return ""
+}
+
+func (x *Source) GetThumbnailMediaType() string {
+	if x != nil {
+		return x.ThumbnailMediaType
+	}
+	return ""
+}
+
+func (x *Source) GetThumbnailOriginalFilename() string {
+	if x != nil {
+		return x.ThumbnailOriginalFilename
 	}
 	return ""
 }
@@ -6181,14 +6199,16 @@ const file_engine_proto_rawDesc = "" +
 	"\x17updated_by_display_name\x18\x06 \x01(\tR\x14updatedByDisplayName\x12$\n" +
 	"\x0eupdated_by_ref\x18\a \x01(\tR\fupdatedByRef\"V\n" +
 	"\x16GetProjectInfoResponse\x12<\n" +
-	"\aproject\x18\x01 \x01(\v2\".provenencia.engine.v1.ProjectInfoR\aproject\"\xb6\x01\n" +
+	"\aproject\x18\x01 \x01(\v2\".provenencia.engine.v1.ProjectInfoR\aproject\"\xa8\x02\n" +
 	"\x06Source\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
 	"\x03ref\x18\x02 \x01(\tR\x03ref\x12$\n" +
 	"\x0esource_type_id\x18\x03 \x01(\tR\fsourceTypeId\x12\x14\n" +
 	"\x05title\x18\x04 \x01(\tR\x05title\x12 \n" +
 	"\vdescription\x18\x05 \x01(\tR\vdescription\x12,\n" +
-	"\x12thumbnail_rel_path\x18\x06 \x01(\tR\x10thumbnailRelPath\"\x9c\x01\n" +
+	"\x12thumbnail_rel_path\x18\x06 \x01(\tR\x10thumbnailRelPath\x120\n" +
+	"\x14thumbnail_media_type\x18\a \x01(\tR\x12thumbnailMediaType\x12>\n" +
+	"\x1bthumbnail_original_filename\x18\b \x01(\tR\x19thumbnailOriginalFilename\"\x9c\x01\n" +
 	"\n" +
 	"SourceNote\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +

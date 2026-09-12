@@ -208,7 +208,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             var copy = source
             if copy.thumbnailRelPath.isEmpty {
                 let arts = artifactsBySource[source.id] ?? []
-                copy.thumbnailRelPath = arts.first { !$0.thumbnailRelPath.isEmpty }?.thumbnailRelPath ?? ""
+                if let raster = arts.first(where: { !$0.thumbnailRelPath.isEmpty }) {
+                    copy.thumbnailRelPath = raster.thumbnailRelPath
+                } else if let fileArt = arts.first(where: { $0.file != nil }) {
+                    copy.thumbnailMediaType = fileArt.file?.mediaType ?? ""
+                    copy.thumbnailOriginalFilename = fileArt.file?.originalFilename ?? ""
+                }
             }
             return copy
         }
@@ -445,11 +450,29 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         path: String
     ) async throws -> (artifact: CatalogArtifact, file: CatalogFileRef, reused: Bool) {
         if let ingestArtifactFileError { throw ingestArtifactFileError }
+        let filename = URL(fileURLWithPath: path).lastPathComponent
+        let ext = URL(fileURLWithPath: path).pathExtension.lowercased()
+        let mediaType: String = switch ext {
+        case "png": "image/png"
+        case "jpg", "jpeg": "image/jpeg"
+        case "gif": "image/gif"
+        case "webp": "image/webp"
+        case "tif", "tiff": "image/tiff"
+        case "pdf": "application/pdf"
+        case "mp4": "video/mp4"
+        case "mov": "video/quicktime"
+        case "mp3": "audio/mpeg"
+        case "wav": "audio/wav"
+        case "txt": "text/plain"
+        case "csv": "text/csv"
+        case "doc", "docx": "application/msword"
+        default: "application/octet-stream"
+        }
         let file = CatalogFileRef(
             id: UUID().uuidString.lowercased(),
             relPath: "objects/aa/bb/aabb",
-            originalFilename: URL(fileURLWithPath: path).lastPathComponent,
-            mediaType: "application/octet-stream",
+            originalFilename: filename,
+            mediaType: mediaType,
             byteSize: 0
         )
         for (sourceID, arts) in artifactsBySource {
@@ -465,7 +488,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 var copy = arts
                 copy[idx].fileID = file.id
                 copy[idx].file = file
-                let ext = URL(fileURLWithPath: path).pathExtension.lowercased()
                 if ["png", "jpg", "jpeg", "gif", "webp", "tif", "tiff"].contains(ext) {
                     copy[idx].thumbnailRelPath = "objects/aa/bb/thumb-\(file.id.prefix(8))"
                 }

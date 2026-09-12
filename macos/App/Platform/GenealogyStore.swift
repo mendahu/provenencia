@@ -30,8 +30,11 @@ struct CatalogSource: Sendable, Equatable, Identifiable {
     var sourceTypeID: String
     var title: String
     var description: String
-    /// Thumbnail JPEG under `objects/…` for list cells (empty = placeholder).
+    /// Thumbnail JPEG under `objects/…` for list cells (empty = no raster).
     var thumbnailRelPath: String = ""
+    /// When `thumbnailRelPath` is empty, MIME of the cover-candidate File for glyphs.
+    var thumbnailMediaType: String = ""
+    var thumbnailOriginalFilename: String = ""
 }
 
 struct CatalogSourceNote: Sendable, Equatable {

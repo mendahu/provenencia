@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AA00000000000000000003B1 /* PVEvidenceIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003B0 /* PVEvidenceIcon.swift */; };
+		AA00000000000000000003B3 /* PVFileTypeGlyphTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003B2 /* PVFileTypeGlyphTests.swift */; };
 		AA0000000000000000000301 /* PVThumbnail.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000300 /* PVThumbnail.swift */; };
 		AA0000000000000000000303 /* PVList.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000302 /* PVList.swift */; };
 		AA000000000000000000031F /* PVReorderableList.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000320 /* PVReorderableList.swift */; };
@@ -161,6 +163,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		AA00000000000000000003B0 /* PVEvidenceIcon.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVEvidenceIcon.swift; sourceTree = "<group>"; };
+		AA00000000000000000003B2 /* PVFileTypeGlyphTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVFileTypeGlyphTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000300 /* PVThumbnail.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVThumbnail.swift; sourceTree = "<group>"; };
 		AA0000000000000000000302 /* PVList.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVList.swift; sourceTree = "<group>"; };
 		AA0000000000000000000320 /* PVReorderableList.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVReorderableList.swift; sourceTree = "<group>"; };
@@ -633,6 +637,7 @@
 				AA0000000000000000000312 /* SourcesModelTests.swift */,
 				AA000000000000000000031E /* SourcePageModelTests.swift */,
 				AA0000000000000000000394 /* ThumbnailCacheTests.swift */,
+				AA00000000000000000003B2 /* PVFileTypeGlyphTests.swift */,
 				AA0000000000000000000332 /* DateValueDraftTests.swift */,
 				AA0000000000000000000232 /* PVComboBoxTests.swift */,
 			);
@@ -658,9 +663,19 @@
 				751809A4EF38DC6F6B1B17A4 /* Forms */,
 				7CE27BCE83A155C8F77EF85E /* Feedback */,
 				4890BA38D028388F6C2157E5 /* Navigation */,
+				AA00000000000000000003B4 /* Research */,
 			);
 			name = Components;
 			path = Components;
+			sourceTree = "<group>";
+		};
+		AA00000000000000000003B4 /* Research */ = {
+			isa = PBXGroup;
+			children = (
+				AA00000000000000000003B0 /* PVEvidenceIcon.swift */,
+			);
+			name = Research;
+			path = Research;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -870,6 +885,7 @@
 				D0D0E4841104F1836736A7CD /* SourceFieldsListPane.swift in Sources */,
 				57420D5CDD1330745ACC33FD /* SourceFieldsDetailPane.swift in Sources */,
 				AA0000000000000000000301 /* PVThumbnail.swift in Sources */,
+				AA00000000000000000003B1 /* PVEvidenceIcon.swift in Sources */,
 				AA0000000000000000000303 /* PVList.swift in Sources */,
 				AA000000000000000000031F /* PVReorderableList.swift in Sources */,
 				AA0000000000000000000305 /* PVDialog.swift in Sources */,
@@ -921,6 +937,7 @@
 				AA0000000000000000000313 /* SourcesModelTests.swift in Sources */,
 				AA000000000000000000031D /* SourcePageModelTests.swift in Sources */,
 				AA0000000000000000000395 /* ThumbnailCacheTests.swift in Sources */,
+				AA00000000000000000003B3 /* PVFileTypeGlyphTests.swift in Sources */,
 				AA0000000000000000000333 /* DateValueDraftTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

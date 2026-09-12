@@ -15,7 +15,7 @@ final class SourcePageContext {
     let projectDir: String
     let userID: String
     let store: any GenealogyStore
-    /// Notifies the Sources list when identity changes (title/type edits).
+    /// Notifies the Sources list when identity or list-cover thumbnails change.
     let onSourceUpdated: ((CatalogSource) -> Void)?
 
     var workspace: CatalogSourceWorkspace?
@@ -43,4 +43,27 @@ final class SourcePageContext {
     }
 
     var source: CatalogSource? { workspace?.source }
+
+    /// Syncs list-row cover fields from workspace Artifacts (first raster, else
+    /// first File MIME/filename) and notifies the Sources list. Call after
+    /// ingest / create that can change the leading thumbnail.
+    func publishCoverToList() {
+        guard var source = workspace?.source else { return }
+        let arts = workspace?.artifacts ?? []
+        if let raster = arts.first(where: { !$0.thumbnailRelPath.isEmpty }) {
+            source.thumbnailRelPath = raster.thumbnailRelPath
+            source.thumbnailMediaType = ""
+            source.thumbnailOriginalFilename = ""
+        } else if let file = arts.first(where: { $0.file != nil })?.file {
+            source.thumbnailRelPath = ""
+            source.thumbnailMediaType = file.mediaType
+            source.thumbnailOriginalFilename = file.originalFilename
+        } else {
+            source.thumbnailRelPath = ""
+            source.thumbnailMediaType = ""
+            source.thumbnailOriginalFilename = ""
+        }
+        workspace?.source = source
+        onSourceUpdated?(source)
+    }
 }

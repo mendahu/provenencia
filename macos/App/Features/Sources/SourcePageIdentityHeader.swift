@@ -15,7 +15,9 @@ struct SourcePageIdentityHeader: View {
                 HStack(alignment: .top, spacing: PVSpacing.space7) {
                     CachedThumbnail(
                         projectDir: model.pageProjectDir,
-                        relPath: model.source?.thumbnailRelPath ?? "",
+                        relPath: identityCover.relPath,
+                        mediaType: identityCover.mediaType,
+                        originalFilename: identityCover.originalFilename,
                         size: 72
                     )
                     titleCluster
@@ -34,6 +36,29 @@ struct SourcePageIdentityHeader: View {
                 .fill(PVColor.borderSubtle)
                 .frame(height: 1)
         }
+    }
+
+    private var identityCover: (relPath: String, mediaType: String, originalFilename: String) {
+        if let source = model.source {
+            if !source.thumbnailRelPath.isEmpty
+                || !source.thumbnailMediaType.isEmpty
+                || !source.thumbnailOriginalFilename.isEmpty
+            {
+                return (
+                    source.thumbnailRelPath,
+                    source.thumbnailMediaType,
+                    source.thumbnailOriginalFilename
+                )
+            }
+        }
+        let arts = model.artifacts.items
+        if let raster = arts.first(where: { !$0.thumbnailRelPath.isEmpty }) {
+            return (raster.thumbnailRelPath, "", "")
+        }
+        if let fileArt = arts.first(where: { $0.file != nil }), let file = fileArt.file {
+            return ("", file.mediaType, file.originalFilename)
+        }
+        return ("", "", "")
     }
 
     private var breadcrumbs: some View {

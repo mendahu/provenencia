@@ -174,8 +174,12 @@ message Source {
   string source_type_id = 3;
   string title = 4;
   string description = 5;
-  // Thumbnail JPEG under objects/… for list cells (empty = placeholder).
+  // Thumbnail JPEG under objects/… for list cells (empty = no raster).
   string thumbnail_rel_path = 6;
+  // When thumbnail_rel_path is empty but a File exists under some Artifact,
+  // MIME of the cover-candidate File for client file-type glyph fallback.
+  string thumbnail_media_type = 7;
+  string thumbnail_original_filename = 8;
 }
 
 message SourceNote {

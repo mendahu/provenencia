@@ -225,4 +225,36 @@ struct SourcesModelTests {
         model.closeSource()
         #expect(model.openedSourceID == nil)
     }
+
+    @Test func applyUpdatedSourceMergesCoverWhenIdentityOmitsThumbs() async {
+        var row = source(id: "s1", title: "Deed", typeID: "t1")
+        row.thumbnailMediaType = "application/pdf"
+        row.thumbnailOriginalFilename = "deed.pdf"
+        let model = makeModel(sources: [row], types: [photoType()])
+        await model.load()
+        model.applyUpdatedSource(
+            CatalogSource(
+                id: "s1",
+                ref: "SRC-AAAAA",
+                sourceTypeID: "t1",
+                title: "Deed renamed",
+                description: ""
+            )
+        )
+        #expect(model.sources.first?.title == "Deed renamed")
+        #expect(model.sources.first?.thumbnailMediaType == "application/pdf")
+        #expect(model.sources.first?.thumbnailOriginalFilename == "deed.pdf")
+    }
+
+    @Test func applyUpdatedSourceReplacesCoverWhenIncomingHasGlyph() async {
+        var row = source(id: "s1", title: "Deed", typeID: "t1")
+        row.thumbnailMediaType = "application/pdf"
+        let model = makeModel(sources: [row], types: [photoType()])
+        await model.load()
+        var updated = source(id: "s1", title: "Deed", typeID: "t1")
+        updated.thumbnailRelPath = "objects/aa/bb/thumb"
+        model.applyUpdatedSource(updated)
+        #expect(model.sources.first?.thumbnailRelPath == "objects/aa/bb/thumb")
+        #expect(model.sources.first?.thumbnailMediaType.isEmpty == true)
+    }
 }

@@ -642,8 +642,14 @@ public nonisolated struct Provenencia_Engine_V1_Source: Sendable {
 
   public var description_p: String = String()
 
-  /// Thumbnail JPEG under objects/… for list cells (empty = placeholder).
+  /// Thumbnail JPEG under objects/… for list cells (empty = no raster).
   public var thumbnailRelPath: String = String()
+
+  /// When thumbnail_rel_path is empty but a File exists under some Artifact,
+  /// MIME of the cover-candidate File for client file-type glyph fallback.
+  public var thumbnailMediaType: String = String()
+
+  public var thumbnailOriginalFilename: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -3083,7 +3089,7 @@ nonisolated extension Provenencia_Engine_V1_GetProjectInfoResponse: SwiftProtobu
 
 nonisolated extension Provenencia_Engine_V1_Source: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Source"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}ref\0\u{3}source_type_id\0\u{1}title\0\u{1}description\0\u{3}thumbnail_rel_path\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}ref\0\u{3}source_type_id\0\u{1}title\0\u{1}description\0\u{3}thumbnail_rel_path\0\u{3}thumbnail_media_type\0\u{3}thumbnail_original_filename\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3097,6 +3103,8 @@ nonisolated extension Provenencia_Engine_V1_Source: SwiftProtobuf.Message, Swift
       case 4: try { try decoder.decodeSingularStringField(value: &self.title) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
       case 6: try { try decoder.decodeSingularStringField(value: &self.thumbnailRelPath) }()
+      case 7: try { try decoder.decodeSingularStringField(value: &self.thumbnailMediaType) }()
+      case 8: try { try decoder.decodeSingularStringField(value: &self.thumbnailOriginalFilename) }()
       default: break
       }
     }
@@ -3121,6 +3129,12 @@ nonisolated extension Provenencia_Engine_V1_Source: SwiftProtobuf.Message, Swift
     if !self.thumbnailRelPath.isEmpty {
       try visitor.visitSingularStringField(value: self.thumbnailRelPath, fieldNumber: 6)
     }
+    if !self.thumbnailMediaType.isEmpty {
+      try visitor.visitSingularStringField(value: self.thumbnailMediaType, fieldNumber: 7)
+    }
+    if !self.thumbnailOriginalFilename.isEmpty {
+      try visitor.visitSingularStringField(value: self.thumbnailOriginalFilename, fieldNumber: 8)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -3131,6 +3145,8 @@ nonisolated extension Provenencia_Engine_V1_Source: SwiftProtobuf.Message, Swift
     if lhs.title != rhs.title {return false}
     if lhs.description_p != rhs.description_p {return false}
     if lhs.thumbnailRelPath != rhs.thumbnailRelPath {return false}
+    if lhs.thumbnailMediaType != rhs.thumbnailMediaType {return false}
+    if lhs.thumbnailOriginalFilename != rhs.thumbnailOriginalFilename {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

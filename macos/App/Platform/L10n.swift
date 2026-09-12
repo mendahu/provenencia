@@ -67,6 +67,52 @@ enum L10n {
             defaultValue: "Loading preview",
             comment: "Accessibility label for a PVThumbnail in the loading state"
         )
+
+        static let evidenceIconFilePDF = LocalizedStringResource(
+            "designSystem.evidenceIcon.filePdf",
+            defaultValue: "PDF file",
+            comment: "Accessibility name for the file_pdf evidence glyph"
+        )
+        static let evidenceIconFileDoc = LocalizedStringResource(
+            "designSystem.evidenceIcon.fileDoc",
+            defaultValue: "Word-processed file",
+            comment: "Accessibility name for the file_doc evidence glyph"
+        )
+        static let evidenceIconFileTxt = LocalizedStringResource(
+            "designSystem.evidenceIcon.fileTxt",
+            defaultValue: "Plain text file",
+            comment: "Accessibility name for the file_txt evidence glyph"
+        )
+        static let evidenceIconFileSheet = LocalizedStringResource(
+            "designSystem.evidenceIcon.fileSheet",
+            defaultValue: "Spreadsheet file",
+            comment: "Accessibility name for the file_sheet evidence glyph"
+        )
+        static let evidenceIconFileSlides = LocalizedStringResource(
+            "designSystem.evidenceIcon.fileSlides",
+            defaultValue: "Presentation file",
+            comment: "Accessibility name for the file_slides evidence glyph"
+        )
+        static let evidenceIconFileVideo = LocalizedStringResource(
+            "designSystem.evidenceIcon.fileVideo",
+            defaultValue: "Video file",
+            comment: "Accessibility name for the file_video evidence glyph"
+        )
+        static let evidenceIconFileAudio = LocalizedStringResource(
+            "designSystem.evidenceIcon.fileAudio",
+            defaultValue: "Audio file",
+            comment: "Accessibility name for the file_audio evidence glyph"
+        )
+        static let evidenceIconFileImageMissing = LocalizedStringResource(
+            "designSystem.evidenceIcon.fileImageMissing",
+            defaultValue: "Image file, preview unavailable",
+            comment: "Accessibility name for the file_image_missing evidence glyph"
+        )
+        static let evidenceIconFileGeneric = LocalizedStringResource(
+            "designSystem.evidenceIcon.fileGeneric",
+            defaultValue: "File of unknown type",
+            comment: "Accessibility name for the file_generic evidence glyph"
+        )
     }
 
     enum Onboarding {
