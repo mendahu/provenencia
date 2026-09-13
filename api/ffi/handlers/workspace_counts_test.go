@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -64,10 +63,8 @@ func TestGetWorkspaceNavCounts(t *testing.T) {
 				if err := proto.Unmarshal(aout, &art); err != nil {
 					t.Fatal(err)
 				}
-				path := filepath.Join(t.TempDir(), "scan.jpg")
-				if err := os.WriteFile(path, []byte("jpeg-bytes"), 0o644); err != nil {
-					t.Fatal(err)
-				}
+				path := filepath.Join(t.TempDir(), "scan.pdf")
+				writePDF(t, path)
 				if _, err := IngestArtifactFile(marshalProto(t, &engine.IngestArtifactFileRequest{
 					ProjectDir: dir, UserId: userID, ArtifactId: art.Artifact.Id, Path: path,
 				})); err != nil {

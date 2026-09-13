@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"errors"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -45,10 +44,8 @@ func TestCreateArtifactAndIngest(t *testing.T) {
 				}
 				cr := req.(*engine.CreateArtifactRequest)
 				assertLatestAuditAction(t, cr.ProjectDir, "create_artifact")
-				path := filepath.Join(t.TempDir(), "scan.jpg")
-				if err := os.WriteFile(path, []byte("jpeg-bytes"), 0o644); err != nil {
-					t.Fatal(err)
-				}
+				path := filepath.Join(t.TempDir(), "scan.png")
+				writePNG(t, path)
 				iout, err := IngestArtifactFile(marshalProto(t, &engine.IngestArtifactFileRequest{
 					ProjectDir: cr.ProjectDir, UserId: cr.UserId, ArtifactId: art.Artifact.Id, Path: path,
 				}))
@@ -59,7 +56,7 @@ func TestCreateArtifactAndIngest(t *testing.T) {
 				if err := proto.Unmarshal(iout, &ingested); err != nil {
 					t.Fatal(err)
 				}
-				if ingested.File.GetOriginalFilename() != "scan.jpg" || ingested.GetReused() {
+				if ingested.File.GetOriginalFilename() != "scan.png" || ingested.GetReused() {
 					t.Fatalf("%+v", ingested)
 				}
 				if ingested.Artifact.GetFileId() == "" {
@@ -69,10 +66,8 @@ func TestCreateArtifactAndIngest(t *testing.T) {
 				assertAuditActionPresent(t, cr.ProjectDir, "update_artifact")
 				assertLatestAuditAction(t, cr.ProjectDir, "update_artifact")
 
-				path2 := filepath.Join(t.TempDir(), "scan2.jpg")
-				if err := os.WriteFile(path2, []byte("jpeg-two"), 0o644); err != nil {
-					t.Fatal(err)
-				}
+				path2 := filepath.Join(t.TempDir(), "scan2.png")
+				writePNG(t, path2)
 				_, err = IngestArtifactFile(marshalProto(t, &engine.IngestArtifactFileRequest{
 					ProjectDir: cr.ProjectDir, UserId: cr.UserId, ArtifactId: art.Artifact.Id, Path: path2,
 				}))
