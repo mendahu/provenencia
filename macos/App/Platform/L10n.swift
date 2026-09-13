@@ -1749,7 +1749,7 @@ enum L10n {
 
         static let ingestAllowedTypesCaption = LocalizedStringResource(
             "sources.page.ingestAllowedTypesCaption",
-            defaultValue: "Images, PDF, text (CSV, Markdown), audio, or video · 512 MB maximum",
+            defaultValue: "Images, PDF, Word, text (CSV, Markdown), audio, or video · 512 MB maximum",
             comment: "Always-visible caption under the ingest file drop row"
         )
 
@@ -2997,12 +2997,12 @@ enum L10n {
         )
         static let ingestUnsupportedOfficeTitle = LocalizedStringResource(
             "error.ingest.unsupported_office.title",
-            defaultValue: "Office documents aren’t accepted as artifact files",
+            defaultValue: "Spreadsheets and presentations aren’t accepted as artifact files",
             comment: "Callout title for ingest.unsupported_office"
         )
         static let ingestUnsupportedOfficeHelp = LocalizedStringResource(
             "error.ingest.unsupported_office.help",
-            defaultValue: "Artifacts hold images, PDFs, plain text (including CSV and Markdown), audio, or video — up to 512 MB. Export to PDF or attach a scan instead.",
+            defaultValue: "Word documents are fine — Excel, PowerPoint, and similar apps are not. Export to PDF or attach a Word file, scan, or image instead (up to 512 MB).",
             comment: "Callout help for ingest.unsupported_office"
         )
         static let ingestUnsupportedArchiveTitle = LocalizedStringResource(
@@ -3012,7 +3012,7 @@ enum L10n {
         )
         static let ingestUnsupportedArchiveHelp = LocalizedStringResource(
             "error.ingest.unsupported_archive.help",
-            defaultValue: "Unzip the archive and attach the scan, PDF, or recording inside. Artifacts hold images, PDFs, plain text (including CSV and Markdown), audio, or video — up to 512 MB.",
+            defaultValue: "Unzip the archive and attach the scan, PDF, or recording inside. Artifacts hold images, PDFs, Word documents, plain text (including CSV and Markdown), audio, or video — up to 512 MB.",
             comment: "Callout help for ingest.unsupported_archive"
         )
         static let ingestUnsupportedExecutableTitle = LocalizedStringResource(
@@ -3027,7 +3027,7 @@ enum L10n {
         )
         static let ingestUnsupportedTypeHelp = LocalizedStringResource(
             "error.ingest.unsupported_type.help",
-            defaultValue: "Artifacts hold images, PDFs, plain text (including CSV and Markdown), audio, or video — up to 512 MB. Choose a different file.",
+            defaultValue: "Artifacts hold images, PDFs, Word documents, plain text (including CSV and Markdown), audio, or video — up to 512 MB. Choose a different file.",
             comment: "Callout help for ingest.unsupported_type"
         )
         static let ingestUnsupportedTypeGenericTitle = LocalizedStringResource(
@@ -3042,7 +3042,7 @@ enum L10n {
         )
         static let ingestUnidentifiedHelp = LocalizedStringResource(
             "error.ingest.unidentified.help",
-            defaultValue: "Artifacts hold images, PDFs, plain text (including CSV and Markdown), audio, or video — up to 512 MB. Try a clearer export from the original app.",
+            defaultValue: "Artifacts hold images, PDFs, Word documents, plain text (including CSV and Markdown), audio, or video — up to 512 MB. Try a clearer export from the original app.",
             comment: "Callout help for ingest.unidentified"
         )
         static let ingestEmptyTitle = LocalizedStringResource(
@@ -3166,7 +3166,7 @@ enum L10n {
                         title: ingestUnsupportedTypeGenericTitle,
                         message: String(format: String(localized: LocalizedStringResource(
                             "error.ingest.unsupported_type.helpWithLabel",
-                            defaultValue: "%@ files aren’t accepted. Artifacts hold images, PDFs, plain text (including CSV and Markdown), audio, or video — up to 512 MB. Choose a different file.",
+                            defaultValue: "%@ files aren’t accepted. Artifacts hold images, PDFs, Word documents, plain text (including CSV and Markdown), audio, or video — up to 512 MB. Choose a different file.",
                             comment: "Callout help for unsupported type with label; argument is short type"
                         )), locale: .current, typeLabel)
                     )

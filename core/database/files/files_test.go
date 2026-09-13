@@ -54,6 +54,8 @@ func TestExtensionForMediaType(t *testing.T) {
 		{in: "text/plain; charset=utf-8", want: ".txt"},
 		{in: "text/csv", want: ".csv"},
 		{in: "text/markdown", want: ".md"},
+		{in: "application/msword", want: ".doc"},
+		{in: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", want: ".docx"},
 		{in: "audio/flac", want: ".flac"},
 		{in: "image/heic", want: ".heic"},
 		{in: "", want: ""},

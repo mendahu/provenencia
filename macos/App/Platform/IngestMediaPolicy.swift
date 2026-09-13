@@ -36,6 +36,12 @@ enum IngestMediaPolicy {
         if let markdown = UTType(filenameExtension: "markdown") {
             types.append(markdown)
         }
+        if let doc = UTType(filenameExtension: "doc") {
+            types.append(doc)
+        }
+        if let docx = UTType(filenameExtension: "docx") {
+            types.append(docx)
+        }
         return types
     }()
 
@@ -116,8 +122,11 @@ enum IngestMediaPolicy {
             if let type = values?.contentType {
                 if (type.conforms(to: .spreadsheet) && !type.conforms(to: .commaSeparatedText))
                     || type.conforms(to: .presentation)
-                    || type.conforms(to: .rtf) || type.identifier.contains("word")
-                    || type.identifier.contains("excel") || type.identifier.contains("powerpoint")
+                    || type.conforms(to: .rtf)
+                    || type.identifier.contains("excel")
+                    || type.identifier.contains("powerpoint")
+                    || type.identifier.contains("spreadsheetml")
+                    || type.identifier.contains("presentationml")
                 {
                     return .reject(.office)
                 }
@@ -151,7 +160,7 @@ enum IngestMediaPolicy {
 
     private static let allowedExtensions: Set<String> = [
         "jpg", "jpeg", "png", "gif", "webp", "tif", "tiff", "bmp", "heic", "heif",
-        "pdf", "txt", "text", "csv", "md", "markdown",
+        "pdf", "doc", "docx", "txt", "text", "csv", "md", "markdown",
         "mp3", "m4a", "aac", "wav", "ogg", "flac", "aif", "aiff",
         "mp4", "m4v", "mov", "webm", "avi",
     ]
@@ -161,7 +170,7 @@ enum IngestMediaPolicy {
         guard !ext.isEmpty else { return .generic }
         if allowedExtensions.contains(ext) { return .ok }
         switch ext {
-        case "doc", "docx", "xls", "xlsx", "ppt", "pptx", "rtf", "odt", "ods", "odp":
+        case "xls", "xlsx", "ppt", "pptx", "rtf", "odt", "ods", "odp":
             return .office
         case "zip", "rar", "7z", "tar", "gz", "tgz", "bz2", "dmg":
             return .archive
@@ -178,6 +187,14 @@ enum IngestMediaPolicy {
         if type.conforms(to: .plainText) { return true }
         if type.conforms(to: .commaSeparatedText) { return true }
         if type.identifier.contains("markdown") { return true }
+        // Word (.doc / .docx); Excel / PowerPoint stay rejected via extension.
+        if type.identifier.contains("wordprocessingml")
+            || type.identifier.contains("msword")
+            || type.identifier == "com.microsoft.word.doc"
+            || type.identifier == "org.openxmlformats.wordprocessingml.document"
+        {
+            return true
+        }
         if type.conforms(to: .audio) { return true }
         if type.conforms(to: .movie) || type.conforms(to: .video) { return true }
         return false

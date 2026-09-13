@@ -11,8 +11,15 @@ struct IngestMediaPolicyTests {
     }
 
     @Test func rejectsOfficeExtension() throws {
-        let url = try writeTemp(name: "notes.docx", data: Data("PK\u{0003}\u{0004}xxxx".utf8))
+        let url = try writeTemp(name: "notes.xlsx", data: Data("PK\u{0003}\u{0004}xxxx".utf8))
         #expect(IngestMediaPolicy.validate(url: url) == .reject(.office))
+    }
+
+    @Test func acceptsWordExtensions() throws {
+        let docx = try writeTemp(name: "letter.docx", data: Data("PK\u{0003}\u{0004}xxxx".utf8))
+        #expect(IngestMediaPolicy.validate(url: docx) == .ok)
+        let doc = try writeTemp(name: "letter.doc", data: Data(" helloid".utf8))
+        #expect(IngestMediaPolicy.validate(url: doc) == .ok)
     }
 
     @Test func rejectsEmpty() throws {
@@ -27,8 +34,8 @@ struct IngestMediaPolicyTests {
 
     @Test func calloutOfficeHasTitleAndHelp() {
         let callout = L10n.Errors.ingestCallout(reason: .office)
-        #expect(String(localized: callout.title).contains("Office"))
-        #expect(callout.message.contains("512 MB"))
+        #expect(String(localized: callout.title).contains("Spreadsheets"))
+        #expect(callout.message.contains("Word"))
     }
 
     @Test func calloutTooLargeInterpolatesSize() {

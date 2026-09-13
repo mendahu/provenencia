@@ -60,6 +60,10 @@ func ExtensionForMediaType(mediaType string) string {
 		return ".heif"
 	case "application/pdf":
 		return ".pdf"
+	case "application/msword":
+		return ".doc"
+	case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+		return ".docx"
 	case "text/plain":
 		return ".txt"
 	case "text/csv", "application/csv":

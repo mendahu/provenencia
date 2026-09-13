@@ -308,7 +308,7 @@ func TestFile(t *testing.T) {
 		}
 	})
 
-	t.Run("rejects unsupported office zip", func(t *testing.T) {
+	t.Run("accepts docx zip package", func(t *testing.T) {
 		c, err := database.Create(t.TempDir(), "t.provenencia")
 		if err != nil {
 			t.Fatal(err)
@@ -318,6 +318,25 @@ func TestFile(t *testing.T) {
 		// Minimal ZIP local-file header — DetectContentType → application/zip.
 		data := []byte("PK\x03\x04" + strings.Repeat("x", 64))
 		path := writeTemp(t, t.TempDir(), "notes.docx", data)
+		res, err := File(c, path, userID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+		if res.File.MediaType != want {
+			t.Fatalf("media %q want %q", res.File.MediaType, want)
+		}
+	})
+
+	t.Run("rejects xlsx zip package", func(t *testing.T) {
+		c, err := database.Create(t.TempDir(), "t.provenencia")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer c.Close()
+		mustUser(t, c)
+		data := []byte("PK\x03\x04" + strings.Repeat("x", 64))
+		path := writeTemp(t, t.TempDir(), "table.xlsx", data)
 		if _, err := File(c, path, userID); !errors.Is(err, ErrUnsupportedOffice) {
 			t.Fatalf("got %v", err)
 		}

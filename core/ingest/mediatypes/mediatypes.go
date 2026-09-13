@@ -64,9 +64,12 @@ func Resolve(sniffed, originalFilename string) (mediaType string, reason Reason,
 		return sniffed, ReasonUnidentified, false
 	}
 
-	// OOXML and similar are often sniffed as zip — prefer Office when the
-	// extension says so, so Callouts can say “Word documents…” not “Archives…”.
+	// OOXML packages sniff as zip. Word (.docx) is allowed; other Office
+	// packages and plain archives are not.
 	if sniffed == "application/zip" || sniffed == "application/x-zip-compressed" {
+		if mapped, mappedOK := fromExtension(originalFilename); mappedOK {
+			return mapped, ReasonOK, true
+		}
 		if r := classifyExtension(originalFilename); r == ReasonOffice {
 			return sniffed, ReasonOffice, false
 		}
@@ -107,6 +110,8 @@ var allowed = map[string]struct{}{
 	"image/heif": {},
 
 	"application/pdf": {},
+	"application/msword": {},
+	"application/vnd.openxmlformats-officedocument.wordprocessingml.document": {},
 	"text/plain":      {},
 	"text/csv":        {},
 	"application/csv": {},
@@ -146,6 +151,8 @@ var extAllowed = map[string]string{
 	"heic": "image/heic",
 	"heif": "image/heif",
 	"pdf":  "application/pdf",
+	"doc":  "application/msword",
+	"docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 	"txt":  "text/plain",
 	"text": "text/plain",
 	"csv":  "text/csv",
@@ -177,9 +184,7 @@ func fromExtension(originalFilename string) (string, bool) {
 
 func classifyMIME(mime string) Reason {
 	switch mime {
-	case "application/msword",
-		"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-		"application/vnd.ms-excel",
+	case "application/vnd.ms-excel",
 		"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 		"application/vnd.ms-powerpoint",
 		"application/vnd.openxmlformats-officedocument.presentationml.presentation",
@@ -207,6 +212,7 @@ func classifyMIME(mime string) Reason {
 		"application/vnd.microsoft.portable-executable":
 		return ReasonExecutable
 	}
+	// Remaining Microsoft / OOXML families (not Word — Word is on the allowlist).
 	if strings.HasPrefix(mime, "application/vnd.ms-") ||
 		strings.HasPrefix(mime, "application/vnd.openxmlformats-officedocument.") {
 		return ReasonOffice
@@ -217,7 +223,7 @@ func classifyMIME(mime string) Reason {
 func classifyExtension(originalFilename string) Reason {
 	ext := strings.ToLower(strings.TrimPrefix(filepath.Ext(originalFilename), "."))
 	switch ext {
-	case "doc", "docx", "xls", "xlsx", "ppt", "pptx", "rtf", "odt", "ods", "odp":
+	case "xls", "xlsx", "ppt", "pptx", "rtf", "odt", "ods", "odp":
 		return ReasonOffice
 	case "zip", "rar", "7z", "tar", "gz", "tgz", "bz2", "dmg":
 		return ReasonArchive
