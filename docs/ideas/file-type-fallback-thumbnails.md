@@ -145,7 +145,7 @@ Shipped on `feat/file-type-fallback-glyphs`:
 
 Shipped on `feat/source-type-icons`:
 
-1. Closed `type_*` key set (~21) and seeded defaults.
+1. Closed `type_*` key set (~22) and seeded defaults.
 2. Catalog migration `000014`: `source_types.icon_key`.
 3. Proto / FFI + icon picker on types; type icons in Source type combo; fileless Artifact thumbs.
 4. No `Source.thumbnail_icon_key` — resolve via `sourceTypeID` → `CatalogSourceType.iconKey`.

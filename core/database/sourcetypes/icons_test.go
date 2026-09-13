@@ -15,6 +15,7 @@ func TestNormalizeIconKey(t *testing.T) {
 		{name: "empty defaults", raw: "", want: DefaultIconKey},
 		{name: "whitespace defaults", raw: "  ", want: DefaultIconKey},
 		{name: "known key", raw: "type_certificate", want: "type_certificate"},
+		{name: "passport", raw: "type_passport", want: "type_passport"},
 		{name: "unknown", raw: "type_nope", wantErr: true},
 		{name: "file key rejected", raw: "file_pdf", wantErr: true},
 	}

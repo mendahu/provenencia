@@ -28,6 +28,7 @@ var ValidIconKeys = map[string]struct{}{
 	"type_folder_archive": {},
 	"type_email":          {},
 	"type_postcard":       {},
+	"type_passport":       {},
 }
 
 // NormalizeIconKey trims and validates icon_key. Empty becomes DefaultIconKey.

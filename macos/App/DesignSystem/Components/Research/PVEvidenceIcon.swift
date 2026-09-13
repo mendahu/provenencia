@@ -47,6 +47,7 @@ enum PVEvidenceIconKey: String, CaseIterable, Sendable {
     case typeFolderArchive = "type_folder_archive"
     case typeEmail = "type_email"
     case typePostcard = "type_postcard"
+    case typePassport = "type_passport"
 
     /// Unknown catalog strings resolve here rather than failing.
     static let fallback: PVEvidenceIconKey = .typeEvidence
@@ -112,6 +113,7 @@ enum PVEvidenceIconKey: String, CaseIterable, Sendable {
         case .typeFolderArchive: L10n.DesignSystem.evidenceIconTypeFolderArchive
         case .typeEmail: L10n.DesignSystem.evidenceIconTypeEmail
         case .typePostcard: L10n.DesignSystem.evidenceIconTypePostcard
+        case .typePassport: L10n.DesignSystem.evidenceIconTypePassport
         }
     }
 
@@ -139,6 +141,7 @@ enum PVEvidenceIconKey: String, CaseIterable, Sendable {
         case .typeFolderArchive: L10n.DesignSystem.evidenceIconTypeFolderArchiveTitle
         case .typeEmail: L10n.DesignSystem.evidenceIconTypeEmailTitle
         case .typePostcard: L10n.DesignSystem.evidenceIconTypePostcardTitle
+        case .typePassport: L10n.DesignSystem.evidenceIconTypePassportTitle
         default: accessibilityName
         }
     }
@@ -167,6 +170,7 @@ enum PVEvidenceIconKey: String, CaseIterable, Sendable {
         case .typeFolderArchive: L10n.DesignSystem.evidenceIconTypeFolderArchiveMetaphor
         case .typeEmail: L10n.DesignSystem.evidenceIconTypeEmailMetaphor
         case .typePostcard: L10n.DesignSystem.evidenceIconTypePostcardMetaphor
+        case .typePassport: L10n.DesignSystem.evidenceIconTypePassportMetaphor
         default: L10n.DesignSystem.evidenceIconTypeEvidenceMetaphor
         }
     }

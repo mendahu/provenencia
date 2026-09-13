@@ -387,6 +387,18 @@
         }
       }
     },
+    "designSystem.evidenceIcon.typePassport": {
+      "comment": "Accessibility name for the type_passport evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passport source type"
+          }
+        }
+      }
+    },
     "designSystem.evidenceIcon.fileImageMissing": {
       "comment": "Accessibility name for the file_image_missing evidence glyph",
       "extractionState": "manual",
@@ -5847,6 +5859,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "Divided back — message, stamp, address"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typePassport.title": {
+      "comment": "Short title for typePassport in the icon picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passport"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typePassport.metaphor": {
+      "comment": "Metaphor for typePassport in the icon picker footer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Travel booklet — cover emblem over the title line"
           }
         }
       }

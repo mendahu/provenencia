@@ -218,6 +218,11 @@ enum L10n {
             defaultValue: "Postcard source type",
             comment: "Accessibility name for the type_postcard evidence glyph"
         )
+        static let evidenceIconTypePassport = LocalizedStringResource(
+            "designSystem.evidenceIcon.typePassport",
+            defaultValue: "Passport source type",
+            comment: "Accessibility name for the type_passport evidence glyph"
+        )
 
         // Short titles for the Source-type icon picker (design pack names).
         static let evidenceIconTypeCertificateTitle = LocalizedStringResource(
@@ -303,6 +308,10 @@ enum L10n {
         static let evidenceIconTypePostcardTitle = LocalizedStringResource(
             "designSystem.evidenceIcon.typePostcard.title", defaultValue: "Postcard",
             comment: "Short title for type_postcard in the icon picker"
+        )
+        static let evidenceIconTypePassportTitle = LocalizedStringResource(
+            "designSystem.evidenceIcon.typePassport.title", defaultValue: "Passport",
+            comment: "Short title for type_passport in the icon picker"
         )
 
         static let evidenceIconTypeCertificateMetaphor = LocalizedStringResource(
@@ -409,6 +418,11 @@ enum L10n {
             "designSystem.evidenceIcon.typePostcard.metaphor",
             defaultValue: "Divided back — message, stamp, address",
             comment: "Metaphor for type_postcard in the icon picker footer"
+        )
+        static let evidenceIconTypePassportMetaphor = LocalizedStringResource(
+            "designSystem.evidenceIcon.typePassport.metaphor",
+            defaultValue: "Travel booklet — cover emblem over the title line",
+            comment: "Metaphor for type_passport in the icon picker footer"
         )
     }
 

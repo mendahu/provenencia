@@ -22,7 +22,8 @@ Source-type marks on `source_types.icon_key` (required, default `type_evidence`)
 `type_certificate`, `type_book`, `type_document`, `type_scroll`, `type_photograph`,
 `type_newspaper`, `type_map`, `type_microfilm`, `type_cassette`, `type_oral_history`,
 `type_video`, `type_website`, `type_census`, `type_dna`, `type_gedcom`, `type_grave`,
-`type_scrapbook`, `type_evidence`, `type_folder_archive`, `type_email`, `type_postcard`.
+`type_scrapbook`, `type_evidence`, `type_folder_archive`, `type_email`, `type_postcard`,
+`type_passport`.
 
 Assets: `provenencia_type_*.imageset` in the same catalog. No ink-band label.
 
@@ -32,5 +33,5 @@ file-type glyphs. Artifact rows **with a File** stay raster → MIME; **fileless
 Artifact rows use the parent Source’s type icon.
 
 Source types create/edit: form shows a 44px tile (28px mark + name + key + Change);
-Change opens a **Choose an icon** dialog with the 21 marks at 40px (names under each),
+Change opens a **Choose an icon** dialog with the curated marks at 40px (names under each),
 immediate selection, metaphor footer, Done to dismiss.
