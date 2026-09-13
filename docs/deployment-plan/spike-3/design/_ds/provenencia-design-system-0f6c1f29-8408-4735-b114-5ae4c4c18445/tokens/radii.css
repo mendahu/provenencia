@@ -1,0 +1,2 @@
+/* Documents have crisp corners; controls get a small, bookbinder's radius. */
+:root{--radius-none:0;--radius-xs:2px;--radius-sm:3px;--radius-md:5px;--radius-lg:8px;--radius-xl:12px;--radius-2xl:18px;--radius-pill:999px;--radius-seal:50%}

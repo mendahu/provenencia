@@ -1,0 +1,96 @@
+/* ── Provenencia palette ───────────────────────────────────────────────
+   Warm parchment neutrals + seven archival pigment hues. Every hue ships
+   100/300/500/700/900 so the app can differentiate record types, evidence
+   grades, and lineage branches without resorting to tints of one colour. */
+:root{
+  /* Parchment → ink neutrals (warm, never blue-grey) */
+  --paper-0:#FDFBF7;--paper-50:#F8F4ED;--paper-100:#F0EAE0;--paper-200:#E3DACB;
+  --paper-300:#CDC0AC;--paper-400:#A5967F;--paper-500:#7D705D;--paper-600:#5D5346;
+  --paper-700:#433C32;--paper-800:#2C2721;--paper-900:#1B1712;--paper-950:#100E0A;
+
+  /* Iron gall — the primary ink. Cold blue-slate over deep teal. */
+  --iron-100:#DCE7EC;--iron-300:#8FB1C0;--iron-500:#3E6E85;--iron-700:#27495B;--iron-900:#152F3B;
+  /* Madder — alarm, contradiction, deletion */
+  --madder-100:#F8DFDB;--madder-300:#E0A196;--madder-500:#B23F2D;--madder-700:#892D1F;--madder-900:#591C13;
+  /* Verdigris — confirmation, verified records */
+  --verdigris-100:#D9EBE2;--verdigris-300:#8CC1AC;--verdigris-500:#3F8C6E;--verdigris-700:#2B6550;--verdigris-900:#1A4032;
+  /* Ochre — inference, highlight, marginalia */
+  --ochre-100:#F8EBCE;--ochre-300:#E4C178;--ochre-500:#BF8927;--ochre-700:#95671A;--ochre-900:#5E4110;
+  /* Lapis — sources, citations, external links */
+  --lapis-100:#DEE3F5;--lapis-300:#9AA9E0;--lapis-500:#4257A8;--lapis-700:#2E3D7B;--lapis-900:#1C2550;
+  /* Plum — unions, marriages, relationship edges */
+  --plum-100:#EFDDEA;--plum-300:#C79BBB;--plum-500:#8B4A78;--plum-700:#6A3459;--plum-900:#432038;
+  /* Copper — migration, movement, in-progress work */
+  --copper-100:#FAE3D5;--copper-300:#E8AE86;--copper-500:#C1662B;--copper-700:#95491C;--copper-900:#5D2D10;
+
+  /* ── Semantic aliases (light) ── */
+  --text-primary:var(--paper-900);--text-secondary:var(--paper-600);--text-muted:var(--paper-500);
+  --text-faint:var(--paper-400);--text-inverse:var(--paper-0);--text-link:var(--lapis-700);
+  --text-link-hover:var(--lapis-500);--text-display:var(--paper-950);
+
+  --surface-page:var(--paper-50);--surface-card:#FFFDF9;--surface-raised:var(--paper-0);
+  --surface-sunken:var(--paper-100);--surface-inset:var(--paper-200);
+  --surface-hover:rgba(62,110,133,.06);--surface-active:rgba(62,110,133,.12);
+  --surface-selected:var(--iron-100);--surface-overlay:rgba(27,23,18,.44);
+
+  --border-subtle:var(--paper-200);--border-default:var(--paper-300);
+  --border-strong:var(--paper-400);--border-inked:var(--paper-700);
+  --border-focus:var(--iron-500);
+
+  --accent:var(--iron-700);--accent-hover:var(--iron-900);--accent-active:var(--paper-950);
+  --accent-fg:var(--paper-0);--accent-soft:var(--iron-100);--accent-soft-fg:var(--iron-900);--accent-line:var(--iron-500);
+
+  --success:var(--verdigris-700);--success-soft:var(--verdigris-100);--success-fg:var(--verdigris-900);
+  --warning:var(--ochre-700);--warning-soft:var(--ochre-100);--warning-fg:var(--ochre-900);
+  --danger:var(--madder-500);--danger-soft:var(--madder-100);--danger-fg:var(--madder-900);
+  --info:var(--lapis-500);--info-soft:var(--lapis-100);--info-fg:var(--lapis-900);
+
+  /* Evidence grading — the spine of the product */
+  --evidence-proven:var(--verdigris-700);--evidence-proven-soft:var(--verdigris-100);
+  --evidence-probable:var(--lapis-500);--evidence-probable-soft:var(--lapis-100);
+  --evidence-possible:var(--ochre-700);--evidence-possible-soft:var(--ochre-100);
+  --evidence-disputed:var(--madder-500);--evidence-disputed-soft:var(--madder-100);
+  --evidence-undocumented:var(--paper-500);--evidence-undocumented-soft:var(--paper-100);
+
+  /* Record types — categorical, deliberately non-sequential */
+  --rec-birth:var(--verdigris-500);--rec-marriage:var(--plum-500);--rec-death:var(--iron-900);
+  --rec-census:var(--lapis-500);--rec-migration:var(--copper-500);--rec-military:var(--ochre-700);
+  --rec-probate:var(--paper-600);--rec-dna:var(--madder-500);
+
+  /* Lineage lines in tree views */
+  --line-paternal:var(--iron-500);--line-maternal:var(--plum-500);--line-inferred:var(--paper-400);
+}
+
+[data-theme="dark"]{
+  --text-primary:var(--paper-100);--text-secondary:var(--paper-300);--text-muted:var(--paper-400);
+  --text-faint:var(--paper-500);--text-inverse:var(--paper-950);--text-link:var(--lapis-300);
+  --text-link-hover:#C3CDF0;--text-display:#FBF7F0;
+
+  --surface-page:var(--paper-950);--surface-card:#191510;--surface-raised:#221D17;
+  --surface-sunken:#0B0907;--surface-inset:#2C2721;
+  --surface-hover:rgba(220,231,236,.06);--surface-active:rgba(220,231,236,.12);
+  --surface-selected:#1E2E37;--surface-overlay:rgba(6,5,4,.6);
+
+  --border-subtle:#2B2620;--border-default:#3C352C;--border-strong:#544B3F;
+  --border-inked:var(--paper-300);--border-focus:var(--iron-300);
+
+  --accent:var(--iron-300);--accent-hover:#A9C4D0;--accent-active:#C6DAE3;
+  --accent-fg:var(--paper-950);--accent-soft:#1E2E37;--accent-soft-fg:#BDD5DF;--accent-line:var(--iron-300);
+
+  --success:#6FB394;--success-soft:#152C23;--success-fg:#B6DCC9;
+  --warning:#DDB35C;--warning-soft:#2E2410;--warning-fg:#F0D79A;
+  --danger:#DE8271;--danger-soft:#331611;--danger-fg:#F2BCB0;
+  --info:#8E9DDA;--info-soft:#181E38;--info-fg:#C3CDF0;
+
+  --evidence-proven:#6FB394;--evidence-proven-soft:#152C23;
+  --evidence-probable:#8E9DDA;--evidence-probable-soft:#181E38;
+  --evidence-possible:#DDB35C;--evidence-possible-soft:#2E2410;
+  --evidence-disputed:#DE8271;--evidence-disputed-soft:#331611;
+  --evidence-undocumented:var(--paper-400);--evidence-undocumented-soft:#241F19;
+
+  --rec-birth:#6FB394;--rec-marriage:#C08FB2;--rec-death:#8FB1C0;
+  --rec-census:#8E9DDA;--rec-migration:#DB9764;--rec-military:#DDB35C;
+  --rec-probate:var(--paper-300);--rec-dna:#DE8271;
+
+  --line-paternal:var(--iron-300);--line-maternal:#C08FB2;--line-inferred:var(--paper-600);
+}

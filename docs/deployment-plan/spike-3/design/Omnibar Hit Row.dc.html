@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/provenencia-design-system-0f6c1f29-8408-4735-b114-5ae4c4c18445/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/provenencia-design-system-0f6c1f29-8408-4735-b114-5ae4c4c18445/tokens/colors.css">
+<link rel="stylesheet" href="_ds/provenencia-design-system-0f6c1f29-8408-4735-b114-5ae4c4c18445/tokens/typography.css">
+<link rel="stylesheet" href="_ds/provenencia-design-system-0f6c1f29-8408-4735-b114-5ae4c4c18445/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/provenencia-design-system-0f6c1f29-8408-4735-b114-5ae4c4c18445/tokens/radii.css">
+<link rel="stylesheet" href="_ds/provenencia-design-system-0f6c1f29-8408-4735-b114-5ae4c4c18445/tokens/elevation.css">
+<link rel="stylesheet" href="_ds/provenencia-design-system-0f6c1f29-8408-4735-b114-5ae4c4c18445/tokens/motion.css">
+<link rel="stylesheet" href="_ds/provenencia-design-system-0f6c1f29-8408-4735-b114-5ae4c4c18445/tokens/base.css">
+<link rel="stylesheet" href="_ds/provenencia-design-system-0f6c1f29-8408-4735-b114-5ae4c4c18445/styles.css">
+<script src="_ds/provenencia-design-system-0f6c1f29-8408-4735-b114-5ae4c4c18445/_ds_bundle.js"></script>
+<style>
+  a { color: var(--text-link); text-decoration: none; }
+  a:hover { color: var(--text-link-hover); text-decoration: underline; }
+</style>
+</helmet>
+<div role="option" aria-selected="{{ selected }}" style="display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; column-gap: var(--space-6); align-items: start; padding: 9px 11px; border-radius: var(--radius-xs); background: {{ rowBg }}; font-family: var(--font-body)" style-hover="background: var(--surface-hover)">
+
+  <div style="grid-row: span 3; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: var(--radius-xs); background: var(--surface-sunken); color: var(--text-faint)">
+    <sc-if value="{{ isThumb }}" hint-placeholder-val="{{ false }}">
+      <span style="width: 100%; height: 100%; display: flex; align-items: flex-end; padding: 4px 3px; box-sizing: border-box; background: var(--paper-200); gap: 2px">
+        <span style="flex: 1; height: 60%; background: var(--paper-400); opacity: 0.55"></span>
+        <span style="flex: 1; height: 85%; background: var(--paper-400); opacity: 0.4"></span>
+        <span style="flex: 1; height: 45%; background: var(--paper-400); opacity: 0.6"></span>
+      </span>
+    </sc-if>
+    <sc-if value="{{ isGlyph }}" hint-placeholder-val="{{ false }}">
+      <span style="font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.04em; color: var(--text-muted)">{{ ext }}</span>
+    </sc-if>
+    <sc-if value="{{ isIcon }}" hint-placeholder-val="{{ true }}">
+      <x-import component-from-global-scope="ProvenenciaDesignSystem_0f6c1f.Icon" name="{{ icon }}" size="{{ iconSize }}" stroke-weight="light" hint-size="17px,17px"></x-import>
+    </sc-if>
+  </div>
+
+  <div style="display: flex; align-items: baseline; gap: var(--space-4); min-width: 0">
+    <span style="flex: 0 1 auto; font-size: var(--text-body); font-weight: var(--weight-semibold); color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ title }}</span>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: var(--space-4); justify-self: end; padding-top: 1px">
+    <span style="flex: none; padding: 1px 6px; border: 1px solid var(--border-subtle); border-radius: var(--radius-xs); font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase; font-weight: var(--weight-semibold); color: var(--text-muted); white-space: nowrap">{{ kind }}</span>
+  </div>
+
+  <div style="grid-column: 2; display: flex; align-items: baseline; gap: var(--space-3); min-width: 0; padding-top: 2px">
+    <span style="flex: 0 1 auto; font-size: var(--text-body-sm); color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ secondary }}</span>
+  </div>
+
+  <div style="grid-column: 3; justify-self: end; padding-top: 3px">
+    <span style="font-family: var(--font-mono); font-size: var(--text-micro); color: {{ refColor }}; white-space: nowrap">{{ reference }}</span>
+  </div>
+
+  <sc-if value="{{ hasContext }}" hint-placeholder-val="{{ false }}">
+    <div style="grid-column: 2 / span 2; display: flex; align-items: baseline; gap: var(--space-3); min-width: 0; padding-top: 3px">
+      <span style="flex: none; font-family: var(--font-mono); font-size: var(--text-micro); color: var(--text-faint)">{{ contextLabel }}</span>
+      <span style="flex: 0 1 auto; font-size: var(--text-caption); font-style: italic; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ contextText }}</span>
+    </div>
+  </sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:520,&quot;height&quot;:72},&quot;hit&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;{ lead?: 'thumb'|'glyph'|'icon'; ext?: string; icon?: string; title: string; kind: string; secondary?: string; ref?: string; exact?: boolean; contextLabel?: string; contextText?: string }&quot;},&quot;selected&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const h = this.props.hit || {};
+    const lead = h.lead || 'icon';
+    const selected = !!(this.props.selected ?? h.selected);
+    return {
+      selected,
+      rowBg: selected ? 'var(--surface-selected)' : 'transparent',
+      isThumb: lead === 'thumb',
+      isGlyph: lead === 'glyph',
+      isIcon: lead === 'icon',
+      ext: h.ext || '',
+      icon: h.icon || 'library',
+      iconSize: 17,
+      title: h.title || '',
+      kind: h.kind || '',
+      secondary: h.secondary || '',
+      reference: h.ref || '',
+      refColor: h.exact ? 'var(--accent)' : 'var(--text-faint)',
+      hasContext: !!h.contextText,
+      contextLabel: h.contextLabel || '',
+      contextText: h.contextText || '',
+    };
+  }
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+/* Restrained: fades and short slides. Nothing bounces. */
+:root{
+  --dur-instant:80ms;/* @kind other */--dur-fast:130ms;/* @kind other */--dur-normal:200ms;/* @kind other */--dur-slow:320ms;/* @kind other */--dur-page:460ms;/* @kind other */
+  --ease-standard:cubic-bezier(.2,.6,.2,1);/* @kind other */--ease-out:cubic-bezier(0,.55,.45,1);/* @kind other */
+  --ease-in:cubic-bezier(.55,0,1,.45);/* @kind other */--ease-inout:cubic-bezier(.5,0,.5,1);/* @kind other */
+  --lift-hover:-1px;/* @kind spacing */--press-scale:.985;/* @kind other */
+}
+@media (prefers-reduced-motion:reduce){:root{--dur-fast:0ms;/* @kind other */--dur-normal:0ms;/* @kind other */--dur-slow:0ms;/* @kind other */--dur-page:0ms/* @kind other */}}

@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/provenencia-design-system-0f6c1f29-8408-4735-b114-5ae4c4c18445/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/provenencia-design-system-0f6c1f29-8408-4735-b114-5ae4c4c18445/tokens/colors.css">
+<link rel="stylesheet" href="_ds/provenencia-design-system-0f6c1f29-8408-4735-b114-5ae4c4c18445/tokens/typography.css">
+<link rel="stylesheet" href="_ds/provenencia-design-system-0f6c1f29-8408-4735-b114-5ae4c4c18445/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/provenencia-design-system-0f6c1f29-8408-4735-b114-5ae4c4c18445/tokens/radii.css">
+<link rel="stylesheet" href="_ds/provenencia-design-system-0f6c1f29-8408-4735-b114-5ae4c4c18445/tokens/elevation.css">
+<link rel="stylesheet" href="_ds/provenencia-design-system-0f6c1f29-8408-4735-b114-5ae4c4c18445/tokens/motion.css">
+<link rel="stylesheet" href="_ds/provenencia-design-system-0f6c1f29-8408-4735-b114-5ae4c4c18445/tokens/base.css">
+<link rel="stylesheet" href="_ds/provenencia-design-system-0f6c1f29-8408-4735-b114-5ae4c4c18445/styles.css">
+<script src="_ds/provenencia-design-system-0f6c1f29-8408-4735-b114-5ae4c4c18445/_ds_bundle.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; }
+  body > *, body > * > * { height: 100%; }
+  a { color: var(--text-link); text-decoration: none; }
+  a:hover { color: var(--text-link-hover); text-decoration: underline; }
+</style>
+</helmet>
+<div data-theme="{{ theme }}" data-screen-label="Workspace" style="display: flex; flex-direction: column; height: 100%; min-height: 0; background: var(--surface-page); font-family: var(--font-body); color: var(--text-primary); overflow: hidden">
+
+  <div style="flex: 1; display: flex; min-height: 0">
+
+  <aside style="position: relative; z-index: 2; flex: none; display: flex; flex-direction: column; width: {{ railWidth }}; background: var(--surface-card); border-right: 1px solid var(--border-subtle); overflow-y: auto; overflow-x: hidden; transition: width var(--dur-normal) var(--ease-standard)">
+
+    <sc-if value="{{ isAligned }}" hint-placeholder-val="{{ true }}">
+      <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}">
+        <div style="flex: none; display: flex; align-items: center; gap: var(--space-5); height: 46px; padding: 0 12px 0 84px; border-bottom: 1px solid var(--border-subtle); box-sizing: border-box">
+          <img src="assets/logo-mark.svg" alt="Provenencia" style="width: 22px; height: 22px; display: block; flex: none">
+          <span style="font-family: var(--font-display); font-size: 15px; font-weight: 600; letter-spacing: -0.02em; color: var(--text-display); white-space: nowrap">Provenencia</span>
+        </div>
+      </sc-if>
+      <sc-if value="{{ collapsed }}" hint-placeholder-val="{{ false }}">
+        <div style="flex: none; height: 46px; border-bottom: 1px solid var(--border-subtle); box-sizing: border-box" aria-hidden="true"></div>
+        <div style="flex: none; display: flex; justify-content: center; padding: 14px 0 2px">
+          <img src="assets/logo-mark.svg" alt="Provenencia" style="width: 22px; height: 22px; display: block">
+        </div>
+      </sc-if>
+    </sc-if>
+
+    <div id="app-nav" style="flex: 1 0 auto; display: flex; flex-direction: column">
+      <x-import component-from-global-scope="SidebarNav" from="./SidebarNav.jsx" groups="{{ navGroups }}" value="{{ section }}" collapsed="{{ collapsed }}" on-change="{{ setSection }}" hint-size="100%,150px"></x-import>
+    </div>
+
+
+    <div style="flex: none; border-top: 1px solid var(--border-subtle); background: var(--surface-sunken)">
+      <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}">
+        <div style="display: flex; align-items: center; gap: var(--space-4); padding: 12px 12px 12px 16px">
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0">
+            <span style="font-family: var(--font-display); font-size: 14px; font-weight: 600; letter-spacing: -0.01em; color: var(--text-display); overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ projectLabel }}</span>
+            <span style="display: flex; align-items: baseline; gap: var(--space-4); min-width: 0">
+              <span style="font-size: var(--text-body-sm); color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ researcherName }}</span>
+              <span style="flex: none; font-family: var(--font-mono); font-size: var(--text-micro); color: var(--text-muted)">{{ researcherRef }}</span>
+            </span>
+          </div>
+          <x-import component-from-global-scope="ProvenenciaDesignSystem_0f6c1f.Tooltip" label="Collapse labels" side="top" hint-size="26px,26px">
+            <x-import component-from-global-scope="ProvenenciaDesignSystem_0f6c1f.IconButton" icon="panel-left-close" label="Collapse labels" size="sm" on-click="{{ toggleRail }}" hint-size="26px,26px"></x-import>
+          </x-import>
+        </div>
+      </sc-if>
+      <sc-if value="{{ collapsed }}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-2); padding: 12px 0">
+          <div ref="{{ acctRef }}" onMouseEnter="{{ showAcct }}" onMouseLeave="{{ hideAcct }}" style="position: relative; display: flex">
+            <x-import component-from-global-scope="ProvenenciaDesignSystem_0f6c1f.IconButton" icon="circle-user" label="{{ accountLabel }}" hint-size="32px,32px"></x-import>
+            <span role="tooltip" style="position: fixed; left: {{ acctTipLeft }}; top: {{ acctTipTop }}; transform: translateY(-50%); z-index: 200; pointer-events: none; display: flex; flex-direction: column; gap: 1px; background: var(--paper-900); color: var(--paper-50); padding: 5px 9px; border-radius: var(--radius-xs); white-space: nowrap; box-shadow: var(--shadow-md); transition: opacity var(--dur-fast) var(--ease-standard); opacity: {{ acctTipOpacity }}">
+              <span style="font-size: var(--text-micro); font-weight: var(--weight-semibold)">{{ projectLabel }}</span>
+              <span style="font-size: var(--text-micro)">{{ researcherName }}</span>
+              <span style="font-family: var(--font-mono); font-size: var(--text-micro); opacity: 0.75">{{ researcherRef }}</span>
+            </span>
+          </div>
+          <x-import component-from-global-scope="ProvenenciaDesignSystem_0f6c1f.Tooltip" label="Show labels" side="right" hint-size="26px,26px">
+            <x-import component-from-global-scope="ProvenenciaDesignSystem_0f6c1f.IconButton" icon="panel-left-open" label="Show labels" size="sm" on-click="{{ toggleRail }}" hint-size="26px,26px"></x-import>
+          </x-import>
+        </div>
+      </sc-if>
+    </div>
+  </aside>
+
+  <main style="flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden">
+    <header style="flex: none; display: flex; align-items: center; gap: var(--space-6); height: {{ headerHeight }}; padding: 0 32px; border-bottom: 1px solid var(--border-subtle); background: var(--surface-page); box-sizing: border-box">
+      <div style="flex: none; display: flex; align-items: center; gap: var(--space-2)">
+        <div style="position: relative; display: flex">
+          <x-import component-from-global-scope="ProvenenciaDesignSystem_0f6c1f.IconButton" icon="chevron-left" label="Back" size="sm" disabled="{{ backDisabled }}" on-click="{{ goBack }}" on-mouse-down="{{ holdBack }}" on-mouse-up="{{ releaseHold }}" on-mouse-leave="{{ releaseHold }}" on-context-menu="{{ openBackMenu }}" hint-size="26px,26px"></x-import>
+        <sc-if value="{{ backMenuOpen }}" hint-placeholder-val="{{ false }}">
+          <div role="menu" style="position: absolute; top: calc(100% + 5px); left: 0; z-index: 60; min-width: 290px; max-width: 380px; padding: 4px; display: flex; flex-direction: column; background: var(--surface-raised); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); box-shadow: var(--shadow-lg)">
+            <sc-for list="{{ backItems }}" as="item" hint-placeholder-count="3">
+              <button role="menuitem" onClick="{{ item.onSelect }}" style="display: grid; grid-template-columns: 15px minmax(0, 1fr) auto; align-items: center; gap: var(--space-5); width: 100%; padding: 6px 9px; text-align: left; background: transparent; border: 0; border-radius: var(--radius-xs); font-family: var(--font-body); cursor: pointer" style-hover="background: var(--surface-hover)">
+                <x-import component-from-global-scope="ProvenenciaDesignSystem_0f6c1f.Icon" name="{{ item.icon }}" size="{{ i15 }}" stroke-weight="light" hint-size="15px,15px"></x-import>
+                <span style="display: flex; align-items: baseline; gap: var(--space-3); min-width: 0; white-space: nowrap">
+                  <span style="flex: none; font-size: var(--text-caption); color: var(--text-muted)">{{ item.root }}</span>
+                  <span style="flex: none; font-size: var(--text-caption); color: var(--text-faint)">{{ item.sep }}</span>
+                  <span style="flex: 0 1 auto; font-size: var(--text-body-sm); font-weight: {{ item.leafWeight }}; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis">{{ item.leaf }}</span>
+                </span>
+                <span style="font-family: var(--font-mono); font-size: var(--text-micro); color: var(--text-faint)">{{ item.ref }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+        </div>
+        <div style="position: relative; display: flex">
+          <x-import component-from-global-scope="ProvenenciaDesignSystem_0f6c1f.IconButton" icon="chevron-right" label="Forward" size="sm" disabled="{{ forwardDisabled }}" on-click="{{ goForward }}" on-mouse-down="{{ holdForward }}" on-mouse-up="{{ releaseHold }}" on-mouse-leave="{{ releaseHold }}" on-context-menu="{{ openForwardMenu }}" hint-size="26px,26px"></x-import>
+        <sc-if value="{{ forwardMenuOpen }}" hint-placeholder-val="{{ false }}">
+          <div role="menu" style="position: absolute; top: calc(100% + 5px); left: 0; z-index: 60; min-width: 290px; max-width: 380px; padding: 4px; display: flex; flex-direction: column; background: var(--surface-raised); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); box-shadow: var(--shadow-lg)">
+            <sc-for list="{{ forwardItems }}" as="item" hint-placeholder-count="3">
+              <button role="menuitem" onClick="{{ item.onSelect }}" style="display: grid; grid-template-columns: 15px minmax(0, 1fr) auto; align-items: center; gap: var(--space-5); width: 100%; padding: 6px 9px; text-align: left; background: transparent; border: 0; border-radius: var(--radius-xs); font-family: var(--font-body); cursor: pointer" style-hover="background: var(--surface-hover)">
+                <x-import component-from-global-scope="ProvenenciaDesignSystem_0f6c1f.Icon" name="{{ item.icon }}" size="{{ i15 }}" stroke-weight="light" hint-size="15px,15px"></x-import>
+                <span style="display: flex; align-items: baseline; gap: var(--space-3); min-width: 0; white-space: nowrap">
+                  <span style="flex: none; font-size: var(--text-caption); color: var(--text-muted)">{{ item.root }}</span>
+                  <span style="flex: none; font-size: var(--text-caption); color: var(--text-faint)">{{ item.sep }}</span>
+                  <span style="flex: 0 1 auto; font-size: var(--text-body-sm); font-weight: {{ item.leafWeight }}; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis">{{ item.leaf }}</span>
+                </span>
+                <span style="font-family: var(--font-mono); font-size: var(--text-micro); color: var(--text-faint)">{{ item.ref }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+        </div>
+      </div>
+      <div style="flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; display: flex; align-items: center">
+        <x-import component-from-global-scope="ProvenenciaDesignSystem_0f6c1f.Breadcrumbs" items="{{ crumbs }}" dc-props="{{ crumbProps }}" hint-size="200px,18px"></x-import>
+      </div>
+      <div style="flex: 0 0 420px; max-width: 60%; display: flex">
+        <x-import component-from-global-scope="ProvenenciaDesignSystem_0f6c1f.Input" icon-left="search" size="sm" suffix="⌘K" type="search" aria-label="Search everything" dc-props="{{ searchProps }}" placeholder="{{ searchPlaceholder }}" hint-size="100%,28px"></x-import>
+      </div>
+    </header>
+
+    <div style="flex: 1; overflow-y: auto; padding: 28px 32px 32px">
+      <div style="max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-7); height: 100%; box-sizing: border-box">
+        <h1 style="margin: 0; flex: none; font-family: var(--font-display); font-size: 26px; font-weight: 600; letter-spacing: -0.02em; color: var(--text-display); line-height: 1.15">{{ pageTitle }}</h1>
+        <div style="flex: 1; min-height: 100px; border: 1px dashed var(--border-default); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; padding: var(--space-10)">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; max-width: 46ch">
+            <span style="font-family: var(--font-display); font-size: 17px; font-weight: 600; color: var(--text-secondary)">{{ placeholderTitle }}</span>
+            <span style="font-size: var(--text-body-sm); font-style: italic; color: var(--text-muted)">{{ placeholderNote }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:800},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;system&quot;,&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;system&quot;,&quot;tsType&quot;:&quot;'system' | 'light' | 'dark'&quot;,&quot;section&quot;:&quot;Appearance&quot;},&quot;collapsed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Sidebar&quot;},&quot;defaultSection&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;sources&quot;,&quot;source-types&quot;,&quot;source-fields&quot;],&quot;default&quot;:&quot;sources&quot;,&quot;tsType&quot;:&quot;'sources' | 'source-types' | 'source-fields'&quot;,&quot;section&quot;:&quot;Sidebar&quot;},&quot;showAccountTooltip&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Sidebar&quot;},&quot;demoHistory&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Toolbar&quot;},&quot;searchPlaceholder&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Search people, sources, places and files&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Toolbar&quot;},&quot;researcherName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Jake Robins&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Identity&quot;},&quot;researcherRef&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;USR-F4N2P&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Identity&quot;},&quot;projectLabel&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Robins Family&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Identity&quot;},&quot;persist&quot;:{&quot;editor&quot;:null,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const SECTIONS = [
+  { id: 'sources', label: 'Sources', icon: 'library', note: 'Source catalog list and detail arrive in S2-02' },
+  { id: 'source-types', label: 'Source types', icon: 'tags', note: 'Type vocabulary editor arrives in S2-04' },
+  { id: 'source-fields', label: 'Source fields', icon: 'list', note: 'Field vocabulary editor arrives in S2-04' },
+];
+
+const DEMO_TRAIL = [
+  { sec: 'sources' },
+  { sec: 'sources', item: { label: 'Ilminster parish register, 1841\u20131852', ref: 'SRC-3K9M2' } },
+  { sec: 'source-fields' },
+  { sec: 'source-fields', item: { label: 'Folio reference', ref: 'FLD-21' } },
+  { sec: 'source-types' },
+  { sec: 'source-types', item: { label: 'Parish register', ref: 'TYP-07' } },
+];
+
+function demoHistory(current) {
+  return DEMO_TRAIL.filter((e) => e.sec !== current).concat([{ sec: current }]);
+}
+
+class Component extends DCLogic {
+  state = { section: null, collapsed: null, systemDark: false, acctHover: false, acctTip: null, history: null, hIndex: null, menu: null };
+
+  componentDidMount() {
+    this.onDocDown = (e) => {
+      if (this.state.menu && !(this.menuHost && this.menuHost.contains && this.menuHost.contains(e.target))) {
+        clearTimeout(this.holdTimer);
+        this.held = false;
+        this.setState({ menu: null });
+      }
+    };
+    document.addEventListener('mousedown', this.onDocDown, true);
+    this.onKey = (e) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      if (e.key === '[') { e.preventDefault(); this.step(-1); }
+      if (e.key === ']') { e.preventDefault(); this.step(1); }
+    };
+    document.addEventListener('keydown', this.onKey);
+    this.mq = window.matchMedia('(prefers-color-scheme: dark)');
+    this.onMq = () => this.setState({ systemDark: this.mq.matches });
+    this.onMq();
+    this.mq.addEventListener('change', this.onMq);
+    if (this.props.showAccountTooltip) requestAnimationFrame(() => this.measureAcct());
+    try {
+      if (this.props.persist === false) return;
+      const saved = localStorage.getItem('pv.sidebarCollapsed');
+      if (saved !== null && this.props.collapsed == null) this.setState({ collapsed: saved === '1' });
+    } catch (e) {}
+  }
+
+  measureAcct() {
+    if (!this.acctEl) return;
+    const r = this.acctEl.getBoundingClientRect();
+    const t = this.state.acctTip;
+    if (!t || Math.round(t.left) !== Math.round(r.right + 8) || Math.round(t.top) !== Math.round(r.top + r.height / 2)) {
+      this.setState({ acctTip: { left: r.right + 8, top: r.top + r.height / 2 } });
+    }
+  }
+
+  componentDidUpdate() {
+    if (this.props.showAccountTooltip) this.measureAcct();
+  }
+
+  componentWillUnmount() {
+    if (this.mq) this.mq.removeEventListener('change', this.onMq);
+    document.removeEventListener('mousedown', this.onDocDown, true);
+    document.removeEventListener('keydown', this.onKey);
+    clearTimeout(this.holdTimer);
+  }
+
+  hist() {
+    if (this.state.history) return this.state.history;
+    if (this.props.demoHistory !== false) return demoHistory(this.props.defaultSection || 'sources');
+    return [{ sec: this.props.defaultSection || 'sources' }];
+  }
+
+  hIdx() {
+    const h = this.hist();
+    const i = this.state.hIndex == null ? h.length - 1 : this.state.hIndex;
+    return Math.max(0, Math.min(i, h.length - 1));
+  }
+
+  startHold(which, e) {
+    this.menuHost = e.currentTarget.parentNode;
+    this.held = false;
+    clearTimeout(this.holdTimer);
+    this.holdTimer = setTimeout(() => {
+      this.held = true;
+      this.setState({ menu: which });
+    }, 400);
+  }
+
+  openMenu(which, e) {
+    e.preventDefault();
+    this.menuHost = e.currentTarget.parentNode;
+    clearTimeout(this.holdTimer);
+    this.held = true;
+    this.setState({ menu: which });
+  }
+
+  step(delta) {
+    clearTimeout(this.holdTimer);
+    if (this.held) { this.held = false; return; }
+    const h = this.hist();
+    const next = this.hIdx() + delta;
+    if (next < 0 || next >= h.length) return;
+    this.setState({ history: h, hIndex: next, section: h[next].sec, menu: null });
+  }
+
+  jump(i) {
+    const h = this.hist();
+    this.setState({ history: h, hIndex: i, section: h[i].sec, menu: null });
+    this.held = false;
+  }
+
+  renderVals() {
+    const history = this.hist();
+    const hIndex = this.hIdx();
+    const entry = history[hIndex] || { sec: 'sources' };
+    const section = this.state.section || entry.sec || this.props.defaultSection || 'sources';
+    const active = SECTIONS.find((s) => s.id === section) || SECTIONS[0];
+    const collapsed = this.state.collapsed ?? this.props.collapsed ?? false;
+    const counts = { sources: 1904, 'source-types': 12, 'source-fields': 46 };
+    const pref = this.props.theme ?? 'system';
+    const name = this.props.researcherName ?? 'Jake Robins';
+    const ref = this.props.researcherRef ?? 'USR-F4N2P';
+    const secOf = (id) => SECTIONS.find((s) => s.id === id) || SECTIONS[0];
+    const rowOf = (e, i) => {
+      const sec = secOf(e.sec);
+      return {
+        icon: sec.icon,
+        root: e.item ? sec.label : '',
+        sep: e.item ? '\u203a' : '',
+        leaf: e.item ? e.item.label : sec.label,
+        leafWeight: e.item ? 'var(--weight-semibold)' : 'var(--weight-semibold)',
+        ref: e.item ? e.item.ref : '',
+        onSelect: () => this.jump(i),
+      };
+    };
+    return {
+      theme: pref === 'system' ? (this.state.systemDark ? 'dark' : 'light') : pref,
+      section,
+      collapsed,
+      expanded: !collapsed,
+      isAligned: true,
+      headerHeight: '46px',
+      railWidth: collapsed ? '78px' : '264px',
+      pageTitle: active.label,
+      placeholderTitle: active.label + ' content goes here',
+      placeholderNote: active.note,
+      crumbs: entry.item ? [{ label: active.label }, { label: entry.item.ref }] : [{ label: active.label }],
+      i15: 15,
+      searchProps: this.searchProps || (this.searchProps = { style: { flex: 1, minWidth: 0 } }),
+      crumbProps: this.crumbProps || (this.crumbProps = { style: { flexWrap: 'nowrap', minWidth: 0, overflow: 'hidden' } }),
+      searchPlaceholder: this.props.searchPlaceholder ?? 'Search people, sources, places and files',
+      backDisabled: hIndex <= 0,
+      forwardDisabled: hIndex >= history.length - 1,
+      backMenuOpen: this.state.menu === 'back',
+      forwardMenuOpen: this.state.menu === 'forward',
+      backItems: history.slice(0, hIndex).map(rowOf).reverse(),
+      forwardItems: history.slice(hIndex + 1).map((e, i) => rowOf(e, hIndex + 1 + i)),
+      goBack: () => this.step(-1),
+      goForward: () => this.step(1),
+      holdBack: (e) => this.startHold('back', e),
+      holdForward: (e) => this.startHold('forward', e),
+      releaseHold: () => clearTimeout(this.holdTimer),
+      openBackMenu: (e) => this.openMenu('back', e),
+      openForwardMenu: (e) => this.openMenu('forward', e),
+      projectLabel: this.props.projectLabel ?? 'Robins Family',
+      researcherName: name,
+      researcherRef: ref,
+      accountLabel: name + ' · ' + ref,
+      acctTipOpacity: (this.props.showAccountTooltip ?? false) || this.state.acctHover ? 1 : 0,
+      acctRef: (el) => { this.acctEl = el; },
+      acctTipLeft: (this.state.acctTip ? this.state.acctTip.left : 0) + 'px',
+      acctTipTop: (this.state.acctTip ? this.state.acctTip.top : 0) + 'px',
+      showAcct: () => {
+        const r = this.acctEl && this.acctEl.getBoundingClientRect();
+        this.setState({ acctHover: true, acctTip: r ? { left: r.right + 8, top: r.top + r.height / 2 } : null });
+      },
+      hideAcct: () => this.setState({ acctHover: false }),
+      navGroups: [{
+        label: 'Source layer',
+        items: SECTIONS.map((s) => ({ ...s, count: counts[s.id] })),
+      }],
+      setSection: (id) => this.setState((st) => {
+        const h = this.hist();
+        const i = this.hIdx();
+        if (h[i] && h[i].sec === id && !h[i].item) return { section: id, menu: null };
+        const next = h.slice(0, i + 1).concat([{ sec: id }]).slice(-12);
+        return { section: id, history: next, hIndex: next.length - 1, menu: null };
+      }),
+      toggleRail: () => this.setState((st) => {
+        const next = !(st.collapsed ?? this.props.collapsed ?? false);
+        if (this.props.persist !== false) {
+          try { localStorage.setItem('pv.sidebarCollapsed', next ? '1' : '0'); } catch (e) {}
+        }
+        return { collapsed: next };
+      }),
+    };
+  }
+}
+
+</script>
+</body>
+</html>
