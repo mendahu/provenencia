@@ -50,6 +50,7 @@ enum Method {
   METHOD_REORDER_SOURCE_METADATA = 40;
   METHOD_ENSURE_FILE_THUMBNAIL = 41;
   METHOD_CLOSE_CATALOG_SESSION = 42;
+  METHOD_SET_SOURCE_COVER = 43;
 }
 
 message PingRequest {
@@ -180,6 +181,10 @@ message Source {
   // MIME of the cover-candidate File for client file-type glyph fallback.
   string thumbnail_media_type = 7;
   string thumbnail_original_filename = 8;
+  // Cover preference: "artifact" (primary_artifact_id) or "type_icon".
+  string cover_mode = 9;
+  // Set when cover_mode is artifact; empty for type_icon.
+  string primary_artifact_id = 10;
 }
 
 message SourceNote {
@@ -356,6 +361,20 @@ message UpdateSourceRequest {
 }
 
 message UpdateSourceResponse {
+  Source source = 1;
+}
+
+message SetSourceCoverRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string source_id = 3;
+  // "artifact" or "type_icon".
+  string cover_mode = 4;
+  // Required when cover_mode is artifact; ignored for type_icon.
+  string primary_artifact_id = 5;
+}
+
+message SetSourceCoverResponse {
   Source source = 1;
 }
 

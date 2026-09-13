@@ -340,6 +340,13 @@ private struct ThrowingStore: GenealogyStore {
         title _: String,
         description _: String
     ) async throws -> CatalogSource { throw StoreBoom.boom }
+    func setSourceCover(
+        projectDir _: String,
+        userID _: String,
+        sourceID _: String,
+        coverMode _: String,
+        primaryArtifactID _: String
+    ) async throws -> CatalogSource { throw StoreBoom.boom }
     func addSourceNote(projectDir _: String, userID _: String, sourceID _: String, body _: String) async throws
         -> CatalogSourceNote { throw StoreBoom.boom }
     func updateSourceNote(projectDir _: String, userID _: String, noteID _: String, body _: String) async throws

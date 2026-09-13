@@ -66,7 +66,8 @@ func TestCreateArtifactAndIngest(t *testing.T) {
 					t.Fatal("expected file_id")
 				}
 				assertAuditActionPresent(t, cr.ProjectDir, "create_file")
-				assertLatestAuditAction(t, cr.ProjectDir, "update_artifact")
+				assertAuditActionPresent(t, cr.ProjectDir, "update_artifact")
+				assertLatestAuditAction(t, cr.ProjectDir, "set_source_cover")
 
 				path2 := filepath.Join(t.TempDir(), "scan2.jpg")
 				if err := os.WriteFile(path2, []byte("jpeg-two"), 0o644); err != nil {

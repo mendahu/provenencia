@@ -3967,6 +3967,114 @@
         }
       }
     },
+    "sources.page.coverBadge": {
+      "comment": "Badge on the Artifact currently used as the Source thumbnail",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cover"
+          }
+        }
+      }
+    },
+    "sources.page.useAsThumbnail": {
+      "comment": "Button to pin an Artifact as the Source list/identity cover",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use as thumbnail"
+          }
+        }
+      }
+    },
+    "sources.page.thumbnailMenuTitle": {
+      "comment": "Context menu title on the Source identity cover",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source thumbnail"
+          }
+        }
+      }
+    },
+    "sources.page.thumbnailMenuHint": {
+      "comment": "Accessibility hint on the Source identity cover thumbnail",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Right-click for thumbnail options"
+          }
+        }
+      }
+    },
+    "sources.page.thumbnailRevertToDefault": {
+      "comment": "Context menu action to use the Source type icon as cover",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revert to default"
+          }
+        }
+      }
+    },
+    "sources.page.thumbnailDefaultInUse": {
+      "comment": "Disabled context menu item when the type icon is already the cover",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Default icon is in use"
+          }
+        }
+      }
+    },
+    "sources.page.toastThumbnailUpdatedTitle": {
+      "comment": "Toast title after changing Source cover",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thumbnail updated"
+          }
+        }
+      }
+    },
+    "sources.page.toastThumbnailUpdatedArtifactBody": {
+      "comment": "Toast body after pinning an Artifact; argument is ART- ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Using %@ as the Source thumbnail."
+          }
+        }
+      }
+    },
+    "sources.page.toastThumbnailUpdatedTypeIconBody": {
+      "comment": "Toast body after reverting cover to the type icon",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Using the Source type icon as the thumbnail."
+          }
+        }
+      }
+    },
     "sourceTypes.delete.action": {
       "comment": "Delete button in the Source types detail pane, and the confirm dialog's destructive button",
       "extractionState": "manual",

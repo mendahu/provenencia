@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// Sticky identity header: breadcrumbs, thumbnail, title edit, type chip.
@@ -7,20 +8,17 @@ struct SourcePageIdentityHeader: View {
     /// Local draft so title keystrokes don't invalidate the whole Source page
     /// observation graph on every character.
     @State private var titleDraft = ""
+    /// Custom Source-thumbnail menu (design: not `NSMenu` / `.contextMenu`).
+    @State private var coverMenuOpen = false
+    @State private var coverMenuOrigin: CGPoint = .zero
+    @State private var coverMenuDismissMonitor: Any?
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space5) {
             breadcrumbs
             if model.workspace != nil {
                 HStack(alignment: .top, spacing: PVSpacing.space7) {
-                    CachedThumbnail(
-                        projectDir: model.pageProjectDir,
-                        relPath: identityCover.relPath,
-                        mediaType: identityCover.mediaType,
-                        originalFilename: identityCover.originalFilename,
-                        typeIconKey: identityCover.typeIconKey,
-                        size: 72
-                    )
+                    coverThumbnail
                     titleCluster
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -37,6 +35,123 @@ struct SourcePageIdentityHeader: View {
                 .fill(PVColor.borderSubtle)
                 .frame(height: 1)
         }
+        .onChange(of: coverMenuOpen) { _, open in
+            if open {
+                // Defer so the opening right-click does not immediately dismiss.
+                DispatchQueue.main.async {
+                    installCoverMenuDismissMonitor()
+                }
+            } else {
+                removeCoverMenuDismissMonitor()
+            }
+        }
+        .onDisappear {
+            coverMenuOpen = false
+            removeCoverMenuDismissMonitor()
+        }
+    }
+
+    private var coverThumbnail: some View {
+        ZStack(alignment: .topLeading) {
+            CachedThumbnail(
+                projectDir: model.pageProjectDir,
+                relPath: identityCover.relPath,
+                mediaType: identityCover.mediaType,
+                originalFilename: identityCover.originalFilename,
+                typeIconKey: identityCover.typeIconKey,
+                size: 72
+            )
+            .accessibilityHint(L10n.Sources.thumbnailMenuHint)
+            .accessibilityIdentifier("sources.page.cover")
+            .overlay {
+                RightClickCatcher { point in
+                    coverMenuOrigin = point
+                    coverMenuOpen = true
+                }
+            }
+            .help(String(localized: L10n.Sources.thumbnailMenuHint))
+
+            if coverMenuOpen {
+                coverMenuPanel
+                    .offset(
+                        x: min(max(coverMenuOrigin.x, 0), 40),
+                        y: min(max(coverMenuOrigin.y, 8), 64)
+                    )
+                    .zIndex(20)
+            }
+        }
+    }
+
+    private var coverMenuPanel: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(L10n.Sources.thumbnailMenuTitle)
+                .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
+                .tracking(PVTypeScale.micro * PVTracking.caps)
+                .textCase(.uppercase)
+                .foregroundStyle(PVColor.textFaint)
+                .padding(.horizontal, PVSpacing.space5)
+                .padding(.top, PVSpacing.space3)
+                .padding(.bottom, PVSpacing.space2)
+
+            if model.source?.coverMode == "type_icon" {
+                Text(L10n.Sources.thumbnailDefaultInUse)
+                    .font(PVFont.body(size: PVTypeScale.bodySmall))
+                    .foregroundStyle(PVColor.textFaint)
+                    .padding(.horizontal, PVSpacing.space5)
+                    .padding(.vertical, PVSpacing.space4)
+                    .fixedSize(horizontal: true, vertical: false)
+            } else {
+                Button {
+                    coverMenuOpen = false
+                    Task { await model.artifacts.revertCoverToTypeIcon() }
+                } label: {
+                    Text(L10n.Sources.thumbnailRevertToDefault)
+                        .font(PVFont.body(size: PVTypeScale.bodySmall))
+                        .foregroundStyle(PVColor.textPrimary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, PVSpacing.space5)
+                        .padding(.vertical, PVSpacing.space4)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(CoverMenuItemButtonStyle())
+                .accessibilityIdentifier("sources.page.cover.revert")
+            }
+        }
+        .padding(PVSpacing.space2)
+        .frame(minWidth: 180, alignment: .leading)
+        .background(PVColor.surfaceCard)
+        .overlay(
+            RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
+                .stroke(PVColor.borderSubtle, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous))
+        .pvShadow(PVElevation.overlay)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("sources.page.cover.menu")
+    }
+
+    private func installCoverMenuDismissMonitor() {
+        removeCoverMenuDismissMonitor()
+        coverMenuDismissMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown, .keyDown]
+        ) { event in
+            if event.type == .keyDown {
+                if event.keyCode == 53 { // Escape
+                    DispatchQueue.main.async { coverMenuOpen = false }
+                    return nil
+                }
+                return event
+            }
+            DispatchQueue.main.async { coverMenuOpen = false }
+            return event
+        }
+    }
+
+    private func removeCoverMenuDismissMonitor() {
+        if let coverMenuDismissMonitor {
+            NSEvent.removeMonitor(coverMenuDismissMonitor)
+            self.coverMenuDismissMonitor = nil
+        }
     }
 
     private var identityCover: (
@@ -48,8 +163,11 @@ struct SourcePageIdentityHeader: View {
         let typeIcon = model.identity.types
             .first { $0.id == model.identity.sourceTypeID }?
             .iconKey
+        // Prefer persisted / enriched Source cover; fall through only when
+        // workspace source has not been enriched yet (load race).
         if let source = model.source {
-            if !source.thumbnailRelPath.isEmpty
+            if source.coverMode == "type_icon"
+                || !source.thumbnailRelPath.isEmpty
                 || !source.thumbnailMediaType.isEmpty
                 || !source.thumbnailOriginalFilename.isEmpty
             {
@@ -60,13 +178,16 @@ struct SourcePageIdentityHeader: View {
                     typeIcon
                 )
             }
-        }
-        let arts = model.artifacts.items
-        if let raster = arts.first(where: { !$0.thumbnailRelPath.isEmpty }) {
-            return (raster.thumbnailRelPath, "", "", typeIcon)
-        }
-        if let fileArt = arts.first(where: { $0.file != nil }), let file = fileArt.file {
-            return ("", file.mediaType, file.originalFilename, typeIcon)
+            if source.coverMode == "artifact",
+               let art = model.artifacts.items.first(where: { $0.id == source.primaryArtifactID })
+            {
+                if !art.thumbnailRelPath.isEmpty {
+                    return (art.thumbnailRelPath, "", "", typeIcon)
+                }
+                if let file = art.file {
+                    return ("", file.mediaType, file.originalFilename, typeIcon)
+                }
+            }
         }
         return ("", "", "", typeIcon)
     }
@@ -226,5 +347,31 @@ struct SourcePageIdentityHeader: View {
                 }
             }
         }
+    }
+}
+
+/// Hover / press fill for custom cover-menu rows (matches `--surface-hover`).
+private struct CoverMenuItemButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background {
+                RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                    .fill(configuration.isPressed ? PVColor.surfaceActive : Color.clear)
+            }
+            .background {
+                CoverMenuHoverFill()
+            }
+    }
+}
+
+private struct CoverMenuHoverFill: View {
+    @State private var hovering = false
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+            .fill(PVColor.surfaceHover)
+            .opacity(hovering ? 1 : 0)
+            .onHover { hovering = $0 }
+            .allowsHitTesting(false)
     }
 }

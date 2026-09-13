@@ -3,11 +3,14 @@ package sources
 import (
 	"database/sql"
 	"errors"
+	"os"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/ref"
 )
 
@@ -321,6 +324,134 @@ func TestSources(t *testing.T) {
 				_, err := Get(c, id)
 				if !errors.Is(err, sql.ErrNoRows) {
 					t.Fatalf("got %v", err)
+				}
+			},
+		},
+		{
+			name: "cover columns default type_icon",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				typeID := mustType(t, c)
+				s, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: "Cover default"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if s.CoverMode != CoverModeTypeIcon {
+					t.Fatalf("cover_mode %q", s.CoverMode)
+				}
+				if len(s.PrimaryArtifactID) != 0 {
+					t.Fatalf("primary %v", s.PrimaryArtifactID)
+				}
+				got, err := Get(c, s.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got.CoverMode != CoverModeTypeIcon || len(got.PrimaryArtifactID) != 0 {
+					t.Fatalf("get cover %+v", got)
+				}
+			},
+		},
+		{
+			name: "set cover artifact and revert to type icon",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				typeID := mustType(t, c)
+				s, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: "Pin cover"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				path := t.TempDir() + "/scan.jpg"
+				if err := os.WriteFile(path, []byte("not-really-jpeg"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				fres, err := ingest.File(c, path, userID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				a, err := artifacts.Create(c, userID, artifacts.CreateInput{
+					SourceID: s.ID, FileID: fres.File.ID, Label: "Scan",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				pinned, err := SetCover(c, userID, s.ID, CoverModeArtifact, a.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if pinned.CoverMode != CoverModeArtifact || !bytesEqual(pinned.PrimaryArtifactID, a.ID) {
+					t.Fatalf("pinned %+v", pinned)
+				}
+				if latestAction(t, c) != "set_source_cover" {
+					t.Fatalf("action %s", latestAction(t, c))
+				}
+				fileless, err := artifacts.Create(c, userID, artifacts.CreateInput{
+					SourceID: s.ID, Label: "Note only",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := SetCover(c, userID, s.ID, CoverModeArtifact, fileless.ID); !errors.Is(err, ErrInvalid) {
+					t.Fatalf("fileless pin %v", err)
+				}
+				reverted, err := SetCover(c, userID, s.ID, CoverModeTypeIcon, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if reverted.CoverMode != CoverModeTypeIcon || len(reverted.PrimaryArtifactID) != 0 {
+					t.Fatalf("reverted %+v", reverted)
+				}
+			},
+		},
+		{
+			name: "maybe pin first file cover once",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				typeID := mustType(t, c)
+				s, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: "Auto pin"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				path := t.TempDir() + "/a.pdf"
+				if err := os.WriteFile(path, []byte("%PDF"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				f1, err := ingest.File(c, path, userID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				a1, err := artifacts.Create(c, userID, artifacts.CreateInput{
+					SourceID: s.ID, FileID: f1.File.ID, Label: "First",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				got, pinned, err := MaybePinFirstFileCover(c, userID, s.ID, a1.ID)
+				if err != nil || !pinned {
+					t.Fatalf("first pin got=%+v pinned=%v err=%v", got, pinned, err)
+				}
+				if got.CoverMode != CoverModeArtifact || !bytesEqual(got.PrimaryArtifactID, a1.ID) {
+					t.Fatalf("got %+v", got)
+				}
+				path2 := t.TempDir() + "/b.pdf"
+				if err := os.WriteFile(path2, []byte("%PDF-2"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				f2, err := ingest.File(c, path2, userID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				a2, err := artifacts.Create(c, userID, artifacts.CreateInput{
+					SourceID: s.ID, FileID: f2.File.ID, Label: "Second",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				again, pinned2, err := MaybePinFirstFileCover(c, userID, s.ID, a2.ID)
+				if err != nil || pinned2 {
+					t.Fatalf("second pin again=%+v pinned=%v err=%v", again, pinned2, err)
+				}
+				if !bytesEqual(again.PrimaryArtifactID, a1.ID) {
+					t.Fatalf("stole cover %+v", again)
 				}
 			},
 		},

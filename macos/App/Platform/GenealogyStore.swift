@@ -35,6 +35,10 @@ struct CatalogSource: Sendable, Equatable, Identifiable {
     /// When `thumbnailRelPath` is empty, MIME of the cover-candidate File for glyphs.
     var thumbnailMediaType: String = ""
     var thumbnailOriginalFilename: String = ""
+    /// `artifact` (pinned primary) or `type_icon`.
+    var coverMode: String = "type_icon"
+    /// Set when `coverMode` is `artifact`.
+    var primaryArtifactID: String = ""
 }
 
 struct CatalogSourceNote: Sendable, Equatable {
@@ -233,6 +237,14 @@ protocol GenealogyStore: Sendable {
         sourceTypeID: String,
         title: String,
         description: String
+    ) async throws -> CatalogSource
+    /// Pin a file-bearing Artifact as cover, or revert to the Source type icon (`type_icon`).
+    func setSourceCover(
+        projectDir: String,
+        userID: String,
+        sourceID: String,
+        coverMode: String,
+        primaryArtifactID: String
     ) async throws -> CatalogSource
     func addSourceNote(projectDir: String, userID: String, sourceID: String, body: String) async throws
         -> CatalogSourceNote

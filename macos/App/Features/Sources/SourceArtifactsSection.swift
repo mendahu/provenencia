@@ -180,7 +180,7 @@ final class SourceArtifactsSection {
             descriptions[art.id] = art.description
             isAdding = false
             draftLabelError = nil
-            context.publishCoverToList()
+            await context.refreshCoverFromStore()
             context.toast = VocabularyToast(
                 title: L10n.Sources.toastArtifactCreatedTitle(ref: art.ref),
                 body: art.fileID.isEmpty
@@ -191,6 +191,39 @@ final class SourceArtifactsSection {
         } catch {
             draftLabelError = L10n.Errors.message(for: error)
         }
+    }
+
+    // MARK: Cover
+
+    func isCover(_ art: CatalogArtifact) -> Bool {
+        guard let source = context.source else { return false }
+        return source.coverMode == "artifact" && source.primaryArtifactID == art.id
+    }
+
+    func canUseAsThumbnail(_ art: CatalogArtifact) -> Bool {
+        !(art.file == nil || art.fileID.isEmpty) && !isCover(art)
+    }
+
+    func useAsThumbnail(_ art: CatalogArtifact) async {
+        guard canUseAsThumbnail(art) else { return }
+        let ok = await context.setSourceCover(mode: "artifact", primaryArtifactID: art.id)
+        guard ok else { return }
+        context.toast = VocabularyToast(
+            title: L10n.Sources.toastThumbnailUpdatedTitle,
+            body: L10n.Sources.toastThumbnailUpdatedArtifactBody(ref: art.ref),
+            tone: .success
+        )
+    }
+
+    func revertCoverToTypeIcon() async {
+        guard context.source?.coverMode != "type_icon" else { return }
+        let ok = await context.setSourceCover(mode: "type_icon")
+        guard ok else { return }
+        context.toast = VocabularyToast(
+            title: L10n.Sources.toastThumbnailUpdatedTitle,
+            body: L10n.Sources.toastThumbnailUpdatedTypeIconBody,
+            tone: .success
+        )
     }
 
     // MARK: Files
@@ -211,7 +244,7 @@ final class SourceArtifactsSection {
                 path: path
             )
             replace(ingested.artifact)
-            context.publishCoverToList()
+            await context.refreshCoverFromStore()
             context.toast = VocabularyToast(
                 title: L10n.Sources.toastFileAttachedTitle,
                 body: L10n.Sources.toastFileAttachedBody(name: ingested.file.originalFilename),
