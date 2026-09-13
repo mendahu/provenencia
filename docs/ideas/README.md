@@ -7,25 +7,8 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 ## Rules of thumb
 
 - **Not authoritative.** Domain and stack decisions stay in the sibling docs under [`docs/`](../). Spikes live under [`deployment-plan/`](../deployment-plan/).
-- **Not scheduled.** Listing an idea here does not put it on the current spike (or any spike).
+- **Not scheduled.** Adding a file here does not put it on the current spike (or any spike).
 - **Prefer one file per idea.** Keep the entry short; link out to model docs when the idea depends on an existing layer.
 - **Rough is fine.** Bullets, open questions, and “maybe later” notes are enough.
-- **Promote out.** When an idea is pulled into a deployment-plan spike, move the file into that spike folder and drop it from the index below.
-
-## Index
-
-| Idea | One-liner |
-| --- | --- |
-| [Share packages](share-packages.md) | One-button export of a Source (or later a canonical entity) as a readable, standards-friendly bundle for other researchers. |
-| [File-type fallback thumbnails](file-type-fallback-thumbnails.md) | MIME glyphs + curated Source-type icons (fileless / cover) + Source primary Artifact thumbnail rollup. |
-| [Ingest MIME enforcement](ingest-mime-enforcement.md) | Allowlist media types at ingest so Artifact Files stay evidence-shaped, not arbitrary blobs. |
-
-## Completed
-
-| Idea | One-liner |
-| --- | --- |
-| [Aggregate workspace nav counts](archive/aggregate-workspace-nav-counts.md) | `GetWorkspaceNavCounts` for sidebar badge counts (plus vocabulary origin splits) in one FFI open. |
-| [Catalog access serialization](archive/catalog-access-serialization.md) | Held exclusive catalog session + serial queue (PR1–PR3). |
-| [Image optimization](archive/image-optimization.md) | Async in-memory thumbnail cache + MIME extensions on `objects/…` so Finder/Preview work. |
-
-Completed ideas live in [`archive/`](archive/).
+- **Promote out.** When an idea is pulled into a deployment-plan spike, move the file into that spike folder.
+- **Archive when shipped.** Move finished ideas into [`archive/`](archive/).

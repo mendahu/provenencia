@@ -1,6 +1,6 @@
 # Evidence thumbnails: file-type fallbacks, Source-type icons, and primary Artifact
 
-**Status:** idea — PR1–PR3 shipped; cover rules simplified (no first-file auto-pin; Source never shows file-type glyphs). Related client media work: [`image-optimization.md`](archive/image-optimization.md). Domain: [`source-layer-data-model.md`](../source-layer-data-model.md) §§3, 6–8; vocabulary: [`seeded-vocabulary.md`](../seeded-vocabulary.md) §2.1.
+**Status:** done — archived. PR1–PR3 shipped; cover rules simplified (no first-file auto-pin; Source never shows file-type glyphs). Related client media work: [`image-optimization.md`](image-optimization.md). Domain: [`source-layer-data-model.md`](../../source-layer-data-model.md) §§3, 6–8; vocabulary: [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §2.1.
 
 ## Problem
 
@@ -181,8 +181,8 @@ Shipped on `feat/source-cover-primary`, then tightened:
 
 ## Related docs
 
-- [`source-layer-data-model.md`](../source-layer-data-model.md) §§3, 6–8
-- [`seeded-vocabulary.md`](../seeded-vocabulary.md) §2.1 (`source_types`)
-- [`image-optimization.md`](archive/image-optimization.md)
-- [`artifact-file-storage.md`](../artifact-file-storage.md)
+- [`source-layer-data-model.md`](../../source-layer-data-model.md) §§3, 6–8
+- [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §2.1 (`source_types`)
+- [`image-optimization.md`](image-optimization.md)
+- [`artifact-file-storage.md`](../../artifact-file-storage.md)
 - Design assets: Provenencia Design System export (`provenencia_file_*` / `provenencia_type_*`)

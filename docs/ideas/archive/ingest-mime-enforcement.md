@@ -1,6 +1,6 @@
 # Ingest MIME / file-type enforcement
 
-**Status:** shipped — policy in [`core/ingest/mediatypes`](../../core/ingest/mediatypes); macOS fail-fast + modal drag-drop on Add Artifact / Add File. Related UI: [`file-type-fallback-thumbnails.md`](file-type-fallback-thumbnails.md). Domain: [`source-layer-data-model.md`](../source-layer-data-model.md) §6; ingest: `core/ingest`.
+**Status:** done — archived. Policy in [`core/ingest/mediatypes`](../../../core/ingest/mediatypes); macOS fail-fast + modal drag-drop on Add Artifact / Add File. Related UI: [`file-type-fallback-thumbnails.md`](file-type-fallback-thumbnails.md). Domain: [`source-layer-data-model.md`](../../source-layer-data-model.md) §6; ingest: `core/ingest`.
 
 ## What shipped
 
