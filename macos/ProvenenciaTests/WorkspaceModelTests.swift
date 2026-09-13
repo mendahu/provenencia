@@ -16,9 +16,8 @@ struct WorkspaceModelTests {
         WorkspaceModel(defaults: defaults ?? makeDefaults())
     }
 
-    @Test func defaultsToSourcesExpanded() {
+    @Test func defaultsToExpanded() {
         let model = makeModel()
-        #expect(model.selectedSection == .sources)
         #expect(!model.isSidebarCollapsed)
     }
 
@@ -37,13 +36,5 @@ struct WorkspaceModelTests {
         model.toggleSidebarCollapsed()
         model.toggleSidebarCollapsed()
         #expect(!model.isSidebarCollapsed)
-    }
-
-    @Test func selectingEachSectionUpdatesLabelAndPlaceholder() {
-        let model = makeModel()
-        for section in WorkspaceModel.Section.allCases {
-            model.selectedSection = section
-            #expect(model.selectedSection == section)
-        }
     }
 }

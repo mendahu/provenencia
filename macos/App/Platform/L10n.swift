@@ -754,6 +754,18 @@ enum L10n {
             defaultValue: "Show labels",
             comment: "Tooltip/accessibility label for the sidebar toggle when collapsed"
         )
+
+        static let goBack = LocalizedStringResource(
+            "workspace.navigation.goBack",
+            defaultValue: "Back",
+            comment: "Menu / keyboard command to go back in workspace navigation history (⌘[)"
+        )
+
+        static let goForward = LocalizedStringResource(
+            "workspace.navigation.goForward",
+            defaultValue: "Forward",
+            comment: "Menu / keyboard command to go forward in workspace navigation history (⌘])"
+        )
     }
 
     /// The **Source fields** workspace destination (S2-15): browse, search,

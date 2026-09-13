@@ -14,6 +14,7 @@ import SwiftUI
 /// Source fields already does, so the two vocabulary destinations behave
 /// alike.
 struct SourceTypesView: View {
+    @Environment(WorkspaceNavigation.self) private var navigation
     @State private var model: SourceTypesModel
 
     /// Detail pane width — between the web board's `minmax(340px, 400px)`
@@ -71,8 +72,28 @@ struct SourceTypesView: View {
         ) { type in
             deleteDetail(for: type)
         }
-        .task { await model.load() }
+        .task {
+            await model.load()
+            applyWorkspaceLocation()
+        }
+        .onAppear { applyWorkspaceLocation() }
+        .onChange(of: navigation.currentLocation) { _, _ in applyWorkspaceLocation() }
         .accessibilityIdentifier("sourceTypes")
+    }
+
+    private func applyWorkspaceLocation() {
+        let location = navigation.currentLocation
+        guard location.section == .sourceTypes else { return }
+        if model.isAdding { return }
+        if let typeId = location.typeId {
+            if model.types.contains(where: { $0.id == typeId }) {
+                model.select(typeId)
+            } else if !model.isLoading {
+                navigation.fallbackToSectionRoot()
+            }
+        } else {
+            model.clearHistorySelection()
+        }
     }
 
     /// Dismissal is driven by the model, not by the sheet: a successful delete
@@ -145,7 +166,12 @@ struct SourceTypesView: View {
     store.suggestionsByType["t4"] = [
         CatalogTypeSuggestion(field: store.fieldsByProject[projectDir]![3], sortOrder: 0),
     ]
-    return SourceTypesView(projectDir: projectDir, userID: "00000000-0000-7000-8000-000000000001", store: store)
-        .frame(width: 1180, height: 760)
+    return SourceTypesView(
+        projectDir: projectDir,
+        userID: "00000000-0000-7000-8000-000000000001",
+        store: store
+    )
+    .environment(WorkspaceNavigation())
+    .frame(width: 1180, height: 760)
 }
 #endif

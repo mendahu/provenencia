@@ -4,8 +4,10 @@ import SwiftUI
 struct ProvenenciaApp: App {
     // Owned here (not inside the view hierarchy) because `.commands` builds
     // the app menu at the Scene level, outside the views that hold
-    // `OnboardingModel` — see `SignOutCoordinator`.
+    // `OnboardingModel` / `WorkspaceModel` — see `SignOutCoordinator` and
+    // `NavigationCoordinator`.
     @State private var signOutCoordinator = SignOutCoordinator()
+    @State private var navigationCoordinator = NavigationCoordinator()
 
     init() {
         PVFontRegistration.registerBundledFontsIfNeeded()
@@ -15,6 +17,7 @@ struct ProvenenciaApp: App {
         WindowGroup {
             OnboardingView()
                 .environment(signOutCoordinator)
+                .environment(navigationCoordinator)
                 // `.hiddenTitleBar` alone still reserves the title bar's
                 // height as a top safe area, leaving a blank strip above
                 // our content instead of letting the stoplights float over
@@ -38,6 +41,24 @@ struct ProvenenciaApp: App {
                     Text(L10n.Onboarding.signOut)
                 }
                 .disabled(!signOutCoordinator.isAvailable)
+            }
+            CommandGroup(after: .sidebar) {
+                // Never `.disabled` these: Scene `.commands` often keeps the
+                // first enabled state, so ⌘] stayed inert after Back created
+                // a forward entry. `goBack` / `goForward` already no-op at ends.
+                Button {
+                    navigationCoordinator.goBack()
+                } label: {
+                    Text(L10n.Workspace.goBack)
+                }
+                .keyboardShortcut("[", modifiers: .command)
+
+                Button {
+                    navigationCoordinator.goForward()
+                } label: {
+                    Text(L10n.Workspace.goForward)
+                }
+                .keyboardShortcut("]", modifiers: .command)
             }
         }
     }

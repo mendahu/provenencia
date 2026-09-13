@@ -10,6 +10,7 @@ import SwiftUI
 /// researcher's place in the list while filling out the form and matches
 /// the density of the rest of the workspace.
 struct SourceFieldsView: View {
+    @Environment(WorkspaceNavigation.self) private var navigation
     @State private var model: SourceFieldsModel
 
     /// Detail pane width — between the web board's `minmax(360px, 420px)`
@@ -67,8 +68,28 @@ struct SourceFieldsView: View {
         ) { field in
             deleteDetail(for: field)
         }
-        .task { await model.load() }
+        .task {
+            await model.load()
+            applyWorkspaceLocation()
+        }
+        .onAppear { applyWorkspaceLocation() }
+        .onChange(of: navigation.currentLocation) { _, _ in applyWorkspaceLocation() }
         .accessibilityIdentifier("sourceFields")
+    }
+
+    private func applyWorkspaceLocation() {
+        let location = navigation.currentLocation
+        guard location.section == .sourceFields else { return }
+        if model.isAdding { return }
+        if let fieldId = location.fieldId {
+            if model.fields.contains(where: { $0.id == fieldId }) {
+                model.select(fieldId)
+            } else if !model.isLoading {
+                navigation.fallbackToSectionRoot()
+            }
+        } else {
+            model.clearHistorySelection()
+        }
     }
 
     /// Dismissal is driven by the model, not by the sheet: a successful delete
@@ -126,7 +147,12 @@ struct SourceFieldsView: View {
         CatalogMetadataField(id: "3", key: "grandmas-album-code", origin: "user", label: "Grandma's album code", dataType: "text", description: "Pencil code on the back of prints."),
         CatalogMetadataField(id: "4", key: "memorial-id", origin: "plugin:findagrave", label: "Memorial id", dataType: "text", description: "Numeric memorial identifier."),
     ]
-    return SourceFieldsView(projectDir: projectDir, userID: "00000000-0000-7000-8000-000000000001", store: store)
-        .frame(width: 1180, height: 760)
+    return SourceFieldsView(
+        projectDir: projectDir,
+        userID: "00000000-0000-7000-8000-000000000001",
+        store: store
+    )
+    .environment(WorkspaceNavigation())
+    .frame(width: 1180, height: 760)
 }
 #endif

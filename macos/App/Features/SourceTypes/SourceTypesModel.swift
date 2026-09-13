@@ -258,6 +258,15 @@ final class SourceTypesModel {
         Task { await loadSuggestions(for: id) }
     }
 
+    /// Clears master–detail selection when history restores a section root.
+    func clearHistorySelection() {
+        guard !isAdding else { return }
+        mode = .empty
+        suggestions = []
+        suggestionError = nil
+        assignPick = ""
+    }
+
     func openAdd() {
         let resumeID: String? = switch mode {
         case .viewing(let id), .editing(let id): id

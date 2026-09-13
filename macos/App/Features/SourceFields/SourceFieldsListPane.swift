@@ -5,6 +5,7 @@ import SwiftUI
 /// with origin pill, mono key, data-type badge — sorted by label only.
 struct SourceFieldsListPane: View {
     @Bindable var model: SourceFieldsModel
+    @Environment(WorkspaceNavigation.self) private var navigation
 
     /// Column widths live only here; `PVTable` shares them between the
     /// header and every row, so they are never restated.
@@ -65,13 +66,19 @@ struct SourceFieldsListPane: View {
         ]
     }
 
-    /// Selection is the table's, but the model owns what it means: picking a
-    /// row leaves the add form and decides view-vs-edit by origin. The add
-    /// form deselects, so no row reads as selected while it is open.
+    /// Selection is the table's; workspace history owns committed place.
     private var selection: Binding<String?> {
         Binding(
             get: { model.isAdding ? nil : model.selectedField?.id },
-            set: { if let id = $0 { model.select(id) } }
+            set: { id in
+                guard let id else { return }
+                let field = model.fields.first(where: { $0.id == id })
+                navigation.go(to: WorkspaceLocation(
+                    section: .sourceFields,
+                    fieldId: id,
+                    title: field?.label
+                ))
+            }
         )
     }
 }

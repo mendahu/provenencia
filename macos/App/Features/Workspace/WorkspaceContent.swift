@@ -7,13 +7,15 @@ import SwiftUI
 /// below that header; Files still shows the labeled empty placeholder
 /// (project Files list was descoped with S2-20/S2-21).
 struct WorkspaceContent: View {
-    let section: WorkspaceModel.Section
+    @Environment(WorkspaceNavigation.self) private var navigation
     let project: ProjectInfo?
     let projectDir: String
     let userID: String
     let sessionDisplayName: String
     let store: any GenealogyStore
     let catalogCounts: CatalogCounts
+
+    private var section: WorkspaceSection { navigation.selectedSection }
 
     var body: some View {
         VStack(spacing: 0) {

@@ -1,66 +1,21 @@
 import Foundation
 import Observation
 
-/// State for the post-onboarding app workspace: which top-level
-/// destination is selected, and whether the sidebar is showing labels or
-/// collapsed to an icon rail. See
-/// `docs/deployment-plan/archive/spike-2/design/archive/S2-01-workspace-chrome.md`.
-///
-/// Nav-row counts live on `CatalogCounts` (environment), not here — so
-/// vocabulary panes can publish totals without talking to workspace chrome.
+/// Workspace chrome that is not navigation history: sidebar collapse only.
+/// Place / Back / Forward live on `WorkspaceNavigation` (environment).
 @MainActor
 @Observable
 final class WorkspaceModel {
-    /// Spike 2's top-level destinations (W-13, W-16), plus Files — added to
-    /// the design board after the written brief, alongside Source content
-    /// (its Artifact ingest / file preview arrives in S2-03). Raw values
-    /// match the design board's kebab-case section ids.
-    enum Section: String, CaseIterable {
-        case sources
-        case sourceTypes = "source-types"
-        case sourceFields = "source-fields"
-        case files
-
-        var label: LocalizedStringResource {
-            switch self {
-            case .sources: L10n.Workspace.sourcesTitle
-            case .sourceTypes: L10n.Workspace.sourceTypesTitle
-            case .sourceFields: L10n.Workspace.sourceFieldsTitle
-            case .files: L10n.Workspace.filesTitle
-            }
-        }
-
-        var placeholderNote: LocalizedStringResource {
-            // Only Files still uses the workspace placeholder host; Sources /
-            // types / fields mount real destinations.
-            L10n.Workspace.filesPlaceholderNote
-        }
-
-        var icon: PVSymbol {
-            switch self {
-            case .sources: .library
-            case .sourceTypes: .tag
-            case .sourceFields: .list
-            case .files: .folderOpen
-            }
-        }
-    }
-
     /// W-5: the researcher chooses this; it's never derived from window
     /// width. Persisted per install via `UserDefaults`, as the design brief
     /// suggests.
     private static let sidebarCollapsedDefaultsKey = "pv.sidebarCollapsed"
 
-    var selectedSection: Section
     var isSidebarCollapsed: Bool
 
     private let defaults: UserDefaults
 
-    init(
-        selectedSection: Section = .sources,
-        defaults: UserDefaults = .standard
-    ) {
-        self.selectedSection = selectedSection
+    init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         isSidebarCollapsed = defaults.bool(forKey: Self.sidebarCollapsedDefaultsKey)
     }
