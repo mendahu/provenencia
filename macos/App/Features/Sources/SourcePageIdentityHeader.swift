@@ -46,7 +46,7 @@ struct SourcePageIdentityHeader: View {
             typeIconKey: identityCover.typeIconKey,
             size: 72
         )
-        .accessibilityHint(L10n.Sources.thumbnailMenuHint)
+        .accessibilityHint(String(localized: L10n.Sources.thumbnailMenuHint))
         .accessibilityIdentifier("sources.page.cover")
         .pvContextMenuTrigger($coverMenu)
         .help(String(localized: L10n.Sources.thumbnailMenuHint))
