@@ -1,6 +1,7 @@
 package onboarding
 
 import (
+	"bytes"
 	"errors"
 	"os"
 	"path/filepath"
@@ -280,6 +281,12 @@ func TestProjectInfo(t *testing.T) {
 				if info.UpdatedByRef != created.Identity.Ref {
 					t.Fatalf("ref %q", info.UpdatedByRef)
 				}
+				if len(info.Info.UUID) != 16 {
+					t.Fatalf("expected project uuid, got %v", info.Info.UUID)
+				}
+				if !bytes.Equal(info.Info.UUID, created.Project.Info.UUID) {
+					t.Fatalf("uuid mismatch info=%v created=%v", info.Info.UUID, created.Project.Info.UUID)
+				}
 			},
 		},
 		{
@@ -288,6 +295,42 @@ func TestProjectInfo(t *testing.T) {
 				_, err := ProjectInfo(t.TempDir())
 				if !errors.Is(err, database.ErrNotAProject) {
 					t.Fatalf("got %v", err)
+				}
+			},
+		},
+		{
+			name: "heals null project uuid on open",
+			run: func(t *testing.T) {
+				created, err := Complete(t.TempDir(), t.TempDir(), "Jake", "Heal")
+				if err != nil {
+					t.Fatal(err)
+				}
+				err = catalogsession.Do(created.ProjectDir, func(c *database.Catalog) error {
+					db, err := c.DB()
+					if err != nil {
+						return err
+					}
+					_, err = db.Exec(`UPDATE project SET uuid = NULL WHERE id = 1`)
+					return err
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				_ = catalogsession.Close(created.ProjectDir)
+
+				opened, err := Open(t.TempDir(), created.ProjectDir, "Jake", "")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(opened.Project.Info.UUID) != 16 {
+					t.Fatalf("expected healed uuid, got %v", opened.Project.Info.UUID)
+				}
+				again, err := ProjectInfo(created.ProjectDir)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !bytes.Equal(again.Info.UUID, opened.Project.Info.UUID) {
+					t.Fatalf("uuid changed on second read")
 				}
 			},
 		},

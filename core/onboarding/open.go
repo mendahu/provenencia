@@ -126,7 +126,10 @@ func openMint(identityDir, projectDir, displayName string) (Result, error) {
 func ensureProject(proj *database.Catalog, projectDir string, updatedBy []byte) (project.Info, error) {
 	info, err := project.Get(proj)
 	if err == nil {
-		return info, nil
+		if err := project.EnsureUUID(proj); err != nil {
+			return project.Info{}, err
+		}
+		return project.Get(proj)
 	}
 	if !errors.Is(err, project.ErrMissing) {
 		return project.Info{}, err
@@ -144,7 +147,7 @@ func ensureProject(proj *database.Catalog, projectDir string, updatedBy []byte) 
 	if err := project.Upsert(proj, info); err != nil {
 		return project.Info{}, err
 	}
-	return info, nil
+	return project.Get(proj)
 }
 
 // resolveUpdatedBy fills updated-by display fields from the users row while the catalog is open.
@@ -170,6 +173,9 @@ func resolveUpdatedBy(proj *database.Catalog, info project.Info) (ResolvedInfo, 
 func ProjectInfo(projectDir string) (ResolvedInfo, error) {
 	var out ResolvedInfo
 	err := catalogsession.Do(projectDir, func(proj *database.Catalog) error {
+		if err := project.EnsureUUID(proj); err != nil {
+			return err
+		}
 		info, err := project.Get(proj)
 		if errors.Is(err, project.ErrMissing) {
 			rows, listErr := users.List(proj)

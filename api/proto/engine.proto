@@ -161,6 +161,8 @@ message ProjectInfo {
   string updated_by_user_id = 5;
   string updated_by_display_name = 6;
   string updated_by_ref = 7;
+  // Durable catalog project identity (UUIDv7); empty only if project row is absent.
+  string uuid = 8;
 }
 
 message GetProjectInfoResponse {

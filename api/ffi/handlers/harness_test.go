@@ -183,6 +183,9 @@ func assertOnboardingWroteProject(t *testing.T, out []byte, familyBase string) {
 	if _, err := os.Stat(filepath.Join(done.GetProjectDir(), "provenencia.sqlite")); err != nil {
 		t.Fatal(err)
 	}
+	if done.GetProject().GetUuid() == "" {
+		t.Fatal("empty project uuid")
+	}
 }
 
 func assertIdentityMatchesComplete(t *testing.T, out []byte, req proto.Message) {

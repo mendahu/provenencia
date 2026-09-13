@@ -8,7 +8,7 @@ Authoritative domain and stack decisions remain in the sibling docs under [`docs
 
 | Spike | Goal |
 | --- | --- |
-| [Spike 3](spike-3/) | Workspace chrome + first-class nav history and catalog search: Back/Forward (persisted, `project.uuid`), toolbar omnibar with Go registry + FTS5 ranking. **PR sequence:** [`spike-3/deployment-plan.md`](spike-3/deployment-plan.md). Notes: [`navigation-history.md`](spike-3/navigation-history.md), [`omnibar-search.md`](spike-3/omnibar-search.md). |
+| [Spike 3](spike-3/) | Workspace chrome + first-class nav history and catalog search: Back/Forward (persisted, `project.uuid`), toolbar omnibar with Go registry + FTS5 ranking. **Open checklist:** [`spike-3/deployment-plan.md`](spike-3/deployment-plan.md). **Completed:** [`spike-3/completed.md`](spike-3/completed.md). Notes: [`navigation-history.md`](spike-3/navigation-history.md), [`omnibar-search.md`](spike-3/omnibar-search.md). |
 
 ## Completed
 

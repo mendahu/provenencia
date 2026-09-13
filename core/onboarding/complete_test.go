@@ -104,6 +104,12 @@ func TestComplete(t *testing.T) {
 				if info.Label != "Robins Family" {
 					t.Fatalf("label %q", info.Label)
 				}
+				if len(info.UUID) != 16 {
+					t.Fatalf("expected project uuid, got %v", info.UUID)
+				}
+				if len(res.Project.Info.UUID) != 16 {
+					t.Fatalf("result missing uuid %v", res.Project.Info.UUID)
+				}
 				types, err := sourcetypes.List(p)
 				if err != nil {
 					t.Fatal(err)

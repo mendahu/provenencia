@@ -55,6 +55,9 @@ func TestGetProjectInfo(t *testing.T) {
 				if p.GetUpdatedByRef() == "" || p.GetCreatedAt() == "" {
 					t.Fatalf("missing meta %+v", p)
 				}
+				if p.GetUuid() == "" {
+					t.Fatalf("missing project uuid %+v", p)
+				}
 			},
 		},
 	})

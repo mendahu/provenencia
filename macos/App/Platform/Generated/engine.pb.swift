@@ -605,6 +605,9 @@ public nonisolated struct Provenencia_Engine_V1_ProjectInfo: Sendable {
 
   public var updatedByRef: String = String()
 
+  /// Durable catalog project identity (UUIDv7); empty only if project row is absent.
+  public var uuid: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -646,11 +649,11 @@ public nonisolated struct Provenencia_Engine_V1_Source: Sendable {
 
   public var description_p: String = String()
 
-  /// Thumbnail JPEG under objects/… for list cells (empty = no raster).
+  /// Thumbnail JPEG under objects/… for list cells (empty = no raster cover).
   public var thumbnailRelPath: String = String()
 
-  /// When thumbnail_rel_path is empty but a File exists under some Artifact,
-  /// MIME of the cover-candidate File for client file-type glyph fallback.
+  /// Reserved / unused for Source cover. File-type glyphs stay on Artifact
+  /// rows only; Source paints type icon or raster.
   public var thumbnailMediaType: String = String()
 
   public var thumbnailOriginalFilename: String = String()
@@ -3055,7 +3058,7 @@ nonisolated extension Provenencia_Engine_V1_GetProjectInfoRequest: SwiftProtobuf
 
 nonisolated extension Provenencia_Engine_V1_ProjectInfo: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ProjectInfo"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}label\0\u{3}folder_name\0\u{3}created_at\0\u{3}updated_at\0\u{3}updated_by_user_id\0\u{3}updated_by_display_name\0\u{3}updated_by_ref\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}label\0\u{3}folder_name\0\u{3}created_at\0\u{3}updated_at\0\u{3}updated_by_user_id\0\u{3}updated_by_display_name\0\u{3}updated_by_ref\0\u{1}uuid\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3070,6 +3073,7 @@ nonisolated extension Provenencia_Engine_V1_ProjectInfo: SwiftProtobuf.Message, 
       case 5: try { try decoder.decodeSingularStringField(value: &self.updatedByUserID) }()
       case 6: try { try decoder.decodeSingularStringField(value: &self.updatedByDisplayName) }()
       case 7: try { try decoder.decodeSingularStringField(value: &self.updatedByRef) }()
+      case 8: try { try decoder.decodeSingularStringField(value: &self.uuid) }()
       default: break
       }
     }
@@ -3097,6 +3101,9 @@ nonisolated extension Provenencia_Engine_V1_ProjectInfo: SwiftProtobuf.Message, 
     if !self.updatedByRef.isEmpty {
       try visitor.visitSingularStringField(value: self.updatedByRef, fieldNumber: 7)
     }
+    if !self.uuid.isEmpty {
+      try visitor.visitSingularStringField(value: self.uuid, fieldNumber: 8)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -3108,6 +3115,7 @@ nonisolated extension Provenencia_Engine_V1_ProjectInfo: SwiftProtobuf.Message, 
     if lhs.updatedByUserID != rhs.updatedByUserID {return false}
     if lhs.updatedByDisplayName != rhs.updatedByDisplayName {return false}
     if lhs.updatedByRef != rhs.updatedByRef {return false}
+    if lhs.uuid != rhs.uuid {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
