@@ -81,14 +81,13 @@ func thumbnailRelPath(c *database.Catalog, sourceFileID []byte) (relPath string,
 
 // sourceCoverThumb is the ListSources cover payload for a Source.
 type sourceCoverThumb struct {
-	RelPath          string
-	MediaType        string
-	OriginalFilename string
+	RelPath string
 }
 
 // sourceCoverThumbnail resolves cover paint fields from persisted cover mode.
-// artifact → that Artifact’s raster else MIME/filename; type_icon → empty
-// (client paints Source type icon).
+// artifact → that Artifact’s raster only; type_icon (or non-raster primary) →
+// empty so the client paints the Source type icon. File-type glyphs never
+// bubble up to Source identity.
 func sourceCoverThumbnail(c *database.Catalog, s sources.Source) (sourceCoverThumb, error) {
 	if s.CoverMode != sources.CoverModeArtifact || len(s.PrimaryArtifactID) != 16 {
 		return sourceCoverThumb{}, nil
@@ -103,24 +102,11 @@ func sourceCoverThumbnail(c *database.Catalog, s sources.Source) (sourceCoverThu
 	if len(a.FileID) != 16 {
 		return sourceCoverThumb{}, nil
 	}
-	f, err := files.Lookup(c, a.FileID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return sourceCoverThumb{}, nil
-		}
-		return sourceCoverThumb{}, err
-	}
 	rel, _, err := thumbnailRelPath(c, a.FileID)
 	if err != nil {
 		return sourceCoverThumb{}, err
 	}
-	if rel != "" {
-		return sourceCoverThumb{RelPath: rel}, nil
-	}
-	return sourceCoverThumb{
-		MediaType:        f.MediaType,
-		OriginalFilename: f.OriginalFilename,
-	}, nil
+	return sourceCoverThumb{RelPath: rel}, nil
 }
 
 // enrichSourceProto fills identity + cover mode + resolved thumbnail fields.
@@ -131,7 +117,5 @@ func enrichSourceProto(c *database.Catalog, s sources.Source) (*engine.Source, e
 		return nil, err
 	}
 	sp.ThumbnailRelPath = cover.RelPath
-	sp.ThumbnailMediaType = cover.MediaType
-	sp.ThumbnailOriginalFilename = cover.OriginalFilename
 	return sp, nil
 }

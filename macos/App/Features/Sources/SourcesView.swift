@@ -249,8 +249,6 @@ struct SourcesView: View {
                     CachedThumbnail(
                         projectDir: model.pageProjectDir,
                         relPath: source.thumbnailRelPath,
-                        mediaType: source.thumbnailMediaType,
-                        originalFilename: source.thumbnailOriginalFilename,
                         typeIconKey: model.typeIconKey(for: source)
                     )
                 },

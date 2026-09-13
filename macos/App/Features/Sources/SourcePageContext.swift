@@ -50,7 +50,7 @@ final class SourcePageContext {
         onSourceUpdated?(source)
     }
 
-    /// Reloads Source cover fields after Artifact create/ingest (server may auto-pin).
+    /// Reloads Source cover fields after Artifact create/ingest (raster may appear).
     func refreshCoverFromStore() async {
         do {
             let ws = try await store.getSourceWorkspace(projectDir: projectDir, sourceID: sourceID)

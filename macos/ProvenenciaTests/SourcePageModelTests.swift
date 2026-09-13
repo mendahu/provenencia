@@ -305,7 +305,7 @@ struct SourcePageModelTests {
         #expect(model.artifacts.items.isEmpty)
     }
 
-    @Test func createArtifactWithPDFPinsCoverMIME() async throws {
+    @Test func createArtifactWithPDFLeavesTypeIconCover() async throws {
         final class CoverBox: @unchecked Sendable {
             var source: CatalogSource?
         }
@@ -328,11 +328,11 @@ struct SourcePageModelTests {
         model.artifacts.draft.filePath = path
         await model.artifacts.create()
         #expect(model.artifacts.items.count == 1)
-        #expect(box.source?.coverMode == "artifact")
-        #expect(box.source?.primaryArtifactID == model.artifacts.items.first?.id)
-        #expect(box.source?.thumbnailMediaType == "application/pdf")
-        #expect(box.source?.thumbnailOriginalFilename.hasSuffix(".pdf") == true)
-        #expect(model.source?.coverMode == "artifact")
+        #expect(box.source?.coverMode == "type_icon")
+        #expect(box.source?.primaryArtifactID.isEmpty == true)
+        #expect(box.source?.thumbnailMediaType.isEmpty == true)
+        #expect(model.source?.coverMode == "type_icon")
+        #expect(!model.artifacts.canUseAsThumbnail(model.artifacts.items[0]))
     }
 
     @Test func useAsThumbnailAndRevertToTypeIcon() async throws {
@@ -343,11 +343,21 @@ struct SourcePageModelTests {
         model.artifacts.draft.label = "Scan"
         let path = FileManager.default.temporaryDirectory
             .appendingPathComponent("scan-\(UUID().uuidString).png").path
-        try Data([0x89, 0x50, 0x4E, 0x47]).write(to: URL(fileURLWithPath: path))
+        // Minimal valid PNG so FakeStore marks a raster thumb path.
+        try Data([
+            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+        ]).write(to: URL(fileURLWithPath: path))
         model.artifacts.draft.filePath = path
         await model.artifacts.create()
         let first = try #require(model.artifacts.items.first)
-        #expect(model.artifacts.isCover(first))
+        #expect(!model.artifacts.isCover(first))
+        #expect(model.artifacts.canUseAsThumbnail(first))
+        #expect(model.source?.coverMode == "type_icon")
+
+        await model.artifacts.useAsThumbnail(first)
+        #expect(model.source?.coverMode == "artifact")
+        #expect(model.source?.primaryArtifactID == first.id)
+        #expect(!model.source!.thumbnailRelPath.isEmpty)
 
         model.artifacts.openAdd()
         model.artifacts.draft.label = "Other"
@@ -358,16 +368,12 @@ struct SourcePageModelTests {
         await model.artifacts.create()
         let second = try #require(model.artifacts.items.last)
         #expect(!model.artifacts.isCover(second))
-        #expect(model.artifacts.canUseAsThumbnail(second))
-
-        await model.artifacts.useAsThumbnail(second)
-        #expect(model.source?.primaryArtifactID == second.id)
-        #expect(model.source?.thumbnailMediaType == "application/pdf")
+        #expect(!model.artifacts.canUseAsThumbnail(second))
 
         await model.artifacts.revertCoverToTypeIcon()
         #expect(model.source?.coverMode == "type_icon")
         #expect(model.source?.primaryArtifactID.isEmpty == true)
-        #expect(model.source?.thumbnailMediaType.isEmpty == true)
+        #expect(model.source?.thumbnailRelPath.isEmpty == true)
     }
 
     @Test func filelessArtifactCannotBeCover() async throws {

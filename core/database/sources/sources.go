@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/project"
+	"github.com/mendahu/provenencia/core/derivatives"
 	"github.com/mendahu/provenencia/core/ref"
 )
 
@@ -148,8 +149,9 @@ func Create(c *database.Catalog, userID []byte, in CreateInput) (Source, error) 
 }
 
 // SetCover pins an Artifact as cover or reverts to the Source type icon.
-// mode must be CoverModeArtifact (with a file-bearing Artifact under this Source)
-// or CoverModeTypeIcon (clears primary_artifact_id).
+// mode must be CoverModeArtifact (with a rasterizable Artifact File under this
+// Source) or CoverModeTypeIcon (clears primary_artifact_id). PDF / other
+// non-image Files cannot be cover — Source identity stays a type icon or raster.
 func SetCover(c *database.Catalog, userID []byte, sourceID []byte, mode string, primaryArtifactID []byte) (Source, error) {
 	db, err := c.DB()
 	if err != nil {
@@ -173,6 +175,12 @@ func SetCover(c *database.Catalog, userID []byte, sourceID []byte, mode string, 
 		return Source{}, ErrInvalid
 	}
 
+	if mode == CoverModeArtifact {
+		if err := requireRasterCoverArtifact(c, sourceID, primaryArtifactID); err != nil {
+			return Source{}, err
+		}
+	}
+
 	tx, err := db.Begin()
 	if err != nil {
 		return Source{}, err
@@ -185,12 +193,6 @@ func SetCover(c *database.Catalog, userID []byte, sourceID []byte, mode string, 
 	}
 	if err != nil {
 		return Source{}, err
-	}
-
-	if mode == CoverModeArtifact {
-		if err := requireFileBearingArtifact(tx, sourceID, primaryArtifactID); err != nil {
-			return Source{}, err
-		}
 	}
 
 	if prev.CoverMode == mode && bytesEqual(prev.PrimaryArtifactID, primaryArtifactID) {
@@ -230,24 +232,6 @@ func SetCover(c *database.Catalog, userID []byte, sourceID []byte, mode string, 
 		return Source{}, err
 	}
 	return Get(c, sourceID)
-}
-
-// MaybePinFirstFileCover pins artifactID as the Source cover when the Source
-// still has no primary (type_icon). Same end state as SetCover(artifact, id).
-// No-op when a cover Artifact is already set.
-func MaybePinFirstFileCover(c *database.Catalog, userID, sourceID, artifactID []byte) (Source, bool, error) {
-	s, err := Get(c, sourceID)
-	if err != nil {
-		return Source{}, false, err
-	}
-	if s.CoverMode == CoverModeArtifact && len(s.PrimaryArtifactID) == 16 {
-		return s, false, nil
-	}
-	got, err := SetCover(c, userID, sourceID, CoverModeArtifact, artifactID)
-	if err != nil {
-		return Source{}, false, err
-	}
-	return got, true, nil
 }
 
 // Update patches title, description, and source_type_id; records update_source for changed fields.
@@ -409,9 +393,13 @@ func requireType(tx *sql.Tx, typeID []byte) error {
 	return err
 }
 
-func requireFileBearingArtifact(tx *sql.Tx, sourceID, artifactID []byte) error {
+func requireRasterCoverArtifact(c *database.Catalog, sourceID, artifactID []byte) error {
+	db, err := c.DB()
+	if err != nil {
+		return err
+	}
 	var id, artSource, fileID []byte
-	err := tx.QueryRow(sqlArtifactForCover, artifactID).Scan(&id, &artSource, &fileID)
+	err = db.QueryRow(sqlArtifactForCover, artifactID).Scan(&id, &artSource, &fileID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ErrInvalid
 	}
@@ -419,6 +407,18 @@ func requireFileBearingArtifact(tx *sql.Tx, sourceID, artifactID []byte) error {
 		return err
 	}
 	if !bytesEqual(artSource, sourceID) || len(fileID) != 16 {
+		return ErrInvalid
+	}
+	res, err := derivatives.EnsureThumbnail(c, fileID)
+	if err != nil {
+		if errors.Is(err, derivatives.ErrUnprocessable) ||
+			errors.Is(err, derivatives.ErrCorruptObject) ||
+			errors.Is(err, derivatives.ErrInvalid) {
+			return ErrInvalid
+		}
+		return err
+	}
+	if res.Skipped || len(res.Link.DerivedFileID) != 16 {
 		return ErrInvalid
 	}
 	return nil

@@ -175,10 +175,10 @@ message Source {
   string source_type_id = 3;
   string title = 4;
   string description = 5;
-  // Thumbnail JPEG under objects/… for list cells (empty = no raster).
+  // Thumbnail JPEG under objects/… for list cells (empty = no raster cover).
   string thumbnail_rel_path = 6;
-  // When thumbnail_rel_path is empty but a File exists under some Artifact,
-  // MIME of the cover-candidate File for client file-type glyph fallback.
+  // Reserved / unused for Source cover. File-type glyphs stay on Artifact
+  // rows only; Source paints type icon or raster.
   string thumbnail_media_type = 7;
   string thumbnail_original_filename = 8;
   // Cover preference: "artifact" (primary_artifact_id) or "type_icon".

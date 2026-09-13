@@ -42,7 +42,7 @@ func TestSetSourceCover(t *testing.T) {
 				})); err != nil {
 					t.Fatal(err)
 				}
-				// Ingest already auto-pinned; pin again is idempotent.
+				// Ingest does not auto-pin; this call is the first cover set.
 				return &engine.SetSourceCoverRequest{
 					ProjectDir:        dir,
 					UserId:            userID,
@@ -110,6 +110,36 @@ func TestSetSourceCover(t *testing.T) {
 				})); err == nil {
 					t.Fatal("want fileless pin error")
 				}
+
+				// PDF cannot be cover (no raster).
+				pout, err := CreateArtifact(marshalProto(t, &engine.CreateArtifactRequest{
+					ProjectDir: cr.GetProjectDir(), UserId: cr.GetUserId(),
+					SourceId: cr.GetSourceId(), Label: "PDF",
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var pdfArt engine.CreateArtifactResponse
+				if err := proto.Unmarshal(pout, &pdfArt); err != nil {
+					t.Fatal(err)
+				}
+				pdfPath := filepath.Join(t.TempDir(), "no-cover.pdf")
+				writePDF(t, pdfPath)
+				if _, err := IngestArtifactFile(marshalProto(t, &engine.IngestArtifactFileRequest{
+					ProjectDir: cr.GetProjectDir(), UserId: cr.GetUserId(),
+					ArtifactId: pdfArt.Artifact.Id, Path: pdfPath,
+				})); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := SetSourceCover(marshalProto(t, &engine.SetSourceCoverRequest{
+					ProjectDir:        cr.GetProjectDir(),
+					UserId:            cr.GetUserId(),
+					SourceId:          cr.GetSourceId(),
+					CoverMode:         "artifact",
+					PrimaryArtifactId: pdfArt.Artifact.Id,
+				})); err == nil {
+					t.Fatal("want pdf pin error")
+				}
 			},
 		},
 	})
@@ -118,7 +148,7 @@ func TestSetSourceCover(t *testing.T) {
 func TestGetSourceWorkspaceCover(t *testing.T) {
 	runRPC(t, GetSourceWorkspace, []rpcTest{
 		{
-			name: "enriched cover on workspace source",
+			name: "enriched cover on workspace source after explicit pin",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, typeID := sourceFixture(t)
 				cout, err := CreateSource(marshalProto(t, &engine.CreateSourceRequest{
@@ -145,6 +175,12 @@ func TestGetSourceWorkspaceCover(t *testing.T) {
 				writePNG(t, path)
 				if _, err := IngestArtifactFile(marshalProto(t, &engine.IngestArtifactFileRequest{
 					ProjectDir: dir, UserId: userID, ArtifactId: art.Artifact.Id, Path: path,
+				})); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := SetSourceCover(marshalProto(t, &engine.SetSourceCoverRequest{
+					ProjectDir: dir, UserId: userID, SourceId: created.Source.Id,
+					CoverMode: "artifact", PrimaryArtifactId: art.Artifact.Id,
 				})); err != nil {
 					t.Fatal(err)
 				}

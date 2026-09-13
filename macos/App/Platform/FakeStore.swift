@@ -279,7 +279,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         case "artifact":
             let arts = artifactsBySource[sourceID] ?? []
             guard let art = arts.first(where: { $0.id == primaryArtifactID }),
-                  art.file != nil || !art.fileID.isEmpty
+                  !art.thumbnailRelPath.isEmpty
             else {
                 throw StoreBoom.boom
             }
@@ -440,15 +440,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             file: nil
         )
         artifactsBySource[sourceID, default: []].append(art)
-        if !fileID.isEmpty {
-            // Tests rarely create-with-file; still mirror engine first-file pin.
-            for (dir, list) in sourcesByProject {
-                if list.contains(where: { $0.id == sourceID }) {
-                    maybeAutoPinCover(projectDir: dir, sourceID: sourceID, artifactID: art.id)
-                    break
-                }
-            }
-        }
         return art
     }
 
@@ -520,7 +511,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     copy[idx].thumbnailRelPath = "objects/aa/bb/thumb-\(file.id.prefix(8))"
                 }
                 artifactsBySource[sourceID] = copy
-                maybeAutoPinCover(projectDir: projectDir, sourceID: sourceID, artifactID: artifactID)
                 return (copy[idx], file, false)
             }
         }
@@ -797,6 +787,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     /// Resolves list/identity paint fields from persisted cover mode.
+    /// Source cover is type icon or a raster path — never Artifact file-type MIME.
     private func enrichCoverFields(_ source: CatalogSource) -> CatalogSource {
         var copy = source
         copy.thumbnailRelPath = ""
@@ -806,29 +797,13 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             return copy
         }
         let arts = artifactsBySource[copy.id] ?? []
-        guard let art = arts.first(where: { $0.id == copy.primaryArtifactID }) else {
+        guard let art = arts.first(where: { $0.id == copy.primaryArtifactID }),
+              !art.thumbnailRelPath.isEmpty
+        else {
             return copy
         }
-        if !art.thumbnailRelPath.isEmpty {
-            copy.thumbnailRelPath = art.thumbnailRelPath
-            return copy
-        }
-        if let file = art.file {
-            copy.thumbnailMediaType = file.mediaType
-            copy.thumbnailOriginalFilename = file.originalFilename
-        }
+        copy.thumbnailRelPath = art.thumbnailRelPath
         return copy
-    }
-
-    private func maybeAutoPinCover(projectDir: String, sourceID: String, artifactID: String) {
-        var list = sourcesByProject[projectDir] ?? []
-        guard let idx = list.firstIndex(where: { $0.id == sourceID }) else { return }
-        if list[idx].coverMode == "artifact", !list[idx].primaryArtifactID.isEmpty {
-            return
-        }
-        list[idx].coverMode = "artifact"
-        list[idx].primaryArtifactID = artifactID
-        sourcesByProject[projectDir] = list
     }
 
     private static func originCounts(from origins: [String]) -> WorkspaceNavOriginCounts {

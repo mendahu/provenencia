@@ -201,7 +201,7 @@ final class SourceArtifactsSection {
     }
 
     func canUseAsThumbnail(_ art: CatalogArtifact) -> Bool {
-        !(art.file == nil || art.fileID.isEmpty) && !isCover(art)
+        !art.thumbnailRelPath.isEmpty && !isCover(art)
     }
 
     func useAsThumbnail(_ art: CatalogArtifact) async {
