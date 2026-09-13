@@ -113,6 +113,303 @@ enum L10n {
             defaultValue: "File of unknown type",
             comment: "Accessibility name for the file_generic evidence glyph"
         )
+        static let evidenceIconTypeCertificate = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeCertificate",
+            defaultValue: "Certificate source type",
+            comment: "Accessibility name for the type_certificate evidence glyph"
+        )
+        static let evidenceIconTypeBook = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeBook",
+            defaultValue: "Book source type",
+            comment: "Accessibility name for the type_book evidence glyph"
+        )
+        static let evidenceIconTypeDocument = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeDocument",
+            defaultValue: "Document source type",
+            comment: "Accessibility name for the type_document evidence glyph"
+        )
+        static let evidenceIconTypeScroll = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeScroll",
+            defaultValue: "Register source type",
+            comment: "Accessibility name for the type_scroll evidence glyph"
+        )
+        static let evidenceIconTypePhotograph = LocalizedStringResource(
+            "designSystem.evidenceIcon.typePhotograph",
+            defaultValue: "Photograph source type",
+            comment: "Accessibility name for the type_photograph evidence glyph"
+        )
+        static let evidenceIconTypeNewspaper = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeNewspaper",
+            defaultValue: "Newspaper source type",
+            comment: "Accessibility name for the type_newspaper evidence glyph"
+        )
+        static let evidenceIconTypeMap = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeMap",
+            defaultValue: "Map source type",
+            comment: "Accessibility name for the type_map evidence glyph"
+        )
+        static let evidenceIconTypeMicrofilm = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeMicrofilm",
+            defaultValue: "Microfilm source type",
+            comment: "Accessibility name for the type_microfilm evidence glyph"
+        )
+        static let evidenceIconTypeCassette = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeCassette",
+            defaultValue: "Magnetic tape source type",
+            comment: "Accessibility name for the type_cassette evidence glyph"
+        )
+        static let evidenceIconTypeOralHistory = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeOralHistory",
+            defaultValue: "Oral history source type",
+            comment: "Accessibility name for the type_oral_history evidence glyph"
+        )
+        static let evidenceIconTypeVideo = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeVideo",
+            defaultValue: "Moving image source type",
+            comment: "Accessibility name for the type_video evidence glyph"
+        )
+        static let evidenceIconTypeWebsite = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeWebsite",
+            defaultValue: "Website source type",
+            comment: "Accessibility name for the type_website evidence glyph"
+        )
+        static let evidenceIconTypeCensus = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeCensus",
+            defaultValue: "Census source type",
+            comment: "Accessibility name for the type_census evidence glyph"
+        )
+        static let evidenceIconTypeDNA = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeDna",
+            defaultValue: "DNA match source type",
+            comment: "Accessibility name for the type_dna evidence glyph"
+        )
+        static let evidenceIconTypeGEDCOM = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeGedcom",
+            defaultValue: "GEDCOM source type",
+            comment: "Accessibility name for the type_gedcom evidence glyph"
+        )
+        static let evidenceIconTypeGrave = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeGrave",
+            defaultValue: "Memorial source type",
+            comment: "Accessibility name for the type_grave evidence glyph"
+        )
+        static let evidenceIconTypeScrapbook = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeScrapbook",
+            defaultValue: "Scrapbook source type",
+            comment: "Accessibility name for the type_scrapbook evidence glyph"
+        )
+        static let evidenceIconTypeEvidence = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeEvidence",
+            defaultValue: "Evidence source type",
+            comment: "Accessibility name for the type_evidence evidence glyph"
+        )
+        static let evidenceIconTypeFolderArchive = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeFolderArchive",
+            defaultValue: "Archival container source type",
+            comment: "Accessibility name for the type_folder_archive evidence glyph"
+        )
+        static let evidenceIconTypeEmail = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeEmail",
+            defaultValue: "Correspondence source type",
+            comment: "Accessibility name for the type_email evidence glyph"
+        )
+        static let evidenceIconTypePostcard = LocalizedStringResource(
+            "designSystem.evidenceIcon.typePostcard",
+            defaultValue: "Postcard source type",
+            comment: "Accessibility name for the type_postcard evidence glyph"
+        )
+
+        // Short titles for the Source-type icon picker (design pack names).
+        static let evidenceIconTypeCertificateTitle = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeCertificate.title", defaultValue: "Certificate",
+            comment: "Short title for type_certificate in the icon picker"
+        )
+        static let evidenceIconTypeBookTitle = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeBook.title", defaultValue: "Book",
+            comment: "Short title for type_book in the icon picker"
+        )
+        static let evidenceIconTypeDocumentTitle = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeDocument.title", defaultValue: "Document",
+            comment: "Short title for type_document in the icon picker"
+        )
+        static let evidenceIconTypeScrollTitle = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeScroll.title", defaultValue: "Register",
+            comment: "Short title for type_scroll in the icon picker"
+        )
+        static let evidenceIconTypePhotographTitle = LocalizedStringResource(
+            "designSystem.evidenceIcon.typePhotograph.title", defaultValue: "Photograph",
+            comment: "Short title for type_photograph in the icon picker"
+        )
+        static let evidenceIconTypeNewspaperTitle = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeNewspaper.title", defaultValue: "Newspaper",
+            comment: "Short title for type_newspaper in the icon picker"
+        )
+        static let evidenceIconTypeMapTitle = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeMap.title", defaultValue: "Map",
+            comment: "Short title for type_map in the icon picker"
+        )
+        static let evidenceIconTypeMicrofilmTitle = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeMicrofilm.title", defaultValue: "Microfilm",
+            comment: "Short title for type_microfilm in the icon picker"
+        )
+        static let evidenceIconTypeCassetteTitle = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeCassette.title", defaultValue: "Magnetic tape",
+            comment: "Short title for type_cassette in the icon picker"
+        )
+        static let evidenceIconTypeOralHistoryTitle = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeOralHistory.title", defaultValue: "Oral history",
+            comment: "Short title for type_oral_history in the icon picker"
+        )
+        static let evidenceIconTypeVideoTitle = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeVideo.title", defaultValue: "Moving image",
+            comment: "Short title for type_video in the icon picker"
+        )
+        static let evidenceIconTypeWebsiteTitle = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeWebsite.title", defaultValue: "Website",
+            comment: "Short title for type_website in the icon picker"
+        )
+        static let evidenceIconTypeCensusTitle = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeCensus.title", defaultValue: "Census",
+            comment: "Short title for type_census in the icon picker"
+        )
+        static let evidenceIconTypeDNATitle = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeDNA.title", defaultValue: "DNA match",
+            comment: "Short title for type_dna in the icon picker"
+        )
+        static let evidenceIconTypeGEDCOMTitle = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeGEDCOM.title", defaultValue: "GEDCOM",
+            comment: "Short title for type_gedcom in the icon picker"
+        )
+        static let evidenceIconTypeGraveTitle = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeGrave.title", defaultValue: "Memorial",
+            comment: "Short title for type_grave in the icon picker"
+        )
+        static let evidenceIconTypeScrapbookTitle = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeScrapbook.title", defaultValue: "Scrapbook",
+            comment: "Short title for type_scrapbook in the icon picker"
+        )
+        static let evidenceIconTypeEvidenceTitle = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeEvidence.title", defaultValue: "Evidence",
+            comment: "Short title for type_evidence in the icon picker"
+        )
+        static let evidenceIconTypeFolderArchiveTitle = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeFolderArchive.title", defaultValue: "Archival container",
+            comment: "Short title for type_folder_archive in the icon picker"
+        )
+        static let evidenceIconTypeEmailTitle = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeEmail.title", defaultValue: "Correspondence",
+            comment: "Short title for type_email in the icon picker"
+        )
+        static let evidenceIconTypePostcardTitle = LocalizedStringResource(
+            "designSystem.evidenceIcon.typePostcard.title", defaultValue: "Postcard",
+            comment: "Short title for type_postcard in the icon picker"
+        )
+
+        static let evidenceIconTypeCertificateMetaphor = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeCertificate.metaphor",
+            defaultValue: "Ruled formal record under an impressed seal",
+            comment: "Metaphor for type_certificate in the icon picker footer"
+        )
+        static let evidenceIconTypeBookMetaphor = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeBook.metaphor",
+            defaultValue: "Bound volume seen spine-on",
+            comment: "Metaphor for type_book in the icon picker footer"
+        )
+        static let evidenceIconTypeDocumentMetaphor = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeDocument.metaphor",
+            defaultValue: "Loose sheet with a turned corner — a letter, a note, a form",
+            comment: "Metaphor for type_document in the icon picker footer"
+        )
+        static let evidenceIconTypeScrollMetaphor = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeScroll.metaphor",
+            defaultValue: "Parchment rolled at both ends — parish register, roll, cartulary",
+            comment: "Metaphor for type_scroll in the icon picker footer"
+        )
+        static let evidenceIconTypePhotographMetaphor = LocalizedStringResource(
+            "designSystem.evidenceIcon.typePhotograph.metaphor",
+            defaultValue: "A print with its white margin below the image",
+            comment: "Metaphor for type_photograph in the icon picker footer"
+        )
+        static let evidenceIconTypeNewspaperMetaphor = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeNewspaper.metaphor",
+            defaultValue: "Masthead over a photo block and columns",
+            comment: "Metaphor for type_newspaper in the icon picker footer"
+        )
+        static let evidenceIconTypeMapMetaphor = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeMap.metaphor",
+            defaultValue: "Sheet folded into panels",
+            comment: "Metaphor for type_map in the icon picker footer"
+        )
+        static let evidenceIconTypeMicrofilmMetaphor = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeMicrofilm.metaphor",
+            defaultValue: "Reel on its hub — film or fiche as delivered by an archive",
+            comment: "Metaphor for type_microfilm in the icon picker footer"
+        )
+        static let evidenceIconTypeCassetteMetaphor = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeCassette.metaphor",
+            defaultValue: "Shell with two hubs — the physical medium, not the recording",
+            comment: "Metaphor for type_cassette in the icon picker footer"
+        )
+        static let evidenceIconTypeOralHistoryMetaphor = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeOralHistory.metaphor",
+            defaultValue: "A person speaking outward — testimony, not equipment",
+            comment: "Metaphor for type_oral_history in the icon picker footer"
+        )
+        static let evidenceIconTypeVideoMetaphor = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeVideo.metaphor",
+            defaultValue: "Sprocketed strip with a frame to play",
+            comment: "Metaphor for type_video in the icon picker footer"
+        )
+        static let evidenceIconTypeWebsiteMetaphor = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeWebsite.metaphor",
+            defaultValue: "Captured page — window chrome around a globe",
+            comment: "Metaphor for type_website in the icon picker footer"
+        )
+        static let evidenceIconTypeCensusMetaphor = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeCensus.metaphor",
+            defaultValue: "Enumeration schedule — ruled both ways, no prose",
+            comment: "Metaphor for type_census in the icon picker footer"
+        )
+        static let evidenceIconTypeDNAMetaphor = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeDNA.metaphor",
+            defaultValue: "Two strands crossing on three rungs — scientific, not decorative",
+            comment: "Metaphor for type_dna in the icon picker footer"
+        )
+        static let evidenceIconTypeGEDCOMMetaphor = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeGEDCOM.metaphor",
+            defaultValue: "Structured genealogy data — a pedigree bracket inside a file",
+            comment: "Metaphor for type_gedcom in the icon picker footer"
+        )
+        static let evidenceIconTypeGraveMetaphor = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeGrave.metaphor",
+            defaultValue: "Inscribed stone on its plinth — a cemetery record",
+            comment: "Metaphor for type_grave in the icon picker footer"
+        )
+        static let evidenceIconTypeScrapbookMetaphor = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeScrapbook.metaphor",
+            defaultValue: "Album leaf with clippings pasted at an angle",
+            comment: "Metaphor for type_scrapbook in the icon picker footer"
+        )
+        static let evidenceIconTypeEvidenceMetaphor = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeEvidence.metaphor",
+            defaultValue: "A catalogued tag — the fallback for any custom type",
+            comment: "Metaphor for type_evidence in the icon picker footer"
+        )
+        static let evidenceIconTypeFolderArchiveMetaphor = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeFolderArchive.metaphor",
+            defaultValue: "Lidded box with a written label — a box, folder or bundle",
+            comment: "Metaphor for type_folder_archive in the icon picker footer"
+        )
+        static let evidenceIconTypeEmailMetaphor = LocalizedStringResource(
+            "designSystem.evidenceIcon.typeEmail.metaphor",
+            defaultValue: "Digital letter — correspondence that was never on paper",
+            comment: "Metaphor for type_email in the icon picker footer"
+        )
+        static let evidenceIconTypePostcardMetaphor = LocalizedStringResource(
+            "designSystem.evidenceIcon.typePostcard.metaphor",
+            defaultValue: "Divided back — message, stamp, address",
+            comment: "Metaphor for type_postcard in the icon picker footer"
+        )
     }
 
     enum Onboarding {
@@ -2077,6 +2374,57 @@ enum L10n {
             "sourceTypes.form.descriptionPlaceholder",
             defaultValue: "A bound register of baptisms, marriages or burials kept by a parish",
             comment: "Placeholder text for the add-type description input"
+        )
+
+        static let formIcon = LocalizedStringResource(
+            "sourceTypes.form.icon",
+            defaultValue: "Icon",
+            comment: "Add/edit form field: evidence icon for this type"
+        )
+
+        static let formIconHint = LocalizedStringResource(
+            "sourceTypes.form.iconHint",
+            defaultValue: "The mark that stands for this type wherever a source of it is listed",
+            comment: "Hint under the source-type icon field"
+        )
+
+        static let formIconChange = LocalizedStringResource(
+            "sourceTypes.form.iconChange",
+            defaultValue: "Change",
+            comment: "Link-styled control that opens the icon picker dialog"
+        )
+
+        static func formIconChangeAccessibility(name: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "sourceTypes.form.iconChangeAccessibility",
+                defaultValue: "Icon: %@ — choose a different one",
+                comment: "Accessibility label for the icon field button; argument is the current mark name"
+            ))
+            return String(format: format, locale: .current, name)
+        }
+
+        static let iconPickerTitle = LocalizedStringResource(
+            "sourceTypes.iconPicker.title",
+            defaultValue: "Choose an icon",
+            comment: "Title of the Source-type icon picker dialog"
+        )
+
+        static let iconPickerSubtitle = LocalizedStringResource(
+            "sourceTypes.iconPicker.subtitle",
+            defaultValue: "The mark that stands for this type wherever a source of it is listed. Twenty-one marks name a kind of record, not a file format.",
+            comment: "Subtitle of the Source-type icon picker dialog"
+        )
+
+        static let iconPickerDone = LocalizedStringResource(
+            "sourceTypes.iconPicker.done",
+            defaultValue: "Done",
+            comment: "Closes the Source-type icon picker dialog"
+        )
+
+        static let iconPickerGroupLabel = LocalizedStringResource(
+            "sourceTypes.iconPicker.group",
+            defaultValue: "Icon for this source type",
+            comment: "Accessibility label for the icon picker radio group"
         )
 
         static let errorLabelRequired = LocalizedStringResource(

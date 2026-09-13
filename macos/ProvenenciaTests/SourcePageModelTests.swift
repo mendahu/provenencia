@@ -328,10 +328,34 @@ struct SourcePageModelTests {
         model.artifacts.draft.filePath = path
         await model.artifacts.create()
         #expect(model.artifacts.items.count == 1)
-        #expect(box.source?.thumbnailMediaType == "application/pdf")
-        #expect(box.source?.thumbnailOriginalFilename.hasSuffix(".pdf") == true)
+        #expect(box.source?.thumbnailMediaType.isEmpty == true)
+        #expect(box.source?.thumbnailOriginalFilename.isEmpty == true)
         #expect(box.source?.thumbnailRelPath.isEmpty == true)
-        #expect(model.source?.thumbnailMediaType == "application/pdf")
+        #expect(model.source?.thumbnailMediaType.isEmpty == true)
+        #expect(model.identity.types.first?.iconKey == PVEvidenceIconKey.defaultTypeIcon.rawValue)
+    }
+
+    @Test func createFilelessArtifactClearsMIMECoverForTypeIcon() async {
+        final class CoverBox: @unchecked Sendable {
+            var source: CatalogSource?
+        }
+        let box = CoverBox()
+        let store = makeStore()
+        let model = SourcePageModel(
+            sourceID: sourceID,
+            projectDir: projectDir,
+            userID: userID,
+            sessionDisplayName: "Jake",
+            store: store,
+            onSourceUpdated: { box.source = $0 }
+        )
+        await model.load()
+        model.artifacts.openAdd()
+        model.artifacts.draft.label = "Physical register"
+        await model.artifacts.create()
+        #expect(box.source?.thumbnailRelPath.isEmpty == true)
+        #expect(box.source?.thumbnailMediaType.isEmpty == true)
+        #expect(model.identity.typeLabel == "Photograph")
     }
 
     @Test func ingestMissingFileSurfacesIngestInvalid() async {

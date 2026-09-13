@@ -805,6 +805,9 @@ public nonisolated struct Provenencia_Engine_V1_SourceType: Sendable {
   /// so browsing does not have to fetch every type's join rows.
   public var suggestedFieldCount: Int32 = 0
 
+  /// Closed design-system type_* key for evidence representation.
+  public var iconKey: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -1764,6 +1767,8 @@ public nonisolated struct Provenencia_Engine_V1_CreateSourceTypeRequest: Sendabl
 
   public var description_p: String = String()
 
+  public var iconKey: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -1912,6 +1917,8 @@ public nonisolated struct Provenencia_Engine_V1_UpdateSourceTypeRequest: Sendabl
   public var label: String = String()
 
   public var description_p: String = String()
+
+  public var iconKey: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -3428,7 +3435,7 @@ nonisolated extension Provenencia_Engine_V1_SourceCredibilityAssessment: SwiftPr
 
 nonisolated extension Provenencia_Engine_V1_SourceType: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SourceType"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}key\0\u{1}origin\0\u{1}label\0\u{1}description\0\u{3}used_by\0\u{3}suggested_field_count\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}key\0\u{1}origin\0\u{1}label\0\u{1}description\0\u{3}used_by\0\u{3}suggested_field_count\0\u{3}icon_key\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3443,6 +3450,7 @@ nonisolated extension Provenencia_Engine_V1_SourceType: SwiftProtobuf.Message, S
       case 5: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
       case 6: try { try decoder.decodeSingularInt32Field(value: &self.usedBy) }()
       case 7: try { try decoder.decodeSingularInt32Field(value: &self.suggestedFieldCount) }()
+      case 8: try { try decoder.decodeSingularStringField(value: &self.iconKey) }()
       default: break
       }
     }
@@ -3470,6 +3478,9 @@ nonisolated extension Provenencia_Engine_V1_SourceType: SwiftProtobuf.Message, S
     if self.suggestedFieldCount != 0 {
       try visitor.visitSingularInt32Field(value: self.suggestedFieldCount, fieldNumber: 7)
     }
+    if !self.iconKey.isEmpty {
+      try visitor.visitSingularStringField(value: self.iconKey, fieldNumber: 8)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -3481,6 +3492,7 @@ nonisolated extension Provenencia_Engine_V1_SourceType: SwiftProtobuf.Message, S
     if lhs.description_p != rhs.description_p {return false}
     if lhs.usedBy != rhs.usedBy {return false}
     if lhs.suggestedFieldCount != rhs.suggestedFieldCount {return false}
+    if lhs.iconKey != rhs.iconKey {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -5281,7 +5293,7 @@ nonisolated extension Provenencia_Engine_V1_ListSourceTypesResponse: SwiftProtob
 
 nonisolated extension Provenencia_Engine_V1_CreateSourceTypeRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CreateSourceTypeRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{2}\u{2}label\0\u{1}description\0\u{b}key\0\u{c}\u{3}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{2}\u{2}label\0\u{1}description\0\u{3}icon_key\0\u{b}key\0\u{c}\u{3}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -5293,6 +5305,7 @@ nonisolated extension Provenencia_Engine_V1_CreateSourceTypeRequest: SwiftProtob
       case 2: try { try decoder.decodeSingularStringField(value: &self.userID) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.label) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
+      case 6: try { try decoder.decodeSingularStringField(value: &self.iconKey) }()
       default: break
       }
     }
@@ -5311,6 +5324,9 @@ nonisolated extension Provenencia_Engine_V1_CreateSourceTypeRequest: SwiftProtob
     if !self.description_p.isEmpty {
       try visitor.visitSingularStringField(value: self.description_p, fieldNumber: 5)
     }
+    if !self.iconKey.isEmpty {
+      try visitor.visitSingularStringField(value: self.iconKey, fieldNumber: 6)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -5319,6 +5335,7 @@ nonisolated extension Provenencia_Engine_V1_CreateSourceTypeRequest: SwiftProtob
     if lhs.userID != rhs.userID {return false}
     if lhs.label != rhs.label {return false}
     if lhs.description_p != rhs.description_p {return false}
+    if lhs.iconKey != rhs.iconKey {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -5593,7 +5610,7 @@ nonisolated extension Provenencia_Engine_V1_UpdateMetadataFieldResponse: SwiftPr
 
 nonisolated extension Provenencia_Engine_V1_UpdateSourceTypeRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".UpdateSourceTypeRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}type_id\0\u{1}label\0\u{1}description\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}type_id\0\u{1}label\0\u{1}description\0\u{3}icon_key\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -5606,6 +5623,7 @@ nonisolated extension Provenencia_Engine_V1_UpdateSourceTypeRequest: SwiftProtob
       case 3: try { try decoder.decodeSingularStringField(value: &self.typeID) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.label) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
+      case 6: try { try decoder.decodeSingularStringField(value: &self.iconKey) }()
       default: break
       }
     }
@@ -5627,6 +5645,9 @@ nonisolated extension Provenencia_Engine_V1_UpdateSourceTypeRequest: SwiftProtob
     if !self.description_p.isEmpty {
       try visitor.visitSingularStringField(value: self.description_p, fieldNumber: 5)
     }
+    if !self.iconKey.isEmpty {
+      try visitor.visitSingularStringField(value: self.iconKey, fieldNumber: 6)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -5636,6 +5657,7 @@ nonisolated extension Provenencia_Engine_V1_UpdateSourceTypeRequest: SwiftProtob
     if lhs.typeID != rhs.typeID {return false}
     if lhs.label != rhs.label {return false}
     if lhs.description_p != rhs.description_p {return false}
+    if lhs.iconKey != rhs.iconKey {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

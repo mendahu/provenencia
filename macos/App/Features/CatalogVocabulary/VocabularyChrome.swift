@@ -86,6 +86,8 @@ struct VocabularyPanelHeader: View {
     let title: String
     let origin: String
     let keyText: String
+    /// Optional evidence `type_*` key — Source types show a 22pt mark beside the title.
+    var iconKey: String? = nil
     /// The "used by N sources" line — only Source types carries one so far.
     var usageLine: String?
     let keyHint: LocalizedStringResource
@@ -112,9 +114,29 @@ struct VocabularyPanelHeader: View {
                     .accessibilityIdentifier("\(identifierPrefix).delete")
                 }
             }
-            Text(title)
-                .font(PVFont.display(size: PVTypeScale.h2))
-                .foregroundStyle(PVColor.textDisplay)
+            HStack(alignment: .center, spacing: PVSpacing.space5) {
+                if let iconKey, !iconKey.isEmpty {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                            .fill(PVColor.surfaceSunken)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                                    .stroke(PVColor.borderSubtle, lineWidth: 1)
+                            )
+                        PVEvidenceIcon(
+                            PVEvidenceIconKey(catalogKey: iconKey),
+                            size: 22,
+                            decorative: true
+                        )
+                    }
+                    .frame(width: 36, height: 36)
+                    .accessibilityIdentifier("\(identifierPrefix).detail.icon")
+                }
+                Text(title)
+                    .font(PVFont.display(size: PVTypeScale.h2))
+                    .foregroundStyle(PVColor.textDisplay)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
             HStack(spacing: PVSpacing.space5) {
                 OriginBadge(origin: origin)
                 Text(keyText)

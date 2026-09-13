@@ -42,7 +42,7 @@ func CreateSourceType(in []byte) ([]byte, error) {
 	}
 	var out *engine.CreateSourceTypeResponse
 	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		got, err := sourcetypes.Create(c, req.GetLabel(), req.GetDescription())
+		got, err := sourcetypes.Create(c, req.GetLabel(), req.GetDescription(), req.GetIconKey())
 		if err != nil {
 			return err
 		}
@@ -69,7 +69,7 @@ func UpdateSourceType(in []byte) ([]byte, error) {
 	}
 	var out *engine.UpdateSourceTypeResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		got, err := sourcetypes.Update(c, typeID, req.GetLabel(), req.GetDescription())
+		got, err := sourcetypes.Update(c, typeID, req.GetLabel(), req.GetDescription(), req.GetIconKey())
 		if err != nil {
 			return err
 		}
@@ -335,6 +335,7 @@ func sourceTypeProto(t sourcetypes.Type) *engine.SourceType {
 		Description:         t.Description,
 		UsedBy:              int32(t.UsedBy),
 		SuggestedFieldCount: int32(t.SuggestedFields),
+		IconKey:             t.IconKey,
 	}
 }
 

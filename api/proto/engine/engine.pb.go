@@ -2014,8 +2014,10 @@ type SourceType struct {
 	// How many metadata fields this type suggests — the list's third column,
 	// so browsing does not have to fetch every type's join rows.
 	SuggestedFieldCount int32 `protobuf:"varint,7,opt,name=suggested_field_count,json=suggestedFieldCount,proto3" json:"suggested_field_count,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// Closed design-system type_* key for evidence representation.
+	IconKey       string `protobuf:"bytes,8,opt,name=icon_key,json=iconKey,proto3" json:"icon_key,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SourceType) Reset() {
@@ -2095,6 +2097,13 @@ func (x *SourceType) GetSuggestedFieldCount() int32 {
 		return x.SuggestedFieldCount
 	}
 	return 0
+}
+
+func (x *SourceType) GetIconKey() string {
+	if x != nil {
+		return x.IconKey
+	}
+	return ""
 }
 
 // TypeSuggestion is one source_type_metadata_fields join row: a field this
@@ -4508,6 +4517,7 @@ type CreateSourceTypeRequest struct {
 	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	Label         string                 `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
 	Description   string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
+	IconKey       string                 `protobuf:"bytes,6,opt,name=icon_key,json=iconKey,proto3" json:"icon_key,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4566,6 +4576,13 @@ func (x *CreateSourceTypeRequest) GetLabel() string {
 func (x *CreateSourceTypeRequest) GetDescription() string {
 	if x != nil {
 		return x.Description
+	}
+	return ""
+}
+
+func (x *CreateSourceTypeRequest) GetIconKey() string {
+	if x != nil {
+		return x.IconKey
 	}
 	return ""
 }
@@ -4957,6 +4974,7 @@ type UpdateSourceTypeRequest struct {
 	TypeId        string                 `protobuf:"bytes,3,opt,name=type_id,json=typeId,proto3" json:"type_id,omitempty"`
 	Label         string                 `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
 	Description   string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
+	IconKey       string                 `protobuf:"bytes,6,opt,name=icon_key,json=iconKey,proto3" json:"icon_key,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5022,6 +5040,13 @@ func (x *UpdateSourceTypeRequest) GetLabel() string {
 func (x *UpdateSourceTypeRequest) GetDescription() string {
 	if x != nil {
 		return x.Description
+	}
+	return ""
+}
+
+func (x *UpdateSourceTypeRequest) GetIconKey() string {
+	if x != nil {
+		return x.IconKey
 	}
 	return ""
 }
@@ -6247,7 +6272,7 @@ const file_engine_proto_rawDesc = "" +
 	"\tgrade_key\x18\x04 \x01(\tR\bgradeKey\x12\x1f\n" +
 	"\vgrade_label\x18\x05 \x01(\tR\n" +
 	"gradeLabel\x12\x1a\n" +
-	"\bargument\x18\x06 \x01(\tR\bargument\"\xcb\x01\n" +
+	"\bargument\x18\x06 \x01(\tR\bargument\"\xe6\x01\n" +
 	"\n" +
 	"SourceType\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
@@ -6256,7 +6281,8 @@ const file_engine_proto_rawDesc = "" +
 	"\x05label\x18\x04 \x01(\tR\x05label\x12 \n" +
 	"\vdescription\x18\x05 \x01(\tR\vdescription\x12\x17\n" +
 	"\aused_by\x18\x06 \x01(\x05R\x06usedBy\x122\n" +
-	"\x15suggested_field_count\x18\a \x01(\x05R\x13suggestedFieldCount\"k\n" +
+	"\x15suggested_field_count\x18\a \x01(\x05R\x13suggestedFieldCount\x12\x19\n" +
+	"\bicon_key\x18\b \x01(\tR\aiconKey\"k\n" +
 	"\x0eTypeSuggestion\x12:\n" +
 	"\x05field\x18\x01 \x01(\v2$.provenencia.engine.v1.MetadataFieldR\x05field\x12\x1d\n" +
 	"\n" +
@@ -6470,13 +6496,14 @@ const file_engine_proto_rawDesc = "" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\"R\n" +
 	"\x17ListSourceTypesResponse\x127\n" +
-	"\x05types\x18\x01 \x03(\v2!.provenencia.engine.v1.SourceTypeR\x05types\"\x96\x01\n" +
+	"\x05types\x18\x01 \x03(\v2!.provenencia.engine.v1.SourceTypeR\x05types\"\xb1\x01\n" +
 	"\x17CreateSourceTypeRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x14\n" +
 	"\x05label\x18\x04 \x01(\tR\x05label\x12 \n" +
-	"\vdescription\x18\x05 \x01(\tR\vdescriptionJ\x04\b\x03\x10\x04R\x03key\"Q\n" +
+	"\vdescription\x18\x05 \x01(\tR\vdescription\x12\x19\n" +
+	"\bicon_key\x18\x06 \x01(\tR\aiconKeyJ\x04\b\x03\x10\x04R\x03key\"Q\n" +
 	"\x18CreateSourceTypeResponse\x125\n" +
 	"\x04type\x18\x01 \x01(\v2!.provenencia.engine.v1.SourceTypeR\x04type\"<\n" +
 	"\x19ListMetadataFieldsRequest\x12\x1f\n" +
@@ -6502,14 +6529,15 @@ const file_engine_proto_rawDesc = "" +
 	"\tdata_type\x18\x05 \x01(\tR\bdataType\x12 \n" +
 	"\vdescription\x18\x06 \x01(\tR\vdescription\"Y\n" +
 	"\x1bUpdateMetadataFieldResponse\x12:\n" +
-	"\x05field\x18\x01 \x01(\v2$.provenencia.engine.v1.MetadataFieldR\x05field\"\xa4\x01\n" +
+	"\x05field\x18\x01 \x01(\v2$.provenencia.engine.v1.MetadataFieldR\x05field\"\xbf\x01\n" +
 	"\x17UpdateSourceTypeRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x17\n" +
 	"\atype_id\x18\x03 \x01(\tR\x06typeId\x12\x14\n" +
 	"\x05label\x18\x04 \x01(\tR\x05label\x12 \n" +
-	"\vdescription\x18\x05 \x01(\tR\vdescription\"Q\n" +
+	"\vdescription\x18\x05 \x01(\tR\vdescription\x12\x19\n" +
+	"\bicon_key\x18\x06 \x01(\tR\aiconKey\"Q\n" +
 	"\x18UpdateSourceTypeResponse\x125\n" +
 	"\x04type\x18\x01 \x01(\v2!.provenencia.engine.v1.SourceTypeR\x04type\"V\n" +
 	"\x1aListTypeSuggestionsRequest\x12\x1f\n" +

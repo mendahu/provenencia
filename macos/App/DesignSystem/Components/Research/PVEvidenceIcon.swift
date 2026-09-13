@@ -1,14 +1,20 @@
 import SwiftUI
 
 /// Curated evidence icon pack — the one place the Mac client draws its own
-/// artwork instead of SF Symbols. PR1 ships the `file_*` family only (MIME
-/// stand-ins when a File has no raster derivative). `type_*` marks land in PR2.
+/// artwork instead of SF Symbols. Two families: `file_*` (MIME stand-ins) and
+/// `type_*` (kinds of evidence on `source_types.icon_key`).
 ///
 /// Artwork lives in `Assets.xcassets/EvidenceIcons` as template-rendered vector
 /// image sets named `provenencia_<key>`. The mono type label on file glyphs is
 /// composited here (Xcode's SVG importer does not resolve `<text>`).
 
+enum PVEvidenceIconFamily {
+    case file
+    case type
+}
+
 enum PVEvidenceIconKey: String, CaseIterable, Sendable {
+    // File-type fallbacks
     case filePDF = "file_pdf"
     case fileDoc = "file_doc"
     case fileTxt = "file_txt"
@@ -19,17 +25,47 @@ enum PVEvidenceIconKey: String, CaseIterable, Sendable {
     case fileImageMissing = "file_image_missing"
     case fileGeneric = "file_generic"
 
-    /// Unknown catalog / MIME strings resolve here rather than failing.
-    static let fallback: PVEvidenceIconKey = .fileGeneric
+    // Source-type marks
+    case typeCertificate = "type_certificate"
+    case typeBook = "type_book"
+    case typeDocument = "type_document"
+    case typeScroll = "type_scroll"
+    case typePhotograph = "type_photograph"
+    case typeNewspaper = "type_newspaper"
+    case typeMap = "type_map"
+    case typeMicrofilm = "type_microfilm"
+    case typeCassette = "type_cassette"
+    case typeOralHistory = "type_oral_history"
+    case typeVideo = "type_video"
+    case typeWebsite = "type_website"
+    case typeCensus = "type_census"
+    case typeDNA = "type_dna"
+    case typeGEDCOM = "type_gedcom"
+    case typeGrave = "type_grave"
+    case typeScrapbook = "type_scrapbook"
+    case typeEvidence = "type_evidence"
+    case typeFolderArchive = "type_folder_archive"
+    case typeEmail = "type_email"
+    case typePostcard = "type_postcard"
+
+    /// Unknown catalog strings resolve here rather than failing.
+    static let fallback: PVEvidenceIconKey = .typeEvidence
+
+    /// Default for a new user Source type until the researcher picks another.
+    static let defaultTypeIcon: PVEvidenceIconKey = .typeEvidence
 
     init(catalogKey: String?) {
         self = PVEvidenceIconKey(rawValue: catalogKey ?? "") ?? .fallback
     }
 
+    var family: PVEvidenceIconFamily {
+        rawValue.hasPrefix("file_") ? .file : .type
+    }
+
     var assetName: String { "provenencia_" + rawValue }
 
-    /// Stamped in the ink band.
-    var label: String {
+    /// Stamped in the ink band. `nil` for source-type marks.
+    var label: String? {
         switch self {
         case .filePDF: "PDF"
         case .fileDoc: "DOC"
@@ -40,6 +76,7 @@ enum PVEvidenceIconKey: String, CaseIterable, Sendable {
         case .fileAudio: "WAV"
         case .fileImageMissing: "IMG"
         case .fileGeneric: "FILE"
+        default: nil
         }
     }
 
@@ -54,8 +91,88 @@ enum PVEvidenceIconKey: String, CaseIterable, Sendable {
         case .fileAudio: L10n.DesignSystem.evidenceIconFileAudio
         case .fileImageMissing: L10n.DesignSystem.evidenceIconFileImageMissing
         case .fileGeneric: L10n.DesignSystem.evidenceIconFileGeneric
+        case .typeCertificate: L10n.DesignSystem.evidenceIconTypeCertificate
+        case .typeBook: L10n.DesignSystem.evidenceIconTypeBook
+        case .typeDocument: L10n.DesignSystem.evidenceIconTypeDocument
+        case .typeScroll: L10n.DesignSystem.evidenceIconTypeScroll
+        case .typePhotograph: L10n.DesignSystem.evidenceIconTypePhotograph
+        case .typeNewspaper: L10n.DesignSystem.evidenceIconTypeNewspaper
+        case .typeMap: L10n.DesignSystem.evidenceIconTypeMap
+        case .typeMicrofilm: L10n.DesignSystem.evidenceIconTypeMicrofilm
+        case .typeCassette: L10n.DesignSystem.evidenceIconTypeCassette
+        case .typeOralHistory: L10n.DesignSystem.evidenceIconTypeOralHistory
+        case .typeVideo: L10n.DesignSystem.evidenceIconTypeVideo
+        case .typeWebsite: L10n.DesignSystem.evidenceIconTypeWebsite
+        case .typeCensus: L10n.DesignSystem.evidenceIconTypeCensus
+        case .typeDNA: L10n.DesignSystem.evidenceIconTypeDNA
+        case .typeGEDCOM: L10n.DesignSystem.evidenceIconTypeGEDCOM
+        case .typeGrave: L10n.DesignSystem.evidenceIconTypeGrave
+        case .typeScrapbook: L10n.DesignSystem.evidenceIconTypeScrapbook
+        case .typeEvidence: L10n.DesignSystem.evidenceIconTypeEvidence
+        case .typeFolderArchive: L10n.DesignSystem.evidenceIconTypeFolderArchive
+        case .typeEmail: L10n.DesignSystem.evidenceIconTypeEmail
+        case .typePostcard: L10n.DesignSystem.evidenceIconTypePostcard
         }
     }
+
+    /// Short title in the Source-type icon picker grid and form tile.
+    var typePickerTitle: LocalizedStringResource {
+        switch self {
+        case .typeCertificate: L10n.DesignSystem.evidenceIconTypeCertificateTitle
+        case .typeBook: L10n.DesignSystem.evidenceIconTypeBookTitle
+        case .typeDocument: L10n.DesignSystem.evidenceIconTypeDocumentTitle
+        case .typeScroll: L10n.DesignSystem.evidenceIconTypeScrollTitle
+        case .typePhotograph: L10n.DesignSystem.evidenceIconTypePhotographTitle
+        case .typeNewspaper: L10n.DesignSystem.evidenceIconTypeNewspaperTitle
+        case .typeMap: L10n.DesignSystem.evidenceIconTypeMapTitle
+        case .typeMicrofilm: L10n.DesignSystem.evidenceIconTypeMicrofilmTitle
+        case .typeCassette: L10n.DesignSystem.evidenceIconTypeCassetteTitle
+        case .typeOralHistory: L10n.DesignSystem.evidenceIconTypeOralHistoryTitle
+        case .typeVideo: L10n.DesignSystem.evidenceIconTypeVideoTitle
+        case .typeWebsite: L10n.DesignSystem.evidenceIconTypeWebsiteTitle
+        case .typeCensus: L10n.DesignSystem.evidenceIconTypeCensusTitle
+        case .typeDNA: L10n.DesignSystem.evidenceIconTypeDNATitle
+        case .typeGEDCOM: L10n.DesignSystem.evidenceIconTypeGEDCOMTitle
+        case .typeGrave: L10n.DesignSystem.evidenceIconTypeGraveTitle
+        case .typeScrapbook: L10n.DesignSystem.evidenceIconTypeScrapbookTitle
+        case .typeEvidence: L10n.DesignSystem.evidenceIconTypeEvidenceTitle
+        case .typeFolderArchive: L10n.DesignSystem.evidenceIconTypeFolderArchiveTitle
+        case .typeEmail: L10n.DesignSystem.evidenceIconTypeEmailTitle
+        case .typePostcard: L10n.DesignSystem.evidenceIconTypePostcardTitle
+        default: accessibilityName
+        }
+    }
+
+    /// One-line metaphor shown under the icon picker dialog while this mark is selected.
+    var typeMetaphor: LocalizedStringResource {
+        switch self {
+        case .typeCertificate: L10n.DesignSystem.evidenceIconTypeCertificateMetaphor
+        case .typeBook: L10n.DesignSystem.evidenceIconTypeBookMetaphor
+        case .typeDocument: L10n.DesignSystem.evidenceIconTypeDocumentMetaphor
+        case .typeScroll: L10n.DesignSystem.evidenceIconTypeScrollMetaphor
+        case .typePhotograph: L10n.DesignSystem.evidenceIconTypePhotographMetaphor
+        case .typeNewspaper: L10n.DesignSystem.evidenceIconTypeNewspaperMetaphor
+        case .typeMap: L10n.DesignSystem.evidenceIconTypeMapMetaphor
+        case .typeMicrofilm: L10n.DesignSystem.evidenceIconTypeMicrofilmMetaphor
+        case .typeCassette: L10n.DesignSystem.evidenceIconTypeCassetteMetaphor
+        case .typeOralHistory: L10n.DesignSystem.evidenceIconTypeOralHistoryMetaphor
+        case .typeVideo: L10n.DesignSystem.evidenceIconTypeVideoMetaphor
+        case .typeWebsite: L10n.DesignSystem.evidenceIconTypeWebsiteMetaphor
+        case .typeCensus: L10n.DesignSystem.evidenceIconTypeCensusMetaphor
+        case .typeDNA: L10n.DesignSystem.evidenceIconTypeDNAMetaphor
+        case .typeGEDCOM: L10n.DesignSystem.evidenceIconTypeGEDCOMMetaphor
+        case .typeGrave: L10n.DesignSystem.evidenceIconTypeGraveMetaphor
+        case .typeScrapbook: L10n.DesignSystem.evidenceIconTypeScrapbookMetaphor
+        case .typeEvidence: L10n.DesignSystem.evidenceIconTypeEvidenceMetaphor
+        case .typeFolderArchive: L10n.DesignSystem.evidenceIconTypeFolderArchiveMetaphor
+        case .typeEmail: L10n.DesignSystem.evidenceIconTypeEmailMetaphor
+        case .typePostcard: L10n.DesignSystem.evidenceIconTypePostcardMetaphor
+        default: L10n.DesignSystem.evidenceIconTypeEvidenceMetaphor
+        }
+    }
+
+    static var fileKeys: [PVEvidenceIconKey] { allCases.filter { $0.family == .file } }
+    static var typeKeys: [PVEvidenceIconKey] { allCases.filter { $0.family == .type } }
 }
 
 enum PVEvidenceIconSize: CGFloat {
@@ -93,14 +210,15 @@ struct PVEvidenceIcon: View {
     private static let labelFloor: CGFloat = 22
 
     private var labelled: Bool {
-        showLabel ?? (size >= Self.labelFloor)
+        guard key.family == .file, key.label != nil else { return false }
+        return showLabel ?? (size >= Self.labelFloor)
     }
 
     private var bandWidth: CGFloat { size * 15.0 / 24 }
     private var bandHeight: CGFloat { size * 6.9 / 24 }
     private var bandOffsetY: CGFloat { size * 6.05 / 24 }
     private var labelSize: CGFloat {
-        size * (key.label.count > 3 ? 4.4 : 5.4) / 24
+        size * ((key.label?.count ?? 3) > 3 ? 4.4 : 5.4) / 24
     }
 
     var body: some View {
@@ -117,7 +235,7 @@ struct PVEvidenceIcon: View {
         Rectangle()
             .frame(width: bandWidth, height: bandHeight)
             .overlay {
-                Text(key.label)
+                Text(key.label ?? "")
                     .font(PVFont.mono(size: labelSize, weight: PVFontWeight.semibold))
                     .tracking(size * 0.28 / 24)
                     .blendMode(.destinationOut)
@@ -223,15 +341,21 @@ enum PVFileTypeGlyph {
     }
 }
 
-#Preview("File-type glyphs") {
-    HStack(spacing: PVSpacing.space6) {
-        ForEach(PVEvidenceIconKey.allCases, id: \.self) { key in
-            PVEvidenceIcon(key, size: .tile)
-                .foregroundStyle(PVColor.textSecondary)
-                .frame(width: 52, height: 52)
-                .background(PVColor.surfaceInset)
+#Preview("Evidence icons") {
+    ScrollView {
+        VStack(alignment: .leading, spacing: PVSpacing.space7) {
+            ForEach([PVEvidenceIconKey.fileKeys, PVEvidenceIconKey.typeKeys], id: \.first) { group in
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: PVSpacing.space6) {
+                    ForEach(group, id: \.self) { key in
+                        PVEvidenceIcon(key, size: .tile)
+                            .foregroundStyle(PVColor.textSecondary)
+                            .frame(width: 52, height: 52)
+                            .background(PVColor.surfaceInset)
+                    }
+                }
+            }
         }
+        .padding(PVSpacing.space9)
     }
-    .padding(PVSpacing.space9)
     .background(PVColor.surfacePage)
 }

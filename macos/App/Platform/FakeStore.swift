@@ -562,7 +562,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         projectDir: String,
         userID _: String,
         label: String,
-        description: String
+        description: String,
+        iconKey: String
     ) async throws -> CatalogSourceType {
         if let createSourceTypeError { throw createSourceTypeError }
         let key = FieldSlug.kebab(label)
@@ -577,12 +578,16 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 params: [key]
             )
         }
+        let resolvedIcon = iconKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? PVEvidenceIconKey.defaultTypeIcon.rawValue
+            : iconKey
         let type = CatalogSourceType(
             id: UUID().uuidString.lowercased(),
             key: key,
             origin: "user",
             label: label,
-            description: description
+            description: description,
+            iconKey: resolvedIcon
         )
         sourceTypesByProject[projectDir, default: []].append(type)
         return type
@@ -593,7 +598,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         userID _: String,
         typeID: String,
         label: String,
-        description: String
+        description: String,
+        iconKey: String
     ) async throws -> CatalogSourceType {
         var list = sourceTypesByProject[projectDir] ?? []
         guard let idx = list.firstIndex(where: { $0.id == typeID }) else {
@@ -604,6 +610,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
         list[idx].label = label
         list[idx].description = description
+        let trimmed = iconKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        list[idx].iconKey = trimmed.isEmpty ? PVEvidenceIconKey.defaultTypeIcon.rawValue : trimmed
         sourceTypesByProject[projectDir] = list
         return withSuggestedFieldCount(list[idx])
     }

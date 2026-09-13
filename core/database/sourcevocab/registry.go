@@ -7,7 +7,7 @@ import (
 // Declarative provenencia seed registry (create-time starter for new catalogs).
 
 type seedType struct {
-	Key, Label, Description string
+	Key, Label, Description, IconKey string
 }
 
 type seedField struct {
@@ -21,7 +21,11 @@ type seedSuggestion struct {
 }
 
 var seedTypes = []seedType{
-	{Key: "birth_certificate", Label: "Birth certificate", Description: "Civil or parish record of a birth (certificate, register entry, abstract, etc.)."},
+	{
+		Key: "birth_certificate", Label: "Birth certificate",
+		Description: "Civil or parish record of a birth (certificate, register entry, abstract, etc.).",
+		IconKey:     "type_certificate",
+	},
 }
 
 var seedFields = []seedField{

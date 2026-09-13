@@ -97,6 +97,14 @@ struct SourcePageArtifactsView: View {
         }
     }
 
+    private func artifactTypeIconKey(for art: CatalogArtifact) -> String? {
+        // File-bearing rows stay on raster → MIME; only fileless use type icon.
+        guard art.file == nil || art.fileID.isEmpty else { return nil }
+        return model.identity.types
+            .first { $0.id == model.source?.sourceTypeID }?
+            .iconKey
+    }
+
     private func artifactRow(_ art: CatalogArtifact) -> some View {
         let expanded = model.artifacts.expandedIDs.contains(art.id)
         return VStack(alignment: .leading, spacing: 0) {
@@ -113,6 +121,7 @@ struct SourcePageArtifactsView: View {
                         relPath: art.thumbnailRelPath,
                         mediaType: art.file?.mediaType ?? "",
                         originalFilename: art.file?.originalFilename ?? "",
+                        typeIconKey: artifactTypeIconKey(for: art),
                         size: SourcePageLayout.artifactRowThumbnailSize
                     )
                     Text(art.label.isEmpty ? art.ref : art.label)

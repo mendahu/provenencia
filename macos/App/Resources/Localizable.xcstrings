@@ -135,6 +135,258 @@
         }
       }
     },
+    "designSystem.evidenceIcon.typeCertificate": {
+      "comment": "Accessibility name for the type_certificate evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Certificate source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeBook": {
+      "comment": "Accessibility name for the type_book evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Book source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeDocument": {
+      "comment": "Accessibility name for the type_document evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Document source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeScroll": {
+      "comment": "Accessibility name for the type_scroll evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Register source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typePhotograph": {
+      "comment": "Accessibility name for the type_photograph evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photograph source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeNewspaper": {
+      "comment": "Accessibility name for the type_newspaper evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Newspaper source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeMap": {
+      "comment": "Accessibility name for the type_map evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Map source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeMicrofilm": {
+      "comment": "Accessibility name for the type_microfilm evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microfilm source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeCassette": {
+      "comment": "Accessibility name for the type_cassette evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Magnetic tape source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeOralHistory": {
+      "comment": "Accessibility name for the type_oral_history evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oral history source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeVideo": {
+      "comment": "Accessibility name for the type_video evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moving image source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeWebsite": {
+      "comment": "Accessibility name for the type_website evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Website source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeCensus": {
+      "comment": "Accessibility name for the type_census evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Census source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeDna": {
+      "comment": "Accessibility name for the type_dna evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DNA match source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeGedcom": {
+      "comment": "Accessibility name for the type_gedcom evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GEDCOM source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeGrave": {
+      "comment": "Accessibility name for the type_grave evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Memorial source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeScrapbook": {
+      "comment": "Accessibility name for the type_scrapbook evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scrapbook source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeEvidence": {
+      "comment": "Accessibility name for the type_evidence evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidence source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeFolderArchive": {
+      "comment": "Accessibility name for the type_folder_archive evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archival container source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeEmail": {
+      "comment": "Accessibility name for the type_email evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correspondence source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typePostcard": {
+      "comment": "Accessibility name for the type_postcard evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Postcard source type"
+          }
+        }
+      }
+    },
     "designSystem.evidenceIcon.fileImageMissing": {
       "comment": "Accessibility name for the file_image_missing evidence glyph",
       "extractionState": "manual",
@@ -4039,6 +4291,30 @@
         }
       }
     },
+    "sourceTypes.form.icon": {
+      "comment": "Add/edit form field: evidence icon for this type",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Icon"
+          }
+        }
+      }
+    },
+    "sourceTypes.form.iconHint": {
+      "comment": "Hint under the source-type icon field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The mark that stands for this type wherever a source of it is listed"
+          }
+        }
+      }
+    },
     "sourceTypes.form.errorLabelRequired": {
       "comment": "Inline validation error when the label is blank",
       "extractionState": "manual",
@@ -4890,6 +5166,582 @@
         }
       },
       "comment": "Empty-state title when a Source has no metadata rows"
+    },
+    "sourceTypes.form.iconChange": {
+      "comment": "Link-styled control that opens the icon picker dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change"
+          }
+        }
+      }
+    },
+    "sourceTypes.form.iconChangeAccessibility": {
+      "comment": "Accessibility label for the icon field button; argument is the current mark name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Icon: %@ — choose a different one"
+          }
+        }
+      }
+    },
+    "sourceTypes.iconPicker.title": {
+      "comment": "Title of the Source-type icon picker dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose an icon"
+          }
+        }
+      }
+    },
+    "sourceTypes.iconPicker.subtitle": {
+      "comment": "Subtitle of the Source-type icon picker dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The mark that stands for this type wherever a source of it is listed. Twenty-one marks name a kind of record, not a file format."
+          }
+        }
+      }
+    },
+    "sourceTypes.iconPicker.done": {
+      "comment": "Closes the Source-type icon picker dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        }
+      }
+    },
+    "sourceTypes.iconPicker.group": {
+      "comment": "Accessibility label for the icon picker radio group",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Icon for this source type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeCertificate.title": {
+      "comment": "Short title for typeCertificate in the icon picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Certificate"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeCertificate.metaphor": {
+      "comment": "Metaphor for typeCertificate in the icon picker footer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ruled formal record under an impressed seal"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeBook.title": {
+      "comment": "Short title for typeBook in the icon picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Book"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeBook.metaphor": {
+      "comment": "Metaphor for typeBook in the icon picker footer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bound volume seen spine-on"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeDocument.title": {
+      "comment": "Short title for typeDocument in the icon picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Document"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeDocument.metaphor": {
+      "comment": "Metaphor for typeDocument in the icon picker footer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loose sheet with a turned corner — a letter, a note, a form"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeScroll.title": {
+      "comment": "Short title for typeScroll in the icon picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Register"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeScroll.metaphor": {
+      "comment": "Metaphor for typeScroll in the icon picker footer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parchment rolled at both ends — parish register, roll, cartulary"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typePhotograph.title": {
+      "comment": "Short title for typePhotograph in the icon picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photograph"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typePhotograph.metaphor": {
+      "comment": "Metaphor for typePhotograph in the icon picker footer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A print with its white margin below the image"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeNewspaper.title": {
+      "comment": "Short title for typeNewspaper in the icon picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Newspaper"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeNewspaper.metaphor": {
+      "comment": "Metaphor for typeNewspaper in the icon picker footer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Masthead over a photo block and columns"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeMap.title": {
+      "comment": "Short title for typeMap in the icon picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Map"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeMap.metaphor": {
+      "comment": "Metaphor for typeMap in the icon picker footer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sheet folded into panels"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeMicrofilm.title": {
+      "comment": "Short title for typeMicrofilm in the icon picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microfilm"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeMicrofilm.metaphor": {
+      "comment": "Metaphor for typeMicrofilm in the icon picker footer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reel on its hub — film or fiche as delivered by an archive"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeCassette.title": {
+      "comment": "Short title for typeCassette in the icon picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Magnetic tape"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeCassette.metaphor": {
+      "comment": "Metaphor for typeCassette in the icon picker footer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shell with two hubs — the physical medium, not the recording"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeOralHistory.title": {
+      "comment": "Short title for typeOralHistory in the icon picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oral history"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeOralHistory.metaphor": {
+      "comment": "Metaphor for typeOralHistory in the icon picker footer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A person speaking outward — testimony, not equipment"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeVideo.title": {
+      "comment": "Short title for typeVideo in the icon picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moving image"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeVideo.metaphor": {
+      "comment": "Metaphor for typeVideo in the icon picker footer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprocketed strip with a frame to play"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeWebsite.title": {
+      "comment": "Short title for typeWebsite in the icon picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Website"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeWebsite.metaphor": {
+      "comment": "Metaphor for typeWebsite in the icon picker footer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Captured page — window chrome around a globe"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeCensus.title": {
+      "comment": "Short title for typeCensus in the icon picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Census"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeCensus.metaphor": {
+      "comment": "Metaphor for typeCensus in the icon picker footer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enumeration schedule — ruled both ways, no prose"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeDNA.title": {
+      "comment": "Short title for typeDNA in the icon picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DNA match"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeDNA.metaphor": {
+      "comment": "Metaphor for typeDNA in the icon picker footer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Two strands crossing on three rungs — scientific, not decorative"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeGEDCOM.title": {
+      "comment": "Short title for typeGEDCOM in the icon picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GEDCOM"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeGEDCOM.metaphor": {
+      "comment": "Metaphor for typeGEDCOM in the icon picker footer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Structured genealogy data — a pedigree bracket inside a file"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeGrave.title": {
+      "comment": "Short title for typeGrave in the icon picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Memorial"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeGrave.metaphor": {
+      "comment": "Metaphor for typeGrave in the icon picker footer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inscribed stone on its plinth — a cemetery record"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeScrapbook.title": {
+      "comment": "Short title for typeScrapbook in the icon picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scrapbook"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeScrapbook.metaphor": {
+      "comment": "Metaphor for typeScrapbook in the icon picker footer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Album leaf with clippings pasted at an angle"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeEvidence.title": {
+      "comment": "Short title for typeEvidence in the icon picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidence"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeEvidence.metaphor": {
+      "comment": "Metaphor for typeEvidence in the icon picker footer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A catalogued tag — the fallback for any custom type"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeFolderArchive.title": {
+      "comment": "Short title for typeFolderArchive in the icon picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archival container"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeFolderArchive.metaphor": {
+      "comment": "Metaphor for typeFolderArchive in the icon picker footer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lidded box with a written label — a box, folder or bundle"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeEmail.title": {
+      "comment": "Short title for typeEmail in the icon picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correspondence"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typeEmail.metaphor": {
+      "comment": "Metaphor for typeEmail in the icon picker footer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digital letter — correspondence that was never on paper"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typePostcard.title": {
+      "comment": "Short title for typePostcard in the icon picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Postcard"
+          }
+        }
+      }
+    },
+    "designSystem.evidenceIcon.typePostcard.metaphor": {
+      "comment": "Metaphor for typePostcard in the icon picker footer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Divided back — message, stamp, address"
+          }
+        }
+      }
     }
   },
   "version": "1.1"

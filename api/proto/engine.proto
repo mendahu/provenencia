@@ -243,6 +243,8 @@ message SourceType {
   // How many metadata fields this type suggests — the list's third column,
   // so browsing does not have to fetch every type's join rows.
   int32 suggested_field_count = 7;
+  // Closed design-system type_* key for evidence representation.
+  string icon_key = 8;
 }
 
 // TypeSuggestion is one source_type_metadata_fields join row: a field this
@@ -514,6 +516,7 @@ message CreateSourceTypeRequest {
   reserved "key";
   string label = 4;
   string description = 5;
+  string icon_key = 6;
 }
 
 message CreateSourceTypeResponse {
@@ -561,6 +564,7 @@ message UpdateSourceTypeRequest {
   string type_id = 3;
   string label = 4;
   string description = 5;
+  string icon_key = 6;
 }
 
 message UpdateSourceTypeResponse {

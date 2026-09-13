@@ -176,19 +176,42 @@ func TestCreateUpdateGetByID(t *testing.T) {
 		{
 			name: "create mints kebab key from label",
 			run: func(t *testing.T, c *database.Catalog) {
-				got, err := Create(c, "Parish register", "Baptisms, marriages, burials")
+				got, err := Create(c, "Parish register", "Baptisms, marriages, burials", "type_scroll")
 				if err != nil {
 					t.Fatal(err)
 				}
 				if got.Key != "parish-register" || got.Origin != OriginUser {
 					t.Fatalf("got %+v", got)
 				}
+				if got.IconKey != "type_scroll" {
+					t.Fatalf("icon_key %+v", got)
+				}
+			},
+		},
+		{
+			name: "create refuses unknown icon_key",
+			run: func(t *testing.T, c *database.Catalog) {
+				if _, err := Create(c, "Deed", "", "type_not_a_real_icon"); !errors.Is(err, ErrInvalid) {
+					t.Fatalf("got %v", err)
+				}
+			},
+		},
+		{
+			name: "create empty icon_key defaults to type_evidence",
+			run: func(t *testing.T, c *database.Catalog) {
+				got, err := Create(c, "Loose note", "", "")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got.IconKey != DefaultIconKey {
+					t.Fatalf("icon_key %+v", got)
+				}
 			},
 		},
 		{
 			name: "create refuses an unslugifiable label",
 			run: func(t *testing.T, c *database.Catalog) {
-				if _, err := Create(c, "—", ""); !errors.Is(err, ErrInvalid) {
+				if _, err := Create(c, "—", "", "type_evidence"); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -196,10 +219,10 @@ func TestCreateUpdateGetByID(t *testing.T) {
 		{
 			name: "create refuses a duplicate user key",
 			run: func(t *testing.T, c *database.Catalog) {
-				if _, err := Create(c, "Parish register", ""); err != nil {
+				if _, err := Create(c, "Parish register", "", "type_scroll"); err != nil {
 					t.Fatal(err)
 				}
-				_, err := Create(c, "Parish Register", "")
+				_, err := Create(c, "Parish Register", "", "type_scroll")
 				if !errors.Is(err, ErrDuplicateKey) {
 					t.Fatalf("got %v", err)
 				}
@@ -211,7 +234,7 @@ func TestCreateUpdateGetByID(t *testing.T) {
 				if _, err := Upsert(c, Type{Key: "book", Origin: OriginProvenencia, Label: "Book"}); err != nil {
 					t.Fatal(err)
 				}
-				got, err := Create(c, "Book", "")
+				got, err := Create(c, "Book", "", "type_book")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -227,12 +250,33 @@ func TestCreateUpdateGetByID(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				got, err := Update(c, id, "Printed book", "New")
+				got, err := Update(c, id, "Printed book", "New", "type_book")
 				if err != nil {
 					t.Fatal(err)
 				}
 				if got.Key != "book" || got.Label != "Printed book" || got.Description != "New" {
 					t.Fatalf("got %+v", got)
+				}
+				if got.IconKey != "type_book" {
+					t.Fatalf("icon_key %+v", got)
+				}
+			},
+		},
+		{
+			name: "update empty icon_key preserves existing",
+			run: func(t *testing.T, c *database.Catalog) {
+				id, err := Upsert(c, Type{
+					Key: "scroll", Origin: OriginUser, Label: "Scroll", IconKey: "type_scroll",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				got, err := Update(c, id, "Parish scroll", "", "")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got.IconKey != "type_scroll" {
+					t.Fatalf("icon_key %+v", got)
 				}
 			},
 		},
@@ -243,7 +287,7 @@ func TestCreateUpdateGetByID(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := Update(c, id, "Mine now", ""); !errors.Is(err, ErrLocked) {
+				if _, err := Update(c, id, "Mine now", "", "type_book"); !errors.Is(err, ErrLocked) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -255,7 +299,7 @@ func TestCreateUpdateGetByID(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := Update(c, id, "   ", ""); !errors.Is(err, ErrInvalid) {
+				if _, err := Update(c, id, "   ", "", "type_evidence"); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},

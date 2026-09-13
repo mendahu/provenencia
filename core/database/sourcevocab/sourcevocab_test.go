@@ -36,6 +36,9 @@ func TestInstall(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				if cert.IconKey != "type_certificate" {
+					t.Fatalf("seeded icon_key %+v", cert)
+				}
 				sugs, err := ListSuggestions(c, cert.ID)
 				if err != nil {
 					t.Fatal(err)

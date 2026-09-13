@@ -18,6 +18,7 @@ struct SourcePageIdentityHeader: View {
                         relPath: identityCover.relPath,
                         mediaType: identityCover.mediaType,
                         originalFilename: identityCover.originalFilename,
+                        typeIconKey: identityCover.typeIconKey,
                         size: 72
                     )
                     titleCluster
@@ -38,7 +39,15 @@ struct SourcePageIdentityHeader: View {
         }
     }
 
-    private var identityCover: (relPath: String, mediaType: String, originalFilename: String) {
+    private var identityCover: (
+        relPath: String,
+        mediaType: String,
+        originalFilename: String,
+        typeIconKey: String?
+    ) {
+        let typeIcon = model.identity.types
+            .first { $0.id == model.identity.sourceTypeID }?
+            .iconKey
         if let source = model.source {
             if !source.thumbnailRelPath.isEmpty
                 || !source.thumbnailMediaType.isEmpty
@@ -47,18 +56,19 @@ struct SourcePageIdentityHeader: View {
                 return (
                     source.thumbnailRelPath,
                     source.thumbnailMediaType,
-                    source.thumbnailOriginalFilename
+                    source.thumbnailOriginalFilename,
+                    typeIcon
                 )
             }
         }
         let arts = model.artifacts.items
         if let raster = arts.first(where: { !$0.thumbnailRelPath.isEmpty }) {
-            return (raster.thumbnailRelPath, "", "")
+            return (raster.thumbnailRelPath, "", "", typeIcon)
         }
         if let fileArt = arts.first(where: { $0.file != nil }), let file = fileArt.file {
-            return ("", file.mediaType, file.originalFilename)
+            return ("", file.mediaType, file.originalFilename, typeIcon)
         }
-        return ("", "", "")
+        return ("", "", "", typeIcon)
     }
 
     private var breadcrumbs: some View {
@@ -167,7 +177,18 @@ struct SourcePageIdentityHeader: View {
                             label: L10n.Sources.pageFormType,
                             accessibilityIdentifierPrefix: "sources.page.type",
                             activateOnAppear: true
-                        )
+                        ) { option, query in
+                            HStack(spacing: PVSpacing.space3) {
+                                if let type = model.identity.types.first(where: { $0.id == option.value }) {
+                                    PVEvidenceIcon(
+                                        PVEvidenceIconKey(catalogKey: type.iconKey),
+                                        size: .row,
+                                        decorative: true
+                                    )
+                                }
+                                PVComboBoxPlainRow(option: option, query: query)
+                            }
+                        }
                         .frame(width: 210)
                         .disabled(model.identity.isSaving)
                         .onChange(of: model.identity.typeDraftID) { _, newValue in
@@ -190,7 +211,12 @@ struct SourcePageIdentityHeader: View {
                 }
             } else {
                 HStack(spacing: PVSpacing.space3) {
-                    CatalogSourceTypePill(label: model.identity.typeLabel)
+                    CatalogSourceTypePill(
+                        label: model.identity.typeLabel,
+                        iconKey: model.identity.types
+                            .first { $0.id == model.identity.sourceTypeID }?
+                            .iconKey
+                    )
                         .accessibilityIdentifier("sources.page.type")
 
                     PVIconButton(.penLine, label: L10n.Sources.editType, size: .sm) {

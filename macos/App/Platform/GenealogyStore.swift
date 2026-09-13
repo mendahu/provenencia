@@ -90,6 +90,8 @@ struct CatalogSourceType: Sendable, Equatable, Identifiable {
     var origin: String
     var label: String
     var description: String
+    /// Closed design-system `type_*` key for evidence representation.
+    var iconKey: String = PVEvidenceIconKey.defaultTypeIcon.rawValue
     /// How many sources classify as this type. Deleting is only allowed at
     /// 0 — the engine refuses otherwise (`sourcetypes.in_use`). Only
     /// `listSourceTypes` and `updateSourceType` populate it.
@@ -304,9 +306,10 @@ protocol GenealogyStore: Sendable {
         projectDir: String,
         userID: String,
         label: String,
-        description: String
+        description: String,
+        iconKey: String
     ) async throws -> CatalogSourceType
-    /// Patches label and description for a `user` or `provenencia` type.
+    /// Patches label, description, and icon for a `user` or `provenencia` type.
     /// The key never changes here, so a rename keeps existing sources
     /// attached. Fails for `plugin:…` rows.
     func updateSourceType(
@@ -314,7 +317,8 @@ protocol GenealogyStore: Sendable {
         userID: String,
         typeID: String,
         label: String,
-        description: String
+        description: String,
+        iconKey: String
     ) async throws -> CatalogSourceType
     /// Deletes a type no source refers to. Suggestion joins cascade; the
     /// fields they named stay in the vocabulary.
