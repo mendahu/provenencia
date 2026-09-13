@@ -175,6 +175,12 @@ final class SourceFieldsModel {
         mode = CatalogOrigin.isPlugin(field.origin) ? .viewing(id: id) : .editing(id: id)
     }
 
+    /// Clears master–detail selection when history restores a section root.
+    func clearHistorySelection() {
+        guard !isAdding else { return }
+        mode = .empty
+    }
+
     func openAdd() {
         let resumeID: String? = switch mode {
         case .viewing(let id), .editing(let id): id

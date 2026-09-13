@@ -20,6 +20,7 @@ struct WorkspaceView: View {
     @State private var catalogCounts: CatalogCounts
     @State private var countsToast: VocabularyToast?
     @Environment(SignOutCoordinator.self) private var signOutCoordinator
+    @Environment(NavigationCoordinator.self) private var navigationCoordinator
 
     init(model: OnboardingModel, projectDir: String, userID: String) {
         self.model = model
@@ -33,7 +34,7 @@ struct WorkspaceView: View {
         HStack(spacing: 0) {
             WorkspaceSidebar(session: model.session, workspace: workspace, catalogCounts: catalogCounts)
             WorkspaceContent(
-                section: workspace.selectedSection,
+                workspace: workspace,
                 project: model.project,
                 projectDir: projectDir,
                 userID: userID,
@@ -46,6 +47,9 @@ struct WorkspaceView: View {
         .environment(catalogCounts)
         .vocabularyToastOverlay($countsToast, identifier: "workspace.counts.toast")
         .task {
+            if let uuid = model.project?.uuid, !uuid.isEmpty {
+                workspace.attachProject(uuid: uuid)
+            }
             await catalogCounts.refreshAll()
             if let message = catalogCounts.lastRefreshError {
                 countsToast = VocabularyToast(
@@ -60,9 +64,16 @@ struct WorkspaceView: View {
             signOutCoordinator.action = { [model] in
                 Task { await model.signOut() }
             }
+            bindNavigationCommands()
         }
+        .onChange(of: workspace.canGoBack) { _, _ in bindNavigationCommands() }
+        .onChange(of: workspace.canGoForward) { _, _ in bindNavigationCommands() }
         .onDisappear {
             signOutCoordinator.isAvailable = false
+            navigationCoordinator.canGoBack = false
+            navigationCoordinator.canGoForward = false
+            navigationCoordinator.goBack = {}
+            navigationCoordinator.goForward = {}
             let store = model.store
             let dir = projectDir
             Task {
@@ -77,6 +88,13 @@ struct WorkspaceView: View {
         }
         .accessibilityIdentifier("workspace")
     }
+
+    private func bindNavigationCommands() {
+        navigationCoordinator.canGoBack = workspace.canGoBack
+        navigationCoordinator.canGoForward = workspace.canGoForward
+        navigationCoordinator.goBack = { workspace.goBack() }
+        navigationCoordinator.goForward = { workspace.goForward() }
+    }
 }
 
 #if DEBUG
@@ -89,6 +107,7 @@ struct WorkspaceView: View {
         userID: PreviewFixture.identity.userID
     )
     .environment(SignOutCoordinator())
+    .environment(NavigationCoordinator())
     .frame(width: PVSpacing.widthWorkspaceDefault, height: PVSpacing.heightWorkspaceDefault)
 }
 

@@ -4,16 +4,19 @@ import SwiftUI
 /// list (not `PVTable`), Add Source dialog, and navigation to the Source page.
 /// Mounts inside the S2-01 workspace content host.
 struct SourcesView: View {
+    @Bindable var workspace: WorkspaceModel
     @State private var model: SourcesModel
     private let sessionDisplayName: String
 
     init(
+        workspace: WorkspaceModel,
         projectDir: String,
         userID: String,
         sessionDisplayName: String = "",
         store: any GenealogyStore,
         catalogCounts: CatalogCounts? = nil
     ) {
+        self.workspace = workspace
         self.sessionDisplayName = sessionDisplayName
         _model = State(
             initialValue: SourcesModel(
@@ -34,7 +37,9 @@ struct SourcesView: View {
                     userID: model.pageUserID,
                     sessionDisplayName: sessionDisplayName,
                     store: model.pageStore,
-                    onBackToList: { model.closeSource() },
+                    onBackToList: {
+                        workspace.go(to: .sectionRoot(.sources))
+                    },
                     onSourceUpdated: { model.applyUpdatedSource($0) }
                 )
                 .id(opened)
@@ -55,19 +60,53 @@ struct SourcesView: View {
             ),
             isRunning: model.isSaving,
             accessibilityIdentifierPrefix: "sources.add",
-            onConfirm: { Task { await model.create() } }
+            onConfirm: {
+                Task {
+                    await model.create()
+                    if let opened = model.openedSourceID,
+                       let source = model.sources.first(where: { $0.id == opened })
+                    {
+                        workspace.go(to: WorkspaceLocation(
+                            section: .sources,
+                            sourceId: source.id,
+                            ref: source.ref,
+                            title: source.title
+                        ))
+                    }
+                }
+            }
         ) {
             // Read options here so SourcesView observes `types` and the
             // sheet rebuilds when `refreshTypes` fills the pool.
             addForm(typeOptions: model.typeComboOptions)
         }
-        .task { await model.load() }
+        .task {
+            await model.load()
+            applyWorkspaceLocation()
+        }
         .task(id: model.isAdding) {
             guard model.isAdding else { return }
             await model.refreshTypes()
             model.selectSoleTypeIfNeeded()
         }
+        .onAppear { applyWorkspaceLocation() }
+        .onChange(of: workspace.currentLocation) { _, _ in applyWorkspaceLocation() }
         .accessibilityIdentifier("sources")
+    }
+
+    private func applyWorkspaceLocation() {
+        let location = workspace.currentLocation
+        guard location.section == .sources else { return }
+        if let sourceId = location.sourceId {
+            if model.sources.contains(where: { $0.id == sourceId }) {
+                model.openSource(id: sourceId)
+            } else if !model.isLoading {
+                // After load, missing or deleted sources land on the list root.
+                workspace.fallbackToSectionRoot()
+            }
+        } else {
+            model.closeSource()
+        }
     }
 
     private var addPresented: Binding<Bool> {
@@ -252,7 +291,15 @@ struct SourcesView: View {
                         typeIconKey: model.typeIconKey(for: source)
                     )
                 },
-                onActivate: { model.openSource(id: $0) },
+                onActivate: { id in
+                    let source = model.sources.first(where: { $0.id == id })
+                    workspace.go(to: WorkspaceLocation(
+                        section: .sources,
+                        sourceId: id,
+                        ref: source?.ref,
+                        title: source?.title
+                    ))
+                },
                 rowAccessibilityIdentifier: { "sources.row.\($0.id)" }
             )
             .accessibilityIdentifier("sources.list")

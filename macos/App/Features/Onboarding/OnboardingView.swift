@@ -75,6 +75,7 @@ struct OnboardingView: View {
 #Preview("Choose file") {
     OnboardingView(store: FakeStore(), folders: .previewEmpty())
         .environment(SignOutCoordinator())
+        .environment(NavigationCoordinator())
 }
 
 #Preview("Identity, no active") {
@@ -83,6 +84,7 @@ struct OnboardingView: View {
         folders: .previewEmpty()
     )
     .environment(SignOutCoordinator())
+    .environment(NavigationCoordinator())
 }
 
 #Preview("Open picker") {
@@ -91,6 +93,7 @@ struct OnboardingView: View {
         folders: .previewWithProject()
     )
     .environment(SignOutCoordinator())
+    .environment(NavigationCoordinator())
 }
 
 #Preview("Returning") {
@@ -104,5 +107,6 @@ struct OnboardingView: View {
         folders: folders
     )
     .environment(SignOutCoordinator())
+    .environment(NavigationCoordinator())
 }
 #endif

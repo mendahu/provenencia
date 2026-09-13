@@ -11,6 +11,7 @@ IDs stay stable (`S3-NN`). Do not renumber when moving steps here.
 | [S3-01](#s3-01--design-app-layout-toolbar) | Design | App Layout toolbar (Back/Forward, breadcrumbs, omnibar field) |
 | [S3-02](#s3-02--design-omnibar-results) | Design | Omnibar results dropdown + hit row |
 | [S3-03](#s3-03--pr-catalog-projectuuid) | PR | Catalog `project.uuid` (mint, heal, ProjectInfo) |
+| [S3-04](#s3-04--pr-workspacelocation--navigation-history) | PR | WorkspaceLocation + persisted navigation history |
 
 ---
 
@@ -53,3 +54,17 @@ IDs stay stable (`S3-NN`). Do not renumber when moving steps here.
 | **Out** | History JSON; toolbar; short `PRJ-…` ref. |
 | **Dogfood** | New + upgraded projects show a stable UUID on open; rename/move of the folder does not change it. |
 | **Feeds** | S3-04 (history file key); later install-local chrome |
+
+---
+
+### S3-04 — PR: `WorkspaceLocation` + navigation history
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S3-03 (done) |
+| **Deliverables** | Done. `WorkspaceLocation` (section + `sourceId` / `fieldId` / `typeId`, denormalized ref/title). `NavigationHistoryStore` owned by `WorkspaceModel`: `go(to:)`, `goBack()`, `goForward()`, `go(toIndex:)`, coalesce identical places, truncate forward, cap 100. Persist `Application Support/Provenencia/navigation/{uuid}.json` (v1). Sidebar, Source open/close/create, and vocabulary row selection all commit via `go(to:)`. Destinations apply `currentLocation` on appear/change; missing entities prune to section root. `⌘[` / `⌘]` via `NavigationCoordinator`. |
+| **Context** | [`navigation-history.md`](navigation-history.md). Hand-rolled coordinator — not SwiftUI `NavigationStack` / `NavigationPath`. |
+| **Out** | Final toolbar visuals / jump menus (S3-05); omnibar results; search RPC. |
+| **Dogfood** | Keyboard Back/Forward restores deep locations across destinations; relaunch returns to the leave-off place for that `project.uuid`. |
+| **Feeds** | S3-05 (toolbar chrome); S3-07+ Hit `location` shape |

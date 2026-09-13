@@ -20,7 +20,7 @@ See [`navigation-history.md`](navigation-history.md) § Implementation posture a
 
 | Doc | Role |
 | --- | --- |
-| [**Deployment plan**](deployment-plan.md) | Open PR checklist (S3-04…) |
+| [**Deployment plan**](deployment-plan.md) | Open PR checklist (S3-05…) |
 | [**Completed**](completed.md) | Finished Design/PR steps (S3-01…) |
 | [Navigation history](navigation-history.md) | Back/Forward behavior, persistence, `project.uuid` |
 | [Omnibar search](omnibar-search.md) | Registry + FTS5 + ranking; remove per-destination search |

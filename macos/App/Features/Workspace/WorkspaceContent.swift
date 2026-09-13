@@ -7,7 +7,7 @@ import SwiftUI
 /// below that header; Files still shows the labeled empty placeholder
 /// (project Files list was descoped with S2-20/S2-21).
 struct WorkspaceContent: View {
-    let section: WorkspaceModel.Section
+    @Bindable var workspace: WorkspaceModel
     let project: ProjectInfo?
     let projectDir: String
     let userID: String
@@ -15,12 +15,15 @@ struct WorkspaceContent: View {
     let store: any GenealogyStore
     let catalogCounts: CatalogCounts
 
+    private var section: WorkspaceModel.Section { workspace.selectedSection }
+
     var body: some View {
         VStack(spacing: 0) {
             header
             switch section {
             case .sourceFields:
                 SourceFieldsView(
+                    workspace: workspace,
                     projectDir: projectDir,
                     userID: userID,
                     store: store,
@@ -28,6 +31,7 @@ struct WorkspaceContent: View {
                 )
             case .sourceTypes:
                 SourceTypesView(
+                    workspace: workspace,
                     projectDir: projectDir,
                     userID: userID,
                     store: store,
@@ -35,6 +39,7 @@ struct WorkspaceContent: View {
                 )
             case .sources:
                 SourcesView(
+                    workspace: workspace,
                     projectDir: projectDir,
                     userID: userID,
                     sessionDisplayName: sessionDisplayName,

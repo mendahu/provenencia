@@ -5083,6 +5083,30 @@
         }
       }
     },
+    "workspace.navigation.goBack": {
+      "comment": "Menu / keyboard command to go back in workspace navigation history (⌘[)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back"
+          }
+        }
+      }
+    },
+    "workspace.navigation.goForward": {
+      "comment": "Menu / keyboard command to go forward in workspace navigation history (⌘])",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forward"
+          }
+        }
+      }
+    },
     "workspace.sidebar.collapse": {
       "comment": "Tooltip/accessibility label for the sidebar toggle when expanded",
       "extractionState": "extracted_with_value",

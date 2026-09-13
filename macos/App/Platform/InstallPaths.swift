@@ -5,7 +5,8 @@ enum InstallPaths {
     /// Filename of the catalog inside a `.provenencia` folder. Existence only; Swift does not open SQLite.
     static let catalogFile = "provenencia.sqlite"
 
-    /// `{Application Support}/Provenencia`. Holds `identity.json` and `active-project.json`.
+    /// `{Application Support}/Provenencia`. Holds `identity.json`, `active-project.json`,
+    /// and `navigation/{uuid}.json` (workspace history).
     static func identityDirectory(fileManager: FileManager = .default) throws -> URL {
         let base = try fileManager.url(
             for: .applicationSupportDirectory,
@@ -14,6 +15,26 @@ enum InstallPaths {
             create: true
         )
         return base.appendingPathComponent(appSupportFolder, isDirectory: true)
+    }
+
+    /// `{Application Support}/Provenencia/navigation`.
+    static func navigationDirectory(fileManager: FileManager = .default) throws -> URL {
+        try identityDirectory(fileManager: fileManager)
+            .appendingPathComponent("navigation", isDirectory: true)
+    }
+
+    /// Filename key: lowercase hex of the catalog project UUID with no dashes/braces.
+    static func navigationFileName(projectUuid: String) -> String {
+        let hex = projectUuid
+            .trimmingCharacters(in: CharacterSet(charactersIn: "{}"))
+            .replacingOccurrences(of: "-", with: "")
+            .lowercased()
+        return "\(hex).json"
+    }
+
+    static func navigationFile(projectUuid: String, fileManager: FileManager = .default) throws -> URL {
+        try navigationDirectory(fileManager: fileManager)
+            .appendingPathComponent(navigationFileName(projectUuid: projectUuid), isDirectory: false)
     }
 
     static func documentsDirectory(fileManager: FileManager = .default) throws -> URL {

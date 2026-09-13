@@ -5,6 +5,7 @@ import SwiftUI
 /// with origin pill, mono key, suggested-field count — sortable by all three.
 struct SourceTypesListPane: View {
     @Bindable var model: SourceTypesModel
+    @Bindable var workspace: WorkspaceModel
 
     /// Column widths live only here; `PVTable` shares them between the
     /// header and every row, so they are never restated.
@@ -88,14 +89,19 @@ struct SourceTypesListPane: View {
         ]
     }
 
-    /// Selection is the table's, but the model owns what it means: picking a
-    /// row leaves the add form, decides view-vs-edit by origin, and starts
-    /// the suggestions read. The add form deselects, so no row reads as
-    /// selected while it is open.
+    /// Selection is the table's; workspace history owns committed place.
     private var selection: Binding<String?> {
         Binding(
             get: { model.isAdding ? nil : model.selectedType?.id },
-            set: { if let id = $0 { model.select(id) } }
+            set: { id in
+                guard let id else { return }
+                let type = model.types.first(where: { $0.id == id })
+                workspace.go(to: WorkspaceLocation(
+                    section: .sourceTypes,
+                    typeId: id,
+                    title: type?.label
+                ))
+            }
         )
     }
 }

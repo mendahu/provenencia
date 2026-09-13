@@ -57,7 +57,7 @@ struct WorkspaceSidebar: View {
                         collapsed: workspace.isSidebarCollapsed,
                         onSelect: { id in
                             guard let section = WorkspaceModel.Section(rawValue: id) else { return }
-                            workspace.selectedSection = section
+                            workspace.go(to: .sectionRoot(section))
                         }
                     )
                     Spacer(minLength: 0)

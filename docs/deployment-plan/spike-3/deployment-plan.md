@@ -6,7 +6,7 @@ Authoritative behavior: [`navigation-history.md`](navigation-history.md), [`omni
 
 ## Status
 
-**In progress.** Open steps below; completed steps live in [`completed.md`](completed.md) (S3-01…S3-03).
+**In progress.** Open steps below; completed steps live in [`completed.md`](completed.md) (S3-01…S3-04).
 
 ## Goal (dogfood bar)
 
@@ -43,7 +43,7 @@ Steps are **`S3-NN`**. **Depends on** is the merge gate. Prefer many small PRs; 
 S3-03 project.uuid (done) ───────────────────┐
         │                                     │
         ▼                                     ▼
-S3-04  WorkspaceLocation + history store    S3-07  SearchCatalog RPC shell
+S3-04  history (done)                       S3-07  SearchCatalog RPC shell
         │                                     │
         ▼                                     ▼
 S3-05  Toolbar chrome (nav + crumbs + field) S3-08  FTS5 projection
@@ -62,23 +62,11 @@ S3-05  Toolbar chrome (nav + crumbs + field) S3-08  FTS5 projection
                  S3-12  Dogfood polish (optional S3-13+ kinds)
 ```
 
-### S3-04 — PR: `WorkspaceLocation` + navigation history store
-
-| | |
-| --- | --- |
-| **Kind** | PR |
-| **Depends on** | S3-03 (done) |
-| **Deliverables** | `WorkspaceLocation` (section + per-kind deep fields: `sourceId`, `fieldId`, `typeId`, …). History store (array + index) on `WorkspaceModel` (or owned type): `go(to:)`, `goBack()`, `goForward()`, `go(toIndex:)`. Persist `…/Provenencia/navigation/{uuid}.json` (v1, max **100** entries). Relaunch restore to leave-off location; prune missing entities calmly. **Wire every committed navigation** through `go(to:)` — sidebar, Source open/close, vocabulary row selection, future breadcrumbs/omnibar. Coalesce identical location; sidebar always pushes; master–detail selection pushes. `⌘[` / `⌘]` even before final toolbar chrome if practical. Model/FakeStore tests for stack, jump index, persistence round-trip, Sources ↔ Source page + one vocabulary selection. |
-| **Context** | [`navigation-history.md`](navigation-history.md). Hand-rolled coordinator — **not** SwiftUI `NavigationStack` / `NavigationPath`. |
-| **Out** | Final toolbar visuals (S3-05); omnibar results; search RPC. Temporary debug affordances OK if chrome is not ready. |
-| **Dogfood** | Keyboard Back/Forward (or temporary controls) restores deep locations across destinations; relaunch returns to the same place. |
-
 ### S3-05 — PR: Main-column toolbar chrome (nav + breadcrumbs + omnibar field shell)
-
 | | |
 | --- | --- |
 | **Kind** | PR |
-| **Depends on** | S3-04; S3-01 board (done) |
+| **Depends on** | S3-04 (done); S3-01 board (done) |
 | **Deliverables** | Main-column header per App Layout: ~46px, bottom border, content-leading padding. Leading Back/Forward `IconButton`s (disabled at stack ends). Long-press / secondary-click jump menus (nearest **15**, rich rows). Toolbar `PVBreadcrumbs` with navigable ancestors via `go(to:)`. **Strip** Source-page identity-header breadcrumbs and hierarchical list-back. Trailing omnibar **field** always visible (`⌘K` focuses); no results panel required yet (or empty/disabled until S3-10). L10n for new chrome. |
 | **Context** | Claude Design App Layout board; [`design/README.md`](design/README.md). |
 | **Out** | Search RPC, FTS, results dropdown, deleting list search (S3-10). |
@@ -189,9 +177,9 @@ Not required to close Spike 3 dogfood if Sources + types + fields search well:
 | --- | --- |
 | **Design** | S3-01, S3-02 — done ([`completed.md`](completed.md)) |
 | **Core / FFI** | S3-03 done → S3-07 → S3-08 → S3-09 → (S3-11) |
-| **Mac workspace** | S3-04 → S3-05 (→ S3-06) → S3-10 → S3-12 |
+| **Mac workspace** | S3-04 done → S3-05 (→ S3-06) → S3-10 → S3-12 |
 
-S3-07+ may proceed beside S3-04/S3-05 once Hit `location` matches `WorkspaceLocation`. **S3-10** is the integration gate.
+S3-07+ may proceed beside S3-05 once Hit `location` matches `WorkspaceLocation`. **S3-10** is the integration gate.
 
 ---
 
