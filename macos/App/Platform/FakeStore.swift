@@ -204,27 +204,15 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         markCatalogSessionHeld(projectDir)
         if let listSourcesError { throw listSourcesError }
         let rows = sourcesByProject[projectDir] ?? []
-        return rows.map { source in
-            var copy = source
-            if copy.thumbnailRelPath.isEmpty {
-                let arts = artifactsBySource[source.id] ?? []
-                if let raster = arts.first(where: { !$0.thumbnailRelPath.isEmpty }) {
-                    copy.thumbnailRelPath = raster.thumbnailRelPath
-                } else if let fileArt = arts.first(where: { $0.file != nil }) {
-                    copy.thumbnailMediaType = fileArt.file?.mediaType ?? ""
-                    copy.thumbnailOriginalFilename = fileArt.file?.originalFilename ?? ""
-                }
-            }
-            return copy
-        }
+        return rows.map { enrichCoverFields($0) }
     }
 
     func getSourceWorkspace(projectDir: String, sourceID: String) async throws -> CatalogSourceWorkspace {
         markCatalogSessionHeld(projectDir)
-        let source = (sourcesByProject[projectDir] ?? []).first { $0.id == sourceID }
+        let raw = (sourcesByProject[projectDir] ?? []).first { $0.id == sourceID }
             ?? CatalogSource(id: sourceID, ref: "SRC-XXXXX", sourceTypeID: "", title: "", description: "")
         return CatalogSourceWorkspace(
-            source: source,
+            source: enrichCoverFields(raw),
             notes: notesBySource[sourceID] ?? [],
             metadata: metadataBySource[sourceID] ?? [],
             artifacts: artifactsBySource[sourceID] ?? [],
@@ -270,7 +258,38 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         list[idx].title = title
         list[idx].description = description
         sourcesByProject[projectDir] = list
-        return list[idx]
+        return enrichCoverFields(list[idx])
+    }
+
+    func setSourceCover(
+        projectDir: String,
+        userID _: String,
+        sourceID: String,
+        coverMode: String,
+        primaryArtifactID: String
+    ) async throws -> CatalogSource {
+        var list = sourcesByProject[projectDir] ?? []
+        guard let idx = list.firstIndex(where: { $0.id == sourceID }) else {
+            throw StoreBoom.boom
+        }
+        switch coverMode {
+        case "type_icon":
+            list[idx].coverMode = "type_icon"
+            list[idx].primaryArtifactID = ""
+        case "artifact":
+            let arts = artifactsBySource[sourceID] ?? []
+            guard let art = arts.first(where: { $0.id == primaryArtifactID }),
+                  !art.thumbnailRelPath.isEmpty
+            else {
+                throw StoreBoom.boom
+            }
+            list[idx].coverMode = "artifact"
+            list[idx].primaryArtifactID = primaryArtifactID
+        default:
+            throw StoreBoom.boom
+        }
+        sourcesByProject[projectDir] = list
+        return enrichCoverFields(list[idx])
     }
 
     func addSourceNote(projectDir _: String, userID: String, sourceID: String, body: String) async throws
@@ -444,7 +463,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     func ingestArtifactFile(
-        projectDir _: String,
+        projectDir: String,
         userID _: String,
         artifactID: String,
         path: String
@@ -765,6 +784,26 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     private func markCatalogSessionHeld(_ projectDir: String) {
         heldCatalogProjectDir = projectDir
+    }
+
+    /// Resolves list/identity paint fields from persisted cover mode.
+    /// Source cover is type icon or a raster path — never Artifact file-type MIME.
+    private func enrichCoverFields(_ source: CatalogSource) -> CatalogSource {
+        var copy = source
+        copy.thumbnailRelPath = ""
+        copy.thumbnailMediaType = ""
+        copy.thumbnailOriginalFilename = ""
+        guard copy.coverMode == "artifact", !copy.primaryArtifactID.isEmpty else {
+            return copy
+        }
+        let arts = artifactsBySource[copy.id] ?? []
+        guard let art = arts.first(where: { $0.id == copy.primaryArtifactID }),
+              !art.thumbnailRelPath.isEmpty
+        else {
+            return copy
+        }
+        copy.thumbnailRelPath = art.thumbnailRelPath
+        return copy
     }
 
     private static func originCounts(from origins: [String]) -> WorkspaceNavOriginCounts {

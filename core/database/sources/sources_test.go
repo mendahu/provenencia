@@ -1,15 +1,33 @@
 package sources
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
+	"image"
+	"image/png"
+	"os"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/ref"
 )
+
+func writeTinyPNG(t *testing.T, path string) {
+	t.Helper()
+	img := image.NewRGBA(image.Rect(0, 0, 8, 8))
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestSources(t *testing.T) {
 	userID := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
@@ -321,6 +339,125 @@ func TestSources(t *testing.T) {
 				_, err := Get(c, id)
 				if !errors.Is(err, sql.ErrNoRows) {
 					t.Fatalf("got %v", err)
+				}
+			},
+		},
+		{
+			name: "cover columns default type_icon",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				typeID := mustType(t, c)
+				s, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: "Cover default"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if s.CoverMode != CoverModeTypeIcon {
+					t.Fatalf("cover_mode %q", s.CoverMode)
+				}
+				if len(s.PrimaryArtifactID) != 0 {
+					t.Fatalf("primary %v", s.PrimaryArtifactID)
+				}
+				got, err := Get(c, s.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got.CoverMode != CoverModeTypeIcon || len(got.PrimaryArtifactID) != 0 {
+					t.Fatalf("get cover %+v", got)
+				}
+			},
+		},
+		{
+			name: "set cover artifact and revert to type icon",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				typeID := mustType(t, c)
+				s, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: "Pin cover"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				path := t.TempDir() + "/scan.png"
+				writeTinyPNG(t, path)
+				fres, err := ingest.File(c, path, userID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				a, err := artifacts.Create(c, userID, artifacts.CreateInput{
+					SourceID: s.ID, FileID: fres.File.ID, Label: "Scan",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				pinned, err := SetCover(c, userID, s.ID, CoverModeArtifact, a.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if pinned.CoverMode != CoverModeArtifact || !bytesEqual(pinned.PrimaryArtifactID, a.ID) {
+					t.Fatalf("pinned %+v", pinned)
+				}
+				if latestAction(t, c) != "set_source_cover" {
+					t.Fatalf("action %s", latestAction(t, c))
+				}
+				fileless, err := artifacts.Create(c, userID, artifacts.CreateInput{
+					SourceID: s.ID, Label: "Note only",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := SetCover(c, userID, s.ID, CoverModeArtifact, fileless.ID); !errors.Is(err, ErrInvalid) {
+					t.Fatalf("fileless pin %v", err)
+				}
+				pdfPath := t.TempDir() + "/deed.pdf"
+				if err := os.WriteFile(pdfPath, []byte("%PDF-1.1\n%%EOF\n"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				pdfFile, err := ingest.File(c, pdfPath, userID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				pdfArt, err := artifacts.Create(c, userID, artifacts.CreateInput{
+					SourceID: s.ID, FileID: pdfFile.File.ID, Label: "PDF",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := SetCover(c, userID, s.ID, CoverModeArtifact, pdfArt.ID); !errors.Is(err, ErrInvalid) {
+					t.Fatalf("pdf pin %v", err)
+				}
+				reverted, err := SetCover(c, userID, s.ID, CoverModeTypeIcon, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if reverted.CoverMode != CoverModeTypeIcon || len(reverted.PrimaryArtifactID) != 0 {
+					t.Fatalf("reverted %+v", reverted)
+				}
+			},
+		},
+		{
+			name: "ingest leaves cover as type icon until explicit pin",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				typeID := mustType(t, c)
+				s, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: "No auto pin"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				path := t.TempDir() + "/a.png"
+				writeTinyPNG(t, path)
+				f1, err := ingest.File(c, path, userID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := artifacts.Create(c, userID, artifacts.CreateInput{
+					SourceID: s.ID, FileID: f1.File.ID, Label: "First",
+				}); err != nil {
+					t.Fatal(err)
+				}
+				got, err := Get(c, s.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got.CoverMode != CoverModeTypeIcon || len(got.PrimaryArtifactID) != 0 {
+					t.Fatalf("want type_icon after ingest, got %+v", got)
 				}
 			},
 		},

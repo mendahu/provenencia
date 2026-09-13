@@ -7,22 +7,20 @@ struct SourcePageIdentityHeader: View {
     /// Local draft so title keystrokes don't invalidate the whole Source page
     /// observation graph on every character.
     @State private var titleDraft = ""
+    @State private var coverMenu = PVContextMenuState()
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space5) {
             breadcrumbs
             if model.workspace != nil {
                 HStack(alignment: .top, spacing: PVSpacing.space7) {
-                    CachedThumbnail(
-                        projectDir: model.pageProjectDir,
-                        relPath: identityCover.relPath,
-                        mediaType: identityCover.mediaType,
-                        originalFilename: identityCover.originalFilename,
-                        typeIconKey: identityCover.typeIconKey,
-                        size: 72
-                    )
+                    coverThumbnail
                     titleCluster
                         .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                // Menu on the row (not the 72pt thumb) so overflow hits register.
+                .pvContextMenu($coverMenu) {
+                    coverMenuPanel
                 }
                 .frame(maxWidth: PVSpacing.widthContentMax, alignment: .leading)
             }
@@ -39,6 +37,39 @@ struct SourcePageIdentityHeader: View {
         }
     }
 
+    private var coverThumbnail: some View {
+        CachedThumbnail(
+            projectDir: model.pageProjectDir,
+            relPath: identityCover.relPath,
+            mediaType: identityCover.mediaType,
+            originalFilename: identityCover.originalFilename,
+            typeIconKey: identityCover.typeIconKey,
+            size: 72
+        )
+        .accessibilityHint(String(localized: L10n.Sources.thumbnailMenuHint))
+        .accessibilityIdentifier("sources.page.cover")
+        .pvContextMenuTrigger($coverMenu)
+        .help(String(localized: L10n.Sources.thumbnailMenuHint))
+    }
+
+    private var coverMenuPanel: some View {
+        PVContextMenuPanel(
+            title: L10n.Sources.thumbnailMenuTitle,
+            accessibilityIdentifier: "sources.page.cover.menu"
+        ) {
+            if model.source?.coverMode == "type_icon" {
+                PVContextMenuItem(L10n.Sources.thumbnailDefaultInUse, isEnabled: false)
+            } else {
+                PVContextMenuItem(
+                    L10n.Sources.thumbnailRevertToDefault,
+                    accessibilityIdentifier: "sources.page.cover.revert"
+                ) {
+                    Task { await model.artifacts.revertCoverToTypeIcon() }
+                }
+            }
+        }
+    }
+
     private var identityCover: (
         relPath: String,
         mediaType: String,
@@ -48,25 +79,12 @@ struct SourcePageIdentityHeader: View {
         let typeIcon = model.identity.types
             .first { $0.id == model.identity.sourceTypeID }?
             .iconKey
-        if let source = model.source {
-            if !source.thumbnailRelPath.isEmpty
-                || !source.thumbnailMediaType.isEmpty
-                || !source.thumbnailOriginalFilename.isEmpty
-            {
-                return (
-                    source.thumbnailRelPath,
-                    source.thumbnailMediaType,
-                    source.thumbnailOriginalFilename,
-                    typeIcon
-                )
-            }
-        }
-        let arts = model.artifacts.items
-        if let raster = arts.first(where: { !$0.thumbnailRelPath.isEmpty }) {
-            return (raster.thumbnailRelPath, "", "", typeIcon)
-        }
-        if let fileArt = arts.first(where: { $0.file != nil }), let file = fileArt.file {
-            return ("", file.mediaType, file.originalFilename, typeIcon)
+        // Source cover is type icon or an explicit raster pin — never MIME.
+        if let source = model.source,
+           source.coverMode == "artifact",
+           !source.thumbnailRelPath.isEmpty
+        {
+            return (source.thumbnailRelPath, "", "", typeIcon)
         }
         return ("", "", "", typeIcon)
     }

@@ -30,11 +30,15 @@ struct CatalogSource: Sendable, Equatable, Identifiable {
     var sourceTypeID: String
     var title: String
     var description: String
-    /// Thumbnail JPEG under `objects/…` for list cells (empty = no raster).
+    /// Thumbnail JPEG under `objects/…` when cover is a pinned raster Artifact.
     var thumbnailRelPath: String = ""
-    /// When `thumbnailRelPath` is empty, MIME of the cover-candidate File for glyphs.
+    /// Unused on Source (file-type glyphs stay on Artifact rows). Kept for wire compat.
     var thumbnailMediaType: String = ""
     var thumbnailOriginalFilename: String = ""
+    /// `artifact` (pinned raster primary) or `type_icon`.
+    var coverMode: String = "type_icon"
+    /// Set when `coverMode` is `artifact`.
+    var primaryArtifactID: String = ""
 }
 
 struct CatalogSourceNote: Sendable, Equatable {
@@ -233,6 +237,15 @@ protocol GenealogyStore: Sendable {
         sourceTypeID: String,
         title: String,
         description: String
+    ) async throws -> CatalogSource
+    /// Pin a raster Artifact as cover, or revert to the Source type icon (`type_icon`).
+    /// Non-image Files (PDF, …) cannot be cover.
+    func setSourceCover(
+        projectDir: String,
+        userID: String,
+        sourceID: String,
+        coverMode: String,
+        primaryArtifactID: String
     ) async throws -> CatalogSource
     func addSourceNote(projectDir: String, userID: String, sourceID: String, body: String) async throws
         -> CatalogSourceNote

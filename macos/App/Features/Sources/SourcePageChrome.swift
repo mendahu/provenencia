@@ -18,6 +18,10 @@ enum SourcePageLayout {
     static let artifactChevronWidth: CGFloat = 18
     /// Thumbnail size in a collapsed artifact row.
     static let artifactRowThumbnailSize: CGFloat = 44
+    /// Reserved trailing slot for “Use as thumbnail” so ART- refs stay aligned.
+    static let useAsThumbnailSlotWidth: CGFloat = 156
+    /// Trailing mono ART- ref column.
+    static let artifactRefMinWidth: CGFloat = 72
     /// Indent for expanded artifact detail under chevron + thumbnail.
     static var artifactDetailLeading: CGFloat {
         artifactChevronWidth + artifactRowThumbnailSize

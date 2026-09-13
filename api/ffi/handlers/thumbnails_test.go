@@ -158,7 +158,7 @@ func TestEnsureFileThumbnail(t *testing.T) {
 func TestListSourcesAndWorkspaceThumbnails(t *testing.T) {
 	runRPC(t, ListSources, []rpcTest{
 		{
-			name: "list and workspace carry thumbnail after png ingest",
+			name: "list source thumb after explicit pin; workspace artifact has raster",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, typeID := sourceFixture(t)
 				cout, err := CreateSource(marshalProto(t, &engine.CreateSourceRequest{
@@ -188,6 +188,12 @@ func TestListSourcesAndWorkspaceThumbnails(t *testing.T) {
 				})); err != nil {
 					t.Fatal(err)
 				}
+				if _, err := SetSourceCover(marshalProto(t, &engine.SetSourceCoverRequest{
+					ProjectDir: dir, UserId: userID, SourceId: created.Source.Id,
+					CoverMode: "artifact", PrimaryArtifactId: art.Artifact.Id,
+				})); err != nil {
+					t.Fatal(err)
+				}
 				return &engine.ListSourcesRequest{ProjectDir: dir}
 			},
 			after: func(t *testing.T, out []byte, req proto.Message) {
@@ -197,6 +203,9 @@ func TestListSourcesAndWorkspaceThumbnails(t *testing.T) {
 				}
 				if len(list.Sources) != 1 || list.Sources[0].GetThumbnailRelPath() == "" {
 					t.Fatalf("list thumbs %+v", list.Sources)
+				}
+				if list.Sources[0].GetCoverMode() != "artifact" {
+					t.Fatalf("cover_mode %q", list.Sources[0].GetCoverMode())
 				}
 				lr := req.(*engine.ListSourcesRequest)
 				wout, err := GetSourceWorkspace(marshalProto(t, &engine.GetSourceWorkspaceRequest{
@@ -239,7 +248,7 @@ func TestListSourcesAndWorkspaceThumbnails(t *testing.T) {
 			},
 		},
 		{
-			name: "pdf-only source has empty raster and pdf media type",
+			name: "pdf-only source stays type icon with empty thumbs",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, typeID := sourceFixture(t)
 				cout, err := CreateSource(marshalProto(t, &engine.CreateSourceRequest{
@@ -280,19 +289,16 @@ func TestListSourcesAndWorkspaceThumbnails(t *testing.T) {
 					t.Fatalf("sources %+v", list.Sources)
 				}
 				s := list.Sources[0]
-				if s.GetThumbnailRelPath() != "" {
-					t.Fatalf("want empty raster for pdf, got %q", s.GetThumbnailRelPath())
+				if s.GetCoverMode() != "type_icon" {
+					t.Fatalf("cover_mode %q", s.GetCoverMode())
 				}
-				if s.GetThumbnailMediaType() != "application/pdf" {
-					t.Fatalf("media type %q", s.GetThumbnailMediaType())
-				}
-				if s.GetThumbnailOriginalFilename() != "deed.pdf" {
-					t.Fatalf("filename %q", s.GetThumbnailOriginalFilename())
+				if s.GetThumbnailRelPath() != "" || s.GetThumbnailMediaType() != "" {
+					t.Fatalf("want empty source thumbs %+v", s)
 				}
 			},
 		},
 		{
-			name: "pdf then png prefers raster of later png",
+			name: "png ingest leaves type icon until set cover",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, typeID := sourceFixture(t)
 				cout, err := CreateSource(marshalProto(t, &engine.CreateSourceRequest{
@@ -305,30 +311,22 @@ func TestListSourcesAndWorkspaceThumbnails(t *testing.T) {
 				if err := proto.Unmarshal(cout, &created); err != nil {
 					t.Fatal(err)
 				}
-				for _, label := range []string{"PDF", "PNG"} {
-					aout, err := CreateArtifact(marshalProto(t, &engine.CreateArtifactRequest{
-						ProjectDir: dir, UserId: userID, SourceId: created.Source.Id, Label: label,
-					}))
-					if err != nil {
-						t.Fatal(err)
-					}
-					var art engine.CreateArtifactResponse
-					if err := proto.Unmarshal(aout, &art); err != nil {
-						t.Fatal(err)
-					}
-					var path string
-					if label == "PDF" {
-						path = filepath.Join(t.TempDir(), "first.pdf")
-						writePDF(t, path)
-					} else {
-						path = filepath.Join(t.TempDir(), "second.png")
-						writePNG(t, path)
-					}
-					if _, err := IngestArtifactFile(marshalProto(t, &engine.IngestArtifactFileRequest{
-						ProjectDir: dir, UserId: userID, ArtifactId: art.Artifact.Id, Path: path,
-					})); err != nil {
-						t.Fatal(err)
-					}
+				aout, err := CreateArtifact(marshalProto(t, &engine.CreateArtifactRequest{
+					ProjectDir: dir, UserId: userID, SourceId: created.Source.Id, Label: "PNG",
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var art engine.CreateArtifactResponse
+				if err := proto.Unmarshal(aout, &art); err != nil {
+					t.Fatal(err)
+				}
+				path := filepath.Join(t.TempDir(), "scan.png")
+				writePNG(t, path)
+				if _, err := IngestArtifactFile(marshalProto(t, &engine.IngestArtifactFileRequest{
+					ProjectDir: dir, UserId: userID, ArtifactId: art.Artifact.Id, Path: path,
+				})); err != nil {
+					t.Fatal(err)
 				}
 				return &engine.ListSourcesRequest{ProjectDir: dir}
 			},
@@ -337,11 +335,15 @@ func TestListSourcesAndWorkspaceThumbnails(t *testing.T) {
 				if err := proto.Unmarshal(out, &list); err != nil {
 					t.Fatal(err)
 				}
-				if len(list.Sources) != 1 || list.Sources[0].GetThumbnailRelPath() == "" {
-					t.Fatalf("want png raster thumb %+v", list.Sources)
+				if len(list.Sources) != 1 {
+					t.Fatalf("sources %+v", list.Sources)
 				}
-				if list.Sources[0].GetThumbnailMediaType() != "" {
-					t.Fatalf("raster cover should not set media type %+v", list.Sources[0])
+				s := list.Sources[0]
+				if s.GetCoverMode() != "type_icon" || s.GetPrimaryArtifactId() != "" {
+					t.Fatalf("want type_icon without auto-pin %+v", s)
+				}
+				if s.GetThumbnailRelPath() != "" {
+					t.Fatalf("want empty raster until pin, got %q", s.GetThumbnailRelPath())
 				}
 			},
 		},

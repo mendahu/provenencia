@@ -36,6 +36,7 @@ enum PVSymbol: String {
     case externalLink = "arrow.up.right.square"
     case fileUp = "doc.badge.plus"
     case penLine = "pencil.line"
+    case imageUp = "square.and.arrow.up"
 }
 
 /// Renders a design-system icon via SF Symbols.

@@ -66,21 +66,30 @@ struct SourcesModelTests {
         #expect(model.typeLabel(for: model.sources[0]) == "Photograph")
     }
 
-    @Test func listSourcesFillsThumbnailFromArtifact() async {
+    @Test func listSourcesFillsThumbnailFromPinnedArtifact() async {
         let store = FakeStore()
         store.artifactsBySource["s1"] = [
             CatalogArtifact(
                 id: "a1", ref: "ART-1", sourceID: "s1", fileID: "f1",
-                label: "Front", description: "", thumbnailRelPath: "objects/aa/bb/thumb"
+                label: "Front", description: "",
+                file: CatalogFileRef(
+                    id: "f1", relPath: "objects/aa/bb/file", originalFilename: "front.png",
+                    mediaType: "image/png", byteSize: 12
+                ),
+                thumbnailRelPath: "objects/aa/bb/thumb"
             ),
         ]
+        var src = source(id: "s1", title: "Album", typeID: "t1")
+        src.coverMode = "artifact"
+        src.primaryArtifactID = "a1"
         let model = makeModel(
             store: store,
-            sources: [source(id: "s1", title: "Album", typeID: "t1")],
+            sources: [src],
             types: [photoType()]
         )
         await model.load()
         #expect(model.sources.first?.thumbnailRelPath == "objects/aa/bb/thumb")
+        #expect(model.sources.first?.coverMode == "artifact")
     }
 
     @Test func searchFiltersByTitleRefAndTypeLabel() async {
@@ -237,24 +246,21 @@ struct SourcesModelTests {
         #expect(model.typeIconKey(for: model.sources[0]) == "type_photograph")
     }
 
-    @Test func applyUpdatedSourceMergesCoverWhenIdentityOmitsThumbs() async {
+    @Test func applyUpdatedSourceReplacesCoverFieldsFromEngine() async {
         var row = source(id: "s1", title: "Deed", typeID: "t1")
+        row.coverMode = "artifact"
+        row.primaryArtifactID = "a1"
         row.thumbnailMediaType = "application/pdf"
         row.thumbnailOriginalFilename = "deed.pdf"
         let model = makeModel(sources: [row], types: [photoType()])
         await model.load()
-        model.applyUpdatedSource(
-            CatalogSource(
-                id: "s1",
-                ref: "SRC-AAAAA",
-                sourceTypeID: "t1",
-                title: "Deed renamed",
-                description: ""
-            )
-        )
+        var updated = source(id: "s1", title: "Deed renamed", typeID: "t1")
+        updated.coverMode = "type_icon"
+        model.applyUpdatedSource(updated)
         #expect(model.sources.first?.title == "Deed renamed")
-        #expect(model.sources.first?.thumbnailMediaType == "application/pdf")
-        #expect(model.sources.first?.thumbnailOriginalFilename == "deed.pdf")
+        #expect(model.sources.first?.coverMode == "type_icon")
+        #expect(model.sources.first?.thumbnailMediaType.isEmpty == true)
+        #expect(model.sources.first?.primaryArtifactID.isEmpty == true)
     }
 
     @Test func applyUpdatedSourceReplacesCoverWhenIncomingHasGlyph() async {
@@ -263,9 +269,12 @@ struct SourcesModelTests {
         let model = makeModel(sources: [row], types: [photoType()])
         await model.load()
         var updated = source(id: "s1", title: "Deed", typeID: "t1")
+        updated.coverMode = "artifact"
+        updated.primaryArtifactID = "a1"
         updated.thumbnailRelPath = "objects/aa/bb/thumb"
         model.applyUpdatedSource(updated)
         #expect(model.sources.first?.thumbnailRelPath == "objects/aa/bb/thumb")
         #expect(model.sources.first?.thumbnailMediaType.isEmpty == true)
+        #expect(model.sources.first?.coverMode == "artifact")
     }
 }

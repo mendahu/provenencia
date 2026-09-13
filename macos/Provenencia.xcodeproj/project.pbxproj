@@ -41,6 +41,7 @@
 		AA000000000000000000031B /* ProjectFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000031C /* ProjectFiles.swift */; };
 		AA0000000000000000000391 /* ThumbnailCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000390 /* ThumbnailCache.swift */; };
 		AA0000000000000000000393 /* CachedThumbnail.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000392 /* CachedThumbnail.swift */; };
+		AA00000000000000000003C1 /* PVContextMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003C0 /* PVContextMenu.swift */; };
 		AA0000000000000000000395 /* ThumbnailCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000394 /* ThumbnailCacheTests.swift */; };
 		AA0000000000000000000351 /* TimestampFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000350 /* TimestampFormat.swift */; };
 		AA000000000000000000031D /* SourcePageModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000031E /* SourcePageModelTests.swift */; };
@@ -197,6 +198,7 @@
 		AA000000000000000000031C /* ProjectFiles.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProjectFiles.swift; sourceTree = "<group>"; };
 		AA0000000000000000000390 /* ThumbnailCache.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ThumbnailCache.swift; sourceTree = "<group>"; };
 		AA0000000000000000000392 /* CachedThumbnail.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CachedThumbnail.swift; sourceTree = "<group>"; };
+		AA00000000000000000003C0 /* PVContextMenu.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVContextMenu.swift; sourceTree = "<group>"; };
 		AA0000000000000000000394 /* ThumbnailCacheTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ThumbnailCacheTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000350 /* TimestampFormat.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TimestampFormat.swift; sourceTree = "<group>"; };
 		AA000000000000000000031E /* SourcePageModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcePageModelTests.swift; sourceTree = "<group>"; };
@@ -479,6 +481,7 @@
 				AA0000000000000000000300 /* PVThumbnail.swift */,
 				AA0000000000000000000376 /* PVCard.swift */,
 				AA0000000000000000000378 /* PVSectionHeader.swift */,
+				AA00000000000000000003C0 /* PVContextMenu.swift */,
 			);
 			name = Core;
 			path = Core;
@@ -912,6 +915,7 @@
 				AA000000000000000000031B /* ProjectFiles.swift in Sources */,
 				AA0000000000000000000391 /* ThumbnailCache.swift in Sources */,
 				AA0000000000000000000393 /* CachedThumbnail.swift in Sources */,
+				AA00000000000000000003C1 /* PVContextMenu.swift in Sources */,
 				AA0000000000000000000351 /* TimestampFormat.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

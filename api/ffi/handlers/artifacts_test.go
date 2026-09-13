@@ -66,6 +66,7 @@ func TestCreateArtifactAndIngest(t *testing.T) {
 					t.Fatal("expected file_id")
 				}
 				assertAuditActionPresent(t, cr.ProjectDir, "create_file")
+				assertAuditActionPresent(t, cr.ProjectDir, "update_artifact")
 				assertLatestAuditAction(t, cr.ProjectDir, "update_artifact")
 
 				path2 := filepath.Join(t.TempDir(), "scan2.jpg")
