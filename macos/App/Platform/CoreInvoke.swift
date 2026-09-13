@@ -79,6 +79,7 @@ enum CoreMethod {
     static let ensureFileThumbnail = Int32(Provenencia_Engine_V1_Method.ensureFileThumbnail.rawValue)
     static let closeCatalogSession = Int32(Provenencia_Engine_V1_Method.closeCatalogSession.rawValue)
     static let setSourceCover = Int32(Provenencia_Engine_V1_Method.setSourceCover.rawValue)
+    static let searchCatalog = Int32(Provenencia_Engine_V1_Method.searchCatalog.rawValue)
 }
 
 func provenenciaInvoke(method: Int32, request: Data) throws -> Data {

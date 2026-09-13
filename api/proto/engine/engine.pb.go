@@ -70,6 +70,7 @@ const (
 	Method_METHOD_ENSURE_FILE_THUMBNAIL                Method = 41
 	Method_METHOD_CLOSE_CATALOG_SESSION                Method = 42
 	Method_METHOD_SET_SOURCE_COVER                     Method = 43
+	Method_METHOD_SEARCH_CATALOG                       Method = 44
 )
 
 // Enum value maps for Method.
@@ -119,6 +120,7 @@ var (
 		41: "METHOD_ENSURE_FILE_THUMBNAIL",
 		42: "METHOD_CLOSE_CATALOG_SESSION",
 		43: "METHOD_SET_SOURCE_COVER",
+		44: "METHOD_SEARCH_CATALOG",
 	}
 	Method_value = map[string]int32{
 		"METHOD_UNSPECIFIED":                          0,
@@ -165,6 +167,7 @@ var (
 		"METHOD_ENSURE_FILE_THUMBNAIL":                41,
 		"METHOD_CLOSE_CATALOG_SESSION":                42,
 		"METHOD_SET_SOURCE_COVER":                     43,
+		"METHOD_SEARCH_CATALOG":                       44,
 	}
 )
 
@@ -6229,6 +6232,289 @@ func (*CloseCatalogSessionResponse) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{99}
 }
 
+// WorkspaceLocation is the navigable place payload shared by search hits and
+// (later) omnibar go(to:). Aligns with macOS WorkspaceLocation / WorkspaceSection.
+type WorkspaceLocation struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Section       string                 `protobuf:"bytes,1,opt,name=section,proto3" json:"section,omitempty"` // sources | source-types | source-fields | files
+	SourceId      string                 `protobuf:"bytes,2,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	FieldId       string                 `protobuf:"bytes,3,opt,name=field_id,json=fieldId,proto3" json:"field_id,omitempty"`
+	TypeId        string                 `protobuf:"bytes,4,opt,name=type_id,json=typeId,proto3" json:"type_id,omitempty"`
+	Ref           string                 `protobuf:"bytes,5,opt,name=ref,proto3" json:"ref,omitempty"`     // denormalized jump-menu cache
+	Title         string                 `protobuf:"bytes,6,opt,name=title,proto3" json:"title,omitempty"` // denormalized jump-menu cache
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WorkspaceLocation) Reset() {
+	*x = WorkspaceLocation{}
+	mi := &file_engine_proto_msgTypes[100]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WorkspaceLocation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WorkspaceLocation) ProtoMessage() {}
+
+func (x *WorkspaceLocation) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[100]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WorkspaceLocation.ProtoReflect.Descriptor instead.
+func (*WorkspaceLocation) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{100}
+}
+
+func (x *WorkspaceLocation) GetSection() string {
+	if x != nil {
+		return x.Section
+	}
+	return ""
+}
+
+func (x *WorkspaceLocation) GetSourceId() string {
+	if x != nil {
+		return x.SourceId
+	}
+	return ""
+}
+
+func (x *WorkspaceLocation) GetFieldId() string {
+	if x != nil {
+		return x.FieldId
+	}
+	return ""
+}
+
+func (x *WorkspaceLocation) GetTypeId() string {
+	if x != nil {
+		return x.TypeId
+	}
+	return ""
+}
+
+func (x *WorkspaceLocation) GetRef() string {
+	if x != nil {
+		return x.Ref
+	}
+	return ""
+}
+
+func (x *WorkspaceLocation) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+// SearchCatalog finds navigable catalog roots for the omnibar (S3-07+).
+type SearchCatalogRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	Query         string                 `protobuf:"bytes,2,opt,name=query,proto3" json:"query,omitempty"`
+	Location      *WorkspaceLocation     `protobuf:"bytes,3,opt,name=location,proto3" json:"location,omitempty"` // current place; at least section for context boosts
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SearchCatalogRequest) Reset() {
+	*x = SearchCatalogRequest{}
+	mi := &file_engine_proto_msgTypes[101]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SearchCatalogRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SearchCatalogRequest) ProtoMessage() {}
+
+func (x *SearchCatalogRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[101]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SearchCatalogRequest.ProtoReflect.Descriptor instead.
+func (*SearchCatalogRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{101}
+}
+
+func (x *SearchCatalogRequest) GetProjectDir() string {
+	if x != nil {
+		return x.ProjectDir
+	}
+	return ""
+}
+
+func (x *SearchCatalogRequest) GetQuery() string {
+	if x != nil {
+		return x.Query
+	}
+	return ""
+}
+
+func (x *SearchCatalogRequest) GetLocation() *WorkspaceLocation {
+	if x != nil {
+		return x.Location
+	}
+	return nil
+}
+
+type SearchHit struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Kind          string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"` // source | source_type | source_field
+	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	Ref           string                 `protobuf:"bytes,3,opt,name=ref,proto3" json:"ref,omitempty"`
+	Title         string                 `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
+	Subtitle      string                 `protobuf:"bytes,5,opt,name=subtitle,proto3" json:"subtitle,omitempty"`
+	MatchReason   string                 `protobuf:"bytes,6,opt,name=match_reason,json=matchReason,proto3" json:"match_reason,omitempty"`
+	Location      *WorkspaceLocation     `protobuf:"bytes,7,opt,name=location,proto3" json:"location,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SearchHit) Reset() {
+	*x = SearchHit{}
+	mi := &file_engine_proto_msgTypes[102]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SearchHit) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SearchHit) ProtoMessage() {}
+
+func (x *SearchHit) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[102]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SearchHit.ProtoReflect.Descriptor instead.
+func (*SearchHit) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{102}
+}
+
+func (x *SearchHit) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *SearchHit) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *SearchHit) GetRef() string {
+	if x != nil {
+		return x.Ref
+	}
+	return ""
+}
+
+func (x *SearchHit) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *SearchHit) GetSubtitle() string {
+	if x != nil {
+		return x.Subtitle
+	}
+	return ""
+}
+
+func (x *SearchHit) GetMatchReason() string {
+	if x != nil {
+		return x.MatchReason
+	}
+	return ""
+}
+
+func (x *SearchHit) GetLocation() *WorkspaceLocation {
+	if x != nil {
+		return x.Location
+	}
+	return nil
+}
+
+type SearchCatalogResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Hits          []*SearchHit           `protobuf:"bytes,1,rep,name=hits,proto3" json:"hits,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SearchCatalogResponse) Reset() {
+	*x = SearchCatalogResponse{}
+	mi := &file_engine_proto_msgTypes[103]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SearchCatalogResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SearchCatalogResponse) ProtoMessage() {}
+
+func (x *SearchCatalogResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[103]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SearchCatalogResponse.ProtoReflect.Descriptor instead.
+func (*SearchCatalogResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{103}
+}
+
+func (x *SearchCatalogResponse) GetHits() []*SearchHit {
+	if x != nil {
+		return x.Hits
+	}
+	return nil
+}
+
 // Error is the protobuf payload on provenencia_call status 1 (failure).
 // Success payloads remain method-specific response messages.
 type Error struct {
@@ -6242,7 +6528,7 @@ type Error struct {
 
 func (x *Error) Reset() {
 	*x = Error{}
-	mi := &file_engine_proto_msgTypes[100]
+	mi := &file_engine_proto_msgTypes[104]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6254,7 +6540,7 @@ func (x *Error) String() string {
 func (*Error) ProtoMessage() {}
 
 func (x *Error) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[100]
+	mi := &file_engine_proto_msgTypes[104]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6267,7 +6553,7 @@ func (x *Error) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Error.ProtoReflect.Descriptor instead.
 func (*Error) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{100}
+	return file_engine_proto_rawDescGZIP(), []int{104}
 }
 
 func (x *Error) GetCode() string {
@@ -6769,12 +7055,33 @@ const file_engine_proto_rawDesc = "" +
 	"\x1aCloseCatalogSessionRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\"\x1d\n" +
-	"\x1bCloseCatalogSessionResponse\"i\n" +
+	"\x1bCloseCatalogSessionResponse\"\xa6\x01\n" +
+	"\x11WorkspaceLocation\x12\x18\n" +
+	"\asection\x18\x01 \x01(\tR\asection\x12\x1b\n" +
+	"\tsource_id\x18\x02 \x01(\tR\bsourceId\x12\x19\n" +
+	"\bfield_id\x18\x03 \x01(\tR\afieldId\x12\x17\n" +
+	"\atype_id\x18\x04 \x01(\tR\x06typeId\x12\x10\n" +
+	"\x03ref\x18\x05 \x01(\tR\x03ref\x12\x14\n" +
+	"\x05title\x18\x06 \x01(\tR\x05title\"\x93\x01\n" +
+	"\x14SearchCatalogRequest\x12\x1f\n" +
+	"\vproject_dir\x18\x01 \x01(\tR\n" +
+	"projectDir\x12\x14\n" +
+	"\x05query\x18\x02 \x01(\tR\x05query\x12D\n" +
+	"\blocation\x18\x03 \x01(\v2(.provenencia.engine.v1.WorkspaceLocationR\blocation\"\xdc\x01\n" +
+	"\tSearchHit\x12\x12\n" +
+	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x0e\n" +
+	"\x02id\x18\x02 \x01(\tR\x02id\x12\x10\n" +
+	"\x03ref\x18\x03 \x01(\tR\x03ref\x12\x14\n" +
+	"\x05title\x18\x04 \x01(\tR\x05title\x12\x1a\n" +
+	"\bsubtitle\x18\x05 \x01(\tR\bsubtitle\x12!\n" +
+	"\fmatch_reason\x18\x06 \x01(\tR\vmatchReason\x12D\n" +
+	"\blocation\x18\a \x01(\v2(.provenencia.engine.v1.WorkspaceLocationR\blocation\"M\n" +
+	"\x15SearchCatalogResponse\x124\n" +
+	"\x04hits\x18\x01 \x03(\v2 .provenencia.engine.v1.SearchHitR\x04hits\"i\n" +
 	"\x05Error\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x124\n" +
 	"\x04kind\x18\x02 \x01(\x0e2 .provenencia.engine.v1.ErrorKindR\x04kind\x12\x16\n" +
-	"\x06params\x18\x03 \x03(\tR\x06params*\xe9\n" +
-	"\n" +
+	"\x06params\x18\x03 \x03(\tR\x06params*\x84\v\n" +
 	"\x06Method\x12\x16\n" +
 	"\x12METHOD_UNSPECIFIED\x10\x00\x12\x0f\n" +
 	"\vMETHOD_PING\x10\x01\x12\x16\n" +
@@ -6820,7 +7127,8 @@ const file_engine_proto_rawDesc = "" +
 	"\x1eMETHOD_REORDER_SOURCE_METADATA\x10(\x12 \n" +
 	"\x1cMETHOD_ENSURE_FILE_THUMBNAIL\x10)\x12 \n" +
 	"\x1cMETHOD_CLOSE_CATALOG_SESSION\x10*\x12\x1b\n" +
-	"\x17METHOD_SET_SOURCE_COVER\x10+*\x88\x01\n" +
+	"\x17METHOD_SET_SOURCE_COVER\x10+\x12\x19\n" +
+	"\x15METHOD_SEARCH_CATALOG\x10,*\x88\x01\n" +
 	"\tErrorKind\x12\x1a\n" +
 	"\x16ERROR_KIND_UNSPECIFIED\x10\x00\x12\x13\n" +
 	"\x0fERROR_KIND_USER\x10\x01\x12\x17\n" +
@@ -6841,7 +7149,7 @@ func file_engine_proto_rawDescGZIP() []byte {
 }
 
 var file_engine_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 101)
+var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 105)
 var file_engine_proto_goTypes = []any{
 	(Method)(0),                                       // 0: provenencia.engine.v1.Method
 	(ErrorKind)(0),                                    // 1: provenencia.engine.v1.ErrorKind
@@ -6945,58 +7253,65 @@ var file_engine_proto_goTypes = []any{
 	(*EnsureFileThumbnailResponse)(nil),               // 99: provenencia.engine.v1.EnsureFileThumbnailResponse
 	(*CloseCatalogSessionRequest)(nil),                // 100: provenencia.engine.v1.CloseCatalogSessionRequest
 	(*CloseCatalogSessionResponse)(nil),               // 101: provenencia.engine.v1.CloseCatalogSessionResponse
-	(*Error)(nil),                                     // 102: provenencia.engine.v1.Error
+	(*WorkspaceLocation)(nil),                         // 102: provenencia.engine.v1.WorkspaceLocation
+	(*SearchCatalogRequest)(nil),                      // 103: provenencia.engine.v1.SearchCatalogRequest
+	(*SearchHit)(nil),                                 // 104: provenencia.engine.v1.SearchHit
+	(*SearchCatalogResponse)(nil),                     // 105: provenencia.engine.v1.SearchCatalogResponse
+	(*Error)(nil),                                     // 106: provenencia.engine.v1.Error
 }
 var file_engine_proto_depIdxs = []int32{
-	24, // 0: provenencia.engine.v1.CompleteOnboardingResponse.project:type_name -> provenencia.engine.v1.ProjectInfo
-	24, // 1: provenencia.engine.v1.OpenProjectResponse.project:type_name -> provenencia.engine.v1.ProjectInfo
-	19, // 2: provenencia.engine.v1.ListProjectUsersResponse.users:type_name -> provenencia.engine.v1.ProjectUser
-	24, // 3: provenencia.engine.v1.GetProjectInfoResponse.project:type_name -> provenencia.engine.v1.ProjectInfo
-	28, // 4: provenencia.engine.v1.Artifact.file:type_name -> provenencia.engine.v1.SourceFileRef
-	34, // 5: provenencia.engine.v1.TypeSuggestion.field:type_name -> provenencia.engine.v1.MetadataField
-	34, // 6: provenencia.engine.v1.MetadataWorkspaceEntry.field:type_name -> provenencia.engine.v1.MetadataField
-	36, // 7: provenencia.engine.v1.MetadataWorkspaceEntry.date:type_name -> provenencia.engine.v1.DateValueInput
-	26, // 8: provenencia.engine.v1.ListSourcesResponse.sources:type_name -> provenencia.engine.v1.Source
-	26, // 9: provenencia.engine.v1.GetSourceWorkspaceResponse.source:type_name -> provenencia.engine.v1.Source
-	27, // 10: provenencia.engine.v1.GetSourceWorkspaceResponse.notes:type_name -> provenencia.engine.v1.SourceNote
-	35, // 11: provenencia.engine.v1.GetSourceWorkspaceResponse.metadata:type_name -> provenencia.engine.v1.MetadataWorkspaceEntry
-	29, // 12: provenencia.engine.v1.GetSourceWorkspaceResponse.artifacts:type_name -> provenencia.engine.v1.Artifact
-	31, // 13: provenencia.engine.v1.GetSourceWorkspaceResponse.credibility:type_name -> provenencia.engine.v1.SourceCredibilityAssessment
-	32, // 14: provenencia.engine.v1.GetSourceWorkspaceResponse.types:type_name -> provenencia.engine.v1.SourceType
-	30, // 15: provenencia.engine.v1.GetSourceWorkspaceResponse.grades:type_name -> provenencia.engine.v1.SourceCredibilityGrade
-	34, // 16: provenencia.engine.v1.GetSourceWorkspaceResponse.fields:type_name -> provenencia.engine.v1.MetadataField
-	26, // 17: provenencia.engine.v1.CreateSourceResponse.source:type_name -> provenencia.engine.v1.Source
-	26, // 18: provenencia.engine.v1.UpdateSourceResponse.source:type_name -> provenencia.engine.v1.Source
-	26, // 19: provenencia.engine.v1.SetSourceCoverResponse.source:type_name -> provenencia.engine.v1.Source
-	27, // 20: provenencia.engine.v1.AddSourceNoteResponse.note:type_name -> provenencia.engine.v1.SourceNote
-	27, // 21: provenencia.engine.v1.UpdateSourceNoteResponse.note:type_name -> provenencia.engine.v1.SourceNote
-	36, // 22: provenencia.engine.v1.SetSourceMetadataRequest.date:type_name -> provenencia.engine.v1.DateValueInput
-	35, // 23: provenencia.engine.v1.SetSourceMetadataResponse.entry:type_name -> provenencia.engine.v1.MetadataWorkspaceEntry
-	35, // 24: provenencia.engine.v1.DismissSourceMetadataSuggestionResponse.metadata:type_name -> provenencia.engine.v1.MetadataWorkspaceEntry
-	35, // 25: provenencia.engine.v1.ReorderSourceMetadataResponse.metadata:type_name -> provenencia.engine.v1.MetadataWorkspaceEntry
-	29, // 26: provenencia.engine.v1.CreateArtifactResponse.artifact:type_name -> provenencia.engine.v1.Artifact
-	29, // 27: provenencia.engine.v1.UpdateArtifactResponse.artifact:type_name -> provenencia.engine.v1.Artifact
-	29, // 28: provenencia.engine.v1.IngestArtifactFileResponse.artifact:type_name -> provenencia.engine.v1.Artifact
-	28, // 29: provenencia.engine.v1.IngestArtifactFileResponse.file:type_name -> provenencia.engine.v1.SourceFileRef
-	30, // 30: provenencia.engine.v1.ListSourceCredibilityGradesResponse.grades:type_name -> provenencia.engine.v1.SourceCredibilityGrade
-	31, // 31: provenencia.engine.v1.UpsertSourceCredibilityAssessmentResponse.assessment:type_name -> provenencia.engine.v1.SourceCredibilityAssessment
-	32, // 32: provenencia.engine.v1.ListSourceTypesResponse.types:type_name -> provenencia.engine.v1.SourceType
-	32, // 33: provenencia.engine.v1.CreateSourceTypeResponse.type:type_name -> provenencia.engine.v1.SourceType
-	34, // 34: provenencia.engine.v1.ListMetadataFieldsResponse.fields:type_name -> provenencia.engine.v1.MetadataField
-	34, // 35: provenencia.engine.v1.CreateMetadataFieldResponse.field:type_name -> provenencia.engine.v1.MetadataField
-	34, // 36: provenencia.engine.v1.UpdateMetadataFieldResponse.field:type_name -> provenencia.engine.v1.MetadataField
-	32, // 37: provenencia.engine.v1.UpdateSourceTypeResponse.type:type_name -> provenencia.engine.v1.SourceType
-	33, // 38: provenencia.engine.v1.ListTypeSuggestionsResponse.suggestions:type_name -> provenencia.engine.v1.TypeSuggestion
-	33, // 39: provenencia.engine.v1.AssignTypeFieldResponse.suggestions:type_name -> provenencia.engine.v1.TypeSuggestion
-	33, // 40: provenencia.engine.v1.RemoveTypeFieldResponse.suggestions:type_name -> provenencia.engine.v1.TypeSuggestion
-	95, // 41: provenencia.engine.v1.GetWorkspaceNavCountsResponse.source_types:type_name -> provenencia.engine.v1.VocabularyOriginCounts
-	95, // 42: provenencia.engine.v1.GetWorkspaceNavCountsResponse.source_fields:type_name -> provenencia.engine.v1.VocabularyOriginCounts
-	1,  // 43: provenencia.engine.v1.Error.kind:type_name -> provenencia.engine.v1.ErrorKind
-	44, // [44:44] is the sub-list for method output_type
-	44, // [44:44] is the sub-list for method input_type
-	44, // [44:44] is the sub-list for extension type_name
-	44, // [44:44] is the sub-list for extension extendee
-	0,  // [0:44] is the sub-list for field type_name
+	24,  // 0: provenencia.engine.v1.CompleteOnboardingResponse.project:type_name -> provenencia.engine.v1.ProjectInfo
+	24,  // 1: provenencia.engine.v1.OpenProjectResponse.project:type_name -> provenencia.engine.v1.ProjectInfo
+	19,  // 2: provenencia.engine.v1.ListProjectUsersResponse.users:type_name -> provenencia.engine.v1.ProjectUser
+	24,  // 3: provenencia.engine.v1.GetProjectInfoResponse.project:type_name -> provenencia.engine.v1.ProjectInfo
+	28,  // 4: provenencia.engine.v1.Artifact.file:type_name -> provenencia.engine.v1.SourceFileRef
+	34,  // 5: provenencia.engine.v1.TypeSuggestion.field:type_name -> provenencia.engine.v1.MetadataField
+	34,  // 6: provenencia.engine.v1.MetadataWorkspaceEntry.field:type_name -> provenencia.engine.v1.MetadataField
+	36,  // 7: provenencia.engine.v1.MetadataWorkspaceEntry.date:type_name -> provenencia.engine.v1.DateValueInput
+	26,  // 8: provenencia.engine.v1.ListSourcesResponse.sources:type_name -> provenencia.engine.v1.Source
+	26,  // 9: provenencia.engine.v1.GetSourceWorkspaceResponse.source:type_name -> provenencia.engine.v1.Source
+	27,  // 10: provenencia.engine.v1.GetSourceWorkspaceResponse.notes:type_name -> provenencia.engine.v1.SourceNote
+	35,  // 11: provenencia.engine.v1.GetSourceWorkspaceResponse.metadata:type_name -> provenencia.engine.v1.MetadataWorkspaceEntry
+	29,  // 12: provenencia.engine.v1.GetSourceWorkspaceResponse.artifacts:type_name -> provenencia.engine.v1.Artifact
+	31,  // 13: provenencia.engine.v1.GetSourceWorkspaceResponse.credibility:type_name -> provenencia.engine.v1.SourceCredibilityAssessment
+	32,  // 14: provenencia.engine.v1.GetSourceWorkspaceResponse.types:type_name -> provenencia.engine.v1.SourceType
+	30,  // 15: provenencia.engine.v1.GetSourceWorkspaceResponse.grades:type_name -> provenencia.engine.v1.SourceCredibilityGrade
+	34,  // 16: provenencia.engine.v1.GetSourceWorkspaceResponse.fields:type_name -> provenencia.engine.v1.MetadataField
+	26,  // 17: provenencia.engine.v1.CreateSourceResponse.source:type_name -> provenencia.engine.v1.Source
+	26,  // 18: provenencia.engine.v1.UpdateSourceResponse.source:type_name -> provenencia.engine.v1.Source
+	26,  // 19: provenencia.engine.v1.SetSourceCoverResponse.source:type_name -> provenencia.engine.v1.Source
+	27,  // 20: provenencia.engine.v1.AddSourceNoteResponse.note:type_name -> provenencia.engine.v1.SourceNote
+	27,  // 21: provenencia.engine.v1.UpdateSourceNoteResponse.note:type_name -> provenencia.engine.v1.SourceNote
+	36,  // 22: provenencia.engine.v1.SetSourceMetadataRequest.date:type_name -> provenencia.engine.v1.DateValueInput
+	35,  // 23: provenencia.engine.v1.SetSourceMetadataResponse.entry:type_name -> provenencia.engine.v1.MetadataWorkspaceEntry
+	35,  // 24: provenencia.engine.v1.DismissSourceMetadataSuggestionResponse.metadata:type_name -> provenencia.engine.v1.MetadataWorkspaceEntry
+	35,  // 25: provenencia.engine.v1.ReorderSourceMetadataResponse.metadata:type_name -> provenencia.engine.v1.MetadataWorkspaceEntry
+	29,  // 26: provenencia.engine.v1.CreateArtifactResponse.artifact:type_name -> provenencia.engine.v1.Artifact
+	29,  // 27: provenencia.engine.v1.UpdateArtifactResponse.artifact:type_name -> provenencia.engine.v1.Artifact
+	29,  // 28: provenencia.engine.v1.IngestArtifactFileResponse.artifact:type_name -> provenencia.engine.v1.Artifact
+	28,  // 29: provenencia.engine.v1.IngestArtifactFileResponse.file:type_name -> provenencia.engine.v1.SourceFileRef
+	30,  // 30: provenencia.engine.v1.ListSourceCredibilityGradesResponse.grades:type_name -> provenencia.engine.v1.SourceCredibilityGrade
+	31,  // 31: provenencia.engine.v1.UpsertSourceCredibilityAssessmentResponse.assessment:type_name -> provenencia.engine.v1.SourceCredibilityAssessment
+	32,  // 32: provenencia.engine.v1.ListSourceTypesResponse.types:type_name -> provenencia.engine.v1.SourceType
+	32,  // 33: provenencia.engine.v1.CreateSourceTypeResponse.type:type_name -> provenencia.engine.v1.SourceType
+	34,  // 34: provenencia.engine.v1.ListMetadataFieldsResponse.fields:type_name -> provenencia.engine.v1.MetadataField
+	34,  // 35: provenencia.engine.v1.CreateMetadataFieldResponse.field:type_name -> provenencia.engine.v1.MetadataField
+	34,  // 36: provenencia.engine.v1.UpdateMetadataFieldResponse.field:type_name -> provenencia.engine.v1.MetadataField
+	32,  // 37: provenencia.engine.v1.UpdateSourceTypeResponse.type:type_name -> provenencia.engine.v1.SourceType
+	33,  // 38: provenencia.engine.v1.ListTypeSuggestionsResponse.suggestions:type_name -> provenencia.engine.v1.TypeSuggestion
+	33,  // 39: provenencia.engine.v1.AssignTypeFieldResponse.suggestions:type_name -> provenencia.engine.v1.TypeSuggestion
+	33,  // 40: provenencia.engine.v1.RemoveTypeFieldResponse.suggestions:type_name -> provenencia.engine.v1.TypeSuggestion
+	95,  // 41: provenencia.engine.v1.GetWorkspaceNavCountsResponse.source_types:type_name -> provenencia.engine.v1.VocabularyOriginCounts
+	95,  // 42: provenencia.engine.v1.GetWorkspaceNavCountsResponse.source_fields:type_name -> provenencia.engine.v1.VocabularyOriginCounts
+	102, // 43: provenencia.engine.v1.SearchCatalogRequest.location:type_name -> provenencia.engine.v1.WorkspaceLocation
+	102, // 44: provenencia.engine.v1.SearchHit.location:type_name -> provenencia.engine.v1.WorkspaceLocation
+	104, // 45: provenencia.engine.v1.SearchCatalogResponse.hits:type_name -> provenencia.engine.v1.SearchHit
+	1,   // 46: provenencia.engine.v1.Error.kind:type_name -> provenencia.engine.v1.ErrorKind
+	47,  // [47:47] is the sub-list for method output_type
+	47,  // [47:47] is the sub-list for method input_type
+	47,  // [47:47] is the sub-list for extension type_name
+	47,  // [47:47] is the sub-list for extension extendee
+	0,   // [0:47] is the sub-list for field type_name
 }
 
 func init() { file_engine_proto_init() }
@@ -7011,7 +7326,7 @@ func file_engine_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_engine_proto_rawDesc), len(file_engine_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   101,
+			NumMessages:   105,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -660,6 +660,22 @@ struct GoStore: GenealogyStore {
         )
     }
 
+    func searchCatalog(
+        projectDir: String,
+        query: String,
+        location: WorkspaceLocation
+    ) async throws -> [CatalogSearchHit] {
+        var req = Provenencia_Engine_V1_SearchCatalogRequest()
+        req.projectDir = projectDir
+        req.query = query
+        req.location = Self.mapWorkspaceLocationToProto(location)
+        let resp: Provenencia_Engine_V1_SearchCatalogResponse = try await provenenciaCall(
+            method: CoreMethod.searchCatalog,
+            request: req
+        )
+        return resp.hits.map(Self.mapSearchHit)
+    }
+
     private static func mapOriginCounts(
         _ c: Provenencia_Engine_V1_VocabularyOriginCounts
     ) -> WorkspaceNavOriginCounts {
@@ -668,6 +684,44 @@ struct GoStore: GenealogyStore {
             seeded: Int(c.seeded),
             user: Int(c.user),
             plugin: Int(c.plugin)
+        )
+    }
+
+    private static func mapWorkspaceLocationToProto(
+        _ loc: WorkspaceLocation
+    ) -> Provenencia_Engine_V1_WorkspaceLocation {
+        var p = Provenencia_Engine_V1_WorkspaceLocation()
+        p.section = loc.section.rawValue
+        p.sourceID = loc.sourceId ?? ""
+        p.fieldID = loc.fieldId ?? ""
+        p.typeID = loc.typeId ?? ""
+        p.ref = loc.ref ?? ""
+        p.title = loc.title ?? ""
+        return p
+    }
+
+    private static func mapWorkspaceLocationFromProto(
+        _ p: Provenencia_Engine_V1_WorkspaceLocation
+    ) -> WorkspaceLocation {
+        WorkspaceLocation(
+            section: WorkspaceSection(rawValue: p.section) ?? .sources,
+            sourceId: p.sourceID,
+            fieldId: p.fieldID,
+            typeId: p.typeID,
+            ref: p.ref,
+            title: p.title
+        )
+    }
+
+    private static func mapSearchHit(_ h: Provenencia_Engine_V1_SearchHit) -> CatalogSearchHit {
+        CatalogSearchHit(
+            kind: h.kind,
+            id: h.id,
+            ref: h.ref,
+            title: h.title,
+            subtitle: h.subtitle,
+            matchReason: h.matchReason,
+            location: Self.mapWorkspaceLocationFromProto(h.location)
         )
     }
 

@@ -43,7 +43,7 @@ Steps are **`S3-NN`**. **Depends on** is the merge gate. Prefer many small PRs; 
 S3-03 project.uuid (done) ───────────────────┐
         │                                     │
         ▼                                     ▼
-S3-04  history (done)                       S3-07  SearchCatalog RPC shell
+S3-04  history (done)                       S3-07  SearchCatalog (done)
         │                                     │
         ▼                                     ▼
 S3-05  Toolbar chrome (nav + crumbs + field) S3-08  FTS5 projection
@@ -81,23 +81,12 @@ S3-05  Toolbar chrome (nav + crumbs + field) S3-08  FTS5 projection
 | **Deliverables** | Only if S3-05 ships a minimal menu: refine jump-menu row anatomy (destination icon \| `Destination › title` \| mono ref), hold vs click swallow, Escape/outside dismiss — parity with App Layout Frame 8. Skip this ID if S3-05 lands the full menu. |
 | **Out** | Omnibar results (different surface; shared elevation language only). |
 
-### S3-07 — PR: Searchable-kind registry + `SearchCatalog` RPC shell
-
-| | |
-| --- | --- |
-| **Kind** | PR |
-| **Depends on** | — (can parallel S3-04…S3-05 after S3-03 if location payload shape is agreed; otherwise after S3-04) |
-| **Deliverables** | Go searchable-kind registry (Sources, source types, source fields). Protobuf `SearchCatalog` + FFI handler + Hit DTO (`kind`, `id`, `ref?`, `title`, `subtitle?`, `match_reason?`, `location`). Request carries query + current `WorkspaceLocation` (at least section). FakeStore. Naïve table scan **behind the same API** only as a bridge. Tests without UI. |
-| **Context** | [`omnibar-search.md`](omnibar-search.md) § Incremental delivery S1; [`add-ffi-handler`](../../../.cursor/skills/add-ffi-handler/SKILL.md). |
-| **Out** | FTS5 tables; Swift omnibar dropdown; removing list search. |
-| **Dogfood** | RPC returns ranked-enough hits for known titles/refs in tests / debug. |
-
 ### S3-08 — PR: FTS5 projection
 
 | | |
 | --- | --- |
 | **Kind** | PR |
-| **Depends on** | S3-07 |
+| **Depends on** | S3-07 (done) |
 | **Deliverables** | Enable `fts5` on the embedded amalgamation if not already. Migration: FTS search documents for Source / type / field roots. Field weights in registry. Incremental reproject on writes; rebuild/heal on Open/migrate. Swap naïve scanner for FTS retrieval. Roll Source notes / metadata / artifact-filename text into the **Source** document (not separate hits). |
 | **Context** | [`omnibar-search.md`](omnibar-search.md) S2; [`application-stack.md`](../../application-stack.md) §10. |
 | **Out** | Context boosts / ref fast path polish (S3-09); fuzzy (S3-11); Files/Artifact as own hit kinds. |
@@ -162,7 +151,6 @@ Not required to close Spike 3 dogfood if Sources + types + fields search well:
 | --- | --- |
 | S3-04 | Add first-class workspace navigation history |
 | S3-05 | Move Back/Forward and breadcrumbs into the main toolbar |
-| S3-07 | Add a catalog SearchCatalog RPC and kind registry |
 | S3-08 | Index the catalog with FTS5 for project search |
 | S3-09 | Rank search by workspace context and catalog refs |
 | S3-10 | Ship the omnibar and retire per-destination search |
@@ -176,10 +164,10 @@ Not required to close Spike 3 dogfood if Sources + types + fields search well:
 | Track | Steps |
 | --- | --- |
 | **Design** | S3-01, S3-02 — done ([`completed.md`](completed.md)) |
-| **Core / FFI** | S3-03 done → S3-07 → S3-08 → S3-09 → (S3-11) |
+| **Core / FFI** | S3-03 done → S3-07 done → S3-08 → S3-09 → (S3-11) |
 | **Mac workspace** | S3-04 done → S3-05 (→ S3-06) → S3-10 → S3-12 |
 
-S3-07+ may proceed beside S3-05 once Hit `location` matches `WorkspaceLocation`. **S3-10** is the integration gate.
+S3-08+ may proceed beside S3-05. **S3-10** is the integration gate.
 
 ---
 

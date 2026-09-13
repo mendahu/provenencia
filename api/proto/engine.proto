@@ -51,6 +51,7 @@ enum Method {
   METHOD_ENSURE_FILE_THUMBNAIL = 41;
   METHOD_CLOSE_CATALOG_SESSION = 42;
   METHOD_SET_SOURCE_COVER = 43;
+  METHOD_SEARCH_CATALOG = 44;
 }
 
 message PingRequest {
@@ -698,6 +699,38 @@ message CloseCatalogSessionRequest {
 }
 
 message CloseCatalogSessionResponse {}
+
+// WorkspaceLocation is the navigable place payload shared by search hits and
+// (later) omnibar go(to:). Aligns with macOS WorkspaceLocation / WorkspaceSection.
+message WorkspaceLocation {
+  string section = 1;    // sources | source-types | source-fields | files
+  string source_id = 2;
+  string field_id = 3;
+  string type_id = 4;
+  string ref = 5;        // denormalized jump-menu cache
+  string title = 6;      // denormalized jump-menu cache
+}
+
+// SearchCatalog finds navigable catalog roots for the omnibar (S3-07+).
+message SearchCatalogRequest {
+  string project_dir = 1;
+  string query = 2;
+  WorkspaceLocation location = 3; // current place; at least section for context boosts
+}
+
+message SearchHit {
+  string kind = 1;         // source | source_type | source_field
+  string id = 2;
+  string ref = 3;
+  string title = 4;
+  string subtitle = 5;
+  string match_reason = 6;
+  WorkspaceLocation location = 7;
+}
+
+message SearchCatalogResponse {
+  repeated SearchHit hits = 1;
+}
 
 // ErrorKind classifies a failure for client UX (tone, retry hints). Copy still
 // comes from the client's L10n map keyed by Error.code.

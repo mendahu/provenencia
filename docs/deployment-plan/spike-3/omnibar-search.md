@@ -243,11 +243,11 @@ Same spacing and typography; only the slots change. Avoid per-kind card layouts 
 
 ## Incremental delivery
 
-Break into successive PRs so each slice is dogfoodable. Sequenced as **S3-07…S3-11** in [`deployment-plan.md`](deployment-plan.md); intended order:
+Break into successive PRs so each slice is dogfoodable. Sequenced as **S3-07…S3-11** in [`deployment-plan.md`](deployment-plan.md) (S3-07 / S1 done — [`completed.md`](completed.md)); intended order:
 
 | Slice | Delivers | Evaluate |
 | --- | --- | --- |
-| **S1 — Registry + RPC shell** | Searchable-kind registry; `SearchCatalog` protobuf/FFI; Hit DTO; FakeStore; context location on the request. May use a naïve scanner **behind the same API** only as a bridge. | RPC shape; location mapping; tests without UI. |
+| **S1 — Registry + RPC shell** | **Done (S3-07).** Searchable-kind registry; `SearchCatalog` protobuf/FFI; Hit DTO; FakeStore; context location on the request. Naïve scanner **behind the same API** as bridge. | RPC shape; location mapping; tests without UI. |
 | **S2 — FTS5 projection** | Migration + FTS documents for Sources / types / fields; incremental upkeep on writes; rebuild/heal; swap scanner for FTS retrieval + field weights. | Latency; relevance on real dogfood catalogs; index correctness after edits. |
 | **S3 — Context ranking + ref fast path** | Section/kind boosts; exact/prefix ref promotion; match_reason where cheap. | “I’m on Sources → Sources float” feels right; paste-ref UX. |
 | **S4 — Omnibar chrome + remove list search** | Toolbar field + ⌘K (S3-05 shell); results UI per board (S3-10); wire hits to `go(to:)`; **delete** per-destination search. | End-to-end find; no dual search chrome. |

@@ -1,0 +1,15 @@
+---
+description: New omnibar SearchCatalog kinds go through core/search registry + location mappers
+globs: core/search/**/*.go,api/ffi/handlers/search_catalog*.go,macos/App/Platform/{GenealogyStore,GoStore,FakeStore}.swift
+alwaysApply: false
+---
+
+# Searchable catalog kinds
+
+Follow the project skill `.cursor/skills/add-searchable-kind/SKILL.md`.
+Behavior: `docs/deployment-plan/spike-3/omnibar-search.md`.
+
+- Register kinds in `core/search` (weights, context sections, location mapper).
+- Do not put ad hoc SQL/`LIKE` search in FFI handlers or a permanent Swift engine.
+- Hits must include a navigable `WorkspaceLocation` (section + deep id).
+- Empty / whitespace queries return no hits; FakeStore mirrors Go kind rules and marks the catalog session held.

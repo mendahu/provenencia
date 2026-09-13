@@ -64,6 +64,7 @@
 		AA0000000000000000000263 /* CatalogCounts.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000253 /* CatalogCounts.swift */; };
 		AA0000000000000000000271 /* CatalogCountsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000270 /* CatalogCountsTests.swift */; };
 		AA00000000000000000003A1 /* CatalogSessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003A0 /* CatalogSessionStoreTests.swift */; };
+		AA00000000000000000003E1 /* SearchCatalogStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003E0 /* SearchCatalogStoreTests.swift */; };
 		AA0000000000000000000212 /* SourceTypesModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000202 /* SourceTypesModel.swift */; };
 		AA0000000000000000000213 /* SourceTypesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000203 /* SourceTypesView.swift */; };
 		AA0000000000000000000214 /* SourceTypesListPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000204 /* SourceTypesListPane.swift */; };
@@ -240,6 +241,7 @@
 		AA0000000000000000000253 /* CatalogCounts.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogCounts.swift; sourceTree = "<group>"; };
 		AA0000000000000000000270 /* CatalogCountsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogCountsTests.swift; sourceTree = "<group>"; };
 		AA00000000000000000003A0 /* CatalogSessionStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogSessionStoreTests.swift; sourceTree = "<group>"; };
+		AA00000000000000000003E0 /* SearchCatalogStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SearchCatalogStoreTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000202 /* SourceTypesModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTypesModel.swift; sourceTree = "<group>"; };
 		AA0000000000000000000203 /* SourceTypesView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTypesView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000204 /* SourceTypesListPane.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTypesListPane.swift; sourceTree = "<group>"; };
@@ -657,6 +659,7 @@
 				F203948576A1B2C3D4E5F605 /* WorkspaceNavigationTests.swift */,
 				AA0000000000000000000270 /* CatalogCountsTests.swift */,
 				AA00000000000000000003A0 /* CatalogSessionStoreTests.swift */,
+				AA00000000000000000003E0 /* SearchCatalogStoreTests.swift */,
 				B567080CA23230E18488F894 /* TrafficLightsTests.swift */,
 				8291342170CC4CB42EFA814C /* FieldSlugTests.swift */,
 				AA00000000000000000000C5 /* PVTableTests.swift */,
@@ -966,6 +969,7 @@
 				F203948576A1B2C3D4E5F607 /* WorkspaceNavigationTests.swift in Sources */,
 				AA0000000000000000000271 /* CatalogCountsTests.swift in Sources */,
 				AA00000000000000000003A1 /* CatalogSessionStoreTests.swift in Sources */,
+				AA00000000000000000003E1 /* SearchCatalogStoreTests.swift in Sources */,
 				8B20E11A26E9E10EF915519C /* TrafficLightsTests.swift in Sources */,
 				E63D8CEC3F6AC5C7E90EBBFE /* FieldSlugTests.swift in Sources */,
 				AA00000000000000000000C4 /* PVTableTests.swift in Sources */,

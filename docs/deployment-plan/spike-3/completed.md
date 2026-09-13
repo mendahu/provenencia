@@ -12,6 +12,7 @@ IDs stay stable (`S3-NN`). Do not renumber when moving steps here.
 | [S3-02](#s3-02--design-omnibar-results) | Design | Omnibar results dropdown + hit row |
 | [S3-03](#s3-03--pr-catalog-projectuuid) | PR | Catalog `project.uuid` (mint, heal, ProjectInfo) |
 | [S3-04](#s3-04--pr-workspacelocation--navigation-history) | PR | WorkspaceLocation + persisted navigation history |
+| [S3-07](#s3-07--pr-searchable-kind-registry--searchcatalog-rpc-shell) | PR | Searchable-kind registry + SearchCatalog RPC |
 
 ---
 
@@ -68,3 +69,17 @@ IDs stay stable (`S3-NN`). Do not renumber when moving steps here.
 | **Out** | Final toolbar visuals / jump menus (S3-05); omnibar results; search RPC. |
 | **Dogfood** | Keyboard Back/Forward restores deep locations across destinations; relaunch returns to the leave-off place for that `project.uuid`. |
 | **Feeds** | S3-05 (toolbar chrome); S3-07+ Hit `location` shape |
+
+---
+
+### S3-07 — PR: Searchable-kind registry + `SearchCatalog` RPC shell
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | — (parallel with S3-05 after S3-04 location shape) |
+| **Deliverables** | Done. `core/search` kind registry (`source` / `source_type` / `source_field`) with field weights, context-section boosts, and `WorkspaceLocation` mappers. Protobuf `METHOD_SEARCH_CATALOG` + `SearchHit` / `WorkspaceLocation` messages; FFI handler via `withProjectCatalog` + `search.Engine`. `Searcher` interface with `NaiveScanner` bridge (domain `List` APIs — no handler SQL). Mac `GenealogyStore.searchCatalog` / GoStore / FakeStore + Swift tests. Skill [`add-searchable-kind`](../../../.cursor/skills/add-searchable-kind/SKILL.md). |
+| **Context** | [`omnibar-search.md`](omnibar-search.md) § Incremental delivery S1; [`add-ffi-handler`](../../../.cursor/skills/add-ffi-handler/SKILL.md); [`use-catalog-session`](../../../.cursor/skills/use-catalog-session/SKILL.md). |
+| **Out** | FTS5 tables / write-path reproject (S3-08); full context/ref ranking polish (S3-09); omnibar UI / remove list search (S3-10). |
+| **Dogfood** | RPC / FakeStore return ranked hits for known titles, refs, type/field labels with navigable locations. |
+| **Feeds** | S3-08 (swap NaiveScanner for FTS behind same Hit/Query/FFI) |

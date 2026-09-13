@@ -81,6 +81,17 @@ struct CatalogCredibilityGrade: Sendable, Equatable, Identifiable {
     var sortOrder: Int
 }
 
+/// One omnibar / SearchCatalog hit (stable kinds: source, source_type, source_field).
+struct CatalogSearchHit: Sendable, Equatable, Identifiable {
+    var kind: String
+    var id: String
+    var ref: String
+    var title: String
+    var subtitle: String
+    var matchReason: String
+    var location: WorkspaceLocation
+}
+
 struct CatalogCredibilityAssessment: Sendable, Equatable {
     var id: String
     var sourceID: String
@@ -394,4 +405,10 @@ protocol GenealogyStore: Sendable {
     /// One catalog open: sidebar / vocabulary-header totals for sources,
     /// types, fields, and files.
     func workspaceNavCounts(projectDir: String) async throws -> WorkspaceNavCounts
+    /// Omnibar catalog search (S3-07+). Empty / whitespace query → empty hits.
+    func searchCatalog(
+        projectDir: String,
+        query: String,
+        location: WorkspaceLocation
+    ) async throws -> [CatalogSearchHit]
 }
