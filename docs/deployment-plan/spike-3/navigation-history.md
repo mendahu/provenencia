@@ -2,7 +2,7 @@
 
 **Status:** pulled into [Spike 3](README.md) — requirements. PR sequence: [`deployment-plan.md`](deployment-plan.md) (S3-03…S3-06).
 
-Visual chrome: [`design/App Layout.dc.html`](design/App%20Layout.dc.html) (screenshots in [`design/uploads/`](design/uploads/)). This note owns **behavior**; the board is the visual source of truth for placement and menu layout.
+Visual chrome: Claude Design **App Layout** board ([`design/README.md`](design/README.md)). This note owns **behavior**; the board is the visual source of truth for placement and menu layout.
 
 ## Problem
 

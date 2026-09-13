@@ -6,7 +6,7 @@ Authoritative behavior: [`navigation-history.md`](navigation-history.md), [`omni
 
 ## Status
 
-**Sequenced — ready to implement.** Design boards for toolbar chrome and omnibar results are checked in. Steps below are mergeable slices; each should leave `main` dogfoodable.
+**Sequenced — ready to implement.** Design boards for toolbar chrome and omnibar results live in Claude Design (see [`design/README.md`](design/README.md)). Steps below are mergeable slices; each should leave `main` dogfoodable.
 
 ## Goal (dogfood bar)
 
@@ -20,8 +20,8 @@ A researcher can:
 
 | Step | Kind | Board / brief | Feeds |
 | --- | --- | --- | --- |
-| **S3-01** | Design | [`design/App Layout.dc.html`](design/App%20Layout.dc.html) — main-column toolbar: Back/Forward, jump menus, breadcrumbs, omnibar field | S3-05, S3-06 |
-| **S3-02** | Design | [`design/S3-01 Omnibar Results.dc.html`](design/S3-01%20Omnibar%20Results.dc.html) (+ [`Omnibar Hit Row.dc.html`](design/Omnibar%20Hit%20Row.dc.html)) — flat ranked rich rows | S3-10 |
+| **S3-01** | Design | Claude Design **App Layout** — main-column toolbar: Back/Forward, jump menus, breadcrumbs, omnibar field ([`design/README.md`](design/README.md)) | S3-05, S3-06 |
+| **S3-02** | Design | Claude Design **Omnibar Results** (+ hit row) — flat ranked rich rows ([`design/README.md`](design/README.md)) | S3-10 |
 | — | Brief (archived) | [`design/archive/omnibar-results-dropdown-brief.md`](design/archive/omnibar-results-dropdown-brief.md) | S3-02 |
 
 Layout moves locked by the boards (implement in the PR steps that own chrome):
@@ -100,7 +100,7 @@ S3-05  Toolbar chrome (nav + crumbs + field) S3-08  FTS5 projection
 | **Kind** | PR |
 | **Depends on** | S3-04; S3-01 board |
 | **Deliverables** | Main-column header per App Layout: ~46px, bottom border, content-leading padding. Leading Back/Forward `IconButton`s (disabled at stack ends). Long-press / secondary-click jump menus (nearest **15**, rich rows). Toolbar `PVBreadcrumbs` with navigable ancestors via `go(to:)`. **Strip** Source-page identity-header breadcrumbs and hierarchical list-back. Trailing omnibar **field** always visible (`⌘K` focuses); no results panel required yet (or empty/disabled until S3-10). L10n for new chrome. |
-| **Context** | [`design/App Layout.dc.html`](design/App%20Layout.dc.html); [`design/README.md`](design/README.md). |
+| **Context** | Claude Design App Layout board; [`design/README.md`](design/README.md). |
 | **Out** | Search RPC, FTS, results dropdown, deleting list search (S3-10). |
 | **Dogfood** | Chrome matches the board; Back/Forward + jump menu + breadcrumb clicks feel browser-like. |
 
@@ -153,7 +153,7 @@ S3-05  Toolbar chrome (nav + crumbs + field) S3-08  FTS5 projection
 | **Kind** | PR |
 | **Depends on** | S3-05 (field shell); S3-09 (engine quality bar for dogfood); S3-02 board |
 | **Deliverables** | Results dropdown per Omnibar Results board: shared `PVOmnibarHitRow` (lead / title / kind chip / secondary / ref / match context / selected). Anchoring, loading, empty, keyboard selection, Esc/outside dismiss. Debounced `SearchCatalog`; select hit → `go(to: location)` → dismiss. **Delete** Sources list search and `VocabularyListPane` search chrome + query-only filter plumbing. Extend thumbnail/glyph modes as the board requires. L10n. |
-| **Context** | [`design/S3-01 Omnibar Results.dc.html`](design/S3-01%20Omnibar%20Results.dc.html); [`omnibar-search.md`](omnibar-search.md) S4. Board rules: no panel on empty/short query; flat engine order; kind chip disambiguates. |
+| **Context** | Claude Design Omnibar Results board; [`omnibar-search.md`](omnibar-search.md) S4. Board rules: no panel on empty/short query; flat engine order; kind chip disambiguates. |
 | **Out** | Fuzzy; Files/Artifact first-class hit kinds; Interpretation kinds. |
 | **Dogfood** | End-to-end find → navigate → Back returns; no dual search chrome. |
 

@@ -2,7 +2,7 @@
 
 **Status:** pulled into [Spike 3](README.md) — requirements. PR sequence: [`deployment-plan.md`](deployment-plan.md).
 
-Visual chrome for the **field** (placement + access): [`design/App Layout.dc.html`](design/App%20Layout.dc.html). Results dropdown: [`design/S3-01 Omnibar Results.dc.html`](design/S3-01%20Omnibar%20Results.dc.html) (brief archived under [`design/archive/`](design/archive/)). The [Display ideas](#display-problem) section below is historical; implement against the board.
+Visual chrome for the **field** (placement + access): Claude Design **App Layout** board. Results dropdown: Claude Design **Omnibar Results** board (brief archived under [`design/archive/`](design/archive/); summary [`design/README.md`](design/README.md)). The [Display ideas](#display-problem) section below is historical; implement against the board.
 
 Engine / ranking architecture is **in scope** and first-class (not a client-side `LIKE` forever). Ship it in **successive PRs**; the end state below is the product bar.
 
@@ -220,7 +220,7 @@ Relationships without refs: poor primary hits — prefer related Person/Event en
 
 Hits are **heterogeneous**. A Source wants title + type + thumbnail + `SRC-…`. A File wants filename + media type. A Person Node wants name / label + `PER-C-…`. A vocabulary field wants label + key + data type.
 
-**Results UI is locked** by [`design/S3-01 Omnibar Results.dc.html`](design/S3-01%20Omnibar%20Results.dc.html): shared rich row skeleton + flat ranked list. The ideas below remain useful rationale; implement against the board / `PVOmnibarHitRow`.
+**Results UI is locked** by the Claude Design Omnibar Results board: shared rich row skeleton + flat ranked list. The ideas below remain useful rationale; implement against the board / `PVOmnibarHitRow`.
 
 ### Display ideas (board-aligned)
 
@@ -267,7 +267,7 @@ Local-first catalogs invite keyboard navigation. Short refs were designed to be 
 | Where does the field live? | **Main-column toolbar, trailing** (App Layout board). |
 | Always-visible vs ⌘K-only? | **Both:** always-visible field; **⌘K** focuses/activates it. |
 | Per-destination list search? | **Remove** when omnibar covers those kinds. |
-| Results dropdown visuals? | **Board locked** — [`design/S3-01 Omnibar Results.dc.html`](design/S3-01%20Omnibar%20Results.dc.html); shared rich row + flat ranked list. |
+| Results dropdown visuals? | **Board locked** — Claude Design Omnibar Results; shared rich row + flat ranked list. |
 | Hit navigation? | **`go(to:)`** — same session history as sidebar / breadcrumbs. |
 | Engine? | **Go `SearchCatalog` + kind registry + FTS5 projection** in the catalog DB — not Swift-as-search-engine. |
 | Brute force forever? | **No.** Naïve scan only as a short bridge behind the stable RPC. |

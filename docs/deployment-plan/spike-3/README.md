@@ -2,13 +2,13 @@
 
 ## Status
 
-**Sequenced.** Design boards checked in; PR order lives in [`deployment-plan.md`](deployment-plan.md).
+**Sequenced.** PR order lives in [`deployment-plan.md`](deployment-plan.md). Design boards stay in Claude Design ([`design/README.md`](design/README.md)).
 
 Workspace layout (nav history + omnibar chrome) plus first-class infrastructure: **catalog `project.uuid`**, hand-rolled navigation history, and **Go/SQLite catalog search** (registry + FTS5 + ranking; successive PRs).
 
 Authoritative stack / chrome context: [`macos-client-patterns.md`](../../macos-client-patterns.md), [`application-stack.md`](../../application-stack.md). Spike 2 chrome brief (historical): [`S2-01-workspace-chrome.md`](../archive/spike-2/design/archive/S2-01-workspace-chrome.md).
 
-**Design:** [`design/App Layout.dc.html`](design/App%20Layout.dc.html) — main-column toolbar with Back/Forward, breadcrumbs, and omnibar; [`design/S3-01 Omnibar Results.dc.html`](design/S3-01%20Omnibar%20Results.dc.html) — results dropdown ([`design/README.md`](design/README.md)).
+**Design:** Claude Design App Layout (toolbar) + Omnibar Results boards — summary in [`design/README.md`](design/README.md) (boards not checked into git).
 
 ## Goal
 
