@@ -9,8 +9,18 @@ final class SourceArtifactsSection {
     struct Draft: Equatable {
         var label = ""
         var description = ""
+        /// Absolute path when validation passed; nil when rejected or cleared.
         var filePath: String?
         var fileName: String?
+        var reject: L10n.Errors.IngestCallout?
+    }
+
+    struct AttachDraft: Equatable {
+        var artifactID = ""
+        var artifactRef = ""
+        var filePath: String?
+        var fileName: String?
+        var reject: L10n.Errors.IngestCallout?
     }
 
     var expandedIDs: Set<String> = []
@@ -29,6 +39,12 @@ final class SourceArtifactsSection {
     var draftLabelError: String?
     private(set) var isSavingDraft = false
 
+    // MARK: Add file dialog
+
+    var isAttaching = false
+    var attachDraft = AttachDraft()
+    private(set) var isSavingAttach = false
+
     private let context: SourcePageContext
 
     init(context: SourcePageContext) {
@@ -40,6 +56,13 @@ final class SourceArtifactsSection {
     var canSubmitDraft: Bool {
         !isSavingDraft
             && !draft.label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && draft.reject == nil
+    }
+
+    var canSubmitAttach: Bool {
+        !isSavingAttach
+            && attachDraft.filePath != nil
+            && attachDraft.reject == nil
     }
 
     /// Seeds edit buffers for artifacts that do not have one yet.
@@ -139,13 +162,52 @@ final class SourceArtifactsSection {
             message: String(localized: L10n.Sources.filePickMessage)
         )
         guard let path else { return }
-        draft.filePath = path
-        draft.fileName = URL(fileURLWithPath: path).lastPathComponent
+        applyPickedFile(url: URL(fileURLWithPath: path), into: .create)
+    }
+
+    func applyDroppedURLs(_ urls: [URL], into target: FilePickTarget) {
+        if urls.count > 1 {
+            setReject(
+                L10n.Errors.ingestCallout(reason: .multiFile),
+                fileName: urls.first?.lastPathComponent,
+                into: target
+            )
+            return
+        }
+        guard let url = urls.first else { return }
+        applyPickedFile(url: url, into: target)
+    }
+
+    func applyPickedFile(url: URL, into target: FilePickTarget) {
+        let name = url.lastPathComponent
+        switch IngestMediaPolicy.validate(url: url) {
+        case .ok:
+            switch target {
+            case .create:
+                draft.filePath = url.path
+                draft.fileName = name
+                draft.reject = nil
+            case .attach:
+                attachDraft.filePath = url.path
+                attachDraft.fileName = name
+                attachDraft.reject = nil
+            }
+        case .reject(let reason):
+            let size = reason == .tooLarge
+                ? IngestMediaPolicy.formatByteSize(IngestMediaPolicy.byteSize(of: url))
+                : nil
+            setReject(
+                L10n.Errors.ingestCallout(reason: reason, sizeLabel: size),
+                fileName: name,
+                into: target
+            )
+        }
     }
 
     func clearFile() {
         draft.filePath = nil
         draft.fileName = nil
+        draft.reject = nil
     }
 
     func create() async {
@@ -155,6 +217,7 @@ final class SourceArtifactsSection {
             draftLabelError = String(localized: L10n.Sources.artifactLabelRequired)
             return
         }
+        guard draft.reject == nil else { return }
         isSavingDraft = true
         defer { isSavingDraft = false }
         do {
@@ -180,6 +243,7 @@ final class SourceArtifactsSection {
             descriptions[art.id] = art.description
             isAdding = false
             draftLabelError = nil
+            draft.reject = nil
             await context.refreshCoverFromStore()
             context.toast = VocabularyToast(
                 title: L10n.Sources.toastArtifactCreatedTitle(ref: art.ref),
@@ -189,7 +253,15 @@ final class SourceArtifactsSection {
                 tone: .success
             )
         } catch {
-            draftLabelError = L10n.Errors.message(for: error)
+            if let coded = error as? CoreInvokeError, case .coded(_, let code, _, let params) = coded,
+               let callout = L10n.Errors.ingestCallout(code: code, params: params)
+            {
+                draft.reject = callout
+                draft.filePath = nil
+                draftLabelError = nil
+            } else {
+                draftLabelError = L10n.Errors.message(for: error)
+            }
         }
     }
 
@@ -228,13 +300,44 @@ final class SourceArtifactsSection {
 
     // MARK: Files
 
-    func addFile(to id: String) async {
+    enum FilePickTarget {
+        case create
+        case attach
+    }
+
+    func openAttach(to id: String) {
         guard let art = items.first(where: { $0.id == id }), art.fileID.isEmpty else { return }
+        attachDraft = AttachDraft(artifactID: id, artifactRef: art.ref)
+        isAttaching = true
+    }
+
+    func cancelAttach() {
+        guard !isSavingAttach else { return }
+        isAttaching = false
+        attachDraft = AttachDraft()
+    }
+
+    func pickAttachFile() {
         let path = ProjectFiles.pickFileForIngest(
             prompt: String(localized: L10n.Sources.filePickPrompt),
             message: String(localized: L10n.Sources.filePickMessage)
         )
         guard let path else { return }
+        applyPickedFile(url: URL(fileURLWithPath: path), into: .attach)
+    }
+
+    func clearAttachFile() {
+        attachDraft.filePath = nil
+        attachDraft.fileName = nil
+        attachDraft.reject = nil
+    }
+
+    func confirmAttach() async {
+        guard canSubmitAttach else { return }
+        guard let path = attachDraft.filePath else { return }
+        let id = attachDraft.artifactID
+        isSavingAttach = true
+        defer { isSavingAttach = false }
         context.clearPageError()
         do {
             let ingested = try await context.store.ingestArtifactFile(
@@ -244,6 +347,8 @@ final class SourceArtifactsSection {
                 path: path
             )
             replace(ingested.artifact)
+            isAttaching = false
+            attachDraft = AttachDraft()
             await context.refreshCoverFromStore()
             context.toast = VocabularyToast(
                 title: L10n.Sources.toastFileAttachedTitle,
@@ -251,7 +356,15 @@ final class SourceArtifactsSection {
                 tone: .success
             )
         } catch {
-            context.pageError = L10n.Errors.message(for: error)
+            if let coded = error as? CoreInvokeError, case .coded(_, let code, _, let params) = coded,
+               let callout = L10n.Errors.ingestCallout(code: code, params: params)
+            {
+                attachDraft.reject = callout
+                attachDraft.filePath = nil
+            } else {
+                context.pageError = L10n.Errors.message(for: error)
+                isAttaching = false
+            }
         }
     }
 
@@ -260,6 +373,23 @@ final class SourceArtifactsSection {
         context.clearPageError()
         if !ProjectFiles.openObject(projectDir: context.projectDir, relPath: file.relPath) {
             context.pageError = String(localized: L10n.Sources.fileOpenMissing)
+        }
+    }
+
+    private func setReject(
+        _ callout: L10n.Errors.IngestCallout,
+        fileName: String?,
+        into target: FilePickTarget
+    ) {
+        switch target {
+        case .create:
+            draft.filePath = nil
+            draft.fileName = fileName
+            draft.reject = callout
+        case .attach:
+            attachDraft.filePath = nil
+            attachDraft.fileName = fileName
+            attachDraft.reject = callout
         }
     }
 

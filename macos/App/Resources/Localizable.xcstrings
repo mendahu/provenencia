@@ -2906,7 +2906,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Clear"
+            "value": "Remove"
           }
         }
       }
@@ -5883,6 +5883,438 @@
           "stringUnit": {
             "state": "translated",
             "value": "Travel booklet — cover emblem over the title line"
+          }
+        }
+      }
+    },
+    "sources.page.ingestAllowedTypesCaption": {
+      "comment": "Always-visible caption under the ingest file drop row",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Images, PDF, text (CSV, Markdown), audio, or video · 512 MB maximum"
+          }
+        }
+      }
+    },
+    "sources.page.ingestDropIdleCreate": {
+      "comment": "Idle drop hint in Add Artifact when no file is chosen",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drop a file here, or skip — the artifact stays physical-only"
+          }
+        }
+      }
+    },
+    "sources.page.ingestDropIdleAttach": {
+      "comment": "Idle drop hint in Add File dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drop a file here, or choose one"
+          }
+        }
+      }
+    },
+    "sources.page.ingestDropActive": {
+      "comment": "Drop-target active hint while dragging a file over the ingest row",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drop to attach"
+          }
+        }
+      }
+    },
+    "sources.page.addFileDialogTitle": {
+      "comment": "Title of the first-attach Add File dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add file"
+          }
+        }
+      }
+    },
+    "sources.page.addFileDialogSubtitle": {
+      "comment": "Subtitle of the Add File dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "First attach"
+          }
+        }
+      }
+    },
+    "sources.page.addFileConfirm": {
+      "comment": "Confirm button on the Add File dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attach file"
+          }
+        }
+      }
+    },
+    "sources.page.addFileFirstAttachHint": {
+      "comment": "Info callout in the Add File dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "First attach only. Once this artifact has a file it keeps it — a better scan becomes a new artifact."
+          }
+        }
+      }
+    },
+    "error.ingest.permission_denied.title": {
+      "comment": "Callout title for ingest.permission_denied",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file could not be read."
+          }
+        }
+      }
+    },
+    "error.ingest.permission_denied.help": {
+      "comment": "Callout help for ingest.permission_denied",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check that the volume is mounted and that Provenencia has access to the folder, then try again."
+          }
+        }
+      }
+    },
+    "error.ingest.unsupported_office.title": {
+      "comment": "Callout title for ingest.unsupported_office",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Office documents aren’t accepted as artifact files"
+          }
+        }
+      }
+    },
+    "error.ingest.unsupported_office.help": {
+      "comment": "Callout help for ingest.unsupported_office",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artifacts hold images, PDFs, plain text (including CSV and Markdown), audio, or video — up to 512 MB. Export to PDF or attach a scan instead."
+          }
+        }
+      }
+    },
+    "error.ingest.unsupported_archive.title": {
+      "comment": "Callout title for ingest.unsupported_archive",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archives aren’t accepted as artifact files"
+          }
+        }
+      }
+    },
+    "error.ingest.unsupported_archive.help": {
+      "comment": "Callout help for ingest.unsupported_archive",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unzip the archive and attach the scan, PDF, or recording inside. Artifacts hold images, PDFs, plain text (including CSV and Markdown), audio, or video — up to 512 MB."
+          }
+        }
+      }
+    },
+    "error.ingest.unsupported_executable.title": {
+      "comment": "Callout title for ingest.unsupported_executable",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Programs and installers can’t be attached"
+          }
+        }
+      }
+    },
+    "error.ingest.unsupported_executable.help": {
+      "comment": "Callout help for ingest.unsupported_executable",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attach the evidence file itself — a scan, PDF, transcription, or recording — not an application."
+          }
+        }
+      }
+    },
+    "error.ingest.unsupported_type.help": {
+      "comment": "Callout help for ingest.unsupported_type",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artifacts hold images, PDFs, plain text (including CSV and Markdown), audio, or video — up to 512 MB. Choose a different file."
+          }
+        }
+      }
+    },
+    "error.ingest.unsupported_type.genericTitle": {
+      "comment": "Callout title when unsupported type has no short label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That file type isn’t accepted"
+          }
+        }
+      }
+    },
+    "error.ingest.unsupported_type.helpWithLabel": {
+      "comment": "Callout help for unsupported type with label; argument is short type",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ files aren’t accepted. Artifacts hold images, PDFs, plain text (including CSV and Markdown), audio, or video — up to 512 MB. Choose a different file."
+          }
+        }
+      }
+    },
+    "error.ingest.unidentified.title": {
+      "comment": "Callout title for ingest.unidentified",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "We couldn’t identify that file"
+          }
+        }
+      }
+    },
+    "error.ingest.unidentified.help": {
+      "comment": "Callout help for ingest.unidentified",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artifacts hold images, PDFs, plain text (including CSV and Markdown), audio, or video — up to 512 MB. Try a clearer export from the original app."
+          }
+        }
+      }
+    },
+    "error.ingest.empty.title": {
+      "comment": "Callout title for ingest.empty",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That file is empty"
+          }
+        }
+      }
+    },
+    "error.ingest.empty.help": {
+      "comment": "Callout help for ingest.empty",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a real scan, PDF, or recording with content."
+          }
+        }
+      }
+    },
+    "error.ingest.too_large.title": {
+      "comment": "Callout title for ingest.too_large",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That file is over the 512 MB cap"
+          }
+        }
+      }
+    },
+    "error.ingest.too_large.help": {
+      "comment": "Callout help for ingest.too_large; argument is human-readable size",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This file is %@. Downsample or export a smaller copy, then choose that file."
+          }
+        }
+      }
+    },
+    "error.ingest.not_a_file.title": {
+      "comment": "Callout title for ingest.not_a_file",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That isn’t a regular file"
+          }
+        }
+      }
+    },
+    "error.ingest.not_a_file.help": {
+      "comment": "Callout help for ingest.not_a_file",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a single file — not a folder or special device."
+          }
+        }
+      }
+    },
+    "error.ingest.symlink.title": {
+      "comment": "Callout title for ingest.symlink",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Symbolic links can’t be ingested"
+          }
+        }
+      }
+    },
+    "error.ingest.symlink.help": {
+      "comment": "Callout help for ingest.symlink",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose the real file the link points to."
+          }
+        }
+      }
+    },
+    "error.ingest.missing.title": {
+      "comment": "Callout title for ingest.missing",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That file is no longer available"
+          }
+        }
+      }
+    },
+    "error.ingest.missing.help": {
+      "comment": "Callout help for ingest.missing",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It may have moved or the volume was unmounted. Choose the file again."
+          }
+        }
+      }
+    },
+    "error.ingest.multi_file.title": {
+      "comment": "Callout title when multiple files are dropped",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drop a single file"
+          }
+        }
+      }
+    },
+    "error.ingest.multi_file.help": {
+      "comment": "Callout help when multiple files are dropped",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artifacts attach one file at a time. Drop or choose a single scan, PDF, or recording."
+          }
+        }
+      }
+    },
+    "error.ingest.unreadable.title": {
+      "comment": "Callout title when a dropped/picked URL cannot be resolved",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file could not be read."
+          }
+        }
+      }
+    },
+    "error.ingest.unreadable.help": {
+      "comment": "Callout help when a dropped/picked URL cannot be resolved",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check that the volume is mounted and that Provenencia has access to the folder, then try again."
+          }
+        }
+      }
+    },
+    "error.ingest.invalid.title": {
+      "comment": "Callout title for ingest.invalid",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not ingest that file"
           }
         }
       }

@@ -294,6 +294,8 @@ enum PVFileTypeGlyph {
             return .fileDoc
         case "text/plain":
             return .fileTxt
+        case "text/markdown", "text/x-markdown":
+            return .fileTxt
         case "text/csv",
              "application/csv",
              "application/vnd.ms-excel",

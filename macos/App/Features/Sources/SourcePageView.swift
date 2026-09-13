@@ -83,6 +83,21 @@ struct SourcePageView: View {
             SourcePageArtifactsView(model: model).addForm
         }
         .pvDialog(
+            isPresented: addFilePresented,
+            copy: PVDialogCopy(
+                title: L10n.Sources.addFileDialogTitle,
+                subtitle: L10n.Sources.addFileDialogSubtitle,
+                confirm: L10n.Sources.addFileConfirm,
+                cancel: L10n.Sources.cancelAction
+            ),
+            isRunning: model.artifacts.isSavingAttach,
+            confirmDisabled: !model.artifacts.canSubmitAttach,
+            accessibilityIdentifierPrefix: "sources.page.addFile",
+            onConfirm: { Task { await model.artifacts.confirmAttach() } }
+        ) {
+            SourcePageArtifactsView(model: model).addFileForm
+        }
+        .pvDialog(
             isPresented: addMetadataPresented,
             copy: PVDialogCopy(
                 title: L10n.Sources.addMetadataDialogTitle,
@@ -155,6 +170,17 @@ struct SourcePageView: View {
                     model.artifacts.openAdd()
                 } else {
                     model.artifacts.cancelAdd()
+                }
+            }
+        )
+    }
+
+    private var addFilePresented: Binding<Bool> {
+        Binding(
+            get: { model.artifacts.isAttaching },
+            set: { presented in
+                if !presented {
+                    model.artifacts.cancelAttach()
                 }
             }
         )

@@ -429,8 +429,29 @@ struct SourcePageModelTests {
 
         await model.artifacts.create()
 
-        #expect(model.artifacts.draftLabelError == String(localized: L10n.Errors.ingestInvalid))
+        #expect(model.artifacts.draft.reject != nil)
+        #expect(model.artifacts.draft.filePath == nil)
+        #expect(model.artifacts.draftLabelError == nil)
         #expect(model.artifacts.isAdding)
+    }
+
+    @Test func applyPickedFileRejectsOfficeWithoutFFI() throws {
+        let model = makeModel(store: makeStore())
+        model.artifacts.openAdd()
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ingest-ui-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let url = dir.appendingPathComponent("notes.docx")
+        try Data("PK\u{0003}\u{0004}".utf8).write(to: url)
+
+        model.artifacts.applyPickedFile(url: url, into: .create)
+
+        #expect(model.artifacts.draft.filePath == nil)
+        #expect(model.artifacts.draft.fileName == "notes.docx")
+        #expect(model.artifacts.draft.reject != nil)
+        #expect(!model.artifacts.canSubmitDraft) // label still empty too
+        model.artifacts.draft.label = "Letter"
+        #expect(!model.artifacts.canSubmitDraft)
     }
 
     @Test func ingestThenRejectSecondAttach() async throws {

@@ -260,7 +260,7 @@ func TestFile(t *testing.T) {
 		if err := os.Symlink(target, link); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := File(c, link, userID); !errors.Is(err, ErrInvalid) {
+		if _, err := File(c, link, userID); !errors.Is(err, ErrSymlink) {
 			t.Fatalf("got %v", err)
 		}
 	})
@@ -271,7 +271,7 @@ func TestFile(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer c.Close()
-		if _, err := File(c, t.TempDir(), userID); !errors.Is(err, ErrInvalid) {
+		if _, err := File(c, t.TempDir(), userID); !errors.Is(err, ErrNotAFile) {
 			t.Fatalf("got %v", err)
 		}
 	})
@@ -286,8 +286,70 @@ func TestFile(t *testing.T) {
 		maxBytes = 4
 		defer func() { maxBytes = prev }()
 		path := writeTemp(t, t.TempDir(), "big.bin", []byte("12345"))
-		if _, err := File(c, path, userID); !errors.Is(err, ErrInvalid) {
+		_, err = File(c, path, userID)
+		if !errors.Is(err, ErrTooLarge) {
 			t.Fatalf("got %v", err)
+		}
+		if ae := apperr.From(err); len(ae.Params()) == 0 {
+			t.Fatal("expected size param")
+		}
+	})
+
+	t.Run("rejects empty", func(t *testing.T) {
+		c, err := database.Create(t.TempDir(), "t.provenencia")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer c.Close()
+		mustUser(t, c)
+		path := writeTemp(t, t.TempDir(), "empty.txt", nil)
+		if _, err := File(c, path, userID); !errors.Is(err, ErrEmpty) {
+			t.Fatalf("got %v", err)
+		}
+	})
+
+	t.Run("rejects unsupported office zip", func(t *testing.T) {
+		c, err := database.Create(t.TempDir(), "t.provenencia")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer c.Close()
+		mustUser(t, c)
+		// Minimal ZIP local-file header — DetectContentType → application/zip.
+		data := []byte("PK\x03\x04" + strings.Repeat("x", 64))
+		path := writeTemp(t, t.TempDir(), "notes.docx", data)
+		if _, err := File(c, path, userID); !errors.Is(err, ErrUnsupportedOffice) {
+			t.Fatalf("got %v", err)
+		}
+	})
+
+	t.Run("rejects html", func(t *testing.T) {
+		c, err := database.Create(t.TempDir(), "t.provenencia")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer c.Close()
+		mustUser(t, c)
+		path := writeTemp(t, t.TempDir(), "page.html", []byte("<!DOCTYPE html><html></html>"))
+		if _, err := File(c, path, userID); !errors.Is(err, ErrUnsupportedType) {
+			t.Fatalf("got %v", err)
+		}
+	})
+
+	t.Run("accepts pdf magic", func(t *testing.T) {
+		c, err := database.Create(t.TempDir(), "t.provenencia")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer c.Close()
+		mustUser(t, c)
+		path := writeTemp(t, t.TempDir(), "deed.pdf", []byte("%PDF-1.4\n%\xe2\xe3\xcf\xd3\n"))
+		res, err := File(c, path, userID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.HasPrefix(res.File.MediaType, "application/pdf") {
+			t.Fatalf("media %q", res.File.MediaType)
 		}
 	})
 
@@ -332,7 +394,7 @@ func TestFile(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer c.Close()
-		if _, err := File(c, filepath.Join(t.TempDir(), "nope"), userID); !errors.Is(err, ErrInvalid) {
+		if _, err := File(c, filepath.Join(t.TempDir(), "nope"), userID); !errors.Is(err, ErrMissing) {
 			t.Fatalf("got %v", err)
 		}
 	})
@@ -372,7 +434,7 @@ func TestMapOpenErr(t *testing.T) {
 		wantNil bool
 	}{
 		{name: "nil", err: nil, wantNil: true},
-		{name: "not exist", err: os.ErrNotExist, want: ErrInvalid},
+		{name: "not exist", err: os.ErrNotExist, want: ErrMissing},
 		{name: "permission", err: os.ErrPermission, want: ErrPermissionDenied},
 		{name: "other", err: errors.New("boom"), want: errors.New("boom")},
 	}

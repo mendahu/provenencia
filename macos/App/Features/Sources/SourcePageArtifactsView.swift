@@ -77,22 +77,48 @@ struct SourcePageArtifactsView: View {
                     .accessibilityIdentifier("sources.page.addArtifact.description")
             }
             PVField(label: L10n.Sources.optionalFile) {
-                HStack(spacing: PVSpacing.space4) {
-                    if let name = model.artifacts.draft.fileName {
-                        Text(name)
-                            .font(PVFont.mono(size: PVTypeScale.caption))
-                            .foregroundStyle(PVColor.textPrimary)
-                            .lineLimit(1)
-                        PVButton(L10n.Sources.clearFile, variant: .ghost, size: .sm) {
-                            model.artifacts.clearFile()
-                        }
-                    } else {
-                        PVButton(L10n.Sources.chooseFile, variant: .secondary, size: .sm, icon: .fileUp) {
-                            model.artifacts.pickFile()
-                        }
-                        .accessibilityIdentifier("sources.page.addArtifact.chooseFile")
-                    }
+                IngestFileDropRow(
+                    fileName: model.artifacts.draft.fileName,
+                    isRejected: model.artifacts.draft.reject != nil,
+                    isBusy: model.artifacts.isSavingDraft,
+                    idleHint: L10n.Sources.ingestDropIdleCreate,
+                    onChoose: { model.artifacts.pickFile() },
+                    onClear: { model.artifacts.clearFile() },
+                    onDropURLs: { model.artifacts.applyDroppedURLs($0, into: .create) }
+                )
+                if let reject = model.artifacts.draft.reject {
+                    PVCallout(tone: .danger, title: reject.title, message: reject.message)
+                        .accessibilityIdentifier("sources.page.addArtifact.ingestReject")
                 }
+            }
+        }
+    }
+
+    /// Form for the first-attach Add File dialog.
+    var addFileForm: some View {
+        VStack(alignment: .leading, spacing: PVSpacing.space6) {
+            PVCallout(
+                tone: .info,
+                message: String(localized: L10n.Sources.addFileFirstAttachHint),
+                compact: true
+            )
+            if !model.artifacts.attachDraft.artifactRef.isEmpty {
+                Text(model.artifacts.attachDraft.artifactRef)
+                    .font(PVFont.mono(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textMuted)
+            }
+            IngestFileDropRow(
+                fileName: model.artifacts.attachDraft.fileName,
+                isRejected: model.artifacts.attachDraft.reject != nil,
+                isBusy: model.artifacts.isSavingAttach,
+                idleHint: L10n.Sources.ingestDropIdleAttach,
+                onChoose: { model.artifacts.pickAttachFile() },
+                onClear: { model.artifacts.clearAttachFile() },
+                onDropURLs: { model.artifacts.applyDroppedURLs($0, into: .attach) }
+            )
+            if let reject = model.artifacts.attachDraft.reject {
+                PVCallout(tone: .danger, title: reject.title, message: reject.message)
+                    .accessibilityIdentifier("sources.page.addFile.ingestReject")
             }
         }
     }
@@ -253,7 +279,7 @@ struct SourcePageArtifactsView: View {
                     compact: true
                 )
                 PVButton(L10n.Sources.addFile, variant: .primary, size: .sm, icon: .fileUp) {
-                    Task { await model.artifacts.addFile(to: art.id) }
+                    model.artifacts.openAttach(to: art.id)
                 }
                 .accessibilityIdentifier("sources.page.artifact.\(art.id).addFile")
             }

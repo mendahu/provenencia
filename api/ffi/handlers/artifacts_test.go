@@ -134,7 +134,7 @@ func TestIngestArtifactFileMissingPath(t *testing.T) {
 				}
 			},
 			wantErr:   true,
-			wantErrIs: ingest.ErrInvalid,
+			wantErrIs: ingest.ErrMissing,
 		},
 	})
 }

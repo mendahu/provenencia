@@ -9,6 +9,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -21,11 +22,22 @@ import (
 	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/project"
+	"github.com/mendahu/provenencia/core/ingest/mediatypes"
 )
 
 var (
-	ErrInvalid          = apperr.New(apperr.CodeIngestInvalid, apperr.KindUser)
-	ErrPermissionDenied = apperr.New(apperr.CodeIngestPermissionDenied, apperr.KindUser)
+	ErrInvalid               = apperr.New(apperr.CodeIngestInvalid, apperr.KindUser)
+	ErrPermissionDenied      = apperr.New(apperr.CodeIngestPermissionDenied, apperr.KindUser)
+	ErrUnsupportedOffice     = apperr.New(apperr.CodeIngestUnsupportedOffice, apperr.KindUser)
+	ErrUnsupportedArchive    = apperr.New(apperr.CodeIngestUnsupportedArchive, apperr.KindUser)
+	ErrUnsupportedExecutable = apperr.New(apperr.CodeIngestUnsupportedExecutable, apperr.KindUser)
+	ErrUnsupportedType       = apperr.New(apperr.CodeIngestUnsupportedType, apperr.KindUser)
+	ErrUnidentified          = apperr.New(apperr.CodeIngestUnidentified, apperr.KindUser)
+	ErrEmpty                 = apperr.New(apperr.CodeIngestEmpty, apperr.KindUser)
+	ErrTooLarge              = apperr.New(apperr.CodeIngestTooLarge, apperr.KindUser)
+	ErrNotAFile              = apperr.New(apperr.CodeIngestNotAFile, apperr.KindUser)
+	ErrSymlink               = apperr.New(apperr.CodeIngestSymlink, apperr.KindUser)
+	ErrMissing               = apperr.New(apperr.CodeIngestMissing, apperr.KindUser)
 )
 
 // MaxBytes is the largest source file ingest accepts (512 MiB).
@@ -59,18 +71,21 @@ func File(c *database.Catalog, absPath string, userID []byte) (Result, error) {
 	info, err := os.Lstat(absPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return Result{}, ErrInvalid
+			return Result{}, ErrMissing
 		}
 		return Result{}, mapOpenErr(err)
 	}
 	if info.Mode()&os.ModeSymlink != 0 {
-		return Result{}, ErrInvalid
+		return Result{}, ErrSymlink
 	}
 	if !info.Mode().IsRegular() {
-		return Result{}, ErrInvalid
+		return Result{}, ErrNotAFile
+	}
+	if info.Size() == 0 {
+		return Result{}, ErrEmpty
 	}
 	if info.Size() > maxBytes {
-		return Result{}, ErrInvalid
+		return Result{}, ErrTooLarge.WithParams(formatByteSize(info.Size()))
 	}
 
 	src, err := openSource(absPath)
@@ -84,16 +99,26 @@ func File(c *database.Catalog, absPath string, userID []byte) (Result, error) {
 		return Result{}, err
 	}
 	if !st.Mode().IsRegular() {
-		return Result{}, ErrInvalid
+		return Result{}, ErrNotAFile
+	}
+	if st.Size() == 0 {
+		return Result{}, ErrEmpty
 	}
 	if st.Size() > maxBytes {
-		return Result{}, ErrInvalid
+		return Result{}, ErrTooLarge.WithParams(formatByteSize(st.Size()))
 	}
 
 	objectsDir := filepath.Join(c.Dir(), "objects")
-	tmpPath, checksum, byteSize, mediaType, err := streamSource(src, objectsDir)
+	tmpPath, checksum, byteSize, sniffed, err := streamSource(src, objectsDir)
 	if err != nil {
 		return Result{}, err
+	}
+
+	filename := sanitizeFilename(filepath.Base(absPath))
+	mediaType, reason, ok := mediatypes.Resolve(sniffed, filename)
+	if !ok {
+		_ = os.Remove(tmpPath)
+		return Result{}, errForReject(reason, sniffed)
 	}
 
 	relPath, err := files.StorageRelPath(checksum, mediaType)
@@ -102,7 +127,6 @@ func File(c *database.Catalog, absPath string, userID []byte) (Result, error) {
 		return Result{}, err
 	}
 	objPath := filepath.Join(c.Dir(), filepath.FromSlash(relPath))
-	filename := sanitizeFilename(filepath.Base(absPath))
 
 	if existing, err := files.LookupByChecksum(c, checksum); err == nil {
 		if _, err := installObject(tmpPath, objPath, checksum); err != nil {
@@ -326,7 +350,7 @@ func streamSource(src *os.File, objectsDir string) (tmpPath, checksum string, by
 		return fail(err)
 	}
 	if n > maxBytes {
-		return fail(ErrInvalid)
+		return fail(ErrTooLarge.WithParams(formatByteSize(n)))
 	}
 	if err := tmp.Sync(); err != nil {
 		return fail(err)
@@ -334,6 +358,10 @@ func streamSource(src *os.File, objectsDir string) (tmpPath, checksum string, by
 	if err := tmp.Close(); err != nil {
 		_ = os.Remove(tmpPath)
 		return "", "", 0, "", err
+	}
+	if n == 0 {
+		_ = os.Remove(tmpPath)
+		return "", "", 0, "", ErrEmpty
 	}
 	mediaType = http.DetectContentType(sniff.buf)
 	checksum = hex.EncodeToString(h.Sum(nil))
@@ -407,13 +435,50 @@ func mapOpenErr(err error) error {
 		return nil
 	}
 	if errors.Is(err, os.ErrNotExist) {
-		return ErrInvalid
+		return ErrMissing
 	}
 	if errors.Is(err, os.ErrPermission) || isAccessDenied(err) {
 		return ErrPermissionDenied
 	}
 	if isSymlinkLoop(err) {
-		return ErrInvalid
+		return ErrSymlink
 	}
 	return err
+}
+
+func errForReject(reason mediatypes.Reason, sniffed string) error {
+	switch reason {
+	case mediatypes.ReasonOffice:
+		return ErrUnsupportedOffice
+	case mediatypes.ReasonArchive:
+		return ErrUnsupportedArchive
+	case mediatypes.ReasonExecutable:
+		return ErrUnsupportedExecutable
+	case mediatypes.ReasonUnidentified:
+		return ErrUnidentified
+	case mediatypes.ReasonDisallowedSniff:
+		return ErrUnsupportedType.WithParams(mediatypes.ShortLabel(sniffed))
+	case mediatypes.ReasonGenericType:
+		return ErrUnsupportedType.WithParams(mediatypes.ShortLabel(sniffed))
+	default:
+		return ErrUnsupportedType.WithParams(mediatypes.ShortLabel(sniffed))
+	}
+}
+
+func formatByteSize(n int64) string {
+	const (
+		kb = 1024
+		mb = 1024 * kb
+		gb = 1024 * mb
+	)
+	switch {
+	case n >= gb:
+		return fmt.Sprintf("%.2f GB", float64(n)/float64(gb))
+	case n >= mb:
+		return fmt.Sprintf("%.1f MB", float64(n)/float64(mb))
+	case n >= kb:
+		return fmt.Sprintf("%.0f KB", float64(n)/float64(kb))
+	default:
+		return fmt.Sprintf("%d bytes", n)
+	}
 }

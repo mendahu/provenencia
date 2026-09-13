@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import UniformTypeIdentifiers
 
 /// Resolves content-addressed object paths under a `.provenencia` project and
 /// opens user-selected files for ingest. Swift never writes `objects/` itself.
@@ -34,6 +35,7 @@ enum ProjectFiles {
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = IngestMediaPolicy.allowedContentTypes
         panel.prompt = prompt
         panel.message = message
         guard panel.runModal() == .OK, let url = panel.url else {

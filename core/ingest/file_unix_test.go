@@ -33,7 +33,7 @@ func TestFileRejectsFIFO(t *testing.T) {
 	}()
 	select {
 	case err := <-done:
-		if !errors.Is(err, ErrInvalid) {
+		if !errors.Is(err, ErrNotAFile) {
 			t.Fatalf("got %v", err)
 		}
 	case <-time.After(2 * time.Second):
@@ -74,7 +74,7 @@ func TestMapOpenErrUnix(t *testing.T) {
 		err  error
 		want error
 	}{
-		{name: "eloop", err: syscall.ELOOP, want: ErrInvalid},
+		{name: "eloop", err: syscall.ELOOP, want: ErrSymlink},
 		{name: "eacces", err: syscall.EACCES, want: ErrPermissionDenied},
 		{name: "eperm", err: syscall.EPERM, want: ErrPermissionDenied},
 	}

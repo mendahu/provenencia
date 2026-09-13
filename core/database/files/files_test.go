@@ -51,7 +51,11 @@ func TestExtensionForMediaType(t *testing.T) {
 		{in: "IMAGE/PNG", want: ".png"},
 		{in: "video/quicktime", want: ".mov"},
 		{in: "audio/x-wav", want: ".wav"},
-		{in: "text/plain; charset=utf-8", want: ""},
+		{in: "text/plain; charset=utf-8", want: ".txt"},
+		{in: "text/csv", want: ".csv"},
+		{in: "text/markdown", want: ".md"},
+		{in: "audio/flac", want: ".flac"},
+		{in: "image/heic", want: ".heic"},
 		{in: "", want: ""},
 	}
 	for _, tt := range tests {

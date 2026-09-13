@@ -39,6 +39,9 @@
 		AA0000000000000000000331 /* DateValueDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000330 /* DateValueDraft.swift */; };
 		AA0000000000000000000335 /* DateValueEditorForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000336 /* DateValueEditorForm.swift */; };
 		AA000000000000000000031B /* ProjectFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000031C /* ProjectFiles.swift */; };
+		AA00000000000000000003D1 /* IngestMediaPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003D0 /* IngestMediaPolicy.swift */; };
+		AA00000000000000000003D3 /* IngestFileDropRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003D2 /* IngestFileDropRow.swift */; };
+		AA00000000000000000003D5 /* IngestMediaPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003D4 /* IngestMediaPolicyTests.swift */; };
 		AA0000000000000000000391 /* ThumbnailCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000390 /* ThumbnailCache.swift */; };
 		AA0000000000000000000393 /* CachedThumbnail.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000392 /* CachedThumbnail.swift */; };
 		AA00000000000000000003C1 /* PVContextMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003C0 /* PVContextMenu.swift */; };
@@ -196,6 +199,9 @@
 		AA0000000000000000000330 /* DateValueDraft.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueDraft.swift; sourceTree = "<group>"; };
 		AA0000000000000000000336 /* DateValueEditorForm.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueEditorForm.swift; sourceTree = "<group>"; };
 		AA000000000000000000031C /* ProjectFiles.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProjectFiles.swift; sourceTree = "<group>"; };
+		AA00000000000000000003D0 /* IngestMediaPolicy.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IngestMediaPolicy.swift; sourceTree = "<group>"; };
+		AA00000000000000000003D2 /* IngestFileDropRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IngestFileDropRow.swift; sourceTree = "<group>"; };
+		AA00000000000000000003D4 /* IngestMediaPolicyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IngestMediaPolicyTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000390 /* ThumbnailCache.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ThumbnailCache.swift; sourceTree = "<group>"; };
 		AA0000000000000000000392 /* CachedThumbnail.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CachedThumbnail.swift; sourceTree = "<group>"; };
 		AA00000000000000000003C0 /* PVContextMenu.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVContextMenu.swift; sourceTree = "<group>"; };
@@ -355,6 +361,7 @@
 				AA0000000000000000000346 /* SourceMetadataSection.swift */,
 				AA0000000000000000000348 /* SourceNotesSection.swift */,
 				AA000000000000000000034A /* SourceArtifactsSection.swift */,
+				AA00000000000000000003D2 /* IngestFileDropRow.swift */,
 				AA0000000000000000000360 /* SourcePageChrome.swift */,
 				AA0000000000000000000362 /* SourcePageIdentityHeader.swift */,
 				AA0000000000000000000364 /* SourcePageDescriptionView.swift */,
@@ -550,6 +557,7 @@
 				AA0000000000000000000016 /* GoStore.swift */,
 				AA0000000000000000000017 /* CoreInvoke.swift */,
 				AA000000000000000000031C /* ProjectFiles.swift */,
+				AA00000000000000000003D0 /* IngestMediaPolicy.swift */,
 				AA0000000000000000000390 /* ThumbnailCache.swift */,
 				AA0000000000000000000392 /* CachedThumbnail.swift */,
 				AA0000000000000000000350 /* TimestampFormat.swift */,
@@ -639,6 +647,7 @@
 				AA0000000000000000000206 /* SourceTypesModelTests.swift */,
 				AA0000000000000000000312 /* SourcesModelTests.swift */,
 				AA000000000000000000031E /* SourcePageModelTests.swift */,
+				AA00000000000000000003D4 /* IngestMediaPolicyTests.swift */,
 				AA0000000000000000000394 /* ThumbnailCacheTests.swift */,
 				AA00000000000000000003B2 /* PVFileTypeGlyphTests.swift */,
 				AA0000000000000000000332 /* DateValueDraftTests.swift */,
@@ -913,6 +922,8 @@
 				AA0000000000000000000331 /* DateValueDraft.swift in Sources */,
 				AA0000000000000000000335 /* DateValueEditorForm.swift in Sources */,
 				AA000000000000000000031B /* ProjectFiles.swift in Sources */,
+				AA00000000000000000003D1 /* IngestMediaPolicy.swift in Sources */,
+				AA00000000000000000003D3 /* IngestFileDropRow.swift in Sources */,
 				AA0000000000000000000391 /* ThumbnailCache.swift in Sources */,
 				AA0000000000000000000393 /* CachedThumbnail.swift in Sources */,
 				AA00000000000000000003C1 /* PVContextMenu.swift in Sources */,
@@ -940,6 +951,7 @@
 				AA0000000000000000000315 /* PVListTests.swift in Sources */,
 				AA0000000000000000000313 /* SourcesModelTests.swift in Sources */,
 				AA000000000000000000031D /* SourcePageModelTests.swift in Sources */,
+				AA00000000000000000003D5 /* IngestMediaPolicyTests.swift in Sources */,
 				AA0000000000000000000395 /* ThumbnailCacheTests.swift in Sources */,
 				AA00000000000000000003B3 /* PVFileTypeGlyphTests.swift in Sources */,
 				AA0000000000000000000333 /* DateValueDraftTests.swift in Sources */,

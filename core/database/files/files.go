@@ -54,16 +54,42 @@ func ExtensionForMediaType(mediaType string) string {
 		return ".bmp"
 	case "image/tiff", "image/tif":
 		return ".tiff"
+	case "image/heic":
+		return ".heic"
+	case "image/heif":
+		return ".heif"
 	case "application/pdf":
 		return ".pdf"
+	case "text/plain":
+		return ".txt"
+	case "text/csv", "application/csv":
+		return ".csv"
+	case "text/markdown", "text/x-markdown":
+		return ".md"
 	case "video/mp4":
 		return ".mp4"
 	case "video/quicktime":
 		return ".mov"
+	case "video/webm":
+		return ".webm"
+	case "video/x-m4v":
+		return ".m4v"
+	case "video/x-msvideo":
+		return ".avi"
 	case "audio/mpeg":
 		return ".mp3"
+	case "audio/mp4", "audio/x-m4a":
+		return ".m4a"
+	case "audio/aac":
+		return ".aac"
 	case "audio/wav", "audio/wave", "audio/x-wav":
 		return ".wav"
+	case "audio/ogg":
+		return ".ogg"
+	case "audio/flac":
+		return ".flac"
+	case "audio/aiff", "audio/x-aiff":
+		return ".aiff"
 	default:
 		return ""
 	}

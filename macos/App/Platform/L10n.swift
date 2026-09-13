@@ -1731,7 +1731,7 @@ enum L10n {
 
         static let clearFile = LocalizedStringResource(
             "sources.page.clearFile",
-            defaultValue: "Clear",
+            defaultValue: "Remove",
             comment: "Clear a chosen file before creating an Artifact"
         )
 
@@ -1745,6 +1745,54 @@ enum L10n {
             "sources.page.filePickMessage",
             defaultValue: "Choose a file to attach to this artifact. Provenencia copies it into the project.",
             comment: "NSOpenPanel message for Artifact file pick"
+        )
+
+        static let ingestAllowedTypesCaption = LocalizedStringResource(
+            "sources.page.ingestAllowedTypesCaption",
+            defaultValue: "Images, PDF, text (CSV, Markdown), audio, or video · 512 MB maximum",
+            comment: "Always-visible caption under the ingest file drop row"
+        )
+
+        static let ingestDropIdleCreate = LocalizedStringResource(
+            "sources.page.ingestDropIdleCreate",
+            defaultValue: "Drop a file here, or skip — the artifact stays physical-only",
+            comment: "Idle drop hint in Add Artifact when no file is chosen"
+        )
+
+        static let ingestDropIdleAttach = LocalizedStringResource(
+            "sources.page.ingestDropIdleAttach",
+            defaultValue: "Drop a file here, or choose one",
+            comment: "Idle drop hint in Add File dialog"
+        )
+
+        static let ingestDropActive = LocalizedStringResource(
+            "sources.page.ingestDropActive",
+            defaultValue: "Drop to attach",
+            comment: "Drop-target active hint while dragging a file over the ingest row"
+        )
+
+        static let addFileDialogTitle = LocalizedStringResource(
+            "sources.page.addFileDialogTitle",
+            defaultValue: "Add file",
+            comment: "Title of the first-attach Add File dialog"
+        )
+
+        static let addFileDialogSubtitle = LocalizedStringResource(
+            "sources.page.addFileDialogSubtitle",
+            defaultValue: "First attach",
+            comment: "Subtitle of the Add File dialog"
+        )
+
+        static let addFileConfirm = LocalizedStringResource(
+            "sources.page.addFileConfirm",
+            defaultValue: "Attach file",
+            comment: "Confirm button on the Add File dialog"
+        )
+
+        static let addFileFirstAttachHint = LocalizedStringResource(
+            "sources.page.addFileFirstAttachHint",
+            defaultValue: "First attach only. Once this artifact has a file it keeps it — a better scan becomes a new artifact.",
+            comment: "Info callout in the Add File dialog"
         )
 
         static let fileOpenMissing = LocalizedStringResource(
@@ -2932,11 +2980,265 @@ enum L10n {
             defaultValue: "Could not ingest that file.",
             comment: "FFI error ingest.invalid"
         )
+        static let ingestPermissionDeniedTitle = LocalizedStringResource(
+            "error.ingest.permission_denied.title",
+            defaultValue: "The file could not be read.",
+            comment: "Callout title for ingest.permission_denied"
+        )
+        static let ingestPermissionDeniedHelp = LocalizedStringResource(
+            "error.ingest.permission_denied.help",
+            defaultValue: "Check that the volume is mounted and that Provenencia has access to the folder, then try again.",
+            comment: "Callout help for ingest.permission_denied"
+        )
         static let ingestPermissionDenied = LocalizedStringResource(
             "error.ingest.permission_denied",
             defaultValue: "Permission denied reading that file.",
-            comment: "FFI error ingest.permission_denied"
+            comment: "FFI error ingest.permission_denied (banner fallback)"
         )
+        static let ingestUnsupportedOfficeTitle = LocalizedStringResource(
+            "error.ingest.unsupported_office.title",
+            defaultValue: "Office documents aren’t accepted as artifact files",
+            comment: "Callout title for ingest.unsupported_office"
+        )
+        static let ingestUnsupportedOfficeHelp = LocalizedStringResource(
+            "error.ingest.unsupported_office.help",
+            defaultValue: "Artifacts hold images, PDFs, plain text (including CSV and Markdown), audio, or video — up to 512 MB. Export to PDF or attach a scan instead.",
+            comment: "Callout help for ingest.unsupported_office"
+        )
+        static let ingestUnsupportedArchiveTitle = LocalizedStringResource(
+            "error.ingest.unsupported_archive.title",
+            defaultValue: "Archives aren’t accepted as artifact files",
+            comment: "Callout title for ingest.unsupported_archive"
+        )
+        static let ingestUnsupportedArchiveHelp = LocalizedStringResource(
+            "error.ingest.unsupported_archive.help",
+            defaultValue: "Unzip the archive and attach the scan, PDF, or recording inside. Artifacts hold images, PDFs, plain text (including CSV and Markdown), audio, or video — up to 512 MB.",
+            comment: "Callout help for ingest.unsupported_archive"
+        )
+        static let ingestUnsupportedExecutableTitle = LocalizedStringResource(
+            "error.ingest.unsupported_executable.title",
+            defaultValue: "Programs and installers can’t be attached",
+            comment: "Callout title for ingest.unsupported_executable"
+        )
+        static let ingestUnsupportedExecutableHelp = LocalizedStringResource(
+            "error.ingest.unsupported_executable.help",
+            defaultValue: "Attach the evidence file itself — a scan, PDF, transcription, or recording — not an application.",
+            comment: "Callout help for ingest.unsupported_executable"
+        )
+        static let ingestUnsupportedTypeHelp = LocalizedStringResource(
+            "error.ingest.unsupported_type.help",
+            defaultValue: "Artifacts hold images, PDFs, plain text (including CSV and Markdown), audio, or video — up to 512 MB. Choose a different file.",
+            comment: "Callout help for ingest.unsupported_type"
+        )
+        static let ingestUnsupportedTypeGenericTitle = LocalizedStringResource(
+            "error.ingest.unsupported_type.genericTitle",
+            defaultValue: "That file type isn’t accepted",
+            comment: "Callout title when unsupported type has no short label"
+        )
+        static let ingestUnidentifiedTitle = LocalizedStringResource(
+            "error.ingest.unidentified.title",
+            defaultValue: "We couldn’t identify that file",
+            comment: "Callout title for ingest.unidentified"
+        )
+        static let ingestUnidentifiedHelp = LocalizedStringResource(
+            "error.ingest.unidentified.help",
+            defaultValue: "Artifacts hold images, PDFs, plain text (including CSV and Markdown), audio, or video — up to 512 MB. Try a clearer export from the original app.",
+            comment: "Callout help for ingest.unidentified"
+        )
+        static let ingestEmptyTitle = LocalizedStringResource(
+            "error.ingest.empty.title",
+            defaultValue: "That file is empty",
+            comment: "Callout title for ingest.empty"
+        )
+        static let ingestEmptyHelp = LocalizedStringResource(
+            "error.ingest.empty.help",
+            defaultValue: "Choose a real scan, PDF, or recording with content.",
+            comment: "Callout help for ingest.empty"
+        )
+        static let ingestTooLargeTitle = LocalizedStringResource(
+            "error.ingest.too_large.title",
+            defaultValue: "That file is over the 512 MB cap",
+            comment: "Callout title for ingest.too_large"
+        )
+        static let ingestTooLargeHelp = LocalizedStringResource(
+            "error.ingest.too_large.help",
+            defaultValue: "This file is %@. Downsample or export a smaller copy, then choose that file.",
+            comment: "Callout help for ingest.too_large; argument is human-readable size"
+        )
+        static let ingestNotAFileTitle = LocalizedStringResource(
+            "error.ingest.not_a_file.title",
+            defaultValue: "That isn’t a regular file",
+            comment: "Callout title for ingest.not_a_file"
+        )
+        static let ingestNotAFileHelp = LocalizedStringResource(
+            "error.ingest.not_a_file.help",
+            defaultValue: "Choose a single file — not a folder or special device.",
+            comment: "Callout help for ingest.not_a_file"
+        )
+        static let ingestSymlinkTitle = LocalizedStringResource(
+            "error.ingest.symlink.title",
+            defaultValue: "Symbolic links can’t be ingested",
+            comment: "Callout title for ingest.symlink"
+        )
+        static let ingestSymlinkHelp = LocalizedStringResource(
+            "error.ingest.symlink.help",
+            defaultValue: "Choose the real file the link points to.",
+            comment: "Callout help for ingest.symlink"
+        )
+        static let ingestMissingTitle = LocalizedStringResource(
+            "error.ingest.missing.title",
+            defaultValue: "That file is no longer available",
+            comment: "Callout title for ingest.missing"
+        )
+        static let ingestMissingHelp = LocalizedStringResource(
+            "error.ingest.missing.help",
+            defaultValue: "It may have moved or the volume was unmounted. Choose the file again.",
+            comment: "Callout help for ingest.missing"
+        )
+        static let ingestMultiFileTitle = LocalizedStringResource(
+            "error.ingest.multi_file.title",
+            defaultValue: "Drop a single file",
+            comment: "Callout title when multiple files are dropped"
+        )
+        static let ingestMultiFileHelp = LocalizedStringResource(
+            "error.ingest.multi_file.help",
+            defaultValue: "Artifacts attach one file at a time. Drop or choose a single scan, PDF, or recording.",
+            comment: "Callout help when multiple files are dropped"
+        )
+        static let ingestUnreadableTitle = LocalizedStringResource(
+            "error.ingest.unreadable.title",
+            defaultValue: "The file could not be read.",
+            comment: "Callout title when a dropped/picked URL cannot be resolved"
+        )
+        static let ingestUnreadableHelp = LocalizedStringResource(
+            "error.ingest.unreadable.help",
+            defaultValue: "Check that the volume is mounted and that Provenencia has access to the folder, then try again.",
+            comment: "Callout help when a dropped/picked URL cannot be resolved"
+        )
+
+        /// Title + body for ingest reject Callouts (local precheck or FFI).
+        struct IngestCallout: Equatable {
+            var title: LocalizedStringResource
+            var message: String
+        }
+
+        static func ingestCallout(
+            reason: IngestMediaPolicy.Reason,
+            sizeLabel: String? = nil,
+            typeLabel: String? = nil
+        ) -> IngestCallout {
+            switch reason {
+            case .office:
+                return IngestCallout(
+                    title: ingestUnsupportedOfficeTitle,
+                    message: String(localized: ingestUnsupportedOfficeHelp)
+                )
+            case .archive:
+                return IngestCallout(
+                    title: ingestUnsupportedArchiveTitle,
+                    message: String(localized: ingestUnsupportedArchiveHelp)
+                )
+            case .executable:
+                return IngestCallout(
+                    title: ingestUnsupportedExecutableTitle,
+                    message: String(localized: ingestUnsupportedExecutableHelp)
+                )
+            case .empty:
+                return IngestCallout(
+                    title: ingestEmptyTitle,
+                    message: String(localized: ingestEmptyHelp)
+                )
+            case .tooLarge:
+                let size = sizeLabel ?? "?"
+                let format = String(localized: ingestTooLargeHelp)
+                return IngestCallout(
+                    title: ingestTooLargeTitle,
+                    message: String(format: format, locale: .current, size)
+                )
+            case .unidentified:
+                return IngestCallout(
+                    title: ingestUnidentifiedTitle,
+                    message: String(localized: ingestUnidentifiedHelp)
+                )
+            case .disallowedSniff, .genericType:
+                if let typeLabel, !typeLabel.isEmpty, typeLabel != "That" {
+                    return IngestCallout(
+                        title: ingestUnsupportedTypeGenericTitle,
+                        message: String(format: String(localized: LocalizedStringResource(
+                            "error.ingest.unsupported_type.helpWithLabel",
+                            defaultValue: "%@ files aren’t accepted. Artifacts hold images, PDFs, plain text (including CSV and Markdown), audio, or video — up to 512 MB. Choose a different file.",
+                            comment: "Callout help for unsupported type with label; argument is short type"
+                        )), locale: .current, typeLabel)
+                    )
+                }
+                return IngestCallout(
+                    title: ingestUnsupportedTypeGenericTitle,
+                    message: String(localized: ingestUnsupportedTypeHelp)
+                )            case .notAFile:
+                return IngestCallout(
+                    title: ingestNotAFileTitle,
+                    message: String(localized: ingestNotAFileHelp)
+                )
+            case .symlink:
+                return IngestCallout(
+                    title: ingestSymlinkTitle,
+                    message: String(localized: ingestSymlinkHelp)
+                )
+            case .missing:
+                return IngestCallout(
+                    title: ingestMissingTitle,
+                    message: String(localized: ingestMissingHelp)
+                )
+            case .permission, .unreadable:
+                return IngestCallout(
+                    title: ingestPermissionDeniedTitle,
+                    message: String(localized: ingestPermissionDeniedHelp)
+                )
+            case .multiFile:
+                return IngestCallout(
+                    title: ingestMultiFileTitle,
+                    message: String(localized: ingestMultiFileHelp)
+                )
+            }
+        }
+
+        static func ingestCallout(code: String, params: [String] = []) -> IngestCallout? {
+            switch code {
+            case "ingest.unsupported_office":
+                return ingestCallout(reason: .office)
+            case "ingest.unsupported_archive":
+                return ingestCallout(reason: .archive)
+            case "ingest.unsupported_executable":
+                return ingestCallout(reason: .executable)
+            case "ingest.unsupported_type":
+                return ingestCallout(reason: .disallowedSniff, typeLabel: params.first)
+            case "ingest.unidentified":
+                return ingestCallout(reason: .unidentified)
+            case "ingest.empty":
+                return ingestCallout(reason: .empty)
+            case "ingest.too_large":
+                return ingestCallout(reason: .tooLarge, sizeLabel: params.first)
+            case "ingest.not_a_file":
+                return ingestCallout(reason: .notAFile)
+            case "ingest.symlink":
+                return ingestCallout(reason: .symlink)
+            case "ingest.missing":
+                return ingestCallout(reason: .missing)
+            case "ingest.permission_denied":
+                return ingestCallout(reason: .permission)
+            case "ingest.invalid":
+                return IngestCallout(
+                    title: LocalizedStringResource(
+                        "error.ingest.invalid.title",
+                        defaultValue: "Could not ingest that file",
+                        comment: "Callout title for ingest.invalid"
+                    ),
+                    message: String(localized: ingestInvalid)
+                )
+            default:
+                return nil
+            }
+        }
         static let sourceTypesInvalid = LocalizedStringResource(
             "error.sourcetypes.invalid",
             defaultValue: "Invalid source type.",
@@ -3063,6 +3365,26 @@ enum L10n {
                 return String(localized: ingestInvalid)
             case "ingest.permission_denied":
                 return String(localized: ingestPermissionDenied)
+            case "ingest.unsupported_office":
+                return String(localized: ingestUnsupportedOfficeHelp)
+            case "ingest.unsupported_archive":
+                return String(localized: ingestUnsupportedArchiveHelp)
+            case "ingest.unsupported_executable":
+                return String(localized: ingestUnsupportedExecutableHelp)
+            case "ingest.unsupported_type":
+                return ingestCallout(reason: .disallowedSniff, typeLabel: params.first).message
+            case "ingest.unidentified":
+                return String(localized: ingestUnidentifiedHelp)
+            case "ingest.empty":
+                return String(localized: ingestEmptyHelp)
+            case "ingest.too_large":
+                return ingestCallout(reason: .tooLarge, sizeLabel: params.first).message
+            case "ingest.not_a_file":
+                return String(localized: ingestNotAFileHelp)
+            case "ingest.symlink":
+                return String(localized: ingestSymlinkHelp)
+            case "ingest.missing":
+                return String(localized: ingestMissingHelp)
             case "sourcetypes.invalid":
                 return String(localized: sourceTypesInvalid)
             case "sourcetypes.in_use":
