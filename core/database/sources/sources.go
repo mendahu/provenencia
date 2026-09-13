@@ -16,30 +16,44 @@ import (
 
 var ErrInvalid = apperr.New(apperr.CodeSourcesInvalid, apperr.KindUser)
 
+// Cover modes persisted on sources.cover_mode.
+const (
+	CoverModeTypeIcon = "type_icon"
+	CoverModeArtifact = "artifact"
+)
+
 const (
 	sqlInsert = `INSERT INTO sources (id, ref, source_type_id, title, description)
 		VALUES (?, ?, ?, ?, ?)`
 	sqlUpdate = `UPDATE sources SET source_type_id = ?, title = ?, description = ?
 		WHERE id = ?`
-	sqlGet = `SELECT id, ref, source_type_id, title, COALESCE(description, '')
+	sqlSetCover = `UPDATE sources SET cover_mode = ?, primary_artifact_id = ?
+		WHERE id = ?`
+	sqlGet = `SELECT id, ref, source_type_id, title, COALESCE(description, ''),
+		cover_mode, primary_artifact_id
 		FROM sources WHERE id = ?`
-	sqlGetByRef = `SELECT id, ref, source_type_id, title, COALESCE(description, '')
+	sqlGetByRef = `SELECT id, ref, source_type_id, title, COALESCE(description, ''),
+		cover_mode, primary_artifact_id
 		FROM sources WHERE ref = ?`
-	sqlList = `SELECT id, ref, source_type_id, title, COALESCE(description, '')
+	sqlList = `SELECT id, ref, source_type_id, title, COALESCE(description, ''),
+		cover_mode, primary_artifact_id
 		FROM sources
 		ORDER BY title COLLATE NOCASE, ref COLLATE NOCASE`
 	sqlCount      = `SELECT COUNT(*) FROM sources`
 	sqlTypeExists = `SELECT 1 FROM source_types WHERE id = ?`
-	maxRefRetries = 8
+	sqlArtifactForCover = `SELECT id, source_id, file_id FROM artifacts WHERE id = ?`
+	maxRefRetries       = 8
 )
 
 // Source is one sources row.
 type Source struct {
-	ID           []byte
-	Ref          string
-	SourceTypeID []byte
-	Title        string
-	Description  string
+	ID                []byte
+	Ref               string
+	SourceTypeID      []byte
+	Title             string
+	Description       string
+	CoverMode         string
+	PrimaryArtifactID []byte // nil when CoverModeTypeIcon
 }
 
 // CreateInput is the mutable fields for a new Source.
@@ -129,7 +143,111 @@ func Create(c *database.Catalog, userID []byte, in CreateInput) (Source, error) 
 		SourceTypeID: append([]byte(nil), in.SourceTypeID...),
 		Title:        in.Title,
 		Description:  in.Description,
+		CoverMode:    CoverModeTypeIcon,
 	}, nil
+}
+
+// SetCover pins an Artifact as cover or reverts to the Source type icon.
+// mode must be CoverModeArtifact (with a file-bearing Artifact under this Source)
+// or CoverModeTypeIcon (clears primary_artifact_id).
+func SetCover(c *database.Catalog, userID []byte, sourceID []byte, mode string, primaryArtifactID []byte) (Source, error) {
+	db, err := c.DB()
+	if err != nil {
+		return Source{}, err
+	}
+	if len(sourceID) != 16 {
+		return Source{}, ErrInvalid
+	}
+	if err := requireUserID(userID); err != nil {
+		return Source{}, err
+	}
+	mode = strings.TrimSpace(mode)
+	switch mode {
+	case CoverModeTypeIcon:
+		primaryArtifactID = nil
+	case CoverModeArtifact:
+		if len(primaryArtifactID) != 16 {
+			return Source{}, ErrInvalid
+		}
+	default:
+		return Source{}, ErrInvalid
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return Source{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	prev, err := getTx(tx, sourceID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Source{}, ErrInvalid
+	}
+	if err != nil {
+		return Source{}, err
+	}
+
+	if mode == CoverModeArtifact {
+		if err := requireFileBearingArtifact(tx, sourceID, primaryArtifactID); err != nil {
+			return Source{}, err
+		}
+	}
+
+	if prev.CoverMode == mode && bytesEqual(prev.PrimaryArtifactID, primaryArtifactID) {
+		if err := tx.Commit(); err != nil {
+			return Source{}, err
+		}
+		return prev, nil
+	}
+
+	if _, err := tx.Exec(sqlSetCover, mode, nullBlob(primaryArtifactID), sourceID); err != nil {
+		return Source{}, mapConstraint(err)
+	}
+
+	fields := map[string]audit.FieldDiff{
+		"cover_mode": {Old: prev.CoverMode, New: mode},
+	}
+	if !bytesEqual(prev.PrimaryArtifactID, primaryArtifactID) {
+		fields["primary_artifact_id"] = audit.FieldDiff{
+			Old: uuidJSON(prev.PrimaryArtifactID),
+			New: uuidJSON(primaryArtifactID),
+		}
+	}
+	if _, err := audit.Record(tx, audit.Revision{
+		UserID:     userID,
+		ActionType: "set_source_cover",
+		CreatedAt:  project.NowUTC(),
+		Changes: []audit.Change{{
+			EntityType: "source",
+			EntityID:   sourceID,
+			Action:     audit.ActionUpdate,
+			Fields:     fields,
+		}},
+	}); err != nil {
+		return Source{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return Source{}, err
+	}
+	return Get(c, sourceID)
+}
+
+// MaybePinFirstFileCover pins artifactID as the Source cover when the Source
+// still has no primary (type_icon). Same end state as SetCover(artifact, id).
+// No-op when a cover Artifact is already set.
+func MaybePinFirstFileCover(c *database.Catalog, userID, sourceID, artifactID []byte) (Source, bool, error) {
+	s, err := Get(c, sourceID)
+	if err != nil {
+		return Source{}, false, err
+	}
+	if s.CoverMode == CoverModeArtifact && len(s.PrimaryArtifactID) == 16 {
+		return s, false, nil
+	}
+	got, err := SetCover(c, userID, sourceID, CoverModeArtifact, artifactID)
+	if err != nil {
+		return Source{}, false, err
+	}
+	return got, true, nil
 }
 
 // Update patches title, description, and source_type_id; records update_source for changed fields.
@@ -267,8 +385,13 @@ type rowScanner interface {
 
 func scanSource(row rowScanner) (Source, error) {
 	var s Source
-	if err := row.Scan(&s.ID, &s.Ref, &s.SourceTypeID, &s.Title, &s.Description); err != nil {
+	var primary []byte
+	if err := row.Scan(&s.ID, &s.Ref, &s.SourceTypeID, &s.Title, &s.Description, &s.CoverMode, &primary); err != nil {
 		return Source{}, err
+	}
+	s.PrimaryArtifactID = primary
+	if s.CoverMode == "" {
+		s.CoverMode = CoverModeTypeIcon
 	}
 	return s, nil
 }
@@ -284,6 +407,35 @@ func requireType(tx *sql.Tx, typeID []byte) error {
 		return ErrInvalid
 	}
 	return err
+}
+
+func requireFileBearingArtifact(tx *sql.Tx, sourceID, artifactID []byte) error {
+	var id, artSource, fileID []byte
+	err := tx.QueryRow(sqlArtifactForCover, artifactID).Scan(&id, &artSource, &fileID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrInvalid
+	}
+	if err != nil {
+		return err
+	}
+	if !bytesEqual(artSource, sourceID) || len(fileID) != 16 {
+		return ErrInvalid
+	}
+	return nil
+}
+
+func nullBlob(b []byte) any {
+	if len(b) == 0 {
+		return nil
+	}
+	return b
+}
+
+func uuidJSON(id []byte) any {
+	if len(id) != 16 {
+		return nil
+	}
+	return uuidString(id)
 }
 
 func requireUserID(userID []byte) error {

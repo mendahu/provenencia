@@ -5,6 +5,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/files"
+	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/ingest"
 	"google.golang.org/protobuf/proto"
 )
@@ -39,6 +40,11 @@ func CreateArtifact(in []byte) ([]byte, error) {
 		})
 		if err != nil {
 			return err
+		}
+		if len(a.FileID) == 16 {
+			if _, _, err := sources.MaybePinFirstFileCover(c, userID, a.SourceID, a.ID); err != nil {
+				return err
+			}
 		}
 		ap, err := artifactProto(c, a)
 		if err != nil {
@@ -135,6 +141,9 @@ func IngestArtifactFile(in []byte) ([]byte, error) {
 			Description: prev.Description,
 		}
 		if err := artifacts.Update(c, userID, updated); err != nil {
+			return err
+		}
+		if _, _, err := sources.MaybePinFirstFileCover(c, userID, prev.SourceID, artifactID); err != nil {
 			return err
 		}
 		got, err := artifacts.Get(c, artifactID)

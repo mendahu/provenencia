@@ -108,37 +108,60 @@ struct SourcePageArtifactsView: View {
     private func artifactRow(_ art: CatalogArtifact) -> some View {
         let expanded = model.artifacts.expandedIDs.contains(art.id)
         return VStack(alignment: .leading, spacing: 0) {
-            Button {
-                model.artifacts.toggleExpanded(art.id)
-            } label: {
-                HStack(spacing: PVSpacing.space6) {
-                    PVIcon(.chevronForward, size: 15)
-                        .foregroundStyle(PVColor.textMuted)
-                        .rotationEffect(.degrees(expanded ? 90 : 0))
-                        .frame(width: SourcePageLayout.artifactChevronWidth)
-                    CachedThumbnail(
-                        projectDir: model.pageProjectDir,
-                        relPath: art.thumbnailRelPath,
-                        mediaType: art.file?.mediaType ?? "",
-                        originalFilename: art.file?.originalFilename ?? "",
-                        typeIconKey: artifactTypeIconKey(for: art),
-                        size: SourcePageLayout.artifactRowThumbnailSize
-                    )
-                    Text(art.label.isEmpty ? art.ref : art.label)
-                        .font(PVFont.body(size: PVTypeScale.bodySmall))
-                        .foregroundStyle(PVColor.textPrimary)
-                        .lineLimit(1)
+            HStack(spacing: PVSpacing.space4) {
+                Button {
+                    model.artifacts.toggleExpanded(art.id)
+                } label: {
+                    HStack(spacing: PVSpacing.space6) {
+                        PVIcon(.chevronForward, size: 15)
+                            .foregroundStyle(PVColor.textMuted)
+                            .rotationEffect(.degrees(expanded ? 90 : 0))
+                            .frame(width: SourcePageLayout.artifactChevronWidth)
+                        CachedThumbnail(
+                            projectDir: model.pageProjectDir,
+                            relPath: art.thumbnailRelPath,
+                            mediaType: art.file?.mediaType ?? "",
+                            originalFilename: art.file?.originalFilename ?? "",
+                            typeIconKey: artifactTypeIconKey(for: art),
+                            size: SourcePageLayout.artifactRowThumbnailSize
+                        )
+                        HStack(spacing: PVSpacing.space4) {
+                            Text(art.label.isEmpty ? art.ref : art.label)
+                                .font(PVFont.body(size: PVTypeScale.bodySmall))
+                                .foregroundStyle(PVColor.textPrimary)
+                                .lineLimit(1)
+                            if model.artifacts.isCover(art) {
+                                PVBadge(L10n.Sources.coverBadge, tone: .accent)
+                                    .accessibilityIdentifier("sources.page.artifact.\(art.id).coverBadge")
+                            }
+                        }
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    Text(art.ref)
-                        .font(PVFont.mono(size: PVTypeScale.micro))
-                        .foregroundStyle(PVColor.textMuted)
+                        Text(art.ref)
+                            .font(PVFont.mono(size: PVTypeScale.micro))
+                            .foregroundStyle(PVColor.textMuted)
+                    }
+                    .padding(.leading, PVSpacing.space6)
+                    .padding(.vertical, PVSpacing.space5)
+                    .contentShape(Rectangle())
                 }
-                .padding(.horizontal, PVSpacing.space6)
-                .padding(.vertical, PVSpacing.space5)
-                .contentShape(Rectangle())
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("sources.page.artifact.\(art.id)")
+
+                if model.artifacts.canUseAsThumbnail(art) {
+                    PVButton(
+                        L10n.Sources.useAsThumbnail,
+                        variant: .secondary,
+                        size: .sm,
+                        icon: .imageUp
+                    ) {
+                        Task { await model.artifacts.useAsThumbnail(art) }
+                    }
+                    .padding(.trailing, PVSpacing.space6)
+                    .accessibilityIdentifier("sources.page.artifact.\(art.id).useAsThumbnail")
+                } else {
+                    Color.clear.frame(width: PVSpacing.space6)
+                }
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("sources.page.artifact.\(art.id)")
 
             if expanded {
                 artifactDetail(art)

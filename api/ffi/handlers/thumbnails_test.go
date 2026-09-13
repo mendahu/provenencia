@@ -292,7 +292,7 @@ func TestListSourcesAndWorkspaceThumbnails(t *testing.T) {
 			},
 		},
 		{
-			name: "pdf then png prefers raster of later png",
+			name: "pdf then png keeps first file pin as cover",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, typeID := sourceFixture(t)
 				cout, err := CreateSource(marshalProto(t, &engine.CreateSourceRequest{
@@ -337,11 +337,18 @@ func TestListSourcesAndWorkspaceThumbnails(t *testing.T) {
 				if err := proto.Unmarshal(out, &list); err != nil {
 					t.Fatal(err)
 				}
-				if len(list.Sources) != 1 || list.Sources[0].GetThumbnailRelPath() == "" {
-					t.Fatalf("want png raster thumb %+v", list.Sources)
+				if len(list.Sources) != 1 {
+					t.Fatalf("sources %+v", list.Sources)
 				}
-				if list.Sources[0].GetThumbnailMediaType() != "" {
-					t.Fatalf("raster cover should not set media type %+v", list.Sources[0])
+				s := list.Sources[0]
+				if s.GetCoverMode() != "artifact" {
+					t.Fatalf("cover_mode %q", s.GetCoverMode())
+				}
+				if s.GetThumbnailRelPath() != "" {
+					t.Fatalf("first pin is pdf, want empty raster got %q", s.GetThumbnailRelPath())
+				}
+				if s.GetThumbnailMediaType() != "application/pdf" {
+					t.Fatalf("media type %q", s.GetThumbnailMediaType())
 				}
 			},
 		},

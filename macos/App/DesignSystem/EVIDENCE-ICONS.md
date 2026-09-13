@@ -26,9 +26,9 @@ Source-type marks on `source_types.icon_key` (required, default `type_evidence`)
 
 Assets: `provenencia_type_*.imageset` in the same catalog. No ink-band label.
 
-Cover preference for Sources / identity / `publishCoverToList`: **raster → type icon →
-MIME (error path) → empty**. Artifact rows **with a File** stay raster → MIME; **fileless**
-Artifact rows use the parent Source’s type icon.
+Cover preference for Sources / identity (PR3): **pinned Artifact raster or MIME**, else
+**type icon**. First file-bearing Artifact auto-pins once. Artifact rows **with a File**
+stay raster → MIME; **fileless** Artifact rows use the parent Source’s type icon.
 
 Source types create/edit: form shows a 44px tile (28px mark + name + key + Change);
 Change opens a **Choose an icon** dialog with the 21 marks at 40px (names under each),

@@ -91,29 +91,29 @@ Source cover resolution
 
 **Default behavior**
 
-- When the **first** raster thumbnail is successfully ensured for any Artifact under the Source, mark that Artifact as the Source’s **primary thumbnail source** (auto).
-- If nothing rasterizes (all PDFs / fileless), fall through to **Source-type icon** (MIME only as error path) so the Sources list is never a wall of blanks.
+- When the **first file-bearing Artifact** is created/ingested under a Source that still uses the type icon, **auto-pin that Artifact** as cover (same persisted state as a manual pin). Later files do not steal the cover.
+- Until a file-bearing Artifact exists (or after **Revert to default**), cover is the **Source-type icon**.
 
 **User control**
 
-- **Use as Source thumbnail** on an Artifact row (raster or MIME fallback for that Artifact).
-- **Use Source type icon as thumbnail** (identity chrome or type picker) so cover can be the type mark even when rasters exist — researcher choice wins over auto.
-- Switching updates list + header immediately; one primary mode at a time.
+- **Use as thumbnail** on a file-bearing Artifact row (raster or MIME for that Artifact).
+- **Revert to default** on the identity cover context menu → type icon even when rasters exist.
+- No separate “auto” mode, badge, or revert-to-auto. Badge is only **Cover**.
 
-**Schema sketch (when pulled into a spike)**
+**Schema**
 
-- `sources.primary_artifact_id` (nullable FK) **and/or** a small cover mode enum (`artifact` | `source_type_icon`) — exact shape TBD.
-- `source_types.icon_key` (TEXT, required or defaulted) referencing the curated set — **shipped in PR2**.
-- List/Get Source still returns enough for Swift to render: either `thumbnail_rel_path` **or** a resolved `cover: { kind: raster|mime|type_icon, … }` so cells stay simple.
+- `sources.cover_mode` (`artifact` | `type_icon`) + `sources.primary_artifact_id` (nullable FK, `ON DELETE SET NULL`).
+- `source_types.icon_key` — **shipped in PR2**.
+- List/Get Source returns `cover_mode`, `primary_artifact_id`, and resolved `thumbnail_*` for cells.
 
 ## Why these hang together
 
 | Situation | What the researcher sees |
 | --- | --- |
 | Scanned JPEG Artifact | Real thumb; can be Source cover |
-| PDF Artifact | PDF glyph on Artifact row; Source list/identity prefer type icon until a raster exists |
+| PDF Artifact | PDF glyph on Artifact row; Source cover uses that Artifact’s MIME when pinned (first file auto-pins) |
 | Fileless “parish register” Artifact | Source-type scroll/book icon |
-| Multi-Artifact Source | Explicit primary / type-icon cover instead of opaque “first ensure” |
+| Multi-Artifact Source | Explicit primary Artifact or type-icon cover; first file is a one-shot accelerator |
 
 Without type icons, physical evidence stays blank. Without MIME glyphs, digital non-images stay blank. Without primary/cover control, multi-Artifact Sources stay arbitrary.
 
@@ -127,7 +127,7 @@ Design assets: PR1 shipped `file_*`; PR2 shipped `type_*`.
 | --- | --- | --- |
 | **1 — File-type glyphs** | **Done:** nine `file_*` assets + `PVEvidenceIcon` / `PVFileTypeGlyph`; `PVThumbnail` evidence-glyph state; `CachedThumbnail` MIME fallback; ListSources `thumbnail_media_type` + `thumbnail_original_filename` with first-raster-then-file cover scan; Artifact rows, Sources list, identity header wired | Digital non-images (PDF, video, …) show a typed stand-in; empty only for fileless / unknown-missing |
 | **2 — Source-type icons** | **Done:** closed `icon_key` on `source_types`; seed defaults; icon picker on create/edit **type**; type icons in create/edit **Source** type picker; fileless Artifact thumbs + type-list marks; cover order raster → type → MIME → empty | Physical / fileless rows and vocabulary are scannable; custom types default to `type_evidence` |
-| **3 — Source primary cover** | Persist cover mode + optional primary Artifact; auto first-raster; user “use as Source thumbnail” / “use type icon”; List/Get returns resolved cover for cells | Multi-Artifact Sources have durable, controllable list identity |
+| **3 — Source primary cover** | **Done:** `cover_mode` + `primary_artifact_id`; first file-bearing Artifact auto-pins; “Use as thumbnail” / “Revert to default”; List/Get enriched cover | Multi-Artifact Sources have durable, controllable list identity |
 
 **Do not** fold cover control into PR1/PR2 — resolution rules and open questions below belong in PR3 once both fallbacks exist.
 
@@ -157,16 +157,15 @@ Shipped on `feat/source-type-icons`:
 8. `publishCoverToList` / list / identity: raster → type icon → MIME error path → empty.
 9. No `Source.thumbnail_icon_key` — resolve via `sourceTypeID` → `CatalogSourceType.iconKey`.
 
-### PR3 — Source primary thumbnail / cover (actionable)
+### PR3 — Source primary thumbnail / cover (**done**)
 
-Depends on PR1 + PR2 so cover resolution can return `raster | mime | type_icon`. Settle open questions in this PR’s design brief before coding.
+Shipped on `feat/source-cover-primary`:
 
-1. Decide schema: `sources.primary_artifact_id` (nullable FK) **and** cover mode (`artifact` | `source_type_icon`) — or equivalent; document pin-vs-auto rules (see Open questions).
-2. Auto: on first successful raster ensure under a Source, set primary Artifact if cover is still auto/unpinned.
-3. Fallthrough when nothing rasterizes: Source type icon → else MIME error path → else empty (matches PR2 client preference unless user pins otherwise).
-4. User actions: “Use as Source thumbnail” on an Artifact row; “Use Source type icon as thumbnail” in identity chrome (and/or type area); one mode at a time; list + header update immediately.
-5. List/Get Source (and workspace enrichment) return a resolved cover payload Swift can render without re-deriving preference order — e.g. `cover: { kind, thumbnail_rel_path?, media_type?, icon_key? }`.
-6. Tests: auto-assign on first raster; pin type icon survives later raster; switch Artifact primary; delete primary Artifact falls through cleanly.
+1. Migration `000015`: `sources.cover_mode` (`type_icon` default) + `primary_artifact_id`; backfill first file-bearing Artifact; trigger clears mode when primary nulls.
+2. `SetCover` / `MaybePinFirstFileCover`; first create-with-file or ingest auto-pins once.
+3. Proto/FFI: `Source.cover_mode` / `primary_artifact_id`; `SetSourceCover`; List + GetSourceWorkspace enrich `thumbnail_*` from mode.
+4. Artifact row: **Cover** badge + **Use as thumbnail**; identity cover context menu **Revert to default**.
+5. Settled rules: primary = Artifact id; type-icon pin survives later files; PDF pin shows MIME on Source; actions on row + identity menu; no auto badge/state.
 
 ## Non-goals (for the parked idea)
 
@@ -178,13 +177,13 @@ Depends on PR1 + PR2 so cover resolution can return `raster | mime | type_icon`.
 
 ## Open questions
 
-**Settle before / in PR3**
+**Settled in PR3**
 
-- Primary = Artifact id vs File id vs cover-mode enum?
-- If user pinned type icon as cover, does a later first raster auto-steal cover or leave the pin?
-- If primary Artifact is PDF-only, show PDF glyph or fall through to type icon unless pinned?
-- Where do cover actions live — Artifact row, identity header, both?
-- Share packages: embed raster only, or also ship `icon_key` / cover mode?
+- Primary = Artifact id + `cover_mode` (`artifact` | `type_icon`).
+- Type-icon pin is never stolen by later files; first-file auto-pin only when still `type_icon`.
+- PDF primary shows PDF MIME glyph on Source list/identity (not silent fallthrough to type).
+- Actions: Artifact row (“Use as thumbnail” / Cover badge) + identity cover context menu (“Revert to default”).
+- Clients get resolved `thumbnail_*` plus `cover_mode` / `primary_artifact_id`; type icon still via `sourceTypeID` → `icon_key`.
 
 ## Related docs
 

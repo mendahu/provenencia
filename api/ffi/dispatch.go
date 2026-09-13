@@ -52,6 +52,7 @@ const (
 	MethodReorderSourceMetadata               = int32(engine.Method_METHOD_REORDER_SOURCE_METADATA)
 	MethodEnsureFileThumbnail                 = int32(engine.Method_METHOD_ENSURE_FILE_THUMBNAIL)
 	MethodCloseCatalogSession                 = int32(engine.Method_METHOD_CLOSE_CATALOG_SESSION)
+	MethodSetSourceCover                      = int32(engine.Method_METHOD_SET_SOURCE_COVER)
 )
 
 // Call routes one coarse FFI operation to api/ffi/handlers.
@@ -141,6 +142,8 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.EnsureFileThumbnail(in)
 	case MethodCloseCatalogSession:
 		return handlers.CloseCatalogSession(in)
+	case MethodSetSourceCover:
+		return handlers.SetSourceCover(in)
 	default:
 		return nil, apperr.New(apperr.CodeInternalUnknownMethod, apperr.KindInternal, strconv.Itoa(int(method)))
 	}

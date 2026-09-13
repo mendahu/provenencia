@@ -1780,6 +1780,63 @@ enum L10n {
             ))
             return String(format: format, locale: .current, name)
         }
+
+        static let coverBadge = LocalizedStringResource(
+            "sources.page.coverBadge",
+            defaultValue: "Cover",
+            comment: "Badge on the Artifact currently used as the Source thumbnail"
+        )
+
+        static let useAsThumbnail = LocalizedStringResource(
+            "sources.page.useAsThumbnail",
+            defaultValue: "Use as thumbnail",
+            comment: "Button to pin an Artifact as the Source list/identity cover"
+        )
+
+        static let thumbnailMenuTitle = LocalizedStringResource(
+            "sources.page.thumbnailMenuTitle",
+            defaultValue: "Source thumbnail",
+            comment: "Context menu title on the Source identity cover"
+        )
+
+        static let thumbnailMenuHint = LocalizedStringResource(
+            "sources.page.thumbnailMenuHint",
+            defaultValue: "Right-click for thumbnail options",
+            comment: "Accessibility hint on the Source identity cover thumbnail"
+        )
+
+        static let thumbnailRevertToDefault = LocalizedStringResource(
+            "sources.page.thumbnailRevertToDefault",
+            defaultValue: "Revert to default",
+            comment: "Context menu action to use the Source type icon as cover"
+        )
+
+        static let thumbnailDefaultInUse = LocalizedStringResource(
+            "sources.page.thumbnailDefaultInUse",
+            defaultValue: "Default icon is in use",
+            comment: "Disabled context menu item when the type icon is already the cover"
+        )
+
+        static let toastThumbnailUpdatedTitle = String(localized: LocalizedStringResource(
+            "sources.page.toastThumbnailUpdatedTitle",
+            defaultValue: "Thumbnail updated",
+            comment: "Toast title after changing Source cover"
+        ))
+
+        static func toastThumbnailUpdatedArtifactBody(ref: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "sources.page.toastThumbnailUpdatedArtifactBody",
+                defaultValue: "Using %@ as the Source thumbnail.",
+                comment: "Toast body after pinning an Artifact; argument is ART- ref"
+            ))
+            return String(format: format, locale: .current, ref)
+        }
+
+        static let toastThumbnailUpdatedTypeIconBody = String(localized: LocalizedStringResource(
+            "sources.page.toastThumbnailUpdatedTypeIconBody",
+            defaultValue: "Using the Source type icon as the thumbnail.",
+            comment: "Toast body after reverting cover to the type icon"
+        ))
     }
 
     enum SourceFields {

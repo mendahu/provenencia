@@ -29,14 +29,10 @@ func ListSources(in []byte) ([]byte, error) {
 		}
 		out = &engine.ListSourcesResponse{}
 		for _, s := range rows {
-			sp := sourceProto(s)
-			cover, err := sourceCoverThumbnail(c, s.ID)
+			sp, err := enrichSourceProto(c, s)
 			if err != nil {
 				return err
 			}
-			sp.ThumbnailRelPath = cover.RelPath
-			sp.ThumbnailMediaType = cover.MediaType
-			sp.ThumbnailOriginalFilename = cover.OriginalFilename
 			out.Sources = append(out.Sources, sp)
 		}
 		return nil
@@ -91,7 +87,11 @@ func GetSourceWorkspace(in []byte) ([]byte, error) {
 			return err
 		}
 
-		out = &engine.GetSourceWorkspaceResponse{Source: sourceProto(s)}
+		sp, err := enrichSourceProto(c, s)
+		if err != nil {
+			return err
+		}
+		out = &engine.GetSourceWorkspaceResponse{Source: sp}
 		for _, n := range notes {
 			out.Notes = append(out.Notes, noteProto(n))
 		}
@@ -140,7 +140,11 @@ func CreateSource(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.CreateSourceResponse{Source: sourceProto(s)}
+		sp, err := enrichSourceProto(c, s)
+		if err != nil {
+			return err
+		}
+		out = &engine.CreateSourceResponse{Source: sp}
 		return nil
 	})
 	if err != nil {
@@ -186,7 +190,50 @@ func UpdateSource(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.UpdateSourceResponse{Source: sourceProto(got)}
+		sp, err := enrichSourceProto(c, got)
+		if err != nil {
+			return err
+		}
+		out = &engine.UpdateSourceResponse{Source: sp}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
+}
+
+func SetSourceCover(in []byte) ([]byte, error) {
+	var req engine.SetSourceCoverRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("set_source_cover", err)
+	}
+	userID, err := parseUserID(req.GetUserId())
+	if err != nil {
+		return nil, err
+	}
+	sourceID, err := parseID(req.GetSourceId())
+	if err != nil {
+		return nil, err
+	}
+	var primaryID []byte
+	if req.GetPrimaryArtifactId() != "" {
+		primaryID, err = parseID(req.GetPrimaryArtifactId())
+		if err != nil {
+			return nil, err
+		}
+	}
+	var out *engine.SetSourceCoverResponse
+	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		got, err := sources.SetCover(c, userID, sourceID, req.GetCoverMode(), primaryID)
+		if err != nil {
+			return err
+		}
+		sp, err := enrichSourceProto(c, got)
+		if err != nil {
+			return err
+		}
+		out = &engine.SetSourceCoverResponse{Source: sp}
 		return nil
 	})
 	if err != nil {
@@ -463,11 +510,13 @@ func ReorderSourceMetadata(in []byte) ([]byte, error) {
 
 func sourceProto(s sources.Source) *engine.Source {
 	return &engine.Source{
-		Id:           uuidString(s.ID),
-		Ref:          s.Ref,
-		SourceTypeId: uuidString(s.SourceTypeID),
-		Title:        s.Title,
-		Description:  s.Description,
+		Id:                uuidString(s.ID),
+		Ref:               s.Ref,
+		SourceTypeId:      uuidString(s.SourceTypeID),
+		Title:             s.Title,
+		Description:       s.Description,
+		CoverMode:         s.CoverMode,
+		PrimaryArtifactId: uuidString(s.PrimaryArtifactID),
 	}
 }
 

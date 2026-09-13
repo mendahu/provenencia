@@ -21,6 +21,21 @@ struct SourcePageIdentityHeader: View {
                         typeIconKey: identityCover.typeIconKey,
                         size: 72
                     )
+                    .accessibilityHint(L10n.Sources.thumbnailMenuHint)
+                    .contextMenu {
+                        Section {
+                            Text(L10n.Sources.thumbnailMenuTitle)
+                        }
+                        if model.source?.coverMode == "type_icon" {
+                            Button(String(localized: L10n.Sources.thumbnailDefaultInUse)) {}
+                                .disabled(true)
+                        } else {
+                            Button(String(localized: L10n.Sources.thumbnailRevertToDefault)) {
+                                Task { await model.artifacts.revertCoverToTypeIcon() }
+                            }
+                        }
+                    }
+                    .accessibilityIdentifier("sources.page.cover")
                     titleCluster
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -48,8 +63,11 @@ struct SourcePageIdentityHeader: View {
         let typeIcon = model.identity.types
             .first { $0.id == model.identity.sourceTypeID }?
             .iconKey
+        // Prefer persisted / enriched Source cover; fall through only when
+        // workspace source has not been enriched yet (load race).
         if let source = model.source {
-            if !source.thumbnailRelPath.isEmpty
+            if source.coverMode == "type_icon"
+                || !source.thumbnailRelPath.isEmpty
                 || !source.thumbnailMediaType.isEmpty
                 || !source.thumbnailOriginalFilename.isEmpty
             {
@@ -60,13 +78,16 @@ struct SourcePageIdentityHeader: View {
                     typeIcon
                 )
             }
-        }
-        let arts = model.artifacts.items
-        if let raster = arts.first(where: { !$0.thumbnailRelPath.isEmpty }) {
-            return (raster.thumbnailRelPath, "", "", typeIcon)
-        }
-        if let fileArt = arts.first(where: { $0.file != nil }), let file = fileArt.file {
-            return ("", file.mediaType, file.originalFilename, typeIcon)
+            if source.coverMode == "artifact",
+               let art = model.artifacts.items.first(where: { $0.id == source.primaryArtifactID })
+            {
+                if !art.thumbnailRelPath.isEmpty {
+                    return (art.thumbnailRelPath, "", "", typeIcon)
+                }
+                if let file = art.file {
+                    return ("", file.mediaType, file.originalFilename, typeIcon)
+                }
+            }
         }
         return ("", "", "", typeIcon)
     }

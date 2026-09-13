@@ -196,6 +196,26 @@ struct GoStore: GenealogyStore {
         return Self.mapSource(resp.source)
     }
 
+    func setSourceCover(
+        projectDir: String,
+        userID: String,
+        sourceID: String,
+        coverMode: String,
+        primaryArtifactID: String
+    ) async throws -> CatalogSource {
+        var req = Provenencia_Engine_V1_SetSourceCoverRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.sourceID = sourceID
+        req.coverMode = coverMode
+        req.primaryArtifactID = primaryArtifactID
+        let resp: Provenencia_Engine_V1_SetSourceCoverResponse = try await provenenciaCall(
+            method: CoreMethod.setSourceCover,
+            request: req
+        )
+        return Self.mapSource(resp.source)
+    }
+
     func addSourceNote(projectDir: String, userID: String, sourceID: String, body: String) async throws
         -> CatalogSourceNote
     {
@@ -672,7 +692,9 @@ struct GoStore: GenealogyStore {
             description: s.description_p,
             thumbnailRelPath: s.thumbnailRelPath,
             thumbnailMediaType: s.thumbnailMediaType,
-            thumbnailOriginalFilename: s.thumbnailOriginalFilename
+            thumbnailOriginalFilename: s.thumbnailOriginalFilename,
+            coverMode: s.coverMode.isEmpty ? "type_icon" : s.coverMode,
+            primaryArtifactID: s.primaryArtifactID
         )
     }
 

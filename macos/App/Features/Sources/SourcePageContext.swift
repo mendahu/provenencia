@@ -44,36 +44,38 @@ final class SourcePageContext {
 
     var source: CatalogSource? { workspace?.source }
 
-    /// Syncs list-row cover fields from workspace Artifacts and notifies the
-    /// Sources list. Preference: raster → clear MIME (type icon via
-    /// `sourceTypeID`) → MIME only when the type has no icon_key → empty.
-    func publishCoverToList() {
-        guard var source = workspace?.source else { return }
-        let arts = workspace?.artifacts ?? []
-        if let raster = arts.first(where: { !$0.thumbnailRelPath.isEmpty }) {
-            source.thumbnailRelPath = raster.thumbnailRelPath
-            source.thumbnailMediaType = ""
-            source.thumbnailOriginalFilename = ""
-        } else {
-            let typeIcon = workspace?.types
-                .first { $0.id == source.sourceTypeID }?
-                .iconKey
-                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            if !typeIcon.isEmpty {
-                source.thumbnailRelPath = ""
-                source.thumbnailMediaType = ""
-                source.thumbnailOriginalFilename = ""
-            } else if let file = arts.first(where: { $0.file != nil })?.file {
-                source.thumbnailRelPath = ""
-                source.thumbnailMediaType = file.mediaType
-                source.thumbnailOriginalFilename = file.originalFilename
-            } else {
-                source.thumbnailRelPath = ""
-                source.thumbnailMediaType = ""
-                source.thumbnailOriginalFilename = ""
-            }
-        }
+    /// Applies an enriched Source (cover fields included) to the workspace and list.
+    func applySource(_ source: CatalogSource) {
         workspace?.source = source
         onSourceUpdated?(source)
+    }
+
+    /// Reloads Source cover fields after Artifact create/ingest (server may auto-pin).
+    func refreshCoverFromStore() async {
+        do {
+            let ws = try await store.getSourceWorkspace(projectDir: projectDir, sourceID: sourceID)
+            applySource(ws.source)
+        } catch {
+            pageError = L10n.Errors.message(for: error)
+        }
+    }
+
+    /// Pins a file-bearing Artifact as cover, or reverts to the type icon.
+    func setSourceCover(mode: String, primaryArtifactID: String = "") async -> Bool {
+        clearPageError()
+        do {
+            let updated = try await store.setSourceCover(
+                projectDir: projectDir,
+                userID: userID,
+                sourceID: sourceID,
+                coverMode: mode,
+                primaryArtifactID: primaryArtifactID
+            )
+            applySource(updated)
+            return true
+        } catch {
+            pageError = L10n.Errors.message(for: error)
+            return false
+        }
     }
 }
