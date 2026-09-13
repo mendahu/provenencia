@@ -43,13 +43,15 @@ struct ProvenenciaApp: App {
                 .disabled(!signOutCoordinator.isAvailable)
             }
             CommandGroup(after: .sidebar) {
+                // Never `.disabled` these: Scene `.commands` often keeps the
+                // first enabled state, so ⌘] stayed inert after Back created
+                // a forward entry. `goBack` / `goForward` already no-op at ends.
                 Button {
                     navigationCoordinator.goBack()
                 } label: {
                     Text(L10n.Workspace.goBack)
                 }
                 .keyboardShortcut("[", modifiers: .command)
-                .disabled(!navigationCoordinator.canGoBack)
 
                 Button {
                     navigationCoordinator.goForward()
@@ -57,7 +59,6 @@ struct ProvenenciaApp: App {
                     Text(L10n.Workspace.goForward)
                 }
                 .keyboardShortcut("]", modifiers: .command)
-                .disabled(!navigationCoordinator.canGoForward)
             }
         }
     }

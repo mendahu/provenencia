@@ -68,6 +68,7 @@ struct WorkspaceView: View {
         }
         .onChange(of: workspace.canGoBack) { _, _ in bindNavigationCommands() }
         .onChange(of: workspace.canGoForward) { _, _ in bindNavigationCommands() }
+        .onChange(of: workspace.currentLocation) { _, _ in bindNavigationCommands() }
         .onDisappear {
             signOutCoordinator.isAvailable = false
             navigationCoordinator.canGoBack = false

@@ -55,14 +55,14 @@ final class WorkspaceModel {
     private(set) var selectedSection: Section
     /// Current history leaf (section + deep ids). Views apply deep state from this.
     private(set) var currentLocation: WorkspaceLocation
+    /// Stored (not computed) so `@Observable` publishes when the stack index moves.
+    private(set) var canGoBack = false
+    private(set) var canGoForward = false
     var isSidebarCollapsed: Bool
 
     private let defaults: UserDefaults
     private var history: NavigationHistoryStore?
     private var projectUuid: String = ""
-
-    var canGoBack: Bool { history?.canGoBack ?? false }
-    var canGoForward: Bool { history?.canGoForward ?? false }
 
     init(
         selectedSection: Section = .sources,
@@ -150,5 +150,7 @@ final class WorkspaceModel {
     private func apply(_ location: WorkspaceLocation) {
         currentLocation = location
         selectedSection = location.section
+        canGoBack = history?.canGoBack ?? false
+        canGoForward = history?.canGoForward ?? false
     }
 }
