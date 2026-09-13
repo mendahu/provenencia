@@ -2,10 +2,11 @@
 name: add-workspace-location
 description: >-
   Wires a new Provenencia macOS workspace place into first-class navigation
-  history (WorkspaceLocation, go(to:), Back/Forward, persist/restore). Use when
-  adding or changing a sidebar destination, Source-style deep page, master–detail
-  selection, workspace section, breadcrumb/omnibar target, or any view that should
-  restore via history — WorkspaceLocation, NavigationHistoryStore, WorkspaceModel.go,
+  history (WorkspaceLocation, WorkspaceNavigation.go(to:), Back/Forward,
+  persist/restore). Use when adding or changing a sidebar destination,
+  Source-style deep page, master–detail selection, workspace section,
+  breadcrumb/omnibar target, or any view that should restore via history —
+  WorkspaceNavigation, WorkspaceSection, NavigationHistoryStore,
   selectedSection bypass, closeSource without go(to:), or navigation-history.md.
 ---
 
@@ -13,9 +14,12 @@ description: >-
 
 Every **committed place** the researcher can return to must be a
 [`WorkspaceLocation`](macos/App/Features/Workspace/WorkspaceLocation.swift)
-pushed through [`WorkspaceModel.go(to:)`](macos/App/Features/Workspace/WorkspaceModel.swift).
-Do **not** use SwiftUI `NavigationStack` / `NavigationPath`. Do **not** leave
-parallel “where we are” state that bypasses the stack.
+pushed through
+[`WorkspaceNavigation.go(to:)`](macos/App/Features/Workspace/WorkspaceNavigation.swift).
+`WorkspaceNavigation` is owned by `WorkspaceView` and injected with
+`.environment(navigation)`. Do **not** use SwiftUI `NavigationStack` /
+`NavigationPath`. Do **not** leave parallel “where we are” state that bypasses
+the stack. Sidebar collapse stays on `WorkspaceModel` (chrome only).
 
 Authoritative behavior: [`docs/deployment-plan/spike-3/navigation-history.md`](docs/deployment-plan/spike-3/navigation-history.md).
 
@@ -34,13 +38,13 @@ Authoritative behavior: [`docs/deployment-plan/spike-3/navigation-history.md`](d
 
 ```
 - [ ] WorkspaceLocation carries any new deep id (and == ignores ref/title fluff)
-- [ ] New sidebar section added to WorkspaceModel.Section if needed
-- [ ] Every commit path calls workspace.go(to:) (sidebar, open, close/list-back, row select, links)
+- [ ] New sidebar section added to WorkspaceSection if needed
+- [ ] Every commit path calls navigation.go(to:) (sidebar, open, close/list-back, row select, links)
 - [ ] No raw selectedSection = / openSource / closeSource / select as the sole place change
 - [ ] Destination applies currentLocation on appear + onChange (and after load)
-- [ ] Missing deep id → workspace.fallbackToSectionRoot() after load
-- [ ] WorkspaceModel (or Binding) passed into the destination; not a private parallel nav store
-- [ ] WorkspaceModelTests cover push + restore (+ prune if new deep id)
+- [ ] Missing deep id → navigation.fallbackToSectionRoot() after load
+- [ ] Destination uses @Environment(WorkspaceNavigation.self); not a private parallel nav store
+- [ ] WorkspaceNavigationTests cover push + restore (+ prune if new deep id)
 ```
 
 ## Steps
@@ -57,17 +61,17 @@ do not bump casually. See `NavigationHistoryStore` / `NavigationHistoryDocument`
 
 ### 2. Sidebar section (if new destination)
 
-Add `WorkspaceModel.Section` case (raw value kebab-case), L10n label/icon
+Add `WorkspaceSection` case (raw value kebab-case), L10n label/icon
 ([`add-localized-string`](../add-localized-string/SKILL.md)), sidebar item, and
 `WorkspaceContent` host.
 
 Sidebar select **always** pushes a **section list root**:
 
 ```swift
-workspace.go(to: .sectionRoot(.yourSection))
+navigation.go(to: .sectionRoot(.yourSection))
 ```
 
-Never `workspace.selectedSection = …`.
+Never assign `navigation.selectedSection` directly.
 
 ### 3. Record navigation → `go(to:)`
 
@@ -85,16 +89,16 @@ commits navigation.
 
 In the destination view (pattern: `SourcesView`, `SourceFieldsView`):
 
-1. Pass `@Bindable var workspace: WorkspaceModel`.
-2. After catalog load + `onAppear` + `onChange(of: workspace.currentLocation)`:
+1. Take `@Environment(WorkspaceNavigation.self) private var navigation`.
+2. After catalog load + `onAppear` + `onChange(of: navigation.currentLocation)`:
    - Guard `location.section == .yourSection`.
    - Deep id present + found → apply selection/open.
-   - Deep id present + missing after load → `workspace.fallbackToSectionRoot()`.
+   - Deep id present + missing after load → `navigation.fallbackToSectionRoot()`.
    - Deep id nil → clear to list root (no second `go(to:)`).
 
 ### 5. Tests
 
-Extend [`WorkspaceModelTests`](macos/ProvenenciaTests/WorkspaceModelTests.swift)
+Extend [`WorkspaceNavigationTests`](macos/ProvenenciaTests/WorkspaceNavigationTests.swift)
 ([`add-swift-test`](../add-swift-test/SKILL.md)):
 
 - Push the new location; Back/Forward restore the deep id.
@@ -108,12 +112,13 @@ Inject a temp navigation file URL via `attachProject(uuid:fileURL:)`.
 - Push on every search keystroke or focus change
 - Key history by project path (use `project.uuid` + `InstallPaths.navigationFile`)
 - Put history JSON inside `.provenencia` or UserDefaults
+- Fuse navigation back into `WorkspaceModel` (chrome-only: sidebar collapse)
 - Disable ⌘[ / ⌘] menu items based on `canGoBack` / `canGoForward` in
   `ProvenenciaApp.commands` — Scene commands often freeze the first `.disabled`
   state; `goBack` / `goForward` already no-op at the ends
 
 ## Related
 
-- Persist/API: `NavigationHistoryStore`, `WorkspaceModel.attachProject`
+- Persist/API: `NavigationHistoryStore`, `WorkspaceNavigation.attachProject`
 - Keyboard: `NavigationCoordinator` + `ProvenenciaApp` (`⌘[` / `⌘]`)
 - Catalog session for destination loads: [`use-catalog-session`](../use-catalog-session/SKILL.md)

@@ -5,7 +5,7 @@ import SwiftUI
 /// with origin pill, mono key, data-type badge — sorted by label only.
 struct SourceFieldsListPane: View {
     @Bindable var model: SourceFieldsModel
-    @Bindable var workspace: WorkspaceModel
+    @Environment(WorkspaceNavigation.self) private var navigation
 
     /// Column widths live only here; `PVTable` shares them between the
     /// header and every row, so they are never restated.
@@ -66,14 +66,14 @@ struct SourceFieldsListPane: View {
         ]
     }
 
-    /// Selection is the table's, but workspace history owns committed place.
+    /// Selection is the table's; workspace history owns committed place.
     private var selection: Binding<String?> {
         Binding(
             get: { model.isAdding ? nil : model.selectedField?.id },
             set: { id in
                 guard let id else { return }
                 let field = model.fields.first(where: { $0.id == id })
-                workspace.go(to: WorkspaceLocation(
+                navigation.go(to: WorkspaceLocation(
                     section: .sourceFields,
                     fieldId: id,
                     title: field?.label

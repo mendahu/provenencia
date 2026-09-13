@@ -74,7 +74,7 @@ final class CatalogCounts {
     }
 
     /// Sidebar badge for a nav destination.
-    func badge(for section: WorkspaceModel.Section) -> Int? {
+    func badge(for section: WorkspaceSection) -> Int? {
         switch section {
         case .sources: sources
         case .sourceTypes: sourceTypes?.total

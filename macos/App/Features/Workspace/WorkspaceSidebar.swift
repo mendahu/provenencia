@@ -12,6 +12,7 @@ import SwiftUI
 struct WorkspaceSidebar: View {
     let session: InstallIdentity?
     @Bindable var workspace: WorkspaceModel
+    @Environment(WorkspaceNavigation.self) private var navigation
     /// `@Bindable` so badge publishes from Fields/Types invalidate this
     /// column — a plain `let` does not subscribe to `@Observable` writes.
     @Bindable var catalogCounts: CatalogCounts
@@ -34,7 +35,7 @@ struct WorkspaceSidebar: View {
     private let trafficLightLeadingInset: CGFloat = 100
 
     private var items: [PVSidebarNavItem] {
-        WorkspaceModel.Section.allCases.map { section in
+        WorkspaceSection.allCases.map { section in
             PVSidebarNavItem(
                 id: section.rawValue,
                 label: section.label,
@@ -53,11 +54,11 @@ struct WorkspaceSidebar: View {
                     PVSidebarNav(
                         groupLabel: L10n.Workspace.navGroupLabel,
                         items: items,
-                        selection: workspace.selectedSection.rawValue,
+                        selection: navigation.selectedSection.rawValue,
                         collapsed: workspace.isSidebarCollapsed,
                         onSelect: { id in
-                            guard let section = WorkspaceModel.Section(rawValue: id) else { return }
-                            workspace.go(to: .sectionRoot(section))
+                            guard let section = WorkspaceSection(rawValue: id) else { return }
+                            navigation.go(to: .sectionRoot(section))
                         }
                     )
                     Spacer(minLength: 0)

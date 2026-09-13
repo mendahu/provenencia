@@ -1,5 +1,5 @@
 ---
-description: New workspace places must go through WorkspaceLocation + go(to:) history
+description: New workspace places must go through WorkspaceNavigation + go(to:) history
 globs: macos/App/Features/Workspace/**/*.swift,macos/App/Features/Sources/**/*.swift,macos/App/Features/SourceFields/**/*.swift,macos/App/Features/SourceTypes/**/*.swift
 alwaysApply: false
 ---
@@ -9,7 +9,8 @@ alwaysApply: false
 Follow the project skill `.cursor/skills/add-workspace-location/SKILL.md`.
 Behavior: `docs/deployment-plan/spike-3/navigation-history.md`.
 
-- Committed places (sidebar, deep pages, master–detail selection, omnibar/breadcrumb targets) use `WorkspaceLocation` + `WorkspaceModel.go(to:)`.
+- Committed places (sidebar, deep pages, master–detail selection, omnibar/breadcrumb targets) use `WorkspaceLocation` + `WorkspaceNavigation.go(to:)` (environment-injected).
 - Do not set `selectedSection` or open/close/select as the sole navigation path.
 - Do not use SwiftUI `NavigationStack` / `NavigationPath` for workspace place.
-- Destinations apply `workspace.currentLocation` on appear/change; prune missing deep ids with `fallbackToSectionRoot()`.
+- Destinations apply `navigation.currentLocation` on appear/change; prune missing deep ids with `fallbackToSectionRoot()`.
+- `WorkspaceModel` is sidebar chrome only (collapse); do not put history back on it.

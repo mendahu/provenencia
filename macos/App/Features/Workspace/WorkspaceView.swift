@@ -17,6 +17,7 @@ struct WorkspaceView: View {
     let projectDir: String
     let userID: String
     @State private var workspace: WorkspaceModel
+    @State private var navigation: WorkspaceNavigation
     @State private var catalogCounts: CatalogCounts
     @State private var countsToast: VocabularyToast?
     @Environment(SignOutCoordinator.self) private var signOutCoordinator
@@ -27,6 +28,7 @@ struct WorkspaceView: View {
         self.projectDir = projectDir
         self.userID = userID
         _workspace = State(initialValue: WorkspaceModel())
+        _navigation = State(initialValue: WorkspaceNavigation())
         _catalogCounts = State(initialValue: CatalogCounts(projectDir: projectDir, store: model.store))
     }
 
@@ -34,7 +36,6 @@ struct WorkspaceView: View {
         HStack(spacing: 0) {
             WorkspaceSidebar(session: model.session, workspace: workspace, catalogCounts: catalogCounts)
             WorkspaceContent(
-                workspace: workspace,
                 project: model.project,
                 projectDir: projectDir,
                 userID: userID,
@@ -45,11 +46,9 @@ struct WorkspaceView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .environment(catalogCounts)
+        .environment(navigation)
         .vocabularyToastOverlay($countsToast, identifier: "workspace.counts.toast")
         .task {
-            if let uuid = model.project?.uuid, !uuid.isEmpty {
-                workspace.attachProject(uuid: uuid)
-            }
             await catalogCounts.refreshAll()
             if let message = catalogCounts.lastRefreshError {
                 countsToast = VocabularyToast(
@@ -60,15 +59,24 @@ struct WorkspaceView: View {
             }
         }
         .onAppear {
+            if let uuid = model.project?.uuid, !uuid.isEmpty {
+                navigation.attachProject(uuid: uuid)
+            }
             signOutCoordinator.isAvailable = true
             signOutCoordinator.action = { [model] in
                 Task { await model.signOut() }
             }
             bindNavigationCommands()
         }
-        .onChange(of: workspace.canGoBack) { _, _ in bindNavigationCommands() }
-        .onChange(of: workspace.canGoForward) { _, _ in bindNavigationCommands() }
-        .onChange(of: workspace.currentLocation) { _, _ in bindNavigationCommands() }
+        .onChange(of: navigation.canGoBack) { _, _ in bindNavigationCommands() }
+        .onChange(of: navigation.canGoForward) { _, _ in bindNavigationCommands() }
+        .onChange(of: navigation.currentLocation) { _, _ in bindNavigationCommands() }
+        .onChange(of: model.project?.uuid) { _, uuid in
+            if let uuid, !uuid.isEmpty {
+                navigation.attachProject(uuid: uuid)
+                bindNavigationCommands()
+            }
+        }
         .onDisappear {
             signOutCoordinator.isAvailable = false
             navigationCoordinator.canGoBack = false
@@ -91,10 +99,10 @@ struct WorkspaceView: View {
     }
 
     private func bindNavigationCommands() {
-        navigationCoordinator.canGoBack = workspace.canGoBack
-        navigationCoordinator.canGoForward = workspace.canGoForward
-        navigationCoordinator.goBack = { workspace.goBack() }
-        navigationCoordinator.goForward = { workspace.goForward() }
+        navigationCoordinator.canGoBack = navigation.canGoBack
+        navigationCoordinator.canGoForward = navigation.canGoForward
+        navigationCoordinator.goBack = { navigation.goBack() }
+        navigationCoordinator.goForward = { navigation.goForward() }
     }
 }
 

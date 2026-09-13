@@ -14,7 +14,7 @@ import SwiftUI
 /// Source fields already does, so the two vocabulary destinations behave
 /// alike.
 struct SourceTypesView: View {
-    @Bindable var workspace: WorkspaceModel
+    @Environment(WorkspaceNavigation.self) private var navigation
     @State private var model: SourceTypesModel
 
     /// Detail pane width — between the web board's `minmax(340px, 400px)`
@@ -24,13 +24,11 @@ struct SourceTypesView: View {
     private let detailPaneWidth: CGFloat = 380
 
     init(
-        workspace: WorkspaceModel,
         projectDir: String,
         userID: String,
         store: any GenealogyStore,
         catalogCounts: CatalogCounts? = nil
     ) {
-        self.workspace = workspace
         _model = State(
             initialValue: SourceTypesModel(
                 projectDir: projectDir,
@@ -53,7 +51,7 @@ struct SourceTypesView: View {
                     .accessibilityIdentifier("sourceTypes.loadError")
             } else {
                 HStack(spacing: 0) {
-                    SourceTypesListPane(model: model, workspace: workspace)
+                    SourceTypesListPane(model: model)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     PVDivider(axis: .vertical)
                     SourceTypesDetailPane(model: model)
@@ -79,19 +77,19 @@ struct SourceTypesView: View {
             applyWorkspaceLocation()
         }
         .onAppear { applyWorkspaceLocation() }
-        .onChange(of: workspace.currentLocation) { _, _ in applyWorkspaceLocation() }
+        .onChange(of: navigation.currentLocation) { _, _ in applyWorkspaceLocation() }
         .accessibilityIdentifier("sourceTypes")
     }
 
     private func applyWorkspaceLocation() {
-        let location = workspace.currentLocation
+        let location = navigation.currentLocation
         guard location.section == .sourceTypes else { return }
         if model.isAdding { return }
         if let typeId = location.typeId {
             if model.types.contains(where: { $0.id == typeId }) {
                 model.select(typeId)
             } else if !model.isLoading {
-                workspace.fallbackToSectionRoot()
+                navigation.fallbackToSectionRoot()
             }
         } else {
             model.clearHistorySelection()
@@ -169,11 +167,11 @@ struct SourceTypesView: View {
         CatalogTypeSuggestion(field: store.fieldsByProject[projectDir]![3], sortOrder: 0),
     ]
     return SourceTypesView(
-        workspace: WorkspaceModel(),
         projectDir: projectDir,
         userID: "00000000-0000-7000-8000-000000000001",
         store: store
     )
+    .environment(WorkspaceNavigation())
     .frame(width: 1180, height: 760)
 }
 #endif

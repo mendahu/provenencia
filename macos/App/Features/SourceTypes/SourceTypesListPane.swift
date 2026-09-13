@@ -5,7 +5,7 @@ import SwiftUI
 /// with origin pill, mono key, suggested-field count — sortable by all three.
 struct SourceTypesListPane: View {
     @Bindable var model: SourceTypesModel
-    @Bindable var workspace: WorkspaceModel
+    @Environment(WorkspaceNavigation.self) private var navigation
 
     /// Column widths live only here; `PVTable` shares them between the
     /// header and every row, so they are never restated.
@@ -96,7 +96,7 @@ struct SourceTypesListPane: View {
             set: { id in
                 guard let id else { return }
                 let type = model.types.first(where: { $0.id == id })
-                workspace.go(to: WorkspaceLocation(
+                navigation.go(to: WorkspaceLocation(
                     section: .sourceTypes,
                     typeId: id,
                     title: type?.label

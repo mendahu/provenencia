@@ -10,7 +10,7 @@ import SwiftUI
 /// researcher's place in the list while filling out the form and matches
 /// the density of the rest of the workspace.
 struct SourceFieldsView: View {
-    @Bindable var workspace: WorkspaceModel
+    @Environment(WorkspaceNavigation.self) private var navigation
     @State private var model: SourceFieldsModel
 
     /// Detail pane width — between the web board's `minmax(360px, 420px)`
@@ -20,13 +20,11 @@ struct SourceFieldsView: View {
     private let detailPaneWidth: CGFloat = 380
 
     init(
-        workspace: WorkspaceModel,
         projectDir: String,
         userID: String,
         store: any GenealogyStore,
         catalogCounts: CatalogCounts? = nil
     ) {
-        self.workspace = workspace
         _model = State(
             initialValue: SourceFieldsModel(
                 projectDir: projectDir,
@@ -49,7 +47,7 @@ struct SourceFieldsView: View {
                     .accessibilityIdentifier("sourceFields.loadError")
             } else {
                 HStack(spacing: 0) {
-                    SourceFieldsListPane(model: model, workspace: workspace)
+                    SourceFieldsListPane(model: model)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     PVDivider(axis: .vertical)
                     SourceFieldsDetailPane(model: model)
@@ -75,19 +73,19 @@ struct SourceFieldsView: View {
             applyWorkspaceLocation()
         }
         .onAppear { applyWorkspaceLocation() }
-        .onChange(of: workspace.currentLocation) { _, _ in applyWorkspaceLocation() }
+        .onChange(of: navigation.currentLocation) { _, _ in applyWorkspaceLocation() }
         .accessibilityIdentifier("sourceFields")
     }
 
     private func applyWorkspaceLocation() {
-        let location = workspace.currentLocation
+        let location = navigation.currentLocation
         guard location.section == .sourceFields else { return }
         if model.isAdding { return }
         if let fieldId = location.fieldId {
             if model.fields.contains(where: { $0.id == fieldId }) {
                 model.select(fieldId)
             } else if !model.isLoading {
-                workspace.fallbackToSectionRoot()
+                navigation.fallbackToSectionRoot()
             }
         } else {
             model.clearHistorySelection()
@@ -150,11 +148,11 @@ struct SourceFieldsView: View {
         CatalogMetadataField(id: "4", key: "memorial-id", origin: "plugin:findagrave", label: "Memorial id", dataType: "text", description: "Numeric memorial identifier."),
     ]
     return SourceFieldsView(
-        workspace: WorkspaceModel(),
         projectDir: projectDir,
         userID: "00000000-0000-7000-8000-000000000001",
         store: store
     )
+    .environment(WorkspaceNavigation())
     .frame(width: 1180, height: 760)
 }
 #endif

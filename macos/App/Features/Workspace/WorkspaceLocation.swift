@@ -4,7 +4,7 @@ import Foundation
 /// location (Source page, vocabulary row, …). Persisted in navigation history.
 /// See `docs/deployment-plan/spike-3/navigation-history.md`.
 struct WorkspaceLocation: Codable, Equatable, Sendable {
-    var section: WorkspaceModel.Section
+    var section: WorkspaceSection
     var sourceId: String?
     var fieldId: String?
     var typeId: String?
@@ -14,7 +14,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     var title: String?
 
     init(
-        section: WorkspaceModel.Section,
+        section: WorkspaceSection,
         sourceId: String? = nil,
         fieldId: String? = nil,
         typeId: String? = nil,
@@ -30,7 +30,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     }
 
     /// Section list root (no deep id).
-    static func sectionRoot(_ section: WorkspaceModel.Section) -> WorkspaceLocation {
+    static func sectionRoot(_ section: WorkspaceSection) -> WorkspaceLocation {
         WorkspaceLocation(section: section)
     }
 
@@ -48,5 +48,3 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         return trimmed.isEmpty ? nil : trimmed
     }
 }
-
-extension WorkspaceModel.Section: Codable {}

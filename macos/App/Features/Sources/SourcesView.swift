@@ -4,19 +4,17 @@ import SwiftUI
 /// list (not `PVTable`), Add Source dialog, and navigation to the Source page.
 /// Mounts inside the S2-01 workspace content host.
 struct SourcesView: View {
-    @Bindable var workspace: WorkspaceModel
+    @Environment(WorkspaceNavigation.self) private var navigation
     @State private var model: SourcesModel
     private let sessionDisplayName: String
 
     init(
-        workspace: WorkspaceModel,
         projectDir: String,
         userID: String,
         sessionDisplayName: String = "",
         store: any GenealogyStore,
         catalogCounts: CatalogCounts? = nil
     ) {
-        self.workspace = workspace
         self.sessionDisplayName = sessionDisplayName
         _model = State(
             initialValue: SourcesModel(
@@ -38,7 +36,7 @@ struct SourcesView: View {
                     sessionDisplayName: sessionDisplayName,
                     store: model.pageStore,
                     onBackToList: {
-                        workspace.go(to: .sectionRoot(.sources))
+                        navigation.go(to: .sectionRoot(.sources))
                     },
                     onSourceUpdated: { model.applyUpdatedSource($0) }
                 )
@@ -66,7 +64,7 @@ struct SourcesView: View {
                     if let opened = model.openedSourceID,
                        let source = model.sources.first(where: { $0.id == opened })
                     {
-                        workspace.go(to: WorkspaceLocation(
+                        navigation.go(to: WorkspaceLocation(
                             section: .sources,
                             sourceId: source.id,
                             ref: source.ref,
@@ -90,19 +88,19 @@ struct SourcesView: View {
             model.selectSoleTypeIfNeeded()
         }
         .onAppear { applyWorkspaceLocation() }
-        .onChange(of: workspace.currentLocation) { _, _ in applyWorkspaceLocation() }
+        .onChange(of: navigation.currentLocation) { _, _ in applyWorkspaceLocation() }
         .accessibilityIdentifier("sources")
     }
 
     private func applyWorkspaceLocation() {
-        let location = workspace.currentLocation
+        let location = navigation.currentLocation
         guard location.section == .sources else { return }
         if let sourceId = location.sourceId {
             if model.sources.contains(where: { $0.id == sourceId }) {
                 model.openSource(id: sourceId)
             } else if !model.isLoading {
                 // After load, missing or deleted sources land on the list root.
-                workspace.fallbackToSectionRoot()
+                navigation.fallbackToSectionRoot()
             }
         } else {
             model.closeSource()
@@ -293,7 +291,7 @@ struct SourcesView: View {
                 },
                 onActivate: { id in
                     let source = model.sources.first(where: { $0.id == id })
-                    workspace.go(to: WorkspaceLocation(
+                    navigation.go(to: WorkspaceLocation(
                         section: .sources,
                         sourceId: id,
                         ref: source?.ref,

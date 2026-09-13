@@ -63,7 +63,7 @@ IDs stay stable (`S3-NN`). Do not renumber when moving steps here.
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | S3-03 (done) |
-| **Deliverables** | Done. `WorkspaceLocation` (section + `sourceId` / `fieldId` / `typeId`, denormalized ref/title). `NavigationHistoryStore` owned by `WorkspaceModel`: `go(to:)`, `goBack()`, `goForward()`, `go(toIndex:)`, coalesce identical places, truncate forward, cap 100. Persist `Application Support/Provenencia/navigation/{uuid}.json` (v1). Sidebar, Source open/close/create, and vocabulary row selection all commit via `go(to:)`. Destinations apply `currentLocation` on appear/change; missing entities prune to section root. `⌘[` / `⌘]` via `NavigationCoordinator`. |
+| **Deliverables** | Done. `WorkspaceLocation` (section + `sourceId` / `fieldId` / `typeId`, denormalized ref/title). Freestanding `WorkspaceNavigation` (environment-injected; not fused into sidebar chrome): owns `NavigationHistoryStore` with `go(to:)`, `goBack()`, `goForward()`, `go(toIndex:)`, coalesce, truncate forward, cap 100. Persist `Application Support/Provenencia/navigation/{uuid}.json` (v1). Sidebar, Source open/close/create, and vocabulary row selection all commit via `go(to:)`. Destinations apply `currentLocation` on appear/change; missing entities prune to section root. `⌘[` / `⌘]` via `NavigationCoordinator`. `WorkspaceModel` is sidebar collapse only. |
 | **Context** | [`navigation-history.md`](navigation-history.md). Hand-rolled coordinator — not SwiftUI `NavigationStack` / `NavigationPath`. |
 | **Out** | Final toolbar visuals / jump menus (S3-05); omnibar results; search RPC. |
 | **Dogfood** | Keyboard Back/Forward restores deep locations across destinations; relaunch returns to the leave-off place for that `project.uuid`. |

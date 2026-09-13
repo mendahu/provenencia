@@ -79,6 +79,8 @@
 		A7B8C9D0E1F203948576A1B2 /* NavigationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7B8C9D0E1F203948576A1B0 /* NavigationCoordinator.swift */; };
 		B8C9D0E1F203948576A1B2C3 /* WorkspaceLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8C9D0E1F203948576A1B2C1 /* WorkspaceLocation.swift */; };
 		C9D0E1F203948576A1B2C3D4 /* NavigationHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9D0E1F203948576A1B2C3D2 /* NavigationHistoryStore.swift */; };
+		D0E1F203948576A1B2C3D4E5 /* WorkspaceSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E1F203948576A1B2C3D4E3 /* WorkspaceSection.swift */; };
+		E1F203948576A1B2C3D4E5F6 /* WorkspaceNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F203948576A1B2C3D4E5F4 /* WorkspaceNavigation.swift */; };
 		504C4A2D17A9AC30A47D4E37 /* PVSelect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28FB7FB1DE947EE962F4BA83 /* PVSelect.swift */; };
 		537CBAF612C54F4F04ADA683 /* PVSpacing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BEB8D3B3D1A6C08B3733B13 /* PVSpacing.swift */; };
 		563FA9B6FA344585CE32B2A7 /* PVIconButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68425DFE8D1974D7A4AC5BF8 /* PVIconButton.swift */; };
@@ -90,6 +92,7 @@
 		6D245285E4AB8AAFDE78E313 /* PVIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36412B0A6A6851ADB45A7AA8 /* PVIcon.swift */; };
 		6F7945720B05D7777BFA79A2 /* WorkspaceModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F03B00F6F0D021AFCDAD2DEB /* WorkspaceModel.swift */; };
 		826574F8CA8D24BE551A88BF /* WorkspaceModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 164584B2DB70D89A55C4178F /* WorkspaceModelTests.swift */; };
+		F203948576A1B2C3D4E5F607 /* WorkspaceNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F203948576A1B2C3D4E5F605 /* WorkspaceNavigationTests.swift */; };
 		840A56FF5DC13597C1DFDDF9 /* TrafficLights.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85C0991FB99984CAEB385DA4 /* TrafficLights.swift */; };
 		854A784AE802C0EF7A484971 /* PVToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FC0B0A893C7248A08303738 /* PVToast.swift */; };
 		89CEBFA09358C67639951CE0 /* PVEmptyState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3555554CD714B1FD24C2DB2F /* PVEmptyState.swift */; };
@@ -216,6 +219,7 @@
 		AA0000000000000000000314 /* PVListTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVListTests.swift; sourceTree = "<group>"; };
 		11ADAF744C32587CD34CDD23 /* PVLogoMark.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVLogoMark.swift; sourceTree = "<group>"; };
 		164584B2DB70D89A55C4178F /* WorkspaceModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceModelTests.swift; sourceTree = "<group>"; };
+		F203948576A1B2C3D4E5F605 /* WorkspaceNavigationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceNavigationTests.swift; sourceTree = "<group>"; };
 		16D4D3531F81FABFCDDE4F84 /* PVField.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVField.swift; sourceTree = "<group>"; };
 		1B183C69AA74C2C22006FC05 /* Fonts */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder; name = Fonts; path = Fonts; sourceTree = "<group>"; };
 		28FB7FB1DE947EE962F4BA83 /* PVSelect.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSelect.swift; sourceTree = "<group>"; };
@@ -309,6 +313,8 @@
 		A7B8C9D0E1F203948576A1B0 /* NavigationCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NavigationCoordinator.swift; sourceTree = "<group>"; };
 		B8C9D0E1F203948576A1B2C1 /* WorkspaceLocation.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceLocation.swift; sourceTree = "<group>"; };
 		C9D0E1F203948576A1B2C3D2 /* NavigationHistoryStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NavigationHistoryStore.swift; sourceTree = "<group>"; };
+		D0E1F203948576A1B2C3D4E3 /* WorkspaceSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceSection.swift; sourceTree = "<group>"; };
+		E1F203948576A1B2C3D4E5F4 /* WorkspaceNavigation.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceNavigation.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -472,6 +478,8 @@
 			isa = PBXGroup;
 			children = (
 				F03B00F6F0D021AFCDAD2DEB /* WorkspaceModel.swift */,
+				D0E1F203948576A1B2C3D4E3 /* WorkspaceSection.swift */,
+				E1F203948576A1B2C3D4E5F4 /* WorkspaceNavigation.swift */,
 				B8C9D0E1F203948576A1B2C1 /* WorkspaceLocation.swift */,
 				C9D0E1F203948576A1B2C3D2 /* NavigationHistoryStore.swift */,
 				C1FE31A30B665829ECF16A6F /* WorkspaceSidebar.swift */,
@@ -646,6 +654,7 @@
 				AA0000000000000000000352 /* TimestampFormatTests.swift */,
 				AA00000000000000000000F2 /* ProjectSlugTests.swift */,
 				164584B2DB70D89A55C4178F /* WorkspaceModelTests.swift */,
+				F203948576A1B2C3D4E5F605 /* WorkspaceNavigationTests.swift */,
 				AA0000000000000000000270 /* CatalogCountsTests.swift */,
 				AA00000000000000000003A0 /* CatalogSessionStoreTests.swift */,
 				B567080CA23230E18488F894 /* TrafficLightsTests.swift */,
@@ -872,6 +881,8 @@
 				A7B8C9D0E1F203948576A1B2 /* NavigationCoordinator.swift in Sources */,
 				E9178C44063AD95B47B5D524 /* PVSidebarNav.swift in Sources */,
 				6F7945720B05D7777BFA79A2 /* WorkspaceModel.swift in Sources */,
+				D0E1F203948576A1B2C3D4E5 /* WorkspaceSection.swift in Sources */,
+				E1F203948576A1B2C3D4E5F6 /* WorkspaceNavigation.swift in Sources */,
 				B8C9D0E1F203948576A1B2C3 /* WorkspaceLocation.swift in Sources */,
 				C9D0E1F203948576A1B2C3D4 /* NavigationHistoryStore.swift in Sources */,
 				6227C44524E2C4EB3DE4AAD7 /* WorkspaceSidebar.swift in Sources */,
@@ -952,6 +963,7 @@
 				AA0000000000000000000353 /* TimestampFormatTests.swift in Sources */,
 				AA00000000000000000000F3 /* ProjectSlugTests.swift in Sources */,
 				826574F8CA8D24BE551A88BF /* WorkspaceModelTests.swift in Sources */,
+				F203948576A1B2C3D4E5F607 /* WorkspaceNavigationTests.swift in Sources */,
 				AA0000000000000000000271 /* CatalogCountsTests.swift in Sources */,
 				AA00000000000000000003A1 /* CatalogSessionStoreTests.swift in Sources */,
 				8B20E11A26E9E10EF915519C /* TrafficLightsTests.swift in Sources */,
