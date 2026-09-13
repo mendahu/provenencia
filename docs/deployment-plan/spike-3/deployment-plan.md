@@ -2,11 +2,11 @@
 
 Spike 3 sequenced PRs: **navigation history** + **omnibar search**, including the small layout moves from the App Layout / Omnibar Results boards.
 
-Authoritative behavior: [`navigation-history.md`](navigation-history.md), [`omnibar-search.md`](omnibar-search.md). Visual source of truth: [`design/`](design/). Spike overview: [`README.md`](README.md).
+Authoritative behavior: [`navigation-history.md`](navigation-history.md), [`omnibar-search.md`](omnibar-search.md). Visual summary: [`design/`](design/). Spike overview: [`README.md`](README.md). Finished steps: [`completed.md`](completed.md).
 
 ## Status
 
-**Sequenced — ready to implement.** Design boards for toolbar chrome and omnibar results live in Claude Design (see [`design/README.md`](design/README.md)). Steps below are mergeable slices; each should leave `main` dogfoodable.
+**In progress.** Open steps below; completed steps live in [`completed.md`](completed.md) (S3-01…S3-03).
 
 ## Goal (dogfood bar)
 
@@ -16,15 +16,9 @@ A researcher can:
 2. Find Sources, source types, and source fields from one toolbar **omnibar** (`⌘K`), pick a hit, and land via the same `go(to:)` history.
 3. No longer see per-destination list search (Sources list / vocabulary panes).
 
-## Design (done)
+## Layout moves (from Design boards)
 
-| Step | Kind | Board / brief | Feeds |
-| --- | --- | --- | --- |
-| **S3-01** | Design | Claude Design **App Layout** — main-column toolbar: Back/Forward, jump menus, breadcrumbs, omnibar field ([`design/README.md`](design/README.md)) | S3-05, S3-06 |
-| **S3-02** | Design | Claude Design **Omnibar Results** (+ hit row) — flat ranked rich rows ([`design/README.md`](design/README.md)) | S3-10 |
-| — | Brief (archived) | [`design/archive/omnibar-results-dropdown-brief.md`](design/archive/omnibar-results-dropdown-brief.md) | S3-02 |
-
-Layout moves locked by the boards (implement in the PR steps that own chrome):
+Implement in the PR steps that own chrome (see [`design/README.md`](design/README.md); boards in Claude Design):
 
 | Change | From → To |
 | --- | --- |
@@ -41,26 +35,23 @@ Keyboard (board): `⌘[` Back, `⌘]` Forward; `⌘K` focuses omnibar.
 
 ---
 
-## PR sequence
+## Open PR sequence
 
 Steps are **`S3-NN`**. **Depends on** is the merge gate. Prefer many small PRs; do not fold search engine work into the first toolbar PR.
 
 ```text
-S3-01/02 Design (done)
-        │
-        ▼
-S3-03  project.uuid ─────────────────────────────┐
-        │                                         │
-        ▼                                         ▼
+S3-03 project.uuid (done) ───────────────────┐
+        │                                     │
+        ▼                                     ▼
 S3-04  WorkspaceLocation + history store    S3-07  SearchCatalog RPC shell
-        │                                         │
-        ▼                                         ▼
+        │                                     │
+        ▼                                     ▼
 S3-05  Toolbar chrome (nav + crumbs + field) S3-08  FTS5 projection
-        │                                         │
-        │                                         ▼
-        │                                   S3-09  Context ranking + ref path
-        │                                         │
-        └──────────────┬──────────────────────────┘
+        │                                     │
+        │                                     ▼
+        │                               S3-09  Context ranking + ref path
+        │                                     │
+        └──────────────┬──────────────────────┘
                        ▼
                  S3-10  Omnibar results + wire search + remove list search
                        │
@@ -71,23 +62,12 @@ S3-05  Toolbar chrome (nav + crumbs + field) S3-08  FTS5 projection
                  S3-12  Dogfood polish (optional S3-13+ kinds)
 ```
 
-### S3-03 — PR: Catalog `project.uuid`
-
-| | |
-| --- | --- |
-| **Kind** | PR |
-| **Depends on** | — |
-| **Deliverables** | Migration adding `project.uuid` (`BLOB` UUIDv7, `NOT NULL` + `UNIQUE` after backfill). Mint on **Create**; heal-mint on **Open** of older catalogs. Never rewrite after mint. Expose on `ProjectInfo` / open payload for Swift. Domain helpers under `core/database/project`. |
-| **Context** | [`navigation-history.md`](navigation-history.md) § Project key; skill [`add-catalog-migration`](../../../.cursor/skills/add-catalog-migration/SKILL.md). Active-project pointer stays path-based; history (and later install-local chrome) keys off this UUID. |
-| **Out** | History JSON; toolbar; short `PRJ-…` ref. |
-| **Dogfood** | New + upgraded projects show a stable UUID on open; rename/move of the folder does not change it. |
-
 ### S3-04 — PR: `WorkspaceLocation` + navigation history store
 
 | | |
 | --- | --- |
 | **Kind** | PR |
-| **Depends on** | S3-03 |
+| **Depends on** | S3-03 (done) |
 | **Deliverables** | `WorkspaceLocation` (section + per-kind deep fields: `sourceId`, `fieldId`, `typeId`, …). History store (array + index) on `WorkspaceModel` (or owned type): `go(to:)`, `goBack()`, `goForward()`, `go(toIndex:)`. Persist `…/Provenencia/navigation/{uuid}.json` (v1, max **100** entries). Relaunch restore to leave-off location; prune missing entities calmly. **Wire every committed navigation** through `go(to:)` — sidebar, Source open/close, vocabulary row selection, future breadcrumbs/omnibar. Coalesce identical location; sidebar always pushes; master–detail selection pushes. `⌘[` / `⌘]` even before final toolbar chrome if practical. Model/FakeStore tests for stack, jump index, persistence round-trip, Sources ↔ Source page + one vocabulary selection. |
 | **Context** | [`navigation-history.md`](navigation-history.md). Hand-rolled coordinator — **not** SwiftUI `NavigationStack` / `NavigationPath`. |
 | **Out** | Final toolbar visuals (S3-05); omnibar results; search RPC. Temporary debug affordances OK if chrome is not ready. |
@@ -98,7 +78,7 @@ S3-05  Toolbar chrome (nav + crumbs + field) S3-08  FTS5 projection
 | | |
 | --- | --- |
 | **Kind** | PR |
-| **Depends on** | S3-04; S3-01 board |
+| **Depends on** | S3-04; S3-01 board (done) |
 | **Deliverables** | Main-column header per App Layout: ~46px, bottom border, content-leading padding. Leading Back/Forward `IconButton`s (disabled at stack ends). Long-press / secondary-click jump menus (nearest **15**, rich rows). Toolbar `PVBreadcrumbs` with navigable ancestors via `go(to:)`. **Strip** Source-page identity-header breadcrumbs and hierarchical list-back. Trailing omnibar **field** always visible (`⌘K` focuses); no results panel required yet (or empty/disabled until S3-10). L10n for new chrome. |
 | **Context** | Claude Design App Layout board; [`design/README.md`](design/README.md). |
 | **Out** | Search RPC, FTS, results dropdown, deleting list search (S3-10). |
@@ -151,7 +131,7 @@ S3-05  Toolbar chrome (nav + crumbs + field) S3-08  FTS5 projection
 | | |
 | --- | --- |
 | **Kind** | PR |
-| **Depends on** | S3-05 (field shell); S3-09 (engine quality bar for dogfood); S3-02 board |
+| **Depends on** | S3-05 (field shell); S3-09 (engine quality bar for dogfood); S3-02 board (done) |
 | **Deliverables** | Results dropdown per Omnibar Results board: shared `PVOmnibarHitRow` (lead / title / kind chip / secondary / ref / match context / selected). Anchoring, loading, empty, keyboard selection, Esc/outside dismiss. Debounced `SearchCatalog`; select hit → `go(to: location)` → dismiss. **Delete** Sources list search and `VocabularyListPane` search chrome + query-only filter plumbing. Extend thumbnail/glyph modes as the board requires. L10n. |
 | **Context** | Claude Design Omnibar Results board; [`omnibar-search.md`](omnibar-search.md) S4. Board rules: no panel on empty/short query; flat engine order; kind chip disambiguates. |
 | **Out** | Fuzzy; Files/Artifact first-class hit kinds; Interpretation kinds. |
@@ -192,7 +172,6 @@ Not required to close Spike 3 dogfood if Sources + types + fields search well:
 
 | Step | Title sketch |
 | --- | --- |
-| S3-03 | Give catalogs a durable project UUID for install-local chrome |
 | S3-04 | Add first-class workspace navigation history |
 | S3-05 | Move Back/Forward and breadcrumbs into the main toolbar |
 | S3-07 | Add a catalog SearchCatalog RPC and kind registry |
@@ -208,8 +187,8 @@ Not required to close Spike 3 dogfood if Sources + types + fields search well:
 
 | Track | Steps |
 | --- | --- |
-| **Design** | S3-01, S3-02 — done |
-| **Core / FFI** | S3-03 → S3-07 → S3-08 → S3-09 → (S3-11) |
+| **Design** | S3-01, S3-02 — done ([`completed.md`](completed.md)) |
+| **Core / FFI** | S3-03 done → S3-07 → S3-08 → S3-09 → (S3-11) |
 | **Mac workspace** | S3-04 → S3-05 (→ S3-06) → S3-10 → S3-12 |
 
 S3-07+ may proceed beside S3-04/S3-05 once Hit `location` matches `WorkspaceLocation`. **S3-10** is the integration gate.
@@ -238,4 +217,4 @@ Jake can, on his MacBook:
 3. See **no** search fields on the Sources list or vocabulary list panes.
 4. Confirm `project.uuid` exists in SQLite and `navigation/{uuid}.json` under Application Support.
 
-When done, move finished step write-ups to a `completed.md` (Spike 2 pattern) and archive any superseded notes.
+When a step finishes, move its write-up to [`completed.md`](completed.md) and leave the open list here as the checklist.

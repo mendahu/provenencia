@@ -68,6 +68,11 @@ func Complete(identityDir, parent, displayName, familyName string) (Result, erro
 		_ = proj.Close()
 		return Result{}, err
 	}
+	info, err = project.Get(proj)
+	if err != nil {
+		_ = proj.Close()
+		return Result{}, err
+	}
 	dir, err := closeCatalog(proj)
 	if err != nil {
 		return Result{}, err

@@ -679,7 +679,8 @@ struct GoStore: GenealogyStore {
             updatedAt: p.updatedAt,
             updatedByUserID: p.updatedByUserID,
             updatedByDisplayName: p.updatedByDisplayName,
-            updatedByRef: p.updatedByRef
+            updatedByRef: p.updatedByRef,
+            uuid: p.uuid
         )
     }
 

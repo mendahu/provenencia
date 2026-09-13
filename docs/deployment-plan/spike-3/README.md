@@ -2,7 +2,7 @@
 
 ## Status
 
-**Sequenced.** PR order lives in [`deployment-plan.md`](deployment-plan.md). Design boards stay in Claude Design ([`design/README.md`](design/README.md)).
+**In progress.** Open checklist: [`deployment-plan.md`](deployment-plan.md). Finished steps: [`completed.md`](completed.md). Design boards stay in Claude Design ([`design/README.md`](design/README.md)).
 
 Workspace layout (nav history + omnibar chrome) plus first-class infrastructure: **catalog `project.uuid`**, hand-rolled navigation history, and **Go/SQLite catalog search** (registry + FTS5 + ranking; successive PRs).
 
@@ -20,10 +20,11 @@ See [`navigation-history.md`](navigation-history.md) § Implementation posture a
 
 | Doc | Role |
 | --- | --- |
-| [**Deployment plan**](deployment-plan.md) | Sequenced Design + PR steps (S3-01…), layout deltas, dogfood bar |
+| [**Deployment plan**](deployment-plan.md) | Open PR checklist (S3-04…) |
+| [**Completed**](completed.md) | Finished Design/PR steps (S3-01…) |
 | [Navigation history](navigation-history.md) | Back/Forward behavior, persistence, `project.uuid` |
 | [Omnibar search](omnibar-search.md) | Registry + FTS5 + ranking; remove per-destination search |
-| [Design boards](design/README.md) | App Layout + Omnibar Results exports |
+| [Design boards](design/README.md) | App Layout + Omnibar Results summaries |
 
 ## Out of scope (for now)
 

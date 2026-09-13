@@ -96,5 +96,6 @@ func projectInfoProto(projectDir string, info onboarding.ResolvedInfo) *engine.P
 		UpdatedByUserId:      info.UpdatedByUserID,
 		UpdatedByDisplayName: info.UpdatedByDisplayName,
 		UpdatedByRef:         info.UpdatedByRef,
+		Uuid:                 uuidString(info.Info.UUID),
 	}
 }

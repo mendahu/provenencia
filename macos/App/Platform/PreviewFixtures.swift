@@ -22,7 +22,8 @@ enum PreviewFixture {
         updatedAt: "",
         updatedByUserID: "",
         updatedByDisplayName: "",
-        updatedByRef: ""
+        updatedByRef: "",
+        uuid: "00000000-0000-7000-8000-0000000000aa"
     )
 }
 #endif

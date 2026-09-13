@@ -49,7 +49,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             updatedAt: "2026-01-01T00:00:00Z",
             updatedByUserID: "00000000-0000-7000-8000-000000000001",
             updatedByDisplayName: "Jake Robins",
-            updatedByRef: "USR-F4N2P"
+            updatedByRef: "USR-F4N2P",
+            uuid: "00000000-0000-7000-8000-0000000000aa"
         )
     )
 
@@ -92,7 +93,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             updatedAt: now,
             updatedByUserID: userID,
             updatedByDisplayName: displayName,
-            updatedByRef: ref
+            updatedByRef: ref,
+            uuid: UUID().uuidString.lowercased()
         )
         let result = OnboardingResult(
             projectDir: projectDir,

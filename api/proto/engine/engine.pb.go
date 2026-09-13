@@ -1357,8 +1357,10 @@ type ProjectInfo struct {
 	UpdatedByUserId      string                 `protobuf:"bytes,5,opt,name=updated_by_user_id,json=updatedByUserId,proto3" json:"updated_by_user_id,omitempty"`
 	UpdatedByDisplayName string                 `protobuf:"bytes,6,opt,name=updated_by_display_name,json=updatedByDisplayName,proto3" json:"updated_by_display_name,omitempty"`
 	UpdatedByRef         string                 `protobuf:"bytes,7,opt,name=updated_by_ref,json=updatedByRef,proto3" json:"updated_by_ref,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// Durable catalog project identity (UUIDv7); empty only if project row is absent.
+	Uuid          string `protobuf:"bytes,8,opt,name=uuid,proto3" json:"uuid,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ProjectInfo) Reset() {
@@ -1440,6 +1442,13 @@ func (x *ProjectInfo) GetUpdatedByRef() string {
 	return ""
 }
 
+func (x *ProjectInfo) GetUuid() string {
+	if x != nil {
+		return x.Uuid
+	}
+	return ""
+}
+
 type GetProjectInfoResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Project       *ProjectInfo           `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
@@ -1491,10 +1500,10 @@ type Source struct {
 	SourceTypeId string                 `protobuf:"bytes,3,opt,name=source_type_id,json=sourceTypeId,proto3" json:"source_type_id,omitempty"`
 	Title        string                 `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
 	Description  string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
-	// Thumbnail JPEG under objects/… for list cells (empty = no raster).
+	// Thumbnail JPEG under objects/… for list cells (empty = no raster cover).
 	ThumbnailRelPath string `protobuf:"bytes,6,opt,name=thumbnail_rel_path,json=thumbnailRelPath,proto3" json:"thumbnail_rel_path,omitempty"`
-	// When thumbnail_rel_path is empty but a File exists under some Artifact,
-	// MIME of the cover-candidate File for client file-type glyph fallback.
+	// Reserved / unused for Source cover. File-type glyphs stay on Artifact
+	// rows only; Source paints type icon or raster.
 	ThumbnailMediaType        string `protobuf:"bytes,7,opt,name=thumbnail_media_type,json=thumbnailMediaType,proto3" json:"thumbnail_media_type,omitempty"`
 	ThumbnailOriginalFilename string `protobuf:"bytes,8,opt,name=thumbnail_original_filename,json=thumbnailOriginalFilename,proto3" json:"thumbnail_original_filename,omitempty"`
 	// Cover preference: "artifact" (primary_artifact_id) or "type_icon".
@@ -6354,7 +6363,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x0fSignOutResponse\"8\n" +
 	"\x15GetProjectInfoRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
-	"projectDir\"\x8c\x02\n" +
+	"projectDir\"\xa0\x02\n" +
 	"\vProjectInfo\x12\x14\n" +
 	"\x05label\x18\x01 \x01(\tR\x05label\x12\x1f\n" +
 	"\vfolder_name\x18\x02 \x01(\tR\n" +
@@ -6365,7 +6374,8 @@ const file_engine_proto_rawDesc = "" +
 	"updated_at\x18\x04 \x01(\tR\tupdatedAt\x12+\n" +
 	"\x12updated_by_user_id\x18\x05 \x01(\tR\x0fupdatedByUserId\x125\n" +
 	"\x17updated_by_display_name\x18\x06 \x01(\tR\x14updatedByDisplayName\x12$\n" +
-	"\x0eupdated_by_ref\x18\a \x01(\tR\fupdatedByRef\"V\n" +
+	"\x0eupdated_by_ref\x18\a \x01(\tR\fupdatedByRef\x12\x12\n" +
+	"\x04uuid\x18\b \x01(\tR\x04uuid\"V\n" +
 	"\x16GetProjectInfoResponse\x12<\n" +
 	"\aproject\x18\x01 \x01(\v2\".provenencia.engine.v1.ProjectInfoR\aproject\"\xf7\x02\n" +
 	"\x06Source\x12\x0e\n" +

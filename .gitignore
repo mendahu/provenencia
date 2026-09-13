@@ -5,6 +5,8 @@
 
 /bin/
 /dist/
+.gopath/
+.gocache/
 
 xcuserdata/
 DerivedData/

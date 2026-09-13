@@ -14,6 +14,8 @@ struct ProjectInfo: Sendable, Equatable {
     var updatedByUserID: String
     var updatedByDisplayName: String
     var updatedByRef: String
+    /// Durable catalog project identity (UUIDv7 string). Empty only if absent.
+    var uuid: String = ""
 }
 
 struct OnboardingResult: Sendable, Equatable {
