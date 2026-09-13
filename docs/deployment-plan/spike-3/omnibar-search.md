@@ -1,8 +1,8 @@
 # Omnibar search
 
-**Status:** pulled into [Spike 3](README.md) — requirements (results dropdown design still provisional).
+**Status:** pulled into [Spike 3](README.md) — requirements. PR sequence: [`deployment-plan.md`](deployment-plan.md).
 
-Visual chrome for the **field** (placement + access): [`design/App Layout.dc.html`](design/App%20Layout.dc.html). Results-list / dropdown visuals are **not** finalized yet — keep the [Display ideas](#display-problem) below as working hypotheses until a dedicated board lands.
+Visual chrome for the **field** (placement + access): Claude Design **App Layout** board. Results dropdown: Claude Design **Omnibar Results** board (brief archived under [`design/archive/`](design/archive/); summary [`design/README.md`](design/README.md)). The [Display ideas](#display-problem) section below is historical; implement against the board.
 
 Engine / ranking architecture is **in scope** and first-class (not a client-side `LIKE` forever). Ship it in **successive PRs**; the end state below is the product bar.
 
@@ -59,7 +59,7 @@ Toolbar sits in the **main column** (shared with Back/Forward and breadcrumbs �
 | --- | --- |
 | **Placement** | Always-visible search field, top-**right** of the main-column toolbar (~420px wide / max ~60% in the board). Search icon leading; placeholder copy per board (e.g. people, sources, places, files). |
 | **⌘K** | Keyboard focuses / activates the omnibar (suffix hint on the field in the board). Same field — not a separate hidden-only palette. |
-| **Results dropdown** | Opens from the field while searching; **visual design TBD**. Behavioral: navigable hits; selecting one calls `go(to:)` and dismisses. Debounce typing before RPC. |
+| **Results dropdown** | Opens from the field while searching per Omnibar Results board (rich `PVOmnibarHitRow`, flat rank, ~640px widen-left). Behavioral: navigable hits; selecting one calls `go(to:)` and dismisses. Debounce typing before RPC; empty/short query does not open a panel. |
 
 ## What should be searchable (horizon)
 
@@ -220,11 +220,11 @@ Relationships without refs: poor primary hits — prefer related Person/Event en
 
 Hits are **heterogeneous**. A Source wants title + type + thumbnail + `SRC-…`. A File wants filename + media type. A Person Node wants name / label + `PER-C-…`. A vocabulary field wants label + key + data type.
 
-**Results UI design is unfinished** — treat the following as provisional until a dropdown board exists.
+**Results UI is locked** by the Claude Design Omnibar Results board: shared rich row skeleton + flat ranked list. The ideas below remain useful rationale; implement against the board / `PVOmnibarHitRow`.
 
-### Display ideas (rough)
+### Display ideas (board-aligned)
 
-**1. Shared skeleton, kind-specific slots**
+**1. Shared skeleton, kind-specific slots** — shipped direction on the board.
 
 ```text
 [icon / thumb]  primary title                 kind · secondary
@@ -233,26 +233,24 @@ Hits are **heterogeneous**. A Source wants title + type + thumbnail + `SRC-…`.
 
 Same spacing and typography; only the slots change. Avoid per-kind card layouts inside the results list.
 
-**2. Grouped results** — sections by kind; empty omitted.
+**2. Grouped results** — optional exploration only; board default is flat.
 
-**3. Faceted omnibar** — `type:` / `in:` or pills; complement to default everything mode.
+**3. Faceted omnibar** — later; not Spike 3 chrome.
 
-**4. Rank, then unify** — flat list ordered by engine score; kind chip disambiguates.
+**4. Rank, then unify** — flat list ordered by engine score; kind chip disambiguates (**board default**).
 
-**5. Two densities** — compact while typing; richer secondary on expand/⌥.
+**5. Two densities** — not required by the board; denser rich rows are the v1.
 
-**Recommendation to explore in Design:** **(1) + (4)** plus exact-ref promotion. Grouping/facets if dogfood stays confusing.
+## Incremental delivery
 
-## Incremental delivery (for the later deployment plan)
-
-Break into successive PRs so each slice is dogfoodable. Exact ticket IDs TBD when Spike 3 is sequenced; intended order:
+Break into successive PRs so each slice is dogfoodable. Sequenced as **S3-07…S3-11** in [`deployment-plan.md`](deployment-plan.md); intended order:
 
 | Slice | Delivers | Evaluate |
 | --- | --- | --- |
 | **S1 — Registry + RPC shell** | Searchable-kind registry; `SearchCatalog` protobuf/FFI; Hit DTO; FakeStore; context location on the request. May use a naïve scanner **behind the same API** only as a bridge. | RPC shape; location mapping; tests without UI. |
 | **S2 — FTS5 projection** | Migration + FTS documents for Sources / types / fields; incremental upkeep on writes; rebuild/heal; swap scanner for FTS retrieval + field weights. | Latency; relevance on real dogfood catalogs; index correctness after edits. |
 | **S3 — Context ranking + ref fast path** | Section/kind boosts; exact/prefix ref promotion; match_reason where cheap. | “I’m on Sources → Sources float” feels right; paste-ref UX. |
-| **S4 — Omnibar chrome + remove list search** | Toolbar field + ⌘K; provisional results UI; wire hits to `go(to:)`; **delete** per-destination search. | End-to-end find; no dual search chrome. |
+| **S4 — Omnibar chrome + remove list search** | Toolbar field + ⌘K (S3-05 shell); results UI per board (S3-10); wire hits to `go(to:)`; **delete** per-destination search. | End-to-end find; no dual search chrome. |
 | **S5 — Fuzzy / typo** | Trigram and/or Go fuzzy shortlist pass; tune thresholds. | Typos recover without garbage. |
 | **S6+ — More kinds / depth** | Files, Artifacts projection; deeper note/metadata/transcription weight tuning; Interpretation when UI exists. | Noise vs recall; registry extensibility. |
 
@@ -269,7 +267,7 @@ Local-first catalogs invite keyboard navigation. Short refs were designed to be 
 | Where does the field live? | **Main-column toolbar, trailing** (App Layout board). |
 | Always-visible vs ⌘K-only? | **Both:** always-visible field; **⌘K** focuses/activates it. |
 | Per-destination list search? | **Remove** when omnibar covers those kinds. |
-| Results dropdown visuals? | **TBD** — provisional display ideas until a board exists. |
+| Results dropdown visuals? | **Board locked** — Claude Design Omnibar Results; shared rich row + flat ranked list. |
 | Hit navigation? | **`go(to:)`** — same session history as sidebar / breadcrumbs. |
 | Engine? | **Go `SearchCatalog` + kind registry + FTS5 projection** in the catalog DB — not Swift-as-search-engine. |
 | Brute force forever? | **No.** Naïve scan only as a short bridge behind the stable RPC. |
@@ -292,7 +290,6 @@ Local-first catalogs invite keyboard navigation. Short refs were designed to be 
 
 ## Explicitly out of scope
 
-- Final results-dropdown Design board (field chrome is done; results UI is not)
 - Searching audit history, settings, or help docs
 - Natural-language / AI “ask the catalog” queries
 - Cross-project search
@@ -300,7 +297,8 @@ Local-first catalogs invite keyboard navigation. Short refs were designed to be 
 
 ## Related docs
 
-- [`design/README.md`](design/README.md) — App Layout board (omnibar field placement)
+- [`deployment-plan.md`](deployment-plan.md) — sequenced PRs
+- [`design/README.md`](design/README.md) — App Layout + Omnibar Results boards
 - [`navigation-history.md`](navigation-history.md) (Back/Forward after omnibar jumps; shared toolbar; `WorkspaceLocation`)
 - [`application-stack.md`](../../application-stack.md) (FTS5; index rebuild task class)
 - [`catalog-refs.md`](../../catalog-refs.md)

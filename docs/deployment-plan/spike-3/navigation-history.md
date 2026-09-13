@@ -1,8 +1,8 @@
 # Navigation history (back / forward)
 
-**Status:** pulled into [Spike 3](README.md) — requirements.
+**Status:** pulled into [Spike 3](README.md) — requirements. PR sequence: [`deployment-plan.md`](deployment-plan.md) (S3-03…S3-06).
 
-Visual chrome: [`design/App Layout.dc.html`](design/App%20Layout.dc.html) (screenshots in [`design/uploads/`](design/uploads/)). This note owns **behavior**; the board is the visual source of truth for placement and menu layout.
+Visual chrome: Claude Design **App Layout** board ([`design/README.md`](design/README.md)). This note owns **behavior**; the board is the visual source of truth for placement and menu layout.
 
 ## Problem
 
@@ -188,7 +188,7 @@ Evidence work is link-shaped: Source ↔ (later) File ↔ Citation ↔ Person. W
 
 ## Still open
 
-_None for navigation history behavior._ Remaining Spike 3 work is implementation sequencing (catalog UUID → history store → toolbar chrome) and omnibar / layout notes.
+_None for navigation history behavior._ Implementation order is locked in [`deployment-plan.md`](deployment-plan.md) (catalog UUID → history store → toolbar chrome; omnibar on the parallel search track).
 
 ## Explicitly out of scope
 
@@ -200,6 +200,7 @@ _None for navigation history behavior._ Remaining Spike 3 work is implementation
 
 ## Related docs
 
+- [`deployment-plan.md`](deployment-plan.md) — sequenced PRs
 - [`design/README.md`](design/README.md) — App Layout board + uploads
 - [`omnibar-search.md`](omnibar-search.md) (jumps that should push history; toolbar neighbor)
 - [`macos-client-patterns.md`](../../macos-client-patterns.md)
