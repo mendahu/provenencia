@@ -18,6 +18,7 @@ IDs stay stable (`S3-NN`). Do not renumber when moving steps here.
 | [S3-08](#s3-08--pr-fts5-projection) | PR | FTS5 catalog search projection |
 | [S3-09](#s3-09--pr-context-ranking--ref-fast-path) | PR | Context ranking + ref fast path |
 | [S3-10](#s3-10--pr-omnibar-results-ui--wire-search--remove-list-search) | PR | Omnibar results + retire list search |
+| [S3-11](#s3-11--pr-fuzzy--typo-matching) | PR | Trigram shortlist + Jaro–Winkler typo tolerance |
 
 ---
 
@@ -154,6 +155,20 @@ IDs stay stable (`S3-NN`). Do not renumber when moving steps here.
 | **Depends on** | S3-05; S3-09; S3-02 board |
 | **Deliverables** | Done. `PVOmnibarHitRow` + content-column results overlay (jump-menu family / `PVRadius.sm`, not NSPanel). `OmnibarResultsModel` debounces SearchCatalog (180ms, min 2 chars); keyboard ↑↓/Return/Esc + outside dismiss; select → `go(to:)` and clear query. Source leads from `listSources`/`CachedThumbnail`; type/field glyphs. Removed Sources + `VocabularyListPane` list-search chrome and query filters. L10n + `OmnibarResultsModelTests`. |
 | **Context** | Claude Design Omnibar Results board; [`omnibar-search.md`](omnibar-search.md) S4. |
-| **Out** | Fuzzy (S3-11); Files/Artifact first-class hit kinds. |
+| **Out** | Files/Artifact first-class hit kinds. |
 | **Dogfood** | ⌘K → find Source/type/field → navigate → Back; no list search fields. |
 | **Feeds** | S3-11; S3-12 |
+
+---
+
+### S3-11 — PR: Fuzzy / typo matching
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S3-10 (engine could land after S3-09; omnibar already wired) |
+| **Deliverables** | Done. Migration `000019`: external-content `catalog_search_fts_trigram` (`tokenize='trigram case_sensitive 0 remove_diacritics 1'`). `searchindex` keeps unicode61 + trigram indexes in sync; `ProjectionVersion` 3. `FTSSearcher` expands under-limit candidates via OR-of-character-trigrams shortlist (cap 150), Jaro–Winkler gate on title/label/ref/key (`FuzzyWeights`), fuzzy-only score scale so exact FTS still wins. Ref-shaped queries skip fuzzy. Latin-script dogfood focus (not CJK). Tests for typo recall, ranking, garbage, accent fold; FFI smoke. Skill [`add-searchable-kind`](../../../.cursor/skills/add-searchable-kind/SKILL.md) updated. |
+| **Context** | [`omnibar-search.md`](omnibar-search.md) S5. |
+| **Out** | Cross-root association search; NL/AI; spellfix1 / stemming; CJK fuzzy models. |
+| **Dogfood** | Common typos (`Ilminstr` → Ilminster) recover without flooding garbage. |
+| **Feeds** | S3-12 |

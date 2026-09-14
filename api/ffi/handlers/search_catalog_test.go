@@ -142,5 +142,37 @@ func TestSearchCatalog(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "recovers title typo",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, typeID := sourceFixture(t)
+				if _, err := CreateSource(marshalProto(t, &engine.CreateSourceRequest{
+					ProjectDir:   dir,
+					UserId:       userID,
+					SourceTypeId: typeID,
+					Title:        "Ilminster parish register unique",
+				})); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.SearchCatalogRequest{
+					ProjectDir: dir,
+					Query:      "Ilminstr",
+					Location:   &engine.WorkspaceLocation{Section: search.SectionSources},
+				}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				t.Helper()
+				var resp engine.SearchCatalogResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				if len(resp.Hits) == 0 {
+					t.Fatal("expected typo hit")
+				}
+				if resp.Hits[0].GetKind() != search.KindSource {
+					t.Fatalf("kind %s", resp.Hits[0].GetKind())
+				}
+			},
+		},
 	})
 }

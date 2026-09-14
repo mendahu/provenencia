@@ -1,6 +1,6 @@
-// Package searchindex maintains catalog_search_docs / catalog_search_fts.
-// Domain mutators call Reproject* in the same transaction; core/search
-// EnsureIndex rebuilds when projection_version lags.
+// Package searchindex maintains catalog_search_docs / catalog_search_fts
+// / catalog_search_fts_trigram. Domain mutators call Reproject* in the same
+// transaction; core/search EnsureIndex rebuilds when projection_version lags.
 package searchindex
 
 import (
@@ -21,7 +21,7 @@ const (
 
 // ProjectionVersion is the Go-side projector shape. Bump when rollup columns
 // or document layout change so Open heals old indexes.
-const ProjectionVersion = 2
+const ProjectionVersion = 3
 
 // Tagged body line prefixes for Source rollups (parsed by core/search for match_reason).
 const (
@@ -75,6 +75,12 @@ func Delete(q Querier, kind, entityID string) error {
 	); err != nil {
 		return err
 	}
+	if _, err := q.Exec(
+		`INSERT INTO catalog_search_fts_trigram(catalog_search_fts_trigram, rowid, title, ref, secondary, body) VALUES('delete', ?, ?, ?, ?, ?)`,
+		rowid, title, ref, secondary, body,
+	); err != nil {
+		return err
+	}
 	_, err = q.Exec(`DELETE FROM catalog_search_docs WHERE rowid = ?`, rowid)
 	return err
 }
@@ -111,8 +117,14 @@ func Upsert(q Querier, doc Document) error {
 	if err != nil {
 		return err
 	}
-	_, err = q.Exec(
+	if _, err = q.Exec(
 		`INSERT INTO catalog_search_fts(rowid, title, ref, secondary, body) VALUES (?, ?, ?, ?, ?)`,
+		rowid, doc.Title, doc.Ref, doc.Secondary, doc.Body,
+	); err != nil {
+		return err
+	}
+	_, err = q.Exec(
+		`INSERT INTO catalog_search_fts_trigram(rowid, title, ref, secondary, body) VALUES (?, ?, ?, ?, ?)`,
 		rowid, doc.Title, doc.Ref, doc.Secondary, doc.Body,
 	)
 	return err
@@ -121,6 +133,9 @@ func Upsert(q Querier, doc Document) error {
 // ClearAll wipes the projection (FTS + docs). Meta version is left unchanged.
 func ClearAll(q Querier) error {
 	if _, err := q.Exec(`INSERT INTO catalog_search_fts(catalog_search_fts) VALUES('delete-all')`); err != nil {
+		return err
+	}
+	if _, err := q.Exec(`INSERT INTO catalog_search_fts_trigram(catalog_search_fts_trigram) VALUES('delete-all')`); err != nil {
 		return err
 	}
 	_, err := q.Exec(`DELETE FROM catalog_search_docs`)
@@ -156,7 +171,7 @@ func NeedsRebuild(q Querier) (bool, error) {
 	if v != ProjectionVersion {
 		return true, nil
 	}
-	var docs, fts int
+	var docs, fts, trigram int
 	if err := q.QueryRow(`SELECT COUNT(*) FROM catalog_search_docs`).Scan(&docs); err != nil {
 		return false, err
 	}
@@ -164,7 +179,10 @@ func NeedsRebuild(q Querier) (bool, error) {
 	if err := q.QueryRow(`SELECT COUNT(*) FROM catalog_search_fts`).Scan(&fts); err != nil {
 		return false, err
 	}
-	return docs != fts, nil
+	if err := q.QueryRow(`SELECT COUNT(*) FROM catalog_search_fts_trigram`).Scan(&trigram); err != nil {
+		return false, err
+	}
+	return docs != fts || docs != trigram, nil
 }
 
 // ReprojectSource builds the Source navigable document (own fields + rolled children).

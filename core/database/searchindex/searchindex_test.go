@@ -20,10 +20,15 @@ func TestMigrationCreatesSearchTables(t *testing.T) {
 	if err := db.QueryRow(`PRAGMA user_version`).Scan(&version); err != nil {
 		t.Fatal(err)
 	}
-	if version < 18 {
-		t.Fatalf("user_version %d, want >= 18", version)
+	if version < 19 {
+		t.Fatalf("user_version %d, want >= 19", version)
 	}
-	for _, table := range []string{"catalog_search_docs", "catalog_search_fts", "catalog_search_meta"} {
+	for _, table := range []string{
+		"catalog_search_docs",
+		"catalog_search_fts",
+		"catalog_search_fts_trigram",
+		"catalog_search_meta",
+	} {
 		var name string
 		err := db.QueryRow(
 			`SELECT name FROM sqlite_master WHERE type IN ('table','view') AND name = ?`,
@@ -49,5 +54,14 @@ func TestMigrationCreatesSearchTables(t *testing.T) {
 	}
 	if n != 1 {
 		t.Fatalf("match count %d", n)
+	}
+	// Trigram index is substring-oriented; three+ chars should hit.
+	if err := db.QueryRow(
+		`SELECT COUNT(*) FROM catalog_search_fts_trigram WHERE catalog_search_fts_trigram MATCH 'smo'`,
+	).Scan(&n); err != nil {
+		t.Fatalf("trigram match: %v", err)
+	}
+	if n != 1 {
+		t.Fatalf("trigram match count %d", n)
 	}
 }

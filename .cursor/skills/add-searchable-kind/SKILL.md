@@ -24,7 +24,7 @@ Authoritative behavior: [`docs/deployment-plan/spike-3/omnibar-search.md`](../..
 - [ ] Registry entry: fields + weights (title/ref/label ≫ description ≫ body)
 - [ ] Location mapper → WorkspaceLocation (section + deep id)
 - [ ] DefaultInEverything / ContextSections for ranking boosts
-- [ ] FTS projector in core/database/searchindex (Upsert/Delete/Rebuild)
+- [ ] FTS projector in core/database/searchindex (Upsert/Delete/Rebuild; unicode61 **and** trigram indexes)
 - [ ] Write-path reproject on domain mutators (same tx when practical)
 - [ ] Tagged Source body rollup when contributing child text (`note:` / `metadata:` / `filename:`)
 - [ ] FakeStore mirrors kinds + location rules + ref exact/prefix boost; markCatalogSessionHeld
@@ -52,9 +52,10 @@ FTS documents map fields into columns `title` / `ref` / `secondary` / `body`
 (`core/database/searchindex`). Keep weights in this registry — do not fork
 weight tables in SQL migrations.
 
-Global knobs in the same file: `FTSBM25Weights` (SQL bm25 columns) and
-`RefBoostWeights` (exact ≫ prefix ≫ none). Ref-shaped queries use the docs
-`ref` column fast path in `FTSSearcher` (hyphens break FTS MATCH).
+Global knobs in the same file: `FTSBM25Weights` (SQL bm25 columns),
+`RefBoostWeights` (exact ≫ prefix ≫ none), and `FuzzyWeights` (trigram
+shortlist cap + Jaro–Winkler gate / score scale). Ref-shaped queries use the
+docs `ref` column fast path in `FTSSearcher` (hyphens break FTS MATCH).
 
 ### 2. Location mapping
 
@@ -74,11 +75,15 @@ destination UI.
 ### 3. Projection + retrieval
 
 1. Extend `core/database/searchindex` to build/upsert the kind’s document
-   (and delete on remove). Bump `ProjectionVersion` when the document shape
-   changes so `searchindex.EnsureCatalog` rebuilds on Open.
+   (and delete on remove). Keep **both** `catalog_search_fts` (unicode61) and
+   `catalog_search_fts_trigram` in sync on Upsert/Delete/ClearAll. Bump
+   `ProjectionVersion` when the document shape or index set changes so
+   `searchindex.EnsureCatalog` rebuilds on Open.
 2. Call reproject from domain mutators in the same transaction when practical.
-3. `FTSSearcher` (`DefaultEngine`) reads `catalog_search_fts` + docs; empty /
-   whitespace query → **no hits**; cap at `DefaultHitLimit` (50).
+3. `FTSSearcher` (`DefaultEngine`) reads unicode61 FTS + docs; when the
+   candidate map is still under the hit limit, expands via trigram OR shortlist
+   + Jaro–Winkler gate (never full-catalog fuzzy). Empty / whitespace query →
+   **no hits**; cap at `DefaultHitLimit` (50).
 
 ### 4. FFI + Mac store
 
@@ -95,8 +100,8 @@ Catalog RPCs use `withProjectCatalog` — see
 
 | Layer | Cover |
 | --- | --- |
-| `core/search` | Ranking (title > description), note rollup, context boost, location, empty query, EnsureCatalog heal |
-| `core/database/searchindex` | Migration / FTS smoke |
+| `core/search` | Ranking (title > description), note rollup, context boost, location, empty query, EnsureCatalog heal, typo shortlist |
+| `core/database/searchindex` | Migration / FTS + trigram smoke |
 | `api/ffi/handlers` | `runRPC` hit on new kind; location populated |
 | `ProvenenciaTests` | FakeStore title/ref hit + location ([`add-swift-test`](../add-swift-test/SKILL.md)) |
 

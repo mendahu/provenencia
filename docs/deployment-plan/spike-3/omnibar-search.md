@@ -89,7 +89,7 @@ Swift omnibar (query + current WorkspaceLocation)
   → SearchCatalog RPC  (one catalog open)
        → ref fast path (exact / prefix on ref column)
        → FTS5 over projected search documents
-       → optional fuzzy pass on shortlist (trigram / Go)
+       → fuzzy pass on shortlist (trigram OR + Jaro–Winkler; never full scan)
        → rank: retrieval score × field weights × context boosts × ref boosts
        → Hit DTO[] (kind, id, ref?, title, subtitle?, match_reason?, location)
   → go(to: location)
@@ -243,7 +243,7 @@ Same spacing and typography; only the slots change. Avoid per-kind card layouts 
 
 ## Incremental delivery
 
-Break into successive PRs so each slice is dogfoodable. Sequenced as **S3-07…S3-11** in [`deployment-plan.md`](deployment-plan.md) (S3-07…S3-10 / S1–S4 done — [`completed.md`](completed.md)); intended order:
+Break into successive PRs so each slice is dogfoodable. Sequenced as **S3-07…S3-11** in [`deployment-plan.md`](deployment-plan.md) (S3-07…S3-11 / S1–S5 done — [`completed.md`](completed.md)); intended order:
 
 | Slice | Delivers | Evaluate |
 | --- | --- | --- |
@@ -251,7 +251,7 @@ Break into successive PRs so each slice is dogfoodable. Sequenced as **S3-07…S
 | **S2 — FTS5 projection** | **Done (S3-08).** Migration + FTS documents for Sources / types / fields; incremental upkeep on writes; rebuild/heal; FTS retrieval + field weights; Source child text rolled into Source docs. | Latency; relevance on real dogfood catalogs; index correctness after edits. |
 | **S3 — Context ranking + ref fast path** | **Done (S3-09).** Section/kind boosts; exact/prefix ref promotion; tagged-body `match_reason`; multi-token OR + term coverage. | “I’m on Sources → Sources float” feels right; paste-ref UX. |
 | **S4 — Omnibar chrome + remove list search** | **Done (S3-10).** Toolbar field + ⌘K (S3-05 shell); results UI (`PVOmnibarHitRow` + jump-menu overlay); wire hits to `go(to:)`; **deleted** per-destination search. | End-to-end find; no dual search chrome. |
-| **S5 — Fuzzy / typo** | Trigram and/or Go fuzzy shortlist pass; tune thresholds. | Typos recover without garbage. |
+| **S5 — Fuzzy / typo** | **Done (S3-11).** Trigram OR shortlist + Jaro–Winkler gate; `FuzzyWeights` tuning; never full-catalog fuzzy. | Typos recover without garbage. |
 | **S6+ — More kinds / depth** | Files, Artifacts projection; deeper note/metadata/transcription weight tuning; Interpretation when UI exists. | Noise vs recall; registry extensibility. |
 
 S4 can overlap S2/S3 if chrome is blocked on Design for the dropdown — field chrome can ship with a simple list against the Hit DTO before visual polish.

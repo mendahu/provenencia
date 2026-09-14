@@ -415,6 +415,123 @@ func TestNoteMatchReasonUsesSnippet(t *testing.T) {
 	}
 }
 
+func TestSearchRecoversCommonTypo(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	userID := seedUser(t, c)
+	typeID := seedType(t, c, "Book", "")
+	src, err := sources.Create(c, userID, sources.CreateInput{
+		SourceTypeID: typeID,
+		Title:        "Ilminster parish register",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = sources.Create(c, userID, sources.CreateInput{
+		SourceTypeID: typeID,
+		Title:        "Unrelated Somerset deed",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hits, err := DefaultEngine().Search(context.Background(), c, Query{Text: "Ilminstr"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hits) == 0 {
+		t.Fatal("expected typo to recover Ilminster")
+	}
+	if hits[0].ID != uuidString(src.ID) {
+		t.Fatalf("want Ilminster Source first, got %+v", hits)
+	}
+}
+
+func TestSearchExactOutranksFuzzyNeighbor(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	userID := seedUser(t, c)
+	typeID := seedType(t, c, "Book", "")
+	exact, err := sources.Create(c, userID, sources.CreateInput{
+		SourceTypeID: typeID,
+		Title:        "Ilminster parish register",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = sources.Create(c, userID, sources.CreateInput{
+		SourceTypeID: typeID,
+		Title:        "Ilminsterish notes",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hits, err := DefaultEngine().Search(context.Background(), c, Query{Text: "Ilminster"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hits) == 0 || hits[0].ID != uuidString(exact.ID) {
+		t.Fatalf("exact title should win, got %+v", hits)
+	}
+}
+
+func TestSearchGarbageTypoDoesNotFlood(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	userID := seedUser(t, c)
+	typeID := seedType(t, c, "Book", "")
+	_, err = sources.Create(c, userID, sources.CreateInput{
+		SourceTypeID: typeID,
+		Title:        "Ilminster parish register",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hits, err := DefaultEngine().Search(context.Background(), c, Query{Text: "zzzzqwerty"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hits) != 0 {
+		t.Fatalf("garbage should not flood, got %+v", hits)
+	}
+}
+
+func TestSearchAccentedPlaceTypo(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	userID := seedUser(t, c)
+	typeID := seedType(t, c, "Book", "")
+	src, err := sources.Create(c, userID, sources.CreateInput{
+		SourceTypeID: typeID,
+		Title:        "München parish register",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hits, err := DefaultEngine().Search(context.Background(), c, Query{Text: "Munchen"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hits) == 0 || hits[0].ID != uuidString(src.ID) {
+		t.Fatalf("accent fold / typo should find München, got %+v", hits)
+	}
+}
+
 func TestEnsureCatalogRebuildsAfterWipe(t *testing.T) {
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {
