@@ -302,16 +302,20 @@ final class SourceTypesModel {
         formError = nil
     }
 
-    func submit() async {
-        guard let draft else { return }
+    /// Saves the draft. On successful **create**, returns the location the
+    /// view must `go(to:)` so history matches the new selection. Edits and
+    /// failures return `nil` (place unchanged).
+    @discardableResult
+    func submit() async -> WorkspaceLocation? {
+        guard let draft else { return nil }
         let label = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !label.isEmpty else {
             formError = String(localized: L10n.SourceTypes.errorLabelRequired)
-            return
+            return nil
         }
         if isAdding && FieldSlug.kebab(label).isEmpty {
             formError = String(localized: L10n.SourceTypes.errorUnslugifiable)
-            return
+            return nil
         }
         isSaving = true
         formError = nil
@@ -335,6 +339,11 @@ final class SourceTypesModel {
                     tone: .success
                 )
                 publishCounts()
+                return WorkspaceLocation(
+                    section: .sourceTypes,
+                    typeId: created.id,
+                    title: created.label
+                )
             case .editing(let id):
                 let updated = try await store.updateSourceType(
                     projectDir: projectDir, userID: userID, typeID: id,
@@ -348,11 +357,13 @@ final class SourceTypesModel {
                     body: L10n.SourceTypes.toastUpdatedBody(label: updated.label, key: updated.key),
                     tone: .success
                 )
+                return nil
             case .empty, .viewing:
-                break
+                return nil
             }
         } catch {
             formError = L10n.Errors.message(for: error)
+            return nil
         }
     }
 
@@ -440,8 +451,11 @@ final class SourceTypesModel {
         // error callout mid-dismissal. `askDelete` resets it anyway.
     }
 
-    func confirmDelete() async {
-        guard let type = pendingDeleteType, !isDeleting else { return }
+    /// Deletes the pending type. Returns `true` on success so the view can
+    /// `fallbackToSectionRoot()` and keep history aligned with empty detail.
+    @discardableResult
+    func confirmDelete() async -> Bool {
+        guard let type = pendingDeleteType, !isDeleting else { return false }
         isDeleting = true
         deleteError = nil
         defer { isDeleting = false }
@@ -462,8 +476,10 @@ final class SourceTypesModel {
                 tone: .success
             )
             publishCounts()
+            return true
         } catch {
             deleteError = L10n.Errors.message(for: error)
+            return false
         }
     }
 

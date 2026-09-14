@@ -4,6 +4,7 @@ import SwiftUI
 /// field's detail (editable for `user` / `provenencia`, locked read-only for
 /// `plugin:…`), or an empty prompt when nothing is selected — S2-02 §3.2/3.3.
 struct SourceFieldsDetailPane: View {
+    @Environment(WorkspaceNavigation.self) private var navigation
     @Bindable var model: SourceFieldsModel
 
     var body: some View {
@@ -164,7 +165,13 @@ struct SourceFieldsDetailPane: View {
                     canSubmit: model.canSubmit,
                     isSecondaryDisabled: model.isSaving || (!model.isAdding && !model.isDirty),
                     identifierPrefix: "sourceFields",
-                    onPrimary: { Task { await model.submit() } },
+                    onPrimary: {
+                        Task {
+                            if let location = await model.submit() {
+                                navigation.go(to: location)
+                            }
+                        }
+                    },
                     onSecondary: { secondaryAction() }
                 )
             }

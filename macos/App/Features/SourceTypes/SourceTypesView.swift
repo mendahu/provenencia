@@ -68,7 +68,13 @@ struct SourceTypesView: View {
             copy: deleteCopy(for:),
             isRunning: model.isDeleting,
             accessibilityIdentifierPrefix: "sourceTypes.delete",
-            onConfirm: { Task { await model.confirmDelete() } }
+            onConfirm: {
+                Task {
+                    if await model.confirmDelete() {
+                        navigation.fallbackToSectionRoot()
+                    }
+                }
+            }
         ) { type in
             deleteDetail(for: type)
         }
