@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/slug"
 )
 
@@ -114,6 +115,9 @@ func Upsert(c *database.Catalog, f Field) ([]byte, error) {
 	if _, err := db.Exec(sqlUpsert, id, f.Key, f.Origin, f.Label, f.DataType, desc); err != nil {
 		return nil, err
 	}
+	if err := searchindex.ReprojectSourceField(db, id); err != nil {
+		return nil, err
+	}
 	return append([]byte(nil), id...), nil
 }
 
@@ -171,6 +175,9 @@ func Update(c *database.Catalog, id []byte, label, dataType, description string)
 		desc = description
 	}
 	if _, err := db.Exec(sqlUpdate, label, desc, id); err != nil {
+		return Field{}, err
+	}
+	if err := searchindex.ReprojectSourceField(db, id); err != nil {
 		return Field{}, err
 	}
 	return GetByID(c, id)
@@ -305,7 +312,10 @@ func Delete(c *database.Catalog, id []byte) error {
 		return err
 	}
 	_, err = db.Exec(sqlDelete, id)
-	return err
+	if err != nil {
+		return err
+	}
+	return searchindex.Delete(db, searchindex.KindSourceField, uuidString(id))
 }
 
 func originOK(origin string) bool {
@@ -317,4 +327,13 @@ func originOK(origin string) bool {
 
 func dataTypeOK(dt string) bool {
 	return dt == DataTypeText || dt == DataTypeDate
+}
+
+func uuidString(id []byte) string {
+	if len(id) != 16 {
+		return ""
+	}
+	var u uuid.UUID
+	copy(u[:], id)
+	return u.String()
 }

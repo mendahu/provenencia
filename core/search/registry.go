@@ -2,10 +2,25 @@ package search
 
 import "strings"
 
-// FieldWeight relative importance for naïve / future FTS scoring.
+// FieldWeight relative importance for FTS / registry scoring.
 type FieldWeight struct {
 	Name   string
 	Weight float64
+}
+
+// FTSBM25Weights are global bm25 column weights for catalog_search_fts, in
+// table column order: title, ref, secondary, body. Shared across kinds;
+// per-kind field importance still comes from KindSpec.Fields via scoreFields.
+var FTSBM25Weights = struct {
+	Title     float64
+	Ref       float64
+	Secondary float64
+	Body      float64
+}{
+	Title:     10,
+	Ref:       12,
+	Secondary: 4,
+	Body:      1,
 }
 
 // KindSpec is one searchable navigable root in the registry.
@@ -29,6 +44,9 @@ var Registry = []KindSpec{
 			{Name: "title", Weight: 10},
 			{Name: "ref", Weight: 12},
 			{Name: "description", Weight: 3},
+			{Name: "notes", Weight: 1.5},
+			{Name: "metadata", Weight: 1.5},
+			{Name: "filename", Weight: 1},
 		},
 	},
 	{

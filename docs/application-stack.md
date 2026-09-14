@@ -232,7 +232,7 @@ Open the database through `database/sql` with that driver. Connection hygiene fo
 - **Tiny pool:** `SetMaxOpenConns` small (typically 1 for writers, or a single shared connection). `database/sql`’s default pool fights SQLite.
 - **Held session:** researcher FFI uses `core/catalogsession` (one exclusive open per project while in use; ops serialized). Do not open-per-RPC from handlers.
 
-Enable compile features the product needs with driver build tags (at least `fts5` and JSON when those land). Do not link against macOS’s system SQLite.
+Enable compile features the product needs with driver build tags. **`fts5` is required** for catalog omnibar search (`catalog_search_fts`); all CGO `go test` / dylib builds pass `-tags fts5`. JSON and other amalgamation opts can land the same way later. Do not link against macOS’s system SQLite.
 
 **Escape hatch:** if the cgo + Swift dylib build becomes untenable, a pure-Go engine (`modernc.org/sqlite` or similar) can open the same `.sqlite` files. That is a packaging change, not a schema change.
 

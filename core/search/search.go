@@ -1,5 +1,5 @@
 // Package search is the catalog omnibar engine: kind registry, scoring, and
-// retrieval (naïve scan now; FTS in S3-08 behind the same Searcher).
+// FTS5 retrieval over projected search documents.
 package search
 
 import (
@@ -8,7 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 )
 
-// Kind identifiers for SearchHit.kind (stable across FTS swap).
+// Kind identifiers for SearchHit.kind (stable across retrieval backends).
 const (
 	KindSource      = "source"
 	KindSourceType  = "source_type"
@@ -55,7 +55,7 @@ type Hit struct {
 	Score       float64 // internal; not exposed on the wire
 }
 
-// Searcher retrieves and ranks hits. S3-08 swaps NaiveScanner for FTS.
+// Searcher retrieves and ranks hits.
 type Searcher interface {
 	Search(ctx context.Context, c *database.Catalog, q Query) ([]Hit, error)
 }
@@ -65,9 +65,9 @@ type Engine struct {
 	Searcher Searcher
 }
 
-// DefaultEngine returns an Engine with the naïve table scanner.
+// DefaultEngine returns an Engine with the FTS5 Searcher.
 func DefaultEngine() *Engine {
-	return &Engine{Searcher: NewNaiveScanner()}
+	return &Engine{Searcher: NewFTSSearcher()}
 }
 
 // Search runs the configured Searcher (empty/short query → no hits).

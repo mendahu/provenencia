@@ -6,7 +6,7 @@ Authoritative behavior: [`navigation-history.md`](navigation-history.md), [`omni
 
 ## Status
 
-**In progress.** Open steps below; completed steps live in [`completed.md`](completed.md) (S3-01…S3-07; S3-06 skipped).
+**In progress.** Open steps below; completed steps live in [`completed.md`](completed.md) (S3-01…S3-08; S3-06 skipped).
 
 ## Goal (dogfood bar)
 
@@ -46,7 +46,7 @@ S3-03 project.uuid (done) ──────────────────
 S3-04  history (done)                       S3-07  SearchCatalog (done)
         │                                     │
         ▼                                     ▼
-S3-05  Toolbar chrome (done)                S3-08  FTS5 projection
+S3-05  Toolbar chrome (done)                S3-08  FTS5 (done)
         │                                     │
         │                                     ▼
         │                               S3-09  Context ranking + ref path
@@ -61,17 +61,6 @@ S3-05  Toolbar chrome (done)                S3-08  FTS5 projection
                        ▼
                  S3-12  Dogfood polish (optional S3-13+ kinds)
 ```
-
-### S3-08 — PR: FTS5 projection
-
-| | |
-| --- | --- |
-| **Kind** | PR |
-| **Depends on** | S3-07 (done) |
-| **Deliverables** | Enable `fts5` on the embedded amalgamation if not already. Migration: FTS search documents for Source / type / field roots. Field weights in registry. Incremental reproject on writes; rebuild/heal on Open/migrate. Swap naïve scanner for FTS retrieval. Roll Source notes / metadata / artifact-filename text into the **Source** document (not separate hits). |
-| **Context** | [`omnibar-search.md`](omnibar-search.md) S2; [`application-stack.md`](../../application-stack.md) §10. |
-| **Out** | Context boosts / ref fast path polish (S3-09); fuzzy (S3-11); Files/Artifact as own hit kinds. |
-| **Dogfood** | Edit a Source title/note → search updates; relevance acceptable on a real catalog. |
 
 ### S3-09 — PR: Context ranking + ref fast path
 
@@ -145,7 +134,7 @@ Not required to close Spike 3 dogfood if Sources + types + fields search well:
 | Track | Steps |
 | --- | --- |
 | **Design** | S3-01, S3-02 — done ([`completed.md`](completed.md)) |
-| **Core / FFI** | S3-03 done → S3-07 done → S3-08 → S3-09 → (S3-11) |
+| **Core / FFI** | S3-03 done → S3-07 done → S3-08 done → S3-09 → (S3-11) |
 | **Mac workspace** | S3-04 done → S3-05 done → S3-10 → S3-12 |
 
 S3-08+ may proceed beside remaining Mac chrome. **S3-10** is the integration gate.

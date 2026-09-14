@@ -21,8 +21,9 @@ trap 'rm -rf "$tmp"' EXIT
 
 export CGO_ENABLED=1
 export MACOSX_DEPLOYMENT_TARGET=14.0
-GOARCH=arm64 go build -buildmode=c-shared -o "$tmp/libprovenencia_arm64.dylib" ./api/libprovenencia
-GOARCH=amd64 go build -buildmode=c-shared -o "$tmp/libprovenencia_amd64.dylib" ./api/libprovenencia
+# fts5: catalog omnibar projection (go-sqlite3 amalgamation opt-in).
+GOARCH=arm64 go build -tags fts5 -buildmode=c-shared -o "$tmp/libprovenencia_arm64.dylib" ./api/libprovenencia
+GOARCH=amd64 go build -tags fts5 -buildmode=c-shared -o "$tmp/libprovenencia_amd64.dylib" ./api/libprovenencia
 lipo -create -output "$out" \
   "$tmp/libprovenencia_arm64.dylib" \
   "$tmp/libprovenencia_amd64.dylib"

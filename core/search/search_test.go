@@ -5,7 +5,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/sourcefields"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
@@ -177,10 +179,83 @@ func TestContextBoostPrefersMatchingSection(t *testing.T) {
 	}
 }
 
+func TestNoteBodyRollsIntoSourceHit(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	userID := seedUser(t, c)
+	typeID := seedType(t, c, "Book", "")
+	src, err := sources.Create(c, userID, sources.CreateInput{
+		SourceTypeID: typeID,
+		Title:        "Quiet title",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := sources.AddNote(c, userID, src.ID, "mentions Zemblanity only in the note"); err != nil {
+		t.Fatal(err)
+	}
+	hits, err := DefaultEngine().Search(context.Background(), c, Query{Text: "Zemblanity"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hits) != 1 || hits[0].Kind != KindSource || hits[0].ID != uuidString(src.ID) {
+		t.Fatalf("want Source hit for note text, got %+v", hits)
+	}
+	if hits[0].MatchReason != "notes" {
+		t.Fatalf("match_reason %q", hits[0].MatchReason)
+	}
+}
+
+func TestEnsureCatalogRebuildsAfterWipe(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	userID := seedUser(t, c)
+	typeID := seedType(t, c, "Book", "")
+	src, err := sources.Create(c, userID, sources.CreateInput{
+		SourceTypeID: typeID,
+		Title:        "RebuildMe Parish",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := searchindex.ClearAll(db); err != nil {
+		t.Fatal(err)
+	}
+	if err := searchindex.SetProjectionVersion(db, 0); err != nil {
+		t.Fatal(err)
+	}
+	hits, err := DefaultEngine().Search(context.Background(), c, Query{Text: "RebuildMe"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hits) != 0 {
+		t.Fatalf("expected empty after wipe, got %+v", hits)
+	}
+	if err := searchindex.EnsureCatalog(c); err != nil {
+		t.Fatal(err)
+	}
+	hits, err = DefaultEngine().Search(context.Background(), c, Query{Text: "RebuildMe"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hits) != 1 || hits[0].ID != uuidString(src.ID) {
+		t.Fatalf("after heal got %+v", hits)
+	}
+}
+
 func TestTokenize(t *testing.T) {
 	got := tokenize(`  John's "birth"  `)
 	if len(got) != 2 || got[0] != "john's" && got[0] != "johns" {
-		// Trim quotes only; apostrophe may remain.
 		if !strings.Contains(strings.Join(got, " "), "john") {
 			t.Fatalf("%v", got)
 		}
@@ -212,4 +287,13 @@ func seedType(t *testing.T, c *database.Catalog, label, desc string) []byte {
 		t.Fatal(err)
 	}
 	return id
+}
+
+func uuidString(id []byte) string {
+	if len(id) != 16 {
+		return ""
+	}
+	var u uuid.UUID
+	copy(u[:], id)
+	return u.String()
 }

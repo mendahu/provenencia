@@ -24,4 +24,5 @@ jobs:
       - name: Run unit tests
         env:
           CGO_ENABLED: "1"
-        run: go test ./api/... ./core/...
+        # fts5: required for catalog_search_fts (go-sqlite3 amalgamation).
+        run: go test -tags fts5 ./api/... ./core/...

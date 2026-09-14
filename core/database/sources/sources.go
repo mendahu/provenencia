@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/project"
+	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/derivatives"
 	"github.com/mendahu/provenencia/core/ref"
 )
@@ -133,6 +134,9 @@ func Create(c *database.Catalog, userID []byte, in CreateInput) (Source, error) 
 			Fields:     fields,
 		}},
 	}); err != nil {
+		return Source{}, err
+	}
+	if err := searchindex.ReprojectSource(tx, idBytes); err != nil {
 		return Source{}, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -297,6 +301,9 @@ func Update(c *database.Catalog, userID []byte, s Source) error {
 			Fields:     fields,
 		}},
 	}); err != nil {
+		return err
+	}
+	if err := searchindex.ReprojectSource(tx, s.ID); err != nil {
 		return err
 	}
 	return tx.Commit()

@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/slug"
 )
 
@@ -118,6 +119,9 @@ func Upsert(c *database.Catalog, t Type) ([]byte, error) {
 		desc = t.Description
 	}
 	if _, err := db.Exec(sqlUpsert, id, t.Key, t.Origin, t.Label, desc, t.IconKey); err != nil {
+		return nil, err
+	}
+	if err := searchindex.ReprojectSourceType(db, id); err != nil {
 		return nil, err
 	}
 	return append([]byte(nil), id...), nil
@@ -230,6 +234,12 @@ func Update(c *database.Catalog, id []byte, label, description, iconKey string) 
 	if _, err := db.Exec(sqlUpdate, label, desc, normalizedIcon, id); err != nil {
 		return Type{}, err
 	}
+	if err := searchindex.ReprojectSourceType(db, id); err != nil {
+		return Type{}, err
+	}
+	if err := searchindex.ReprojectSourcesForType(db, id); err != nil {
+		return Type{}, err
+	}
 	return GetByID(c, id)
 }
 
@@ -319,7 +329,10 @@ func Delete(c *database.Catalog, id []byte) error {
 		return err
 	}
 	_, err = db.Exec(sqlDelete, id)
-	return err
+	if err != nil {
+		return err
+	}
+	return searchindex.Delete(db, searchindex.KindSourceType, uuidString(id))
 }
 
 func originOK(origin string) bool {
@@ -327,4 +340,13 @@ func originOK(origin string) bool {
 		return true
 	}
 	return strings.HasPrefix(origin, "plugin:") && len(origin) > len("plugin:")
+}
+
+func uuidString(id []byte) string {
+	if len(id) != 16 {
+		return ""
+	}
+	var u uuid.UUID
+	copy(u[:], id)
+	return u.String()
 }
