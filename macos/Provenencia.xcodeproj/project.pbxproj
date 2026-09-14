@@ -72,6 +72,7 @@
 		AA00000000000000000003F9 /* OmnibarResultsModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003F8 /* OmnibarResultsModel.swift */; };
 		AA00000000000000000003FB /* OmnibarResultsHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003FA /* OmnibarResultsHost.swift */; };
 		AA00000000000000000003FD /* OmnibarResultsModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003FC /* OmnibarResultsModelTests.swift */; };
+		AA0000000000000000000401 /* ProjectFilesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000400 /* ProjectFilesTests.swift */; };
 		AA0000000000000000000212 /* SourceTypesModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000202 /* SourceTypesModel.swift */; };
 		AA0000000000000000000213 /* SourceTypesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000203 /* SourceTypesView.swift */; };
 		AA0000000000000000000214 /* SourceTypesListPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000204 /* SourceTypesListPane.swift */; };
@@ -256,6 +257,7 @@
 		AA00000000000000000003F8 /* OmnibarResultsModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OmnibarResultsModel.swift; sourceTree = "<group>"; };
 		AA00000000000000000003FA /* OmnibarResultsHost.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OmnibarResultsHost.swift; sourceTree = "<group>"; };
 		AA00000000000000000003FC /* OmnibarResultsModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OmnibarResultsModelTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000400 /* ProjectFilesTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProjectFilesTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000202 /* SourceTypesModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTypesModel.swift; sourceTree = "<group>"; };
 		AA0000000000000000000203 /* SourceTypesView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTypesView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000204 /* SourceTypesListPane.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTypesListPane.swift; sourceTree = "<group>"; };
@@ -673,6 +675,7 @@
 				AA00000000000000000000B1 /* InstallPathsTests.swift */,
 				AA0000000000000000000352 /* TimestampFormatTests.swift */,
 				AA00000000000000000000F2 /* ProjectSlugTests.swift */,
+				AA0000000000000000000400 /* ProjectFilesTests.swift */,
 				164584B2DB70D89A55C4178F /* WorkspaceModelTests.swift */,
 				F203948576A1B2C3D4E5F605 /* WorkspaceNavigationTests.swift */,
 				AA0000000000000000000270 /* CatalogCountsTests.swift */,
@@ -991,6 +994,7 @@
 				AA00000000000000000000B4 /* InstallPathsTests.swift in Sources */,
 				AA0000000000000000000353 /* TimestampFormatTests.swift in Sources */,
 				AA00000000000000000000F3 /* ProjectSlugTests.swift in Sources */,
+				AA0000000000000000000401 /* ProjectFilesTests.swift in Sources */,
 				826574F8CA8D24BE551A88BF /* WorkspaceModelTests.swift in Sources */,
 				F203948576A1B2C3D4E5F607 /* WorkspaceNavigationTests.swift in Sources */,
 				AA0000000000000000000271 /* CatalogCountsTests.swift in Sources */,

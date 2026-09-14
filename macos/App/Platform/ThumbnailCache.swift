@@ -45,7 +45,9 @@ final class ThumbnailCache {
         }
 
         let task = Task<NSImage?, Never> {
-            let url = ProjectFiles.objectURL(projectDir: projectDir, relPath: trimmed)
+            guard let url = ProjectFiles.objectURL(projectDir: projectDir, relPath: trimmed) else {
+                return nil
+            }
             return await Task.detached(priority: .userInitiated) {
                 NSImage(contentsOf: url)
             }.value

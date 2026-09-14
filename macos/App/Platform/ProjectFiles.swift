@@ -6,19 +6,44 @@ import UniformTypeIdentifiers
 /// opens user-selected files for ingest. Swift never writes `objects/` itself.
 enum ProjectFiles {
     /// Joins `projectDir` with a slash-separated `relPath` from the catalog
-    /// (e.g. `objects/ab/cd/abcd…`).
-    static func objectURL(projectDir: String, relPath: String) -> URL {
-        var url = URL(fileURLWithPath: projectDir, isDirectory: true)
-        for part in relPath.split(separator: "/") where !part.isEmpty {
-            url.appendPathComponent(String(part), isDirectory: false)
+    /// (e.g. `objects/ab/cd/abcd…`). Returns `nil` when `relPath` is empty,
+    /// contains `..` / absolute-ish segments, or resolves outside `projectDir`.
+    static func objectURL(projectDir: String, relPath: String) -> URL? {
+        let trimmed = relPath.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        let projectURL = URL(fileURLWithPath: projectDir, isDirectory: true).standardizedFileURL
+        var url = projectURL
+        for part in trimmed.split(separator: "/") where !part.isEmpty {
+            let segment = String(part)
+            if segment == ".." || segment == "." {
+                return nil
+            }
+            // Absolute or home-relative segments must not be joined as relatives.
+            if segment.hasPrefix("/") || segment.hasPrefix("~") {
+                return nil
+            }
+            url.appendPathComponent(segment, isDirectory: false)
         }
-        return url
+
+        let resolved = url.standardizedFileURL
+        let projectPath = projectURL.path
+        let resolvedPath = resolved.path
+        // Require a real child of the project directory (not the dir itself,
+        // and not a sibling that only shares a path prefix).
+        guard resolvedPath.hasPrefix(projectPath + "/") else {
+            return nil
+        }
+        return resolved
     }
 
-    /// Opens a stored object in the default app. Returns false when missing.
+    /// Opens a stored object in the default app. Returns false when missing
+    /// or when `relPath` is rejected by `objectURL`.
     @discardableResult
     static func openObject(projectDir: String, relPath: String) -> Bool {
-        let url = objectURL(projectDir: projectDir, relPath: relPath)
+        guard let url = objectURL(projectDir: projectDir, relPath: relPath) else {
+            return false
+        }
         guard FileManager.default.fileExists(atPath: url.path) else {
             return false
         }

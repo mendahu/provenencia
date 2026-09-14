@@ -490,22 +490,6 @@ struct SourcePageModelTests {
         }
     }
 
-    @Test func objectURLJoinsRelPath() {
-        let url = ProjectFiles.objectURL(
-            projectDir: "/tmp/proj.provenencia",
-            relPath: "objects/ab/cd/abcd"
-        )
-        #expect(url.path == "/tmp/proj.provenencia/objects/ab/cd/abcd")
-    }
-
-    @Test func objectURLJoinsRelPathWithExtension() {
-        let url = ProjectFiles.objectURL(
-            projectDir: "/tmp/proj.provenencia",
-            relPath: "objects/ab/cd/abcd.jpg"
-        )
-        #expect(url.path == "/tmp/proj.provenencia/objects/ab/cd/abcd.jpg")
-    }
-
     @Test func workspaceArtifactsCarryThumbnailRelPath() async {
         let store = makeStore(
             artifacts: [
