@@ -2,7 +2,7 @@ import Foundation
 import Observation
 
 /// State for the **Sources** workspace destination (S2-04 board / S2-17 PR):
-/// browse/search/filter/sort Sources as an evidence list, create via a thin
+/// browse/filter/sort Sources as an evidence list, create via a thin
 /// dialog, and open a separate Source page (S2-18).
 @MainActor
 @Observable
@@ -34,6 +34,8 @@ final class SourcesModel {
     private(set) var sources: [CatalogSource] = []
     private(set) var types: [CatalogSourceType] = []
     private(set) var isLoading = false
+    /// True after the first `load()` finishes — gates history prune until rows exist.
+    private(set) var hasCompletedInitialLoad = false
     var loadError: Error?
 
     /// `nil` / empty string means all types. Otherwise a `source_types.id`.
@@ -148,7 +150,10 @@ final class SourcesModel {
     func load() async {
         isLoading = true
         loadError = nil
-        defer { isLoading = false }
+        defer {
+            isLoading = false
+            hasCompletedInitialLoad = true
+        }
         // Load independently so a busy catalog on one call does not leave
         // the type pool empty for Add Source when sources already arrived
         // (or vice versa).

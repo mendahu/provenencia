@@ -20,6 +20,8 @@ final class SourceFieldsModel {
 
     private(set) var fields: [CatalogMetadataField] = []
     private(set) var isLoading = false
+    /// True after the first `load()` finishes — gates history prune until rows exist.
+    private(set) var hasCompletedInitialLoad = false
     var loadError: Error?
 
     private(set) var sortAscending = true
@@ -151,7 +153,10 @@ final class SourceFieldsModel {
     func load() async {
         isLoading = true
         loadError = nil
-        defer { isLoading = false }
+        defer {
+            isLoading = false
+            hasCompletedInitialLoad = true
+        }
         do {
             fields = try await store.listMetadataFields(projectDir: projectDir)
             publishCounts()

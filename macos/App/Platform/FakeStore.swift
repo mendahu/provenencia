@@ -25,6 +25,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var lastClosedCatalogProjectDir: String?
     /// When set, `listSources` throws instead of returning the in-memory list.
     var listSourcesError: Error?
+    /// When set, `searchCatalog` throws (omnibar error UI).
+    var searchCatalogError: Error?
     /// When set, `workspaceNavCounts` throws instead of returning counts.
     var workspaceNavCountsError: Error?
     /// When set, `updateSource` throws (identity title/type/description saves).
@@ -790,6 +792,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         location: WorkspaceLocation
     ) async throws -> [CatalogSearchHit] {
         markCatalogSessionHeld(projectDir)
+        if let searchCatalogError { throw searchCatalogError }
         let raw = query.trimmingCharacters(in: .whitespacesAndNewlines)
         let tokens = Self.tokenizeSearch(raw)
         let refKey = Self.classifyRefQuery(raw)

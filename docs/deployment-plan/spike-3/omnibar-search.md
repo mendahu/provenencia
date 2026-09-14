@@ -279,11 +279,13 @@ Local-first catalogs invite keyboard navigation. Short refs were designed to be 
 | Fuzzy / typo matching? | **Yes, in scope** (phased after FTS + weights + ref path). |
 | Delivery? | **Successive PRs** per incremental table above. |
 
-## Open questions
+## Deferred questions (not dogfood blockers)
+
+Parked after Spike 3 dogfood closeout (S3-12). Ship defaults today: blank omnibar until 2 characters; vocabulary at full default weight; Source thumbs when enrichment lists are cheap enough.
 
 - Should vocabulary (types/fields) appear in the default “everything” query at full weight, or slightly demoted unless context is vocabulary?
 - Thumbnail cost: show Source/File thumbs in the palette, or icons only until selected?
-- Empty query: recent destinations / recent entities (from navigation history?), or blank until type?
+- Empty query: recent destinations / recent entities (from navigation history?), or blank until type? (**Current:** blank until `minQueryLength`.)
 - How aggressively to weight note bodies / metadata / (later) transcriptions by default?
 - Candidate `PER-C-…` vs canonical `PER-…` when Interpretation/Conclusion search lands — same list with a layer badge, or separate sections?
 - Sync vs async FTS rebuild when catalogs get large?

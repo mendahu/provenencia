@@ -96,8 +96,12 @@ private struct OmnibarResultsPanel: View {
 
     var body: some View {
         Group {
-            if results.showsEmptyState {
+            if results.showsErrorState {
+                errorState
+            } else if results.showsEmptyState {
                 emptyState
+            } else if results.showsLoadingState {
+                loadingState
             } else {
                 // ScrollView expands to the proposed height unless we ask for
                 // the ideal (content) height — clamp only when the list is tall.
@@ -120,6 +124,10 @@ private struct OmnibarResultsPanel: View {
                                     if hovering { results.selectedIndex = index }
                                 }
                             ))
+                            .accessibilityLabel(
+                                "\(hit.title), \(String(localized: OmnibarHitPresentation.kindLabel(for: hit.kind)))"
+                            )
+                            .accessibilityIdentifier("workspace.toolbar.omnibar.hit.\(hit.id)")
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -141,6 +149,30 @@ private struct OmnibarResultsPanel: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(L10n.Workspace.omnibarResultsAccessibilityLabel))
         .accessibilityIdentifier("workspace.toolbar.omnibar.results")
+    }
+
+    private var loadingState: some View {
+        HStack(spacing: PVSpacing.space3) {
+            ProgressView()
+                .controlSize(.small)
+            Text(L10n.Workspace.omnibarSearching)
+                .font(PVFont.body(size: PVTypeScale.bodySmall))
+                .foregroundStyle(PVColor.textMuted)
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityIdentifier("workspace.toolbar.omnibar.loading")
+    }
+
+    private var errorState: some View {
+        PVCallout(
+            tone: .danger,
+            message: results.searchError ?? String(localized: L10n.Workspace.omnibarSearchFailed)
+        )
+        .padding(.horizontal, 9)
+        .padding(.vertical, 8)
+        .accessibilityIdentifier("workspace.toolbar.omnibar.error")
     }
 
     private var emptyState: some View {

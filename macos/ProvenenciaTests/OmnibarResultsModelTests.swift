@@ -7,6 +7,15 @@ import Testing
 struct OmnibarResultsModelTests {
     private let projectDir = "/tmp/omnibar-results.provenencia"
 
+    private func waitForSearch(_ model: OmnibarResultsModel) async {
+        for _ in 0..<80 {
+            if !model.isLoading, model.hasSearched || model.searchError != nil {
+                return
+            }
+            try? await Task.sleep(nanoseconds: 25_000_000)
+        }
+    }
+
     @Test func shortQueryDoesNotPresent() async {
         let store = FakeStore()
         store.sourcesByProject[projectDir] = [
@@ -39,7 +48,7 @@ struct OmnibarResultsModelTests {
             location: .sectionRoot(.sources),
             store: store
         )
-        try? await Task.sleep(nanoseconds: 350_000_000)
+        await waitForSearch(model)
         #expect(model.isPresented)
         #expect(model.hits.first?.id == "s1")
         #expect(model.sourcesByID["s1"] != nil)
@@ -58,10 +67,12 @@ struct OmnibarResultsModelTests {
             location: .sectionRoot(.sources),
             store: store
         )
-        try? await Task.sleep(nanoseconds: 350_000_000)
+        await waitForSearch(model)
         #expect(model.hits.first?.id == "s1")
         #expect(model.hits.first?.matchReason == "ref")
-        #expect(OmnibarHitPresentation.refAccent(for: model.hits[0]))
+        if let top = model.hits.first {
+            #expect(OmnibarHitPresentation.refAccent(for: top))
+        }
     }
 
     @Test func clearAfterNavigateResetsQuery() async {
@@ -88,6 +99,81 @@ struct OmnibarResultsModelTests {
     @Test func matchContextHidesTitleAndRef() {
         #expect(!OmnibarHitPresentation.showMatchContext("title"))
         #expect(!OmnibarHitPresentation.showMatchContext("ref"))
+        #expect(!OmnibarHitPresentation.showMatchContext("fuzzy"))
         #expect(OmnibarHitPresentation.showMatchContext("note: Zemblanity"))
+    }
+
+    @Test func closePanelSetsUserDismissedWithoutClearingQuery() {
+        let model = OmnibarResultsModel()
+        model.query = "Ilminster"
+        model.hasSearched = true
+        model.isLoading = true
+        model.closePanel()
+        #expect(model.userDismissed)
+        #expect(!model.isPresented)
+        #expect(model.query == "Ilminster")
+        #expect(!model.isLoading)
+    }
+
+    @Test func loadingPresentsBeforeHitsArrive() {
+        let model = OmnibarResultsModel()
+        model.query = "Il"
+        model.isLoading = true
+        #expect(model.isPresented)
+        #expect(model.showsLoadingState)
+        #expect(!model.showsEmptyState)
+        #expect(!model.showsErrorState)
+    }
+
+    @Test func emptyStateRequiresCompletedSearchWithoutError() {
+        let model = OmnibarResultsModel()
+        model.query = "zz"
+        model.hasSearched = true
+        model.isLoading = false
+        #expect(model.showsEmptyState)
+        model.searchError = "boom"
+        #expect(!model.showsEmptyState)
+        #expect(model.showsErrorState)
+    }
+
+    @Test func searchFailureSurfacesErrorNotEmpty() async {
+        enum Boom: Error { case boom }
+        let store = FakeStore()
+        store.searchCatalogError = Boom.boom
+        let model = OmnibarResultsModel()
+        model.query = "Ilminster"
+        model.scheduleSearch(
+            projectDir: projectDir,
+            location: .sectionRoot(.sources),
+            store: store
+        )
+        await waitForSearch(model)
+        #expect(model.searchError != nil)
+        #expect(model.hits.isEmpty)
+        #expect(model.showsErrorState)
+        #expect(!model.showsEmptyState)
+        #expect(model.isPresented)
+    }
+
+    @Test func moveSelectionClampsAndSelectedHit() {
+        let model = OmnibarResultsModel()
+        model.hits = [
+            CatalogSearchHit(
+                kind: "source", id: "a", ref: "", title: "A", subtitle: "",
+                matchReason: "title", location: .sectionRoot(.sources)
+            ),
+            CatalogSearchHit(
+                kind: "source", id: "b", ref: "", title: "B", subtitle: "",
+                matchReason: "title", location: .sectionRoot(.sources)
+            ),
+        ]
+        #expect(model.selectedHit()?.id == "a")
+        model.moveSelection(delta: 1)
+        #expect(model.selectedIndex == 1)
+        #expect(model.selectedHit()?.id == "b")
+        model.moveSelection(delta: 5)
+        #expect(model.selectedIndex == 1)
+        model.moveSelection(delta: -10)
+        #expect(model.selectedIndex == 0)
     }
 }

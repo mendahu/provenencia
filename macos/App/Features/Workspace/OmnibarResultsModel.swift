@@ -19,6 +19,8 @@ final class OmnibarResultsModel {
     var hasSearched = false
     /// Set when Esc / outside click closes the panel without clearing the query.
     var userDismissed = false
+    /// Non-nil when the last completed search failed (not “no matches”).
+    var searchError: String?
     var selectedIndex = 0
     var fieldFrame: CGRect = .zero
 
@@ -34,8 +36,16 @@ final class OmnibarResultsModel {
         !userDismissed && trimmedQuery.count >= Self.minQueryLength && (hasSearched || isLoading)
     }
 
+    var showsLoadingState: Bool {
+        isLoading && hits.isEmpty && searchError == nil
+    }
+
+    var showsErrorState: Bool {
+        searchError != nil && !isLoading
+    }
+
     var showsEmptyState: Bool {
-        hasSearched && !isLoading && hits.isEmpty
+        hasSearched && !isLoading && hits.isEmpty && searchError == nil
     }
 
     func closePanel() {
@@ -53,6 +63,7 @@ final class OmnibarResultsModel {
         isLoading = false
         hasSearched = false
         userDismissed = false
+        searchError = nil
         selectedIndex = 0
     }
 
@@ -76,11 +87,13 @@ final class OmnibarResultsModel {
             isLoading = false
             hasSearched = false
             userDismissed = false
+            searchError = nil
             selectedIndex = 0
             return
         }
 
         userDismissed = false
+        searchError = nil
         isLoading = true
         let generation = searchGeneration + 1
         searchGeneration = generation
@@ -129,6 +142,7 @@ final class OmnibarResultsModel {
             sourcesByID = Dictionary(uniqueKeysWithValues: sourceRows.map { ($0.id, $0) })
             typesByID = Dictionary(uniqueKeysWithValues: typeRows.map { ($0.id, $0) })
             hasSearched = true
+            searchError = nil
             isLoading = false
             selectedIndex = 0
         } catch {
@@ -137,6 +151,7 @@ final class OmnibarResultsModel {
             sourcesByID = [:]
             typesByID = [:]
             hasSearched = true
+            searchError = String(localized: L10n.Workspace.omnibarSearchFailed)
             isLoading = false
             selectedIndex = 0
         }
@@ -157,7 +172,7 @@ enum OmnibarHitPresentation {
     static func showMatchContext(_ reason: String) -> Bool {
         let r = reason.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if r.isEmpty { return false }
-        if r == "title" || r == "ref" || r == "label" || r == "key" { return false }
+        if r == "title" || r == "ref" || r == "label" || r == "key" || r == "fuzzy" { return false }
         return true
     }
 

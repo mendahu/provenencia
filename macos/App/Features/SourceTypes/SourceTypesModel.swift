@@ -31,6 +31,8 @@ final class SourceTypesModel {
     /// This destination never edits it, only reads it to offer suggestions.
     private(set) var fields: [CatalogMetadataField] = []
     private(set) var isLoading = false
+    /// True after the first `load()` finishes — gates history prune until rows exist.
+    private(set) var hasCompletedInitialLoad = false
     var loadError: Error?
 
     private(set) var sortColumn: SortColumn = .label
@@ -224,7 +226,10 @@ final class SourceTypesModel {
     func load() async {
         isLoading = true
         loadError = nil
-        defer { isLoading = false }
+        defer {
+            isLoading = false
+            hasCompletedInitialLoad = true
+        }
         do {
             types = try await store.listSourceTypes(projectDir: projectDir)
             fields = try await store.listMetadataFields(projectDir: projectDir)

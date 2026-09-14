@@ -108,6 +108,9 @@ struct WorkspaceToolbar: View {
             symbol: symbol,
             shortcut: shortcut,
             label: label,
+            accessibilityIdentifier: side == .back
+                ? "workspace.toolbar.back"
+                : "workspace.toolbar.forward",
             menuPresented: Binding(
                 get: { jumpMenu.side == side },
                 set: { presented in
@@ -331,6 +334,7 @@ private struct HistoryNavControl: View {
     let symbol: PVSymbol
     let shortcut: String
     let label: LocalizedStringResource
+    let accessibilityIdentifier: String
     @Binding var menuPresented: Bool
     let hasJumpItems: Bool
     let onStep: () -> Void
@@ -366,6 +370,7 @@ private struct HistoryNavControl: View {
         .opacity(enabled ? 1 : 0.45)
         .help(Text(label))
         .accessibilityLabel(Text(label))
+        .accessibilityIdentifier(accessibilityIdentifier)
         .onHover { hovering = $0 }
         .simultaneousGesture(
             LongPressGesture(minimumDuration: 0.4)
@@ -480,6 +485,7 @@ private struct HistoryJumpMenuPanel: View {
         .clipShape(RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous))
         .pvShadow(PVElevation.overlay)
         .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text(L10n.Workspace.jumpMenuAccessibilityLabel))
         .accessibilityIdentifier("workspace.toolbar.jumpMenu")
     }
 }

@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The **Source fields** workspace destination (S2-02 board / S2-15 PR):
-/// browse, search, and create/edit the project's `source_metadata_fields`
+/// browse and create/edit the project's `source_metadata_fields`
 /// vocabulary. Mounts inside the existing S2-01 workspace content host —
 /// see `WorkspaceContent` — not a second window chrome.
 ///
@@ -84,7 +84,7 @@ struct SourceFieldsView: View {
         if let fieldId = location.fieldId {
             if model.fields.contains(where: { $0.id == fieldId }) {
                 model.select(fieldId)
-            } else if !model.isLoading {
+            } else if model.hasCompletedInitialLoad {
                 navigation.fallbackToSectionRoot()
             }
         } else {

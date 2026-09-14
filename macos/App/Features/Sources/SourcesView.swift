@@ -95,7 +95,7 @@ struct SourcesView: View {
         if let sourceId = location.sourceId {
             if model.sources.contains(where: { $0.id == sourceId }) {
                 model.openSource(id: sourceId)
-            } else if !model.isLoading {
+            } else if model.hasCompletedInitialLoad {
                 // After load, missing or deleted sources land on the list root.
                 navigation.fallbackToSectionRoot()
             }
