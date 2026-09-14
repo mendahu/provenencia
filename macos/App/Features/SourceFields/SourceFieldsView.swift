@@ -72,8 +72,10 @@ struct SourceFieldsView: View {
             await model.load()
             applyWorkspaceLocation()
         }
-        .onAppear { applyWorkspaceLocation() }
-        .onChange(of: navigation.currentLocation) { _, _ in applyWorkspaceLocation() }
+        .onChange(of: navigation.currentLocation) { _, _ in
+            guard model.hasCompletedInitialLoad else { return }
+            applyWorkspaceLocation()
+        }
         .accessibilityIdentifier("sourceFields")
     }
 
@@ -84,7 +86,8 @@ struct SourceFieldsView: View {
         if let fieldId = location.fieldId {
             if model.fields.contains(where: { $0.id == fieldId }) {
                 model.select(fieldId)
-            } else if model.hasCompletedInitialLoad {
+            } else {
+                // Missing or deleted — only called after first load completes.
                 navigation.fallbackToSectionRoot()
             }
         } else {

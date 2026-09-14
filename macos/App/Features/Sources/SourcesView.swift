@@ -84,8 +84,10 @@ struct SourcesView: View {
             await model.refreshTypes()
             model.selectSoleTypeIfNeeded()
         }
-        .onAppear { applyWorkspaceLocation() }
-        .onChange(of: navigation.currentLocation) { _, _ in applyWorkspaceLocation() }
+        .onChange(of: navigation.currentLocation) { _, _ in
+            guard model.hasCompletedInitialLoad else { return }
+            applyWorkspaceLocation()
+        }
         .accessibilityIdentifier("sources")
     }
 
@@ -95,8 +97,8 @@ struct SourcesView: View {
         if let sourceId = location.sourceId {
             if model.sources.contains(where: { $0.id == sourceId }) {
                 model.openSource(id: sourceId)
-            } else if model.hasCompletedInitialLoad {
-                // After load, missing or deleted sources land on the list root.
+            } else {
+                // Missing or deleted — only called after first load completes.
                 navigation.fallbackToSectionRoot()
             }
         } else {

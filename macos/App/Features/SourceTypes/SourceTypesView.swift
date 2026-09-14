@@ -76,8 +76,10 @@ struct SourceTypesView: View {
             await model.load()
             applyWorkspaceLocation()
         }
-        .onAppear { applyWorkspaceLocation() }
-        .onChange(of: navigation.currentLocation) { _, _ in applyWorkspaceLocation() }
+        .onChange(of: navigation.currentLocation) { _, _ in
+            guard model.hasCompletedInitialLoad else { return }
+            applyWorkspaceLocation()
+        }
         .accessibilityIdentifier("sourceTypes")
     }
 
@@ -88,7 +90,8 @@ struct SourceTypesView: View {
         if let typeId = location.typeId {
             if model.types.contains(where: { $0.id == typeId }) {
                 model.select(typeId)
-            } else if model.hasCompletedInitialLoad {
+            } else {
+                // Missing or deleted — only called after first load completes.
                 navigation.fallbackToSectionRoot()
             }
         } else {
