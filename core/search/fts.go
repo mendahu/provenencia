@@ -24,6 +24,9 @@ type docRow struct {
 	title, ref, secondary, body                               string
 	ftsRank                                                   float64
 	hasFTS                                                    bool
+	fromFuzzy                                                 bool
+	fuzzySim                                                  float64
+	fuzzyReason                                               string
 	refMatch                                                  refMatchTier
 }
 
@@ -77,6 +80,12 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 					}
 				}
 			}
+			// Typo shortlist: trigram OR expansion + Jaro–Winkler gate (never full scan).
+			if len(byKey) < limit {
+				if err := mergeFuzzyShortlist(db, byKey, tokens, limit); err != nil {
+					return nil, err
+				}
+			}
 		}
 	}
 
@@ -104,10 +113,19 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 			if score <= 0 {
 				score = 12 // ref field weight floor
 			}
+		} else if score <= 0 && d.fromFuzzy && d.fuzzySim >= FuzzyWeights.JaroWinklerMin {
+			// Substring scorer missed (typo); keep JW-gated fuzzy hit below exact FTS.
+			score = d.fuzzySim * 12 * FuzzyWeights.ScoreScale
+			reason = d.fuzzyReason
+			if reason == "" {
+				reason = "fuzzy"
+			}
 		} else if score <= 0 {
 			// FTS matched (e.g. prefix) but scoreFields saw no substring — keep a floor.
 			score = 0.1
 			reason = "title"
+		} else if d.fromFuzzy && !d.hasFTS {
+			score *= FuzzyWeights.ScoreScale
 		}
 		if d.hasFTS {
 			score *= 1.0 / (1.0 + absFloat(d.ftsRank))
@@ -177,6 +195,75 @@ func mergeFTS(db *sql.DB, byKey map[string]docRow, match string) error {
 		byKey[key] = d
 	}
 	return rows.Err()
+}
+
+// mergeFuzzyShortlist expands candidates via trigram OR MATCH, then keeps only
+// rows that pass a Jaro–Winkler gate against identity fields.
+func mergeFuzzyShortlist(db *sql.DB, byKey map[string]docRow, tokens []string, limit int) error {
+	remaining := FuzzyWeights.CandidateCap
+	if remaining <= 0 {
+		return nil
+	}
+	for _, tok := range tokens {
+		if len(byKey) >= limit || remaining <= 0 {
+			break
+		}
+		match := buildTrigramORMatch(tok)
+		if match == "" {
+			continue
+		}
+		added, err := mergeTrigramCandidates(db, byKey, match, remaining, tokens)
+		if err != nil {
+			return err
+		}
+		remaining -= added
+	}
+	return nil
+}
+
+func mergeTrigramCandidates(db *sql.DB, byKey map[string]docRow, match string, capN int, tokens []string) (added int, err error) {
+	rows, err := db.Query(`
+		SELECT d.kind, d.entity_id, d.display_ref, d.display_title, d.display_subtitle,
+			d.title, d.ref, d.secondary, d.body
+		FROM catalog_search_fts_trigram
+		JOIN catalog_search_docs d ON d.rowid = catalog_search_fts_trigram.rowid
+		WHERE catalog_search_fts_trigram MATCH ?
+		LIMIT ?
+	`, match, capN)
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var d docRow
+		if err := rows.Scan(
+			&d.kind, &d.entityID, &d.displayRef, &d.displayTitle, &d.displaySubtitle,
+			&d.title, &d.ref, &d.secondary, &d.body,
+		); err != nil {
+			return added, err
+		}
+		key := candidateKey(d.kind, d.entityID)
+		if prev, ok := byKey[key]; ok {
+			// Already retrieved via unicode FTS or ref — keep prior row.
+			_ = prev
+			continue
+		}
+		values := fieldValuesForKind(d.kind, d.title, d.ref, d.secondary, d.body)
+		sim, reason := bestFuzzyFieldScore(values, tokens)
+		if sim < FuzzyWeights.JaroWinklerMin {
+			continue
+		}
+		d.fromFuzzy = true
+		d.fuzzySim = sim
+		d.fuzzyReason = reason
+		byKey[key] = d
+		added++
+		if added >= capN {
+			break
+		}
+	}
+	return added, rows.Err()
 }
 
 func fieldValuesForKind(kind, title, refCol, secondary, body string) map[string]string {

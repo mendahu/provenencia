@@ -6,7 +6,7 @@ Authoritative behavior: [`navigation-history.md`](navigation-history.md), [`omni
 
 ## Status
 
-**In progress.** Open steps below; completed steps live in [`completed.md`](completed.md) (S3-01…S3-10; S3-06 skipped).
+**In progress.** Open steps below; completed steps live in [`completed.md`](completed.md) (S3-01…S3-11; S3-06 skipped).
 
 ## Goal (dogfood bar)
 
@@ -56,22 +56,11 @@ S3-05  Toolbar chrome (done)                S3-08  FTS5 (done)
                  S3-10  Omnibar results (done)
                        │
                        ▼
-                 S3-11  Fuzzy / typo
+                 S3-11  Fuzzy / typo (done)
                        │
                        ▼
                  S3-12  Dogfood polish (optional S3-13+ kinds)
 ```
-
-### S3-11 — PR: Fuzzy / typo matching
-
-| | |
-| --- | --- |
-| **Kind** | PR |
-| **Depends on** | S3-10 (or S3-09 if tuning without UI) |
-| **Deliverables** | FTS5 trigram and/or Go fuzzy on a **shortlist** only; threshold tuning. Never full-catalog fuzzy scan. |
-| **Context** | [`omnibar-search.md`](omnibar-search.md) S5. |
-| **Out** | Cross-root association search; NL/AI queries. |
-| **Dogfood** | Common typos recover without flooding garbage. |
 
 ### S3-12 — PR: Spike 3 dogfood polish
 
@@ -112,10 +101,10 @@ Not required to close Spike 3 dogfood if Sources + types + fields search well:
 | Track | Steps |
 | --- | --- |
 | **Design** | S3-01, S3-02 — done ([`completed.md`](completed.md)) |
-| **Core / FFI** | S3-03 done → S3-07 done → S3-08 done → S3-09 done → (S3-11) |
+| **Core / FFI** | S3-03 done → S3-07 done → S3-08 done → S3-09 done → S3-11 done |
 | **Mac workspace** | S3-04 done → S3-05 done → S3-10 done → S3-12 |
 
-S3-11 may proceed beside S3-12 polish. **S3-10** was the omnibar integration gate.
+**S3-10** was the omnibar integration gate; **S3-11** closed typo tolerance in Go.
 
 ---
 

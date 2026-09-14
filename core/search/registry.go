@@ -36,6 +36,24 @@ var RefBoostWeights = struct {
 	None:   1,
 }
 
+// FuzzyWeights tune the S3-11 typo shortlist pass (trigram OR + Jaro–Winkler).
+// Never full-catalog fuzzy scan — only a capped trigram candidate set.
+var FuzzyWeights = struct {
+	// MinTokenRunes skips short tokens (trigrams need ≥3; typos need room).
+	MinTokenRunes int
+	// CandidateCap limits rows merged from the trigram index per Search.
+	CandidateCap int
+	// JaroWinklerMin is the similarity gate against title/ref/label/key.
+	JaroWinklerMin float64
+	// ScoreScale multiplies fuzzy-only hits so exact FTS still ranks higher.
+	ScoreScale float64
+}{
+	MinTokenRunes:  4,
+	CandidateCap:   150,
+	JaroWinklerMin: 0.86,
+	ScoreScale:     0.55,
+}
+
 // KindSpec is one searchable navigable root in the registry.
 type KindSpec struct {
 	Kind                string

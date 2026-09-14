@@ -230,8 +230,7 @@ private struct OmnibarHitRowButtonStyle: ButtonStyle {
 }
 
 struct OmnibarFieldAnchorKey: PreferenceKey {
-    // PreferenceKey storage is main-actor UI only.
-    nonisolated(unsafe) static let defaultValue: CGRect = .zero
+    static let defaultValue: CGRect = .zero
 
     static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
         let next = nextValue()
