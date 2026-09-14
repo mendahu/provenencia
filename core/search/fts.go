@@ -2,11 +2,13 @@ package search
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"sort"
 	"strings"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/searchindex"
 )
 
 // FTSSearcher retrieves hits from catalog_search_fts + catalog_search_docs.
@@ -17,13 +19,23 @@ func NewFTSSearcher() *FTSSearcher {
 	return &FTSSearcher{}
 }
 
+type docRow struct {
+	kind, entityID, displayRef, displayTitle, displaySubtitle string
+	title, ref, secondary, body                               string
+	ftsRank                                                   float64
+	hasFTS                                                    bool
+	refMatch                                                  refMatchTier
+}
+
+func candidateKey(kind, entityID string) string {
+	return kind + "\x00" + entityID
+}
+
 // Search implements Searcher.
 func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) ([]Hit, error) {
 	_ = ctx
-	tokens := tokenize(q.Text)
-	if len(tokens) == 0 {
-		return nil, nil
-	}
+	raw := strings.TrimSpace(q.Text)
+	tokens := tokenize(raw)
 	limit := q.Limit
 	if limit <= 0 {
 		limit = DefaultHitLimit
@@ -33,65 +45,86 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 	if err != nil {
 		return nil, err
 	}
-	match := buildMatchQuery(tokens)
-	if match == "" {
+
+	byKey := make(map[string]docRow)
+
+	// Ref fast path: exact / prefix on projected docs (does not depend on FTS tokenization).
+	if key, exact := classifyRefQuery(raw); key != "" {
+		refDocs, err := lookUpRefDocs(db, key, exact, limit)
+		if err != nil {
+			return nil, err
+		}
+		for _, d := range refDocs {
+			byKey[candidateKey(d.kind, d.entityID)] = d
+		}
+	}
+
+	if len(tokens) > 0 {
+		// Ref-shaped queries skip FTS: hyphens are FTS operators and break MATCH.
+		if refKey, _ := classifyRefQuery(raw); refKey == "" {
+			andMatch := buildMatchQuery(tokens, false)
+			if andMatch != "" {
+				if err := mergeFTS(db, byKey, andMatch); err != nil {
+					return nil, err
+				}
+			}
+			// Controlled OR for multi-token queries so partial term coverage can retrieve.
+			if len(tokens) >= 2 {
+				orMatch := buildMatchQuery(tokens, true)
+				if orMatch != "" {
+					if err := mergeFTS(db, byKey, orMatch); err != nil {
+						return nil, err
+					}
+				}
+			}
+		}
+	}
+
+	if len(byKey) == 0 {
 		return nil, nil
 	}
 
-	// bm25 column weights from FTSBM25Weights (lower bm25 = better).
-	w := FTSBM25Weights
-	rows, err := db.Query(fmt.Sprintf(`
-		SELECT d.kind, d.entity_id, d.display_ref, d.display_title, d.display_subtitle,
-			d.title, d.ref, d.secondary, d.body,
-			bm25(catalog_search_fts, %f, %f, %f, %f) AS rank
-		FROM catalog_search_fts
-		JOIN catalog_search_docs d ON d.rowid = catalog_search_fts.rowid
-		WHERE catalog_search_fts MATCH ?
-	`, w.Title, w.Ref, w.Secondary, w.Body), match)
-	if err != nil {
-		return nil, err
+	// Score tokens: for pure ref queries, still tokenize the raw string so
+	// scoreFields can credit the ref field when present.
+	scoreTokens := tokens
+	if len(scoreTokens) == 0 {
+		scoreTokens = tokenize(strings.ToLower(raw))
 	}
-	defer rows.Close()
 
 	var hits []Hit
-	for rows.Next() {
-		var kind, entityID, displayRef, displayTitle, displaySubtitle string
-		var titleCol, refCol, secondaryCol, bodyCol string
-		var rank float64
-		if err := rows.Scan(
-			&kind, &entityID, &displayRef, &displayTitle, &displaySubtitle,
-			&titleCol, &refCol, &secondaryCol, &bodyCol, &rank,
-		); err != nil {
-			return nil, err
-		}
-		spec, ok := kindSpec(kind)
+	for _, d := range byKey {
+		spec, ok := kindSpec(d.kind)
 		if !ok || !spec.DefaultInEverything {
 			continue
 		}
-		values := fieldValuesForKind(kind, titleCol, refCol, secondaryCol, bodyCol)
-		score, reason := scoreFields(spec, values, tokens)
-		if score <= 0 {
+		values := fieldValuesForKind(d.kind, d.title, d.ref, d.secondary, d.body)
+		score, reason := scoreFields(spec, values, scoreTokens)
+		if d.refMatch == refMatchExact || d.refMatch == refMatchPrefix {
+			reason = "ref"
+			if score <= 0 {
+				score = 12 // ref field weight floor
+			}
+		} else if score <= 0 {
 			// FTS matched (e.g. prefix) but scoreFields saw no substring — keep a floor.
 			score = 0.1
 			reason = "title"
 		}
-		// Blend registry weights with FTS rank (bm25: more negative ≈ stronger).
-		score *= 1.0 / (1.0 + absFloat(rank))
+		if d.hasFTS {
+			score *= 1.0 / (1.0 + absFloat(d.ftsRank))
+		}
 		score *= contextMultiplier(spec, q.Location.Section)
+		score *= refBoostFor(d.refMatch)
 
 		hits = append(hits, Hit{
-			Kind:        kind,
-			ID:          entityID,
-			Ref:         displayRef,
-			Title:       displayTitle,
-			Subtitle:    displaySubtitle,
+			Kind:        d.kind,
+			ID:          d.entityID,
+			Ref:         d.displayRef,
+			Title:       d.displayTitle,
+			Subtitle:    d.displaySubtitle,
 			MatchReason: reason,
-			Location:    locationFor(kind, entityID, displayRef, displayTitle),
+			Location:    locationFor(d.kind, d.entityID, d.displayRef, d.displayTitle),
 			Score:       score,
 		})
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
 	}
 
 	sort.SliceStable(hits, func(i, j int) bool {
@@ -109,16 +142,54 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 	return hits, nil
 }
 
-func fieldValuesForKind(kind, title, ref, secondary, body string) map[string]string {
+func mergeFTS(db *sql.DB, byKey map[string]docRow, match string) error {
+	w := FTSBM25Weights
+	rows, err := db.Query(fmt.Sprintf(`
+		SELECT d.kind, d.entity_id, d.display_ref, d.display_title, d.display_subtitle,
+			d.title, d.ref, d.secondary, d.body,
+			bm25(catalog_search_fts, %f, %f, %f, %f) AS rank
+		FROM catalog_search_fts
+		JOIN catalog_search_docs d ON d.rowid = catalog_search_fts.rowid
+		WHERE catalog_search_fts MATCH ?
+	`, w.Title, w.Ref, w.Secondary, w.Body), match)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var d docRow
+		if err := rows.Scan(
+			&d.kind, &d.entityID, &d.displayRef, &d.displayTitle, &d.displaySubtitle,
+			&d.title, &d.ref, &d.secondary, &d.body, &d.ftsRank,
+		); err != nil {
+			return err
+		}
+		d.hasFTS = true
+		key := candidateKey(d.kind, d.entityID)
+		if prev, ok := byKey[key]; ok {
+			d.refMatch = betterRefMatch(prev.refMatch, d.refMatch)
+			// bm25: more negative is stronger — keep the better rank across AND/OR passes.
+			if prev.hasFTS && prev.ftsRank < d.ftsRank {
+				d.ftsRank = prev.ftsRank
+			}
+		}
+		byKey[key] = d
+	}
+	return rows.Err()
+}
+
+func fieldValuesForKind(kind, title, refCol, secondary, body string) map[string]string {
 	switch kind {
 	case KindSource:
+		notes, metadata, filename := splitTaggedBody(body)
 		return map[string]string{
 			"title":       title,
-			"ref":         ref,
+			"ref":         refCol,
 			"description": secondary,
-			"notes":       body,
-			"metadata":    body,
-			"filename":    body,
+			"notes":       notes,
+			"metadata":    metadata,
+			"filename":    filename,
 		}
 	case KindSourceType, KindSourceField:
 		return map[string]string{
@@ -129,16 +200,36 @@ func fieldValuesForKind(kind, title, ref, secondary, body string) map[string]str
 	default:
 		return map[string]string{
 			"title": title,
-			"ref":   ref,
+			"ref":   refCol,
 			"body":  body,
 		}
 	}
 }
 
-func locationFor(kind, id, ref, title string) WorkspaceLocation {
+func splitTaggedBody(body string) (notes, metadata, filename string) {
+	var noteParts, metaParts, fileParts []string
+	for _, line := range strings.Split(body, "\n") {
+		switch {
+		case strings.HasPrefix(line, searchindex.BodyTagNote):
+			noteParts = append(noteParts, strings.TrimPrefix(line, searchindex.BodyTagNote))
+		case strings.HasPrefix(line, searchindex.BodyTagMetadata):
+			metaParts = append(metaParts, strings.TrimPrefix(line, searchindex.BodyTagMetadata))
+		case strings.HasPrefix(line, searchindex.BodyTagFilename):
+			fileParts = append(fileParts, strings.TrimPrefix(line, searchindex.BodyTagFilename))
+		default:
+			// Legacy untagged body (pre-ProjectionVersion 2): treat as notes.
+			if t := strings.TrimSpace(line); t != "" {
+				noteParts = append(noteParts, t)
+			}
+		}
+	}
+	return strings.Join(noteParts, "\n"), strings.Join(metaParts, "\n"), strings.Join(fileParts, "\n")
+}
+
+func locationFor(kind, id, refCol, title string) WorkspaceLocation {
 	switch kind {
 	case KindSource:
-		return WorkspaceLocation{Section: SectionSources, SourceID: id, Ref: ref, Title: title}
+		return WorkspaceLocation{Section: SectionSources, SourceID: id, Ref: refCol, Title: title}
 	case KindSourceType:
 		return WorkspaceLocation{Section: SectionSourceTypes, TypeID: id, Title: title}
 	case KindSourceField:
@@ -148,8 +239,8 @@ func locationFor(kind, id, ref, title string) WorkspaceLocation {
 	}
 }
 
-// buildMatchQuery ANDs tokens; last token gets a prefix star for typeahead.
-func buildMatchQuery(tokens []string) string {
+// buildMatchQuery joins tokens with AND or OR; last token gets a prefix star for typeahead.
+func buildMatchQuery(tokens []string, orJoin bool) string {
 	if len(tokens) == 0 {
 		return ""
 	}
@@ -160,15 +251,19 @@ func buildMatchQuery(tokens []string) string {
 			continue
 		}
 		if i == len(tokens)-1 {
-			parts = append(parts, tok+"*")
+			parts = append(parts, `"`+tok+`"*`)
 		} else {
-			parts = append(parts, tok)
+			parts = append(parts, `"`+tok+`"`)
 		}
 	}
 	if len(parts) == 0 {
 		return ""
 	}
-	return strings.Join(parts, " AND ")
+	sep := " AND "
+	if orJoin {
+		sep = " OR "
+	}
+	return strings.Join(parts, sep)
 }
 
 func sanitizeFTSToken(tok string) string {

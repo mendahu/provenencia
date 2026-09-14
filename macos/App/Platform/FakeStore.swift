@@ -790,8 +790,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         location: WorkspaceLocation
     ) async throws -> [CatalogSearchHit] {
         markCatalogSessionHeld(projectDir)
-        let tokens = Self.tokenizeSearch(query)
-        guard !tokens.isEmpty else { return [] }
+        let raw = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let tokens = Self.tokenizeSearch(raw)
+        let refKey = Self.classifyRefQuery(raw)
+        guard !tokens.isEmpty || refKey != nil else { return [] }
 
         var scored: [(hit: CatalogSearchHit, score: Double)] = []
         let types = sourceTypesByProject[projectDir] ?? []
@@ -807,13 +809,29 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 "ref": source.ref,
                 "description": description,
             ]
-            let (score, reason) = Self.scoreSearchFields(
+            var (score, reason) = Self.scoreSearchFields(
                 fields: [("title", 10), ("ref", 12), ("description", 3)],
                 values: values,
-                tokens: tokens
+                tokens: tokens.isEmpty ? [raw.lowercased()] : tokens
             )
-            guard score > 0 else { continue }
-            let boost = location.section == .sources ? 1.35 : 1.0
+            var refBoost = 1.0
+            if let refKey {
+                let srcRef = source.ref.uppercased()
+                if refKey.exact && srcRef == refKey.key {
+                    score = max(score, 12)
+                    reason = "ref"
+                    refBoost = 8
+                } else if !refKey.exact && srcRef.hasPrefix(refKey.key) {
+                    score = max(score, 12)
+                    reason = "ref"
+                    refBoost = 3
+                } else if score <= 0 {
+                    continue
+                }
+            } else {
+                guard score > 0 else { continue }
+            }
+            let boost = location.section == .sources ? 2.0 : 1.0
             scored.append((
                 CatalogSearchHit(
                     kind: "source",
@@ -829,68 +847,71 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         title: source.title
                     )
                 ),
-                score * boost
+                score * boost * refBoost
             ))
         }
 
-        for type in types {
-            let (score, reason) = Self.scoreSearchFields(
-                fields: [("label", 10), ("key", 8), ("description", 3)],
-                values: [
-                    "label": type.label,
-                    "key": type.key,
-                    "description": type.description,
-                ],
-                tokens: tokens
-            )
-            guard score > 0 else { continue }
-            let boost = location.section == .sourceTypes ? 1.35 : 1.0
-            scored.append((
-                CatalogSearchHit(
-                    kind: "source_type",
-                    id: type.id,
-                    ref: "",
-                    title: type.label,
-                    subtitle: type.key,
-                    matchReason: reason,
-                    location: WorkspaceLocation(
-                        section: .sourceTypes,
-                        typeId: type.id,
-                        title: type.label
-                    )
-                ),
-                score * boost
-            ))
-        }
+        // Ref-shaped queries only promote Sources (vocab has no SRC-… refs).
+        if refKey == nil {
+            for type in types {
+                let (score, reason) = Self.scoreSearchFields(
+                    fields: [("label", 10), ("key", 8), ("description", 3)],
+                    values: [
+                        "label": type.label,
+                        "key": type.key,
+                        "description": type.description,
+                    ],
+                    tokens: tokens
+                )
+                guard score > 0 else { continue }
+                let boost = location.section == .sourceTypes ? 2.0 : 1.0
+                scored.append((
+                    CatalogSearchHit(
+                        kind: "source_type",
+                        id: type.id,
+                        ref: "",
+                        title: type.label,
+                        subtitle: type.key,
+                        matchReason: reason,
+                        location: WorkspaceLocation(
+                            section: .sourceTypes,
+                            typeId: type.id,
+                            title: type.label
+                        )
+                    ),
+                    score * boost
+                ))
+            }
 
-        for field in fieldsByProject[projectDir] ?? [] {
-            let (score, reason) = Self.scoreSearchFields(
-                fields: [("label", 10), ("key", 8), ("description", 3)],
-                values: [
-                    "label": field.label,
-                    "key": field.key,
-                    "description": field.description,
-                ],
-                tokens: tokens
-            )
-            guard score > 0 else { continue }
-            let boost = location.section == .sourceFields ? 1.35 : 1.0
-            scored.append((
-                CatalogSearchHit(
-                    kind: "source_field",
-                    id: field.id,
-                    ref: "",
-                    title: field.label,
-                    subtitle: field.key,
-                    matchReason: reason,
-                    location: WorkspaceLocation(
-                        section: .sourceFields,
-                        fieldId: field.id,
-                        title: field.label
-                    )
-                ),
-                score * boost
-            ))
+            for field in fieldsByProject[projectDir] ?? [] {
+                let (score, reason) = Self.scoreSearchFields(
+                    fields: [("label", 10), ("key", 8), ("description", 3)],
+                    values: [
+                        "label": field.label,
+                        "key": field.key,
+                        "description": field.description,
+                    ],
+                    tokens: tokens
+                )
+                guard score > 0 else { continue }
+                let boost = location.section == .sourceFields ? 2.0 : 1.0
+                scored.append((
+                    CatalogSearchHit(
+                        kind: "source_field",
+                        id: field.id,
+                        ref: "",
+                        title: field.label,
+                        subtitle: field.key,
+                        matchReason: reason,
+                        location: WorkspaceLocation(
+                            section: .sourceFields,
+                            fieldId: field.id,
+                            title: field.label
+                        )
+                    ),
+                    score * boost
+                ))
+            }
         }
 
         scored.sort {
@@ -903,6 +924,21 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     private func markCatalogSessionHeld(_ projectDir: String) {
         heldCatalogProjectDir = projectDir
+    }
+
+    /// Exact catalog ref or PREFIX-token prefix (mirrors core/search classifyRefQuery).
+    private static func classifyRefQuery(_ query: String) -> (key: String, exact: Bool)? {
+        let s = query.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard !s.isEmpty else { return nil }
+        let exactPattern = /^[A-Z]{3}-[0-9A-HJKMNP-TV-Z]{5}$/
+        if s.wholeMatch(of: exactPattern) != nil {
+            return (s, true)
+        }
+        let prefixPattern = /^[A-Z]{3}-[0-9A-HJKMNP-TV-Z]{1,4}$/
+        if s.wholeMatch(of: prefixPattern) != nil {
+            return (s, false)
+        }
+        return nil
     }
 
     private static func tokenizeSearch(_ query: String) -> [String] {

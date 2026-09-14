@@ -16,6 +16,7 @@ IDs stay stable (`S3-NN`). Do not renumber when moving steps here.
 | [S3-06](#s3-06--skipped--history-jump-menu-polish) | PR | Skipped — full jump menus shipped in S3-05 |
 | [S3-07](#s3-07--pr-searchable-kind-registry--searchcatalog-rpc-shell) | PR | Searchable-kind registry + SearchCatalog RPC |
 | [S3-08](#s3-08--pr-fts5-projection) | PR | FTS5 catalog search projection |
+| [S3-09](#s3-09--pr-context-ranking--ref-fast-path) | PR | Context ranking + ref fast path |
 
 ---
 
@@ -124,6 +125,20 @@ IDs stay stable (`S3-NN`). Do not renumber when moving steps here.
 | **Depends on** | S3-07 |
 | **Deliverables** | Done. Enabled `-tags fts5` on dylib build + CI/`go test`. Migration `000018`: `catalog_search_docs` + external-content `catalog_search_fts` + `catalog_search_meta`. `core/database/searchindex` projectors for Source (notes/metadata/artifact/filename rollup) and vocab roots; incremental reproject on domain writes; `searchindex.EnsureCatalog` rebuild/heal on Open/Create. `FTSSearcher` is `DefaultEngine` (NaiveScanner removed). Registry body weights for rolled Source text. Skill [`add-searchable-kind`](../../../.cursor/skills/add-searchable-kind/SKILL.md) updated. |
 | **Context** | [`omnibar-search.md`](omnibar-search.md) S2; [`application-stack.md`](../../application-stack.md) §10. |
-| **Out** | Context/ref fast-path polish (S3-09); fuzzy (S3-11); Files/Artifact as own hit kinds; omnibar UI (S3-10). |
+| **Out** | Fuzzy (S3-11); Files/Artifact as own hit kinds; omnibar UI (S3-10). |
 | **Dogfood** | Edit a Source title/note → SearchCatalog updates; title beats body; Open heals a wiped index. |
 | **Feeds** | S3-09 |
+
+---
+
+### S3-09 — PR: Context ranking + ref fast path
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S3-08 |
+| **Deliverables** | Done. Registry `RefBoostWeights` + section `ContextBoost` (2.0). Exact/prefix ref fast path on `catalog_search_docs.ref` (skips FTS for ref-shaped queries). Controlled multi-token OR retrieve for partial term coverage. Tagged Source body rollup (`note:` / `metadata:` / `filename:`) with `ProjectionVersion` 2 + snippet `match_reason`. Hit cap remains 50. FakeStore parity for paste-ref. |
+| **Context** | [`omnibar-search.md`](omnibar-search.md) S3. |
+| **Out** | Fuzzy (S3-11); omnibar UI / remove list search (S3-10). |
+| **Dogfood** | Paste `SRC-…` → top hit with `match_reason` ref; Sources context floats Sources without hiding vocabulary. |
+| **Feeds** | S3-10 |

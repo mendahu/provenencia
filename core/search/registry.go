@@ -23,9 +23,22 @@ var FTSBM25Weights = struct {
 	Body:      1,
 }
 
+// RefBoostWeights multiply a hit's score when the query matches display_ref
+// via the ref fast path (exact ≫ prefix ≫ FTS-only / no ref match).
+// Section/kind boosts stay on KindSpec.ContextBoost.
+var RefBoostWeights = struct {
+	Exact  float64
+	Prefix float64
+	None   float64
+}{
+	Exact:  8,
+	Prefix: 3,
+	None:   1,
+}
+
 // KindSpec is one searchable navigable root in the registry.
 type KindSpec struct {
-	Kind               string
+	Kind                string
 	DefaultInEverything bool
 	// ContextSections that boost this kind when Query.Location.Section matches.
 	ContextSections []string
@@ -39,7 +52,7 @@ var Registry = []KindSpec{
 		Kind:                KindSource,
 		DefaultInEverything: true,
 		ContextSections:     []string{SectionSources},
-		ContextBoost:        1.35,
+		ContextBoost:        2.0,
 		Fields: []FieldWeight{
 			{Name: "title", Weight: 10},
 			{Name: "ref", Weight: 12},
@@ -53,7 +66,7 @@ var Registry = []KindSpec{
 		Kind:                KindSourceType,
 		DefaultInEverything: true,
 		ContextSections:     []string{SectionSourceTypes},
-		ContextBoost:        1.35,
+		ContextBoost:        2.0,
 		Fields: []FieldWeight{
 			{Name: "label", Weight: 10},
 			{Name: "key", Weight: 8},
@@ -64,7 +77,7 @@ var Registry = []KindSpec{
 		Kind:                KindSourceField,
 		DefaultInEverything: true,
 		ContextSections:     []string{SectionSourceFields},
-		ContextBoost:        1.35,
+		ContextBoost:        2.0,
 		Fields: []FieldWeight{
 			{Name: "label", Weight: 10},
 			{Name: "key", Weight: 8},
@@ -95,7 +108,8 @@ func contextMultiplier(spec KindSpec, section string) float64 {
 	return 1
 }
 
-// scoreFields returns a weighted score and the best-matching field name.
+// scoreFields returns a weighted score and the best-matching field reason.
+// For rolled-up Source body fields, reason is a cheap snippet (note: …).
 func scoreFields(spec KindSpec, values map[string]string, tokens []string) (score float64, reason string) {
 	if len(tokens) == 0 {
 		return 0, ""
@@ -129,9 +143,64 @@ func scoreFields(spec KindSpec, values map[string]string, tokens []string) (scor
 	// Prefer fuller term coverage.
 	score *= float64(matchedTokens) / float64(len(tokens))
 	if bestField != "" {
-		reason = bestField
+		reason = matchReasonForField(bestField, values[bestField], tokens)
 	}
 	return score, reason
+}
+
+func matchReasonForField(field, value string, tokens []string) string {
+	switch field {
+	case "notes":
+		return "note: " + snippetAround(value, tokens, 48)
+	case "metadata":
+		return "metadata: " + snippetAround(value, tokens, 48)
+	case "filename":
+		return "filename: " + snippetAround(value, tokens, 48)
+	default:
+		return field
+	}
+}
+
+func snippetAround(value string, tokens []string, maxLen int) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	lower := strings.ToLower(value)
+	idx := -1
+	tokLen := 0
+	for _, tok := range tokens {
+		if i := strings.Index(lower, tok); i >= 0 {
+			idx = i
+			tokLen = len(tok)
+			break
+		}
+	}
+	if idx < 0 {
+		if len(value) <= maxLen {
+			return value
+		}
+		return value[:maxLen] + "…"
+	}
+	start := idx - 8
+	if start < 0 {
+		start = 0
+	}
+	end := idx + tokLen + 24
+	if end > len(value) {
+		end = len(value)
+	}
+	out := value[start:end]
+	if start > 0 {
+		out = "…" + out
+	}
+	if end < len(value) {
+		out += "…"
+	}
+	if len(out) > maxLen+1 {
+		out = out[:maxLen] + "…"
+	}
+	return out
 }
 
 func tokenize(q string) []string {

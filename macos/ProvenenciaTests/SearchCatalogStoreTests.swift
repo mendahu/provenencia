@@ -93,10 +93,26 @@ struct SearchCatalogStoreTests {
         let store = FakeStore()
         store.sourcesByProject[projectDir] = [
             CatalogSource(id: "src-1", ref: "SRC-ZZ9K2", sourceTypeID: "", title: "Quiet title", description: ""),
+            CatalogSource(id: "src-2", ref: "SRC-OTHER", sourceTypeID: "", title: "SRC-ZZ9K2 in title", description: ""),
         ]
         let hits = try await store.searchCatalog(
             projectDir: projectDir,
             query: "SRC-ZZ9K2",
+            location: .sectionRoot(.sources)
+        )
+        #expect(hits.first?.id == "src-1")
+        #expect(hits.first?.matchReason == "ref")
+    }
+
+    @Test func prefixRefPromotesSource() async throws {
+        let store = FakeStore()
+        store.sourcesByProject[projectDir] = [
+            CatalogSource(id: "src-1", ref: "SRC-ZZ9K2", sourceTypeID: "", title: "Quiet", description: ""),
+            CatalogSource(id: "src-2", ref: "SRC-AAAAA", sourceTypeID: "", title: "Noise", description: ""),
+        ]
+        let hits = try await store.searchCatalog(
+            projectDir: projectDir,
+            query: "SRC-ZZ",
             location: .sectionRoot(.sources)
         )
         #expect(hits.first?.id == "src-1")

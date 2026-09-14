@@ -21,7 +21,14 @@ const (
 
 // ProjectionVersion is the Go-side projector shape. Bump when rollup columns
 // or document layout change so Open heals old indexes.
-const ProjectionVersion = 1
+const ProjectionVersion = 2
+
+// Tagged body line prefixes for Source rollups (parsed by core/search for match_reason).
+const (
+	BodyTagNote     = "note:\t"
+	BodyTagMetadata = "metadata:\t"
+	BodyTagFilename = "filename:\t"
+)
 
 // Querier is *sql.Tx or *sql.DB.
 type Querier interface {
@@ -191,7 +198,7 @@ func ReprojectSource(q Querier, sourceID []byte) error {
 			return err
 		}
 		if t := strings.TrimSpace(body); t != "" {
-			bodyParts = append(bodyParts, t)
+			bodyParts = append(bodyParts, BodyTagNote+t)
 		}
 	}
 	if err := noteRows.Err(); err != nil {
@@ -202,22 +209,32 @@ func ReprojectSource(q Querier, sourceID []byte) error {
 
 	metaRows, err := q.Query(`
 		SELECT COALESCE(m.value_text, ''), COALESCE(d.phrase, ''),
-			COALESCE(CAST(d.start_year AS TEXT), '')
+			COALESCE(CAST(d.start_year AS TEXT), ''),
+			COALESCE(f.label, ''), COALESCE(f.key, '')
 		FROM source_metadata m
 		LEFT JOIN date_values d ON d.id = m.date_value_id
+		LEFT JOIN source_metadata_fields f ON f.id = m.field_id
 		WHERE m.source_id = ?`, sourceID)
 	if err != nil {
 		return err
 	}
 	for metaRows.Next() {
-		var valueText, phrase, year string
-		if err := metaRows.Scan(&valueText, &phrase, &year); err != nil {
+		var valueText, phrase, year, fieldLabel, fieldKey string
+		if err := metaRows.Scan(&valueText, &phrase, &year, &fieldLabel, &fieldKey); err != nil {
 			metaRows.Close()
 			return err
 		}
+		label := strings.TrimSpace(fieldLabel)
+		if label == "" {
+			label = strings.TrimSpace(fieldKey)
+		}
 		for _, p := range []string{valueText, phrase, year} {
 			if t := strings.TrimSpace(p); t != "" {
-				bodyParts = append(bodyParts, t)
+				if label != "" {
+					bodyParts = append(bodyParts, BodyTagMetadata+label+": "+t)
+				} else {
+					bodyParts = append(bodyParts, BodyTagMetadata+t)
+				}
 			}
 		}
 	}
@@ -241,10 +258,13 @@ func ReprojectSource(q Querier, sourceID []byte) error {
 			artRows.Close()
 			return err
 		}
-		for _, p := range []string{label, desc, filename} {
+		for _, p := range []string{label, desc} {
 			if t := strings.TrimSpace(p); t != "" {
-				bodyParts = append(bodyParts, t)
+				bodyParts = append(bodyParts, BodyTagFilename+t)
 			}
+		}
+		if t := strings.TrimSpace(filename); t != "" {
+			bodyParts = append(bodyParts, BodyTagFilename+t)
 		}
 	}
 	if err := artRows.Err(); err != nil {
