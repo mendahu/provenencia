@@ -65,6 +65,9 @@
 		AA0000000000000000000271 /* CatalogCountsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000270 /* CatalogCountsTests.swift */; };
 		AA00000000000000000003A1 /* CatalogSessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003A0 /* CatalogSessionStoreTests.swift */; };
 		AA00000000000000000003E1 /* SearchCatalogStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003E0 /* SearchCatalogStoreTests.swift */; };
+		AA00000000000000000003F1 /* WorkspaceToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003F0 /* WorkspaceToolbar.swift */; };
+		AA00000000000000000003F3 /* OmnibarFocusCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003F2 /* OmnibarFocusCoordinator.swift */; };
+		AA00000000000000000003F5 /* WorkspaceToolbarBreadcrumbTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003F4 /* WorkspaceToolbarBreadcrumbTests.swift */; };
 		AA0000000000000000000212 /* SourceTypesModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000202 /* SourceTypesModel.swift */; };
 		AA0000000000000000000213 /* SourceTypesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000203 /* SourceTypesView.swift */; };
 		AA0000000000000000000214 /* SourceTypesListPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000204 /* SourceTypesListPane.swift */; };
@@ -242,6 +245,9 @@
 		AA0000000000000000000270 /* CatalogCountsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogCountsTests.swift; sourceTree = "<group>"; };
 		AA00000000000000000003A0 /* CatalogSessionStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogSessionStoreTests.swift; sourceTree = "<group>"; };
 		AA00000000000000000003E0 /* SearchCatalogStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SearchCatalogStoreTests.swift; sourceTree = "<group>"; };
+		AA00000000000000000003F0 /* WorkspaceToolbar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceToolbar.swift; sourceTree = "<group>"; };
+		AA00000000000000000003F2 /* OmnibarFocusCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OmnibarFocusCoordinator.swift; sourceTree = "<group>"; };
+		AA00000000000000000003F4 /* WorkspaceToolbarBreadcrumbTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceToolbarBreadcrumbTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000202 /* SourceTypesModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTypesModel.swift; sourceTree = "<group>"; };
 		AA0000000000000000000203 /* SourceTypesView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTypesView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000204 /* SourceTypesListPane.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTypesListPane.swift; sourceTree = "<group>"; };
@@ -482,6 +488,7 @@
 				F03B00F6F0D021AFCDAD2DEB /* WorkspaceModel.swift */,
 				D0E1F203948576A1B2C3D4E3 /* WorkspaceSection.swift */,
 				E1F203948576A1B2C3D4E5F4 /* WorkspaceNavigation.swift */,
+				AA00000000000000000003F0 /* WorkspaceToolbar.swift */,
 				B8C9D0E1F203948576A1B2C1 /* WorkspaceLocation.swift */,
 				C9D0E1F203948576A1B2C3D2 /* NavigationHistoryStore.swift */,
 				C1FE31A30B665829ECF16A6F /* WorkspaceSidebar.swift */,
@@ -585,6 +592,7 @@
 				AA0000000000000000000044 /* Generated */,
 				F56B617548A3EF65699270F8 /* SignOutCoordinator.swift */,
 				A7B8C9D0E1F203948576A1B0 /* NavigationCoordinator.swift */,
+				AA00000000000000000003F2 /* OmnibarFocusCoordinator.swift */,
 				85C0991FB99984CAEB385DA4 /* TrafficLights.swift */,
 				A1B2C3D4E5F60718293A4B5C /* WindowDragRegion.swift */,
 				7F69681C808F487B9BD6E7AA /* WindowSizing.swift */,
@@ -660,6 +668,7 @@
 				AA0000000000000000000270 /* CatalogCountsTests.swift */,
 				AA00000000000000000003A0 /* CatalogSessionStoreTests.swift */,
 				AA00000000000000000003E0 /* SearchCatalogStoreTests.swift */,
+				AA00000000000000000003F4 /* WorkspaceToolbarBreadcrumbTests.swift */,
 				B567080CA23230E18488F894 /* TrafficLightsTests.swift */,
 				8291342170CC4CB42EFA814C /* FieldSlugTests.swift */,
 				AA00000000000000000000C5 /* PVTableTests.swift */,
@@ -882,10 +891,12 @@
 				07D60E0FE9704E4723AE18DD /* PVLogoMark.swift in Sources */,
 				391CDC6A5D45C6C9E15EC251 /* SignOutCoordinator.swift in Sources */,
 				A7B8C9D0E1F203948576A1B2 /* NavigationCoordinator.swift in Sources */,
+				AA00000000000000000003F3 /* OmnibarFocusCoordinator.swift in Sources */,
 				E9178C44063AD95B47B5D524 /* PVSidebarNav.swift in Sources */,
 				6F7945720B05D7777BFA79A2 /* WorkspaceModel.swift in Sources */,
 				D0E1F203948576A1B2C3D4E5 /* WorkspaceSection.swift in Sources */,
 				E1F203948576A1B2C3D4E5F6 /* WorkspaceNavigation.swift in Sources */,
+				AA00000000000000000003F1 /* WorkspaceToolbar.swift in Sources */,
 				B8C9D0E1F203948576A1B2C3 /* WorkspaceLocation.swift in Sources */,
 				C9D0E1F203948576A1B2C3D4 /* NavigationHistoryStore.swift in Sources */,
 				6227C44524E2C4EB3DE4AAD7 /* WorkspaceSidebar.swift in Sources */,
@@ -970,6 +981,7 @@
 				AA0000000000000000000271 /* CatalogCountsTests.swift in Sources */,
 				AA00000000000000000003A1 /* CatalogSessionStoreTests.swift in Sources */,
 				AA00000000000000000003E1 /* SearchCatalogStoreTests.swift in Sources */,
+				AA00000000000000000003F5 /* WorkspaceToolbarBreadcrumbTests.swift in Sources */,
 				8B20E11A26E9E10EF915519C /* TrafficLightsTests.swift in Sources */,
 				E63D8CEC3F6AC5C7E90EBBFE /* FieldSlugTests.swift in Sources */,
 				AA00000000000000000000C4 /* PVTableTests.swift in Sources */,

@@ -4,7 +4,7 @@ Claude Design boards for Spike 3 live in the Provenencia Claude Design project �
 
 | Board | Implements in |
 | --- | --- |
-| App Layout (toolbar: Back/Forward, breadcrumbs, omnibar field) | S3-05 (field shell); jump menus / breadcrumbs with S3-04–S3-05 |
+| App Layout (toolbar: Back/Forward, breadcrumbs, omnibar field) | S3-05 (done) |
 | Omnibar results (flat ranked rich rows) | S3-10 |
 | Omnibar hit row component | S3-10 → `PVOmnibarHitRow` |
 

@@ -76,6 +76,7 @@ struct OnboardingView: View {
     OnboardingView(store: FakeStore(), folders: .previewEmpty())
         .environment(SignOutCoordinator())
         .environment(NavigationCoordinator())
+        .environment(OmnibarFocusCoordinator())
 }
 
 #Preview("Identity, no active") {
@@ -85,6 +86,7 @@ struct OnboardingView: View {
     )
     .environment(SignOutCoordinator())
     .environment(NavigationCoordinator())
+    .environment(OmnibarFocusCoordinator())
 }
 
 #Preview("Open picker") {
@@ -94,6 +96,7 @@ struct OnboardingView: View {
     )
     .environment(SignOutCoordinator())
     .environment(NavigationCoordinator())
+    .environment(OmnibarFocusCoordinator())
 }
 
 #Preview("Returning") {
@@ -108,5 +111,6 @@ struct OnboardingView: View {
     )
     .environment(SignOutCoordinator())
     .environment(NavigationCoordinator())
+    .environment(OmnibarFocusCoordinator())
 }
 #endif

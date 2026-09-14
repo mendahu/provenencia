@@ -1,25 +1,28 @@
 import SwiftUI
 
-/// The workspace's single content host (W-3): a slim header carrying page
-/// context plus project identity (W-9, W-10), and the active
-/// destination's content below it. **Sources** (S2-17), **Source fields**
-/// (S2-15), and **Source types** (S2-16) mount their own full-height views
-/// below that header; Files still shows the labeled empty placeholder
+/// The workspace's single content host (W-3): App Layout toolbar (Back/Forward,
+/// breadcrumbs, omnibar shell) plus the active destination below. **Sources**
+/// (S2-17), **Source fields** (S2-15), and **Source types** (S2-16) mount their
+/// own full-height views; Files still shows the labeled empty placeholder
 /// (project Files list was descoped with S2-20/S2-21).
 struct WorkspaceContent: View {
     @Environment(WorkspaceNavigation.self) private var navigation
-    let project: ProjectInfo?
     let projectDir: String
     let userID: String
     let sessionDisplayName: String
     let store: any GenealogyStore
     let catalogCounts: CatalogCounts
 
+    /// Hosted here (not on the 52pt toolbar row) so the jump menu can paint and
+    /// receive hits over the page below — same reason `pvContextMenu` wants a
+    /// large ancestor.
+    @State private var jumpMenu = HistoryJumpMenuModel()
+
     private var section: WorkspaceSection { navigation.selectedSection }
 
     var body: some View {
         VStack(spacing: 0) {
-            header
+            WorkspaceToolbar(jumpMenu: jumpMenu)
             switch section {
             case .sourceFields:
                 SourceFieldsView(
@@ -61,34 +64,11 @@ struct WorkspaceContent: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(PVColor.surfacePage)
-        .accessibilityIdentifier("workspace.content")
-    }
-
-    @ViewBuilder
-    private var header: some View {
-        HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space6) {
-            Text(section.label)
-                .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
-                .foregroundStyle(PVColor.textSecondary)
-            Spacer(minLength: PVSpacing.space6)
-            if let project {
-                HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space4) {
-                    Text(project.label)
-                        .font(PVFont.display(size: PVTypeScale.caption, weight: PVFontWeight.medium))
-                        .foregroundStyle(PVColor.textSecondary)
-                        .lineLimit(1)
-                    Text(project.folderName)
-                        .font(PVFont.mono(size: PVTypeScale.micro))
-                        .foregroundStyle(PVColor.textFaint)
-                        .lineLimit(1)
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityIdentifier("workspace.content.projectIdentity")
-            }
+        .coordinateSpace(name: HistoryJumpMenuModel.contentCoordinateSpace)
+        .overlay(alignment: .topLeading) {
+            HistoryJumpMenuHost(jumpMenu: jumpMenu)
         }
-        .padding(.horizontal, PVSpacing.gutterPage)
-        .frame(maxWidth: .infinity)
-        .pvWorkspaceHeaderRow()
+        .accessibilityIdentifier("workspace.content")
     }
 
     @ViewBuilder

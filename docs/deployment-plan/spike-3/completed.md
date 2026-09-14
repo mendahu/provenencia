@@ -12,6 +12,8 @@ IDs stay stable (`S3-NN`). Do not renumber when moving steps here.
 | [S3-02](#s3-02--design-omnibar-results) | Design | Omnibar results dropdown + hit row |
 | [S3-03](#s3-03--pr-catalog-projectuuid) | PR | Catalog `project.uuid` (mint, heal, ProjectInfo) |
 | [S3-04](#s3-04--pr-workspacelocation--navigation-history) | PR | WorkspaceLocation + persisted navigation history |
+| [S3-05](#s3-05--pr-main-column-toolbar-chrome) | PR | Main-column toolbar (nav + crumbs + omnibar shell) |
+| [S3-06](#s3-06--skipped--history-jump-menu-polish) | PR | Skipped — full jump menus shipped in S3-05 |
 | [S3-07](#s3-07--pr-searchable-kind-registry--searchcatalog-rpc-shell) | PR | Searchable-kind registry + SearchCatalog RPC |
 
 ---
@@ -27,7 +29,7 @@ IDs stay stable (`S3-NN`). Do not renumber when moving steps here.
 | **Deliverables** | Done. Board for the main-column toolbar: Back/Forward (long-press / secondary-click jump menus), flex-grow breadcrumbs, trailing omnibar field (`⌘K`). Layout summary: [`design/README.md`](design/README.md). Boards stay in Claude Design (not checked into git). |
 | **Context** | [`navigation-history.md`](navigation-history.md); [`omnibar-search.md`](omnibar-search.md) field placement. |
 | **Out** | Results dropdown (S3-02); engine search; history persistence. |
-| **Feeds** | S3-05, S3-06 |
+| **Feeds** | S3-05 (S3-06 skipped — full jump menus in S3-05) |
 
 ---
 
@@ -69,6 +71,33 @@ IDs stay stable (`S3-NN`). Do not renumber when moving steps here.
 | **Out** | Final toolbar visuals / jump menus (S3-05); omnibar results; search RPC. |
 | **Dogfood** | Keyboard Back/Forward restores deep locations across destinations; relaunch returns to the leave-off place for that `project.uuid`. |
 | **Feeds** | S3-05 (toolbar chrome); S3-07+ Hit `location` shape |
+
+---
+
+### S3-05 — PR: Main-column toolbar chrome
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S3-04 (done); S3-01 board (done) |
+| **Deliverables** | Done. App Layout main-column toolbar (`WorkspaceToolbar`): Back/Forward with chevron + mono shortcut hints, long-press (~400ms) / secondary-click jump menus (nearest 15, icon \| Destination › title \| mono ref), flex `PVBreadcrumbs` via `go(to:)` for ancestors, trailing omnibar **field shell** (`PVInput` + ⌘K suffix / `⌘K` focus via `OmnibarFocusCoordinator`). Header height stays **52** for traffic lights. Stripped Source-page identity-header breadcrumbs / `onBackToList` crumb wiring. L10n for omnibar + Focus Search. |
+| **Context** | Claude Design App Layout board; [`design/README.md`](design/README.md); [`navigation-history.md`](navigation-history.md) § Toolbar. |
+| **Out** | Omnibar results dropdown / `searchCatalog` wire / remove list search (S3-10). |
+| **Dogfood** | Toolbar Back/Forward + jump menu + crumb click feel browser-like; ⌘K focuses the field; Source page has no local crumb trail. |
+| **Feeds** | S3-10 (results + search wire) |
+
+---
+
+### S3-06 — Skipped: History jump-menu polish
+
+| | |
+| --- | --- |
+| **Kind** | PR (skipped) |
+| **Depends on** | S3-05 |
+| **Deliverables** | Skipped. Full jump-menu anatomy (rich rows, long-press swallow, popover dismiss) shipped with **S3-05**; this optional split is unused. |
+| **Context** | Was only needed if S3-05 shipped a minimal Back/Forward without menus. |
+| **Out** | — |
+| **Feeds** | — |
 
 ---
 

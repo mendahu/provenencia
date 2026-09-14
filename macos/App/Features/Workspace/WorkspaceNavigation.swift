@@ -81,6 +81,16 @@ final class WorkspaceNavigation {
         apply(location)
     }
 
+    /// Nearest history entries before current (nearest first) for the Back jump menu.
+    func backJumpItems(limit: Int = 15) -> [(index: Int, location: WorkspaceLocation)] {
+        history?.backJumpItems(limit: limit) ?? []
+    }
+
+    /// History entries after current (stack order) for the Forward jump menu.
+    func forwardJumpItems(limit: Int = 15) -> [(index: Int, location: WorkspaceLocation)] {
+        history?.forwardJumpItems(limit: limit) ?? []
+    }
+
     /// When a deep id is missing after catalog load, land on the section list
     /// and rewrite the current stack entry so persistence stays honest.
     func fallbackToSectionRoot() {

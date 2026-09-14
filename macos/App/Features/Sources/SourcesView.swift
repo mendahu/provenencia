@@ -35,9 +35,6 @@ struct SourcesView: View {
                     userID: model.pageUserID,
                     sessionDisplayName: sessionDisplayName,
                     store: model.pageStore,
-                    onBackToList: {
-                        navigation.go(to: .sectionRoot(.sources))
-                    },
                     onSourceUpdated: { model.applyUpdatedSource($0) }
                 )
                 .id(opened)
