@@ -43,20 +43,6 @@ struct SourceFieldsModelTests {
         #expect(model.fields.pluginCount == 0)
     }
 
-    @Test func searchFiltersByLabelKeyAndDescription() async {
-        let model = makeModel(fields: [seededField(), userField()])
-        await model.load()
-
-        model.query = "album"
-        #expect(model.visibleFields.map(\.id) == ["2"])
-
-        model.query = "seeded"
-        #expect(model.visibleFields.map(\.id) == ["1"])
-
-        model.query = "nomatch"
-        #expect(model.visibleFields.isEmpty)
-    }
-
     @Test func sortTogglesLabelDirection() async {
         let model = makeModel(fields: [
             seededField(id: "1", label: "Zebra"),

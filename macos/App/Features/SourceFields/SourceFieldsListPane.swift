@@ -16,7 +16,6 @@ struct SourceFieldsListPane: View {
 
     var body: some View {
         VocabularyListPane(
-            query: $model.query,
             totalCount: model.fields.count,
             rows: model.visibleFields,
             isLoading: model.isLoading,
@@ -28,14 +27,10 @@ struct SourceFieldsListPane: View {
             ),
             onSortChange: { _ in model.toggleLabelSort() },
             strings: VocabularyListStrings(
-                searchPlaceholder: L10n.SourceFields.searchPlaceholder,
-                clearSearch: L10n.SourceFields.clearSearch,
                 tableLabel: L10n.Workspace.sourceFieldsTitle,
                 emptyIcon: .tag,
                 emptyTitle: L10n.SourceFields.emptyProjectTitle,
                 emptyBody: L10n.SourceFields.emptyProjectBody,
-                noMatchTitle: L10n.SourceFields.noMatchTitle,
-                noMatchBody: { L10n.SourceFields.noMatchBody(query: $0) },
                 resultLine: { L10n.SourceFields.resultLine(shown: $0, total: $1) }
             ),
             identifierPrefix: "sourceFields"

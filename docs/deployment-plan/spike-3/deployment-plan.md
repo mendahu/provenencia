@@ -6,7 +6,7 @@ Authoritative behavior: [`navigation-history.md`](navigation-history.md), [`omni
 
 ## Status
 
-**In progress.** Open steps below; completed steps live in [`completed.md`](completed.md) (S3-01…S3-09; S3-06 skipped).
+**In progress.** Open steps below; completed steps live in [`completed.md`](completed.md) (S3-01…S3-10; S3-06 skipped).
 
 ## Goal (dogfood bar)
 
@@ -53,7 +53,7 @@ S3-05  Toolbar chrome (done)                S3-08  FTS5 (done)
         │                                     │
         └──────────────┬──────────────────────┘
                        ▼
-                 S3-10  Omnibar results + wire search + remove list search
+                 S3-10  Omnibar results (done)
                        │
                        ▼
                  S3-11  Fuzzy / typo
@@ -61,17 +61,6 @@ S3-05  Toolbar chrome (done)                S3-08  FTS5 (done)
                        ▼
                  S3-12  Dogfood polish (optional S3-13+ kinds)
 ```
-
-### S3-10 — PR: Omnibar results UI + wire search + remove list search
-
-| | |
-| --- | --- |
-| **Kind** | PR |
-| **Depends on** | S3-05 (field shell); S3-09 (engine quality bar for dogfood); S3-02 board (done) |
-| **Deliverables** | Results dropdown per Omnibar Results board: shared `PVOmnibarHitRow` (lead / title / kind chip / secondary / ref / match context / selected). Anchoring, loading, empty, keyboard selection, Esc/outside dismiss. Debounced `SearchCatalog`; select hit → `go(to: location)` → dismiss. **Delete** Sources list search and `VocabularyListPane` search chrome + query-only filter plumbing. Extend thumbnail/glyph modes as the board requires. L10n. |
-| **Context** | Claude Design Omnibar Results board; [`omnibar-search.md`](omnibar-search.md) S4. Board rules: no panel on empty/short query; flat engine order; kind chip disambiguates. |
-| **Out** | Fuzzy; Files/Artifact first-class hit kinds; Interpretation kinds. |
-| **Dogfood** | End-to-end find → navigate → Back returns; no dual search chrome. |
 
 ### S3-11 — PR: Fuzzy / typo matching
 
@@ -124,9 +113,9 @@ Not required to close Spike 3 dogfood if Sources + types + fields search well:
 | --- | --- |
 | **Design** | S3-01, S3-02 — done ([`completed.md`](completed.md)) |
 | **Core / FFI** | S3-03 done → S3-07 done → S3-08 done → S3-09 done → (S3-11) |
-| **Mac workspace** | S3-04 done → S3-05 done → S3-10 → S3-12 |
+| **Mac workspace** | S3-04 done → S3-05 done → S3-10 done → S3-12 |
 
-S3-08+ may proceed beside remaining Mac chrome. **S3-10** is the integration gate.
+S3-11 may proceed beside S3-12 polish. **S3-10** was the omnibar integration gate.
 
 ---
 

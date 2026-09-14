@@ -69,23 +69,6 @@ struct SourceTypesModelTests {
         #expect(model.types.pluginCount == 1)
     }
 
-    @Test func searchFiltersByLabelKeyAndDescription() async {
-        let model = makeModel(types: [seededType(), userType()])
-        await model.load()
-
-        model.query = "scrapbook"
-        #expect(model.visibleTypes.map(\.id) == ["t2"])
-
-        model.query = "book"
-        #expect(model.visibleTypes.map(\.id).sorted() == ["t1", "t2"])
-
-        model.query = "monograph"
-        #expect(model.visibleTypes.map(\.id) == ["t1"])
-
-        model.query = "nomatch"
-        #expect(model.visibleTypes.isEmpty)
-    }
-
     @Test func sortingTogglesWithinAColumnAndResetsAcrossColumns() async {
         let store = FakeStore()
         let model = makeModel(

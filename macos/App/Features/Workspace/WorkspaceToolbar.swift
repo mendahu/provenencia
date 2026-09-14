@@ -26,13 +26,15 @@ enum HistoryJumpMenuSide: Hashable {
     case back, forward
 }
 
-/// App Layout main-column toolbar: Back/Forward (+ jump menus), breadcrumbs, omnibar shell.
+/// App Layout main-column toolbar: Back/Forward (+ jump menus), breadcrumbs, omnibar.
 /// See `docs/deployment-plan/spike-3/navigation-history.md` § Toolbar.
 struct WorkspaceToolbar: View {
     @Environment(WorkspaceNavigation.self) private var navigation
     @Environment(OmnibarFocusCoordinator.self) private var omnibarFocus
     var jumpMenu: HistoryJumpMenuModel
-    @State private var omnibarQuery = ""
+    @Bindable var omnibarResults: OmnibarResultsModel
+    let projectDir: String
+    let store: any GenealogyStore
     @FocusState private var omnibarFocused: Bool
 
     var body: some View {
@@ -48,6 +50,7 @@ struct WorkspaceToolbar: View {
         .padding(.horizontal, PVSpacing.gutterPage)
         .frame(maxWidth: .infinity)
         .onPreferenceChange(HistoryJumpMenuAnchorKey.self) { jumpMenu.anchors = $0 }
+        .onPreferenceChange(OmnibarFieldAnchorKey.self) { omnibarResults.fieldFrame = $0 }
         // No window-drag overlay — it would sit on top of Back/Forward and
         // the omnibar and swallow hover/clicks (see `pvWorkspaceHeaderRow`).
         .pvWorkspaceHeaderRow(includesWindowDrag: false)
@@ -56,6 +59,13 @@ struct WorkspaceToolbar: View {
         }
         .onChange(of: navigation.currentLocation) { _, _ in
             jumpMenu.dismiss()
+        }
+        .onChange(of: omnibarResults.query) { _, _ in
+            omnibarResults.scheduleSearch(
+                projectDir: projectDir,
+                location: navigation.currentLocation,
+                store: store
+            )
         }
         .accessibilityIdentifier("workspace.toolbar")
     }
@@ -139,13 +149,21 @@ struct WorkspaceToolbar: View {
 
     private var omnibarField: some View {
         PVInput(
-            text: $omnibarQuery,
+            text: $omnibarResults.query,
             size: .sm,
             prompt: L10n.Workspace.omnibarPlaceholder,
             icon: .search,
             suffix: "⌘K",
             focused: $omnibarFocused
         )
+        .background {
+            GeometryReader { geo in
+                Color.clear.preference(
+                    key: OmnibarFieldAnchorKey.self,
+                    value: geo.frame(in: .named(HistoryJumpMenuModel.contentCoordinateSpace))
+                )
+            }
+        }
         .accessibilityLabel(Text(L10n.Workspace.omnibarAccessibilityLabel))
         .accessibilityIdentifier("workspace.toolbar.omnibar")
     }
@@ -508,7 +526,12 @@ private extension Optional where Wrapped == String {
 }
 
 #Preview {
-    WorkspaceToolbar(jumpMenu: HistoryJumpMenuModel())
+    WorkspaceToolbar(
+        jumpMenu: HistoryJumpMenuModel(),
+        omnibarResults: OmnibarResultsModel(),
+        projectDir: "/tmp/preview.provenencia",
+        store: FakeStore()
+    )
         .environment(WorkspaceNavigation())
         .environment(OmnibarFocusCoordinator())
         .frame(width: 900)

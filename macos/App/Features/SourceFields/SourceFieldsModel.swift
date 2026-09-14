@@ -22,7 +22,6 @@ final class SourceFieldsModel {
     private(set) var isLoading = false
     var loadError: Error?
 
-    var query = ""
     private(set) var sortAscending = true
 
     /// Detail-pane mode — see `VocabularyPaneMode` for the invariants.
@@ -68,7 +67,7 @@ final class SourceFieldsModel {
     // MARK: Derived
 
     var visibleFields: [CatalogMetadataField] {
-        fields.matching(query).sorted { a, b in
+        fields.sorted { a, b in
             let order = a.label.localizedCaseInsensitiveCompare(b.label)
             return sortAscending ? order == .orderedAscending : order == .orderedDescending
         }
@@ -270,7 +269,6 @@ final class SourceFieldsModel {
                     label: label, dataType: draft.dataType, description: draft.description
                 )
                 fields.append(created)
-                query = ""
                 mode = .editing(id: created.id)
                 self.draft = Draft(label: created.label, dataType: created.dataType, description: created.description)
                 toast = VocabularyToast(

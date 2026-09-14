@@ -1,9 +1,9 @@
 import Foundation
 
 /// A row in one of the project's catalog vocabularies (`source_types`,
-/// `source_metadata_fields`). The two vocabulary destinations browse, search
-/// and count their rows identically; this is the shape that sameness hangs
-/// off, so the rules live once. The FFI structs adopt it below.
+/// `source_metadata_fields`). The two vocabulary destinations browse and
+/// count their rows identically; this is the shape that sameness hangs off.
+/// Find lives in the workspace omnibar (S3-10).
 protocol CatalogVocabularyRow: Identifiable where ID == String {
     var id: String { get }
     var key: String { get }
@@ -18,19 +18,6 @@ extension CatalogSourceType: CatalogVocabularyRow {}
 extension CatalogMetadataField: CatalogVocabularyRow {}
 
 extension Array where Element: CatalogVocabularyRow {
-    /// The search rule both vocabulary lists apply: case-folded substring
-    /// over label, key and description. An empty (or all-space) query keeps
-    /// every row.
-    func matching(_ query: String) -> [Element] {
-        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !q.isEmpty else { return self }
-        return filter {
-            $0.label.lowercased().contains(q)
-                || $0.key.lowercased().contains(q)
-                || $0.description.lowercased().contains(q)
-        }
-    }
-
     // The header's count line splits the vocabulary by origin.
 
     var seededCount: Int { filter { $0.origin == CatalogOrigin.provenencia }.count }

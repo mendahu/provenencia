@@ -92,29 +92,6 @@ struct SourcesModelTests {
         #expect(model.sources.first?.coverMode == "artifact")
     }
 
-    @Test func searchFiltersByTitleRefAndTypeLabel() async {
-        let model = makeModel(
-            sources: [
-                source(id: "s1", title: "Alderwick photograph", typeID: "t1", ref: "SRC-0412"),
-                source(id: "s2", title: "Parish register", typeID: "t2", ref: "SRC-0287"),
-            ],
-            types: [photoType(), bookType(id: "t2")]
-        )
-        await model.load()
-
-        model.query = "alderwick"
-        #expect(model.visibleSources.map(\.id) == ["s1"])
-
-        model.query = "SRC-0287"
-        #expect(model.visibleSources.map(\.id) == ["s2"])
-
-        model.query = "photograph"
-        #expect(model.visibleSources.map(\.id) == ["s1"])
-
-        model.query = "nomatch"
-        #expect(model.visibleSources.isEmpty)
-    }
-
     @Test func typeFilterNarrowsTheList() async {
         let model = makeModel(
             sources: [
