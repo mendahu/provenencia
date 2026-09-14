@@ -243,12 +243,12 @@ Same spacing and typography; only the slots change. Avoid per-kind card layouts 
 
 ## Incremental delivery
 
-Break into successive PRs so each slice is dogfoodable. Sequenced as **S3-07…S3-11** in [`deployment-plan.md`](deployment-plan.md) (S3-07 / S1 done — [`completed.md`](completed.md)); intended order:
+Break into successive PRs so each slice is dogfoodable. Sequenced as **S3-07…S3-11** in [`deployment-plan.md`](deployment-plan.md) (S3-07 / S1 and S3-08 / S2 done — [`completed.md`](completed.md)); intended order:
 
 | Slice | Delivers | Evaluate |
 | --- | --- | --- |
 | **S1 — Registry + RPC shell** | **Done (S3-07).** Searchable-kind registry; `SearchCatalog` protobuf/FFI; Hit DTO; FakeStore; context location on the request. Naïve scanner **behind the same API** as bridge. | RPC shape; location mapping; tests without UI. |
-| **S2 — FTS5 projection** | Migration + FTS documents for Sources / types / fields; incremental upkeep on writes; rebuild/heal; swap scanner for FTS retrieval + field weights. | Latency; relevance on real dogfood catalogs; index correctness after edits. |
+| **S2 — FTS5 projection** | **Done (S3-08).** Migration + FTS documents for Sources / types / fields; incremental upkeep on writes; rebuild/heal; FTS retrieval + field weights; Source child text rolled into Source docs. | Latency; relevance on real dogfood catalogs; index correctness after edits. |
 | **S3 — Context ranking + ref fast path** | Section/kind boosts; exact/prefix ref promotion; match_reason where cheap. | “I’m on Sources → Sources float” feels right; paste-ref UX. |
 | **S4 — Omnibar chrome + remove list search** | Toolbar field + ⌘K (S3-05 shell); results UI per board (S3-10); wire hits to `go(to:)`; **delete** per-destination search. | End-to-end find; no dual search chrome. |
 | **S5 — Fuzzy / typo** | Trigram and/or Go fuzzy shortlist pass; tune thresholds. | Typos recover without garbage. |
@@ -270,7 +270,7 @@ Local-first catalogs invite keyboard navigation. Short refs were designed to be 
 | Results dropdown visuals? | **Board locked** — Claude Design Omnibar Results; shared rich row + flat ranked list. |
 | Hit navigation? | **`go(to:)`** — same session history as sidebar / breadcrumbs. |
 | Engine? | **Go `SearchCatalog` + kind registry + FTS5 projection** in the catalog DB — not Swift-as-search-engine. |
-| Brute force forever? | **No.** Naïve scan only as a short bridge behind the stable RPC. |
+| Brute force forever? | **No.** Naïve scan was only a short bridge (S3-07); FTS5 projection is the engine (S3-08). |
 | Context-aware ranking? | **Yes** — boost by current workspace section / location. |
 | Multi-word queries? | **Yes** — tokenize; prefer higher **term coverage** + high-weight fields; allow partial matches at lower rank; context reorders kinds. |
 | Cross-root “associated with”? | **Later** — denormalize related labels and/or second-stage joins; not implied by multi-word FTS alone. |

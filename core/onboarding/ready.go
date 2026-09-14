@@ -6,6 +6,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sourcevocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/search"
 )
 
 // createCatalog installs a new catalog (create path). OpenCatalog is a one-shot
@@ -35,6 +36,10 @@ func createCatalog(parent, folder string) (*database.Catalog, error) {
 		_ = c.Close()
 		return nil, err
 	}
+	if err := search.EnsureIndex(c); err != nil {
+		_ = c.Close()
+		return nil, err
+	}
 	return c, nil
 }
 
@@ -51,6 +56,10 @@ func OpenCatalog(projectDir string) (*database.Catalog, error) {
 		return nil, err
 	}
 	if err := project.EnsureUUID(c); err != nil {
+		_ = c.Close()
+		return nil, err
+	}
+	if err := search.EnsureIndex(c); err != nil {
 		_ = c.Close()
 		return nil, err
 	}

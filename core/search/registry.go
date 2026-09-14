@@ -2,7 +2,7 @@ package search
 
 import "strings"
 
-// FieldWeight relative importance for naïve / future FTS scoring.
+// FieldWeight relative importance for FTS / registry scoring.
 type FieldWeight struct {
 	Name   string
 	Weight float64
@@ -29,6 +29,9 @@ var Registry = []KindSpec{
 			{Name: "title", Weight: 10},
 			{Name: "ref", Weight: 12},
 			{Name: "description", Weight: 3},
+			{Name: "notes", Weight: 1.5},
+			{Name: "metadata", Weight: 1.5},
+			{Name: "filename", Weight: 1},
 		},
 	},
 	{

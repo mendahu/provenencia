@@ -15,6 +15,7 @@ IDs stay stable (`S3-NN`). Do not renumber when moving steps here.
 | [S3-05](#s3-05--pr-main-column-toolbar-chrome) | PR | Main-column toolbar (nav + crumbs + omnibar shell) |
 | [S3-06](#s3-06--skipped--history-jump-menu-polish) | PR | Skipped — full jump menus shipped in S3-05 |
 | [S3-07](#s3-07--pr-searchable-kind-registry--searchcatalog-rpc-shell) | PR | Searchable-kind registry + SearchCatalog RPC |
+| [S3-08](#s3-08--pr-fts5-projection) | PR | FTS5 catalog search projection |
 
 ---
 
@@ -112,3 +113,17 @@ IDs stay stable (`S3-NN`). Do not renumber when moving steps here.
 | **Out** | FTS5 tables / write-path reproject (S3-08); full context/ref ranking polish (S3-09); omnibar UI / remove list search (S3-10). |
 | **Dogfood** | RPC / FakeStore return ranked hits for known titles, refs, type/field labels with navigable locations. |
 | **Feeds** | S3-08 (swap NaiveScanner for FTS behind same Hit/Query/FFI) |
+
+---
+
+### S3-08 — PR: FTS5 projection
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S3-07 |
+| **Deliverables** | Done. Enabled `-tags fts5` on dylib build + CI/`go test`. Migration `000018`: `catalog_search_docs` + external-content `catalog_search_fts` + `catalog_search_meta`. `core/database/searchindex` projectors for Source (notes/metadata/artifact/filename rollup) and vocab roots; incremental reproject on domain writes; `search.EnsureIndex` rebuild/heal on Open/Create. `FTSSearcher` is `DefaultEngine` (NaiveScanner removed). Registry body weights for rolled Source text. Skill [`add-searchable-kind`](../../../.cursor/skills/add-searchable-kind/SKILL.md) updated. |
+| **Context** | [`omnibar-search.md`](omnibar-search.md) S2; [`application-stack.md`](../../application-stack.md) §10. |
+| **Out** | Context/ref fast-path polish (S3-09); fuzzy (S3-11); Files/Artifact as own hit kinds; omnibar UI (S3-10). |
+| **Dogfood** | Edit a Source title/note → SearchCatalog updates; title beats body; Open heals a wiped index. |
+| **Feeds** | S3-09 |

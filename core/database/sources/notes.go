@@ -9,6 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/project"
+	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/users"
 )
 
@@ -120,6 +121,9 @@ func AddNote(c *database.Catalog, userID, sourceID []byte, body string) (Note, e
 	}); err != nil {
 		return Note{}, err
 	}
+	if err := searchindex.ReprojectSource(tx, sourceID); err != nil {
+		return Note{}, err
+	}
 	if err := tx.Commit(); err != nil {
 		return Note{}, err
 	}
@@ -184,6 +188,9 @@ func UpdateNote(c *database.Catalog, userID, noteID []byte, body string) error {
 	}); err != nil {
 		return err
 	}
+	if err := searchindex.ReprojectSource(tx, prev.SourceID); err != nil {
+		return err
+	}
 	return tx.Commit()
 }
 
@@ -231,6 +238,9 @@ func DeleteNote(c *database.Catalog, userID, noteID []byte) error {
 			},
 		}},
 	}); err != nil {
+		return err
+	}
+	if err := searchindex.ReprojectSource(tx, prev.SourceID); err != nil {
 		return err
 	}
 	return tx.Commit()

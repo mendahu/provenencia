@@ -2,19 +2,18 @@
 name: add-searchable-kind
 description: >-
   Registers a Provenencia catalog entity as an omnibar SearchCatalog hit kind
-  (core/search registry, location mapper, field weights, NaiveScanner/FTS
-  projector hooks, FakeStore, tests). Use when adding or changing searchable
-  kinds, SearchHit.kind strings, WorkspaceLocation mapping for hits, Searcher
+  (core/search registry, location mapper, field weights, FTS projector hooks,
+  FakeStore, tests). Use when adding or changing searchable kinds,
+  SearchHit.kind strings, WorkspaceLocation mapping for hits, Searcher
   implementations, FTS document projection for a kind, or omnibar-search.md
   registry work — not for omnibar UI chrome alone.
 ---
 
 # Add a searchable kind
 
-Catalog search is **Go-owned**: declarative kind registry + `Searcher` behind
-stable `SearchCatalog` FFI. Naïve scan (S3-07) and FTS (S3-08+) share the same
-`Hit` / `Query` / location mapping. Do **not** put ad hoc `LIKE` SQL in FFI
-handlers or build a permanent Swift search engine.
+Catalog search is **Go-owned**: declarative kind registry + FTS5 projection +
+`Searcher` behind stable `SearchCatalog` FFI. Do **not** put ad hoc `LIKE` SQL
+in FFI handlers or build a permanent Swift search engine.
 
 Authoritative behavior: [`docs/deployment-plan/spike-3/omnibar-search.md`](../../../docs/deployment-plan/spike-3/omnibar-search.md).
 
@@ -22,10 +21,11 @@ Authoritative behavior: [`docs/deployment-plan/spike-3/omnibar-search.md`](../..
 
 ```
 - [ ] Kind id string stable (`source`, `source_type`, `source_field`, …)
-- [ ] Registry entry: fields + weights (title/ref/label ≫ description)
+- [ ] Registry entry: fields + weights (title/ref/label ≫ description ≫ body)
 - [ ] Location mapper → WorkspaceLocation (section + deep id)
 - [ ] DefaultInEverything / ContextSections for ranking boosts
-- [ ] Searcher path loads the kind (NaiveScanner today; FTS projector later)
+- [ ] FTS projector in core/database/searchindex (Upsert/Delete/Rebuild)
+- [ ] Write-path reproject on domain mutators (same tx when practical)
 - [ ] FakeStore mirrors kinds + location rules; markCatalogSessionHeld
 - [ ] Package + FFI + Swift FakeStore tests
 ```
@@ -47,6 +47,10 @@ Add a `KindSpec`:
 Kind constants live in `core/search/search.go`. Section strings must match
 macOS `WorkspaceSection` raw values.
 
+FTS documents map fields into columns `title` / `ref` / `secondary` / `body`
+(`core/database/searchindex`). Keep weights in this registry — do not fork
+weight tables in SQL migrations.
+
 ### 2. Location mapping
 
 Every hit must carry a navigable `WorkspaceLocation` so S3-10 can
@@ -62,16 +66,14 @@ Child text (notes, metadata values, artifact filenames) should **roll into** a
 navigable root hit — do not invent note/metadata hit kinds without a
 destination UI.
 
-### 3. Retrieval (`Searcher`)
+### 3. Projection + retrieval
 
-Implement / extend the active `Searcher` (`NaiveScanner` until FTS lands):
-
-- Load via existing domain `List` / lookup packages — no SQL in the handler.
-- Score with registry weights + light context boost.
-- Empty / whitespace query → **no hits**.
-- Cap at `DefaultHitLimit` (50).
-
-S3-08 replaces the scanner behind `Engine` without changing Hit/Query/FFI.
+1. Extend `core/database/searchindex` to build/upsert the kind’s document
+   (and delete on remove). Bump `ProjectionVersion` when the document shape
+   changes so `search.EnsureIndex` rebuilds on Open.
+2. Call reproject from domain mutators in the same transaction when practical.
+3. `FTSSearcher` (`DefaultEngine`) reads `catalog_search_fts` + docs; empty /
+   whitespace query → **no hits**; cap at `DefaultHitLimit` (50).
 
 ### 4. FFI + Mac store
 
@@ -88,19 +90,14 @@ Catalog RPCs use `withProjectCatalog` — see
 
 | Layer | Cover |
 | --- | --- |
-| `core/search` | Ranking (title > description), context boost, location mapping, empty query |
+| `core/search` | Ranking (title > description), note rollup, context boost, location, empty query, EnsureIndex heal |
+| `core/database/searchindex` | Migration / FTS smoke |
 | `api/ffi/handlers` | `runRPC` hit on new kind; location populated |
 | `ProvenenciaTests` | FakeStore title/ref hit + location ([`add-swift-test`](../add-swift-test/SKILL.md)) |
 
 ```sh
-CGO_ENABLED=1 go test ./core/search/... ./api/ffi/...
+CGO_ENABLED=1 go test -tags fts5 ./core/search/... ./core/database/searchindex/... ./api/ffi/...
 ```
-
-### 6. FTS projector hooks (S3-08+)
-
-When FTS lands, each kind needs a document projector + write-path reproject.
-Keep field weights in the **same registry** — do not fork weight tables in SQL
-migrations. Rebuild/heal stays in Open/migrate policy, not the UI.
 
 ## Do not
 
@@ -108,9 +105,10 @@ migrations. Rebuild/heal stays in Open/migrate policy, not the UI.
 - Return hits without a `WorkspaceLocation` the Mac can `go(to:)`
 - Open the catalog outside `withProjectCatalog` / `catalogsession`
 - Ship Files / Artifact / Interpretation kinds before destinations exist
-- Treat naïve scan as the long-term engine (FTS is the swap)
+- Reintroduce a live-table naïve scan as the product Searcher
 
 ## Related
 
 - Hit navigation: [`add-workspace-location`](../add-workspace-location/SKILL.md)
+- Migrations: [`add-catalog-migration`](../add-catalog-migration/SKILL.md)
 - Omnibar UI: Spike 3 S3-10 (not this skill)
