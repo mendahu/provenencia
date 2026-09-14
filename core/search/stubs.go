@@ -2,6 +2,7 @@ package search
 
 import (
 	"database/sql"
+	"fmt"
 	"strings"
 
 	"github.com/google/uuid"
@@ -13,6 +14,9 @@ import (
 // attachLeadStubs fills ThumbnailRelPath / IconKey on the ranked hit list so
 // the Mac client can render omnibar leads without listing every Source/type.
 // Thumbnails are lookup-only (no EnsureThumbnail) so search stays cheap.
+//
+// Uses at most two batched SELECTs (types, sources+cover) keyed by the hit
+// IDs — never one QueryRow per hit.
 func attachLeadStubs(db *sql.DB, hits []Hit) error {
 	if len(hits) == 0 {
 		return nil
@@ -20,6 +24,8 @@ func attachLeadStubs(db *sql.DB, hits []Hit) error {
 
 	sourceIDs := make([][]byte, 0)
 	typeIDs := make([][]byte, 0)
+	sourceSeen := map[string]struct{}{}
+	typeSeen := map[string]struct{}{}
 	sourceIdx := map[string][]int{}
 	typeIdx := map[string][]int{}
 	for i, h := range hits {
@@ -27,15 +33,25 @@ func attachLeadStubs(db *sql.DB, hits []Hit) error {
 		if err != nil {
 			continue
 		}
-		bid := make([]byte, 16)
-		copy(bid, parsed[:])
 		switch h.Kind {
 		case KindSource:
-			sourceIDs = append(sourceIDs, bid)
 			sourceIdx[h.ID] = append(sourceIdx[h.ID], i)
+			if _, ok := sourceSeen[h.ID]; ok {
+				continue
+			}
+			sourceSeen[h.ID] = struct{}{}
+			bid := make([]byte, 16)
+			copy(bid, parsed[:])
+			sourceIDs = append(sourceIDs, bid)
 		case KindSourceType:
-			typeIDs = append(typeIDs, bid)
 			typeIdx[h.ID] = append(typeIdx[h.ID], i)
+			if _, ok := typeSeen[h.ID]; ok {
+				continue
+			}
+			typeSeen[h.ID] = struct{}{}
+			bid := make([]byte, 16)
+			copy(bid, parsed[:])
+			typeIDs = append(typeIDs, bid)
 		}
 	}
 
@@ -46,15 +62,23 @@ func attachLeadStubs(db *sql.DB, hits []Hit) error {
 }
 
 func fillTypeIcons(db *sql.DB, typeIDs [][]byte, typeIdx map[string][]int, hits []Hit) error {
-	for _, id := range typeIDs {
+	if len(typeIDs) == 0 {
+		return nil
+	}
+	q := fmt.Sprintf(
+		`SELECT id, icon_key FROM source_types WHERE id IN (%s)`,
+		placeholders(len(typeIDs)),
+	)
+	rows, err := db.Query(q, blobArgs(typeIDs)...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id []byte
 		var iconKey string
-		err := db.QueryRow(
-			`SELECT icon_key FROM source_types WHERE id = ?`, id,
-		).Scan(&iconKey)
-		if err == sql.ErrNoRows {
-			continue
-		}
-		if err != nil {
+		if err := rows.Scan(&id, &iconKey); err != nil {
 			return err
 		}
 		key := idUUIDString(id)
@@ -62,41 +86,86 @@ func fillTypeIcons(db *sql.DB, typeIDs [][]byte, typeIdx map[string][]int, hits 
 			hits[i].IconKey = strings.TrimSpace(iconKey)
 		}
 	}
-	return nil
+	return rows.Err()
 }
 
 func fillSourceLeads(db *sql.DB, sourceIDs [][]byte, sourceIdx map[string][]int, hits []Hit) error {
-	for _, id := range sourceIDs {
+	if len(sourceIDs) == 0 {
+		return nil
+	}
+	// One query: type icon + existing cover thumbnail (when already derived).
+	q := fmt.Sprintf(`
+		SELECT s.id,
+			COALESCE(t.icon_key, ''),
+			COALESCE(f.checksum_sha256, ''),
+			COALESCE(f.media_type, '')
+		FROM sources s
+		LEFT JOIN source_types t ON t.id = s.source_type_id
+		LEFT JOIN artifacts a
+			ON s.cover_mode = ?
+			AND a.id = s.primary_artifact_id
+			AND length(a.file_id) = 16
+		LEFT JOIN file_derivatives d
+			ON d.source_file_id = a.file_id
+			AND d.derivative_type = ?
+		LEFT JOIN files f ON f.id = d.derived_file_id
+		WHERE s.id IN (%s)
+	`, placeholders(len(sourceIDs)))
+
+	args := make([]any, 0, 2+len(sourceIDs))
+	args = append(args, sources.CoverModeArtifact, filederivatives.TypeThumbnail)
+	args = append(args, blobArgs(sourceIDs)...)
+
+	rows, err := db.Query(q, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
 		var (
-			coverMode    string
-			primaryArtID []byte
-			typeIcon     string
+			id                  []byte
+			typeIcon            string
+			checksum, mediaType string
 		)
-		err := db.QueryRow(`
-			SELECT s.cover_mode, s.primary_artifact_id, COALESCE(t.icon_key, '')
-			FROM sources s
-			LEFT JOIN source_types t ON t.id = s.source_type_id
-			WHERE s.id = ?
-		`, id).Scan(&coverMode, &primaryArtID, &typeIcon)
-		if err == sql.ErrNoRows {
-			continue
-		}
-		if err != nil {
+		if err := rows.Scan(&id, &typeIcon, &checksum, &mediaType); err != nil {
 			return err
 		}
-		key := idUUIDString(id)
 		thumb := ""
-		if coverMode == sources.CoverModeArtifact && len(primaryArtID) == 16 {
-			if rel, err := existingCoverThumbnailRel(db, primaryArtID); err == nil {
+		if checksum != "" {
+			if rel, err := files.StorageRelPath(checksum, mediaType); err == nil {
 				thumb = rel
 			}
 		}
+		key := idUUIDString(id)
 		for _, i := range sourceIdx[key] {
 			hits[i].IconKey = strings.TrimSpace(typeIcon)
 			hits[i].ThumbnailRelPath = thumb
 		}
 	}
-	return nil
+	return rows.Err()
+}
+
+func placeholders(n int) string {
+	if n <= 0 {
+		return ""
+	}
+	b := strings.Builder{}
+	for i := 0; i < n; i++ {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteByte('?')
+	}
+	return b.String()
+}
+
+func blobArgs(ids [][]byte) []any {
+	out := make([]any, len(ids))
+	for i, id := range ids {
+		out[i] = id
+	}
+	return out
 }
 
 func idUUIDString(id []byte) string {
@@ -106,40 +175,4 @@ func idUUIDString(id []byte) string {
 	var u uuid.UUID
 	copy(u[:], id)
 	return u.String()
-}
-
-// existingCoverThumbnailRel returns the objects/… path when a thumbnail
-// derivative already exists for the cover artifact's primary file.
-func existingCoverThumbnailRel(db *sql.DB, artifactID []byte) (string, error) {
-	var fileID []byte
-	err := db.QueryRow(`SELECT file_id FROM artifacts WHERE id = ?`, artifactID).Scan(&fileID)
-	if err != nil {
-		return "", err
-	}
-	if len(fileID) != 16 {
-		return "", nil
-	}
-	var derivedID []byte
-	err = db.QueryRow(
-		`SELECT derived_file_id FROM file_derivatives
-		 WHERE source_file_id = ? AND derivative_type = ?`,
-		fileID, filederivatives.TypeThumbnail,
-	).Scan(&derivedID)
-	if err == sql.ErrNoRows {
-		return "", nil
-	}
-	if err != nil {
-		return "", err
-	}
-	if len(derivedID) != 16 {
-		return "", nil
-	}
-	var checksum, mediaType string
-	err = db.QueryRow(
-		`SELECT checksum_sha256, media_type FROM files WHERE id = ?`, derivedID,
-	).Scan(&checksum, &mediaType)
-	if err != nil {
-		return "", err
-	}
-	return files.StorageRelPath(checksum, mediaType)
 }
