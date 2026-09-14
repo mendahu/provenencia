@@ -64,12 +64,14 @@ func locationToProto(loc search.WorkspaceLocation) *engine.WorkspaceLocation {
 
 func hitToProto(h search.Hit) *engine.SearchHit {
 	return &engine.SearchHit{
-		Kind:        h.Kind,
-		Id:          h.ID,
-		Ref:         h.Ref,
-		Title:       h.Title,
-		Subtitle:    h.Subtitle,
-		MatchReason: h.MatchReason,
-		Location:    locationToProto(h.Location),
+		Kind:             h.Kind,
+		Id:               h.ID,
+		Ref:              h.Ref,
+		Title:            h.Title,
+		Subtitle:         h.Subtitle,
+		MatchReason:      h.MatchReason,
+		Location:         locationToProto(h.Location),
+		ThumbnailRelPath: h.ThumbnailRelPath,
+		IconKey:          h.IconKey,
 	}
 }

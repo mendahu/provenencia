@@ -2385,6 +2385,12 @@ public nonisolated struct Provenencia_Engine_V1_SearchHit: Sendable {
   /// Clears the value of `location`. Subsequent reads from it will return its default value.
   public mutating func clearLocation() {self._location = nil}
 
+  /// Display stubs for omnibar lead chrome (avoid a second full-list fetch).
+  public var thumbnailRelPath: String = String()
+
+  /// Source type icon, or type hit icon; empty for fields
+  public var iconKey: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -6693,7 +6699,7 @@ nonisolated extension Provenencia_Engine_V1_SearchCatalogRequest: SwiftProtobuf.
 
 nonisolated extension Provenencia_Engine_V1_SearchHit: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SearchHit"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}kind\0\u{1}id\0\u{1}ref\0\u{1}title\0\u{1}subtitle\0\u{3}match_reason\0\u{1}location\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}kind\0\u{1}id\0\u{1}ref\0\u{1}title\0\u{1}subtitle\0\u{3}match_reason\0\u{1}location\0\u{3}thumbnail_rel_path\0\u{3}icon_key\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -6708,6 +6714,8 @@ nonisolated extension Provenencia_Engine_V1_SearchHit: SwiftProtobuf.Message, Sw
       case 5: try { try decoder.decodeSingularStringField(value: &self.subtitle) }()
       case 6: try { try decoder.decodeSingularStringField(value: &self.matchReason) }()
       case 7: try { try decoder.decodeSingularMessageField(value: &self._location) }()
+      case 8: try { try decoder.decodeSingularStringField(value: &self.thumbnailRelPath) }()
+      case 9: try { try decoder.decodeSingularStringField(value: &self.iconKey) }()
       default: break
       }
     }
@@ -6739,6 +6747,12 @@ nonisolated extension Provenencia_Engine_V1_SearchHit: SwiftProtobuf.Message, Sw
     try { if let v = self._location {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
     } }()
+    if !self.thumbnailRelPath.isEmpty {
+      try visitor.visitSingularStringField(value: self.thumbnailRelPath, fieldNumber: 8)
+    }
+    if !self.iconKey.isEmpty {
+      try visitor.visitSingularStringField(value: self.iconKey, fieldNumber: 9)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -6750,6 +6764,8 @@ nonisolated extension Provenencia_Engine_V1_SearchHit: SwiftProtobuf.Message, Sw
     if lhs.subtitle != rhs.subtitle {return false}
     if lhs.matchReason != rhs.matchReason {return false}
     if lhs._location != rhs._location {return false}
+    if lhs.thumbnailRelPath != rhs.thumbnailRelPath {return false}
+    if lhs.iconKey != rhs.iconKey {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

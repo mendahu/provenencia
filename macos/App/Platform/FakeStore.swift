@@ -801,6 +801,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         var scored: [(hit: CatalogSearchHit, score: Double)] = []
         let types = sourceTypesByProject[projectDir] ?? []
         let typeLabelByID = Dictionary(uniqueKeysWithValues: types.map { ($0.id, $0.label) })
+        let typeIconByID = Dictionary(uniqueKeysWithValues: types.map { ($0.id, $0.iconKey) })
 
         for source in sourcesByProject[projectDir] ?? [] {
             var description = source.description
@@ -848,7 +849,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         sourceId: source.id,
                         ref: source.ref,
                         title: source.title
-                    )
+                    ),
+                    thumbnailRelPath: source.thumbnailRelPath,
+                    iconKey: typeIconByID[source.sourceTypeID] ?? ""
                 ),
                 score * boost * refBoost
             ))
@@ -880,7 +883,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                             section: .sourceTypes,
                             typeId: type.id,
                             title: type.label
-                        )
+                        ),
+                        iconKey: type.iconKey
                     ),
                     score * boost
                 ))

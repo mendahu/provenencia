@@ -76,6 +76,9 @@ func TestSearchRanksTitleOverDescriptionAndMapsLocation(t *testing.T) {
 	if hits[0].Location.Section != SectionSources || hits[0].Location.SourceID != hits[0].ID {
 		t.Fatalf("location %+v", hits[0].Location)
 	}
+	if hits[0].IconKey == "" {
+		t.Fatal("expected source hit icon_key from type")
+	}
 	if hits[0].Score <= hits[1].Score {
 		t.Fatalf("title score %v should beat description %v", hits[0].Score, hits[1].Score)
 	}
@@ -110,6 +113,9 @@ func TestSearchFindsTypesAndFields(t *testing.T) {
 			foundType = true
 			if h.Location.TypeID != h.ID || h.Location.Section != SectionSourceTypes {
 				t.Fatalf("type location %+v", h.Location)
+			}
+			if h.IconKey == "" {
+				t.Fatal("expected type hit icon_key")
 			}
 		}
 	}

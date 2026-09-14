@@ -11,10 +11,6 @@ final class OmnibarResultsModel {
 
     var query = ""
     var hits: [CatalogSearchHit] = []
-    /// Source rows keyed by id — filled after each search for lead thumbnails.
-    var sourcesByID: [String: CatalogSource] = [:]
-    /// Type rows keyed by id — filled after each search for type/source icons.
-    var typesByID: [String: CatalogSourceType] = [:]
     var isLoading = false
     var hasSearched = false
     /// Set when Esc / outside click closes the panel without clearing the query.
@@ -58,8 +54,6 @@ final class OmnibarResultsModel {
         debounceTask = nil
         searchGeneration += 1
         hits = []
-        sourcesByID = [:]
-        typesByID = [:]
         isLoading = false
         hasSearched = false
         userDismissed = false
@@ -82,8 +76,6 @@ final class OmnibarResultsModel {
         guard q.count >= Self.minQueryLength else {
             searchGeneration += 1
             hits = []
-            sourcesByID = [:]
-            typesByID = [:]
             isLoading = false
             hasSearched = false
             userDismissed = false
@@ -129,18 +121,13 @@ final class OmnibarResultsModel {
         store: any GenealogyStore
     ) async {
         do {
-            async let search = store.searchCatalog(
+            let results = try await store.searchCatalog(
                 projectDir: projectDir,
                 query: query,
                 location: location
             )
-            async let sources = store.listSources(projectDir: projectDir)
-            async let types = store.listSourceTypes(projectDir: projectDir)
-            let (results, sourceRows, typeRows) = try await (search, sources, types)
             guard generation == searchGeneration else { return }
             hits = results
-            sourcesByID = Dictionary(uniqueKeysWithValues: sourceRows.map { ($0.id, $0) })
-            typesByID = Dictionary(uniqueKeysWithValues: typeRows.map { ($0.id, $0) })
             hasSearched = true
             searchError = nil
             isLoading = false
@@ -148,8 +135,6 @@ final class OmnibarResultsModel {
         } catch {
             guard generation == searchGeneration else { return }
             hits = []
-            sourcesByID = [:]
-            typesByID = [:]
             hasSearched = true
             searchError = String(localized: L10n.Workspace.omnibarSearchFailed)
             isLoading = false

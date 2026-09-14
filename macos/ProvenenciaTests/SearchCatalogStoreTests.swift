@@ -55,13 +55,21 @@ struct SearchCatalogStoreTests {
         #expect(hit.location.section == .sources)
         #expect(hit.location.sourceId == "src-1")
         #expect(hit.location.ref == "SRC-ILMIN")
+        #expect(hit.subtitle == "Parish register")
         #expect(store.heldCatalogProjectDir == projectDir)
     }
 
     @Test func findsTypeAndFieldByLabel() async throws {
         let store = FakeStore()
         store.sourceTypesByProject[projectDir] = [
-            CatalogSourceType(id: "t1", key: "book", origin: "provenencia", label: "Published book", description: ""),
+            CatalogSourceType(
+                id: "t1",
+                key: "book",
+                origin: "provenencia",
+                label: "Published book",
+                description: "",
+                iconKey: "type_book"
+            ),
         ]
         store.fieldsByProject[projectDir] = [
             CatalogMetadataField(
@@ -79,7 +87,9 @@ struct SearchCatalogStoreTests {
             query: "Published book",
             location: .sectionRoot(.sourceTypes)
         )
-        #expect(typeHits.contains { $0.kind == "source_type" && $0.location.typeId == "t1" })
+        #expect(typeHits.contains {
+            $0.kind == "source_type" && $0.location.typeId == "t1" && $0.iconKey == "type_book"
+        })
 
         let fieldHits = try await store.searchCatalog(
             projectDir: projectDir,

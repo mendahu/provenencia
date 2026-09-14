@@ -90,6 +90,10 @@ struct CatalogSearchHit: Sendable, Equatable, Identifiable {
     var subtitle: String
     var matchReason: String
     var location: WorkspaceLocation
+    /// Source cover raster path when already derived; empty otherwise.
+    var thumbnailRelPath: String = ""
+    /// Source-type icon key (type hits and Source type fallback).
+    var iconKey: String = ""
 }
 
 struct CatalogCredibilityAssessment: Sendable, Equatable {

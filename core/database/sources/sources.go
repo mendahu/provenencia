@@ -41,8 +41,8 @@ const (
 		cover_mode, primary_artifact_id
 		FROM sources
 		ORDER BY title COLLATE NOCASE, ref COLLATE NOCASE`
-	sqlCount      = `SELECT COUNT(*) FROM sources`
-	sqlTypeExists = `SELECT 1 FROM source_types WHERE id = ?`
+	sqlCount            = `SELECT COUNT(*) FROM sources`
+	sqlTypeExists       = `SELECT 1 FROM source_types WHERE id = ?`
 	sqlArtifactForCover = `SELECT id, source_id, file_id FROM artifacts WHERE id = ?`
 	maxRefRetries       = 8
 )
@@ -230,6 +230,9 @@ func SetCover(c *database.Catalog, userID []byte, sourceID []byte, mode string, 
 			Fields:     fields,
 		}},
 	}); err != nil {
+		return Source{}, err
+	}
+	if err := searchindex.ReprojectSource(tx, sourceID); err != nil {
 		return Source{}, err
 	}
 	if err := tx.Commit(); err != nil {

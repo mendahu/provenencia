@@ -114,8 +114,6 @@ private struct OmnibarResultsPanel: View {
                                 OmnibarHitRowView(
                                     hit: hit,
                                     projectDir: projectDir,
-                                    sourcesByID: results.sourcesByID,
-                                    typesByID: results.typesByID,
                                     selected: index == results.selectedIndex
                                 )
                             }
@@ -195,8 +193,6 @@ private struct OmnibarResultsPanel: View {
 private struct OmnibarHitRowView: View {
     let hit: CatalogSearchHit
     let projectDir: String
-    let sourcesByID: [String: CatalogSource]
-    let typesByID: [String: CatalogSourceType]
     var selected: Bool
 
     var body: some View {
@@ -216,31 +212,24 @@ private struct OmnibarHitRowView: View {
     private var leadView: some View {
         switch hit.kind {
         case "source":
-            if let source = sourcesByID[hit.id] {
-                CachedThumbnail(
-                    projectDir: projectDir,
-                    relPath: source.thumbnailRelPath,
-                    typeIconKey: typesByID[source.sourceTypeID]?.iconKey,
-                    size: 40,
-                    cornerRadius: PVRadius.sm
-                )
+            CachedThumbnail(
+                projectDir: projectDir,
+                relPath: hit.thumbnailRelPath,
+                typeIconKey: hit.iconKey.isEmpty ? nil : hit.iconKey,
+                size: 40,
+                cornerRadius: PVRadius.sm
+            )
+        case "source_type":
+            if hit.iconKey.isEmpty {
+                PVThumbnail(PVThumbnail.Content(icon: .library), size: 40)
             } else {
                 PVThumbnail(
-                    PVThumbnail.Content(icon: .scrollText),
-                    size: 40
-                )
-            }
-        case "source_type":
-            if let type = typesByID[hit.id] {
-                PVThumbnail(
                     PVThumbnail.Content(
-                        evidenceIcon: PVEvidenceIconKey(catalogKey: type.iconKey),
+                        evidenceIcon: PVEvidenceIconKey(catalogKey: hit.iconKey),
                         label: OmnibarHitPresentation.kindLabel(for: hit.kind)
                     ),
                     size: 40
                 )
-            } else {
-                PVThumbnail(PVThumbnail.Content(icon: .library), size: 40)
             }
         default:
             PVThumbnail(

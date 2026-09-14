@@ -45,14 +45,16 @@ type Query struct {
 
 // Hit is one navigable search result.
 type Hit struct {
-	Kind        string
-	ID          string
-	Ref         string
-	Title       string
-	Subtitle    string
-	MatchReason string
-	Location    WorkspaceLocation
-	Score       float64 // internal; not exposed on the wire
+	Kind             string
+	ID               string
+	Ref              string
+	Title            string
+	Subtitle         string
+	MatchReason      string
+	Location         WorkspaceLocation
+	ThumbnailRelPath string  // Source cover when a derivative already exists
+	IconKey          string  // Type icon (source type, or source's type)
+	Score            float64 // internal; not exposed on the wire
 }
 
 // Searcher retrieves and ranks hits.

@@ -726,6 +726,9 @@ message SearchHit {
   string subtitle = 5;
   string match_reason = 6;
   WorkspaceLocation location = 7;
+  // Display stubs for omnibar lead chrome (avoid a second full-list fetch).
+  string thumbnail_rel_path = 8; // Source cover raster when already derived; else empty
+  string icon_key = 9;           // Source type icon, or type hit icon; empty for fields
 }
 
 message SearchCatalogResponse {
