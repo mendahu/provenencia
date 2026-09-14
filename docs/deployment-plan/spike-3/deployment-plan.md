@@ -6,7 +6,7 @@ Authoritative behavior: [`navigation-history.md`](navigation-history.md), [`omni
 
 ## Status
 
-**In progress.** Open steps below; completed steps live in [`completed.md`](completed.md) (S3-01…S3-11; S3-06 skipped).
+**Spike 3 dogfood complete** (S3-01…S3-12; S3-06 skipped). Optional later slices (**S3-13+**) remain below. History: [`completed.md`](completed.md).
 
 ## Goal (dogfood bar)
 
@@ -18,7 +18,7 @@ A researcher can:
 
 ## Layout moves (from Design boards)
 
-Implement in the PR steps that own chrome (see [`design/README.md`](design/README.md); boards in Claude Design):
+Implemented in the PRs that owned chrome (see [`design/README.md`](design/README.md); boards in Claude Design):
 
 | Change | From → To |
 | --- | --- |
@@ -35,45 +35,18 @@ Keyboard (board): `⌘[` Back, `⌘]` Forward; `⌘K` focuses omnibar.
 
 ---
 
-## Open PR sequence
-
-Steps are **`S3-NN`**. **Depends on** is the merge gate. Prefer many small PRs; do not fold search engine work into the first toolbar PR.
+## Optional later slices
 
 ```text
-S3-03 project.uuid (done) ───────────────────┐
-        │                                     │
-        ▼                                     ▼
-S3-04  history (done)                       S3-07  SearchCatalog (done)
-        │                                     │
-        ▼                                     ▼
-S3-05  Toolbar chrome (done)                S3-08  FTS5 (done)
-        │                                     │
-        │                                     ▼
-        │                               S3-09  Context + ref (done)
-        │                                     │
-        └──────────────┬──────────────────────┘
-                       ▼
-                 S3-10  Omnibar results (done)
-                       │
-                       ▼
-                 S3-11  Fuzzy / typo (done)
-                       │
-                       ▼
-                 S3-12  Dogfood polish (optional S3-13+ kinds)
+S3-01…S3-12 (dogfood done)
+        │
+        ▼
+S3-13+  More kinds / depth (optional)
 ```
-
-### S3-12 — PR: Spike 3 dogfood polish
-
-| | |
-| --- | --- |
-| **Kind** | PR |
-| **Depends on** | S3-10; S3-11 preferred |
-| **Deliverables** | Copy/a11y/identifiers, restore edge cases, jump-menu + omnibar elevation consistency, regression tests, closeout notes. Fix anything that blocks daily use of history + omnibar. |
-| **Out** | New catalog layers; project Files browser. |
 
 ### S3-13+ — Later slices (same spike or next)
 
-Not required to close Spike 3 dogfood if Sources + types + fields search well:
+Not required for Spike 3 dogfood if Sources + types + fields search well:
 
 | Step | Scope |
 | --- | --- |
@@ -101,22 +74,20 @@ Not required to close Spike 3 dogfood if Sources + types + fields search well:
 | Track | Steps |
 | --- | --- |
 | **Design** | S3-01, S3-02 — done ([`completed.md`](completed.md)) |
-| **Core / FFI** | S3-03 done → S3-07 done → S3-08 done → S3-09 done → S3-11 done |
-| **Mac workspace** | S3-04 done → S3-05 done → S3-10 done → S3-12 |
-
-**S3-10** was the omnibar integration gate; **S3-11** closed typo tolerance in Go.
+| **Core / FFI** | S3-03 → S3-07 → S3-08 → S3-09 → S3-11 — done |
+| **Mac workspace** | S3-04 → S3-05 → S3-10 → S3-12 — done |
 
 ---
 
 ## Explicit non-goals (keep PRs honest)
 
-- [ ] No Interpretation / Conclusion destinations or search kinds required for Spike 3 done
-- [ ] No project Files list (Spike 2 descoped)
-- [ ] No short human `PRJ-…` project ref
-- [ ] No SwiftUI `NavigationStack` for session history
-- [ ] No permanent Swift-side `LIKE` search engine
-- [ ] No dual list-search chrome after S3-10
-- [ ] No edit undo/redo; no cross-project search; no AI “ask the catalog”
+- [x] No Interpretation / Conclusion destinations or search kinds required for Spike 3 done
+- [x] No project Files list (Spike 2 descoped)
+- [x] No short human `PRJ-…` project ref
+- [x] No SwiftUI `NavigationStack` for session history
+- [x] No permanent Swift-side `LIKE` search engine
+- [x] No dual list-search chrome after S3-10
+- [x] No edit undo/redo; no cross-project search; no AI “ask the catalog”
 - [ ] No product `VERSION` bump for docs-only; bump when shipping a release that includes these PRs
 
 ---
@@ -125,9 +96,9 @@ Not required to close Spike 3 dogfood if Sources + types + fields search well:
 
 Jake can, on his MacBook:
 
-1. Open a project, navigate Sources ↔ Source page ↔ vocabulary, use toolbar Back/Forward and jump menus, relaunch, and land where he left off.
-2. Focus omnibar with `⌘K`, find a Source / type / field by title or ref, open it, then Back out.
-3. See **no** search fields on the Sources list or vocabulary list panes.
-4. Confirm `project.uuid` exists in SQLite and `navigation/{uuid}.json` under Application Support.
+1. [x] Open a project, navigate Sources ↔ Source page ↔ vocabulary, use toolbar Back/Forward and jump menus, relaunch, and land where he left off.
+2. [x] Focus omnibar with `⌘K`, find a Source / type / field by title or ref, open it, then Back out.
+3. [x] See **no** search fields on the Sources list or vocabulary list panes.
+4. [x] Confirm `project.uuid` exists in SQLite and `navigation/{uuid}.json` under Application Support.
 
-When a step finishes, move its write-up to [`completed.md`](completed.md) and leave the open list here as the checklist.
+When a step finishes, move its write-up to [`completed.md`](completed.md) and leave optional later slices here.

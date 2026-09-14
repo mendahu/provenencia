@@ -66,6 +66,17 @@ struct SourcesModelTests {
         #expect(model.typeLabel(for: model.sources[0]) == "Photograph")
     }
 
+    @Test func initialLoadGateStartsFalseThenCompletes() async {
+        let model = makeModel(
+            sources: [source(id: "s1", title: "Album", typeID: "t1")],
+            types: [photoType()]
+        )
+        #expect(!model.hasCompletedInitialLoad)
+        await model.load()
+        #expect(model.hasCompletedInitialLoad)
+        #expect(!model.isLoading)
+    }
+
     @Test func listSourcesFillsThumbnailFromPinnedArtifact() async {
         let store = FakeStore()
         store.artifactsBySource["s1"] = [

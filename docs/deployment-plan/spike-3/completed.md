@@ -19,6 +19,7 @@ IDs stay stable (`S3-NN`). Do not renumber when moving steps here.
 | [S3-09](#s3-09--pr-context-ranking--ref-fast-path) | PR | Context ranking + ref fast path |
 | [S3-10](#s3-10--pr-omnibar-results-ui--wire-search--remove-list-search) | PR | Omnibar results + retire list search |
 | [S3-11](#s3-11--pr-fuzzy--typo-matching) | PR | Trigram shortlist + Jaro–Winkler typo tolerance |
+| [S3-12](#s3-12--pr-spike-3-dogfood-polish) | PR | Dogfood polish for history + omnibar |
 
 ---
 
@@ -172,3 +173,17 @@ IDs stay stable (`S3-NN`). Do not renumber when moving steps here.
 | **Out** | Cross-root association search; NL/AI; spellfix1 / stemming; CJK fuzzy models. |
 | **Dogfood** | Common typos (`Ilminstr` → Ilminster) recover without flooding garbage. |
 | **Feeds** | S3-12 |
+
+---
+
+### S3-12 — PR: Spike 3 dogfood polish
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S3-10; S3-11 preferred |
+| **Deliverables** | Done. Gate `fallbackToSectionRoot` on `hasCompletedInitialLoad` (Sources + vocab) so relaunch deep places are not pruned before catalog load. Omnibar loading row + `searchError` callout (not blank panel / not “no matches”). A11y: Back/Forward identifiers, per-hit omnibar ids + labels, jump-menu accessibility label. Confirmed jump menu and omnibar already share `PVRadius.sm` + `PVElevation.overlay`. Regression tests for load gate, close/loading/empty/error/selection. Spike 3 dogfood closeout; open questions parked as deferred. |
+| **Context** | [`deployment-plan.md`](deployment-plan.md) Definition of done; [`navigation-history.md`](navigation-history.md) restore; omnibar S4/S5. |
+| **Out** | New catalog layers; project Files browser; empty-query recents; non-current stack prune on attach. |
+| **Dogfood** | Relaunch on a Source page stays put; ⌘K search shows loading then hits or a clear error; identifiers support UI scripts. |
+| **Feeds** | Optional S3-13+ |

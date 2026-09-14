@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The **Source types** workspace destination (S2-03 board / S2-16 PR):
-/// browse and search the project's `source_types` vocabulary, edit or delete
+/// browse the project's `source_types` vocabulary, edit or delete
 /// a type, and assign or remove the metadata fields it suggests. Mounts
 /// inside the existing S2-01 workspace content host — see
 /// `WorkspaceContent` — not a second window chrome.
@@ -76,8 +76,10 @@ struct SourceTypesView: View {
             await model.load()
             applyWorkspaceLocation()
         }
-        .onAppear { applyWorkspaceLocation() }
-        .onChange(of: navigation.currentLocation) { _, _ in applyWorkspaceLocation() }
+        .onChange(of: navigation.currentLocation) { _, _ in
+            guard model.hasCompletedInitialLoad else { return }
+            applyWorkspaceLocation()
+        }
         .accessibilityIdentifier("sourceTypes")
     }
 
@@ -88,7 +90,8 @@ struct SourceTypesView: View {
         if let typeId = location.typeId {
             if model.types.contains(where: { $0.id == typeId }) {
                 model.select(typeId)
-            } else if !model.isLoading {
+            } else {
+                // Missing or deleted — only called after first load completes.
                 navigation.fallbackToSectionRoot()
             }
         } else {

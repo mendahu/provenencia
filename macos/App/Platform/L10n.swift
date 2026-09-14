@@ -823,6 +823,24 @@ enum L10n {
             defaultValue: "Search results",
             comment: "Accessibility label for the omnibar results panel"
         )
+
+        static let omnibarSearchFailed = LocalizedStringResource(
+            "workspace.omnibar.searchFailed",
+            defaultValue: "Search couldn’t finish. Try again.",
+            comment: "Omnibar panel message when SearchCatalog fails"
+        )
+
+        static let omnibarSearching = LocalizedStringResource(
+            "workspace.omnibar.searching",
+            defaultValue: "Searching…",
+            comment: "Omnibar panel loading label while SearchCatalog is in flight"
+        )
+
+        static let jumpMenuAccessibilityLabel = LocalizedStringResource(
+            "workspace.navigation.jumpMenuAccessibilityLabel",
+            defaultValue: "History jump menu",
+            comment: "Accessibility label for the Back/Forward history jump menu panel"
+        )
     }
 
     /// The **Source fields** workspace destination (S2-15): browse, search,
