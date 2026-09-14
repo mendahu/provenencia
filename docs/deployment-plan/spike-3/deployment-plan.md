@@ -6,7 +6,7 @@ Authoritative behavior: [`navigation-history.md`](navigation-history.md), [`omni
 
 ## Status
 
-**In progress.** Open steps below; completed steps live in [`completed.md`](completed.md) (S3-01…S3-08; S3-06 skipped).
+**In progress.** Open steps below; completed steps live in [`completed.md`](completed.md) (S3-01…S3-09; S3-06 skipped).
 
 ## Goal (dogfood bar)
 
@@ -49,7 +49,7 @@ S3-04  history (done)                       S3-07  SearchCatalog (done)
 S3-05  Toolbar chrome (done)                S3-08  FTS5 (done)
         │                                     │
         │                                     ▼
-        │                               S3-09  Context ranking + ref path
+        │                               S3-09  Context + ref (done)
         │                                     │
         └──────────────┬──────────────────────┘
                        ▼
@@ -61,17 +61,6 @@ S3-05  Toolbar chrome (done)                S3-08  FTS5 (done)
                        ▼
                  S3-12  Dogfood polish (optional S3-13+ kinds)
 ```
-
-### S3-09 — PR: Context ranking + ref fast path
-
-| | |
-| --- | --- |
-| **Kind** | PR |
-| **Depends on** | S3-08 |
-| **Deliverables** | Section/kind context boosts from request location. Exact / prefix **ref** promotion (`SRC-…` etc.). Cheap `match_reason` when match is in rolled-up child text. Bounded hit list (e.g. top 20–50). |
-| **Context** | [`omnibar-search.md`](omnibar-search.md) S3; multi-word term-coverage rules in that note. |
-| **Out** | Fuzzy; omnibar UI. |
-| **Dogfood** | Paste `SRC-…` → obvious top hit; browsing Sources floats Source hits without hiding vocabulary. |
 
 ### S3-10 — PR: Omnibar results UI + wire search + remove list search
 
@@ -134,7 +123,7 @@ Not required to close Spike 3 dogfood if Sources + types + fields search well:
 | Track | Steps |
 | --- | --- |
 | **Design** | S3-01, S3-02 — done ([`completed.md`](completed.md)) |
-| **Core / FFI** | S3-03 done → S3-07 done → S3-08 done → S3-09 → (S3-11) |
+| **Core / FFI** | S3-03 done → S3-07 done → S3-08 done → S3-09 done → (S3-11) |
 | **Mac workspace** | S3-04 done → S3-05 done → S3-10 → S3-12 |
 
 S3-08+ may proceed beside remaining Mac chrome. **S3-10** is the integration gate.

@@ -26,7 +26,8 @@ Authoritative behavior: [`docs/deployment-plan/spike-3/omnibar-search.md`](../..
 - [ ] DefaultInEverything / ContextSections for ranking boosts
 - [ ] FTS projector in core/database/searchindex (Upsert/Delete/Rebuild)
 - [ ] Write-path reproject on domain mutators (same tx when practical)
-- [ ] FakeStore mirrors kinds + location rules; markCatalogSessionHeld
+- [ ] Tagged Source body rollup when contributing child text (`note:` / `metadata:` / `filename:`)
+- [ ] FakeStore mirrors kinds + location rules + ref exact/prefix boost; markCatalogSessionHeld
 - [ ] Package + FFI + Swift FakeStore tests
 ```
 
@@ -50,6 +51,10 @@ macOS `WorkspaceSection` raw values.
 FTS documents map fields into columns `title` / `ref` / `secondary` / `body`
 (`core/database/searchindex`). Keep weights in this registry — do not fork
 weight tables in SQL migrations.
+
+Global knobs in the same file: `FTSBM25Weights` (SQL bm25 columns) and
+`RefBoostWeights` (exact ≫ prefix ≫ none). Ref-shaped queries use the docs
+`ref` column fast path in `FTSSearcher` (hyphens break FTS MATCH).
 
 ### 2. Location mapping
 

@@ -204,8 +204,214 @@ func TestNoteBodyRollsIntoSourceHit(t *testing.T) {
 	if len(hits) != 1 || hits[0].Kind != KindSource || hits[0].ID != uuidString(src.ID) {
 		t.Fatalf("want Source hit for note text, got %+v", hits)
 	}
-	if hits[0].MatchReason != "notes" {
+	if hits[0].MatchReason != "notes" && !strings.HasPrefix(hits[0].MatchReason, "note:") {
 		t.Fatalf("match_reason %q", hits[0].MatchReason)
+	}
+}
+
+func TestExactRefIsTopHit(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	userID := seedUser(t, c)
+	typeID := seedType(t, c, "Book", "")
+	target, err := sources.Create(c, userID, sources.CreateInput{
+		SourceTypeID: typeID,
+		Title:        "Quiet title",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	noise, err := sources.Create(c, userID, sources.CreateInput{
+		SourceTypeID: typeID,
+		Title:        target.Ref + " mentioned in title only",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = noise
+
+	hits, err := DefaultEngine().Search(context.Background(), c, Query{Text: target.Ref})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hits) < 1 {
+		t.Fatal("expected hits")
+	}
+	if hits[0].ID != uuidString(target.ID) {
+		t.Fatalf("want exact ref Source first, got %+v", hits[0])
+	}
+	if hits[0].MatchReason != "ref" {
+		t.Fatalf("match_reason %q", hits[0].MatchReason)
+	}
+}
+
+func TestPrefixRefPromotesSource(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	userID := seedUser(t, c)
+	typeID := seedType(t, c, "Book", "")
+	target, err := sources.Create(c, userID, sources.CreateInput{
+		SourceTypeID: typeID,
+		Title:        "Prefix target",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = sources.Create(c, userID, sources.CreateInput{
+		SourceTypeID: typeID,
+		Title:        "Unrelated noise",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(target.Ref) < 6 {
+		t.Fatalf("ref too short %q", target.Ref)
+	}
+	prefix := target.Ref[:6] // SRC-XX
+	hits, err := DefaultEngine().Search(context.Background(), c, Query{Text: prefix})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hits) < 1 || hits[0].ID != uuidString(target.ID) {
+		t.Fatalf("want prefix Source first, got %+v", hits)
+	}
+	if hits[0].MatchReason != "ref" {
+		t.Fatalf("match_reason %q", hits[0].MatchReason)
+	}
+}
+
+func TestSourcesContextFloatsSourceAboveVocab(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	userID := seedUser(t, c)
+	ty, err := sourcetypes.Create(c, "SharedToken Type", "x", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	field, err := sourcefields.Create(c, "SharedToken Field", "text", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	src, err := sources.Create(c, userID, sources.CreateInput{
+		SourceTypeID: ty.ID,
+		Title:        "SharedToken Source",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = field
+
+	hits, err := DefaultEngine().Search(context.Background(), c, Query{
+		Text:     "SharedToken",
+		Location: WorkspaceLocation{Section: SectionSources},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hits) < 3 {
+		t.Fatalf("want Source+type+field, got %+v", hits)
+	}
+	if hits[0].Kind != KindSource || hits[0].ID != uuidString(src.ID) {
+		t.Fatalf("want Source first under sources context, got %+v", hits[0])
+	}
+	var sawType, sawField bool
+	for _, h := range hits {
+		if h.Kind == KindSourceType {
+			sawType = true
+		}
+		if h.Kind == KindSourceField {
+			sawField = true
+		}
+	}
+	if !sawType || !sawField {
+		t.Fatalf("vocab should still appear: %+v", hits)
+	}
+}
+
+func TestMultiTokenPartialCoverageStillRetrieves(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	userID := seedUser(t, c)
+	ty, err := sourcetypes.Create(c, "Birth certificate", "civil record", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	src, err := sources.Create(c, userID, sources.CreateInput{
+		SourceTypeID: ty.ID,
+		Title:        "John Smith's birth certificate",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hits, err := DefaultEngine().Search(context.Background(), c, Query{
+		Text:     "John Smith's birth certificate",
+		Location: WorkspaceLocation{Section: SectionSources},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hits) < 1 || hits[0].ID != uuidString(src.ID) {
+		t.Fatalf("want full Source first, got %+v", hits)
+	}
+	var sawType bool
+	var typeIdx int
+	for i, h := range hits {
+		if h.Kind == KindSourceType && h.ID == uuidString(ty.ID) {
+			sawType = true
+			typeIdx = i
+		}
+	}
+	if !sawType {
+		t.Fatalf("partial-coverage type missing from %+v", hits)
+	}
+	if typeIdx == 0 {
+		t.Fatalf("type should rank below fuller Source match")
+	}
+}
+
+func TestNoteMatchReasonUsesSnippet(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	userID := seedUser(t, c)
+	typeID := seedType(t, c, "Book", "")
+	src, err := sources.Create(c, userID, sources.CreateInput{
+		SourceTypeID: typeID,
+		Title:        "Quiet title",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := sources.AddNote(c, userID, src.ID, "mentions Zemblanity only in the note"); err != nil {
+		t.Fatal(err)
+	}
+	hits, err := DefaultEngine().Search(context.Background(), c, Query{Text: "Zemblanity"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hits) != 1 {
+		t.Fatalf("got %+v", hits)
+	}
+	if !strings.HasPrefix(hits[0].MatchReason, "note:") {
+		t.Fatalf("want note: snippet, got %q", hits[0].MatchReason)
+	}
+	if !strings.Contains(strings.ToLower(hits[0].MatchReason), "zemblanity") {
+		t.Fatalf("snippet should include token, got %q", hits[0].MatchReason)
 	}
 }
 
