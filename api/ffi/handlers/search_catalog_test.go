@@ -61,6 +61,9 @@ func TestSearchCatalog(t *testing.T) {
 				if top.GetTitle() == "" {
 					t.Fatal("empty title")
 				}
+				if top.GetIconKey() == "" {
+					t.Fatal("expected source type icon_key stub")
+				}
 			},
 		},
 		{
@@ -95,6 +98,9 @@ func TestSearchCatalog(t *testing.T) {
 				for _, h := range resp.Hits {
 					if h.GetKind() == search.KindSourceType && h.GetLocation().GetTypeId() != "" {
 						found = true
+						if h.GetIconKey() == "" {
+							t.Fatalf("type hit missing icon_key %+v", h)
+						}
 						break
 					}
 				}

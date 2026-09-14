@@ -39,7 +39,7 @@ struct OmnibarResultsModelTests {
             CatalogSource(id: "s1", ref: "SRC-ILMIN", sourceTypeID: "t1", title: "Ilminster parish", description: ""),
         ]
         store.sourceTypesByProject[projectDir] = [
-            CatalogSourceType(id: "t1", key: "parish", origin: "provenencia", label: "Parish", description: ""),
+            CatalogSourceType(id: "t1", key: "parish", origin: "provenencia", label: "Parish", description: "", iconKey: "type_certificate"),
         ]
         let model = OmnibarResultsModel()
         model.query = "Ilminster"
@@ -51,7 +51,8 @@ struct OmnibarResultsModelTests {
         await waitForSearch(model)
         #expect(model.isPresented)
         #expect(model.hits.first?.id == "s1")
-        #expect(model.sourcesByID["s1"] != nil)
+        #expect(model.hits.first?.subtitle == "Parish")
+        #expect(model.hits.first?.iconKey == "type_certificate")
     }
 
     @Test func exactRefHitIsTop() async {

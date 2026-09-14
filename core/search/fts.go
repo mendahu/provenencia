@@ -157,6 +157,9 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 	if len(hits) > limit {
 		hits = hits[:limit]
 	}
+	if err := attachLeadStubs(db, hits); err != nil {
+		return nil, err
+	}
 	return hits, nil
 }
 
