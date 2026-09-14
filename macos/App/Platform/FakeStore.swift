@@ -784,8 +784,162 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         )
     }
 
+    func searchCatalog(
+        projectDir: String,
+        query: String,
+        location: WorkspaceLocation
+    ) async throws -> [CatalogSearchHit] {
+        markCatalogSessionHeld(projectDir)
+        let tokens = Self.tokenizeSearch(query)
+        guard !tokens.isEmpty else { return [] }
+
+        var scored: [(hit: CatalogSearchHit, score: Double)] = []
+        let types = sourceTypesByProject[projectDir] ?? []
+        let typeLabelByID = Dictionary(uniqueKeysWithValues: types.map { ($0.id, $0.label) })
+
+        for source in sourcesByProject[projectDir] ?? [] {
+            var description = source.description
+            if let typeLabel = typeLabelByID[source.sourceTypeID], !typeLabel.isEmpty {
+                description = "\(description) \(typeLabel)".trimmingCharacters(in: .whitespaces)
+            }
+            let values = [
+                "title": source.title,
+                "ref": source.ref,
+                "description": description,
+            ]
+            let (score, reason) = Self.scoreSearchFields(
+                fields: [("title", 10), ("ref", 12), ("description", 3)],
+                values: values,
+                tokens: tokens
+            )
+            guard score > 0 else { continue }
+            let boost = location.section == .sources ? 1.35 : 1.0
+            scored.append((
+                CatalogSearchHit(
+                    kind: "source",
+                    id: source.id,
+                    ref: source.ref,
+                    title: source.title,
+                    subtitle: typeLabelByID[source.sourceTypeID] ?? "",
+                    matchReason: reason,
+                    location: WorkspaceLocation(
+                        section: .sources,
+                        sourceId: source.id,
+                        ref: source.ref,
+                        title: source.title
+                    )
+                ),
+                score * boost
+            ))
+        }
+
+        for type in types {
+            let (score, reason) = Self.scoreSearchFields(
+                fields: [("label", 10), ("key", 8), ("description", 3)],
+                values: [
+                    "label": type.label,
+                    "key": type.key,
+                    "description": type.description,
+                ],
+                tokens: tokens
+            )
+            guard score > 0 else { continue }
+            let boost = location.section == .sourceTypes ? 1.35 : 1.0
+            scored.append((
+                CatalogSearchHit(
+                    kind: "source_type",
+                    id: type.id,
+                    ref: "",
+                    title: type.label,
+                    subtitle: type.key,
+                    matchReason: reason,
+                    location: WorkspaceLocation(
+                        section: .sourceTypes,
+                        typeId: type.id,
+                        title: type.label
+                    )
+                ),
+                score * boost
+            ))
+        }
+
+        for field in fieldsByProject[projectDir] ?? [] {
+            let (score, reason) = Self.scoreSearchFields(
+                fields: [("label", 10), ("key", 8), ("description", 3)],
+                values: [
+                    "label": field.label,
+                    "key": field.key,
+                    "description": field.description,
+                ],
+                tokens: tokens
+            )
+            guard score > 0 else { continue }
+            let boost = location.section == .sourceFields ? 1.35 : 1.0
+            scored.append((
+                CatalogSearchHit(
+                    kind: "source_field",
+                    id: field.id,
+                    ref: "",
+                    title: field.label,
+                    subtitle: field.key,
+                    matchReason: reason,
+                    location: WorkspaceLocation(
+                        section: .sourceFields,
+                        fieldId: field.id,
+                        title: field.label
+                    )
+                ),
+                score * boost
+            ))
+        }
+
+        scored.sort {
+            if $0.score != $1.score { return $0.score > $1.score }
+            if $0.hit.kind != $1.hit.kind { return $0.hit.kind < $1.hit.kind }
+            return $0.hit.title < $1.hit.title
+        }
+        return scored.prefix(50).map(\.hit)
+    }
+
     private func markCatalogSessionHeld(_ projectDir: String) {
         heldCatalogProjectDir = projectDir
+    }
+
+    private static func tokenizeSearch(_ query: String) -> [String] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !trimmed.isEmpty else { return [] }
+        return trimmed.split(whereSeparator: \.isWhitespace).compactMap { part in
+            let cleaned = part.trimmingCharacters(in: CharacterSet(charactersIn: "\"'.,;:!?()[]{}"))
+            return cleaned.isEmpty ? nil : String(cleaned)
+        }
+    }
+
+    private static func scoreSearchFields(
+        fields: [(name: String, weight: Double)],
+        values: [String: String],
+        tokens: [String]
+    ) -> (score: Double, reason: String) {
+        var score = 0.0
+        var bestField = ""
+        var bestWeight = 0.0
+        var matchedTokens = 0
+        for tok in tokens {
+            var tokHit = false
+            for field in fields {
+                let value = (values[field.name] ?? "").lowercased()
+                guard !value.isEmpty, value.contains(tok) else { continue }
+                tokHit = true
+                score += field.weight
+                if field.weight > bestWeight || (field.weight == bestWeight && bestField.isEmpty) {
+                    bestWeight = field.weight
+                    bestField = field.name
+                }
+            }
+            if tokHit { matchedTokens += 1 }
+        }
+        guard matchedTokens > 0 else { return (0, "") }
+        score *= Double(matchedTokens) / Double(tokens.count)
+        return (score, bestField)
     }
 
     /// Resolves list/identity paint fields from persisted cover mode.

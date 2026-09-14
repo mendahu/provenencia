@@ -471,4 +471,9 @@ private struct ThrowingStore: GenealogyStore {
     func workspaceNavCounts(projectDir _: String) async throws -> WorkspaceNavCounts {
         throw StoreBoom.boom
     }
+    func searchCatalog(
+        projectDir _: String,
+        query _: String,
+        location _: WorkspaceLocation
+    ) async throws -> [CatalogSearchHit] { throw StoreBoom.boom }
 }
