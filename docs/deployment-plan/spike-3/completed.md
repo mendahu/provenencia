@@ -122,7 +122,7 @@ IDs stay stable (`S3-NN`). Do not renumber when moving steps here.
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | S3-07 |
-| **Deliverables** | Done. Enabled `-tags fts5` on dylib build + CI/`go test`. Migration `000018`: `catalog_search_docs` + external-content `catalog_search_fts` + `catalog_search_meta`. `core/database/searchindex` projectors for Source (notes/metadata/artifact/filename rollup) and vocab roots; incremental reproject on domain writes; `search.EnsureIndex` rebuild/heal on Open/Create. `FTSSearcher` is `DefaultEngine` (NaiveScanner removed). Registry body weights for rolled Source text. Skill [`add-searchable-kind`](../../../.cursor/skills/add-searchable-kind/SKILL.md) updated. |
+| **Deliverables** | Done. Enabled `-tags fts5` on dylib build + CI/`go test`. Migration `000018`: `catalog_search_docs` + external-content `catalog_search_fts` + `catalog_search_meta`. `core/database/searchindex` projectors for Source (notes/metadata/artifact/filename rollup) and vocab roots; incremental reproject on domain writes; `searchindex.EnsureCatalog` rebuild/heal on Open/Create. `FTSSearcher` is `DefaultEngine` (NaiveScanner removed). Registry body weights for rolled Source text. Skill [`add-searchable-kind`](../../../.cursor/skills/add-searchable-kind/SKILL.md) updated. |
 | **Context** | [`omnibar-search.md`](omnibar-search.md) S2; [`application-stack.md`](../../application-stack.md) §10. |
 | **Out** | Context/ref fast-path polish (S3-09); fuzzy (S3-11); Files/Artifact as own hit kinds; omnibar UI (S3-10). |
 | **Dogfood** | Edit a Source title/note → SearchCatalog updates; title beats body; Open heals a wiped index. |

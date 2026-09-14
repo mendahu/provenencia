@@ -14,8 +14,8 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/project"
+	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/users"
-	"github.com/mendahu/provenencia/core/search"
 )
 
 type session struct {
@@ -52,7 +52,7 @@ func openResearcher(projectDir string) (*database.Catalog, error) {
 		_ = c.Close()
 		return nil, err
 	}
-	if err := search.EnsureIndex(c); err != nil {
+	if err := searchindex.EnsureCatalog(c); err != nil {
 		_ = c.Close()
 		return nil, err
 	}

@@ -209,7 +209,7 @@ func TestNoteBodyRollsIntoSourceHit(t *testing.T) {
 	}
 }
 
-func TestEnsureIndexRebuildsAfterWipe(t *testing.T) {
+func TestEnsureCatalogRebuildsAfterWipe(t *testing.T) {
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {
 		t.Fatal(err)
@@ -241,7 +241,7 @@ func TestEnsureIndexRebuildsAfterWipe(t *testing.T) {
 	if len(hits) != 0 {
 		t.Fatalf("expected empty after wipe, got %+v", hits)
 	}
-	if err := EnsureIndex(c); err != nil {
+	if err := searchindex.EnsureCatalog(c); err != nil {
 		t.Fatal(err)
 	}
 	hits, err = DefaultEngine().Search(context.Background(), c, Query{Text: "RebuildMe"})

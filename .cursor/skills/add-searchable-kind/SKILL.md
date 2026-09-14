@@ -70,7 +70,7 @@ destination UI.
 
 1. Extend `core/database/searchindex` to build/upsert the kind’s document
    (and delete on remove). Bump `ProjectionVersion` when the document shape
-   changes so `search.EnsureIndex` rebuilds on Open.
+   changes so `searchindex.EnsureCatalog` rebuilds on Open.
 2. Call reproject from domain mutators in the same transaction when practical.
 3. `FTSSearcher` (`DefaultEngine`) reads `catalog_search_fts` + docs; empty /
    whitespace query → **no hits**; cap at `DefaultHitLimit` (50).
@@ -90,7 +90,7 @@ Catalog RPCs use `withProjectCatalog` — see
 
 | Layer | Cover |
 | --- | --- |
-| `core/search` | Ranking (title > description), note rollup, context boost, location, empty query, EnsureIndex heal |
+| `core/search` | Ranking (title > description), note rollup, context boost, location, empty query, EnsureCatalog heal |
 | `core/database/searchindex` | Migration / FTS smoke |
 | `api/ffi/handlers` | `runRPC` hit on new kind; location populated |
 | `ProvenenciaTests` | FakeStore title/ref hit + location ([`add-swift-test`](../add-swift-test/SKILL.md)) |
