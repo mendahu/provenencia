@@ -21,7 +21,7 @@ const (
 
 // ProjectionVersion is the Go-side projector shape. Bump when rollup columns
 // or document layout change so Open heals old indexes.
-const ProjectionVersion = 3
+const ProjectionVersion = 4
 
 // Tagged body line prefixes for Source rollups (parsed by core/search for match_reason).
 const (
@@ -39,15 +39,17 @@ type Querier interface {
 
 // Document is one navigable search root ready to write.
 type Document struct {
-	Kind            string
-	EntityID        string // UUID string
-	DisplayRef      string
-	DisplayTitle    string
-	DisplaySubtitle string
-	Title           string
-	Ref             string
-	Secondary       string
-	Body            string
+	Kind                    string
+	EntityID                string // UUID string
+	DisplayRef              string
+	DisplayTitle            string
+	DisplaySubtitle         string
+	DisplayIconKey          string // type icon; empty for fields
+	DisplayThumbnailRelPath string // Source cover objects/… when already derived
+	Title                   string
+	Ref                     string
+	Secondary               string
+	Body                    string
 }
 
 // Delete removes a root from docs + FTS. No-op if missing.
@@ -98,13 +100,16 @@ func Upsert(q Querier, doc Document) error {
 	res, err := q.Exec(
 		`INSERT INTO catalog_search_docs (
 			kind, entity_id, display_ref, display_title, display_subtitle,
+			display_icon_key, display_thumbnail_rel_path,
 			title, ref, secondary, body
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		doc.Kind,
 		doc.EntityID,
 		doc.DisplayRef,
 		doc.DisplayTitle,
 		doc.DisplaySubtitle,
+		doc.DisplayIconKey,
+		doc.DisplayThumbnailRelPath,
 		doc.Title,
 		doc.Ref,
 		doc.Secondary,
@@ -190,16 +195,22 @@ func ReprojectSource(q Querier, sourceID []byte) error {
 	if len(sourceID) != 16 {
 		return nil
 	}
-	var ref, title, description, typeLabel string
+	var ref, title, description, typeLabel, typeIcon string
 	err := q.QueryRow(`
-		SELECT s.ref, s.title, COALESCE(s.description, ''), COALESCE(st.label, '')
+		SELECT s.ref, s.title, COALESCE(s.description, ''),
+			COALESCE(st.label, ''), COALESCE(st.icon_key, '')
 		FROM sources s
 		LEFT JOIN source_types st ON st.id = s.source_type_id
 		WHERE s.id = ?`, sourceID,
-	).Scan(&ref, &title, &description, &typeLabel)
+	).Scan(&ref, &title, &description, &typeLabel, &typeIcon)
 	if err == sql.ErrNoRows {
 		return Delete(q, KindSource, uuidString(sourceID))
 	}
+	if err != nil {
+		return err
+	}
+
+	thumb, err := existingSourceCoverThumb(q, sourceID)
 	if err != nil {
 		return err
 	}
@@ -293,15 +304,17 @@ func ReprojectSource(q Querier, sourceID []byte) error {
 
 	secondary := strings.TrimSpace(strings.TrimSpace(description) + " " + strings.TrimSpace(typeLabel))
 	return Upsert(q, Document{
-		Kind:            KindSource,
-		EntityID:        uuidString(sourceID),
-		DisplayRef:      ref,
-		DisplayTitle:    title,
-		DisplaySubtitle: typeLabel,
-		Title:           title,
-		Ref:             ref,
-		Secondary:       secondary,
-		Body:            strings.Join(bodyParts, "\n"),
+		Kind:                    KindSource,
+		EntityID:                uuidString(sourceID),
+		DisplayRef:              ref,
+		DisplayTitle:            title,
+		DisplaySubtitle:         typeLabel,
+		DisplayIconKey:          strings.TrimSpace(typeIcon),
+		DisplayThumbnailRelPath: thumb,
+		Title:                   title,
+		Ref:                     ref,
+		Secondary:               secondary,
+		Body:                    strings.Join(bodyParts, "\n"),
 	})
 }
 
@@ -310,10 +323,10 @@ func ReprojectSourceType(q Querier, typeID []byte) error {
 	if len(typeID) != 16 {
 		return nil
 	}
-	var key, label, description string
+	var key, label, description, iconKey string
 	err := q.QueryRow(`
-		SELECT key, label, COALESCE(description, '') FROM source_types WHERE id = ?`, typeID,
-	).Scan(&key, &label, &description)
+		SELECT key, label, COALESCE(description, ''), icon_key FROM source_types WHERE id = ?`, typeID,
+	).Scan(&key, &label, &description, &iconKey)
 	if err == sql.ErrNoRows {
 		return Delete(q, KindSourceType, uuidString(typeID))
 	}
@@ -325,6 +338,7 @@ func ReprojectSourceType(q Querier, typeID []byte) error {
 		EntityID:        uuidString(typeID),
 		DisplayTitle:    label,
 		DisplaySubtitle: key,
+		DisplayIconKey:  strings.TrimSpace(iconKey),
 		Title:           label,
 		Secondary:       strings.TrimSpace(key + " " + description),
 	})
@@ -482,6 +496,68 @@ func listIDs(q Querier, query string) ([][]byte, error) {
 		out = append(out, id)
 	}
 	return out, rows.Err()
+}
+
+// existingSourceCoverThumb returns objects/… when cover is an artifact and a
+// thumbnail derivative already exists (lookup-only; no EnsureThumbnail).
+// Path layout matches files.StorageRelPath; kept local to avoid an import cycle
+// (files → searchindex).
+func existingSourceCoverThumb(q Querier, sourceID []byte) (string, error) {
+	var checksum, mediaType string
+	err := q.QueryRow(`
+		SELECT COALESCE(f.checksum_sha256, ''), COALESCE(f.media_type, '')
+		FROM sources s
+		LEFT JOIN artifacts a
+			ON s.cover_mode = 'artifact'
+			AND a.id = s.primary_artifact_id
+			AND length(a.file_id) = 16
+		LEFT JOIN file_derivatives d
+			ON d.source_file_id = a.file_id
+			AND d.derivative_type = 'thumbnail'
+		LEFT JOIN files f ON f.id = d.derived_file_id
+		WHERE s.id = ?
+	`, sourceID).Scan(&checksum, &mediaType)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	if checksum == "" {
+		return "", nil
+	}
+	return objectsRelPath(checksum, mediaType)
+}
+
+func objectsRelPath(checksumHex, mediaType string) (string, error) {
+	checksumHex = strings.TrimSpace(strings.ToLower(checksumHex))
+	if len(checksumHex) != 64 {
+		return "", fmt.Errorf("searchindex: bad checksum for object path")
+	}
+	for _, r := range checksumHex {
+		if (r < '0' || r > '9') && (r < 'a' || r > 'f') {
+			return "", fmt.Errorf("searchindex: bad checksum for object path")
+		}
+	}
+	base := "objects/" + checksumHex[0:2] + "/" + checksumHex[2:4] + "/" + checksumHex
+	mt := strings.ToLower(strings.TrimSpace(mediaType))
+	if i := strings.IndexByte(mt, ';'); i >= 0 {
+		mt = strings.TrimSpace(mt[:i])
+	}
+	switch mt {
+	case "image/jpeg", "image/jpg":
+		return base + ".jpg", nil
+	case "image/png":
+		return base + ".png", nil
+	case "image/webp":
+		return base + ".webp", nil
+	case "image/gif":
+		return base + ".gif", nil
+	case "application/pdf":
+		return base + ".pdf", nil
+	default:
+		return base, nil
+	}
 }
 
 func uuidString(id []byte) string {

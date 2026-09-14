@@ -20,8 +20,8 @@ func TestMigrationCreatesSearchTables(t *testing.T) {
 	if err := db.QueryRow(`PRAGMA user_version`).Scan(&version); err != nil {
 		t.Fatal(err)
 	}
-	if version < 19 {
-		t.Fatalf("user_version %d, want >= 19", version)
+	if version < 20 {
+		t.Fatalf("user_version %d, want >= 20", version)
 	}
 	for _, table := range []string{
 		"catalog_search_docs",

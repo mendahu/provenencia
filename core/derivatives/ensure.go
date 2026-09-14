@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/filederivatives"
 	"github.com/mendahu/provenencia/core/database/files"
+	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/derivatives/raster"
 )
 
@@ -203,6 +204,9 @@ func Ensure(c *database.Catalog, sourceFileID []byte, spec Spec) (Result, error)
 	if err := tx.Commit(); err != nil {
 		return Result{}, err
 	}
+	if err := reprojectSourcesForNewThumbnail(c, sourceFileID, spec.Type); err != nil {
+		return Result{}, err
+	}
 	return Result{Link: link}, nil
 }
 
@@ -287,7 +291,32 @@ func insertLinkOnly(c *database.Catalog, sourceFileID, derivedID []byte, derivat
 	if err := tx.Commit(); err != nil {
 		return Result{}, err
 	}
+	if err := reprojectSourcesForNewThumbnail(c, sourceFileID, derivativeType); err != nil {
+		return Result{}, err
+	}
 	return Result{Link: link}, nil
+}
+
+// reprojectSourcesForNewThumbnail refreshes Source search docs after a new
+// thumbnail link is created so omnibar display stubs can pick up the path.
+func reprojectSourcesForNewThumbnail(c *database.Catalog, sourceFileID []byte, derivativeType string) error {
+	if derivativeType != filederivatives.TypeThumbnail {
+		return nil
+	}
+	db, err := c.DB()
+	if err != nil {
+		return err
+	}
+	ids, err := searchindex.SourceIDsForFile(db, sourceFileID)
+	if err != nil {
+		return err
+	}
+	for _, id := range ids {
+		if err := searchindex.ReprojectSource(db, id); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func writeObjectIfAbsent(objPath string, data []byte) error {

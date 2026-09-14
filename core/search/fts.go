@@ -21,6 +21,7 @@ func NewFTSSearcher() *FTSSearcher {
 
 type docRow struct {
 	kind, entityID, displayRef, displayTitle, displaySubtitle string
+	displayIconKey, displayThumbnailRelPath                   string
 	title, ref, secondary, body                               string
 	ftsRank                                                   float64
 	hasFTS                                                    bool
@@ -134,14 +135,16 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 		score *= refBoostFor(d.refMatch)
 
 		hits = append(hits, Hit{
-			Kind:        d.kind,
-			ID:          d.entityID,
-			Ref:         d.displayRef,
-			Title:       d.displayTitle,
-			Subtitle:    d.displaySubtitle,
-			MatchReason: reason,
-			Location:    locationFor(d.kind, d.entityID, d.displayRef, d.displayTitle),
-			Score:       score,
+			Kind:             d.kind,
+			ID:               d.entityID,
+			Ref:              d.displayRef,
+			Title:            d.displayTitle,
+			Subtitle:         d.displaySubtitle,
+			MatchReason:      reason,
+			Location:         locationFor(d.kind, d.entityID, d.displayRef, d.displayTitle),
+			ThumbnailRelPath: d.displayThumbnailRelPath,
+			IconKey:          d.displayIconKey,
+			Score:            score,
 		})
 	}
 
@@ -157,9 +160,6 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 	if len(hits) > limit {
 		hits = hits[:limit]
 	}
-	if err := attachLeadStubs(db, hits); err != nil {
-		return nil, err
-	}
 	return hits, nil
 }
 
@@ -167,6 +167,7 @@ func mergeFTS(db *sql.DB, byKey map[string]docRow, match string) error {
 	w := FTSBM25Weights
 	rows, err := db.Query(fmt.Sprintf(`
 		SELECT d.kind, d.entity_id, d.display_ref, d.display_title, d.display_subtitle,
+			d.display_icon_key, d.display_thumbnail_rel_path,
 			d.title, d.ref, d.secondary, d.body,
 			bm25(catalog_search_fts, %f, %f, %f, %f) AS rank
 		FROM catalog_search_fts
@@ -182,6 +183,7 @@ func mergeFTS(db *sql.DB, byKey map[string]docRow, match string) error {
 		var d docRow
 		if err := rows.Scan(
 			&d.kind, &d.entityID, &d.displayRef, &d.displayTitle, &d.displaySubtitle,
+			&d.displayIconKey, &d.displayThumbnailRelPath,
 			&d.title, &d.ref, &d.secondary, &d.body, &d.ftsRank,
 		); err != nil {
 			return err
@@ -227,6 +229,7 @@ func mergeFuzzyShortlist(db *sql.DB, byKey map[string]docRow, tokens []string, l
 func mergeTrigramCandidates(db *sql.DB, byKey map[string]docRow, match string, capN int, tokens []string) (added int, err error) {
 	rows, err := db.Query(`
 		SELECT d.kind, d.entity_id, d.display_ref, d.display_title, d.display_subtitle,
+			d.display_icon_key, d.display_thumbnail_rel_path,
 			d.title, d.ref, d.secondary, d.body
 		FROM catalog_search_fts_trigram
 		JOIN catalog_search_docs d ON d.rowid = catalog_search_fts_trigram.rowid
@@ -242,6 +245,7 @@ func mergeTrigramCandidates(db *sql.DB, byKey map[string]docRow, match string, c
 		var d docRow
 		if err := rows.Scan(
 			&d.kind, &d.entityID, &d.displayRef, &d.displayTitle, &d.displaySubtitle,
+			&d.displayIconKey, &d.displayThumbnailRelPath,
 			&d.title, &d.ref, &d.secondary, &d.body,
 		); err != nil {
 			return added, err

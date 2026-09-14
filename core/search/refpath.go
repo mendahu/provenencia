@@ -40,6 +40,7 @@ func lookUpRefDocs(db *sql.DB, key string, exact bool, limit int) ([]docRow, err
 	if exact {
 		rows, err = db.Query(`
 			SELECT kind, entity_id, display_ref, display_title, display_subtitle,
+				display_icon_key, display_thumbnail_rel_path,
 				title, ref, secondary, body
 			FROM catalog_search_docs
 			WHERE upper(ref) = ?
@@ -49,6 +50,7 @@ func lookUpRefDocs(db *sql.DB, key string, exact bool, limit int) ([]docRow, err
 		like := escapeLike(key) + "%"
 		rows, err = db.Query(`
 			SELECT kind, entity_id, display_ref, display_title, display_subtitle,
+				display_icon_key, display_thumbnail_rel_path,
 				title, ref, secondary, body
 			FROM catalog_search_docs
 			WHERE upper(ref) LIKE ? ESCAPE '\'
@@ -65,6 +67,7 @@ func lookUpRefDocs(db *sql.DB, key string, exact bool, limit int) ([]docRow, err
 		var d docRow
 		if err := rows.Scan(
 			&d.kind, &d.entityID, &d.displayRef, &d.displayTitle, &d.displaySubtitle,
+			&d.displayIconKey, &d.displayThumbnailRelPath,
 			&d.title, &d.ref, &d.secondary, &d.body,
 		); err != nil {
 			return nil, err
