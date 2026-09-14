@@ -99,8 +99,10 @@ private struct OmnibarResultsPanel: View {
             if results.showsEmptyState {
                 emptyState
             } else {
+                // ScrollView expands to the proposed height unless we ask for
+                // the ideal (content) height — clamp only when the list is tall.
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 0) {
+                    VStack(alignment: .leading, spacing: 0) {
                         ForEach(Array(results.hits.enumerated()), id: \.element.id) { index, hit in
                             Button {
                                 onActivate(hit)
@@ -120,12 +122,15 @@ private struct OmnibarResultsPanel: View {
                             ))
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .frame(maxHeight: 420)
+                .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(PVSpacing.space2)
         .frame(width: OmnibarResultsModel.panelWidth, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
         .background(PVColor.surfaceCard)
         .overlay(
             RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
@@ -225,7 +230,8 @@ private struct OmnibarHitRowButtonStyle: ButtonStyle {
 }
 
 struct OmnibarFieldAnchorKey: PreferenceKey {
-    static var defaultValue: CGRect = .zero
+    // PreferenceKey storage is main-actor UI only.
+    nonisolated(unsafe) static let defaultValue: CGRect = .zero
 
     static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
         let next = nextValue()
