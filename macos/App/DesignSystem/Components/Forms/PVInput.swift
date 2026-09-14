@@ -18,10 +18,19 @@ struct PVInputChrome: ViewModifier {
     var isInvalid: Bool = false
     /// Reserves room on the left for `PVInput`'s icon overlay.
     var leadingIconInset: Bool = false
+    /// Reserves room on the right for an optional suffix overlay (e.g. ⌘K).
+    var trailingSuffixWidth: CGFloat = 0
 
     private var leadingPadding: CGFloat {
         if leadingIconInset {
             return Self.horizontalInset + Self.iconSize + Self.iconTextGap
+        }
+        return Self.horizontalInset
+    }
+
+    private var trailingPadding: CGFloat {
+        if trailingSuffixWidth > 0 {
+            return Self.horizontalInset + trailingSuffixWidth + Self.iconTextGap
         }
         return Self.horizontalInset
     }
@@ -31,7 +40,7 @@ struct PVInputChrome: ViewModifier {
             .font(mono ? PVFont.mono(size: size == .sm ? PVTypeScale.caption : PVTypeScale.bodySmall) : size.font)
             .foregroundStyle(PVColor.textPrimary)
             .padding(.leading, leadingPadding)
-            .padding(.trailing, Self.horizontalInset)
+            .padding(.trailing, trailingPadding)
             .frame(height: size.height)
             .background(
                 RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
@@ -56,8 +65,8 @@ struct PVInputChrome: ViewModifier {
     }
 }
 
-/// Convenience field with optional leading icon, read-only rendering, and
-/// owned focus state.
+/// Convenience field with optional leading icon, trailing suffix, read-only
+/// rendering, and owned or externally driven focus state.
 struct PVInput: View {
     @Binding private var text: String
     private let size: PVControlSize
@@ -65,7 +74,11 @@ struct PVInput: View {
     private let isReadOnly: Bool
     private let prompt: LocalizedStringResource?
     private let icon: PVSymbol?
+    private let suffix: String?
     private let isInvalid: Bool
+    private let externalFocus: FocusState<Bool>.Binding?
+
+    @FocusState private var ownedFocus: Bool
 
     init(
         text: Binding<String>,
@@ -74,7 +87,9 @@ struct PVInput: View {
         isReadOnly: Bool = false,
         prompt: LocalizedStringResource? = nil,
         icon: PVSymbol? = nil,
-        isInvalid: Bool = false
+        suffix: String? = nil,
+        isInvalid: Bool = false,
+        focused: FocusState<Bool>.Binding? = nil
     ) {
         self._text = text
         self.size = size
@@ -82,10 +97,10 @@ struct PVInput: View {
         self.isReadOnly = isReadOnly
         self.prompt = prompt
         self.icon = icon
+        self.suffix = Self.nilIfEmpty(suffix)
         self.isInvalid = isInvalid
+        self.externalFocus = focused
     }
-
-    @FocusState private var isFocused: Bool
 
     var body: some View {
         Group {
@@ -93,11 +108,16 @@ struct PVInput: View {
                 Text(text)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .modifier(chrome(isFocused: false))
+            } else if let externalFocus {
+                TextField("", text: $text, prompt: prompt.map { Text($0) })
+                    .textFieldStyle(.plain)
+                    .focused(externalFocus)
+                    .modifier(chrome(isFocused: externalFocus.wrappedValue))
             } else {
                 TextField("", text: $text, prompt: prompt.map { Text($0) })
                     .textFieldStyle(.plain)
-                    .focused($isFocused)
-                    .modifier(chrome(isFocused: isFocused))
+                    .focused($ownedFocus)
+                    .modifier(chrome(isFocused: ownedFocus))
             }
         }
         .overlay(alignment: .leading) {
@@ -108,6 +128,16 @@ struct PVInput: View {
                     .allowsHitTesting(false)
             }
         }
+        .overlay(alignment: .trailing) {
+            if let suffix {
+                Text(suffix)
+                    .font(PVFont.mono(size: PVTypeScale.micro))
+                    .foregroundStyle(PVColor.textSecondary)
+                    .padding(.trailing, PVInputChrome.horizontalInset)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
     }
 
     private func chrome(isFocused: Bool) -> PVInputChrome {
@@ -116,8 +146,20 @@ struct PVInput: View {
             mono: mono,
             isFocused: isFocused,
             isInvalid: isInvalid,
-            leadingIconInset: icon != nil
+            leadingIconInset: icon != nil,
+            trailingSuffixWidth: suffix.map { Self.estimatedSuffixWidth($0) } ?? 0
         )
+    }
+
+    private static func nilIfEmpty(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private static func estimatedSuffixWidth(_ suffix: String) -> CGFloat {
+        // Mono micro shortcut badges (⌘K, ⌘[) are short; reserve a stable inset.
+        max(22, CGFloat(suffix.count) * 7)
     }
 }
 
@@ -125,6 +167,7 @@ struct PVInput: View {
     VStack(spacing: PVSpacing.space5) {
         PVInput(text: .constant(""), prompt: "Search fields")
         PVInput(text: .constant(""), prompt: "Search fields", icon: .search)
+        PVInput(text: .constant(""), size: .sm, prompt: "Search everything", icon: .search, suffix: "⌘K")
         PVInput(text: .constant("USR-A1B2C"), mono: true)
         PVInput(text: .constant("Jane Smith"), isReadOnly: true)
         PVInput(text: .constant(""), prompt: "Required", isInvalid: true)

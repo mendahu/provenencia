@@ -1,10 +1,10 @@
 import SwiftUI
 
 /// Layout constants genuinely shared across files: `WorkspaceSidebar`'s
-/// brand row and `WorkspaceContent`'s header so their hairline rules read
-/// as one continuous line across the whole window width (S2-01 Frame 7
-/// decision), and `TrafficLights.swift` so the system-drawn stoplights
-/// align to that same row instead of the row aligning to them.
+/// brand row and `WorkspaceToolbar` so their hairline rules read as one
+/// continuous line across the whole window width (S2-01 Frame 7 decision),
+/// and `TrafficLights.swift` so the system-drawn stoplights align to that
+/// same row instead of the row aligning to them.
 ///
 /// Constants that only one file actually reads — the sidebar's own
 /// traffic-light clearance padding, the collapsed rail width, the
@@ -31,22 +31,32 @@ enum WorkspaceChrome {
 extension View {
     /// Applies `WorkspaceChrome`'s shared header-row recipe — the fixed
     /// row height, the vertical nudge aligning this row's content with
-    /// `TrafficLights`' stoplights, the bottom hairline that makes the
+    /// `TrafficLights`' stoplights, and the bottom hairline that makes the
     /// sidebar and content headers read as one continuous row across the
-    /// window (S2-01 Frame 7), and a full-row window-drag surface so the
-    /// hit box matches that taller visual header under
-    /// `.hiddenTitleBar`. `WorkspaceSidebar`'s brand row and
-    /// `WorkspaceContent`'s header both use this instead of re-chaining
-    /// the same modifiers, so a future header row can't apply them out
-    /// of order or forget one.
-    func pvWorkspaceHeaderRow() -> some View {
+    /// window (S2-01 Frame 7).
+    ///
+    /// - Parameter includesWindowDrag: When `true` (default), installs a
+    ///   full-row `WindowDragRegion` overlay. Use only on chrome **without**
+    ///   interactive controls (sidebar brand). `WorkspaceToolbar` must pass
+    ///   `false` so Back/Forward, breadcrumbs, and the omnibar stay clickable.
+    func pvWorkspaceHeaderRow(includesWindowDrag: Bool = true) -> some View {
         offset(y: WorkspaceChrome.verticalNudge)
             .frame(height: WorkspaceChrome.headerHeight)
             .overlay(alignment: .bottom) {
                 PVDivider()
             }
-            // Outermost so the full visual height — including the
-            // hairline — initiates a window move (see `WindowDragRegion`).
-            .pvWindowDragRegion()
+            .modifier(WorkspaceHeaderWindowDragModifier(enabled: includesWindowDrag))
+    }
+}
+
+private struct WorkspaceHeaderWindowDragModifier: ViewModifier {
+    let enabled: Bool
+
+    func body(content: Content) -> some View {
+        if enabled {
+            content.pvWindowDragRegion()
+        } else {
+            content
+        }
     }
 }

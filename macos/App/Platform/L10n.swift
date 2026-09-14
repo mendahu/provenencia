@@ -766,6 +766,24 @@ enum L10n {
             defaultValue: "Forward",
             comment: "Menu / keyboard command to go forward in workspace navigation history (⌘])"
         )
+
+        static let focusOmnibar = LocalizedStringResource(
+            "workspace.navigation.focusOmnibar",
+            defaultValue: "Focus Search",
+            comment: "Menu / keyboard command to focus the workspace omnibar field (⌘K)"
+        )
+
+        static let omnibarPlaceholder = LocalizedStringResource(
+            "workspace.omnibar.placeholder",
+            defaultValue: "Search people, sources, places and files",
+            comment: "Placeholder in the main-column toolbar omnibar field shell"
+        )
+
+        static let omnibarAccessibilityLabel = LocalizedStringResource(
+            "workspace.omnibar.accessibilityLabel",
+            defaultValue: "Search everything",
+            comment: "Accessibility label for the toolbar omnibar field"
+        )
     }
 
     /// The **Source fields** workspace destination (S2-15): browse, search,
@@ -1026,12 +1044,6 @@ enum L10n {
         }
 
         // MARK: Source page (S2-18)
-
-        static let breadcrumbSources = LocalizedStringResource(
-            "sources.page.breadcrumbSources",
-            defaultValue: "Sources",
-            comment: "Breadcrumb link back to the Sources list"
-        )
 
         static let pageTitleRequired = LocalizedStringResource(
             "sources.page.titleRequired",

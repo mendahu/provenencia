@@ -159,4 +159,50 @@ struct WorkspaceNavigationTests {
                 == "000000000000700080000000000000aa.json"
         )
     }
+
+    @Test func backJumpItemsNearestFirstAndCapped() throws {
+        let (navigation, _) = try attachedNavigation()
+        // indices: 0 sources, 1 fields, 2 types, 3 files, 4 deep source — current at 4
+        navigation.go(to: .sectionRoot(.sourceFields))
+        navigation.go(to: .sectionRoot(.sourceTypes))
+        navigation.go(to: .sectionRoot(.files))
+        navigation.go(to: WorkspaceLocation(section: .sources, sourceId: "src-1", title: "Deep"))
+
+        let back = navigation.backJumpItems(limit: 2)
+        #expect(back.map(\.index) == [3, 2])
+        #expect(back[0].location == .sectionRoot(.files))
+        #expect(back[1].location == .sectionRoot(.sourceTypes))
+
+        let allBack = navigation.backJumpItems(limit: 15)
+        #expect(allBack.map(\.index) == [3, 2, 1, 0])
+    }
+
+    @Test func forwardJumpItemsStackOrderAndCapped() throws {
+        let (navigation, _) = try attachedNavigation()
+        navigation.go(to: .sectionRoot(.sourceFields))
+        navigation.go(to: .sectionRoot(.sourceTypes))
+        navigation.go(to: .sectionRoot(.files))
+        navigation.goBack()
+        navigation.goBack()
+        // current at sourceFields (index 1); forward: types (2), files (3)
+        #expect(navigation.currentLocation == .sectionRoot(.sourceFields))
+
+        let forward = navigation.forwardJumpItems(limit: 1)
+        #expect(forward.map(\.index) == [2])
+        #expect(forward[0].location == .sectionRoot(.sourceTypes))
+
+        let allForward = navigation.forwardJumpItems(limit: 15)
+        #expect(allForward.map(\.index) == [2, 3])
+        #expect(allForward[1].location == .sectionRoot(.files))
+    }
+
+    @Test func jumpItemsEmptyAtStackEnds() throws {
+        let (navigation, _) = try attachedNavigation()
+        #expect(navigation.backJumpItems().isEmpty)
+        #expect(navigation.forwardJumpItems().isEmpty)
+
+        navigation.go(to: .sectionRoot(.sourceFields))
+        #expect(navigation.forwardJumpItems().isEmpty)
+        #expect(navigation.backJumpItems().map(\.index) == [0])
+    }
 }

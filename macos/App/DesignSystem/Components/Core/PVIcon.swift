@@ -7,6 +7,7 @@ enum PVSymbol: String {
     case check = "checkmark"
     case info = "info.circle"
     case chevronDown = "chevron.down"
+    case chevronBack = "chevron.left"
     case chevronForward = "chevron.right"
     case photo = "photo"
     case scrollText = "doc.text"

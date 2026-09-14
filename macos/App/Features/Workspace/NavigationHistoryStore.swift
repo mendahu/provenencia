@@ -28,6 +28,22 @@ final class NavigationHistoryStore {
     var canGoBack: Bool { document.index > 0 }
     var canGoForward: Bool { document.index + 1 < document.entries.count }
 
+    /// Nearest entries before the current index (nearest first), capped at `limit`.
+    func backJumpItems(limit: Int = 15) -> [(index: Int, location: WorkspaceLocation)] {
+        guard document.index > 0, limit > 0 else { return [] }
+        let start = max(0, document.index - limit)
+        let range = start ..< document.index
+        return range.reversed().map { (index: $0, location: document.entries[$0]) }
+    }
+
+    /// Entries after the current index in stack order, capped at `limit`.
+    func forwardJumpItems(limit: Int = 15) -> [(index: Int, location: WorkspaceLocation)] {
+        guard canGoForward, limit > 0 else { return [] }
+        let end = min(document.entries.count, document.index + 1 + limit)
+        let range = (document.index + 1) ..< end
+        return range.map { (index: $0, location: document.entries[$0]) }
+    }
+
     init(
         projectUuid: String,
         fileURL: URL,

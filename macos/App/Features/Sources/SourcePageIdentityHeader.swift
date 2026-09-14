@@ -1,9 +1,8 @@
 import SwiftUI
 
-/// Sticky identity header: breadcrumbs, thumbnail, title edit, type chip.
+/// Sticky identity header: thumbnail, title edit, type chip.
 struct SourcePageIdentityHeader: View {
     @Bindable var model: SourcePageModel
-    let onBackToList: () -> Void
     /// Local draft so title keystrokes don't invalidate the whole Source page
     /// observation graph on every character.
     @State private var titleDraft = ""
@@ -11,7 +10,6 @@ struct SourcePageIdentityHeader: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space5) {
-            breadcrumbs
             if model.workspace != nil {
                 HStack(alignment: .top, spacing: PVSpacing.space7) {
                     coverThumbnail
@@ -87,22 +85,6 @@ struct SourcePageIdentityHeader: View {
             return (source.thumbnailRelPath, "", "", typeIcon)
         }
         return ("", "", "", typeIcon)
-    }
-
-    private var breadcrumbs: some View {
-        PVBreadcrumbs(items: [
-            PVBreadcrumbItem(
-                id: "sources",
-                label: String(localized: L10n.Sources.breadcrumbSources),
-                action: onBackToList
-            ),
-            PVBreadcrumbItem(
-                id: "ref",
-                label: model.source?.ref ?? "…",
-                action: nil
-            ),
-        ])
-        .accessibilityIdentifier("sources.page.breadcrumbs")
     }
 
     private var titleCluster: some View {

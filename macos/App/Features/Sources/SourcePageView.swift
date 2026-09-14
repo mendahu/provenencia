@@ -5,7 +5,6 @@ import SwiftUI
 /// in sibling `SourcePage*View` files; this shell owns load, dialogs, and layout.
 struct SourcePageView: View {
     @State private var model: SourcePageModel
-    let onBackToList: () -> Void
     /// Date dialog confirm wiring — kept off the page observation graph so
     /// structure/wording keystrokes stay local to the dialog form.
     @State private var dateEditorCanSave = false
@@ -17,7 +16,6 @@ struct SourcePageView: View {
         userID: String,
         sessionDisplayName: String = "",
         store: any GenealogyStore,
-        onBackToList: @escaping () -> Void,
         onSourceUpdated: ((CatalogSource) -> Void)? = nil
     ) {
         _model = State(
@@ -30,13 +28,12 @@ struct SourcePageView: View {
                 onSourceUpdated: onSourceUpdated
             )
         )
-        self.onBackToList = onBackToList
     }
 
     var body: some View {
         VStack(spacing: 0) {
             if model.workspace != nil || model.isLoading || model.loadError != nil {
-                SourcePageIdentityHeader(model: model, onBackToList: onBackToList)
+                SourcePageIdentityHeader(model: model)
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: PVSpacing.space9) {

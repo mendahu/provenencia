@@ -9,10 +9,9 @@ import SwiftUI
 /// of that visual row would otherwise do nothing. `WindowDragGesture` is
 /// macOS 15+; this is the macOS 14-compatible escape hatch.
 ///
-/// Intended for chrome that has no interactive controls of its own —
-/// sit it as an overlay on the full header row so the hit box matches
-/// what the user sees. Traffic lights stay clickable because they live
-/// in the window's chrome layer above the content view.
+/// **Only** attach over chrome with no interactive controls of its own
+/// (e.g. the sidebar brand row). A full-row overlay on `WorkspaceToolbar`
+/// steals hover/clicks from Back/Forward, breadcrumbs, and the omnibar.
 private struct WindowDragRegion: NSViewRepresentable {
     @MainActor
     func makeNSView(context: Context) -> NSView {
@@ -34,8 +33,9 @@ private struct WindowDragRegion: NSViewRepresentable {
 
 extension View {
     /// Makes the view's full bounds a window-drag surface (see
-    /// `WindowDragRegion`). Attach to header chrome whose visual height
-    /// exceeds the system title-bar drag strip.
+    /// `WindowDragRegion`). Attach only to header chrome that has **no**
+    /// interactive SwiftUI controls — the overlay sits on top and will
+    /// otherwise swallow hits.
     func pvWindowDragRegion() -> some View {
         overlay {
             WindowDragRegion()

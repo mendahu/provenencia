@@ -36,7 +36,6 @@ struct WorkspaceView: View {
         HStack(spacing: 0) {
             WorkspaceSidebar(session: model.session, workspace: workspace, catalogCounts: catalogCounts)
             WorkspaceContent(
-                project: model.project,
                 projectDir: projectDir,
                 userID: userID,
                 sessionDisplayName: model.session?.displayName ?? "",
@@ -117,6 +116,7 @@ struct WorkspaceView: View {
     )
     .environment(SignOutCoordinator())
     .environment(NavigationCoordinator())
+    .environment(OmnibarFocusCoordinator())
     .frame(width: PVSpacing.widthWorkspaceDefault, height: PVSpacing.heightWorkspaceDefault)
 }
 

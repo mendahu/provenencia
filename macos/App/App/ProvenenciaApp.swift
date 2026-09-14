@@ -8,6 +8,7 @@ struct ProvenenciaApp: App {
     // `NavigationCoordinator`.
     @State private var signOutCoordinator = SignOutCoordinator()
     @State private var navigationCoordinator = NavigationCoordinator()
+    @State private var omnibarFocusCoordinator = OmnibarFocusCoordinator()
 
     init() {
         PVFontRegistration.registerBundledFontsIfNeeded()
@@ -18,6 +19,7 @@ struct ProvenenciaApp: App {
             OnboardingView()
                 .environment(signOutCoordinator)
                 .environment(navigationCoordinator)
+                .environment(omnibarFocusCoordinator)
                 // `.hiddenTitleBar` alone still reserves the title bar's
                 // height as a top safe area, leaving a blank strip above
                 // our content instead of letting the stoplights float over
@@ -59,6 +61,13 @@ struct ProvenenciaApp: App {
                     Text(L10n.Workspace.goForward)
                 }
                 .keyboardShortcut("]", modifiers: .command)
+
+                Button {
+                    omnibarFocusCoordinator.focusOmnibar()
+                } label: {
+                    Text(L10n.Workspace.focusOmnibar)
+                }
+                .keyboardShortcut("k", modifiers: .command)
             }
         }
     }
