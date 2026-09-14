@@ -17,6 +17,7 @@ IDs stay stable (`S3-NN`). Do not renumber when moving steps here.
 | [S3-07](#s3-07--pr-searchable-kind-registry--searchcatalog-rpc-shell) | PR | Searchable-kind registry + SearchCatalog RPC |
 | [S3-08](#s3-08--pr-fts5-projection) | PR | FTS5 catalog search projection |
 | [S3-09](#s3-09--pr-context-ranking--ref-fast-path) | PR | Context ranking + ref fast path |
+| [S3-10](#s3-10--pr-omnibar-results-ui--wire-search--remove-list-search) | PR | Omnibar results + retire list search |
 
 ---
 
@@ -139,6 +140,20 @@ IDs stay stable (`S3-NN`). Do not renumber when moving steps here.
 | **Depends on** | S3-08 |
 | **Deliverables** | Done. Registry `RefBoostWeights` + section `ContextBoost` (2.0). Exact/prefix ref fast path on `catalog_search_docs.ref` (skips FTS for ref-shaped queries). Controlled multi-token OR retrieve for partial term coverage. Tagged Source body rollup (`note:` / `metadata:` / `filename:`) with `ProjectionVersion` 2 + snippet `match_reason`. Hit cap remains 50. FakeStore parity for paste-ref. |
 | **Context** | [`omnibar-search.md`](omnibar-search.md) S3. |
-| **Out** | Fuzzy (S3-11); omnibar UI / remove list search (S3-10). |
+| **Out** | Fuzzy (S3-11). |
 | **Dogfood** | Paste `SRC-…` → top hit with `match_reason` ref; Sources context floats Sources without hiding vocabulary. |
 | **Feeds** | S3-10 |
+
+---
+
+### S3-10 — PR: Omnibar results UI + wire search + remove list search
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S3-05; S3-09; S3-02 board |
+| **Deliverables** | Done. `PVOmnibarHitRow` + content-column results overlay (jump-menu family / `PVRadius.sm`, not NSPanel). `OmnibarResultsModel` debounces SearchCatalog (180ms, min 2 chars); keyboard ↑↓/Return/Esc + outside dismiss; select → `go(to:)` and clear query. Source leads from `listSources`/`CachedThumbnail`; type/field glyphs. Removed Sources + `VocabularyListPane` list-search chrome and query filters. L10n + `OmnibarResultsModelTests`. |
+| **Context** | Claude Design Omnibar Results board; [`omnibar-search.md`](omnibar-search.md) S4. |
+| **Out** | Fuzzy (S3-11); Files/Artifact first-class hit kinds. |
+| **Dogfood** | ⌘K → find Source/type/field → navigate → Back; no list search fields. |
+| **Feeds** | S3-11; S3-12 |

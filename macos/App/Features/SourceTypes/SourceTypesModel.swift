@@ -33,7 +33,6 @@ final class SourceTypesModel {
     private(set) var isLoading = false
     var loadError: Error?
 
-    var query = ""
     private(set) var sortColumn: SortColumn = .label
     private(set) var sortAscending = true
 
@@ -94,7 +93,7 @@ final class SourceTypesModel {
     // MARK: Derived
 
     var visibleTypes: [CatalogSourceType] {
-        types.matching(query).sorted { a, b in
+        types.sorted { a, b in
             let order = compare(a, b)
             return sortAscending ? order == .orderedAscending : order == .orderedDescending
         }
@@ -320,7 +319,6 @@ final class SourceTypesModel {
                     label: label, description: draft.description, iconKey: draft.iconKey
                 )
                 types.append(created)
-                query = ""
                 mode = .editing(id: created.id)
                 self.draft = Draft(label: created.label, description: created.description, iconKey: created.iconKey)
                 // A new type suggests nothing yet (S2-03 T-15) — assigning

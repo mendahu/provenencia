@@ -171,24 +171,7 @@ struct SourcesView: View {
     }
 
     private var toolbar: some View {
-        // Same search chrome as `VocabularyListPane.searchBar` (Source fields /
-        // Source types): default `PVInput` size, card strip, bottom hairline.
         HStack(spacing: PVSpacing.space5) {
-            PVInput(
-                text: $model.query,
-                prompt: L10n.Sources.searchPlaceholder,
-                icon: .search
-            )
-            .frame(maxWidth: 420)
-            .accessibilityIdentifier("sources.search")
-
-            if !model.query.isEmpty {
-                PVButton(L10n.Sources.clearSearch, variant: .ghost, size: .sm) {
-                    model.query = ""
-                }
-                .accessibilityIdentifier("sources.clearSearch")
-            }
-
             filterMenu
             sortMenu
             Spacer(minLength: 0)
@@ -263,15 +246,15 @@ struct SourcesView: View {
     private var listBody: some View {
         if model.visibleSources.isEmpty {
             PVEmptyState(
-                icon: .searchEmpty,
-                title: L10n.Sources.noMatchesTitle,
-                message: L10n.Sources.noMatchesMessage(query: model.query),
+                icon: .filter,
+                title: L10n.Sources.noFilterMatchesTitle,
+                message: String(localized: L10n.Sources.noFilterMatchesMessage),
                 compact: true
             )
             .padding(.horizontal, PVSpacing.gutterPage)
             .padding(.top, PVSpacing.space6)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .accessibilityIdentifier("sources.noMatches")
+            .accessibilityIdentifier("sources.filterEmpty")
         } else {
             PVList(
                 rows: model.visibleSources,

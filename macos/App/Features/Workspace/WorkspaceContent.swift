@@ -13,16 +13,22 @@ struct WorkspaceContent: View {
     let store: any GenealogyStore
     let catalogCounts: CatalogCounts
 
-    /// Hosted here (not on the 52pt toolbar row) so the jump menu can paint and
-    /// receive hits over the page below — same reason `pvContextMenu` wants a
-    /// large ancestor.
+    /// Hosted here (not on the 52pt toolbar row) so the jump menu / omnibar
+    /// results can paint and receive hits over the page below — same reason
+    /// `pvContextMenu` wants a large ancestor.
     @State private var jumpMenu = HistoryJumpMenuModel()
+    @State private var omnibarResults = OmnibarResultsModel()
 
     private var section: WorkspaceSection { navigation.selectedSection }
 
     var body: some View {
         VStack(spacing: 0) {
-            WorkspaceToolbar(jumpMenu: jumpMenu)
+            WorkspaceToolbar(
+                jumpMenu: jumpMenu,
+                omnibarResults: omnibarResults,
+                projectDir: projectDir,
+                store: store
+            )
             switch section {
             case .sourceFields:
                 SourceFieldsView(
@@ -67,6 +73,16 @@ struct WorkspaceContent: View {
         .coordinateSpace(name: HistoryJumpMenuModel.contentCoordinateSpace)
         .overlay(alignment: .topLeading) {
             HistoryJumpMenuHost(jumpMenu: jumpMenu)
+        }
+        .overlay(alignment: .topLeading) {
+            OmnibarResultsHost(
+                results: omnibarResults,
+                projectDir: projectDir,
+                onActivate: { hit in
+                    navigation.go(to: hit.location)
+                    omnibarResults.clearAfterNavigate()
+                }
+            )
         }
         .accessibilityIdentifier("workspace.content")
     }

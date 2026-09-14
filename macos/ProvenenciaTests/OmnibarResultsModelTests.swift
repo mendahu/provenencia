@@ -1,0 +1,93 @@
+import Foundation
+import Testing
+@testable import Provenencia
+
+@Suite
+@MainActor
+struct OmnibarResultsModelTests {
+    private let projectDir = "/tmp/omnibar-results.provenencia"
+
+    @Test func shortQueryDoesNotPresent() async {
+        let store = FakeStore()
+        store.sourcesByProject[projectDir] = [
+            CatalogSource(id: "s1", ref: "SRC-AAAAA", sourceTypeID: "", title: "Ilminster", description: ""),
+        ]
+        let model = OmnibarResultsModel()
+        model.query = "I"
+        model.scheduleSearch(
+            projectDir: projectDir,
+            location: .sectionRoot(.sources),
+            store: store
+        )
+        try? await Task.sleep(nanoseconds: 250_000_000)
+        #expect(!model.isPresented)
+        #expect(model.hits.isEmpty)
+    }
+
+    @Test func debouncedSearchReturnsHits() async {
+        let store = FakeStore()
+        store.sourcesByProject[projectDir] = [
+            CatalogSource(id: "s1", ref: "SRC-ILMIN", sourceTypeID: "t1", title: "Ilminster parish", description: ""),
+        ]
+        store.sourceTypesByProject[projectDir] = [
+            CatalogSourceType(id: "t1", key: "parish", origin: "provenencia", label: "Parish", description: ""),
+        ]
+        let model = OmnibarResultsModel()
+        model.query = "Ilminster"
+        model.scheduleSearch(
+            projectDir: projectDir,
+            location: .sectionRoot(.sources),
+            store: store
+        )
+        try? await Task.sleep(nanoseconds: 350_000_000)
+        #expect(model.isPresented)
+        #expect(model.hits.first?.id == "s1")
+        #expect(model.sourcesByID["s1"] != nil)
+    }
+
+    @Test func exactRefHitIsTop() async {
+        let store = FakeStore()
+        store.sourcesByProject[projectDir] = [
+            CatalogSource(id: "s1", ref: "SRC-ZZ9K2", sourceTypeID: "", title: "Quiet", description: ""),
+            CatalogSource(id: "s2", ref: "SRC-OTHER", sourceTypeID: "", title: "SRC-ZZ9K2 in title", description: ""),
+        ]
+        let model = OmnibarResultsModel()
+        model.query = "SRC-ZZ9K2"
+        model.scheduleSearch(
+            projectDir: projectDir,
+            location: .sectionRoot(.sources),
+            store: store
+        )
+        try? await Task.sleep(nanoseconds: 350_000_000)
+        #expect(model.hits.first?.id == "s1")
+        #expect(model.hits.first?.matchReason == "ref")
+        #expect(OmnibarHitPresentation.refAccent(for: model.hits[0]))
+    }
+
+    @Test func clearAfterNavigateResetsQuery() async {
+        let model = OmnibarResultsModel()
+        model.query = "abc"
+        model.hasSearched = true
+        model.hits = [
+            CatalogSearchHit(
+                kind: "source",
+                id: "s1",
+                ref: "SRC-AAAAA",
+                title: "A",
+                subtitle: "",
+                matchReason: "title",
+                location: .sectionRoot(.sources)
+            ),
+        ]
+        model.clearAfterNavigate()
+        #expect(model.query.isEmpty)
+        #expect(!model.isPresented)
+        #expect(model.hits.isEmpty)
+    }
+
+    @Test func matchContextHidesTitleAndRef() {
+        #expect(!OmnibarHitPresentation.showMatchContext("title"))
+        #expect(!OmnibarHitPresentation.showMatchContext("ref"))
+        #expect(OmnibarHitPresentation.showMatchContext("note: Zemblanity"))
+    }
+}

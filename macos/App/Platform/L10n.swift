@@ -784,6 +784,45 @@ enum L10n {
             defaultValue: "Search everything",
             comment: "Accessibility label for the toolbar omnibar field"
         )
+
+        static let omnibarKindSource = LocalizedStringResource(
+            "workspace.omnibar.kind.source",
+            defaultValue: "Source",
+            comment: "Kind chip on an omnibar hit for a Source"
+        )
+
+        static let omnibarKindType = LocalizedStringResource(
+            "workspace.omnibar.kind.type",
+            defaultValue: "Type",
+            comment: "Kind chip on an omnibar hit for a source type"
+        )
+
+        static let omnibarKindField = LocalizedStringResource(
+            "workspace.omnibar.kind.field",
+            defaultValue: "Field",
+            comment: "Kind chip on an omnibar hit for a source field"
+        )
+
+        static func omnibarNoMatchesTitle(query: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "workspace.omnibar.noMatchesTitle",
+                defaultValue: "No matches for “%@”.",
+                comment: "Omnibar empty-state title; argument is the typed query"
+            ))
+            return String(format: format, locale: .current, query)
+        }
+
+        static let omnibarNoMatchesHint = LocalizedStringResource(
+            "workspace.omnibar.noMatchesHint",
+            defaultValue: "Check the spelling, or paste a catalog reference such as SRC-3K9M2",
+            comment: "Omnibar empty-state hint under no matches"
+        )
+
+        static let omnibarResultsAccessibilityLabel = LocalizedStringResource(
+            "workspace.omnibar.resultsAccessibilityLabel",
+            defaultValue: "Search results",
+            comment: "Accessibility label for the omnibar results panel"
+        )
     }
 
     /// The **Source fields** workspace destination (S2-15): browse, search,
@@ -851,16 +890,16 @@ enum L10n {
             comment: "Button: open the Add Source dialog"
         )
 
-        static let searchPlaceholder = LocalizedStringResource(
-            "sources.list.searchPlaceholder",
-            defaultValue: "Search title, reference or type",
-            comment: "Placeholder for the Sources list search input"
+        static let noFilterMatchesTitle = LocalizedStringResource(
+            "sources.list.noFilterMatchesTitle",
+            defaultValue: "No sources for this type",
+            comment: "Empty-state title when the Sources type filter matches nothing"
         )
 
-        static let clearSearch = LocalizedStringResource(
-            "sources.list.clearSearch",
-            defaultValue: "Clear search",
-            comment: "Button that clears the Sources search query"
+        static let noFilterMatchesMessage = LocalizedStringResource(
+            "sources.list.noFilterMatchesMessage",
+            defaultValue: "Try another type, or choose All types.",
+            comment: "Empty-state body when the Sources type filter matches nothing"
         )
 
         static let filterAllTypes = LocalizedStringResource(
@@ -925,21 +964,6 @@ enum L10n {
             defaultValue: "Every fact should trace back to a record. Add the first source, then attach the scans and files it came from.",
             comment: "Empty-state body when the project has no Sources"
         )
-
-        static let noMatchesTitle = LocalizedStringResource(
-            "sources.list.noMatchesTitle",
-            defaultValue: "No source matches that search",
-            comment: "Empty-state title when search/filter matches nothing"
-        )
-
-        static func noMatchesMessage(query: String) -> String {
-            let format = String(localized: LocalizedStringResource(
-                "sources.list.noMatchesMessage",
-                defaultValue: "Try the reference on its own — “%@” matches no title, reference or type in this workspace.",
-                comment: "Empty-state body when search matches nothing; argument is the query"
-            ))
-            return String(format: format, locale: .current, query)
-        }
 
         static let listAccessibilityLabel = LocalizedStringResource(
             "sources.list.accessibilityLabel",
@@ -1956,18 +1980,6 @@ enum L10n {
             comment: "Button: add a new Source field (toolbar, empty state, and add-form submit)"
         )
 
-        static let searchPlaceholder = LocalizedStringResource(
-            "sourceFields.list.searchPlaceholder",
-            defaultValue: "Search fields — label, key, or description",
-            comment: "Placeholder for the Source fields search input"
-        )
-
-        static let clearSearch = LocalizedStringResource(
-            "sourceFields.list.clearSearch",
-            defaultValue: "Clear search",
-            comment: "Button that clears the Source fields search query"
-        )
-
         static let columnLabel = LocalizedStringResource(
             "sourceFields.list.columnLabel",
             defaultValue: "Label",
@@ -2082,36 +2094,13 @@ enum L10n {
             comment: "Body of the empty state when the project has zero metadata fields"
         )
 
-        static let noMatchTitle = LocalizedStringResource(
-            "sourceFields.noMatch.title",
-            defaultValue: "No field matches",
-            comment: "Title of the empty state when a search finds no fields"
-        )
-
-        static func noMatchBody(query: String) -> String {
-            let format = String(localized: LocalizedStringResource(
-                "sourceFields.noMatch.body",
-                defaultValue: "Nothing in this project’s vocabulary matches “%@”. Clear the search, or add the field.",
-                comment: "Body of the no-match empty state; argument is the search query"
-            ))
-            return String(format: format, locale: .current, query)
-        }
-
         static func resultLine(shown: Int, total: Int) -> String {
-            if shown == total {
-                let format = String(localized: LocalizedStringResource(
-                    "sourceFields.list.resultLineAll",
-                    defaultValue: "%lld fields",
-                    comment: "Footer result count when no search/filter narrows the Source fields list; argument is the total"
-                ))
-                return String(format: format, locale: .current, total)
-            }
             let format = String(localized: LocalizedStringResource(
-                "sourceFields.list.resultLineFiltered",
-                defaultValue: "%lld of %lld fields shown",
-                comment: "Footer result count when search narrows the Source fields list; arguments are shown then total"
+                "sourceFields.list.resultLineAll",
+                defaultValue: "%lld fields",
+                comment: "Footer result count for the Source fields list; argument is the total"
             ))
-            return String(format: format, locale: .current, shown, total)
+            return String(format: format, locale: .current, total)
         }
 
         static let detailEyebrowField = LocalizedStringResource(
@@ -2324,18 +2313,6 @@ enum L10n {
             comment: "Button: add a new Source type (toolbar, empty state, and add-form submit)"
         )
 
-        static let searchPlaceholder = LocalizedStringResource(
-            "sourceTypes.list.searchPlaceholder",
-            defaultValue: "Search types — label, key, or description",
-            comment: "Placeholder for the Source types search input"
-        )
-
-        static let clearSearch = LocalizedStringResource(
-            "sourceTypes.list.clearSearch",
-            defaultValue: "Clear search",
-            comment: "Button that clears the Source types search query"
-        )
-
         static let columnLabel = LocalizedStringResource(
             "sourceTypes.list.columnLabel",
             defaultValue: "Label",
@@ -2361,20 +2338,12 @@ enum L10n {
         )
 
         static func resultLine(shown: Int, total: Int) -> String {
-            if shown == total {
-                let format = String(localized: LocalizedStringResource(
-                    "sourceTypes.list.resultLineAll",
-                    defaultValue: "%lld types",
-                    comment: "Footer result count when no search narrows the Source types list; argument is the total"
-                ))
-                return String(format: format, locale: .current, total)
-            }
             let format = String(localized: LocalizedStringResource(
-                "sourceTypes.list.resultLineFiltered",
-                defaultValue: "%lld of %lld types shown",
-                comment: "Footer result count when search narrows the Source types list; arguments are shown then total"
+                "sourceTypes.list.resultLineAll",
+                defaultValue: "%lld types",
+                comment: "Footer result count for the Source types list; argument is the total"
             ))
-            return String(format: format, locale: .current, shown, total)
+            return String(format: format, locale: .current, total)
         }
 
         static let emptyProjectTitle = LocalizedStringResource(
@@ -2388,21 +2357,6 @@ enum L10n {
             defaultValue: "This project has no record classes to cite against. Add the kinds of record you actually hold — a parish register, a scrapbook, a headstone photograph.",
             comment: "Body of the empty state when the project has zero source types"
         )
-
-        static let noMatchTitle = LocalizedStringResource(
-            "sourceTypes.noMatch.title",
-            defaultValue: "No type matches",
-            comment: "Title of the empty state when a search finds no types"
-        )
-
-        static func noMatchBody(query: String) -> String {
-            let format = String(localized: LocalizedStringResource(
-                "sourceTypes.noMatch.body",
-                defaultValue: "Nothing in this project’s vocabulary matches “%@”. Clear the search, or add the type.",
-                comment: "Body of the no-match empty state; argument is the search query"
-            ))
-            return String(format: format, locale: .current, query)
-        }
 
         static let detailEyebrowType = LocalizedStringResource(
             "sourceTypes.detail.eyebrowType",

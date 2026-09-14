@@ -14,7 +14,6 @@ struct SourceTypesListPane: View {
 
     var body: some View {
         VocabularyListPane(
-            query: $model.query,
             totalCount: model.types.count,
             rows: model.visibleTypes,
             isLoading: model.isLoading,
@@ -26,14 +25,10 @@ struct SourceTypesListPane: View {
             ),
             onSortChange: { model.sortBy($0) },
             strings: VocabularyListStrings(
-                searchPlaceholder: L10n.SourceTypes.searchPlaceholder,
-                clearSearch: L10n.SourceTypes.clearSearch,
                 tableLabel: L10n.Workspace.sourceTypesTitle,
                 emptyIcon: .library,
                 emptyTitle: L10n.SourceTypes.emptyProjectTitle,
                 emptyBody: L10n.SourceTypes.emptyProjectBody,
-                noMatchTitle: L10n.SourceTypes.noMatchTitle,
-                noMatchBody: { L10n.SourceTypes.noMatchBody(query: $0) },
                 resultLine: { L10n.SourceTypes.resultLine(shown: $0, total: $1) }
             ),
             identifierPrefix: "sourceTypes"

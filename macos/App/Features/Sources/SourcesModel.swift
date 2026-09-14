@@ -36,7 +36,6 @@ final class SourcesModel {
     private(set) var isLoading = false
     var loadError: Error?
 
-    var query = ""
     /// `nil` / empty string means all types. Otherwise a `source_types.id`.
     var typeFilterID = ""
     var sort: Sort = .added
@@ -89,14 +88,6 @@ final class SourcesModel {
         var rows = sources
         if !typeFilterID.isEmpty {
             rows = rows.filter { $0.sourceTypeID == typeFilterID }
-        }
-        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if !q.isEmpty {
-            rows = rows.filter { source in
-                source.title.lowercased().contains(q)
-                    || source.ref.lowercased().contains(q)
-                    || typeLabel(for: source).lowercased().contains(q)
-            }
         }
         switch sort {
         case .added:
