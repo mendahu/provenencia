@@ -2,6 +2,7 @@ package search
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"strings"
 
@@ -37,15 +38,16 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 		return nil, nil
 	}
 
-	// bm25 column weights: title, ref, secondary, body (lower bm25 = better).
-	rows, err := db.Query(`
+	// bm25 column weights from FTSBM25Weights (lower bm25 = better).
+	w := FTSBM25Weights
+	rows, err := db.Query(fmt.Sprintf(`
 		SELECT d.kind, d.entity_id, d.display_ref, d.display_title, d.display_subtitle,
 			d.title, d.ref, d.secondary, d.body,
-			bm25(catalog_search_fts, 10.0, 12.0, 4.0, 1.0) AS rank
+			bm25(catalog_search_fts, %f, %f, %f, %f) AS rank
 		FROM catalog_search_fts
 		JOIN catalog_search_docs d ON d.rowid = catalog_search_fts.rowid
 		WHERE catalog_search_fts MATCH ?
-	`, match)
+	`, w.Title, w.Ref, w.Secondary, w.Body), match)
 	if err != nil {
 		return nil, err
 	}
