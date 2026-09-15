@@ -6371,30 +6371,6 @@
         }
       }
     },
-    "workspace.section.files.placeholderNote" : {
-      "comment" : "Placeholder note for the descoped Files destination",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A project-wide Files browser is not in this release. Open files from a Source’s artifacts."
-          }
-        }
-      }
-    },
-    "workspace.section.files.title" : {
-      "comment" : "Workspace sidebar destination and page title: Files",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Files"
-          }
-        }
-      }
-    },
     "workspace.section.sourceFields.title" : {
       "comment" : "Workspace sidebar destination and page title: Source fields",
       "extractionState" : "extracted_with_value",

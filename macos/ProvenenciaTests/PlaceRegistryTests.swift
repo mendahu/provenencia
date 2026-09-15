@@ -34,11 +34,6 @@ struct PlaceRegistryTests {
             .sourceTypesList(project: project),
             .metadataFieldsList(project: project),
         ])
-
-        let files = resolve(.sectionRoot(.files))
-        #expect(files?.placeID == .files)
-        #expect(files?.presentation == .filesPlaceholder)
-        #expect(files?.queryKeys.isEmpty == true)
     }
 
     @Test func resolvesSourceDetail() {
@@ -139,7 +134,6 @@ struct PlaceRegistryTests {
             case .sourceFields: .sectionRoot(.sourceFields)
             case .sourceTypes: .sectionRoot(.sourceTypes)
             case .sourceTypesDetail: WorkspaceLocation(section: .sourceTypes, typeId: "t1")
-            case .files: .sectionRoot(.files)
             }
             let place = resolve(location)
             #expect(place?.placeID == id)

@@ -26,13 +26,10 @@ struct CatalogCountsTests {
             CatalogMetadataField(id: "1", key: "date_taken", origin: "provenencia", label: "Date taken", dataType: "date", description: ""),
             CatalogMetadataField(id: "2", key: "notes", origin: "user", label: "Notes", dataType: "text", description: ""),
         ]
-        store.fileCountByProject[projectDir] = 4
-
         let counts = makeCounts(store: store)
         await counts.refreshAll()
 
         #expect(counts.sources == 2)
-        #expect(counts.files == 4)
         #expect(counts.sourceTypes?.total == 3)
         #expect(counts.sourceTypes?.seeded == 1)
         #expect(counts.sourceTypes?.user == 1)
@@ -44,7 +41,6 @@ struct CatalogCountsTests {
         #expect(counts.badge(for: .sources) == 2)
         #expect(counts.badge(for: .sourceTypes) == 3)
         #expect(counts.badge(for: .sourceFields) == 2)
-        #expect(counts.badge(for: .files) == 4)
     }
 
     @Test func refreshAllOnEmptyProjectYieldsZero() async {
@@ -53,7 +49,6 @@ struct CatalogCountsTests {
         #expect(counts.sources == 0)
         #expect(counts.sourceTypes?.total == 0)
         #expect(counts.sourceFields?.total == 0)
-        #expect(counts.files == 0)
         #expect(counts.lastRefreshError == nil)
     }
 
@@ -69,7 +64,6 @@ struct CatalogCountsTests {
         #expect(counts.sources == nil)
         #expect(counts.sourceTypes == nil)
         #expect(counts.sourceFields == nil)
-        #expect(counts.files == nil)
         #expect(counts.badge(for: .sources) == nil)
     }
 

@@ -6,5 +6,4 @@ enum WorkspacePresentationID: Hashable, Sendable {
     case sourcePage
     case sourceFields
     case sourceTypes
-    case filesPlaceholder
 }

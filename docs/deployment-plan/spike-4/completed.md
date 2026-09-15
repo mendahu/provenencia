@@ -66,7 +66,7 @@ cd macos && xcodebuild test -scheme Provenencia -destination 'platform=macOS' \
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | S4-02 |
-| **Deliverables** | Done. `PlaceID.swift`, `WorkspacePresentationID.swift`, `ResolvedPlace.swift`, `PlaceRegistry.swift`: priority-ordered specs mapping `WorkspaceLocation` → place id, presentation id, and `CatalogQueryKey`s. Covers sources list/detail, source fields (one spec for root + row), source types list/detail (with suggestions), and files placeholder. **No** production UI wiring. |
+| **Deliverables** | Done. `PlaceID.swift`, `WorkspacePresentationID.swift`, `ResolvedPlace.swift`, `PlaceRegistry.swift`: priority-ordered specs mapping `WorkspaceLocation` → place id, presentation id, and `CatalogQueryKey`s. Covers sources list/detail, source fields (one spec for root + row), and source types list/detail (with suggestions). **No** production UI wiring. |
 | **Tests** | Done. `macos/ProvenenciaTests/PlaceRegistryTests.swift`: section roots, deep ids, cross-section id ignore, query key table, full `PlaceID` coverage. |
 | **Dogfood** | App unchanged. |
 | **Out** | View host; `session.apply(location:)` (S4-04). |

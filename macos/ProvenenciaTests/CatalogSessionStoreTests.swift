@@ -88,12 +88,9 @@ struct CatalogSessionStoreTests {
         #expect(store.lastClosedCatalogProjectDir == projectDir)
     }
 
-    @Test func getSourceWorkspaceAndCountFilesMarkSessionHeld() async throws {
+    @Test func getSourceWorkspaceMarksSessionHeld() async throws {
         let store = FakeStore()
         _ = try await store.getSourceWorkspace(projectDir: projectDir, sourceID: "missing")
-        #expect(store.heldCatalogProjectDir == projectDir)
-        store.heldCatalogProjectDir = nil
-        _ = try await store.countFiles(projectDir: projectDir)
         #expect(store.heldCatalogProjectDir == projectDir)
     }
 }

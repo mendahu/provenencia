@@ -77,14 +77,6 @@ struct PlaceRegistry: Sendable {
             },
             deepId: { _ in nil }
         ),
-        Spec(
-            id: .files,
-            presentation: .filesPlaceholder,
-            priority: 0,
-            matches: { $0.section == .files },
-            queryKeys: { _, _ in [] },
-            deepId: { _ in nil }
-        ),
     ]
 
     private var orderedSpecs: [Spec] {

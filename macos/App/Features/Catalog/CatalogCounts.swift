@@ -46,16 +46,14 @@ struct CatalogCountSummary: Equatable {
 /// via the environment — feature models publish after load / create /
 /// delete instead of prop-drilling refresh callbacks.
 ///
-/// Sources and files only need a total (no origin split). Vocabulary
-/// sections keep the full summary so the header line and the nav badge
-/// stay one write apart.
+/// Sources only need a total (no origin split). Vocabulary sections keep
+/// the full summary so the header line and the nav badge stay one write apart.
 @MainActor
 @Observable
 final class CatalogCounts {
     /// Absent until a refresh or publish succeeds for that section —
     /// the sidebar treats absence as "no badge" rather than `0`.
     private(set) var sources: Int?
-    private(set) var files: Int?
     private(set) var sourceFields: CatalogCountSummary?
     private(set) var sourceTypes: CatalogCountSummary?
     /// Set when `refreshAll` fails; cleared on the next successful refresh.
@@ -79,7 +77,6 @@ final class CatalogCounts {
         case .sources: sources
         case .sourceTypes: sourceTypes?.total
         case .sourceFields: sourceFields?.total
-        case .files: files
         }
     }
 
@@ -109,7 +106,6 @@ final class CatalogCounts {
             sources = nav.sources
             sourceTypes = CatalogCountSummary(nav.sourceTypes)
             sourceFields = CatalogCountSummary(nav.sourceFields)
-            files = nav.files
             lastRefreshError = nil
         } catch {
             lastRefreshError = L10n.Errors.message(for: error)

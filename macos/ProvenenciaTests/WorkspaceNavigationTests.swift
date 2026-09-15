@@ -58,7 +58,7 @@ struct WorkspaceNavigationTests {
         let (navigation, _) = try attachedNavigation()
         navigation.go(to: .sectionRoot(.sourceFields))
         navigation.go(to: .sectionRoot(.sourceTypes))
-        navigation.go(to: .sectionRoot(.files))
+        navigation.go(to: .sectionRoot(.sources))
         navigation.goBack()
         navigation.goBack()
         #expect(navigation.currentLocation == .sectionRoot(.sourceFields))
@@ -162,15 +162,15 @@ struct WorkspaceNavigationTests {
 
     @Test func backJumpItemsNearestFirstAndCapped() throws {
         let (navigation, _) = try attachedNavigation()
-        // indices: 0 sources, 1 fields, 2 types, 3 files, 4 deep source — current at 4
+        // indices: 0 sources, 1 fields, 2 types, 3 source detail, 4 deep source — current at 4
         navigation.go(to: .sectionRoot(.sourceFields))
         navigation.go(to: .sectionRoot(.sourceTypes))
-        navigation.go(to: .sectionRoot(.files))
+        navigation.go(to: WorkspaceLocation(section: .sources, sourceId: "src-0"))
         navigation.go(to: WorkspaceLocation(section: .sources, sourceId: "src-1", title: "Deep"))
 
         let back = navigation.backJumpItems(limit: 2)
         #expect(back.map(\.index) == [3, 2])
-        #expect(back[0].location == .sectionRoot(.files))
+        #expect(back[0].location.sourceId == "src-0")
         #expect(back[1].location == .sectionRoot(.sourceTypes))
 
         let allBack = navigation.backJumpItems(limit: 15)
@@ -181,10 +181,10 @@ struct WorkspaceNavigationTests {
         let (navigation, _) = try attachedNavigation()
         navigation.go(to: .sectionRoot(.sourceFields))
         navigation.go(to: .sectionRoot(.sourceTypes))
-        navigation.go(to: .sectionRoot(.files))
+        navigation.go(to: WorkspaceLocation(section: .sources, sourceId: "src-0"))
         navigation.goBack()
         navigation.goBack()
-        // current at sourceFields (index 1); forward: types (2), files (3)
+        // current at sourceFields (index 1); forward: types (2), source detail (3)
         #expect(navigation.currentLocation == .sectionRoot(.sourceFields))
 
         let forward = navigation.forwardJumpItems(limit: 1)
@@ -193,7 +193,7 @@ struct WorkspaceNavigationTests {
 
         let allForward = navigation.forwardJumpItems(limit: 15)
         #expect(allForward.map(\.index) == [2, 3])
-        #expect(allForward[1].location == .sectionRoot(.files))
+        #expect(allForward[1].location.sourceId == "src-0")
     }
 
     @Test func jumpItemsEmptyAtStackEnds() throws {

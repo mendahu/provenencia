@@ -7,5 +7,4 @@ enum PlaceID: Hashable, Sendable, CaseIterable {
     case sourceFields
     case sourceTypes
     case sourceTypesDetail
-    case files
 }

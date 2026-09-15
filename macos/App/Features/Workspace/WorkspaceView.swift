@@ -156,8 +156,6 @@ extension WorkspaceView {
         store.fieldsByProject[projectDir] = [
             CatalogMetadataField(id: "1", key: "date_taken", origin: "provenencia", label: "Date taken", dataType: "date", description: ""),
         ]
-        store.fileCountByProject[projectDir] = 8
-
         let model = OnboardingModel(store: store, folders: .previewEmpty())
         model.session = PreviewFixture.identity
         model.project = PreviewFixture.project

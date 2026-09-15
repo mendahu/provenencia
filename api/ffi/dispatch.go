@@ -36,7 +36,6 @@ const (
 	MethodCreateSourceType      = int32(engine.Method_METHOD_CREATE_SOURCE_TYPE)
 	MethodListMetadataFields    = int32(engine.Method_METHOD_LIST_METADATA_FIELDS)
 	MethodCreateMetadataField   = int32(engine.Method_METHOD_CREATE_METADATA_FIELD)
-	MethodCountFiles            = int32(engine.Method_METHOD_COUNT_FILES)
 	MethodUpdateMetadataField   = int32(engine.Method_METHOD_UPDATE_METADATA_FIELD)
 	MethodDeleteSourceType      = int32(engine.Method_METHOD_DELETE_SOURCE_TYPE)
 	MethodDeleteMetadataField   = int32(engine.Method_METHOD_DELETE_METADATA_FIELD)
@@ -111,8 +110,6 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.ListMetadataFields(in)
 	case MethodCreateMetadataField:
 		return handlers.CreateMetadataField(in)
-	case MethodCountFiles:
-		return handlers.CountFiles(in)
 	case MethodUpdateMetadataField:
 		return handlers.UpdateMetadataField(in)
 	case MethodDeleteSourceType:

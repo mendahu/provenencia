@@ -467,7 +467,6 @@ private struct ThrowingStore: GenealogyStore {
         userID _: String,
         fieldID _: String
     ) async throws { throw StoreBoom.boom }
-    func countFiles(projectDir _: String) async throws -> Int { throw StoreBoom.boom }
     func workspaceNavCounts(projectDir _: String) async throws -> WorkspaceNavCounts {
         throw StoreBoom.boom
     }

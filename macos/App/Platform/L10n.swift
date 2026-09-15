@@ -725,18 +725,6 @@ enum L10n {
             comment: "Workspace sidebar destination and page title: Source fields"
         )
 
-        static let filesTitle = LocalizedStringResource(
-            "workspace.section.files.title",
-            defaultValue: "Files",
-            comment: "Workspace sidebar destination and page title: Files"
-        )
-
-        static let filesPlaceholderNote = LocalizedStringResource(
-            "workspace.section.files.placeholderNote",
-            defaultValue: "A project-wide Files browser is not in this release. Open files from a Source’s artifacts.",
-            comment: "Placeholder note for the descoped Files destination"
-        )
-
         static let countsRefreshFailedTitle = LocalizedStringResource(
             "workspace.counts.refreshFailedTitle",
             defaultValue: "Couldn’t refresh catalog counts",
