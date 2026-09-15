@@ -69,13 +69,14 @@ final class SourcePageModel {
     /// Loads the workspace query handle and syncs section state (tests and previews).
     func warmFromSession() async {
         let session = context.session
-        let handle: QueryHandle<CatalogSourceWorkspace> = session.query(
-            CatalogQueryKey.sourceWorkspace(project: session.projectKey, sourceId: context.sourceID)
-        )
+        let key = CatalogQueryKey.sourceWorkspace(project: session.projectKey, sourceId: context.sourceID)
+        session.invalidate(key)
+        let handle: QueryHandle<CatalogSourceWorkspace> = session.query(key)
         var waited: UInt64 = 0
         let step: UInt64 = 10_000_000
         while waited < 2_000_000_000 {
-            if handle.status == .ready || handle.status == .error { break }
+            if handle.status == .error { break }
+            if handle.status == .ready, !handle.isFetching { break }
             await Task.yield()
             try? await Task.sleep(nanoseconds: step)
             waited += step
