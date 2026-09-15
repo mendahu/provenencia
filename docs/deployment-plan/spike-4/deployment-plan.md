@@ -4,7 +4,7 @@ Workspace session, catalog query cache, and declarative place registry. Authorit
 
 ## Status
 
-**In progress.** Completed steps: [`completed.md`](completed.md). Execute **S4-03 → S4-09** in order unless noted. **S4-10+** are optional Go-side follow-ons after the Mac cache exists.
+**In progress.** Completed steps: [`completed.md`](completed.md). Execute **S4-04 → S4-09** in order unless noted. **S4-10+** are optional Go-side follow-ons after the Mac cache exists.
 
 ## Goal (dogfood bar)
 
@@ -22,7 +22,7 @@ S4-01  Query cache engine (no UI) ✓
 S4-02  CatalogQueryRegistry (loaders + invalidation map) ✓
   │
   ▼
-S4-03  PlaceRegistry + resolve(location)
+S4-03  PlaceRegistry + resolve(location) ✓
   │
   ▼
 S4-04  Wire session + sync apply(location) on navigation
@@ -51,6 +51,7 @@ Sources            Source fields      Source types
 
 - [x] S4-01 — Catalog query cache engine → [`completed.md`](completed.md)
 - [x] S4-02 — Catalog query registry → [`completed.md`](completed.md)
+- [x] S4-03 — Place registry → [`completed.md`](completed.md)
 
 ---
 
@@ -67,19 +68,6 @@ Cross-view sync (detail edit → list row) and navigation comfort (Back / sectio
 **S4-01 note:** `invalidate(_:)` marks stale and cancels in-flight work; it does **not** start a background refetch. Optional eager warm-up (e.g. `invalidateAndRefetch` or mutation helper calling `ensureQuery` after bust) is allowed when off-screen prefetch is worth the FFI cost — not required for title/thumbnail sync.
 
 **Detail → list (Sources):** On save, **patch** both `sourceWorkspace(sourceId:)` and the matching row inside `sourcesList` (same role as today's `SourcesModel.applyUpdatedSource`). Invalidate is for create source, delete, and other paths where local patch is impractical.
-
----
-
-## S4-03 — PR: PlaceRegistry
-
-| | |
-| --- | --- |
-| **Depends on** | S4-02 |
-| **Title sketch** | Add declarative workspace place registry |
-| **Deliverables** | `PlaceRegistry.swift`: `PlaceID`, `PlaceSpec`, `ResolvedPlace`. Registry table for **all current places**: `sourcesList`, `sourceDetail`, `sourceFields` (list root + row selection as one or two specs), `sourceTypes` (+ row / suggestions). `resolve(_ location: WorkspaceLocation) -> ResolvedPlace?` (first match or deterministic priority). Each spec declares: section, deep-id matcher, required `CatalogQueryKey`s for `(project, deepId)`. Presentation id enum for view routing (used in S4-05). |
-| **Tests** | Location → place resolution: section roots, each deep id, unknown section, conflicting ids; query key list per place matches design doc table. |
-| **Dogfood** | App unchanged. |
-| **Out** | View host; navigation hookup. |
 
 ---
 
