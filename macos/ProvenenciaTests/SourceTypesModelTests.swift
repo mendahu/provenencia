@@ -222,6 +222,17 @@ struct SourceTypesModelTests {
         #expect(counts.sourceTypes?.user == 1)
     }
 
+    @Test func addingReturnsLocationForWorkspaceNavigation() async {
+        let model = makeModel(types: [seededType()])
+        await model.load()
+        model.openAdd()
+        model.draft?.label = "Parish register"
+        let location = await model.submit()
+        #expect(location?.section == .sourceTypes)
+        #expect(location?.typeId == model.selectedType?.id)
+        #expect(location?.title == "Parish register")
+    }
+
     @Test func addingRefusesABlankLabelWithoutCallingTheStore() async {
         let model = makeModel()
         await model.load()
@@ -373,5 +384,30 @@ struct SourceTypesModelTests {
         #expect(store.fieldsByProject[projectDir]?.map(\.id) == ["f1"])
         #expect(counts.sourceTypes?.total == 0)
         #expect(counts.sourceFields?.total == 1)
+    }
+
+    @Test func createAndDeleteCommitThroughWorkspaceNavigation() async throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("types-nav-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let url = dir.appendingPathComponent("history.json")
+        let navigation = WorkspaceNavigation()
+        navigation.attachProject(uuid: "00000000-0000-7000-8000-0000000000cc", fileURL: url)
+        navigation.go(to: .sectionRoot(.sourceTypes))
+
+        let model = makeModel()
+        await model.load()
+        model.openAdd()
+        model.draft?.label = "Parish register"
+        if let location = await model.submit() {
+            navigation.go(to: location)
+        }
+        #expect(navigation.currentLocation.typeId == model.selectedType?.id)
+
+        model.askDelete()
+        #expect(await model.confirmDelete())
+        navigation.fallbackToSectionRoot()
+        #expect(navigation.currentLocation == .sectionRoot(.sourceTypes))
+        #expect(navigation.currentLocation.typeId == nil)
     }
 }

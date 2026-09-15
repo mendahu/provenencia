@@ -5,6 +5,7 @@ import SwiftUI
 /// `plugin:…`) with the fields it suggests, or an empty prompt when nothing
 /// is selected — S2-03 §3.2/3.3.
 struct SourceTypesDetailPane: View {
+    @Environment(WorkspaceNavigation.self) private var navigation
     @Bindable var model: SourceTypesModel
     @State private var iconPickerOpen = false
 
@@ -190,7 +191,13 @@ struct SourceTypesDetailPane: View {
                     canSubmit: model.canSubmit,
                     isSecondaryDisabled: model.isSaving || (!model.isAdding && !model.isDirty),
                     identifierPrefix: "sourceTypes",
-                    onPrimary: { Task { await model.submit() } },
+                    onPrimary: {
+                        Task {
+                            if let location = await model.submit() {
+                                navigation.go(to: location)
+                            }
+                        }
+                    },
                     onSecondary: { secondaryAction() }
                 )
             }

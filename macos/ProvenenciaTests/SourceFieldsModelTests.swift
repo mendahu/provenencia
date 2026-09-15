@@ -134,7 +134,7 @@ struct SourceFieldsModelTests {
         await model.load()
         model.openAdd()
         model.draft?.label = "Grandma's album code"
-        await model.submit()
+        let location = await model.submit()
         #expect(model.formError == nil)
         #expect(model.fields.count == 1)
         #expect(model.fields.first?.key == "grandmas-album-code")
@@ -143,6 +143,9 @@ struct SourceFieldsModelTests {
         #expect(model.selectedField?.key == "grandmas-album-code")
         #expect(counts.sourceFields?.total == 1)
         #expect(counts.sourceFields?.user == 1)
+        #expect(location?.section == .sourceFields)
+        #expect(location?.fieldId == model.fields.first?.id)
+        #expect(location?.title == "Grandma's album code")
     }
 
     @Test func submitAddWithBlankLabelSetsFormError() async {
@@ -313,8 +316,9 @@ struct SourceFieldsModelTests {
         #expect(counts.sourceFields?.total == 2)
         model.select("2")
         model.askDelete()
-        await model.confirmDelete()
+        let deleted = await model.confirmDelete()
 
+        #expect(deleted)
         #expect(model.fields.map(\.id) == ["1"])
         #expect(store.fieldsByProject[projectDir]?.map(\.id) == ["1"])
         #expect(model.selectedField == nil)
@@ -336,11 +340,38 @@ struct SourceFieldsModelTests {
         // count the button was enabled from is stale and the engine refuses.
         // That race is why the dialog has an error path at all.
         store.fieldsByProject[projectDir] = [userField(usedBy: 4)]
-        await model.confirmDelete()
+        let deleted = await model.confirmDelete()
 
+        #expect(!deleted)
         #expect(model.fields.count == 1)
         #expect(model.pendingDeleteField?.id == "2")
         #expect(model.deleteError != nil)
+    }
+
+    @Test func createAndDeleteCommitThroughWorkspaceNavigation() async throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("fields-nav-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let url = dir.appendingPathComponent("history.json")
+        let navigation = WorkspaceNavigation()
+        navigation.attachProject(uuid: "00000000-0000-7000-8000-0000000000bb", fileURL: url)
+        navigation.go(to: .sectionRoot(.sourceFields))
+
+        let model = makeModel()
+        await model.load()
+        model.openAdd()
+        model.draft?.label = "Album code"
+        if let location = await model.submit() {
+            navigation.go(to: location)
+        }
+        #expect(navigation.currentLocation.fieldId == model.fields.first?.id)
+        #expect(navigation.canGoBack)
+
+        model.askDelete()
+        #expect(await model.confirmDelete())
+        navigation.fallbackToSectionRoot()
+        #expect(navigation.currentLocation == .sectionRoot(.sourceFields))
+        #expect(navigation.currentLocation.fieldId == nil)
     }
 
 }

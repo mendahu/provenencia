@@ -64,7 +64,13 @@ struct SourceFieldsView: View {
             copy: deleteCopy(for:),
             isRunning: model.isDeleting,
             accessibilityIdentifierPrefix: "sourceFields.delete",
-            onConfirm: { Task { await model.confirmDelete() } }
+            onConfirm: {
+                Task {
+                    if await model.confirmDelete() {
+                        navigation.fallbackToSectionRoot()
+                    }
+                }
+            }
         ) { field in
             deleteDetail(for: field)
         }
