@@ -9,6 +9,30 @@ enum CatalogQueryKey: Hashable, Sendable {
     case sourceWorkspace(project: ProjectKey, sourceId: String)
     case typeSuggestions(project: ProjectKey, typeId: String)
 
+    /// Case identity without associated payload — used by `CatalogQueryRegistry` specs.
+    enum Kind: Hashable, Sendable {
+        case sourcesList
+        case sourceTypesList
+        case metadataFieldsList
+        case sourceWorkspace
+        case typeSuggestions
+    }
+
+    var kind: Kind {
+        switch self {
+        case .sourcesList:
+            return .sourcesList
+        case .sourceTypesList:
+            return .sourceTypesList
+        case .metadataFieldsList:
+            return .metadataFieldsList
+        case .sourceWorkspace:
+            return .sourceWorkspace
+        case .typeSuggestions:
+            return .typeSuggestions
+        }
+    }
+
     var project: ProjectKey {
         switch self {
         case .sourcesList(let project),

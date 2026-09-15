@@ -8,20 +8,60 @@ import Observation
 final class WorkspaceSession {
     let projectKey: ProjectKey
     let store: any GenealogyStore
+    let registry: CatalogQueryRegistry
 
     private var handles: [CatalogQueryKey: AnyObject] = [:]
     private var valueTypes: [CatalogQueryKey: ObjectIdentifier] = [:]
     private var inFlight: [CatalogQueryKey: Task<Void, Never>] = [:]
     private var invalidatedKeys: Set<CatalogQueryKey> = []
 
-    init(projectKey: ProjectKey, store: any GenealogyStore) {
+    init(
+        projectKey: ProjectKey,
+        store: any GenealogyStore,
+        registry: CatalogQueryRegistry = .standard
+    ) {
         self.projectKey = projectKey
         self.store = store
+        self.registry = registry
     }
 
     /// Returns an existing handle without starting a load.
     func queryHandle<Value>(_ key: CatalogQueryKey) -> QueryHandle<Value>? {
         handles[key] as? QueryHandle<Value>
+    }
+
+    /// Registry-backed get-or-load.
+    @discardableResult
+    func query<Value>(_ key: CatalogQueryKey) -> QueryHandle<Value> {
+        ensureQuery(key) { [store, registry] in
+            let result = try await registry.load(key: key, store: store)
+            guard let typed = result as? Value else {
+                #if DEBUG
+                assertionFailure("CatalogQueryKey \(key) value type mismatch for \(Value.self)")
+                #endif
+                throw CatalogQueryRegistryError.typeMismatch
+            }
+            return typed
+        }
+    }
+
+    /// Synchronous cache write. Clears stale flag without calling the loader.
+    func setQueryValue<Value>(_ key: CatalogQueryKey, value: Value) {
+        let handle = typedHandle(for: key, as: Value.self)
+        handle.applySuccess(value)
+        invalidatedKeys.remove(key)
+    }
+
+    /// Patch list row + cached workspace on identity/cover save; bust keys for other mutations.
+    func apply(_ mutation: CatalogMutation) {
+        switch mutation {
+        case .updatedSource(let source):
+            patchUpdatedSource(source)
+        default:
+            for key in registry.keysAffected(by: mutation, project: projectKey) {
+                invalidate(key)
+            }
+        }
     }
 
     /// Get-or-load with in-flight dedupe. Reuses cached `.ready` data until invalidated.
@@ -66,6 +106,25 @@ final class WorkspaceSession {
     func invalidateAll(matching predicate: (CatalogQueryKey) -> Bool) {
         for key in handles.keys where predicate(key) {
             invalidate(key)
+        }
+    }
+
+    private func patchUpdatedSource(_ source: CatalogSource) {
+        let listKey = CatalogQueryKey.sourcesList(project: projectKey)
+        if let listHandle: QueryHandle<[CatalogSource]> = queryHandle(listKey),
+           var sources = listHandle.value,
+           let index = sources.firstIndex(where: { $0.id == source.id }) {
+            sources[index] = source
+            listHandle.applySuccess(sources)
+            invalidatedKeys.remove(listKey)
+        }
+
+        let workspaceKey = CatalogQueryKey.sourceWorkspace(project: projectKey, sourceId: source.id)
+        if let workspaceHandle: QueryHandle<CatalogSourceWorkspace> = queryHandle(workspaceKey),
+           var workspace = workspaceHandle.value {
+            workspace.source = source
+            workspaceHandle.applySuccess(workspace)
+            invalidatedKeys.remove(workspaceKey)
         }
     }
 

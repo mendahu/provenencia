@@ -9,6 +9,7 @@ IDs stay stable (`S4-NN`). Do not renumber when moving steps here.
 | Step | Kind | One-liner |
 | --- | --- | --- |
 | [S4-01](#s4-01--pr-catalog-query-cache-engine) | PR | Workspace catalog query cache engine (no UI wiring) |
+| [S4-02](#s4-02--pr-catalog-query-registry) | PR | Declarative query loaders, mutation map, patch API |
 
 ---
 
@@ -31,4 +32,27 @@ IDs stay stable (`S4-NN`). Do not renumber when moving steps here.
 
 ```bash
 cd macos && xcodebuild test -scheme Provenencia -destination 'platform=macOS' -only-testing:ProvenenciaTests/WorkspaceSessionTests
+```
+
+---
+
+### S4-02 — PR: Catalog query registry
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S4-01 |
+| **Deliverables** | Done. `CatalogMutation.swift`, `CatalogQueryStalePolicy.swift`, `CatalogQueryRegistry.swift`: declarative loaders for all five initial keys, `sessionFresh` stale policy (reserved `refetchOnRevisit`), and mutation invalidation map. `WorkspaceSession` gains registry init (default `.standard`), `query(_:)`, `setQueryValue(_:value:)`, and `apply(_:)` with **patch** for `.updatedSource` and **bust** for create/delete/CRUD/suggestion mutations. **No** production UI wiring. |
+| **Tests** | Done. `macos/ProvenenciaTests/CatalogQueryRegistryTests.swift`: registry loads every key, cache hit without refetch, `setQueryValue` skips loader, patch vs invalidate paths, field/type CRUD and suggestion mutation maps. |
+| **Dogfood** | App unchanged. |
+| **Out** | Place registry; view migration; Go changes. |
+
+**Landed:** Callers can load via `session.query(key)` without ad hoc store switches. Mutation dispatch follows [cache update strategy](deployment-plan.md#cache-update-strategy): identity/cover sync patches list + workspace; bust-only paths invalidate the correct keys.
+
+**Verify:**
+
+```bash
+cd macos && xcodebuild test -scheme Provenencia -destination 'platform=macOS' \
+  -only-testing:ProvenenciaTests/CatalogQueryRegistryTests \
+  -only-testing:ProvenenciaTests/WorkspaceSessionTests
 ```

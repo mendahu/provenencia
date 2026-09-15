@@ -4,7 +4,7 @@ Workspace session, catalog query cache, and declarative place registry. Authorit
 
 ## Status
 
-**In progress.** Completed steps: [`completed.md`](completed.md). Execute **S4-02 → S4-09** in order unless noted. **S4-10+** are optional Go-side follow-ons after the Mac cache exists.
+**In progress.** Completed steps: [`completed.md`](completed.md). Execute **S4-03 → S4-09** in order unless noted. **S4-10+** are optional Go-side follow-ons after the Mac cache exists.
 
 ## Goal (dogfood bar)
 
@@ -19,7 +19,7 @@ Workspace session, catalog query cache, and declarative place registry. Authorit
 S4-01  Query cache engine (no UI) ✓
   │
   ▼
-S4-02  CatalogQueryRegistry (loaders + invalidation map)
+S4-02  CatalogQueryRegistry (loaders + invalidation map) ✓
   │
   ▼
 S4-03  PlaceRegistry + resolve(location)
@@ -50,6 +50,7 @@ Sources            Source fields      Source types
 ## Checklist
 
 - [x] S4-01 — Catalog query cache engine → [`completed.md`](completed.md)
+- [x] S4-02 — Catalog query registry → [`completed.md`](completed.md)
 
 ---
 
@@ -66,19 +67,6 @@ Cross-view sync (detail edit → list row) and navigation comfort (Back / sectio
 **S4-01 note:** `invalidate(_:)` marks stale and cancels in-flight work; it does **not** start a background refetch. Optional eager warm-up (e.g. `invalidateAndRefetch` or mutation helper calling `ensureQuery` after bust) is allowed when off-screen prefetch is worth the FFI cost — not required for title/thumbnail sync.
 
 **Detail → list (Sources):** On save, **patch** both `sourceWorkspace(sourceId:)` and the matching row inside `sourcesList` (same role as today's `SourcesModel.applyUpdatedSource`). Invalidate is for create source, delete, and other paths where local patch is impractical.
-
----
-
-## S4-02 — PR: CatalogQueryRegistry
-
-| | |
-| --- | --- |
-| **Depends on** | S4-01 |
-| **Title sketch** | Register catalog query loaders for workspace navigation |
-| **Deliverables** | `CatalogQueryRegistry.swift`: declarative registration of loaders for initial keys: `sourcesList`, `sourceTypesList`, `metadataFieldsList`, `sourceWorkspace(sourceId:)`, `typeSuggestions(typeId:)`. Each entry: loader closure, optional stale policy, `CatalogMutation` tags that invalidate it. `WorkspaceSession` loads via registry (not ad hoc switches). Add **`setQueryValue(_:value:)`** (or equivalent typed patch API) for synchronous cache writes per [cache update strategy](#cache-update-strategy). `CatalogMutation` handlers distinguish **patch** paths (e.g. `updatedSource` with full row) from **invalidate** paths (create/delete). Wire registry at session init in tests; production init in S4-04. |
-| **Tests** | Registry resolves loader for every key; invalidation map covers create/delete and other bust-only paths; patch API updates handle without calling loader; field/type CRUD and type suggestion assign/remove mapped correctly. |
-| **Dogfood** | App unchanged (or session only in test target). |
-| **Out** | UI; place matching. |
 
 ---
 
