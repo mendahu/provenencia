@@ -23,7 +23,7 @@ Domain, SQLite, and identity stay in `go test`.
 
 ## File
 
-Copy [`macos/ProvenenciaTests/OnboardingModelTests.swift`](macos/ProvenenciaTests/OnboardingModelTests.swift) or [`InstallPathsTests.swift`](macos/ProvenenciaTests/InstallPathsTests.swift).
+Copy [`macos/ProvenenciaTests/OnboardingModelTests.swift`](../../../macos/ProvenenciaTests/OnboardingModelTests.swift) or [`InstallPathsTests.swift`](../../../macos/ProvenenciaTests/InstallPathsTests.swift).
 
 ```swift
 import Foundation
@@ -48,7 +48,7 @@ struct FooTests {
 
 Add the file to **ProvenenciaTests** only (never the Provenencia app target).
 
-In [`macos/Provenencia.xcodeproj/project.pbxproj`](macos/Provenencia.xcodeproj/project.pbxproj), copy an existing test file’s four objects and give them unused `AA00000000000000000000xx` IDs (do not reuse `B0`–`BE`):
+In [`macos/Provenencia.xcodeproj/project.pbxproj`](../../../macos/Provenencia.xcodeproj/project.pbxproj), copy an existing test file’s four objects and give them unused `AA00000000000000000000xx` IDs (do not reuse `B0`–`BE`):
 
 1. `PBXFileReference` in group `AA00000000000000000000B5` (`path = ProvenenciaTests`)
 2. `PBXBuildFile` in Sources phase `AA00000000000000000000B7`
