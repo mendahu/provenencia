@@ -206,9 +206,19 @@ WorkspaceDestinationHost(location: currentLocation, session: session)
 
 - **Sources list** and **source detail** are two registered places, same section; only the list is reachable from the sidebar (detail via list, omnibar, breadcrumbs, history).
 - The router `if` keys on **`resolve(location)`** / **`currentLocation`**, not `openedSourceID` inside a parent.
-- List and detail share no parent view lifecycle; coupling is **cache invalidation** (page edit patches or busts list query) — same pattern as React Query `invalidateQueries`.
+- List and detail share no parent view lifecycle; coupling is **cache writes** (patch or bust) — not a shared view model.
 
 Vocabulary destinations stay one view (master–detail both visible) but still register as place(s) and use query handles instead of load-on-appear.
+
+### Cache updates — patch vs invalidate vs stale-while-revalidate
+
+| Mechanism | Role |
+| --- | --- |
+| **Patch** (`setQueryValue`) | Mutation sync: detail save writes updated row into `sourcesList` and `sourceWorkspace(id:)` **synchronously**. Title/thumbnail/list-row sync uses this — same as today's `applyUpdatedSource`. |
+| **Invalidate** | Create, delete, or changes too hard to patch: mark key stale; refetch on next `ensureQuery` (navigation `apply` or subscribed view). `invalidate()` alone does not background-fetch. |
+| **Stale-while-revalidate** | **Navigation reads only:** Back, section return, or refetch-after-invalidate when old value still in handle. Show cached frame immediately; async reload updates in place. **Not** the primary path for detail → list edits. |
+
+Optional eager refetch after invalidate (warm cache before user navigates back) is allowed for create/delete; not required for identity/cover saves.
 
 ### Invalidation — declarative, like search projection hooks
 
@@ -221,7 +231,7 @@ enum CatalogMutation {
 }
 ```
 
-Registry entries declare which mutations bust which keys. Handlers call `session.invalidate(.updatedSource(id:))`; the session looks up affected `CatalogQueryKey`s from the registry. Features do not manually track every cache entry.
+Registry entries declare which mutations **bust** which keys. Handlers call `session.invalidate(.createdSource)` (etc.) for bust-only paths; the session looks up affected `CatalogQueryKey`s from the registry. **`updatedSource` with row payload patches** list + workspace keys instead of invalidate-for-refetch. Features do not manually track every cache entry.
 
 ### Navigation commit flow
 

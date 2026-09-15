@@ -53,14 +53,30 @@ Sources            Source fields      Source types
 
 ---
 
+## Cache update strategy
+
+Cross-view sync (detail edit → list row) and navigation comfort (Back / section return) use **different mechanisms**. Do not rely on stale-while-revalidate for mutation sync.
+
+| Mechanism | Use when | Behavior |
+| --- | --- | --- |
+| **Patch** | Identity/cover/title saves; any mutation whose response includes enough data to update cached rows | Write updated values into affected `QueryHandle`s **synchronously** on MainActor — no refetch, no stale row flash |
+| **Invalidate** | Create, delete, or changes too expensive or ambiguous to patch locally | Mark key stale; refetch only when something calls `ensureQuery` (typically `apply(location)` on navigation, or a subscribed view) |
+| **Stale-while-revalidate** | **Navigation reads only** — Back, sidebar return, refetch after invalidate when prior value still in handle | Show cached frame immediately; async reload replaces data in place (`isFetching`) |
+
+**S4-01 note:** `invalidate(_:)` marks stale and cancels in-flight work; it does **not** start a background refetch. Optional eager warm-up (e.g. `invalidateAndRefetch` or mutation helper calling `ensureQuery` after bust) is allowed when off-screen prefetch is worth the FFI cost — not required for title/thumbnail sync.
+
+**Detail → list (Sources):** On save, **patch** both `sourceWorkspace(sourceId:)` and the matching row inside `sourcesList` (same role as today's `SourcesModel.applyUpdatedSource`). Invalidate is for create source, delete, and other paths where local patch is impractical.
+
+---
+
 ## S4-02 — PR: CatalogQueryRegistry
 
 | | |
 | --- | --- |
 | **Depends on** | S4-01 |
 | **Title sketch** | Register catalog query loaders for workspace navigation |
-| **Deliverables** | `CatalogQueryRegistry.swift`: declarative registration of loaders for initial keys: `sourcesList`, `sourceTypesList`, `metadataFieldsList`, `sourceWorkspace(sourceId:)`, `typeSuggestions(typeId:)`. Each entry: loader closure, optional stale policy, `CatalogMutation` tags that invalidate it. `WorkspaceSession` loads via registry (not ad hoc switches). Wire registry at session init in tests; production init in S4-04. |
-| **Tests** | Registry resolves loader for every key; invalidation map covers create/update/delete paths used today (source create, source identity/cover update, field/type CRUD, type suggestion assign/remove). |
+| **Deliverables** | `CatalogQueryRegistry.swift`: declarative registration of loaders for initial keys: `sourcesList`, `sourceTypesList`, `metadataFieldsList`, `sourceWorkspace(sourceId:)`, `typeSuggestions(typeId:)`. Each entry: loader closure, optional stale policy, `CatalogMutation` tags that invalidate it. `WorkspaceSession` loads via registry (not ad hoc switches). Add **`setQueryValue(_:value:)`** (or equivalent typed patch API) for synchronous cache writes per [cache update strategy](#cache-update-strategy). `CatalogMutation` handlers distinguish **patch** paths (e.g. `updatedSource` with full row) from **invalidate** paths (create/delete). Wire registry at session init in tests; production init in S4-04. |
+| **Tests** | Registry resolves loader for every key; invalidation map covers create/delete and other bust-only paths; patch API updates handle without calling loader; field/type CRUD and type suggestion assign/remove mapped correctly. |
 | **Dogfood** | App unchanged (or session only in test target). |
 | **Out** | UI; place matching. |
 
@@ -111,8 +127,8 @@ Sources            Source fields      Source types
 | --- | --- |
 | **Depends on** | S4-05 |
 | **Title sketch** | Migrate Sources to session cache and split list from detail |
-| **Deliverables** | Split `SourcesView` → `SourcesListView` + keep `SourcePageView`. Host routes `sourcesList` → list, `sourceDetail` → page from **`currentLocation.sourceId`** (remove `openedSourceID` view gate). List reads `session.query(.sourcesList)` / `.sourceTypesList`; drop list `.task { load }` and async `reconcileNavigation`. Row click / create still `go(to:)`. Mutations call `session.invalidate` (create source, `applyUpdatedSource` → patch or invalidate list + workspace keys). Delete fat `SourcesView` or reduce to thin re-export. Update/add `SourcesModel` tests → store/query tests. |
-| **Tests** | No list flash (location-driven tree); list data from cache; invalidate on create; navigation tests still pass. |
+| **Deliverables** | Split `SourcesView` → `SourcesListView` + keep `SourcePageView`. Host routes `sourcesList` → list, `sourceDetail` → page from **`currentLocation.sourceId`** (remove `openedSourceID` view gate). List reads `session.query(.sourcesList)` / `.sourceTypesList`; drop list `.task { load }` and async `reconcileNavigation`. Row click / create still `go(to:)`. **Mutations:** create source → invalidate list keys (+ optional eager refetch); identity/cover save → **patch** `sourcesList` row + `sourceWorkspace(id:)` synchronously (replace `applyUpdatedSource`; do not invalidate-for-refetch on title/thumbnail). Delete fat `SourcesView` or reduce to thin re-export. Update/add `SourcesModel` tests → store/query tests. |
+| **Tests** | No list flash (location-driven tree); list data from cache; invalidate on create; **edit title/cover on page patches list row without second list FFI**; navigation tests still pass. |
 | **Dogfood** | Sources list ↔ detail via click, Back, omnibar: correct frame immediately; list loads once per session. |
 | **Out** | Source page workspace cache (S4-06b if split, or same PR below). |
 
@@ -126,8 +142,8 @@ Sources            Source fields      Source types
 | --- | --- |
 | **Depends on** | S4-06 (or combined with it) |
 | **Title sketch** | Load source detail from workspace session cache |
-| **Deliverables** | `SourcePageView` / `SourcePageModel` read `session.query(.sourceWorkspace(id))` instead of `.task { load() }`. Stale cache paints immediately; miss shows skeleton for **target** source id. Remove `.id(opened)` remount forcing full reload when switching sources (identity from location + cache key). Section mutations invalidate workspace key. `refreshCoverFromStore` uses cache refresh not ad hoc bypass. |
-| **Tests** | Back to prior source = cache hit, no second `getSourceWorkspace`; switch A → B → A; edit invalidates. |
+| **Deliverables** | `SourcePageView` / `SourcePageModel` read `session.query(.sourceWorkspace(id))` instead of `.task { load() }`. Stale cache paints immediately; miss shows skeleton for **target** source id. Remove `.id(opened)` remount forcing full reload when switching sources (identity from location + cache key). Saves **patch** workspace + list keys (see [cache update strategy](#cache-update-strategy)); bust-only paths use invalidate. `refreshCoverFromStore` patches cache, not ad hoc bypass. |
+| **Tests** | Back to prior source = cache hit, no second `getSourceWorkspace`; switch A → B → A; edit patches both caches without refetch. |
 | **Dogfood** | Source page Back/Forward feels instant on revisits. |
 
 *If combined with S4-06, omit S4-06b as a separate PR.*
@@ -175,7 +191,7 @@ Sources            Source fields      Source types
 - [ ] Source A → Source B → Back to A: page instant (cache hit).
 - [ ] Sources → Fields → Sources: list not refetched (cache hit).
 - [ ] Omnibar → source → Back → sidebar → Sources: same.
-- [ ] Create source, edit title on page, return to list: row updated.
+- [ ] Create source, edit title on page, return to list: row updated (sync patch on save, not SWR refetch).
 - [ ] Fields/types: history restore, sidebar hop, no cold reload when cache valid.
 - [ ] Relaunch: history restore still works; first paint may load (cold cache) then warm.
 
