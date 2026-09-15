@@ -3999,6 +3999,54 @@
         }
       }
     },
+    "sources.page.dateCalendar.frenchRepublican" : {
+      "comment" : "DateValue calendar picker option: French Republican",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "French Republican"
+          }
+        }
+      }
+    },
+    "sources.page.dateCalendar.gregorian" : {
+      "comment" : "DateValue calendar picker option: Gregorian",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gregorian"
+          }
+        }
+      }
+    },
+    "sources.page.dateCalendar.hebrew" : {
+      "comment" : "DateValue calendar picker option: Hebrew",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hebrew"
+          }
+        }
+      }
+    },
+    "sources.page.dateCalendar.julian" : {
+      "comment" : "DateValue calendar picker option: Julian",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Julian"
+          }
+        }
+      }
+    },
     "sources.page.dateDay" : {
       "comment" : "DateValue day field label",
       "extractionState" : "manual",

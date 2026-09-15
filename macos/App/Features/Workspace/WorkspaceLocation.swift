@@ -1,5 +1,16 @@
 import Foundation
 
+/// Result of reconciling a destination model to a navigation `WorkspaceLocation`.
+/// Views map `.missingDeepId` to `navigation.fallbackToSectionRoot()`.
+enum WorkspaceLocationReconcile: Equatable, Sendable {
+    /// Wrong section, or blocked (e.g. add form open).
+    case ignored
+    /// Model state now matches the location (including section list root).
+    case applied
+    /// Deep id was requested but absent from the catalog after load.
+    case missingDeepId
+}
+
 /// A restoreable workspace place: sidebar destination plus optional deep
 /// location (Source page, vocabulary row, …). Persisted in navigation history.
 /// See `docs/deployment-plan/spike-3/navigation-history.md`.

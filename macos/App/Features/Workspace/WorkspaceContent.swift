@@ -79,8 +79,7 @@ struct WorkspaceContent: View {
                 results: omnibarResults,
                 projectDir: projectDir,
                 onActivate: { hit in
-                    navigation.go(to: hit.location)
-                    omnibarResults.clearAfterNavigate()
+                    omnibarResults.activate(hit, navigation: navigation)
                 }
             )
         }

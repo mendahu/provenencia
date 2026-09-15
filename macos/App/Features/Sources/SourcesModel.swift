@@ -147,7 +147,10 @@ final class SourcesModel {
 
     // MARK: Actions
 
-    func load() async {
+    /// Fetches sources/types and reconciles the open page to `location` in one publish.
+    @discardableResult
+    func load(from location: WorkspaceLocation = .sectionRoot(.sources)) async -> WorkspaceLocationReconcile {
+        guard location.section == .sources else { return .ignored }
         isLoading = true
         loadError = nil
         defer {
@@ -170,6 +173,28 @@ final class SourcesModel {
             firstError = firstError ?? error
         }
         loadError = firstError
+        return reconcile(from: location)
+    }
+
+    /// Reconciles list/page state to `location` when rows are already loaded.
+    @discardableResult
+    func apply(from location: WorkspaceLocation) -> WorkspaceLocationReconcile {
+        guard location.section == .sources else { return .ignored }
+        return reconcile(from: location)
+    }
+
+    @discardableResult
+    private func reconcile(from location: WorkspaceLocation) -> WorkspaceLocationReconcile {
+        if let sourceId = location.sourceId {
+            guard sources.contains(where: { $0.id == sourceId }) else {
+                openedSourceID = nil
+                return .missingDeepId
+            }
+            openedSourceID = sourceId
+            return .applied
+        }
+        openedSourceID = nil
+        return .applied
     }
 
     /// Refreshes the type vocabulary for the Add Source combo. Always hits

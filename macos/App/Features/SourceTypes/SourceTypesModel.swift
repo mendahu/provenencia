@@ -223,7 +223,10 @@ final class SourceTypesModel {
 
     // MARK: Actions
 
-    func load() async {
+    /// Fetches types/fields and reconciles selection to `location` in one publish.
+    @discardableResult
+    func load(from location: WorkspaceLocation = .sectionRoot(.sourceTypes)) async -> WorkspaceLocationReconcile {
+        guard location.section == .sourceTypes else { return .ignored }
         isLoading = true
         loadError = nil
         defer {
@@ -234,9 +237,18 @@ final class SourceTypesModel {
             types = try await store.listSourceTypes(projectDir: projectDir)
             fields = try await store.listMetadataFields(projectDir: projectDir)
             publishCounts()
+            return await reconcile(from: location)
         } catch {
             loadError = error
+            return .ignored
         }
+    }
+
+    /// Reconciles list/detail state to `location` when rows are already loaded.
+    @discardableResult
+    func apply(from location: WorkspaceLocation) async -> WorkspaceLocationReconcile {
+        guard location.section == .sourceTypes else { return .ignored }
+        return await reconcile(from: location)
     }
 
     func sortBy(_ columnID: String) {
@@ -250,7 +262,27 @@ final class SourceTypesModel {
     }
 
     func select(_ id: String) {
-        guard let type = types.first(where: { $0.id == id }) else { return }
+        guard applySelection(id) else { return }
+        Task { await loadSuggestions(for: id) }
+    }
+
+    private func reconcile(from location: WorkspaceLocation) async -> WorkspaceLocationReconcile {
+        if isAdding { return .ignored }
+        if let typeId = location.typeId {
+            guard applySelection(typeId) else {
+                clearHistorySelection()
+                return .missingDeepId
+            }
+            await loadSuggestions(for: typeId)
+            return .applied
+        }
+        clearHistorySelection()
+        return .applied
+    }
+
+    @discardableResult
+    private func applySelection(_ id: String) -> Bool {
+        guard let type = types.first(where: { $0.id == id }) else { return false }
         formError = nil
         suggestionError = nil
         assignPick = ""
@@ -259,7 +291,7 @@ final class SourceTypesModel {
         // same turn tears down `Binding($model.draft)` and traps.
         draft = Draft(label: type.label, description: type.description, iconKey: type.iconKey)
         mode = CatalogOrigin.isPlugin(type.origin) ? .viewing(id: id) : .editing(id: id)
-        Task { await loadSuggestions(for: id) }
+        return true
     }
 
     /// Clears master–detail selection when history restores a section root.

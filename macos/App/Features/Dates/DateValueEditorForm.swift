@@ -253,10 +253,10 @@ struct DateValueEditorForm: View {
                     .font(PVFont.body(size: PVTypeScale.micro))
                     .foregroundStyle(PVColor.textSecondary)
                 Picker("", selection: $draft.calendar) {
-                    Text("Gregorian").tag("gregorian")
-                    Text("Julian").tag("julian")
-                    Text("French Republican").tag("french-republican")
-                    Text("Hebrew").tag("hebrew")
+                    Text(L10n.Sources.dateCalendarGregorian).tag("gregorian")
+                    Text(L10n.Sources.dateCalendarJulian).tag("julian")
+                    Text(L10n.Sources.dateCalendarFrenchRepublican).tag("french-republican")
+                    Text(L10n.Sources.dateCalendarHebrew).tag("hebrew")
                 }
                 .labelsHidden()
                 .frame(width: 220)

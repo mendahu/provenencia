@@ -348,6 +348,65 @@ struct SourceFieldsModelTests {
         #expect(model.deleteError != nil)
     }
 
+    @Test func loadFromLocationAppliesFieldInSameCompletion() async {
+        let model = makeModel(fields: [seededField(id: "1", label: "Author")])
+        let outcome = await model.load(
+            from: WorkspaceLocation(section: .sourceFields, fieldId: "1", title: "Author")
+        )
+        #expect(outcome == .applied)
+        #expect(model.selectedField?.id == "1")
+        #expect(model.hasCompletedInitialLoad)
+    }
+
+    @Test func loadFromLocationMissingDeepId() async {
+        let model = makeModel(fields: [seededField(id: "1")])
+        let outcome = await model.load(
+            from: WorkspaceLocation(section: .sourceFields, fieldId: "gone", title: "Missing")
+        )
+        #expect(outcome == .missingDeepId)
+        #expect(model.selectedField == nil)
+    }
+
+    @Test func applyFromLocationSelectsAfterLoad() async {
+        let model = makeModel(fields: [seededField(id: "1", label: "Author")])
+        await model.load()
+        let outcome = model.apply(
+            from: WorkspaceLocation(section: .sourceFields, fieldId: "1", title: "Author")
+        )
+        #expect(outcome == .applied)
+        #expect(model.selectedField?.id == "1")
+    }
+
+    @Test func applyFromLocationMissingDeepId() async {
+        let model = makeModel(fields: [seededField(id: "1")])
+        await model.load()
+        let outcome = model.apply(
+            from: WorkspaceLocation(section: .sourceFields, fieldId: "gone", title: "Missing")
+        )
+        #expect(outcome == .missingDeepId)
+        #expect(model.selectedField == nil)
+    }
+
+    @Test func applyFromSectionRootClearsSelection() async {
+        let model = makeModel(fields: [seededField(id: "1")])
+        await model.load()
+        model.select("1")
+        let outcome = model.apply(from: .sectionRoot(.sourceFields))
+        #expect(outcome == .applied)
+        #expect(model.selectedField == nil)
+    }
+
+    @Test func applyIgnoredWhileAdding() async {
+        let model = makeModel(fields: [seededField(id: "1")])
+        await model.load()
+        model.openAdd()
+        let outcome = model.apply(
+            from: WorkspaceLocation(section: .sourceFields, fieldId: "1", title: "Author")
+        )
+        #expect(outcome == .ignored)
+        #expect(model.isAdding)
+    }
+
     @Test func createAndDeleteCommitThroughWorkspaceNavigation() async throws {
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("fields-nav-\(UUID().uuidString)", isDirectory: true)

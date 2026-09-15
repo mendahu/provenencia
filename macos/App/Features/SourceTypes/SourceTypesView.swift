@@ -79,29 +79,24 @@ struct SourceTypesView: View {
             deleteDetail(for: type)
         }
         .task {
-            await model.load()
-            applyWorkspaceLocation()
+            await reconcileNavigation(load: true)
         }
         .onChange(of: navigation.currentLocation) { _, _ in
             guard model.hasCompletedInitialLoad else { return }
-            applyWorkspaceLocation()
+            Task { await reconcileNavigation(load: false) }
         }
         .accessibilityIdentifier("sourceTypes")
     }
 
-    private func applyWorkspaceLocation() {
+    private func reconcileNavigation(load: Bool) async {
         let location = navigation.currentLocation
-        guard location.section == .sourceTypes else { return }
-        if model.isAdding { return }
-        if let typeId = location.typeId {
-            if model.types.contains(where: { $0.id == typeId }) {
-                model.select(typeId)
-            } else {
-                // Missing or deleted — only called after first load completes.
-                navigation.fallbackToSectionRoot()
-            }
+        let outcome = if load {
+            await model.load(from: location)
         } else {
-            model.clearHistorySelection()
+            await model.apply(from: location)
+        }
+        if outcome == .missingDeepId {
+            navigation.fallbackToSectionRoot()
         }
     }
 

@@ -150,7 +150,10 @@ final class SourceFieldsModel {
 
     // MARK: Actions
 
-    func load() async {
+    /// Fetches fields and reconciles selection to `location` in one publish.
+    @discardableResult
+    func load(from location: WorkspaceLocation = .sectionRoot(.sourceFields)) async -> WorkspaceLocationReconcile {
+        guard location.section == .sourceFields else { return .ignored }
         isLoading = true
         loadError = nil
         defer {
@@ -160,9 +163,18 @@ final class SourceFieldsModel {
         do {
             fields = try await store.listMetadataFields(projectDir: projectDir)
             publishCounts()
+            return reconcile(from: location)
         } catch {
             loadError = error
+            return .ignored
         }
+    }
+
+    /// Reconciles list/detail state to `location` when rows are already loaded.
+    @discardableResult
+    func apply(from location: WorkspaceLocation) -> WorkspaceLocationReconcile {
+        guard location.section == .sourceFields else { return .ignored }
+        return reconcile(from: location)
     }
 
     func toggleLabelSort() {
@@ -170,13 +182,33 @@ final class SourceFieldsModel {
     }
 
     func select(_ id: String) {
-        guard let field = fields.first(where: { $0.id == id }) else { return }
+        _ = applySelection(id)
+    }
+
+    @discardableResult
+    private func reconcile(from location: WorkspaceLocation) -> WorkspaceLocationReconcile {
+        if isAdding { return .ignored }
+        if let fieldId = location.fieldId {
+            guard applySelection(fieldId) else {
+                mode = .empty
+                return .missingDeepId
+            }
+            return .applied
+        }
+        clearHistorySelection()
+        return .applied
+    }
+
+    @discardableResult
+    private func applySelection(_ id: String) -> Bool {
+        guard let field = fields.first(where: { $0.id == id }) else { return false }
         formError = nil
         // Always keep `draft` non-nil here. The locked (.viewing) panel does
         // not bind it, but going edit/add → view with `draft = nil` in the
         // same turn tears down `Binding($model.draft)` and traps.
         draft = Draft(label: field.label, dataType: field.dataType, description: field.description)
         mode = CatalogOrigin.isPlugin(field.origin) ? .viewing(id: id) : .editing(id: id)
+        return true
     }
 
     /// Clears master–detail selection when history restores a section root.

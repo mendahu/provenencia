@@ -119,6 +119,64 @@ struct OmnibarResultsModelTests {
         )
     }
 
+    @Test func activateCommitsNavigationAndClearsResults() {
+        let hit = CatalogSearchHit(
+            kind: "source",
+            id: "s1",
+            ref: "SRC-AAAAA",
+            title: "Deed",
+            subtitle: "Photograph",
+            matchReason: "title",
+            location: WorkspaceLocation(section: .sources, sourceId: "s1", ref: "SRC-AAAAA", title: "Deed")
+        )
+        let navigation = WorkspaceNavigation()
+        let model = OmnibarResultsModel()
+        model.query = "Deed"
+        model.hits = [hit]
+        model.hasSearched = true
+
+        model.activate(hit, navigation: navigation)
+
+        #expect(navigation.currentLocation.sourceId == "s1")
+        #expect(navigation.selectedSection == .sources)
+        #expect(model.query.isEmpty)
+        #expect(model.hits.isEmpty)
+        #expect(!model.hasSearched)
+    }
+
+    @Test func activateFieldHitFromSearch() async {
+        let store = FakeStore()
+        let projectDir = "/tmp/omnibar-activate.provenencia"
+        store.fieldsByProject[projectDir] = [
+            CatalogMetadataField(
+                id: "f9", key: "author", origin: "provenencia",
+                label: "Author", dataType: "text", description: ""
+            ),
+        ]
+        let model = OmnibarResultsModel()
+        model.query = "Author"
+        model.scheduleSearch(
+            projectDir: projectDir,
+            location: .sectionRoot(.sourceFields),
+            store: store
+        )
+        for _ in 0..<80 {
+            if !model.isLoading, model.hasSearched || model.searchError != nil {
+                break
+            }
+            try? await Task.sleep(nanoseconds: 25_000_000)
+        }
+        let hit = try? #require(model.hits.first { $0.id == "f9" })
+        guard let hit else { return }
+
+        let navigation = WorkspaceNavigation()
+        model.activate(hit, navigation: navigation)
+
+        #expect(navigation.currentLocation.fieldId == "f9")
+        #expect(navigation.selectedSection == .sourceFields)
+        #expect(model.query.isEmpty)
+    }
+
     @Test func closePanelSetsUserDismissedWithoutClearingQuery() {
         let model = OmnibarResultsModel()
         model.query = "Ilminster"
