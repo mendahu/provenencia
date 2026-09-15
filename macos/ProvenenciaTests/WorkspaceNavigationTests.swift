@@ -205,4 +205,54 @@ struct WorkspaceNavigationTests {
         #expect(navigation.forwardJumpItems().isEmpty)
         #expect(navigation.backJumpItems().map(\.index) == [0])
     }
+
+    @Test func corruptJSONFallsBackAndReportsLoadIssue() throws {
+        let url = try tempNavigationFile()
+        try Data("{not-json".utf8).write(to: url)
+
+        let (navigation, _) = try attachedNavigation(fileURL: url)
+        #expect(navigation.currentLocation == .sectionRoot(.sources))
+        #expect(!navigation.canGoBack)
+        #expect(navigation.lastHistoryIssue == .loadFailed)
+
+        navigation.acknowledgeHistoryIssue()
+        #expect(navigation.lastHistoryIssue == nil)
+    }
+
+    @Test func unwritablePathReportsPersistIssue() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("nav-history-ro-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o555],
+            ofItemAtPath: dir.path
+        )
+        defer {
+            try? FileManager.default.setAttributes(
+                [.posixPermissions: 0o755],
+                ofItemAtPath: dir.path
+            )
+            try? FileManager.default.removeItem(at: dir)
+        }
+
+        let url = dir.appendingPathComponent("history.json", isDirectory: false)
+        let navigation = WorkspaceNavigation()
+        navigation.attachProject(uuid: projectUuid, fileURL: url)
+        #expect(navigation.currentLocation == .sectionRoot(.sources))
+        #expect(navigation.lastHistoryIssue == .persistFailed)
+
+        navigation.acknowledgeHistoryIssue()
+        #expect(navigation.lastHistoryIssue == nil)
+
+        // In-memory navigation still works; further writes keep reporting.
+        navigation.go(to: .sectionRoot(.sourceFields))
+        #expect(navigation.currentLocation == .sectionRoot(.sourceFields))
+        #expect(navigation.lastHistoryIssue == .persistFailed)
+    }
+
+    @Test func missingHistoryFileDoesNotReportLoadIssue() throws {
+        let (navigation, _) = try attachedNavigation()
+        #expect(navigation.lastHistoryIssue == nil)
+        #expect(navigation.currentLocation == .sectionRoot(.sources))
+    }
 }

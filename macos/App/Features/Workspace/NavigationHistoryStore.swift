@@ -12,9 +12,19 @@ struct NavigationHistoryDocument: Codable, Equatable, Sendable {
     static let maxEntries = 100
 }
 
+/// Load/persist problems for navigation history. Workspace chrome surfaces these
+/// as a non-blocking toast; navigation itself keeps working from an in-memory stack.
+enum NavigationHistoryIssue: Equatable, Sendable {
+    /// File existed but was unreadable, undecodable, or failed validation.
+    case loadFailed
+    /// Could not create directories or write the history JSON.
+    case persistFailed
+}
+
 @MainActor
 final class NavigationHistoryStore {
     private(set) var document: NavigationHistoryDocument
+    private(set) var lastIssue: NavigationHistoryIssue?
     private let fileURL: URL
     private let fileManager: FileManager
 
@@ -52,24 +62,24 @@ final class NavigationHistoryStore {
     ) {
         self.fileURL = fileURL
         self.fileManager = fileManager
-        if let loaded = Self.load(from: fileURL, fileManager: fileManager),
-           loaded.projectUuid == projectUuid || loaded.projectUuid.isEmpty,
-           !loaded.entries.isEmpty,
-           loaded.entries.indices.contains(loaded.index)
-        {
+        switch Self.loadOutcome(from: fileURL, fileManager: fileManager) {
+        case .missing:
+            self.document = Self.seedDocument(projectUuid: projectUuid, seed: seed)
+            persist()
+        case .decoded(let loaded) where Self.isUsable(loaded, projectUuid: projectUuid):
             var doc = loaded
             doc.projectUuid = projectUuid
             doc.v = NavigationHistoryDocument.formatVersion
             self.document = doc
-        } else {
-            self.document = NavigationHistoryDocument(
-                v: NavigationHistoryDocument.formatVersion,
-                projectUuid: projectUuid,
-                index: 0,
-                entries: [seed]
-            )
+        case .decoded, .unreadable:
+            lastIssue = .loadFailed
+            self.document = Self.seedDocument(projectUuid: projectUuid, seed: seed)
             persist()
         }
+    }
+
+    func clearLastIssue() {
+        lastIssue = nil
     }
 
     /// Push a committed navigation (truncates forward). Coalesces when identical to current.
@@ -142,15 +152,40 @@ final class NavigationHistoryStore {
                 try fileManager.moveItem(at: temp, to: fileURL)
             }
         } catch {
-            #if DEBUG
-            assertionFailure("navigation history persist failed: \(error)")
-            #endif
+            lastIssue = .persistFailed
         }
     }
 
-    private static func load(from url: URL, fileManager: FileManager) -> NavigationHistoryDocument? {
-        guard fileManager.fileExists(atPath: url.path) else { return nil }
-        guard let data = try? Data(contentsOf: url) else { return nil }
-        return try? JSONDecoder().decode(NavigationHistoryDocument.self, from: data)
+    private static func seedDocument(
+        projectUuid: String,
+        seed: WorkspaceLocation
+    ) -> NavigationHistoryDocument {
+        NavigationHistoryDocument(
+            v: NavigationHistoryDocument.formatVersion,
+            projectUuid: projectUuid,
+            index: 0,
+            entries: [seed]
+        )
+    }
+
+    private static func isUsable(_ doc: NavigationHistoryDocument, projectUuid: String) -> Bool {
+        (doc.projectUuid == projectUuid || doc.projectUuid.isEmpty)
+            && !doc.entries.isEmpty
+            && doc.entries.indices.contains(doc.index)
+    }
+
+    private enum LoadOutcome {
+        case missing
+        case decoded(NavigationHistoryDocument)
+        case unreadable
+    }
+
+    private static func loadOutcome(from url: URL, fileManager: FileManager) -> LoadOutcome {
+        guard fileManager.fileExists(atPath: url.path) else { return .missing }
+        guard let data = try? Data(contentsOf: url) else { return .unreadable }
+        guard let doc = try? JSONDecoder().decode(NavigationHistoryDocument.self, from: data) else {
+            return .unreadable
+        }
+        return .decoded(doc)
     }
 }

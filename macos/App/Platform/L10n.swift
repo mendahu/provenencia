@@ -743,6 +743,30 @@ enum L10n {
             comment: "Toast title when GetWorkspaceNavCounts fails at workspace appear"
         )
 
+        static let navigationHistoryLoadFailedTitle = LocalizedStringResource(
+            "workspace.navigation.historyLoadFailedTitle",
+            defaultValue: "Couldn’t restore navigation history",
+            comment: "Toast title when navigation history JSON is missing or corrupt on project open"
+        )
+
+        static let navigationHistoryLoadFailedBody = LocalizedStringResource(
+            "workspace.navigation.historyLoadFailedBody",
+            defaultValue: "Starting from Sources. Back and Forward may not match your last session.",
+            comment: "Toast body when navigation history could not be loaded; workspace still opens"
+        )
+
+        static let navigationHistoryPersistFailedTitle = LocalizedStringResource(
+            "workspace.navigation.historyPersistFailedTitle",
+            defaultValue: "Couldn’t save navigation history",
+            comment: "Toast title when writing navigation history JSON fails"
+        )
+
+        static let navigationHistoryPersistFailedBody = LocalizedStringResource(
+            "workspace.navigation.historyPersistFailedBody",
+            defaultValue: "Back and Forward still work now, but may not survive quitting the app.",
+            comment: "Toast body when navigation history could not be persisted"
+        )
+
         static let collapseSidebar = LocalizedStringResource(
             "workspace.sidebar.collapse",
             defaultValue: "Collapse labels",

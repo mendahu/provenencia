@@ -6231,6 +6231,54 @@
         }
       }
     },
+    "workspace.navigation.historyLoadFailedBody" : {
+      "comment" : "Toast body when navigation history could not be loaded; workspace still opens",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starting from Sources. Back and Forward may not match your last session."
+          }
+        }
+      }
+    },
+    "workspace.navigation.historyLoadFailedTitle" : {
+      "comment" : "Toast title when navigation history JSON is missing or corrupt on project open",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t restore navigation history"
+          }
+        }
+      }
+    },
+    "workspace.navigation.historyPersistFailedBody" : {
+      "comment" : "Toast body when navigation history could not be persisted",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back and Forward still work now, but may not survive quitting the app."
+          }
+        }
+      }
+    },
+    "workspace.navigation.historyPersistFailedTitle" : {
+      "comment" : "Toast title when writing navigation history JSON fails",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t save navigation history"
+          }
+        }
+      }
+    },
     "workspace.navigation.focusOmnibar" : {
       "comment" : "Menu / keyboard command to focus the workspace omnibar field (⌘K)",
       "extractionState" : "manual",

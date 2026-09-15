@@ -15,6 +15,8 @@ final class WorkspaceNavigation {
     /// Stored (not computed) so `@Observable` publishes when the stack index moves.
     private(set) var canGoBack = false
     private(set) var canGoForward = false
+    /// Latest load/persist failure for chrome toast; cleared via `acknowledgeHistoryIssue()`.
+    private(set) var lastHistoryIssue: NavigationHistoryIssue?
 
     private var history: NavigationHistoryStore?
     private var projectUuid: String = ""
@@ -41,9 +43,7 @@ final class WorkspaceNavigation {
             do {
                 url = try InstallPaths.navigationFile(projectUuid: trimmed, fileManager: fileManager)
             } catch {
-                #if DEBUG
-                assertionFailure("navigation file URL failed: \(error)")
-                #endif
+                lastHistoryIssue = .persistFailed
                 return
             }
         }
@@ -55,6 +55,13 @@ final class WorkspaceNavigation {
         )
         history = store
         apply(store.current)
+        refreshHistoryIssue()
+    }
+
+    /// Clears a surfaced history issue so it is not shown again until a new failure.
+    func acknowledgeHistoryIssue() {
+        history?.clearLastIssue()
+        lastHistoryIssue = nil
     }
 
     /// Committed navigation. Coalesces identical locations; truncates forward.
@@ -64,21 +71,25 @@ final class WorkspaceNavigation {
             return
         }
         apply(history.go(to: location))
+        refreshHistoryIssue()
     }
 
     func goBack() {
         guard let history, let location = history.goBack() else { return }
         apply(location)
+        refreshHistoryIssue()
     }
 
     func goForward() {
         guard let history, let location = history.goForward() else { return }
         apply(location)
+        refreshHistoryIssue()
     }
 
     func go(toIndex index: Int) {
         guard let history, let location = history.go(toIndex: index) else { return }
         apply(location)
+        refreshHistoryIssue()
     }
 
     /// Nearest history entries before current (nearest first) for the Back jump menu.
@@ -100,6 +111,7 @@ final class WorkspaceNavigation {
             return
         }
         apply(history.replaceCurrent(with: root))
+        refreshHistoryIssue()
     }
 
     private func apply(_ location: WorkspaceLocation) {
@@ -107,5 +119,11 @@ final class WorkspaceNavigation {
         selectedSection = location.section
         canGoBack = history?.canGoBack ?? false
         canGoForward = history?.canGoForward ?? false
+    }
+
+    private func refreshHistoryIssue() {
+        if let issue = history?.lastIssue {
+            lastHistoryIssue = issue
+        }
     }
 }
