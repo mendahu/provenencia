@@ -210,6 +210,139 @@ struct WorkspaceSessionTests {
         #expect(handle.value == nil)
     }
 
+    private func seedStore(_ store: FakeStore) {
+        store.sourcesByProject[projectDir] = [
+            CatalogSource(id: "s1", ref: "SRC-1", sourceTypeID: "t1", title: "Alpha", description: ""),
+        ]
+        store.sourceTypesByProject[projectDir] = [
+            CatalogSourceType(id: "t1", key: "book", origin: "user", label: "Book", description: ""),
+        ]
+        store.fieldsByProject[projectDir] = [
+            CatalogMetadataField(
+                id: "f1", key: "author", origin: "user", label: "Author", dataType: "text", description: ""
+            ),
+        ]
+        store.suggestionsByType["t1"] = [
+            CatalogTypeSuggestion(
+                field: CatalogMetadataField(
+                    id: "f1", key: "author", origin: "user", label: "Author", dataType: "text", description: ""
+                ),
+                sortOrder: 0
+            ),
+        ]
+    }
+
+    @Test func applyLocationSourcesRoot() async {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        let project = session.projectKey
+
+        session.apply(location: .sectionRoot(.sources))
+
+        let sourcesHandle: QueryHandle<[CatalogSource]>? = session.queryHandle(
+            CatalogQueryKey.sourcesList(project: project)
+        )
+        let typesHandle: QueryHandle<[CatalogSourceType]>? = session.queryHandle(
+            CatalogQueryKey.sourceTypesList(project: project)
+        )
+        let fieldsHandle: QueryHandle<[CatalogMetadataField]>? = session.queryHandle(
+            CatalogQueryKey.metadataFieldsList(project: project)
+        )
+        #expect(sourcesHandle != nil)
+        #expect(typesHandle != nil)
+        #expect(fieldsHandle == nil)
+
+        await waitForFetchComplete(sourcesHandle!)
+        await waitForFetchComplete(typesHandle!)
+        #expect(sourcesHandle?.value?.first?.title == "Alpha")
+        #expect(typesHandle?.value?.first?.label == "Book")
+    }
+
+    @Test func applyLocationSourceDetail() async {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        let project = session.projectKey
+
+        session.apply(location: WorkspaceLocation(section: .sources, sourceId: "s1", title: "Alpha"))
+
+        let listHandle: QueryHandle<[CatalogSource]>? = session.queryHandle(
+            CatalogQueryKey.sourcesList(project: project)
+        )
+        #expect(listHandle == nil)
+        let workspaceHandle: QueryHandle<CatalogSourceWorkspace>? = session.queryHandle(
+            CatalogQueryKey.sourceWorkspace(project: project, sourceId: "s1")
+        )
+        #expect(workspaceHandle != nil)
+        await waitForFetchComplete(workspaceHandle!)
+        #expect(workspaceHandle?.value?.source.id == "s1")
+    }
+
+    @Test func applyLocationSourceTypesWithSelection() async {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        let project = session.projectKey
+
+        session.apply(location: WorkspaceLocation(section: .sourceTypes, typeId: "t1", title: "Book"))
+
+        let typesHandle: QueryHandle<[CatalogSourceType]>? = session.queryHandle(
+            CatalogQueryKey.sourceTypesList(project: project)
+        )
+        let fieldsHandle: QueryHandle<[CatalogMetadataField]>? = session.queryHandle(
+            CatalogQueryKey.metadataFieldsList(project: project)
+        )
+        let suggestionsHandle: QueryHandle<[CatalogTypeSuggestion]>? = session.queryHandle(
+            CatalogQueryKey.typeSuggestions(project: project, typeId: "t1")
+        )
+        #expect(typesHandle != nil)
+        #expect(fieldsHandle != nil)
+        #expect(suggestionsHandle != nil)
+
+        await waitForFetchComplete(typesHandle!)
+        await waitForFetchComplete(fieldsHandle!)
+        await waitForFetchComplete(suggestionsHandle!)
+        #expect(suggestionsHandle?.value?.count == 1)
+    }
+
+    @Test func applyLocationIsNonBlocking() async {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        let project = session.projectKey
+
+        session.apply(location: .sectionRoot(.sources))
+        let handle: QueryHandle<[CatalogSource]>? = session.queryHandle(
+            CatalogQueryKey.sourcesList(project: project)
+        )
+        #expect(handle?.status == .loading)
+
+        await waitForFetchComplete(handle!)
+        #expect(handle?.status == .ready)
+    }
+
+    @Test func applyLocationCacheHit() async {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        let location = WorkspaceLocation(section: .sources, sourceId: "s1")
+
+        session.apply(location: location)
+        let workspaceHandle: QueryHandle<CatalogSourceWorkspace>? = session.queryHandle(
+            CatalogQueryKey.sourceWorkspace(project: session.projectKey, sourceId: "s1")
+        )
+        await waitForFetchComplete(workspaceHandle!)
+
+        store.sourcesByProject[projectDir] = [
+            CatalogSource(id: "s2", ref: "SRC-2", sourceTypeID: "", title: "Beta", description: ""),
+        ]
+
+        session.apply(location: location)
+        await Task.yield()
+        #expect(workspaceHandle?.value?.source.id == "s1")
+    }
+
     @Test func loadsSourcesListViaFakeStore() async throws {
         let store = FakeStore()
         store.sourcesByProject[projectDir] = [

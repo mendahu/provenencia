@@ -17,6 +17,8 @@ final class WorkspaceNavigation {
     private(set) var canGoForward = false
     /// Latest load/persist failure for chrome toast; cleared via `acknowledgeHistoryIssue()`.
     private(set) var lastHistoryIssue: NavigationHistoryIssue?
+    /// Fired synchronously whenever a location is committed (including history restore).
+    var onLocationCommit: ((WorkspaceLocation) -> Void)?
 
     private var history: NavigationHistoryStore?
     private var projectUuid: String = ""
@@ -119,6 +121,7 @@ final class WorkspaceNavigation {
         selectedSection = location.section
         canGoBack = history?.canGoBack ?? false
         canGoForward = history?.canGoForward ?? false
+        onLocationCommit?(location)
     }
 
     private func refreshHistoryIssue() {

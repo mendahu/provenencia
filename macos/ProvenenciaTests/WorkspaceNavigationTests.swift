@@ -255,4 +255,48 @@ struct WorkspaceNavigationTests {
         #expect(navigation.lastHistoryIssue == nil)
         #expect(navigation.currentLocation == .sectionRoot(.sources))
     }
+
+    @Test func locationCommitOnGo() {
+        let navigation = WorkspaceNavigation()
+        var committed: [WorkspaceLocation] = []
+        navigation.onLocationCommit = { committed.append($0) }
+
+        navigation.go(to: .sectionRoot(.sourceFields))
+        #expect(committed == [.sectionRoot(.sourceFields)])
+    }
+
+    @Test func locationCommitOnAttachProjectRestore() throws {
+        let (navigation, url) = try attachedNavigation()
+        navigation.go(to: WorkspaceLocation(section: .sources, sourceId: "src-1", title: "Deed"))
+        navigation.go(to: WorkspaceLocation(section: .sourceTypes, typeId: "typ-1", title: "Book"))
+        navigation.goBack()
+
+        var committed: [WorkspaceLocation] = []
+        let reloaded = WorkspaceNavigation()
+        reloaded.onLocationCommit = { committed.append($0) }
+        reloaded.attachProject(uuid: projectUuid, fileURL: url)
+
+        #expect(committed.count == 1)
+        #expect(committed[0].sourceId == "src-1")
+    }
+
+    @Test func locationCommitOnBackForward() throws {
+        let (navigation, _) = try attachedNavigation()
+        var committed: [WorkspaceLocation] = []
+        navigation.onLocationCommit = { committed.append($0) }
+
+        navigation.go(to: .sectionRoot(.sourceFields))
+        navigation.go(to: .sectionRoot(.sourceTypes))
+        committed.removeAll()
+
+        navigation.goBack()
+        #expect(committed.last == .sectionRoot(.sourceFields))
+
+        navigation.goForward()
+        #expect(committed.last == .sectionRoot(.sourceTypes))
+
+        committed.removeAll()
+        navigation.go(toIndex: 0)
+        #expect(committed.last == .sectionRoot(.sources))
+    }
 }

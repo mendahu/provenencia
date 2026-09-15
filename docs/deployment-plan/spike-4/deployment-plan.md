@@ -4,7 +4,7 @@ Workspace session, catalog query cache, and declarative place registry. Authorit
 
 ## Status
 
-**In progress.** Completed steps: [`completed.md`](completed.md). Execute **S4-04 → S4-09** in order unless noted. **S4-10+** are optional Go-side follow-ons after the Mac cache exists.
+**In progress.** Completed steps: [`completed.md`](completed.md). Execute **S4-05 → S4-09** in order unless noted. **S4-10+** are optional Go-side follow-ons after the Mac cache exists.
 
 ## Goal (dogfood bar)
 
@@ -25,7 +25,7 @@ S4-02  CatalogQueryRegistry (loaders + invalidation map) ✓
 S4-03  PlaceRegistry + resolve(location) ✓
   │
   ▼
-S4-04  Wire session + sync apply(location) on navigation
+S4-04  Wire session + sync apply(location) on navigation ✓
   │
   ▼
 S4-05  WorkspaceDestinationHost (shim → old views)
@@ -52,6 +52,7 @@ Sources            Source fields      Source types
 - [x] S4-01 — Catalog query cache engine → [`completed.md`](completed.md)
 - [x] S4-02 — Catalog query registry → [`completed.md`](completed.md)
 - [x] S4-03 — Place registry → [`completed.md`](completed.md)
+- [x] S4-04 — Wire workspace session → [`completed.md`](completed.md)
 
 ---
 
@@ -71,26 +72,13 @@ Cross-view sync (detail edit → list row) and navigation comfort (Back / sectio
 
 ---
 
-## S4-04 — PR: Wire WorkspaceSession and sync apply(location)
-
-| | |
-| --- | --- |
-| **Depends on** | S4-03 |
-| **Title sketch** | Wire workspace session and sync navigation apply |
-| **Deliverables** | `WorkspaceView` owns `@State WorkspaceSession` (projectDir + store); inject `.environment(session)`. `session.apply(location)` resolves place via registry and ensures query keys are loading (does not block UI). Call `apply` synchronously on MainActor when navigation commits: wrap or extend `WorkspaceNavigation` apply path, and on initial `attachProject` restore. Destinations **unchanged** still use old `.task` loads (intentional overlap brief — cache warms ahead of migration). |
-| **Tests** | apply triggers correct query keys for sample locations; restore after attachProject; no regression in `WorkspaceNavigationTests`. |
-| **Dogfood** | App behaves as today; optional debug logging shows cache warming. |
-| **Out** | Removing old load paths; view routing. |
-
----
-
 ## S4-05 — PR: WorkspaceDestinationHost
 
 | | |
 | --- | --- |
 | **Depends on** | S4-04 |
 | **Title sketch** | Add workspace destination host for place-based routing |
-| **Deliverables** | `WorkspaceDestinationHost.swift`: reads `navigation.currentLocation`, `registry.resolve`, switches on presentation id. **Shim phase:** maps each presentation id to existing views (`SourcesView`, `SourceFieldsView`, `SourceTypesView`, Files placeholder). Replace `WorkspaceContent` inner `switch section` with host. Sidebar + toolbar unchanged. |
+| **Deliverables** | `WorkspaceDestinationHost.swift`: reads `navigation.currentLocation`, `registry.resolve`, switches on presentation id. **Shim phase:** maps each presentation id to existing views (`SourcesView`, `SourceFieldsView`, `SourceTypesView`). Replace `WorkspaceContent` inner `switch section` with host. Sidebar + toolbar unchanged. |
 | **Tests** | Host mounts correct view type per location (list vs detail not split yet — still `SourcesView` for both source places). |
 | **Dogfood** | No user-visible change; all destinations still work. |
 | **Out** | Sources split; query-backed views. |

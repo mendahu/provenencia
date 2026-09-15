@@ -18,6 +18,7 @@ struct WorkspaceView: View {
     let userID: String
     @State private var workspace: WorkspaceModel
     @State private var navigation: WorkspaceNavigation
+    @State private var session: WorkspaceSession
     @State private var catalogCounts: CatalogCounts
     @State private var countsToast: VocabularyToast?
     @Environment(SignOutCoordinator.self) private var signOutCoordinator
@@ -28,7 +29,16 @@ struct WorkspaceView: View {
         self.projectDir = projectDir
         self.userID = userID
         _workspace = State(initialValue: WorkspaceModel())
-        _navigation = State(initialValue: WorkspaceNavigation())
+        let session = WorkspaceSession(
+            projectKey: ProjectKey(projectDir: projectDir),
+            store: model.store
+        )
+        let navigation = WorkspaceNavigation()
+        navigation.onLocationCommit = { location in
+            session.apply(location: location)
+        }
+        _session = State(initialValue: session)
+        _navigation = State(initialValue: navigation)
         _catalogCounts = State(initialValue: CatalogCounts(projectDir: projectDir, store: model.store))
     }
 
@@ -46,6 +56,7 @@ struct WorkspaceView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .environment(catalogCounts)
         .environment(navigation)
+        .environment(session)
         .vocabularyToastOverlay($countsToast, identifier: "workspace.counts.toast")
         .task {
             await catalogCounts.refreshAll()
