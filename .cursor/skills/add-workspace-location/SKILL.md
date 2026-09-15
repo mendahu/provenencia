@@ -13,15 +13,15 @@ description: >-
 # Add a workspace location (navigation history)
 
 Every **committed place** the researcher can return to must be a
-[`WorkspaceLocation`](macos/App/Features/Workspace/WorkspaceLocation.swift)
+[`WorkspaceLocation`](../../../macos/App/Features/Workspace/WorkspaceLocation.swift)
 pushed through
-[`WorkspaceNavigation.go(to:)`](macos/App/Features/Workspace/WorkspaceNavigation.swift).
+[`WorkspaceNavigation.go(to:)`](../../../macos/App/Features/Workspace/WorkspaceNavigation.swift).
 `WorkspaceNavigation` is owned by `WorkspaceView` and injected with
 `.environment(navigation)`. Do **not** use SwiftUI `NavigationStack` /
 `NavigationPath`. Do **not** leave parallel “where we are” state that bypasses
 the stack. Sidebar collapse stays on `WorkspaceModel` (chrome only).
 
-Authoritative behavior: [`docs/deployment-plan/spike-3/navigation-history.md`](docs/deployment-plan/spike-3/navigation-history.md).
+Authoritative behavior: [`docs/deployment-plan/spike-3/navigation-history.md`](../../../docs/deployment-plan/spike-3/navigation-history.md).
 
 ## When this applies
 
@@ -98,7 +98,7 @@ In the destination view (pattern: `SourcesView`, `SourceFieldsView`):
 
 ### 5. Tests
 
-Extend [`WorkspaceNavigationTests`](macos/ProvenenciaTests/WorkspaceNavigationTests.swift)
+Extend [`WorkspaceNavigationTests`](../../../macos/ProvenenciaTests/WorkspaceNavigationTests.swift)
 ([`add-swift-test`](../add-swift-test/SKILL.md)):
 
 - Push the new location; Back/Forward restore the deep id.

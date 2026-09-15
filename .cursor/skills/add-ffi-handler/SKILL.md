@@ -8,11 +8,11 @@ description: >-
 
 # Add an FFI handler
 
-[`api/ffi/dispatch.go`](api/ffi/dispatch.go) is **only** a method switch. Unmarshal, domain calls, and protobuf replies live in **`api/ffi/handlers/`**. `handlers` must not import `ffi` (cycle).
+[`api/ffi/dispatch.go`](../../../api/ffi/dispatch.go) is **only** a method switch. Unmarshal, domain calls, and protobuf replies live in **`api/ffi/handlers/`**. `handlers` must not import `ffi` (cycle).
 
 ## Layout
 
-1. Add the enum value and messages in [`api/proto/engine.proto`](api/proto/engine.proto). Run `./scripts/generate-proto.sh` and commit generated Go + Swift.
+1. Add the enum value and messages in [`api/proto/engine.proto`](../../../api/proto/engine.proto). Run `./scripts/generate-proto.sh` and commit generated Go + Swift.
 2. Add `Method…` next to the other constants in `dispatch.go` and one `case` that calls `handlers.<Name>`.
 3. Implement `func <Name>(in []byte) ([]byte, error)` in `api/ffi/handlers/<name>.go` (copy ping/identity/onboarding).
 4. Test in `api/ffi/handlers/<name>_test.go` with **`runRPC`** from `harness_test.go`. Do **not** put a large `run func(*testing.T)` in the table.
@@ -53,7 +53,7 @@ User-visible handler failures must return `core/apperr` coded errors (sentinels 
 
 Any handler that reads or mutates `provenencia.sqlite` must use **`withProjectCatalog`** (→ `catalogsession.Do`). Do **not** open-per-call with `database.Open` / `onboarding.OpenCatalog` / `defer Close`.
 
-Follow `.cursor/skills/use-catalog-session/SKILL.md`. Identity-only RPCs (install identity, active project file) do not need a catalog session.
+Follow [`use-catalog-session`](../use-catalog-session/SKILL.md). Identity-only RPCs (install identity, active project file) do not need a catalog session.
 
 ## Do not
 

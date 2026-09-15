@@ -10,9 +10,9 @@ description: >-
 
 # Add or update a localized string
 
-Mac UI copy is **never** hard-coded at call sites. Typed keys live in [`macos/App/Platform/L10n.swift`](macos/App/Platform/L10n.swift). English + future locales live in [`macos/App/Resources/Localizable.xcstrings`](macos/App/Resources/Localizable.xcstrings) (UI) or [`InfoPlist.xcstrings`](macos/App/Resources/InfoPlist.xcstrings) (Info.plist keys).
+Mac UI copy is **never** hard-coded at call sites. Typed keys live in [`macos/App/Platform/L10n.swift`](../../../macos/App/Platform/L10n.swift). English + future locales live in [`macos/App/Resources/Localizable.xcstrings`](../../../macos/App/Resources/Localizable.xcstrings) (UI) or [`InfoPlist.xcstrings`](../../../macos/App/Resources/InfoPlist.xcstrings) (Info.plist keys).
 
-Authoritative notes: [`docs/macos-client-patterns.md`](docs/macos-client-patterns.md) § Localization.
+Authoritative notes: [`docs/macos-client-patterns.md`](../../../docs/macos-client-patterns.md) § Localization.
 
 ## Checklist (keep in sync)
 

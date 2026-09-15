@@ -9,11 +9,11 @@ description: >-
 
 # Add a catalog `ref`
 
-Short user-facing ids are **`{PREFIX}-{TOKEN}`** (and **`{PREFIX}-C-{TOKEN}`** for Interpretation Nodes). Machine identity stays UUIDv7. Authoritative product notes: [`docs/catalog-refs.md`](../../docs/catalog-refs.md). Philosophy: [`docs/data-model-source-interpretation-conclusion.md`](../../docs/data-model-source-interpretation-conclusion.md) §2.
+Short user-facing ids are **`{PREFIX}-{TOKEN}`** (and **`{PREFIX}-C-{TOKEN}`** for Interpretation Nodes). Machine identity stays UUIDv7. Authoritative product notes: [`docs/catalog-refs.md`](../../../docs/catalog-refs.md). Philosophy: [`docs/data-model-source-interpretation-conclusion.md`](../../../docs/data-model-source-interpretation-conclusion.md) §2.
 
 ## Use `core/ref`
 
-Package: [`core/ref`](../../core/ref/ref.go).
+Package: [`core/ref`](../../../core/ref/ref.go).
 
 ```go
 import "github.com/mendahu/provenencia/core/ref"
@@ -58,7 +58,7 @@ Uniqueness: unique **within the project across all ref-bearing tables** (app rul
 2. **Query package** — follow [add-catalog-query](../add-catalog-query/SKILL.md): Upsert takes/validates `ref`; mint in the use-case or package helper with the correct prefix.
 3. **Backfill** — if opening old catalogs, `EnsureRefs`-style mint for NULL/empty (see `users.EnsureRefs`).
 4. **FFI / Swift** — expose `ref` on list/get protos; UI shows `Name (REF)` when names can collide ([add-localized-string](../add-localized-string/SKILL.md)).
-5. **Docs** — if adding a **new** prefix, update [`docs/catalog-refs.md`](../../docs/catalog-refs.md) and §2 of the data-model philosophy doc.
+5. **Docs** — if adding a **new** prefix, update [`docs/catalog-refs.md`](../../../docs/catalog-refs.md) and §2 of the data-model philosophy doc.
 6. **Tests** — table-driven: mint shape (`ref.Valid`), upsert rejects bad ref, create/open round-trip preserves ref.
 
 ```bash
