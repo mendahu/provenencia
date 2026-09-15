@@ -1,6 +1,6 @@
 # Navigation history (back / forward)
 
-**Status:** pulled into [Spike 3](README.md) — requirements. PR sequence: [`deployment-plan.md`](deployment-plan.md) (S3-03…S3-06).
+**Status:** archived — Spike 3 complete. Requirements for navigation history and persistence. PR sequence: [`deployment-plan.md`](deployment-plan.md) (S3-03…S3-06).
 
 Visual chrome: Claude Design **App Layout** board ([`design/README.md`](design/README.md)). This note owns **behavior**; the board is the visual source of truth for placement and menu layout.
 
@@ -114,12 +114,12 @@ Today `project` is a singleton bookkeeping row (`id = 1`, label + timestamps) wi
 
 | Piece | Requirement |
 | --- | --- |
-| **Column** | `project.uuid` — `BLOB` UUIDv7, **NOT NULL**, **UNIQUE** (after backfill). Same machine-id pattern as `users.id` ([`catalog-refs.md`](../../catalog-refs.md) §1). No short `PRJ-…` ref required for this spike. |
+| **Column** | `project.uuid` — `BLOB` UUIDv7, **NOT NULL**, **UNIQUE** (after backfill). Same machine-id pattern as `users.id` ([`catalog-refs.md`](../../../catalog-refs.md) §1). No short `PRJ-…` ref required for this spike. |
 | **Mint** | On **Create**, mint UUID when inserting the singleton row. |
 | **Backfill** | On **Open** of an older catalog missing `uuid`, mint once and persist (heal path — same spirit as other Open-time backfills). |
 | **Immutability** | Never rewrite `uuid` after mint. Copying the whole `.provenencia` folder copies the UUID (two working copies on one Mac share one history file — acceptable; do not mint a new id on copy). |
 | **FFI / Swift** | Expose on `ProjectInfo` (or equivalent open payload) so the Mac client can open `navigation/{uuid}.json` without a second round trip. |
-| **Migration** | New `core/database/migrations/NNNNNN.sql` via [`add-catalog-migration`](../../../.cursor/skills/add-catalog-migration/SKILL.md); domain helpers in `core/database/project`. |
+| **Migration** | New `core/database/migrations/NNNNNN.sql` via [`add-catalog-migration`](../../../../.cursor/skills/add-catalog-migration/SKILL.md); domain helpers in `core/database/project`. |
 | **vs `active-project.json`** | Active project pointer stays **path-based** (which folder to open). History key is **catalog UUID** (which research document’s chrome state). |
 
 Example history document:
@@ -203,7 +203,7 @@ _None for navigation history behavior._ Implementation order is locked in [`depl
 - [`deployment-plan.md`](deployment-plan.md) — sequenced PRs
 - [`design/README.md`](design/README.md) — App Layout board + uploads
 - [`omnibar-search.md`](omnibar-search.md) (jumps that should push history; toolbar neighbor)
-- [`macos-client-patterns.md`](../../macos-client-patterns.md)
-- [`S2-01-workspace-chrome.md`](../archive/spike-2/design/archive/S2-01-workspace-chrome.md)
-- [`S2-04-sources-list.md`](../archive/spike-2/design/archive/S2-04-sources-list.md) / [`S2-23-source-detail.md`](../archive/spike-2/design/archive/S2-23-source-detail.md) (list ↔ Source page; historical local-back notes — superseded by this spike)
-- [`S2-20-files-list.md`](../archive/spike-2/design/archive/S2-20-files-list.md) (Source deep link — brief descoped with S2-21; still useful as a Files→Source jump sketch)
+- [`macos-client-patterns.md`](../../../macos-client-patterns.md)
+- [`S2-01-workspace-chrome.md`](../spike-2/design/archive/S2-01-workspace-chrome.md)
+- [`S2-04-sources-list.md`](../spike-2/design/archive/S2-04-sources-list.md) / [`S2-23-source-detail.md`](../spike-2/design/archive/S2-23-source-detail.md) (list ↔ Source page; historical local-back notes — superseded by this spike)
+- [`S2-20-files-list.md`](../spike-2/design/archive/S2-20-files-list.md) (Source deep link — brief descoped with S2-21; still useful as a Files→Source jump sketch)

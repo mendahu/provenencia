@@ -3,7 +3,7 @@
 Kind: Claude Design board
 Spike: Provenencia Spike 3 (workspace layout + catalog search)
 Depends on: App Layout toolbar (omnibar field already top-right of main column, Cmd-K); navigation history Back/Forward + breadcrumbs in the same toolbar
-Authoritative behavior: docs/deployment-plan/spike-3/omnibar-search.md
+Authoritative behavior: docs/deployment-plan/archive/spike-3/omnibar-search.md
 Out of this board: search engine / FTS ranking internals; FFI; redesigning the toolbar field placement (already designed)
 
 Paste this entire document into Claude Design as the requirements for one board/flow.

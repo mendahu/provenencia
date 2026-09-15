@@ -15,7 +15,7 @@ Catalog search is **Go-owned**: declarative kind registry + FTS5 projection +
 `Searcher` behind stable `SearchCatalog` FFI. Do **not** put ad hoc `LIKE` SQL
 in FFI handlers or build a permanent Swift search engine.
 
-Authoritative behavior: [`docs/deployment-plan/spike-3/omnibar-search.md`](../../../docs/deployment-plan/spike-3/omnibar-search.md).
+Authoritative behavior: [`docs/deployment-plan/archive/spike-3/omnibar-search.md`](../../../docs/deployment-plan/archive/spike-3/omnibar-search.md).
 
 ## Checklist
 

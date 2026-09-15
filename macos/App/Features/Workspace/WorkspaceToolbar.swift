@@ -27,7 +27,7 @@ enum HistoryJumpMenuSide: Hashable {
 }
 
 /// App Layout main-column toolbar: Back/Forward (+ jump menus), breadcrumbs, omnibar.
-/// See `docs/deployment-plan/spike-3/navigation-history.md` § Toolbar.
+/// See `docs/deployment-plan/archive/spike-3/navigation-history.md` § Toolbar.
 struct WorkspaceToolbar: View {
     @Environment(WorkspaceNavigation.self) private var navigation
     @Environment(OmnibarFocusCoordinator.self) private var omnibarFocus

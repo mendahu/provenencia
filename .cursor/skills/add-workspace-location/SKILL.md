@@ -21,7 +21,7 @@ pushed through
 `NavigationPath`. Do **not** leave parallel “where we are” state that bypasses
 the stack. Sidebar collapse stays on `WorkspaceModel` (chrome only).
 
-Authoritative behavior: [`docs/deployment-plan/spike-3/navigation-history.md`](../../../docs/deployment-plan/spike-3/navigation-history.md).
+Authoritative behavior: [`docs/deployment-plan/archive/spike-3/navigation-history.md`](../../../docs/deployment-plan/archive/spike-3/navigation-history.md).
 
 ## When this applies
 

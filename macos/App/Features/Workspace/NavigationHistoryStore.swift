@@ -1,7 +1,7 @@
 import Foundation
 
 /// Browser-shaped navigation stack for one project window, persisted as JSON
-/// under Application Support. See `docs/deployment-plan/spike-3/navigation-history.md`.
+/// under Application Support. See `docs/deployment-plan/archive/spike-3/navigation-history.md`.
 struct NavigationHistoryDocument: Codable, Equatable, Sendable {
     var v: Int
     var projectUuid: String

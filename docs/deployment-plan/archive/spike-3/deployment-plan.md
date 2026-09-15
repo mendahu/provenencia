@@ -6,7 +6,7 @@ Authoritative behavior: [`navigation-history.md`](navigation-history.md), [`omni
 
 ## Status
 
-**Spike 3 dogfood complete** (S3-01…S3-12; S3-06 skipped). Optional later slices (**S3-13+**) remain below. History: [`completed.md`](completed.md).
+**Done.** Spike archived after dogfood (S3-01…S3-12; S3-06 skipped). History: [`completed.md`](completed.md). Optional later slices (**S3-13+**) below are not scheduled open spike work.
 
 ## Goal (dogfood bar)
 
@@ -101,4 +101,4 @@ Jake can, on his MacBook:
 3. [x] See **no** search fields on the Sources list or vocabulary list panes.
 4. [x] Confirm `project.uuid` exists in SQLite and `navigation/{uuid}.json` under Application Support.
 
-When a step finishes, move its write-up to [`completed.md`](completed.md) and leave optional later slices here.
+All dogfood steps are in [`completed.md`](completed.md). Optional later slices (S3-13+) stay here for numbering continuity only.

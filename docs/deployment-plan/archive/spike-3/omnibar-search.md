@@ -1,6 +1,6 @@
 # Omnibar search
 
-**Status:** pulled into [Spike 3](README.md) — requirements. PR sequence: [`deployment-plan.md`](deployment-plan.md).
+**Status:** archived — Spike 3 complete. Requirements for catalog omnibar search. PR sequence: [`deployment-plan.md`](deployment-plan.md).
 
 Visual chrome for the **field** (placement + access): Claude Design **App Layout** board. Results dropdown: Claude Design **Omnibar Results** board (brief archived under [`design/archive/`](design/archive/); summary [`design/README.md`](design/README.md)). The [Display ideas](#display-problem) section below is historical; implement against the board.
 
@@ -45,7 +45,7 @@ Early product: **prefer correct Go/SQLite search infrastructure over a Swift fil
 - **No second find surface** — Omnibar replaces per-destination search.
 - **Evaluate as we go** — Incremental PRs (below) so dogfood can reject ranking/UX before the next slice lands.
 
-Aligned with [`application-stack.md`](../../application-stack.md) (FTS5 build tag; search index rebuild as a long-running task class).
+Aligned with [`application-stack.md`](../../../application-stack.md) (FTS5 build tag; search index rebuild as a long-running task class).
 
 ## Chrome (from App Layout board)
 
@@ -136,7 +136,7 @@ Same pattern later: Observation text may roll into a **Node** or **Citation** ro
 ### FTS5 projection (SQLite)
 
 - Maintain a **search document** projection inside `provenencia.sqlite` (FTS5 virtual table + side table for `kind` / `entity_id` / display fields as needed).
-- Enable **`fts5`** on the embedded amalgamation ([`application-stack.md`](../../application-stack.md) §10).
+- Enable **`fts5`** on the embedded amalgamation ([`application-stack.md`](../../../application-stack.md) §10).
 - **Incremental updates** in the same transaction as domain writes when practical; **rebuild/heal** on Open/migrate when the projection lags or schema changes (long-running rebuild may be async later; sync rebuild OK while catalogs are small).
 - Do **not** rely on caching whole tables in Swift as the source of truth. Optional debounce / in-flight request cancellation only.
 
@@ -302,11 +302,11 @@ Parked after Spike 3 dogfood closeout (S3-12). Ship defaults today: blank omniba
 - [`deployment-plan.md`](deployment-plan.md) — sequenced PRs
 - [`design/README.md`](design/README.md) — App Layout + Omnibar Results boards
 - [`navigation-history.md`](navigation-history.md) (Back/Forward after omnibar jumps; shared toolbar; `WorkspaceLocation`)
-- [`application-stack.md`](../../application-stack.md) (FTS5; index rebuild task class)
-- [`catalog-refs.md`](../../catalog-refs.md)
-- [`source-layer-data-model.md`](../../source-layer-data-model.md)
-- [`artifact-file-storage.md`](../../artifact-file-storage.md)
-- [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md)
-- [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md)
-- [`macos-client-patterns.md`](../../macos-client-patterns.md)
-- Historical briefs that assumed local list search (superseded for find chrome): [`S2-04-sources-list.md`](../archive/spike-2/design/archive/S2-04-sources-list.md); [`S2-20-files-list.md`](../archive/spike-2/design/archive/S2-20-files-list.md)
+- [`application-stack.md`](../../../application-stack.md) (FTS5; index rebuild task class)
+- [`catalog-refs.md`](../../../catalog-refs.md)
+- [`source-layer-data-model.md`](../../../source-layer-data-model.md)
+- [`artifact-file-storage.md`](../../../artifact-file-storage.md)
+- [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md)
+- [`conclusion-layer-data-model.md`](../../../conclusion-layer-data-model.md)
+- [`macos-client-patterns.md`](../../../macos-client-patterns.md)
+- Historical briefs that assumed local list search (superseded for find chrome): [`S2-04-sources-list.md`](../spike-2/design/archive/S2-04-sources-list.md); [`S2-20-files-list.md`](../spike-2/design/archive/S2-20-files-list.md)
