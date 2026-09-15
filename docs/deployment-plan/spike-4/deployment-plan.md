@@ -4,7 +4,7 @@ Workspace session, catalog query cache, and declarative place registry. Authorit
 
 ## Status
 
-**In progress.** Completed steps: [`completed.md`](completed.md). Execute **S4-05 → S4-09** in order unless noted. **S4-10+** are optional Go-side follow-ons after the Mac cache exists.
+**In progress.** Completed steps: [`completed.md`](completed.md). Execute **S4-06 → S4-09** in order unless noted. **S4-10+** are optional Go-side follow-ons after the Mac cache exists.
 
 ## Goal (dogfood bar)
 
@@ -28,7 +28,7 @@ S4-03  PlaceRegistry + resolve(location) ✓
 S4-04  Wire session + sync apply(location) on navigation ✓
   │
   ▼
-S4-05  WorkspaceDestinationHost (shim → old views)
+S4-05  WorkspaceDestinationHost (shim → old views) ✓
   │
   ├──────────────────┬──────────────────┐
   ▼                  ▼                  ▼
@@ -53,6 +53,7 @@ Sources            Source fields      Source types
 - [x] S4-02 — Catalog query registry → [`completed.md`](completed.md)
 - [x] S4-03 — Place registry → [`completed.md`](completed.md)
 - [x] S4-04 — Wire workspace session → [`completed.md`](completed.md)
+- [x] S4-05 — Workspace destination host → [`completed.md`](completed.md)
 
 ---
 
@@ -69,19 +70,6 @@ Cross-view sync (detail edit → list row) and navigation comfort (Back / sectio
 **S4-01 note:** `invalidate(_:)` marks stale and cancels in-flight work; it does **not** start a background refetch. Optional eager warm-up (e.g. `invalidateAndRefetch` or mutation helper calling `ensureQuery` after bust) is allowed when off-screen prefetch is worth the FFI cost — not required for title/thumbnail sync.
 
 **Detail → list (Sources):** On save, **patch** both `sourceWorkspace(sourceId:)` and the matching row inside `sourcesList` (same role as today's `SourcesModel.applyUpdatedSource`). Invalidate is for create source, delete, and other paths where local patch is impractical.
-
----
-
-## S4-05 — PR: WorkspaceDestinationHost
-
-| | |
-| --- | --- |
-| **Depends on** | S4-04 |
-| **Title sketch** | Add workspace destination host for place-based routing |
-| **Deliverables** | `WorkspaceDestinationHost.swift`: reads `navigation.currentLocation`, `registry.resolve`, switches on presentation id. **Shim phase:** maps each presentation id to existing views (`SourcesView`, `SourceFieldsView`, `SourceTypesView`). Replace `WorkspaceContent` inner `switch section` with host. Sidebar + toolbar unchanged. |
-| **Tests** | Host mounts correct view type per location (list vs detail not split yet — still `SourcesView` for both source places). |
-| **Dogfood** | No user-visible change; all destinations still work. |
-| **Out** | Sources split; query-backed views. |
 
 ---
 
