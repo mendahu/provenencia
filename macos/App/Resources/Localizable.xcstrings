@@ -28,18 +28,6 @@
         }
       }
     },
-    "workspace.omnibar.hitAccessibilityLabel" : {
-      "comment" : "Accessibility label for an omnibar result row; arguments are hit title then kind label",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@, %@"
-          }
-        }
-      }
-    },
     "workspace.omnibar.kind.field" : {
       "comment" : "Kind chip on an omnibar hit for a source field",
       "extractionState" : "manual",

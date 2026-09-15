@@ -193,6 +193,29 @@ enum OmnibarHitPresentation {
         hit.matchReason == "ref" && !hit.ref.isEmpty
     }
 
+    /// VoiceOver label for a result row — title, kind, subtitle, ref, match context.
+    static func accessibilityLabel(for hit: CatalogSearchHit) -> String {
+        var parts = [
+            hit.title,
+            String(localized: kindLabel(for: hit.kind)),
+        ]
+        let subtitle = hit.subtitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !subtitle.isEmpty {
+            parts.append(subtitle)
+        }
+        let ref = hit.ref.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !ref.isEmpty {
+            parts.append(ref)
+        }
+        let matchContext = matchContextText(field: hit.matchReason, snippet: hit.matchSnippet)
+        if !matchContext.isEmpty {
+            parts.append(matchContext)
+        }
+        let formatter = ListFormatter()
+        formatter.locale = .current
+        return formatter.string(from: parts) ?? parts.joined(separator: ", ")
+    }
+
     static func leadSymbol(for kind: String) -> PVSymbol {
         switch kind {
         case "source": .scrollText
