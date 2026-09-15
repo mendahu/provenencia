@@ -45,6 +45,7 @@ final class SourceNotesSection {
             )
             draft = ""
             context.workspace?.notes.append(note)
+            context.notifyWorkspaceMutated()
         } catch {
             context.pageError = L10n.Errors.message(for: error)
         }
@@ -99,6 +100,7 @@ final class SourceNotesSection {
             }
             editingNoteID = nil
             bodyDraft = ""
+            context.notifyWorkspaceMutated()
         } catch {
             bodyError = L10n.Errors.message(for: error)
         }
@@ -119,6 +121,7 @@ final class SourceNotesSection {
                 bodyError = nil
             }
             context.workspace?.notes.removeAll { $0.id == id }
+            context.notifyWorkspaceMutated()
         } catch {
             context.pageError = L10n.Errors.message(for: error)
         }

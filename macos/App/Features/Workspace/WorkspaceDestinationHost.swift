@@ -1,35 +1,44 @@
 import SwiftUI
 
-/// Routes workspace content by place-registry presentation id (S4-05 shim).
-/// Reads `navigation.currentLocation`; S4-06+ splits Sources list/detail here.
+/// Routes workspace content by place-registry presentation id (S4-05+).
+/// Reads `navigation.currentLocation`; list and detail mount as separate views.
 struct WorkspaceDestinationHost: View {
     @Environment(WorkspaceNavigation.self) private var navigation
-    let projectDir: String
+    @Environment(WorkspaceSession.self) private var session
     let userID: String
     let sessionDisplayName: String
     let store: any GenealogyStore
     let catalogCounts: CatalogCounts
 
     var body: some View {
-        switch Self.presentation(for: navigation.currentLocation, projectDir: projectDir) {
-        case .sourcesList, .sourcePage:
-            SourcesView(
-                projectDir: projectDir,
+        switch Self.presentation(for: navigation.currentLocation, projectDir: session.projectKey.projectDir) {
+        case .sourcesList:
+            SourcesListView(
+                session: session,
                 userID: userID,
-                sessionDisplayName: sessionDisplayName,
                 store: store,
                 catalogCounts: catalogCounts
             )
+        case .sourcePage:
+            if let sourceID = navigation.currentLocation.sourceId {
+                SourcePageView(
+                    sourceID: sourceID,
+                    session: session,
+                    userID: userID,
+                    sessionDisplayName: sessionDisplayName,
+                    store: store
+                )
+            }
         case .sourceFields:
             SourceFieldsView(
-                projectDir: projectDir,
+                session: session,
                 userID: userID,
                 store: store,
                 catalogCounts: catalogCounts
             )
         case .sourceTypes:
             SourceTypesView(
-                projectDir: projectDir,
+                session: session,
                 userID: userID,
                 store: store,
                 catalogCounts: catalogCounts

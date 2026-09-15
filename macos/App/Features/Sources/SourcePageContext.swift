@@ -11,12 +11,11 @@ import Observation
 @MainActor
 @Observable
 final class SourcePageContext {
-    let sourceID: String
+    var sourceID: String
     let projectDir: String
     let userID: String
     let store: any GenealogyStore
-    /// Notifies the Sources list when identity or list-cover thumbnails change.
-    let onSourceUpdated: ((CatalogSource) -> Void)?
+    let session: WorkspaceSession
 
     var workspace: CatalogSourceWorkspace?
     /// Non-field failure banner shared by the page sections.
@@ -33,28 +32,39 @@ final class SourcePageContext {
         projectDir: String,
         userID: String,
         store: any GenealogyStore,
-        onSourceUpdated: ((CatalogSource) -> Void)?
+        session: WorkspaceSession
     ) {
         self.sourceID = sourceID
         self.projectDir = projectDir
         self.userID = userID
         self.store = store
-        self.onSourceUpdated = onSourceUpdated
+        self.session = session
     }
 
     var source: CatalogSource? { workspace?.source }
 
-    /// Applies an enriched Source (cover fields included) to the workspace and list.
+    /// Applies an enriched Source (cover fields included) to the workspace and list cache.
     func applySource(_ source: CatalogSource) {
         workspace?.source = source
-        onSourceUpdated?(source)
+        session.apply(.updatedSource(source))
+    }
+
+    /// Busts the workspace cache after non-identity page edits.
+    func notifyWorkspaceMutated() {
+        session.apply(.mutatedSourceWorkspace(sourceId: sourceID))
     }
 
     /// Reloads Source cover fields after Artifact create/ingest (raster may appear).
     func refreshCoverFromStore() async {
+        clearPageError()
         do {
             let ws = try await store.getSourceWorkspace(projectDir: projectDir, sourceID: sourceID)
-            applySource(ws.source)
+            workspace = ws
+            session.setQueryValue(
+                CatalogQueryKey.sourceWorkspace(project: session.projectKey, sourceId: sourceID),
+                value: ws
+            )
+            session.apply(.updatedSource(ws.source))
         } catch {
             pageError = L10n.Errors.message(for: error)
         }

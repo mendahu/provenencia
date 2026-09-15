@@ -1,24 +1,21 @@
 import SwiftUI
 
-/// The **Sources** workspace destination (S2-04 board / S2-17–18): evidence
-/// list (not `PVTable`), Add Source dialog, and navigation to the Source page.
-/// Mounts inside the S2-01 workspace content host.
-struct SourcesView: View {
+/// The **Sources** list workspace destination (S2-04 / S4-06): evidence list,
+/// Add Source dialog, and row navigation to the Source page via history.
+struct SourcesListView: View {
+    @Environment(WorkspaceSession.self) private var session
     @Environment(WorkspaceNavigation.self) private var navigation
     @State private var model: SourcesModel
-    private let sessionDisplayName: String
 
     init(
-        projectDir: String,
+        session: WorkspaceSession,
         userID: String,
-        sessionDisplayName: String = "",
         store: any GenealogyStore,
         catalogCounts: CatalogCounts? = nil
     ) {
-        self.sessionDisplayName = sessionDisplayName
         _model = State(
             initialValue: SourcesModel(
-                projectDir: projectDir,
+                session: session,
                 userID: userID,
                 store: store,
                 catalogCounts: catalogCounts
@@ -28,18 +25,54 @@ struct SourcesView: View {
 
     var body: some View {
         Group {
-            if let opened = model.openedSourceID {
-                SourcePageView(
-                    sourceID: opened,
-                    projectDir: model.pageProjectDir,
-                    userID: model.pageUserID,
-                    sessionDisplayName: sessionDisplayName,
-                    store: model.pageStore,
-                    onSourceUpdated: { model.applyUpdatedSource($0) }
+            if let sourcesHandle: QueryHandle<[CatalogSource]> = session.queryHandle(
+                SourcesModel.sourcesListKey(for: session)
+            ),
+            let typesHandle: QueryHandle<[CatalogSourceType]> = session.queryHandle(
+                SourcesModel.sourceTypesListKey(for: session)
+            ) {
+                SourcesListContent(
+                    sourcesHandle: sourcesHandle,
+                    typesHandle: typesHandle,
+                    model: model
                 )
-                .id(opened)
             } else {
-                listDestination
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            }
+        }
+        .task {
+            model.warmListQueries()
+        }
+    }
+}
+
+/// Observes query handles directly so list loads repaint when cache settles.
+private struct SourcesListContent: View {
+    @Environment(WorkspaceNavigation.self) private var navigation
+    @Bindable var sourcesHandle: QueryHandle<[CatalogSource]>
+    @Bindable var typesHandle: QueryHandle<[CatalogSourceType]>
+    @Bindable var model: SourcesModel
+
+    var body: some View {
+        VStack(spacing: 0) {
+            header
+            PVDivider()
+            if sourcesHandle.status == .loading && model.sources.isEmpty && model.loadError == nil {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                    .padding(.top, PVSpacing.space9)
+            } else if let loadError = model.loadError, model.sources.isEmpty {
+                PVCallout(tone: .danger, message: L10n.Errors.message(for: loadError))
+                    .padding(.horizontal, PVSpacing.gutterPage)
+                    .padding(.top, PVSpacing.space8)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .accessibilityIdentifier("sources.loadError")
+            } else if model.isCatalogEmpty {
+                emptyState
+            } else {
+                toolbar
+                listBody
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -57,49 +90,36 @@ struct SourcesView: View {
             accessibilityIdentifierPrefix: "sources.add",
             onConfirm: {
                 Task {
-                    await model.create()
-                    if let opened = model.openedSourceID,
-                       let source = model.sources.first(where: { $0.id == opened })
-                    {
+                    if let created = await model.create() {
                         navigation.go(to: WorkspaceLocation(
                             section: .sources,
-                            sourceId: source.id,
-                            ref: source.ref,
-                            title: source.title
+                            sourceId: created.id,
+                            ref: created.ref,
+                            title: created.title
                         ))
                     }
                 }
             }
         ) {
-            // Read options here so SourcesView observes `types` and the
-            // sheet rebuilds when `refreshTypes` fills the pool.
             addForm(typeOptions: model.typeComboOptions)
-        }
-        .task {
-            await reconcileNavigation(load: true)
         }
         .task(id: model.isAdding) {
             guard model.isAdding else { return }
-            await model.refreshTypes()
+            model.refreshTypes()
             model.selectSoleTypeIfNeeded()
         }
-        .onChange(of: navigation.currentLocation) { _, _ in
-            guard model.hasCompletedInitialLoad else { return }
-            Task { await reconcileNavigation(load: false) }
+        .onChange(of: sourcesHandle.status) { _, status in
+            if status == .ready { model.syncCatalogCounts() }
+        }
+        .onChange(of: typesHandle.status) { _, _ in
+            if model.isAdding { model.selectSoleTypeIfNeeded() }
+        }
+        .onAppear {
+            if sourcesHandle.status == .ready {
+                model.syncCatalogCounts()
+            }
         }
         .accessibilityIdentifier("sources")
-    }
-
-    private func reconcileNavigation(load: Bool) async {
-        let location = navigation.currentLocation
-        let outcome = if load {
-            await model.load(from: location)
-        } else {
-            model.apply(from: location)
-        }
-        if outcome == .missingDeepId {
-            navigation.fallbackToSectionRoot()
-        }
     }
 
     private var addPresented: Binding<Bool> {
@@ -113,29 +133,6 @@ struct SourcesView: View {
                 }
             }
         )
-    }
-
-    private var listDestination: some View {
-        VStack(spacing: 0) {
-            header
-            PVDivider()
-            if model.isLoading && model.sources.isEmpty && model.loadError == nil {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-                    .padding(.top, PVSpacing.space9)
-            } else if let loadError = model.loadError, model.sources.isEmpty {
-                PVCallout(tone: .danger, message: L10n.Errors.message(for: loadError))
-                    .padding(.horizontal, PVSpacing.gutterPage)
-                    .padding(.top, PVSpacing.space8)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                    .accessibilityIdentifier("sources.loadError")
-            } else if model.isCatalogEmpty {
-                emptyState
-            } else {
-                toolbar
-                listBody
-            }
-        }
     }
 
     private var header: some View {
@@ -183,8 +180,6 @@ struct SourcesView: View {
     }
 
     private var filterMenu: some View {
-        // Inline `Picker` (same as `PVTable` column filters): AppKit menus drop
-        // custom `HStack` button labels, which left these rows blank.
         Menu {
             Picker(String(localized: L10n.Sources.filterMenu), selection: $model.typeFilterID) {
                 Text(L10n.Sources.filterAllTypes).tag("")

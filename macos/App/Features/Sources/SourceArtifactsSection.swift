@@ -399,5 +399,6 @@ final class SourceArtifactsSection {
         }
         labels[updated.id] = updated.label
         descriptions[updated.id] = updated.description
+        context.notifyWorkspaceMutated()
     }
 }
