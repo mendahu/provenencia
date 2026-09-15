@@ -11,6 +11,7 @@ IDs stay stable (`S4-NN`). Do not renumber when moving steps here.
 | [S4-01](#s4-01--pr-catalog-query-cache-engine) | PR | Workspace catalog query cache engine (no UI wiring) |
 | [S4-02](#s4-02--pr-catalog-query-registry) | PR | Declarative query loaders, mutation map, patch API |
 | [S4-03](#s4-03--pr-place-registry) | PR | Declarative place registry + resolve(location) |
+| [S4-04](#s4-04--pr-wire-workspace-session) | PR | Wire session into navigation; warm cache on commit |
 
 ---
 
@@ -80,4 +81,29 @@ cd macos && xcodebuild test -scheme Provenencia -destination 'platform=macOS' \
   -only-testing:ProvenenciaTests/PlaceRegistryTests \
   -only-testing:ProvenenciaTests/CatalogQueryRegistryTests \
   -only-testing:ProvenenciaTests/WorkspaceSessionTests
+```
+
+---
+
+### S4-04 — PR: Wire workspace session
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S4-03 |
+| **Deliverables** | Done. `WorkspaceView` owns `@State WorkspaceSession` (projectDir + store) and injects `.environment(session)`. `WorkspaceSession.apply(location:)` resolves via `PlaceRegistry` and non-blocking `warmQuery` for each place key. `WorkspaceNavigation.onLocationCommit` fires synchronously from the private apply path (go, Back/Forward, jump index, fallback, `attachProject` restore). Destination views **unchanged** — legacy `.task` loads overlap briefly while cache warms ahead of S4-05+. Optional `PROVENENCIA_DEBUG_SESSION_APPLY=1` logging in DEBUG. |
+| **Tests** | Done. `WorkspaceSessionTests`: apply(location) key table, non-blocking warm, cache hit. `WorkspaceNavigationTests`: `onLocationCommit` on go, history restore, Back/Forward/jump. |
+| **Dogfood** | App behaves as today; cache warms in background on navigation. |
+| **Out** | Destination host; removing legacy load paths; views reading query handles. |
+
+**Landed:** Every navigation commit warms the place registry query keys. S4-05 can route presentation without changing when cache loads start.
+
+**Verify:**
+
+```bash
+cd macos && xcodebuild test -scheme Provenencia -destination 'platform=macOS' \
+  -only-testing:ProvenenciaTests/WorkspaceSessionTests \
+  -only-testing:ProvenenciaTests/WorkspaceNavigationTests \
+  -only-testing:ProvenenciaTests/PlaceRegistryTests \
+  -only-testing:ProvenenciaTests/CatalogQueryRegistryTests
 ```

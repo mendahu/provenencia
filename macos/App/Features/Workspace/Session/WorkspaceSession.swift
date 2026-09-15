@@ -52,6 +52,22 @@ final class WorkspaceSession {
         invalidatedKeys.remove(key)
     }
 
+    /// Resolves the place for `location` and starts loading its query keys (non-blocking).
+    func apply(
+        location: WorkspaceLocation,
+        placeRegistry: PlaceRegistry = .standard
+    ) {
+        guard let place = placeRegistry.resolve(location, project: projectKey) else { return }
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["PROVENENCIA_DEBUG_SESSION_APPLY"] == "1" {
+            print("WorkspaceSession.apply location=\(location) place=\(place.placeID) keys=\(place.queryKeys)")
+        }
+        #endif
+        for key in place.queryKeys {
+            warmQuery(key)
+        }
+    }
+
     /// Patch list row + cached workspace on identity/cover save; bust keys for other mutations.
     func apply(_ mutation: CatalogMutation) {
         switch mutation {
@@ -106,6 +122,21 @@ final class WorkspaceSession {
     func invalidateAll(matching predicate: (CatalogQueryKey) -> Bool) {
         for key in handles.keys where predicate(key) {
             invalidate(key)
+        }
+    }
+
+    private func warmQuery(_ key: CatalogQueryKey) {
+        switch key {
+        case .sourcesList:
+            let _: QueryHandle<[CatalogSource]> = query(key)
+        case .sourceTypesList:
+            let _: QueryHandle<[CatalogSourceType]> = query(key)
+        case .metadataFieldsList:
+            let _: QueryHandle<[CatalogMetadataField]> = query(key)
+        case .sourceWorkspace:
+            let _: QueryHandle<CatalogSourceWorkspace> = query(key)
+        case .typeSuggestions:
+            let _: QueryHandle<[CatalogTypeSuggestion]> = query(key)
         }
     }
 
