@@ -61,6 +61,7 @@ struct WorkspaceView: View {
             if let uuid = model.project?.uuid, !uuid.isEmpty {
                 navigation.attachProject(uuid: uuid)
             }
+            presentHistoryIssueIfNeeded()
             signOutCoordinator.isAvailable = true
             signOutCoordinator.action = { [model] in
                 Task { await model.signOut() }
@@ -70,9 +71,11 @@ struct WorkspaceView: View {
         .onChange(of: navigation.canGoBack) { _, _ in bindNavigationCommands() }
         .onChange(of: navigation.canGoForward) { _, _ in bindNavigationCommands() }
         .onChange(of: navigation.currentLocation) { _, _ in bindNavigationCommands() }
+        .onChange(of: navigation.lastHistoryIssue) { _, _ in presentHistoryIssueIfNeeded() }
         .onChange(of: model.project?.uuid) { _, uuid in
             if let uuid, !uuid.isEmpty {
                 navigation.attachProject(uuid: uuid)
+                presentHistoryIssueIfNeeded()
                 bindNavigationCommands()
             }
         }
@@ -102,6 +105,25 @@ struct WorkspaceView: View {
         navigationCoordinator.canGoForward = navigation.canGoForward
         navigationCoordinator.goBack = { navigation.goBack() }
         navigationCoordinator.goForward = { navigation.goForward() }
+    }
+
+    private func presentHistoryIssueIfNeeded() {
+        guard let issue = navigation.lastHistoryIssue else { return }
+        switch issue {
+        case .loadFailed:
+            countsToast = VocabularyToast(
+                title: String(localized: L10n.Workspace.navigationHistoryLoadFailedTitle),
+                body: String(localized: L10n.Workspace.navigationHistoryLoadFailedBody),
+                tone: .danger
+            )
+        case .persistFailed:
+            countsToast = VocabularyToast(
+                title: String(localized: L10n.Workspace.navigationHistoryPersistFailedTitle),
+                body: String(localized: L10n.Workspace.navigationHistoryPersistFailedBody),
+                tone: .danger
+            )
+        }
+        navigation.acknowledgeHistoryIssue()
     }
 }
 
