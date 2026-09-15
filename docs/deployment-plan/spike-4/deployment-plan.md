@@ -4,7 +4,7 @@ Workspace session, catalog query cache, and declarative place registry. Authorit
 
 ## Status
 
-**Planned.** Execute **S4-01 → S4-09** in order unless noted. **S4-10+** are optional Go-side follow-ons after the Mac cache exists.
+**In progress.** Completed steps: [`completed.md`](completed.md). Execute **S4-02 → S4-09** in order unless noted. **S4-10+** are optional Go-side follow-ons after the Mac cache exists.
 
 ## Goal (dogfood bar)
 
@@ -16,7 +16,7 @@ Workspace session, catalog query cache, and declarative place registry. Authorit
 ## PR sequence
 
 ```text
-S4-01  Query cache engine (no UI)
+S4-01  Query cache engine (no UI) ✓
   │
   ▼
 S4-02  CatalogQueryRegistry (loaders + invalidation map)
@@ -47,16 +47,9 @@ Sources            Source fields      Source types
 
 ---
 
-## S4-01 — PR: Catalog query cache engine
+## Checklist
 
-| | |
-| --- | --- |
-| **Depends on** | — |
-| **Title sketch** | Add workspace catalog query cache engine |
-| **Deliverables** | `Features/Workspace/Session/`: `CatalogQueryKey`, `QueryHandle`, `WorkspaceSession` with get-or-load, in-flight dedupe, stale-while-revalidate status (`idle` / `loading` / `ready` / `error`), and primitive `invalidate(_:)` / `invalidateAll(matching:)`. `@Observable`, `@MainActor`. **No** production wiring; no destination changes. |
-| **Tests** | `ProvenenciaTests/WorkspaceSessionTests.swift` (or similar): FakeStore loaders, dedupe (two concurrent `query` same key → one FFI call), invalidation drops data, stale handle refetches. |
-| **Dogfood** | App unchanged. |
-| **Out** | Place registry; view migration; Go changes. |
+- [x] S4-01 — Catalog query cache engine → [`completed.md`](completed.md)
 
 ---
 
