@@ -8,16 +8,8 @@ enum CatalogQueryRegistryError: Error {
 struct CatalogQueryRegistry: Sendable {
     static let standard = CatalogQueryRegistry()
 
-    private enum KeyKind {
-        case sourcesList
-        case sourceTypesList
-        case metadataFieldsList
-        case sourceWorkspace
-        case typeSuggestions
-    }
-
     private struct Spec {
-        let kind: KeyKind
+        let kind: CatalogQueryKey.Kind
         let stalePolicy: CatalogQueryStalePolicy
         let invalidateOn: Set<CatalogMutationKind>
     }
@@ -51,7 +43,7 @@ struct CatalogQueryRegistry: Sendable {
     ]
 
     func stalePolicy(for key: CatalogQueryKey) -> CatalogQueryStalePolicy {
-        spec(for: key).stalePolicy
+        specs.first { $0.kind == key.kind }?.stalePolicy ?? .sessionFresh
     }
 
     func load(key: CatalogQueryKey, store: any GenealogyStore) async throws -> Any {
@@ -69,40 +61,36 @@ struct CatalogQueryRegistry: Sendable {
         }
     }
 
+    /// Resolves concrete cache keys from registry `invalidateOn` tags + mutation payload.
     func keysAffected(by mutation: CatalogMutation, project: ProjectKey) -> [CatalogQueryKey] {
-        switch mutation {
-        case .updatedSource:
-            return []
-        case .createdSource:
-            return [.sourcesList(project: project)]
-        case .createdSourceType, .updatedSourceType, .deletedSourceType:
-            return [.sourceTypesList(project: project)]
-        case .createdMetadataField, .updatedMetadataField, .deletedMetadataField:
-            return [.metadataFieldsList(project: project)]
-        case .assignedTypeSuggestion(let typeId), .removedTypeSuggestion(let typeId):
-            return [.typeSuggestions(project: project, typeId: typeId)]
-        case .mutatedSourceWorkspace(let sourceId):
-            return [.sourceWorkspace(project: project, sourceId: sourceId)]
+        guard let mutationKind = mutation.invalidationKind else { return [] }
+        return specs.compactMap { spec in
+            guard spec.invalidateOn.contains(mutationKind) else { return nil }
+            return spec.kind.cacheKey(project: project, mutation: mutation)
         }
     }
+}
 
-    private func spec(for key: CatalogQueryKey) -> Spec {
-        let kind = keyKind(for: key)
-        return specs.first { $0.kind == kind } ?? Spec(kind: kind, stalePolicy: .sessionFresh, invalidateOn: [])
-    }
-
-    private func keyKind(for key: CatalogQueryKey) -> KeyKind {
-        switch key {
+private extension CatalogQueryKey.Kind {
+    /// Builds the concrete cache key for one registry row and mutation.
+    func cacheKey(project: ProjectKey, mutation: CatalogMutation) -> CatalogQueryKey? {
+        switch self {
         case .sourcesList:
-            return .sourcesList
+            return .sourcesList(project: project)
         case .sourceTypesList:
-            return .sourceTypesList
+            return .sourceTypesList(project: project)
         case .metadataFieldsList:
-            return .metadataFieldsList
+            return .metadataFieldsList(project: project)
         case .sourceWorkspace:
-            return .sourceWorkspace
+            guard case .mutatedSourceWorkspace(let sourceId) = mutation else { return nil }
+            return .sourceWorkspace(project: project, sourceId: sourceId)
         case .typeSuggestions:
-            return .typeSuggestions
+            switch mutation {
+            case .assignedTypeSuggestion(let typeId), .removedTypeSuggestion(let typeId):
+                return .typeSuggestions(project: project, typeId: typeId)
+            default:
+                return nil
+            }
         }
     }
 }

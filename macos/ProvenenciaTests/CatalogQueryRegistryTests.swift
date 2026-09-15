@@ -291,4 +291,26 @@ struct CatalogQueryRegistryTests {
         let key = CatalogQueryKey.sourcesList(project: session.projectKey)
         #expect(session.registry.stalePolicy(for: key) == .sessionFresh)
     }
+
+    @Test func keysAffectedComesFromRegistrySpecs() {
+        let registry = CatalogQueryRegistry.standard
+        let project = ProjectKey(projectDir: projectDir)
+
+        #expect(registry.keysAffected(by: .updatedSource(
+            CatalogSource(id: "s1", ref: "SRC-1", sourceTypeID: "", title: "T", description: "")
+        ), project: project).isEmpty)
+
+        #expect(registry.keysAffected(by: .createdSource, project: project) == [
+            .sourcesList(project: project),
+        ])
+        #expect(registry.keysAffected(by: .deletedMetadataField(id: "f1"), project: project) == [
+            .metadataFieldsList(project: project),
+        ])
+        #expect(registry.keysAffected(by: .assignedTypeSuggestion(typeId: "t1"), project: project) == [
+            .typeSuggestions(project: project, typeId: "t1"),
+        ])
+        #expect(registry.keysAffected(by: .mutatedSourceWorkspace(sourceId: "s1"), project: project) == [
+            .sourceWorkspace(project: project, sourceId: "s1"),
+        ])
+    }
 }
