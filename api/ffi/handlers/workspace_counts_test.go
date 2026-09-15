@@ -25,12 +25,11 @@ func TestGetWorkspaceNavCounts(t *testing.T) {
 				SourceFields: &engine.VocabularyOriginCounts{
 					Total: 3, Seeded: 3,
 				},
-				Files: 0,
 			},
 			exact: true,
 		},
 		{
-			name: "counts user vocab sources and files",
+			name: "counts user vocab and sources after ingest",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, typeID := sourceFixture(t)
 				if _, err := CreateSourceType(marshalProto(t, &engine.CreateSourceTypeRequest{
@@ -80,7 +79,6 @@ func TestGetWorkspaceNavCounts(t *testing.T) {
 				SourceFields: &engine.VocabularyOriginCounts{
 					Total: 4, Seeded: 3, User: 1,
 				},
-				Files: 1,
 			},
 			exact: true,
 		},

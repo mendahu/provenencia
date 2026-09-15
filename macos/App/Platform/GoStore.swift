@@ -635,16 +635,6 @@ struct GoStore: GenealogyStore {
         )
     }
 
-    func countFiles(projectDir: String) async throws -> Int {
-        var req = Provenencia_Engine_V1_CountFilesRequest()
-        req.projectDir = projectDir
-        let resp: Provenencia_Engine_V1_CountFilesResponse = try await provenenciaCall(
-            method: CoreMethod.countFiles,
-            request: req
-        )
-        return Int(resp.count)
-    }
-
     func workspaceNavCounts(projectDir: String) async throws -> WorkspaceNavCounts {
         var req = Provenencia_Engine_V1_GetWorkspaceNavCountsRequest()
         req.projectDir = projectDir
@@ -655,8 +645,7 @@ struct GoStore: GenealogyStore {
         return WorkspaceNavCounts(
             sources: Int(resp.sources),
             sourceTypes: Self.mapOriginCounts(resp.sourceTypes),
-            sourceFields: Self.mapOriginCounts(resp.sourceFields),
-            files: Int(resp.files)
+            sourceFields: Self.mapOriginCounts(resp.sourceFields)
         )
     }
 

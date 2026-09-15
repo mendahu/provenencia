@@ -84,6 +84,11 @@
 		AA0000000000000000000420 /* CatalogQueryStalePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000041F /* CatalogQueryStalePolicy.swift */; };
 		AA0000000000000000000422 /* CatalogQueryRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000421 /* CatalogQueryRegistry.swift */; };
 		AA0000000000000000000424 /* CatalogQueryRegistryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000423 /* CatalogQueryRegistryTests.swift */; };
+		AA0000000000000000000426 /* PlaceID.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000425 /* PlaceID.swift */; };
+		AA0000000000000000000428 /* WorkspacePresentationID.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000427 /* WorkspacePresentationID.swift */; };
+		AA000000000000000000042A /* ResolvedPlace.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000429 /* ResolvedPlace.swift */; };
+		AA000000000000000000042C /* PlaceRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000042B /* PlaceRegistry.swift */; };
+		AA000000000000000000042E /* PlaceRegistryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000042D /* PlaceRegistryTests.swift */; };
 		AA0000000000000000000212 /* SourceTypesModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000202 /* SourceTypesModel.swift */; };
 		AA0000000000000000000213 /* SourceTypesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000203 /* SourceTypesView.swift */; };
 		AA0000000000000000000214 /* SourceTypesListPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000204 /* SourceTypesListPane.swift */; };
@@ -280,6 +285,11 @@
 		AA000000000000000000041F /* CatalogQueryStalePolicy.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogQueryStalePolicy.swift; sourceTree = "<group>"; };
 		AA0000000000000000000421 /* CatalogQueryRegistry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogQueryRegistry.swift; sourceTree = "<group>"; };
 		AA0000000000000000000423 /* CatalogQueryRegistryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogQueryRegistryTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000425 /* PlaceID.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlaceID.swift; sourceTree = "<group>"; };
+		AA0000000000000000000427 /* WorkspacePresentationID.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspacePresentationID.swift; sourceTree = "<group>"; };
+		AA0000000000000000000429 /* ResolvedPlace.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ResolvedPlace.swift; sourceTree = "<group>"; };
+		AA000000000000000000042B /* PlaceRegistry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlaceRegistry.swift; sourceTree = "<group>"; };
+		AA000000000000000000042D /* PlaceRegistryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlaceRegistryTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000202 /* SourceTypesModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTypesModel.swift; sourceTree = "<group>"; };
 		AA0000000000000000000203 /* SourceTypesView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTypesView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000204 /* SourceTypesListPane.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTypesListPane.swift; sourceTree = "<group>"; };
@@ -525,6 +535,10 @@
 				AA000000000000000000041D /* CatalogMutation.swift */,
 				AA000000000000000000041F /* CatalogQueryStalePolicy.swift */,
 				AA0000000000000000000421 /* CatalogQueryRegistry.swift */,
+				AA0000000000000000000425 /* PlaceID.swift */,
+				AA0000000000000000000427 /* WorkspacePresentationID.swift */,
+				AA0000000000000000000429 /* ResolvedPlace.swift */,
+				AA000000000000000000042B /* PlaceRegistry.swift */,
 			);
 			name = Session;
 			path = Session;
@@ -720,6 +734,7 @@
 				F203948576A1B2C3D4E5F605 /* WorkspaceNavigationTests.swift */,
 				AA000000000000000000041B /* WorkspaceSessionTests.swift */,
 				AA0000000000000000000423 /* CatalogQueryRegistryTests.swift */,
+				AA000000000000000000042D /* PlaceRegistryTests.swift */,
 				AA0000000000000000000270 /* CatalogCountsTests.swift */,
 				AA00000000000000000003A0 /* CatalogSessionStoreTests.swift */,
 				AA00000000000000000003E0 /* SearchCatalogStoreTests.swift */,
@@ -961,6 +976,10 @@
 				AA000000000000000000041E /* CatalogMutation.swift in Sources */,
 				AA0000000000000000000420 /* CatalogQueryStalePolicy.swift in Sources */,
 				AA0000000000000000000422 /* CatalogQueryRegistry.swift in Sources */,
+				AA0000000000000000000426 /* PlaceID.swift in Sources */,
+				AA0000000000000000000428 /* WorkspacePresentationID.swift in Sources */,
+				AA000000000000000000042A /* ResolvedPlace.swift in Sources */,
+				AA000000000000000000042C /* PlaceRegistry.swift in Sources */,
 				AA00000000000000000003F1 /* WorkspaceToolbar.swift in Sources */,
 				AA00000000000000000003F9 /* OmnibarResultsModel.swift in Sources */,
 				AA00000000000000000003FF /* OmnibarHitPresentation.swift in Sources */,
@@ -1050,6 +1069,7 @@
 				F203948576A1B2C3D4E5F607 /* WorkspaceNavigationTests.swift in Sources */,
 				AA000000000000000000041C /* WorkspaceSessionTests.swift in Sources */,
 				AA0000000000000000000424 /* CatalogQueryRegistryTests.swift in Sources */,
+				AA000000000000000000042E /* PlaceRegistryTests.swift in Sources */,
 				AA0000000000000000000271 /* CatalogCountsTests.swift in Sources */,
 				AA00000000000000000003A1 /* CatalogSessionStoreTests.swift in Sources */,
 				AA00000000000000000003E1 /* SearchCatalogStoreTests.swift in Sources */,

@@ -216,7 +216,6 @@ struct WorkspaceNavCounts: Sendable, Equatable {
     var sources: Int
     var sourceTypes: WorkspaceNavOriginCounts
     var sourceFields: WorkspaceNavOriginCounts
-    var files: Int
 }
 
 protocol GenealogyStore: Sendable {
@@ -405,12 +404,8 @@ protocol GenealogyStore: Sendable {
         userID: String,
         fieldID: String
     ) async throws
-    /// Total content-addressed files rows — distinct files, not the
-    /// (larger, per-source) artifact count. No project-wide artifact
-    /// listing exists yet (S2-17).
-    func countFiles(projectDir: String) async throws -> Int
     /// One catalog open: sidebar / vocabulary-header totals for sources,
-    /// types, fields, and files.
+    /// types, and fields.
     func workspaceNavCounts(projectDir: String) async throws -> WorkspaceNavCounts
     /// Omnibar catalog search (S3-07+). Empty / whitespace query → empty hits.
     func searchCatalog(

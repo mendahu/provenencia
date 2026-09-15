@@ -53,7 +53,6 @@ const (
 	Method_METHOD_CREATE_SOURCE_TYPE                   Method = 24
 	Method_METHOD_LIST_METADATA_FIELDS                 Method = 25
 	Method_METHOD_CREATE_METADATA_FIELD                Method = 26
-	Method_METHOD_COUNT_FILES                          Method = 27
 	Method_METHOD_UPDATE_METADATA_FIELD                Method = 28
 	Method_METHOD_DELETE_SOURCE_TYPE                   Method = 29
 	Method_METHOD_DELETE_METADATA_FIELD                Method = 30
@@ -103,7 +102,6 @@ var (
 		24: "METHOD_CREATE_SOURCE_TYPE",
 		25: "METHOD_LIST_METADATA_FIELDS",
 		26: "METHOD_CREATE_METADATA_FIELD",
-		27: "METHOD_COUNT_FILES",
 		28: "METHOD_UPDATE_METADATA_FIELD",
 		29: "METHOD_DELETE_SOURCE_TYPE",
 		30: "METHOD_DELETE_METADATA_FIELD",
@@ -150,7 +148,6 @@ var (
 		"METHOD_CREATE_SOURCE_TYPE":                   24,
 		"METHOD_LIST_METADATA_FIELDS":                 25,
 		"METHOD_CREATE_METADATA_FIELD":                26,
-		"METHOD_COUNT_FILES":                          27,
 		"METHOD_UPDATE_METADATA_FIELD":                28,
 		"METHOD_DELETE_SOURCE_TYPE":                   29,
 		"METHOD_DELETE_METADATA_FIELD":                30,
@@ -5769,97 +5766,6 @@ func (*DeleteMetadataFieldResponse) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{90}
 }
 
-// CountFiles reports the total number of content-addressed files rows in
-// the project — distinct files, not the (larger, per-source) artifact
-// count. No project-wide artifact listing exists yet (S2-17).
-type CountFilesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CountFilesRequest) Reset() {
-	*x = CountFilesRequest{}
-	mi := &file_engine_proto_msgTypes[91]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CountFilesRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CountFilesRequest) ProtoMessage() {}
-
-func (x *CountFilesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[91]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CountFilesRequest.ProtoReflect.Descriptor instead.
-func (*CountFilesRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{91}
-}
-
-func (x *CountFilesRequest) GetProjectDir() string {
-	if x != nil {
-		return x.ProjectDir
-	}
-	return ""
-}
-
-type CountFilesResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Count         int32                  `protobuf:"varint,1,opt,name=count,proto3" json:"count,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CountFilesResponse) Reset() {
-	*x = CountFilesResponse{}
-	mi := &file_engine_proto_msgTypes[92]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CountFilesResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CountFilesResponse) ProtoMessage() {}
-
-func (x *CountFilesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[92]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CountFilesResponse.ProtoReflect.Descriptor instead.
-func (*CountFilesResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{92}
-}
-
-func (x *CountFilesResponse) GetCount() int32 {
-	if x != nil {
-		return x.Count
-	}
-	return 0
-}
-
 // VocabularyOriginCounts is the sidebar / vocabulary-header split for a
 // catalog vocabulary (source_types or source_metadata_fields). total is
 // always seeded + user + plugin.
@@ -5875,7 +5781,7 @@ type VocabularyOriginCounts struct {
 
 func (x *VocabularyOriginCounts) Reset() {
 	*x = VocabularyOriginCounts{}
-	mi := &file_engine_proto_msgTypes[93]
+	mi := &file_engine_proto_msgTypes[91]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5887,7 +5793,7 @@ func (x *VocabularyOriginCounts) String() string {
 func (*VocabularyOriginCounts) ProtoMessage() {}
 
 func (x *VocabularyOriginCounts) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[93]
+	mi := &file_engine_proto_msgTypes[91]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5900,7 +5806,7 @@ func (x *VocabularyOriginCounts) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VocabularyOriginCounts.ProtoReflect.Descriptor instead.
 func (*VocabularyOriginCounts) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{93}
+	return file_engine_proto_rawDescGZIP(), []int{91}
 }
 
 func (x *VocabularyOriginCounts) GetTotal() int32 {
@@ -5943,7 +5849,7 @@ type GetWorkspaceNavCountsRequest struct {
 
 func (x *GetWorkspaceNavCountsRequest) Reset() {
 	*x = GetWorkspaceNavCountsRequest{}
-	mi := &file_engine_proto_msgTypes[94]
+	mi := &file_engine_proto_msgTypes[92]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5955,7 +5861,7 @@ func (x *GetWorkspaceNavCountsRequest) String() string {
 func (*GetWorkspaceNavCountsRequest) ProtoMessage() {}
 
 func (x *GetWorkspaceNavCountsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[94]
+	mi := &file_engine_proto_msgTypes[92]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5968,7 +5874,7 @@ func (x *GetWorkspaceNavCountsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWorkspaceNavCountsRequest.ProtoReflect.Descriptor instead.
 func (*GetWorkspaceNavCountsRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{94}
+	return file_engine_proto_rawDescGZIP(), []int{92}
 }
 
 func (x *GetWorkspaceNavCountsRequest) GetProjectDir() string {
@@ -5983,14 +5889,13 @@ type GetWorkspaceNavCountsResponse struct {
 	Sources       int32                   `protobuf:"varint,1,opt,name=sources,proto3" json:"sources,omitempty"`
 	SourceTypes   *VocabularyOriginCounts `protobuf:"bytes,2,opt,name=source_types,json=sourceTypes,proto3" json:"source_types,omitempty"`
 	SourceFields  *VocabularyOriginCounts `protobuf:"bytes,3,opt,name=source_fields,json=sourceFields,proto3" json:"source_fields,omitempty"`
-	Files         int32                   `protobuf:"varint,4,opt,name=files,proto3" json:"files,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetWorkspaceNavCountsResponse) Reset() {
 	*x = GetWorkspaceNavCountsResponse{}
-	mi := &file_engine_proto_msgTypes[95]
+	mi := &file_engine_proto_msgTypes[93]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6002,7 +5907,7 @@ func (x *GetWorkspaceNavCountsResponse) String() string {
 func (*GetWorkspaceNavCountsResponse) ProtoMessage() {}
 
 func (x *GetWorkspaceNavCountsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[95]
+	mi := &file_engine_proto_msgTypes[93]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6015,7 +5920,7 @@ func (x *GetWorkspaceNavCountsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWorkspaceNavCountsResponse.ProtoReflect.Descriptor instead.
 func (*GetWorkspaceNavCountsResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{95}
+	return file_engine_proto_rawDescGZIP(), []int{93}
 }
 
 func (x *GetWorkspaceNavCountsResponse) GetSources() int32 {
@@ -6039,13 +5944,6 @@ func (x *GetWorkspaceNavCountsResponse) GetSourceFields() *VocabularyOriginCount
 	return nil
 }
 
-func (x *GetWorkspaceNavCountsResponse) GetFiles() int32 {
-	if x != nil {
-		return x.Files
-	}
-	return 0
-}
-
 // EnsureFileThumbnail lazily creates (or returns) the default thumbnail
 // derivative for a File that is the primary File of some Artifact.
 type EnsureFileThumbnailRequest struct {
@@ -6058,7 +5956,7 @@ type EnsureFileThumbnailRequest struct {
 
 func (x *EnsureFileThumbnailRequest) Reset() {
 	*x = EnsureFileThumbnailRequest{}
-	mi := &file_engine_proto_msgTypes[96]
+	mi := &file_engine_proto_msgTypes[94]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6070,7 +5968,7 @@ func (x *EnsureFileThumbnailRequest) String() string {
 func (*EnsureFileThumbnailRequest) ProtoMessage() {}
 
 func (x *EnsureFileThumbnailRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[96]
+	mi := &file_engine_proto_msgTypes[94]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6083,7 +5981,7 @@ func (x *EnsureFileThumbnailRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnsureFileThumbnailRequest.ProtoReflect.Descriptor instead.
 func (*EnsureFileThumbnailRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{96}
+	return file_engine_proto_rawDescGZIP(), []int{94}
 }
 
 func (x *EnsureFileThumbnailRequest) GetProjectDir() string {
@@ -6110,7 +6008,7 @@ type EnsureFileThumbnailResponse struct {
 
 func (x *EnsureFileThumbnailResponse) Reset() {
 	*x = EnsureFileThumbnailResponse{}
-	mi := &file_engine_proto_msgTypes[97]
+	mi := &file_engine_proto_msgTypes[95]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6122,7 +6020,7 @@ func (x *EnsureFileThumbnailResponse) String() string {
 func (*EnsureFileThumbnailResponse) ProtoMessage() {}
 
 func (x *EnsureFileThumbnailResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[97]
+	mi := &file_engine_proto_msgTypes[95]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6135,7 +6033,7 @@ func (x *EnsureFileThumbnailResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnsureFileThumbnailResponse.ProtoReflect.Descriptor instead.
 func (*EnsureFileThumbnailResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{97}
+	return file_engine_proto_rawDescGZIP(), []int{95}
 }
 
 func (x *EnsureFileThumbnailResponse) GetRelPath() string {
@@ -6161,7 +6059,7 @@ type CloseCatalogSessionRequest struct {
 
 func (x *CloseCatalogSessionRequest) Reset() {
 	*x = CloseCatalogSessionRequest{}
-	mi := &file_engine_proto_msgTypes[98]
+	mi := &file_engine_proto_msgTypes[96]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6173,7 +6071,7 @@ func (x *CloseCatalogSessionRequest) String() string {
 func (*CloseCatalogSessionRequest) ProtoMessage() {}
 
 func (x *CloseCatalogSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[98]
+	mi := &file_engine_proto_msgTypes[96]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6186,7 +6084,7 @@ func (x *CloseCatalogSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CloseCatalogSessionRequest.ProtoReflect.Descriptor instead.
 func (*CloseCatalogSessionRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{98}
+	return file_engine_proto_rawDescGZIP(), []int{96}
 }
 
 func (x *CloseCatalogSessionRequest) GetProjectDir() string {
@@ -6204,7 +6102,7 @@ type CloseCatalogSessionResponse struct {
 
 func (x *CloseCatalogSessionResponse) Reset() {
 	*x = CloseCatalogSessionResponse{}
-	mi := &file_engine_proto_msgTypes[99]
+	mi := &file_engine_proto_msgTypes[97]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6216,7 +6114,7 @@ func (x *CloseCatalogSessionResponse) String() string {
 func (*CloseCatalogSessionResponse) ProtoMessage() {}
 
 func (x *CloseCatalogSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[99]
+	mi := &file_engine_proto_msgTypes[97]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6229,7 +6127,7 @@ func (x *CloseCatalogSessionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CloseCatalogSessionResponse.ProtoReflect.Descriptor instead.
 func (*CloseCatalogSessionResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{99}
+	return file_engine_proto_rawDescGZIP(), []int{97}
 }
 
 // WorkspaceLocation is the navigable place payload shared by search hits and
@@ -6248,7 +6146,7 @@ type WorkspaceLocation struct {
 
 func (x *WorkspaceLocation) Reset() {
 	*x = WorkspaceLocation{}
-	mi := &file_engine_proto_msgTypes[100]
+	mi := &file_engine_proto_msgTypes[98]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6260,7 +6158,7 @@ func (x *WorkspaceLocation) String() string {
 func (*WorkspaceLocation) ProtoMessage() {}
 
 func (x *WorkspaceLocation) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[100]
+	mi := &file_engine_proto_msgTypes[98]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6273,7 +6171,7 @@ func (x *WorkspaceLocation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkspaceLocation.ProtoReflect.Descriptor instead.
 func (*WorkspaceLocation) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{100}
+	return file_engine_proto_rawDescGZIP(), []int{98}
 }
 
 func (x *WorkspaceLocation) GetSection() string {
@@ -6330,7 +6228,7 @@ type SearchCatalogRequest struct {
 
 func (x *SearchCatalogRequest) Reset() {
 	*x = SearchCatalogRequest{}
-	mi := &file_engine_proto_msgTypes[101]
+	mi := &file_engine_proto_msgTypes[99]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6342,7 +6240,7 @@ func (x *SearchCatalogRequest) String() string {
 func (*SearchCatalogRequest) ProtoMessage() {}
 
 func (x *SearchCatalogRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[101]
+	mi := &file_engine_proto_msgTypes[99]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6355,7 +6253,7 @@ func (x *SearchCatalogRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchCatalogRequest.ProtoReflect.Descriptor instead.
 func (*SearchCatalogRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{101}
+	return file_engine_proto_rawDescGZIP(), []int{99}
 }
 
 func (x *SearchCatalogRequest) GetProjectDir() string {
@@ -6401,7 +6299,7 @@ type SearchHit struct {
 
 func (x *SearchHit) Reset() {
 	*x = SearchHit{}
-	mi := &file_engine_proto_msgTypes[102]
+	mi := &file_engine_proto_msgTypes[100]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6413,7 +6311,7 @@ func (x *SearchHit) String() string {
 func (*SearchHit) ProtoMessage() {}
 
 func (x *SearchHit) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[102]
+	mi := &file_engine_proto_msgTypes[100]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6426,7 +6324,7 @@ func (x *SearchHit) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchHit.ProtoReflect.Descriptor instead.
 func (*SearchHit) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{102}
+	return file_engine_proto_rawDescGZIP(), []int{100}
 }
 
 func (x *SearchHit) GetKind() string {
@@ -6508,7 +6406,7 @@ type SearchCatalogResponse struct {
 
 func (x *SearchCatalogResponse) Reset() {
 	*x = SearchCatalogResponse{}
-	mi := &file_engine_proto_msgTypes[103]
+	mi := &file_engine_proto_msgTypes[101]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6520,7 +6418,7 @@ func (x *SearchCatalogResponse) String() string {
 func (*SearchCatalogResponse) ProtoMessage() {}
 
 func (x *SearchCatalogResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[103]
+	mi := &file_engine_proto_msgTypes[101]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6533,7 +6431,7 @@ func (x *SearchCatalogResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchCatalogResponse.ProtoReflect.Descriptor instead.
 func (*SearchCatalogResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{103}
+	return file_engine_proto_rawDescGZIP(), []int{101}
 }
 
 func (x *SearchCatalogResponse) GetHits() []*SearchHit {
@@ -6556,7 +6454,7 @@ type Error struct {
 
 func (x *Error) Reset() {
 	*x = Error{}
-	mi := &file_engine_proto_msgTypes[104]
+	mi := &file_engine_proto_msgTypes[102]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6568,7 +6466,7 @@ func (x *Error) String() string {
 func (*Error) ProtoMessage() {}
 
 func (x *Error) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[104]
+	mi := &file_engine_proto_msgTypes[102]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6581,7 +6479,7 @@ func (x *Error) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Error.ProtoReflect.Descriptor instead.
 func (*Error) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{104}
+	return file_engine_proto_rawDescGZIP(), []int{102}
 }
 
 func (x *Error) GetCode() string {
@@ -7054,12 +6952,7 @@ const file_engine_proto_rawDesc = "" +
 	"projectDir\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x19\n" +
 	"\bfield_id\x18\x03 \x01(\tR\afieldId\"\x1d\n" +
-	"\x1bDeleteMetadataFieldResponse\"4\n" +
-	"\x11CountFilesRequest\x12\x1f\n" +
-	"\vproject_dir\x18\x01 \x01(\tR\n" +
-	"projectDir\"*\n" +
-	"\x12CountFilesResponse\x12\x14\n" +
-	"\x05count\x18\x01 \x01(\x05R\x05count\"r\n" +
+	"\x1bDeleteMetadataFieldResponse\"r\n" +
 	"\x16VocabularyOriginCounts\x12\x14\n" +
 	"\x05total\x18\x01 \x01(\x05R\x05total\x12\x16\n" +
 	"\x06seeded\x18\x02 \x01(\x05R\x06seeded\x12\x12\n" +
@@ -7067,12 +6960,11 @@ const file_engine_proto_rawDesc = "" +
 	"\x06plugin\x18\x04 \x01(\x05R\x06plugin\"?\n" +
 	"\x1cGetWorkspaceNavCountsRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
-	"projectDir\"\xf5\x01\n" +
+	"projectDir\"\xec\x01\n" +
 	"\x1dGetWorkspaceNavCountsResponse\x12\x18\n" +
 	"\asources\x18\x01 \x01(\x05R\asources\x12P\n" +
 	"\fsource_types\x18\x02 \x01(\v2-.provenencia.engine.v1.VocabularyOriginCountsR\vsourceTypes\x12R\n" +
-	"\rsource_fields\x18\x03 \x01(\v2-.provenencia.engine.v1.VocabularyOriginCountsR\fsourceFields\x12\x14\n" +
-	"\x05files\x18\x04 \x01(\x05R\x05files\"V\n" +
+	"\rsource_fields\x18\x03 \x01(\v2-.provenencia.engine.v1.VocabularyOriginCountsR\fsourceFieldsJ\x04\b\x04\x10\x05R\x05files\"V\n" +
 	"\x1aEnsureFileThumbnailRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +
@@ -7113,7 +7005,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x05Error\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x124\n" +
 	"\x04kind\x18\x02 \x01(\x0e2 .provenencia.engine.v1.ErrorKindR\x04kind\x12\x16\n" +
-	"\x06params\x18\x03 \x03(\tR\x06params*\x84\v\n" +
+	"\x06params\x18\x03 \x03(\tR\x06params*\x86\v\n" +
 	"\x06Method\x12\x16\n" +
 	"\x12METHOD_UNSPECIFIED\x10\x00\x12\x0f\n" +
 	"\vMETHOD_PING\x10\x01\x12\x16\n" +
@@ -7142,8 +7034,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x18METHOD_LIST_SOURCE_TYPES\x10\x17\x12\x1d\n" +
 	"\x19METHOD_CREATE_SOURCE_TYPE\x10\x18\x12\x1f\n" +
 	"\x1bMETHOD_LIST_METADATA_FIELDS\x10\x19\x12 \n" +
-	"\x1cMETHOD_CREATE_METADATA_FIELD\x10\x1a\x12\x16\n" +
-	"\x12METHOD_COUNT_FILES\x10\x1b\x12 \n" +
+	"\x1cMETHOD_CREATE_METADATA_FIELD\x10\x1a\x12 \n" +
 	"\x1cMETHOD_UPDATE_METADATA_FIELD\x10\x1c\x12\x1d\n" +
 	"\x19METHOD_DELETE_SOURCE_TYPE\x10\x1d\x12 \n" +
 	"\x1cMETHOD_DELETE_METADATA_FIELD\x10\x1e\x12\x1d\n" +
@@ -7160,7 +7051,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x1cMETHOD_ENSURE_FILE_THUMBNAIL\x10)\x12 \n" +
 	"\x1cMETHOD_CLOSE_CATALOG_SESSION\x10*\x12\x1b\n" +
 	"\x17METHOD_SET_SOURCE_COVER\x10+\x12\x19\n" +
-	"\x15METHOD_SEARCH_CATALOG\x10,*\x88\x01\n" +
+	"\x15METHOD_SEARCH_CATALOG\x10,\"\x04\b\x1b\x10\x1b*\x12METHOD_COUNT_FILES*\x88\x01\n" +
 	"\tErrorKind\x12\x1a\n" +
 	"\x16ERROR_KIND_UNSPECIFIED\x10\x00\x12\x13\n" +
 	"\x0fERROR_KIND_USER\x10\x01\x12\x17\n" +
@@ -7181,7 +7072,7 @@ func file_engine_proto_rawDescGZIP() []byte {
 }
 
 var file_engine_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 105)
+var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 103)
 var file_engine_proto_goTypes = []any{
 	(Method)(0),                                       // 0: provenencia.engine.v1.Method
 	(ErrorKind)(0),                                    // 1: provenencia.engine.v1.ErrorKind
@@ -7276,20 +7167,18 @@ var file_engine_proto_goTypes = []any{
 	(*DeleteSourceTypeResponse)(nil),                  // 90: provenencia.engine.v1.DeleteSourceTypeResponse
 	(*DeleteMetadataFieldRequest)(nil),                // 91: provenencia.engine.v1.DeleteMetadataFieldRequest
 	(*DeleteMetadataFieldResponse)(nil),               // 92: provenencia.engine.v1.DeleteMetadataFieldResponse
-	(*CountFilesRequest)(nil),                         // 93: provenencia.engine.v1.CountFilesRequest
-	(*CountFilesResponse)(nil),                        // 94: provenencia.engine.v1.CountFilesResponse
-	(*VocabularyOriginCounts)(nil),                    // 95: provenencia.engine.v1.VocabularyOriginCounts
-	(*GetWorkspaceNavCountsRequest)(nil),              // 96: provenencia.engine.v1.GetWorkspaceNavCountsRequest
-	(*GetWorkspaceNavCountsResponse)(nil),             // 97: provenencia.engine.v1.GetWorkspaceNavCountsResponse
-	(*EnsureFileThumbnailRequest)(nil),                // 98: provenencia.engine.v1.EnsureFileThumbnailRequest
-	(*EnsureFileThumbnailResponse)(nil),               // 99: provenencia.engine.v1.EnsureFileThumbnailResponse
-	(*CloseCatalogSessionRequest)(nil),                // 100: provenencia.engine.v1.CloseCatalogSessionRequest
-	(*CloseCatalogSessionResponse)(nil),               // 101: provenencia.engine.v1.CloseCatalogSessionResponse
-	(*WorkspaceLocation)(nil),                         // 102: provenencia.engine.v1.WorkspaceLocation
-	(*SearchCatalogRequest)(nil),                      // 103: provenencia.engine.v1.SearchCatalogRequest
-	(*SearchHit)(nil),                                 // 104: provenencia.engine.v1.SearchHit
-	(*SearchCatalogResponse)(nil),                     // 105: provenencia.engine.v1.SearchCatalogResponse
-	(*Error)(nil),                                     // 106: provenencia.engine.v1.Error
+	(*VocabularyOriginCounts)(nil),                    // 93: provenencia.engine.v1.VocabularyOriginCounts
+	(*GetWorkspaceNavCountsRequest)(nil),              // 94: provenencia.engine.v1.GetWorkspaceNavCountsRequest
+	(*GetWorkspaceNavCountsResponse)(nil),             // 95: provenencia.engine.v1.GetWorkspaceNavCountsResponse
+	(*EnsureFileThumbnailRequest)(nil),                // 96: provenencia.engine.v1.EnsureFileThumbnailRequest
+	(*EnsureFileThumbnailResponse)(nil),               // 97: provenencia.engine.v1.EnsureFileThumbnailResponse
+	(*CloseCatalogSessionRequest)(nil),                // 98: provenencia.engine.v1.CloseCatalogSessionRequest
+	(*CloseCatalogSessionResponse)(nil),               // 99: provenencia.engine.v1.CloseCatalogSessionResponse
+	(*WorkspaceLocation)(nil),                         // 100: provenencia.engine.v1.WorkspaceLocation
+	(*SearchCatalogRequest)(nil),                      // 101: provenencia.engine.v1.SearchCatalogRequest
+	(*SearchHit)(nil),                                 // 102: provenencia.engine.v1.SearchHit
+	(*SearchCatalogResponse)(nil),                     // 103: provenencia.engine.v1.SearchCatalogResponse
+	(*Error)(nil),                                     // 104: provenencia.engine.v1.Error
 }
 var file_engine_proto_depIdxs = []int32{
 	24,  // 0: provenencia.engine.v1.CompleteOnboardingResponse.project:type_name -> provenencia.engine.v1.ProjectInfo
@@ -7333,11 +7222,11 @@ var file_engine_proto_depIdxs = []int32{
 	33,  // 38: provenencia.engine.v1.ListTypeSuggestionsResponse.suggestions:type_name -> provenencia.engine.v1.TypeSuggestion
 	33,  // 39: provenencia.engine.v1.AssignTypeFieldResponse.suggestions:type_name -> provenencia.engine.v1.TypeSuggestion
 	33,  // 40: provenencia.engine.v1.RemoveTypeFieldResponse.suggestions:type_name -> provenencia.engine.v1.TypeSuggestion
-	95,  // 41: provenencia.engine.v1.GetWorkspaceNavCountsResponse.source_types:type_name -> provenencia.engine.v1.VocabularyOriginCounts
-	95,  // 42: provenencia.engine.v1.GetWorkspaceNavCountsResponse.source_fields:type_name -> provenencia.engine.v1.VocabularyOriginCounts
-	102, // 43: provenencia.engine.v1.SearchCatalogRequest.location:type_name -> provenencia.engine.v1.WorkspaceLocation
-	102, // 44: provenencia.engine.v1.SearchHit.location:type_name -> provenencia.engine.v1.WorkspaceLocation
-	104, // 45: provenencia.engine.v1.SearchCatalogResponse.hits:type_name -> provenencia.engine.v1.SearchHit
+	93,  // 41: provenencia.engine.v1.GetWorkspaceNavCountsResponse.source_types:type_name -> provenencia.engine.v1.VocabularyOriginCounts
+	93,  // 42: provenencia.engine.v1.GetWorkspaceNavCountsResponse.source_fields:type_name -> provenencia.engine.v1.VocabularyOriginCounts
+	100, // 43: provenencia.engine.v1.SearchCatalogRequest.location:type_name -> provenencia.engine.v1.WorkspaceLocation
+	100, // 44: provenencia.engine.v1.SearchHit.location:type_name -> provenencia.engine.v1.WorkspaceLocation
+	102, // 45: provenencia.engine.v1.SearchCatalogResponse.hits:type_name -> provenencia.engine.v1.SearchHit
 	1,   // 46: provenencia.engine.v1.Error.kind:type_name -> provenencia.engine.v1.ErrorKind
 	47,  // [47:47] is the sub-list for method output_type
 	47,  // [47:47] is the sub-list for method input_type
@@ -7358,7 +7247,7 @@ func file_engine_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_engine_proto_rawDesc), len(file_engine_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   105,
+			NumMessages:   103,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -34,7 +34,8 @@ enum Method {
   METHOD_CREATE_SOURCE_TYPE = 24;
   METHOD_LIST_METADATA_FIELDS = 25;
   METHOD_CREATE_METADATA_FIELD = 26;
-  METHOD_COUNT_FILES = 27;
+  reserved 27;
+  reserved "METHOD_COUNT_FILES";
   METHOD_UPDATE_METADATA_FIELD = 28;
   METHOD_DELETE_SOURCE_TYPE = 29;
   METHOD_DELETE_METADATA_FIELD = 30;
@@ -647,17 +648,6 @@ message DeleteMetadataFieldRequest {
 
 message DeleteMetadataFieldResponse {}
 
-// CountFiles reports the total number of content-addressed files rows in
-// the project — distinct files, not the (larger, per-source) artifact
-// count. No project-wide artifact listing exists yet (S2-17).
-message CountFilesRequest {
-  string project_dir = 1;
-}
-
-message CountFilesResponse {
-  int32 count = 1;
-}
-
 // VocabularyOriginCounts is the sidebar / vocabulary-header split for a
 // catalog vocabulary (source_types or source_metadata_fields). total is
 // always seeded + user + plugin.
@@ -679,7 +669,8 @@ message GetWorkspaceNavCountsResponse {
   int32 sources = 1;
   VocabularyOriginCounts source_types = 2;
   VocabularyOriginCounts source_fields = 3;
-  int32 files = 4;
+  reserved 4;
+  reserved "files";
 }
 
 // EnsureFileThumbnail lazily creates (or returns) the default thumbnail

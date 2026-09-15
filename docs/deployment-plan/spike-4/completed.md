@@ -10,6 +10,7 @@ IDs stay stable (`S4-NN`). Do not renumber when moving steps here.
 | --- | --- | --- |
 | [S4-01](#s4-01--pr-catalog-query-cache-engine) | PR | Workspace catalog query cache engine (no UI wiring) |
 | [S4-02](#s4-02--pr-catalog-query-registry) | PR | Declarative query loaders, mutation map, patch API |
+| [S4-03](#s4-03--pr-place-registry) | PR | Declarative place registry + resolve(location) |
 
 ---
 
@@ -53,6 +54,30 @@ cd macos && xcodebuild test -scheme Provenencia -destination 'platform=macOS' -o
 
 ```bash
 cd macos && xcodebuild test -scheme Provenencia -destination 'platform=macOS' \
+  -only-testing:ProvenenciaTests/CatalogQueryRegistryTests \
+  -only-testing:ProvenenciaTests/WorkspaceSessionTests
+```
+
+---
+
+### S4-03 — PR: Place registry
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S4-02 |
+| **Deliverables** | Done. `PlaceID.swift`, `WorkspacePresentationID.swift`, `ResolvedPlace.swift`, `PlaceRegistry.swift`: priority-ordered specs mapping `WorkspaceLocation` → place id, presentation id, and `CatalogQueryKey`s. Covers sources list/detail, source fields (one spec for root + row), and source types list/detail (with suggestions). **No** production UI wiring. |
+| **Tests** | Done. `macos/ProvenenciaTests/PlaceRegistryTests.swift`: section roots, deep ids, cross-section id ignore, query key table, full `PlaceID` coverage. |
+| **Dogfood** | App unchanged. |
+| **Out** | View host; `session.apply(location:)` (S4-04). |
+
+**Landed:** `PlaceRegistry.standard.resolve(_:project:)` is the extension point for S4-04 cache warming and S4-05 presentation routing.
+
+**Verify:**
+
+```bash
+cd macos && xcodebuild test -scheme Provenencia -destination 'platform=macOS' \
+  -only-testing:ProvenenciaTests/PlaceRegistryTests \
   -only-testing:ProvenenciaTests/CatalogQueryRegistryTests \
   -only-testing:ProvenenciaTests/WorkspaceSessionTests
 ```

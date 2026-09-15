@@ -18,7 +18,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var suggestionsByType: [String: [CatalogTypeSuggestion]] = [:]
     var fieldsByProject: [String: [CatalogMetadataField]] = [:]
     var metadataBySource: [String: [CatalogMetadataEntry]] = [:]
-    var fileCountByProject: [String: Int] = [:]
     /// Project dir for which a catalog RPC has “held” a session (tests only).
     var heldCatalogProjectDir: String?
     /// Last `closeCatalogSession` argument (tests only).
@@ -768,11 +767,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         fieldsByProject[projectDir] = list
     }
 
-    func countFiles(projectDir: String) async throws -> Int {
-        markCatalogSessionHeld(projectDir)
-        return fileCountByProject[projectDir] ?? 0
-    }
-
     func workspaceNavCounts(projectDir: String) async throws -> WorkspaceNavCounts {
         markCatalogSessionHeld(projectDir)
         if let workspaceNavCountsError { throw workspaceNavCountsError }
@@ -781,8 +775,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         return WorkspaceNavCounts(
             sources: (sourcesByProject[projectDir] ?? []).count,
             sourceTypes: Self.originCounts(from: types.map(\.origin)),
-            sourceFields: Self.originCounts(from: fields.map(\.origin)),
-            files: fileCountByProject[projectDir] ?? 0
+            sourceFields: Self.originCounts(from: fields.map(\.origin))
         )
     }
 

@@ -3,7 +3,6 @@ package handlers
 import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/sourcefields"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
@@ -29,15 +28,10 @@ func GetWorkspaceNavCounts(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		fileCount, err := files.Count(c)
-		if err != nil {
-			return err
-		}
 		out = &engine.GetWorkspaceNavCountsResponse{
 			Sources:      int32(sourceCount),
 			SourceTypes:  typeOriginProto(types),
 			SourceFields: fieldOriginProto(fields),
-			Files:        int32(fileCount),
 		}
 		return nil
 	})
