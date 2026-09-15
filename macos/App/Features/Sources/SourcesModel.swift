@@ -2,8 +2,8 @@ import Foundation
 import Observation
 
 /// State for the **Sources** workspace destination (S2-04 board / S2-17 PR):
-/// browse/filter/sort Sources as an evidence list, create via a thin
-/// dialog, and open a separate Source page (S2-18).
+/// browse/filter/sort Sources as an evidence list and create via a thin dialog.
+/// List rows come from `WorkspaceSession`; navigation to detail is history-driven.
 @MainActor
 @Observable
 final class SourcesModel {
@@ -31,13 +31,6 @@ final class SourcesModel {
         var description: String
     }
 
-    private(set) var sources: [CatalogSource] = []
-    private(set) var types: [CatalogSourceType] = []
-    private(set) var isLoading = false
-    /// True after the first `load()` finishes — gates history prune until rows exist.
-    private(set) var hasCompletedInitialLoad = false
-    var loadError: Error?
-
     /// `nil` / empty string means all types. Otherwise a `source_types.id`.
     var typeFilterID = ""
     var sort: Sort = .added
@@ -51,29 +44,60 @@ final class SourcesModel {
     private(set) var isSaving = false
     var toast: VocabularyToast?
 
-    /// Non-nil when the Source page is showing that id.
-    private(set) var openedSourceID: String?
+    var pageProjectDir: String { session.projectKey.projectDir }
 
-    /// Exposed so `SourcesView` can mount `SourcePageView` without duplicating init.
-    var pageProjectDir: String { projectDir }
-    var pageUserID: String { userID }
-    var pageStore: any GenealogyStore { store }
-
-    private let projectDir: String
     private let userID: String
     private let store: any GenealogyStore
+    private let session: WorkspaceSession
     private let catalogCounts: CatalogCounts?
 
     init(
-        projectDir: String,
+        session: WorkspaceSession,
         userID: String,
         store: any GenealogyStore,
         catalogCounts: CatalogCounts? = nil
     ) {
-        self.projectDir = projectDir
+        self.session = session
         self.userID = userID
         self.store = store
         self.catalogCounts = catalogCounts
+    }
+
+    // MARK: Session handles
+
+    static func sourcesListKey(for session: WorkspaceSession) -> CatalogQueryKey {
+        CatalogQueryKey.sourcesList(project: session.projectKey)
+    }
+
+    static func sourceTypesListKey(for session: WorkspaceSession) -> CatalogQueryKey {
+        CatalogQueryKey.sourceTypesList(project: session.projectKey)
+    }
+
+    /// Starts list queries once (`.task` / dialog). Do not call from view `body`.
+    func warmListQueries() {
+        let _: QueryHandle<[CatalogSource]> = session.query(Self.sourcesListKey(for: session))
+        let _: QueryHandle<[CatalogSourceType]> = session.query(Self.sourceTypesListKey(for: session))
+    }
+
+    var sources: [CatalogSource] {
+        session.queryHandle(Self.sourcesListKey(for: session))?.value ?? []
+    }
+
+    var types: [CatalogSourceType] {
+        session.queryHandle(Self.sourceTypesListKey(for: session))?.value ?? []
+    }
+
+    var isLoading: Bool {
+        guard let handle: QueryHandle<[CatalogSource]> = session.queryHandle(Self.sourcesListKey(for: session))
+        else { return true }
+        return handle.status == .loading && sources.isEmpty
+    }
+
+    var loadError: Error? {
+        guard sources.isEmpty else { return nil }
+        let sourcesHandle: QueryHandle<[CatalogSource]>? = session.queryHandle(Self.sourcesListKey(for: session))
+        let typesHandle: QueryHandle<[CatalogSourceType]>? = session.queryHandle(Self.sourceTypesListKey(for: session))
+        return sourcesHandle?.error ?? typesHandle?.error
     }
 
     // MARK: Derived
@@ -130,11 +154,6 @@ final class SourcesModel {
         return L10n.Sources.countLineFiltered(visible: visible, total: sources.count)
     }
 
-    var openedSource: CatalogSource? {
-        guard let openedSourceID else { return nil }
-        return sources.first { $0.id == openedSourceID }
-    }
-
     var typeComboOptions: [PVComboBoxOption] {
         types.map { PVComboBoxOption(value: $0.id, label: $0.label, subtext: $0.key) }
     }
@@ -147,68 +166,9 @@ final class SourcesModel {
 
     // MARK: Actions
 
-    /// Fetches sources/types and reconciles the open page to `location` in one publish.
-    @discardableResult
-    func load(from location: WorkspaceLocation = .sectionRoot(.sources)) async -> WorkspaceLocationReconcile {
-        guard location.section == .sources else { return .ignored }
-        isLoading = true
-        loadError = nil
-        defer {
-            isLoading = false
-            hasCompletedInitialLoad = true
-        }
-        // Load independently so a busy catalog on one call does not leave
-        // the type pool empty for Add Source when sources already arrived
-        // (or vice versa).
-        var firstError: Error?
-        do {
-            sources = try await store.listSources(projectDir: projectDir)
-            publishCounts()
-        } catch {
-            firstError = error
-        }
-        do {
-            types = try await store.listSourceTypes(projectDir: projectDir)
-        } catch {
-            firstError = firstError ?? error
-        }
-        loadError = firstError
-        return reconcile(from: location)
-    }
-
-    /// Reconciles list/page state to `location` when rows are already loaded.
-    @discardableResult
-    func apply(from location: WorkspaceLocation) -> WorkspaceLocationReconcile {
-        guard location.section == .sources else { return .ignored }
-        return reconcile(from: location)
-    }
-
-    @discardableResult
-    private func reconcile(from location: WorkspaceLocation) -> WorkspaceLocationReconcile {
-        if let sourceId = location.sourceId {
-            guard sources.contains(where: { $0.id == sourceId }) else {
-                openedSourceID = nil
-                return .missingDeepId
-            }
-            openedSourceID = sourceId
-            return .applied
-        }
-        openedSourceID = nil
-        return .applied
-    }
-
-    /// Refreshes the type vocabulary for the Add Source combo. Always hits
-    /// the store so a failed/racy initial `load` cannot leave the dialog
-    /// with an empty pool while Source types elsewhere show rows.
-    func refreshTypes() async {
-        do {
-            types = try await store.listSourceTypes(projectDir: projectDir)
-            if loadError != nil, !types.isEmpty {
-                loadError = nil
-            }
-        } catch {
-            loadError = error
-        }
+    /// Ensures the type pool query is warm for the Add Source dialog.
+    func refreshTypes() {
+        let _: QueryHandle<[CatalogSourceType]> = session.query(Self.sourceTypesListKey(for: session))
     }
 
     func openAdd() {
@@ -237,8 +197,10 @@ final class SourcesModel {
         createError = nil
     }
 
-    func create() async {
-        guard !isSaving else { return }
+    /// On success returns the created source for the view to `go(to:)`.
+    @discardableResult
+    func create() async -> CatalogSource? {
+        guard !isSaving else { return nil }
         let trimmedTitle = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
         var typeErr: String?
         var titleErr: String?
@@ -251,20 +213,26 @@ final class SourcesModel {
         typeError = typeErr
         titleError = titleErr
         createError = nil
-        guard typeErr == nil, titleErr == nil else { return }
+        guard typeErr == nil, titleErr == nil else { return nil }
 
         isSaving = true
         defer { isSaving = false }
         do {
             let created = try await store.createSource(
-                projectDir: projectDir,
+                projectDir: session.projectKey.projectDir,
                 userID: userID,
                 sourceTypeID: draft.sourceTypeID,
                 title: trimmedTitle,
                 description: draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
             )
-            sources.insert(created, at: 0)
-            publishCounts()
+            session.apply(.createdSource)
+            let listKey = CatalogQueryKey.sourcesList(project: session.projectKey)
+            if let listHandle: QueryHandle<[CatalogSource]> = session.queryHandle(listKey) {
+                var rows = listHandle.value ?? []
+                rows.insert(created, at: 0)
+                session.setQueryValue(listKey, value: rows)
+            }
+            syncCatalogCounts()
             isAdding = false
             typeError = nil
             titleError = nil
@@ -274,28 +242,15 @@ final class SourcesModel {
                 body: L10n.Sources.toastCreatedBody(title: created.title),
                 tone: .success
             )
-            openedSourceID = created.id
+            return created
         } catch {
             createError = L10n.Errors.message(for: error)
+            return nil
         }
     }
 
-    func openSource(id: String) {
-        openedSourceID = id
-    }
-
-    func closeSource() {
-        openedSourceID = nil
-    }
-
-    /// Keeps the list row in sync when the Source page edits identity or cover.
-    func applyUpdatedSource(_ source: CatalogSource) {
-        if let idx = sources.firstIndex(where: { $0.id == source.id }) {
-            sources[idx] = source
-        }
-    }
-
-    private func publishCounts() {
+    /// Refreshes sidebar totals from the cached list (after warm load or create).
+    func syncCatalogCounts() {
         catalogCounts?.publishSources(sources.count)
     }
 }

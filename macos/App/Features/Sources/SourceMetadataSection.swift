@@ -167,6 +167,7 @@ final class SourceMetadataSection {
                 fieldID: fieldID
             )
             context.workspace?.metadata = updated
+            context.notifyWorkspaceMutated()
             syncDrafts()
         } catch {
             context.pageError = L10n.Errors.message(for: error)
@@ -190,6 +191,7 @@ final class SourceMetadataSection {
                 fieldIDs: ordered.map(\.field.id)
             )
             context.workspace?.metadata = updated
+            context.notifyWorkspaceMutated()
             syncDrafts()
         } catch {
             context.pageError = L10n.Errors.message(for: error)
@@ -335,5 +337,6 @@ final class SourceMetadataSection {
             context.workspace?.metadata.append(entry)
         }
         drafts[entry.field.id] = entry.valueText
+        context.notifyWorkspaceMutated()
     }
 }

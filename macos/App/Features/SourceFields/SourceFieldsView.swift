@@ -2,38 +2,55 @@ import SwiftUI
 
 /// The **Source fields** workspace destination (S2-02 board / S2-15 PR):
 /// browse and create/edit the project's `source_metadata_fields`
-/// vocabulary. Mounts inside the existing S2-01 workspace content host —
-/// see `WorkspaceContent` — not a second window chrome.
-///
-/// Chrome choice for add/edit (S2-02 F-18 leaves this open): a nested
-/// detail pane beside the list, not a modal/sheet. It keeps the
-/// researcher's place in the list while filling out the form and matches
-/// the density of the rest of the workspace.
+/// vocabulary. Mounts inside the existing S2-01 workspace content host.
 struct SourceFieldsView: View {
-    @Environment(WorkspaceNavigation.self) private var navigation
+    @Environment(WorkspaceSession.self) private var session
     @State private var model: SourceFieldsModel
 
-    /// Detail pane width — between the web board's `minmax(360px, 420px)`
-    /// column and `PVSpacing.widthInspector` (340pt); no shared token
-    /// covers this exact range, so it's a local literal like
-    /// `PVToast`'s own `frame(maxWidth: 360)`.
     private let detailPaneWidth: CGFloat = 380
 
     init(
-        projectDir: String,
+        session: WorkspaceSession,
         userID: String,
         store: any GenealogyStore,
         catalogCounts: CatalogCounts? = nil
     ) {
         _model = State(
             initialValue: SourceFieldsModel(
-                projectDir: projectDir,
+                session: session,
                 userID: userID,
                 store: store,
                 catalogCounts: catalogCounts
             )
         )
     }
+
+    var body: some View {
+        Group {
+            if let fieldsHandle: QueryHandle<[CatalogMetadataField]> = session.queryHandle(
+                SourceFieldsModel.fieldsListKey(for: session)
+            ) {
+                SourceFieldsContent(
+                    fieldsHandle: fieldsHandle,
+                    model: model,
+                    detailPaneWidth: detailPaneWidth
+                )
+            } else {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .task {
+            model.warmFieldsQuery()
+        }
+    }
+}
+
+private struct SourceFieldsContent: View {
+    @Environment(WorkspaceNavigation.self) private var navigation
+    @Bindable var fieldsHandle: QueryHandle<[CatalogMetadataField]>
+    @Bindable var model: SourceFieldsModel
+    let detailPaneWidth: CGFloat
 
     var body: some View {
         VStack(spacing: 0) {
@@ -74,33 +91,33 @@ struct SourceFieldsView: View {
         ) { field in
             deleteDetail(for: field)
         }
-        .task {
-            await reconcileNavigation(load: true)
+        .onChange(of: navigation.currentLocation) { _, location in
+            reconcileSelection(for: location)
         }
-        .onChange(of: navigation.currentLocation) { _, _ in
-            guard model.hasCompletedInitialLoad else { return }
-            Task { await reconcileNavigation(load: false) }
+        .onChange(of: fieldsHandle.status) { _, status in
+            if status == .ready { model.syncCatalogCounts() }
+            reconcileSelection(for: navigation.currentLocation)
+        }
+        .onChange(of: fieldsHandle.value) { _, _ in
+            reconcileSelection(for: navigation.currentLocation)
+        }
+        .onAppear {
+            reconcileSelection(for: navigation.currentLocation)
+            if fieldsHandle.status == .ready {
+                model.syncCatalogCounts()
+            }
         }
         .accessibilityIdentifier("sourceFields")
     }
 
-    private func reconcileNavigation(load: Bool) async {
-        let location = navigation.currentLocation
-        let outcome = if load {
-            await model.load(from: location)
-        } else {
-            model.apply(from: location)
-        }
+    private func reconcileSelection(for location: WorkspaceLocation) {
+        guard fieldsHandle.status == .ready || !(fieldsHandle.value ?? []).isEmpty else { return }
+        let outcome = model.syncSelection(from: location)
         if outcome == .missingDeepId {
             navigation.fallbackToSectionRoot()
         }
     }
 
-    /// Dismissal is driven by the model, not by the sheet: a successful delete
-    /// clears `pendingDeleteID`, and a failed one keeps the sheet up with the
-    /// reason (see `pvConfirmSheet`). The sheet renders its copy and detail
-    /// from the field it receives — a snapshot `pvConfirmSheet` holds through
-    /// the dismiss animation — never from `model.pendingDeleteField` live.
     private var pendingDelete: Binding<CatalogMetadataField?> {
         Binding(
             get: { model.pendingDeleteField },
@@ -117,8 +134,6 @@ struct SourceFieldsView: View {
         )
     }
 
-    /// The consequence that earns this a sheet rather than a plain alert: the
-    /// mono-set key the delete releases, plus the reason if it failed.
     @ViewBuilder
     private func deleteDetail(for field: CatalogMetadataField) -> some View {
         PVConfirmKeyChip(label: L10n.SourceFields.deleteKeyReleased, value: field.key)
@@ -151,12 +166,14 @@ struct SourceFieldsView: View {
         CatalogMetadataField(id: "3", key: "grandmas-album-code", origin: "user", label: "Grandma's album code", dataType: "text", description: "Pencil code on the back of prints."),
         CatalogMetadataField(id: "4", key: "memorial-id", origin: "plugin:findagrave", label: "Memorial id", dataType: "text", description: "Numeric memorial identifier."),
     ]
+    let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
     return SourceFieldsView(
-        projectDir: projectDir,
+        session: session,
         userID: "00000000-0000-7000-8000-000000000001",
         store: store
     )
     .environment(WorkspaceNavigation())
+    .environment(session)
     .frame(width: 1180, height: 760)
 }
 #endif

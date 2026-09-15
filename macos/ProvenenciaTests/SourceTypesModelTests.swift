@@ -42,26 +42,62 @@ struct SourceTypesModelTests {
         fields: [CatalogMetadataField] = [],
         suggestions: [String: [CatalogTypeSuggestion]] = [:],
         catalogCounts: CatalogCounts? = nil
-    ) -> SourceTypesModel {
+    ) -> (SourceTypesModel, WorkspaceSession) {
         store.sourceTypesByProject[projectDir] = types
         store.fieldsByProject[projectDir] = fields
         store.suggestionsByType = suggestions
-        return SourceTypesModel(
-            projectDir: projectDir,
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let model = SourceTypesModel(
+            session: session,
             userID: userID,
             store: store,
             catalogCounts: catalogCounts
         )
+        return (model, session)
+    }
+
+    private func waitForQuery<Value>(_ handle: QueryHandle<Value>) async {
+        var waited: UInt64 = 0
+        let step: UInt64 = 10_000_000
+        while waited < 2_000_000_000 {
+            if handle.status == .ready || handle.status == .error { return }
+            await Task.yield()
+            try? await Task.sleep(nanoseconds: step)
+            waited += step
+        }
+    }
+
+    private func warm(_ model: SourceTypesModel, session: WorkspaceSession) async {
+        model.warmListQueries()
+        if let typesHandle: QueryHandle<[CatalogSourceType]> = session.queryHandle(
+            SourceTypesModel.typesListKey(for: session)
+        ) {
+            await waitForQuery(typesHandle)
+        }
+        if let fieldsHandle: QueryHandle<[CatalogMetadataField]> = session.queryHandle(
+            SourceTypesModel.fieldsListKey(for: session)
+        ) {
+            await waitForQuery(fieldsHandle)
+        }
+    }
+
+    private func warmSuggestions(_ model: SourceTypesModel, session: WorkspaceSession, typeID: String) async {
+        model.warmSuggestions(for: typeID)
+        if let handle: QueryHandle<[CatalogTypeSuggestion]> = session.queryHandle(
+            SourceTypesModel.suggestionsKey(for: session, typeID: typeID)
+        ) {
+            await waitForQuery(handle)
+        }
     }
 
     // MARK: List
 
     @Test func loadPopulatesTypesPoolAndCounts() async {
-        let model = makeModel(
+        let (model, session) = makeModel(
             types: [seededType(), userType(), pluginType()],
             fields: [field(id: "f1", label: "Author")]
         )
-        await model.load()
+        await warm(model, session: session)
         #expect(model.types.count == 3)
         #expect(model.fields.count == 1)
         #expect(model.types.seededCount == 1)
@@ -71,13 +107,13 @@ struct SourceTypesModelTests {
 
     @Test func sortingTogglesWithinAColumnAndResetsAcrossColumns() async {
         let store = FakeStore()
-        let model = makeModel(
+        let (model, session) = makeModel(
             store: store,
             types: [seededType(), userType()],
             fields: [field(id: "f1", label: "Author")],
             suggestions: ["t2": [CatalogTypeSuggestion(field: field(id: "f1", label: "Author"), sortOrder: 0)]]
         )
-        await model.load()
+        await warm(model, session: session)
         #expect(model.visibleTypes.map(\.id) == ["t1", "t2"])
 
         model.sortBy("label")
@@ -95,8 +131,8 @@ struct SourceTypesModelTests {
     // MARK: Selection and locking
 
     @Test func selectingSeededOrUserTypeEditsAndPluginTypeLocks() async {
-        let model = makeModel(types: [seededType(), userType(), pluginType()])
-        await model.load()
+        let (model, session) = makeModel(types: [seededType(), userType(), pluginType()])
+        await warm(model, session: session)
 
         model.select("t1")
         #expect(!model.isSelectedTypeLocked)
@@ -111,7 +147,7 @@ struct SourceTypesModelTests {
     @Test func selectingLoadsThatTypesSuggestionsInStoredOrder() async {
         let author = field(id: "f1", label: "Author")
         let publisher = field(id: "f2", label: "Publisher")
-        let model = makeModel(
+        let (model, session) = makeModel(
             types: [seededType()],
             fields: [author, publisher],
             // Publisher was assigned first, so stored order and label order disagree.
@@ -120,35 +156,35 @@ struct SourceTypesModelTests {
                 CatalogTypeSuggestion(field: author, sortOrder: 1),
             ]]
         )
-        await model.load()
+        await warm(model, session: session)
         model.select("t1")
-        await model.loadSuggestions(for: "t1")
+        await warmSuggestions(model, session: session, typeID: "t1")
         #expect(model.suggestions.map(\.field.label) == ["Publisher", "Author"])
     }
 
     @Test func assignPoolExcludesFieldsAlreadySuggested() async {
         let author = field(id: "f1", label: "Author")
-        let model = makeModel(
+        let (model, session) = makeModel(
             types: [seededType()],
             fields: [author, field(id: "f2", label: "Publisher")],
             suggestions: ["t1": [CatalogTypeSuggestion(field: author, sortOrder: 0)]]
         )
-        await model.load()
+        await warm(model, session: session)
         model.select("t1")
-        await model.loadSuggestions(for: "t1")
+        await warmSuggestions(model, session: session, typeID: "t1")
         #expect(model.assignPool.map(\.id) == ["f2"])
     }
 
     // MARK: Associations
 
     @Test func assigningAppendsTheFieldAndUpdatesTheListCount() async {
-        let model = makeModel(
+        let (model, session) = makeModel(
             types: [seededType()],
             fields: [field(id: "f1", label: "Author"), field(id: "f2", label: "Publisher")]
         )
-        await model.load()
+        await warm(model, session: session)
         model.select("t1")
-        await model.loadSuggestions(for: "t1")
+        await warmSuggestions(model, session: session, typeID: "t1")
 
         model.assignPick = "f2"
         await model.assignPickedField()
@@ -163,14 +199,14 @@ struct SourceTypesModelTests {
 
     @Test func removingASuggestionKeepsTheFieldInThePool() async {
         let author = field(id: "f1", label: "Author", usedBy: 3)
-        let model = makeModel(
+        let (model, session) = makeModel(
             types: [seededType()],
             fields: [author],
             suggestions: ["t1": [CatalogTypeSuggestion(field: author, sortOrder: 0)]]
         )
-        await model.load()
+        await warm(model, session: session)
         model.select("t1")
-        await model.loadSuggestions(for: "t1")
+        await warmSuggestions(model, session: session, typeID: "t1")
 
         await model.removeSuggestion(fieldID: "f1")
 
@@ -185,14 +221,14 @@ struct SourceTypesModelTests {
 
     @Test func removingASuggestionNoSourceUsesOmitsTheValueCount() async {
         let author = field(id: "f1", label: "Author")
-        let model = makeModel(
+        let (model, session) = makeModel(
             types: [seededType()],
             fields: [author],
             suggestions: ["t1": [CatalogTypeSuggestion(field: author, sortOrder: 0)]]
         )
-        await model.load()
+        await warm(model, session: session)
         model.select("t1")
-        await model.loadSuggestions(for: "t1")
+        await warmSuggestions(model, session: session, typeID: "t1")
 
         await model.removeSuggestion(fieldID: "f1")
         #expect(model.toast?.body == L10n.SourceTypes.toastRemovedBody(field: "Author", type: "Book", valueCount: 0))
@@ -202,8 +238,8 @@ struct SourceTypesModelTests {
 
     @Test func addingMintsTheKeyFromTheLabelAndLandsOnTheNewType() async {
         let counts = CatalogCounts(projectDir: projectDir, store: FakeStore())
-        let model = makeModel(types: [seededType()], catalogCounts: counts)
-        await model.load()
+        let (model, session) = makeModel(types: [seededType()], catalogCounts: counts)
+        await warm(model, session: session)
 
         model.openAdd()
         #expect(model.isAdding)
@@ -223,8 +259,8 @@ struct SourceTypesModelTests {
     }
 
     @Test func addingReturnsLocationForWorkspaceNavigation() async {
-        let model = makeModel(types: [seededType()])
-        await model.load()
+        let (model, session) = makeModel(types: [seededType()])
+        await warm(model, session: session)
         model.openAdd()
         model.draft?.label = "Parish register"
         let location = await model.submit()
@@ -234,8 +270,8 @@ struct SourceTypesModelTests {
     }
 
     @Test func addingRefusesABlankLabelWithoutCallingTheStore() async {
-        let model = makeModel()
-        await model.load()
+        let (model, session) = makeModel()
+        await warm(model, session: session)
         model.openAdd()
         model.draft?.label = "   "
 
@@ -247,8 +283,8 @@ struct SourceTypesModelTests {
     }
 
     @Test func addingRefusesALabelThatCannotBeSlugged() async {
-        let model = makeModel()
-        await model.load()
+        let (model, session) = makeModel()
+        await warm(model, session: session)
         model.openAdd()
         model.draft?.label = "—"
 
@@ -259,8 +295,8 @@ struct SourceTypesModelTests {
     }
 
     @Test func addingADuplicateUserKeySurfacesTheErrorAndKeepsTheForm() async {
-        let model = makeModel(types: [userType(id: "t2", label: "Family scrapbook")])
-        await model.load()
+        let (model, session) = makeModel(types: [userType(id: "t2", label: "Family scrapbook")])
+        await warm(model, session: session)
         model.openAdd()
         model.draft?.label = "Family scrapbook"
 
@@ -272,8 +308,8 @@ struct SourceTypesModelTests {
     }
 
     @Test func cancellingAddRestoresThePreviouslySelectedType() async {
-        let model = makeModel(types: [seededType(), userType()])
-        await model.load()
+        let (model, session) = makeModel(types: [seededType(), userType()])
+        await warm(model, session: session)
         model.select("t2")
         model.openAdd()
         model.cancelAdd()
@@ -285,8 +321,8 @@ struct SourceTypesModelTests {
     // MARK: Edit
 
     @Test func editingASeededTypeIsAllowedAndTheKeyStays() async {
-        let model = makeModel(types: [seededType()])
-        await model.load()
+        let (model, session) = makeModel(types: [seededType()])
+        await warm(model, session: session)
         model.select("t1")
         #expect(!model.isDirty)
 
@@ -300,8 +336,8 @@ struct SourceTypesModelTests {
     }
 
     @Test func changingIconMarksDirtyAndPersists() async {
-        let model = makeModel(types: [userType()])
-        await model.load()
+        let (model, session) = makeModel(types: [userType()])
+        await warm(model, session: session)
         model.select("t2")
         #expect(model.draft?.iconKey == PVEvidenceIconKey.defaultTypeIcon.rawValue)
 
@@ -314,8 +350,8 @@ struct SourceTypesModelTests {
     }
 
     @Test func revertingDiscardsUnsavedEdits() async {
-        let model = makeModel(types: [userType()])
-        await model.load()
+        let (model, session) = makeModel(types: [userType()])
+        await warm(model, session: session)
         model.select("t2")
         model.draft?.description = "Changed"
         model.revertEdit()
@@ -327,12 +363,12 @@ struct SourceTypesModelTests {
     // MARK: Delete
 
     @Test func deleteIsGatedOnUseAndPluginOwnership() async {
-        let model = makeModel(types: [
+        let (model, session) = makeModel(types: [
             userType(id: "t2", label: "Family scrapbook", usedBy: 0),
             seededType(id: "t1", label: "Book", usedBy: 26),
             pluginType(),
         ])
-        await model.load()
+        await warm(model, session: session)
 
         model.select("t2")
         #expect(model.canDeleteSelectedType)
@@ -348,8 +384,8 @@ struct SourceTypesModelTests {
     }
 
     @Test func askDeleteIsIgnoredWhenTheTypeIsInUse() async {
-        let model = makeModel(types: [seededType(usedBy: 26)])
-        await model.load()
+        let (model, session) = makeModel(types: [seededType(usedBy: 26)])
+        await warm(model, session: session)
         model.select("t1")
         model.askDelete()
 
@@ -360,16 +396,16 @@ struct SourceTypesModelTests {
         let author = field(id: "f1", label: "Author")
         let store = FakeStore()
         let counts = CatalogCounts(projectDir: projectDir, store: store)
-        let model = makeModel(
+        let (model, session) = makeModel(
             store: store,
             types: [userType()],
             fields: [author],
             suggestions: ["t2": [CatalogTypeSuggestion(field: author, sortOrder: 0)]],
             catalogCounts: counts
         )
-        await model.load()
+        await warm(model, session: session)
         model.select("t2")
-        await model.loadSuggestions(for: "t2")
+        await warmSuggestions(model, session: session, typeID: "t2")
         model.askDelete()
         #expect(model.pendingDeleteType?.id == "t2")
 
@@ -386,72 +422,49 @@ struct SourceTypesModelTests {
         #expect(counts.sourceFields?.total == 1)
     }
 
-    @Test func loadFromLocationAppliesTypeInSameCompletion() async {
-        let model = makeModel(types: [
+    @Test func syncSelectionAppliesTypeAfterWarm() async {
+        let (model, session) = makeModel(types: [
             CatalogSourceType(id: "t1", key: "book", origin: "provenencia", label: "Book", description: ""),
         ])
-        let outcome = await model.load(
-            from: WorkspaceLocation(section: .sourceTypes, typeId: "t1", title: "Book")
-        )
-        #expect(outcome == .applied)
-        #expect(model.selectedType?.id == "t1")
-        #expect(model.hasCompletedInitialLoad)
-    }
-
-    @Test func loadFromLocationMissingDeepId() async {
-        let model = makeModel(types: [
-            CatalogSourceType(id: "t1", key: "book", origin: "provenencia", label: "Book", description: ""),
-        ])
-        let outcome = await model.load(
-            from: WorkspaceLocation(section: .sourceTypes, typeId: "gone", title: "Missing")
-        )
-        #expect(outcome == .missingDeepId)
-        #expect(model.selectedType == nil)
-    }
-
-    @Test func applyFromLocationSelectsAfterLoad() async {
-        let model = makeModel(types: [
-            CatalogSourceType(id: "t1", key: "book", origin: "provenencia", label: "Book", description: ""),
-        ])
-        await model.load()
-        let outcome = await model.apply(
+        await warm(model, session: session)
+        let outcome = model.syncSelection(
             from: WorkspaceLocation(section: .sourceTypes, typeId: "t1", title: "Book")
         )
         #expect(outcome == .applied)
         #expect(model.selectedType?.id == "t1")
     }
 
-    @Test func applyFromLocationMissingDeepId() async {
-        let model = makeModel(types: [
+    @Test func syncSelectionMissingDeepId() async {
+        let (model, session) = makeModel(types: [
             CatalogSourceType(id: "t1", key: "book", origin: "provenencia", label: "Book", description: ""),
         ])
-        await model.load()
-        let outcome = await model.apply(
+        await warm(model, session: session)
+        let outcome = model.syncSelection(
             from: WorkspaceLocation(section: .sourceTypes, typeId: "gone", title: "Missing")
         )
         #expect(outcome == .missingDeepId)
         #expect(model.selectedType == nil)
     }
 
-    @Test func applyFromSectionRootClearsSelection() async {
-        let model = makeModel(types: [
+    @Test func syncSelectionFromSectionRootClearsSelection() async {
+        let (model, session) = makeModel(types: [
             CatalogSourceType(id: "t1", key: "book", origin: "provenencia", label: "Book", description: ""),
         ])
-        await model.load()
+        await warm(model, session: session)
         model.select("t1")
-        try? await Task.sleep(nanoseconds: 50_000_000)
-        let outcome = await model.apply(from: .sectionRoot(.sourceTypes))
+        await warmSuggestions(model, session: session, typeID: "t1")
+        let outcome = model.syncSelection(from: .sectionRoot(.sourceTypes))
         #expect(outcome == .applied)
         #expect(model.selectedType == nil)
     }
 
-    @Test func applyIgnoredWhileAdding() async {
-        let model = makeModel(types: [
+    @Test func syncSelectionIgnoredWhileAdding() async {
+        let (model, session) = makeModel(types: [
             CatalogSourceType(id: "t1", key: "book", origin: "provenencia", label: "Book", description: ""),
         ])
-        await model.load()
+        await warm(model, session: session)
         model.openAdd()
-        let outcome = await model.apply(
+        let outcome = model.syncSelection(
             from: WorkspaceLocation(section: .sourceTypes, typeId: "t1", title: "Book")
         )
         #expect(outcome == .ignored)
@@ -467,8 +480,8 @@ struct SourceTypesModelTests {
         navigation.attachProject(uuid: "00000000-0000-7000-8000-0000000000cc", fileURL: url)
         navigation.go(to: .sectionRoot(.sourceTypes))
 
-        let model = makeModel()
-        await model.load()
+        let (model, session) = makeModel()
+        await warm(model, session: session)
         model.openAdd()
         model.draft?.label = "Parish register"
         if let location = await model.submit() {

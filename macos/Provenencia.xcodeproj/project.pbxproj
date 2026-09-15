@@ -14,7 +14,7 @@
 		AA000000000000000000031F /* PVReorderableList.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000320 /* PVReorderableList.swift */; };
 		AA0000000000000000000305 /* PVDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000304 /* PVDialog.swift */; };
 		AA0000000000000000000307 /* SourcesModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000306 /* SourcesModel.swift */; };
-		AA0000000000000000000309 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000308 /* SourcesView.swift */; };
+		AA0000000000000000000309 /* SourcesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000308 /* SourcesListView.swift */; };
 		AA0000000000000000000311 /* SourcePageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000310 /* SourcePageView.swift */; };
 		AA0000000000000000000317 /* PVBreadcrumbs.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000318 /* PVBreadcrumbs.swift */; };
 		AA0000000000000000000319 /* SourcePageModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000031A /* SourcePageModel.swift */; };
@@ -207,7 +207,7 @@
 		AA0000000000000000000320 /* PVReorderableList.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVReorderableList.swift; sourceTree = "<group>"; };
 		AA0000000000000000000304 /* PVDialog.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVDialog.swift; sourceTree = "<group>"; };
 		AA0000000000000000000306 /* SourcesModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesModel.swift; sourceTree = "<group>"; };
-		AA0000000000000000000308 /* SourcesView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesView.swift; sourceTree = "<group>"; };
+		AA0000000000000000000308 /* SourcesListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesListView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000310 /* SourcePageView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcePageView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000318 /* PVBreadcrumbs.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVBreadcrumbs.swift; sourceTree = "<group>"; };
 		AA000000000000000000031A /* SourcePageModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcePageModel.swift; sourceTree = "<group>"; };
@@ -419,7 +419,7 @@
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000306 /* SourcesModel.swift */,
-				AA0000000000000000000308 /* SourcesView.swift */,
+				AA0000000000000000000308 /* SourcesListView.swift */,
 				AA000000000000000000031A /* SourcePageModel.swift */,
 				AA0000000000000000000340 /* SourcePageContext.swift */,
 				AA0000000000000000000342 /* SourceIdentitySection.swift */,
@@ -1034,7 +1034,7 @@
 				AA000000000000000000031F /* PVReorderableList.swift in Sources */,
 				AA0000000000000000000305 /* PVDialog.swift in Sources */,
 				AA0000000000000000000307 /* SourcesModel.swift in Sources */,
-				AA0000000000000000000309 /* SourcesView.swift in Sources */,
+				AA0000000000000000000309 /* SourcesListView.swift in Sources */,
 				AA0000000000000000000311 /* SourcePageView.swift in Sources */,
 				AA0000000000000000000317 /* PVBreadcrumbs.swift in Sources */,
 				AA0000000000000000000319 /* SourcePageModel.swift in Sources */,

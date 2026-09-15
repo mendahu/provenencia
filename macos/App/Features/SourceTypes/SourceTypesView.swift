@@ -2,42 +2,55 @@ import SwiftUI
 
 /// The **Source types** workspace destination (S2-03 board / S2-16 PR):
 /// browse the project's `source_types` vocabulary, edit or delete
-/// a type, and assign or remove the metadata fields it suggests. Mounts
-/// inside the existing S2-01 workspace content host — see
-/// `WorkspaceContent` — not a second window chrome.
-///
-/// Navigation choice (S2-03 T-13 leaves this open): a master–detail split,
-/// not expand-in-list or a pushed detail. A type carries a description plus
-/// a variable-length suggestions list, so expanding a row in place would
-/// push the rest of the vocabulary off screen; and assigning fields is a
-/// back-and-forth task that a push would make tedious. It is also what
-/// Source fields already does, so the two vocabulary destinations behave
-/// alike.
+/// a type, and assign or remove the metadata fields it suggests.
 struct SourceTypesView: View {
-    @Environment(WorkspaceNavigation.self) private var navigation
+    @Environment(WorkspaceSession.self) private var session
     @State private var model: SourceTypesModel
 
-    /// Detail pane width — between the web board's `minmax(340px, 400px)`
-    /// column and `PVSpacing.widthInspector` (340pt); no shared token covers
-    /// this exact range, so it's a local literal like `PVToast`'s own
-    /// `frame(maxWidth: 360)`.
     private let detailPaneWidth: CGFloat = 380
 
     init(
-        projectDir: String,
+        session: WorkspaceSession,
         userID: String,
         store: any GenealogyStore,
         catalogCounts: CatalogCounts? = nil
     ) {
         _model = State(
             initialValue: SourceTypesModel(
-                projectDir: projectDir,
+                session: session,
                 userID: userID,
                 store: store,
                 catalogCounts: catalogCounts
             )
         )
     }
+
+    var body: some View {
+        Group {
+            if let typesHandle: QueryHandle<[CatalogSourceType]> = session.queryHandle(
+                SourceTypesModel.typesListKey(for: session)
+            ) {
+                SourceTypesContent(
+                    typesHandle: typesHandle,
+                    model: model,
+                    detailPaneWidth: detailPaneWidth
+                )
+            } else {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .task {
+            model.warmListQueries()
+        }
+    }
+}
+
+private struct SourceTypesContent: View {
+    @Environment(WorkspaceNavigation.self) private var navigation
+    @Bindable var typesHandle: QueryHandle<[CatalogSourceType]>
+    @Bindable var model: SourceTypesModel
+    let detailPaneWidth: CGFloat
 
     var body: some View {
         VStack(spacing: 0) {
@@ -78,33 +91,29 @@ struct SourceTypesView: View {
         ) { type in
             deleteDetail(for: type)
         }
-        .task {
-            await reconcileNavigation(load: true)
+        .onChange(of: navigation.currentLocation) { _, location in
+            reconcileSelection(for: location)
         }
-        .onChange(of: navigation.currentLocation) { _, _ in
-            guard model.hasCompletedInitialLoad else { return }
-            Task { await reconcileNavigation(load: false) }
+        .onChange(of: typesHandle.status) { _, _ in
+            reconcileSelection(for: navigation.currentLocation)
+        }
+        .onChange(of: typesHandle.value) { _, _ in
+            reconcileSelection(for: navigation.currentLocation)
+        }
+        .onAppear {
+            reconcileSelection(for: navigation.currentLocation)
         }
         .accessibilityIdentifier("sourceTypes")
     }
 
-    private func reconcileNavigation(load: Bool) async {
-        let location = navigation.currentLocation
-        let outcome = if load {
-            await model.load(from: location)
-        } else {
-            await model.apply(from: location)
-        }
+    private func reconcileSelection(for location: WorkspaceLocation) {
+        guard typesHandle.status == .ready || !(typesHandle.value ?? []).isEmpty else { return }
+        let outcome = model.syncSelection(from: location)
         if outcome == .missingDeepId {
             navigation.fallbackToSectionRoot()
         }
     }
 
-    /// Dismissal is driven by the model, not by the sheet: a successful delete
-    /// clears `pendingDeleteID`, and a failed one keeps the sheet up with the
-    /// reason (see `pvConfirmSheet`). The sheet renders its copy and detail
-    /// from the type it receives — a snapshot `pvConfirmSheet` holds through
-    /// the dismiss animation — never from `model.pendingDeleteType` live.
     private var pendingDelete: Binding<CatalogSourceType?> {
         Binding(
             get: { model.pendingDeleteType },
@@ -121,8 +130,6 @@ struct SourceTypesView: View {
         )
     }
 
-    /// The consequence that earns this a sheet rather than a plain alert: the
-    /// mono-set key the delete releases, plus the reason if it failed.
     @ViewBuilder
     private func deleteDetail(for type: CatalogSourceType) -> some View {
         PVConfirmKeyChip(label: L10n.SourceTypes.deleteKeyReleased, value: type.key)
@@ -157,10 +164,10 @@ struct SourceTypesView: View {
     ]
     store.sourceTypesByProject[projectDir] = [
         CatalogSourceType(id: "t1", key: "photograph", origin: "provenencia", label: "Photograph", description: "A photographic image of people, places or objects.", usedBy: 41),
-        CatalogSourceType(id: "t2", key: "book", origin: "provenencia", label: "Book", description: "A published monograph — county history, compiled genealogy, printed transcript.", usedBy: 18),
-        CatalogSourceType(id: "t3", key: "letter", origin: "provenencia", label: "Letter", description: "Private correspondence, held as the original or as a later transcript.", usedBy: 0),
-        CatalogSourceType(id: "t4", key: "family-scrapbook", origin: "user", label: "Family scrapbook", description: "Nan's albums — pasted prints, clippings and pencil captions.", usedBy: 3),
-        CatalogSourceType(id: "t5", key: "grave-memorial", origin: "plugin:findagrave", label: "Grave memorial", description: "A memorial page assembled from headstone photographs.", usedBy: 5),
+        CatalogSourceType(id: "t2", key: "book", origin: "provenencia", label: "Book", description: "A published monograph.", usedBy: 18),
+        CatalogSourceType(id: "t3", key: "letter", origin: "provenencia", label: "Letter", description: "Private correspondence.", usedBy: 0),
+        CatalogSourceType(id: "t4", key: "family-scrapbook", origin: "user", label: "Family scrapbook", description: "Nan's albums.", usedBy: 3),
+        CatalogSourceType(id: "t5", key: "grave-memorial", origin: "plugin:findagrave", label: "Grave memorial", description: "A memorial page.", usedBy: 5),
     ]
     store.suggestionsByType["t2"] = [
         CatalogTypeSuggestion(field: store.fieldsByProject[projectDir]![0], sortOrder: 0),
@@ -170,12 +177,14 @@ struct SourceTypesView: View {
     store.suggestionsByType["t4"] = [
         CatalogTypeSuggestion(field: store.fieldsByProject[projectDir]![3], sortOrder: 0),
     ]
+    let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
     return SourceTypesView(
-        projectDir: projectDir,
+        session: session,
         userID: "00000000-0000-7000-8000-000000000001",
         store: store
     )
     .environment(WorkspaceNavigation())
+    .environment(session)
     .frame(width: 1180, height: 760)
 }
 #endif

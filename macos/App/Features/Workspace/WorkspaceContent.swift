@@ -25,7 +25,6 @@ struct WorkspaceContent: View {
                 store: store
             )
             WorkspaceDestinationHost(
-                projectDir: projectDir,
                 userID: userID,
                 sessionDisplayName: sessionDisplayName,
                 store: store,

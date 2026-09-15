@@ -82,6 +82,7 @@ final class SourceCredibilitySection {
                 argument: argument
             )
             context.workspace?.credibility = assessment
+            context.notifyWorkspaceMutated()
             resetDrafts()
         } catch {
             context.pageError = L10n.Errors.message(for: error)

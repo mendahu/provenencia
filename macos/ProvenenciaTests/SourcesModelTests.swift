@@ -31,26 +31,58 @@ struct SourcesModelTests {
         CatalogSource(id: id, ref: ref, sourceTypeID: typeID, title: title, description: "")
     }
 
+    private func makeSession(store: FakeStore) -> WorkspaceSession {
+        WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+    }
+
     private func makeModel(
         store: FakeStore = FakeStore(),
         sources: [CatalogSource] = [],
         types: [CatalogSourceType] = [],
         catalogCounts: CatalogCounts? = nil
-    ) -> SourcesModel {
+    ) -> (SourcesModel, WorkspaceSession) {
         store.sourcesByProject[projectDir] = sources
         store.sourceTypesByProject[projectDir] = types
-        return SourcesModel(
-            projectDir: projectDir,
+        let session = makeSession(store: store)
+        let model = SourcesModel(
+            session: session,
             userID: userID,
             store: store,
             catalogCounts: catalogCounts
         )
+        return (model, session)
     }
 
-    @Test func loadPopulatesSourcesTypesAndPublishesCount() async {
+    private func waitForQuery<Value>(_ handle: QueryHandle<Value>) async {
+        var waited: UInt64 = 0
+        let step: UInt64 = 10_000_000
+        while waited < 2_000_000_000 {
+            if handle.status == .ready || handle.status == .error { return }
+            await Task.yield()
+            try? await Task.sleep(nanoseconds: step)
+            waited += step
+        }
+    }
+
+    private func warmLists(_ model: SourcesModel, session: WorkspaceSession) async {
+        model.warmListQueries()
+        if let sourcesHandle: QueryHandle<[CatalogSource]> = session.queryHandle(
+            SourcesModel.sourcesListKey(for: session)
+        ) {
+            await waitForQuery(sourcesHandle)
+        }
+        if let typesHandle: QueryHandle<[CatalogSourceType]> = session.queryHandle(
+            SourcesModel.sourceTypesListKey(for: session)
+        ) {
+            await waitForQuery(typesHandle)
+        }
+        model.syncCatalogCounts()
+    }
+
+    @Test func sessionQueryPopulatesSourcesTypesAndPublishesCount() async {
         let store = FakeStore()
         let counts = CatalogCounts(projectDir: projectDir, store: store)
-        let model = makeModel(
+        let (model, session) = makeModel(
             store: store,
             sources: [
                 source(id: "s1", title: "Album", typeID: "t1", ref: "SRC-0001"),
@@ -59,22 +91,11 @@ struct SourcesModelTests {
             types: [photoType(), bookType()],
             catalogCounts: counts
         )
-        await model.load()
+        await warmLists(model, session: session)
         #expect(model.sources.count == 2)
         #expect(model.types.count == 2)
         #expect(counts.sources == 2)
         #expect(model.typeLabel(for: model.sources[0]) == "Photograph")
-    }
-
-    @Test func initialLoadGateStartsFalseThenCompletes() async {
-        let model = makeModel(
-            sources: [source(id: "s1", title: "Album", typeID: "t1")],
-            types: [photoType()]
-        )
-        #expect(!model.hasCompletedInitialLoad)
-        await model.load()
-        #expect(model.hasCompletedInitialLoad)
-        #expect(!model.isLoading)
     }
 
     @Test func listSourcesFillsThumbnailFromPinnedArtifact() async {
@@ -93,18 +114,18 @@ struct SourcesModelTests {
         var src = source(id: "s1", title: "Album", typeID: "t1")
         src.coverMode = "artifact"
         src.primaryArtifactID = "a1"
-        let model = makeModel(
+        let (model, session) = makeModel(
             store: store,
             sources: [src],
             types: [photoType()]
         )
-        await model.load()
+        await warmLists(model, session: session)
         #expect(model.sources.first?.thumbnailRelPath == "objects/aa/bb/thumb")
         #expect(model.sources.first?.coverMode == "artifact")
     }
 
     @Test func typeFilterNarrowsTheList() async {
-        let model = makeModel(
+        let (model, session) = makeModel(
             sources: [
                 source(id: "s1", title: "A", typeID: "t1"),
                 source(id: "s2", title: "B", typeID: "t2"),
@@ -112,13 +133,13 @@ struct SourcesModelTests {
             ],
             types: [photoType(), bookType()]
         )
-        await model.load()
+        await warmLists(model, session: session)
         model.typeFilterID = "t1"
         #expect(model.visibleSources.map(\.id) == ["s1", "s3"])
     }
 
     @Test func sortOrdersByTitleAndCatalogOrder() async {
-        let model = makeModel(
+        let (model, session) = makeModel(
             sources: [
                 source(id: "s1", title: "Charlie", typeID: "t1"),
                 source(id: "s2", title: "Alpha", typeID: "t1"),
@@ -126,7 +147,7 @@ struct SourcesModelTests {
             ],
             types: [photoType()]
         )
-        await model.load()
+        await warmLists(model, session: session)
         #expect(model.visibleSources.map(\.id) == ["s1", "s2", "s3"])
 
         model.sort = .az
@@ -140,192 +161,121 @@ struct SourcesModelTests {
     }
 
     @Test func createRequiresTypeAndTitle() async {
-        let model = makeModel(types: [photoType(), bookType()])
-        await model.load()
+        let (model, session) = makeModel(types: [photoType(), bookType()])
+        await warmLists(model, session: session)
         model.openAdd()
         #expect(model.draft.sourceTypeID.isEmpty)
-        await model.create()
+        let created = await model.create()
+        #expect(created == nil)
         #expect(model.typeError != nil)
         #expect(model.titleError != nil)
-        #expect(model.openedSourceID == nil)
         #expect(model.isAdding)
     }
 
-    @Test func createNavigatesPublishesAndDismissesDialog() async {
+    @Test func createReturnsSourceAndPublishesCount() async {
         let store = FakeStore()
         let counts = CatalogCounts(projectDir: projectDir, store: store)
-        let model = makeModel(
+        let (model, session) = makeModel(
             store: store,
             types: [photoType()],
             catalogCounts: counts
         )
-        await model.load()
+        await warmLists(model, session: session)
         #expect(counts.sources == 0)
 
         model.openAdd()
         model.draft.sourceTypeID = "t1"
         model.draft.title = "  Family album  "
         model.draft.description = "Nan's prints"
-        await model.create()
+        let created = await model.create()
 
         #expect(!model.isAdding)
         #expect(model.sources.count == 1)
-        #expect(model.sources.first?.title == "Family album")
-        #expect(model.openedSourceID == model.sources.first?.id)
+        #expect(created?.title == "Family album")
         #expect(counts.sources == 1)
         #expect(model.toast != nil)
     }
 
-    @Test func cancelAddDoesNotNavigate() async {
-        let model = makeModel(types: [photoType()])
-        await model.load()
+    @Test func cancelAddDoesNotCreate() async {
+        let (model, session) = makeModel(types: [photoType()])
+        await warmLists(model, session: session)
         model.openAdd()
         model.draft.title = "Unused"
         model.cancelAdd()
         #expect(!model.isAdding)
-        #expect(model.openedSourceID == nil)
         #expect(model.sources.isEmpty)
     }
 
-    @Test func refreshTypesRepopulatesAnEmptyPool() async {
+    @Test func refreshTypesWarmsTypesHandle() async {
         let store = FakeStore()
-        let model = makeModel(store: store, types: [])
-        await model.load()
-        #expect(model.types.isEmpty)
-
+        let (model, session) = makeModel(store: store, types: [])
+        model.warmListQueries()
         store.sourceTypesByProject[projectDir] = [photoType(), bookType()]
-        await model.refreshTypes()
+        session.invalidate(CatalogQueryKey.sourceTypesList(project: session.projectKey))
+        model.refreshTypes()
+        if let typesHandle: QueryHandle<[CatalogSourceType]> = session.queryHandle(
+            SourcesModel.sourceTypesListKey(for: session)
+        ) {
+            await waitForQuery(typesHandle)
+        }
         #expect(model.types.map(\.id) == ["t1", "t2"])
         #expect(model.typeComboOptions.count == 2)
     }
 
-    @Test func loadKeepsTypesWhenSourcesListFails() async {
+    @Test func typesHandleLoadsWhenSourcesListFails() async {
         enum Boom: Error { case boom }
         let store = FakeStore()
         store.listSourcesError = Boom.boom
-        store.sourceTypesByProject[projectDir] = [photoType()]
-        let model = SourcesModel(projectDir: projectDir, userID: userID, store: store)
-        await model.load()
+        let (model, session) = makeModel(store: store, types: [photoType()])
+        await warmLists(model, session: session)
         #expect(model.types.map(\.id) == ["t1"])
         #expect(model.loadError != nil)
-    }
-
-    @Test func openAndCloseSourcePage() async {
-        let model = makeModel(
-            sources: [source(id: "s1", title: "Album", typeID: "t1")],
-            types: [photoType()]
-        )
-        await model.load()
-        model.openSource(id: "s1")
-        #expect(model.openedSourceID == "s1")
-        #expect(model.openedSource?.title == "Album")
-        model.closeSource()
-        #expect(model.openedSourceID == nil)
     }
 
     @Test func typeIconKeyResolvesFromSourceType() async {
         var photo = photoType()
         photo.iconKey = "type_photograph"
-        let model = makeModel(
+        let (model, session) = makeModel(
             sources: [source(id: "s1", title: "Album", typeID: "t1")],
             types: [photo]
         )
-        await model.load()
+        await warmLists(model, session: session)
         #expect(model.typeIconKey(for: model.sources[0]) == "type_photograph")
     }
 
-    @Test func applyUpdatedSourceReplacesCoverFieldsFromEngine() async {
-        var row = source(id: "s1", title: "Deed", typeID: "t1")
-        row.coverMode = "artifact"
-        row.primaryArtifactID = "a1"
-        row.thumbnailMediaType = "application/pdf"
-        row.thumbnailOriginalFilename = "deed.pdf"
-        let model = makeModel(sources: [row], types: [photoType()])
-        await model.load()
+    @Test func cacheHitSkipsSecondListLoad() async {
+        let store = FakeStore()
+        let (model, session) = makeModel(
+            store: store,
+            sources: [source(id: "s1", title: "Album", typeID: "t1")],
+            types: [photoType()]
+        )
+        await warmLists(model, session: session)
+        store.sourcesByProject[projectDir] = [
+            source(id: "s2", title: "Other", typeID: "t1", ref: "SRC-0002"),
+        ]
+
+        let _: QueryHandle<[CatalogSource]> = session.query(
+            CatalogQueryKey.sourcesList(project: session.projectKey)
+        )
+        await Task.yield()
+        #expect(model.sources.first?.title == "Album")
+    }
+
+    @Test func updatedSourcePatchesListRow() async {
+        let store = FakeStore()
+        let (model, session) = makeModel(
+            store: store,
+            sources: [source(id: "s1", title: "Deed", typeID: "t1")],
+            types: [photoType()]
+        )
+        await warmLists(model, session: session)
+
         var updated = source(id: "s1", title: "Deed renamed", typeID: "t1")
         updated.coverMode = "type_icon"
-        model.applyUpdatedSource(updated)
+        session.apply(.updatedSource(updated))
+
         #expect(model.sources.first?.title == "Deed renamed")
         #expect(model.sources.first?.coverMode == "type_icon")
-        #expect(model.sources.first?.thumbnailMediaType.isEmpty == true)
-        #expect(model.sources.first?.primaryArtifactID.isEmpty == true)
-    }
-
-    @Test func loadFromLocationOpensSourceInSameCompletion() async {
-        let model = makeModel(
-            sources: [source(id: "s1", title: "Deed", typeID: "t1")],
-            types: [photoType()]
-        )
-        let outcome = await model.load(
-            from: WorkspaceLocation(section: .sources, sourceId: "s1", title: "Deed")
-        )
-        #expect(outcome == .applied)
-        #expect(model.openedSourceID == "s1")
-        #expect(model.hasCompletedInitialLoad)
-    }
-
-    @Test func loadFromLocationMissingDeepId() async {
-        let model = makeModel(
-            sources: [source(id: "s1", title: "Deed", typeID: "t1")],
-            types: [photoType()]
-        )
-        let outcome = await model.load(
-            from: WorkspaceLocation(section: .sources, sourceId: "gone", title: "Missing")
-        )
-        #expect(outcome == .missingDeepId)
-        #expect(model.openedSourceID == nil)
-    }
-
-    @Test func applyFromLocationOpensAfterLoad() async {
-        let model = makeModel(
-            sources: [source(id: "s1", title: "Deed", typeID: "t1")],
-            types: [photoType()]
-        )
-        await model.load()
-        let outcome = model.apply(
-            from: WorkspaceLocation(section: .sources, sourceId: "s1", title: "Deed")
-        )
-        #expect(outcome == .applied)
-        #expect(model.openedSourceID == "s1")
-    }
-
-    @Test func applyFromLocationMissingDeepId() async {
-        let model = makeModel(
-            sources: [source(id: "s1", title: "Deed", typeID: "t1")],
-            types: [photoType()]
-        )
-        await model.load()
-        let outcome = model.apply(
-            from: WorkspaceLocation(section: .sources, sourceId: "gone", title: "Missing")
-        )
-        #expect(outcome == .missingDeepId)
-        #expect(model.openedSourceID == nil)
-    }
-
-    @Test func applyFromSectionRootClosesSource() async {
-        let model = makeModel(
-            sources: [source(id: "s1", title: "Deed", typeID: "t1")],
-            types: [photoType()]
-        )
-        await model.load()
-        model.openSource(id: "s1")
-        let outcome = model.apply(from: .sectionRoot(.sources))
-        #expect(outcome == .applied)
-        #expect(model.openedSourceID == nil)
-    }
-
-    @Test func applyUpdatedSourceReplacesCoverWhenIncomingHasGlyph() async {
-        var row = source(id: "s1", title: "Deed", typeID: "t1")
-        row.thumbnailMediaType = "application/pdf"
-        let model = makeModel(sources: [row], types: [photoType()])
-        await model.load()
-        var updated = source(id: "s1", title: "Deed", typeID: "t1")
-        updated.coverMode = "artifact"
-        updated.primaryArtifactID = "a1"
-        updated.thumbnailRelPath = "objects/aa/bb/thumb"
-        model.applyUpdatedSource(updated)
-        #expect(model.sources.first?.thumbnailRelPath == "objects/aa/bb/thumb")
-        #expect(model.sources.first?.thumbnailMediaType.isEmpty == true)
-        #expect(model.sources.first?.coverMode == "artifact")
     }
 }

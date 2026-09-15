@@ -51,9 +51,10 @@ struct SourcePageModelTests {
     }
 
     private func makeModel(store: FakeStore) -> SourcePageModel {
-        SourcePageModel(
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        return SourcePageModel(
             sourceID: sourceID,
-            projectDir: projectDir,
+            session: session,
             userID: userID,
             sessionDisplayName: "Jake Robins",
             store: store
@@ -62,7 +63,7 @@ struct SourcePageModelTests {
 
     @Test func loadPopulatesWorkspaceAndDefaultsCredibilityToStandard() async {
         let model = makeModel(store: makeStore())
-        await model.load()
+        await model.warmFromSession()
         #expect(model.workspace?.source.ref == "SRC-AAAAA")
         #expect(model.identity.title == "Family album")
         #expect(model.credibility.savedKey == "standard")
@@ -73,7 +74,7 @@ struct SourcePageModelTests {
     @Test func saveTitleUpdatesCommittedTitle() async {
         let store = makeStore()
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         model.identity.beginEditTitle()
         model.identity.titleDraft = "Revised title"
         await model.identity.saveTitle()
@@ -92,7 +93,7 @@ struct SourcePageModelTests {
             ),
         ]
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         model.identity.beginEditType()
         model.identity.typeDraftID = "t2"
         await model.identity.saveType()
@@ -105,7 +106,7 @@ struct SourcePageModelTests {
     @Test func cancelEditTypeRestoresSavedType() async {
         let store = makeStore()
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         model.identity.beginEditType()
         model.identity.typeDraftID = "t-other"
         model.identity.cancelEditType()
@@ -117,7 +118,7 @@ struct SourcePageModelTests {
     @Test func saveDescriptionUpdatesCommittedDescription() async {
         let store = makeStore()
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         model.identity.beginEditDescription()
         model.identity.descriptionDraft = "Revised notes"
         await model.identity.saveDescription()
@@ -129,7 +130,7 @@ struct SourcePageModelTests {
     @Test func cancelEditDescriptionDiscardsDraft() async {
         let store = makeStore()
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         model.identity.beginEditDescription()
         model.identity.descriptionDraft = "Should not stick"
         model.identity.cancelEditDescription()
@@ -144,7 +145,7 @@ struct SourcePageModelTests {
             status: 1, code: "internal.unknown", kind: .internal, params: []
         )
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         model.identity.beginEditTitle()
         model.identity.titleDraft = "Nope"
         await model.identity.saveTitle()
@@ -159,7 +160,7 @@ struct SourcePageModelTests {
             status: 1, code: "internal.unknown", kind: .internal, params: []
         )
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         model.notes.draft = "Will fail"
         await model.notes.add()
         #expect(model.pageError != nil)
@@ -169,7 +170,7 @@ struct SourcePageModelTests {
 
     @Test func emptyTitleDraftSetsValidationError() async {
         let model = makeModel(store: makeStore())
-        await model.load()
+        await model.warmFromSession()
         model.identity.beginEditTitle()
         model.identity.titleDraft = "   "
         await model.identity.saveTitle()
@@ -181,7 +182,7 @@ struct SourcePageModelTests {
     @Test func selectCredibilityDraftDoesNotPersistUntilSave() async {
         let store = makeStore()
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         model.credibility.selectDraft(key: "high_trust")
         #expect(model.credibility.isDirty)
         #expect(model.workspace?.credibility == nil)
@@ -195,7 +196,7 @@ struct SourcePageModelTests {
     @Test func standardWithEmptyArgumentDoesNotWriteRow() async {
         let store = makeStore()
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         model.credibility.selectDraft(key: "standard")
         await model.credibility.save()
         #expect(model.workspace?.credibility == nil)
@@ -213,7 +214,7 @@ struct SourcePageModelTests {
             argument: "Film"
         ))
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         #expect(model.credibility.hasSavedAssessment)
         model.credibility.selectDraft(key: "low_trust")
         model.credibility.argumentDraft = "changed"
@@ -227,7 +228,7 @@ struct SourcePageModelTests {
     @Test func notesCRUD() async throws {
         let store = makeStore()
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         model.notes.draft = "First look"
         await model.notes.add()
         #expect(model.notes.items.count == 1)
@@ -253,7 +254,7 @@ struct SourcePageModelTests {
     @Test func cancelNoteEditRestoresCommittedBody() async throws {
         let store = makeStore()
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         model.notes.draft = "Original"
         await model.notes.add()
         let noteID = try #require(model.notes.items.first?.id)
@@ -268,7 +269,7 @@ struct SourcePageModelTests {
     @Test func emptyNoteBodyDraftSetsValidationError() async throws {
         let store = makeStore()
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         model.notes.draft = "Keep me"
         await model.notes.add()
         let noteID = try #require(model.notes.items.first?.id)
@@ -284,7 +285,7 @@ struct SourcePageModelTests {
     @Test func createFilelessArtifact() async {
         let store = makeStore()
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         model.artifacts.openAdd()
         model.artifacts.draft.label = "Physical copy"
         model.artifacts.draft.description = "At the archive"
@@ -297,7 +298,7 @@ struct SourcePageModelTests {
 
     @Test func createArtifactRequiresLabel() async {
         let model = makeModel(store: makeStore())
-        await model.load()
+        await model.warmFromSession()
         model.artifacts.openAdd()
         model.artifacts.draft.label = "  "
         await model.artifacts.create()
@@ -306,20 +307,9 @@ struct SourcePageModelTests {
     }
 
     @Test func createArtifactWithPDFLeavesTypeIconCover() async throws {
-        final class CoverBox: @unchecked Sendable {
-            var source: CatalogSource?
-        }
-        let box = CoverBox()
         let store = makeStore()
-        let model = SourcePageModel(
-            sourceID: sourceID,
-            projectDir: projectDir,
-            userID: userID,
-            sessionDisplayName: "Jake",
-            store: store,
-            onSourceUpdated: { box.source = $0 }
-        )
-        await model.load()
+        let model = makeModel(store: store)
+        await model.warmFromSession()
         model.artifacts.openAdd()
         model.artifacts.draft.label = "Deed"
         let path = FileManager.default.temporaryDirectory
@@ -328,17 +318,16 @@ struct SourcePageModelTests {
         model.artifacts.draft.filePath = path
         await model.artifacts.create()
         #expect(model.artifacts.items.count == 1)
-        #expect(box.source?.coverMode == "type_icon")
-        #expect(box.source?.primaryArtifactID.isEmpty == true)
-        #expect(box.source?.thumbnailMediaType.isEmpty == true)
         #expect(model.source?.coverMode == "type_icon")
+        #expect(model.source?.primaryArtifactID.isEmpty == true)
+        #expect(model.source?.thumbnailMediaType.isEmpty == true)
         #expect(!model.artifacts.canUseAsThumbnail(model.artifacts.items[0]))
     }
 
     @Test func useAsThumbnailAndRevertToTypeIcon() async throws {
         let store = makeStore()
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         model.artifacts.openAdd()
         model.artifacts.draft.label = "Scan"
         let path = FileManager.default.temporaryDirectory
@@ -379,7 +368,7 @@ struct SourcePageModelTests {
     @Test func filelessArtifactCannotBeCover() async throws {
         let store = makeStore()
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         model.artifacts.openAdd()
         model.artifacts.draft.label = "Note only"
         await model.artifacts.create()
@@ -390,26 +379,15 @@ struct SourcePageModelTests {
     }
 
     @Test func createFilelessArtifactClearsMIMECoverForTypeIcon() async {
-        final class CoverBox: @unchecked Sendable {
-            var source: CatalogSource?
-        }
-        let box = CoverBox()
         let store = makeStore()
-        let model = SourcePageModel(
-            sourceID: sourceID,
-            projectDir: projectDir,
-            userID: userID,
-            sessionDisplayName: "Jake",
-            store: store,
-            onSourceUpdated: { box.source = $0 }
-        )
-        await model.load()
+        let model = makeModel(store: store)
+        await model.warmFromSession()
         model.artifacts.openAdd()
         model.artifacts.draft.label = "Physical register"
         await model.artifacts.create()
-        #expect(box.source?.thumbnailRelPath.isEmpty == true)
-        #expect(box.source?.thumbnailMediaType.isEmpty == true)
-        #expect(box.source?.coverMode == "type_icon")
+        #expect(model.source?.thumbnailRelPath.isEmpty == true)
+        #expect(model.source?.thumbnailMediaType.isEmpty == true)
+        #expect(model.source?.coverMode == "type_icon")
         #expect(model.identity.typeLabel == "Photograph")
     }
 
@@ -422,7 +400,7 @@ struct SourcePageModelTests {
             params: []
         )
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         model.artifacts.openAdd()
         model.artifacts.draft.label = "Scan"
         model.artifacts.draft.filePath = "/tmp/provenencia-missing-\(UUID().uuidString).bin"
@@ -457,7 +435,7 @@ struct SourcePageModelTests {
     @Test func ingestThenRejectSecondAttach() async throws {
         let store = makeStore()
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         model.artifacts.openAdd()
         model.artifacts.draft.label = "Scan"
         await model.artifacts.create()
@@ -473,7 +451,7 @@ struct SourcePageModelTests {
         #expect(!first.artifact.fileID.isEmpty)
 
         // Refresh model artifact state from store.
-        await model.load()
+        await model.warmFromSession()
         #expect(model.artifacts.items.first?.fileID.isEmpty == false)
 
         do {
@@ -505,7 +483,7 @@ struct SourcePageModelTests {
             ]
         )
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         #expect(model.artifacts.items.first?.thumbnailRelPath == "objects/aa/bb/thumb")
     }
 
@@ -540,7 +518,7 @@ struct SourcePageModelTests {
             fields: [author, repo]
         )
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         #expect(model.metadata.entries.count == 2)
         #expect(model.metadata.saved.map(\.field.key) == ["repository"])
         #expect(model.metadata.suggested.map(\.field.key) == ["author"])
@@ -558,7 +536,7 @@ struct SourcePageModelTests {
             fields: [author]
         )
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         #expect(model.metadata.suggested.count == 1)
         model.metadata.drafts[author.id] = "Mary Robins"
         await model.metadata.save(fieldID: author.id)
@@ -578,7 +556,7 @@ struct SourcePageModelTests {
             fields: [repo]
         )
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         model.metadata.beginEdit(fieldID: repo.id)
         #expect(model.metadata.editingFieldID == repo.id)
         model.metadata.drafts[repo.id] = "Changed"
@@ -599,7 +577,7 @@ struct SourcePageModelTests {
             fields: [repo]
         )
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         model.metadata.beginEdit(fieldID: repo.id)
         model.metadata.drafts[repo.id] = "Norfolk Record Office"
         await model.metadata.save(fieldID: repo.id)
@@ -619,7 +597,7 @@ struct SourcePageModelTests {
             fields: [author]
         )
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         await model.metadata.dismissSuggestion(fieldID: author.id)
         #expect(model.metadata.entries.isEmpty)
         #expect(model.metadata.suggested.isEmpty)
@@ -650,7 +628,7 @@ struct SourcePageModelTests {
             fields: [author, repo, issue]
         )
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         await model.metadata.moveSaved(from: IndexSet(integer: 0), to: 2)
         #expect(model.metadata.saved.map(\.field.id) == [repo.id, author.id])
         #expect(model.metadata.suggested.map(\.field.id) == [issue.id])
@@ -677,7 +655,7 @@ struct SourcePageModelTests {
             status: 1, code: "internal.unknown", kind: .internal, params: []
         )
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         let before = model.metadata.saved.map(\.field.id)
         await model.metadata.moveSaved(from: IndexSet(integer: 0), to: 2)
         #expect(model.pageError != nil)
@@ -689,7 +667,7 @@ struct SourcePageModelTests {
         let author = authorField()
         let store = makeStore(fields: [author])
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         model.metadata.openAdd()
         model.metadata.addFieldID = author.id
         model.metadata.addValue = "Eliza"
@@ -702,7 +680,7 @@ struct SourcePageModelTests {
         let author = authorField()
         let store = makeStore(fields: [author])
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         model.metadata.openAdd()
         await model.metadata.createFromAdd()
         #expect(model.metadata.addFieldError != nil)
@@ -726,7 +704,7 @@ struct SourcePageModelTests {
             ]
         )
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         let artID = try #require(model.artifacts.items.first?.id)
         model.artifacts.labels[artID] = "Changed"
         model.artifacts.descriptions[artID] = "Changed desc"
@@ -752,7 +730,7 @@ struct SourcePageModelTests {
             fields: [dateField]
         )
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         model.metadata.openDateEditor(fieldID: dateField.id)
         #expect(model.metadata.drafts[dateField.id] == "about the year 1890")
         #expect(model.metadata.canSaveDateEditor == false)
@@ -784,7 +762,7 @@ struct SourcePageModelTests {
             fields: [dateField]
         )
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         model.metadata.openDateEditor(fieldID: dateField.id)
         model.metadata.drafts[dateField.id] = "changed wording"
         model.metadata.cancelDateEditor()
@@ -807,7 +785,7 @@ struct SourcePageModelTests {
             fields: [dateField]
         )
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         model.metadata.openDateEditor(fieldID: dateField.id)
         model.metadata.dateEditorDraft.setKind("range")
         model.metadata.dateEditorDraft.startYear = 1890
@@ -820,7 +798,7 @@ struct SourcePageModelTests {
         // A fresh model on the same store (new session — no in-memory cache)
         // must rebuild the saved draft from the workspace entry.
         let reopened = makeModel(store: store)
-        await reopened.load()
+        await reopened.warmFromSession()
         reopened.metadata.openDateEditor(fieldID: dateField.id)
         #expect(reopened.metadata.isDateEditMode == true)
         #expect(reopened.metadata.drafts[dateField.id] == "spring 1890")
@@ -845,7 +823,7 @@ struct SourcePageModelTests {
             ]
         )
         let model = makeModel(store: store)
-        await model.load()
+        await model.warmFromSession()
         model.artifacts.toggleExpanded("a1")
         #expect(model.artifacts.expandedIDs == ["a1"])
         model.artifacts.toggleExpanded("a2")

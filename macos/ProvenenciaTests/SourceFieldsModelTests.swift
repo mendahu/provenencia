@@ -24,19 +24,42 @@ struct SourceFieldsModelTests {
         store: FakeStore = FakeStore(),
         fields: [CatalogMetadataField] = [],
         catalogCounts: CatalogCounts? = nil
-    ) -> SourceFieldsModel {
+    ) -> (SourceFieldsModel, WorkspaceSession) {
         store.fieldsByProject[projectDir] = fields
-        return SourceFieldsModel(
-            projectDir: projectDir,
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let model = SourceFieldsModel(
+            session: session,
             userID: userID,
             store: store,
             catalogCounts: catalogCounts
         )
+        return (model, session)
+    }
+
+    private func waitForQuery<Value>(_ handle: QueryHandle<Value>) async {
+        var waited: UInt64 = 0
+        let step: UInt64 = 10_000_000
+        while waited < 2_000_000_000 {
+            if handle.status == .ready || handle.status == .error { return }
+            await Task.yield()
+            try? await Task.sleep(nanoseconds: step)
+            waited += step
+        }
+    }
+
+    private func warm(_ model: SourceFieldsModel, session: WorkspaceSession) async {
+        model.warmFieldsQuery()
+        if let fieldsHandle: QueryHandle<[CatalogMetadataField]> = session.queryHandle(
+            SourceFieldsModel.fieldsListKey(for: session)
+        ) {
+            await waitForQuery(fieldsHandle)
+        }
+        model.syncCatalogCounts()
     }
 
     @Test func loadPopulatesFieldsAndCounts() async {
-        let model = makeModel(fields: [seededField(), userField()])
-        await model.load()
+        let (model, session) = makeModel(fields: [seededField(), userField()])
+        await warm(model, session: session)
         #expect(model.fields.count == 2)
         #expect(model.fields.seededCount == 1)
         #expect(model.fields.userCount == 1)
@@ -44,11 +67,11 @@ struct SourceFieldsModelTests {
     }
 
     @Test func sortTogglesLabelDirection() async {
-        let model = makeModel(fields: [
+        let (model, session) = makeModel(fields: [
             seededField(id: "1", label: "Zebra"),
             userField(id: "2", label: "Album"),
         ])
-        await model.load()
+        await warm(model, session: session)
         #expect(model.visibleFields.map(\.id) == ["2", "1"])
         model.toggleLabelSort()
         #expect(model.visibleFields.map(\.id) == ["1", "2"])
@@ -59,8 +82,8 @@ struct SourceFieldsModelTests {
             id: "3", key: "memorial-id", origin: "plugin:findagrave",
             label: "Memorial id", dataType: "text", description: ""
         )
-        let model = makeModel(fields: [seededField(), userField(), plugin])
-        await model.load()
+        let (model, session) = makeModel(fields: [seededField(), userField(), plugin])
+        await warm(model, session: session)
         model.select("1")
         #expect(!model.isSelectedFieldLocked)
         model.select("2")
@@ -70,8 +93,8 @@ struct SourceFieldsModelTests {
     }
 
     @Test func submitEditUpdatesSeededFieldButKeepsKeyAndOrigin() async {
-        let model = makeModel(fields: [seededField()])
-        await model.load()
+        let (model, session) = makeModel(fields: [seededField()])
+        await warm(model, session: session)
         model.select("1")
         #expect(!model.isSelectedFieldLocked)
         model.draft?.label = "Author renamed"
@@ -85,8 +108,8 @@ struct SourceFieldsModelTests {
     }
 
     @Test func seededAndUserFieldsAreEditedTheSameWay() async {
-        let model = makeModel(fields: [seededField(), userField()])
-        await model.load()
+        let (model, session) = makeModel(fields: [seededField(), userField()])
+        await warm(model, session: session)
 
         for id in ["1", "2"] {
             model.select(id)
@@ -101,8 +124,8 @@ struct SourceFieldsModelTests {
     }
 
     @Test func pluginFieldsAreTheOnlyReadOnlyOnes() async {
-        let model = makeModel(fields: [pluginField()])
-        await model.load()
+        let (model, session) = makeModel(fields: [pluginField()])
+        await warm(model, session: session)
         model.select("3")
 
         #expect(model.mode == .viewing(id: "3"))
@@ -111,8 +134,8 @@ struct SourceFieldsModelTests {
     }
 
     @Test func openAddSeedsBlankDraftAndClearsSelection() async {
-        let model = makeModel(fields: [userField()])
-        await model.load()
+        let (model, session) = makeModel(fields: [userField()])
+        await warm(model, session: session)
         model.select("2")
         model.openAdd()
         #expect(model.selectedField == nil)
@@ -120,8 +143,8 @@ struct SourceFieldsModelTests {
     }
 
     @Test func cancelAddResumesPriorSelection() async {
-        let model = makeModel(fields: [userField()])
-        await model.load()
+        let (model, session) = makeModel(fields: [userField()])
+        await warm(model, session: session)
         model.select("2")
         model.openAdd()
         model.cancelAdd()
@@ -130,8 +153,8 @@ struct SourceFieldsModelTests {
 
     @Test func submitAddCreatesFieldAndMintsKeyFromLabel() async {
         let counts = CatalogCounts(projectDir: projectDir, store: FakeStore())
-        let model = makeModel(fields: [], catalogCounts: counts)
-        await model.load()
+        let (model, session) = makeModel(fields: [], catalogCounts: counts)
+        await warm(model, session: session)
         model.openAdd()
         model.draft?.label = "Grandma's album code"
         let location = await model.submit()
@@ -149,8 +172,8 @@ struct SourceFieldsModelTests {
     }
 
     @Test func submitAddWithBlankLabelSetsFormError() async {
-        let model = makeModel(fields: [])
-        await model.load()
+        let (model, session) = makeModel(fields: [])
+        await warm(model, session: session)
         model.openAdd()
         await model.submit()
         #expect(model.formError != nil)
@@ -158,8 +181,8 @@ struct SourceFieldsModelTests {
     }
 
     @Test func submitAddWithUnslugifiableLabelSetsFormError() async {
-        let model = makeModel(fields: [])
-        await model.load()
+        let (model, session) = makeModel(fields: [])
+        await warm(model, session: session)
         model.openAdd()
         model.draft?.label = "..."
         await model.submit()
@@ -169,8 +192,8 @@ struct SourceFieldsModelTests {
 
     @Test func submitAddWithCollidingSlugSetsFormError() async {
         // "Album code" and "Album  Code!" both slug to "album-code".
-        let model = makeModel(fields: [userField(id: "2", label: "Album code")])
-        await model.load()
+        let (model, session) = makeModel(fields: [userField(id: "2", label: "Album code")])
+        await warm(model, session: session)
         model.openAdd()
         model.draft?.label = "Album  Code!"
         await model.submit()
@@ -180,8 +203,8 @@ struct SourceFieldsModelTests {
 
     @Test func submitEditUpdatesFieldButKeepsKey() async {
         let counts = CatalogCounts(projectDir: projectDir, store: FakeStore())
-        let model = makeModel(fields: [userField()], catalogCounts: counts)
-        await model.load()
+        let (model, session) = makeModel(fields: [userField()], catalogCounts: counts)
+        await warm(model, session: session)
         let totalBefore = counts.sourceFields?.total
         model.select("2")
         model.draft?.label = "Grandma's photo album code"
@@ -195,8 +218,8 @@ struct SourceFieldsModelTests {
     }
 
     @Test func isDirtyTracksUnsavedEditsAndRevertClearsThem() async {
-        let model = makeModel(fields: [userField()])
-        await model.load()
+        let (model, session) = makeModel(fields: [userField()])
+        await warm(model, session: session)
         model.select("2")
         #expect(!model.isDirty)
         model.draft?.label = "Changed"
@@ -207,8 +230,8 @@ struct SourceFieldsModelTests {
     }
 
     @Test func canSubmitRequiresDirtyOnEditAndNonEmptyLabelOnAdd() async {
-        let model = makeModel(fields: [userField()])
-        await model.load()
+        let (model, session) = makeModel(fields: [userField()])
+        await warm(model, session: session)
         model.select("2")
         #expect(!model.canSubmit)
         model.draft?.label = "Changed"
@@ -222,8 +245,8 @@ struct SourceFieldsModelTests {
     // MARK: Delete
 
     @Test func deleteIsOfferedForSavedFieldsOnly() async {
-        let model = makeModel(fields: [userField()])
-        await model.load()
+        let (model, session) = makeModel(fields: [userField()])
+        await warm(model, session: session)
         #expect(!model.showsDelete)
 
         model.select("2")
@@ -234,8 +257,8 @@ struct SourceFieldsModelTests {
     }
 
     @Test func unusedProjectOwnedFieldsCanBeDeleted() async {
-        let model = makeModel(fields: [seededField(), userField()])
-        await model.load()
+        let (model, session) = makeModel(fields: [seededField(), userField()])
+        await warm(model, session: session)
 
         model.select("1")
         #expect(model.canDeleteSelectedField)
@@ -244,8 +267,8 @@ struct SourceFieldsModelTests {
     }
 
     @Test func pluginFieldsCannotBeDeletedAndSayWhy() async {
-        let model = makeModel(fields: [pluginField()])
-        await model.load()
+        let (model, session) = makeModel(fields: [pluginField()])
+        await warm(model, session: session)
         model.select("3")
 
         #expect(!model.canDeleteSelectedField)
@@ -253,8 +276,8 @@ struct SourceFieldsModelTests {
     }
 
     @Test func fieldsInUseCannotBeDeletedAndCountTheSources() async {
-        let model = makeModel(fields: [userField(usedBy: 3)])
-        await model.load()
+        let (model, session) = makeModel(fields: [userField(usedBy: 3)])
+        await warm(model, session: session)
         model.select("2")
 
         #expect(!model.canDeleteSelectedField)
@@ -262,8 +285,8 @@ struct SourceFieldsModelTests {
     }
 
     @Test func aSingleUseReadsAsOneSource() async {
-        let model = makeModel(fields: [userField(usedBy: 1)])
-        await model.load()
+        let (model, session) = makeModel(fields: [userField(usedBy: 1)])
+        await warm(model, session: session)
         model.select("2")
 
         #expect(String(localized: model.deleteTooltip) == String(localized: L10n.SourceFields.deleteInUse(count: 1)))
@@ -271,16 +294,16 @@ struct SourceFieldsModelTests {
     }
 
     @Test func deletableFieldTooltipNamesTheAction() async {
-        let model = makeModel(fields: [userField()])
-        await model.load()
+        let (model, session) = makeModel(fields: [userField()])
+        await warm(model, session: session)
         model.select("2")
 
         #expect(String(localized: model.deleteTooltip) == String(localized: L10n.SourceFields.deleteField))
     }
 
     @Test func askDeleteOpensConfirmationForTheSelectedField() async {
-        let model = makeModel(fields: [userField()])
-        await model.load()
+        let (model, session) = makeModel(fields: [userField()])
+        await warm(model, session: session)
         model.select("2")
         model.askDelete()
 
@@ -288,8 +311,8 @@ struct SourceFieldsModelTests {
     }
 
     @Test func askDeleteIsIgnoredWhenTheFieldCannotBeDeleted() async {
-        let model = makeModel(fields: [userField(usedBy: 2)])
-        await model.load()
+        let (model, session) = makeModel(fields: [userField(usedBy: 2)])
+        await warm(model, session: session)
         model.select("2")
         model.askDelete()
 
@@ -297,8 +320,8 @@ struct SourceFieldsModelTests {
     }
 
     @Test func cancelDeleteClosesTheConfirmationAndKeepsTheField() async {
-        let model = makeModel(fields: [userField()])
-        await model.load()
+        let (model, session) = makeModel(fields: [userField()])
+        await warm(model, session: session)
         model.select("2")
         model.askDelete()
         model.cancelDelete()
@@ -311,8 +334,8 @@ struct SourceFieldsModelTests {
     @Test func confirmDeleteRemovesTheFieldClearsSelectionAndToasts() async {
         let store = FakeStore()
         let counts = CatalogCounts(projectDir: projectDir, store: store)
-        let model = makeModel(store: store, fields: [seededField(), userField()], catalogCounts: counts)
-        await model.load()
+        let (model, session) = makeModel(store: store, fields: [seededField(), userField()], catalogCounts: counts)
+        await warm(model, session: session)
         #expect(counts.sourceFields?.total == 2)
         model.select("2")
         model.askDelete()
@@ -332,8 +355,8 @@ struct SourceFieldsModelTests {
 
     @Test func confirmDeleteKeepsTheConfirmationOpenWhenTheStoreRefuses() async {
         let store = FakeStore()
-        let model = makeModel(store: store, fields: [userField()])
-        await model.load()
+        let (model, session) = makeModel(store: store, fields: [userField()])
+        await warm(model, session: session)
         model.select("2")
         model.askDelete()
         // A source picks the field up after the model last listed, so the
@@ -348,59 +371,40 @@ struct SourceFieldsModelTests {
         #expect(model.deleteError != nil)
     }
 
-    @Test func loadFromLocationAppliesFieldInSameCompletion() async {
-        let model = makeModel(fields: [seededField(id: "1", label: "Author")])
-        let outcome = await model.load(
-            from: WorkspaceLocation(section: .sourceFields, fieldId: "1", title: "Author")
-        )
-        #expect(outcome == .applied)
-        #expect(model.selectedField?.id == "1")
-        #expect(model.hasCompletedInitialLoad)
-    }
-
-    @Test func loadFromLocationMissingDeepId() async {
-        let model = makeModel(fields: [seededField(id: "1")])
-        let outcome = await model.load(
-            from: WorkspaceLocation(section: .sourceFields, fieldId: "gone", title: "Missing")
-        )
-        #expect(outcome == .missingDeepId)
-        #expect(model.selectedField == nil)
-    }
-
-    @Test func applyFromLocationSelectsAfterLoad() async {
-        let model = makeModel(fields: [seededField(id: "1", label: "Author")])
-        await model.load()
-        let outcome = model.apply(
+    @Test func syncSelectionAppliesFieldAfterWarm() async {
+        let (model, session) = makeModel(fields: [seededField(id: "1", label: "Author")])
+        await warm(model, session: session)
+        let outcome = model.syncSelection(
             from: WorkspaceLocation(section: .sourceFields, fieldId: "1", title: "Author")
         )
         #expect(outcome == .applied)
         #expect(model.selectedField?.id == "1")
     }
 
-    @Test func applyFromLocationMissingDeepId() async {
-        let model = makeModel(fields: [seededField(id: "1")])
-        await model.load()
-        let outcome = model.apply(
+    @Test func syncSelectionMissingDeepId() async {
+        let (model, session) = makeModel(fields: [seededField(id: "1")])
+        await warm(model, session: session)
+        let outcome = model.syncSelection(
             from: WorkspaceLocation(section: .sourceFields, fieldId: "gone", title: "Missing")
         )
         #expect(outcome == .missingDeepId)
         #expect(model.selectedField == nil)
     }
 
-    @Test func applyFromSectionRootClearsSelection() async {
-        let model = makeModel(fields: [seededField(id: "1")])
-        await model.load()
+    @Test func syncSelectionFromSectionRootClearsSelection() async {
+        let (model, session) = makeModel(fields: [seededField(id: "1")])
+        await warm(model, session: session)
         model.select("1")
-        let outcome = model.apply(from: .sectionRoot(.sourceFields))
+        let outcome = model.syncSelection(from: .sectionRoot(.sourceFields))
         #expect(outcome == .applied)
         #expect(model.selectedField == nil)
     }
 
-    @Test func applyIgnoredWhileAdding() async {
-        let model = makeModel(fields: [seededField(id: "1")])
-        await model.load()
+    @Test func syncSelectionIgnoredWhileAdding() async {
+        let (model, session) = makeModel(fields: [seededField(id: "1")])
+        await warm(model, session: session)
         model.openAdd()
-        let outcome = model.apply(
+        let outcome = model.syncSelection(
             from: WorkspaceLocation(section: .sourceFields, fieldId: "1", title: "Author")
         )
         #expect(outcome == .ignored)
@@ -416,8 +420,8 @@ struct SourceFieldsModelTests {
         navigation.attachProject(uuid: "00000000-0000-7000-8000-0000000000bb", fileURL: url)
         navigation.go(to: .sectionRoot(.sourceFields))
 
-        let model = makeModel()
-        await model.load()
+        let (model, session) = makeModel()
+        await warm(model, session: session)
         model.openAdd()
         model.draft?.label = "Album code"
         if let location = await model.submit() {

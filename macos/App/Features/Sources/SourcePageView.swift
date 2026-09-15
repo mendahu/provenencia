@@ -2,8 +2,10 @@ import SwiftUI
 
 /// Individual Source page (S2-18 / S2-25): sticky identity header, Description +
 /// Credibility beside Metadata, Artifacts accordion, Notes. Section bodies live
-/// in sibling `SourcePage*View` files; this shell owns load, dialogs, and layout.
+/// in sibling `SourcePage*View` files; this shell owns cache sync, dialogs, and layout.
 struct SourcePageView: View {
+    @Environment(WorkspaceSession.self) private var session
+    let sourceID: String
     @State private var model: SourcePageModel
     /// Date dialog confirm wiring — kept off the page observation graph so
     /// structure/wording keystrokes stay local to the dialog form.
@@ -12,23 +14,77 @@ struct SourcePageView: View {
 
     init(
         sourceID: String,
-        projectDir: String,
+        session: WorkspaceSession,
         userID: String,
         sessionDisplayName: String = "",
-        store: any GenealogyStore,
-        onSourceUpdated: ((CatalogSource) -> Void)? = nil
+        store: any GenealogyStore
     ) {
+        self.sourceID = sourceID
         _model = State(
             initialValue: SourcePageModel(
                 sourceID: sourceID,
-                projectDir: projectDir,
+                session: session,
                 userID: userID,
                 sessionDisplayName: sessionDisplayName,
-                store: store,
-                onSourceUpdated: onSourceUpdated
+                store: store
             )
         )
     }
+
+    private var workspaceKey: CatalogQueryKey {
+        CatalogQueryKey.sourceWorkspace(project: session.projectKey, sourceId: sourceID)
+    }
+
+    var body: some View {
+        Group {
+            if let workspaceHandle: QueryHandle<CatalogSourceWorkspace> = session.queryHandle(workspaceKey) {
+                SourcePageContent(
+                    workspaceHandle: workspaceHandle,
+                    sourceID: sourceID,
+                    model: model,
+                    dateEditorCanSave: $dateEditorCanSave,
+                    dateEditorSaveAction: $dateEditorSaveAction
+                )
+            } else {
+                SourcePageLoadingShell(model: model)
+            }
+        }
+        .task(id: sourceID) {
+            model.prepare(for: sourceID)
+            let handle: QueryHandle<CatalogSourceWorkspace> = session.query(workspaceKey)
+            model.sync(from: handle, sourceID: sourceID)
+        }
+    }
+}
+
+/// Spinner-only shell before the workspace handle exists.
+private struct SourcePageLoadingShell: View {
+    let model: SourcePageModel
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if model.isLoading || model.loadError != nil {
+                SourcePageIdentityHeader(model: model)
+            }
+            ScrollView {
+                ProgressView()
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, PVSpacing.space9)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(PVColor.surfacePage)
+        .accessibilityIdentifier("sources.page")
+    }
+}
+
+/// Observes the workspace handle so cache loads repaint the page.
+private struct SourcePageContent: View {
+    @Bindable var workspaceHandle: QueryHandle<CatalogSourceWorkspace>
+    let sourceID: String
+    @Bindable var model: SourcePageModel
+    @Binding var dateEditorCanSave: Bool
+    @Binding var dateEditorSaveAction: (() async -> Void)?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -137,7 +193,16 @@ struct SourcePageView: View {
                 dateEditorSaveAction = nil
             }
         }
-        .task { await model.load() }
+        .onChange(of: workspaceHandle.status) { _, _ in
+            model.sync(from: workspaceHandle, sourceID: sourceID)
+        }
+        .onChange(of: workspaceHandle.value) { _, newValue in
+            guard newValue != nil else { return }
+            model.sync(from: workspaceHandle, sourceID: sourceID)
+        }
+        .onAppear {
+            model.sync(from: workspaceHandle, sourceID: sourceID)
+        }
         .accessibilityIdentifier("sources.page")
     }
 
@@ -206,5 +271,4 @@ struct SourcePageView: View {
             }
         )
     }
-
 }
