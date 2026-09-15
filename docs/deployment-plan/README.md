@@ -6,7 +6,9 @@ Authoritative domain and stack decisions remain in the sibling docs under [`docs
 
 ## Current
 
-_None — unscheduled work lives in [`ideas/`](../ideas/)._
+| Spike | Goal |
+| --- | --- |
+| [Spike 4](spike-4/) | Workspace session + catalog query cache + declarative place registry: fast, consistent navigation; split Sources list/detail; extensible infrastructure for future destinations. Design: [`ideas/page-navigation-performance.md`](../ideas/page-navigation-performance.md). PRs: [`spike-4/deployment-plan.md`](spike-4/deployment-plan.md). |
 
 ## Completed
 
