@@ -73,6 +73,8 @@
 		AA00000000000000000003FB /* OmnibarResultsHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003FA /* OmnibarResultsHost.swift */; };
 		AA00000000000000000003FD /* OmnibarResultsModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003FC /* OmnibarResultsModelTests.swift */; };
 		AA0000000000000000000401 /* ProjectFilesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000400 /* ProjectFilesTests.swift */; };
+		AA0000000000000000000411 /* WorkspaceLocationApply.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000410 /* WorkspaceLocationApply.swift */; };
+		AA0000000000000000000413 /* WorkspaceLocationApplyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000412 /* WorkspaceLocationApplyTests.swift */; };
 		AA0000000000000000000212 /* SourceTypesModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000202 /* SourceTypesModel.swift */; };
 		AA0000000000000000000213 /* SourceTypesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000203 /* SourceTypesView.swift */; };
 		AA0000000000000000000214 /* SourceTypesListPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000204 /* SourceTypesListPane.swift */; };
@@ -258,6 +260,8 @@
 		AA00000000000000000003FA /* OmnibarResultsHost.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OmnibarResultsHost.swift; sourceTree = "<group>"; };
 		AA00000000000000000003FC /* OmnibarResultsModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OmnibarResultsModelTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000400 /* ProjectFilesTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProjectFilesTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000410 /* WorkspaceLocationApply.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceLocationApply.swift; sourceTree = "<group>"; };
+		AA0000000000000000000412 /* WorkspaceLocationApplyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceLocationApplyTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000202 /* SourceTypesModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTypesModel.swift; sourceTree = "<group>"; };
 		AA0000000000000000000203 /* SourceTypesView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTypesView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000204 /* SourceTypesListPane.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTypesListPane.swift; sourceTree = "<group>"; };
@@ -502,6 +506,7 @@
 				AA00000000000000000003F8 /* OmnibarResultsModel.swift */,
 				AA00000000000000000003FA /* OmnibarResultsHost.swift */,
 				B8C9D0E1F203948576A1B2C1 /* WorkspaceLocation.swift */,
+				AA0000000000000000000410 /* WorkspaceLocationApply.swift */,
 				C9D0E1F203948576A1B2C3D2 /* NavigationHistoryStore.swift */,
 				C1FE31A30B665829ECF16A6F /* WorkspaceSidebar.swift */,
 				48B417D5E38F11219198BF91 /* WorkspaceContent.swift */,
@@ -678,6 +683,7 @@
 				AA0000000000000000000400 /* ProjectFilesTests.swift */,
 				164584B2DB70D89A55C4178F /* WorkspaceModelTests.swift */,
 				F203948576A1B2C3D4E5F605 /* WorkspaceNavigationTests.swift */,
+				AA0000000000000000000412 /* WorkspaceLocationApplyTests.swift */,
 				AA0000000000000000000270 /* CatalogCountsTests.swift */,
 				AA00000000000000000003A0 /* CatalogSessionStoreTests.swift */,
 				AA00000000000000000003E0 /* SearchCatalogStoreTests.swift */,
@@ -916,6 +922,7 @@
 				AA00000000000000000003FB /* OmnibarResultsHost.swift in Sources */,
 				AA00000000000000000003F7 /* PVOmnibarHitRow.swift in Sources */,
 				B8C9D0E1F203948576A1B2C3 /* WorkspaceLocation.swift in Sources */,
+				AA0000000000000000000411 /* WorkspaceLocationApply.swift in Sources */,
 				C9D0E1F203948576A1B2C3D4 /* NavigationHistoryStore.swift in Sources */,
 				6227C44524E2C4EB3DE4AAD7 /* WorkspaceSidebar.swift in Sources */,
 				DA26E3BA97D438A7561ED96D /* WorkspaceContent.swift in Sources */,
@@ -997,6 +1004,7 @@
 				AA0000000000000000000401 /* ProjectFilesTests.swift in Sources */,
 				826574F8CA8D24BE551A88BF /* WorkspaceModelTests.swift in Sources */,
 				F203948576A1B2C3D4E5F607 /* WorkspaceNavigationTests.swift in Sources */,
+				AA0000000000000000000413 /* WorkspaceLocationApplyTests.swift in Sources */,
 				AA0000000000000000000271 /* CatalogCountsTests.swift in Sources */,
 				AA00000000000000000003A1 /* CatalogSessionStoreTests.swift in Sources */,
 				AA00000000000000000003E1 /* SearchCatalogStoreTests.swift in Sources */,

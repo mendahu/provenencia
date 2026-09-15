@@ -86,19 +86,11 @@ struct SourceFieldsView: View {
     }
 
     private func applyWorkspaceLocation() {
-        let location = navigation.currentLocation
-        guard location.section == .sourceFields else { return }
-        if model.isAdding { return }
-        if let fieldId = location.fieldId {
-            if model.fields.contains(where: { $0.id == fieldId }) {
-                model.select(fieldId)
-            } else {
-                // Missing or deleted — only called after first load completes.
-                navigation.fallbackToSectionRoot()
-            }
-        } else {
-            model.clearHistorySelection()
-        }
+        WorkspaceLocationApply.applySourceFields(
+            location: navigation.currentLocation,
+            model: model,
+            navigation: navigation
+        )
     }
 
     /// Dismissal is driven by the model, not by the sheet: a successful delete

@@ -1465,6 +1465,30 @@ enum L10n {
             comment: "DateValue calendar picker label"
         )
 
+        static let dateCalendarGregorian = LocalizedStringResource(
+            "sources.page.dateCalendar.gregorian",
+            defaultValue: "Gregorian",
+            comment: "DateValue calendar picker option: Gregorian"
+        )
+
+        static let dateCalendarJulian = LocalizedStringResource(
+            "sources.page.dateCalendar.julian",
+            defaultValue: "Julian",
+            comment: "DateValue calendar picker option: Julian"
+        )
+
+        static let dateCalendarFrenchRepublican = LocalizedStringResource(
+            "sources.page.dateCalendar.frenchRepublican",
+            defaultValue: "French Republican",
+            comment: "DateValue calendar picker option: French Republican"
+        )
+
+        static let dateCalendarHebrew = LocalizedStringResource(
+            "sources.page.dateCalendar.hebrew",
+            defaultValue: "Hebrew",
+            comment: "DateValue calendar picker option: Hebrew"
+        )
+
         static let datePhrase = LocalizedStringResource(
             "sources.page.datePhrase",
             defaultValue: "Phrase",

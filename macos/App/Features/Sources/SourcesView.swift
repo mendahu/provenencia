@@ -92,18 +92,11 @@ struct SourcesView: View {
     }
 
     private func applyWorkspaceLocation() {
-        let location = navigation.currentLocation
-        guard location.section == .sources else { return }
-        if let sourceId = location.sourceId {
-            if model.sources.contains(where: { $0.id == sourceId }) {
-                model.openSource(id: sourceId)
-            } else {
-                // Missing or deleted — only called after first load completes.
-                navigation.fallbackToSectionRoot()
-            }
-        } else {
-            model.closeSource()
-        }
+        WorkspaceLocationApply.applySources(
+            location: navigation.currentLocation,
+            model: model,
+            navigation: navigation
+        )
     }
 
     private var addPresented: Binding<Bool> {

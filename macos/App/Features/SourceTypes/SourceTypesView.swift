@@ -90,19 +90,11 @@ struct SourceTypesView: View {
     }
 
     private func applyWorkspaceLocation() {
-        let location = navigation.currentLocation
-        guard location.section == .sourceTypes else { return }
-        if model.isAdding { return }
-        if let typeId = location.typeId {
-            if model.types.contains(where: { $0.id == typeId }) {
-                model.select(typeId)
-            } else {
-                // Missing or deleted — only called after first load completes.
-                navigation.fallbackToSectionRoot()
-            }
-        } else {
-            model.clearHistorySelection()
-        }
+        WorkspaceLocationApply.applySourceTypes(
+            location: navigation.currentLocation,
+            model: model,
+            navigation: navigation
+        )
     }
 
     /// Dismissal is driven by the model, not by the sheet: a successful delete
