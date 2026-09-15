@@ -1,6 +1,6 @@
 # Spike 4 — Workspace session and navigation performance
 
-**Status:** planned — not started.
+**Status:** in progress (S4-01 done). Completed steps: [`completed.md`](completed.md).
 
 Replace per-view load-on-appear with a **project-scoped catalog query cache** and **declarative place registry**, so navigation is fast, consistent, and extensible for future destinations.
 

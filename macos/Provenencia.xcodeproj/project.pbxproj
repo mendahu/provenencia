@@ -74,6 +74,12 @@
 		AA00000000000000000003FB /* OmnibarResultsHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003FA /* OmnibarResultsHost.swift */; };
 		AA00000000000000000003FD /* OmnibarResultsModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003FC /* OmnibarResultsModelTests.swift */; };
 		AA0000000000000000000401 /* ProjectFilesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000400 /* ProjectFilesTests.swift */; };
+		AA0000000000000000000412 /* ProjectKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000411 /* ProjectKey.swift */; };
+		AA0000000000000000000414 /* CatalogQueryKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000413 /* CatalogQueryKey.swift */; };
+		AA0000000000000000000416 /* QueryStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000415 /* QueryStatus.swift */; };
+		AA0000000000000000000418 /* QueryHandle.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000417 /* QueryHandle.swift */; };
+		AA000000000000000000041A /* WorkspaceSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000419 /* WorkspaceSession.swift */; };
+		AA000000000000000000041C /* WorkspaceSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000041B /* WorkspaceSessionTests.swift */; };
 		AA0000000000000000000212 /* SourceTypesModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000202 /* SourceTypesModel.swift */; };
 		AA0000000000000000000213 /* SourceTypesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000203 /* SourceTypesView.swift */; };
 		AA0000000000000000000214 /* SourceTypesListPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000204 /* SourceTypesListPane.swift */; };
@@ -260,6 +266,12 @@
 		AA00000000000000000003FA /* OmnibarResultsHost.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OmnibarResultsHost.swift; sourceTree = "<group>"; };
 		AA00000000000000000003FC /* OmnibarResultsModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OmnibarResultsModelTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000400 /* ProjectFilesTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProjectFilesTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000411 /* ProjectKey.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProjectKey.swift; sourceTree = "<group>"; };
+		AA0000000000000000000413 /* CatalogQueryKey.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogQueryKey.swift; sourceTree = "<group>"; };
+		AA0000000000000000000415 /* QueryStatus.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QueryStatus.swift; sourceTree = "<group>"; };
+		AA0000000000000000000417 /* QueryHandle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QueryHandle.swift; sourceTree = "<group>"; };
+		AA0000000000000000000419 /* WorkspaceSession.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceSession.swift; sourceTree = "<group>"; };
+		AA000000000000000000041B /* WorkspaceSessionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceSessionTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000202 /* SourceTypesModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTypesModel.swift; sourceTree = "<group>"; };
 		AA0000000000000000000203 /* SourceTypesView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTypesView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000204 /* SourceTypesListPane.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTypesListPane.swift; sourceTree = "<group>"; };
@@ -494,9 +506,23 @@
 			path = Feedback;
 			sourceTree = "<group>";
 		};
+		AA0000000000000000000410 /* Session */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000411 /* ProjectKey.swift */,
+				AA0000000000000000000413 /* CatalogQueryKey.swift */,
+				AA0000000000000000000415 /* QueryStatus.swift */,
+				AA0000000000000000000417 /* QueryHandle.swift */,
+				AA0000000000000000000419 /* WorkspaceSession.swift */,
+			);
+			name = Session;
+			path = Session;
+			sourceTree = "<group>";
+		};
 		8D76A01BF603CC419C35EEBD /* Workspace */ = {
 			isa = PBXGroup;
 			children = (
+				AA0000000000000000000410 /* Session */,
 				F03B00F6F0D021AFCDAD2DEB /* WorkspaceModel.swift */,
 				D0E1F203948576A1B2C3D4E3 /* WorkspaceSection.swift */,
 				E1F203948576A1B2C3D4E5F4 /* WorkspaceNavigation.swift */,
@@ -681,6 +707,7 @@
 				AA0000000000000000000400 /* ProjectFilesTests.swift */,
 				164584B2DB70D89A55C4178F /* WorkspaceModelTests.swift */,
 				F203948576A1B2C3D4E5F605 /* WorkspaceNavigationTests.swift */,
+				AA000000000000000000041B /* WorkspaceSessionTests.swift */,
 				AA0000000000000000000270 /* CatalogCountsTests.swift */,
 				AA00000000000000000003A0 /* CatalogSessionStoreTests.swift */,
 				AA00000000000000000003E0 /* SearchCatalogStoreTests.swift */,
@@ -914,6 +941,11 @@
 				6F7945720B05D7777BFA79A2 /* WorkspaceModel.swift in Sources */,
 				D0E1F203948576A1B2C3D4E5 /* WorkspaceSection.swift in Sources */,
 				E1F203948576A1B2C3D4E5F6 /* WorkspaceNavigation.swift in Sources */,
+				AA0000000000000000000412 /* ProjectKey.swift in Sources */,
+				AA0000000000000000000414 /* CatalogQueryKey.swift in Sources */,
+				AA0000000000000000000416 /* QueryStatus.swift in Sources */,
+				AA0000000000000000000418 /* QueryHandle.swift in Sources */,
+				AA000000000000000000041A /* WorkspaceSession.swift in Sources */,
 				AA00000000000000000003F1 /* WorkspaceToolbar.swift in Sources */,
 				AA00000000000000000003F9 /* OmnibarResultsModel.swift in Sources */,
 				AA00000000000000000003FF /* OmnibarHitPresentation.swift in Sources */,
@@ -1001,6 +1033,7 @@
 				AA0000000000000000000401 /* ProjectFilesTests.swift in Sources */,
 				826574F8CA8D24BE551A88BF /* WorkspaceModelTests.swift in Sources */,
 				F203948576A1B2C3D4E5F607 /* WorkspaceNavigationTests.swift in Sources */,
+				AA000000000000000000041C /* WorkspaceSessionTests.swift in Sources */,
 				AA0000000000000000000271 /* CatalogCountsTests.swift in Sources */,
 				AA00000000000000000003A1 /* CatalogSessionStoreTests.swift in Sources */,
 				AA00000000000000000003E1 /* SearchCatalogStoreTests.swift in Sources */,
