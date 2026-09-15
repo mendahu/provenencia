@@ -97,6 +97,42 @@ struct OmnibarResultsModelTests {
         #expect(model.hits.isEmpty)
     }
 
+    @Test func accessibilityLabelComposesVisibleRowMetadata() {
+        let hit = CatalogSearchHit(
+            kind: "source",
+            id: "s1",
+            ref: "SRC-3K9M2",
+            title: "Ilminster parish register",
+            subtitle: "Parish register",
+            matchReason: "notes",
+            matchSnippet: "Zemblanity",
+            location: .sectionRoot(.sources)
+        )
+        let label = OmnibarHitPresentation.accessibilityLabel(for: hit)
+        #expect(label.contains("Ilminster parish register"))
+        #expect(label.contains(String(localized: L10n.Workspace.omnibarKindSource)))
+        #expect(label.contains("Parish register"))
+        #expect(label.contains("SRC-3K9M2"))
+        #expect(label.contains(L10n.Workspace.omnibarMatchNote(snippet: "Zemblanity")))
+    }
+
+    @Test func accessibilityLabelOmitsEmptyOptionalParts() {
+        let hit = CatalogSearchHit(
+            kind: "source_field",
+            id: "f1",
+            ref: "",
+            title: "Citation",
+            subtitle: "",
+            matchReason: "title",
+            location: .sectionRoot(.sourceFields)
+        )
+        let label = OmnibarHitPresentation.accessibilityLabel(for: hit)
+        #expect(label.contains("Citation"))
+        #expect(label.contains(String(localized: L10n.Workspace.omnibarKindField)))
+        #expect(!label.contains("Note:"))
+        #expect(!label.contains("Metadata:"))
+    }
+
     @Test func matchContextLocalizesBodyFieldsAndHidesTitleRef() {
         #expect(OmnibarHitPresentation.matchContextText(field: "title", snippet: "") == "")
         #expect(OmnibarHitPresentation.matchContextText(field: "ref", snippet: "") == "")

@@ -848,15 +848,6 @@ enum L10n {
             comment: "Accessibility label for the omnibar results panel"
         )
 
-        static func omnibarHitAccessibilityLabel(title: String, kind: String) -> String {
-            let format = String(localized: LocalizedStringResource(
-                "workspace.omnibar.hitAccessibilityLabel",
-                defaultValue: "%@, %@",
-                comment: "Accessibility label for an omnibar result row; arguments are hit title then kind label"
-            ))
-            return String(format: format, locale: .current, title, kind)
-        }
-
         static let omnibarSearchFailed = LocalizedStringResource(
             "workspace.omnibar.searchFailed",
             defaultValue: "Search couldn’t finish. Try again.",
