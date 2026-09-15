@@ -2,6 +2,7 @@ package search
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -27,6 +28,30 @@ func TestEmptyQueryReturnsNoHits(t *testing.T) {
 	}
 	if len(hits) != 0 {
 		t.Fatalf("got %d hits", len(hits))
+	}
+}
+
+func TestSearchRespectsCancelledContext(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	userID := seedUser(t, c)
+	typeID := seedType(t, c, "Book", "a monograph")
+	if _, err := sources.Create(c, userID, sources.CreateInput{
+		SourceTypeID: typeID,
+		Title:        "Ilminster parish register",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err = DefaultEngine().Search(ctx, c, Query{Text: "Ilminster"})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("Search() error = %v, want context.Canceled", err)
 	}
 }
 
