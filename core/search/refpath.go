@@ -1,6 +1,7 @@
 package search
 
 import (
+	"context"
 	"database/sql"
 	"regexp"
 	"strings"
@@ -29,7 +30,10 @@ func classifyRefQuery(text string) (key string, exact bool) {
 	return "", false
 }
 
-func lookUpRefDocs(db *sql.DB, key string, exact bool, limit int) ([]docRow, error) {
+func lookUpRefDocs(ctx context.Context, db *sql.DB, key string, exact bool, limit int) ([]docRow, error) {
+	if err := errIfCancelled(ctx); err != nil {
+		return nil, err
+	}
 	if limit <= 0 {
 		limit = DefaultHitLimit
 	}
@@ -38,7 +42,7 @@ func lookUpRefDocs(db *sql.DB, key string, exact bool, limit int) ([]docRow, err
 		err  error
 	)
 	if exact {
-		rows, err = db.Query(`
+		rows, err = db.QueryContext(ctx, `
 			SELECT kind, entity_id, display_ref, display_title, display_subtitle,
 				display_icon_key, display_thumbnail_rel_path,
 				title, ref, secondary, body
@@ -48,7 +52,7 @@ func lookUpRefDocs(db *sql.DB, key string, exact bool, limit int) ([]docRow, err
 		`, key, limit)
 	} else {
 		like := escapeLike(key) + "%"
-		rows, err = db.Query(`
+		rows, err = db.QueryContext(ctx, `
 			SELECT kind, entity_id, display_ref, display_title, display_subtitle,
 				display_icon_key, display_thumbnail_rel_path,
 				title, ref, secondary, body
@@ -64,6 +68,9 @@ func lookUpRefDocs(db *sql.DB, key string, exact bool, limit int) ([]docRow, err
 
 	var out []docRow
 	for rows.Next() {
+		if err := errIfCancelled(ctx); err != nil {
+			return nil, err
+		}
 		var d docRow
 		if err := rows.Scan(
 			&d.kind, &d.entityID, &d.displayRef, &d.displayTitle, &d.displaySubtitle,

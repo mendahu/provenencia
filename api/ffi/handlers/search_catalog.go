@@ -21,6 +21,7 @@ func SearchCatalog(in []byte) ([]byte, error) {
 	}
 	var out *engine.SearchCatalogResponse
 	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		// FFI dispatch has no call-scoped context yet; search honors ctx for future wiring.
 		hits, err := search.DefaultEngine().Search(context.Background(), c, q)
 		if err != nil {
 			return err

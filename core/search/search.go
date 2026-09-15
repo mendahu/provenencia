@@ -75,6 +75,9 @@ func DefaultEngine() *Engine {
 
 // Search runs the configured Searcher (empty/short query → no hits).
 func (e *Engine) Search(ctx context.Context, c *database.Catalog, q Query) ([]Hit, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if e == nil || e.Searcher == nil {
 		e = DefaultEngine()
 	}

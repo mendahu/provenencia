@@ -35,9 +35,18 @@ func candidateKey(kind, entityID string) string {
 	return kind + "\x00" + entityID
 }
 
+func errIfCancelled(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Search implements Searcher.
 func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) ([]Hit, error) {
-	_ = ctx
+	if err := errIfCancelled(ctx); err != nil {
+		return nil, err
+	}
 	raw := strings.TrimSpace(q.Text)
 	tokens := tokenize(raw)
 	limit := q.Limit
@@ -54,7 +63,7 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 
 	// Ref fast path: exact / prefix on projected docs (does not depend on FTS tokenization).
 	if key, exact := classifyRefQuery(raw); key != "" {
-		refDocs, err := lookUpRefDocs(db, key, exact, limit)
+		refDocs, err := lookUpRefDocs(ctx, db, key, exact, limit)
 		if err != nil {
 			return nil, err
 		}
@@ -68,7 +77,7 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 		if refKey, _ := classifyRefQuery(raw); refKey == "" {
 			andMatch := buildMatchQuery(tokens, false)
 			if andMatch != "" {
-				if err := mergeFTS(db, byKey, andMatch); err != nil {
+				if err := mergeFTS(ctx, db, byKey, andMatch); err != nil {
 					return nil, err
 				}
 			}
@@ -76,14 +85,14 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 			if len(tokens) >= 2 {
 				orMatch := buildMatchQuery(tokens, true)
 				if orMatch != "" {
-					if err := mergeFTS(db, byKey, orMatch); err != nil {
+					if err := mergeFTS(ctx, db, byKey, orMatch); err != nil {
 						return nil, err
 					}
 				}
 			}
 			// Typo shortlist: trigram OR expansion + Jaro–Winkler gate (never full scan).
 			if len(byKey) < limit {
-				if err := mergeFuzzyShortlist(db, byKey, tokens, limit); err != nil {
+				if err := mergeFuzzyShortlist(ctx, db, byKey, tokens, limit); err != nil {
 					return nil, err
 				}
 			}
@@ -103,6 +112,9 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 
 	var hits []Hit
 	for _, d := range byKey {
+		if err := errIfCancelled(ctx); err != nil {
+			return nil, err
+		}
 		spec, ok := kindSpec(d.kind)
 		if !ok || !spec.DefaultInEverything {
 			continue
@@ -167,9 +179,12 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 	return hits, nil
 }
 
-func mergeFTS(db *sql.DB, byKey map[string]docRow, match string) error {
+func mergeFTS(ctx context.Context, db *sql.DB, byKey map[string]docRow, match string) error {
+	if err := errIfCancelled(ctx); err != nil {
+		return err
+	}
 	w := FTSBM25Weights
-	rows, err := db.Query(fmt.Sprintf(`
+	rows, err := db.QueryContext(ctx, fmt.Sprintf(`
 		SELECT d.kind, d.entity_id, d.display_ref, d.display_title, d.display_subtitle,
 			d.display_icon_key, d.display_thumbnail_rel_path,
 			d.title, d.ref, d.secondary, d.body,
@@ -184,6 +199,9 @@ func mergeFTS(db *sql.DB, byKey map[string]docRow, match string) error {
 	defer rows.Close()
 
 	for rows.Next() {
+		if err := errIfCancelled(ctx); err != nil {
+			return err
+		}
 		var d docRow
 		if err := rows.Scan(
 			&d.kind, &d.entityID, &d.displayRef, &d.displayTitle, &d.displaySubtitle,
@@ -208,12 +226,15 @@ func mergeFTS(db *sql.DB, byKey map[string]docRow, match string) error {
 
 // mergeFuzzyShortlist expands candidates via trigram OR MATCH, then keeps only
 // rows that pass a Jaro–Winkler gate against identity fields.
-func mergeFuzzyShortlist(db *sql.DB, byKey map[string]docRow, tokens []string, limit int) error {
+func mergeFuzzyShortlist(ctx context.Context, db *sql.DB, byKey map[string]docRow, tokens []string, limit int) error {
 	remaining := FuzzyWeights.CandidateCap
 	if remaining <= 0 {
 		return nil
 	}
 	for _, tok := range tokens {
+		if err := errIfCancelled(ctx); err != nil {
+			return err
+		}
 		if len(byKey) >= limit || remaining <= 0 {
 			break
 		}
@@ -221,7 +242,7 @@ func mergeFuzzyShortlist(db *sql.DB, byKey map[string]docRow, tokens []string, l
 		if match == "" {
 			continue
 		}
-		added, err := mergeTrigramCandidates(db, byKey, match, remaining, tokens)
+		added, err := mergeTrigramCandidates(ctx, db, byKey, match, remaining, tokens)
 		if err != nil {
 			return err
 		}
@@ -230,8 +251,11 @@ func mergeFuzzyShortlist(db *sql.DB, byKey map[string]docRow, tokens []string, l
 	return nil
 }
 
-func mergeTrigramCandidates(db *sql.DB, byKey map[string]docRow, match string, capN int, tokens []string) (added int, err error) {
-	rows, err := db.Query(`
+func mergeTrigramCandidates(ctx context.Context, db *sql.DB, byKey map[string]docRow, match string, capN int, tokens []string) (added int, err error) {
+	if err := errIfCancelled(ctx); err != nil {
+		return 0, err
+	}
+	rows, err := db.QueryContext(ctx, `
 		SELECT d.kind, d.entity_id, d.display_ref, d.display_title, d.display_subtitle,
 			d.display_icon_key, d.display_thumbnail_rel_path,
 			d.title, d.ref, d.secondary, d.body
@@ -246,6 +270,9 @@ func mergeTrigramCandidates(db *sql.DB, byKey map[string]docRow, match string, c
 	defer rows.Close()
 
 	for rows.Next() {
+		if err := errIfCancelled(ctx); err != nil {
+			return added, err
+		}
 		var d docRow
 		if err := rows.Scan(
 			&d.kind, &d.entityID, &d.displayRef, &d.displayTitle, &d.displaySubtitle,
