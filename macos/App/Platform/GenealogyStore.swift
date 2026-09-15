@@ -88,7 +88,10 @@ struct CatalogSearchHit: Sendable, Equatable, Identifiable {
     var ref: String
     var title: String
     var subtitle: String
+    /// Stable match field code from Go (`title`, `notes`, …) — not UI copy.
     var matchReason: String
+    /// Optional raw snippet for body/rollup matches; Mac localizes the prefix.
+    var matchSnippet: String = ""
     var location: WorkspaceLocation
     /// Source cover raster path when already derived; empty otherwise.
     var thumbnailRelPath: String = ""

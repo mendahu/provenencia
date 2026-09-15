@@ -836,6 +836,42 @@ enum L10n {
             comment: "Omnibar panel loading label while SearchCatalog is in flight"
         )
 
+        /// Omnibar match-context line for a note body hit; argument is the raw snippet.
+        static func omnibarMatchNote(snippet: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "workspace.omnibar.match.note",
+                defaultValue: "Note: %@",
+                comment: "Omnibar match context when the query hit a Source note; argument is a short snippet"
+            ))
+            return String(format: format, locale: .current, snippet)
+        }
+
+        /// Omnibar match-context line for metadata text; argument is the raw snippet.
+        static func omnibarMatchMetadata(snippet: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "workspace.omnibar.match.metadata",
+                defaultValue: "Metadata: %@",
+                comment: "Omnibar match context when the query hit Source metadata; argument is a short snippet"
+            ))
+            return String(format: format, locale: .current, snippet)
+        }
+
+        /// Omnibar match-context line for a filename/artifact label; argument is the raw snippet.
+        static func omnibarMatchFilename(snippet: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "workspace.omnibar.match.filename",
+                defaultValue: "Filename: %@",
+                comment: "Omnibar match context when the query hit a filename or artifact label; argument is a short snippet"
+            ))
+            return String(format: format, locale: .current, snippet)
+        }
+
+        static let omnibarMatchDescription = LocalizedStringResource(
+            "workspace.omnibar.match.description",
+            defaultValue: "Description",
+            comment: "Omnibar match context when the query hit a description field"
+        )
+
         static let jumpMenuAccessibilityLabel = LocalizedStringResource(
             "workspace.navigation.jumpMenuAccessibilityLabel",
             defaultValue: "History jump menu",

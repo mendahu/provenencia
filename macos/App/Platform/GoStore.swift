@@ -721,6 +721,7 @@ struct GoStore: GenealogyStore {
             title: h.title,
             subtitle: h.subtitle,
             matchReason: h.matchReason,
+            matchSnippet: h.matchSnippet,
             location: Self.mapWorkspaceLocationFromProto(h.location),
             thumbnailRelPath: h.thumbnailRelPath,
             iconKey: h.iconKey

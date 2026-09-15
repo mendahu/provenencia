@@ -70,6 +70,7 @@ func hitToProto(h search.Hit) *engine.SearchHit {
 		Title:            h.Title,
 		Subtitle:         h.Subtitle,
 		MatchReason:      h.MatchReason,
+		MatchSnippet:     h.MatchSnippet,
 		Location:         locationToProto(h.Location),
 		ThumbnailRelPath: h.ThumbnailRelPath,
 		IconKey:          h.IconKey,

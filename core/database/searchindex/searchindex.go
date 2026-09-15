@@ -23,7 +23,8 @@ const (
 // or document layout change so Open heals old indexes.
 const ProjectionVersion = 4
 
-// Tagged body line prefixes for Source rollups (parsed by core/search for match_reason).
+// Tagged body line prefixes for Source rollups (parsed by core/search for
+// match field codes + snippets).
 const (
 	BodyTagNote     = "note:\t"
 	BodyTagMetadata = "metadata:\t"
