@@ -12,6 +12,7 @@ IDs stay stable (`S4-NN`). Do not renumber when moving steps here.
 | [S4-02](#s4-02--pr-catalog-query-registry) | PR | Declarative query loaders, mutation map, patch API |
 | [S4-03](#s4-03--pr-place-registry) | PR | Declarative place registry + resolve(location) |
 | [S4-04](#s4-04--pr-wire-workspace-session) | PR | Wire session into navigation; warm cache on commit |
+| [S4-05](#s4-05--pr-workspace-destination-host) | PR | Place-based destination host (shim to existing views) |
 
 ---
 
@@ -106,4 +107,28 @@ cd macos && xcodebuild test -scheme Provenencia -destination 'platform=macOS' \
   -only-testing:ProvenenciaTests/WorkspaceNavigationTests \
   -only-testing:ProvenenciaTests/PlaceRegistryTests \
   -only-testing:ProvenenciaTests/CatalogQueryRegistryTests
+```
+
+---
+
+### S4-05 — PR: Workspace destination host
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S4-04 |
+| **Deliverables** | Done. `WorkspaceDestinationHost.swift`: resolves `navigation.currentLocation` via `PlaceRegistry`, switches on `WorkspacePresentationID`. Shim maps `.sourcesList` / `.sourcePage` → `SourcesView`, `.sourceFields` → `SourceFieldsView`, `.sourceTypes` → `SourceTypesView`. `WorkspaceContent` uses the host instead of a section switch. `WorkspacePresentationID` is `CaseIterable`. Sidebar + toolbar unchanged. |
+| **Tests** | Done. `WorkspaceDestinationHostTests.swift`: presentation routing table, both source presentations → sources destination, registry presentations known. |
+| **Dogfood** | No user-visible change; all destinations still work. |
+| **Out** | Sources list/detail split; query-backed views; removing legacy loaders. |
+
+**Landed:** Workspace content routing is presentation-driven. S4-06 can split Sources and wire query handles without changing the outer host shell.
+
+**Verify:**
+
+```bash
+cd macos && xcodebuild test -scheme Provenencia -destination 'platform=macOS' \
+  -only-testing:ProvenenciaTests/WorkspaceDestinationHostTests \
+  -only-testing:ProvenenciaTests/PlaceRegistryTests \
+  -only-testing:ProvenenciaTests/WorkspaceNavigationTests
 ```

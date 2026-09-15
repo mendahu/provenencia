@@ -16,8 +16,6 @@ struct WorkspaceContent: View {
     @State private var jumpMenu = HistoryJumpMenuModel()
     @State private var omnibarResults = OmnibarResultsModel()
 
-    private var section: WorkspaceSection { navigation.selectedSection }
-
     var body: some View {
         VStack(spacing: 0) {
             WorkspaceToolbar(
@@ -26,30 +24,13 @@ struct WorkspaceContent: View {
                 projectDir: projectDir,
                 store: store
             )
-            switch section {
-            case .sourceFields:
-                SourceFieldsView(
-                    projectDir: projectDir,
-                    userID: userID,
-                    store: store,
-                    catalogCounts: catalogCounts
-                )
-            case .sourceTypes:
-                SourceTypesView(
-                    projectDir: projectDir,
-                    userID: userID,
-                    store: store,
-                    catalogCounts: catalogCounts
-                )
-            case .sources:
-                SourcesView(
-                    projectDir: projectDir,
-                    userID: userID,
-                    sessionDisplayName: sessionDisplayName,
-                    store: store,
-                    catalogCounts: catalogCounts
-                )
-            }
+            WorkspaceDestinationHost(
+                projectDir: projectDir,
+                userID: userID,
+                sessionDisplayName: sessionDisplayName,
+                store: store,
+                catalogCounts: catalogCounts
+            )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(PVColor.surfacePage)
