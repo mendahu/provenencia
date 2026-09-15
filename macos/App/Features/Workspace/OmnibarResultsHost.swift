@@ -122,9 +122,10 @@ private struct OmnibarResultsPanel: View {
                                     if hovering { results.selectedIndex = index }
                                 }
                             ))
-                            .accessibilityLabel(
-                                "\(hit.title), \(String(localized: OmnibarHitPresentation.kindLabel(for: hit.kind)))"
-                            )
+                            .accessibilityLabel(L10n.Workspace.omnibarHitAccessibilityLabel(
+                                title: hit.title,
+                                kind: String(localized: OmnibarHitPresentation.kindLabel(for: hit.kind))
+                            ))
                             .accessibilityIdentifier("workspace.toolbar.omnibar.hit.\(hit.id)")
                         }
                     }
