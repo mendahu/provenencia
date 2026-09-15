@@ -4,7 +4,7 @@ import Observation
 /// First-class workspace navigation history (`go(to:)` / Back / Forward).
 /// Owned by `WorkspaceView` and injected via `.environment` so any destination
 /// can commit or apply places without talking to sidebar chrome.
-/// See `docs/deployment-plan/spike-3/navigation-history.md`.
+/// See `docs/deployment-plan/archive/spike-3/navigation-history.md`.
 @MainActor
 @Observable
 final class WorkspaceNavigation {

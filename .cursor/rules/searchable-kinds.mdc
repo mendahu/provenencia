@@ -7,7 +7,7 @@ alwaysApply: false
 # Searchable catalog kinds
 
 Follow the project skill `.cursor/skills/add-searchable-kind/SKILL.md`.
-Behavior: `docs/deployment-plan/spike-3/omnibar-search.md`.
+Behavior: `docs/deployment-plan/archive/spike-3/omnibar-search.md`.
 
 - Register kinds in `core/search` (weights, context sections, location mapper).
 - Project documents via `core/database/searchindex`; reproject on writes; heal with `searchindex.EnsureCatalog`.

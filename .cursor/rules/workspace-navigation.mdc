@@ -7,7 +7,7 @@ alwaysApply: false
 # Workspace navigation history
 
 Follow the project skill `.cursor/skills/add-workspace-location/SKILL.md`.
-Behavior: `docs/deployment-plan/spike-3/navigation-history.md`.
+Behavior: `docs/deployment-plan/archive/spike-3/navigation-history.md`.
 
 - Committed places (sidebar, deep pages, master–detail selection, omnibar/breadcrumb targets) use `WorkspaceLocation` + `WorkspaceNavigation.go(to:)` (environment-injected).
 - Do not set `selectedSection` or open/close/select as the sole navigation path.

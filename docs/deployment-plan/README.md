@@ -6,16 +6,22 @@ Authoritative domain and stack decisions remain in the sibling docs under [`docs
 
 ## Current
 
-| Spike | Goal |
-| --- | --- |
-| [Spike 3](spike-3/) | Workspace chrome + first-class nav history and catalog search: Back/Forward (persisted, `project.uuid`), toolbar omnibar with Go registry + FTS5 ranking. **Open checklist:** [`spike-3/deployment-plan.md`](spike-3/deployment-plan.md). **Completed:** [`spike-3/completed.md`](spike-3/completed.md). Notes: [`navigation-history.md`](spike-3/navigation-history.md), [`omnibar-search.md`](spike-3/omnibar-search.md). |
+_None — unscheduled work lives in [`ideas/`](../ideas/)._
 
 ## Completed
 
 | Spike | Goal |
 | --- | --- |
+| [Spike 3](archive/spike-3/) | Workspace chrome + first-class nav history and catalog search: Back/Forward (persisted, `project.uuid`), toolbar omnibar with Go registry + FTS5 ranking. Archive: [`archive/spike-3/README.md`](archive/spike-3/README.md), [`completed.md`](archive/spike-3/completed.md). Notes: [`navigation-history.md`](archive/spike-3/navigation-history.md), [`omnibar-search.md`](archive/spike-3/omnibar-search.md). |
 | [Spike 2](archive/spike-2/) | Validate the Source layer: app workspace chrome (sidebar), audit + schema + Go CRUD/ingest + FFI + macOS Source catalog UI (create Sources, Artifacts, Files, extensible types/metadata). Design steps in Claude Design interleaved with PRs. Dogfood: [`archive/spike-2/dogfood.md`](archive/spike-2/dogfood.md). |
 | [Spike 1](archive/spike-1.md) | Scaffold the macOS app, local SQLite project, and first-run onboarding. **Retired the cgo SQLite + Swift dylib risk** (plan A: `mattn/go-sqlite3` inside `libprovenencia.dylib`). |
+
+Spike 3 archive:
+
+- [`archive/spike-3/README.md`](archive/spike-3/README.md) — spike overview (no open steps)
+- [`archive/spike-3/completed.md`](archive/spike-3/completed.md) — finished Spike 3 steps
+- [`archive/spike-3/navigation-history.md`](archive/spike-3/navigation-history.md), [`archive/spike-3/omnibar-search.md`](archive/spike-3/omnibar-search.md)
+- [`archive/spike-3/design/`](archive/spike-3/design/) — design summaries; archived brief in [`archive/spike-3/design/archive/`](archive/spike-3/design/archive/)
 
 Spike 2 archive:
 

@@ -13,7 +13,7 @@ enum WorkspaceLocationReconcile: Equatable, Sendable {
 
 /// A restoreable workspace place: sidebar destination plus optional deep
 /// location (Source page, vocabulary row, …). Persisted in navigation history.
-/// See `docs/deployment-plan/spike-3/navigation-history.md`.
+/// See `docs/deployment-plan/archive/spike-3/navigation-history.md`.
 struct WorkspaceLocation: Codable, Equatable, Sendable {
     var section: WorkspaceSection
     var sourceId: String?

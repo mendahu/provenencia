@@ -1,6 +1,6 @@
 # Spike 3 — Completed steps
 
-Finished Spike 3 work kept for history. The live to-do list is [`deployment-plan.md`](deployment-plan.md).
+Finished Spike 3 work kept for history. Spike archived — optional later slices: [`deployment-plan.md`](deployment-plan.md) (S3-13+).
 
 IDs stay stable (`S3-NN`). Do not renumber when moving steps here.
 
@@ -58,7 +58,7 @@ IDs stay stable (`S3-NN`). Do not renumber when moving steps here.
 | **Kind** | PR |
 | **Depends on** | — |
 | **Deliverables** | Done. Migration `000017` adds `project.uuid` (`BLOB`, unique when set). `project.NewID` / Upsert mints UUIDv7 on Create; `project.EnsureUUID` heal-mints on Open / `createCatalog` / `catalogsession` (beside `users.EnsureRefs`). Existing uuid never rewritten on Upsert conflict. Exposed on protobuf / Swift `ProjectInfo.uuid` via Complete, Open, and GetProjectInfo. |
-| **Context** | [`navigation-history.md`](navigation-history.md) § Project key; skill [`add-catalog-migration`](../../../.cursor/skills/add-catalog-migration/SKILL.md). Active-project pointer stays path-based. |
+| **Context** | [`navigation-history.md`](navigation-history.md) § Project key; skill [`add-catalog-migration`](../../../../.cursor/skills/add-catalog-migration/SKILL.md). Active-project pointer stays path-based. |
 | **Out** | History JSON; toolbar; short `PRJ-…` ref. |
 | **Dogfood** | New + upgraded projects show a stable UUID on open; rename/move of the folder does not change it. |
 | **Feeds** | S3-04 (history file key); later install-local chrome |
@@ -112,8 +112,8 @@ IDs stay stable (`S3-NN`). Do not renumber when moving steps here.
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | — (parallel with S3-05 after S3-04 location shape) |
-| **Deliverables** | Done. `core/search` kind registry (`source` / `source_type` / `source_field`) with field weights, context-section boosts, and `WorkspaceLocation` mappers. Protobuf `METHOD_SEARCH_CATALOG` + `SearchHit` / `WorkspaceLocation` messages; FFI handler via `withProjectCatalog` + `search.Engine`. `Searcher` interface with `NaiveScanner` bridge (domain `List` APIs — no handler SQL). Mac `GenealogyStore.searchCatalog` / GoStore / FakeStore + Swift tests. Skill [`add-searchable-kind`](../../../.cursor/skills/add-searchable-kind/SKILL.md). |
-| **Context** | [`omnibar-search.md`](omnibar-search.md) § Incremental delivery S1; [`add-ffi-handler`](../../../.cursor/skills/add-ffi-handler/SKILL.md); [`use-catalog-session`](../../../.cursor/skills/use-catalog-session/SKILL.md). |
+| **Deliverables** | Done. `core/search` kind registry (`source` / `source_type` / `source_field`) with field weights, context-section boosts, and `WorkspaceLocation` mappers. Protobuf `METHOD_SEARCH_CATALOG` + `SearchHit` / `WorkspaceLocation` messages; FFI handler via `withProjectCatalog` + `search.Engine`. `Searcher` interface with `NaiveScanner` bridge (domain `List` APIs — no handler SQL). Mac `GenealogyStore.searchCatalog` / GoStore / FakeStore + Swift tests. Skill [`add-searchable-kind`](../../../../.cursor/skills/add-searchable-kind/SKILL.md). |
+| **Context** | [`omnibar-search.md`](omnibar-search.md) § Incremental delivery S1; [`add-ffi-handler`](../../../../.cursor/skills/add-ffi-handler/SKILL.md); [`use-catalog-session`](../../../../.cursor/skills/use-catalog-session/SKILL.md). |
 | **Out** | FTS5 tables / write-path reproject (S3-08); full context/ref ranking polish (S3-09); omnibar UI / remove list search (S3-10). |
 | **Dogfood** | RPC / FakeStore return ranked hits for known titles, refs, type/field labels with navigable locations. |
 | **Feeds** | S3-08 (swap NaiveScanner for FTS behind same Hit/Query/FFI) |
@@ -126,8 +126,8 @@ IDs stay stable (`S3-NN`). Do not renumber when moving steps here.
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | S3-07 |
-| **Deliverables** | Done. Enabled `-tags fts5` on dylib build + CI/`go test`. Migration `000018`: `catalog_search_docs` + external-content `catalog_search_fts` + `catalog_search_meta`. `core/database/searchindex` projectors for Source (notes/metadata/artifact/filename rollup) and vocab roots; incremental reproject on domain writes; `searchindex.EnsureCatalog` rebuild/heal on Open/Create. `FTSSearcher` is `DefaultEngine` (NaiveScanner removed). Registry body weights for rolled Source text. Skill [`add-searchable-kind`](../../../.cursor/skills/add-searchable-kind/SKILL.md) updated. |
-| **Context** | [`omnibar-search.md`](omnibar-search.md) S2; [`application-stack.md`](../../application-stack.md) §10. |
+| **Deliverables** | Done. Enabled `-tags fts5` on dylib build + CI/`go test`. Migration `000018`: `catalog_search_docs` + external-content `catalog_search_fts` + `catalog_search_meta`. `core/database/searchindex` projectors for Source (notes/metadata/artifact/filename rollup) and vocab roots; incremental reproject on domain writes; `searchindex.EnsureCatalog` rebuild/heal on Open/Create. `FTSSearcher` is `DefaultEngine` (NaiveScanner removed). Registry body weights for rolled Source text. Skill [`add-searchable-kind`](../../../../.cursor/skills/add-searchable-kind/SKILL.md) updated. |
+| **Context** | [`omnibar-search.md`](omnibar-search.md) S2; [`application-stack.md`](../../../application-stack.md) §10. |
 | **Out** | Fuzzy (S3-11); Files/Artifact as own hit kinds; omnibar UI (S3-10). |
 | **Dogfood** | Edit a Source title/note → SearchCatalog updates; title beats body; Open heals a wiped index. |
 | **Feeds** | S3-09 |
@@ -168,7 +168,7 @@ IDs stay stable (`S3-NN`). Do not renumber when moving steps here.
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | S3-10 (engine could land after S3-09; omnibar already wired) |
-| **Deliverables** | Done. Migration `000019`: external-content `catalog_search_fts_trigram` (`tokenize='trigram case_sensitive 0 remove_diacritics 1'`). `searchindex` keeps unicode61 + trigram indexes in sync; `ProjectionVersion` 3. `FTSSearcher` expands under-limit candidates via OR-of-character-trigrams shortlist (cap 150), Jaro–Winkler gate on title/label/ref/key (`FuzzyWeights`), fuzzy-only score scale so exact FTS still wins. Ref-shaped queries skip fuzzy. Latin-script dogfood focus (not CJK). Tests for typo recall, ranking, garbage, accent fold; FFI smoke. Skill [`add-searchable-kind`](../../../.cursor/skills/add-searchable-kind/SKILL.md) updated. |
+| **Deliverables** | Done. Migration `000019`: external-content `catalog_search_fts_trigram` (`tokenize='trigram case_sensitive 0 remove_diacritics 1'`). `searchindex` keeps unicode61 + trigram indexes in sync; `ProjectionVersion` 3. `FTSSearcher` expands under-limit candidates via OR-of-character-trigrams shortlist (cap 150), Jaro–Winkler gate on title/label/ref/key (`FuzzyWeights`), fuzzy-only score scale so exact FTS still wins. Ref-shaped queries skip fuzzy. Latin-script dogfood focus (not CJK). Tests for typo recall, ranking, garbage, accent fold; FFI smoke. Skill [`add-searchable-kind`](../../../../.cursor/skills/add-searchable-kind/SKILL.md) updated. |
 | **Context** | [`omnibar-search.md`](omnibar-search.md) S5. |
 | **Out** | Cross-root association search; NL/AI; spellfix1 / stemming; CJK fuzzy models. |
 | **Dogfood** | Common typos (`Ilminstr` → Ilminster) recover without flooding garbage. |
