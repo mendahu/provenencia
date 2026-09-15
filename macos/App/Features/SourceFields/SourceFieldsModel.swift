@@ -150,7 +150,11 @@ final class SourceFieldsModel {
 
     // MARK: Actions
 
-    func load() async {
+    /// Loads the vocabulary. When `selecting` is set, applies that row in the
+    /// same completion as the list fetch so the first paint is not list-only.
+    /// Returns `true` when `selecting` was requested but the id is absent.
+    @discardableResult
+    func load(selecting fieldId: String? = nil) async -> Bool {
         isLoading = true
         loadError = nil
         defer {
@@ -160,8 +164,10 @@ final class SourceFieldsModel {
         do {
             fields = try await store.listMetadataFields(projectDir: projectDir)
             publishCounts()
+            return applyLoadedSelection(fieldId)
         } catch {
             loadError = error
+            return false
         }
     }
 
@@ -170,13 +176,38 @@ final class SourceFieldsModel {
     }
 
     func select(_ id: String) {
-        guard let field = fields.first(where: { $0.id == id }) else { return }
+        _ = applySelection(id)
+    }
+
+    /// Applies a deep id after the list is in memory. Returns `true` when the
+    /// id was requested but missing (caller should prune history).
+    @discardableResult
+    private func applyLoadedSelection(_ fieldId: String?) -> Bool {
+        guard let fieldId else {
+            if !isAdding {
+                mode = .empty
+            }
+            return false
+        }
+        guard applySelection(fieldId) else {
+            if !isAdding {
+                mode = .empty
+            }
+            return true
+        }
+        return false
+    }
+
+    @discardableResult
+    private func applySelection(_ id: String) -> Bool {
+        guard let field = fields.first(where: { $0.id == id }) else { return false }
         formError = nil
         // Always keep `draft` non-nil here. The locked (.viewing) panel does
         // not bind it, but going edit/add → view with `draft = nil` in the
         // same turn tears down `Binding($model.draft)` and traps.
         draft = Draft(label: field.label, dataType: field.dataType, description: field.description)
         mode = CatalogOrigin.isPlugin(field.origin) ? .viewing(id: id) : .editing(id: id)
+        return true
     }
 
     /// Clears master–detail selection when history restores a section root.

@@ -76,8 +76,10 @@ struct SourcesView: View {
             addForm(typeOptions: model.typeComboOptions)
         }
         .task {
-            await model.load()
-            applyWorkspaceLocation()
+            let location = navigation.currentLocation
+            if await model.load(opening: location.sourceId) {
+                navigation.fallbackToSectionRoot()
+            }
         }
         .task(id: model.isAdding) {
             guard model.isAdding else { return }

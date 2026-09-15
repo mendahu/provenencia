@@ -79,8 +79,10 @@ struct SourceTypesView: View {
             deleteDetail(for: type)
         }
         .task {
-            await model.load()
-            applyWorkspaceLocation()
+            let location = navigation.currentLocation
+            if await model.load(selecting: location.typeId) {
+                navigation.fallbackToSectionRoot()
+            }
         }
         .onChange(of: navigation.currentLocation) { _, _ in
             guard model.hasCompletedInitialLoad else { return }

@@ -386,6 +386,25 @@ struct SourceTypesModelTests {
         #expect(counts.sourceFields?.total == 1)
     }
 
+    @Test func loadSelectingAppliesTypeInSameCompletion() async {
+        let model = makeModel(types: [
+            CatalogSourceType(id: "t1", key: "book", origin: "provenencia", label: "Book", description: ""),
+        ])
+        let missing = await model.load(selecting: "t1")
+        #expect(!missing)
+        #expect(model.selectedType?.id == "t1")
+        #expect(model.hasCompletedInitialLoad)
+    }
+
+    @Test func loadSelectingMissingReportsFallback() async {
+        let model = makeModel(types: [
+            CatalogSourceType(id: "t1", key: "book", origin: "provenencia", label: "Book", description: ""),
+        ])
+        let missing = await model.load(selecting: "gone")
+        #expect(missing)
+        #expect(model.selectedType == nil)
+    }
+
     @Test func createAndDeleteCommitThroughWorkspaceNavigation() async throws {
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("types-nav-\(UUID().uuidString)", isDirectory: true)

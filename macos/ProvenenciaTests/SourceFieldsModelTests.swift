@@ -348,6 +348,21 @@ struct SourceFieldsModelTests {
         #expect(model.deleteError != nil)
     }
 
+    @Test func loadSelectingAppliesFieldInSameCompletion() async {
+        let model = makeModel(fields: [seededField(id: "1", label: "Author")])
+        let missing = await model.load(selecting: "1")
+        #expect(!missing)
+        #expect(model.selectedField?.id == "1")
+        #expect(model.hasCompletedInitialLoad)
+    }
+
+    @Test func loadSelectingMissingReportsFallback() async {
+        let model = makeModel(fields: [seededField(id: "1")])
+        let missing = await model.load(selecting: "gone")
+        #expect(missing)
+        #expect(model.selectedField == nil)
+    }
+
     @Test func createAndDeleteCommitThroughWorkspaceNavigation() async throws {
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("fields-nav-\(UUID().uuidString)", isDirectory: true)

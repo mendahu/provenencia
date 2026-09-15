@@ -223,7 +223,11 @@ final class SourceTypesModel {
 
     // MARK: Actions
 
-    func load() async {
+    /// Loads vocabulary rows. When `selecting` is set, applies that type (and
+    /// its suggestions) in the same completion as the list fetch.
+    /// Returns `true` when `selecting` was requested but the id is absent.
+    @discardableResult
+    func load(selecting typeId: String? = nil) async -> Bool {
         isLoading = true
         loadError = nil
         defer {
@@ -234,8 +238,10 @@ final class SourceTypesModel {
             types = try await store.listSourceTypes(projectDir: projectDir)
             fields = try await store.listMetadataFields(projectDir: projectDir)
             publishCounts()
+            return await applyLoadedSelection(typeId)
         } catch {
             loadError = error
+            return false
         }
     }
 
@@ -250,7 +256,32 @@ final class SourceTypesModel {
     }
 
     func select(_ id: String) {
-        guard let type = types.first(where: { $0.id == id }) else { return }
+        guard applySelection(id) else { return }
+        Task { await loadSuggestions(for: id) }
+    }
+
+    /// Applies a deep id after rows are in memory. Returns `true` when the id
+    /// was requested but missing (caller should prune history).
+    private func applyLoadedSelection(_ typeId: String?) async -> Bool {
+        guard let typeId else {
+            if !isAdding {
+                clearHistorySelection()
+            }
+            return false
+        }
+        guard applySelection(typeId) else {
+            if !isAdding {
+                clearHistorySelection()
+            }
+            return true
+        }
+        await loadSuggestions(for: typeId)
+        return false
+    }
+
+    @discardableResult
+    private func applySelection(_ id: String) -> Bool {
+        guard let type = types.first(where: { $0.id == id }) else { return false }
         formError = nil
         suggestionError = nil
         assignPick = ""
@@ -259,7 +290,7 @@ final class SourceTypesModel {
         // same turn tears down `Binding($model.draft)` and traps.
         draft = Draft(label: type.label, description: type.description, iconKey: type.iconKey)
         mode = CatalogOrigin.isPlugin(type.origin) ? .viewing(id: id) : .editing(id: id)
-        Task { await loadSuggestions(for: id) }
+        return true
     }
 
     /// Clears master–detail selection when history restores a section root.

@@ -251,6 +251,27 @@ struct SourcesModelTests {
         #expect(model.sources.first?.primaryArtifactID.isEmpty == true)
     }
 
+    @Test func loadOpeningAppliesSourceInSameCompletion() async {
+        let model = makeModel(
+            sources: [source(id: "s1", title: "Deed", typeID: "t1")],
+            types: [photoType()]
+        )
+        let missing = await model.load(opening: "s1")
+        #expect(!missing)
+        #expect(model.openedSourceID == "s1")
+        #expect(model.hasCompletedInitialLoad)
+    }
+
+    @Test func loadOpeningMissingReportsFallback() async {
+        let model = makeModel(
+            sources: [source(id: "s1", title: "Deed", typeID: "t1")],
+            types: [photoType()]
+        )
+        let missing = await model.load(opening: "gone")
+        #expect(missing)
+        #expect(model.openedSourceID == nil)
+    }
+
     @Test func applyUpdatedSourceReplacesCoverWhenIncomingHasGlyph() async {
         var row = source(id: "s1", title: "Deed", typeID: "t1")
         row.thumbnailMediaType = "application/pdf"

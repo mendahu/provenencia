@@ -75,8 +75,10 @@ struct SourceFieldsView: View {
             deleteDetail(for: field)
         }
         .task {
-            await model.load()
-            applyWorkspaceLocation()
+            let location = navigation.currentLocation
+            if await model.load(selecting: location.fieldId) {
+                navigation.fallbackToSectionRoot()
+            }
         }
         .onChange(of: navigation.currentLocation) { _, _ in
             guard model.hasCompletedInitialLoad else { return }
