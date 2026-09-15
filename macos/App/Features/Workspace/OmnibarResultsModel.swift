@@ -154,11 +154,33 @@ enum OmnibarHitPresentation {
         }
     }
 
-    static func showMatchContext(_ reason: String) -> Bool {
-        let r = reason.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if r.isEmpty { return false }
-        if r == "title" || r == "ref" || r == "label" || r == "key" || r == "fuzzy" { return false }
-        return true
+    /// Whether the match-context slot should show for this stable field code.
+    static func showsMatchContext(field: String) -> Bool {
+        switch field.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "notes", "metadata", "filename", "description":
+            return true
+        default:
+            return false
+        }
+    }
+
+    /// Localized match-context line from Go field code + optional raw snippet.
+    static func matchContextText(field: String, snippet: String) -> String {
+        let code = field.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard showsMatchContext(field: code) else { return "" }
+        let trimmed = snippet.trimmingCharacters(in: .whitespacesAndNewlines)
+        switch code {
+        case "notes":
+            return L10n.Workspace.omnibarMatchNote(snippet: trimmed)
+        case "metadata":
+            return L10n.Workspace.omnibarMatchMetadata(snippet: trimmed)
+        case "filename":
+            return L10n.Workspace.omnibarMatchFilename(snippet: trimmed)
+        case "description":
+            return String(localized: L10n.Workspace.omnibarMatchDescription)
+        default:
+            return ""
+        }
     }
 
     static func refAccent(for hit: CatalogSearchHit) -> Bool {

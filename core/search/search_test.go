@@ -210,7 +210,7 @@ func TestNoteBodyRollsIntoSourceHit(t *testing.T) {
 	if len(hits) != 1 || hits[0].Kind != KindSource || hits[0].ID != uuidString(src.ID) {
 		t.Fatalf("want Source hit for note text, got %+v", hits)
 	}
-	if hits[0].MatchReason != "notes" && !strings.HasPrefix(hits[0].MatchReason, "note:") {
+	if hits[0].MatchReason != "notes" {
 		t.Fatalf("match_reason %q", hits[0].MatchReason)
 	}
 }
@@ -413,11 +413,11 @@ func TestNoteMatchReasonUsesSnippet(t *testing.T) {
 	if len(hits) != 1 {
 		t.Fatalf("got %+v", hits)
 	}
-	if !strings.HasPrefix(hits[0].MatchReason, "note:") {
-		t.Fatalf("want note: snippet, got %q", hits[0].MatchReason)
+	if hits[0].MatchReason != "notes" {
+		t.Fatalf("want match_reason notes, got %q", hits[0].MatchReason)
 	}
-	if !strings.Contains(strings.ToLower(hits[0].MatchReason), "zemblanity") {
-		t.Fatalf("snippet should include token, got %q", hits[0].MatchReason)
+	if !strings.Contains(strings.ToLower(hits[0].MatchSnippet), "zemblanity") {
+		t.Fatalf("snippet should include token, got %q", hits[0].MatchSnippet)
 	}
 }
 

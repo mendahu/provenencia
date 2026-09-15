@@ -126,11 +126,11 @@ func contextMultiplier(spec KindSpec, section string) float64 {
 	return 1
 }
 
-// scoreFields returns a weighted score and the best-matching field reason.
-// For rolled-up Source body fields, reason is a cheap snippet (note: …).
-func scoreFields(spec KindSpec, values map[string]string, tokens []string) (score float64, reason string) {
+// scoreFields returns a weighted score, the best-matching field code, and an
+// optional raw snippet for body/rollup fields (notes/metadata/filename).
+func scoreFields(spec KindSpec, values map[string]string, tokens []string) (score float64, field, snippet string) {
 	if len(tokens) == 0 {
-		return 0, ""
+		return 0, "", ""
 	}
 	var bestField string
 	var bestWeight float64
@@ -156,26 +156,23 @@ func scoreFields(spec KindSpec, values map[string]string, tokens []string) (scor
 		}
 	}
 	if matchedTokens == 0 {
-		return 0, ""
+		return 0, "", ""
 	}
 	// Prefer fuller term coverage.
 	score *= float64(matchedTokens) / float64(len(tokens))
 	if bestField != "" {
-		reason = matchReasonForField(bestField, values[bestField], tokens)
+		field = bestField
+		snippet = matchSnippetForField(bestField, values[bestField], tokens)
 	}
-	return score, reason
+	return score, field, snippet
 }
 
-func matchReasonForField(field, value string, tokens []string) string {
+func matchSnippetForField(field, value string, tokens []string) string {
 	switch field {
-	case "notes":
-		return "note: " + snippetAround(value, tokens, 48)
-	case "metadata":
-		return "metadata: " + snippetAround(value, tokens, 48)
-	case "filename":
-		return "filename: " + snippetAround(value, tokens, 48)
+	case "notes", "metadata", "filename":
+		return snippetAround(value, tokens, 48)
 	default:
-		return field
+		return ""
 	}
 }
 

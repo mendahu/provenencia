@@ -50,7 +50,8 @@ type Hit struct {
 	Ref              string
 	Title            string
 	Subtitle         string
-	MatchReason      string
+	MatchReason      string // stable field code; not localized UI copy
+	MatchSnippet     string // optional raw snippet for body/rollup matches
 	Location         WorkspaceLocation
 	ThumbnailRelPath string  // Source cover when a derivative already exists
 	IconKey          string  // Type icon (source type, or source's type)

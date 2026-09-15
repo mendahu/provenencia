@@ -64,6 +64,54 @@
         }
       }
     },
+    "workspace.omnibar.match.description" : {
+      "comment" : "Omnibar match context when the query hit a description field",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Description"
+          }
+        }
+      }
+    },
+    "workspace.omnibar.match.filename" : {
+      "comment" : "Omnibar match context when the query hit a filename or artifact label; argument is a short snippet",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filename: %@"
+          }
+        }
+      }
+    },
+    "workspace.omnibar.match.metadata" : {
+      "comment" : "Omnibar match context when the query hit Source metadata; argument is a short snippet",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Metadata: %@"
+          }
+        }
+      }
+    },
+    "workspace.omnibar.match.note" : {
+      "comment" : "Omnibar match context when the query hit a Source note; argument is a short snippet",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Note: %@"
+          }
+        }
+      }
+    },
     "workspace.omnibar.noMatchesHint" : {
       "comment" : "Omnibar empty-state hint under no matches",
       "extractionState" : "manual",

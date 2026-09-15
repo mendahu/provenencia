@@ -6380,19 +6380,23 @@ func (x *SearchCatalogRequest) GetLocation() *WorkspaceLocation {
 }
 
 type SearchHit struct {
-	state       protoimpl.MessageState `protogen:"open.v1"`
-	Kind        string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"` // source | source_type | source_field
-	Id          string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
-	Ref         string                 `protobuf:"bytes,3,opt,name=ref,proto3" json:"ref,omitempty"`
-	Title       string                 `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
-	Subtitle    string                 `protobuf:"bytes,5,opt,name=subtitle,proto3" json:"subtitle,omitempty"`
-	MatchReason string                 `protobuf:"bytes,6,opt,name=match_reason,json=matchReason,proto3" json:"match_reason,omitempty"`
-	Location    *WorkspaceLocation     `protobuf:"bytes,7,opt,name=location,proto3" json:"location,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Kind     string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"` // source | source_type | source_field
+	Id       string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	Ref      string                 `protobuf:"bytes,3,opt,name=ref,proto3" json:"ref,omitempty"`
+	Title    string                 `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
+	Subtitle string                 `protobuf:"bytes,5,opt,name=subtitle,proto3" json:"subtitle,omitempty"`
+	// Stable match field code (title|ref|label|key|notes|metadata|filename|description|fuzzy).
+	// Not user-facing copy — Mac localizes via L10n.
+	MatchReason string             `protobuf:"bytes,6,opt,name=match_reason,json=matchReason,proto3" json:"match_reason,omitempty"`
+	Location    *WorkspaceLocation `protobuf:"bytes,7,opt,name=location,proto3" json:"location,omitempty"`
 	// Display stubs for omnibar lead chrome (avoid a second full-list fetch).
 	ThumbnailRelPath string `protobuf:"bytes,8,opt,name=thumbnail_rel_path,json=thumbnailRelPath,proto3" json:"thumbnail_rel_path,omitempty"` // Source cover raster when already derived; else empty
 	IconKey          string `protobuf:"bytes,9,opt,name=icon_key,json=iconKey,proto3" json:"icon_key,omitempty"`                              // Source type icon, or type hit icon; empty for fields
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Optional raw snippet for body/rollup matches (notes/metadata/filename). No English prefix.
+	MatchSnippet  string `protobuf:"bytes,10,opt,name=match_snippet,json=matchSnippet,proto3" json:"match_snippet,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SearchHit) Reset() {
@@ -6484,6 +6488,13 @@ func (x *SearchHit) GetThumbnailRelPath() string {
 func (x *SearchHit) GetIconKey() string {
 	if x != nil {
 		return x.IconKey
+	}
+	return ""
+}
+
+func (x *SearchHit) GetMatchSnippet() string {
+	if x != nil {
+		return x.MatchSnippet
 	}
 	return ""
 }
@@ -7084,7 +7095,7 @@ const file_engine_proto_rawDesc = "" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x14\n" +
 	"\x05query\x18\x02 \x01(\tR\x05query\x12D\n" +
-	"\blocation\x18\x03 \x01(\v2(.provenencia.engine.v1.WorkspaceLocationR\blocation\"\xa5\x02\n" +
+	"\blocation\x18\x03 \x01(\v2(.provenencia.engine.v1.WorkspaceLocationR\blocation\"\xca\x02\n" +
 	"\tSearchHit\x12\x12\n" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12\x10\n" +
@@ -7094,7 +7105,9 @@ const file_engine_proto_rawDesc = "" +
 	"\fmatch_reason\x18\x06 \x01(\tR\vmatchReason\x12D\n" +
 	"\blocation\x18\a \x01(\v2(.provenencia.engine.v1.WorkspaceLocationR\blocation\x12,\n" +
 	"\x12thumbnail_rel_path\x18\b \x01(\tR\x10thumbnailRelPath\x12\x19\n" +
-	"\bicon_key\x18\t \x01(\tR\aiconKey\"M\n" +
+	"\bicon_key\x18\t \x01(\tR\aiconKey\x12#\n" +
+	"\rmatch_snippet\x18\n" +
+	" \x01(\tR\fmatchSnippet\"M\n" +
 	"\x15SearchCatalogResponse\x124\n" +
 	"\x04hits\x18\x01 \x03(\v2 .provenencia.engine.v1.SearchHitR\x04hits\"i\n" +
 	"\x05Error\x12\x12\n" +

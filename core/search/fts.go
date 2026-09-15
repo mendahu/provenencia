@@ -108,9 +108,10 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 			continue
 		}
 		values := fieldValuesForKind(d.kind, d.title, d.ref, d.secondary, d.body)
-		score, reason := scoreFields(spec, values, scoreTokens)
+		score, reason, snippet := scoreFields(spec, values, scoreTokens)
 		if d.refMatch == refMatchExact || d.refMatch == refMatchPrefix {
 			reason = "ref"
+			snippet = ""
 			if score <= 0 {
 				score = 12 // ref field weight floor
 			}
@@ -118,6 +119,7 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 			// Substring scorer missed (typo); keep JW-gated fuzzy hit below exact FTS.
 			score = d.fuzzySim * 12 * FuzzyWeights.ScoreScale
 			reason = d.fuzzyReason
+			snippet = ""
 			if reason == "" {
 				reason = "fuzzy"
 			}
@@ -125,6 +127,7 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 			// FTS matched (e.g. prefix) but scoreFields saw no substring — keep a floor.
 			score = 0.1
 			reason = "title"
+			snippet = ""
 		} else if d.fromFuzzy && !d.hasFTS {
 			score *= FuzzyWeights.ScoreScale
 		}
@@ -141,6 +144,7 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 			Title:            d.displayTitle,
 			Subtitle:         d.displaySubtitle,
 			MatchReason:      reason,
+			MatchSnippet:     snippet,
 			Location:         locationFor(d.kind, d.entityID, d.displayRef, d.displayTitle),
 			ThumbnailRelPath: d.displayThumbnailRelPath,
 			IconKey:          d.displayIconKey,

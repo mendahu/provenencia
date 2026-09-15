@@ -203,7 +203,10 @@ private struct OmnibarHitRowView: View {
             secondary: hit.subtitle,
             ref: hit.ref,
             refAccent: OmnibarHitPresentation.refAccent(for: hit),
-            matchContext: OmnibarHitPresentation.showMatchContext(hit.matchReason) ? hit.matchReason : "",
+            matchContext: OmnibarHitPresentation.matchContextText(
+                field: hit.matchReason,
+                snippet: hit.matchSnippet
+            ),
             selected: selected
         )
     }

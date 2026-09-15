@@ -97,11 +97,26 @@ struct OmnibarResultsModelTests {
         #expect(model.hits.isEmpty)
     }
 
-    @Test func matchContextHidesTitleAndRef() {
-        #expect(!OmnibarHitPresentation.showMatchContext("title"))
-        #expect(!OmnibarHitPresentation.showMatchContext("ref"))
-        #expect(!OmnibarHitPresentation.showMatchContext("fuzzy"))
-        #expect(OmnibarHitPresentation.showMatchContext("note: Zemblanity"))
+    @Test func matchContextLocalizesBodyFieldsAndHidesTitleRef() {
+        #expect(OmnibarHitPresentation.matchContextText(field: "title", snippet: "") == "")
+        #expect(OmnibarHitPresentation.matchContextText(field: "ref", snippet: "") == "")
+        #expect(OmnibarHitPresentation.matchContextText(field: "fuzzy", snippet: "") == "")
+        #expect(
+            OmnibarHitPresentation.matchContextText(field: "notes", snippet: "Zemblanity")
+                == L10n.Workspace.omnibarMatchNote(snippet: "Zemblanity")
+        )
+        #expect(
+            OmnibarHitPresentation.matchContextText(field: "metadata", snippet: "author")
+                == L10n.Workspace.omnibarMatchMetadata(snippet: "author")
+        )
+        #expect(
+            OmnibarHitPresentation.matchContextText(field: "filename", snippet: "scan.png")
+                == L10n.Workspace.omnibarMatchFilename(snippet: "scan.png")
+        )
+        #expect(
+            OmnibarHitPresentation.matchContextText(field: "description", snippet: "")
+                == String(localized: L10n.Workspace.omnibarMatchDescription)
+        )
     }
 
     @Test func closePanelSetsUserDismissedWithoutClearingQuery() {

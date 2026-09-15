@@ -724,11 +724,15 @@ message SearchHit {
   string ref = 3;
   string title = 4;
   string subtitle = 5;
+  // Stable match field code (title|ref|label|key|notes|metadata|filename|description|fuzzy).
+  // Not user-facing copy — Mac localizes via L10n.
   string match_reason = 6;
   WorkspaceLocation location = 7;
   // Display stubs for omnibar lead chrome (avoid a second full-list fetch).
   string thumbnail_rel_path = 8; // Source cover raster when already derived; else empty
   string icon_key = 9;           // Source type icon, or type hit icon; empty for fields
+  // Optional raw snippet for body/rollup matches (notes/metadata/filename). No English prefix.
+  string match_snippet = 10;
 }
 
 message SearchCatalogResponse {
