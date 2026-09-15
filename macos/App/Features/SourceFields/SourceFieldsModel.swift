@@ -150,11 +150,10 @@ final class SourceFieldsModel {
 
     // MARK: Actions
 
-    /// Loads the vocabulary. When `selecting` is set, applies that row in the
-    /// same completion as the list fetch so the first paint is not list-only.
-    /// Returns `true` when `selecting` was requested but the id is absent.
+    /// Fetches fields and reconciles selection to `location` in one publish.
     @discardableResult
-    func load(selecting fieldId: String? = nil) async -> Bool {
+    func load(from location: WorkspaceLocation = .sectionRoot(.sourceFields)) async -> WorkspaceLocationReconcile {
+        guard location.section == .sourceFields else { return .ignored }
         isLoading = true
         loadError = nil
         defer {
@@ -164,11 +163,18 @@ final class SourceFieldsModel {
         do {
             fields = try await store.listMetadataFields(projectDir: projectDir)
             publishCounts()
-            return applyLoadedSelection(fieldId)
+            return reconcile(from: location)
         } catch {
             loadError = error
-            return false
+            return .ignored
         }
+    }
+
+    /// Reconciles list/detail state to `location` when rows are already loaded.
+    @discardableResult
+    func apply(from location: WorkspaceLocation) -> WorkspaceLocationReconcile {
+        guard location.section == .sourceFields else { return .ignored }
+        return reconcile(from: location)
     }
 
     func toggleLabelSort() {
@@ -179,23 +185,18 @@ final class SourceFieldsModel {
         _ = applySelection(id)
     }
 
-    /// Applies a deep id after the list is in memory. Returns `true` when the
-    /// id was requested but missing (caller should prune history).
     @discardableResult
-    private func applyLoadedSelection(_ fieldId: String?) -> Bool {
-        guard let fieldId else {
-            if !isAdding {
+    private func reconcile(from location: WorkspaceLocation) -> WorkspaceLocationReconcile {
+        if isAdding { return .ignored }
+        if let fieldId = location.fieldId {
+            guard applySelection(fieldId) else {
                 mode = .empty
+                return .missingDeepId
             }
-            return false
+            return .applied
         }
-        guard applySelection(fieldId) else {
-            if !isAdding {
-                mode = .empty
-            }
-            return true
-        }
-        return false
+        clearHistorySelection()
+        return .applied
     }
 
     @discardableResult

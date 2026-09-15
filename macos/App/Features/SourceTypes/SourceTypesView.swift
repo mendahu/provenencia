@@ -79,24 +79,25 @@ struct SourceTypesView: View {
             deleteDetail(for: type)
         }
         .task {
-            let location = navigation.currentLocation
-            if await model.load(selecting: location.typeId) {
-                navigation.fallbackToSectionRoot()
-            }
+            await reconcileNavigation(load: true)
         }
         .onChange(of: navigation.currentLocation) { _, _ in
             guard model.hasCompletedInitialLoad else { return }
-            applyWorkspaceLocation()
+            Task { await reconcileNavigation(load: false) }
         }
         .accessibilityIdentifier("sourceTypes")
     }
 
-    private func applyWorkspaceLocation() {
-        WorkspaceLocationApply.applySourceTypes(
-            location: navigation.currentLocation,
-            model: model,
-            navigation: navigation
-        )
+    private func reconcileNavigation(load: Bool) async {
+        let location = navigation.currentLocation
+        let outcome = if load {
+            await model.load(from: location)
+        } else {
+            await model.apply(from: location)
+        }
+        if outcome == .missingDeepId {
+            navigation.fallbackToSectionRoot()
+        }
     }
 
     /// Dismissal is driven by the model, not by the sheet: a successful delete

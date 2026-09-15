@@ -76,10 +76,7 @@ struct SourcesView: View {
             addForm(typeOptions: model.typeComboOptions)
         }
         .task {
-            let location = navigation.currentLocation
-            if await model.load(opening: location.sourceId) {
-                navigation.fallbackToSectionRoot()
-            }
+            await reconcileNavigation(load: true)
         }
         .task(id: model.isAdding) {
             guard model.isAdding else { return }
@@ -88,17 +85,21 @@ struct SourcesView: View {
         }
         .onChange(of: navigation.currentLocation) { _, _ in
             guard model.hasCompletedInitialLoad else { return }
-            applyWorkspaceLocation()
+            Task { await reconcileNavigation(load: false) }
         }
         .accessibilityIdentifier("sources")
     }
 
-    private func applyWorkspaceLocation() {
-        WorkspaceLocationApply.applySources(
-            location: navigation.currentLocation,
-            model: model,
-            navigation: navigation
-        )
+    private func reconcileNavigation(load: Bool) async {
+        let location = navigation.currentLocation
+        let outcome = if load {
+            await model.load(from: location)
+        } else {
+            model.apply(from: location)
+        }
+        if outcome == .missingDeepId {
+            navigation.fallbackToSectionRoot()
+        }
     }
 
     private var addPresented: Binding<Bool> {

@@ -79,11 +79,7 @@ struct WorkspaceContent: View {
                 results: omnibarResults,
                 projectDir: projectDir,
                 onActivate: { hit in
-                    WorkspaceLocationApply.activateOmnibarHit(
-                        hit,
-                        navigation: navigation,
-                        results: omnibarResults
-                    )
+                    omnibarResults.activate(hit, navigation: navigation)
                 }
             )
         }

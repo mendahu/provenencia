@@ -223,11 +223,10 @@ final class SourceTypesModel {
 
     // MARK: Actions
 
-    /// Loads vocabulary rows. When `selecting` is set, applies that type (and
-    /// its suggestions) in the same completion as the list fetch.
-    /// Returns `true` when `selecting` was requested but the id is absent.
+    /// Fetches types/fields and reconciles selection to `location` in one publish.
     @discardableResult
-    func load(selecting typeId: String? = nil) async -> Bool {
+    func load(from location: WorkspaceLocation = .sectionRoot(.sourceTypes)) async -> WorkspaceLocationReconcile {
+        guard location.section == .sourceTypes else { return .ignored }
         isLoading = true
         loadError = nil
         defer {
@@ -238,11 +237,18 @@ final class SourceTypesModel {
             types = try await store.listSourceTypes(projectDir: projectDir)
             fields = try await store.listMetadataFields(projectDir: projectDir)
             publishCounts()
-            return await applyLoadedSelection(typeId)
+            return await reconcile(from: location)
         } catch {
             loadError = error
-            return false
+            return .ignored
         }
+    }
+
+    /// Reconciles list/detail state to `location` when rows are already loaded.
+    @discardableResult
+    func apply(from location: WorkspaceLocation) async -> WorkspaceLocationReconcile {
+        guard location.section == .sourceTypes else { return .ignored }
+        return await reconcile(from: location)
     }
 
     func sortBy(_ columnID: String) {
@@ -260,23 +266,18 @@ final class SourceTypesModel {
         Task { await loadSuggestions(for: id) }
     }
 
-    /// Applies a deep id after rows are in memory. Returns `true` when the id
-    /// was requested but missing (caller should prune history).
-    private func applyLoadedSelection(_ typeId: String?) async -> Bool {
-        guard let typeId else {
-            if !isAdding {
+    private func reconcile(from location: WorkspaceLocation) async -> WorkspaceLocationReconcile {
+        if isAdding { return .ignored }
+        if let typeId = location.typeId {
+            guard applySelection(typeId) else {
                 clearHistorySelection()
+                return .missingDeepId
             }
-            return false
+            await loadSuggestions(for: typeId)
+            return .applied
         }
-        guard applySelection(typeId) else {
-            if !isAdding {
-                clearHistorySelection()
-            }
-            return true
-        }
-        await loadSuggestions(for: typeId)
-        return false
+        clearHistorySelection()
+        return .applied
     }
 
     @discardableResult

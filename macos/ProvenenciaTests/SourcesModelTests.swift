@@ -251,24 +251,66 @@ struct SourcesModelTests {
         #expect(model.sources.first?.primaryArtifactID.isEmpty == true)
     }
 
-    @Test func loadOpeningAppliesSourceInSameCompletion() async {
+    @Test func loadFromLocationOpensSourceInSameCompletion() async {
         let model = makeModel(
             sources: [source(id: "s1", title: "Deed", typeID: "t1")],
             types: [photoType()]
         )
-        let missing = await model.load(opening: "s1")
-        #expect(!missing)
+        let outcome = await model.load(
+            from: WorkspaceLocation(section: .sources, sourceId: "s1", title: "Deed")
+        )
+        #expect(outcome == .applied)
         #expect(model.openedSourceID == "s1")
         #expect(model.hasCompletedInitialLoad)
     }
 
-    @Test func loadOpeningMissingReportsFallback() async {
+    @Test func loadFromLocationMissingDeepId() async {
         let model = makeModel(
             sources: [source(id: "s1", title: "Deed", typeID: "t1")],
             types: [photoType()]
         )
-        let missing = await model.load(opening: "gone")
-        #expect(missing)
+        let outcome = await model.load(
+            from: WorkspaceLocation(section: .sources, sourceId: "gone", title: "Missing")
+        )
+        #expect(outcome == .missingDeepId)
+        #expect(model.openedSourceID == nil)
+    }
+
+    @Test func applyFromLocationOpensAfterLoad() async {
+        let model = makeModel(
+            sources: [source(id: "s1", title: "Deed", typeID: "t1")],
+            types: [photoType()]
+        )
+        await model.load()
+        let outcome = model.apply(
+            from: WorkspaceLocation(section: .sources, sourceId: "s1", title: "Deed")
+        )
+        #expect(outcome == .applied)
+        #expect(model.openedSourceID == "s1")
+    }
+
+    @Test func applyFromLocationMissingDeepId() async {
+        let model = makeModel(
+            sources: [source(id: "s1", title: "Deed", typeID: "t1")],
+            types: [photoType()]
+        )
+        await model.load()
+        let outcome = model.apply(
+            from: WorkspaceLocation(section: .sources, sourceId: "gone", title: "Missing")
+        )
+        #expect(outcome == .missingDeepId)
+        #expect(model.openedSourceID == nil)
+    }
+
+    @Test func applyFromSectionRootClosesSource() async {
+        let model = makeModel(
+            sources: [source(id: "s1", title: "Deed", typeID: "t1")],
+            types: [photoType()]
+        )
+        await model.load()
+        model.openSource(id: "s1")
+        let outcome = model.apply(from: .sectionRoot(.sources))
+        #expect(outcome == .applied)
         #expect(model.openedSourceID == nil)
     }
 

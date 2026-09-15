@@ -147,11 +147,10 @@ final class SourcesModel {
 
     // MARK: Actions
 
-    /// Loads sources and types. When `opening` is set, opens that source in
-    /// the same completion as the list fetch.
-    /// Returns `true` when `opening` was requested but the id is absent.
+    /// Fetches sources/types and reconciles the open page to `location` in one publish.
     @discardableResult
-    func load(opening sourceId: String? = nil) async -> Bool {
+    func load(from location: WorkspaceLocation = .sectionRoot(.sources)) async -> WorkspaceLocationReconcile {
+        guard location.section == .sources else { return .ignored }
         isLoading = true
         loadError = nil
         defer {
@@ -174,23 +173,28 @@ final class SourcesModel {
             firstError = firstError ?? error
         }
         loadError = firstError
-        return applyLoadedOpen(sourceId)
+        return reconcile(from: location)
     }
 
-    /// Applies a deep source id after rows are in memory. Returns `true` when
-    /// the id was requested but missing (caller should prune history).
+    /// Reconciles list/page state to `location` when rows are already loaded.
     @discardableResult
-    private func applyLoadedOpen(_ sourceId: String?) -> Bool {
-        guard let sourceId else {
-            openedSourceID = nil
-            return false
+    func apply(from location: WorkspaceLocation) -> WorkspaceLocationReconcile {
+        guard location.section == .sources else { return .ignored }
+        return reconcile(from: location)
+    }
+
+    @discardableResult
+    private func reconcile(from location: WorkspaceLocation) -> WorkspaceLocationReconcile {
+        if let sourceId = location.sourceId {
+            guard sources.contains(where: { $0.id == sourceId }) else {
+                openedSourceID = nil
+                return .missingDeepId
+            }
+            openedSourceID = sourceId
+            return .applied
         }
-        guard sources.contains(where: { $0.id == sourceId }) else {
-            openedSourceID = nil
-            return true
-        }
-        openedSourceID = sourceId
-        return false
+        openedSourceID = nil
+        return .applied
     }
 
     /// Refreshes the type vocabulary for the Add Source combo. Always hits

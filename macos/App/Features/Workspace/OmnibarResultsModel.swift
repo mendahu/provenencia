@@ -66,6 +66,12 @@ final class OmnibarResultsModel {
         dismiss()
     }
 
+    /// Return / click on a hit: commit navigation and clear the results chrome.
+    func activate(_ hit: CatalogSearchHit, navigation: WorkspaceNavigation) {
+        navigation.go(to: hit.location)
+        clearAfterNavigate()
+    }
+
     func scheduleSearch(
         projectDir: String,
         location: WorkspaceLocation,

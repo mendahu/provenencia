@@ -386,23 +386,76 @@ struct SourceTypesModelTests {
         #expect(counts.sourceFields?.total == 1)
     }
 
-    @Test func loadSelectingAppliesTypeInSameCompletion() async {
+    @Test func loadFromLocationAppliesTypeInSameCompletion() async {
         let model = makeModel(types: [
             CatalogSourceType(id: "t1", key: "book", origin: "provenencia", label: "Book", description: ""),
         ])
-        let missing = await model.load(selecting: "t1")
-        #expect(!missing)
+        let outcome = await model.load(
+            from: WorkspaceLocation(section: .sourceTypes, typeId: "t1", title: "Book")
+        )
+        #expect(outcome == .applied)
         #expect(model.selectedType?.id == "t1")
         #expect(model.hasCompletedInitialLoad)
     }
 
-    @Test func loadSelectingMissingReportsFallback() async {
+    @Test func loadFromLocationMissingDeepId() async {
         let model = makeModel(types: [
             CatalogSourceType(id: "t1", key: "book", origin: "provenencia", label: "Book", description: ""),
         ])
-        let missing = await model.load(selecting: "gone")
-        #expect(missing)
+        let outcome = await model.load(
+            from: WorkspaceLocation(section: .sourceTypes, typeId: "gone", title: "Missing")
+        )
+        #expect(outcome == .missingDeepId)
         #expect(model.selectedType == nil)
+    }
+
+    @Test func applyFromLocationSelectsAfterLoad() async {
+        let model = makeModel(types: [
+            CatalogSourceType(id: "t1", key: "book", origin: "provenencia", label: "Book", description: ""),
+        ])
+        await model.load()
+        let outcome = await model.apply(
+            from: WorkspaceLocation(section: .sourceTypes, typeId: "t1", title: "Book")
+        )
+        #expect(outcome == .applied)
+        #expect(model.selectedType?.id == "t1")
+    }
+
+    @Test func applyFromLocationMissingDeepId() async {
+        let model = makeModel(types: [
+            CatalogSourceType(id: "t1", key: "book", origin: "provenencia", label: "Book", description: ""),
+        ])
+        await model.load()
+        let outcome = await model.apply(
+            from: WorkspaceLocation(section: .sourceTypes, typeId: "gone", title: "Missing")
+        )
+        #expect(outcome == .missingDeepId)
+        #expect(model.selectedType == nil)
+    }
+
+    @Test func applyFromSectionRootClearsSelection() async {
+        let model = makeModel(types: [
+            CatalogSourceType(id: "t1", key: "book", origin: "provenencia", label: "Book", description: ""),
+        ])
+        await model.load()
+        model.select("t1")
+        try? await Task.sleep(nanoseconds: 50_000_000)
+        let outcome = await model.apply(from: .sectionRoot(.sourceTypes))
+        #expect(outcome == .applied)
+        #expect(model.selectedType == nil)
+    }
+
+    @Test func applyIgnoredWhileAdding() async {
+        let model = makeModel(types: [
+            CatalogSourceType(id: "t1", key: "book", origin: "provenencia", label: "Book", description: ""),
+        ])
+        await model.load()
+        model.openAdd()
+        let outcome = await model.apply(
+            from: WorkspaceLocation(section: .sourceTypes, typeId: "t1", title: "Book")
+        )
+        #expect(outcome == .ignored)
+        #expect(model.isAdding)
     }
 
     @Test func createAndDeleteCommitThroughWorkspaceNavigation() async throws {
