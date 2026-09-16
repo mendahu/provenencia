@@ -21,7 +21,7 @@ Interpretation foundation: candidate refs, Node vocabulary, Nodes, layout storag
 S5-01  Candidate refs (core/ref)                  no deps
   │
   ▼
-S5-02  Migration 000021                           node_types, nodes, graph_node_positions
+S5-02  Migration 000021                           node_types, nodes, node_positions
   │
   ▼
 S5-03  core/database/nodetypes + seed Install     7 seeded types, create-time only
@@ -93,7 +93,7 @@ CREATE TABLE nodes (
 	UNIQUE (id, node_type_id)
 ) STRICT;
 
-CREATE TABLE graph_node_positions (
+CREATE TABLE node_positions (
 	source_id BLOB NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
 	node_id   BLOB NOT NULL REFERENCES nodes(id)   ON DELETE CASCADE,
 	grid_x    INTEGER NOT NULL,
@@ -106,10 +106,10 @@ CREATE TABLE graph_node_positions (
 Decisions baked into that DDL, each argued in the design note:
 
 - **`nodes` has no `ON DELETE` clause** on either FK — deliberately `NO ACTION`, so a Source with Nodes cannot be deleted out from under them. The cascade for `observations` → `nodes` is a *later* decision and must be made when that table ships (§4.3), not retrofitted.
-- **`graph_node_positions` cascades both ways**, which is the deliberate contrast: layout is disposable, evidence is not.
+- **`node_positions` cascades both ways**, which is the deliberate contrast: layout is disposable, evidence is not.
 - **No `UNIQUE (source_id, grid_x, grid_y)`.** A drag that swaps two bubbles transiently collides; let the UI nudge (§5.1).
 - **Coordinates are signed** — the plane is unbounded around an origin, so no `CHECK (grid_x >= 0)`.
-- **`graph_node_positions` is unaudited.** State this in the migration comment and be ready to defend it, because the nearest sibling (`source_metadata_layout`, migration `000013`) *is* audited. The distinction: dismissing a metadata suggestion is a research decision; arranging bubbles is not.
+- **`node_positions` is unaudited.** State this in the migration comment and be ready to defend it, because the nearest sibling (`source_metadata_layout`, migration `000013`) *is* audited. The distinction: dismissing a metadata suggestion is a research decision; arranging bubbles is not.
 
 ## Seeded Node Types (S5-03)
 
@@ -164,9 +164,22 @@ Findings from the pattern inventory that will otherwise cost a day each.
 
 ## Accepted risk: an API with no consumer
 
-`graph_node_positions` and its RPCs (S5-05, part of S5-06) ship with **no UI exercising them** — the nodes list does not place anything on a grid. They are covered by Go tests and a `FakeStore` round-trip only.
+`node_positions` and its RPCs (S5-05, part of S5-06) ship with **no UI exercising them** — the nodes list does not place anything on a grid. They are covered by Go tests and a `FakeStore` round-trip only.
 
 This is deliberate. The alternative is opening Spike 6 with a migration, a Go package, and an FFI method before a single line of canvas code, which is exactly the "backend spike first" shape this plan exists to avoid. The cost of being wrong is low: the table is unaudited UI state and therefore cheap to migrate (§5.1).
+
+---
+
+## Forward compatibility: the family tree view
+
+The canvas this spike leads up to is expected to be reused for an eventual family tree over Conclusion-layer canonical entities. Design note §13 works through what that implies; the short version for **this** spike is that it changes almost nothing, because two of the three shared pieces are already shared by the model docs:
+
+- `canonical_entities.node_type_id` references the same `node_types` rows S5-03 seeds, so the tree inherits that vocabulary for free.
+- Canonical refs are `{prefix}-{token}` and Node refs are `{prefix}-C-{token}` off the same `ref_prefix`, so S5-01 serves both layers. The reserved-prefix guard protects both.
+
+The one thing it did change is the name of the layout table. It is **`node_positions`**, not `graph_node_positions`: there is deliberately no `graphs` entity (design note §5.1), and a future tree will get its own `canonical_entity_positions` rather than a shared polymorphic table — a shared subject column could not carry a foreign key, which would forfeit the cascade behavior that is the main reason this table is shaped the way it is.
+
+**Do not pre-generalize anything else here.** The reuse worth protecting lives in the canvas geometry, which is Spike 6's problem and is addressed there by putting those primitives in a neutral module rather than inside `Features/Interpretation/`.
 
 ---
 
@@ -205,7 +218,7 @@ No design-board dependency — there is no novel visual language in this spike. 
 Jake can, on his MacBook:
 
 1. Complete the dogfood bar above end to end on a real project.
-2. Point at `node_types` / `nodes` / `graph_node_positions` and the Interpretation place as the foundation Spike 6 builds on, with no schema, Go, or FFI work left in front of the canvas.
+2. Point at `node_types` / `nodes` / `node_positions` and the Interpretation place as the foundation Spike 6 builds on, with no schema, Go, or FFI work left in front of the canvas.
 3. Confirm the layer is *inert but honest*: Nodes exist, carry candidate refs, and are audited, and nothing yet claims they are cited.
 
 Per [`versioning.mdc`](../../../.cursor/rules/versioning.mdc), the docs in this folder do not bump `VERSION`; cutting a release that contains the spike bumps product PATCH across `VERSION`, `core/version.go`, and both Xcode `MARKETING_VERSION` configurations.

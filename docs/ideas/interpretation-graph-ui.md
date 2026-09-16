@@ -23,6 +23,7 @@ Authoritative schema for everything described here is [`interpretation-layer-dat
 | 11 | Persons, events, and places ship together — three seeded rows, not three features | §11.1.1 |
 | 12 | Entry via a Source-page button; the Interpretation Sources list is **required** as the section root and error-recovery destination | §11.1.2 |
 | 13 | The foundation is its **own spike** (Spike 5) so the canvas spike opens with no schema work; its deep destination is a plain node list, which doubles as the structured a11y path | §11.4 |
+| 14 | The canvas is expected to be reused for a family tree, so **geometry goes in a neutral module** — but the position table stays concrete per layer rather than polymorphic | §13 |
 
 Two items found along the way that were on nobody's list: **candidate `-C-` ref support** does not exist in `core/ref` (§11.1), and **NameValue does not exist in either language** (§4.4).
 
@@ -342,7 +343,7 @@ Two simplifications worth taking:
 ## 5.1 One table is enough
 
 ```sql
-CREATE TABLE graph_node_positions (
+CREATE TABLE node_positions (
     source_id   BLOB NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
     node_id     BLOB NOT NULL REFERENCES nodes(id)   ON DELETE CASCADE,
     grid_x      INTEGER NOT NULL,
@@ -355,7 +356,7 @@ CREATE TABLE graph_node_positions (
 Design notes, each of which is a decision worth making deliberately:
 
 - **The key is `(source_id, node_id)`, not `node_id` alone.** `source_id` is the graph identity, so a layout loads with `WHERE source_id = ?` and no join, and dropping a Source's whole layout is a direct cascade. Because the canvas is scoped to one Source (§4.6), every positioned Node is currently homed to that Source and `source_id` is technically derivable — so this is partly denormalization for the hot read path and partly keeping the door open: if foreign Nodes are ever displayed, a Node needs one position *per graph it appears in*, not one globally, and that would otherwise be a migration.
-- **No `graphs` table.** One graph per Source is the premise of the whole design, so the Source *is* the graph identity. If named views or multiple layouts per Source are ever wanted, that becomes a `graph_id` and a migration — acceptable precisely because this is unaudited UI state and therefore cheap to migrate.
+- **No `graphs` table**, and the table name says so. One graph per Source is the premise of the whole design, so the Source *is* the graph identity. If named views or multiple layouts per Source are ever wanted, that becomes a `graph_id` and a migration — acceptable precisely because this is unaudited UI state and therefore cheap to migrate. A future family tree gets its own concrete table rather than a shared polymorphic one; the reasoning is in §13.3.
 - **Absence of a row means unplaced**, which is exactly what feeds the tray. No nullable coordinates and no sentinel values.
 - **Both foreign keys cascade**, which is a deliberate *contrast* with `observations` (§4.3). Deleting a Node should silently drop its position; deleting a Source should drop its whole layout. Evidence must never be swept away that quietly, but layout should be.
 - **No `UNIQUE (source_id, grid_x, grid_y)`.** Tempting, but it would make overlaps a hard error — and a drag that swaps two bubbles transiently collides, which a database constraint cannot accommodate without temporary values. Let bubbles overlap and let the UI nudge.
@@ -597,7 +598,49 @@ Considered and set aside:
 
 ---
 
-# 13. Open questions
+# 13. Reuse: the eventual family tree view
+
+A family tree is the same idea — nodes, edges, spatial layout, click a thing to see what supports it — so the canvas built here is very likely the canvas built there. That is worth planning for, but the reuse is not where it first appears to be, and one piece of it is a trap.
+
+## 13.1 What already shares a spine
+
+Two things are shared *by design* in the model docs, before any canvas exists:
+
+- **Node Type vocabulary.** `canonical_entities.node_type_id REFERENCES node_types(id)` ([`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md) §2.1) — the same seven rows Spike 5 seeds. A Person in the tree and a candidate person Node share one type row.
+- **Ref prefixes.** `node_types.ref_prefix` is documented as the token for "Nodes **and canonical entities** of this kind" (interpretation model §4.1): `PER-7KD45` for the Person, `PER-C-7KD45` for the candidate. So `Mint` and the new `MintCandidate` (§11.1) already serve both layers, and the reserved-prefix guard protects both.
+
+So the foundation spike is already doing family-tree work without trying to.
+
+## 13.2 The reuse is in the geometry, not the storage
+
+The expensive, risky part of the canvas is not persistence — it is the interaction surface: the `NSScrollView` bridge, coordinate conversion under magnification (§7.2), hit-testing, snap-to-grid, drag, selection, edge routing, keyboard parity, and the accessibility outline (§7.4). Storage is roughly forty lines of SQL and a small Go package.
+
+That is the right split, and §7.2 and §7.4 already argue for it on testability grounds: keep the geometry as **pure functions over value types**, with no view and no store. What makes those functions unit-testable is exactly what makes them reusable for a second graph over a different table.
+
+**The consequence is for the canvas spike, not this one: put the canvas primitives in a neutral module from day one.** If they are born inside `Features/Interpretation/` and reach for `CatalogNode` directly, extracting them later is a refactor across the riskiest code in the app. A generic layer parameterized over "a thing with an id, a type, a label, and a grid position" costs nothing extra to write first and is very expensive to retrofit.
+
+## 13.3 Do not generalize the position table
+
+The tempting move — one `graph_positions` table with a `graph_id` and a polymorphic subject — is the trap. Interpretation positions `nodes.id`; a tree positions `canonical_entities.id`. They are different tables, so a shared subject column cannot carry a foreign key.
+
+That forfeits the single best property of the design in §5.1: **both keys cascade**, so deleting a Node silently drops its position and deleting a Source drops its whole layout. A polymorphic subject replaces that with application-side cleanup and tolerated orphan rows — in exchange for avoiding a second forty-line table.
+
+There is also no shared graph scope to key on. Interpretation's scope is a Source; a tree's is the whole project, or a named view, or a starting person. `source_id` is not a column a tree can fill.
+
+So: **two concrete tables, `node_positions` and a future `canonical_entity_positions`.** They will have near-identical Go packages, and that duplication is the cheap kind — no polymorphism, no orphans, full referential integrity, and each one deletable without touching the other. (This is also why the Spike 5 table is *not* called `graph_node_positions`: §5.1 explicitly declines to introduce a `graphs` entity, so the name should not imply one.)
+
+## 13.4 Two things that will not transfer
+
+Worth knowing now, because both are places where a decision taken here is right for Interpretation and wrong for a tree:
+
+- **The tray instead of auto-layout** (§5). A researcher hand-placing tens of Nodes per Source is the premise. Nobody hand-places four hundred ancestors, and generational rows and sibling ordering are not aesthetic preferences in a tree — they carry meaning. **A family tree forces the auto-layout engine this note deliberately refused.** That is a genuine cost the tree pays, not a shortfall in the tray decision.
+- **The rendering strategy** (§7.1). The `Canvas`-plus-`ZStack`-of-real-views hybrid works precisely *because* Source-scoped graphs are small; the same section says outright that it "would not handle a whole-project graph." A tree is a whole-project graph. It will need viewport culling or virtualization, which means the node-rendering layer is the one part of the canvas most likely to be rewritten rather than reused.
+
+The pattern in both: what transfers is the **plumbing** — coordinates, gestures, hit-testing, persistence shape, accessibility. What does not is anything whose design was justified by Interpretation's bounded scope.
+
+---
+
+# 14. Open questions
 
 Answered during this brainstorm, recorded so they are not reopened by accident: whether the canvas shows `source` Nodes (no, §4.6), whether Citation→Observation should be 1:1 (no, §4.5), whether layout lives in the catalog (yes, unaudited, §5.1), whether raising the deployment target unlocks the canvas (no, §7.2), and whether the property vocabulary blocks the canvas (no, §11.2).
 
