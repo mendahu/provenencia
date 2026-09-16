@@ -71,7 +71,7 @@ Destination view  →  reads QueryHandle(s)  →  patches / invalidates on mutat
 
 **Mutations:** patch list/detail synchronously when the save response is enough (`updatedSource`); invalidate on create/delete/ambiguous busts. Stale-while-revalidate is for **navigation reads**, not edit sync.
 
-Agent workflow: [`.cursor/skills/add-workspace-place/SKILL.md`](../.cursor/skills/add-workspace-place/SKILL.md). Design: [`ideas/page-navigation-performance.md`](ideas/page-navigation-performance.md).
+Agent workflow: [`.cursor/skills/add-workspace-place/SKILL.md`](../.cursor/skills/add-workspace-place/SKILL.md). Design: [`ideas/archive/page-navigation-performance.md`](ideas/archive/page-navigation-performance.md).
 
 ---
 

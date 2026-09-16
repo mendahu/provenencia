@@ -1,6 +1,6 @@
 # Deployment Plan — Spike 4
 
-Workspace session, catalog query cache, and declarative place registry. Authoritative design: [`page-navigation-performance.md`](../../../ideas/page-navigation-performance.md).
+Workspace session, catalog query cache, and declarative place registry. Authoritative design: [`page-navigation-performance.md`](../../../ideas/archive/page-navigation-performance.md).
 
 ## Status
 

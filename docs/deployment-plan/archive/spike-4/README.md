@@ -6,7 +6,7 @@
 
 Replace per-view load-on-appear with a **project-scoped catalog query cache** and **declarative place registry**, so navigation is fast, consistent, and extensible for future destinations.
 
-Authoritative design: [`page-navigation-performance.md`](../../../ideas/page-navigation-performance.md).
+Authoritative design: [`page-navigation-performance.md`](../../../ideas/archive/page-navigation-performance.md).
 
 Agent skill: [`.cursor/skills/add-workspace-place/SKILL.md`](../../../../.cursor/skills/add-workspace-place/SKILL.md).
 
@@ -24,7 +24,7 @@ A researcher can:
 | --- | --- |
 | [**Deployment plan**](deployment-plan.md) | PR sequence, cache strategy, descoped S4-10+ notes |
 | [**Completed**](completed.md) | Finished steps (S4-01…S4-09) |
-| [Page navigation performance](../../../ideas/page-navigation-performance.md) | Design rationale + landed summary |
+| [Page navigation performance](../../../ideas/archive/page-navigation-performance.md) | Design rationale + landed summary |
 
 ## Relationship to Spike 3
 

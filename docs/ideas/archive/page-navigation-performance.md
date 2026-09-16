@@ -1,8 +1,8 @@
 # Page navigation performance
 
-**Status:** **implemented** (Spike 4 archived, S4-01…S4-09). Finished steps: [`docs/deployment-plan/archive/spike-4/completed.md`](../deployment-plan/archive/spike-4/completed.md). S4-10+ Go RPC tiering descoped.
+**Status:** **done** — archived after Spike 4 (S4-01…S4-09). Finished steps: [`docs/deployment-plan/archive/spike-4/completed.md`](../../deployment-plan/archive/spike-4/completed.md). S4-10+ Go RPC tiering descoped.
 
-**Agent skill:** [`.cursor/skills/add-workspace-place/SKILL.md`](../../.cursor/skills/add-workspace-place/SKILL.md).
+**Agent skill:** [`.cursor/skills/add-workspace-place/SKILL.md`](../../../.cursor/skills/add-workspace-place/SKILL.md).
 
 ---
 
@@ -11,7 +11,7 @@
 - `WorkspaceSession` + `CatalogQueryRegistry` + `QueryHandle` — project-scoped catalog read cache with patch, invalidate, and stale-while-revalidate.
 - `PlaceRegistry` + `WorkspaceDestinationHost` — location-driven presentation; Sources list and detail are separate views.
 - Sources, Source fields, and Source types read query handles; navigation `apply(location:)` warms keys on every commit.
-- macOS patterns: [`macos-client-patterns.md`](../macos-client-patterns.md) § workspace session.
+- macOS patterns: [`macos-client-patterns.md`](../../macos-client-patterns.md) § workspace session.
 
 The sections below are the **pre-implementation review** (Sep 2025) kept for rationale and extension guidance.
 
@@ -123,7 +123,7 @@ Concurrent Swift `async` store calls queue on one Go session. Same gesture, diff
 
 ## Target architecture — three layers
 
-Build **generic infrastructure first**, migrate Sources as proof, then vocabulary, then future destinations (Files, Interpretation, …). Same declarative spirit as [`core/search/registry.go`](../../core/search/registry.go): search registry says how to **find** a place; a **place registry** says how to **load and show** it.
+Build **generic infrastructure first**, migrate Sources as proof, then vocabulary, then future destinations (Files, Interpretation, …). Same declarative spirit as [`core/search/registry.go`](../../../core/search/registry.go): search registry says how to **find** a place; a **place registry** says how to **load and show** it.
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
@@ -274,7 +274,7 @@ Back/Forward uses the same path. Cache keys are **location-derived**, not view-l
 | Add kind → registry row + projector | Add place → registry row + query loader + view |
 | Omnibar calls `go(to: hit.location)` | Host loads queries for resolved place |
 
-**`add-workspace-place`** skill (authored in S4-09): merged checklist for history + cache + presentation — mirror of [`add-searchable-kind`](../../.cursor/skills/add-searchable-kind/SKILL.md) and [`add-workspace-location`](../../.cursor/skills/add-workspace-location/SKILL.md). See [`.cursor/skills/add-workspace-place/SKILL.md`](../../.cursor/skills/add-workspace-place/SKILL.md).
+**`add-workspace-place`** skill (authored in S4-09): merged checklist for history + cache + presentation — mirror of [`add-searchable-kind`](../../../.cursor/skills/add-searchable-kind/SKILL.md) and [`add-workspace-location`](../../../.cursor/skills/add-workspace-location/SKILL.md). See [`.cursor/skills/add-workspace-place/SKILL.md`](../../../.cursor/skills/add-workspace-place/SKILL.md).
 
 **Add-a-place checklist (draft):**
 
@@ -374,7 +374,7 @@ Feature folders contain views + mutation actions that call `session.invalidate(�
 
 ## Deployment
 
-Sequenced PRs: [`docs/deployment-plan/archive/spike-4/deployment-plan.md`](../deployment-plan/archive/spike-4/deployment-plan.md) (S4-01…S4-09; S4-10+ descoped).
+Sequenced PRs: [`docs/deployment-plan/archive/spike-4/deployment-plan.md`](../../deployment-plan/archive/spike-4/deployment-plan.md) (S4-01…S4-09; S4-10+ descoped).
 
 | Step | Summary |
 | --- | --- |
@@ -394,9 +394,9 @@ Sequenced PRs: [`docs/deployment-plan/archive/spike-4/deployment-plan.md`](../de
 
 ## Related
 
-- [`docs/deployment-plan/archive/spike-4/deployment-plan.md`](../deployment-plan/archive/spike-4/deployment-plan.md) — PR sequence (archived).
-- [`docs/deployment-plan/archive/spike-3/navigation-history.md`](../deployment-plan/archive/spike-3/navigation-history.md) — history behavior (done).
-- [`docs/ideas/archive/catalog-access-serialization.md`](archive/catalog-access-serialization.md) — catalog session (done).
-- [`core/search/registry.go`](../../core/search/registry.go) — declarative registry pattern to mirror.
-- [`.cursor/skills/add-workspace-location/SKILL.md`](../../.cursor/skills/add-workspace-location/SKILL.md) — wiring new places (to extend).
-- [`.cursor/skills/add-searchable-kind/SKILL.md`](../../.cursor/skills/add-searchable-kind/SKILL.md) — search registry (parallel track).
+- [`docs/deployment-plan/archive/spike-4/deployment-plan.md`](../../deployment-plan/archive/spike-4/deployment-plan.md) — PR sequence (archived).
+- [`docs/deployment-plan/archive/spike-3/navigation-history.md`](../../deployment-plan/archive/spike-3/navigation-history.md) — history behavior (done).
+- [`docs/ideas/archive/catalog-access-serialization.md`](catalog-access-serialization.md) — catalog session (done).
+- [`core/search/registry.go`](../../../core/search/registry.go) — declarative registry pattern to mirror.
+- [`.cursor/skills/add-workspace-location/SKILL.md`](../../../.cursor/skills/add-workspace-location/SKILL.md) — wiring new places (to extend).
+- [`.cursor/skills/add-searchable-kind/SKILL.md`](../../../.cursor/skills/add-searchable-kind/SKILL.md) — search registry (parallel track).

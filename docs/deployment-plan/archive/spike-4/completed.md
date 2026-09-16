@@ -224,7 +224,7 @@ cd macos && xcodebuild test -scheme Provenencia -destination 'platform=macOS' \
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | S4-08 |
-| **Deliverables** | Done. [`.cursor/skills/add-workspace-place/SKILL.md`](../../../../.cursor/skills/add-workspace-place/SKILL.md). Updated [`page-navigation-performance.md`](../../../ideas/page-navigation-performance.md) (implemented), [`macos-client-patterns.md`](../../../macos-client-patterns.md) § workspace session, [`add-workspace-location`](../../../../.cursor/skills/add-workspace-location/SKILL.md) (post-migration apply pattern). Optional `PROVENENCIA_DEBUG_NAV_TIMING=1` on navigation commit. Legacy loaders removed in S4-06–08 (`openedSourceID`, `reconcileNavigation`, `load(from:)`). Spike archived; S4-10+ descoped. |
+| **Deliverables** | Done. [`.cursor/skills/add-workspace-place/SKILL.md`](../../../../.cursor/skills/add-workspace-place/SKILL.md). Updated [`page-navigation-performance.md`](../../../ideas/archive/page-navigation-performance.md) (archived), [`macos-client-patterns.md`](../../../macos-client-patterns.md) § workspace session, [`add-workspace-location`](../../../../.cursor/skills/add-workspace-location/SKILL.md) (post-migration apply pattern). Optional `PROVENENCIA_DEBUG_NAV_TIMING=1` on navigation commit. Legacy loaders removed in S4-06–08 (`openedSourceID`, `reconcileNavigation`, `load(from:)`). Spike archived; S4-10+ descoped. |
 | **Tests** | Full `ProvenenciaTests` green; `PlaceRegistryTests.registryCoversAllPlaceIDs` covers every `PlaceID`. |
 | **Dogfood** | Spike 4 checklist signed off (below). |
 | **Out** | Go RPC tiering (S4-10+) — descoped, not scheduled. |
