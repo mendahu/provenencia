@@ -2,13 +2,14 @@
 
 ## Status
 
-Draft architecture notes. This document describes the relationship between Provenencia's three principal research layers.
+Draft architecture notes. This document describes the relationship between Provenencia's principal research layers (three shipped in design; a fourth **Narrative** layer is under exploratory draft).
 
 Authoritative layer schemas:
 
 - Source: [`source-layer-data-model.md`](source-layer-data-model.md)
 - Interpretation: [`interpretation-layer-data-model.md`](interpretation-layer-data-model.md)
 - Conclusion: [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md)
+- Narrative (exploratory): [`narrative-layer-data-model.md`](narrative-layer-data-model.md)
 
 Shared value models:
 
@@ -163,6 +164,18 @@ Subject- and fact-level “likelihood” pills are **derived in the UI**, not st
 
 Authoritative rules and schemas: [`research-judgment-model.md`](research-judgment-model.md).
 
+## 1.5 Narrative (proposed fourth layer)
+
+**Status:** exploratory — see [`narrative-layer-data-model.md`](narrative-layer-data-model.md). Not roadmapped; no migrations yet.
+
+The Narrative layer would answer:
+
+> How does the researcher choose to **arrange, emphasize, and communicate** what they believe?
+
+It sits **downstream** of Conclusion. Family tree, timeline, and map views are **projections** over the graph; prose essays and curated visual compositions are **authored artifacts** that **reference** canonical entities, Observations, Citations, and Sources without automatically promoting text or layout into Claims or Observations.
+
+Each layer adds researcher interpretation (catalog choices → reading → commitment → storytelling and visualization). Narrative is the most subjective by design, as long as references flow **one way** into the graph and not upstream into silent fact changes.
+
 ---
 
 # 2. Shared persistence conventions
@@ -284,6 +297,7 @@ To avoid competing schema definitions:
 - [`source-layer-data-model.md`](source-layer-data-model.md) is authoritative for Source-layer tables and Artifact/File storage.
 - [`interpretation-layer-data-model.md`](interpretation-layer-data-model.md) is authoritative for Interpretation-layer tables and vocabulary.
 - [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) is authoritative for Conclusion-layer tables and Claims.
+- [`narrative-layer-data-model.md`](narrative-layer-data-model.md) is the exploratory draft for the proposed Narrative layer (compositions, projections, references).
 - [`structured-date-model.md`](structured-date-model.md) is authoritative for shared DateValue persistence.
 - [`structured-name-model.md`](structured-name-model.md) is authoritative for shared NameValue persistence.
 - [`seeded-vocabulary.md`](seeded-vocabulary.md) is the horizon catalog for intended keys and starter open-vocabulary lists (not a v1 ship list).

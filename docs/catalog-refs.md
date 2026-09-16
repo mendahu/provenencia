@@ -55,6 +55,8 @@ node (candidate)      {PREFIX}-C-{TOKEN}    e.g. PER-C-7KD45
 
 **Node / canonical type prefixes** come from `node_types.ref_prefix` (see [`seeded-vocabulary.md`](seeded-vocabulary.md)): `PER`, `EVT`, `PLC`, `REL`, `PTN`, `LOC`, `SRN`, …. Those must not collide with the reserved catalog set above.
 
+**Proposed (not shipped):** `NAR` for Narrative compositions ([`narrative-layer-data-model.md`](narrative-layer-data-model.md)). Promote to the reserved catalog table above when the layer is roadmapped.
+
 Uniqueness is **across all ref-bearing tables in one project** (application rule). Prefer a project-wide unique index strategy when multiple tables carry `ref`; until then, enforce uniqueness in the insert path (retry mint on conflict).
 
 ---
