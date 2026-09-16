@@ -31,9 +31,12 @@ Nothing here is genealogically useful yet — there are no Observations, so noth
 
 | Doc | Role |
 | --- | --- |
-| [**Deployment plan**](deployment-plan.md) | PR sequence, schema, gotchas, definition of done |
+| [**Deployment plan**](deployment-plan.md) | PR sequence, design gates, schema, gotchas, definition of done |
+| [**Design briefs**](design/) | Claude Design briefs (S5-D1, S5-D2) — all UI is designed before it is built |
 | [**Completed**](completed.md) | Finished steps (S5-01…) |
 | [Interpretation graph UI](../../ideas/interpretation-graph-ui.md) | Design rationale and the decision log this spike implements |
+
+Two of the ten build steps ship UI, and both are gated on a design board. The design track has no dependency on the Go track, so it starts on day one — see [`design/README.md`](design/README.md).
 
 ## Relationship to the spikes around it
 

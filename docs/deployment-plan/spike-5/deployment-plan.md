@@ -15,44 +15,64 @@ Interpretation foundation: candidate refs, Node vocabulary, Nodes, layout storag
 5. Back/Forward and relaunch restore the graph place; returning to it is a session-cache hit.
 6. A Source deleted while its graph is in history falls back to the Interpretation list, not a stale page.
 
+## Design track (no PRs)
+
+**All UI is designed in Claude Design first.** Design steps carry a `D` id, produce a board rather than a diff, and are *not* PRs — but they are ordered work and they gate the PRs that implement them. Briefs: [`design/`](design/).
+
+Both briefs are writable on day one: they depend on nothing in the Go track, so the design track runs in parallel with S5-01…S5-06 and is off the critical path entirely — provided it starts at the top of the spike rather than when the implementing PR is ready to open.
+
+| Step | Brief | Covers | Gates |
+| --- | --- | --- | --- |
+| **S5-D1** | Interpretation section | Sidebar entry (label + icon), the Interpretation Sources list and its empty state, and the **Open interpretation graph** control on the Source page | S5-07, S5-08 |
+| **S5-D2** | Source nodes destination | Node rows (candidate ref, type, working label), the add-Node type picker, rename and delete affordances, empty state | S5-09 |
+
+S5-D1 gates S5-07 because the sidebar case commits to a label and a `PVSymbol` in that PR. Stub destination views in S5-07 are exempt — they are compile scaffolding, replaced before anything ships.
+
 ## PR sequence
 
+Design steps are shown in the order they must happen. They are not PRs and they do not block the Go track — only the UI PRs they gate.
+
 ```text
-S5-01  Candidate refs (core/ref)                  no deps
-  │
-  ▼
-S5-02  Migration 000021                           node_types, nodes, node_positions
-  │
-  ▼
-S5-03  core/database/nodetypes + seed Install     7 seeded types, create-time only
-  │
-  ▼
-S5-04  core/database/nodes + audit                needs S5-01 (mint) and S5-03 (prefix)
-  │
-  ▼
-S5-05  core/database/graphlayout                  unaudited positions
-  │
-  ▼
-S5-06  Proto + dispatch + handlers                the FFI seam; codegen Go *and* Swift
-  │
-  ▼
-S5-07  Section, places, query keys, store         registry plumbing; stub destination views
-  │
-  ├──────────────────────┐
-  ▼                      ▼
-S5-08                  S5-09
-Entry points           Source nodes list
-(list + page button)   (replaces the stub)
-  │                      │
-  └──────────┬───────────┘
-             ▼
-          S5-10  Docs, dogfood, cleanup
+   design                          build
+─────────────                ──────────────────────────────────────────────
+
+S5-D1  Interpretation        S5-01  Candidate refs (core/ref)
+       section                 │                              no deps
+  │                            ▼
+  │                          S5-02  Migration 000021
+  │                            │    node_types, nodes, node_positions
+  ▼                            ▼
+S5-D2  Source nodes          S5-03  core/database/nodetypes + seed
+       destination             │    7 seeded types, create-time only
+  │                            ▼
+  │                          S5-04  core/database/nodes + audit
+  │                            │    needs S5-01 (mint) + S5-03 (prefix)
+  │                            ▼
+  │                          S5-05  core/database/graphlayout
+  │                            │    unaudited positions
+  │                            ▼
+  │                          S5-06  Proto + dispatch + handlers
+  │                            │    codegen Go *and* Swift
+  │      ┌── D1 gates ────────▶▼
+  │      │                   S5-07  Section, places, query keys, store
+  │      │                     │    registry plumbing; stub views
+  │      │            ┌────────┴────────┐
+  │      │            ▼                 ▼
+  └──────┴─ D1 ─▶ S5-08            S5-09 ◀─ D2 ─┘
+                  Entry points      Source nodes list
+                  (list + button)   (replaces the stub)
+                       │                 │
+                       └────────┬────────┘
+                                ▼
+                             S5-10  Docs, dogfood, cleanup
 ```
 
 ---
 
 ## Checklist
 
+- [ ] S5-D1 — Design: Interpretation section (sidebar, Sources list, Source-page entry) → [`design/`](design/)
+- [ ] S5-D2 — Design: Source nodes destination → [`design/`](design/)
 - [ ] S5-01 — Candidate ref minting in `core/ref`
 - [ ] S5-02 — Interpretation schema migration
 - [ ] S5-03 — Node type vocabulary and create-time seed
@@ -204,12 +224,15 @@ The one thing it did change is the name of the layout table. It is **`node_posit
 
 | Track | Steps |
 | --- | --- |
+| **Design (no PRs)** | S5-D1 → S5-D2, from day one, parallel to the Go core |
 | **Go core (critical path)** | S5-01 → S5-06 |
 | **Mac client** | S5-07 → S5-08 / S5-09 (parallel) → S5-10 |
 
-S5-01 is genuinely independent and can land any time. S5-08 and S5-09 are the only true fork; everything else is a chain, because each layer is the next one's only consumer.
+S5-01 is genuinely independent and can land any time. S5-08 and S5-09 are the only true fork in the build track; everything else is a chain, because each layer is the next one's only consumer.
 
-No design-board dependency — there is no novel visual language in this spike. `PVList`, `PVButton`, and the existing sidebar carry all of it.
+**The design track is the one thing that can stall this spike without warning.** Nothing in S5-01…S5-06 blocks on it, so it is easy to leave until the Mac client work starts — at which point it is suddenly on the critical path with two briefs outstanding. Start S5-D1 alongside S5-01.
+
+The visual language itself is modest: `PVList`, `PVButton`, and the existing sidebar carry all of it, and the Sources list and Source page already have boards to extend rather than boards to invent. The briefs are small; the sequencing is the risk.
 
 ---
 
