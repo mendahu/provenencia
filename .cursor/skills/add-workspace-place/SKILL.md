@@ -96,6 +96,15 @@ In `Session/`:
 - Register in [`CatalogQueryRegistry`](../../../macos/App/Features/Workspace/Session/CatalogQueryRegistry.swift): loader calling `GenealogyStore`, `invalidateOn` mutation tags.
 - Wire `WorkspaceSession.warmQuery` switch arm if the key kind is new.
 
+**Tag every mutation whose reply changes any part of the payload, not just the
+part the write names.** A cached payload that folds in another key's data
+(`CatalogSourceWorkspace` carries the whole type + field vocabulary; a
+`CatalogTypeSuggestion` carries a whole field row) goes stale on edits made from
+another place entirely, and derived counts (`usedBy`, `suggestedFieldCount`) move
+when a *different* table is written. If the mutation names no single owner for an
+id-bearing key, `Kind.invalidation` returns `.allCached(kind)` and every cached
+key of that kind is busted.
+
 Add [`CatalogQueryRegistryTests`](../../../macos/ProvenenciaTests/CatalogQueryRegistryTests.swift) coverage for load + invalidation.
 
 ### 4. Presentation + host
@@ -147,8 +156,11 @@ sync apply from history after list is ready; `fallbackToSectionRoot()` if deep i
 ### 6. Mutations from section models
 
 - Identity/cover/title: `session.apply(.updatedSource(source))` (patches list + workspace).
+- Source type moved: `context.applySource(updated, typeChanged: true)` — patches the row, then refetches the page because the engine derives suggested rows from the type.
+- Metadata values: `context.notifyMetadataMutated()` (also busts the field list's `usedBy`).
 - Other page edits: `context.notifyWorkspaceMutated()` → bust `sourceWorkspace` key.
-- Vocabulary CRUD: registry `invalidateOn` + list patch where cheap.
+- Vocabulary CRUD: registry `invalidateOn` + list patch where cheap. A patch is an
+  optimization on top of invalidation, never a substitute for it.
 
 ### 7. Tests
 

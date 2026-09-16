@@ -71,6 +71,24 @@ Destination view  →  reads QueryHandle(s)  →  patches / invalidates on mutat
 
 **Mutations:** patch list/detail synchronously when the save response is enough (`updatedSource`); invalidate on create/delete/ambiguous busts. Stale-while-revalidate is for **navigation reads**, not edit sync.
 
+A cached payload usually holds more than its own table, so a write reaches keys it
+does not name:
+
+- `CatalogSourceWorkspace` folds in the whole source-type and metadata-field
+  vocabulary (type picker, Add-metadata list) and the type's suggested rows, so
+  **every vocabulary edit stales every cached Source page** — that is
+  `CatalogQueryInvalidation.allCached(.sourceWorkspace)`, since a new field belongs
+  to all of them rather than one.
+- A `CatalogTypeSuggestion` embeds a whole field row, so relabelling a field
+  restates suggestion lists for types the edit never named.
+- Derived counts move when another table is written: `usedBy` /
+  `suggestedFieldCount` gate the Delete buttons, so writing a metadata value stales
+  the field list and adding a source stales the type list.
+
+A `setQueryValue` patch is an optimization layered on top of invalidation, never a
+substitute for it: it silently no-ops when the key was never cached, and it only
+fixes the one row the write returned.
+
 Agent workflow: [`.cursor/skills/add-workspace-place/SKILL.md`](../.cursor/skills/add-workspace-place/SKILL.md). Design: [`ideas/archive/page-navigation-performance.md`](ideas/archive/page-navigation-performance.md).
 
 ---

@@ -676,6 +676,48 @@ struct SourcePageModelTests {
         #expect(model.metadata.entries.contains { $0.field.id == author.id && $0.valueText == "Eliza" })
     }
 
+    /// A field added on the Source Fields page while a Source page sat in the
+    /// cache never reached the Add-metadata dropdown, because the cached page
+    /// payload carries its own copy of the field vocabulary.
+    @Test func addMetadataDropdownSeesFieldCreatedElsewhere() async {
+        let store = makeStore(fields: [authorField()])
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let model = SourcePageModel(
+            sourceID: sourceID, session: session, userID: userID, store: store
+        )
+        let key = CatalogQueryKey.sourceWorkspace(project: session.projectKey, sourceId: sourceID)
+        let handle: QueryHandle<CatalogSourceWorkspace> = session.query(key)
+        await settle(handle)
+        model.sync(from: handle, sourceID: sourceID)
+        #expect(model.metadata.fieldComboOptions.map(\.label) == ["Author"])
+
+        store.fieldsByProject[projectDir]?.append(
+            CatalogMetadataField(
+                id: "f-folio", key: "folio", origin: "user", label: "Folio",
+                dataType: "text", description: ""
+            )
+        )
+        session.apply(.createdMetadataField)
+
+        // Navigating back to the page is what refetches the busted key.
+        session.apply(location: WorkspaceLocation(section: .sources, sourceId: sourceID))
+        await settle(handle)
+        model.sync(from: handle, sourceID: sourceID)
+        #expect(model.metadata.fieldComboOptions.map(\.label) == ["Author", "Folio"])
+    }
+
+    /// Waits out a cache load (or its stale-while-revalidate refetch).
+    private func settle<Value>(_ handle: QueryHandle<Value>) async {
+        var waited: UInt64 = 0
+        while waited < 2_000_000_000 {
+            if handle.status == .error { return }
+            if handle.status == .ready, !handle.isFetching { return }
+            await Task.yield()
+            try? await Task.sleep(nanoseconds: 10_000_000)
+            waited += 10_000_000
+        }
+    }
+
     @Test func addMetadataRequiresFieldAndValue() async {
         let author = authorField()
         let store = makeStore(fields: [author])

@@ -176,7 +176,7 @@ final class SourceIdentitySection {
             )
             context.workspace?.source = updated
             typeDraftID = updated.sourceTypeID
-            context.applySource(updated)
+            context.applySource(updated, typeChanged: sourceTypeID != current.sourceTypeID)
             return nil
         } catch {
             return L10n.Errors.message(for: error)

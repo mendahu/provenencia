@@ -337,6 +337,6 @@ final class SourceMetadataSection {
             context.workspace?.metadata.append(entry)
         }
         drafts[entry.field.id] = entry.valueText
-        context.notifyWorkspaceMutated()
+        context.notifyMetadataMutated()
     }
 }
