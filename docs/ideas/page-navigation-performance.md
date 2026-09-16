@@ -1,6 +1,6 @@
 # Page navigation performance
 
-**Status:** **implemented** (Spike 4, S4-01…S4-09). Finished steps: [`docs/deployment-plan/spike-4/completed.md`](../deployment-plan/spike-4/completed.md). Optional Go RPC tiering: S4-10+ in [`deployment-plan.md`](../deployment-plan/spike-4/deployment-plan.md).
+**Status:** **implemented** (Spike 4 archived, S4-01…S4-09). Finished steps: [`docs/deployment-plan/archive/spike-4/completed.md`](../deployment-plan/archive/spike-4/completed.md). S4-10+ Go RPC tiering descoped.
 
 **Agent skill:** [`.cursor/skills/add-workspace-place/SKILL.md`](../../.cursor/skills/add-workspace-place/SKILL.md).
 
@@ -374,7 +374,7 @@ Feature folders contain views + mutation actions that call `session.invalidate(�
 
 ## Deployment
 
-Sequenced PRs: [`docs/deployment-plan/spike-4/deployment-plan.md`](../deployment-plan/spike-4/deployment-plan.md) (S4-01…S4-09 required; S4-10+ optional Go tiering).
+Sequenced PRs: [`docs/deployment-plan/archive/spike-4/deployment-plan.md`](../deployment-plan/archive/spike-4/deployment-plan.md) (S4-01…S4-09; S4-10+ descoped).
 
 | Step | Summary |
 | --- | --- |
@@ -394,7 +394,7 @@ Sequenced PRs: [`docs/deployment-plan/spike-4/deployment-plan.md`](../deployment
 
 ## Related
 
-- [`docs/deployment-plan/spike-4/deployment-plan.md`](../deployment-plan/spike-4/deployment-plan.md) — PR sequence.
+- [`docs/deployment-plan/archive/spike-4/deployment-plan.md`](../deployment-plan/archive/spike-4/deployment-plan.md) — PR sequence (archived).
 - [`docs/deployment-plan/archive/spike-3/navigation-history.md`](../deployment-plan/archive/spike-3/navigation-history.md) — history behavior (done).
 - [`docs/ideas/archive/catalog-access-serialization.md`](archive/catalog-access-serialization.md) — catalog session (done).
 - [`core/search/registry.go`](../../core/search/registry.go) — declarative registry pattern to mirror.

@@ -1,10 +1,10 @@
 # Deployment Plan — Spike 4
 
-Workspace session, catalog query cache, and declarative place registry. Authoritative design: [`page-navigation-performance.md`](../../ideas/page-navigation-performance.md).
+Workspace session, catalog query cache, and declarative place registry. Authoritative design: [`page-navigation-performance.md`](../../../ideas/page-navigation-performance.md).
 
 ## Status
 
-**Complete** (S4-01…S4-09). Finished steps: [`completed.md`](completed.md). **S4-10+** are optional Go-side follow-ons when Swift cache profiling shows which RPCs hurt.
+**Done.** Spike archived after dogfood (S4-01…S4-09). History: [`completed.md`](completed.md). **S4-10+** Go read-model tiering below is **descoped** (not scheduled open spike work).
 
 ## Goal (dogfood bar)
 
@@ -41,7 +41,7 @@ Sources            Source fields      Source types
                      ▼
                   S4-09  Docs, skill, cleanup, dogfood metrics
                      │
-                     ▼ (optional)
+                     ▼ (descoped)
                   S4-10+ Go read-model tiering
 ```
 
@@ -81,13 +81,13 @@ Cross-view sync (detail edit → list row) and navigation comfort (Back / sectio
 
 Landings and dogfood sign-off: [`completed.md`](completed.md) (S4-06…S4-06b in PR [#113](https://github.com/mendahu/provenencia/pull/113); S4-09 closes docs/skill).
 
-Extension point for new destinations: [`.cursor/skills/add-workspace-place/SKILL.md`](../../../.cursor/skills/add-workspace-place/SKILL.md).
+Extension point for new destinations: [`.cursor/skills/add-workspace-place/SKILL.md`](../../../../.cursor/skills/add-workspace-place/SKILL.md).
 
 ---
 
-## Optional — Go read-model tiering (S4-10+)
+## Descoped — Go read-model tiering (S4-10+)
 
-Execute **after S4-09** when Swift cache proves which RPCs hurt. Can parallelize sub-steps.
+**Not scheduled.** Was optional follow-on after S4-09 if Swift cache profiling showed RPC cost; descoped after dogfood — local SQLite + session cache hits are acceptable. Kept for historical reference.
 
 | Step | Scope |
 | --- | --- |
