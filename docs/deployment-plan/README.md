@@ -6,7 +6,9 @@ Authoritative domain and stack decisions remain in the sibling docs under [`docs
 
 ## Current
 
-_No active spike._ Next milestones will be added here when scheduled.
+| Spike | Goal |
+| --- | --- |
+| [Spike 5](spike-5/) | Interpretation foundation — everything up to the canvas: candidate refs, `node_types` + seed, audited `nodes` CRUD, graph layout storage, FFI, and an Interpretation workspace section with two entry points. **The canvas itself is Spike 6.** Design: [`ideas/interpretation-graph-ui.md`](../ideas/interpretation-graph-ui.md). Plan: [`spike-5/deployment-plan.md`](spike-5/deployment-plan.md). |
 
 ## Completed
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-**Brainstorm, with working decisions.** Not scheduled and not a UI spec, but no longer purely open-ended: the design questions below were worked through and settled, and the next step is a spike plan with a PR breakdown.
+**Brainstorm, with working decisions — now partly scheduled.** Not a UI spec, but no longer open-ended: the design questions below were worked through and settled, and slice 1 is planned as [Spike 5](../deployment-plan/spike-5/). The canvas (slice 2) is Spike 6 and is not yet planned.
 
 Authoritative schema for everything described here is [`interpretation-layer-data-model.md`](../interpretation-layer-data-model.md). Client rules are [`macos-client-patterns.md`](../macos-client-patterns.md). Nothing in this file overrides those — where this note reaches a conclusion that would change a model doc, that edit has to be made there deliberately.
 
@@ -22,6 +22,7 @@ Authoritative schema for everything described here is [`interpretation-layer-dat
 | 10 | Build **canvas first**, behind only the load-bearing minimum; the property vocabulary is *not* load-bearing | §11.1, §11.2 |
 | 11 | Persons, events, and places ship together — three seeded rows, not three features | §11.1.1 |
 | 12 | Entry via a Source-page button; the Interpretation Sources list is **required** as the section root and error-recovery destination | §11.1.2 |
+| 13 | The foundation is its **own spike** (Spike 5) so the canvas spike opens with no schema work; its deep destination is a plain node list, which doubles as the structured a11y path | §11.4 |
 
 Two items found along the way that were on nobody's list: **candidate `-C-` ref support** does not exist in `core/ref` (§11.1), and **NameValue does not exist in either language** (§4.4).
 
@@ -467,7 +468,7 @@ That outline pays for itself twice, because XCUITest cannot meaningfully drive a
 - **Round-trip lossiness** (§3.3), in a tool whose entire purpose is not misrepresenting evidence. This is the one risk with no clean mitigation yet.
 - **Position becomes state we did not want** — a UI-state table in the catalog, with sharing and migration consequences. Accepted deliberately, shape settled in §5.1.
 - **Accessibility and keyboard parity are non-optional work**, not a polish pass.
-- **It strains the current session cache.** `WorkspaceSession` patch/invalidate is tuned for lists and detail payloads, while a graph is one large payload mutated constantly from inside the view. §5.3 proposes the shape (one key owning Nodes plus positions, patch on drag, invalidate on create/delete), but it is unproven until Slice 1 runs it.
+- **It strains the current session cache.** `WorkspaceSession` patch/invalidate is tuned for lists and detail payloads, while a graph is one large payload mutated constantly from inside the view. §5.3 proposes the shape (one key owning Nodes plus positions, patch on drag, invalidate on create/delete), but it is unproven until the canvas slice runs it.
 - **Deletion is a genuine UX problem, not a button** (§4.3).
 - **Scope creep is the default outcome.** "Snap to grid, then auto-layout, then edge routing, then minimap, then multi-select, then alignment guides" is an infinite backlog that produces no genealogical capability. The tray (§5) is one deliberate refusal; there will need to be more.
 
@@ -505,9 +506,9 @@ The test is narrow: **what does the first `nodes` INSERT actually require?** The
 | Item | Why it is load-bearing | Size |
 | --- | --- | --- |
 | **Candidate ref support in `core/ref`** | `nodes.ref` is `NOT NULL` in the `{PREFIX}-C-{TOKEN}` candidate form. Today `Mint` only produces `PREFIX-TOKEN`, and the `validRef` regex rejects the `-C-` form outright. The catalog-refs rule already reserves this work: candidate Nodes use the form "via a shared helper **when implemented** — do not invent a parallel generator." | Small |
-| **`node_types` table + `person` / `event` / `place` seeds** | `node_types` is the other FK. Needs the table, plus rows via the existing idempotent `Install` registry pattern (`sourcevocab` is the template, `add-seeded-vocabulary` the skill), plus `ref_prefix` values. **Table and seed only — not the browser UI.** All three types cost the same as one: see §11.1.1. | Small |
+| **`node_types` table + seeds** | `node_types` is the other FK. Needs the table, plus rows via the existing idempotent `Install` registry pattern (`sourcecredibilitygrades` is the closest template, `add-seeded-vocabulary` the skill), plus `ref_prefix` values. **Table and seed only — not the browser UI.** Seed all seven types from [`seeded-vocabulary.md`](../seeded-vocabulary.md) §3.1; only three are placeable, and they cost the same as one (§11.1.1). | Small |
 | **`nodes` table + `core/database/nodes`** | Create, list, rename, delete — **with audit wiring.** Every domain write in this product goes through `audit.Record(tx, …)` (see `sources/notes.go`); that is not optional, and it is the bulk of the work here. | Medium |
-| **Layout table** | Integer grid cells, unaudited (§5). Persistence across relaunch is part of what Slice 1 is validating, so it cannot be held in memory. | Small |
+| **Layout table** | Integer grid cells, unaudited (§5). Persistence across relaunch is part of what the canvas validates, so it cannot be held in memory — and it ships in slice 1 so the canvas slice opens with no schema work in front of it. | Small |
 | **FFI handlers** | `add-ffi-handler` skill. | Small |
 | **Graph workspace place** | A `WorkspaceSection` case (**no** `WorkspaceLocation` change needed — see §11.1.2), `CatalogQueryKey`, registry loader, two `PlaceRegistry` specs (root and deep), destination views, `CatalogCounts` badge entry. `add-workspace-place` and `add-workspace-location` cover it. | Medium |
 
@@ -541,7 +542,7 @@ Without a root view, both paths land on an unresolved location, and `WorkspaceDe
 
 So: **build it, and keep it a plain copy.** If the Interpretation list reads the existing `.sourcesList(project:)` query key, it is genuinely cheap — sharing a key is encouraged, unlike duplicating a payload — and the only real content is different row chrome plus a different navigation target.
 
-**Defer the graph-specific columns.** "12 nodes, 3 uncited, last worked Tuesday" is the tempting part and the expensive part: it needs a new Go query with derived counts, and per [`macos-client-patterns.md`](../macos-client-patterns.md) §1, derived counts "move when another table is written" — so placing a single bubble would stale the list. That is a real invalidation dependency between the canvas and its own landing page, and it buys nothing for the risk being retired in Slice 1.
+**Defer the graph-specific columns.** "12 nodes, 3 uncited, last worked Tuesday" is the tempting part and the expensive part: it needs a new Go query with derived counts, and per [`macos-client-patterns.md`](../macos-client-patterns.md) §1, derived counts "move when another table is written" — so placing a single bubble would stale the list. That is a real invalidation dependency between the canvas and its own landing page, and it buys nothing for the risks being retired in the first two slices.
 
 One accepted oddity: clicking a button on a page in the Sources section lands the user in a different sidebar section, because `selectedSection` follows `location.section`. That is normal cross-section navigation and Back returns to the Source page, so it is fine — but it is worth noticing rather than discovering.
 
@@ -552,29 +553,32 @@ The structural fact that shrinks the prework dramatically: **`nodes` has no fore
 Deferred, blocking nothing:
 
 - `properties` and `node_type_properties` — Observation concerns, not Node concerns.
-- The vocabulary browser UI — three Node Types get seeded directly; browsing and user extension can wait.
+- The vocabulary browser UI — Node Types get seeded directly from the registry in [`seeded-vocabulary.md`](../seeded-vocabulary.md) §3.1; browsing and user extension can wait. Seed all seven rather than only the three placeable ones: they are rows, not features, and a partial seed just means editing the registry again.
 - `ref_prefix` user-facing validation (global uniqueness across origins, reserved `SRC` / `ART` / `CIT` / `OBS` / `C`) — only needed when *users* define Node Types, which is the browser UI.
 - NameValue, the typed value dispatch, and the seven value editors — all Observation concerns. Scope notes for when they land: Interpretation needs only `name_values` and `name_value_parts`, because interpretation model §5.1 puts `name_format` in the Conclusion layer — two tables, not the four in [`structured-name-model.md`](../structured-name-model.md) §4. `date` is already done and is the template. The seven-way sparse-column dispatch is the genuinely new part, since Source metadata is only `value_text` plus an optional `date_value_id` and no `value_type` enum exists anywhere in the product yet.
 - Citations, the artifact viewer, locator validation.
 - Open value vocabulary (`event_type`, `role`, `relationship_type`) — and note this one is not even a build task yet: [`seeded-vocabulary.md`](../seeded-vocabulary.md) §1.5 is explicit that these are open free-text values rather than vocabulary-definition tables, with no `origin`, so the seeded picker defaults have no home in the schema. Where they live is a design question to settle in planning.
 
-## 11.3 What Slice 1 proves, and what it does not
+## 11.3 What the canvas slice proves, and what it does not
 
-**Proves:** the `NSScrollView` bridge, coordinate conversion under magnification (§7.2), bubble hit-testing and drag, snap-to-grid persistence, session-cache behavior under canvas mutation, navigation and restore of a graph place, the shape of the accessibility outline — and above all whether the thing feels right to use.
+**Proves:** the `NSScrollView` bridge, coordinate conversion under magnification (§7.2), bubble hit-testing and drag, snap-to-grid persistence, session-cache behavior under canvas mutation, the shape of the accessibility outline — and above all whether the thing feels right to use.
 
 **Does not prove:** the citation composer, the property flow, or the connect macros. Those are real risks, but they are *different* risks with their own slices. The one retired here is the only one with no prior art and no fallback: whether a spatial editing surface is buildable and pleasant on this stack.
 
 ## 11.4 Slice order
 
-1. **Foundation + bubbles** (§11.1) — persons, events, and places; working labels; drag / snap / select / persist; the tray for unplaced Nodes. Entry via a Source-page button plus a plain Interpretation Sources list as the section root (§11.1.2).
-2. **Property vocabulary** — `properties`, `node_type_properties`, the browser UI, `ref_prefix` validation.
-3. **Artifact viewer + Citations** — PDF and image; `page`, `region`, `text_quote`; Go-side locator validation.
-4. **First Observation** — Add Property on a bubble, `text` value type only. The whole vertical path proven end to end.
-5. **Remaining value types** — including NameValue end to end; reuse the existing DateValue editor.
-6. **Connect tool** — bridge macros, the disambiguation form, the pinned Citation (§6.1).
-7. **Honesty and polish** — negated / conflicted / uncited states, filtering, accessibility outline, undo.
+1. **Foundation** (§11.1) — candidate refs, `node_types` and its seed, audited `nodes` CRUD, the layout table, FFI, and the Interpretation place with both entry points (§11.1.2). No canvas.
+2. **Bubbles** — the canvas proper: `NSScrollView` bridge, persons / events / places, working labels, drag / snap / select / persist, the tray for unplaced Nodes.
+3. **Property vocabulary** — `properties`, `node_type_properties`, the browser UI, `ref_prefix` validation.
+4. **Artifact viewer + Citations** — PDF and image; `page`, `region`, `text_quote`; Go-side locator validation.
+5. **First Observation** — Add Property on a bubble, `text` value type only. The whole vertical path proven end to end.
+6. **Remaining value types** — including NameValue end to end; reuse the existing DateValue editor.
+7. **Connect tool** — bridge macros, the disambiguation form, the pinned Citation (§6.1).
+8. **Honesty and polish** — negated / conflicted / uncited states, filtering, accessibility outline, undo.
 
-**Spike boundary: Slice 1.** It ends at "open a Source and lay out the cast of characters spatially, with working labels" — not yet genealogically useful, but it retires the entire spatial-UI risk, and every later slice builds on a canvas that is known to work. Slice 2 onward is the second spike.
+**Spike boundary: slice 1 is [Spike 5](../deployment-plan/spike-5/), slice 2 is Spike 6.** Splitting foundation from canvas keeps the canvas spike pure — Spike 6's first PR draws a bubble rather than writing a migration.
+
+The cost of the split is that slice 1 ships a layer with no visible capability, so it needs *some* surface to prove the data path. That surface is a plain list of a Source's Nodes at the graph destination — which is not throwaway, because §7.4 already commits to a structured non-canvas editing path as the accessibility representation and the only XCUITest-drivable view of this data. It arrives early because it is also the cheapest way to prove the rail before the canvas sits on it.
 
 ---
 
