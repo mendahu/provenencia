@@ -4,7 +4,7 @@ Workspace session, catalog query cache, and declarative place registry. Authorit
 
 ## Status
 
-**In progress.** Completed steps: [`completed.md`](completed.md). Execute **S4-06 → S4-09** in order unless noted. **S4-10+** are optional Go-side follow-ons after the Mac cache exists.
+**Complete** (S4-01…S4-09). Finished steps: [`completed.md`](completed.md). **S4-10+** are optional Go-side follow-ons when Swift cache profiling shows which RPCs hurt.
 
 ## Goal (dogfood bar)
 
@@ -54,6 +54,10 @@ Sources            Source fields      Source types
 - [x] S4-03 — Place registry → [`completed.md`](completed.md)
 - [x] S4-04 — Wire workspace session → [`completed.md`](completed.md)
 - [x] S4-05 — Workspace destination host → [`completed.md`](completed.md)
+- [x] S4-06 — Migrate Sources (list + detail split) → [`completed.md`](completed.md)
+- [x] S4-07 — Migrate Source fields → [`completed.md`](completed.md)
+- [x] S4-08 — Migrate Source types → [`completed.md`](completed.md)
+- [x] S4-09 — Docs, skill, cleanup → [`completed.md`](completed.md)
 
 ---
 
@@ -73,79 +77,11 @@ Cross-view sync (detail edit → list row) and navigation comfort (Back / sectio
 
 ---
 
-## S4-06 — PR: Migrate Sources (split list + detail)
+## Completed migration (S4-06…S4-09)
 
-| | |
-| --- | --- |
-| **Depends on** | S4-05 |
-| **Title sketch** | Migrate Sources to session cache and split list from detail |
-| **Deliverables** | Split `SourcesView` → `SourcesListView` + keep `SourcePageView`. Host routes `sourcesList` → list, `sourceDetail` → page from **`currentLocation.sourceId`** (remove `openedSourceID` view gate). List reads `session.query(.sourcesList)` / `.sourceTypesList`; drop list `.task { load }` and async `reconcileNavigation`. Row click / create still `go(to:)`. **Mutations:** create source → invalidate list keys (+ optional eager refetch); identity/cover save → **patch** `sourcesList` row + `sourceWorkspace(id:)` synchronously (replace `applyUpdatedSource`; do not invalidate-for-refetch on title/thumbnail). Delete fat `SourcesView` or reduce to thin re-export. Update/add `SourcesModel` tests → store/query tests. |
-| **Tests** | No list flash (location-driven tree); list data from cache; invalidate on create; **edit title/cover on page patches list row without second list FFI**; navigation tests still pass. |
-| **Dogfood** | Sources list ↔ detail via click, Back, omnibar: correct frame immediately; list loads once per session. |
-| **Out** | Source page workspace cache (S4-06b if split, or same PR below). |
+Landings and dogfood sign-off: [`completed.md`](completed.md) (S4-06…S4-06b in PR [#113](https://github.com/mendahu/provenencia/pull/113); S4-09 closes docs/skill).
 
-**Note:** If this PR is too large, split into **S4-06a** (split views + location routing + list on cache) and **S4-06b** (source page on workspace cache — below).
-
----
-
-## S4-06b — PR: Source page workspace cache (optional split from S4-06)
-
-| | |
-| --- | --- |
-| **Depends on** | S4-06 (or combined with it) |
-| **Title sketch** | Load source detail from workspace session cache |
-| **Deliverables** | `SourcePageView` / `SourcePageModel` read `session.query(.sourceWorkspace(id))` instead of `.task { load() }`. Stale cache paints immediately; miss shows skeleton for **target** source id. Remove `.id(opened)` remount forcing full reload when switching sources (identity from location + cache key). Saves **patch** workspace + list keys (see [cache update strategy](#cache-update-strategy)); bust-only paths use invalidate. `refreshCoverFromStore` patches cache, not ad hoc bypass. |
-| **Tests** | Back to prior source = cache hit, no second `getSourceWorkspace`; switch A → B → A; edit patches both caches without refetch. |
-| **Dogfood** | Source page Back/Forward feels instant on revisits. |
-
-*If combined with S4-06, omit S4-06b as a separate PR.*
-
----
-
-## S4-07 — PR: Migrate Source fields
-
-| | |
-| --- | --- |
-| **Depends on** | S4-06 (or S4-06b) |
-| **Title sketch** | Migrate Source fields to workspace session cache |
-| **Deliverables** | `SourceFieldsView` reads `metadataFieldsList` query handle. Remove `.task` / `reconcileNavigation` / `load(from:)` / `apply(from:)`. Selection from `currentLocation.fieldId` (sync); missing id → `fallbackToSectionRoot` after list ready. CRUD invalidates list query + `CatalogCounts.publish*`. Master–detail layout unchanged. |
-| **Tests** | Row select via history; sidebar return without refetch; delete → fallback. |
-| **Dogfood** | Fields vocabulary navigation matches Sources snappiness. |
-
----
-
-## S4-08 — PR: Migrate Source types
-
-| | |
-| --- | --- |
-| **Depends on** | S4-07 |
-| **Title sketch** | Migrate Source types to session cache including suggestions |
-| **Deliverables** | `SourceTypesView` on query handles: types list, fields pool, `typeSuggestions(typeId)` keyed separately. Remove async reconcile waterfall. Selection UI instant from `currentLocation.typeId`; suggestions load async into query handle (detail shows loading state for suggestions block only). Assign/remove invalidates suggestions key (+ types list counts if needed). |
-| **Tests** | History restore with type selected; suggestions deduped; no empty-detail flash. |
-| **Dogfood** | Types navigation stable; suggestion panel loads without blocking selection chrome. |
-
----
-
-## S4-09 — PR: Docs, skill, cleanup, and dogfood metrics
-
-| | |
-| --- | --- |
-| **Depends on** | S4-08 |
-| **Title sketch** | Document workspace place registry and remove legacy navigation loaders |
-| **Deliverables** | Remove dead code: `openedSourceID`, `reconcileNavigation` helpers, unused `load(from:)` / `apply(from:)` on migrated models. Author [`.cursor/skills/add-workspace-place/SKILL.md`](../../../.cursor/skills/add-workspace-place/SKILL.md) (checklist from idea doc). Update [`page-navigation-performance.md`](../../ideas/page-navigation-performance.md) status → implemented / archive pointer. Update [`macos-client-patterns.md`](../../macos-client-patterns.md) § workspace session. Optional `#if DEBUG` navigation timing logs behind flag. Brief [`spike-4/completed.md`](completed.md) template. |
-| **Tests** | Full `ProvenenciaTests` green; registry coverage test enumerates every `PlaceID` has presentation + queries. |
-| **Dogfood** | Full spike-4 dogfood checklist (below). |
-| **Out** | Go RPC changes. |
-
-### Spike 4 dogfood checklist
-
-- [ ] Sources list → detail → Back: no list flash; detail correct on first frame.
-- [ ] Source A → Source B → Back to A: page instant (cache hit).
-- [ ] Sources → Fields → Sources: list not refetched (cache hit).
-- [ ] Omnibar → source → Back → sidebar → Sources: same.
-- [ ] Create source, edit title on page, return to list: row updated (sync patch on save, not SWR refetch).
-- [ ] Fields/types: history restore, sidebar hop, no cold reload when cache valid.
-- [ ] Relaunch: history restore still works; first paint may load (cold cache) then warm.
+Extension point for new destinations: [`.cursor/skills/add-workspace-place/SKILL.md`](../../../.cursor/skills/add-workspace-place/SKILL.md).
 
 ---
 

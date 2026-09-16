@@ -117,6 +117,15 @@ final class WorkspaceNavigation {
     }
 
     private func apply(_ location: WorkspaceLocation) {
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["PROVENENCIA_DEBUG_NAV_TIMING"] == "1" {
+            print(
+                "WorkspaceNavigation.apply section=\(location.section.rawValue) " +
+                    "sourceId=\(location.sourceId ?? "nil") fieldId=\(location.fieldId ?? "nil") " +
+                    "typeId=\(location.typeId ?? "nil") t=\(CFAbsoluteTimeGetCurrent())"
+            )
+        }
+        #endif
         currentLocation = location
         selectedSection = location.section
         canGoBack = history?.canGoBack ?? false

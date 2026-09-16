@@ -13,6 +13,11 @@ IDs stay stable (`S4-NN`). Do not renumber when moving steps here.
 | [S4-03](#s4-03--pr-place-registry) | PR | Declarative place registry + resolve(location) |
 | [S4-04](#s4-04--pr-wire-workspace-session) | PR | Wire session into navigation; warm cache on commit |
 | [S4-05](#s4-05--pr-workspace-destination-host) | PR | Place-based destination host (shim to existing views) |
+| [S4-06](#s4-06--pr-migrate-sources) | PR | Sources list on session cache; split list from detail |
+| [S4-06b](#s4-06b--source-page-workspace-cache) | PR | Source page on `sourceWorkspace` handle (combined with S4-06) |
+| [S4-07](#s4-07--pr-migrate-source-fields) | PR | Source fields on `metadataFieldsList` handle |
+| [S4-08](#s4-08--pr-migrate-source-types) | PR | Source types + type suggestions on session cache |
+| [S4-09](#s4-09--pr-docs-skill-cleanup) | PR | Skill, docs, cleanup; Spike 4 dogfood sign-off |
 
 ---
 
@@ -117,7 +122,7 @@ cd macos && xcodebuild test -scheme Provenencia -destination 'platform=macOS' \
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | S4-04 |
-| **Deliverables** | Done. `WorkspaceDestinationHost.swift`: resolves `navigation.currentLocation` via `PlaceRegistry`, switches on `WorkspacePresentationID`. Shim maps `.sourcesList` / `.sourcePage` → `SourcesView`, `.sourceFields` → `SourceFieldsView`, `.sourceTypes` → `SourceTypesView`. `WorkspaceContent` uses the host instead of a section switch. `WorkspacePresentationID` is `CaseIterable`. Sidebar + toolbar unchanged. |
+| **Deliverables** | Done. `WorkspaceDestinationHost.swift`: resolves `navigation.currentLocation` via `PlaceRegistry`, switches on `WorkspacePresentationID`. Host maps presentations to destination views. `WorkspaceContent` uses the host instead of a section switch. `WorkspacePresentationID` is `CaseIterable`. Sidebar + toolbar unchanged. |
 | **Tests** | Done. `WorkspaceDestinationHostTests.swift`: presentation routing table, both source presentations → sources destination, registry presentations known. |
 | **Dogfood** | No user-visible change; all destinations still work. |
 | **Out** | Sources list/detail split; query-backed views; removing legacy loaders. |
@@ -131,4 +136,111 @@ cd macos && xcodebuild test -scheme Provenencia -destination 'platform=macOS' \
   -only-testing:ProvenenciaTests/WorkspaceDestinationHostTests \
   -only-testing:ProvenenciaTests/PlaceRegistryTests \
   -only-testing:ProvenenciaTests/WorkspaceNavigationTests
+```
+
+---
+
+### S4-06 — PR: Migrate Sources
+
+| | |
+| --- | --- |
+| **Kind** | PR ([#113](https://github.com/mendahu/provenencia/pull/113)) |
+| **Depends on** | S4-05 |
+| **Deliverables** | Done. Deleted `SourcesView`; added `SourcesListView`. `WorkspaceDestinationHost` routes `.sourcesList` / `.sourcePage` from `currentLocation.sourceId`. `SourcesModel` reads `sourcesList` / `sourceTypesList` handles; create → invalidate + list patch; `syncCatalogCounts` on ready. Views warm queries in `.task` and observe `@Bindable QueryHandle` (no `session.query()` in `body`). |
+| **Tests** | Done. `SourcesModelTests` rewritten for session warm, filter/sort, create, cache hit, `updatedSource` patch. |
+| **Dogfood** | List ↔ detail via click, Back, omnibar: location-driven tree; no `openedSourceID` gate. |
+| **Out** | Source page workspace cache (S4-06b — same PR). |
+
+**Verify:**
+
+```bash
+cd macos && xcodebuild test -scheme Provenencia -destination 'platform=macOS' \
+  -only-testing:ProvenenciaTests/SourcesModelTests \
+  -only-testing:ProvenenciaTests/WorkspaceDestinationHostTests
+```
+
+---
+
+### S4-06b — Source page workspace cache
+
+| | |
+| --- | --- |
+| **Kind** | PR (combined with S4-06, [#113](https://github.com/mendahu/provenencia/pull/113)) |
+| **Depends on** | S4-06 |
+| **Deliverables** | Done. `SourcePageView` / `SourcePageModel` sync from `sourceWorkspace` handle; `.task(id: sourceID)` warms query; fingerprint skips redundant section resets. Identity/cover → `session.apply(.updatedSource)`; other edits → `notifyWorkspaceMutated()`. `refreshCoverFromStore` patches cache via `setQueryValue`. |
+| **Tests** | Done. `SourcePageModelTests` use `warmFromSession()` (invalidate + await `isFetching` for stale refetch). |
+| **Dogfood** | Back to prior source uses cache; switching sources does not remount via `.id(opened)`. |
+
+**Verify:**
+
+```bash
+cd macos && xcodebuild test -scheme Provenencia -destination 'platform=macOS' \
+  -only-testing:ProvenenciaTests/SourcePageModelTests
+```
+
+---
+
+### S4-07 — PR: Migrate Source fields
+
+| | |
+| --- | --- |
+| **Kind** | PR ([#113](https://github.com/mendahu/provenencia/pull/113)) |
+| **Depends on** | S4-06 |
+| **Deliverables** | Done. `SourceFieldsModel` reads `metadataFieldsList` via `queryHandle`; `warmFieldsQuery()` in view `.task`. Selection via `syncSelection(from:)` on history + handle changes; missing deep id → `fallbackToSectionRoot`. CRUD → `session.apply` + list patch + `syncCatalogCounts`. |
+| **Tests** | Done. `SourceFieldsModelTests` use session warm helpers. |
+| **Dogfood** | Fields vocabulary: history restore and sidebar return without cold list reload when cache valid. |
+
+**Verify:**
+
+```bash
+cd macos && xcodebuild test -scheme Provenencia -destination 'platform=macOS' \
+  -only-testing:ProvenenciaTests/SourceFieldsModelTests
+```
+
+---
+
+### S4-08 — PR: Migrate Source types
+
+| | |
+| --- | --- |
+| **Kind** | PR ([#113](https://github.com/mendahu/provenencia/pull/113)) |
+| **Depends on** | S4-07 |
+| **Deliverables** | Done. `SourceTypesModel` on types/fields/suggestions handles; `warmListQueries()` / `warmSuggestions(for:)`. Selection sync from history; suggestions load async into keyed handle. Assign/remove → registry invalidation + cache patch. |
+| **Tests** | Done. `SourceTypesModelTests` session warm + suggestion coverage. |
+| **Dogfood** | Types selection instant from history; suggestions block shows loading without blocking chrome. |
+
+**Verify:**
+
+```bash
+cd macos && xcodebuild test -scheme Provenencia -destination 'platform=macOS' \
+  -only-testing:ProvenenciaTests/SourceTypesModelTests
+```
+
+---
+
+### S4-09 — PR: Docs, skill, cleanup
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S4-08 |
+| **Deliverables** | Done. [`.cursor/skills/add-workspace-place/SKILL.md`](../../../.cursor/skills/add-workspace-place/SKILL.md). Updated [`page-navigation-performance.md`](../../ideas/page-navigation-performance.md) (implemented), [`macos-client-patterns.md`](../../macos-client-patterns.md) § workspace session, [`add-workspace-location`](../../../.cursor/skills/add-workspace-location/SKILL.md) (post-migration apply pattern). Optional `PROVENENCIA_DEBUG_NAV_TIMING=1` on navigation commit. Legacy loaders removed in S4-06–08 (`openedSourceID`, `reconcileNavigation`, `load(from:)`). |
+| **Tests** | Full `ProvenenciaTests` green; `PlaceRegistryTests.registryCoversAllPlaceIDs` covers every `PlaceID`. |
+| **Dogfood** | Spike 4 checklist signed off (below). |
+| **Out** | Go RPC tiering (S4-10+). |
+
+**Spike 4 dogfood checklist (signed off):**
+
+- [x] Sources list → detail → Back: no list flash; detail correct on first frame.
+- [x] Source A → Source B → Back to A: page instant (cache hit).
+- [x] Sources → Fields → Sources: list not refetched (cache hit).
+- [x] Omnibar → source → Back → sidebar → Sources: same.
+- [x] Create source, edit title on page, return to list: row updated (sync patch on save).
+- [x] Fields/types: history restore, sidebar hop, no cold reload when cache valid.
+- [x] Relaunch: history restore works; first paint may load (cold cache) then warm.
+
+**Verify:**
+
+```bash
+cd macos && xcodebuild test -scheme Provenencia -destination 'platform=macOS'
 ```

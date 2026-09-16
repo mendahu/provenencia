@@ -6,14 +6,13 @@ Authoritative domain and stack decisions remain in the sibling docs under [`docs
 
 ## Current
 
-| Spike | Goal |
-| --- | --- |
-| [Spike 4](spike-4/) | Workspace session + catalog query cache + declarative place registry: fast, consistent navigation; split Sources list/detail; extensible infrastructure for future destinations. Design: [`ideas/page-navigation-performance.md`](../ideas/page-navigation-performance.md). PRs: [`spike-4/deployment-plan.md`](spike-4/deployment-plan.md). |
+_No active spike._ Next milestones will be added here when scheduled.
 
 ## Completed
 
 | Spike | Goal |
 | --- | --- |
+| [Spike 4](spike-4/) | Workspace session + catalog query cache + declarative place registry: fast, consistent navigation; Sources/fields/types on query handles; `add-workspace-place` skill. Design: [`ideas/page-navigation-performance.md`](../ideas/page-navigation-performance.md). Finished: [`spike-4/completed.md`](spike-4/completed.md). Optional follow-on: S4-10+ Go tiering in [`spike-4/deployment-plan.md`](spike-4/deployment-plan.md). |
 | [Spike 3](archive/spike-3/) | Workspace chrome + first-class nav history and catalog search: Back/Forward (persisted, `project.uuid`), toolbar omnibar with Go registry + FTS5 ranking. Archive: [`archive/spike-3/README.md`](archive/spike-3/README.md), [`completed.md`](archive/spike-3/completed.md). Notes: [`navigation-history.md`](archive/spike-3/navigation-history.md), [`omnibar-search.md`](archive/spike-3/omnibar-search.md). |
 | [Spike 2](archive/spike-2/) | Validate the Source layer: app workspace chrome (sidebar), audit + schema + Go CRUD/ingest + FFI + macOS Source catalog UI (create Sources, Artifacts, Files, extensible types/metadata). Design steps in Claude Design interleaved with PRs. Dogfood: [`archive/spike-2/dogfood.md`](archive/spike-2/dogfood.md). |
 | [Spike 1](archive/spike-1.md) | Scaffold the macOS app, local SQLite project, and first-run onboarding. **Retired the cgo SQLite + Swift dylib risk** (plan A: `mattn/go-sqlite3` inside `libprovenencia.dylib`). |

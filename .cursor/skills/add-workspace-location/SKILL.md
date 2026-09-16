@@ -41,8 +41,8 @@ Authoritative behavior: [`docs/deployment-plan/archive/spike-3/navigation-histor
 - [ ] New sidebar section added to WorkspaceSection if needed
 - [ ] Every commit path calls navigation.go(to:) (sidebar, open, close/list-back, row select, links)
 - [ ] No raw selectedSection = / openSource / closeSource / select as the sole place change
-- [ ] Destination applies currentLocation on appear + onChange (and after load)
-- [ ] Missing deep id → navigation.fallbackToSectionRoot() after load
+- [ ] Destination applies currentLocation on appear + onChange (after query handle ready)
+- [ ] Missing deep id → navigation.fallbackToSectionRoot() after list/workspace ready
 - [ ] Destination uses @Environment(WorkspaceNavigation.self); not a private parallel nav store
 - [ ] WorkspaceNavigationTests cover push + restore (+ prune if new deep id)
 ```
@@ -87,14 +87,19 @@ commits navigation.
 
 ### 4. Apply location → UI
 
-In the destination view (pattern: `SourcesView`, `SourceFieldsView`):
+In the destination view (pattern: `SourcesListView`, `SourceFieldsView`):
 
 1. Take `@Environment(WorkspaceNavigation.self) private var navigation`.
-2. After catalog load + `onAppear` + `onChange(of: navigation.currentLocation)`:
+2. On `onAppear` + `onChange(of: navigation.currentLocation)` (+ `onChange` on query
+   handle status/value when list loads async):
    - Guard `location.section == .yourSection`.
-   - Deep id present + found → apply selection/open.
-   - Deep id present + missing after load → `navigation.fallbackToSectionRoot()`.
+   - Deep id present + found → apply selection/open (model `syncSelection(from:)`).
+   - Deep id present + missing after handle ready → `navigation.fallbackToSectionRoot()`.
    - Deep id nil → clear to list root (no second `go(to:)`).
+
+Catalog reads come from `WorkspaceSession` query handles (Spike 4) — see
+[`add-workspace-place`](../add-workspace-place/SKILL.md). Do **not** add `.task {
+load(from:) }` as the primary hydration path.
 
 ### 5. Tests
 
@@ -122,3 +127,4 @@ Inject a temp navigation file URL via `attachProject(uuid:fileURL:)`.
 - Persist/API: `NavigationHistoryStore`, `WorkspaceNavigation.attachProject`
 - Keyboard: `NavigationCoordinator` + `ProvenenciaApp` (`⌘[` / `⌘]`)
 - Catalog session for destination loads: [`use-catalog-session`](../use-catalog-session/SKILL.md)
+- Place registry + query cache: [`add-workspace-place`](../add-workspace-place/SKILL.md)

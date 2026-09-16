@@ -1,10 +1,27 @@
 # Page navigation performance
 
-**Status:** planned — sequenced as [Spike 4](../deployment-plan/spike-4/deployment-plan.md).
+**Status:** **implemented** (Spike 4, S4-01…S4-09). Finished steps: [`docs/deployment-plan/spike-4/completed.md`](../deployment-plan/spike-4/completed.md). Optional Go RPC tiering: S4-10+ in [`deployment-plan.md`](../deployment-plan/spike-4/deployment-plan.md).
 
-Navigation history infrastructure is in place (`WorkspaceNavigation`, persisted stack, `go(to:)` everywhere). The remaining problem is **how destinations load and render** when a place changes. Performance is inconsistent across link clicks, Back/Forward, sidebar switches, and omnibar jumps — and the current per-view load pattern will not scale as we add Files, Interpretation, cross-links, and heavier detail pages.
+**Agent skill:** [`.cursor/skills/add-workspace-place/SKILL.md`](../../.cursor/skills/add-workspace-place/SKILL.md).
 
-This note captures a high-level review (Sep 2025) and the target **platform infrastructure** — not band-aids, and not a Sources-only refactor.
+---
+
+## Landed (Spike 4)
+
+- `WorkspaceSession` + `CatalogQueryRegistry` + `QueryHandle` — project-scoped catalog read cache with patch, invalidate, and stale-while-revalidate.
+- `PlaceRegistry` + `WorkspaceDestinationHost` — location-driven presentation; Sources list and detail are separate views.
+- Sources, Source fields, and Source types read query handles; navigation `apply(location:)` warms keys on every commit.
+- macOS patterns: [`macos-client-patterns.md`](../macos-client-patterns.md) § workspace session.
+
+The sections below are the **pre-implementation review** (Sep 2025) kept for rationale and extension guidance.
+
+---
+
+## Problem statement (pre-Spike 4)
+
+Navigation history infrastructure was in place (`WorkspaceNavigation`, persisted stack, `go(to:)` everywhere). The remaining problem was **how destinations load and render** when a place changes. Performance was inconsistent across link clicks, Back/Forward, sidebar switches, and omnibar jumps — and the per-view load pattern would not scale as we add Files, Interpretation, cross-links, and heavier detail pages.
+
+This note captured the target **platform infrastructure** — not band-aids, and not a Sources-only refactor.
 
 ---
 
@@ -257,7 +274,7 @@ Back/Forward uses the same path. Cache keys are **location-derived**, not view-l
 | Add kind → registry row + projector | Add place → registry row + query loader + view |
 | Omnibar calls `go(to: hit.location)` | Host loads queries for resolved place |
 
-Future **`add-workspace-place`** skill (to author alongside this spike): merged checklist for history + cache + presentation — mirror of [`add-searchable-kind`](../../.cursor/skills/add-searchable-kind/SKILL.md) and [`add-workspace-location`](../../.cursor/skills/add-workspace-location/SKILL.md).
+**`add-workspace-place`** skill (authored in S4-09): merged checklist for history + cache + presentation — mirror of [`add-searchable-kind`](../../.cursor/skills/add-searchable-kind/SKILL.md) and [`add-workspace-location`](../../.cursor/skills/add-workspace-location/SKILL.md). See [`.cursor/skills/add-workspace-place/SKILL.md`](../../.cursor/skills/add-workspace-place/SKILL.md).
 
 **Add-a-place checklist (draft):**
 
