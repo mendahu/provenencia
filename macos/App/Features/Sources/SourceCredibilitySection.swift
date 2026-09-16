@@ -17,7 +17,7 @@ final class SourceCredibilitySection {
         self.context = context
     }
 
-    var grades: [CatalogCredibilityGrade] { context.workspace?.grades ?? [] }
+    var grades: [CatalogCredibilityGrade] { context.grades }
 
     /// Saved grade key; defaults to Standard when no assessment row.
     var savedKey: String {

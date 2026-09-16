@@ -22,7 +22,15 @@ struct PlaceRegistry: Sendable {
             matches: { $0.section == .sources && $0.sourceId != nil },
             queryKeys: { project, location in
                 guard let sourceId = location.sourceId else { return [] }
-                return [.sourceWorkspace(project: project, sourceId: sourceId)]
+                // The page's vocabulary (type picker, credibility chips,
+                // Add-metadata list) comes from the shared lists, which are
+                // usually already warm from the sidebar and list places.
+                return [
+                    .sourceWorkspace(project: project, sourceId: sourceId),
+                    .sourceTypesList(project: project),
+                    .metadataFieldsList(project: project),
+                    .credibilityGradesList(project: project),
+                ]
             },
             deepId: { $0.sourceId }
         ),

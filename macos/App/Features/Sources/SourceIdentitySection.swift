@@ -35,7 +35,7 @@ final class SourceIdentitySection {
 
     var sourceTypeID: String { context.workspace?.source.sourceTypeID ?? "" }
 
-    var types: [CatalogSourceType] { context.workspace?.types ?? [] }
+    var types: [CatalogSourceType] { context.types }
 
     /// Resting type label from committed `sourceTypeID`.
     var typeLabel: String {
@@ -176,7 +176,7 @@ final class SourceIdentitySection {
             )
             context.workspace?.source = updated
             typeDraftID = updated.sourceTypeID
-            context.applySource(updated)
+            context.applySource(updated, typeChanged: sourceTypeID != current.sourceTypeID)
             return nil
         } catch {
             return L10n.Errors.message(for: error)

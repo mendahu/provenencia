@@ -219,10 +219,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             notes: notesBySource[sourceID] ?? [],
             metadata: metadataBySource[sourceID] ?? [],
             artifacts: artifactsBySource[sourceID] ?? [],
-            credibility: credibilityBySource[sourceID],
-            types: sourceTypesByProject[projectDir] ?? [],
-            grades: credibilityGradesByProject[projectDir] ?? [],
-            fields: fieldsByProject[projectDir] ?? []
+            credibility: credibilityBySource[sourceID]
         )
     }
 

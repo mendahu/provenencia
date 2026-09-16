@@ -66,17 +66,31 @@ final class SourcePageModel {
         set { context.toast = newValue }
     }
 
-    /// Loads the workspace query handle and syncs section state (tests and previews).
+    /// Loads the workspace and page vocabulary, then syncs section state
+    /// (tests and previews; navigation warms the same keys via `PlaceRegistry`).
     func warmFromSession() async {
         let session = context.session
         let key = CatalogQueryKey.sourceWorkspace(project: session.projectKey, sourceId: context.sourceID)
         session.invalidate(key)
         let handle: QueryHandle<CatalogSourceWorkspace> = session.query(key)
+        let types: QueryHandle<[CatalogSourceType]> = session.query(
+            .sourceTypesList(project: session.projectKey)
+        )
+        let grades: QueryHandle<[CatalogCredibilityGrade]> = session.query(
+            .credibilityGradesList(project: session.projectKey)
+        )
+        let fields: QueryHandle<[CatalogMetadataField]> = session.query(
+            .metadataFieldsList(project: session.projectKey)
+        )
         var waited: UInt64 = 0
         let step: UInt64 = 10_000_000
         while waited < 2_000_000_000 {
             if handle.status == .error { break }
-            if handle.status == .ready, !handle.isFetching { break }
+            if handle.status == .ready, !handle.isFetching,
+               types.status != .loading, grades.status != .loading, fields.status != .loading
+            {
+                break
+            }
             await Task.yield()
             try? await Task.sleep(nanoseconds: step)
             waited += step

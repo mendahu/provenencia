@@ -676,6 +676,52 @@ struct SourcePageModelTests {
         #expect(model.metadata.entries.contains { $0.field.id == author.id && $0.valueText == "Eliza" })
     }
 
+    /// A field added on the Source Fields page reaches the Add-metadata dropdown
+    /// without the page reloading: the dropdown reads the shared field list.
+    @Test func addMetadataDropdownSeesFieldCreatedElsewhere() async throws {
+        let store = makeStore(fields: [authorField()])
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let model = SourcePageModel(
+            sourceID: sourceID, session: session, userID: userID, store: store
+        )
+        await model.warmFromSession()
+        #expect(model.metadata.fieldComboOptions.map(\.label) == ["Author"])
+
+        let workspaceKey = CatalogQueryKey.sourceWorkspace(project: session.projectKey, sourceId: sourceID)
+        let workspaceBefore: QueryHandle<CatalogSourceWorkspace>? = session.queryHandle(workspaceKey)
+        let payloadBefore = workspaceBefore?.value
+
+        store.fieldsByProject[projectDir]?.append(
+            CatalogMetadataField(
+                id: "f-folio", key: "folio", origin: "user", label: "Folio",
+                dataType: "text", description: ""
+            )
+        )
+        session.apply(.createdMetadataField)
+        session.apply(location: WorkspaceLocation(section: .sources, sourceId: sourceID))
+
+        let fieldsHandle: QueryHandle<[CatalogMetadataField]>? = session.queryHandle(
+            .metadataFieldsList(project: session.projectKey)
+        )
+        await settle(try #require(fieldsHandle))
+
+        #expect(model.metadata.fieldComboOptions.map(\.label) == ["Author", "Folio"])
+        // The page payload itself was never refetched.
+        #expect(workspaceBefore?.value == payloadBefore)
+    }
+
+    /// Waits out a cache load (or its stale-while-revalidate refetch).
+    private func settle<Value>(_ handle: QueryHandle<Value>) async {
+        var waited: UInt64 = 0
+        while waited < 2_000_000_000 {
+            if handle.status == .error { return }
+            if handle.status == .ready, !handle.isFetching { return }
+            await Task.yield()
+            try? await Task.sleep(nanoseconds: 10_000_000)
+            waited += 10_000_000
+        }
+    }
+
     @Test func addMetadataRequiresFieldAndValue() async {
         let author = authorField()
         let store = makeStore(fields: [author])

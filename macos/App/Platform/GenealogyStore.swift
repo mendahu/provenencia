@@ -170,11 +170,6 @@ struct CatalogSourceWorkspace: Sendable, Equatable {
     var artifacts: [CatalogArtifact]
     /// Nil when no assessment row (UI may display Standard without a row).
     var credibility: CatalogCredibilityAssessment?
-    /// Page vocabulary folded into the same catalog open so the Source page
-    /// loads with one RPC (type picker, credibility chips, Add-metadata list).
-    var types: [CatalogSourceType] = []
-    var grades: [CatalogCredibilityGrade] = []
-    var fields: [CatalogMetadataField] = []
 }
 
 struct CatalogDateValueInput: Sendable, Equatable {

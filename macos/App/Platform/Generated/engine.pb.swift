@@ -1169,24 +1169,6 @@ public nonisolated struct Provenencia_Engine_V1_GetSourceWorkspaceResponse: @unc
   /// Clears the value of `credibility`. Subsequent reads from it will return its default value.
   public mutating func clearCredibility() {_uniqueStorage()._credibility = nil}
 
-  /// Page vocabulary folded into the same exclusive catalog open so the
-  /// Source page loads with one RPC (types picker, credibility chips, and
-  /// the Add-metadata field list).
-  public var types: [Provenencia_Engine_V1_SourceType] {
-    get {_storage._types}
-    set {_uniqueStorage()._types = newValue}
-  }
-
-  public var grades: [Provenencia_Engine_V1_SourceCredibilityGrade] {
-    get {_storage._grades}
-    set {_uniqueStorage()._grades = newValue}
-  }
-
-  public var fields: [Provenencia_Engine_V1_MetadataField] {
-    get {_storage._fields}
-    set {_uniqueStorage()._fields = newValue}
-  }
-
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -4114,7 +4096,7 @@ nonisolated extension Provenencia_Engine_V1_GetSourceWorkspaceRequest: SwiftProt
 
 nonisolated extension Provenencia_Engine_V1_GetSourceWorkspaceResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GetSourceWorkspaceResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}source\0\u{1}notes\0\u{1}metadata\0\u{1}artifacts\0\u{1}credibility\0\u{1}types\0\u{1}grades\0\u{1}fields\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}source\0\u{1}notes\0\u{1}metadata\0\u{1}artifacts\0\u{1}credibility\0\u{c}\u{6}\u{1}\u{c}\u{7}\u{1}\u{c}\u{8}\u{1}")
 
   fileprivate class _StorageClass {
     var _source: Provenencia_Engine_V1_Source? = nil
@@ -4122,9 +4104,6 @@ nonisolated extension Provenencia_Engine_V1_GetSourceWorkspaceResponse: SwiftPro
     var _metadata: [Provenencia_Engine_V1_MetadataWorkspaceEntry] = []
     var _artifacts: [Provenencia_Engine_V1_Artifact] = []
     var _credibility: Provenencia_Engine_V1_SourceCredibilityAssessment? = nil
-    var _types: [Provenencia_Engine_V1_SourceType] = []
-    var _grades: [Provenencia_Engine_V1_SourceCredibilityGrade] = []
-    var _fields: [Provenencia_Engine_V1_MetadataField] = []
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -4140,9 +4119,6 @@ nonisolated extension Provenencia_Engine_V1_GetSourceWorkspaceResponse: SwiftPro
       _metadata = source._metadata
       _artifacts = source._artifacts
       _credibility = source._credibility
-      _types = source._types
-      _grades = source._grades
-      _fields = source._fields
     }
   }
 
@@ -4166,9 +4142,6 @@ nonisolated extension Provenencia_Engine_V1_GetSourceWorkspaceResponse: SwiftPro
         case 3: try { try decoder.decodeRepeatedMessageField(value: &_storage._metadata) }()
         case 4: try { try decoder.decodeRepeatedMessageField(value: &_storage._artifacts) }()
         case 5: try { try decoder.decodeSingularMessageField(value: &_storage._credibility) }()
-        case 6: try { try decoder.decodeRepeatedMessageField(value: &_storage._types) }()
-        case 7: try { try decoder.decodeRepeatedMessageField(value: &_storage._grades) }()
-        case 8: try { try decoder.decodeRepeatedMessageField(value: &_storage._fields) }()
         default: break
         }
       }
@@ -4196,15 +4169,6 @@ nonisolated extension Provenencia_Engine_V1_GetSourceWorkspaceResponse: SwiftPro
       try { if let v = _storage._credibility {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
       } }()
-      if !_storage._types.isEmpty {
-        try visitor.visitRepeatedMessageField(value: _storage._types, fieldNumber: 6)
-      }
-      if !_storage._grades.isEmpty {
-        try visitor.visitRepeatedMessageField(value: _storage._grades, fieldNumber: 7)
-      }
-      if !_storage._fields.isEmpty {
-        try visitor.visitRepeatedMessageField(value: _storage._fields, fieldNumber: 8)
-      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -4219,9 +4183,6 @@ nonisolated extension Provenencia_Engine_V1_GetSourceWorkspaceResponse: SwiftPro
         if _storage._metadata != rhs_storage._metadata {return false}
         if _storage._artifacts != rhs_storage._artifacts {return false}
         if _storage._credibility != rhs_storage._credibility {return false}
-        if _storage._types != rhs_storage._types {return false}
-        if _storage._grades != rhs_storage._grades {return false}
-        if _storage._fields != rhs_storage._fields {return false}
         return true
       }
       if !storagesAreEqual {return false}

@@ -48,7 +48,7 @@ final class SourceMetadataSection {
 
     var fieldComboOptions: [PVComboBoxOption] {
         let used = Set(entries.map(\.field.id))
-        return (context.workspace?.fields ?? [])
+        return context.fields
             .filter { !used.contains($0.id) }
             .map { PVComboBoxOption(value: $0.id, label: $0.label, subtext: $0.key) }
     }
@@ -337,6 +337,6 @@ final class SourceMetadataSection {
             context.workspace?.metadata.append(entry)
         }
         drafts[entry.field.id] = entry.valueText
-        context.notifyWorkspaceMutated()
+        context.notifyMetadataMutated()
     }
 }

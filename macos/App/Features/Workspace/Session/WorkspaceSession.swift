@@ -68,14 +68,19 @@ final class WorkspaceSession {
         }
     }
 
-    /// Patch list row + cached workspace on identity/cover save; bust keys for other mutations.
+    /// Patches the list row + cached page shell on identity/cover save, then
+    /// busts whatever else the registry says the write reached. Patching first
+    /// keeps the edit on screen while a busted page revalidates.
     func apply(_ mutation: CatalogMutation) {
-        switch mutation {
-        case .updatedSource(let source):
+        if let source = mutation.patchedSource {
             patchUpdatedSource(source)
-        default:
-            for key in registry.keysAffected(by: mutation, project: projectKey) {
+        }
+        for invalidation in registry.invalidations(by: mutation, project: projectKey) {
+            switch invalidation {
+            case .key(let key):
                 invalidate(key)
+            case .allCached(let kind):
+                invalidateAll { $0.kind == kind && $0.project == projectKey }
             }
         }
     }
@@ -133,6 +138,8 @@ final class WorkspaceSession {
             let _: QueryHandle<[CatalogSourceType]> = query(key)
         case .metadataFieldsList:
             let _: QueryHandle<[CatalogMetadataField]> = query(key)
+        case .credibilityGradesList:
+            let _: QueryHandle<[CatalogCredibilityGrade]> = query(key)
         case .sourceWorkspace:
             let _: QueryHandle<CatalogSourceWorkspace> = query(key)
         case .typeSuggestions:

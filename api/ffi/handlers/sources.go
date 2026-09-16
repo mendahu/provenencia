@@ -8,11 +8,8 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/files"
-	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
-	"github.com/mendahu/provenencia/core/database/sourcefields"
 	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/database/sources"
-	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -74,18 +71,6 @@ func GetSourceWorkspace(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		types, err := sourcetypes.List(c)
-		if err != nil {
-			return err
-		}
-		grades, err := sourcecredibilitygrades.List(c)
-		if err != nil {
-			return err
-		}
-		fields, err := sourcefields.List(c)
-		if err != nil {
-			return err
-		}
 
 		sp, err := enrichSourceProto(c, s)
 		if err != nil {
@@ -100,15 +85,6 @@ func GetSourceWorkspace(in []byte) ([]byte, error) {
 		}
 		out.Artifacts = arts
 		out.Credibility = cred
-		for _, t := range types {
-			out.Types = append(out.Types, sourceTypeProto(t))
-		}
-		for _, g := range grades {
-			out.Grades = append(out.Grades, credibilityGradeProto(g))
-		}
-		for _, f := range fields {
-			out.Fields = append(out.Fields, metadataFieldProto(f))
-		}
 		return nil
 	})
 	if err != nil {

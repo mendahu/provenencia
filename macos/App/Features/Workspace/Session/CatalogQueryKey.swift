@@ -6,6 +6,7 @@ enum CatalogQueryKey: Hashable, Sendable {
     case sourcesList(project: ProjectKey)
     case sourceTypesList(project: ProjectKey)
     case metadataFieldsList(project: ProjectKey)
+    case credibilityGradesList(project: ProjectKey)
     case sourceWorkspace(project: ProjectKey, sourceId: String)
     case typeSuggestions(project: ProjectKey, typeId: String)
 
@@ -14,6 +15,7 @@ enum CatalogQueryKey: Hashable, Sendable {
         case sourcesList
         case sourceTypesList
         case metadataFieldsList
+        case credibilityGradesList
         case sourceWorkspace
         case typeSuggestions
     }
@@ -26,6 +28,8 @@ enum CatalogQueryKey: Hashable, Sendable {
             return .sourceTypesList
         case .metadataFieldsList:
             return .metadataFieldsList
+        case .credibilityGradesList:
+            return .credibilityGradesList
         case .sourceWorkspace:
             return .sourceWorkspace
         case .typeSuggestions:
@@ -38,6 +42,7 @@ enum CatalogQueryKey: Hashable, Sendable {
         case .sourcesList(let project),
              .sourceTypesList(let project),
              .metadataFieldsList(let project),
+             .credibilityGradesList(let project),
              .sourceWorkspace(let project, _),
              .typeSuggestions(let project, _):
             project

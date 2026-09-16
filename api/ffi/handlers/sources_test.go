@@ -181,7 +181,7 @@ func unmarshalSetMetadataEntry(t *testing.T, raw []byte) *engine.MetadataWorkspa
 func TestGetSourceWorkspace(t *testing.T) {
 	runRPC(t, GetSourceWorkspace, []rpcTest{
 		{
-			name: "workspace folds in types, grades, and fields",
+			name: "workspace reads source-specific data only",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, typeID := sourceFixture(t)
 				cout, err := CreateSource(marshalProto(t, &engine.CreateSourceRequest{
@@ -204,14 +204,11 @@ func TestGetSourceWorkspace(t *testing.T) {
 				if resp.Source.GetTitle() != "Book" {
 					t.Fatalf("source %+v", resp.Source)
 				}
-				if len(resp.Types) == 0 {
-					t.Fatal("expected seeded source types on workspace")
-				}
-				if len(resp.Grades) == 0 {
-					t.Fatal("expected seeded credibility grades on workspace")
-				}
-				if len(resp.Fields) == 0 {
-					t.Fatal("expected seeded metadata fields on workspace")
+				// The type's seeded suggestions still arrive as empty
+				// metadata rows — that join is per-source, unlike the
+				// vocabulary lists, which each have their own RPC.
+				if len(resp.Metadata) == 0 {
+					t.Fatal("expected suggested metadata rows for the seeded type")
 				}
 			},
 		},

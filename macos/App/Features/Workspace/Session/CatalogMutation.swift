@@ -5,6 +5,11 @@ enum CatalogMutation: Sendable, Equatable {
     /// Patch path: update list row + cached workspace shell synchronously.
     case updatedSource(CatalogSource)
 
+    /// Patch the same shell as `updatedSource`, then bust: the engine derives a
+    /// source's suggested metadata rows from its type, and counts sources per
+    /// type, so neither survives the move.
+    case changedSourceType(CatalogSource)
+
     case createdSource
 
     case createdSourceType
@@ -18,12 +23,17 @@ enum CatalogMutation: Sendable, Equatable {
     case assignedTypeSuggestion(typeId: String)
     case removedTypeSuggestion(typeId: String)
 
-    /// Bust-only: non-identity source page edits (metadata, notes, artifacts).
+    /// Bust-only: non-identity source page edits (notes, artifacts, credibility).
     case mutatedSourceWorkspace(sourceId: String)
+
+    /// Metadata values for one source changed. Narrower than
+    /// `mutatedSourceWorkspace` because it also moves each field's `usedBy`.
+    case mutatedSourceMetadata(sourceId: String)
 }
 
 /// Mutation kind for registry invalidation tags (no associated payload).
 enum CatalogMutationKind: Hashable, Sendable {
+    case changedSourceType
     case createdSource
     case createdSourceType
     case updatedSourceType
@@ -34,6 +44,7 @@ enum CatalogMutationKind: Hashable, Sendable {
     case assignedTypeSuggestion
     case removedTypeSuggestion
     case mutatedSourceWorkspace
+    case mutatedSourceMetadata
 }
 
 extension CatalogMutation {
@@ -42,6 +53,8 @@ extension CatalogMutation {
         switch self {
         case .updatedSource:
             return nil
+        case .changedSourceType:
+            return .changedSourceType
         case .createdSource:
             return .createdSource
         case .createdSourceType:
@@ -62,6 +75,18 @@ extension CatalogMutation {
             return .removedTypeSuggestion
         case .mutatedSourceWorkspace:
             return .mutatedSourceWorkspace
+        case .mutatedSourceMetadata:
+            return .mutatedSourceMetadata
+        }
+    }
+
+    /// Enriched Source to patch into the cached list row and page shell, if any.
+    var patchedSource: CatalogSource? {
+        switch self {
+        case .updatedSource(let source), .changedSourceType(let source):
+            return source
+        default:
+            return nil
         }
     }
 }

@@ -96,6 +96,19 @@ In `Session/`:
 - Register in [`CatalogQueryRegistry`](../../../macos/App/Features/Workspace/Session/CatalogQueryRegistry.swift): loader calling `GenealogyStore`, `invalidateOn` mutation tags.
 - Wire `WorkspaceSession.warmQuery` switch arm if the key kind is new.
 
+**One cache owns each list — do not fold a shared list into a page payload.**
+A deep page composes its own key plus the shared list keys it reads (see the
+`sourceDetail` spec), so a vocabulary edit invalidates one list and no pages. The
+held `catalogsession` makes the extra RPCs cheap, and the lists are usually already
+warm from the sidebar.
+
+**Then tag every mutation whose reply changes any *derived* part of a payload, not
+just the part the write names.** A `CatalogTypeSuggestion` carries a whole field
+row; `workspace.metadata` is a Go-computed join over the type's suggestions; counts
+like `usedBy` / `suggestedFieldCount` move when a different table is written. If the
+mutation names no single owner for an id-bearing key, `Kind.invalidation` returns
+`.allCached(kind)` and every cached key of that kind is busted.
+
 Add [`CatalogQueryRegistryTests`](../../../macos/ProvenenciaTests/CatalogQueryRegistryTests.swift) coverage for load + invalidation.
 
 ### 4. Presentation + host
@@ -147,8 +160,11 @@ sync apply from history after list is ready; `fallbackToSectionRoot()` if deep i
 ### 6. Mutations from section models
 
 - Identity/cover/title: `session.apply(.updatedSource(source))` (patches list + workspace).
+- Source type moved: `context.applySource(updated, typeChanged: true)` — patches the row, then refetches the page because the engine derives suggested rows from the type.
+- Metadata values: `context.notifyMetadataMutated()` (also busts the field list's `usedBy`).
 - Other page edits: `context.notifyWorkspaceMutated()` → bust `sourceWorkspace` key.
-- Vocabulary CRUD: registry `invalidateOn` + list patch where cheap.
+- Vocabulary CRUD: registry `invalidateOn` + list patch where cheap. A patch is an
+  optimization on top of invalidation, never a substitute for it.
 
 ### 7. Tests
 
