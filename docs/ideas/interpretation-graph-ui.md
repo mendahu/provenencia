@@ -230,17 +230,16 @@ The counter-argument is that a structured editing path built first may be "good 
 
 # 11. Naming
 
-The view needs a name that is not "graph" (too mathematical, and it collides with "family tree graph") and not "canvas" (implies drawing, not asserting).
+**Decided: Interpretation graph.** It matches the layer name and the data model's own language — the Interpretation layer *is* "a cited property graph" ([`interpretation-layer-data-model.md`](../interpretation-layer-data-model.md) §1.2), so the UI name and the schema vocabulary agree instead of introducing a third word for the same thing. Layer vocabulary stays intact inside it: Citations, Observations, and Nodes keep their names.
 
-| Candidate | Reads as |
+Considered and set aside:
+
+| Candidate | Why not |
 | --- | --- |
-| **Interpretation map** | Consistent with the layer name; "map" implies fidelity to a territory, which is the point. |
-| **Source map** | Emphasizes the Source scope; risks sounding like geography, which is awkward given `place` Nodes. |
-| **Evidence map** | Warm and legible to non-experts, but "evidence" is closer to the Source layer in our vocabulary. |
-| Interpretation graph | Accurate, matches the data model's own language, but jargon-forward for UI chrome. |
-| Worksheet | Plays down the visual, plays up the per-Source work session. Possibly too humble. |
-
-Leaning **Interpretation map**, with the layer vocabulary kept intact (Citations, Observations, Nodes keep their names inside it).
+| Interpretation map | "Map" reads well but adds a term the data model does not use. |
+| Source map | Emphasizes Source scope, but sounds geographic — awkward alongside `place` Nodes. |
+| Evidence map | Legible to non-experts, but "evidence" sits closer to the Source layer in our vocabulary. |
+| Worksheet | Plays down the visual and plays up the work session; too humble for the layer's primary surface. |
 
 ---
 
