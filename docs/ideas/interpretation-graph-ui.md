@@ -161,6 +161,36 @@ The reason bridges differ: if we persisted a bridge Node and the researcher then
 
 DateValue is in much better shape, which makes it easy to assume names are too. They are not. Building NameValue end to end is its own chunk of work sitting directly on the critical path of "record a person's name," and it should be planned explicitly rather than discovered in the middle of a slice.
 
+## 4.5 Should Citation and Observation be one-to-one?
+
+Considered and **rejected** — but the reasoning is worth recording, because the simplicity argument is real and the decision is hard to reverse.
+
+The proposal: enforce one Citation per Observation, rather than letting one Citation support many. Taken far enough, the two tables could merge into one row carrying artifact, locator, transcription, subject Node, Property, polarity, and value.
+
+**What it would genuinely buy.** No "reuse this Citation or make a new one?" picker. Trivial deletion, with no shared-Citation refcounting and no orphaned Citations. No Citation-with-zero-Observations state to explain. One `ref` per assertion instead of a `CIT-…` and an `OBS-…`. If merged, one fewer table and one notes table instead of two. None of that is nothing.
+
+**What it would cost: duplicated evidence, which is the one thing this layer exists to prevent.** Take a census line — *"William Robins, carpenter, aged 43, b. Somerset"* — yielding four Observations:
+
+- **Four copies of the same `transcription`.** Correcting a misreading becomes four edits, and the four copies can drift. Divergent transcriptions of one line is corruption *in the evidence record*, which is the worst possible place for it.
+- **Four copies of `locator_json`**, including four hand-drawn region polygons that will not be identical. Four Observations would then claim slightly different evidence for what was one act of reading.
+- **Four settings of `transcription_uncertain` / `transcription_note`.** "Surname damaged" is a property of the reading, not of each fact derived from it.
+- **`citation_notes` loses its subject.** "This line is in a different hand" is commentary about the evidence, not about the name assertion.
+- **Audit noise.** Fixing a reading becomes N revisions across N rows instead of one audited act of correcting one transcription.
+
+**Cases already written into the model docs that 1:1 cannot express without duplication:**
+
+- [`interpretation-layer-data-model.md`](../interpretation-layer-data-model.md) §7 — one Citation `C1` supporting `name`, `occupation`, and `birth_date` on one person.
+- §6 — one letter Citation `L1` supporting a `remark` about a **source** Node *and* a positive/negative `birth_date` pair about a **person** Node. That is one reading yielding four Observations across two different subject Nodes, where the positive/negative pair is only meaningful *as a pair*.
+- A census household block: one region selector, six person Nodes.
+
+**It also damages the canvas design specifically.** The connect tool writes two or three Observations per gesture (the bridge's `participant` edges plus its type). Under 1:1, "these two are cousins" becomes three Citations — three locators and three transcriptions for a single reading — and the macro stops being a macro. The pinned Citation in §6.1 would have nothing to pin, so the hot path gets *more* expensive, not less: a six-person household with five facts each is thirty Observations, meaning thirty locator selections and thirty transcriptions instead of roughly six.
+
+**The asymmetry that settles it.** One-to-many can *behave* as one-to-one. One-to-one cannot later become one-to-many without retroactively guessing which duplicate Citations were "really" the same Citation, by comparing locators and transcriptions — lossy and ambiguous. For a product whose data is meant to outlive the application, take the reversible option.
+
+**And the complexity being avoided is already small.** Invariant 7 already states that every Observation is supported by exactly one Citation, so the Observation side *is* one-to-one. The only multiplicity is on the read side, and it is a plain foreign key. The UI cost is not a schema problem; it is a single affordance — a visible "current Citation."
+
+**Recommendation: one-to-one by default, sharing opt-in.** Every Add Property starts a fresh Citation unless one is pinned. A researcher who never pins never encounters Citations as shared objects, and gets exactly the simple model the question was after. A researcher working a census pins one and gets the speedup. No schema change, no lost capability.
+
 ---
 
 # 5. Layout state
@@ -333,4 +363,5 @@ Considered and set aside:
 - Can one graph span Sources (a "case view"), or is Source scope hard?
 - Are `source` Nodes and source-to-source `mentions` edges on this canvas, or a different view?
 - Does the person → person disambiguation (§3.2) earn its complexity, or should person → person simply always mean `relationship` and let shared-event modelling go through the event bubble?
+- Is a Citation with zero Observations a legal, useful state — "I transcribed this line, I have not interpreted it yet" — or should the composer refuse to save a Citation that asserts nothing? This is the one real loose end left by keeping one-to-many (§4.5), and it is a UI policy question rather than a schema one.
 - How does Conclusion-layer work ([`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md)) surface here later — same canvas with a layer toggle, or a separate reconciliation view? "Not now" is fine; "never" would be a mistake.
