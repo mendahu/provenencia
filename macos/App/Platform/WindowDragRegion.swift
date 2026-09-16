@@ -1,17 +1,26 @@
 @preconcurrency import AppKit
 import SwiftUI
 
-/// Transparent AppKit overlay that turns mouse-downs into window moves.
+/// Where a `WindowDragRegion` sits relative to the view's own content.
+enum PVWindowDragPlacement {
+    /// On top of everything. Only for chrome with no interactive controls
+    /// of its own (e.g. the sidebar brand row) — an overlay swallows the
+    /// hover and clicks of anything beneath it.
+    case overlay
+    /// Behind the view's content, so controls keep their own clicks and
+    /// only the space around them drags the window. What a row like
+    /// `WorkspaceToolbar` needs: its buttons are ~26pt tall inside a 52pt
+    /// row, and without this the strips above and below them are dead.
+    case behindContent
+}
+
+/// Transparent AppKit surface that turns mouse-downs into window moves.
 ///
 /// With `.windowStyle(.hiddenTitleBar)`, AppKit still only treats roughly
 /// the system title-bar strip as a drag region. Our workspace header is
 /// taller (`WorkspaceChrome.headerHeight`), so clicks in the lower part
 /// of that visual row would otherwise do nothing. `WindowDragGesture` is
 /// macOS 15+; this is the macOS 14-compatible escape hatch.
-///
-/// **Only** attach over chrome with no interactive controls of its own
-/// (e.g. the sidebar brand row). A full-row overlay on `WorkspaceToolbar`
-/// steals hover/clicks from Back/Forward, breadcrumbs, and the omnibar.
 private struct WindowDragRegion: NSViewRepresentable {
     @MainActor
     func makeNSView(context: Context) -> NSView {
@@ -33,14 +42,28 @@ private struct WindowDragRegion: NSViewRepresentable {
 
 extension View {
     /// Makes the view's full bounds a window-drag surface (see
-    /// `WindowDragRegion`). Attach only to header chrome that has **no**
-    /// interactive SwiftUI controls — the overlay sits on top and will
-    /// otherwise swallow hits.
-    func pvWindowDragRegion() -> some View {
-        overlay {
-            WindowDragRegion()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .accessibilityHidden(true)
+    /// `WindowDragRegion`). Use `.behindContent` on any row that has
+    /// interactive SwiftUI controls; `.overlay` swallows their hits.
+    func pvWindowDragRegion(_ placement: PVWindowDragPlacement = .overlay) -> some View {
+        modifier(WindowDragRegionModifier(placement: placement))
+    }
+}
+
+private struct WindowDragRegionModifier: ViewModifier {
+    let placement: PVWindowDragPlacement
+
+    func body(content: Content) -> some View {
+        switch placement {
+        case .overlay:
+            content.overlay { region }
+        case .behindContent:
+            content.background { region }
         }
+    }
+
+    private var region: some View {
+        WindowDragRegion()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .accessibilityHidden(true)
     }
 }

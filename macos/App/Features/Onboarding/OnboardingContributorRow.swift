@@ -58,6 +58,10 @@ struct OnboardingContributorRow: View {
                         .frame(height: 1)
                 }
             }
+            // The row reads as one card, so the whole card has to be
+            // clickable — without this the button's hit area is only the
+            // radio dot and the text, and the space around them is dead.
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
