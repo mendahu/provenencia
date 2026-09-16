@@ -258,6 +258,35 @@ It is not a silly idea. The reasons not to take it: it puts a type-specific colu
 
 That is arguably fine and even useful — an unheld Source is a legitimate research to-do, and the Source layer already permits Sources with no Artifacts. But it has a consequence: if two Sources each mention what might be the same unheld document, resolving that means **merging Sources**, which is a Source-layer operation that does not exist. Not a blocker for the graph slices, but it belongs on the list before `mentions` ships.
 
+### Keep Sources off the canvas — but as a UI decision, not a schema change
+
+The thematic objection is correct: the Interpretation graph is about historical persons, events, and places. A bubble representing "the marriage certificate in my filing cabinet" is a category error on that surface — it is a research object, not a historical entity. The `source` Node Type is already slightly embarrassed about itself in the model, which warns that it "must not use `SRC`; a distinct prefix such as `SRN` keeps Source catalog refs distinguishable from source-Nodes in speech."
+
+But two decisions are easy to conflate here, and only one of them is cheap:
+
+| Decision | Cost |
+| --- | --- |
+| **(a)** Don't render `source`-type Nodes on the canvas | **Free.** The graph query is ours to write: filter to `node_type != source AND source_id = <this Source>`. |
+| **(b)** Stop modelling source commentary as Observations, and have Citations point at `sources` directly | **Expensive**, and it breaks documented behavior — see below. |
+
+**Take (a). Do not take (b).** They are independent: the data model can keep `source` Nodes and `remark` / `mentions` Observations exactly as designed while the canvas simply never draws them. Source-to-source commentary then lives where a researcher would actually look for it — a "what other Sources say about this one" section on the Source page — and the canvas stays about people, events, and places.
+
+### Why (b) costs more than it looks
+
+**It breaks Conclusion exhibit.** Both `sameness_claim_evidence` and `reconciliation_claim_evidence` are `observation_id … REFERENCES observations(id)`, and the Conclusion doc is explicit: "Exhibit pins are **Observations only** for now — not Citations, Sources, or other Claims." Conclusion §12.2's worked example pins "the birth_date Observations (and related letter Observations as needed)" — and the related letter Observation *is* `SC -- remark --> "date of birth on certificate mistyped"`. Move remarks out of `observations` and that exhibit path stops existing. "The letter says this certificate is a forgery" is exactly the kind of thing a researcher needs to pin to a Reconciliation Claim.
+
+**It closes an open vocabulary.** `remark` and `mentions` are ordinary Properties today, so a researcher can add `supersedes`, `is_transcription_of`, or `derived_from` with no migration — precisely the §1.3 extensibility promise. A bespoke `source_remarks` table freezes that vocabulary at whatever columns it ships with.
+
+**It duplicates the evidence machinery.** A second Citation-backed assertion table means a second ref prefix, its own audit wiring, its own notes table, its own FFI surface, its own search projection, and a second thing that has to stay consistent with Citations forever.
+
+**And the polymorphic alternative is worse.** Adding `subject_source_id` alongside `subject_node_id` on `observations` breaks invariant 9 ("exactly one subject Node") and makes the subject a sparse polymorphic pair that every reader must handle — importing the value-column problem into the subject position, on the layer's most important table.
+
+### On making a canonical entity for a Source
+
+Also considered: bridge the gap by giving each Source a `canonical_entities` row, so `source` Nodes could resolve through the ordinary Conclusion machinery.
+
+This is the wrong direction. A Source **already has canonical identity** — a row in `sources` and a public `SRC-…` ref. Adding a canonical entity would create a *second* canonical handle for one document, with two refs, two merge stories, and a synchronization rule between them. The Conclusion doc's "Reification `source` Nodes are not typically given canonical rows" is guarding exactly that. The catalog is the canonical layer for Sources; Conclusion is the canonical layer for historical things that only exist as inference.
+
 ### What this means for the canvas
 
 | Decision | Call |
@@ -265,9 +294,11 @@ That is arguably fine and even useful — an unheld Source is a legitimate resea
 | Enforce same-Source Observations in the schema | **No.** It costs a trigger to add, breaks `mentions` / `remark`, and contradicts the model's stated posture. The permissive model is a superset that costs nothing to keep. |
 | Show foreign Nodes on the canvas in early slices | **No.** Scope the graph query to `nodes.source_id = ?`. Free, and it removes the two-payload cache hazard in §5.3. |
 | Offer "attach this to a person from another Source" | **Never.** The canvas should not make the epistemically wrong thing easy. Create a candidate here; claim sameness later. |
-| Cross-source display when source-to-source commentary lands | Scope it to **`source`-type Nodes only** — a far narrower case than "any Node from any Source," and the only one with a real requirement behind it. |
+| Render `source`-type Nodes on the canvas | **No, ever.** Source-to-source commentary belongs on the Source page, not the graph. That removes the last reason the canvas would ever need cross-source display, and it is a query filter, not a schema change. |
 
 The honest cost of this posture: a researcher working twenty census years on one family creates twenty person Nodes for the same man and reconciles them in the Conclusion layer. That friction is *designed* — it is what keeps each Source's testimony independent — but it is real, and it is the strongest argument for making Sameness Claims a pleasant workflow when that layer arrives. The canvas should not route around it.
+
+**Net effect on the graph slices:** with `source` Nodes off the canvas, every Node the canvas draws is homed to the open Source, so the graph query is `source_id = ?` with no exceptions, the two-payload cache hazard in §5.3 never arises, and cross-source Observations remain legal in the model without ever being the canvas's problem.
 
 ---
 
