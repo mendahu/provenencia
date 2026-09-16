@@ -106,7 +106,7 @@ Selected user-facing entities receive a required short human-readable `ref`. Can
 
 # 3. Design summary
 
-Interpretation is a cited property graph (Nodes, Observations, Citations). Conclusion adds working handles and two claim verbs. The family tree and maps are **views** over that graph.
+Interpretation is a cited property graph (Nodes, Observations, Citations). Conclusion adds working handles and two claim verbs. The family tree, timeline, and map pins are **views** over that graph — **projections** in the proposed Narrative layer ([`narrative-layer-data-model.md`](narrative-layer-data-model.md) §4–§6). Conclusion owns the relationships and committed values those views read; saved layouts, prose, and curated map compositions would live downstream in Narrative when that layer ships.
 
 ```text
 Observations ──subject──► Node ◄──same_as──► other Nodes

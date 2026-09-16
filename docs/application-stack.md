@@ -696,7 +696,7 @@ If commercialization later warrants Windows support, a native Windows client can
 
 The architecture prioritizes local-first operation, ownership, privacy, interoperability, and long-term durability while preserving a practical route to a multi-platform commercial product.
 
-Authoritative domain schemas: [`source-layer-data-model.md`](source-layer-data-model.md), [`interpretation-layer-data-model.md`](interpretation-layer-data-model.md), [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md). This document owns runtime and packaging, not table shapes.
+Authoritative domain schemas: [`source-layer-data-model.md`](source-layer-data-model.md), [`interpretation-layer-data-model.md`](interpretation-layer-data-model.md), [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md), and (exploratory) [`narrative-layer-data-model.md`](narrative-layer-data-model.md). This document owns runtime and packaging, not table shapes.
 
 ---
 
