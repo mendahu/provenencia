@@ -193,6 +193,57 @@ The proposal: enforce one Citation per Observation, rather than letting one Cita
 
 **Recommendation: one-to-one by default, sharing opt-in.** Every Add Property starts a fresh Citation unless one is pinned. A researcher who never pins never encounters Citations as shared objects, and gets exactly the simple model the question was after. A researcher working a census pins one and gets the speedup. No schema change, no lost capability.
 
+## 4.6 Cross-source Nodes: what they are actually for
+
+Worth pinning down, because the obvious guess about why they exist is wrong, and that changes what the canvas should offer.
+
+### It is not a feature — it is a constraint we did not add
+
+There is no cross-source machinery in the schema. `nodes.source_id` is an ordinary column, and nothing anywhere confines an Observation's Citation to the subject Node's home Source. The interpretation model says so directly: `source_id` "exists so the application can efficiently surface Nodes that belong with a given Source during common same-source workflows. It does not restrict which Citations or Observations may reference the Node." Invariant 3 repeats it.
+
+So "removing it" does not mean deleting code. It means **adding** enforcement — and SQLite cannot express it as a `CHECK`, because the rule spans `observations` → `citations` → `artifacts` → `sources` and back to `nodes.source_id`. It would be a trigger or an application invariant, and it would run against the grain of §1.2 ("the database should enforce generic graph integrity… it should not attempt to encode the entire genealogy ontology into rigid table structure") and of the existing posture that even target Node Type constraints are application invariants rather than SQL allow-lists.
+
+### Consolidating a person across Sources is *not* the reason
+
+This is the guess worth killing. If two Sources describe the same man, the architected answer is **one Node per Source plus a Sameness Claim** — not one shared Node. Both worked examples in [`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md) do exactly that:
+
+```text
+§12.1   Node N1 (home = photograph), Node N2 (home = testimony)
+        sameness_claim: N1 same_as N2 (accepted) → members(E1) = {N1, N2}
+
+§12.2   Node NC (home = certificate), Node NL (home = letter)
+        sameness_claim: NC same_as NL (accepted)
+        reconciliation_claim on E, birth_date → 2 JAN 1800
+```
+
+And the Conclusion layer already solves the follow-on problem too: separation 4 in its §3 states that a Reconciliation Claim's exhibit "Observations may be about **other** Nodes; they are not retargeted." So evidence recorded against one Source's Node can support a conclusion about the shared entity without anything being rewritten or shared.
+
+Using a cross-source Observation to consolidate people would actively **damage** the model: it attaches Source B's assertion to a Node whose identity came from Source A, destroying the per-Source "what does this one source appear to say" guarantee that the entire layer exists to protect.
+
+### The one thing that genuinely requires it
+
+**Source-to-source commentary.** A `source` Node reifies exactly one Source row, and §4.2 says the application "should maintain at most one `source` Node per Source." So when a book mentions a certificate:
+
+```text
+Book Citation B1:   SB1 -- mentions --> SC1
+Letter Citation L1:  SC1 -- remark --> "date of birth on certificate mistyped"
+```
+
+`SC1` is homed to the certificate while the Citation sits under the book or the letter. That is cross-source by construction and there is no same-source way to say it. The only workaround would be minting a second `source` Node for the certificate under each citing Source — which breaks the at-most-one rule and would mean reconciling duplicate reifications of a row whose `id` is sitting right there.
+
+Note the shape: in `mentions` the foreign Node is in the **object** position (`value_node_id`); in `remark` it is the **subject**. Both occur.
+
+### What this means for the canvas
+
+| Decision | Call |
+| --- | --- |
+| Enforce same-Source Observations in the schema | **No.** It costs a trigger to add, breaks `mentions` / `remark`, and contradicts the model's stated posture. The permissive model is a superset that costs nothing to keep. |
+| Show foreign Nodes on the canvas in early slices | **No.** Scope the graph query to `nodes.source_id = ?`. Free, and it removes the two-payload cache hazard in §5.3. |
+| Offer "attach this to a person from another Source" | **Never.** The canvas should not make the epistemically wrong thing easy. Create a candidate here; claim sameness later. |
+| Cross-source display when source-to-source commentary lands | Scope it to **`source`-type Nodes only** — a far narrower case than "any Node from any Source," and the only one with a real requirement behind it. |
+
+The honest cost of this posture: a researcher working twenty census years on one family creates twenty person Nodes for the same man and reconciles them in the Conclusion layer. That friction is *designed* — it is what keeps each Source's testimony independent — but it is real, and it is the strongest argument for making Sameness Claims a pleasant workflow when that layer arrives. The canvas should not route around it.
+
 ---
 
 # 5. Layout state
@@ -352,7 +403,7 @@ That outline pays for itself twice, because XCUITest cannot meaningfully drive a
 7. **NameValue end to end** (§4.4) — schema, Go, and editor, on the critical path.
 8. **Locator validation in Go**, with the full invariant set, before any UI writes `locator_json`.
 9. **Coordinate conversion** under magnification (§7.2) — one seam, unit-tested.
-10. **Cross-source Nodes** — a Node homed to another Source can legitimately appear here; ghost styling, and whether it is editable in this graph.
+10. **Cross-source Nodes** — scoped out of the early slices and limited to `source`-type Nodes when they arrive; see §4.6 for why they exist at all and why the canvas must not offer person reuse across Sources.
 11. **Cache strategy** for a large, constantly mutated graph payload.
 12. **Navigation history** — the graph is a place ([`add-workspace-location`](../../.cursor/skills/add-workspace-location/SKILL.md)); camera and selection probably are not. `WorkspaceLocation` is a flat struct of optional ids and needs new fields plus an identity decision.
 13. **Undo** — one connect gesture writes several rows and people will hit ⌘Z. The audit model already says undo is a forward revision, not a deletion ([`audit-revision-history.md`](../audit-revision-history.md) §9), so undo is a Go concern, not an `UndoManager` concern.
@@ -437,9 +488,9 @@ Considered and set aside:
 
 # 13. Open questions
 
-- Does the canvas *create* root Nodes only, or also adopt Nodes created elsewhere (imports, other Sources)?
-- Can one graph span Sources (a "case view"), or is Source scope hard?
-- Are `source` Nodes and source-to-source `mentions` edges on this canvas, or a different view?
+- Does the canvas *create* root Nodes only, or also adopt Nodes created elsewhere (imports)? Cross-Source adoption is answered in §4.6: no.
+- Can one graph span Sources (a "case view")? Source scope should be hard for editing; a read-only multi-Source view is a different feature and would need the Conclusion layer to be meaningful.
+- Are `source` Nodes and source-to-source `mentions` edges on this canvas, or a different view? This is the one place cross-source display is actually required (§4.6).
 - Does the person → person disambiguation (§3.2) earn its complexity, or should person → person simply always mean `relationship` and let shared-event modelling go through the event bubble?
 - Is a Citation with zero Observations a legal, useful state — "I transcribed this line, I have not interpreted it yet" — or should the composer refuse to save a Citation that asserts nothing? This is the one real loose end left by keeping one-to-many (§4.5), and it is a UI policy question rather than a schema one.
 - How does Conclusion-layer work ([`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md)) surface here later — same canvas with a layer toggle, or a separate reconciliation view? "Not now" is fine; "never" would be a mistake.
