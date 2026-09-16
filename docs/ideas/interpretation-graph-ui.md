@@ -57,7 +57,8 @@ The codebase has **no prior art for either half of this**. Worth stating plainly
 | Artifact rendering | Nothing. No PDFKit, no QuickLook, no AVKit. Files/Artifacts have thumbnails ([`core/derivatives`](../../core/derivatives/)) and a list row; nobody has ever *opened* an Artifact in the app. |
 | Locator capture | Nothing. The selector vocabulary (`page`, `region`, `text_quote`, `time_range`) is fully specified and entirely unimplemented. |
 | Structured NameValue | **Nothing, in either language.** `name_values` has no migration, no Go package, and no Swift editor — see §4.4. |
-| Structured DateValue | Partial: [`Features/Dates/`](../../macos/App/Features/Dates/) has `DateValueDraft` + editor form; [`core/database/datevalues`](../../core/database/datevalues/) exists. |
+| Structured DateValue | **Done.** [`core/database/datevalues`](../../core/database/datevalues/) plus `DateValueDraft` / `DateValueEditorForm` in [`Features/Dates/`](../../macos/App/Features/Dates/), already wired into `SourcePageMetadataView`. The template for NameValue. |
+| Typed value dispatch | Nothing. Source metadata is `value_text` + optional `date_value_id`; no `value_type` enum exists in the product — see §11.1. |
 | Interpretation vocabulary browser | Reusable shell exists (`CatalogVocabulary`, `PVTable`, origin markers). |
 | Interpretation schema / Go / FFI | Nothing. Migrations stop at `000020.sql`; no `nodes`, `citations`, `observations` packages. |
 
@@ -339,6 +340,38 @@ Not backend-then-frontend. Each slice cuts through migration → Go → FFI → 
 **Slice 7 — honesty and polish.** Negated / conflicted / uncited visual states, filtering, the accessibility outline, undo.
 
 The property that matters: **the layer is dogfoodable from Slice 4 onward, and the canvas is proven at Slice 1.** Risk is retired early and there is still a fallback if the spatial UI turns out to be wrong.
+
+## 11.1 Where to cut the spike boundary
+
+The whole layer is too big for one spike. The natural cut is **everything that is durable regardless of what happens to the canvas** — which is a better test than "everything before the canvas," because it includes work a form-driven Interpretation UI would need just as much.
+
+That gives a prework spike of: the vocabulary (`node_types`, `properties`, `node_type_properties`), the value types and their editors, and NameValue. Then the graph spike takes Citations, Observations, the artifact viewer, and the canvas.
+
+### Scope corrections
+
+Three things commonly listed as prework should come out, and one is larger than it looks.
+
+| Item | Verdict |
+| --- | --- |
+| `node` value type | **Defer to the graph spike.** It needs the `nodes` table plus a Node picker, and a Node-valued Observation *is* a graph edge — it is the connect tool, not a form control. |
+| `name_format_profiles` / `name_format_profile_parts` | **Defer.** [`structured-name-model.md`](../structured-name-model.md) §4 defines them, but the interpretation model §5.1 says `name_format` "is primarily a Conclusion Property" and "need not appear in `node_type_properties` for Interpretation." Interpretation needs only `name_values` and `name_value_parts` — two tables, not four. |
+| Open value vocabulary (`event_type`, `role`, `relationship_type`) | **Not a build task yet.** [`seeded-vocabulary.md`](../seeded-vocabulary.md) §1.5 is explicit that these are open free-text values, *not* vocabulary-definition tables, and they carry no `origin`. So the seeded picker defaults have no home in the schema, and deciding where they live (Go constants? a picker-suggestions table? nothing at all until observations exist) is a **design question to settle in planning**, not a PR. It is also only needed once Observations can be written. |
+| `date` value type | **Already done.** [`core/database/datevalues`](../../core/database/datevalues/) exists, and `DateValueEditorForm` is wired into `SourcePageMetadataView` in production. Free. |
+| Value editor pattern | **Proven.** `DateValueDraft` + `DateValueEditorForm` is the template to copy for NameValue. |
+| `node_type_properties` binding editor | **Has direct prior art** in `source_type_metadata_fields` and the existing type-suggestions UI. |
+| **Typed value dispatch** | **Larger than it looks.** Source metadata is only `value_text` plus an optional `date_value_id` — there is no `value_type` enum anywhere in the product. The Observation's seven-way sparse-column value system, its write-side "exactly one column, matching the Property's `value_type`" rule, and its read-side tolerance rule are all genuinely new. |
+| `node_types.ref_prefix` | Small but real: globally unique across origins, uppercase ASCII, and must reject the reserved `SRC` / `ART` / `CIT` / `OBS` / `C` prefixes. Go-side validation with tests. |
+
+### The tension to resolve
+
+A pure prework spike has one serious drawback: **it delays canvas risk retirement by an entire spike**, and it is exactly the backend-then-frontend shape that vertical slicing is meant to avoid. The prework is all low-risk work on known patterns; the canvas is the only thing that could invalidate the plan.
+
+So there are two defensible boundaries:
+
+- **Option A — prework only.** Vocabulary + value types + NameValue. Ends at "a researcher can define and extend the interpretation vocabulary, and every value type except `node` has a working editor." Clean, durable, entirely known patterns — and the canvas stays unproven until the following spike.
+- **Option B — prework plus Slice 1.** The same, plus the `nodes` table, the layout table, and bubbles-on-a-grid for `person`. Ends with the biggest unknown in the layer retired. This is cheap *because* Nodes are free to create (§4.1): no Citations, no Observations, no artifact viewer, no interpretation semantics at risk.
+
+Option B is the better trade. It costs one slice and it answers the only question in this document that could change the plan.
 
 ---
 
