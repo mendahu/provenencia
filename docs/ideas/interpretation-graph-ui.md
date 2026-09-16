@@ -206,7 +206,49 @@ Two simplifications worth taking:
 - **Snap-to-grid means integers.** If the grid is the interaction model, make it the *storage* model: `grid_x` / `grid_y` as `INTEGER` cell coordinates rather than floats. No float drift, trivial equality, cheap conflict resolution, and snapping stops being a separate feature.
 - **A tray beats an auto-layout engine.** Something has to handle Nodes with no stored position — cross-source Nodes, future imports, anything created outside the canvas. Instead of building auto-layout for v1, put unplaced Nodes in a **tray along the edge of the canvas** and let the researcher drag them onto the grid. That removes an entire algorithmic dependency and is arguably better behavior: the app never guesses at an arrangement that means something.
 
-Dragging must not write per frame. Positions batch and debounce; the catalog session serializes FFI ([`use-catalog-session`](../../.cursor/skills/use-catalog-session/SKILL.md)), so a chatty canvas would queue behind badge refreshes and list loads.
+## 5.1 One table is enough
+
+```sql
+CREATE TABLE graph_node_positions (
+    source_id   BLOB NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+    node_id     BLOB NOT NULL REFERENCES nodes(id)   ON DELETE CASCADE,
+    grid_x      INTEGER NOT NULL,
+    grid_y      INTEGER NOT NULL,
+
+    PRIMARY KEY (source_id, node_id)
+) STRICT;
+```
+
+Design notes, each of which is a decision worth making deliberately:
+
+- **The key is `(source_id, node_id)`, not `node_id` alone.** `source_id` answers "which graph." A Node homed to Source A can legitimately appear in Source B's graph, because Observations are not confined by `nodes.source_id` (§4.1) — so a Node needs one position *per graph it appears in*, not one position globally.
+- **No `graphs` table.** One graph per Source is the premise of the whole design, so the Source *is* the graph identity. If named views or multiple layouts per Source are ever wanted, that becomes a `graph_id` and a migration — acceptable precisely because this is unaudited UI state and therefore cheap to migrate.
+- **Absence of a row means unplaced**, which is exactly what feeds the tray. No nullable coordinates and no sentinel values.
+- **Both foreign keys cascade**, which is a deliberate *contrast* with `observations` (§4.3). Deleting a Node should silently drop its position; deleting a Source should drop its whole layout. Evidence must never be swept away that quietly, but layout should be.
+- **No `UNIQUE (source_id, grid_x, grid_y)`.** Tempting, but it would make overlaps a hard error — and a drag that swaps two bubbles transiently collides, which a database constraint cannot accommodate without temporary values. Let bubbles overlap and let the UI nudge.
+- **Coordinates are signed.** The canvas is an unbounded plane around an origin, so do not add a `CHECK (grid_x >= 0)`.
+- **Not audited.** Arranging bubbles is not a research assertion, and audit rows for every drag would drown the revision history that matters.
+
+## 5.2 Positions travel; the camera does not
+
+Worth splitting explicitly, because they look like the same kind of state and are not:
+
+| State | Where it belongs | Why |
+| --- | --- | --- |
+| Bubble positions | The catalog, in the table above | Intellectual work. Must survive relaunch, travel in a share package, and sync. |
+| Pan offset and zoom | App-local (`UserDefaults`), or nowhere | Per-machine view state. It is not research, should not sync, and should not appear in a shared project. |
+
+Selection is likewise transient. Neither camera nor selection belongs in navigation history (§10.12).
+
+## 5.3 Cache shape
+
+This fits the existing session model cleanly. One key — something like `.sourceGraph(project:sourceId:)` alongside the cases in `CatalogQueryKey` — owns **both** the Nodes and their positions for one Source, because nothing else owns positions and the Node set is genuinely Source-scoped. That satisfies the "one cache owns each list" rule in [`macos-client-patterns.md`](../macos-client-patterns.md) §1 without duplicating another key's data.
+
+Drag is then a **patch, not an invalidation**: the move response names exactly the one row that changed, which is the case `setQueryValue` exists for. Creating or deleting a bubble invalidates the key.
+
+One caveat for later: once cross-source Nodes are displayed (§13), the same Node appears in two graph payloads, and renaming its label would have to invalidate both. That is the duplicated-versus-derived hazard from the same doc section, and it is a reason to keep cross-source display out of the first slices.
+
+Dragging must not write per frame. Positions batch and debounce, flushing on gesture end; the catalog session serializes FFI ([`use-catalog-session`](../../.cursor/skills/use-catalog-session/SKILL.md)), so a chatty canvas would queue behind badge refreshes and list loads.
 
 ---
 
@@ -305,7 +347,7 @@ That outline pays for itself twice, because XCUITest cannot meaningfully drive a
 2. **Reverse rendering rules** — visual states for negated, conflicted, and incomplete; collapse/expand of bridge bubbles.
 3. **Deletion semantics** — `ON DELETE` choice at migration time; subject *and* object references; the confirmation that counts the damage.
 4. **Type correction** — delete-and-recreate, gated on having no Observations.
-5. **Layout table** — integer grid cells, unaudited, plus the unplaced tray.
+5. **Layout table** — the `(source_id, node_id)` shape in §5.1, unaudited, plus the unplaced tray and the positions-travel/camera-does-not split (§5.2).
 6. **Artifact gate** — the empty state when a Source has no Artifact.
 7. **NameValue end to end** (§4.4) — schema, Go, and editor, on the critical path.
 8. **Locator validation in Go**, with the full invariant set, before any UI writes `locator_json`.
@@ -331,11 +373,19 @@ The test is narrow: **what does the first `nodes` INSERT actually require?** The
 | Item | Why it is load-bearing | Size |
 | --- | --- | --- |
 | **Candidate ref support in `core/ref`** | `nodes.ref` is `NOT NULL` in the `{PREFIX}-C-{TOKEN}` candidate form. Today `Mint` only produces `PREFIX-TOKEN`, and the `validRef` regex rejects the `-C-` form outright. The catalog-refs rule already reserves this work: candidate Nodes use the form "via a shared helper **when implemented** — do not invent a parallel generator." | Small |
-| **`node_types` table + `person` / `event` / `place` seeds** | `node_types` is the other FK. Needs the table, plus rows via the existing idempotent `Install` registry pattern (`sourcevocab` is the template, `add-seeded-vocabulary` the skill), plus `ref_prefix` values. **Table and seed only — not the browser UI.** | Small |
+| **`node_types` table + `person` / `event` / `place` seeds** | `node_types` is the other FK. Needs the table, plus rows via the existing idempotent `Install` registry pattern (`sourcevocab` is the template, `add-seeded-vocabulary` the skill), plus `ref_prefix` values. **Table and seed only — not the browser UI.** All three types cost the same as one: see §11.1.1. | Small |
 | **`nodes` table + `core/database/nodes`** | Create, list, rename, delete — **with audit wiring.** Every domain write in this product goes through `audit.Record(tx, …)` (see `sources/notes.go`); that is not optional, and it is the bulk of the work here. | Medium |
 | **Layout table** | Integer grid cells, unaudited (§5). Persistence across relaunch is part of what Slice 1 is validating, so it cannot be held in memory. | Small |
 | **FFI handlers** | `add-ffi-handler` skill. | Small |
 | **Graph workspace place** | `WorkspaceSection` case, `WorkspaceLocation` field and identity decision, `CatalogQueryKey`, registry loader, `PlaceRegistry` spec, destination view. `add-workspace-place` and `add-workspace-location` cover it. | Medium |
+
+### 11.1.1 Three Node Types cost the same as one
+
+Persons, Events, and Places are **three seeded rows**, not three features. `nodes.node_type_id` is a generic foreign key, so the migration, the Go package, the FFI handlers, and the layout table are all type-agnostic — a `Create` that takes a Node Type id serves all three.
+
+What does scale with the count is small and entirely presentational: three palette buttons instead of one, per-type bubble styling so a Person does not look like a Place (icons already exist under `EvidenceIcons`), and the `L10n` strings for each. That is view code, not architecture.
+
+So the earlier split of "person first, then events and places" was a false economy — the second slice would have been almost empty. They collapse into one slice (§11.4), and the canvas gets to look like the real product from the first demo, which also makes it far easier to judge whether the idea works.
 
 ## 11.2 What is not load-bearing
 
@@ -358,16 +408,15 @@ Deferred, blocking nothing:
 
 ## 11.4 Slice order
 
-1. **Foundation + bubbles** (§11.1) — `person` only, working label only, drag / snap / select / persist.
-2. **Events and places** — same machinery, two more seeded Node Types.
-3. **Property vocabulary** — `properties`, `node_type_properties`, the browser UI, `ref_prefix` validation.
-4. **Artifact viewer + Citations** — PDF and image; `page`, `region`, `text_quote`; Go-side locator validation.
-5. **First Observation** — Add Property on a root bubble, `text` value type only. The whole vertical path proven end to end.
-6. **Remaining value types** — including NameValue end to end; reuse the existing DateValue editor.
-7. **Connect tool** — bridge macros, the disambiguation form, the pinned Citation (§6.1).
-8. **Honesty and polish** — negated / conflicted / uncited states, filtering, accessibility outline, undo.
+1. **Foundation + bubbles** (§11.1) — persons, events, and places; working labels; drag / snap / select / persist; the tray for unplaced Nodes.
+2. **Property vocabulary** — `properties`, `node_type_properties`, the browser UI, `ref_prefix` validation.
+3. **Artifact viewer + Citations** — PDF and image; `page`, `region`, `text_quote`; Go-side locator validation.
+4. **First Observation** — Add Property on a bubble, `text` value type only. The whole vertical path proven end to end.
+5. **Remaining value types** — including NameValue end to end; reuse the existing DateValue editor.
+6. **Connect tool** — bridge macros, the disambiguation form, the pinned Citation (§6.1).
+7. **Honesty and polish** — negated / conflicted / uncited states, filtering, accessibility outline, undo.
 
-**Spike boundary: slices 1–2.** That ends at "open a Source and lay out the cast of characters spatially, with working labels" — not yet genealogically useful, but it retires the whole spatial-UI risk and every later slice builds on a canvas that is known to work. Slice 3 onward is the second spike.
+**Spike boundary: Slice 1.** It ends at "open a Source and lay out the cast of characters spatially, with working labels" — not yet genealogically useful, but it retires the entire spatial-UI risk, and every later slice builds on a canvas that is known to work. Slice 2 onward is the second spike.
 
 ---
 
