@@ -153,7 +153,12 @@ struct WorkspaceToolbar: View {
         PVBreadcrumbs(items: Self.breadcrumbItems(
             for: navigation.currentLocation,
             goToSectionRoot: { section in
-                navigation.go(to: .sectionRoot(section))
+                // Guarded here rather than in `PVBreadcrumbs`: the toolbar is
+                // the only place crumbs sit on a window-drag surface, and the
+                // design system has no business knowing about window chrome.
+                WindowDrag.unlessDragging {
+                    navigation.go(to: .sectionRoot(section))
+                }
             }
         ))
         .lineLimit(1)
@@ -354,12 +359,16 @@ private struct HistoryNavControl: View {
 
     var body: some View {
         Button {
-            if suppressStep {
-                suppressStep = false
-                return
+            // A press that moved the window was a window drag that happened
+            // to start here, not a click on Back/Forward.
+            WindowDrag.unlessDragging {
+                if suppressStep {
+                    suppressStep = false
+                    return
+                }
+                guard enabled else { return }
+                onStep()
             }
-            guard enabled else { return }
-            onStep()
         } label: {
             HStack(spacing: 3) {
                 PVIcon(symbol, size: 14)
@@ -385,9 +394,14 @@ private struct HistoryNavControl: View {
         .simultaneousGesture(
             LongPressGesture(minimumDuration: 0.4)
                 .onEnded { _ in
-                    guard enabled, hasJumpItems else { return }
-                    suppressStep = true
-                    menuPresented = true
+                    // Both statements stay inside the guard: skipping the
+                    // menu but still arming `suppressStep` would eat the
+                    // user's next real click.
+                    WindowDrag.unlessDragging {
+                        guard enabled, hasJumpItems else { return }
+                        suppressStep = true
+                        menuPresented = true
+                    }
                 }
         )
         .overlay {
