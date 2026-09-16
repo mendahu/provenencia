@@ -35,28 +35,17 @@ extension View {
     /// sidebar and content headers read as one continuous row across the
     /// window (S2-01 Frame 7).
     ///
-    /// - Parameter includesWindowDrag: When `true` (default), installs a
-    ///   full-row `WindowDragRegion` overlay. Use only on chrome **without**
-    ///   interactive controls (sidebar brand). `WorkspaceToolbar` must pass
-    ///   `false` so Back/Forward, breadcrumbs, and the omnibar stay clickable.
-    func pvWorkspaceHeaderRow(includesWindowDrag: Bool = true) -> some View {
+    /// - Parameter windowDrag: Where the row's `WindowDragRegion` sits.
+    ///   `.overlay` (default) covers the whole row and suits chrome
+    ///   **without** interactive controls (sidebar brand). `WorkspaceToolbar`
+    ///   passes `.behindContent` so the full 52pt row drags while
+    ///   Back/Forward, breadcrumbs, and the omnibar keep their own clicks.
+    func pvWorkspaceHeaderRow(windowDrag: PVWindowDragPlacement = .overlay) -> some View {
         offset(y: WorkspaceChrome.verticalNudge)
             .frame(height: WorkspaceChrome.headerHeight)
             .overlay(alignment: .bottom) {
                 PVDivider()
             }
-            .modifier(WorkspaceHeaderWindowDragModifier(enabled: includesWindowDrag))
-    }
-}
-
-private struct WorkspaceHeaderWindowDragModifier: ViewModifier {
-    let enabled: Bool
-
-    func body(content: Content) -> some View {
-        if enabled {
-            content.pvWindowDragRegion()
-        } else {
-            content
-        }
+            .pvWindowDragRegion(windowDrag)
     }
 }

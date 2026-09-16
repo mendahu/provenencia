@@ -53,7 +53,11 @@ struct WorkspaceView: View {
                 catalogCounts: catalogCounts
             )
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Leading, not the default center: if a destination ever does insist
+        // on more width than the window has, the overflow has to spill off
+        // the trailing edge. Centering it slides the fixed-width sidebar
+        // under the traffic lights.
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .environment(catalogCounts)
         .environment(navigation)
         .environment(session)

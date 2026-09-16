@@ -37,6 +37,11 @@ struct WorkspaceToolbar: View {
     let store: any GenealogyStore
     @FocusState private var omnibarFocused: Bool
 
+    /// Omnibar width at a comfortable window size, and the floor it
+    /// compresses to before the breadcrumbs give up any more room.
+    private static let omnibarWidth: CGFloat = 420
+    private static let omnibarMinWidth: CGFloat = 200
+
     var body: some View {
         HStack(alignment: .center, spacing: PVSpacing.space6) {
             navCluster
@@ -44,16 +49,21 @@ struct WorkspaceToolbar: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .layoutPriority(0)
             omnibarField
-                .frame(width: 420)
+                // Flexible, not a hard 420: a fixed width made the content
+                // column's minimum wider than a narrow window, and the
+                // overflow was centered — pushing the sidebar (and its logo)
+                // off the left edge, under the traffic lights.
+                .frame(minWidth: Self.omnibarMinWidth, maxWidth: Self.omnibarWidth)
                 .layoutPriority(1)
         }
         .padding(.horizontal, PVSpacing.gutterPage)
         .frame(maxWidth: .infinity)
         .onPreferenceChange(HistoryJumpMenuAnchorKey.self) { jumpMenu.anchors = $0 }
         .onPreferenceChange(OmnibarFieldAnchorKey.self) { omnibarResults.fieldFrame = $0 }
-        // No window-drag overlay — it would sit on top of Back/Forward and
-        // the omnibar and swallow hover/clicks (see `pvWorkspaceHeaderRow`).
-        .pvWorkspaceHeaderRow(includesWindowDrag: false)
+        // Drag surface sits *behind* the row: an overlay would swallow
+        // Back/Forward, breadcrumb, and omnibar hits, but without one only
+        // the system title-bar strip at the very top of the 52pt row drags.
+        .pvWorkspaceHeaderRow(windowDrag: .behindContent)
         .onChange(of: omnibarFocus.focusGeneration) { _, _ in
             omnibarFocused = true
         }
@@ -143,7 +153,12 @@ struct WorkspaceToolbar: View {
         PVBreadcrumbs(items: Self.breadcrumbItems(
             for: navigation.currentLocation,
             goToSectionRoot: { section in
-                navigation.go(to: .sectionRoot(section))
+                // Guarded here rather than in `PVBreadcrumbs`: the toolbar is
+                // the only place crumbs sit on a window-drag surface, and the
+                // design system has no business knowing about window chrome.
+                WindowDrag.unlessDragging {
+                    navigation.go(to: .sectionRoot(section))
+                }
             }
         ))
         .lineLimit(1)
@@ -344,12 +359,16 @@ private struct HistoryNavControl: View {
 
     var body: some View {
         Button {
-            if suppressStep {
-                suppressStep = false
-                return
+            // A press that moved the window was a window drag that happened
+            // to start here, not a click on Back/Forward.
+            WindowDrag.unlessDragging {
+                if suppressStep {
+                    suppressStep = false
+                    return
+                }
+                guard enabled else { return }
+                onStep()
             }
-            guard enabled else { return }
-            onStep()
         } label: {
             HStack(spacing: 3) {
                 PVIcon(symbol, size: 14)
@@ -375,9 +394,14 @@ private struct HistoryNavControl: View {
         .simultaneousGesture(
             LongPressGesture(minimumDuration: 0.4)
                 .onEnded { _ in
-                    guard enabled, hasJumpItems else { return }
-                    suppressStep = true
-                    menuPresented = true
+                    // Both statements stay inside the guard: skipping the
+                    // menu but still arming `suppressStep` would eat the
+                    // user's next real click.
+                    WindowDrag.unlessDragging {
+                        guard enabled, hasJumpItems else { return }
+                        suppressStep = true
+                        menuPresented = true
+                    }
                 }
         )
         .overlay {
