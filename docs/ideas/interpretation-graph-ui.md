@@ -484,7 +484,7 @@ The test is narrow: **what does the first `nodes` INSERT actually require?** The
 | **`nodes` table + `core/database/nodes`** | Create, list, rename, delete — **with audit wiring.** Every domain write in this product goes through `audit.Record(tx, …)` (see `sources/notes.go`); that is not optional, and it is the bulk of the work here. | Medium |
 | **Layout table** | Integer grid cells, unaudited (§5). Persistence across relaunch is part of what Slice 1 is validating, so it cannot be held in memory. | Small |
 | **FFI handlers** | `add-ffi-handler` skill. | Small |
-| **Graph workspace place** | `WorkspaceSection` case, `WorkspaceLocation` field and identity decision, `CatalogQueryKey`, registry loader, `PlaceRegistry` spec, destination view. `add-workspace-place` and `add-workspace-location` cover it. | Medium |
+| **Graph workspace place** | A `WorkspaceSection` case (**no** `WorkspaceLocation` change needed — see §11.1.2), `CatalogQueryKey`, registry loader, two `PlaceRegistry` specs (root and deep), destination views, `CatalogCounts` badge entry. `add-workspace-place` and `add-workspace-location` cover it. | Medium |
 
 ### 11.1.1 Three Node Types cost the same as one
 
@@ -493,6 +493,32 @@ Persons, Events, and Places are **three seeded rows**, not three features. `node
 What does scale with the count is small and entirely presentational: three palette buttons instead of one, per-type bubble styling so a Person does not look like a Place (icons already exist under `EvidenceIcons`), and the `L10n` strings for each. That is view code, not architecture.
 
 So the earlier split of "person first, then events and places" was a false economy — the second slice would have been almost empty. They collapse into one slice (§11.4), and the canvas gets to look like the real product from the first demo, which also makes it far easier to judge whether the idea works.
+
+### 11.1.2 Entry points, and why the list view is not optional
+
+The graph is Source-scoped, so the researcher has to pick a Source before there is anything to draw. Two entry points are in play: a button on the Source page, and an Interpretation-scoped Sources list whose rows open the graph rather than the Source detail page.
+
+**Good news first: `WorkspaceLocation` needs no new field.** Its identity compares `section`, `sourceId`, `fieldId`, and `typeId`, so a new `WorkspaceSection` case plus the **existing** `sourceId` yields a distinct place:
+
+```text
+WorkspaceLocation(section: .sources,             sourceId: X)   → Source detail page
+WorkspaceLocation(section: .interpretationGraph, sourceId: X)   → that Source's graph
+```
+
+The Source page button is then one `navigation.go(to:)` call, and it should populate the denormalized `ref` and `title` so the Back/Forward jump menu reads properly.
+
+**The list view, though, is forced by the navigation contract rather than being a nice-to-have.** Two mechanisms make it so:
+
+- `WorkspaceSidebar` builds its items from `WorkspaceSection.allCases`, so adding a section **automatically adds a sidebar row**, and that row navigates to `.sectionRoot(section)` — a location with no `sourceId`. Something has to render there. (It also needs a `CatalogCounts.badge(for:)` entry, `nil` for now.)
+- Destinations prune missing deep ids with `navigation.fallbackToSectionRoot()`. So when a Source is deleted while its graph is in history, the graph view falls back to the graph section root — which means **the section root is the error-recovery destination**, not just a landing page.
+
+Without a root view, both paths land on an unresolved location, and `WorkspaceDestinationHost.presentation(for:)` ends in `?? .sourcesList` — so the user would silently get the ordinary Sources list. That works by accident rather than by design, which is exactly the kind of thing that becomes a confusing bug report later.
+
+So: **build it, and keep it a plain copy.** If the Interpretation list reads the existing `.sourcesList(project:)` query key, it is genuinely cheap — sharing a key is encouraged, unlike duplicating a payload — and the only real content is different row chrome plus a different navigation target.
+
+**Defer the graph-specific columns.** "12 nodes, 3 uncited, last worked Tuesday" is the tempting part and the expensive part: it needs a new Go query with derived counts, and per [`macos-client-patterns.md`](../macos-client-patterns.md) §1, derived counts "move when another table is written" — so placing a single bubble would stale the list. That is a real invalidation dependency between the canvas and its own landing page, and it buys nothing for the risk being retired in Slice 1.
+
+One accepted oddity: clicking a button on a page in the Sources section lands the user in a different sidebar section, because `selectedSection` follows `location.section`. That is normal cross-section navigation and Back returns to the Source page, so it is fine — but it is worth noticing rather than discovering.
 
 ## 11.2 What is not load-bearing
 
@@ -515,7 +541,7 @@ Deferred, blocking nothing:
 
 ## 11.4 Slice order
 
-1. **Foundation + bubbles** (§11.1) — persons, events, and places; working labels; drag / snap / select / persist; the tray for unplaced Nodes.
+1. **Foundation + bubbles** (§11.1) — persons, events, and places; working labels; drag / snap / select / persist; the tray for unplaced Nodes. Entry via a Source-page button plus a plain Interpretation Sources list as the section root (§11.1.2).
 2. **Property vocabulary** — `properties`, `node_type_properties`, the browser UI, `ref_prefix` validation.
 3. **Artifact viewer + Citations** — PDF and image; `page`, `region`, `text_quote`; Go-side locator validation.
 4. **First Observation** — Add Property on a bubble, `text` value type only. The whole vertical path proven end to end.
