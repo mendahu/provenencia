@@ -44,6 +44,35 @@ Go holds one exclusive catalog session per open project and serializes FFI ops (
 - **Leave:** `WorkspaceView.onDisappear` calls `GenealogyStore.closeCatalogSession(projectDir:)`. Sign-out / project switch also close in Go.
 - **FakeStore:** tracks `heldCatalogProjectDir` / `lastClosedCatalogProjectDir` for unit tests — no real locking.
 
+### Workspace session & place registry (Spike 4)
+
+Navigation history (`WorkspaceNavigation`) answers **where**. The **workspace session** answers **what catalog data is already loaded** for the open project.
+
+```text
+go(to: location)  →  navigation stack (sync)
+                  →  session.apply(location)  →  PlaceRegistry  →  warm CatalogQueryKeys
+WorkspaceDestinationHost  →  presentation id  →  destination view
+Destination view  →  reads QueryHandle(s)  →  patches / invalidates on mutate
+```
+
+| Piece | Role |
+| --- | --- |
+| `WorkspaceSession` | Project-scoped cache: get-or-load, in-flight dedupe, patch vs invalidate |
+| `CatalogQueryRegistry` | Declarative loaders + mutation → cache key map |
+| `PlaceRegistry` | `WorkspaceLocation` → place id, presentation, required query keys |
+| `WorkspaceDestinationHost` | Routes by presentation (list vs detail are separate views) |
+| `QueryHandle` | Observable load state per key (`.ready`, `.loading`, stale `isFetching`) |
+
+**View rules (required):**
+
+- Warm loads in `.task { model.warm…Queries() }` or rely on navigation `apply(location:)` — not in `body`.
+- Read display data via `session.queryHandle(_)`; observe with `@Bindable var handle: QueryHandle<…>` in a child view.
+- Never call `session.query()` from computed properties that `body` reads every frame.
+
+**Mutations:** patch list/detail synchronously when the save response is enough (`updatedSource`); invalidate on create/delete/ambiguous busts. Stale-while-revalidate is for **navigation reads**, not edit sync.
+
+Agent workflow: [`.cursor/skills/add-workspace-place/SKILL.md`](../.cursor/skills/add-workspace-place/SKILL.md). Design: [`ideas/archive/page-navigation-performance.md`](ideas/archive/page-navigation-performance.md).
+
 ---
 
 ## 2. Views are value types; `body` stays cheap

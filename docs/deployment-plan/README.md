@@ -6,17 +6,22 @@ Authoritative domain and stack decisions remain in the sibling docs under [`docs
 
 ## Current
 
-| Spike | Goal |
-| --- | --- |
-| [Spike 4](spike-4/) | Workspace session + catalog query cache + declarative place registry: fast, consistent navigation; split Sources list/detail; extensible infrastructure for future destinations. Design: [`ideas/page-navigation-performance.md`](../ideas/page-navigation-performance.md). PRs: [`spike-4/deployment-plan.md`](spike-4/deployment-plan.md). |
+_No active spike._ Next milestones will be added here when scheduled.
 
 ## Completed
 
 | Spike | Goal |
 | --- | --- |
+| [Spike 4](archive/spike-4/) | Workspace session + catalog query cache + declarative place registry: fast, consistent navigation; Sources/fields/types on query handles; `add-workspace-place` skill. Design: [`ideas/archive/page-navigation-performance.md`](../ideas/archive/page-navigation-performance.md). Archive: [`archive/spike-4/README.md`](archive/spike-4/README.md), [`completed.md`](archive/spike-4/completed.md). |
 | [Spike 3](archive/spike-3/) | Workspace chrome + first-class nav history and catalog search: Back/Forward (persisted, `project.uuid`), toolbar omnibar with Go registry + FTS5 ranking. Archive: [`archive/spike-3/README.md`](archive/spike-3/README.md), [`completed.md`](archive/spike-3/completed.md). Notes: [`navigation-history.md`](archive/spike-3/navigation-history.md), [`omnibar-search.md`](archive/spike-3/omnibar-search.md). |
 | [Spike 2](archive/spike-2/) | Validate the Source layer: app workspace chrome (sidebar), audit + schema + Go CRUD/ingest + FFI + macOS Source catalog UI (create Sources, Artifacts, Files, extensible types/metadata). Design steps in Claude Design interleaved with PRs. Dogfood: [`archive/spike-2/dogfood.md`](archive/spike-2/dogfood.md). |
 | [Spike 1](archive/spike-1.md) | Scaffold the macOS app, local SQLite project, and first-run onboarding. **Retired the cgo SQLite + Swift dylib risk** (plan A: `mattn/go-sqlite3` inside `libprovenencia.dylib`). |
+
+Spike 4 archive:
+
+- [`archive/spike-4/README.md`](archive/spike-4/README.md) — spike overview (no open steps)
+- [`archive/spike-4/completed.md`](archive/spike-4/completed.md) — finished Spike 4 steps (S4-01…S4-09)
+- [`archive/spike-4/deployment-plan.md`](archive/spike-4/deployment-plan.md) — PR sequence, cache strategy, descoped S4-10+ notes
 
 Spike 3 archive:
 

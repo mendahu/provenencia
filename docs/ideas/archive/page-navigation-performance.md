@@ -1,10 +1,27 @@
 # Page navigation performance
 
-**Status:** planned — sequenced as [Spike 4](../deployment-plan/spike-4/deployment-plan.md).
+**Status:** **done** — archived after Spike 4 (S4-01…S4-09). Finished steps: [`docs/deployment-plan/archive/spike-4/completed.md`](../../deployment-plan/archive/spike-4/completed.md). S4-10+ Go RPC tiering descoped.
 
-Navigation history infrastructure is in place (`WorkspaceNavigation`, persisted stack, `go(to:)` everywhere). The remaining problem is **how destinations load and render** when a place changes. Performance is inconsistent across link clicks, Back/Forward, sidebar switches, and omnibar jumps — and the current per-view load pattern will not scale as we add Files, Interpretation, cross-links, and heavier detail pages.
+**Agent skill:** [`.cursor/skills/add-workspace-place/SKILL.md`](../../../.cursor/skills/add-workspace-place/SKILL.md).
 
-This note captures a high-level review (Sep 2025) and the target **platform infrastructure** — not band-aids, and not a Sources-only refactor.
+---
+
+## Landed (Spike 4)
+
+- `WorkspaceSession` + `CatalogQueryRegistry` + `QueryHandle` — project-scoped catalog read cache with patch, invalidate, and stale-while-revalidate.
+- `PlaceRegistry` + `WorkspaceDestinationHost` — location-driven presentation; Sources list and detail are separate views.
+- Sources, Source fields, and Source types read query handles; navigation `apply(location:)` warms keys on every commit.
+- macOS patterns: [`macos-client-patterns.md`](../../macos-client-patterns.md) § workspace session.
+
+The sections below are the **pre-implementation review** (Sep 2025) kept for rationale and extension guidance.
+
+---
+
+## Problem statement (pre-Spike 4)
+
+Navigation history infrastructure was in place (`WorkspaceNavigation`, persisted stack, `go(to:)` everywhere). The remaining problem was **how destinations load and render** when a place changes. Performance was inconsistent across link clicks, Back/Forward, sidebar switches, and omnibar jumps — and the per-view load pattern would not scale as we add Files, Interpretation, cross-links, and heavier detail pages.
+
+This note captured the target **platform infrastructure** — not band-aids, and not a Sources-only refactor.
 
 ---
 
@@ -106,7 +123,7 @@ Concurrent Swift `async` store calls queue on one Go session. Same gesture, diff
 
 ## Target architecture — three layers
 
-Build **generic infrastructure first**, migrate Sources as proof, then vocabulary, then future destinations (Files, Interpretation, …). Same declarative spirit as [`core/search/registry.go`](../../core/search/registry.go): search registry says how to **find** a place; a **place registry** says how to **load and show** it.
+Build **generic infrastructure first**, migrate Sources as proof, then vocabulary, then future destinations (Files, Interpretation, …). Same declarative spirit as [`core/search/registry.go`](../../../core/search/registry.go): search registry says how to **find** a place; a **place registry** says how to **load and show** it.
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
@@ -257,7 +274,7 @@ Back/Forward uses the same path. Cache keys are **location-derived**, not view-l
 | Add kind → registry row + projector | Add place → registry row + query loader + view |
 | Omnibar calls `go(to: hit.location)` | Host loads queries for resolved place |
 
-Future **`add-workspace-place`** skill (to author alongside this spike): merged checklist for history + cache + presentation — mirror of [`add-searchable-kind`](../../.cursor/skills/add-searchable-kind/SKILL.md) and [`add-workspace-location`](../../.cursor/skills/add-workspace-location/SKILL.md).
+**`add-workspace-place`** skill (authored in S4-09): merged checklist for history + cache + presentation — mirror of [`add-searchable-kind`](../../../.cursor/skills/add-searchable-kind/SKILL.md) and [`add-workspace-location`](../../../.cursor/skills/add-workspace-location/SKILL.md). See [`.cursor/skills/add-workspace-place/SKILL.md`](../../../.cursor/skills/add-workspace-place/SKILL.md).
 
 **Add-a-place checklist (draft):**
 
@@ -357,7 +374,7 @@ Feature folders contain views + mutation actions that call `session.invalidate(�
 
 ## Deployment
 
-Sequenced PRs: [`docs/deployment-plan/spike-4/deployment-plan.md`](../deployment-plan/spike-4/deployment-plan.md) (S4-01…S4-09 required; S4-10+ optional Go tiering).
+Sequenced PRs: [`docs/deployment-plan/archive/spike-4/deployment-plan.md`](../../deployment-plan/archive/spike-4/deployment-plan.md) (S4-01…S4-09; S4-10+ descoped).
 
 | Step | Summary |
 | --- | --- |
@@ -377,9 +394,9 @@ Sequenced PRs: [`docs/deployment-plan/spike-4/deployment-plan.md`](../deployment
 
 ## Related
 
-- [`docs/deployment-plan/spike-4/deployment-plan.md`](../deployment-plan/spike-4/deployment-plan.md) — PR sequence.
-- [`docs/deployment-plan/archive/spike-3/navigation-history.md`](../deployment-plan/archive/spike-3/navigation-history.md) — history behavior (done).
-- [`docs/ideas/archive/catalog-access-serialization.md`](archive/catalog-access-serialization.md) — catalog session (done).
-- [`core/search/registry.go`](../../core/search/registry.go) — declarative registry pattern to mirror.
-- [`.cursor/skills/add-workspace-location/SKILL.md`](../../.cursor/skills/add-workspace-location/SKILL.md) — wiring new places (to extend).
-- [`.cursor/skills/add-searchable-kind/SKILL.md`](../../.cursor/skills/add-searchable-kind/SKILL.md) — search registry (parallel track).
+- [`docs/deployment-plan/archive/spike-4/deployment-plan.md`](../../deployment-plan/archive/spike-4/deployment-plan.md) — PR sequence (archived).
+- [`docs/deployment-plan/archive/spike-3/navigation-history.md`](../../deployment-plan/archive/spike-3/navigation-history.md) — history behavior (done).
+- [`docs/ideas/archive/catalog-access-serialization.md`](catalog-access-serialization.md) — catalog session (done).
+- [`core/search/registry.go`](../../../core/search/registry.go) — declarative registry pattern to mirror.
+- [`.cursor/skills/add-workspace-location/SKILL.md`](../../../.cursor/skills/add-workspace-location/SKILL.md) — wiring new places (to extend).
+- [`.cursor/skills/add-searchable-kind/SKILL.md`](../../../.cursor/skills/add-searchable-kind/SKILL.md) — search registry (parallel track).
