@@ -96,14 +96,18 @@ In `Session/`:
 - Register in [`CatalogQueryRegistry`](../../../macos/App/Features/Workspace/Session/CatalogQueryRegistry.swift): loader calling `GenealogyStore`, `invalidateOn` mutation tags.
 - Wire `WorkspaceSession.warmQuery` switch arm if the key kind is new.
 
-**Tag every mutation whose reply changes any part of the payload, not just the
-part the write names.** A cached payload that folds in another key's data
-(`CatalogSourceWorkspace` carries the whole type + field vocabulary; a
-`CatalogTypeSuggestion` carries a whole field row) goes stale on edits made from
-another place entirely, and derived counts (`usedBy`, `suggestedFieldCount`) move
-when a *different* table is written. If the mutation names no single owner for an
-id-bearing key, `Kind.invalidation` returns `.allCached(kind)` and every cached
-key of that kind is busted.
+**One cache owns each list — do not fold a shared list into a page payload.**
+A deep page composes its own key plus the shared list keys it reads (see the
+`sourceDetail` spec), so a vocabulary edit invalidates one list and no pages. The
+held `catalogsession` makes the extra RPCs cheap, and the lists are usually already
+warm from the sidebar.
+
+**Then tag every mutation whose reply changes any *derived* part of a payload, not
+just the part the write names.** A `CatalogTypeSuggestion` carries a whole field
+row; `workspace.metadata` is a Go-computed join over the type's suggestions; counts
+like `usedBy` / `suggestedFieldCount` move when a different table is written. If the
+mutation names no single owner for an id-bearing key, `Kind.invalidation` returns
+`.allCached(kind)` and every cached key of that kind is busted.
 
 Add [`CatalogQueryRegistryTests`](../../../macos/ProvenenciaTests/CatalogQueryRegistryTests.swift) coverage for load + invalidation.
 

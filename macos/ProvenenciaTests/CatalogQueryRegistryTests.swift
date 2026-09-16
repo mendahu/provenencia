@@ -304,24 +304,39 @@ struct CatalogQueryRegistryTests {
             .key(.sourcesList(project: project)),
             .key(.sourceTypesList(project: project)),
         ])
-        // Vocabulary edits name no single page or type, so they fan out.
+        // Adding vocabulary touches only the list that owns it — the Source
+        // page reads that list rather than carrying its own copy.
         #expect(registry.invalidations(by: .createdMetadataField, project: project) == [
             .key(.metadataFieldsList(project: project)),
-            .allCached(.sourceWorkspace),
         ])
+        #expect(registry.invalidations(by: .createdSourceType, project: project) == [
+            .key(.sourceTypesList(project: project)),
+        ])
+        // Edits that restate a *derived* row still fan out, since the mutation
+        // names no single page: metadata rows embed their field, and the row set
+        // comes from the type's suggestions.
         #expect(registry.invalidations(by: .deletedMetadataField(id: "f1"), project: project) == [
             .key(.metadataFieldsList(project: project)),
             .allCached(.sourceWorkspace),
             .allCached(.typeSuggestions),
         ])
-        #expect(registry.invalidations(by: .createdSourceType, project: project) == [
-            .key(.sourceTypesList(project: project)),
-            .allCached(.sourceWorkspace),
-        ])
         #expect(registry.invalidations(by: .assignedTypeSuggestion(typeId: "t1"), project: project) == [
             .allCached(.sourceWorkspace),
             .key(.typeSuggestions(project: project, typeId: "t1")),
         ])
+        // Grades are seeded vocabulary with no CRUD surface, so nothing stales them.
+        let everyMutation: [CatalogMutation] = [
+            .updatedSource(source), .changedSourceType(source), .createdSource,
+            .createdSourceType, .updatedSourceType(id: "t1"), .deletedSourceType(id: "t1"),
+            .createdMetadataField, .updatedMetadataField(id: "f1"), .deletedMetadataField(id: "f1"),
+            .assignedTypeSuggestion(typeId: "t1"), .removedTypeSuggestion(typeId: "t1"),
+            .mutatedSourceWorkspace(sourceId: "s1"), .mutatedSourceMetadata(sourceId: "s1"),
+        ]
+        #expect(everyMutation.allSatisfy { mutation in
+            !registry.invalidations(by: mutation, project: project).contains(
+                .key(.credibilityGradesList(project: project))
+            )
+        })
         // Writes that name their source stay narrow.
         #expect(registry.invalidations(by: .mutatedSourceWorkspace(sourceId: "s1"), project: project) == [
             .key(.sourceWorkspace(project: project, sourceId: "s1")),
@@ -336,15 +351,51 @@ struct CatalogQueryRegistryTests {
         ])
     }
 
-    /// The reported bug: a field added on the Source Fields page must reach the
-    /// Add-metadata list on every cached Source page, which folds in the whole
-    /// field vocabulary.
-    @Test func fieldCRUDInvalidatesEveryCachedSourcePage() async {
+    /// Adding vocabulary no longer disturbs open Source pages: the page reads the
+    /// shared lists, so there is nothing stale on it to refetch.
+    @Test func addingVocabularyLeavesCachedSourcePagesAlone() async {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        let project = session.projectKey
+        let workspaceKey = CatalogQueryKey.sourceWorkspace(project: project, sourceId: "s1")
+        let fieldsKey = CatalogQueryKey.metadataFieldsList(project: project)
+
+        let workspaceHandle: QueryHandle<CatalogSourceWorkspace> = session.query(workspaceKey)
+        let fieldsHandle: QueryHandle<[CatalogMetadataField]> = session.query(fieldsKey)
+        await waitForFetchComplete(workspaceHandle)
+        await waitForFetchComplete(fieldsHandle)
+        store.heldCatalogProjectDir = nil
+
+        store.fieldsByProject[projectDir]?.append(
+            CatalogMetadataField(
+                id: "f2", key: "folio", origin: "user", label: "Folio", dataType: "text", description: ""
+            )
+        )
+        session.apply(.createdMetadataField)
+        session.apply(.createdSourceType)
+
+        // The page is untouched — re-querying it opens no catalog.
+        let _: QueryHandle<CatalogSourceWorkspace> = session.query(workspaceKey)
+        await Task.yield()
+        #expect(store.heldCatalogProjectDir == nil)
+
+        // The list that owns the field is the one that refetches.
+        let _: QueryHandle<[CatalogMetadataField]> = session.query(fieldsKey)
+        await waitForFetchComplete(fieldsHandle)
+        #expect(fieldsHandle.value?.map(\.label) == ["Author", "Folio"])
+    }
+
+    /// Edits that restate a derived metadata row still reach every cached page,
+    /// because the mutation cannot name which sources hold that field or type.
+    @Test func derivedMetadataEditsStillInvalidateEveryCachedPage() async {
         let store = FakeStore()
         seedStore(store)
         store.sourcesByProject[projectDir]?.append(
             CatalogSource(id: "s2", ref: "SRC-2", sourceTypeID: "t1", title: "Beta", description: "")
         )
+        store.metadataBySource["s1"] = [suggestedAuthorEntry(label: "Author")]
+        store.metadataBySource["s2"] = [suggestedAuthorEntry(label: "Author")]
         let session = makeSession(store: store)
         let project = session.projectKey
         let firstKey = CatalogQueryKey.sourceWorkspace(project: project, sourceId: "s1")
@@ -354,42 +405,27 @@ struct CatalogQueryRegistryTests {
         let secondHandle: QueryHandle<CatalogSourceWorkspace> = session.query(secondKey)
         await waitForFetchComplete(firstHandle)
         await waitForFetchComplete(secondHandle)
-        #expect(firstHandle.value?.fields.count == 1)
 
-        store.fieldsByProject[projectDir]?.append(
-            CatalogMetadataField(
-                id: "f2", key: "folio", origin: "user", label: "Folio", dataType: "text", description: ""
-            )
-        )
-        session.apply(.createdMetadataField)
+        store.metadataBySource["s1"] = [suggestedAuthorEntry(label: "Author name")]
+        store.metadataBySource["s2"] = [suggestedAuthorEntry(label: "Author name")]
+        session.apply(.updatedMetadataField(id: "f1"))
 
         let _: QueryHandle<CatalogSourceWorkspace> = session.query(firstKey)
         let _: QueryHandle<CatalogSourceWorkspace> = session.query(secondKey)
         await waitForFetchComplete(firstHandle)
         await waitForFetchComplete(secondHandle)
-        #expect(firstHandle.value?.fields.map(\.label) == ["Author", "Folio"])
-        #expect(secondHandle.value?.fields.map(\.label) == ["Author", "Folio"])
+        #expect(firstHandle.value?.metadata.first?.field.label == "Author name")
+        #expect(secondHandle.value?.metadata.first?.field.label == "Author name")
     }
 
-    /// Type vocabulary rides the same payload as the field vocabulary.
-    @Test func typeCRUDInvalidatesCachedSourcePage() async {
-        let store = FakeStore()
-        seedStore(store)
-        let session = makeSession(store: store)
-        let key = CatalogQueryKey.sourceWorkspace(project: session.projectKey, sourceId: "s1")
-
-        let handle: QueryHandle<CatalogSourceWorkspace> = session.query(key)
-        await waitForFetchComplete(handle)
-        #expect(handle.value?.types.count == 1)
-
-        store.sourceTypesByProject[projectDir]?.append(
-            CatalogSourceType(id: "t2", key: "photo", origin: "user", label: "Photo", description: "")
+    private func suggestedAuthorEntry(label: String) -> CatalogMetadataEntry {
+        CatalogMetadataEntry(
+            field: CatalogMetadataField(
+                id: "f1", key: "author", origin: "user", label: label,
+                dataType: "text", description: ""
+            ),
+            valueText: "", dateValueID: "", hasValue: false, suggested: true, sortOrder: 0
         )
-        session.apply(.createdSourceType)
-
-        let _: QueryHandle<CatalogSourceWorkspace> = session.query(key)
-        await waitForFetchComplete(handle)
-        #expect(handle.value?.types.map(\.label) == ["Book", "Photo"])
     }
 
     /// Suggestions embed a whole field row, so a relabel reaches types the edit

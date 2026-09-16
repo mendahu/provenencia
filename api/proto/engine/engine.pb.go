@@ -2724,13 +2724,7 @@ type GetSourceWorkspaceResponse struct {
 	Metadata  []*MetadataWorkspaceEntry `protobuf:"bytes,3,rep,name=metadata,proto3" json:"metadata,omitempty"`
 	Artifacts []*Artifact               `protobuf:"bytes,4,rep,name=artifacts,proto3" json:"artifacts,omitempty"`
 	// Omitted when no assessment row (UI may display Standard without a row).
-	Credibility *SourceCredibilityAssessment `protobuf:"bytes,5,opt,name=credibility,proto3" json:"credibility,omitempty"`
-	// Page vocabulary folded into the same exclusive catalog open so the
-	// Source page loads with one RPC (types picker, credibility chips, and
-	// the Add-metadata field list).
-	Types         []*SourceType             `protobuf:"bytes,6,rep,name=types,proto3" json:"types,omitempty"`
-	Grades        []*SourceCredibilityGrade `protobuf:"bytes,7,rep,name=grades,proto3" json:"grades,omitempty"`
-	Fields        []*MetadataField          `protobuf:"bytes,8,rep,name=fields,proto3" json:"fields,omitempty"`
+	Credibility   *SourceCredibilityAssessment `protobuf:"bytes,5,opt,name=credibility,proto3" json:"credibility,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2796,27 +2790,6 @@ func (x *GetSourceWorkspaceResponse) GetArtifacts() []*Artifact {
 func (x *GetSourceWorkspaceResponse) GetCredibility() *SourceCredibilityAssessment {
 	if x != nil {
 		return x.Credibility
-	}
-	return nil
-}
-
-func (x *GetSourceWorkspaceResponse) GetTypes() []*SourceType {
-	if x != nil {
-		return x.Types
-	}
-	return nil
-}
-
-func (x *GetSourceWorkspaceResponse) GetGrades() []*SourceCredibilityGrade {
-	if x != nil {
-		return x.Grades
-	}
-	return nil
-}
-
-func (x *GetSourceWorkspaceResponse) GetFields() []*MetadataField {
-	if x != nil {
-		return x.Fields
 	}
 	return nil
 }
@@ -6727,16 +6700,13 @@ const file_engine_proto_rawDesc = "" +
 	"\x19GetSourceWorkspaceRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x1b\n" +
-	"\tsource_id\x18\x02 \x01(\tR\bsourceId\"\xaa\x04\n" +
+	"\tsource_id\x18\x02 \x01(\tR\bsourceId\"\xfe\x02\n" +
 	"\x1aGetSourceWorkspaceResponse\x125\n" +
 	"\x06source\x18\x01 \x01(\v2\x1d.provenencia.engine.v1.SourceR\x06source\x127\n" +
 	"\x05notes\x18\x02 \x03(\v2!.provenencia.engine.v1.SourceNoteR\x05notes\x12I\n" +
 	"\bmetadata\x18\x03 \x03(\v2-.provenencia.engine.v1.MetadataWorkspaceEntryR\bmetadata\x12=\n" +
 	"\tartifacts\x18\x04 \x03(\v2\x1f.provenencia.engine.v1.ArtifactR\tartifacts\x12T\n" +
-	"\vcredibility\x18\x05 \x01(\v22.provenencia.engine.v1.SourceCredibilityAssessmentR\vcredibility\x127\n" +
-	"\x05types\x18\x06 \x03(\v2!.provenencia.engine.v1.SourceTypeR\x05types\x12E\n" +
-	"\x06grades\x18\a \x03(\v2-.provenencia.engine.v1.SourceCredibilityGradeR\x06grades\x12<\n" +
-	"\x06fields\x18\b \x03(\v2$.provenencia.engine.v1.MetadataFieldR\x06fields\"\xad\x01\n" +
+	"\vcredibility\x18\x05 \x01(\v22.provenencia.engine.v1.SourceCredibilityAssessmentR\vcredibilityJ\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\b\x10\t\"\xad\x01\n" +
 	"\x13CreateSourceRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +
@@ -7195,44 +7165,41 @@ var file_engine_proto_depIdxs = []int32{
 	35,  // 11: provenencia.engine.v1.GetSourceWorkspaceResponse.metadata:type_name -> provenencia.engine.v1.MetadataWorkspaceEntry
 	29,  // 12: provenencia.engine.v1.GetSourceWorkspaceResponse.artifacts:type_name -> provenencia.engine.v1.Artifact
 	31,  // 13: provenencia.engine.v1.GetSourceWorkspaceResponse.credibility:type_name -> provenencia.engine.v1.SourceCredibilityAssessment
-	32,  // 14: provenencia.engine.v1.GetSourceWorkspaceResponse.types:type_name -> provenencia.engine.v1.SourceType
-	30,  // 15: provenencia.engine.v1.GetSourceWorkspaceResponse.grades:type_name -> provenencia.engine.v1.SourceCredibilityGrade
-	34,  // 16: provenencia.engine.v1.GetSourceWorkspaceResponse.fields:type_name -> provenencia.engine.v1.MetadataField
-	26,  // 17: provenencia.engine.v1.CreateSourceResponse.source:type_name -> provenencia.engine.v1.Source
-	26,  // 18: provenencia.engine.v1.UpdateSourceResponse.source:type_name -> provenencia.engine.v1.Source
-	26,  // 19: provenencia.engine.v1.SetSourceCoverResponse.source:type_name -> provenencia.engine.v1.Source
-	27,  // 20: provenencia.engine.v1.AddSourceNoteResponse.note:type_name -> provenencia.engine.v1.SourceNote
-	27,  // 21: provenencia.engine.v1.UpdateSourceNoteResponse.note:type_name -> provenencia.engine.v1.SourceNote
-	36,  // 22: provenencia.engine.v1.SetSourceMetadataRequest.date:type_name -> provenencia.engine.v1.DateValueInput
-	35,  // 23: provenencia.engine.v1.SetSourceMetadataResponse.entry:type_name -> provenencia.engine.v1.MetadataWorkspaceEntry
-	35,  // 24: provenencia.engine.v1.DismissSourceMetadataSuggestionResponse.metadata:type_name -> provenencia.engine.v1.MetadataWorkspaceEntry
-	35,  // 25: provenencia.engine.v1.ReorderSourceMetadataResponse.metadata:type_name -> provenencia.engine.v1.MetadataWorkspaceEntry
-	29,  // 26: provenencia.engine.v1.CreateArtifactResponse.artifact:type_name -> provenencia.engine.v1.Artifact
-	29,  // 27: provenencia.engine.v1.UpdateArtifactResponse.artifact:type_name -> provenencia.engine.v1.Artifact
-	29,  // 28: provenencia.engine.v1.IngestArtifactFileResponse.artifact:type_name -> provenencia.engine.v1.Artifact
-	28,  // 29: provenencia.engine.v1.IngestArtifactFileResponse.file:type_name -> provenencia.engine.v1.SourceFileRef
-	30,  // 30: provenencia.engine.v1.ListSourceCredibilityGradesResponse.grades:type_name -> provenencia.engine.v1.SourceCredibilityGrade
-	31,  // 31: provenencia.engine.v1.UpsertSourceCredibilityAssessmentResponse.assessment:type_name -> provenencia.engine.v1.SourceCredibilityAssessment
-	32,  // 32: provenencia.engine.v1.ListSourceTypesResponse.types:type_name -> provenencia.engine.v1.SourceType
-	32,  // 33: provenencia.engine.v1.CreateSourceTypeResponse.type:type_name -> provenencia.engine.v1.SourceType
-	34,  // 34: provenencia.engine.v1.ListMetadataFieldsResponse.fields:type_name -> provenencia.engine.v1.MetadataField
-	34,  // 35: provenencia.engine.v1.CreateMetadataFieldResponse.field:type_name -> provenencia.engine.v1.MetadataField
-	34,  // 36: provenencia.engine.v1.UpdateMetadataFieldResponse.field:type_name -> provenencia.engine.v1.MetadataField
-	32,  // 37: provenencia.engine.v1.UpdateSourceTypeResponse.type:type_name -> provenencia.engine.v1.SourceType
-	33,  // 38: provenencia.engine.v1.ListTypeSuggestionsResponse.suggestions:type_name -> provenencia.engine.v1.TypeSuggestion
-	33,  // 39: provenencia.engine.v1.AssignTypeFieldResponse.suggestions:type_name -> provenencia.engine.v1.TypeSuggestion
-	33,  // 40: provenencia.engine.v1.RemoveTypeFieldResponse.suggestions:type_name -> provenencia.engine.v1.TypeSuggestion
-	93,  // 41: provenencia.engine.v1.GetWorkspaceNavCountsResponse.source_types:type_name -> provenencia.engine.v1.VocabularyOriginCounts
-	93,  // 42: provenencia.engine.v1.GetWorkspaceNavCountsResponse.source_fields:type_name -> provenencia.engine.v1.VocabularyOriginCounts
-	100, // 43: provenencia.engine.v1.SearchCatalogRequest.location:type_name -> provenencia.engine.v1.WorkspaceLocation
-	100, // 44: provenencia.engine.v1.SearchHit.location:type_name -> provenencia.engine.v1.WorkspaceLocation
-	102, // 45: provenencia.engine.v1.SearchCatalogResponse.hits:type_name -> provenencia.engine.v1.SearchHit
-	1,   // 46: provenencia.engine.v1.Error.kind:type_name -> provenencia.engine.v1.ErrorKind
-	47,  // [47:47] is the sub-list for method output_type
-	47,  // [47:47] is the sub-list for method input_type
-	47,  // [47:47] is the sub-list for extension type_name
-	47,  // [47:47] is the sub-list for extension extendee
-	0,   // [0:47] is the sub-list for field type_name
+	26,  // 14: provenencia.engine.v1.CreateSourceResponse.source:type_name -> provenencia.engine.v1.Source
+	26,  // 15: provenencia.engine.v1.UpdateSourceResponse.source:type_name -> provenencia.engine.v1.Source
+	26,  // 16: provenencia.engine.v1.SetSourceCoverResponse.source:type_name -> provenencia.engine.v1.Source
+	27,  // 17: provenencia.engine.v1.AddSourceNoteResponse.note:type_name -> provenencia.engine.v1.SourceNote
+	27,  // 18: provenencia.engine.v1.UpdateSourceNoteResponse.note:type_name -> provenencia.engine.v1.SourceNote
+	36,  // 19: provenencia.engine.v1.SetSourceMetadataRequest.date:type_name -> provenencia.engine.v1.DateValueInput
+	35,  // 20: provenencia.engine.v1.SetSourceMetadataResponse.entry:type_name -> provenencia.engine.v1.MetadataWorkspaceEntry
+	35,  // 21: provenencia.engine.v1.DismissSourceMetadataSuggestionResponse.metadata:type_name -> provenencia.engine.v1.MetadataWorkspaceEntry
+	35,  // 22: provenencia.engine.v1.ReorderSourceMetadataResponse.metadata:type_name -> provenencia.engine.v1.MetadataWorkspaceEntry
+	29,  // 23: provenencia.engine.v1.CreateArtifactResponse.artifact:type_name -> provenencia.engine.v1.Artifact
+	29,  // 24: provenencia.engine.v1.UpdateArtifactResponse.artifact:type_name -> provenencia.engine.v1.Artifact
+	29,  // 25: provenencia.engine.v1.IngestArtifactFileResponse.artifact:type_name -> provenencia.engine.v1.Artifact
+	28,  // 26: provenencia.engine.v1.IngestArtifactFileResponse.file:type_name -> provenencia.engine.v1.SourceFileRef
+	30,  // 27: provenencia.engine.v1.ListSourceCredibilityGradesResponse.grades:type_name -> provenencia.engine.v1.SourceCredibilityGrade
+	31,  // 28: provenencia.engine.v1.UpsertSourceCredibilityAssessmentResponse.assessment:type_name -> provenencia.engine.v1.SourceCredibilityAssessment
+	32,  // 29: provenencia.engine.v1.ListSourceTypesResponse.types:type_name -> provenencia.engine.v1.SourceType
+	32,  // 30: provenencia.engine.v1.CreateSourceTypeResponse.type:type_name -> provenencia.engine.v1.SourceType
+	34,  // 31: provenencia.engine.v1.ListMetadataFieldsResponse.fields:type_name -> provenencia.engine.v1.MetadataField
+	34,  // 32: provenencia.engine.v1.CreateMetadataFieldResponse.field:type_name -> provenencia.engine.v1.MetadataField
+	34,  // 33: provenencia.engine.v1.UpdateMetadataFieldResponse.field:type_name -> provenencia.engine.v1.MetadataField
+	32,  // 34: provenencia.engine.v1.UpdateSourceTypeResponse.type:type_name -> provenencia.engine.v1.SourceType
+	33,  // 35: provenencia.engine.v1.ListTypeSuggestionsResponse.suggestions:type_name -> provenencia.engine.v1.TypeSuggestion
+	33,  // 36: provenencia.engine.v1.AssignTypeFieldResponse.suggestions:type_name -> provenencia.engine.v1.TypeSuggestion
+	33,  // 37: provenencia.engine.v1.RemoveTypeFieldResponse.suggestions:type_name -> provenencia.engine.v1.TypeSuggestion
+	93,  // 38: provenencia.engine.v1.GetWorkspaceNavCountsResponse.source_types:type_name -> provenencia.engine.v1.VocabularyOriginCounts
+	93,  // 39: provenencia.engine.v1.GetWorkspaceNavCountsResponse.source_fields:type_name -> provenencia.engine.v1.VocabularyOriginCounts
+	100, // 40: provenencia.engine.v1.SearchCatalogRequest.location:type_name -> provenencia.engine.v1.WorkspaceLocation
+	100, // 41: provenencia.engine.v1.SearchHit.location:type_name -> provenencia.engine.v1.WorkspaceLocation
+	102, // 42: provenencia.engine.v1.SearchCatalogResponse.hits:type_name -> provenencia.engine.v1.SearchHit
+	1,   // 43: provenencia.engine.v1.Error.kind:type_name -> provenencia.engine.v1.ErrorKind
+	44,  // [44:44] is the sub-list for method output_type
+	44,  // [44:44] is the sub-list for method input_type
+	44,  // [44:44] is the sub-list for extension type_name
+	44,  // [44:44] is the sub-list for extension extendee
+	0,   // [0:44] is the sub-list for field type_name
 }
 
 func init() { file_engine_proto_init() }

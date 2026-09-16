@@ -42,8 +42,12 @@ struct PlaceRegistryTests {
         #expect(place?.placeID == .sourceDetail)
         #expect(place?.presentation == .sourcePage)
         #expect(place?.deepId == "src-1")
+        // Page payload + the three shared vocabulary lists it reads.
         #expect(place?.queryKeys == [
             .sourceWorkspace(project: project, sourceId: "src-1"),
+            .sourceTypesList(project: project),
+            .metadataFieldsList(project: project),
+            .credibilityGradesList(project: project),
         ])
     }
 
@@ -94,7 +98,12 @@ struct PlaceRegistryTests {
             (
                 WorkspaceLocation(section: .sources, sourceId: "s1"),
                 .sourceDetail,
-                [.sourceWorkspace(project: project, sourceId: "s1")]
+                [
+                    .sourceWorkspace(project: project, sourceId: "s1"),
+                    .sourceTypesList(project: project),
+                    .metadataFieldsList(project: project),
+                    .credibilityGradesList(project: project),
+                ]
             ),
             (
                 .sectionRoot(.sourceFields),

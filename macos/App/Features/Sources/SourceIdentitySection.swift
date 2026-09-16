@@ -35,7 +35,7 @@ final class SourceIdentitySection {
 
     var sourceTypeID: String { context.workspace?.source.sourceTypeID ?? "" }
 
-    var types: [CatalogSourceType] { context.workspace?.types ?? [] }
+    var types: [CatalogSourceType] { context.types }
 
     /// Resting type label from committed `sourceTypeID`.
     var typeLabel: String {

@@ -676,20 +676,20 @@ struct SourcePageModelTests {
         #expect(model.metadata.entries.contains { $0.field.id == author.id && $0.valueText == "Eliza" })
     }
 
-    /// A field added on the Source Fields page while a Source page sat in the
-    /// cache never reached the Add-metadata dropdown, because the cached page
-    /// payload carries its own copy of the field vocabulary.
-    @Test func addMetadataDropdownSeesFieldCreatedElsewhere() async {
+    /// A field added on the Source Fields page reaches the Add-metadata dropdown
+    /// without the page reloading: the dropdown reads the shared field list.
+    @Test func addMetadataDropdownSeesFieldCreatedElsewhere() async throws {
         let store = makeStore(fields: [authorField()])
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
         let model = SourcePageModel(
             sourceID: sourceID, session: session, userID: userID, store: store
         )
-        let key = CatalogQueryKey.sourceWorkspace(project: session.projectKey, sourceId: sourceID)
-        let handle: QueryHandle<CatalogSourceWorkspace> = session.query(key)
-        await settle(handle)
-        model.sync(from: handle, sourceID: sourceID)
+        await model.warmFromSession()
         #expect(model.metadata.fieldComboOptions.map(\.label) == ["Author"])
+
+        let workspaceKey = CatalogQueryKey.sourceWorkspace(project: session.projectKey, sourceId: sourceID)
+        let workspaceBefore: QueryHandle<CatalogSourceWorkspace>? = session.queryHandle(workspaceKey)
+        let payloadBefore = workspaceBefore?.value
 
         store.fieldsByProject[projectDir]?.append(
             CatalogMetadataField(
@@ -698,12 +698,16 @@ struct SourcePageModelTests {
             )
         )
         session.apply(.createdMetadataField)
-
-        // Navigating back to the page is what refetches the busted key.
         session.apply(location: WorkspaceLocation(section: .sources, sourceId: sourceID))
-        await settle(handle)
-        model.sync(from: handle, sourceID: sourceID)
+
+        let fieldsHandle: QueryHandle<[CatalogMetadataField]>? = session.queryHandle(
+            .metadataFieldsList(project: session.projectKey)
+        )
+        await settle(try #require(fieldsHandle))
+
         #expect(model.metadata.fieldComboOptions.map(\.label) == ["Author", "Folio"])
+        // The page payload itself was never refetched.
+        #expect(workspaceBefore?.value == payloadBefore)
     }
 
     /// Waits out a cache load (or its stale-while-revalidate refetch).

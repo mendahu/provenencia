@@ -49,15 +49,21 @@ struct CatalogQueryRegistry: Sendable {
             ]
         ),
         Spec(
+            kind: .credibilityGradesList,
+            stalePolicy: .sessionFresh,
+            // Seeded vocabulary with no CRUD surface, so nothing stales it.
+            invalidateOn: []
+        ),
+        Spec(
             kind: .sourceWorkspace,
             stalePolicy: .sessionFresh,
-            // The page payload folds in the whole type and field vocabulary
-            // (type picker, Add-metadata list) plus the type's suggested rows,
-            // so vocabulary edits stale every cached page, not just one.
+            // Vocabulary lists are no longer folded in here, so plain
+            // create/relabel of a type or field leaves the page alone. What
+            // remains is the metadata row set the engine derives per source:
+            // suggestions ∪ values, each row embedding its field.
             invalidateOn: [
                 .mutatedSourceWorkspace, .mutatedSourceMetadata, .changedSourceType,
-                .createdSourceType, .updatedSourceType, .deletedSourceType,
-                .createdMetadataField, .updatedMetadataField, .deletedMetadataField,
+                .updatedMetadataField, .deletedMetadataField,
                 .assignedTypeSuggestion, .removedTypeSuggestion,
             ]
         ),
@@ -85,6 +91,8 @@ struct CatalogQueryRegistry: Sendable {
             return try await store.listSourceTypes(projectDir: project.projectDir)
         case .metadataFieldsList(let project):
             return try await store.listMetadataFields(projectDir: project.projectDir)
+        case .credibilityGradesList(let project):
+            return try await store.listSourceCredibilityGrades(projectDir: project.projectDir)
         case .sourceWorkspace(let project, let sourceId):
             return try await store.getSourceWorkspace(projectDir: project.projectDir, sourceID: sourceId)
         case .typeSuggestions(let project, let typeId):
@@ -112,6 +120,8 @@ private extension CatalogQueryKey.Kind {
             return .key(.sourceTypesList(project: project))
         case .metadataFieldsList:
             return .key(.metadataFieldsList(project: project))
+        case .credibilityGradesList:
+            return .key(.credibilityGradesList(project: project))
         case .sourceWorkspace:
             switch mutation {
             case .mutatedSourceWorkspace(let sourceId), .mutatedSourceMetadata(let sourceId):

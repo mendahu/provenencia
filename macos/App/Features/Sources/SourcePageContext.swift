@@ -43,6 +43,34 @@ final class SourcePageContext {
 
     var source: CatalogSource? { workspace?.source }
 
+    // MARK: Shared vocabulary
+
+    // Read from the shared list caches rather than the page payload: one cache
+    // owns each list, so adding a field on the Source Fields page shows up here
+    // without busting the page. Empty until the list loads — `PlaceRegistry`
+    // warms all three alongside the workspace.
+
+    var types: [CatalogSourceType] {
+        let handle: QueryHandle<[CatalogSourceType]>? = session.queryHandle(
+            .sourceTypesList(project: session.projectKey)
+        )
+        return handle?.value ?? []
+    }
+
+    var grades: [CatalogCredibilityGrade] {
+        let handle: QueryHandle<[CatalogCredibilityGrade]>? = session.queryHandle(
+            .credibilityGradesList(project: session.projectKey)
+        )
+        return handle?.value ?? []
+    }
+
+    var fields: [CatalogMetadataField] {
+        let handle: QueryHandle<[CatalogMetadataField]>? = session.queryHandle(
+            .metadataFieldsList(project: session.projectKey)
+        )
+        return handle?.value ?? []
+    }
+
     /// Applies an enriched Source (cover fields included) to the workspace and
     /// list cache. Pass `typeChanged` when the write moved the Source to another
     /// type, so its suggested metadata rows and per-type counts refetch.

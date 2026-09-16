@@ -138,6 +138,8 @@ final class WorkspaceSession {
             let _: QueryHandle<[CatalogSourceType]> = query(key)
         case .metadataFieldsList:
             let _: QueryHandle<[CatalogMetadataField]> = query(key)
+        case .credibilityGradesList:
+            let _: QueryHandle<[CatalogCredibilityGrade]> = query(key)
         case .sourceWorkspace:
             let _: QueryHandle<CatalogSourceWorkspace> = query(key)
         case .typeSuggestions:

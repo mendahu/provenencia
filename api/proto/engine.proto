@@ -335,12 +335,11 @@ message GetSourceWorkspaceResponse {
   repeated Artifact artifacts = 4;
   // Omitted when no assessment row (UI may display Standard without a row).
   SourceCredibilityAssessment credibility = 5;
-  // Page vocabulary folded into the same exclusive catalog open so the
-  // Source page loads with one RPC (types picker, credibility chips, and
-  // the Add-metadata field list).
-  repeated SourceType types = 6;
-  repeated SourceCredibilityGrade grades = 7;
-  repeated MetadataField fields = 8;
+  // 6, 7, 8 held the source type, credibility grade, and metadata field
+  // vocabulary. The page now reads each from its own list RPC so one cache
+  // owns each list; duplicating them here staled every open page on a
+  // vocabulary edit made elsewhere.
+  reserved 6, 7, 8;
 }
 
 message CreateSourceRequest {

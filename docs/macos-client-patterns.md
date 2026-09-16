@@ -71,19 +71,28 @@ Destination view  →  reads QueryHandle(s)  →  patches / invalidates on mutat
 
 **Mutations:** patch list/detail synchronously when the save response is enough (`updatedSource`); invalidate on create/delete/ambiguous busts. Stale-while-revalidate is for **navigation reads**, not edit sync.
 
-A cached payload usually holds more than its own table, so a write reaches keys it
-does not name:
+**One cache owns each list.** A payload that duplicates another key's data has to
+be invalidated whenever that data changes anywhere, which is a bust with no
+natural scope. `GetSourceWorkspace` used to fold in the source-type, credibility-grade,
+and metadata-field vocabulary to save catalog opens; once `catalogsession` held the
+catalog open, that saved nothing and only meant a field added on the Source Fields
+page left every open Source page stale. The page now reads those three lists from
+their own keys (warmed together by `PlaceRegistry`), so adding vocabulary
+invalidates one list and no pages.
 
-- `CatalogSourceWorkspace` folds in the whole source-type and metadata-field
-  vocabulary (type picker, Add-metadata list) and the type's suggested rows, so
-  **every vocabulary edit stales every cached Source page** — that is
-  `CatalogQueryInvalidation.allCached(.sourceWorkspace)`, since a new field belongs
-  to all of them rather than one.
-- A `CatalogTypeSuggestion` embeds a whole field row, so relabelling a field
-  restates suggestion lists for types the edit never named.
-- Derived counts move when another table is written: `usedBy` /
-  `suggestedFieldCount` gate the Delete buttons, so writing a metadata value stales
-  the field list and adding a source stales the type list.
+Reach for a bust only where a payload is genuinely *derived* rather than duplicated:
+
+- `workspace.metadata` is a Go-computed join (the type's suggestions ∪ stored values,
+  filtered by per-source dismissal, in layout order) and each row embeds its field.
+  Relabelling a field or changing a type's suggestions restates it, and the mutation
+  can't name which sources are affected — hence
+  `CatalogQueryInvalidation.allCached(.sourceWorkspace)`. Keep that join in Go; don't
+  rebuild it in Swift to chase a narrower key.
+- A `CatalogTypeSuggestion` embeds a whole field row, so a relabel restates suggestion
+  lists for types the edit never named.
+- Derived counts move when another table is written: `usedBy` / `suggestedFieldCount`
+  gate the Delete buttons, so writing a metadata value stales the field list and
+  adding a source stales the type list.
 
 A `setQueryValue` patch is an optimization layered on top of invalidation, never a
 substitute for it: it silently no-ops when the key was never cached, and it only
