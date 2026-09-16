@@ -2,15 +2,34 @@
 
 ## Status
 
-**Brainstorm.** Not scheduled, not authoritative, and not a UI spec. Captured before the Interpretation-layer spike is planned so the shape of the client can be argued about before PRs are broken out.
+**Brainstorm, with working decisions.** Not scheduled and not a UI spec, but no longer purely open-ended: the design questions below were worked through and settled, and the next step is a spike plan with a PR breakdown.
 
-Authoritative schema for everything described here is [`interpretation-layer-data-model.md`](../interpretation-layer-data-model.md). Client rules are [`macos-client-patterns.md`](../macos-client-patterns.md). Nothing in this file overrides those.
+Authoritative schema for everything described here is [`interpretation-layer-data-model.md`](../interpretation-layer-data-model.md). Client rules are [`macos-client-patterns.md`](../macos-client-patterns.md). Nothing in this file overrides those — where this note reaches a conclusion that would change a model doc, that edit has to be made there deliberately.
+
+## Decisions so far
+
+| # | Decision | Where |
+| --- | --- | --- |
+| 1 | The primary surface is a Source-scoped spatial canvas called the **Interpretation graph**, not a list/detail pair per table | §1.2, §12 |
+| 2 | Root bubbles (person / event / place) are placed freely; **connect** writes a bridge Node plus its edges as one atomic macro, with a required disambiguation step | §3.1, §3.2 |
+| 3 | Draft status needs **no schema flag** — "uncited" is a query for Nodes with no Observations; `nodes.label` is the free working handle | §4.2 |
+| 4 | Citation → Observation stays **one-to-many**, with one-to-one as the default *behavior* and pinning opt-in | §4.5 |
+| 5 | Cross-source Observations stay legal in the model (removing them costs a trigger), but the canvas scopes to `source_id = ?` | §4.6 |
+| 6 | **`source` Nodes never render on the canvas.** Source-to-source commentary lives on the Source page. UI decision, no schema change | §4.6 |
+| 7 | Layout is **one unaudited table** keyed `(source_id, node_id)` with integer grid cells; positions travel with the project, camera does not | §5.1, §5.2 |
+| 8 | No auto-layout engine — unplaced Nodes go in a **tray** | §5 |
+| 9 | Pan/zoom needs **AppKit `NSScrollView`** regardless of deployment target; raising past macOS 14 is a separate decision on support-matrix grounds | §7.2, §7.3 |
+| 10 | Build **canvas first**, behind only the load-bearing minimum; the property vocabulary is *not* load-bearing | §11.1, §11.2 |
+| 11 | Persons, events, and places ship together — three seeded rows, not three features | §11.1.1 |
+| 12 | Entry via a Source-page button; the Interpretation Sources list is **required** as the section root and error-recovery destination | §11.1.2 |
+
+Two items found along the way that were on nobody's list: **candidate `-C-` ref support** does not exist in `core/ref` (§11.1), and **NameValue does not exist in either language** (§4.4).
 
 ---
 
 # 1. The premise
 
-The Interpretation layer is Citation → Observation → Node. Nodes are candidate persons, events, places, and the bridge-like associations between them (`participation`, `location`, `relationship`), plus reified `source` Nodes.
+The Interpretation layer is Citation → Observation → Node. Nodes are candidate persons, events, places, and the bridge-like associations between them (`participation`, `location`, `relationship`), plus reified `source` Nodes — which exist in the layer but are deliberately kept off this canvas (§4.6).
 
 The default way to build a client for that is one destination per table: a Citations list and detail, an Observations list and detail, a Nodes list and detail. That is how the Source layer is built today (Sources, Source types, Source fields), and it works there because a researcher genuinely does think about one Source at a time.
 
@@ -43,7 +62,12 @@ A single spatial workspace, scoped to a Source, with a small tool palette:
 
 Bridge bubbles are visually differentiated from root bubbles, so the association is a *thing* on the canvas the way it is a row in the catalog — but it reads as "the relationship between these two" rather than as a mysterious extra entity.
 
-Plus one supporting destination: an **Interpretation vocabulary** browser for `node_types`, `properties`, and the `node_type_properties` bindings — which Properties exist and which Node Types they attach to. That is the direct analogue of Source types / Source fields and should reuse [`Features/CatalogVocabulary/`](../../macos/App/Features/CatalogVocabulary/).
+Because the graph is Source-scoped, it is reached from a **button on the Source page** and from an **Interpretation Sources list** whose rows open a graph rather than a Source detail page (§11.1.2).
+
+Two supporting destinations sit beside it:
+
+- an **Interpretation vocabulary** browser for `node_types`, `properties`, and the `node_type_properties` bindings — which Properties exist and which Node Types they attach to. The direct analogue of Source types / Source fields, reusing [`Features/CatalogVocabulary/`](../../macos/App/Features/CatalogVocabulary/). Not needed for the first slice (§11.2);
+- a **"what other Sources say about this one"** section on the Source page, which is where source-to-source commentary lives instead of on the canvas (§4.6).
 
 ---
 
@@ -58,7 +82,7 @@ The codebase has **no prior art for either half of this**. Worth stating plainly
 | Locator capture | Nothing. The selector vocabulary (`page`, `region`, `text_quote`, `time_range`) is fully specified and entirely unimplemented. |
 | Structured NameValue | **Nothing, in either language.** `name_values` has no migration, no Go package, and no Swift editor — see §4.4. |
 | Structured DateValue | **Done.** [`core/database/datevalues`](../../core/database/datevalues/) plus `DateValueDraft` / `DateValueEditorForm` in [`Features/Dates/`](../../macos/App/Features/Dates/), already wired into `SourcePageMetadataView`. The template for NameValue. |
-| Typed value dispatch | Nothing. Source metadata is `value_text` + optional `date_value_id`; no `value_type` enum exists in the product — see §11.1. |
+| Typed value dispatch | Nothing. Source metadata is `value_text` + optional `date_value_id`; no `value_type` enum exists in the product — see §11.2. |
 | Interpretation vocabulary browser | Reusable shell exists (`CatalogVocabulary`, `PVTable`, origin markers). |
 | Candidate refs (`PER-C-…`) | Not implemented. `core/ref` mints `PREFIX-TOKEN` only and its `validRef` regex rejects the `-C-` form; the catalog-refs rule reserves a shared helper "when implemented" — see §11.1. |
 | Interpretation schema / Go / FFI | Nothing. Migrations stop at `000020.sql`; no `nodes`, `citations`, `observations` packages. |
@@ -144,8 +168,9 @@ That gives a clean lifecycle rule:
 
 | Node kind | Stands alone? | Uncited state |
 | --- | --- | --- |
-| Root — `person`, `event`, `place`, `source` | **Yes.** Created freely, one at a time. | Normal and expected. Persist immediately. |
+| Root — `person`, `event`, `place` | **Yes.** Created freely, one at a time. | Normal and expected. Persist immediately. |
 | Bridge — `relationship`, `participation`, `location` | Legal, but semantically empty | **Never persist alone.** Commit the bridge Node, its edges, and the Citation in one transaction, or write nothing. |
+| `source` | Yes, but not via this canvas | Created by the Source-page commentary flow, never placed on the graph (§4.6). |
 
 The reason bridges differ: if we persisted a bridge Node and the researcher then cancelled the citation dialog, the canvas would be showing line segments that do not exist in the catalog. The connect gesture must be atomic. Root placement does not have that problem, because a lone person bubble is truthful — it says "this source seems to mention somebody," which is exactly what it means.
 
@@ -201,7 +226,7 @@ Worth pinning down, because the obvious guess about why they exist is wrong, and
 
 There is no cross-source machinery in the schema. `nodes.source_id` is an ordinary column, and nothing anywhere confines an Observation's Citation to the subject Node's home Source. The interpretation model says so directly: `source_id` "exists so the application can efficiently surface Nodes that belong with a given Source during common same-source workflows. It does not restrict which Citations or Observations may reference the Node." Invariant 3 repeats it.
 
-So "removing it" does not mean deleting code. It means **adding** enforcement — and SQLite cannot express it as a `CHECK`, because the rule spans `observations` → `citations` → `artifacts` → `sources` and back to `nodes.source_id`. It would be a trigger or an application invariant, and it would run against the grain of §1.2 ("the database should enforce generic graph integrity… it should not attempt to encode the entire genealogy ontology into rigid table structure") and of the existing posture that even target Node Type constraints are application invariants rather than SQL allow-lists.
+So "removing it" does not mean deleting code. It means **adding** enforcement — and SQLite cannot express it as a `CHECK`, because the rule spans `observations` → `citations` → `artifacts` → `sources` and back to `nodes.source_id`. It would be a trigger or an application invariant, and it would run against the grain of the interpretation model's own §1.2 ("the database should enforce generic graph integrity… it should not attempt to encode the entire genealogy ontology into rigid table structure") and of the existing posture that even target Node Type constraints are application invariants rather than SQL allow-lists.
 
 ### Consolidating a person across Sources is *not* the reason
 
@@ -222,7 +247,7 @@ Using a cross-source Observation to consolidate people would actively **damage**
 
 ### The one thing that genuinely requires it
 
-**Source-to-source commentary.** A `source` Node reifies exactly one Source row, and §4.2 says the application "should maintain at most one `source` Node per Source." So when a book mentions a certificate:
+**Source-to-source commentary.** A `source` Node reifies exactly one Source row, and the interpretation model's §4.2 says the application "should maintain at most one `source` Node per Source." So when a book mentions a certificate:
 
 ```text
 Book Citation B1:   SB1 -- mentions --> SC1
@@ -311,7 +336,7 @@ A separate catalog table, explicitly excluded from audit, is the leaning: it tra
 Two simplifications worth taking:
 
 - **Snap-to-grid means integers.** If the grid is the interaction model, make it the *storage* model: `grid_x` / `grid_y` as `INTEGER` cell coordinates rather than floats. No float drift, trivial equality, cheap conflict resolution, and snapping stops being a separate feature.
-- **A tray beats an auto-layout engine.** Something has to handle Nodes with no stored position — cross-source Nodes, future imports, anything created outside the canvas. Instead of building auto-layout for v1, put unplaced Nodes in a **tray along the edge of the canvas** and let the researcher drag them onto the grid. That removes an entire algorithmic dependency and is arguably better behavior: the app never guesses at an arrangement that means something.
+- **A tray beats an auto-layout engine.** Something has to handle Nodes with no stored position — future imports, anything created outside the canvas, and Nodes whose position row was never written. Instead of building auto-layout for v1, put unplaced Nodes in a **tray along the edge of the canvas** and let the researcher drag them onto the grid. That removes an entire algorithmic dependency and is arguably better behavior: the app never guesses at an arrangement that means something.
 
 ## 5.1 One table is enough
 
@@ -328,7 +353,7 @@ CREATE TABLE graph_node_positions (
 
 Design notes, each of which is a decision worth making deliberately:
 
-- **The key is `(source_id, node_id)`, not `node_id` alone.** `source_id` answers "which graph." A Node homed to Source A can legitimately appear in Source B's graph, because Observations are not confined by `nodes.source_id` (§4.1) — so a Node needs one position *per graph it appears in*, not one position globally.
+- **The key is `(source_id, node_id)`, not `node_id` alone.** `source_id` is the graph identity, so a layout loads with `WHERE source_id = ?` and no join, and dropping a Source's whole layout is a direct cascade. Because the canvas is scoped to one Source (§4.6), every positioned Node is currently homed to that Source and `source_id` is technically derivable — so this is partly denormalization for the hot read path and partly keeping the door open: if foreign Nodes are ever displayed, a Node needs one position *per graph it appears in*, not one globally, and that would otherwise be a migration.
 - **No `graphs` table.** One graph per Source is the premise of the whole design, so the Source *is* the graph identity. If named views or multiple layouts per Source are ever wanted, that becomes a `graph_id` and a migration — acceptable precisely because this is unaudited UI state and therefore cheap to migrate.
 - **Absence of a row means unplaced**, which is exactly what feeds the tray. No nullable coordinates and no sentinel values.
 - **Both foreign keys cascade**, which is a deliberate *contrast* with `observations` (§4.3). Deleting a Node should silently drop its position; deleting a Source should drop its whole layout. Evidence must never be swept away that quietly, but layout should be.
@@ -353,7 +378,7 @@ This fits the existing session model cleanly. One key — something like `.sourc
 
 Drag is then a **patch, not an invalidation**: the move response names exactly the one row that changed, which is the case `setQueryValue` exists for. Creating or deleting a bubble invalidates the key.
 
-One caveat for later: once cross-source Nodes are displayed (§13), the same Node appears in two graph payloads, and renaming its label would have to invalidate both. That is the duplicated-versus-derived hazard from the same doc section, and it is a reason to keep cross-source display out of the first slices.
+One caveat for later: *if* foreign Nodes are ever displayed, the same Node would appear in two graph payloads and renaming its label would have to invalidate both — the duplicated-versus-derived hazard from the same doc section. Keeping the canvas Source-scoped (§4.6) means this never arises in the planned slices, and `source` Nodes never raise it at all because they are never drawn.
 
 Dragging must not write per frame. Positions batch and debounce, flushing on gesture end; the catalog session serializes FFI ([`use-catalog-session`](../../.cursor/skills/use-catalog-session/SKILL.md)), so a chatty canvas would queue behind badge refreshes and list loads.
 
@@ -439,10 +464,10 @@ That outline pays for itself twice, because XCUITest cannot meaningfully drive a
 
 - **Highest-risk UI in the app, on zero prior art**, landing alongside the layer's schema, Go, and FFI. Mitigated by slicing (§11), not eliminated.
 - **The canvas cannot express everything.** Polarity, competing Observations, transcription uncertainty, and cross-source Observations all resist spatial representation. Some list/detail surface is still required, so this is "graph *plus* fewer pages," not "graph instead of pages."
-- **Round-trip lossiness** (§3.3), in a tool whose entire purpose is not misrepresenting evidence.
-- **Position becomes state we did not want** (§5), with migration and sharing consequences.
+- **Round-trip lossiness** (§3.3), in a tool whose entire purpose is not misrepresenting evidence. This is the one risk with no clean mitigation yet.
+- **Position becomes state we did not want** — a UI-state table in the catalog, with sharing and migration consequences. Accepted deliberately, shape settled in §5.1.
 - **Accessibility and keyboard parity are non-optional work**, not a polish pass.
-- **It fights the current session cache.** `WorkspaceSession` patch/invalidate is tuned for lists and detail payloads. A graph is one large payload mutated constantly from inside the view; naive invalidation reloads everything on every write, naive patching drifts from the catalog. Needs per-Node and per-Observation patching against a graph query key.
+- **It strains the current session cache.** `WorkspaceSession` patch/invalidate is tuned for lists and detail payloads, while a graph is one large payload mutated constantly from inside the view. §5.3 proposes the shape (one key owning Nodes plus positions, patch on drag, invalidate on create/delete), but it is unproven until Slice 1 runs it.
 - **Deletion is a genuine UX problem, not a button** (§4.3).
 - **Scope creep is the default outcome.** "Snap to grid, then auto-layout, then edge routing, then minimap, then multi-select, then alignment guides" is an infinite backlog that produces no genealogical capability. The tray (§5) is one deliberate refusal; there will need to be more.
 
@@ -459,9 +484,9 @@ That outline pays for itself twice, because XCUITest cannot meaningfully drive a
 7. **NameValue end to end** (§4.4) — schema, Go, and editor, on the critical path.
 8. **Locator validation in Go**, with the full invariant set, before any UI writes `locator_json`.
 9. **Coordinate conversion** under magnification (§7.2) — one seam, unit-tested.
-10. **Cross-source Nodes** — scoped out of the early slices and limited to `source`-type Nodes when they arrive; see §4.6 for why they exist at all and why the canvas must not offer person reuse across Sources.
-11. **Cache strategy** for a large, constantly mutated graph payload.
-12. **Navigation history** — the graph is a place ([`add-workspace-location`](../../.cursor/skills/add-workspace-location/SKILL.md)); camera and selection probably are not. `WorkspaceLocation` is a flat struct of optional ids and needs new fields plus an identity decision.
+10. **Cross-source Nodes** — scoped out of the canvas entirely: `source` Nodes never render, and foreign person/event/place Nodes are deferred. See §4.6 for why they exist and why the canvas must never offer person reuse across Sources.
+11. **Cache strategy** for a large, constantly mutated graph payload — shape proposed in §5.3 (one `sourceGraph` key, patch on drag, invalidate on create/delete).
+12. **Navigation history** — the graph is a place ([`add-workspace-location`](../../.cursor/skills/add-workspace-location/SKILL.md)); camera and selection are not (§5.2). `WorkspaceLocation` needs **no** new field — a new section case plus the existing `sourceId` is already a distinct identity (§11.1.2).
 13. **Undo** — one connect gesture writes several rows and people will hit ⌘Z. The audit model already says undo is a forward revision, not a deletion ([`audit-revision-history.md`](../audit-revision-history.md) §9), so undo is a Go concern, not an `UndoManager` concern.
 14. **Density and filtering** — a census page yields dozens of Nodes and hundreds of Observations; needs layers/filters before it is usable on a real source.
 15. **Design system** — canvas chrome, bubbles, edges, and selection from existing tokens, not a parallel visual language.
@@ -570,9 +595,13 @@ Considered and set aside:
 
 # 13. Open questions
 
+Answered during this brainstorm, recorded so they are not reopened by accident: whether the canvas shows `source` Nodes (no, §4.6), whether Citation→Observation should be 1:1 (no, §4.5), whether layout lives in the catalog (yes, unaudited, §5.1), whether raising the deployment target unlocks the canvas (no, §7.2), and whether the property vocabulary blocks the canvas (no, §11.2).
+
+Still open:
+
 - Does the canvas *create* root Nodes only, or also adopt Nodes created elsewhere (imports)? Cross-Source adoption is answered in §4.6: no.
 - Can one graph span Sources (a "case view")? Source scope should be hard for editing; a read-only multi-Source view is a different feature and would need the Conclusion layer to be meaningful.
-- Are `source` Nodes and source-to-source `mentions` edges on this canvas, or a different view? This is the one place cross-source display is actually required (§4.6).
+- What does the Source-page commentary surface actually look like? `mentions` and `remark` Observations stay in the data model (§4.6) but now need a home that is not the canvas, and it is unspecified.
 - Before `mentions` ships: does mentioning an unheld document create a placeholder Source, and what resolves two placeholders that turn out to be the same document? Source merge does not exist (§4.6).
 - Does the person → person disambiguation (§3.2) earn its complexity, or should person → person simply always mean `relationship` and let shared-event modelling go through the event bubble?
 - Is a Citation with zero Observations a legal, useful state — "I transcribed this line, I have not interpreted it yet" — or should the composer refuse to save a Citation that asserts nothing? This is the one real loose end left by keeping one-to-many (§4.5), and it is a UI policy question rather than a schema one.
