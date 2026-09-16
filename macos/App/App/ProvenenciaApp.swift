@@ -12,6 +12,9 @@ struct ProvenenciaApp: App {
 
     init() {
         PVFontRegistration.registerBundledFontsIfNeeded()
+        // Must be armed before the first press: chrome controls ask
+        // `WindowDrag` whether the press they are handling dragged the window.
+        WindowDrag.startTrackingPresses()
     }
 
     var body: some Scene {

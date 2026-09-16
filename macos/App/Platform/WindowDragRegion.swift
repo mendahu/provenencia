@@ -16,34 +16,61 @@ enum PVWindowDragPlacement {
 
 /// Whether the press being handled right now has already moved the window.
 ///
-/// A `.behindContent` drag surface and the controls painted on top of it
-/// both act on the same mouse-down: AppKit hands it to `DragView`, which
-/// blocks in `performDrag` until mouse-up, and SwiftUI then resumes its own
-/// gesture for whatever control was under the cursor. So dragging the window
-/// by the Back button also *pressed* the Back button, and a slow drag
-/// tripped its long-press jump menu.
+/// Dragging the window by the Back button used to step Back too, and a slow
+/// drag also tripped its long-press jump menu. The window moves there without
+/// `WindowDragRegion` being involved at all: a `.hiddenTitleBar` window still
+/// carries AppKit's title-bar strip across the top ~28pt of the content, and
+/// that strip moves the window on a drag *while* passing the click through to
+/// the SwiftUI control underneath. Our 52pt header row overlaps it, so its
+/// controls get both.
 ///
-/// Every press over the surface reaches `DragView.mouseDown` before SwiftUI
-/// acts on it — that is the same delivery order that lets you drag from a
-/// control at all — so each press can clear the previous press's verdict.
-/// No timers: `didDrag` is false again the instant the next press starts.
+/// Watching the window instead of any one drag mechanism catches that strip
+/// and `WindowDragRegion`'s own `performDrag` alike, since both post
+/// `didMove`. A press counts as a drag once the window moves while the button
+/// is held, and the next mouse-down clears the verdict — no timers.
 @MainActor
 enum WindowDrag {
     private(set) static var didDrag = false
+    private static var pressMonitor: Any?
 
-    /// Runs `action` unless the current press has moved the window. Controls
-    /// sitting on a drag surface put their work behind this.
+    /// Installed once for the app's lifetime from `ProvenenciaApp`, ahead of
+    /// any press: arming this from a view's `onAppear` would miss presses on
+    /// whatever chrome appears first.
+    static func startTrackingPresses() {
+        guard pressMonitor == nil else { return }
+        // A local monitor sees the event before it reaches any view, so the
+        // reset always lands ahead of the control's own handling of it.
+        pressMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown]) { event in
+            MainActor.assumeIsolated { pressBegan() }
+            return event
+        }
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.didMoveNotification,
+            object: nil,
+            queue: nil
+        ) { _ in
+            MainActor.assumeIsolated {
+                // Programmatic moves (restore, zoom) are not drags; only a
+                // move made with the button held is the user dragging.
+                guard NSEvent.pressedMouseButtons != 0 else { return }
+                windowMovedUnderPress()
+            }
+        }
+    }
+
+    /// Runs `action` unless the press in flight has moved the window.
+    /// Controls that sit on window chrome put their work behind this.
     static func unlessDragging(_ action: () -> Void) {
         guard !didDrag else { return }
         action()
     }
 
-    /// Called by the drag surface on every mouse-down it receives, and
-    /// internal (not `fileprivate`) so the press/drag sequence is testable
-    /// without a real window — same escape hatch as `TrafficLights`.
-    static func beginPress() { didDrag = false }
+    /// The two transitions, internal rather than private so the press/drag
+    /// sequence is testable without synthesizing real drags — the same escape
+    /// hatch `TrafficLights.verticalOrigin` takes.
+    static func pressBegan() { didDrag = false }
 
-    static func noteWindowMoved() { didDrag = true }
+    static func windowMovedUnderPress() { didDrag = true }
 }
 
 /// Transparent AppKit surface that turns mouse-downs into window moves.
@@ -64,25 +91,10 @@ private struct WindowDragRegion: NSViewRepresentable {
 
     @MainActor
     private final class DragView: NSView {
+        // The resulting move is picked up by `WindowDrag`, which watches every
+        // window rather than this one drag path.
         override func mouseDown(with event: NSEvent) {
-            guard let window else { return }
-            WindowDrag.beginPress()
-            let origin = window.frame.origin
-            // Posted synchronously (`queue: nil`) so the flag flips *during*
-            // the drag, in time for a long-press gesture that fires while
-            // `performDrag` is still running its modal event loop.
-            let observer = NotificationCenter.default.addObserver(
-                forName: NSWindow.didMoveNotification,
-                object: window,
-                queue: nil
-            ) { _ in
-                MainActor.assumeIsolated { WindowDrag.noteWindowMoved() }
-            }
-            defer { NotificationCenter.default.removeObserver(observer) }
-            window.performDrag(with: event)
-            if window.frame.origin != origin {
-                WindowDrag.noteWindowMoved()
-            }
+            window?.performDrag(with: event)
         }
 
         override func accessibilityIsIgnored() -> Bool { true }
