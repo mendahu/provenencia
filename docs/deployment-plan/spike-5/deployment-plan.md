@@ -73,7 +73,7 @@ S5-D2  Source nodes          S5-03  core/database/nodetypes + seed
 
 - [ ] S5-D1 — Design: Interpretation section (sidebar, Sources list, Source-page entry) → [`design/`](design/)
 - [ ] S5-D2 — Design: Source nodes destination → [`design/`](design/)
-- [ ] S5-01 — Candidate ref minting in `core/ref`
+- [x] S5-01 — Candidate ref minting in `core/ref` → [`completed.md`](completed.md)
 - [ ] S5-02 — Interpretation schema migration
 - [ ] S5-03 — Node type vocabulary and create-time seed
 - [ ] S5-04 — Node CRUD with audit

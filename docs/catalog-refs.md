@@ -69,13 +69,23 @@ Authoritative mint/validate code: [`core/ref`](../core/ref/ref.go).
 r, err := ref.Mint(ref.PrefixSource)
 if err != nil { … }
 if err := ref.Validate(r); err != nil { … }
+
+// Interpretation Node, prefix from node_types.ref_prefix
+n, err := ref.MintCandidate("PER")            // PER-C-7KD45
+if err := ref.ValidateCandidate(n); err != nil { … }
 ```
 
 | API | Behavior |
 | --- | --- |
 | `Mint(prefix)` | Normalizes prefix to `A-Z{3}`, appends `-` + random 5-char token |
-| `Valid` / `Validate` | Catalog form only (`PREFIX-TOKEN`) today |
-| Candidate mint | **Not implemented yet** — add `MintCandidate` / validate when Node tables land; do not hand-roll strings |
+| `Valid` / `Validate` | Catalog form only (`PREFIX-TOKEN`). Rejects the candidate form |
+| `MintCandidate(prefix)` | Same normalize + token, emitting `PREFIX-C-TOKEN` for Interpretation Nodes |
+| `ValidCandidate` / `ValidateCandidate` | Candidate form only. Rejects the catalog form |
+| `ValidatePrefix(prefix)` | Normalizes a `node_types.ref_prefix` and rejects the reserved catalog prefixes (`ref.reserved_prefix`) |
+
+The two forms are **disjoint by length** — 9 characters against 11 — so exactly one validator matches any given string. That matters because `C` is a legal token character: `PER-C4N2P` is a catalog ref and is not a candidate.
+
+`Mint` still accepts reserved prefixes, because `ref.Mint(ref.PrefixSource)` is how catalog rows are minted. Only `ValidatePrefix`, which guards Node Type vocabulary, refuses them.
 
 **Do not** invent refs in SQL (`hex(id)`, random literals). Mint in Go on insert (or backfill in an `EnsureRefs`-style helper after migration).
 

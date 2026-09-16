@@ -14,6 +14,10 @@ const alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
 const tokenLen = 5
 
+// candidateMarker separates prefix from token in Interpretation Node refs.
+// Fixed application marker, never a ref_prefix.
+const candidateMarker = "C"
+
 // Reserved catalog / contributor prefixes (not used as node_types.ref_prefix).
 const (
 	PrefixUser        = "USR"
@@ -23,12 +27,27 @@ const (
 	PrefixObservation = "OBS"
 )
 
+var reservedPrefixes = map[string]struct{}{
+	PrefixUser:        {},
+	PrefixSource:      {},
+	PrefixArtifact:    {},
+	PrefixCitation:    {},
+	PrefixObservation: {},
+}
+
 var (
 	ErrInvalidPrefix = apperr.New(apperr.CodeRefInvalidPrefix, apperr.KindInternal)
 	ErrInvalid       = apperr.New(apperr.CodeRefInvalid, apperr.KindInternal)
+	// ErrReservedPrefix is a user error: a Node Type may not claim a catalog prefix.
+	ErrReservedPrefix = apperr.New(apperr.CodeRefReservedPrefix, apperr.KindUser)
 )
 
-var validRef = regexp.MustCompile(`^[A-Z]{3}-[0-9A-HJKMNP-TV-Z]{5}$`)
+// Canonical and candidate forms are disjoint by length (9 vs 11), so a token
+// beginning with C (e.g. PER-C4N2P) never reads as a candidate ref.
+var (
+	validRef          = regexp.MustCompile(`^[A-Z]{3}-[0-9A-HJKMNP-TV-Z]{5}$`)
+	validCandidateRef = regexp.MustCompile(`^[A-Z]{3}-C-[0-9A-HJKMNP-TV-Z]{5}$`)
+)
 
 // Mint returns PREFIX-TOKEN (e.g. USR-F4N2P). prefix must be three ASCII letters.
 func Mint(prefix string) (string, error) {
@@ -43,7 +62,22 @@ func Mint(prefix string) (string, error) {
 	return p + "-" + token, nil
 }
 
-// Valid reports whether s matches {PREFIX}-{token}.
+// MintCandidate returns PREFIX-C-TOKEN (e.g. PER-C-7KD45) for an Interpretation
+// Node. prefix is the Node Type's ref_prefix.
+func MintCandidate(prefix string) (string, error) {
+	p, err := normalizePrefix(prefix)
+	if err != nil {
+		return "", err
+	}
+	token, err := randomToken()
+	if err != nil {
+		return "", err
+	}
+	return p + "-" + candidateMarker + "-" + token, nil
+}
+
+// Valid reports whether s matches {PREFIX}-{token}. Candidate refs are not
+// valid here; use ValidCandidate.
 func Valid(s string) bool {
 	return validRef.MatchString(strings.TrimSpace(s))
 }
@@ -54,6 +88,33 @@ func Validate(s string) error {
 		return ErrInvalid
 	}
 	return nil
+}
+
+// ValidCandidate reports whether s matches {PREFIX}-C-{token}.
+func ValidCandidate(s string) bool {
+	return validCandidateRef.MatchString(strings.TrimSpace(s))
+}
+
+// ValidateCandidate returns ErrInvalid when s is not a well-formed candidate ref.
+func ValidateCandidate(s string) error {
+	if !ValidCandidate(s) {
+		return ErrInvalid
+	}
+	return nil
+}
+
+// ValidatePrefix normalizes a node_types.ref_prefix and rejects the reserved
+// catalog prefixes. Mint itself still accepts them — they are how catalog rows
+// are minted; only Node Types are constrained.
+func ValidatePrefix(prefix string) (string, error) {
+	p, err := normalizePrefix(prefix)
+	if err != nil {
+		return "", err
+	}
+	if _, ok := reservedPrefixes[p]; ok {
+		return "", ErrReservedPrefix
+	}
+	return p, nil
 }
 
 func normalizePrefix(prefix string) (string, error) {

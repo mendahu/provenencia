@@ -48,7 +48,16 @@ Token = 5 chars, Crockford alphabet without `I L O U`. Prefix = exactly three AS
 | `ref.PrefixCitation` | `CIT` | citations |
 | `ref.PrefixObservation` | `OBS` | observations |
 
-Node / canonical prefixes (`PER`, `EVT`, …) come from `node_types.ref_prefix`. Candidate Nodes: `{PREFIX}-C-{TOKEN}` — **extend `core/ref`** with `MintCandidate` when first needed; do not concatenate `-C-` ad hoc without shared validate.
+Node / canonical prefixes (`PER`, `EVT`, …) come from `node_types.ref_prefix`. Candidate Nodes are `{PREFIX}-C-{TOKEN}` and ship in `core/ref` — never concatenate `-C-` by hand:
+
+```go
+r, err := ref.MintCandidate(nodeType.RefPrefix) // PER-C-7KD45
+if err := ref.ValidateCandidate(r); err != nil {
+	return err
+}
+```
+
+`Valid` / `Validate` cover the catalog form and `ValidCandidate` / `ValidateCandidate` the candidate form; the two are disjoint, so pick the one matching the column. Validate a researcher- or seed-supplied `ref_prefix` with `ref.ValidatePrefix`, which rejects the reserved catalog prefixes below.
 
 Uniqueness: unique **within the project across all ref-bearing tables** (app rule). Table `UNIQUE(ref)` is necessary but not always sufficient once multiple tables exist—check/retry on insert.
 
@@ -62,7 +71,7 @@ Uniqueness: unique **within the project across all ref-bearing tables** (app rul
 6. **Tests** — table-driven: mint shape (`ref.Valid`), upsert rejects bad ref, create/open round-trip preserves ref.
 
 ```bash
-CGO_ENABLED=1 go test ./core/ref/ ./core/database/...
+CGO_ENABLED=1 go test -tags fts5 ./core/ref/ ./core/database/...
 ```
 
 ## Reference implementation
@@ -79,5 +88,5 @@ Copy that pattern for `SRC` / `ART` / … — same package, different prefix.
 
 - Invent a second random-id helper beside `core/ref`
 - Put `ref` generation in Swift (mint in Go; Swift only displays)
-- Use `C` as a three-letter `ref_prefix`
+- Use a reserved catalog prefix as a `node_types.ref_prefix` — gate it on `ref.ValidatePrefix`
 - Treat folder slugs / filenames as refs
