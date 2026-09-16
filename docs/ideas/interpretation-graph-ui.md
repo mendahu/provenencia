@@ -233,6 +233,31 @@ Letter Citation L1:  SC1 -- remark --> "date of birth on certificate mistyped"
 
 Note the shape: in `mentions` the foreign Node is in the **object** position (`value_node_id`); in `remark` it is the **subject**. Both occur.
 
+### Why only one `source` Node per Source
+
+The rule looks arbitrary next to person Nodes, where duplicates are not only allowed but expected. The difference is that **duplicates are only safe where there is a mechanism to resolve them, and for `source` Nodes there deliberately is not.**
+
+1. **Source identity is already machine-known.** A person Node is a *candidate* — that is what the `-C-` in `PER-C-7KD45` means — whose real identity is uncertain and source-local. A `source` Node reifies a row in your own catalog. There is nothing uncertain to resolve: `sources.id` is the answer, and the Source already has its own canonical `SRC-…` ref.
+2. **So `source` Nodes get no canonical rows.** [`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md) §6 states it directly: "Reification `source` Nodes are not typically given canonical rows." That is the crux. Duplicate person Nodes are fine because `canonical_entities` + `sameness_claims` + `reconciliation_claims` exist to unify them. That entire apparatus is intentionally out of play here.
+3. **Which leaves duplicates unresolvable.** You *could* write `sameness_claims` between two `source` Nodes — both endpoints share a Node Type, which the composite foreign key requires, and `source` is a Node Type. But membership closure runs from an `identity_anchor_id` on a canonical entity (§2.2), so with no canonical row the cluster has no handle and the unification is inert. You would be asserting, by hand, something the database already knows from `source_id` — and getting nothing back for it.
+4. **And duplicates would buy nothing.** Nodes carry no evidentiary content; a `source` Node has only `label` and `description`. Each citing Source's independent view of the certificate already lives in *its own* Observations under *its own* Citations. Sharing the subject Node does not merge those testimonies, so splitting it does not protect them.
+
+So the single-Node rule is not a restriction that costs expressiveness. It is **uniqueness by construction standing in for the reconciliation layer that `source` Nodes deliberately do not have.**
+
+Note it cannot be a SQL constraint. A partial unique index would need `WHERE node_type_id = <the source type>`, but `node_type_id` is a runtime UUID looked up from data rather than an enum, so there is no static predicate to index on. Hence the doc's "should" — it is a Go-side application invariant, like the value-population and target-type rules.
+
+### The coherent alternative, for the record
+
+There is one design that would make `source` Nodes uniform with every other Node *and* eliminate the only hard requirement for cross-source Observations: **split home from reified.** Let `source_id` mean "the Source that encountered this Node," exactly as it does for persons, and add a second reference — `reifies_source_id` — for the Source being talked about. Then each citing Source mints its own `source` Node homed to itself, every Observation becomes same-Source, and duplicates auto-cluster on `reifies_source_id` with no researcher effort.
+
+It is not a silly idea. The reasons not to take it: it puts a type-specific column on a table explicitly designed to hold almost no domain data; the "reifies" relationship cannot be expressed as an Observation instead, because there is no `source` value type among the seven primitives; and it requires edits to interpretation invariant 4, §4.2, §5.1, and conclusion §12.2. That trades a small application invariant for a permanent schema special case, which is the worse deal — but it should be a decision, not an oversight.
+
+### A real gap worth noting
+
+`nodes.source_id` is `NOT NULL REFERENCES sources(id)`, so a `source` Node must point at a Source that exists in the catalog. That means "this book mentions a marriage certificate I have never seen" forces a placeholder `sources` row for a document you do not hold.
+
+That is arguably fine and even useful — an unheld Source is a legitimate research to-do, and the Source layer already permits Sources with no Artifacts. But it has a consequence: if two Sources each mention what might be the same unheld document, resolving that means **merging Sources**, which is a Source-layer operation that does not exist. Not a blocker for the graph slices, but it belongs on the list before `mentions` ships.
+
 ### What this means for the canvas
 
 | Decision | Call |
@@ -491,6 +516,7 @@ Considered and set aside:
 - Does the canvas *create* root Nodes only, or also adopt Nodes created elsewhere (imports)? Cross-Source adoption is answered in §4.6: no.
 - Can one graph span Sources (a "case view")? Source scope should be hard for editing; a read-only multi-Source view is a different feature and would need the Conclusion layer to be meaningful.
 - Are `source` Nodes and source-to-source `mentions` edges on this canvas, or a different view? This is the one place cross-source display is actually required (§4.6).
+- Before `mentions` ships: does mentioning an unheld document create a placeholder Source, and what resolves two placeholders that turn out to be the same document? Source merge does not exist (§4.6).
 - Does the person → person disambiguation (§3.2) earn its complexity, or should person → person simply always mean `relationship` and let shared-event modelling go through the event bubble?
 - Is a Citation with zero Observations a legal, useful state — "I transcribed this line, I have not interpreted it yet" — or should the composer refuse to save a Citation that asserts nothing? This is the one real loose end left by keeping one-to-many (§4.5), and it is a UI policy question rather than a schema one.
 - How does Conclusion-layer work ([`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md)) surface here later — same canvas with a layer toggle, or a separate reconciliation view? "Not now" is fine; "never" would be a mistake.
