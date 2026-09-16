@@ -39,6 +39,12 @@ node (candidate)      {PREFIX}-C-{TOKEN}    e.g. PER-C-7KD45
 
 `C` is a fixed application marker, **not** a `ref_prefix`. Do not register `C` as a three-letter prefix.
 
+**Why an infix marker.** Three alternatives were considered and rejected:
+
+- **Suffix (`PER-7KD45-C`).** The end of a string is where text is lost — clipped table cells, ellipsized labels, a copy-paste one character short. A truncated candidate ref becomes a *well-formed canonical ref*, so the failure is silent and runs in the dangerous direction. It also makes the candidate ref literally contain a canonical ref as a prefix, which suggests a promotion relationship that does not exist: the two tokens are minted independently, and with 32⁵ tokens a large project will likely contain at least one misleading pair. Finally, `PER-7KD45` would be both a complete ref and a proper prefix of another, so nothing downstream could tell when input was finished.
+- **Separate prefixes (`CPR-7KD45`).** Cleaner as a string, but it needs two prefixes per Node Type, and the second is not derivable from the first (`PER`→`CPR`, `EVT`→`CEV`?), so readers must memorize a mapping instead of learning one rule. Making it self-describing requires reserving every C-initial prefix for candidates, which rules out natural canonical codes like `CEM`, `CTY`, and `CEN`.
+- **Leading marker (`C-PER-7KD45`).** Sound, and it would let candidates cluster and prefix-search as a layer. Rejected only because it is no shorter than the infix and the type code reads better first.
+
 ---
 
 ## 3. Reserved and seeded prefixes
@@ -81,11 +87,15 @@ if err := ref.ValidateCandidate(n); err != nil { … }
 | `Valid` / `Validate` | Catalog form only (`PREFIX-TOKEN`). Rejects the candidate form |
 | `MintCandidate(prefix)` | Same normalize + token, emitting `PREFIX-C-TOKEN` for Interpretation Nodes |
 | `ValidCandidate` / `ValidateCandidate` | Candidate form only. Rejects the catalog form |
+| `ValidAny(s)` | Either complete form. For resolving a ref the researcher typed, where the layer is not known up front |
+| `ValidPartial(s)` | A leading fragment of either form (`PER-7`, `PER-C`, `PER-C-`, `PER-C-7KD4`). Complete refs are **not** partial — test `ValidAny` first |
 | `ValidatePrefix(prefix)` | Normalizes a `node_types.ref_prefix` and rejects the reserved catalog prefixes (`ref.reserved_prefix`) |
 
 The two forms are **disjoint by length** — 9 characters against 11 — so exactly one validator matches any given string. That matters because `C` is a legal token character: `PER-C4N2P` is a catalog ref and is not a candidate.
 
 `Mint` still accepts reserved prefixes, because `ref.Mint(ref.PrefixSource)` is how catalog rows are minted. Only `ValidatePrefix`, which guards Node Type vocabulary, refuses them.
+
+Both ref grammars live **only** in this package. Consumers that need to recognize ref-shaped input — the omnibar fast path in [`core/search/refpath.go`](../core/search/refpath.go) is the first — call `ValidAny` / `ValidPartial` rather than carrying their own regex, so a future format change stays confined to `core/ref`.
 
 **Do not** invent refs in SQL (`hex(id)`, random literals). Mint in Go on insert (or backfill in an `EnsureRefs`-style helper after migration).
 

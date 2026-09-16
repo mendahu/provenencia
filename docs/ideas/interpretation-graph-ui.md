@@ -24,8 +24,9 @@ Authoritative schema for everything described here is [`interpretation-layer-dat
 | 12 | Entry via a Source-page button; the Interpretation Sources list is **required** as the section root and error-recovery destination | §11.1.2 |
 | 13 | The foundation is its **own spike** (Spike 5) so the canvas spike opens with no schema work; its deep destination is a plain node list, which doubles as the structured a11y path | §11.4 |
 | 14 | The canvas is expected to be reused for a family tree, so **geometry goes in a neutral module** — but the position table stays concrete per layer rather than polymorphic | §13 |
+| 15 | Candidate refs keep the **infix marker** (`PER-C-7KD45`) over a suffix or a separate prefix per type: the marker survives end-truncation, avoids implying a promotion link to an unrelated canonical ref, and keeps one type code per concept | [`catalog-refs.md`](../catalog-refs.md) §2 |
 
-Two items found along the way that were on nobody's list: **candidate `-C-` ref support** does not exist in `core/ref` (§11.1), and **NameValue does not exist in either language** (§4.4).
+Two items found along the way that were on nobody's list: **candidate `-C-` ref support** did not exist in `core/ref` (§11.1, shipped in S5-01), and **NameValue does not exist in either language** (§4.4).
 
 ---
 
@@ -86,7 +87,7 @@ The codebase has **no prior art for either half of this**. Worth stating plainly
 | Structured DateValue | **Done.** [`core/database/datevalues`](../../core/database/datevalues/) plus `DateValueDraft` / `DateValueEditorForm` in [`Features/Dates/`](../../macos/App/Features/Dates/), already wired into `SourcePageMetadataView`. The template for NameValue. |
 | Typed value dispatch | Nothing. Source metadata is `value_text` + optional `date_value_id`; no `value_type` enum exists in the product — see §11.2. |
 | Interpretation vocabulary browser | Reusable shell exists (`CatalogVocabulary`, `PVTable`, origin markers). |
-| Candidate refs (`PER-C-…`) | Not implemented. `core/ref` mints `PREFIX-TOKEN` only and its `validRef` regex rejects the `-C-` form; the catalog-refs rule reserves a shared helper "when implemented" — see §11.1. |
+| Candidate refs (`PER-C-…`) | **Done** (S5-01). `core/ref` gained `MintCandidate`, `ValidCandidate` / `ValidateCandidate`, and `ValidatePrefix`; both grammars now live only in that package and the omnibar defers to `ValidAny` / `ValidPartial`. |
 | Interpretation schema / Go / FFI | Nothing. Migrations stop at `000020.sql`; no `nodes`, `citations`, `observations` packages. |
 
 The vocabulary browser is a known quantity. The canvas and the artifact viewer are both greenfield, and the artifact viewer is probably the *larger* of the two.
@@ -506,7 +507,7 @@ The test is narrow: **what does the first `nodes` INSERT actually require?** The
 
 | Item | Why it is load-bearing | Size |
 | --- | --- | --- |
-| **Candidate ref support in `core/ref`** | `nodes.ref` is `NOT NULL` in the `{PREFIX}-C-{TOKEN}` candidate form. Today `Mint` only produces `PREFIX-TOKEN`, and the `validRef` regex rejects the `-C-` form outright. The catalog-refs rule already reserves this work: candidate Nodes use the form "via a shared helper **when implemented** — do not invent a parallel generator." | Small |
+| **Candidate ref support in `core/ref`** | ~~`nodes.ref` is `NOT NULL` in the `{PREFIX}-C-{TOKEN}` candidate form, which `Mint` could not produce.~~ **Shipped in S5-01.** The marker form was re-litigated against a suffix and a separate-prefix scheme before landing; rationale is in [`catalog-refs.md`](../catalog-refs.md) §2. | Small |
 | **`node_types` table + seeds** | `node_types` is the other FK. Needs the table, plus rows via the existing idempotent `Install` registry pattern (`sourcecredibilitygrades` is the closest template, `add-seeded-vocabulary` the skill), plus `ref_prefix` values. **Table and seed only — not the browser UI.** Seed all seven types from [`seeded-vocabulary.md`](../seeded-vocabulary.md) §3.1; only three are placeable, and they cost the same as one (§11.1.1). | Small |
 | **`nodes` table + `core/database/nodes`** | Create, list, rename, delete — **with audit wiring.** Every domain write in this product goes through `audit.Record(tx, …)` (see `sources/notes.go`); that is not optional, and it is the bulk of the work here. | Medium |
 | **Layout table** | Integer grid cells, unaudited (§5). Persistence across relaunch is part of what the canvas validates, so it cannot be held in memory — and it ships in slice 1 so the canvas slice opens with no schema work in front of it. | Small |

@@ -3,29 +3,24 @@ package search
 import (
 	"context"
 	"database/sql"
-	"regexp"
 	"strings"
 
 	"github.com/mendahu/provenencia/core/ref"
 )
 
-var refPrefixForm = regexp.MustCompile(`^[A-Z]{3}-[0-9A-HJKMNP-TV-Z]{0,4}$`)
-
 // classifyRefQuery returns an uppercased lookup key when the raw query looks
-// like a catalog ref or ref prefix (e.g. SRC-ZZ9K2 or SRC-ZZ).
+// like a ref or the start of one (e.g. SRC-ZZ9K2, SRC-ZZ, PER-C-7KD45, PER-C-).
+// The grammar lives in core/ref so both ref forms stay in one place.
 func classifyRefQuery(text string) (key string, exact bool) {
 	s := strings.ToUpper(strings.TrimSpace(text))
 	if s == "" {
 		return "", false
 	}
-	if ref.Valid(s) {
+	if ref.ValidAny(s) {
 		return s, true
 	}
-	if refPrefixForm.MatchString(s) {
-		parts := strings.SplitN(s, "-", 2)
-		if len(parts) == 2 && len(parts[1]) >= 1 {
-			return s, false
-		}
+	if ref.ValidPartial(s) {
+		return s, false
 	}
 	return "", false
 }

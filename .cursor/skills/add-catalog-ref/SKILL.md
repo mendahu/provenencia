@@ -59,6 +59,8 @@ if err := ref.ValidateCandidate(r); err != nil {
 
 `Valid` / `Validate` cover the catalog form and `ValidCandidate` / `ValidateCandidate` the candidate form; the two are disjoint, so pick the one matching the column. Validate a researcher- or seed-supplied `ref_prefix` with `ref.ValidatePrefix`, which rejects the reserved catalog prefixes below.
 
+When the layer is not known up front — resolving something the researcher typed, pasted, or is mid-way through typing — use `ref.ValidAny` (either complete form) and `ref.ValidPartial` (a leading fragment), testing `ValidAny` first. Both ref grammars live only in `core/ref`; **never** write a ref-shaped regex in a consumer package, or a format change has to be chased across the tree. `core/search/refpath.go` is the worked example.
+
 Uniqueness: unique **within the project across all ref-bearing tables** (app rule). Table `UNIQUE(ref)` is necessary but not always sufficient once multiple tables exist—check/retry on insert.
 
 ## Checklist for a new ref-bearing table

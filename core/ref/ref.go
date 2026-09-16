@@ -47,6 +47,10 @@ var (
 var (
 	validRef          = regexp.MustCompile(`^[A-Z]{3}-[0-9A-HJKMNP-TV-Z]{5}$`)
 	validCandidateRef = regexp.MustCompile(`^[A-Z]{3}-C-[0-9A-HJKMNP-TV-Z]{5}$`)
+	// partialRef matches a non-empty leading fragment of either form, short of
+	// a complete ref: PER-7, PER-C, PER-C-, PER-C-7KD4. Keep in step with the
+	// two forms above.
+	partialRef = regexp.MustCompile(`^[A-Z]{3}-(?:[0-9A-HJKMNP-TV-Z]{1,4}|C-[0-9A-HJKMNP-TV-Z]{0,4})$`)
 )
 
 // Mint returns PREFIX-TOKEN (e.g. USR-F4N2P). prefix must be three ASCII letters.
@@ -101,6 +105,21 @@ func ValidateCandidate(s string) error {
 		return ErrInvalid
 	}
 	return nil
+}
+
+// ValidAny reports whether s is a complete ref in either form. Callers that
+// resolve a ref the researcher typed or spoke want this; callers that assert a
+// specific layer want Valid or ValidCandidate.
+func ValidAny(s string) bool {
+	t := strings.TrimSpace(s)
+	return Valid(t) || ValidCandidate(t)
+}
+
+// ValidPartial reports whether s is a leading fragment of some complete ref —
+// what a researcher has typed so far. Complete refs are not partial: test
+// ValidAny first.
+func ValidPartial(s string) bool {
+	return partialRef.MatchString(strings.TrimSpace(s))
 }
 
 // ValidatePrefix normalizes a node_types.ref_prefix and rejects the reserved
