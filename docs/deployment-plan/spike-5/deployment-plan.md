@@ -119,12 +119,9 @@ CREATE TABLE subjects (
 ) STRICT;
 
 CREATE TABLE subject_positions (
-	source_id BLOB NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
-	subject_id   BLOB NOT NULL REFERENCES subjects(id)   ON DELETE CASCADE,
-	grid_x    INTEGER NOT NULL,
-	grid_y    INTEGER NOT NULL,
-
-	PRIMARY KEY (source_id, subject_id)
+	subject_id BLOB PRIMARY KEY REFERENCES subjects(id) ON DELETE CASCADE,
+	grid_x     INTEGER NOT NULL,
+	grid_y     INTEGER NOT NULL
 ) STRICT;
 ```
 
@@ -132,8 +129,9 @@ Decisions baked into that DDL, each argued in the design note:
 
 - **`subject_types` carries two prefixes**, `ref_prefix` for Conclusion-layer canonical entities and `candidate_ref_prefix` for Interpretation subjects, because `canonical_entities` will reference these same rows (interpretation model §4.1). Both are `UNIQUE`, but that is not sufficient — see the gotcha on the shared namespace.
 - **`subjects` has no `ON DELETE` clause** on either FK — deliberately `NO ACTION`, so a Source with Subjects cannot be deleted out from under them. The cascade for `observations` → `subjects` is a *later* decision and must be made when that table ships (§4.3), not retrofitted.
-- **`subject_positions` cascades both ways**, which is the deliberate contrast: layout is disposable, evidence is not.
-- **No `UNIQUE (source_id, grid_x, grid_y)`.** A drag that swaps two bubbles transiently collides; let the UI nudge (§5.1).
+- **`subject_positions` is keyed by `subject_id` alone** — one position per subject; graph scope is `subjects.source_id`. No plan for the same subject on multiple Source graphs, so `source_id` is not denormalized onto the layout row.
+- **`subject_positions.subject_id` cascades on delete**, which is the deliberate contrast: layout is disposable, evidence is not. (Source delete of layout is indirect: subjects block Source delete via `NO ACTION`, and removing subjects drops positions.)
+- **No `UNIQUE (grid_x, grid_y)`.** A drag that swaps two bubbles transiently collides; let the UI nudge (§5.1).
 - **Coordinates are signed** — the plane is unbounded around an origin, so no `CHECK (grid_x >= 0)`.
 - **`subject_positions` is unaudited.** State this in the migration comment and be ready to defend it, because the nearest sibling (`source_metadata_layout`, migration `000013`) *is* audited. The distinction: dismissing a metadata suggestion is a research decision; arranging bubbles is not.
 

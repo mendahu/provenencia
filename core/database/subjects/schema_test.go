@@ -33,7 +33,7 @@ func TestMigrationCreatesSubjectTables(t *testing.T) {
 			"id", "ref", "source_id", "subject_type_id", "label", "description",
 		},
 		"subject_positions": {
-			"source_id", "subject_id", "grid_x", "grid_y",
+			"subject_id", "grid_x", "grid_y",
 		},
 	}
 	for table, cols := range wantCols {

@@ -86,7 +86,7 @@ CGO_ENABLED=1 go test -tags fts5 ./...
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | S5-01 (reserved Subject type prefixes) |
-| **Deliverables** | Done. [`core/database/migrations/000021.sql`](../../../core/database/migrations/000021.sql): `subject_types` (two prefixes), `subjects` (NO ACTION FKs to `sources` / `subject_types`), and `subject_positions` (CASCADE both ways; unaudited layout). Schema presence test in [`core/database/subjects/schema_test.go`](../../../core/database/subjects/schema_test.go). |
+| **Deliverables** | Done. [`core/database/migrations/000021.sql`](../../../core/database/migrations/000021.sql): `subject_types` (two prefixes), `subjects` (NO ACTION FKs to `sources` / `subject_types`), and `subject_positions` (PK `subject_id`, CASCADE on subject delete; unaudited layout). Schema presence test in [`core/database/subjects/schema_test.go`](../../../core/database/subjects/schema_test.go). |
 | **Tests** | Done. `TestMigrationCreatesSubjectTables`: `user_version >= 21` and `PRAGMA table_info` columns for all three tables after `database.Create`. |
 | **Dogfood** | App unchanged. No seed, CRUD, FFI, or Swift — nothing is user-visible. |
 | **Out** | Seeded Subject types (S5-03); Subject CRUD + audit (S5-04); positions query package (S5-05); FFI and UI (S5-06…). |
