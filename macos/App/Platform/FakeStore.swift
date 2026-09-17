@@ -13,6 +13,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var credibilityBySource: [String: CatalogCredibilityAssessment] = [:]
     var credibilityGradesByProject: [String: [CatalogCredibilityGrade]] = [:]
     var sourceTypesByProject: [String: [CatalogSourceType]] = [:]
+    var subjectTypesByProject: [String: [CatalogSubjectType]] = [:]
+    var subjectsBySource: [String: [CatalogSubject]] = [:]
+    var subjectPositionsBySubject: [String: CatalogSubjectPosition] = [:]
     /// Type↔field suggestion joins, keyed by source type id and held in the
     /// order they were assigned — the engine's `sort_order`.
     var suggestionsByType: [String: [CatalogTypeSuggestion]] = [:]
@@ -917,6 +920,95 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             return $0.hit.title < $1.hit.title
         }
         return scored.prefix(50).map(\.hit)
+    }
+
+    func listSubjectTypes(projectDir: String) async throws -> [CatalogSubjectType] {
+        markCatalogSessionHeld(projectDir)
+        return subjectTypesByProject[projectDir] ?? []
+    }
+
+    func createSubject(
+        projectDir: String,
+        userID _: String,
+        sourceID: String,
+        subjectTypeID: String,
+        label: String,
+        description: String
+    ) async throws -> CatalogSubject {
+        markCatalogSessionHeld(projectDir)
+        let subject = CatalogSubject(
+            id: UUID().uuidString.lowercased(),
+            ref: "CPR-FAKE1",
+            sourceID: sourceID,
+            subjectTypeID: subjectTypeID,
+            label: label,
+            description: description
+        )
+        subjectsBySource[sourceID, default: []].append(subject)
+        return subject
+    }
+
+    func updateSubject(
+        projectDir: String,
+        userID _: String,
+        subjectID: String,
+        label: String,
+        description: String
+    ) async throws -> CatalogSubject {
+        markCatalogSessionHeld(projectDir)
+        for (sourceID, var list) in subjectsBySource {
+            guard let idx = list.firstIndex(where: { $0.id == subjectID }) else { continue }
+            list[idx].label = label
+            list[idx].description = description
+            subjectsBySource[sourceID] = list
+            return list[idx]
+        }
+        throw StoreBoom.boom
+    }
+
+    func deleteSubject(projectDir: String, userID _: String, subjectID: String) async throws {
+        markCatalogSessionHeld(projectDir)
+        for (sourceID, var list) in subjectsBySource {
+            guard let idx = list.firstIndex(where: { $0.id == subjectID }) else { continue }
+            list.remove(at: idx)
+            subjectsBySource[sourceID] = list
+            subjectPositionsBySubject[subjectID] = nil
+            return
+        }
+        throw StoreBoom.boom
+    }
+
+    func listSubjects(projectDir: String, sourceID: String) async throws -> [CatalogSubject] {
+        markCatalogSessionHeld(projectDir)
+        return subjectsBySource[sourceID] ?? []
+    }
+
+    func setSubjectPosition(
+        projectDir: String,
+        subjectID: String,
+        gridX: Int64,
+        gridY: Int64
+    ) async throws -> CatalogSubjectPosition {
+        markCatalogSessionHeld(projectDir)
+        let position = CatalogSubjectPosition(subjectID: subjectID, gridX: gridX, gridY: gridY)
+        subjectPositionsBySubject[subjectID] = position
+        return position
+    }
+
+    func clearSubjectPosition(projectDir: String, subjectID: String) async throws {
+        markCatalogSessionHeld(projectDir)
+        subjectPositionsBySubject[subjectID] = nil
+    }
+
+    func listSubjectPositions(projectDir: String, sourceID: String) async throws -> [CatalogSubjectPosition] {
+        markCatalogSessionHeld(projectDir)
+        let subjects = subjectsBySource[sourceID] ?? []
+        return subjects.compactMap { subjectPositionsBySubject[$0.id] }
+            .sorted {
+                if $0.gridY != $1.gridY { return $0.gridY < $1.gridY }
+                if $0.gridX != $1.gridX { return $0.gridX < $1.gridX }
+                return $0.subjectID < $1.subjectID
+            }
     }
 
     private func markCatalogSessionHeld(_ projectDir: String) {

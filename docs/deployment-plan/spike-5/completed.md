@@ -24,6 +24,7 @@ Changes to the plan itself, as opposed to landed work.
 | [S5-03](#s5-03--pr-subject-type-vocabulary-and-seed) | PR | Seven Subject types seeded at catalog create |
 | [S5-04](#s5-04--pr-subject-crud-with-audit) | PR | Audited Subject Create / Update / Delete |
 | [S5-05](#s5-05--pr-graph-layout-positions) | PR | Unaudited `subject_positions` Set / Get / Clear |
+| [S5-06](#s5-06--pr-ffi-for-subjects-types-and-positions) | PR | Eight catalog RPCs for types, subjects, positions |
 | [S5-D1](#s5-d1--design-interpretation-nav-entry) | Design | Interpretation sidebar destination — **superseded** |
 | [S5-D3](#s5-d3--design-sources-section-nav) | Design | Nested Sources family nav — Subject types / fields stubs |
 
@@ -157,4 +158,24 @@ CGO_ENABLED=1 go test -tags fts5 ./core/database/subjects/...
 
 ```bash
 CGO_ENABLED=1 go test -tags fts5 ./core/database/subjectpositions/...
+```
+
+### S5-06 — PR: FFI for subjects, types, and positions
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S5-03…S5-05 (types seed, subject CRUD, positions package) |
+| **Deliverables** | Done. Proto Methods **45–52** (`ListSubjectTypes`, `Create`/`Update`/`Delete`/`ListSubjects`, `Set`/`Clear`/`ListSubjectPositions`) in [`engine.proto`](../../../api/proto/engine.proto); generated Go + Swift. Dispatch + [`api/ffi/handlers/subjects.go`](../../../api/ffi/handlers/subjects.go) via `withProjectCatalog`. `GenealogyStore` / `GoStore` / `FakeStore` / `ThrowingStore` parity. L10n for `subjects.invalid` and `subjectpositions.invalid` (no Subject-type editor codes). |
+| **Tests** | Done. [`subjects_test.go`](../../../api/ffi/handlers/subjects_test.go) `runRPC` coverage (create/list/update/delete, position set/list/clear with session close persistence). [`SubjectStoreTests.swift`](../../../macos/ProvenenciaTests/SubjectStoreTests.swift) FakeStore round-trips. |
+| **Dogfood** | App unchanged — no UI destination. Verifiable by Go FFI tests and FakeStore. |
+| **Out** | Sidebar / Evidence graph place (S5-07); Sources list Interpret (S5-08); canvas / tray UI; Subject type CRUD RPCs; omnibar Subject search; product SemVer bump. |
+
+**Landed:** Spike 6 can call subject types, subjects, and positions over FFI with FakeStore parity for Swift UI work.
+
+**Verify:**
+
+```bash
+CGO_ENABLED=1 go test -tags fts5 ./api/ffi/...
+xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' -only-testing:ProvenenciaTests/SubjectStoreTests
 ```

@@ -1979,6 +1979,30 @@
         }
       }
     },
+    "error.subjects.invalid" : {
+      "comment" : "FFI error subjects.invalid",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid subject."
+          }
+        }
+      }
+    },
+    "error.subjectpositions.invalid" : {
+      "comment" : "FFI error subjectpositions.invalid",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid subject position."
+          }
+        }
+      }
+    },
     "error.sourcetypes.duplicate_key" : {
       "comment" : "FFI error sourcetypes.duplicate_key; argument is the colliding key",
       "extractionState" : "manual",

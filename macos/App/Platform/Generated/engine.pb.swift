@@ -68,6 +68,14 @@ public nonisolated enum Provenencia_Engine_V1_Method: SwiftProtobuf.Enum, Swift.
   case closeCatalogSession // = 42
   case setSourceCover // = 43
   case searchCatalog // = 44
+  case listSubjectTypes // = 45
+  case createSubject // = 46
+  case updateSubject // = 47
+  case deleteSubject // = 48
+  case listSubjects // = 49
+  case setSubjectPosition // = 50
+  case clearSubjectPosition // = 51
+  case listSubjectPositions // = 52
   case UNRECOGNIZED(Int)
 
   public init() {
@@ -120,6 +128,14 @@ public nonisolated enum Provenencia_Engine_V1_Method: SwiftProtobuf.Enum, Swift.
     case 42: self = .closeCatalogSession
     case 43: self = .setSourceCover
     case 44: self = .searchCatalog
+    case 45: self = .listSubjectTypes
+    case 46: self = .createSubject
+    case 47: self = .updateSubject
+    case 48: self = .deleteSubject
+    case 49: self = .listSubjects
+    case 50: self = .setSubjectPosition
+    case 51: self = .clearSubjectPosition
+    case 52: self = .listSubjectPositions
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -170,6 +186,14 @@ public nonisolated enum Provenencia_Engine_V1_Method: SwiftProtobuf.Enum, Swift.
     case .closeCatalogSession: return 42
     case .setSourceCover: return 43
     case .searchCatalog: return 44
+    case .listSubjectTypes: return 45
+    case .createSubject: return 46
+    case .updateSubject: return 47
+    case .deleteSubject: return 48
+    case .listSubjects: return 49
+    case .setSubjectPosition: return 50
+    case .clearSubjectPosition: return 51
+    case .listSubjectPositions: return 52
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -220,6 +244,14 @@ public nonisolated enum Provenencia_Engine_V1_Method: SwiftProtobuf.Enum, Swift.
     .closeCatalogSession,
     .setSourceCover,
     .searchCatalog,
+    .listSubjectTypes,
+    .createSubject,
+    .updateSubject,
+    .deleteSubject,
+    .listSubjects,
+    .setSubjectPosition,
+    .clearSubjectPosition,
+    .listSubjectPositions,
   ]
 
 }
@@ -2364,6 +2396,320 @@ public nonisolated struct Provenencia_Engine_V1_SearchCatalogResponse: Sendable 
   public init() {}
 }
 
+/// SubjectType is one subject_types vocabulary row (shared with Conclusion).
+public nonisolated struct Provenencia_Engine_V1_SubjectType: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var id: String = String()
+
+  public var key: String = String()
+
+  public var origin: String = String()
+
+  public var label: String = String()
+
+  public var description_p: String = String()
+
+  public var refPrefix: String = String()
+
+  public var candidateRefPrefix: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// Subject is one Interpretation subject (candidate) row.
+public nonisolated struct Provenencia_Engine_V1_Subject: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var id: String = String()
+
+  public var ref: String = String()
+
+  public var sourceID: String = String()
+
+  public var subjectTypeID: String = String()
+
+  public var label: String = String()
+
+  public var description_p: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// SubjectPosition is unaudited graph layout for one subject.
+public nonisolated struct Provenencia_Engine_V1_SubjectPosition: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var subjectID: String = String()
+
+  public var gridX: Int64 = 0
+
+  public var gridY: Int64 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Provenencia_Engine_V1_ListSubjectTypesRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var projectDir: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Provenencia_Engine_V1_ListSubjectTypesResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var types: [Provenencia_Engine_V1_SubjectType] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Provenencia_Engine_V1_CreateSubjectRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var projectDir: String = String()
+
+  public var userID: String = String()
+
+  public var sourceID: String = String()
+
+  public var subjectTypeID: String = String()
+
+  public var label: String = String()
+
+  public var description_p: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Provenencia_Engine_V1_CreateSubjectResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var subject: Provenencia_Engine_V1_Subject {
+    get {_subject ?? Provenencia_Engine_V1_Subject()}
+    set {_subject = newValue}
+  }
+  /// Returns true if `subject` has been explicitly set.
+  public var hasSubject: Bool {self._subject != nil}
+  /// Clears the value of `subject`. Subsequent reads from it will return its default value.
+  public mutating func clearSubject() {self._subject = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _subject: Provenencia_Engine_V1_Subject? = nil
+}
+
+public nonisolated struct Provenencia_Engine_V1_UpdateSubjectRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var projectDir: String = String()
+
+  public var userID: String = String()
+
+  public var subjectID: String = String()
+
+  public var label: String = String()
+
+  public var description_p: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Provenencia_Engine_V1_UpdateSubjectResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var subject: Provenencia_Engine_V1_Subject {
+    get {_subject ?? Provenencia_Engine_V1_Subject()}
+    set {_subject = newValue}
+  }
+  /// Returns true if `subject` has been explicitly set.
+  public var hasSubject: Bool {self._subject != nil}
+  /// Clears the value of `subject`. Subsequent reads from it will return its default value.
+  public mutating func clearSubject() {self._subject = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _subject: Provenencia_Engine_V1_Subject? = nil
+}
+
+public nonisolated struct Provenencia_Engine_V1_DeleteSubjectRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var projectDir: String = String()
+
+  public var userID: String = String()
+
+  public var subjectID: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Provenencia_Engine_V1_DeleteSubjectResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Provenencia_Engine_V1_ListSubjectsRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var projectDir: String = String()
+
+  public var sourceID: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Provenencia_Engine_V1_ListSubjectsResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var subjects: [Provenencia_Engine_V1_Subject] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Provenencia_Engine_V1_SetSubjectPositionRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var projectDir: String = String()
+
+  public var subjectID: String = String()
+
+  public var gridX: Int64 = 0
+
+  public var gridY: Int64 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Provenencia_Engine_V1_SetSubjectPositionResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var position: Provenencia_Engine_V1_SubjectPosition {
+    get {_position ?? Provenencia_Engine_V1_SubjectPosition()}
+    set {_position = newValue}
+  }
+  /// Returns true if `position` has been explicitly set.
+  public var hasPosition: Bool {self._position != nil}
+  /// Clears the value of `position`. Subsequent reads from it will return its default value.
+  public mutating func clearPosition() {self._position = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _position: Provenencia_Engine_V1_SubjectPosition? = nil
+}
+
+public nonisolated struct Provenencia_Engine_V1_ClearSubjectPositionRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var projectDir: String = String()
+
+  public var subjectID: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Provenencia_Engine_V1_ClearSubjectPositionResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Provenencia_Engine_V1_ListSubjectPositionsRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var projectDir: String = String()
+
+  public var sourceID: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Provenencia_Engine_V1_ListSubjectPositionsResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var positions: [Provenencia_Engine_V1_SubjectPosition] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 /// Error is the protobuf payload on provenencia_call status 1 (failure).
 /// Success payloads remain method-specific response messages.
 public nonisolated struct Provenencia_Engine_V1_Error: Sendable {
@@ -2389,7 +2735,7 @@ public nonisolated struct Provenencia_Engine_V1_Error: Sendable {
 fileprivate nonisolated let _protobuf_package = "provenencia.engine.v1"
 
 nonisolated extension Provenencia_Engine_V1_Method: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0METHOD_UNSPECIFIED\0\u{1}METHOD_PING\0\u{1}METHOD_GET_VERSION\0\u{1}METHOD_GET_INSTALL_IDENTITY\0\u{1}METHOD_COMPLETE_ONBOARDING\0\u{1}METHOD_REMOVE_INSTALL_IDENTITY\0\u{1}METHOD_GET_ACTIVE_PROJECT\0\u{1}METHOD_OPEN_PROJECT\0\u{1}METHOD_REMOVE_ACTIVE_PROJECT\0\u{1}METHOD_LIST_PROJECT_USERS\0\u{1}METHOD_SIGN_OUT\0\u{1}METHOD_GET_PROJECT_INFO\0\u{1}METHOD_LIST_SOURCES\0\u{1}METHOD_GET_SOURCE_WORKSPACE\0\u{1}METHOD_CREATE_SOURCE\0\u{1}METHOD_UPDATE_SOURCE\0\u{1}METHOD_ADD_SOURCE_NOTE\0\u{1}METHOD_UPDATE_SOURCE_NOTE\0\u{1}METHOD_DELETE_SOURCE_NOTE\0\u{1}METHOD_SET_SOURCE_METADATA\0\u{1}METHOD_CLEAR_SOURCE_METADATA\0\u{1}METHOD_CREATE_ARTIFACT\0\u{1}METHOD_INGEST_ARTIFACT_FILE\0\u{1}METHOD_LIST_SOURCE_TYPES\0\u{1}METHOD_CREATE_SOURCE_TYPE\0\u{1}METHOD_LIST_METADATA_FIELDS\0\u{1}METHOD_CREATE_METADATA_FIELD\0\u{2}\u{2}METHOD_UPDATE_METADATA_FIELD\0\u{1}METHOD_DELETE_SOURCE_TYPE\0\u{1}METHOD_DELETE_METADATA_FIELD\0\u{1}METHOD_UPDATE_SOURCE_TYPE\0\u{1}METHOD_LIST_TYPE_SUGGESTIONS\0\u{1}METHOD_ASSIGN_TYPE_FIELD\0\u{1}METHOD_REMOVE_TYPE_FIELD\0\u{1}METHOD_GET_WORKSPACE_NAV_COUNTS\0\u{1}METHOD_UPDATE_ARTIFACT\0\u{1}METHOD_LIST_SOURCE_CREDIBILITY_GRADES\0\u{1}METHOD_UPSERT_SOURCE_CREDIBILITY_ASSESSMENT\0\u{1}METHOD_DISMISS_SOURCE_METADATA_SUGGESTION\0\u{1}METHOD_REORDER_SOURCE_METADATA\0\u{1}METHOD_ENSURE_FILE_THUMBNAIL\0\u{1}METHOD_CLOSE_CATALOG_SESSION\0\u{1}METHOD_SET_SOURCE_COVER\0\u{1}METHOD_SEARCH_CATALOG\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0METHOD_UNSPECIFIED\0\u{1}METHOD_PING\0\u{1}METHOD_GET_VERSION\0\u{1}METHOD_GET_INSTALL_IDENTITY\0\u{1}METHOD_COMPLETE_ONBOARDING\0\u{1}METHOD_REMOVE_INSTALL_IDENTITY\0\u{1}METHOD_GET_ACTIVE_PROJECT\0\u{1}METHOD_OPEN_PROJECT\0\u{1}METHOD_REMOVE_ACTIVE_PROJECT\0\u{1}METHOD_LIST_PROJECT_USERS\0\u{1}METHOD_SIGN_OUT\0\u{1}METHOD_GET_PROJECT_INFO\0\u{1}METHOD_LIST_SOURCES\0\u{1}METHOD_GET_SOURCE_WORKSPACE\0\u{1}METHOD_CREATE_SOURCE\0\u{1}METHOD_UPDATE_SOURCE\0\u{1}METHOD_ADD_SOURCE_NOTE\0\u{1}METHOD_UPDATE_SOURCE_NOTE\0\u{1}METHOD_DELETE_SOURCE_NOTE\0\u{1}METHOD_SET_SOURCE_METADATA\0\u{1}METHOD_CLEAR_SOURCE_METADATA\0\u{1}METHOD_CREATE_ARTIFACT\0\u{1}METHOD_INGEST_ARTIFACT_FILE\0\u{1}METHOD_LIST_SOURCE_TYPES\0\u{1}METHOD_CREATE_SOURCE_TYPE\0\u{1}METHOD_LIST_METADATA_FIELDS\0\u{1}METHOD_CREATE_METADATA_FIELD\0\u{2}\u{2}METHOD_UPDATE_METADATA_FIELD\0\u{1}METHOD_DELETE_SOURCE_TYPE\0\u{1}METHOD_DELETE_METADATA_FIELD\0\u{1}METHOD_UPDATE_SOURCE_TYPE\0\u{1}METHOD_LIST_TYPE_SUGGESTIONS\0\u{1}METHOD_ASSIGN_TYPE_FIELD\0\u{1}METHOD_REMOVE_TYPE_FIELD\0\u{1}METHOD_GET_WORKSPACE_NAV_COUNTS\0\u{1}METHOD_UPDATE_ARTIFACT\0\u{1}METHOD_LIST_SOURCE_CREDIBILITY_GRADES\0\u{1}METHOD_UPSERT_SOURCE_CREDIBILITY_ASSESSMENT\0\u{1}METHOD_DISMISS_SOURCE_METADATA_SUGGESTION\0\u{1}METHOD_REORDER_SOURCE_METADATA\0\u{1}METHOD_ENSURE_FILE_THUMBNAIL\0\u{1}METHOD_CLOSE_CATALOG_SESSION\0\u{1}METHOD_SET_SOURCE_COVER\0\u{1}METHOD_SEARCH_CATALOG\0\u{1}METHOD_LIST_SUBJECT_TYPES\0\u{1}METHOD_CREATE_SUBJECT\0\u{1}METHOD_UPDATE_SUBJECT\0\u{1}METHOD_DELETE_SUBJECT\0\u{1}METHOD_LIST_SUBJECTS\0\u{1}METHOD_SET_SUBJECT_POSITION\0\u{1}METHOD_CLEAR_SUBJECT_POSITION\0\u{1}METHOD_LIST_SUBJECT_POSITIONS\0")
 }
 
 nonisolated extension Provenencia_Engine_V1_ErrorKind: SwiftProtobuf._ProtoNameProviding {
@@ -6669,6 +7015,716 @@ nonisolated extension Provenencia_Engine_V1_SearchCatalogResponse: SwiftProtobuf
 
   public static func ==(lhs: Provenencia_Engine_V1_SearchCatalogResponse, rhs: Provenencia_Engine_V1_SearchCatalogResponse) -> Bool {
     if lhs.hits != rhs.hits {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_SubjectType: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SubjectType"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}key\0\u{1}origin\0\u{1}label\0\u{1}description\0\u{3}ref_prefix\0\u{3}candidate_ref_prefix\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.key) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.origin) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.label) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
+      case 6: try { try decoder.decodeSingularStringField(value: &self.refPrefix) }()
+      case 7: try { try decoder.decodeSingularStringField(value: &self.candidateRefPrefix) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.id.isEmpty {
+      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
+    }
+    if !self.key.isEmpty {
+      try visitor.visitSingularStringField(value: self.key, fieldNumber: 2)
+    }
+    if !self.origin.isEmpty {
+      try visitor.visitSingularStringField(value: self.origin, fieldNumber: 3)
+    }
+    if !self.label.isEmpty {
+      try visitor.visitSingularStringField(value: self.label, fieldNumber: 4)
+    }
+    if !self.description_p.isEmpty {
+      try visitor.visitSingularStringField(value: self.description_p, fieldNumber: 5)
+    }
+    if !self.refPrefix.isEmpty {
+      try visitor.visitSingularStringField(value: self.refPrefix, fieldNumber: 6)
+    }
+    if !self.candidateRefPrefix.isEmpty {
+      try visitor.visitSingularStringField(value: self.candidateRefPrefix, fieldNumber: 7)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_SubjectType, rhs: Provenencia_Engine_V1_SubjectType) -> Bool {
+    if lhs.id != rhs.id {return false}
+    if lhs.key != rhs.key {return false}
+    if lhs.origin != rhs.origin {return false}
+    if lhs.label != rhs.label {return false}
+    if lhs.description_p != rhs.description_p {return false}
+    if lhs.refPrefix != rhs.refPrefix {return false}
+    if lhs.candidateRefPrefix != rhs.candidateRefPrefix {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_Subject: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".Subject"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}ref\0\u{3}source_id\0\u{3}subject_type_id\0\u{1}label\0\u{1}description\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.ref) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.sourceID) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.subjectTypeID) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.label) }()
+      case 6: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.id.isEmpty {
+      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
+    }
+    if !self.ref.isEmpty {
+      try visitor.visitSingularStringField(value: self.ref, fieldNumber: 2)
+    }
+    if !self.sourceID.isEmpty {
+      try visitor.visitSingularStringField(value: self.sourceID, fieldNumber: 3)
+    }
+    if !self.subjectTypeID.isEmpty {
+      try visitor.visitSingularStringField(value: self.subjectTypeID, fieldNumber: 4)
+    }
+    if !self.label.isEmpty {
+      try visitor.visitSingularStringField(value: self.label, fieldNumber: 5)
+    }
+    if !self.description_p.isEmpty {
+      try visitor.visitSingularStringField(value: self.description_p, fieldNumber: 6)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_Subject, rhs: Provenencia_Engine_V1_Subject) -> Bool {
+    if lhs.id != rhs.id {return false}
+    if lhs.ref != rhs.ref {return false}
+    if lhs.sourceID != rhs.sourceID {return false}
+    if lhs.subjectTypeID != rhs.subjectTypeID {return false}
+    if lhs.label != rhs.label {return false}
+    if lhs.description_p != rhs.description_p {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_SubjectPosition: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SubjectPosition"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}subject_id\0\u{3}grid_x\0\u{3}grid_y\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.subjectID) }()
+      case 2: try { try decoder.decodeSingularInt64Field(value: &self.gridX) }()
+      case 3: try { try decoder.decodeSingularInt64Field(value: &self.gridY) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.subjectID.isEmpty {
+      try visitor.visitSingularStringField(value: self.subjectID, fieldNumber: 1)
+    }
+    if self.gridX != 0 {
+      try visitor.visitSingularInt64Field(value: self.gridX, fieldNumber: 2)
+    }
+    if self.gridY != 0 {
+      try visitor.visitSingularInt64Field(value: self.gridY, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_SubjectPosition, rhs: Provenencia_Engine_V1_SubjectPosition) -> Bool {
+    if lhs.subjectID != rhs.subjectID {return false}
+    if lhs.gridX != rhs.gridX {return false}
+    if lhs.gridY != rhs.gridY {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_ListSubjectTypesRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ListSubjectTypesRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.projectDir) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.projectDir.isEmpty {
+      try visitor.visitSingularStringField(value: self.projectDir, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_ListSubjectTypesRequest, rhs: Provenencia_Engine_V1_ListSubjectTypesRequest) -> Bool {
+    if lhs.projectDir != rhs.projectDir {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_ListSubjectTypesResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ListSubjectTypesResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}types\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.types) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.types.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.types, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_ListSubjectTypesResponse, rhs: Provenencia_Engine_V1_ListSubjectTypesResponse) -> Bool {
+    if lhs.types != rhs.types {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_CreateSubjectRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CreateSubjectRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}source_id\0\u{3}subject_type_id\0\u{1}label\0\u{1}description\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.projectDir) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.userID) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.sourceID) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.subjectTypeID) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.label) }()
+      case 6: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.projectDir.isEmpty {
+      try visitor.visitSingularStringField(value: self.projectDir, fieldNumber: 1)
+    }
+    if !self.userID.isEmpty {
+      try visitor.visitSingularStringField(value: self.userID, fieldNumber: 2)
+    }
+    if !self.sourceID.isEmpty {
+      try visitor.visitSingularStringField(value: self.sourceID, fieldNumber: 3)
+    }
+    if !self.subjectTypeID.isEmpty {
+      try visitor.visitSingularStringField(value: self.subjectTypeID, fieldNumber: 4)
+    }
+    if !self.label.isEmpty {
+      try visitor.visitSingularStringField(value: self.label, fieldNumber: 5)
+    }
+    if !self.description_p.isEmpty {
+      try visitor.visitSingularStringField(value: self.description_p, fieldNumber: 6)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_CreateSubjectRequest, rhs: Provenencia_Engine_V1_CreateSubjectRequest) -> Bool {
+    if lhs.projectDir != rhs.projectDir {return false}
+    if lhs.userID != rhs.userID {return false}
+    if lhs.sourceID != rhs.sourceID {return false}
+    if lhs.subjectTypeID != rhs.subjectTypeID {return false}
+    if lhs.label != rhs.label {return false}
+    if lhs.description_p != rhs.description_p {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_CreateSubjectResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CreateSubjectResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}subject\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._subject) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._subject {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_CreateSubjectResponse, rhs: Provenencia_Engine_V1_CreateSubjectResponse) -> Bool {
+    if lhs._subject != rhs._subject {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_UpdateSubjectRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".UpdateSubjectRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}subject_id\0\u{1}label\0\u{1}description\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.projectDir) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.userID) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.subjectID) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.label) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.projectDir.isEmpty {
+      try visitor.visitSingularStringField(value: self.projectDir, fieldNumber: 1)
+    }
+    if !self.userID.isEmpty {
+      try visitor.visitSingularStringField(value: self.userID, fieldNumber: 2)
+    }
+    if !self.subjectID.isEmpty {
+      try visitor.visitSingularStringField(value: self.subjectID, fieldNumber: 3)
+    }
+    if !self.label.isEmpty {
+      try visitor.visitSingularStringField(value: self.label, fieldNumber: 4)
+    }
+    if !self.description_p.isEmpty {
+      try visitor.visitSingularStringField(value: self.description_p, fieldNumber: 5)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_UpdateSubjectRequest, rhs: Provenencia_Engine_V1_UpdateSubjectRequest) -> Bool {
+    if lhs.projectDir != rhs.projectDir {return false}
+    if lhs.userID != rhs.userID {return false}
+    if lhs.subjectID != rhs.subjectID {return false}
+    if lhs.label != rhs.label {return false}
+    if lhs.description_p != rhs.description_p {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_UpdateSubjectResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".UpdateSubjectResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}subject\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._subject) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._subject {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_UpdateSubjectResponse, rhs: Provenencia_Engine_V1_UpdateSubjectResponse) -> Bool {
+    if lhs._subject != rhs._subject {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_DeleteSubjectRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".DeleteSubjectRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}subject_id\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.projectDir) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.userID) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.subjectID) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.projectDir.isEmpty {
+      try visitor.visitSingularStringField(value: self.projectDir, fieldNumber: 1)
+    }
+    if !self.userID.isEmpty {
+      try visitor.visitSingularStringField(value: self.userID, fieldNumber: 2)
+    }
+    if !self.subjectID.isEmpty {
+      try visitor.visitSingularStringField(value: self.subjectID, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_DeleteSubjectRequest, rhs: Provenencia_Engine_V1_DeleteSubjectRequest) -> Bool {
+    if lhs.projectDir != rhs.projectDir {return false}
+    if lhs.userID != rhs.userID {return false}
+    if lhs.subjectID != rhs.subjectID {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_DeleteSubjectResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".DeleteSubjectResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_DeleteSubjectResponse, rhs: Provenencia_Engine_V1_DeleteSubjectResponse) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_ListSubjectsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ListSubjectsRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}source_id\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.projectDir) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.sourceID) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.projectDir.isEmpty {
+      try visitor.visitSingularStringField(value: self.projectDir, fieldNumber: 1)
+    }
+    if !self.sourceID.isEmpty {
+      try visitor.visitSingularStringField(value: self.sourceID, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_ListSubjectsRequest, rhs: Provenencia_Engine_V1_ListSubjectsRequest) -> Bool {
+    if lhs.projectDir != rhs.projectDir {return false}
+    if lhs.sourceID != rhs.sourceID {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_ListSubjectsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ListSubjectsResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}subjects\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.subjects) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.subjects.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.subjects, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_ListSubjectsResponse, rhs: Provenencia_Engine_V1_ListSubjectsResponse) -> Bool {
+    if lhs.subjects != rhs.subjects {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_SetSubjectPositionRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SetSubjectPositionRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}subject_id\0\u{3}grid_x\0\u{3}grid_y\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.projectDir) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.subjectID) }()
+      case 3: try { try decoder.decodeSingularInt64Field(value: &self.gridX) }()
+      case 4: try { try decoder.decodeSingularInt64Field(value: &self.gridY) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.projectDir.isEmpty {
+      try visitor.visitSingularStringField(value: self.projectDir, fieldNumber: 1)
+    }
+    if !self.subjectID.isEmpty {
+      try visitor.visitSingularStringField(value: self.subjectID, fieldNumber: 2)
+    }
+    if self.gridX != 0 {
+      try visitor.visitSingularInt64Field(value: self.gridX, fieldNumber: 3)
+    }
+    if self.gridY != 0 {
+      try visitor.visitSingularInt64Field(value: self.gridY, fieldNumber: 4)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_SetSubjectPositionRequest, rhs: Provenencia_Engine_V1_SetSubjectPositionRequest) -> Bool {
+    if lhs.projectDir != rhs.projectDir {return false}
+    if lhs.subjectID != rhs.subjectID {return false}
+    if lhs.gridX != rhs.gridX {return false}
+    if lhs.gridY != rhs.gridY {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_SetSubjectPositionResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SetSubjectPositionResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}position\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._position) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._position {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_SetSubjectPositionResponse, rhs: Provenencia_Engine_V1_SetSubjectPositionResponse) -> Bool {
+    if lhs._position != rhs._position {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_ClearSubjectPositionRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ClearSubjectPositionRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}subject_id\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.projectDir) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.subjectID) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.projectDir.isEmpty {
+      try visitor.visitSingularStringField(value: self.projectDir, fieldNumber: 1)
+    }
+    if !self.subjectID.isEmpty {
+      try visitor.visitSingularStringField(value: self.subjectID, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_ClearSubjectPositionRequest, rhs: Provenencia_Engine_V1_ClearSubjectPositionRequest) -> Bool {
+    if lhs.projectDir != rhs.projectDir {return false}
+    if lhs.subjectID != rhs.subjectID {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_ClearSubjectPositionResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ClearSubjectPositionResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_ClearSubjectPositionResponse, rhs: Provenencia_Engine_V1_ClearSubjectPositionResponse) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_ListSubjectPositionsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ListSubjectPositionsRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}source_id\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.projectDir) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.sourceID) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.projectDir.isEmpty {
+      try visitor.visitSingularStringField(value: self.projectDir, fieldNumber: 1)
+    }
+    if !self.sourceID.isEmpty {
+      try visitor.visitSingularStringField(value: self.sourceID, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_ListSubjectPositionsRequest, rhs: Provenencia_Engine_V1_ListSubjectPositionsRequest) -> Bool {
+    if lhs.projectDir != rhs.projectDir {return false}
+    if lhs.sourceID != rhs.sourceID {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_ListSubjectPositionsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ListSubjectPositionsResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}positions\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.positions) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.positions.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.positions, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_ListSubjectPositionsResponse, rhs: Provenencia_Engine_V1_ListSubjectPositionsResponse) -> Bool {
+    if lhs.positions != rhs.positions {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

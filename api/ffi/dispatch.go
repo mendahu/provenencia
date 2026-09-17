@@ -53,6 +53,14 @@ const (
 	MethodCloseCatalogSession                 = int32(engine.Method_METHOD_CLOSE_CATALOG_SESSION)
 	MethodSetSourceCover                      = int32(engine.Method_METHOD_SET_SOURCE_COVER)
 	MethodSearchCatalog                       = int32(engine.Method_METHOD_SEARCH_CATALOG)
+	MethodListSubjectTypes                    = int32(engine.Method_METHOD_LIST_SUBJECT_TYPES)
+	MethodCreateSubject                       = int32(engine.Method_METHOD_CREATE_SUBJECT)
+	MethodUpdateSubject                       = int32(engine.Method_METHOD_UPDATE_SUBJECT)
+	MethodDeleteSubject                       = int32(engine.Method_METHOD_DELETE_SUBJECT)
+	MethodListSubjects                        = int32(engine.Method_METHOD_LIST_SUBJECTS)
+	MethodSetSubjectPosition                  = int32(engine.Method_METHOD_SET_SUBJECT_POSITION)
+	MethodClearSubjectPosition                = int32(engine.Method_METHOD_CLEAR_SUBJECT_POSITION)
+	MethodListSubjectPositions                = int32(engine.Method_METHOD_LIST_SUBJECT_POSITIONS)
 )
 
 // Call routes one coarse FFI operation to api/ffi/handlers.
@@ -144,6 +152,22 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.SetSourceCover(in)
 	case MethodSearchCatalog:
 		return handlers.SearchCatalog(in)
+	case MethodListSubjectTypes:
+		return handlers.ListSubjectTypes(in)
+	case MethodCreateSubject:
+		return handlers.CreateSubject(in)
+	case MethodUpdateSubject:
+		return handlers.UpdateSubject(in)
+	case MethodDeleteSubject:
+		return handlers.DeleteSubject(in)
+	case MethodListSubjects:
+		return handlers.ListSubjects(in)
+	case MethodSetSubjectPosition:
+		return handlers.SetSubjectPosition(in)
+	case MethodClearSubjectPosition:
+		return handlers.ClearSubjectPosition(in)
+	case MethodListSubjectPositions:
+		return handlers.ListSubjectPositions(in)
 	default:
 		return nil, apperr.New(apperr.CodeInternalUnknownMethod, apperr.KindInternal, strconv.Itoa(int(method)))
 	}

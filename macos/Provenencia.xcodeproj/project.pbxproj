@@ -65,6 +65,7 @@
 		AA0000000000000000000271 /* CatalogCountsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000270 /* CatalogCountsTests.swift */; };
 		AA00000000000000000003A1 /* CatalogSessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003A0 /* CatalogSessionStoreTests.swift */; };
 		AA00000000000000000003E1 /* SearchCatalogStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003E0 /* SearchCatalogStoreTests.swift */; };
+		AA0000000000000000000451 /* SubjectStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000450 /* SubjectStoreTests.swift */; };
 		AA00000000000000000003F1 /* WorkspaceToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003F0 /* WorkspaceToolbar.swift */; };
 		AA00000000000000000003F3 /* OmnibarFocusCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003F2 /* OmnibarFocusCoordinator.swift */; };
 		AA00000000000000000003F5 /* WorkspaceToolbarBreadcrumbTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003F4 /* WorkspaceToolbarBreadcrumbTests.swift */; };
@@ -269,6 +270,7 @@
 		AA0000000000000000000270 /* CatalogCountsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogCountsTests.swift; sourceTree = "<group>"; };
 		AA00000000000000000003A0 /* CatalogSessionStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogSessionStoreTests.swift; sourceTree = "<group>"; };
 		AA00000000000000000003E0 /* SearchCatalogStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SearchCatalogStoreTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000450 /* SubjectStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SubjectStoreTests.swift; sourceTree = "<group>"; };
 		AA00000000000000000003F0 /* WorkspaceToolbar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceToolbar.swift; sourceTree = "<group>"; };
 		AA00000000000000000003F2 /* OmnibarFocusCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OmnibarFocusCoordinator.swift; sourceTree = "<group>"; };
 		AA00000000000000000003F4 /* WorkspaceToolbarBreadcrumbTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceToolbarBreadcrumbTests.swift; sourceTree = "<group>"; };
@@ -746,6 +748,7 @@
 				AA0000000000000000000270 /* CatalogCountsTests.swift */,
 				AA00000000000000000003A0 /* CatalogSessionStoreTests.swift */,
 				AA00000000000000000003E0 /* SearchCatalogStoreTests.swift */,
+				AA0000000000000000000450 /* SubjectStoreTests.swift */,
 				AA00000000000000000003FC /* OmnibarResultsModelTests.swift */,
 				AA00000000000000000003F4 /* WorkspaceToolbarBreadcrumbTests.swift */,
 				AA0000000000000000000440 /* WindowDragTests.swift */,
@@ -1084,6 +1087,7 @@
 				AA0000000000000000000271 /* CatalogCountsTests.swift in Sources */,
 				AA00000000000000000003A1 /* CatalogSessionStoreTests.swift in Sources */,
 				AA00000000000000000003E1 /* SearchCatalogStoreTests.swift in Sources */,
+				AA0000000000000000000451 /* SubjectStoreTests.swift in Sources */,
 				AA00000000000000000003FD /* OmnibarResultsModelTests.swift in Sources */,
 				AA00000000000000000003F5 /* WorkspaceToolbarBreadcrumbTests.swift in Sources */,
 				AA0000000000000000000441 /* WindowDragTests.swift in Sources */,

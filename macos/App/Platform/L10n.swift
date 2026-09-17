@@ -3018,6 +3018,16 @@ enum L10n {
             defaultValue: "Invalid source.",
             comment: "FFI error sources.invalid"
         )
+        static let subjectsInvalid = LocalizedStringResource(
+            "error.subjects.invalid",
+            defaultValue: "Invalid subject.",
+            comment: "FFI error subjects.invalid"
+        )
+        static let subjectPositionsInvalid = LocalizedStringResource(
+            "error.subjectpositions.invalid",
+            defaultValue: "Invalid subject position.",
+            comment: "FFI error subjectpositions.invalid"
+        )
         static let artifactsInvalid = LocalizedStringResource(
             "error.artifacts.invalid",
             defaultValue: "Invalid artifact.",
@@ -3419,6 +3429,10 @@ enum L10n {
                 return String(localized: fileNotFound)
             case "sources.invalid":
                 return String(localized: sourcesInvalid)
+            case "subjects.invalid":
+                return String(localized: subjectsInvalid)
+            case "subjectpositions.invalid":
+                return String(localized: subjectPositionsInvalid)
             case "artifacts.invalid":
                 return String(localized: artifactsInvalid)
             case "artifacts.file_already_attached":

@@ -70,6 +70,14 @@ const (
 	Method_METHOD_CLOSE_CATALOG_SESSION                Method = 42
 	Method_METHOD_SET_SOURCE_COVER                     Method = 43
 	Method_METHOD_SEARCH_CATALOG                       Method = 44
+	Method_METHOD_LIST_SUBJECT_TYPES                   Method = 45
+	Method_METHOD_CREATE_SUBJECT                       Method = 46
+	Method_METHOD_UPDATE_SUBJECT                       Method = 47
+	Method_METHOD_DELETE_SUBJECT                       Method = 48
+	Method_METHOD_LIST_SUBJECTS                        Method = 49
+	Method_METHOD_SET_SUBJECT_POSITION                 Method = 50
+	Method_METHOD_CLEAR_SUBJECT_POSITION               Method = 51
+	Method_METHOD_LIST_SUBJECT_POSITIONS               Method = 52
 )
 
 // Enum value maps for Method.
@@ -119,6 +127,14 @@ var (
 		42: "METHOD_CLOSE_CATALOG_SESSION",
 		43: "METHOD_SET_SOURCE_COVER",
 		44: "METHOD_SEARCH_CATALOG",
+		45: "METHOD_LIST_SUBJECT_TYPES",
+		46: "METHOD_CREATE_SUBJECT",
+		47: "METHOD_UPDATE_SUBJECT",
+		48: "METHOD_DELETE_SUBJECT",
+		49: "METHOD_LIST_SUBJECTS",
+		50: "METHOD_SET_SUBJECT_POSITION",
+		51: "METHOD_CLEAR_SUBJECT_POSITION",
+		52: "METHOD_LIST_SUBJECT_POSITIONS",
 	}
 	Method_value = map[string]int32{
 		"METHOD_UNSPECIFIED":                          0,
@@ -165,6 +181,14 @@ var (
 		"METHOD_CLOSE_CATALOG_SESSION":                42,
 		"METHOD_SET_SOURCE_COVER":                     43,
 		"METHOD_SEARCH_CATALOG":                       44,
+		"METHOD_LIST_SUBJECT_TYPES":                   45,
+		"METHOD_CREATE_SUBJECT":                       46,
+		"METHOD_UPDATE_SUBJECT":                       47,
+		"METHOD_DELETE_SUBJECT":                       48,
+		"METHOD_LIST_SUBJECTS":                        49,
+		"METHOD_SET_SUBJECT_POSITION":                 50,
+		"METHOD_CLEAR_SUBJECT_POSITION":               51,
+		"METHOD_LIST_SUBJECT_POSITIONS":               52,
 	}
 )
 
@@ -6414,6 +6438,1069 @@ func (x *SearchCatalogResponse) GetHits() []*SearchHit {
 	return nil
 }
 
+// SubjectType is one subject_types vocabulary row (shared with Conclusion).
+type SubjectType struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Key                string                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
+	Origin             string                 `protobuf:"bytes,3,opt,name=origin,proto3" json:"origin,omitempty"`
+	Label              string                 `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
+	Description        string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
+	RefPrefix          string                 `protobuf:"bytes,6,opt,name=ref_prefix,json=refPrefix,proto3" json:"ref_prefix,omitempty"`
+	CandidateRefPrefix string                 `protobuf:"bytes,7,opt,name=candidate_ref_prefix,json=candidateRefPrefix,proto3" json:"candidate_ref_prefix,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *SubjectType) Reset() {
+	*x = SubjectType{}
+	mi := &file_engine_proto_msgTypes[102]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubjectType) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubjectType) ProtoMessage() {}
+
+func (x *SubjectType) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[102]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubjectType.ProtoReflect.Descriptor instead.
+func (*SubjectType) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{102}
+}
+
+func (x *SubjectType) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *SubjectType) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *SubjectType) GetOrigin() string {
+	if x != nil {
+		return x.Origin
+	}
+	return ""
+}
+
+func (x *SubjectType) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *SubjectType) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *SubjectType) GetRefPrefix() string {
+	if x != nil {
+		return x.RefPrefix
+	}
+	return ""
+}
+
+func (x *SubjectType) GetCandidateRefPrefix() string {
+	if x != nil {
+		return x.CandidateRefPrefix
+	}
+	return ""
+}
+
+// Subject is one Interpretation subject (candidate) row.
+type Subject struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Ref           string                 `protobuf:"bytes,2,opt,name=ref,proto3" json:"ref,omitempty"`
+	SourceId      string                 `protobuf:"bytes,3,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	SubjectTypeId string                 `protobuf:"bytes,4,opt,name=subject_type_id,json=subjectTypeId,proto3" json:"subject_type_id,omitempty"`
+	Label         string                 `protobuf:"bytes,5,opt,name=label,proto3" json:"label,omitempty"`
+	Description   string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Subject) Reset() {
+	*x = Subject{}
+	mi := &file_engine_proto_msgTypes[103]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Subject) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Subject) ProtoMessage() {}
+
+func (x *Subject) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[103]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Subject.ProtoReflect.Descriptor instead.
+func (*Subject) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{103}
+}
+
+func (x *Subject) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Subject) GetRef() string {
+	if x != nil {
+		return x.Ref
+	}
+	return ""
+}
+
+func (x *Subject) GetSourceId() string {
+	if x != nil {
+		return x.SourceId
+	}
+	return ""
+}
+
+func (x *Subject) GetSubjectTypeId() string {
+	if x != nil {
+		return x.SubjectTypeId
+	}
+	return ""
+}
+
+func (x *Subject) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *Subject) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+// SubjectPosition is unaudited graph layout for one subject.
+type SubjectPosition struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SubjectId     string                 `protobuf:"bytes,1,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	GridX         int64                  `protobuf:"varint,2,opt,name=grid_x,json=gridX,proto3" json:"grid_x,omitempty"`
+	GridY         int64                  `protobuf:"varint,3,opt,name=grid_y,json=gridY,proto3" json:"grid_y,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SubjectPosition) Reset() {
+	*x = SubjectPosition{}
+	mi := &file_engine_proto_msgTypes[104]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubjectPosition) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubjectPosition) ProtoMessage() {}
+
+func (x *SubjectPosition) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[104]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubjectPosition.ProtoReflect.Descriptor instead.
+func (*SubjectPosition) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{104}
+}
+
+func (x *SubjectPosition) GetSubjectId() string {
+	if x != nil {
+		return x.SubjectId
+	}
+	return ""
+}
+
+func (x *SubjectPosition) GetGridX() int64 {
+	if x != nil {
+		return x.GridX
+	}
+	return 0
+}
+
+func (x *SubjectPosition) GetGridY() int64 {
+	if x != nil {
+		return x.GridY
+	}
+	return 0
+}
+
+type ListSubjectTypesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSubjectTypesRequest) Reset() {
+	*x = ListSubjectTypesRequest{}
+	mi := &file_engine_proto_msgTypes[105]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSubjectTypesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSubjectTypesRequest) ProtoMessage() {}
+
+func (x *ListSubjectTypesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[105]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSubjectTypesRequest.ProtoReflect.Descriptor instead.
+func (*ListSubjectTypesRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{105}
+}
+
+func (x *ListSubjectTypesRequest) GetProjectDir() string {
+	if x != nil {
+		return x.ProjectDir
+	}
+	return ""
+}
+
+type ListSubjectTypesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Types         []*SubjectType         `protobuf:"bytes,1,rep,name=types,proto3" json:"types,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSubjectTypesResponse) Reset() {
+	*x = ListSubjectTypesResponse{}
+	mi := &file_engine_proto_msgTypes[106]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSubjectTypesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSubjectTypesResponse) ProtoMessage() {}
+
+func (x *ListSubjectTypesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[106]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSubjectTypesResponse.ProtoReflect.Descriptor instead.
+func (*ListSubjectTypesResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{106}
+}
+
+func (x *ListSubjectTypesResponse) GetTypes() []*SubjectType {
+	if x != nil {
+		return x.Types
+	}
+	return nil
+}
+
+type CreateSubjectRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	SourceId      string                 `protobuf:"bytes,3,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	SubjectTypeId string                 `protobuf:"bytes,4,opt,name=subject_type_id,json=subjectTypeId,proto3" json:"subject_type_id,omitempty"`
+	Label         string                 `protobuf:"bytes,5,opt,name=label,proto3" json:"label,omitempty"`
+	Description   string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateSubjectRequest) Reset() {
+	*x = CreateSubjectRequest{}
+	mi := &file_engine_proto_msgTypes[107]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateSubjectRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateSubjectRequest) ProtoMessage() {}
+
+func (x *CreateSubjectRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[107]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateSubjectRequest.ProtoReflect.Descriptor instead.
+func (*CreateSubjectRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{107}
+}
+
+func (x *CreateSubjectRequest) GetProjectDir() string {
+	if x != nil {
+		return x.ProjectDir
+	}
+	return ""
+}
+
+func (x *CreateSubjectRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *CreateSubjectRequest) GetSourceId() string {
+	if x != nil {
+		return x.SourceId
+	}
+	return ""
+}
+
+func (x *CreateSubjectRequest) GetSubjectTypeId() string {
+	if x != nil {
+		return x.SubjectTypeId
+	}
+	return ""
+}
+
+func (x *CreateSubjectRequest) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *CreateSubjectRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+type CreateSubjectResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Subject       *Subject               `protobuf:"bytes,1,opt,name=subject,proto3" json:"subject,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateSubjectResponse) Reset() {
+	*x = CreateSubjectResponse{}
+	mi := &file_engine_proto_msgTypes[108]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateSubjectResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateSubjectResponse) ProtoMessage() {}
+
+func (x *CreateSubjectResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[108]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateSubjectResponse.ProtoReflect.Descriptor instead.
+func (*CreateSubjectResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{108}
+}
+
+func (x *CreateSubjectResponse) GetSubject() *Subject {
+	if x != nil {
+		return x.Subject
+	}
+	return nil
+}
+
+type UpdateSubjectRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	SubjectId     string                 `protobuf:"bytes,3,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	Label         string                 `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
+	Description   string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateSubjectRequest) Reset() {
+	*x = UpdateSubjectRequest{}
+	mi := &file_engine_proto_msgTypes[109]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateSubjectRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateSubjectRequest) ProtoMessage() {}
+
+func (x *UpdateSubjectRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[109]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateSubjectRequest.ProtoReflect.Descriptor instead.
+func (*UpdateSubjectRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{109}
+}
+
+func (x *UpdateSubjectRequest) GetProjectDir() string {
+	if x != nil {
+		return x.ProjectDir
+	}
+	return ""
+}
+
+func (x *UpdateSubjectRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *UpdateSubjectRequest) GetSubjectId() string {
+	if x != nil {
+		return x.SubjectId
+	}
+	return ""
+}
+
+func (x *UpdateSubjectRequest) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *UpdateSubjectRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+type UpdateSubjectResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Subject       *Subject               `protobuf:"bytes,1,opt,name=subject,proto3" json:"subject,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateSubjectResponse) Reset() {
+	*x = UpdateSubjectResponse{}
+	mi := &file_engine_proto_msgTypes[110]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateSubjectResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateSubjectResponse) ProtoMessage() {}
+
+func (x *UpdateSubjectResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[110]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateSubjectResponse.ProtoReflect.Descriptor instead.
+func (*UpdateSubjectResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{110}
+}
+
+func (x *UpdateSubjectResponse) GetSubject() *Subject {
+	if x != nil {
+		return x.Subject
+	}
+	return nil
+}
+
+type DeleteSubjectRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	SubjectId     string                 `protobuf:"bytes,3,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteSubjectRequest) Reset() {
+	*x = DeleteSubjectRequest{}
+	mi := &file_engine_proto_msgTypes[111]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteSubjectRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteSubjectRequest) ProtoMessage() {}
+
+func (x *DeleteSubjectRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[111]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteSubjectRequest.ProtoReflect.Descriptor instead.
+func (*DeleteSubjectRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{111}
+}
+
+func (x *DeleteSubjectRequest) GetProjectDir() string {
+	if x != nil {
+		return x.ProjectDir
+	}
+	return ""
+}
+
+func (x *DeleteSubjectRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *DeleteSubjectRequest) GetSubjectId() string {
+	if x != nil {
+		return x.SubjectId
+	}
+	return ""
+}
+
+type DeleteSubjectResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteSubjectResponse) Reset() {
+	*x = DeleteSubjectResponse{}
+	mi := &file_engine_proto_msgTypes[112]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteSubjectResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteSubjectResponse) ProtoMessage() {}
+
+func (x *DeleteSubjectResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[112]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteSubjectResponse.ProtoReflect.Descriptor instead.
+func (*DeleteSubjectResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{112}
+}
+
+type ListSubjectsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	SourceId      string                 `protobuf:"bytes,2,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSubjectsRequest) Reset() {
+	*x = ListSubjectsRequest{}
+	mi := &file_engine_proto_msgTypes[113]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSubjectsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSubjectsRequest) ProtoMessage() {}
+
+func (x *ListSubjectsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[113]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSubjectsRequest.ProtoReflect.Descriptor instead.
+func (*ListSubjectsRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{113}
+}
+
+func (x *ListSubjectsRequest) GetProjectDir() string {
+	if x != nil {
+		return x.ProjectDir
+	}
+	return ""
+}
+
+func (x *ListSubjectsRequest) GetSourceId() string {
+	if x != nil {
+		return x.SourceId
+	}
+	return ""
+}
+
+type ListSubjectsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Subjects      []*Subject             `protobuf:"bytes,1,rep,name=subjects,proto3" json:"subjects,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSubjectsResponse) Reset() {
+	*x = ListSubjectsResponse{}
+	mi := &file_engine_proto_msgTypes[114]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSubjectsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSubjectsResponse) ProtoMessage() {}
+
+func (x *ListSubjectsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[114]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSubjectsResponse.ProtoReflect.Descriptor instead.
+func (*ListSubjectsResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{114}
+}
+
+func (x *ListSubjectsResponse) GetSubjects() []*Subject {
+	if x != nil {
+		return x.Subjects
+	}
+	return nil
+}
+
+type SetSubjectPositionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	SubjectId     string                 `protobuf:"bytes,2,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	GridX         int64                  `protobuf:"varint,3,opt,name=grid_x,json=gridX,proto3" json:"grid_x,omitempty"`
+	GridY         int64                  `protobuf:"varint,4,opt,name=grid_y,json=gridY,proto3" json:"grid_y,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetSubjectPositionRequest) Reset() {
+	*x = SetSubjectPositionRequest{}
+	mi := &file_engine_proto_msgTypes[115]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetSubjectPositionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetSubjectPositionRequest) ProtoMessage() {}
+
+func (x *SetSubjectPositionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[115]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetSubjectPositionRequest.ProtoReflect.Descriptor instead.
+func (*SetSubjectPositionRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{115}
+}
+
+func (x *SetSubjectPositionRequest) GetProjectDir() string {
+	if x != nil {
+		return x.ProjectDir
+	}
+	return ""
+}
+
+func (x *SetSubjectPositionRequest) GetSubjectId() string {
+	if x != nil {
+		return x.SubjectId
+	}
+	return ""
+}
+
+func (x *SetSubjectPositionRequest) GetGridX() int64 {
+	if x != nil {
+		return x.GridX
+	}
+	return 0
+}
+
+func (x *SetSubjectPositionRequest) GetGridY() int64 {
+	if x != nil {
+		return x.GridY
+	}
+	return 0
+}
+
+type SetSubjectPositionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Position      *SubjectPosition       `protobuf:"bytes,1,opt,name=position,proto3" json:"position,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetSubjectPositionResponse) Reset() {
+	*x = SetSubjectPositionResponse{}
+	mi := &file_engine_proto_msgTypes[116]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetSubjectPositionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetSubjectPositionResponse) ProtoMessage() {}
+
+func (x *SetSubjectPositionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[116]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetSubjectPositionResponse.ProtoReflect.Descriptor instead.
+func (*SetSubjectPositionResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{116}
+}
+
+func (x *SetSubjectPositionResponse) GetPosition() *SubjectPosition {
+	if x != nil {
+		return x.Position
+	}
+	return nil
+}
+
+type ClearSubjectPositionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	SubjectId     string                 `protobuf:"bytes,2,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClearSubjectPositionRequest) Reset() {
+	*x = ClearSubjectPositionRequest{}
+	mi := &file_engine_proto_msgTypes[117]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClearSubjectPositionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClearSubjectPositionRequest) ProtoMessage() {}
+
+func (x *ClearSubjectPositionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[117]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClearSubjectPositionRequest.ProtoReflect.Descriptor instead.
+func (*ClearSubjectPositionRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{117}
+}
+
+func (x *ClearSubjectPositionRequest) GetProjectDir() string {
+	if x != nil {
+		return x.ProjectDir
+	}
+	return ""
+}
+
+func (x *ClearSubjectPositionRequest) GetSubjectId() string {
+	if x != nil {
+		return x.SubjectId
+	}
+	return ""
+}
+
+type ClearSubjectPositionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClearSubjectPositionResponse) Reset() {
+	*x = ClearSubjectPositionResponse{}
+	mi := &file_engine_proto_msgTypes[118]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClearSubjectPositionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClearSubjectPositionResponse) ProtoMessage() {}
+
+func (x *ClearSubjectPositionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[118]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClearSubjectPositionResponse.ProtoReflect.Descriptor instead.
+func (*ClearSubjectPositionResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{118}
+}
+
+type ListSubjectPositionsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	SourceId      string                 `protobuf:"bytes,2,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSubjectPositionsRequest) Reset() {
+	*x = ListSubjectPositionsRequest{}
+	mi := &file_engine_proto_msgTypes[119]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSubjectPositionsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSubjectPositionsRequest) ProtoMessage() {}
+
+func (x *ListSubjectPositionsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[119]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSubjectPositionsRequest.ProtoReflect.Descriptor instead.
+func (*ListSubjectPositionsRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{119}
+}
+
+func (x *ListSubjectPositionsRequest) GetProjectDir() string {
+	if x != nil {
+		return x.ProjectDir
+	}
+	return ""
+}
+
+func (x *ListSubjectPositionsRequest) GetSourceId() string {
+	if x != nil {
+		return x.SourceId
+	}
+	return ""
+}
+
+type ListSubjectPositionsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Positions     []*SubjectPosition     `protobuf:"bytes,1,rep,name=positions,proto3" json:"positions,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSubjectPositionsResponse) Reset() {
+	*x = ListSubjectPositionsResponse{}
+	mi := &file_engine_proto_msgTypes[120]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSubjectPositionsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSubjectPositionsResponse) ProtoMessage() {}
+
+func (x *ListSubjectPositionsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[120]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSubjectPositionsResponse.ProtoReflect.Descriptor instead.
+func (*ListSubjectPositionsResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{120}
+}
+
+func (x *ListSubjectPositionsResponse) GetPositions() []*SubjectPosition {
+	if x != nil {
+		return x.Positions
+	}
+	return nil
+}
+
 // Error is the protobuf payload on provenencia_call status 1 (failure).
 // Success payloads remain method-specific response messages.
 type Error struct {
@@ -6427,7 +7514,7 @@ type Error struct {
 
 func (x *Error) Reset() {
 	*x = Error{}
-	mi := &file_engine_proto_msgTypes[102]
+	mi := &file_engine_proto_msgTypes[121]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6439,7 +7526,7 @@ func (x *Error) String() string {
 func (*Error) ProtoMessage() {}
 
 func (x *Error) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[102]
+	mi := &file_engine_proto_msgTypes[121]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6452,7 +7539,7 @@ func (x *Error) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Error.ProtoReflect.Descriptor instead.
 func (*Error) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{102}
+	return file_engine_proto_rawDescGZIP(), []int{121}
 }
 
 func (x *Error) GetCode() string {
@@ -6971,11 +8058,91 @@ const file_engine_proto_rawDesc = "" +
 	"\rmatch_snippet\x18\n" +
 	" \x01(\tR\fmatchSnippet\"M\n" +
 	"\x15SearchCatalogResponse\x124\n" +
-	"\x04hits\x18\x01 \x03(\v2 .provenencia.engine.v1.SearchHitR\x04hits\"i\n" +
+	"\x04hits\x18\x01 \x03(\v2 .provenencia.engine.v1.SearchHitR\x04hits\"\xd0\x01\n" +
+	"\vSubjectType\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\x12\x16\n" +
+	"\x06origin\x18\x03 \x01(\tR\x06origin\x12\x14\n" +
+	"\x05label\x18\x04 \x01(\tR\x05label\x12 \n" +
+	"\vdescription\x18\x05 \x01(\tR\vdescription\x12\x1d\n" +
+	"\n" +
+	"ref_prefix\x18\x06 \x01(\tR\trefPrefix\x120\n" +
+	"\x14candidate_ref_prefix\x18\a \x01(\tR\x12candidateRefPrefix\"\xa8\x01\n" +
+	"\aSubject\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
+	"\x03ref\x18\x02 \x01(\tR\x03ref\x12\x1b\n" +
+	"\tsource_id\x18\x03 \x01(\tR\bsourceId\x12&\n" +
+	"\x0fsubject_type_id\x18\x04 \x01(\tR\rsubjectTypeId\x12\x14\n" +
+	"\x05label\x18\x05 \x01(\tR\x05label\x12 \n" +
+	"\vdescription\x18\x06 \x01(\tR\vdescription\"^\n" +
+	"\x0fSubjectPosition\x12\x1d\n" +
+	"\n" +
+	"subject_id\x18\x01 \x01(\tR\tsubjectId\x12\x15\n" +
+	"\x06grid_x\x18\x02 \x01(\x03R\x05gridX\x12\x15\n" +
+	"\x06grid_y\x18\x03 \x01(\x03R\x05gridY\":\n" +
+	"\x17ListSubjectTypesRequest\x12\x1f\n" +
+	"\vproject_dir\x18\x01 \x01(\tR\n" +
+	"projectDir\"T\n" +
+	"\x18ListSubjectTypesResponse\x128\n" +
+	"\x05types\x18\x01 \x03(\v2\".provenencia.engine.v1.SubjectTypeR\x05types\"\xcd\x01\n" +
+	"\x14CreateSubjectRequest\x12\x1f\n" +
+	"\vproject_dir\x18\x01 \x01(\tR\n" +
+	"projectDir\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1b\n" +
+	"\tsource_id\x18\x03 \x01(\tR\bsourceId\x12&\n" +
+	"\x0fsubject_type_id\x18\x04 \x01(\tR\rsubjectTypeId\x12\x14\n" +
+	"\x05label\x18\x05 \x01(\tR\x05label\x12 \n" +
+	"\vdescription\x18\x06 \x01(\tR\vdescription\"Q\n" +
+	"\x15CreateSubjectResponse\x128\n" +
+	"\asubject\x18\x01 \x01(\v2\x1e.provenencia.engine.v1.SubjectR\asubject\"\xa7\x01\n" +
+	"\x14UpdateSubjectRequest\x12\x1f\n" +
+	"\vproject_dir\x18\x01 \x01(\tR\n" +
+	"projectDir\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1d\n" +
+	"\n" +
+	"subject_id\x18\x03 \x01(\tR\tsubjectId\x12\x14\n" +
+	"\x05label\x18\x04 \x01(\tR\x05label\x12 \n" +
+	"\vdescription\x18\x05 \x01(\tR\vdescription\"Q\n" +
+	"\x15UpdateSubjectResponse\x128\n" +
+	"\asubject\x18\x01 \x01(\v2\x1e.provenencia.engine.v1.SubjectR\asubject\"o\n" +
+	"\x14DeleteSubjectRequest\x12\x1f\n" +
+	"\vproject_dir\x18\x01 \x01(\tR\n" +
+	"projectDir\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1d\n" +
+	"\n" +
+	"subject_id\x18\x03 \x01(\tR\tsubjectId\"\x17\n" +
+	"\x15DeleteSubjectResponse\"S\n" +
+	"\x13ListSubjectsRequest\x12\x1f\n" +
+	"\vproject_dir\x18\x01 \x01(\tR\n" +
+	"projectDir\x12\x1b\n" +
+	"\tsource_id\x18\x02 \x01(\tR\bsourceId\"R\n" +
+	"\x14ListSubjectsResponse\x12:\n" +
+	"\bsubjects\x18\x01 \x03(\v2\x1e.provenencia.engine.v1.SubjectR\bsubjects\"\x89\x01\n" +
+	"\x19SetSubjectPositionRequest\x12\x1f\n" +
+	"\vproject_dir\x18\x01 \x01(\tR\n" +
+	"projectDir\x12\x1d\n" +
+	"\n" +
+	"subject_id\x18\x02 \x01(\tR\tsubjectId\x12\x15\n" +
+	"\x06grid_x\x18\x03 \x01(\x03R\x05gridX\x12\x15\n" +
+	"\x06grid_y\x18\x04 \x01(\x03R\x05gridY\"`\n" +
+	"\x1aSetSubjectPositionResponse\x12B\n" +
+	"\bposition\x18\x01 \x01(\v2&.provenencia.engine.v1.SubjectPositionR\bposition\"]\n" +
+	"\x1bClearSubjectPositionRequest\x12\x1f\n" +
+	"\vproject_dir\x18\x01 \x01(\tR\n" +
+	"projectDir\x12\x1d\n" +
+	"\n" +
+	"subject_id\x18\x02 \x01(\tR\tsubjectId\"\x1e\n" +
+	"\x1cClearSubjectPositionResponse\"[\n" +
+	"\x1bListSubjectPositionsRequest\x12\x1f\n" +
+	"\vproject_dir\x18\x01 \x01(\tR\n" +
+	"projectDir\x12\x1b\n" +
+	"\tsource_id\x18\x02 \x01(\tR\bsourceId\"d\n" +
+	"\x1cListSubjectPositionsResponse\x12D\n" +
+	"\tpositions\x18\x01 \x03(\v2&.provenencia.engine.v1.SubjectPositionR\tpositions\"i\n" +
 	"\x05Error\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x124\n" +
 	"\x04kind\x18\x02 \x01(\x0e2 .provenencia.engine.v1.ErrorKindR\x04kind\x12\x16\n" +
-	"\x06params\x18\x03 \x03(\tR\x06params*\x86\v\n" +
+	"\x06params\x18\x03 \x03(\tR\x06params*\xf7\f\n" +
 	"\x06Method\x12\x16\n" +
 	"\x12METHOD_UNSPECIFIED\x10\x00\x12\x0f\n" +
 	"\vMETHOD_PING\x10\x01\x12\x16\n" +
@@ -7021,7 +8188,15 @@ const file_engine_proto_rawDesc = "" +
 	"\x1cMETHOD_ENSURE_FILE_THUMBNAIL\x10)\x12 \n" +
 	"\x1cMETHOD_CLOSE_CATALOG_SESSION\x10*\x12\x1b\n" +
 	"\x17METHOD_SET_SOURCE_COVER\x10+\x12\x19\n" +
-	"\x15METHOD_SEARCH_CATALOG\x10,\"\x04\b\x1b\x10\x1b*\x12METHOD_COUNT_FILES*\x88\x01\n" +
+	"\x15METHOD_SEARCH_CATALOG\x10,\x12\x1d\n" +
+	"\x19METHOD_LIST_SUBJECT_TYPES\x10-\x12\x19\n" +
+	"\x15METHOD_CREATE_SUBJECT\x10.\x12\x19\n" +
+	"\x15METHOD_UPDATE_SUBJECT\x10/\x12\x19\n" +
+	"\x15METHOD_DELETE_SUBJECT\x100\x12\x18\n" +
+	"\x14METHOD_LIST_SUBJECTS\x101\x12\x1f\n" +
+	"\x1bMETHOD_SET_SUBJECT_POSITION\x102\x12!\n" +
+	"\x1dMETHOD_CLEAR_SUBJECT_POSITION\x103\x12!\n" +
+	"\x1dMETHOD_LIST_SUBJECT_POSITIONS\x104\"\x04\b\x1b\x10\x1b*\x12METHOD_COUNT_FILES*\x88\x01\n" +
 	"\tErrorKind\x12\x1a\n" +
 	"\x16ERROR_KIND_UNSPECIFIED\x10\x00\x12\x13\n" +
 	"\x0fERROR_KIND_USER\x10\x01\x12\x17\n" +
@@ -7042,7 +8217,7 @@ func file_engine_proto_rawDescGZIP() []byte {
 }
 
 var file_engine_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 103)
+var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 122)
 var file_engine_proto_goTypes = []any{
 	(Method)(0),                                       // 0: provenencia.engine.v1.Method
 	(ErrorKind)(0),                                    // 1: provenencia.engine.v1.ErrorKind
@@ -7148,7 +8323,26 @@ var file_engine_proto_goTypes = []any{
 	(*SearchCatalogRequest)(nil),                      // 101: provenencia.engine.v1.SearchCatalogRequest
 	(*SearchHit)(nil),                                 // 102: provenencia.engine.v1.SearchHit
 	(*SearchCatalogResponse)(nil),                     // 103: provenencia.engine.v1.SearchCatalogResponse
-	(*Error)(nil),                                     // 104: provenencia.engine.v1.Error
+	(*SubjectType)(nil),                               // 104: provenencia.engine.v1.SubjectType
+	(*Subject)(nil),                                   // 105: provenencia.engine.v1.Subject
+	(*SubjectPosition)(nil),                           // 106: provenencia.engine.v1.SubjectPosition
+	(*ListSubjectTypesRequest)(nil),                   // 107: provenencia.engine.v1.ListSubjectTypesRequest
+	(*ListSubjectTypesResponse)(nil),                  // 108: provenencia.engine.v1.ListSubjectTypesResponse
+	(*CreateSubjectRequest)(nil),                      // 109: provenencia.engine.v1.CreateSubjectRequest
+	(*CreateSubjectResponse)(nil),                     // 110: provenencia.engine.v1.CreateSubjectResponse
+	(*UpdateSubjectRequest)(nil),                      // 111: provenencia.engine.v1.UpdateSubjectRequest
+	(*UpdateSubjectResponse)(nil),                     // 112: provenencia.engine.v1.UpdateSubjectResponse
+	(*DeleteSubjectRequest)(nil),                      // 113: provenencia.engine.v1.DeleteSubjectRequest
+	(*DeleteSubjectResponse)(nil),                     // 114: provenencia.engine.v1.DeleteSubjectResponse
+	(*ListSubjectsRequest)(nil),                       // 115: provenencia.engine.v1.ListSubjectsRequest
+	(*ListSubjectsResponse)(nil),                      // 116: provenencia.engine.v1.ListSubjectsResponse
+	(*SetSubjectPositionRequest)(nil),                 // 117: provenencia.engine.v1.SetSubjectPositionRequest
+	(*SetSubjectPositionResponse)(nil),                // 118: provenencia.engine.v1.SetSubjectPositionResponse
+	(*ClearSubjectPositionRequest)(nil),               // 119: provenencia.engine.v1.ClearSubjectPositionRequest
+	(*ClearSubjectPositionResponse)(nil),              // 120: provenencia.engine.v1.ClearSubjectPositionResponse
+	(*ListSubjectPositionsRequest)(nil),               // 121: provenencia.engine.v1.ListSubjectPositionsRequest
+	(*ListSubjectPositionsResponse)(nil),              // 122: provenencia.engine.v1.ListSubjectPositionsResponse
+	(*Error)(nil),                                     // 123: provenencia.engine.v1.Error
 }
 var file_engine_proto_depIdxs = []int32{
 	24,  // 0: provenencia.engine.v1.CompleteOnboardingResponse.project:type_name -> provenencia.engine.v1.ProjectInfo
@@ -7194,12 +8388,18 @@ var file_engine_proto_depIdxs = []int32{
 	100, // 40: provenencia.engine.v1.SearchCatalogRequest.location:type_name -> provenencia.engine.v1.WorkspaceLocation
 	100, // 41: provenencia.engine.v1.SearchHit.location:type_name -> provenencia.engine.v1.WorkspaceLocation
 	102, // 42: provenencia.engine.v1.SearchCatalogResponse.hits:type_name -> provenencia.engine.v1.SearchHit
-	1,   // 43: provenencia.engine.v1.Error.kind:type_name -> provenencia.engine.v1.ErrorKind
-	44,  // [44:44] is the sub-list for method output_type
-	44,  // [44:44] is the sub-list for method input_type
-	44,  // [44:44] is the sub-list for extension type_name
-	44,  // [44:44] is the sub-list for extension extendee
-	0,   // [0:44] is the sub-list for field type_name
+	104, // 43: provenencia.engine.v1.ListSubjectTypesResponse.types:type_name -> provenencia.engine.v1.SubjectType
+	105, // 44: provenencia.engine.v1.CreateSubjectResponse.subject:type_name -> provenencia.engine.v1.Subject
+	105, // 45: provenencia.engine.v1.UpdateSubjectResponse.subject:type_name -> provenencia.engine.v1.Subject
+	105, // 46: provenencia.engine.v1.ListSubjectsResponse.subjects:type_name -> provenencia.engine.v1.Subject
+	106, // 47: provenencia.engine.v1.SetSubjectPositionResponse.position:type_name -> provenencia.engine.v1.SubjectPosition
+	106, // 48: provenencia.engine.v1.ListSubjectPositionsResponse.positions:type_name -> provenencia.engine.v1.SubjectPosition
+	1,   // 49: provenencia.engine.v1.Error.kind:type_name -> provenencia.engine.v1.ErrorKind
+	50,  // [50:50] is the sub-list for method output_type
+	50,  // [50:50] is the sub-list for method input_type
+	50,  // [50:50] is the sub-list for extension type_name
+	50,  // [50:50] is the sub-list for extension extendee
+	0,   // [0:50] is the sub-list for field type_name
 }
 
 func init() { file_engine_proto_init() }
@@ -7214,7 +8414,7 @@ func file_engine_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_engine_proto_rawDesc), len(file_engine_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   103,
+			NumMessages:   122,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
