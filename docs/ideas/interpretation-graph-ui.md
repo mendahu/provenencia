@@ -24,8 +24,9 @@ Authoritative schema for everything described here is [`interpretation-layer-dat
 | 12 | Entry via a Source-page button; the Interpretation Sources list is **required** as the section root and error-recovery destination | §11.1.2 |
 | 13 | The foundation is its **own spike** (Spike 5) so the canvas spike opens with no schema work; its deep destination is a plain node list, which doubles as the structured a11y path | §11.4 |
 | 14 | The canvas is expected to be reused for a family tree, so **geometry goes in a neutral module** — but the position table stays concrete per layer rather than polymorphic | §13 |
+| 15 | **One ref format, two prefixes.** Candidate Nodes get their own three-letter prefix (`CPR-7KD45`) rather than a marker segment, so `node_types` carries both `ref_prefix` and `candidate_ref_prefix`. Costs a second vocabulary column; saves a parallel mint/validate/search path everywhere else | [`catalog-refs.md`](../catalog-refs.md) §2 |
 
-Two items found along the way that were on nobody's list: **candidate `-C-` ref support** does not exist in `core/ref` (§11.1), and **NameValue does not exist in either language** (§4.4).
+Two items found along the way that were on nobody's list: **candidate ref support** did not exist in `core/ref` (§11.1, resolved in S5-01), and **NameValue does not exist in either language** (§4.4).
 
 ---
 
@@ -86,7 +87,7 @@ The codebase has **no prior art for either half of this**. Worth stating plainly
 | Structured DateValue | **Done.** [`core/database/datevalues`](../../core/database/datevalues/) plus `DateValueDraft` / `DateValueEditorForm` in [`Features/Dates/`](../../macos/App/Features/Dates/), already wired into `SourcePageMetadataView`. The template for NameValue. |
 | Typed value dispatch | Nothing. Source metadata is `value_text` + optional `date_value_id`; no `value_type` enum exists in the product — see §11.2. |
 | Interpretation vocabulary browser | Reusable shell exists (`CatalogVocabulary`, `PVTable`, origin markers). |
-| Candidate refs (`PER-C-…`) | Not implemented. `core/ref` mints `PREFIX-TOKEN` only and its `validRef` regex rejects the `-C-` form; the catalog-refs rule reserves a shared helper "when implemented" — see §11.1. |
+| Candidate refs (`CPR-…`) | **Done** (S5-01), and smaller than expected. Candidates use their own prefix, so `ref.Mint` already produces them; S5-01 reduced to `ValidatePrefix` plus the reserved-prefix guard. |
 | Interpretation schema / Go / FFI | Nothing. Migrations stop at `000020.sql`; no `nodes`, `citations`, `observations` packages. |
 
 The vocabulary browser is a known quantity. The canvas and the artifact viewer are both greenfield, and the artifact viewer is probably the *larger* of the two.
@@ -264,7 +265,7 @@ Note the shape: in `mentions` the foreign Node is in the **object** position (`v
 
 The rule looks arbitrary next to person Nodes, where duplicates are not only allowed but expected. The difference is that **duplicates are only safe where there is a mechanism to resolve them, and for `source` Nodes there deliberately is not.**
 
-1. **Source identity is already machine-known.** A person Node is a *candidate* — that is what the `-C-` in `PER-C-7KD45` means — whose real identity is uncertain and source-local. A `source` Node reifies a row in your own catalog. There is nothing uncertain to resolve: `sources.id` is the answer, and the Source already has its own canonical `SRC-…` ref.
+1. **Source identity is already machine-known.** A person Node is a *candidate* — that is what the `CPR` prefix in `CPR-7KD45` means — whose real identity is uncertain and source-local. A `source` Node reifies a row in your own catalog. There is nothing uncertain to resolve: `sources.id` is the answer, and the Source already has its own canonical `SRC-…` ref.
 2. **So `source` Nodes get no canonical rows.** [`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md) §6 states it directly: "Reification `source` Nodes are not typically given canonical rows." That is the crux. Duplicate person Nodes are fine because `canonical_entities` + `sameness_claims` + `reconciliation_claims` exist to unify them. That entire apparatus is intentionally out of play here.
 3. **Which leaves duplicates unresolvable.** You *could* write `sameness_claims` between two `source` Nodes — both endpoints share a Node Type, which the composite foreign key requires, and `source` is a Node Type. But membership closure runs from an `identity_anchor_id` on a canonical entity (§2.2), so with no canonical row the cluster has no handle and the unification is inert. You would be asserting, by hand, something the database already knows from `source_id` — and getting nothing back for it.
 4. **And duplicates would buy nothing.** Nodes carry no evidentiary content; a `source` Node has only `label` and `description`. Each citing Source's independent view of the certificate already lives in *its own* Observations under *its own* Citations. Sharing the subject Node does not merge those testimonies, so splitting it does not protect them.
@@ -506,7 +507,7 @@ The test is narrow: **what does the first `nodes` INSERT actually require?** The
 
 | Item | Why it is load-bearing | Size |
 | --- | --- | --- |
-| **Candidate ref support in `core/ref`** | `nodes.ref` is `NOT NULL` in the `{PREFIX}-C-{TOKEN}` candidate form. Today `Mint` only produces `PREFIX-TOKEN`, and the `validRef` regex rejects the `-C-` form outright. The catalog-refs rule already reserves this work: candidate Nodes use the form "via a shared helper **when implemented** — do not invent a parallel generator." | Small |
+| **Candidate ref support in `core/ref`** | ~~`nodes.ref` needs a form `Mint` could not produce.~~ **Resolved in S5-01**, and mostly by deleting the problem: giving candidates their own `candidate_ref_prefix` means `ref.Mint` already works, leaving only `ValidatePrefix` and the reserved-prefix guard to add. Rationale in [`catalog-refs.md`](../catalog-refs.md) §2. | Small |
 | **`node_types` table + seeds** | `node_types` is the other FK. Needs the table, plus rows via the existing idempotent `Install` registry pattern (`sourcecredibilitygrades` is the closest template, `add-seeded-vocabulary` the skill), plus `ref_prefix` values. **Table and seed only — not the browser UI.** Seed all seven types from [`seeded-vocabulary.md`](../seeded-vocabulary.md) §3.1; only three are placeable, and they cost the same as one (§11.1.1). | Small |
 | **`nodes` table + `core/database/nodes`** | Create, list, rename, delete — **with audit wiring.** Every domain write in this product goes through `audit.Record(tx, …)` (see `sources/notes.go`); that is not optional, and it is the bulk of the work here. | Medium |
 | **Layout table** | Integer grid cells, unaudited (§5). Persistence across relaunch is part of what the canvas validates, so it cannot be held in memory — and it ships in slice 1 so the canvas slice opens with no schema work in front of it. | Small |
@@ -607,7 +608,7 @@ A family tree is the same idea — nodes, edges, spatial layout, click a thing t
 Two things are shared *by design* in the model docs, before any canvas exists:
 
 - **Node Type vocabulary.** `canonical_entities.node_type_id REFERENCES node_types(id)` ([`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md) §2.1) — the same seven rows Spike 5 seeds. A Person in the tree and a candidate person Node share one type row.
-- **Ref prefixes.** `node_types.ref_prefix` is documented as the token for "Nodes **and canonical entities** of this kind" (interpretation model §4.1): `PER-7KD45` for the Person, `PER-C-7KD45` for the candidate. So `Mint` and the new `MintCandidate` (§11.1) already serve both layers, and the reserved-prefix guard protects both.
+- **Ref prefixes.** `node_types` is shared vocabulary for both layers (interpretation model §4.1), carrying `ref_prefix` for the canonical entity (`PER-7KD45`) and `candidate_ref_prefix` for the Node (`CPR-7KD45`). A family tree view reads canonical refs and an interpretation canvas reads candidate refs off the same type row, so `Mint` and the reserved-prefix guard already serve both.
 
 So the foundation spike is already doing family-tree work without trying to.
 

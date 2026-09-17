@@ -1,5 +1,43 @@
-# Completed — Spike 5
+# Spike 5 — Completed steps
 
-Landed steps, newest last. Plan and sequence: [`deployment-plan.md`](deployment-plan.md).
+Finished Spike 5 work kept for history. Spike overview: [`README.md`](README.md). Plan and sequence: [`deployment-plan.md`](deployment-plan.md).
 
-_No steps landed yet._
+IDs stay stable (`S5-NN`, `S5-DN`). Do not renumber when moving steps here.
+
+## Index
+
+| Step | Kind | One-liner |
+| --- | --- | --- |
+| [S5-01](#s5-01--pr-node-type-prefix-validation) | PR | Node Type prefix validation + reserved-prefix guard in `core/ref` |
+
+---
+
+## Steps
+
+### S5-01 — PR: Candidate ref minting
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | — |
+| **Deliverables** | Done. [`core/ref/ref.go`](../../../core/ref/ref.go): `ValidatePrefix(prefix)` normalizing a Node Type prefix and rejecting the reserved catalog prefixes, plus `ErrReservedPrefix` and the `reservedPrefixes` set. New wire code `ref.reserved_prefix` in [`core/apperr/apperr.go`](../../../core/apperr/apperr.go). No new mint or validate path: candidate Nodes are ordinary refs. |
+| **Tests** | Done. [`core/ref/ref_test.go`](../../../core/ref/ref_test.go): `TestValidatePrefix` covering all five reserved prefixes, lowercase normalization, `SRN` allowed, and candidate prefixes (`CPR`, `CSR`, `cev`) validating identically to canonical ones. Rows added to `TestValid` asserting `CPR-7KD45` is an ordinary valid ref and that an extra segment is not. |
+| **Dogfood** | App unchanged. No schema, no FFI, no Swift — nothing is user-visible. |
+| **Out** | `node_types` / `nodes` tables and their Go packages (S5-02…S5-04). Cross-column prefix uniqueness and ref uniqueness retry, both of which belong to the write paths in S5-02 / S5-04. **L10n mapping for `ref.reserved_prefix`**, deferred because the code is unreachable from Swift until researchers can define Node Types in the vocabulary browser (Spike 7); map it then. |
+
+**Landed:** the reserved-prefix guard the Node Type vocabulary needs — and, more usefully, a much smaller step than planned.
+
+This PR was originally built around an infix candidate marker (`PER-C-7KD45`) so one `ref_prefix` could serve both layers. That required `MintCandidate`, a second validator pair, `ValidAny` / `ValidPartial`, and a fix to [`core/search/refpath.go`](../../../core/search/refpath.go), whose partial-ref regex had no room for a second dash. All of it was reverted in favour of giving candidates **their own prefix** (`CPR-7KD45`, seeded in [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.1). One ref format survives, `ref.Mint` already produces Node refs, and every existing consumer of `Valid` / `Validate` handles them untouched. The search package ends up with a zero-line diff.
+
+The cost moved into the vocabulary: `node_types` now needs `candidate_ref_prefix` alongside `ref_prefix`, because `canonical_entities` and `nodes` share that table. That column lands with the table in S5-02.
+
+Two rules `ValidatePrefix` deliberately does **not** enforce, both left to the Node Type write path: cross-column prefix uniqueness (the per-column SQL `UNIQUE` catches only half of a single shared namespace), and the leading `C` on candidate prefixes, which is convention and carries no meaning to the code.
+
+Docs updated with the step: [`catalog-refs.md`](../../catalog-refs.md) §2 and §4, [`data-model-source-interpretation-conclusion.md`](../../data-model-source-interpretation-conclusion.md) §2, [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) §4.1–4.2, [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §6, [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.1, the [`catalog-refs`](../../../.cursor/rules/catalog-refs.mdc) rule, and [`add-catalog-ref`](../../../.cursor/skills/add-catalog-ref/SKILL.md) (whose stale test command was also corrected to include `-tags fts5`).
+
+**Verify:**
+
+```bash
+go test ./core/ref/
+CGO_ENABLED=1 go test -tags fts5 ./...
+```

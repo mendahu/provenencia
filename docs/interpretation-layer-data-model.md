@@ -71,7 +71,7 @@ Structured genealogical dates use [`structured-date-model.md`](structured-date-m
 
 Generic `created_at` / `updated_at` / user bookkeeping does not belong on these domain tables; see [`audit-revision-history.md`](audit-revision-history.md).
 
-Selected user-facing entities receive a required short human-readable `ref`, unique within the project. This layer uses `CIT`, `OBS`, and Node refs of the form `{type_prefix}-C-{token}` (candidate). Shared rules are in [`data-model-source-interpretation-conclusion.md`](data-model-source-interpretation-conclusion.md).
+Selected user-facing entities receive a required short human-readable `ref`, unique within the project. This layer uses `CIT`, `OBS`, and Node refs minted off the Node Type's `candidate_ref_prefix` (`CPR-…`, `CEV-…`, `CPL-…`). Shared rules are in [`data-model-source-interpretation-conclusion.md`](data-model-source-interpretation-conclusion.md).
 
 ---
 
@@ -463,9 +463,10 @@ CREATE TABLE node_types (
     id              BLOB PRIMARY KEY,          -- UUIDv7, 16 bytes
     key             TEXT NOT NULL,
     origin          TEXT NOT NULL,             -- provenencia | user | plugin:<id>
-    label           TEXT NOT NULL,
-    description     TEXT,
-    ref_prefix      TEXT NOT NULL UNIQUE,
+    label                   TEXT NOT NULL,
+    description             TEXT,
+    ref_prefix              TEXT NOT NULL UNIQUE,
+    candidate_ref_prefix    TEXT NOT NULL UNIQUE,
 
     UNIQUE (key, origin)
 ) STRICT;
@@ -473,9 +474,13 @@ CREATE TABLE node_types (
 
 `origin` and `UNIQUE (key, origin)` follow [`seeded-vocabulary.md`](seeded-vocabulary.md) §1.1. Domain rows reference `node_types.id`, not bare `key`, so a later product seed can reuse a `key` already taken by a user or plugin term. Application recognition of shipped types looks up `(key, origin = 'provenencia')`.
 
-`ref_prefix` is the type token in human-readable refs for Nodes and canonical entities of this kind, for example `PER` for `person` → Person `PER-7KD45`, candidate Node `PER-C-7KD45`. It is required when defining a Node Type, including researcher-defined types. Prefixes are uppercase ASCII letters, **globally** unique among Node Types (across origins), and must not use the reserved prefixes `SRC`, `ART`, `CIT`, `OBS`, or the candidate layer code `C`.
+A Node Type carries **two** ref prefixes, because this vocabulary is shared with the Conclusion layer: `canonical_entities.node_type_id` references the same rows. For `person`, `ref_prefix` is `PER` (the Conclusion handle, `PER-7KD45`) and `candidate_ref_prefix` is `CPR` (the Interpretation Node, `CPR-7KD45`). Both are required when defining a Node Type, including researcher-defined types.
 
-The Node Type `source` (reification of a Source row) must not use `SRC`; a distinct prefix such as `SRN` keeps Source catalog refs (`SRC-…`) distinguishable from source-Nodes in speech.
+There is one ref format; the layers are told apart by prefix, not by shape. Candidate prefixes conventionally begin with `C`, but nothing enforces that — a prefix's layer is a registry lookup, not a property of the string.
+
+Prefixes are three uppercase ASCII letters and must not use the reserved catalog prefixes `USR`, `SRC`, `ART`, `CIT`, `OBS`. Both columns draw from **one namespace**: a prefix must be globally unique among Node Types (across origins) and across *both* columns, so no `ref_prefix` may equal another type's `candidate_ref_prefix`. The two `UNIQUE` constraints above are necessary but not sufficient; enforce the cross-column check in the write path.
+
+The Node Type `source` (reification of a Source row) must not use `SRC`; the distinct prefixes `SRN` and `CSR` keep Source catalog refs (`SRC-…`) distinguishable from source-Nodes in speech.
 
 Application semantics attach to stable `key` values within an origin rather than a separate built-in flag. Horizon Node Types and their prefixes are catalogued in [`seeded-vocabulary.md`](seeded-vocabulary.md). That set is expected to include at least `person`, `event`, `place`, `relationship`, `participation`, `location`, and `source`.
 
@@ -492,7 +497,7 @@ A Node gives stable identity to a source-local thing or association encountered 
 ```sql
 CREATE TABLE nodes (
     id              BLOB PRIMARY KEY,
-    ref             TEXT UNIQUE NOT NULL,      -- e.g. PER-C-7KD45
+    ref             TEXT UNIQUE NOT NULL,      -- e.g. CPR-7KD45
     source_id       BLOB NOT NULL REFERENCES sources(id),
     node_type_id    BLOB NOT NULL REFERENCES node_types(id),
     label           TEXT,
@@ -502,11 +507,11 @@ CREATE TABLE nodes (
 ) STRICT;
 ```
 
-`ref` is required. It is assembled as `{ref_prefix}-C-{token}` (`C` = candidate). Users talk about a person Node as a candidate person (`PER-C-…`), distinct from the canonical Person (`PER-…`).
+`ref` is required. It is minted as `{candidate_ref_prefix}-{token}` from the Node's type. Users talk about a person Node as a candidate person (`CPR-…`), distinct from the canonical Person (`PER-…`).
 
 `UNIQUE (id, node_type_id)` exists so Sameness Claims can use a composite foreign key that pins both endpoints to the same type. It is redundant with the primary key for uniqueness of `id`; it does not allow two types per Node.
 
-`node_type_id` is immutable after insert. Correcting a wrong type means a new Node (and new `ref`), not an UPDATE of the type. The UUID remains the machine identity; the type (via `ref_prefix`) is part of the public identity encoded in `ref`.
+`node_type_id` is immutable after insert. Correcting a wrong type means a new Node (and new `ref`), not an UPDATE of the type. The UUID remains the machine identity; the type (via `candidate_ref_prefix`) is part of the public identity encoded in `ref`.
 
 `source_id` is the Node's home Source — typically the Source being interpreted when the Node was created. It exists so the application can efficiently surface Nodes that belong with a given Source during common same-source workflows. It does not restrict which Citations or Observations may reference the Node; cross-source Observations remain valid.
 
@@ -818,7 +823,7 @@ Multiple Observations may also make different assertions about the same Property
 The current design aims to preserve these invariants:
 
 1. Every Node has exactly one Node Type. `node_type_id` is immutable after insert.
-2. Every Node has a required `ref` of the form `{ref_prefix}-C-{token}` (candidate).
+2. Every Node has a required `ref` of the form `{candidate_ref_prefix}-{token}`.
 3. Every Node has a home `source_id`; that home Source does not confine which Observations may target the Node.
 4. A Node of type `source` reifies the Source identified by its `source_id`; the application should keep at most one such Node per Source.
 5. Node Types and Properties are extensible persisted vocabulary with `origin` namespaces and `UNIQUE (key, origin)`, not closed application enums. A new Node Type includes a globally unique `ref_prefix` that is not a reserved catalog prefix or layer code. See [`seeded-vocabulary.md`](seeded-vocabulary.md) §1.1.

@@ -21,7 +21,7 @@ The answer is small. `nodes` has exactly two foreign keys — `sources`, which e
 A researcher can:
 
 1. Open a Source, click **Interpretation**, and land on a graph destination scoped to that Source.
-2. Create `person`, `event`, and `place` Nodes there, see their candidate refs (`PER-C-7KD45`), rename them, and delete them.
+2. Create `person`, `event`, and `place` Nodes there, see their candidate refs (`CPR-7KD45`, `CEV-…`, `CPL-…`), rename them, and delete them.
 3. Leave, navigate elsewhere, and return via Back/Forward or the sidebar with the place restored and the session cache warm.
 4. See every Node write in the audit log.
 
@@ -32,7 +32,7 @@ Nothing here is genealogically useful yet — there are no Observations, so noth
 | Doc | Role |
 | --- | --- |
 | [**Deployment plan**](deployment-plan.md) | PR sequence, design gates, schema, gotchas, definition of done |
-| [**Design briefs**](design/) | Claude Design briefs (S5-D1, S5-D2) — all UI is designed before it is built |
+| [**Design briefs**](design/) | Claude Design briefs (S5-D1…S5-D4, one per surface) — all UI is designed before it is built |
 | [**Completed**](completed.md) | Finished steps (S5-01…) |
 | [Interpretation graph UI](../../ideas/interpretation-graph-ui.md) | Design rationale and the decision log this spike implements |
 

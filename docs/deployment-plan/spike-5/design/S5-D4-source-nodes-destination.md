@@ -1,10 +1,10 @@
-# S5-D2 — Source nodes destination
+# S5-D4 — Source nodes destination
 
 **Kind:** Claude Design board
 **Spike:** Provenencia Spike 5 (Interpretation foundation)
 **Implements later as:** PR S5-09
-**Depends on:** S5-D1 (how the researcher arrives here)
-**Related brief:** [`S5-D1-interpretation-section.md`](S5-D1-interpretation-section.md)
+**Depends on:** S5-D2 and S5-D3 (the two ways the researcher arrives here)
+**Related briefs:** [`S5-D1`](S5-D1-interpretation-nav-entry.md), [`S5-D2`](S5-D2-interpretation-sources-list.md), [`S5-D3`](S5-D3-source-page-entry.md)
 
 Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](README.md) first.
 
@@ -29,7 +29,7 @@ A Node is a **candidate** — a thing one Source appears to mention, before any 
 | Concept | UI implication |
 | --- | --- |
 | Type | One of **person**, **event**, or **place** in this spike. Chosen at creation and **permanently immutable** — there is no "change type." Correcting a mistake means delete and re-create. |
-| `ref` | Required, mono, never editable. Carries the type and the candidate marker: `PER-C-7KD45`, `EVT-C-…`, `PLC-C-…`. |
+| `ref` | Required, mono, never editable. The prefix carries the type and the candidate layer together: `CPR-7KD45` person, `CEV-…` event, `CPL-…` place. |
 | `label` | **Optional and non-evidentiary.** See §2.2 — this is the single most important constraint on the board. |
 | Facts | **None exist.** No name, no date, no place name, no relationships. A Node in this spike is genuinely just a typed, labelled placeholder. |
 
@@ -64,7 +64,7 @@ What is worth saying **once**, at the screen level, is that this is the beginnin
 | ID | Requirement |
 | --- | --- |
 | N-4 | Use the shipped **`PVList`** pattern. No `PVTable`, no new component. |
-| N-5 | Row anatomy: **type** (icon and/or label), the **working label** if present, and the **`PER-C-…`** ref in mono. Propose the slot assignment, respecting §2.2 — the label must not occupy the row's headline slot in a way that reads as a name. |
+| N-5 | Row anatomy: **type** (icon and/or label), the **working label** if present, and the **`CPR-…`** ref in mono. Propose the slot assignment, respecting §2.2 — the label must not occupy the row's headline slot in a way that reads as a name. |
 | N-6 | Design the **unlabelled row** as a first-class state, not a degraded one. It will be extremely common; a researcher placing six household members may label none of them. |
 | N-7 | Types must be **distinguishable at a glance** — a person, an event, and a place should never be confused while scanning. Icons exist in the design system under the evidence icon set; reuse them. |
 | N-8 | Grouping or sorting by type is **optional**. Propose only if it is cheap; a flat list in creation order is an acceptable answer. |
@@ -133,6 +133,6 @@ What is worth saying **once**, at the screen level, is that this is the beginnin
 | --- | --- |
 | Why this screen exists | It proves the full vertical path — migration, Go, FFI, store, session cache, view — before any canvas code sits on top of it. It is also the structured editing path the design note commits to as the accessibility representation of the graph. |
 | Type immutability | Enforced by the data model: `node_type_id` is immutable after insert because the type is baked into the public `ref`. N-15 is a schema fact, not a simplification. |
-| Ref format | `{prefix}-C-{token}` from the Node Type's `ref_prefix`: `PER` person, `EVT` event, `PLC` place. Minted in Go; never user-editable. |
+| Ref format | `{prefix}-{token}` from the Node Type's `candidate_ref_prefix`: `CPR` person, `CEV` event, `CPL` place. Minted in Go; never user-editable. |
 | Vocabulary | Seven Node Types are seeded, but only person, event, and place are creatable here. The other four (`relationship`, `participation`, `location`, `source`) need Observations to mean anything and must not appear in any picker. |
 | Positions | The catalog stores grid coordinates for these Nodes, but nothing in this spike reads or writes them — that is Spike 6. Do not surface position anywhere on this board. |

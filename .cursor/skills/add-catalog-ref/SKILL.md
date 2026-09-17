@@ -1,7 +1,7 @@
 ---
 name: add-catalog-ref
 description: >-
-  Adds or wires Provenencia short human refs (USR-F4N2P, SRC-…, PER-C-…) using
+  Adds or wires Provenencia short human refs (USR-F4N2P, SRC-…, CPR-…) using
   core/ref. Use when adding a ref column, minting identifiers for users/sources/
   artifacts/citations/observations/nodes, catalog UNIQUE refs, identity.json ref,
   or when the user mentions ref, USR-, SRC-, PREFIX-TOKEN, or Crockford tokens.
@@ -9,7 +9,7 @@ description: >-
 
 # Add a catalog `ref`
 
-Short user-facing ids are **`{PREFIX}-{TOKEN}`** (and **`{PREFIX}-C-{TOKEN}`** for Interpretation Nodes). Machine identity stays UUIDv7. Authoritative product notes: [`docs/catalog-refs.md`](../../../docs/catalog-refs.md). Philosophy: [`docs/data-model-source-interpretation-conclusion.md`](../../../docs/data-model-source-interpretation-conclusion.md) §2.
+Short user-facing ids are **`{PREFIX}-{TOKEN}`** — one format, every layer. Machine identity stays UUIDv7. Authoritative product notes: [`docs/catalog-refs.md`](../../../docs/catalog-refs.md). Philosophy: [`docs/data-model-source-interpretation-conclusion.md`](../../../docs/data-model-source-interpretation-conclusion.md) §2.
 
 ## Use `core/ref`
 
@@ -48,7 +48,21 @@ Token = 5 chars, Crockford alphabet without `I L O U`. Prefix = exactly three AS
 | `ref.PrefixCitation` | `CIT` | citations |
 | `ref.PrefixObservation` | `OBS` | observations |
 
-Node / canonical prefixes (`PER`, `EVT`, …) come from `node_types.ref_prefix`. Candidate Nodes: `{PREFIX}-C-{TOKEN}` — **extend `core/ref`** with `MintCandidate` when first needed; do not concatenate `-C-` ad hoc without shared validate.
+`node_types` carries **two** prefixes per row, because `nodes` and `canonical_entities` share that vocabulary. Mint from the one matching the table you are writing:
+
+```go
+// Interpretation Node  →  CPR-7KD45
+r, err := ref.Mint(nodeType.CandidateRefPrefix)
+// Conclusion handle    →  PER-7KD45
+r, err := ref.Mint(nodeType.RefPrefix)
+```
+
+Both are ordinary refs: `Valid` / `Validate` cover them, and there is no candidate-specific mint or validator. Validate a researcher- or seed-supplied prefix for **either** column with `ref.ValidatePrefix`, which rejects the reserved catalog prefixes below.
+
+Two things `ValidatePrefix` does not do, so the write path must:
+
+- **Cross-column uniqueness.** All Node Type prefixes share one three-letter namespace. A new prefix must not match any existing `ref_prefix` *or* `candidate_ref_prefix`; the per-column SQL `UNIQUE` misses half of that.
+- **The leading `C`.** Candidate prefixes conventionally start with `C`, but it is not enforced and means nothing to the code. Do not write a validator for it, and do not infer a ref's layer from its first letter — look up the prefix.
 
 Uniqueness: unique **within the project across all ref-bearing tables** (app rule). Table `UNIQUE(ref)` is necessary but not always sufficient once multiple tables exist—check/retry on insert.
 
@@ -62,7 +76,7 @@ Uniqueness: unique **within the project across all ref-bearing tables** (app rul
 6. **Tests** — table-driven: mint shape (`ref.Valid`), upsert rejects bad ref, create/open round-trip preserves ref.
 
 ```bash
-CGO_ENABLED=1 go test ./core/ref/ ./core/database/...
+CGO_ENABLED=1 go test -tags fts5 ./core/ref/ ./core/database/...
 ```
 
 ## Reference implementation
@@ -79,5 +93,5 @@ Copy that pattern for `SRC` / `ART` / … — same package, different prefix.
 
 - Invent a second random-id helper beside `core/ref`
 - Put `ref` generation in Swift (mint in Go; Swift only displays)
-- Use `C` as a three-letter `ref_prefix`
+- Use a reserved catalog prefix as a `node_types.ref_prefix` — gate it on `ref.ValidatePrefix`
 - Treat folder slugs / filenames as refs

@@ -200,23 +200,23 @@ CIT   citations        e.g. CIT-3K9M2
 OBS   observations     e.g. OBS-2F8Q1
 ```
 
-Nodes and canonical entities share a **type prefix** from `node_types.ref_prefix`. The concluded working subject uses the short form; Interpretation Nodes are marked as **candidates** so they do not read as “final”:
+Nodes and canonical entities are both typed by `node_types`, which carries **two** prefixes per row. The concluded working subject is minted off `ref_prefix`; the source-local Interpretation Node is minted off `candidate_ref_prefix`, so it does not read as “final”:
 
 ```text
-PER-7KD45      Person (canonical entity)
-PER-C-7KD45    person candidate Node (Interpretation)
+PER-7KD45    Person (canonical entity)
+CPR-7KD45    person candidate Node (Interpretation)
 ```
 
 ```text
-canonical    {type_prefix}-{token}
-node         {type_prefix}-C-{token}
+canonical    {ref_prefix}-{token}
+node         {candidate_ref_prefix}-{token}
 ```
 
-`C` means candidate (source-local, not the concluded Person/Event/…). It is not “canonical.” **Hypothetical (`H`) is not used:** a census person Node is cited evidence, not a guess.
+There is **one ref format**. The layers differ by prefix alone — no marker segment, no layer-specific shape, and therefore nothing extra for consumers of a ref to parse. **Hypothetical is not modelled:** a census person Node is cited evidence, not a guess.
 
-`C` is a fixed application layer code, not a column and not user-extensible. Do not use `C` as a `ref_prefix`. Catalog prefixes `USR`, `SRC`, `ART`, `CIT`, `OBS` stay reserved.
+Candidate prefixes conventionally begin with `C` (`CPR`, `CEV`, `CPL`, …), but the leading letter is not enforced and carries no meaning to the code. Which layer a prefix serves is a registry lookup, not a property of the string.
 
-Creating a Node Type includes a `ref_prefix` that is unique and not in that reserved set. The Node Type / canonical `kind` is immutable; a mistaken type is a new row, not an in-place change.
+Creating a Node Type supplies both prefixes. Catalog prefixes `USR`, `SRC`, `ART`, `CIT`, `OBS` stay reserved, and the two columns share one namespace: a prefix must be unique across every `ref_prefix` *and* every `candidate_ref_prefix`. The Node Type / canonical `kind` is immutable; a mistaken type is a new row, not an in-place change.
 
 Machine identity remains the UUID. `ref` is assigned by the application on insert, stable, and not recycled. After canonical merge, old refs keep resolving to the surviving entity.
 

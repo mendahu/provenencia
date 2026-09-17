@@ -68,6 +68,7 @@ const (
 	CodeOnboardingUnknownUser       = "onboarding.unknown_user"
 	CodeRefInvalidPrefix            = "ref.invalid_prefix"
 	CodeRefInvalid                  = "ref.invalid"
+	CodeRefReservedPrefix           = "ref.reserved_prefix"
 	CodeFileNotFound                = "file.not_found"
 	CodeInternalUnknown             = "internal.unknown"
 	CodeInternalUnknownMethod       = "internal.unknown_method"

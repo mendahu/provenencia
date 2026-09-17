@@ -14,7 +14,7 @@ const alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
 const tokenLen = 5
 
-// Reserved catalog / contributor prefixes (not used as node_types.ref_prefix).
+// Reserved catalog / contributor prefixes (not used as a Node Type prefix).
 const (
 	PrefixUser        = "USR"
 	PrefixSource      = "SRC"
@@ -23,9 +23,19 @@ const (
 	PrefixObservation = "OBS"
 )
 
+var reservedPrefixes = map[string]struct{}{
+	PrefixUser:        {},
+	PrefixSource:      {},
+	PrefixArtifact:    {},
+	PrefixCitation:    {},
+	PrefixObservation: {},
+}
+
 var (
 	ErrInvalidPrefix = apperr.New(apperr.CodeRefInvalidPrefix, apperr.KindInternal)
 	ErrInvalid       = apperr.New(apperr.CodeRefInvalid, apperr.KindInternal)
+	// ErrReservedPrefix is a user error: a Node Type may not claim a catalog prefix.
+	ErrReservedPrefix = apperr.New(apperr.CodeRefReservedPrefix, apperr.KindUser)
 )
 
 var validRef = regexp.MustCompile(`^[A-Z]{3}-[0-9A-HJKMNP-TV-Z]{5}$`)
@@ -54,6 +64,25 @@ func Validate(s string) error {
 		return ErrInvalid
 	}
 	return nil
+}
+
+// ValidatePrefix normalizes a Node Type prefix — either node_types.ref_prefix
+// (canonical entities) or node_types.candidate_ref_prefix (Interpretation
+// Nodes) — and rejects the reserved catalog prefixes. Mint itself still accepts
+// them, because they are how catalog rows are minted; only Node Type vocabulary
+// is constrained.
+//
+// Uniqueness across the two columns is an application rule, not a format rule:
+// nothing here distinguishes PER from CPR.
+func ValidatePrefix(prefix string) (string, error) {
+	p, err := normalizePrefix(prefix)
+	if err != nil {
+		return "", err
+	}
+	if _, ok := reservedPrefixes[p]; ok {
+		return "", ErrReservedPrefix
+	}
+	return p, nil
 }
 
 func normalizePrefix(prefix string) (string, error) {
