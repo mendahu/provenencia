@@ -4,186 +4,6 @@
     "" : {
 
     },
-    "sources.list.noFilterMatchesMessage" : {
-      "comment" : "Empty-state body when the Sources type filter matches nothing",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Try another type, or choose All types."
-          }
-        }
-      }
-    },
-    "sources.list.noFilterMatchesTitle" : {
-      "comment" : "Empty-state title when the Sources type filter matches nothing",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No sources for this type"
-          }
-        }
-      }
-    },
-    "workspace.omnibar.kind.field" : {
-      "comment" : "Kind chip on an omnibar hit for a source field",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Field"
-          }
-        }
-      }
-    },
-    "workspace.omnibar.kind.source" : {
-      "comment" : "Kind chip on an omnibar hit for a Source",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Source"
-          }
-        }
-      }
-    },
-    "workspace.omnibar.kind.type" : {
-      "comment" : "Kind chip on an omnibar hit for a source type",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Type"
-          }
-        }
-      }
-    },
-    "workspace.omnibar.match.description" : {
-      "comment" : "Omnibar match context when the query hit a description field",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Description"
-          }
-        }
-      }
-    },
-    "workspace.omnibar.match.filename" : {
-      "comment" : "Omnibar match context when the query hit a filename or artifact label; argument is a short snippet",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Filename: %@"
-          }
-        }
-      }
-    },
-    "workspace.omnibar.match.metadata" : {
-      "comment" : "Omnibar match context when the query hit Source metadata; argument is a short snippet",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Metadata: %@"
-          }
-        }
-      }
-    },
-    "workspace.omnibar.match.note" : {
-      "comment" : "Omnibar match context when the query hit a Source note; argument is a short snippet",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Note: %@"
-          }
-        }
-      }
-    },
-    "workspace.omnibar.noMatchesHint" : {
-      "comment" : "Omnibar empty-state hint under no matches",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Check the spelling, or paste a catalog reference such as SRC-3K9M2"
-          }
-        }
-      }
-    },
-    "workspace.omnibar.noMatchesTitle" : {
-      "comment" : "Omnibar empty-state title; argument is the typed query",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No matches for “%@”."
-          }
-        }
-      }
-    },
-    "workspace.omnibar.resultsAccessibilityLabel" : {
-      "comment" : "Accessibility label for the omnibar results panel",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Search results"
-          }
-        }
-      }
-    },
-    "workspace.omnibar.searchFailed" : {
-      "comment" : "Omnibar panel message when SearchCatalog fails",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Search couldn’t finish. Try again."
-          }
-        }
-      }
-    },
-    "workspace.omnibar.searching" : {
-      "comment" : "Omnibar panel loading label while SearchCatalog is in flight",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Searching…"
-          }
-        }
-      }
-    },
-    "workspace.navigation.jumpMenuAccessibilityLabel" : {
-      "comment" : "Accessibility label for the Back/Forward history jump menu panel",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "History jump menu"
-          }
-        }
-      }
-    },
     "—" : {
       "comment" : "A placeholder for an empty thumbnail.",
       "isCommentAutoGenerated" : true
@@ -198,6 +18,18 @@
     },
     "/" : {
 
+    },
+    "%@, %@" : {
+      "comment" : "A label that describes the source, including its title and reference.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@"
+          }
+        }
+      }
     },
     "%lld" : {
       "comment" : "A badge that shows the number of Sources for a given destination.",
@@ -1979,30 +1811,6 @@
         }
       }
     },
-    "error.subjects.invalid" : {
-      "comment" : "FFI error subjects.invalid",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Invalid subject."
-          }
-        }
-      }
-    },
-    "error.subjectpositions.invalid" : {
-      "comment" : "FFI error subjectpositions.invalid",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Invalid subject position."
-          }
-        }
-      }
-    },
     "error.sourcetypes.duplicate_key" : {
       "comment" : "FFI error sourcetypes.duplicate_key; argument is the colliding key",
       "extractionState" : "manual",
@@ -2047,6 +1855,30 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Invalid source vocabulary."
+          }
+        }
+      }
+    },
+    "error.subjectpositions.invalid" : {
+      "comment" : "FFI error subjectpositions.invalid",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid subject position."
+          }
+        }
+      }
+    },
+    "error.subjects.invalid" : {
+      "comment" : "FFI error subjects.invalid",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid subject."
           }
         }
       }
@@ -3395,6 +3227,18 @@
         }
       }
     },
+    "sources.list.addSource" : {
+      "comment" : "Button: open the Add Source dialog",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add source"
+          }
+        }
+      }
+    },
     "sources.list.columnEvidenceGraph" : {
       "comment" : "Caption band above the Sources list graph zone",
       "extractionState" : "manual",
@@ -3415,66 +3259,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Source"
-          }
-        }
-      }
-    },
-    "sources.list.needsArtifact" : {
-      "comment" : "Blocked graph zone label when the Source has no Artifact",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Needs an artifact"
-          }
-        }
-      }
-    },
-    "sources.list.needsArtifactTooltip" : {
-      "comment" : "Tooltip on the blocked Sources list graph zone",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add an artifact on the source page to build its evidence graph"
-          }
-        }
-      }
-    },
-    "sources.list.openGraph" : {
-      "comment" : "Sources list right-zone action when the Source has an Artifact",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open graph"
-          }
-        }
-      }
-    },
-    "sources.list.openSourcePage" : {
-      "comment" : "Accessibility label for the Sources list left (filing) zone",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open source"
-          }
-        }
-      }
-    },
-    "sources.list.addSource" : {
-      "comment" : "Button: open the Add Source dialog",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add source"
           }
         }
       }
@@ -3559,6 +3343,78 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Filter by type"
+          }
+        }
+      }
+    },
+    "sources.list.needsArtifact" : {
+      "comment" : "Blocked graph zone label when the Source has no Artifact",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Needs an artifact"
+          }
+        }
+      }
+    },
+    "sources.list.needsArtifactTooltip" : {
+      "comment" : "Tooltip on the blocked Sources list graph zone",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add an artifact on the source page to build its evidence graph"
+          }
+        }
+      }
+    },
+    "sources.list.noFilterMatchesMessage" : {
+      "comment" : "Empty-state body when the Sources type filter matches nothing",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try another type, or choose All types."
+          }
+        }
+      }
+    },
+    "sources.list.noFilterMatchesTitle" : {
+      "comment" : "Empty-state title when the Sources type filter matches nothing",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No sources for this type"
+          }
+        }
+      }
+    },
+    "sources.list.openGraph" : {
+      "comment" : "Sources list right-zone action when the Source has an Artifact",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open graph"
+          }
+        }
+      }
+    },
+    "sources.list.openSourcePage" : {
+      "comment" : "Accessibility label for the Sources list left (filing) zone",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open source"
           }
         }
       }
@@ -6359,6 +6215,42 @@
         }
       }
     },
+    "workspace.navigation.focusOmnibar" : {
+      "comment" : "Menu / keyboard command to focus the workspace omnibar field (⌘K)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus Search"
+          }
+        }
+      }
+    },
+    "workspace.navigation.goBack" : {
+      "comment" : "Menu / keyboard command to go back in workspace navigation history (⌘[)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back"
+          }
+        }
+      }
+    },
+    "workspace.navigation.goForward" : {
+      "comment" : "Menu / keyboard command to go forward in workspace navigation history (⌘])",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forward"
+          }
+        }
+      }
+    },
     "workspace.navigation.historyLoadFailedBody" : {
       "comment" : "Toast body when navigation history could not be loaded; workspace still opens",
       "extractionState" : "manual",
@@ -6407,38 +6299,14 @@
         }
       }
     },
-    "workspace.navigation.focusOmnibar" : {
-      "comment" : "Menu / keyboard command to focus the workspace omnibar field (⌘K)",
+    "workspace.navigation.jumpMenuAccessibilityLabel" : {
+      "comment" : "Accessibility label for the Back/Forward history jump menu panel",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Focus Search"
-          }
-        }
-      }
-    },
-    "workspace.navigation.goBack" : {
-      "comment" : "Menu / keyboard command to go back in workspace navigation history (⌘[)",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Back"
-          }
-        }
-      }
-    },
-    "workspace.navigation.goForward" : {
-      "comment" : "Menu / keyboard command to go forward in workspace navigation history (⌘])",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Forward"
+            "value" : "History jump menu"
           }
         }
       }
@@ -6455,6 +6323,114 @@
         }
       }
     },
+    "workspace.omnibar.kind.field" : {
+      "comment" : "Kind chip on an omnibar hit for a source field",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Field"
+          }
+        }
+      }
+    },
+    "workspace.omnibar.kind.source" : {
+      "comment" : "Kind chip on an omnibar hit for a Source",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Source"
+          }
+        }
+      }
+    },
+    "workspace.omnibar.kind.type" : {
+      "comment" : "Kind chip on an omnibar hit for a source type",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type"
+          }
+        }
+      }
+    },
+    "workspace.omnibar.match.description" : {
+      "comment" : "Omnibar match context when the query hit a description field",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Description"
+          }
+        }
+      }
+    },
+    "workspace.omnibar.match.filename" : {
+      "comment" : "Omnibar match context when the query hit a filename or artifact label; argument is a short snippet",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filename: %@"
+          }
+        }
+      }
+    },
+    "workspace.omnibar.match.metadata" : {
+      "comment" : "Omnibar match context when the query hit Source metadata; argument is a short snippet",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Metadata: %@"
+          }
+        }
+      }
+    },
+    "workspace.omnibar.match.note" : {
+      "comment" : "Omnibar match context when the query hit a Source note; argument is a short snippet",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Note: %@"
+          }
+        }
+      }
+    },
+    "workspace.omnibar.noMatchesHint" : {
+      "comment" : "Omnibar empty-state hint under no matches",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check the spelling, or paste a catalog reference such as SRC-3K9M2"
+          }
+        }
+      }
+    },
+    "workspace.omnibar.noMatchesTitle" : {
+      "comment" : "Omnibar empty-state title; argument is the typed query",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No matches for “%@”."
+          }
+        }
+      }
+    },
     "workspace.omnibar.placeholder" : {
       "comment" : "Placeholder in the main-column toolbar omnibar field shell",
       "extractionState" : "manual",
@@ -6467,38 +6443,38 @@
         }
       }
     },
-    "workspace.section.sourceFields.title" : {
-      "comment" : "Workspace sidebar destination and page title: Source fields",
+    "workspace.omnibar.resultsAccessibilityLabel" : {
+      "comment" : "Accessibility label for the omnibar results panel",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Source fields"
+            "value" : "Search results"
           }
         }
       }
     },
-    "workspace.section.subjectTypes.title" : {
-      "comment" : "Workspace sidebar destination and page title: Subject types",
+    "workspace.omnibar.searchFailed" : {
+      "comment" : "Omnibar panel message when SearchCatalog fails",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Subject types"
+            "value" : "Search couldn’t finish. Try again."
           }
         }
       }
     },
-    "workspace.section.subjectFields.title" : {
-      "comment" : "Workspace sidebar destination and page title: Subject fields",
+    "workspace.omnibar.searching" : {
+      "comment" : "Omnibar panel loading label while SearchCatalog is in flight",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Subject fields"
+            "value" : "Searching…"
           }
         }
       }
@@ -6515,38 +6491,14 @@
         }
       }
     },
-    "workspace.stub.subjectTypes.body" : {
-      "comment" : "Subject types coming-soon stub body",
+    "workspace.section.sourceFields.title" : {
+      "comment" : "Workspace sidebar destination and page title: Source fields",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "What a document can talk about."
-          }
-        }
-      }
-    },
-    "workspace.stub.subjectFields.body" : {
-      "comment" : "Subject fields coming-soon stub body",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The properties a subject kind can carry."
-          }
-        }
-      }
-    },
-    "workspace.stub.evidenceGraph.body" : {
-      "comment" : "Evidence graph coming-soon stub body",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Interpret subjects on this source — canvas coming soon."
+            "value" : "Source fields"
           }
         }
       }
@@ -6571,6 +6523,30 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Source types"
+          }
+        }
+      }
+    },
+    "workspace.section.subjectFields.title" : {
+      "comment" : "Workspace sidebar destination and page title: Subject fields",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subject fields"
+          }
+        }
+      }
+    },
+    "workspace.section.subjectTypes.title" : {
+      "comment" : "Workspace sidebar destination and page title: Subject types",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subject types"
           }
         }
       }
@@ -6607,6 +6583,42 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Source layer"
+          }
+        }
+      }
+    },
+    "workspace.stub.evidenceGraph.body" : {
+      "comment" : "Evidence graph coming-soon stub body",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interpret subjects on this source — canvas coming soon."
+          }
+        }
+      }
+    },
+    "workspace.stub.subjectFields.body" : {
+      "comment" : "Subject fields coming-soon stub body",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The properties a subject kind can carry."
+          }
+        }
+      }
+    },
+    "workspace.stub.subjectTypes.body" : {
+      "comment" : "Subject types coming-soon stub body",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What a document can talk about."
           }
         }
       }

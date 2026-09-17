@@ -32,8 +32,8 @@ enum PVSymbol: String {
     case sortDescending = "arrow.down"
     case sortUnsorted = "chevron.up.chevron.down"
     case filter = "line.3.horizontal.decrease"
-    /// Lucide `network` — Evidence graph open zone (S5-D2 / S5-08).
-    case network = "point.3.connected.trianglepath"
+    /// Lucide `network` — Evidence graph zone glyph (S5-D2 / S5-08).
+    case network = "point.3.connected.trianglepath.dotted"
     case shieldCheck = "checkmark.shield.fill"
     case calendar = "calendar"
     case textType = "textformat"

@@ -241,10 +241,9 @@ private struct SourcesListContent: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .accessibilityIdentifier("sources.filterEmpty")
         } else {
-            VStack(spacing: 0) {
-                captionBand
-                ScrollView {
-                    LazyVStack(spacing: 0) {
+            ScrollView {
+                LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
+                    Section {
                         ForEach(model.visibleSources) { source in
                             SourcesSplitRow(
                                 source: source,
@@ -261,33 +260,33 @@ private struct SourcesListContent: View {
                                 }
                             )
                         }
+                    } header: {
+                        captionBand
                     }
                 }
-                .accessibilityElement(children: .contain)
-                .accessibilityLabel(Text(L10n.Sources.listAccessibilityLabel))
-                .accessibilityIdentifier("sources.list")
             }
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(Text(L10n.Sources.listAccessibilityLabel))
+            .accessibilityIdentifier("sources.list")
         }
     }
 
     private var captionBand: some View {
-        HStack(spacing: 0) {
+        SourcesSplitLayout.columns {
             Text(L10n.Sources.columnSource)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, PVSpacing.space6)
+                .padding(.leading, PVSpacing.gutterPage)
+                .padding(.trailing, PVSpacing.space6)
+        } graph: {
             Text(L10n.Sources.columnEvidenceGraph)
-                .frame(width: SourcesSplitRow.graphZoneWidth, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                // Padding inside the fixed 210pt track (not outside — that skewed the hairline).
                 .padding(.horizontal, PVSpacing.space6)
-                .overlay(alignment: .leading) {
-                    Rectangle()
-                        .fill(PVColor.borderSubtle)
-                        .frame(width: 1)
-                }
         }
         .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
         .tracking(PVTypeScale.micro * PVTracking.caps)
         .textCase(.uppercase)
-        .foregroundStyle(PVColor.textFaint)
+        .foregroundStyle(PVColor.textMuted)
         .padding(.vertical, PVSpacing.space3)
         .background(PVColor.surfaceCard)
         .overlay(alignment: .bottom) {
