@@ -1,5 +1,5 @@
 ---
-description: Short human refs (USR-/SRC-/PER-C-) mint via core/ref; see catalog-refs skill
+description: Short human refs (USR-/SRC-/CPR-) mint via core/ref; see catalog-refs skill
 globs: core/ref/**/*.go,core/database/**/*.go,core/identity/**/*.go,core/onboarding/**/*.go
 alwaysApply: false
 ---
@@ -10,4 +10,5 @@ Follow the project skill `.cursor/skills/add-catalog-ref/SKILL.md`. Product note
 
 - Mint/validate only through `core/ref` (`Mint`, `Validate`). Do not hand-roll tokens or mint in SQL.
 - Machine id stays UUIDv7; `ref` is display/search only — never a foreign key; never recycle.
-- Reserved prefixes: `USR`, `SRC`, `ART`, `CIT`, `OBS`. Candidate Nodes use `{PREFIX}-C-{TOKEN}` via a shared helper when implemented — do not invent a parallel generator.
+- Reserved prefixes: `USR`, `SRC`, `ART`, `CIT`, `OBS`. Validate Node Type prefixes with `ref.ValidatePrefix`.
+- One ref format. Interpretation Nodes are ordinary refs off `node_types.candidate_ref_prefix` (`CPR-…`), canonical entities off `ref_prefix` (`PER-…`) — no marker segment, no candidate-specific mint or validator.

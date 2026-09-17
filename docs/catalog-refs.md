@@ -30,20 +30,18 @@ Examples: `USR-F4N2P`, `SRC-3K9M2`, `OBS-2F8Q1`.
 
 ### Candidate Nodes (Interpretation)
 
-Typed Interpretation Nodes use an extra `C` segment so they do not look like concluded entities:
+There is **one ref format**. Interpretation Nodes are distinguished by their own three-letter prefix, not by a special shape:
 
 ```text
-canonical / catalog   {PREFIX}-{TOKEN}      e.g. PER-7KD45
-node (candidate)      {PREFIX}-C-{TOKEN}    e.g. PER-C-7KD45
+canonical entity   {PREFIX}-{TOKEN}    e.g. PER-7KD45   (canonical_entities)
+candidate Node     {PREFIX}-{TOKEN}    e.g. CPR-7KD45   (nodes)
 ```
 
-`C` is a fixed application marker, **not** a `ref_prefix`. Do not register `C` as a three-letter prefix.
+A Node Type therefore carries **two** prefixes — `node_types.ref_prefix` for the Conclusion handle and `node_types.candidate_ref_prefix` for the Interpretation Node — because `canonical_entities` and `nodes` share the same `node_types` vocabulary. Seeded pairs are in [`seeded-vocabulary.md`](seeded-vocabulary.md) §3.1.
 
-**Why an infix marker.** Three alternatives were considered and rejected:
+Candidate prefixes conventionally start with `C` (`CPR`, `CEV`, `CPL`, …), but that is **not enforced**. Both columns validate identically through `ref.ValidatePrefix`, and nothing in the format tells you which layer a prefix belongs to — that is a registry lookup. The consequence to keep in mind: all Node Type prefixes, canonical and candidate, share one three-letter namespace and must be unique across **both** columns. That is an application rule; no single SQL `UNIQUE` expresses it.
 
-- **Suffix (`PER-7KD45-C`).** The end of a string is where text is lost — clipped table cells, ellipsized labels, a copy-paste one character short. A truncated candidate ref becomes a *well-formed canonical ref*, so the failure is silent and runs in the dangerous direction. It also makes the candidate ref literally contain a canonical ref as a prefix, which suggests a promotion relationship that does not exist: the two tokens are minted independently, and with 32⁵ tokens a large project will likely contain at least one misleading pair. Finally, `PER-7KD45` would be both a complete ref and a proper prefix of another, so nothing downstream could tell when input was finished.
-- **Separate prefixes (`CPR-7KD45`).** Cleaner as a string, but it needs two prefixes per Node Type, and the second is not derivable from the first (`PER`→`CPR`, `EVT`→`CEV`?), so readers must memorize a mapping instead of learning one rule. Making it self-describing requires reserving every C-initial prefix for candidates, which rules out natural canonical codes like `CEM`, `CTY`, and `CEN`.
-- **Leading marker (`C-PER-7KD45`).** Sound, and it would let candidates cluster and prefix-search as a layer. Rejected only because it is no shorter than the infix and the type code reads better first.
+An earlier design used an infix marker (`PER-C-7KD45`) so one prefix could serve both layers. It was dropped because the special shape leaked into everything that touches refs — a second mint function, a second validator, partial-match handling in search — for a distinction that a separate prefix encodes for free.
 
 ---
 
@@ -59,7 +57,7 @@ node (candidate)      {PREFIX}-C-{TOKEN}    e.g. PER-C-7KD45
 | `CIT` | citations |
 | `OBS` | observations |
 
-**Node / canonical type prefixes** come from `node_types.ref_prefix` (see [`seeded-vocabulary.md`](seeded-vocabulary.md)): `PER`, `EVT`, `PLC`, `REL`, `PTN`, `LOC`, `SRN`, …. Those must not collide with the reserved catalog set above.
+**Node Type prefixes** come from `node_types`, two per row (see [`seeded-vocabulary.md`](seeded-vocabulary.md) §3.1): `ref_prefix` for canonical entities (`PER`, `EVT`, `PLC`, `REL`, `PTN`, `LOC`, `SRN`, …) and `candidate_ref_prefix` for Nodes (`CPR`, `CEV`, `CPL`, `CRL`, `CPA`, `CLO`, `CSR`, …). None of them may collide with the reserved catalog set above, or with each other across either column.
 
 **Proposed (not shipped):** `NAR` for Narrative compositions ([`narrative-layer-data-model.md`](narrative-layer-data-model.md)). Promote to the reserved catalog table above when the layer is roadmapped.
 
@@ -76,26 +74,22 @@ r, err := ref.Mint(ref.PrefixSource)
 if err != nil { … }
 if err := ref.Validate(r); err != nil { … }
 
-// Interpretation Node, prefix from node_types.ref_prefix
-n, err := ref.MintCandidate("PER")            // PER-C-7KD45
-if err := ref.ValidateCandidate(n); err != nil { … }
+// Interpretation Node — an ordinary ref off the candidate prefix
+n, err := ref.Mint(nodeType.CandidateRefPrefix) // CPR-7KD45
+if err := ref.Validate(n); err != nil { … }
 ```
 
 | API | Behavior |
 | --- | --- |
 | `Mint(prefix)` | Normalizes prefix to `A-Z{3}`, appends `-` + random 5-char token |
-| `Valid` / `Validate` | Catalog form only (`PREFIX-TOKEN`). Rejects the candidate form |
-| `MintCandidate(prefix)` | Same normalize + token, emitting `PREFIX-C-TOKEN` for Interpretation Nodes |
-| `ValidCandidate` / `ValidateCandidate` | Candidate form only. Rejects the catalog form |
-| `ValidAny(s)` | Either complete form. For resolving a ref the researcher typed, where the layer is not known up front |
-| `ValidPartial(s)` | A leading fragment of either form (`PER-7`, `PER-C`, `PER-C-`, `PER-C-7KD4`). Complete refs are **not** partial — test `ValidAny` first |
-| `ValidatePrefix(prefix)` | Normalizes a `node_types.ref_prefix` and rejects the reserved catalog prefixes (`ref.reserved_prefix`) |
+| `Valid` / `Validate` | The one ref form (`PREFIX-TOKEN`) |
+| `ValidatePrefix(prefix)` | Normalizes a Node Type prefix — either column — and rejects the reserved catalog prefixes (`ref.reserved_prefix`) |
 
-The two forms are **disjoint by length** — 9 characters against 11 — so exactly one validator matches any given string. That matters because `C` is a legal token character: `PER-C4N2P` is a catalog ref and is not a candidate.
+There is no candidate-specific mint or validator, and no layer-specific ref grammar. A Node ref and a canonical entity ref are the same shape; only the prefix differs, so every existing consumer of `Mint` / `Valid` already handles both.
 
 `Mint` still accepts reserved prefixes, because `ref.Mint(ref.PrefixSource)` is how catalog rows are minted. Only `ValidatePrefix`, which guards Node Type vocabulary, refuses them.
 
-Both ref grammars live **only** in this package. Consumers that need to recognize ref-shaped input — the omnibar fast path in [`core/search/refpath.go`](../core/search/refpath.go) is the first — call `ValidAny` / `ValidPartial` rather than carrying their own regex, so a future format change stays confined to `core/ref`.
+`ValidatePrefix` does **not** check cross-column uniqueness or enforce the leading `C` convention. Enforce uniqueness in the Node Type write path against both `ref_prefix` and `candidate_ref_prefix`.
 
 **Do not** invent refs in SQL (`hex(id)`, random literals). Mint in Go on insert (or backfill in an `EnsureRefs`-style helper after migration).
 

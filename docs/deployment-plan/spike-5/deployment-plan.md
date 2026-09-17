@@ -9,7 +9,7 @@ Interpretation foundation: candidate refs, Node vocabulary, Nodes, layout storag
 ## Goal (dogfood bar)
 
 1. Source page → **Open interpretation graph** lands on a Source-scoped destination.
-2. Create a person, an event, and a place there; each gets a `{PREFIX}-C-{TOKEN}` ref.
+2. Create a person, an event, and a place there; each gets a ref off its type's `candidate_ref_prefix` (`CPR-…`, `CEV-…`, `CPL-…`).
 3. Rename and delete a Node; both appear in the audit log with a `node` entity type.
 4. Sidebar → **Interpretation** lists Sources; picking one opens its graph.
 5. Back/Forward and relaunch restore the graph place; returning to it is a session-cache hit.
@@ -19,14 +19,20 @@ Interpretation foundation: candidate refs, Node vocabulary, Nodes, layout storag
 
 **All UI is designed in Claude Design first.** Design steps carry a `D` id, produce a board rather than a diff, and are *not* PRs — but they are ordered work and they gate the PRs that implement them. Briefs: [`design/`](design/).
 
-Both briefs are writable on day one: they depend on nothing in the Go track, so the design track runs in parallel with S5-01…S5-06 and is off the critical path entirely — provided it starts at the top of the spike rather than when the implementing PR is ready to open.
+All four briefs are writable on day one: they depend on nothing in the Go track, so the design track runs in parallel with S5-01…S5-06 and is off the critical path entirely — provided it starts at the top of the spike rather than when the implementing PR is ready to open.
+
+One board per surface, so each can be run independently:
 
 | Step | Brief | Covers | Gates |
 | --- | --- | --- | --- |
-| **S5-D1** | Interpretation section | Sidebar entry (label + icon), the Interpretation Sources list and its empty state, and the **Open interpretation graph** control on the Source page | S5-07, S5-08 |
-| **S5-D2** | Source nodes destination | Node rows (candidate ref, type, working label), the add-Node type picker, rename and delete affordances, empty state | S5-09 |
+| **S5-D1** | Interpretation nav entry | The sidebar destination — label, icon, placement, empty badge slot | S5-07 |
+| **S5-D2** | Interpretation Sources list | The Source picker behind the destination: rows, purpose copy, empty state | S5-08 |
+| **S5-D3** | Source page entry control | One **Open interpretation graph** control added to the shipped Source page | S5-08 |
+| **S5-D4** | Source nodes destination | Node rows (candidate ref, type, working label), the add-Node type picker, rename and delete affordances, empty state | S5-09 |
 
-S5-D1 gates S5-07 because the sidebar case commits to a label and a `PVSymbol` in that PR. Stub destination views in S5-07 are exempt — they are compile scaffolding, replaced before anything ships.
+S5-D1 gates S5-07 because the sidebar case commits to a label and a `PVSymbol` in that PR. Stub destination views in S5-07 are exempt — they are compile scaffolding, replaced before anything ships. S5-08 implements D2 and D3 together, so both must be reviewable before it opens.
+
+D1 and D3 are small by design — a sidebar row and a single button. The weight is in D2 and D4, and D4 is the largest surface in the spike: for all of Spike 5 it is the only place Nodes can be created, labelled, renamed, or deleted. It is demoted to the structured alternate view in Spike 6, not deleted.
 
 ## PR sequence
 
@@ -36,18 +42,18 @@ Design steps are shown in the order they must happen. They are not PRs and they 
    design                          build
 ─────────────                ──────────────────────────────────────────────
 
-S5-D1  Interpretation        S5-01  Candidate refs (core/ref)
-       section                 │                              no deps
+S5-D1  Nav entry             S5-01  Node Type prefixes (core/ref)
+  │                            │                              no deps
   │                            ▼
-  │                          S5-02  Migration 000021
-  │                            │    node_types, nodes, node_positions
-  ▼                            ▼
-S5-D2  Source nodes          S5-03  core/database/nodetypes + seed
-       destination             │    7 seeded types, create-time only
+  ▼                          S5-02  Migration 000021
+S5-D2  Sources list            │    node_types, nodes, node_positions
   │                            ▼
-  │                          S5-04  core/database/nodes + audit
-  │                            │    needs S5-01 (mint) + S5-03 (prefix)
+  ▼                          S5-03  core/database/nodetypes + seed
+S5-D3  Source page entry       │    7 seeded types, create-time only
   │                            ▼
+  ▼                          S5-04  core/database/nodes + audit
+S5-D4  Source nodes            │    needs S5-03 (candidate prefix)
+       destination             ▼
   │                          S5-05  core/database/graphlayout
   │                            │    unaudited positions
   │                            ▼
@@ -58,7 +64,7 @@ S5-D2  Source nodes          S5-03  core/database/nodetypes + seed
   │      │                     │    registry plumbing; stub views
   │      │            ┌────────┴────────┐
   │      │            ▼                 ▼
-  └──────┴─ D1 ─▶ S5-08            S5-09 ◀─ D2 ─┘
+  └──────┴ D2+D3 ▶ S5-08           S5-09 ◀─ D4 ─┘
                   Entry points      Source nodes list
                   (list + button)   (replaces the stub)
                        │                 │
@@ -71,9 +77,11 @@ S5-D2  Source nodes          S5-03  core/database/nodetypes + seed
 
 ## Checklist
 
-- [ ] S5-D1 — Design: Interpretation section (sidebar, Sources list, Source-page entry) → [`design/`](design/)
-- [ ] S5-D2 — Design: Source nodes destination → [`design/`](design/)
-- [x] S5-01 — Candidate ref minting in `core/ref` → [`completed.md`](completed.md)
+- [ ] S5-D1 — Design: Interpretation nav entry (sidebar destination) → [`design/`](design/)
+- [ ] S5-D2 — Design: Interpretation Sources list → [`design/`](design/)
+- [ ] S5-D3 — Design: Source page entry control → [`design/`](design/)
+- [ ] S5-D4 — Design: Source nodes destination → [`design/`](design/)
+- [x] S5-01 — Node Type prefix validation in `core/ref` → [`completed.md`](completed.md)
 - [ ] S5-02 — Interpretation schema migration
 - [ ] S5-03 — Node type vocabulary and create-time seed
 - [ ] S5-04 — Node CRUD with audit
@@ -167,10 +175,11 @@ Findings from the pattern inventory that will otherwise cost a day each.
 | **Schema hash** | `core/database/schemahash.go` computes `expectedSchemaHash` at init by migrating an in-memory DB. There is **no committed golden constant to bump** — counterintuitive if you expect a golden file. Nothing to regenerate. |
 | **`Open` rejects unknown schema** | The digest covers all of `sqlite_schema`; `catalog_test.go` proves even a rogue *index* makes a catalog unopenable. Nothing may be created at runtime — every table and index ships in `000021.sql`. |
 | **Test tags** | `CGO_ENABLED=1 go test -tags fts5 ./...`. Bare `go test` on `core/database` fails confusingly, because migrations 18–19 create FTS5 virtual tables. |
-| **Do not widen `ref.Valid`** | Five call sites depend on today's strict `AAA-TTTTT` semantics (`users`, `sources`, `artifacts`, `identity`, `search/refpath`). Add `MintCandidate` / `ValidateCandidate` as separate functions — the name `MintCandidate` is already reserved by [`catalog-refs.md`](../../catalog-refs.md) §4 and the `add-catalog-ref` skill. |
-| **Reserved prefixes** | The guard must reject `USR`, `SRC`, `ART`, `CIT`, `OBS` **and the literal `C`**. No such helper exists today. |
-| **`ref_prefix` collisions are invisible to upsert** | `ON CONFLICT (key, origin)` does not catch a duplicate `ref_prefix`; it arrives as a raw constraint error and will surface as `internal.unknown` unless mapped to its own code. |
-| **Node refs need a join inside the transaction** | Unlike `sources` (constant `SRC`), minting a Node ref means reading `node_types.ref_prefix` first. Extend the `requireType(tx, …)` existence check to return the prefix, then reuse the 8-attempt retry loop from `sources.go`. |
+| **One ref format — do not reintroduce a candidate form** | Candidate Nodes are ordinary `AAA-TTTTT` refs off `node_types.candidate_ref_prefix`. There is no `MintCandidate`, no candidate validator, and nothing in `core/search` to teach. An earlier draft of S5-01 built an infix marker (`PER-C-7KD45`) and it was reverted; see [`catalog-refs.md`](../../catalog-refs.md) §2. |
+| **Two prefixes per Node Type, one namespace** | `node_types` carries `ref_prefix` (canonical, `PER`) and `candidate_ref_prefix` (Node, `CPR`) because `canonical_entities` shares the table. Both draw from the same three-letter space, so a new prefix must be checked against **both** columns — two per-column `UNIQUE` constraints do not express that. The leading `C` is convention; do not validate it. |
+| **Reserved prefixes** | The guard must reject `USR`, `SRC`, `ART`, `CIT`, `OBS`. Shipped as `ref.ValidatePrefix` in S5-01. |
+| **Prefix collisions are invisible to upsert** | `ON CONFLICT (key, origin)` does not catch a duplicate prefix; it arrives as a raw constraint error and will surface as `internal.unknown` unless mapped to its own code. |
+| **Node refs need a join inside the transaction** | Unlike `sources` (constant `SRC`), minting a Node ref means reading `node_types.candidate_ref_prefix` first. Extend the `requireType(tx, …)` existence check to return the prefix, then reuse the 8-attempt retry loop from `sources.go`. |
 | **Audit needs no registry entry** | `EntityType` / `ActionType` are unvalidated free-form strings — which also means a typo persists silently. Convention: singular snake_case table name, `{verb}_{entity}`. |
 | **Protobuf codegen is manual and dual-target** | `scripts/generate-proto.sh` needs `protoc`, `protoc-gen-go`, `protoc-gen-swift`, and writes **both** `api/proto/engine/engine.pb.go` and `macos/App/Platform/Generated/engine.pb.swift`. Commit both; forgetting the Swift half breaks the app build. Methods start at 45 (`METHOD_SEARCH_CATALOG = 44` is current highest). |
 | **`?? .sourcesList` hides a missing spec** | `WorkspaceDestinationHost.presentation(for:)` falls back silently, so a new section with no `PlaceRegistry` spec renders the ordinary Sources list while the sidebar shows Interpretation selected. Land the specs and the sidebar case in the same PR (S5-07). |
@@ -195,7 +204,7 @@ This is deliberate. The alternative is opening Spike 6 with a migration, a Go pa
 The canvas this spike leads up to is expected to be reused for an eventual family tree over Conclusion-layer canonical entities. Design note §13 works through what that implies; the short version for **this** spike is that it changes almost nothing, because two of the three shared pieces are already shared by the model docs:
 
 - `canonical_entities.node_type_id` references the same `node_types` rows S5-03 seeds, so the tree inherits that vocabulary for free.
-- Canonical refs are `{prefix}-{token}` and Node refs are `{prefix}-C-{token}` off the same `ref_prefix`, so S5-01 serves both layers. The reserved-prefix guard protects both.
+- Canonical refs and Node refs share one format, differing only in which of the type's two prefixes they are minted from (`PER-…` against `CPR-…`), so S5-01's guard serves both layers and a tree view needs no new ref work.
 
 The one thing it did change is the name of the layout table. It is **`node_positions`**, not `graph_node_positions`: there is deliberately no `graphs` entity (design note §5.1), and a future tree will get its own `canonical_entity_positions` rather than a shared polymorphic table — a shared subject column could not carry a foreign key, which would forfeit the cascade behavior that is the main reason this table is shaped the way it is.
 
@@ -207,7 +216,7 @@ The one thing it did change is the name of the layout table. It is **`node_posit
 
 | Step | Title sketch |
 | --- | --- |
-| S5-01 | Mint candidate refs for interpretation nodes |
+| S5-01 | Guard node type ref prefixes in `core/ref` |
 | S5-02 | Add interpretation node schema and graph layout storage |
 | S5-03 | Seed node type vocabulary at catalog create |
 | S5-04 | Add audited node CRUD for the interpretation layer |
@@ -224,13 +233,13 @@ The one thing it did change is the name of the layout table. It is **`node_posit
 
 | Track | Steps |
 | --- | --- |
-| **Design (no PRs)** | S5-D1 → S5-D2, from day one, parallel to the Go core |
+| **Design (no PRs)** | S5-D1 → S5-D2 → S5-D3 → S5-D4, from day one, parallel to the Go core |
 | **Go core (critical path)** | S5-01 → S5-06 |
 | **Mac client** | S5-07 → S5-08 / S5-09 (parallel) → S5-10 |
 
 S5-01 is genuinely independent and can land any time. S5-08 and S5-09 are the only true fork in the build track; everything else is a chain, because each layer is the next one's only consumer.
 
-**The design track is the one thing that can stall this spike without warning.** Nothing in S5-01…S5-06 blocks on it, so it is easy to leave until the Mac client work starts — at which point it is suddenly on the critical path with two briefs outstanding. Start S5-D1 alongside S5-01.
+**The design track is the one thing that can stall this spike without warning.** Nothing in S5-01…S5-06 blocks on it, so it is easy to leave until the Mac client work starts — at which point it is suddenly on the critical path with four briefs outstanding. Start S5-D1 alongside S5-01.
 
 The visual language itself is modest: `PVList`, `PVButton`, and the existing sidebar carry all of it, and the Sources list and Source page already have boards to extend rather than boards to invent. The briefs are small; the sequencing is the risk.
 

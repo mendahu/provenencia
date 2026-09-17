@@ -241,7 +241,7 @@ CREATE TABLE canonical_entities (
 
 `node_type_id` is the same vocabulary as Interpretation Node Types (referenced by id so origin-namespaced keys stay unambiguous). The table is an implementation detail; in the UI a `person` row is a Person (`PER-7KD45`), not a “canonical entity.” The Node Type is immutable after insert.
 
-`ref` is required: `{ref_prefix}-{token}`. Candidate person Nodes use `PER-C-…` and stay distinct.
+`ref` is required: `{ref_prefix}-{token}` from the Node Type — `PER-7KD45` for a person. Candidate person Nodes are minted off the same type's `candidate_ref_prefix` (`CPR-…`), so the two layers stay distinct by prefix while sharing one ref format.
 
 `identity_anchor_id` is the optional Node whose identity cluster *is* this subject. It replaces the older required `representative_node_id`. Creating a handle from a record sets the anchor to that Node. **Adopt** (first grounding of an inferred handle) sets it later. When the current anchor leaves the accepted `same_as` component, the application repoints to any remaining member Node; the canonical id does not change for that reason alone.
 

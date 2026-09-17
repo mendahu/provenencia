@@ -8,7 +8,7 @@ IDs stay stable (`S5-NN`, `S5-DN`). Do not renumber when moving steps here.
 
 | Step | Kind | One-liner |
 | --- | --- | --- |
-| [S5-01](#s5-01--pr-candidate-ref-minting) | PR | `MintCandidate` / candidate validation / reserved-prefix guard in `core/ref` |
+| [S5-01](#s5-01--pr-node-type-prefix-validation) | PR | Node Type prefix validation + reserved-prefix guard in `core/ref` |
 
 ---
 
@@ -20,18 +20,20 @@ IDs stay stable (`S5-NN`, `S5-DN`). Do not renumber when moving steps here.
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | — |
-| **Deliverables** | Done. [`core/ref/ref.go`](../../../core/ref/ref.go): `MintCandidate(prefix)` emitting `{PREFIX}-C-{TOKEN}`, `ValidCandidate` / `ValidateCandidate`, `ValidatePrefix(prefix)` rejecting reserved catalog prefixes, plus `ErrReservedPrefix` and the `reservedPrefixes` set. New wire code `ref.reserved_prefix` in [`core/apperr/apperr.go`](../../../core/apperr/apperr.go). Both mint paths share the existing `normalizePrefix` / `randomToken` helpers. |
-| **Tests** | Done. [`core/ref/ref_test.go`](../../../core/ref/ref_test.go): `TestMintCandidate` (valid / lowercase / short / long / digit / blank prefixes, each asserting the minted ref is a candidate and **not** a catalog ref), `TestValidCandidate` (10 rows including the `PER-C4N2P` near-miss and a wrong marker), `TestMintCandidateUnique`, `TestValidatePrefix` (11 rows covering all five reserved prefixes, lowercase normalization, and `SRN` being allowed). Two rows added to the existing `TestValid` for the reverse direction. |
+| **Deliverables** | Done. [`core/ref/ref.go`](../../../core/ref/ref.go): `ValidatePrefix(prefix)` normalizing a Node Type prefix and rejecting the reserved catalog prefixes, plus `ErrReservedPrefix` and the `reservedPrefixes` set. New wire code `ref.reserved_prefix` in [`core/apperr/apperr.go`](../../../core/apperr/apperr.go). No new mint or validate path: candidate Nodes are ordinary refs. |
+| **Tests** | Done. [`core/ref/ref_test.go`](../../../core/ref/ref_test.go): `TestValidatePrefix` covering all five reserved prefixes, lowercase normalization, `SRN` allowed, and candidate prefixes (`CPR`, `CSR`, `cev`) validating identically to canonical ones. Rows added to `TestValid` asserting `CPR-7KD45` is an ordinary valid ref and that an extra segment is not. |
 | **Dogfood** | App unchanged. No schema, no FFI, no Swift — nothing is user-visible. |
-| **Out** | `node_types` / `nodes` tables and their Go packages (S5-02…S5-04). Ref uniqueness retry, which belongs to the insert path in S5-04. Omnibar handling of candidate refs — [`core/search/refpath.go`](../../../core/search/refpath.go) still calls `ref.Valid`, which is correct while Nodes are not searchable. **L10n mapping for `ref.reserved_prefix`**, deferred because the code is unreachable from Swift until researchers can define Node Types in the vocabulary browser (Spike 7); map it then. |
+| **Out** | `node_types` / `nodes` tables and their Go packages (S5-02…S5-04). Cross-column prefix uniqueness and ref uniqueness retry, both of which belong to the write paths in S5-02 / S5-04. **L10n mapping for `ref.reserved_prefix`**, deferred because the code is unreachable from Swift until researchers can define Node Types in the vocabulary browser (Spike 7); map it then. |
 
-**Landed:** `core/ref` can mint both identity forms the layer needs. The decision worth recording is that **`Valid` / `Validate` were not widened** — five call sites depend on the strict `AAA-TTTTT` form ([`users`](../../../core/database/users/users.go), [`sources`](../../../core/database/sources/sources.go), [`artifacts`](../../../core/database/artifacts/artifacts.go), [`identity`](../../../core/identity/identity.go), [`search/refpath`](../../../core/search/refpath.go)), so candidate support is purely additive and no existing caller changed.
+**Landed:** the reserved-prefix guard the Node Type vocabulary needs — and, more usefully, a much smaller step than planned.
 
-The two forms are disjoint by length (9 against 11), so no string satisfies both validators. That is load-bearing rather than incidental: `C` is a legal Crockford token character, so `PER-C4N2P` is a valid catalog ref that must never read as a candidate. Both directions are asserted.
+This PR was originally built around an infix candidate marker (`PER-C-7KD45`) so one `ref_prefix` could serve both layers. That required `MintCandidate`, a second validator pair, `ValidAny` / `ValidPartial`, and a fix to [`core/search/refpath.go`](../../../core/search/refpath.go), whose partial-ref regex had no room for a second dash. All of it was reverted in favour of giving candidates **their own prefix** (`CPR-7KD45`, seeded in [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.1). One ref format survives, `ref.Mint` already produces Node refs, and every existing consumer of `Valid` / `Validate` handles them untouched. The search package ends up with a zero-line diff.
 
-`ValidatePrefix` rejects `USR` / `SRC` / `ART` / `CIT` / `OBS`. It does not need a special case for the literal `C` — prefixes are exactly three ASCII letters, so `C` fails on length. A test row documents that rather than carrying a redundant branch.
+The cost moved into the vocabulary: `node_types` now needs `candidate_ref_prefix` alongside `ref_prefix`, because `canonical_entities` and `nodes` share that table. That column lands with the table in S5-02.
 
-Docs updated with the step: [`catalog-refs.md`](../../catalog-refs.md) §4 (the "Not implemented yet" row is now the shipped API) and [`add-catalog-ref`](../../../.cursor/skills/add-catalog-ref/SKILL.md) (usage snippet, reserved-prefix guidance, and its stale test command corrected to include `-tags fts5`).
+Two rules `ValidatePrefix` deliberately does **not** enforce, both left to the Node Type write path: cross-column prefix uniqueness (the per-column SQL `UNIQUE` catches only half of a single shared namespace), and the leading `C` on candidate prefixes, which is convention and carries no meaning to the code.
+
+Docs updated with the step: [`catalog-refs.md`](../../catalog-refs.md) §2 and §4, [`data-model-source-interpretation-conclusion.md`](../../data-model-source-interpretation-conclusion.md) §2, [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) §4.1–4.2, [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §6, [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.1, the [`catalog-refs`](../../../.cursor/rules/catalog-refs.mdc) rule, and [`add-catalog-ref`](../../../.cursor/skills/add-catalog-ref/SKILL.md) (whose stale test command was also corrected to include `-tags fts5`).
 
 **Verify:**
 

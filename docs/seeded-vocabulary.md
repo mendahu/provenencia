@@ -284,17 +284,21 @@ Missing assessment may display as Standard without inserting a row.
 ## 3.1 `node_types`
 
 ```text
-key             ref_prefix    summary
-person          PER           A person represented by interpreted evidence.
-event           EVT           An occurrence represented by interpreted evidence.
-place           PLC           A geographic feature at one grain (town, township, colony, farm, …).
-relationship    REL           A general association when evidence is not a more specific event/context structure.
-participation   PTN           Association between a person and an event, including role.
-location        LOC           Association between an event and a place.
-source          SRN           A Source reified so other evidence can refer to or comment on it.
+key             ref_prefix    candidate_ref_prefix    summary
+person          PER           CPR                     A person represented by interpreted evidence.
+event           EVT           CEV                     An occurrence represented by interpreted evidence.
+place           PLC           CPL                     A geographic feature at one grain (town, township, colony, farm, …).
+relationship    REL           CRL                     A general association when evidence is not a more specific event/context structure.
+participation   PTN           CPA                     Association between a person and an event, including role.
+location        LOC           CLO                     Association between an event and a place.
+source          SRN           CSR                     A Source reified so other evidence can refer to or comment on it.
 ```
 
-`ref_prefix` is required for every Node Type, including researcher-defined types. Do not reuse reserved prefixes `SRC`, `ART`, `CIT`, `OBS`, or the candidate layer code `C`. Canonical refs are `{prefix}-{token}`; Node refs are `{prefix}-C-{token}`. `SRN` is used for source-Nodes so they do not collide in speech with Source catalog refs (`SRC-…`).
+Both prefixes are required for every Node Type, including researcher-defined types. `ref_prefix` mints canonical entity refs in the Conclusion layer (`PER-7KD45`); `candidate_ref_prefix` mints Interpretation Node refs (`CPR-7KD45`). Same format, different prefix — see [`catalog-refs.md`](catalog-refs.md) §2.
+
+Do not reuse the reserved catalog prefixes `USR`, `SRC`, `ART`, `CIT`, `OBS`. Both columns share **one** three-letter namespace, so a new prefix must not collide with any existing value in *either* column. The leading `C` on candidate prefixes is convention only and is not validated.
+
+`SRN` is used for source-Nodes so they do not collide in speech with Source catalog refs (`SRC-…`); `CSR` is its candidate counterpart.
 
 ## 3.2 `properties`
 

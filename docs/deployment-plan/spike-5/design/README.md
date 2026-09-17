@@ -6,12 +6,18 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 
 ## Open
 
+One board per surface, in flow order:
+
 | Step | Brief | Feeds | Notes |
 | --- | --- | --- | --- |
-| S5-D1 | [`S5-D1-interpretation-section.md`](S5-D1-interpretation-section.md) | PRs S5-07, S5-08 | Sidebar entry, Interpretation Sources list, Source-page entry control |
-| S5-D2 | [`S5-D2-source-nodes-destination.md`](S5-D2-source-nodes-destination.md) | PR S5-09 | The Source's node list — the destination that becomes the canvas in Spike 6 |
+| S5-D1 | [`S5-D1-interpretation-nav-entry.md`](S5-D1-interpretation-nav-entry.md) | PR S5-07 | The Interpretation sidebar destination — label, icon, placement. Small board. |
+| S5-D2 | [`S5-D2-interpretation-sources-list.md`](S5-D2-interpretation-sources-list.md) | PR S5-08 | The Source picker it lands on |
+| S5-D3 | [`S5-D3-source-page-entry.md`](S5-D3-source-page-entry.md) | PR S5-08 | One control added to the shipped Source page |
+| S5-D4 | [`S5-D4-source-nodes-destination.md`](S5-D4-source-nodes-destination.md) | PR S5-09 | The Source's node list — the largest surface in the spike, and the one that becomes the canvas in Spike 6 |
 
-Both are writable immediately; neither depends on the Go track. Start S5-D1 alongside S5-01 so design never becomes the critical path.
+All four are writable immediately; none depends on the Go track. Start S5-D1 alongside S5-01 so design never becomes the critical path.
+
+D1 and D3 are deliberately narrow — a sidebar row and a single button. D2 and D4 carry the real design work.
 
 ## Completed
 
@@ -25,12 +31,12 @@ _None._
 4. Prefer existing components — `PVList`, `PVButton`, `PVIconButton`, `PVEmptyState`, `PVSelect`, `PVConfirm`, `PVField`, `PVInput`, `PVToast`. This spike should add **no** new design-system primitives; if a board seems to need one, that is a finding worth raising rather than drawing.
 5. When the board is reviewable and its PR has shipped, move the brief into `archive/` and the step write-up into [`../completed.md`](../completed.md).
 
-## Shared product facts (both briefs)
+## Shared product facts (all briefs)
 
 - Offline-first macOS genealogy app. After onboarding the researcher is working inside a local `*.provenencia` project folder.
 - The app has three layers. **Source** is evidence as filed (shipped). **Interpretation** is what a single Source *appears to say* (this spike, first slice). **Conclusion** is what the researcher believes across Sources (not built).
 - **Interpretation is Source-scoped.** Every Node belongs to one home Source, and a work session is "sit with one Source and map what it appears to say." There is no cross-Source view.
-- Short human refs are shown in mono and are never editable. Sources are `SRC-…`. Interpretation Nodes are **candidates** and carry a `-C-` segment: a person Node is `PER-C-7KD45`, an event `EVT-C-…`, a place `PLC-C-…`. The `C` is meaningful — it marks "this is what one source seems to say," not "this is a person who existed."
+- Short human refs are shown in mono and are never editable. Sources are `SRC-…`. Interpretation Nodes are **candidates** and carry their own prefix: a person Node is `CPR-7KD45`, an event `CEV-…`, a place `CPL-…`. The distinct prefix is meaningful — `CPR-…` marks "this is what one source seems to say," against the Conclusion layer's `PER-…`, "this is a person I concluded existed." Same shape, different prefix; nothing in the UI should try to derive one from the other.
 - **Nothing in this spike is cited yet.** Citations and Observations arrive in a later spike. So a Node here has a type, a ref, and an optional working label — and no asserted facts at all. Boards must not imply otherwise.
 - **This is the spike before the canvas.** Spike 6 replaces the Source's node destination with a spatial graph where Nodes are draggable bubbles. Design the list surface so it remains credible as the structured, keyboard-and-VoiceOver-friendly alternate view once the canvas exists — but do not design the canvas, and do not over-invest in a surface that is about to be demoted.
 - Existing boards to extend rather than reinvent: the workspace chrome and sidebar (Spike 2 S2-01), the Sources list (S2-04), and the Source page (S2-23, with a checked-in export at `archive/spike-2/design/boards/source-page.dc.html`).
