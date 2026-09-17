@@ -52,9 +52,9 @@ Token = 5 chars, Crockford alphabet without `I L O U`. Prefix = exactly three AS
 
 ```go
 // Interpretation subject  →  CPR-7KD45
-r, err := ref.Mint(nodeType.CandidateRefPrefix)
+r, err := ref.Mint(subjectType.CandidateRefPrefix)
 // Conclusion handle    →  PER-7KD45
-r, err := ref.Mint(nodeType.RefPrefix)
+r, err := ref.Mint(subjectType.RefPrefix)
 ```
 
 Both are ordinary refs: `Valid` / `Validate` cover them, and there is no candidate-specific mint or validator. Validate a researcher- or seed-supplied prefix for **either** column with `ref.ValidatePrefix`, which rejects the reserved catalog prefixes below.
