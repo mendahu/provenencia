@@ -475,4 +475,37 @@ private struct ThrowingStore: GenealogyStore {
         query _: String,
         location _: WorkspaceLocation
     ) async throws -> [CatalogSearchHit] { throw StoreBoom.boom }
+    func listSubjectTypes(projectDir _: String) async throws -> [CatalogSubjectType] { throw StoreBoom.boom }
+    func createSubject(
+        projectDir _: String,
+        userID _: String,
+        sourceID _: String,
+        subjectTypeID _: String,
+        label _: String,
+        description _: String
+    ) async throws -> CatalogSubject { throw StoreBoom.boom }
+    func updateSubject(
+        projectDir _: String,
+        userID _: String,
+        subjectID _: String,
+        label _: String,
+        description _: String
+    ) async throws -> CatalogSubject { throw StoreBoom.boom }
+    func deleteSubject(projectDir _: String, userID _: String, subjectID _: String) async throws {
+        throw StoreBoom.boom
+    }
+    func listSubjects(projectDir _: String, sourceID _: String) async throws -> [CatalogSubject] {
+        throw StoreBoom.boom
+    }
+    func setSubjectPosition(
+        projectDir _: String,
+        subjectID _: String,
+        gridX _: Int64,
+        gridY _: Int64
+    ) async throws -> CatalogSubjectPosition { throw StoreBoom.boom }
+    func clearSubjectPosition(projectDir _: String, subjectID _: String) async throws {
+        throw StoreBoom.boom
+    }
+    func listSubjectPositions(projectDir _: String, sourceID _: String) async throws
+        -> [CatalogSubjectPosition] { throw StoreBoom.boom }
 }

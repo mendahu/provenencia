@@ -662,6 +662,119 @@ struct GoStore: GenealogyStore {
         return resp.hits.map(Self.mapSearchHit)
     }
 
+    func listSubjectTypes(projectDir: String) async throws -> [CatalogSubjectType] {
+        var req = Provenencia_Engine_V1_ListSubjectTypesRequest()
+        req.projectDir = projectDir
+        let resp: Provenencia_Engine_V1_ListSubjectTypesResponse = try await provenenciaCall(
+            method: CoreMethod.listSubjectTypes,
+            request: req
+        )
+        return resp.types.map(Self.mapSubjectType)
+    }
+
+    func createSubject(
+        projectDir: String,
+        userID: String,
+        sourceID: String,
+        subjectTypeID: String,
+        label: String,
+        description: String
+    ) async throws -> CatalogSubject {
+        var req = Provenencia_Engine_V1_CreateSubjectRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.sourceID = sourceID
+        req.subjectTypeID = subjectTypeID
+        req.label = label
+        req.description_p = description
+        let resp: Provenencia_Engine_V1_CreateSubjectResponse = try await provenenciaCall(
+            method: CoreMethod.createSubject,
+            request: req
+        )
+        return Self.mapSubject(resp.subject)
+    }
+
+    func updateSubject(
+        projectDir: String,
+        userID: String,
+        subjectID: String,
+        label: String,
+        description: String
+    ) async throws -> CatalogSubject {
+        var req = Provenencia_Engine_V1_UpdateSubjectRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.subjectID = subjectID
+        req.label = label
+        req.description_p = description
+        let resp: Provenencia_Engine_V1_UpdateSubjectResponse = try await provenenciaCall(
+            method: CoreMethod.updateSubject,
+            request: req
+        )
+        return Self.mapSubject(resp.subject)
+    }
+
+    func deleteSubject(projectDir: String, userID: String, subjectID: String) async throws {
+        var req = Provenencia_Engine_V1_DeleteSubjectRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.subjectID = subjectID
+        let _: Provenencia_Engine_V1_DeleteSubjectResponse = try await provenenciaCall(
+            method: CoreMethod.deleteSubject,
+            request: req
+        )
+    }
+
+    func listSubjects(projectDir: String, sourceID: String) async throws -> [CatalogSubject] {
+        var req = Provenencia_Engine_V1_ListSubjectsRequest()
+        req.projectDir = projectDir
+        req.sourceID = sourceID
+        let resp: Provenencia_Engine_V1_ListSubjectsResponse = try await provenenciaCall(
+            method: CoreMethod.listSubjects,
+            request: req
+        )
+        return resp.subjects.map(Self.mapSubject)
+    }
+
+    func setSubjectPosition(
+        projectDir: String,
+        subjectID: String,
+        gridX: Int64,
+        gridY: Int64
+    ) async throws -> CatalogSubjectPosition {
+        var req = Provenencia_Engine_V1_SetSubjectPositionRequest()
+        req.projectDir = projectDir
+        req.subjectID = subjectID
+        req.gridX = gridX
+        req.gridY = gridY
+        let resp: Provenencia_Engine_V1_SetSubjectPositionResponse = try await provenenciaCall(
+            method: CoreMethod.setSubjectPosition,
+            request: req
+        )
+        return Self.mapSubjectPosition(resp.position)
+    }
+
+    func clearSubjectPosition(projectDir: String, subjectID: String) async throws {
+        var req = Provenencia_Engine_V1_ClearSubjectPositionRequest()
+        req.projectDir = projectDir
+        req.subjectID = subjectID
+        let _: Provenencia_Engine_V1_ClearSubjectPositionResponse = try await provenenciaCall(
+            method: CoreMethod.clearSubjectPosition,
+            request: req
+        )
+    }
+
+    func listSubjectPositions(projectDir: String, sourceID: String) async throws -> [CatalogSubjectPosition] {
+        var req = Provenencia_Engine_V1_ListSubjectPositionsRequest()
+        req.projectDir = projectDir
+        req.sourceID = sourceID
+        let resp: Provenencia_Engine_V1_ListSubjectPositionsResponse = try await provenenciaCall(
+            method: CoreMethod.listSubjectPositions,
+            request: req
+        )
+        return resp.positions.map(Self.mapSubjectPosition)
+    }
+
     private static func mapOriginCounts(
         _ c: Provenencia_Engine_V1_VocabularyOriginCounts
     ) -> WorkspaceNavOriginCounts {
@@ -807,6 +920,33 @@ struct GoStore: GenealogyStore {
             usedBy: Int(t.usedBy),
             suggestedFieldCount: Int(t.suggestedFieldCount)
         )
+    }
+
+    private static func mapSubjectType(_ t: Provenencia_Engine_V1_SubjectType) -> CatalogSubjectType {
+        CatalogSubjectType(
+            id: t.id,
+            key: t.key,
+            origin: t.origin,
+            label: t.label,
+            description: t.description_p,
+            refPrefix: t.refPrefix,
+            candidateRefPrefix: t.candidateRefPrefix
+        )
+    }
+
+    private static func mapSubject(_ s: Provenencia_Engine_V1_Subject) -> CatalogSubject {
+        CatalogSubject(
+            id: s.id,
+            ref: s.ref,
+            sourceID: s.sourceID,
+            subjectTypeID: s.subjectTypeID,
+            label: s.label,
+            description: s.description_p
+        )
+    }
+
+    private static func mapSubjectPosition(_ p: Provenencia_Engine_V1_SubjectPosition) -> CatalogSubjectPosition {
+        CatalogSubjectPosition(subjectID: p.subjectID, gridX: p.gridX, gridY: p.gridY)
     }
 
     private static func mapTypeSuggestion(_ s: Provenencia_Engine_V1_TypeSuggestion) -> CatalogTypeSuggestion {

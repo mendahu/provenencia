@@ -79,6 +79,14 @@ enum CoreMethod {
     static let closeCatalogSession = Int32(Provenencia_Engine_V1_Method.closeCatalogSession.rawValue)
     static let setSourceCover = Int32(Provenencia_Engine_V1_Method.setSourceCover.rawValue)
     static let searchCatalog = Int32(Provenencia_Engine_V1_Method.searchCatalog.rawValue)
+    static let listSubjectTypes = Int32(Provenencia_Engine_V1_Method.listSubjectTypes.rawValue)
+    static let createSubject = Int32(Provenencia_Engine_V1_Method.createSubject.rawValue)
+    static let updateSubject = Int32(Provenencia_Engine_V1_Method.updateSubject.rawValue)
+    static let deleteSubject = Int32(Provenencia_Engine_V1_Method.deleteSubject.rawValue)
+    static let listSubjects = Int32(Provenencia_Engine_V1_Method.listSubjects.rawValue)
+    static let setSubjectPosition = Int32(Provenencia_Engine_V1_Method.setSubjectPosition.rawValue)
+    static let clearSubjectPosition = Int32(Provenencia_Engine_V1_Method.clearSubjectPosition.rawValue)
+    static let listSubjectPositions = Int32(Provenencia_Engine_V1_Method.listSubjectPositions.rawValue)
 }
 
 func provenenciaInvoke(method: Int32, request: Data) throws -> Data {

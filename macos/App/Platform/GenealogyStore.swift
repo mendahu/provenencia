@@ -99,6 +99,31 @@ struct CatalogSearchHit: Sendable, Equatable, Identifiable {
     var iconKey: String = ""
 }
 
+struct CatalogSubjectType: Sendable, Equatable, Identifiable {
+    var id: String
+    var key: String
+    var origin: String
+    var label: String
+    var description: String
+    var refPrefix: String
+    var candidateRefPrefix: String
+}
+
+struct CatalogSubject: Sendable, Equatable, Identifiable {
+    var id: String
+    var ref: String
+    var sourceID: String
+    var subjectTypeID: String
+    var label: String
+    var description: String
+}
+
+struct CatalogSubjectPosition: Sendable, Equatable {
+    var subjectID: String
+    var gridX: Int64
+    var gridY: Int64
+}
+
 struct CatalogCredibilityAssessment: Sendable, Equatable {
     var id: String
     var sourceID: String
@@ -408,4 +433,31 @@ protocol GenealogyStore: Sendable {
         query: String,
         location: WorkspaceLocation
     ) async throws -> [CatalogSearchHit]
+
+    func listSubjectTypes(projectDir: String) async throws -> [CatalogSubjectType]
+    func createSubject(
+        projectDir: String,
+        userID: String,
+        sourceID: String,
+        subjectTypeID: String,
+        label: String,
+        description: String
+    ) async throws -> CatalogSubject
+    func updateSubject(
+        projectDir: String,
+        userID: String,
+        subjectID: String,
+        label: String,
+        description: String
+    ) async throws -> CatalogSubject
+    func deleteSubject(projectDir: String, userID: String, subjectID: String) async throws
+    func listSubjects(projectDir: String, sourceID: String) async throws -> [CatalogSubject]
+    func setSubjectPosition(
+        projectDir: String,
+        subjectID: String,
+        gridX: Int64,
+        gridY: Int64
+    ) async throws -> CatalogSubjectPosition
+    func clearSubjectPosition(projectDir: String, subjectID: String) async throws
+    func listSubjectPositions(projectDir: String, sourceID: String) async throws -> [CatalogSubjectPosition]
 }

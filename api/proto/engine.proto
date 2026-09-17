@@ -53,6 +53,14 @@ enum Method {
   METHOD_CLOSE_CATALOG_SESSION = 42;
   METHOD_SET_SOURCE_COVER = 43;
   METHOD_SEARCH_CATALOG = 44;
+  METHOD_LIST_SUBJECT_TYPES = 45;
+  METHOD_CREATE_SUBJECT = 46;
+  METHOD_UPDATE_SUBJECT = 47;
+  METHOD_DELETE_SUBJECT = 48;
+  METHOD_LIST_SUBJECTS = 49;
+  METHOD_SET_SUBJECT_POSITION = 50;
+  METHOD_CLEAR_SUBJECT_POSITION = 51;
+  METHOD_LIST_SUBJECT_POSITIONS = 52;
 }
 
 message PingRequest {
@@ -727,6 +735,111 @@ message SearchHit {
 
 message SearchCatalogResponse {
   repeated SearchHit hits = 1;
+}
+
+// SubjectType is one subject_types vocabulary row (shared with Conclusion).
+message SubjectType {
+  string id = 1;
+  string key = 2;
+  string origin = 3;
+  string label = 4;
+  string description = 5;
+  string ref_prefix = 6;
+  string candidate_ref_prefix = 7;
+}
+
+// Subject is one Interpretation subject (candidate) row.
+message Subject {
+  string id = 1;
+  string ref = 2;
+  string source_id = 3;
+  string subject_type_id = 4;
+  string label = 5;
+  string description = 6;
+}
+
+// SubjectPosition is unaudited graph layout for one subject.
+message SubjectPosition {
+  string subject_id = 1;
+  int64 grid_x = 2;
+  int64 grid_y = 3;
+}
+
+message ListSubjectTypesRequest {
+  string project_dir = 1;
+}
+
+message ListSubjectTypesResponse {
+  repeated SubjectType types = 1;
+}
+
+message CreateSubjectRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string source_id = 3;
+  string subject_type_id = 4;
+  string label = 5;
+  string description = 6;
+}
+
+message CreateSubjectResponse {
+  Subject subject = 1;
+}
+
+message UpdateSubjectRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string subject_id = 3;
+  string label = 4;
+  string description = 5;
+}
+
+message UpdateSubjectResponse {
+  Subject subject = 1;
+}
+
+message DeleteSubjectRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string subject_id = 3;
+}
+
+message DeleteSubjectResponse {}
+
+message ListSubjectsRequest {
+  string project_dir = 1;
+  string source_id = 2;
+}
+
+message ListSubjectsResponse {
+  repeated Subject subjects = 1;
+}
+
+message SetSubjectPositionRequest {
+  string project_dir = 1;
+  string subject_id = 2;
+  int64 grid_x = 3;
+  int64 grid_y = 4;
+}
+
+message SetSubjectPositionResponse {
+  SubjectPosition position = 1;
+}
+
+message ClearSubjectPositionRequest {
+  string project_dir = 1;
+  string subject_id = 2;
+}
+
+message ClearSubjectPositionResponse {}
+
+message ListSubjectPositionsRequest {
+  string project_dir = 1;
+  string source_id = 2;
+}
+
+message ListSubjectPositionsResponse {
+  repeated SubjectPosition positions = 1;
 }
 
 // ErrorKind classifies a failure for client UX (tone, retry hints). Copy still
