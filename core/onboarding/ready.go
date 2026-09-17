@@ -6,6 +6,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sourcevocab"
+	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/users"
 )
 
@@ -13,8 +14,8 @@ import (
 // open for tests and low-level use. Researcher FFI and onboarding open/list
 // paths use core/catalogsession (held session + serial queue). database.Create/Open
 // stay migrate-only. User refs and project.uuid are reconciled on create and open;
-// Source vocabulary and credibility grades are installed once at create only
-// (never healed on open).
+// Source vocabulary, credibility grades, and Subject types are installed once
+// at create only (never healed on open).
 func createCatalog(parent, folder string) (*database.Catalog, error) {
 	c, err := database.Create(parent, folder)
 	if err != nil {
@@ -36,6 +37,10 @@ func createCatalog(parent, folder string) (*database.Catalog, error) {
 		_ = c.Close()
 		return nil, err
 	}
+	if err := subjecttypes.Install(c); err != nil {
+		_ = c.Close()
+		return nil, err
+	}
 	if err := searchindex.EnsureCatalog(c); err != nil {
 		_ = c.Close()
 		return nil, err
@@ -45,7 +50,7 @@ func createCatalog(parent, folder string) (*database.Catalog, error) {
 
 // OpenCatalog opens a project once (migrate + ensure user refs + project.uuid).
 // Prefer catalogsession.Do for researcher paths so opens are amortized and serialized.
-// Does not re-install or heal Source vocabulary or credibility grades.
+// Does not re-install or heal Source vocabulary, credibility grades, or Subject types.
 func OpenCatalog(projectDir string) (*database.Catalog, error) {
 	c, err := database.Open(projectDir)
 	if err != nil {

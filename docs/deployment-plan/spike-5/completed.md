@@ -21,6 +21,7 @@ Changes to the plan itself, as opposed to landed work.
 | --- | --- | --- |
 | [S5-01](#s5-01--pr-node-type-prefix-validation) | PR | Subject type prefix validation + reserved-prefix guard in `core/ref` |
 | [S5-02](#s5-02--pr-interpretation-schema-migration) | PR | `subject_types`, `subjects`, `subject_positions` via migration `000021` |
+| [S5-03](#s5-03--pr-subject-type-vocabulary-and-seed) | PR | Seven Subject types seeded at catalog create |
 | [S5-D1](#s5-d1--design-interpretation-nav-entry) | Design | Interpretation sidebar destination — **superseded** |
 | [S5-D3](#s5-d3--design-sources-section-nav) | Design | Nested Sources family nav — Subject types / fields stubs |
 
@@ -97,4 +98,23 @@ CGO_ENABLED=1 go test -tags fts5 ./...
 
 ```bash
 CGO_ENABLED=1 go test -tags fts5 ./core/database/...
+```
+
+### S5-03 — PR: Subject type vocabulary and seed
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S5-02 (`subject_types` table) |
+| **Deliverables** | Done. [`core/database/subjecttypes/`](../../../core/database/subjecttypes/): `Upsert` / `Lookup` / `GetByID` / `List` / `Install` with `ref.ValidatePrefix` on both prefixes and cross-column uniqueness (`subjecttypes.duplicate_prefix`). Registry of all seven types from [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.1. Wired into [`onboarding.createCatalog`](../../../core/onboarding/ready.go) only — never healed on open. New wire codes `subjecttypes.invalid` and `subjecttypes.duplicate_prefix`. |
+| **Tests** | Done. Package: Install → 7 rows, idempotent ids, reserved prefix, same-column and cross-column collisions. Onboarding: `TestCreateCatalogSeedsSubjectTypes`, `TestOpenCatalogDoesNotHealSubjectTypes`. |
+| **Dogfood** | Creating a project seeds Subject types in the catalog. No UI lists them yet (S5-07 stubs / Spike 7 editors). |
+| **Out** | Subject CRUD + audit (S5-04); positions (S5-05); FFI; properties / `subject_type_fields` seed; Swift L10n for the new codes until a vocabulary browser can raise them. |
+
+**Landed:** create-time Subject type vocabulary so S5-04 can mint candidate refs off `candidate_ref_prefix`.
+
+**Verify:**
+
+```bash
+CGO_ENABLED=1 go test -tags fts5 ./core/database/subjecttypes/... ./core/onboarding/...
 ```
