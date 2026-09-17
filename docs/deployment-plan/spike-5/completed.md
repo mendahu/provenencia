@@ -4,6 +4,14 @@ Finished Spike 5 work kept for history. Spike overview: [`README.md`](README.md)
 
 IDs stay stable (`S5-NN`, `S5-DN`). Do not renumber when moving steps here.
 
+## Plan revisions
+
+Changes to the plan itself, as opposed to landed work.
+
+| After | Change |
+| --- | --- |
+| S5-01 | **The graph became the only surface for Nodes, Citations, and Observations** (design note §1.3). This spike therefore ships no Node UI: the *Source nodes list* step and the *Source-page entry* step were both cut, along with their design briefs, and the closing docs step moved from S5-10 to S5-09 — safe to renumber because nothing past S5-01 had landed. Ten steps became nine and four design briefs became two. The data path is now proven by Go tests and `FakeStore` parity rather than by a screen; the trade is argued in the deployment plan's *Scope boundary*. Accessibility moved with it: the canvas's own accessibility representation is slice-2 work in Spike 6, not polish, because there is no list view to fall back to. |
+
 ## Index
 
 | Step | Kind | One-liner |
@@ -14,7 +22,7 @@ IDs stay stable (`S5-NN`, `S5-DN`). Do not renumber when moving steps here.
 
 ## Steps
 
-### S5-01 — PR: Candidate ref minting
+### S5-01 — PR: Node Type prefix validation
 
 | | |
 | --- | --- |

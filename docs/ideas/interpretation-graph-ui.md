@@ -21,10 +21,11 @@ Authoritative schema for everything described here is [`interpretation-layer-dat
 | 9 | Pan/zoom needs **AppKit `NSScrollView`** regardless of deployment target; raising past macOS 14 is a separate decision on support-matrix grounds | §7.2, §7.3 |
 | 10 | Build **canvas first**, behind only the load-bearing minimum; the property vocabulary is *not* load-bearing | §11.1, §11.2 |
 | 11 | Persons, events, and places ship together — three seeded rows, not three features | §11.1.1 |
-| 12 | Entry via a Source-page button; the Interpretation Sources list is **required** as the section root and error-recovery destination | §11.1.2 |
-| 13 | The foundation is its **own spike** (Spike 5) so the canvas spike opens with no schema work; its deep destination is a plain node list, which doubles as the structured a11y path | §11.4 |
+| 12 | Entry is sidebar → Interpretation → Sources list → that Source's graph. The Sources list is **required** as the section root and error-recovery destination; the Source-page button is deferred until the graph exists to jump to | §11.1.2 |
+| 13 | The foundation is its **own spike** (Spike 5) so the canvas spike opens with no schema work. Spike 5 ships **no Node UI at all** — the data path is proven by Go tests, and the first visible Node is a bubble | §11.4 |
 | 14 | The canvas is expected to be reused for a family tree, so **geometry goes in a neutral module** — but the position table stays concrete per layer rather than polymorphic | §13 |
 | 15 | **One ref format, two prefixes.** Candidate Nodes get their own three-letter prefix (`CPR-7KD45`) rather than a marker segment, so `node_types` carries both `ref_prefix` and `candidate_ref_prefix`. Costs a second vocabulary column; saves a parallel mint/validate/search path everywhere else | [`catalog-refs.md`](../catalog-refs.md) §2 |
+| 16 | **The graph is the only surface** for Nodes, Citations, and Observations — no co-equal list view, no view toggle, no node list destination. Accessibility is met by the canvas's own accessibility representation, built from slice 2 rather than deferred to polish | §1.3, §7.4 |
 
 Two items found along the way that were on nobody's list: **candidate ref support** did not exist in `core/ref` (§11.1, resolved in S5-01), and **NameValue does not exist in either language** (§4.4).
 
@@ -65,12 +66,22 @@ A single spatial workspace, scoped to a Source, with a small tool palette:
 
 Bridge bubbles are visually differentiated from root bubbles, so the association is a *thing* on the canvas the way it is a row in the catalog — but it reads as "the relationship between these two" rather than as a mysterious extra entity.
 
-Because the graph is Source-scoped, it is reached from a **button on the Source page** and from an **Interpretation Sources list** whose rows open a graph rather than a Source detail page (§11.1.2).
+Because the graph is Source-scoped, it is reached from an **Interpretation Sources list** whose rows open a graph rather than a Source detail page, and later also from a **button on the Source page** (§11.1.2).
 
 Two supporting destinations sit beside it:
 
 - an **Interpretation vocabulary** browser for `node_types`, `properties`, and the `node_type_properties` bindings — which Properties exist and which Node Types they attach to. The direct analogue of Source types / Source fields, reusing [`Features/CatalogVocabulary/`](../../macos/App/Features/CatalogVocabulary/). Not needed for the first slice (§11.2);
 - a **"what other Sources say about this one"** section on the Source page, which is where source-to-source commentary lives instead of on the canvas (§4.6).
+
+## 1.3 One surface, not two
+
+Worth stating plainly, because an earlier draft of this note assumed otherwise. **The graph is the primary and only way to interact with Nodes, Citations, and Observations.** There is no co-equal list or table view of them, no view toggle, and no per-Source node list destination.
+
+The researcher's path into the layer is: sidebar → **Interpretation** → a list of Sources → that Source's graph. The Sources list is a picker (§11.1.2) and is the only list in the layer; everything past it is spatial.
+
+The reasoning is that a second, visible editing surface over the same rows costs more than it returns. It doubles the UI that every later slice has to update — Citations, Observations, value types, bridge macros would all have to land twice — and it invites the researcher to form a tabular mental model of a property graph, which is the model the canvas exists to replace.
+
+This puts real weight on the canvas being good, and it removes the fallback: if the canvas turns out to be unpleasant, the answer is to fix the canvas, not to route around it. It also means accessibility cannot be satisfied by a sibling view and has to be solved inside the canvas — see §7.4, which is where the cost of this decision actually lands.
 
 ---
 
@@ -303,7 +314,7 @@ But two decisions are easy to conflate here, and only one of them is cheap:
 
 **It breaks Conclusion exhibit.** Both `sameness_claim_evidence` and `reconciliation_claim_evidence` are `observation_id … REFERENCES observations(id)`, and the Conclusion doc is explicit: "Exhibit pins are **Observations only** for now — not Citations, Sources, or other Claims." Conclusion §12.2's worked example pins "the birth_date Observations (and related letter Observations as needed)" — and the related letter Observation *is* `SC -- remark --> "date of birth on certificate mistyped"`. Move remarks out of `observations` and that exhibit path stops existing. "The letter says this certificate is a forgery" is exactly the kind of thing a researcher needs to pin to a Reconciliation Claim.
 
-**It closes an open vocabulary.** `remark` and `mentions` are ordinary Properties today, so a researcher can add `supersedes`, `is_transcription_of`, or `derived_from` with no migration — precisely the §1.3 extensibility promise. A bespoke `source_remarks` table freezes that vocabulary at whatever columns it ships with.
+**It closes an open vocabulary.** `remark` and `mentions` are ordinary Properties today, so a researcher can add `supersedes`, `is_transcription_of`, or `derived_from` with no migration — precisely the §1.2 extensibility promise. A bespoke `source_remarks` table freezes that vocabulary at whatever columns it ships with.
 
 **It duplicates the evidence machinery.** A second Citation-backed assertion table means a second ref prefix, its own audit wiring, its own notes table, its own FFI surface, its own search projection, and a second thing that has to stay consistent with Citations forever.
 
@@ -446,9 +457,13 @@ macOS 26 adds rich-text `TextEditor` bound to `AttributedString`. That is delibe
 
 ## 7.4 Accessibility and testing
 
-A free-form spatial canvas is genuinely hostile to VoiceOver and keyboard-only use. It needs full keyboard parity for every canvas action, plus a structured outline of the same graph serving as the accessibility representation.
+A free-form spatial canvas is genuinely hostile to VoiceOver and keyboard-only use. It needs full keyboard parity for every canvas action, plus a structured representation of the same graph for assistive technology.
 
-That outline pays for itself twice, because XCUITest cannot meaningfully drive a canvas (it finds controls by accessibility, not pixels). Coverage has to come from Go tests for schema, macros, and locator validation; Swift unit tests for pure geometry and coordinate conversion; and a structured editing path that *is* testable. Budget for the canvas itself being verified by hand.
+**That representation lives inside the canvas, not beside it.** The graph is the only surface for Nodes, Citations, and Observations (§1.3), so there is no second destination to fall back to — which means the accessible structure is not an alternate view the researcher can choose, it is the canvas's own accessibility tree. SwiftUI supports this directly: `accessibilityRepresentation(_:)` substitutes an entirely different view hierarchy for assistive technology while the canvas is what gets drawn, `accessibilityChildren(_:)` supplies children for a view that has none of its own, and `accessibilityRotor(_:)` gives VoiceOver a way to move through Nodes without spatial navigation. Because Nodes are real SwiftUI views in a `ZStack` rather than shapes inside `Canvas` (§7.1), they can carry their own accessibility identity; the representation is there to impose *order and relationships* on what is otherwise an unordered plane.
+
+**This cannot be deferred to polish.** With no list destination, the representation is the only path for a VoiceOver or keyboard-only researcher — so if it is missing, the layer is not merely awkward for them, it is unusable. It ships with the first bubbles in slice 2 (§11.4), not in the honesty-and-polish slice. Retrofitting an accessibility tree onto a finished spatial editor is the standard way software ends up permanently inaccessible: the structure has to exist while there is still almost nothing to structure.
+
+**It is also what makes the canvas testable at all.** XCUITest finds controls by accessibility rather than by pixels, so a canvas without a representation cannot be driven by UI tests — but a canvas *with* one can. That inverts the earlier conclusion here: the canvas does not have to be resigned to hand verification. The representation is the test handle, which is a second, self-interested reason to build it early rather than late. The rest of the coverage split is unchanged: Go tests for schema, macros, and locator validation; Swift unit tests for pure geometry and coordinate conversion.
 
 ---
 
@@ -512,7 +527,7 @@ The test is narrow: **what does the first `nodes` INSERT actually require?** The
 | **`nodes` table + `core/database/nodes`** | Create, list, rename, delete — **with audit wiring.** Every domain write in this product goes through `audit.Record(tx, …)` (see `sources/notes.go`); that is not optional, and it is the bulk of the work here. | Medium |
 | **Layout table** | Integer grid cells, unaudited (§5). Persistence across relaunch is part of what the canvas validates, so it cannot be held in memory — and it ships in slice 1 so the canvas slice opens with no schema work in front of it. | Small |
 | **FFI handlers** | `add-ffi-handler` skill. | Small |
-| **Graph workspace place** | A `WorkspaceSection` case (**no** `WorkspaceLocation` change needed — see §11.1.2), `CatalogQueryKey`, registry loader, two `PlaceRegistry` specs (root and deep), destination views, `CatalogCounts` badge entry. `add-workspace-place` and `add-workspace-location` cover it. | Medium |
+| **Graph workspace place** | A `WorkspaceSection` case (**no** `WorkspaceLocation` change needed — see §11.1.2), `CatalogQueryKey`, registry loader, the **root** `PlaceRegistry` spec and the Sources list behind it, `CatalogCounts` badge entry. The deep spec and its destination view land with the canvas in slice 2, since slice 1 has nothing to show there. `add-workspace-place` and `add-workspace-location` cover it. | Medium |
 
 ### 11.1.1 Three Node Types cost the same as one
 
@@ -522,9 +537,9 @@ What does scale with the count is small and entirely presentational: three palet
 
 So the earlier split of "person first, then events and places" was a false economy — the second slice would have been almost empty. They collapse into one slice (§11.4), and the canvas gets to look like the real product from the first demo, which also makes it far easier to judge whether the idea works.
 
-### 11.1.2 Entry points, and why the list view is not optional
+### 11.1.2 Entry points, and why the Sources list is not optional
 
-The graph is Source-scoped, so the researcher has to pick a Source before there is anything to draw. Two entry points are in play: a button on the Source page, and an Interpretation-scoped Sources list whose rows open the graph rather than the Source detail page.
+The graph is Source-scoped, so the researcher has to pick a Source before there is anything to draw. The primary path is an Interpretation-scoped Sources list whose rows open the graph rather than the Source detail page. A button on the Source page is a convenient second path, but it is **deferred to slice 2** — it exists only to jump to a graph, so it is meaningless until there is one.
 
 **Good news first: `WorkspaceLocation` needs no new field.** Its identity compares `section`, `sourceId`, `fieldId`, and `typeId`, so a new `WorkspaceSection` case plus the **existing** `sourceId` yields a distinct place:
 
@@ -533,9 +548,9 @@ WorkspaceLocation(section: .sources,             sourceId: X)   → Source detai
 WorkspaceLocation(section: .interpretationGraph, sourceId: X)   → that Source's graph
 ```
 
-The Source page button is then one `navigation.go(to:)` call, and it should populate the denormalized `ref` and `title` so the Back/Forward jump menu reads properly.
+The Source page button, when it lands in slice 2, is then one `navigation.go(to:)` call, and it should populate the denormalized `ref` and `title` so the Back/Forward jump menu reads properly.
 
-**The list view, though, is forced by the navigation contract rather than being a nice-to-have.** Two mechanisms make it so:
+**The Sources list, though, is forced by the navigation contract rather than being a nice-to-have** — which is why it ships in slice 1 even though its rows go nowhere yet. Two mechanisms make it so:
 
 - `WorkspaceSidebar` builds its items from `WorkspaceSection.allCases`, so adding a section **automatically adds a sidebar row**, and that row navigates to `.sectionRoot(section)` — a location with no `sourceId`. Something has to render there. (It also needs a `CatalogCounts.badge(for:)` entry, `nil` for now.)
 - Destinations prune missing deep ids with `navigation.fallbackToSectionRoot()`. So when a Source is deleted while its graph is in history, the graph view falls back to the graph section root — which means **the section root is the error-recovery destination**, not just a landing page.
@@ -563,24 +578,28 @@ Deferred, blocking nothing:
 
 ## 11.3 What the canvas slice proves, and what it does not
 
-**Proves:** the `NSScrollView` bridge, coordinate conversion under magnification (§7.2), bubble hit-testing and drag, snap-to-grid persistence, session-cache behavior under canvas mutation, the shape of the accessibility outline — and above all whether the thing feels right to use.
+**Proves:** the `NSScrollView` bridge, coordinate conversion under magnification (§7.2), bubble hit-testing and drag, snap-to-grid persistence, session-cache behavior under canvas mutation, whether the canvas accessibility representation is workable at all (§7.4) — and above all whether the thing feels right to use.
 
 **Does not prove:** the citation composer, the property flow, or the connect macros. Those are real risks, but they are *different* risks with their own slices. The one retired here is the only one with no prior art and no fallback: whether a spatial editing surface is buildable and pleasant on this stack.
 
 ## 11.4 Slice order
 
-1. **Foundation** (§11.1) — candidate refs, `node_types` and its seed, audited `nodes` CRUD, the layout table, FFI, and the Interpretation place with both entry points (§11.1.2). No canvas.
-2. **Bubbles** — the canvas proper: `NSScrollView` bridge, persons / events / places, working labels, drag / snap / select / persist, the tray for unplaced Nodes.
+1. **Foundation** (§11.1) — candidate refs, `node_types` and its seed, audited `nodes` CRUD, the layout table, FFI, the Interpretation section, and the Sources list as its root (§11.1.2). **No Node UI**: rows are inert, because there is nothing to open yet.
+2. **Bubbles** — the canvas proper: `NSScrollView` bridge, persons / events / places, working labels, drag / snap / select / persist, the tray for unplaced Nodes. Wires the Sources list rows to it, and ships the accessibility representation and keyboard parity alongside the first bubbles (§7.4).
 3. **Property vocabulary** — `properties`, `node_type_properties`, the browser UI, `ref_prefix` validation.
 4. **Artifact viewer + Citations** — PDF and image; `page`, `region`, `text_quote`; Go-side locator validation.
 5. **First Observation** — Add Property on a bubble, `text` value type only. The whole vertical path proven end to end.
 6. **Remaining value types** — including NameValue end to end; reuse the existing DateValue editor.
 7. **Connect tool** — bridge macros, the disambiguation form, the pinned Citation (§6.1).
-8. **Honesty and polish** — negated / conflicted / uncited states, filtering, accessibility outline, undo.
+8. **Honesty and polish** — negated / conflicted / uncited states, filtering, undo. Accessibility is *not* here; it moved to slice 2 (§7.4).
 
 **Spike boundary: slice 1 is [Spike 5](../deployment-plan/spike-5/), slice 2 is Spike 6.** Splitting foundation from canvas keeps the canvas spike pure — Spike 6's first PR draws a bubble rather than writing a migration.
 
-The cost of the split is that slice 1 ships a layer with no visible capability, so it needs *some* surface to prove the data path. That surface is a plain list of a Source's Nodes at the graph destination — which is not throwaway, because §7.4 already commits to a structured non-canvas editing path as the accessibility representation and the only XCUITest-drivable view of this data. It arrives early because it is also the cheapest way to prove the rail before the canvas sits on it.
+**The cost of the split is that slice 1 ships a layer with no visible capability, and that cost is now accepted rather than bought off.** An earlier draft of this note put a plain list of a Source's Nodes at the graph destination to prove the data path, justified as the structured non-canvas editing path §7.4 was committed to. Since the graph is now the only surface (§1.3), that list would be throwaway UI — built, designed, and then deleted by slice 2 — so it is dropped.
+
+What slice 1 ships instead is the sidebar entry and the Sources list, because the navigation contract forces the section root to exist (§11.1.2) and it is permanent rather than throwaway. Its rows are inert: there is no destination behind them until slice 2.
+
+The data path — migration → Go → FFI → store → session cache — is therefore proven by Go tests and a `FakeStore` round-trip rather than by a screen. That is a real reduction in confidence compared to seeing a row render, and it is the deliberate price of the first visible Node being a bubble. The mitigation is that slice 2 opens against a fully tested rail, so a canvas bug in slice 2 is a canvas bug and not an ambiguity about which layer is broken.
 
 ---
 
@@ -614,7 +633,7 @@ So the foundation spike is already doing family-tree work without trying to.
 
 ## 13.2 The reuse is in the geometry, not the storage
 
-The expensive, risky part of the canvas is not persistence — it is the interaction surface: the `NSScrollView` bridge, coordinate conversion under magnification (§7.2), hit-testing, snap-to-grid, drag, selection, edge routing, keyboard parity, and the accessibility outline (§7.4). Storage is roughly forty lines of SQL and a small Go package.
+The expensive, risky part of the canvas is not persistence — it is the interaction surface: the `NSScrollView` bridge, coordinate conversion under magnification (§7.2), hit-testing, snap-to-grid, drag, selection, edge routing, keyboard parity, and the accessibility representation (§7.4). Storage is roughly forty lines of SQL and a small Go package.
 
 That is the right split, and §7.2 and §7.4 already argue for it on testability grounds: keep the geometry as **pure functions over value types**, with no view and no store. What makes those functions unit-testable is exactly what makes them reusable for a second graph over a different table.
 

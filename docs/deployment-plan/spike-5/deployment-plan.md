@@ -1,38 +1,51 @@
 # Deployment Plan — Spike 5
 
-Interpretation foundation: candidate refs, Node vocabulary, Nodes, layout storage, FFI, and a workspace place. Authoritative design: [`interpretation-graph-ui.md`](../../ideas/interpretation-graph-ui.md) §11.1. Authoritative schema: [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) §4.
+Interpretation foundation: candidate refs, Node vocabulary, Nodes, layout storage, FFI, and the Interpretation section root. Authoritative design: [`interpretation-graph-ui.md`](../../ideas/interpretation-graph-ui.md) §11.1. Authoritative schema: [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) §4.
 
 ## Status
 
 **Planned.** No steps landed. Landings go in [`completed.md`](completed.md).
 
+> **This spike ships no Node UI.** The graph is the only surface for Nodes, Citations, and Observations (design note §1.3), and the graph is Spike 6 — so there is nothing in this spike a researcher can click to make a Node. The rail is proven by Go tests. See *Scope boundary* below for what that costs and why it was chosen over a throwaway list.
+
 ## Goal (dogfood bar)
 
-1. Source page → **Open interpretation graph** lands on a Source-scoped destination.
-2. Create a person, an event, and a place there; each gets a ref off its type's `candidate_ref_prefix` (`CPR-…`, `CEV-…`, `CPL-…`).
-3. Rename and delete a Node; both appear in the audit log with a `node` entity type.
-4. Sidebar → **Interpretation** lists Sources; picking one opens its graph.
-5. Back/Forward and relaunch restore the graph place; returning to it is a session-cache hit.
-6. A Source deleted while its graph is in history falls back to the Interpretation list, not a stale page.
+Split, because most of this spike is not verifiable by clicking.
+
+**Verifiable in the app:**
+
+1. Sidebar → **Interpretation** exists, and lands on a list of the project's Sources.
+2. Rows are visibly inert — nothing happens on click, and nothing pretends otherwise.
+3. Back/Forward and relaunch restore the Interpretation section root; returning to it is a session-cache hit.
+4. Creating a project seeds all seven Node Types.
+
+**Verifiable only by test or inspection:**
+
+5. `nodes.Create` mints a ref off its type's `candidate_ref_prefix` (`CPR-…`, `CEV-…`, `CPL-…`), for a person, an event, and a place.
+6. Rename and delete a Node; both appear in the audit log with a `node` entity type.
+7. `node_positions` round-trips through the FFI and survives reopen.
+8. A `FakeStore` round-trip covers every new RPC, so Spike 6's Swift work opens against a store that already answers.
 
 ## Design track (no PRs)
 
 **All UI is designed in Claude Design first.** Design steps carry a `D` id, produce a board rather than a diff, and are *not* PRs — but they are ordered work and they gate the PRs that implement them. Briefs: [`design/`](design/).
 
-All four briefs are writable on day one: they depend on nothing in the Go track, so the design track runs in parallel with S5-01…S5-06 and is off the critical path entirely — provided it starts at the top of the spike rather than when the implementing PR is ready to open.
+Both briefs are writable on day one: they depend on nothing in the Go track, so the design track runs in parallel with S5-01…S5-06 and is off the critical path entirely — provided it starts at the top of the spike rather than when the implementing PR is ready to open.
 
 One board per surface, so each can be run independently:
 
 | Step | Brief | Covers | Gates |
 | --- | --- | --- | --- |
 | **S5-D1** | Interpretation nav entry | The sidebar destination — label, icon, placement, empty badge slot | S5-07 |
-| **S5-D2** | Interpretation Sources list | The Source picker behind the destination: rows, purpose copy, empty state | S5-08 |
-| **S5-D3** | Source page entry control | One **Open interpretation graph** control added to the shipped Source page | S5-08 |
-| **S5-D4** | Source nodes destination | Node rows (candidate ref, type, working label), the add-Node type picker, rename and delete affordances, empty state | S5-09 |
+| **S5-D2** | Interpretation Sources list | The Source picker behind the destination: rows, purpose copy, empty state, and how an **inert** row reads | S5-08 |
 
-S5-D1 gates S5-07 because the sidebar case commits to a label and a `PVSymbol` in that PR. Stub destination views in S5-07 are exempt — they are compile scaffolding, replaced before anything ships. S5-08 implements D2 and D3 together, so both must be reviewable before it opens.
+S5-D1 gates S5-07 because the sidebar case commits to a label and a `PVSymbol` in that PR. Stub destination views in S5-07 are exempt — they are compile scaffolding, replaced before anything ships.
 
-D1 and D3 are small by design — a sidebar row and a single button. The weight is in D2 and D4, and D4 is the largest surface in the spike: for all of Spike 5 it is the only place Nodes can be created, labelled, renamed, or deleted. It is demoted to the structured alternate view in Spike 6, not deleted.
+Both boards are small, and the design track is no longer a meaningful schedule risk for this spike — the weight moved to Spike 6 along with the canvas.
+
+**Two briefs were cut** when the graph became the only Node surface (design note §1.3): a *Source page entry control* and a *Source nodes destination*. Neither is re-homed here. Spike 6 will be planned fresh once this spike's results are in, and its design track written then — writing those boards now would bake in assumptions the canvas is likely to overturn.
+
+The one genuinely new design question is small but real: **S5-D2's rows go nowhere.** A row that looks actionable and does nothing is a defect, so the board has to say whether inert rows are plainly non-interactive or explicitly marked as not-yet-available.
 
 ## PR sequence
 
@@ -45,52 +58,48 @@ Design steps are shown in the order they must happen. They are not PRs and they 
 S5-D1  Nav entry             S5-01  Node Type prefixes (core/ref)
   │                            │                              no deps
   │                            ▼
-  ▼                          S5-02  Migration 000021
-S5-D2  Sources list            │    node_types, nodes, node_positions
+  │                          S5-02  Migration 000021
+  │                            │    node_types, nodes, node_positions
   │                            ▼
-  ▼                          S5-03  core/database/nodetypes + seed
-S5-D3  Source page entry       │    7 seeded types, create-time only
+  │                          S5-03  core/database/nodetypes + seed
+  │                            │    7 seeded types, create-time only
   │                            ▼
-  ▼                          S5-04  core/database/nodes + audit
-S5-D4  Source nodes            │    needs S5-03 (candidate prefix)
-       destination             ▼
+  │                          S5-04  core/database/nodes + audit
+  │                            │    needs S5-03 (candidate prefix)
+  │                            ▼
   │                          S5-05  core/database/graphlayout
   │                            │    unaudited positions
   │                            ▼
   │                          S5-06  Proto + dispatch + handlers
   │                            │    codegen Go *and* Swift
-  │      ┌── D1 gates ────────▶▼
-  │      │                   S5-07  Section, places, query keys, store
-  │      │                     │    registry plumbing; stub views
-  │      │            ┌────────┴────────┐
-  │      │            ▼                 ▼
-  └──────┴ D2+D3 ▶ S5-08           S5-09 ◀─ D4 ─┘
-                  Entry points      Source nodes list
-                  (list + button)   (replaces the stub)
-                       │                 │
-                       └────────┬────────┘
-                                ▼
-                             S5-10  Docs, dogfood, cleanup
+  │                            ▼
+  └────── gates ────────────▶ S5-07  Section, root place, query keys, store
+                               │     registry plumbing, sidebar case
+S5-D2  Sources list            │
+  │                            ▼
+  └────── gates ────────────▶ S5-08  Interpretation Sources list
+                               │     inert rows; no deep place
+                               ▼
+                             S5-09  Docs, dogfood, cleanup
 ```
+
+Nine steps, not ten: the Source nodes list is gone, and the Source-page button went with it to Spike 6.
 
 ---
 
 ## Checklist
 
 - [ ] S5-D1 — Design: Interpretation nav entry (sidebar destination) → [`design/`](design/)
-- [ ] S5-D2 — Design: Interpretation Sources list → [`design/`](design/)
-- [ ] S5-D3 — Design: Source page entry control → [`design/`](design/)
-- [ ] S5-D4 — Design: Source nodes destination → [`design/`](design/)
+- [ ] S5-D2 — Design: Interpretation Sources list (inert rows) → [`design/`](design/)
 - [x] S5-01 — Node Type prefix validation in `core/ref` → [`completed.md`](completed.md)
 - [ ] S5-02 — Interpretation schema migration
 - [ ] S5-03 — Node type vocabulary and create-time seed
 - [ ] S5-04 — Node CRUD with audit
 - [ ] S5-05 — Graph layout positions
 - [ ] S5-06 — FFI methods for node types, nodes, and positions
-- [ ] S5-07 — Interpretation workspace section and place registry
-- [ ] S5-08 — Interpretation Sources list and Source-page entry point
-- [ ] S5-09 — Source nodes list destination
-- [ ] S5-10 — Docs, dogfood, cleanup
+- [ ] S5-07 — Interpretation workspace section and root place
+- [ ] S5-08 — Interpretation Sources list with inert rows
+- [ ] S5-09 — Docs, dogfood, cleanup
 
 ---
 
@@ -100,12 +109,13 @@ One migration, `core/database/migrations/000021.sql`. Two tables are transcribed
 
 ```sql
 CREATE TABLE node_types (
-	id          BLOB PRIMARY KEY,
-	key         TEXT NOT NULL,
-	origin      TEXT NOT NULL,
-	label       TEXT NOT NULL,
-	description TEXT,
-	ref_prefix  TEXT NOT NULL UNIQUE,
+	id                   BLOB PRIMARY KEY,
+	key                  TEXT NOT NULL,
+	origin               TEXT NOT NULL,
+	label                TEXT NOT NULL,
+	description          TEXT,
+	ref_prefix           TEXT NOT NULL UNIQUE,
+	candidate_ref_prefix TEXT NOT NULL UNIQUE,
 
 	UNIQUE (key, origin)
 ) STRICT;
@@ -133,6 +143,7 @@ CREATE TABLE node_positions (
 
 Decisions baked into that DDL, each argued in the design note:
 
+- **`node_types` carries two prefixes**, `ref_prefix` for Conclusion-layer canonical entities and `candidate_ref_prefix` for Interpretation Nodes, because `canonical_entities` will reference these same rows (interpretation model §4.1). Both are `UNIQUE`, but that is not sufficient — see the gotcha on the shared namespace.
 - **`nodes` has no `ON DELETE` clause** on either FK — deliberately `NO ACTION`, so a Source with Nodes cannot be deleted out from under them. The cascade for `observations` → `nodes` is a *later* decision and must be made when that table ships (§4.3), not retrofitted.
 - **`node_positions` cascades both ways**, which is the deliberate contrast: layout is disposable, evidence is not.
 - **No `UNIQUE (source_id, grid_x, grid_y)`.** A drag that swaps two bubbles transiently collides; let the UI nudge (§5.1).
@@ -144,25 +155,36 @@ Decisions baked into that DDL, each argued in the design note:
 All seven from [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.1, in a code registry installed at create time only — never in a migration, never healed on open:
 
 ```text
-person PER    event EVT    place PLC    relationship REL
-participation PTN    location LOC    source SRN
+key              ref_prefix    candidate_ref_prefix
+person           PER           CPR
+event            EVT           CEV
+place            PLC           CPL
+relationship     REL           CRL
+participation    PTN           CPA
+location         LOC           CLO
+source           SRN           CSR
 ```
 
-Seed all seven even though only three are placeable and two categories (bridge, reification) have no UI this spike. They are rows, not features; a partial seed just means editing the registry again later, and the authoritative doc already fixes the set.
+Seed all seven even though none is placeable this spike — there is no Node UI at all. They are rows, not features; a partial seed just means editing the registry again later, and the authoritative doc already fixes the set.
 
 ---
 
 ## Scope boundary: what "ends at the canvas" means
 
-The one judgment call in this plan is **S5-09**, the deep destination. Three options were on the table:
+The judgment call in this plan is what sits behind a Source in the Interpretation section. Four options were considered, and the answer changed once the graph became the **only** Node surface (design note §1.3):
 
 | Option | Verdict |
 | --- | --- |
-| Render a "coming soon" placeholder | Rejected. Proves only that navigation works, and throws away the chance to validate the data path before canvas code sits on top of it. |
 | Render the canvas | Rejected — that is Spike 6, and the whole point of this spike is that Spike 6 starts clean. |
-| **Render a plain list of the Source's Nodes** | **Taken.** Proves migration → Go → FFI → store → session cache → view end to end, with zero canvas risk. |
+| Render a plain list of the Source's Nodes | **Previously taken, now rejected.** It was justified as the structured non-canvas editing path the old §7.4 promised. With one surface only, that path does not exist, so the list would be a screen we build, design a board for, and delete in slice 2. |
+| Render a "coming soon" placeholder | Rejected. It proves only that navigation works, and it commits a deep `PlaceRegistry` spec and destination view that Spike 6 immediately rewrites. |
+| **Nothing — no deep place at all** | **Taken.** The section has a root (the Sources list) and no deep destination. Rows are inert until the canvas gives them somewhere to go. |
 
-The list is not throwaway. Design note §7.4 already commits to a **structured, non-canvas editing path** as both the accessibility representation of the graph and the only part of this surface that XCUITest can drive. This is that path, arriving early because it is also the cheapest way to prove the rail.
+**What this costs.** The data path — migration → Go → FFI → store → session cache → view — is no longer proven by seeing a row render. It is proven by Go tests and a `FakeStore` round-trip, which is genuinely less confidence: an integration mistake between the store layer and a real SwiftUI destination would survive this spike undetected.
+
+**Why it is still the right trade.** The alternative buys that confidence with a screen that has no future, plus a design board for it, plus the deep place spec and destination view — and Spike 6 pays again to remove them. Accepting a weaker proof here keeps the canvas spike's first PR a bubble instead of a deletion. The mitigation is to make the Go and `FakeStore` coverage genuinely complete rather than nominal, so that when slice 2 breaks, it is the canvas that is broken.
+
+**The accessibility consequence, stated here so it is not lost.** Dropping the list means the canvas's accessibility representation is the only path for VoiceOver and keyboard-only researchers. Design note §7.4 moves it from the polish slice into slice 2 for that reason. Nothing in *this* spike implements it, but Spike 6 cannot treat it as optional.
 
 ---
 
@@ -182,20 +204,27 @@ Findings from the pattern inventory that will otherwise cost a day each.
 | **Node refs need a join inside the transaction** | Unlike `sources` (constant `SRC`), minting a Node ref means reading `node_types.candidate_ref_prefix` first. Extend the `requireType(tx, …)` existence check to return the prefix, then reuse the 8-attempt retry loop from `sources.go`. |
 | **Audit needs no registry entry** | `EntityType` / `ActionType` are unvalidated free-form strings — which also means a typo persists silently. Convention: singular snake_case table name, `{verb}_{entity}`. |
 | **Protobuf codegen is manual and dual-target** | `scripts/generate-proto.sh` needs `protoc`, `protoc-gen-go`, `protoc-gen-swift`, and writes **both** `api/proto/engine/engine.pb.go` and `macos/App/Platform/Generated/engine.pb.swift`. Commit both; forgetting the Swift half breaks the app build. Methods start at 45 (`METHOD_SEARCH_CATALOG = 44` is current highest). |
-| **`?? .sourcesList` hides a missing spec** | `WorkspaceDestinationHost.presentation(for:)` falls back silently, so a new section with no `PlaceRegistry` spec renders the ordinary Sources list while the sidebar shows Interpretation selected. Land the specs and the sidebar case in the same PR (S5-07). |
-| **Two hard test gates** | `PlaceRegistryTests.registryCoversAllPlaceIDs` switches exhaustively over `PlaceID`, and `WorkspaceDestinationHostTests` asserts `known.count == 4` over `WorkspacePresentationID`. Both fail the moment a case is added. |
+| **`?? .sourcesList` hides a missing spec** | `WorkspaceDestinationHost.presentation(for:)` falls back silently, so a new section with no `PlaceRegistry` spec renders the ordinary Sources list while the sidebar shows Interpretation selected. Land the root spec and the sidebar case in the same PR (S5-07). Note this fallback makes the *absence* of a deep place quiet rather than loud — a stray `.interpretationGraph` location carrying a `sourceId` would render the Sources list, not an error. Assert that no such location can be constructed this spike. |
+| **Two hard test gates** | `PlaceRegistryTests.registryCoversAllPlaceIDs` switches exhaustively over `PlaceID`, and `WorkspaceDestinationHostTests` asserts `known.count == 4` over `WorkspacePresentationID`. Both fail the moment a case is added — and with no deep place this spike, that is **one** new case each, not two. |
 | **History is not forward-compatible** | `WorkspaceSection.init(from:)` throws on an unknown raw value, so history written by a build with `interpretation` fails to decode on a build without it (surfacing as `NavigationHistoryIssue.loadFailed`). Acceptable for a solo dogfood, worth knowing before bisecting. |
-| **The Source page cannot navigate today** | Nothing in `Features/Sources/` except `SourcesListView` holds `@Environment(WorkspaceNavigation.self)`. S5-08 must inject it. |
+| **The Source page cannot navigate today** | Nothing in `Features/Sources/` except `SourcesListView` holds `@Environment(WorkspaceNavigation.self)`. Not this spike's problem any more — the Source-page button moved to Spike 6 — but it is the first thing that work will hit. |
+| **Inert rows are a design problem, not a `TODO`** | S5-08's rows have no destination. Do not ship a row with a tap target that silently does nothing; that reads as a bug to the only user. The board (S5-D2) has to decide how an unavailable row looks, and the implementation has to match it rather than wiring a no-op handler. |
 | **Nodes are deliberately non-searchable** | Projecting them into the omnibar would mean a `KindNode`, a registry `KindSpec`, a projector, a `WorkspaceLocation` mapper, a `projection_version` bump, and `FakeStore` parity. Declare Nodes out of search for this spike and revisit when they carry names. |
 | **Onboarding tests exercise the seed** | `sourceFixture` runs full onboarding, so a bug in `nodetypes.Install` fails tests across `api/ffi/handlers`, `core/onboarding`, and several `core/database` packages at once. |
 
 ---
 
-## Accepted risk: an API with no consumer
+## Accepted risk: an entire layer with no consumer
 
-`node_positions` and its RPCs (S5-05, part of S5-06) ship with **no UI exercising them** — the nodes list does not place anything on a grid. They are covered by Go tests and a `FakeStore` round-trip only.
+This was originally scoped as "`node_positions` ships with no UI exercising it." It is now broader: **`nodes`, `node_types`, and `node_positions` all ship with no UI exercising them.** Every RPC added in S5-06 is called only by Go tests and a `FakeStore` round-trip. Nothing a researcher can click reaches any of it.
 
-This is deliberate. The alternative is opening Spike 6 with a migration, a Go package, and an FFI method before a single line of canvas code, which is exactly the "backend spike first" shape this plan exists to avoid. The cost of being wrong is low: the table is unaudited UI state and therefore cheap to migrate (§5.1).
+This is deliberate, and it is the same argument as before, only larger. The alternative is opening Spike 6 with a migration, three Go packages, and a set of FFI methods before a single line of canvas code — exactly the "backend spike first" shape this plan exists to avoid.
+
+Because the risk grew, the mitigation has to be stronger than it was:
+
+- **Coverage is the deliverable, not a side effect.** Every RPC needs a Go handler test *and* `FakeStore` parity, because `FakeStore` is what Spike 6's Swift work develops against. A `FakeStore` that disagrees with the real store is the failure mode that will cost Spike 6 a day.
+- **Round-trip, do not just write.** Assert reads after reopen, not only successful inserts — persistence across relaunch is precisely what no human will verify this spike.
+- **The schema is the expensive mistake.** Go packages and RPCs are cheap to change in Spike 6; the migration is not, once a dogfood project exists. Spend the review effort on `000021.sql` and treat the rest as provisional. `node_positions` remains the cheapest of the three to migrate later, being unaudited UI state (§5.1).
 
 ---
 
@@ -222,10 +251,9 @@ The one thing it did change is the name of the layout table. It is **`node_posit
 | S5-04 | Add audited node CRUD for the interpretation layer |
 | S5-05 | Persist graph node positions outside the audit trail |
 | S5-06 | Expose node types, nodes, and positions over FFI |
-| S5-07 | Register the interpretation workspace section and its places |
-| S5-08 | Open a source's interpretation graph from the list and the source page |
-| S5-09 | List and edit a source's nodes before the canvas exists |
-| S5-10 | Document the interpretation foundation and close spike 5 |
+| S5-07 | Register the interpretation workspace section and its root place |
+| S5-08 | Add the interpretation sources list ahead of the canvas |
+| S5-09 | Document the interpretation foundation and close spike 5 |
 
 ---
 
@@ -233,15 +261,15 @@ The one thing it did change is the name of the layout table. It is **`node_posit
 
 | Track | Steps |
 | --- | --- |
-| **Design (no PRs)** | S5-D1 → S5-D2 → S5-D3 → S5-D4, from day one, parallel to the Go core |
+| **Design (no PRs)** | S5-D1 → S5-D2, from day one, parallel to the Go core |
 | **Go core (critical path)** | S5-01 → S5-06 |
-| **Mac client** | S5-07 → S5-08 / S5-09 (parallel) → S5-10 |
+| **Mac client** | S5-07 → S5-08 → S5-09 |
 
-S5-01 is genuinely independent and can land any time. S5-08 and S5-09 are the only true fork in the build track; everything else is a chain, because each layer is the next one's only consumer.
+S5-01 is genuinely independent and can land any time. Everything else is now a straight chain with no fork, because each layer is the next one's only consumer and the branch that used to exist — the nodes list running parallel to the entry points — is gone.
 
-**The design track is the one thing that can stall this spike without warning.** Nothing in S5-01…S5-06 blocks on it, so it is easy to leave until the Mac client work starts — at which point it is suddenly on the critical path with four briefs outstanding. Start S5-D1 alongside S5-01.
+The design track is no longer a real schedule risk. Two small boards remain, both extending shipped surfaces (`PVList`, the existing sidebar) rather than inventing anything, and the Mac client work is two PRs instead of three. Start S5-D1 alongside S5-01 anyway, because it costs nothing to.
 
-The visual language itself is modest: `PVList`, `PVButton`, and the existing sidebar carry all of it, and the Sources list and Source page already have boards to extend rather than boards to invent. The briefs are small; the sequencing is the risk.
+**The critical path is now almost entirely Go**, which is the main structural change from the previous plan: S5-02 through S5-06 is five sequential backend PRs with no client work able to overtake them.
 
 ---
 
@@ -249,9 +277,10 @@ The visual language itself is modest: `PVList`, `PVButton`, and the existing sid
 
 Jake can, on his MacBook:
 
-1. Complete the dogfood bar above end to end on a real project.
-2. Point at `node_types` / `nodes` / `node_positions` and the Interpretation place as the foundation Spike 6 builds on, with no schema, Go, or FFI work left in front of the canvas.
-3. Confirm the layer is *inert but honest*: Nodes exist, carry candidate refs, and are audited, and nothing yet claims they are cited.
+1. Complete the in-app half of the dogfood bar above on a real project — reach the Interpretation section, see his Sources, and find the inert rows unsurprising rather than broken.
+2. Run `CGO_ENABLED=1 go test -tags fts5 ./...` and see the test-only half of the bar covered, including a `FakeStore` round-trip for every new RPC.
+3. Point at `node_types` / `nodes` / `node_positions` and the Interpretation section root as the foundation Spike 6 builds on, with no schema, Go, or FFI work left in front of the canvas.
+4. Confirm the layer is *inert but honest*: nothing in the UI claims a Node exists, is cited, or can be created yet.
 
 Per [`versioning.mdc`](../../../.cursor/rules/versioning.mdc), the docs in this folder do not bump `VERSION`; cutting a release that contains the spike bumps product PATCH across `VERSION`, `core/version.go`, and both Xcode `MARKETING_VERSION` configurations.
 
@@ -262,10 +291,17 @@ Per [`versioning.mdc`](../../../.cursor/rules/versioning.mdc), the docs in this 
 So the boundary is unambiguous — on the day Spike 6 opens, these exist and work:
 
 - `nodes` rows with candidate refs, created and deleted through an audited Go package and an FFI method.
-- A seeded Node Type vocabulary with `ref_prefix` values.
+- A seeded Node Type vocabulary with both `ref_prefix` and `candidate_ref_prefix` values.
 - A positions table and the RPCs to read and write it.
 - A `.sourceGraph(project:sourceId:)` query key owning Nodes and their positions in one payload (design note §5.3), warmed by `session.apply(location:)`.
-- A workspace section, two registered places, working Back/Forward, and two entry points.
-- A structured node list that doubles as the accessibility representation and the XCUITest-drivable path.
+- A workspace section, its **root** place, the Sources list behind it, and working Back/Forward.
+- A `FakeStore` that answers every new RPC, so Swift work can start without the dylib.
 
 Spike 6's first PR is the `NSScrollView` bridge and a bubble.
+
+And these are explicitly **not** inherited — Spike 6 owns them, and they are unplanned on purpose so the canvas's results can inform them:
+
+- The deep `PlaceRegistry` spec and the destination view behind a Source row.
+- Wiring S5-08's inert rows to that destination.
+- The Source-page **Open interpretation graph** button, and its design board.
+- The canvas accessibility representation and keyboard parity, which design note §7.4 makes slice-2 work rather than polish.
