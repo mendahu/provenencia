@@ -4,7 +4,7 @@ Interpretation foundation: candidate refs, subject vocabulary, Subjects, layout 
 
 ## Status
 
-**Planned.** Landings go in [`completed.md`](completed.md). S5-01 and S5-D1 (superseded) are recorded there.
+**Planned.** Landings go in [`completed.md`](completed.md). S5-01, S5-02, and S5-D1 / S5-D3 are recorded there.
 
 > **This spike ships no Subject UI.** The graph is the only surface for Subjects, Citations, and Observations (design note §1.3), and the graph is Spike 6. Product nav keeps **one Sources family** — no Interpretation sidebar section (§1.4). Entry is dual action on the Sources list → graph stub. See *Scope boundary* below.
 
@@ -49,7 +49,7 @@ Run S5-D3 before S5-D2. Subject types / Subject fields **editors** are out of sc
 S5-D3  Sources nav           S5-01  Subject type prefixes (core/ref)   done
   │                            │
   │                            ▼
-  │                          S5-02  Migration 000021
+  │                          S5-02  Migration 000021                 done
   │                            │    subject_types, subjects, subject_positions
   │                            ▼
   │                          S5-03  core/database/subjecttypes + seed
@@ -79,7 +79,7 @@ S5-D2  List dual action        │
 - [x] S5-D3 — Design: Sources section nav (nested config + Subject*) → [`completed.md`](completed.md)
 - [ ] S5-D2 — Design: Sources list → Evidence graph → [`design/`](design/)
 - [x] S5-01 — Subject type prefix validation in `core/ref` → [`completed.md`](completed.md)
-- [ ] S5-02 — Interpretation schema migration
+- [x] S5-02 — Interpretation schema migration → [`completed.md`](completed.md)
 - [ ] S5-03 — subject type vocabulary and create-time seed
 - [ ] S5-04 — Subject CRUD with audit
 - [ ] S5-05 — Graph layout positions
@@ -119,12 +119,9 @@ CREATE TABLE subjects (
 ) STRICT;
 
 CREATE TABLE subject_positions (
-	source_id BLOB NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
-	subject_id   BLOB NOT NULL REFERENCES subjects(id)   ON DELETE CASCADE,
-	grid_x    INTEGER NOT NULL,
-	grid_y    INTEGER NOT NULL,
-
-	PRIMARY KEY (source_id, subject_id)
+	subject_id BLOB PRIMARY KEY REFERENCES subjects(id) ON DELETE CASCADE,
+	grid_x     INTEGER NOT NULL,
+	grid_y     INTEGER NOT NULL
 ) STRICT;
 ```
 
@@ -132,8 +129,9 @@ Decisions baked into that DDL, each argued in the design note:
 
 - **`subject_types` carries two prefixes**, `ref_prefix` for Conclusion-layer canonical entities and `candidate_ref_prefix` for Interpretation subjects, because `canonical_entities` will reference these same rows (interpretation model §4.1). Both are `UNIQUE`, but that is not sufficient — see the gotcha on the shared namespace.
 - **`subjects` has no `ON DELETE` clause** on either FK — deliberately `NO ACTION`, so a Source with Subjects cannot be deleted out from under them. The cascade for `observations` → `subjects` is a *later* decision and must be made when that table ships (§4.3), not retrofitted.
-- **`subject_positions` cascades both ways**, which is the deliberate contrast: layout is disposable, evidence is not.
-- **No `UNIQUE (source_id, grid_x, grid_y)`.** A drag that swaps two bubbles transiently collides; let the UI nudge (§5.1).
+- **`subject_positions` is keyed by `subject_id` alone** — one position per subject; graph scope is `subjects.source_id`. No plan for the same subject on multiple Source graphs, so `source_id` is not denormalized onto the layout row.
+- **`subject_positions.subject_id` cascades on delete**, which is the deliberate contrast: layout is disposable, evidence is not. (Source delete of layout is indirect: subjects block Source delete via `NO ACTION`, and removing subjects drops positions.)
+- **No `UNIQUE (grid_x, grid_y)`.** A drag that swaps two bubbles transiently collides; let the UI nudge (§5.1).
 - **Coordinates are signed** — the plane is unbounded around an origin, so no `CHECK (grid_x >= 0)`.
 - **`subject_positions` is unaudited.** State this in the migration comment and be ready to defend it, because the nearest sibling (`source_metadata_layout`, migration `000013`) *is* audited. The distinction: dismissing a metadata suggestion is a research decision; arranging bubbles is not.
 

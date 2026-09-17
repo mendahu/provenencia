@@ -16,7 +16,7 @@ Authoritative schema for everything described here is [`interpretation-layer-dat
 | 4 | Citation → Observation stays **one-to-many**, with one-to-one as the default *behavior* and pinning opt-in | §4.5 |
 | 5 | Cross-source Observations stay legal in the model (removing them costs a trigger), but the canvas scopes to `source_id = ?` | §4.6 |
 | 6 | **`source` subjects never render on the canvas.** Source-to-source commentary lives on the Source page. UI decision, no schema change | §4.6 |
-| 7 | Layout is **one unaudited table** keyed `(source_id, subject_id)` with integer grid cells; positions travel with the project, camera does not | §5.1, §5.2 |
+| 7 | Layout is **one unaudited table** keyed by `subject_id` with integer grid cells; positions travel with the project, camera does not | §5.1, §5.2 |
 | 8 | No auto-layout engine — unplaced subjects go in a **tray** | §5 |
 | 9 | Pan/zoom needs **AppKit `NSScrollView`** regardless of deployment target; raising past macOS 14 is a separate decision on support-matrix grounds | §7.2, §7.3 |
 | 10 | Build **canvas first**, behind only the load-bearing minimum; the property vocabulary is *not* load-bearing | §11.1, §11.2 |
@@ -383,22 +383,19 @@ Two simplifications worth taking:
 
 ```sql
 CREATE TABLE subject_positions (
-    source_id   BLOB NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
-    subject_id     BLOB NOT NULL REFERENCES subjects(id)   ON DELETE CASCADE,
-    grid_x      INTEGER NOT NULL,
-    grid_y      INTEGER NOT NULL,
-
-    PRIMARY KEY (source_id, subject_id)
+    subject_id BLOB PRIMARY KEY REFERENCES subjects(id) ON DELETE CASCADE,
+    grid_x     INTEGER NOT NULL,
+    grid_y     INTEGER NOT NULL
 ) STRICT;
 ```
 
 Design notes, each of which is a decision worth making deliberately:
 
-- **The key is `(source_id, subject_id)`, not `subject_id` alone.** `source_id` is the graph identity, so a layout loads with `WHERE source_id = ?` and no join, and dropping a Source's whole layout is a direct cascade. Because the canvas is scoped to one Source (§4.6), every positioned subject is currently homed to that Source and `source_id` is technically derivable — so this is partly denormalization for the hot read path and partly keeping the door open: if foreign Subjects are ever displayed, a subject needs one position *per graph it appears in*, not one globally, and that would otherwise be a migration.
+- **The key is `subject_id` alone.** One position per subject; the open graph is still Source-scoped (§4.6), and layout for that graph is subjects with `subjects.source_id = ?` joined to this table. There is no plan for the same subject on multiple Source graphs, so denormalizing `source_id` onto the layout row is unnecessary. (If that ever changes, this becomes a migration — acceptable because layout is unaudited UI state.)
 - **No `graphs` table**, and the table name says so. One graph per Source is the premise of the whole design, so the Source *is* the graph identity. If named views or multiple layouts per Source are ever wanted, that becomes a `graph_id` and a migration — acceptable precisely because this is unaudited UI state and therefore cheap to migrate. A future family tree gets its own concrete table rather than a shared polymorphic one; the reasoning is in §13.3.
-- **Absence of a row means unplaced**, which is exactly what feeds the tray. No nullable coordinates and no sentinel values.
-- **Both foreign keys cascade**, which is a deliberate *contrast* with `observations` (§4.3). Deleting a subject should silently drop its position; deleting a Source should drop its whole layout. Evidence must never be swept away that quietly, but layout should be.
-- **No `UNIQUE (source_id, grid_x, grid_y)`.** Tempting, but it would make overlaps a hard error — and a drag that swaps two bubbles transiently collides, which a database constraint cannot accommodate without temporary values. Let bubbles overlap and let the UI nudge.
+- **Absence of a row means unplaced**, which is exactly what feeds the tray. No nullable coordinates and no sentinel values. Coordinates stay off `subjects` so layout remains unaudited and the tray stays “no row” rather than null columns on an audited entity.
+- **`subject_id` cascades**, which is a deliberate *contrast* with `observations` (§4.3). Deleting a subject should silently drop its position. Evidence must never be swept away that quietly, but layout should be. Source-level layout wipe is indirect: `subjects.source_id` is `NO ACTION`, so a Source with Subjects cannot be deleted until those subjects (and thus their positions) are gone.
+- **No `UNIQUE (grid_x, grid_y)`.** Tempting, but it would make overlaps a hard error — and a drag that swaps two bubbles transiently collides, which a database constraint cannot accommodate without temporary values. Let bubbles overlap and let the UI nudge.
 - **Coordinates are signed.** The canvas is an unbounded plane around an origin, so do not add a `CHECK (grid_x >= 0)`.
 - **Not audited.** Arranging bubbles is not a research assertion, and audit rows for every drag would drown the revision history that matters.
 
@@ -524,7 +521,7 @@ A free-form spatial canvas is genuinely hostile to VoiceOver and keyboard-only u
 2. **Reverse rendering rules** — visual states for negated, conflicted, and incomplete; collapse/expand of bridge bubbles.
 3. **Deletion semantics** — `ON DELETE` choice at migration time; subject *and* object references; the confirmation that counts the damage.
 4. **Type correction** — delete-and-recreate, gated on having no Observations.
-5. **Layout table** — the `(source_id, subject_id)` shape in §5.1, unaudited, plus the unplaced tray and the positions-travel/camera-does-not split (§5.2).
+5. **Layout table** — the `subject_id` primary key shape in §5.1, unaudited, plus the unplaced tray and the positions-travel/camera-does-not split (§5.2).
 6. **Artifact gate** — the empty state when a Source has no Artifact.
 7. **NameValue end to end** (§4.4) — schema, Go, and editor, on the critical path.
 8. **Locator validation in Go**, with the full invariant set, before any UI writes `locator_json`.
@@ -681,7 +678,7 @@ That is the right split, and §7.2 and §7.4 already argue for it on testability
 
 The tempting move — one `graph_positions` table with a `graph_id` and a polymorphic subject — is the trap. Interpretation positions `subjects.id`; a tree positions `canonical_entities.id`. They are different tables, so a shared subject column cannot carry a foreign key.
 
-That forfeits the single best property of the design in §5.1: **both keys cascade**, so deleting a subject silently drops its position and deleting a Source drops its whole layout. A polymorphic subject replaces that with application-side cleanup and tolerated orphan rows — in exchange for avoiding a second forty-line table.
+That forfeits the single best property of the design in §5.1: **`subject_id` cascades**, so deleting a subject silently drops its position. A polymorphic subject replaces that with application-side cleanup and tolerated orphan rows — in exchange for avoiding a second forty-line table.
 
 There is also no shared graph scope to key on. Interpretation's scope is a Source; a tree's is the whole project, or a named view, or a starting person. `source_id` is not a column a tree can fill.
 
