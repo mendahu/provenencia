@@ -20,6 +20,7 @@ Changes to the plan itself, as opposed to landed work.
 | Step | Kind | One-liner |
 | --- | --- | --- |
 | [S5-01](#s5-01--pr-node-type-prefix-validation) | PR | Subject type prefix validation + reserved-prefix guard in `core/ref` |
+| [S5-02](#s5-02--pr-interpretation-schema-migration) | PR | `subject_types`, `subjects`, `subject_positions` via migration `000021` |
 | [S5-D1](#s5-d1--design-interpretation-nav-entry) | Design | Interpretation sidebar destination — **superseded** |
 | [S5-D3](#s5-d3--design-sources-section-nav) | Design | Nested Sources family nav — Subject types / fields stubs |
 
@@ -78,3 +79,22 @@ CGO_ENABLED=1 go test -tags fts5 ./...
 | **Out** | Sources list dual action and Evidence graph stub (S5-D2); Subject types / Subject fields editors; the canvas. |
 
 **Landed:** the nav shape for the unified Sources product layer. S5-07 commits to labels, icons, nesting, and stub destinations from it.
+
+### S5-02 — PR: Interpretation schema migration
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S5-01 (reserved Subject type prefixes) |
+| **Deliverables** | Done. [`core/database/migrations/000021.sql`](../../../core/database/migrations/000021.sql): `subject_types` (two prefixes), `subjects` (NO ACTION FKs to `sources` / `subject_types`), and `subject_positions` (CASCADE both ways; unaudited layout). Schema presence test in [`core/database/subjects/schema_test.go`](../../../core/database/subjects/schema_test.go). |
+| **Tests** | Done. `TestMigrationCreatesSubjectTables`: `user_version >= 21` and `PRAGMA table_info` columns for all three tables after `database.Create`. |
+| **Dogfood** | App unchanged. No seed, CRUD, FFI, or Swift — nothing is user-visible. |
+| **Out** | Seeded Subject types (S5-03); Subject CRUD + audit (S5-04); positions query package (S5-05); FFI and UI (S5-06…). |
+
+**Landed:** the Interpretation catalog tables the rest of Spike 5 builds on. Format version is 21; schema hash is init-derived from the new migration (no golden bump).
+
+**Verify:**
+
+```bash
+CGO_ENABLED=1 go test -tags fts5 ./core/database/...
+```
