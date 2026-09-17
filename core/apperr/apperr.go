@@ -42,6 +42,7 @@ const (
 	CodeSourceVocabInvalid           = "sourcevocab.invalid"
 	CodeSourcesInvalid               = "sources.invalid"
 	CodeSubjectsInvalid              = "subjects.invalid"
+	CodeSubjectPositionsInvalid      = "subjectpositions.invalid"
 	CodeFilesInvalid                 = "files.invalid"
 	CodeArtifactsInvalid             = "artifacts.invalid"
 	CodeArtifactsFileAlreadyAttached = "artifacts.file_already_attached"
