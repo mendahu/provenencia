@@ -1534,8 +1534,11 @@ type Source struct {
 	CoverMode string `protobuf:"bytes,9,opt,name=cover_mode,json=coverMode,proto3" json:"cover_mode,omitempty"`
 	// Set when cover_mode is artifact; empty for type_icon.
 	PrimaryArtifactId string `protobuf:"bytes,10,opt,name=primary_artifact_id,json=primaryArtifactId,proto3" json:"primary_artifact_id,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// True when this Source has at least one Artifact row (fileless counts).
+	// Used by Sources list Evidence graph gate — not cover presence.
+	HasArtifact   bool `protobuf:"varint,11,opt,name=has_artifact,json=hasArtifact,proto3" json:"has_artifact,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Source) Reset() {
@@ -1636,6 +1639,13 @@ func (x *Source) GetPrimaryArtifactId() string {
 		return x.PrimaryArtifactId
 	}
 	return ""
+}
+
+func (x *Source) GetHasArtifact() bool {
+	if x != nil {
+		return x.HasArtifact
+	}
+	return false
 }
 
 type SourceNote struct {
@@ -7649,7 +7659,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x0eupdated_by_ref\x18\a \x01(\tR\fupdatedByRef\x12\x12\n" +
 	"\x04uuid\x18\b \x01(\tR\x04uuid\"V\n" +
 	"\x16GetProjectInfoResponse\x12<\n" +
-	"\aproject\x18\x01 \x01(\v2\".provenencia.engine.v1.ProjectInfoR\aproject\"\xf7\x02\n" +
+	"\aproject\x18\x01 \x01(\v2\".provenencia.engine.v1.ProjectInfoR\aproject\"\x9a\x03\n" +
 	"\x06Source\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
 	"\x03ref\x18\x02 \x01(\tR\x03ref\x12$\n" +
@@ -7662,7 +7672,8 @@ const file_engine_proto_rawDesc = "" +
 	"\n" +
 	"cover_mode\x18\t \x01(\tR\tcoverMode\x12.\n" +
 	"\x13primary_artifact_id\x18\n" +
-	" \x01(\tR\x11primaryArtifactId\"\x9c\x01\n" +
+	" \x01(\tR\x11primaryArtifactId\x12!\n" +
+	"\fhas_artifact\x18\v \x01(\bR\vhasArtifact\"\x9c\x01\n" +
 	"\n" +
 	"SourceNote\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +

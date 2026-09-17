@@ -77,7 +77,7 @@ S5-D2  List dual action        │
 
 - [x] S5-D1 — Design: Interpretation nav entry → [`completed.md`](completed.md) (**superseded** — do not implement)
 - [x] S5-D3 — Design: Sources section nav (nested config + Subject*) → [`completed.md`](completed.md)
-- [ ] S5-D2 — Design: Sources list → Evidence graph → [`design/`](design/)
+- [x] S5-D2 — Design: Sources list → Evidence graph → [`completed.md`](completed.md)
 - [x] S5-01 — Subject type prefix validation in `core/ref` → [`completed.md`](completed.md)
 - [x] S5-02 — Interpretation schema migration → [`completed.md`](completed.md)
 - [x] S5-03 — subject type vocabulary and create-time seed → [`completed.md`](completed.md)
@@ -85,7 +85,7 @@ S5-D2  List dual action        │
 - [x] S5-05 — Graph layout positions → [`completed.md`](completed.md)
 - [x] S5-06 — FFI methods for subject types, subjects, and positions → [`completed.md`](completed.md)
 - [x] S5-07 — Nested Sources nav + Subject* stubs + graph place + `WorkspaceLocation` discriminator → [`completed.md`](completed.md)
-- [ ] S5-08 — Sources list → Evidence graph stub
+- [x] S5-08 — Sources list → Evidence graph stub → [`completed.md`](completed.md)
 - [ ] S5-09 — Docs, dogfood, cleanup
 
 ---
@@ -249,11 +249,11 @@ The one thing it did change is the name of the layout table. It is **`subject_po
 
 | Track | Steps |
 | --- | --- |
-| **Design (no PRs)** | S5-D3 (done) → S5-D2 (S5-D1 superseded) |
+| **Design (no PRs)** | S5-D3 → S5-D2 (done; S5-D1 superseded) |
 | **Go core (critical path)** | S5-01 → S5-06 |
 | **Mac client** | S5-07 → S5-08 → S5-09 |
 
-S5-01 and S5-D3 are done. Go critical path through S5-06 and Mac client S5-07 are done. Next: S5-08 (after S5-D2). Design: finish S5-D2 next.
+S5-01…S5-08 and design briefs S5-D2 / S5-D3 are done. Next: S5-09 (docs, dogfood, cleanup).
 
 ---
 

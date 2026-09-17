@@ -6,14 +6,13 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 
 ## Open
 
-| Step | Brief | Feeds | Notes |
-| --- | --- | --- | --- |
-| S5-D2 | [`S5-D2-sources-list-graph-entry.md`](S5-D2-sources-list-graph-entry.md) | PR S5-08 | Dual action on Sources list → Source page or **Evidence graph** stub |
+_None — design briefs for Spike 5 are complete._
 
 ## Completed
 
 | Step | Brief | Feeds | Notes |
 | --- | --- | --- | --- |
+| S5-D2 | [`archive/S5-D2-sources-list-graph-entry.md`](archive/S5-D2-sources-list-graph-entry.md) | PR S5-08 | Dual action on Sources list → Source page or **Evidence graph** stub (adopted split-row) |
 | S5-D3 | [`archive/S5-D3-sources-section-nav.md`](archive/S5-D3-sources-section-nav.md) | PR S5-07 | Nested Sources family: Sources primary; four config children; Subject types / fields stubs |
 | S5-D1 | [`archive/S5-D1-interpretation-nav-entry.md`](archive/S5-D1-interpretation-nav-entry.md) | — | **Superseded.** Flat Interpretation item — do not implement. Replaced by S5-D3. |
 

@@ -33,7 +33,8 @@ const (
 	sqlListBySource = `SELECT id, ref, source_id, file_id, label, COALESCE(description, '')
 		FROM artifacts WHERE source_id = ?
 		ORDER BY ref COLLATE NOCASE`
-	sqlExistsByFile = `SELECT 1 FROM artifacts WHERE file_id = ? LIMIT 1`
+	sqlExistsBySource = `SELECT 1 FROM artifacts WHERE source_id = ? LIMIT 1`
+	sqlExistsByFile   = `SELECT 1 FROM artifacts WHERE file_id = ? LIMIT 1`
 	sqlSourceExists = `SELECT 1 FROM sources WHERE id = ?`
 	sqlFileExists   = `SELECT 1 FROM files WHERE id = ?`
 	maxRefRetries   = 8
@@ -288,6 +289,26 @@ func ListBySource(c *database.Catalog, sourceID []byte) ([]Artifact, error) {
 		out = append(out, a)
 	}
 	return out, rows.Err()
+}
+
+// HasAnyForSource reports whether the Source has at least one Artifact (fileless counts).
+func HasAnyForSource(c *database.Catalog, sourceID []byte) (bool, error) {
+	db, err := c.DB()
+	if err != nil {
+		return false, err
+	}
+	if len(sourceID) != 16 {
+		return false, ErrInvalid
+	}
+	var one int
+	err = db.QueryRow(sqlExistsBySource, sourceID).Scan(&one)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // HasPrimaryFile reports whether any Artifact uses fileID as its primary File.

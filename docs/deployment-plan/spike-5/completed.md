@@ -26,7 +26,9 @@ Changes to the plan itself, as opposed to landed work.
 | [S5-05](#s5-05--pr-graph-layout-positions) | PR | Unaudited `subject_positions` Set / Get / Clear |
 | [S5-06](#s5-06--pr-ffi-for-subjects-types-and-positions) | PR | Eight catalog RPCs for types, subjects, positions |
 | [S5-07](#s5-07--pr-nested-sources-nav-and-evidence-graph-place) | PR | Nested Sources rail + Subject stubs + graph place |
+| [S5-08](#s5-08--pr-sources-list--evidence-graph) | PR | Sources list split-row → page or graph; artifact gate |
 | [S5-D1](#s5-d1--design-interpretation-nav-entry) | Design | Interpretation sidebar destination — **superseded** |
+| [S5-D2](#s5-d2--design-sources-list--evidence-graph) | Design | Sources list dual action → Evidence graph |
 | [S5-D3](#s5-d3--design-sources-section-nav) | Design | Nested Sources family nav — Subject types / fields stubs |
 
 ---
@@ -202,4 +204,37 @@ xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destin
   -only-testing:ProvenenciaTests/WorkspaceDestinationHostTests \
   -only-testing:ProvenenciaTests/WorkspaceNavigationTests \
   -only-testing:ProvenenciaTests/WorkspaceToolbarBreadcrumbTests
+```
+
+### S5-D2 — Design: Sources list → Evidence graph
+
+| | |
+| --- | --- |
+| **Kind** | Design (Claude Design board) |
+| **Depends on** | S5-D3 (done); shipped Sources list (S2-04) |
+| **Deliverables** | Done. Adopted **split-row** direction: sibling filing / Evidence graph zones (`minmax(0,1fr) \| 210px`), caption band, no-Artifact sunken zone + tooltip, custom filter/sort popups. Brief archived: [`design/archive/S5-D2-sources-list-graph-entry.md`](design/archive/S5-D2-sources-list-graph-entry.md). |
+| **Dogfood** | Design only until S5-08. |
+| **Out** | Canvas; Source-page graph entry; Subject editors. |
+
+**Landed:** dual-action Sources list chrome for S5-08 — split zones, not a nested button.
+
+### S5-08 — PR: Sources list → Evidence graph
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S5-D2 (adopted split-row); S5-07 (graph place + `SourceSurface`) |
+| **Deliverables** | Done. `Source.has_artifact` on list/workspace enrich (`artifacts.HasAnyForSource`); `CatalogSource.hasArtifact` + FakeStore/GoStore. Sources list split-row ([`SourcesSplitRow`](../../../macos/App/Features/Sources/SourcesSplitRow.swift)) with page vs graph zones and blocked “Needs an artifact” state; caption band; custom filter/sort via [`PVPopupMenuButton`](../../../macos/App/DesignSystem/Components/Core/PVPopupMenu.swift). Graph destination remains the S5-07 stub. |
+| **Tests** | Done. Go `ListSources` `has_artifact` false→true after `CreateArtifact`. Swift [`SourcesListNavigationTests`](../../../macos/ProvenenciaTests/SourcesListNavigationTests.swift) page/graph locations + FakeStore gate. |
+| **Dogfood** | From Sources list: open filing page (left zone) or Evidence graph stub (right zone when an Artifact exists); no-Artifact rows show inert graph zone. |
+| **Out** | Canvas / Spike 6; Source-page Evidence graph button; SemVer bump; Subject type/field editors. |
+
+**Landed:** researcher can open an Evidence graph from the Sources list with an honest Artifact gate.
+
+**Verify:**
+
+```bash
+CGO_ENABLED=1 go test -tags fts5 ./api/ffi/handlers/ -run TestListSources
+xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' \
+  -only-testing:ProvenenciaTests/SourcesListNavigationTests
 ```

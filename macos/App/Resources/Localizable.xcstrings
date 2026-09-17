@@ -3395,6 +3395,78 @@
         }
       }
     },
+    "sources.list.columnEvidenceGraph" : {
+      "comment" : "Caption band above the Sources list graph zone",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Evidence graph"
+          }
+        }
+      }
+    },
+    "sources.list.columnSource" : {
+      "comment" : "Caption band above the Sources list left zone",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Source"
+          }
+        }
+      }
+    },
+    "sources.list.needsArtifact" : {
+      "comment" : "Blocked graph zone label when the Source has no Artifact",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Needs an artifact"
+          }
+        }
+      }
+    },
+    "sources.list.needsArtifactTooltip" : {
+      "comment" : "Tooltip on the blocked Sources list graph zone",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add an artifact on the source page to build its evidence graph"
+          }
+        }
+      }
+    },
+    "sources.list.openGraph" : {
+      "comment" : "Sources list right-zone action when the Source has an Artifact",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open graph"
+          }
+        }
+      }
+    },
+    "sources.list.openSourcePage" : {
+      "comment" : "Accessibility label for the Sources list left (filing) zone",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open source"
+          }
+        }
+      }
+    },
     "sources.list.addSource" : {
       "comment" : "Button: open the Add Source dialog",
       "extractionState" : "manual",

@@ -197,6 +197,9 @@ message Source {
   string cover_mode = 9;
   // Set when cover_mode is artifact; empty for type_icon.
   string primary_artifact_id = 10;
+  // True when this Source has at least one Artifact row (fileless counts).
+  // Used by Sources list Evidence graph gate — not cover presence.
+  bool has_artifact = 11;
 }
 
 message SourceNote {

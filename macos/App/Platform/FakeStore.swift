@@ -1069,15 +1069,17 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     /// Resolves list/identity paint fields from persisted cover mode.
     /// Source cover is type icon or a raster path — never Artifact file-type MIME.
+    /// Also sets `hasArtifact` from the Artifact bag (fileless counts).
     private func enrichCoverFields(_ source: CatalogSource) -> CatalogSource {
         var copy = source
+        let arts = artifactsBySource[copy.id] ?? []
+        copy.hasArtifact = !arts.isEmpty
         copy.thumbnailRelPath = ""
         copy.thumbnailMediaType = ""
         copy.thumbnailOriginalFilename = ""
         guard copy.coverMode == "artifact", !copy.primaryArtifactID.isEmpty else {
             return copy
         }
-        let arts = artifactsBySource[copy.id] ?? []
         guard let art = arts.first(where: { $0.id == copy.primaryArtifactID }),
               !art.thumbnailRelPath.isEmpty
         else {

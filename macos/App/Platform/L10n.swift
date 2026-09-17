@@ -1073,6 +1073,42 @@ enum L10n {
             comment: "Accessibility label for the Sources PVList"
         )
 
+        static let columnSource = LocalizedStringResource(
+            "sources.list.columnSource",
+            defaultValue: "Source",
+            comment: "Caption band above the Sources list left zone"
+        )
+
+        static let columnEvidenceGraph = LocalizedStringResource(
+            "sources.list.columnEvidenceGraph",
+            defaultValue: "Evidence graph",
+            comment: "Caption band above the Sources list graph zone"
+        )
+
+        static let openGraph = LocalizedStringResource(
+            "sources.list.openGraph",
+            defaultValue: "Open graph",
+            comment: "Sources list right-zone action when the Source has an Artifact"
+        )
+
+        static let needsArtifact = LocalizedStringResource(
+            "sources.list.needsArtifact",
+            defaultValue: "Needs an artifact",
+            comment: "Blocked graph zone label when the Source has no Artifact"
+        )
+
+        static let needsArtifactTooltip = LocalizedStringResource(
+            "sources.list.needsArtifactTooltip",
+            defaultValue: "Add an artifact on the source page to build its evidence graph",
+            comment: "Tooltip on the blocked Sources list graph zone"
+        )
+
+        static let openSourcePage = LocalizedStringResource(
+            "sources.list.openSourcePage",
+            defaultValue: "Open source",
+            comment: "Accessibility label for the Sources list left (filing) zone"
+        )
+
         static let addDialogTitle = LocalizedStringResource(
             "sources.add.title",
             defaultValue: "Add source",

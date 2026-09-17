@@ -41,6 +41,9 @@ struct CatalogSource: Sendable, Equatable, Identifiable {
     var coverMode: String = "type_icon"
     /// Set when `coverMode` is `artifact`.
     var primaryArtifactID: String = ""
+    /// True when this Source has at least one Artifact (fileless counts).
+    /// Used by the Sources list Evidence graph gate — not cover presence.
+    var hasArtifact: Bool = false
 }
 
 struct CatalogSourceNote: Sendable, Equatable {

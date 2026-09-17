@@ -45,11 +45,15 @@
 		AA0000000000000000000391 /* ThumbnailCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000390 /* ThumbnailCache.swift */; };
 		AA0000000000000000000393 /* CachedThumbnail.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000392 /* CachedThumbnail.swift */; };
 		AA00000000000000000003C1 /* PVContextMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003C0 /* PVContextMenu.swift */; };
+		AA0000000000000000000465 /* PVPopupMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000464 /* PVPopupMenu.swift */; };
+		AA0000000000000000000467 /* SourcesListNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000466 /* SourcesListNavigation.swift */; };
+		AA0000000000000000000469 /* SourcesSplitRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000468 /* SourcesSplitRow.swift */; };
 		AA0000000000000000000395 /* ThumbnailCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000394 /* ThumbnailCacheTests.swift */; };
 		AA0000000000000000000351 /* TimestampFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000350 /* TimestampFormat.swift */; };
 		AA000000000000000000031D /* SourcePageModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000031E /* SourcePageModelTests.swift */; };
 		AA0000000000000000000333 /* DateValueDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000332 /* DateValueDraftTests.swift */; };
 		AA0000000000000000000313 /* SourcesModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000312 /* SourcesModelTests.swift */; };
+		AA000000000000000000046B /* SourcesListNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000046A /* SourcesListNavigationTests.swift */; };
 		AA0000000000000000000315 /* PVListTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000314 /* PVListTests.swift */; };
 		01574F7767F9B0AF5550AFAD /* PVMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = C355704657FB6A572BF7FD6A /* PVMotion.swift */; };
 		AA0000000000000000000210 /* OriginMarkers.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000200 /* OriginMarkers.swift */; };
@@ -242,11 +246,15 @@
 		AA0000000000000000000390 /* ThumbnailCache.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ThumbnailCache.swift; sourceTree = "<group>"; };
 		AA0000000000000000000392 /* CachedThumbnail.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CachedThumbnail.swift; sourceTree = "<group>"; };
 		AA00000000000000000003C0 /* PVContextMenu.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVContextMenu.swift; sourceTree = "<group>"; };
+		AA0000000000000000000464 /* PVPopupMenu.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVPopupMenu.swift; sourceTree = "<group>"; };
+		AA0000000000000000000466 /* SourcesListNavigation.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesListNavigation.swift; sourceTree = "<group>"; };
+		AA0000000000000000000468 /* SourcesSplitRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesSplitRow.swift; sourceTree = "<group>"; };
 		AA0000000000000000000394 /* ThumbnailCacheTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ThumbnailCacheTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000350 /* TimestampFormat.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TimestampFormat.swift; sourceTree = "<group>"; };
 		AA000000000000000000031E /* SourcePageModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcePageModelTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000332 /* DateValueDraftTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueDraftTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000312 /* SourcesModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesModelTests.swift; sourceTree = "<group>"; };
+		AA000000000000000000046A /* SourcesListNavigationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesListNavigationTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000314 /* PVListTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVListTests.swift; sourceTree = "<group>"; };
 		11ADAF744C32587CD34CDD23 /* PVLogoMark.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVLogoMark.swift; sourceTree = "<group>"; };
 		164584B2DB70D89A55C4178F /* WorkspaceModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceModelTests.swift; sourceTree = "<group>"; };
@@ -428,6 +436,8 @@
 			children = (
 				AA0000000000000000000306 /* SourcesModel.swift */,
 				AA0000000000000000000308 /* SourcesListView.swift */,
+				AA0000000000000000000466 /* SourcesListNavigation.swift */,
+				AA0000000000000000000468 /* SourcesSplitRow.swift */,
 				AA000000000000000000031A /* SourcePageModel.swift */,
 				AA0000000000000000000340 /* SourcePageContext.swift */,
 				AA0000000000000000000342 /* SourceIdentitySection.swift */,
@@ -595,6 +605,7 @@
 				AA0000000000000000000376 /* PVCard.swift */,
 				AA0000000000000000000378 /* PVSectionHeader.swift */,
 				AA00000000000000000003C0 /* PVContextMenu.swift */,
+				AA0000000000000000000464 /* PVPopupMenu.swift */,
 			);
 			name = Core;
 			path = Core;
@@ -765,6 +776,7 @@
 				4F0CB87F6EC5759DF8D0A7AF /* SourceFieldsModelTests.swift */,
 				AA0000000000000000000206 /* SourceTypesModelTests.swift */,
 				AA0000000000000000000312 /* SourcesModelTests.swift */,
+				AA000000000000000000046A /* SourcesListNavigationTests.swift */,
 				AA000000000000000000031E /* SourcePageModelTests.swift */,
 				AA00000000000000000003D4 /* IngestMediaPolicyTests.swift */,
 				AA0000000000000000000394 /* ThumbnailCacheTests.swift */,
@@ -1073,6 +1085,9 @@
 				AA0000000000000000000391 /* ThumbnailCache.swift in Sources */,
 				AA0000000000000000000393 /* CachedThumbnail.swift in Sources */,
 				AA00000000000000000003C1 /* PVContextMenu.swift in Sources */,
+				AA0000000000000000000465 /* PVPopupMenu.swift in Sources */,
+				AA0000000000000000000467 /* SourcesListNavigation.swift in Sources */,
+				AA0000000000000000000469 /* SourcesSplitRow.swift in Sources */,
 				AA0000000000000000000351 /* TimestampFormat.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1107,6 +1122,7 @@
 				AA0000000000000000000242 /* PVComboBoxTests.swift in Sources */,
 				AA0000000000000000000315 /* PVListTests.swift in Sources */,
 				AA0000000000000000000313 /* SourcesModelTests.swift in Sources */,
+				AA000000000000000000046B /* SourcesListNavigationTests.swift in Sources */,
 				AA000000000000000000031D /* SourcePageModelTests.swift in Sources */,
 				AA00000000000000000003D5 /* IngestMediaPolicyTests.swift in Sources */,
 				AA0000000000000000000395 /* ThumbnailCacheTests.swift in Sources */,
