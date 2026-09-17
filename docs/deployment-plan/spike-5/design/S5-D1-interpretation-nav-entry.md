@@ -54,7 +54,7 @@ The work is a label, an icon, a position in the list, and how the destination be
 | --- | --- |
 | NAV-7 | No badge, count, or activity indicator, now or designed-for-later. These would be derived counts, and placing a single Node would stale them. Do not leave a visible gap where one would go. |
 | NAV-8 | No second-level nav under Interpretation. Sources are reached through the destination's own screen (S5-D2), not through the sidebar. |
-| NAV-9 | Nothing in the sidebar should signal that the layer is incomplete. The destination is permanent even though the screen behind it cannot open a Source yet — that caveat belongs on S5-D2's list, not in the nav. |
+| NAV-9 | Nothing in the sidebar should signal that the layer is incomplete. The destination is permanent; any "graph not built yet" caveat belongs on the stub behind a Source (S5-D2), not in the nav. |
 
 ---
 

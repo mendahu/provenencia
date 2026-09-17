@@ -6,7 +6,7 @@ Interpretation foundation: candidate refs, Node vocabulary, Nodes, layout storag
 
 **Planned.** No steps landed. Landings go in [`completed.md`](completed.md).
 
-> **This spike ships no Node UI.** The graph is the only surface for Nodes, Citations, and Observations (design note §1.3), and the graph is Spike 6 — so there is nothing in this spike a researcher can click to make a Node. The rail is proven by Go tests. See *Scope boundary* below for what that costs and why it was chosen over a throwaway list.
+> **This spike ships no Node UI.** The graph is the only surface for Nodes, Citations, and Observations (design note §1.3), and the graph is Spike 6 — so there is nothing in this spike a researcher can click to make a Node. The rail is proven by Go tests. Navigation is proven by a Sources list that opens a stub destination. See *Scope boundary* below.
 
 ## Goal (dogfood bar)
 
@@ -15,8 +15,8 @@ Split, because most of this spike is not verifiable by clicking.
 **Verifiable in the app:**
 
 1. Sidebar → **Interpretation** exists, and lands on a list of the project's Sources.
-2. Rows are visibly inert — nothing happens on click, and nothing pretends otherwise.
-3. Back/Forward and relaunch restore the Interpretation section root; returning to it is a session-cache hit.
+2. Activating a Source lands on a stub / "coming soon" destination for that Source — placeholders are fine; the canvas replaces it in Spike 6.
+3. Back/Forward and relaunch restore the Interpretation place; returning to it is a session-cache hit.
 4. Creating a project seeds all seven Node Types.
 
 **Verifiable only by test or inspection:**
@@ -37,7 +37,7 @@ One board per surface, so each can be run independently:
 | Step | Brief | Covers | Gates |
 | --- | --- | --- | --- |
 | **S5-D1** | Interpretation nav entry | The sidebar destination — label, icon, placement, empty badge slot | S5-07 |
-| **S5-D2** | Interpretation Sources list | The Source picker behind the destination: rows, purpose copy, empty state, and how an **inert** row reads | S5-08 |
+| **S5-D2** | Interpretation Sources list | The Source picker behind the destination: rows, purpose copy, empty state, and a light stub behind a row | S5-08 |
 
 S5-D1 gates S5-07 because the sidebar case commits to a label and a `PVSymbol` in that PR. Stub destination views in S5-07 are exempt — they are compile scaffolding, replaced before anything ships.
 
@@ -45,7 +45,7 @@ Both boards are small, and the design track is no longer a meaningful schedule r
 
 **Two briefs were cut** when the graph became the only Node surface (design note §1.3): a *Source page entry control* and a *Source nodes destination*. Neither is re-homed here. Spike 6 will be planned fresh once this spike's results are in, and its design track written then — writing those boards now would bake in assumptions the canvas is likely to overturn.
 
-The one genuinely new design question is small but real: **S5-D2's rows go nowhere.** A row that looks actionable and does nothing is a defect, so the board has to say whether inert rows are plainly non-interactive or explicitly marked as not-yet-available.
+The destination behind a Source row is a stub until Spike 6. Early development: a plain "coming soon" placeholder is fine — do not over-design it.
 
 ## PR sequence
 
@@ -73,24 +73,24 @@ S5-D1  Nav entry             S5-01  Node Type prefixes (core/ref)
   │                          S5-06  Proto + dispatch + handlers
   │                            │    codegen Go *and* Swift
   │                            ▼
-  └────── gates ────────────▶ S5-07  Section, root place, query keys, store
+  └────── gates ────────────▶ S5-07  Section, places, query keys, store
                                │     registry plumbing, sidebar case
 S5-D2  Sources list            │
   │                            ▼
   └────── gates ────────────▶ S5-08  Interpretation Sources list
-                               │     inert rows; no deep place
+                               │     rows open a stub destination
                                ▼
                              S5-09  Docs, dogfood, cleanup
 ```
 
-Nine steps, not ten: the Source nodes list is gone, and the Source-page button went with it to Spike 6.
+Nine steps, not ten: the Source nodes list is gone, and the Source-page button went with it to Spike 6. A deep place ships, but only as a placeholder.
 
 ---
 
 ## Checklist
 
 - [ ] S5-D1 — Design: Interpretation nav entry (sidebar destination) → [`design/`](design/)
-- [ ] S5-D2 — Design: Interpretation Sources list (inert rows) → [`design/`](design/)
+- [ ] S5-D2 — Design: Interpretation Sources list → [`design/`](design/)
 - [x] S5-01 — Node Type prefix validation in `core/ref` → [`completed.md`](completed.md)
 - [ ] S5-02 — Interpretation schema migration
 - [ ] S5-03 — Node type vocabulary and create-time seed
@@ -98,7 +98,7 @@ Nine steps, not ten: the Source nodes list is gone, and the Source-page button w
 - [ ] S5-05 — Graph layout positions
 - [ ] S5-06 — FFI methods for node types, nodes, and positions
 - [ ] S5-07 — Interpretation workspace section and root place
-- [ ] S5-08 — Interpretation Sources list with inert rows
+- [ ] S5-08 — Interpretation Sources list (stub behind a Source)
 - [ ] S5-09 — Docs, dogfood, cleanup
 
 ---
@@ -177,14 +177,14 @@ The judgment call in this plan is what sits behind a Source in the Interpretatio
 | --- | --- |
 | Render the canvas | Rejected — that is Spike 6, and the whole point of this spike is that Spike 6 starts clean. |
 | Render a plain list of the Source's Nodes | **Previously taken, now rejected.** It was justified as the structured non-canvas editing path the old §7.4 promised. With one surface only, that path does not exist, so the list would be a screen we build, design a board for, and delete in slice 2. |
-| Render a "coming soon" placeholder | Rejected. It proves only that navigation works, and it commits a deep `PlaceRegistry` spec and destination view that Spike 6 immediately rewrites. |
-| **Nothing — no deep place at all** | **Taken.** The section has a root (the Sources list) and no deep destination. Rows are inert until the canvas gives them somewhere to go. |
+| **Render a "coming soon" placeholder** | **Taken.** Proves navigation and the deep place end to end. The view is throwaway scaffolding Spike 6 replaces — fine in early development. |
+| Nothing — no deep place at all | Rejected once placeholders were accepted. Leaving rows with nowhere to go is more awkward than a one-line stub. |
 
-**What this costs.** The data path — migration → Go → FFI → store → session cache → view — is no longer proven by seeing a row render. It is proven by Go tests and a `FakeStore` round-trip, which is genuinely less confidence: an integration mistake between the store layer and a real SwiftUI destination would survive this spike undetected.
+**What this costs.** The data path still is not proven by creating a Node in the UI — there is no Node UI. Migration → Go → FFI → store is proven by Go tests and a `FakeStore` round-trip. Navigation → deep place → stub view *is* exercised by clicking through.
 
-**Why it is still the right trade.** The alternative buys that confidence with a screen that has no future, plus a design board for it, plus the deep place spec and destination view — and Spike 6 pays again to remove them. Accepting a weaker proof here keeps the canvas spike's first PR a bubble instead of a deletion. The mitigation is to make the Go and `FakeStore` coverage genuinely complete rather than nominal, so that when slice 2 breaks, it is the canvas that is broken.
+**Why the stub is fine.** The app is not in production; a placeholder destination is cheaper than carefully designed inert rows, and Spike 6 was always going to rewrite whatever sits behind a Source. Keep the place identity stable if convenient so Spike 6 swaps the view rather than the route.
 
-**The accessibility consequence, stated here so it is not lost.** Dropping the list means the canvas's accessibility representation is the only path for VoiceOver and keyboard-only researchers. Design note §7.4 moves it from the polish slice into slice 2 for that reason. Nothing in *this* spike implements it, but Spike 6 cannot treat it as optional.
+**The accessibility consequence, stated here so it is not lost.** Dropping the node list means the canvas's accessibility representation is the only path for VoiceOver and keyboard-only researchers. Design note §7.4 moves it from the polish slice into slice 2 for that reason. Nothing in *this* spike implements it, but Spike 6 cannot treat it as optional.
 
 ---
 
@@ -204,11 +204,11 @@ Findings from the pattern inventory that will otherwise cost a day each.
 | **Node refs need a join inside the transaction** | Unlike `sources` (constant `SRC`), minting a Node ref means reading `node_types.candidate_ref_prefix` first. Extend the `requireType(tx, …)` existence check to return the prefix, then reuse the 8-attempt retry loop from `sources.go`. |
 | **Audit needs no registry entry** | `EntityType` / `ActionType` are unvalidated free-form strings — which also means a typo persists silently. Convention: singular snake_case table name, `{verb}_{entity}`. |
 | **Protobuf codegen is manual and dual-target** | `scripts/generate-proto.sh` needs `protoc`, `protoc-gen-go`, `protoc-gen-swift`, and writes **both** `api/proto/engine/engine.pb.go` and `macos/App/Platform/Generated/engine.pb.swift`. Commit both; forgetting the Swift half breaks the app build. Methods start at 45 (`METHOD_SEARCH_CATALOG = 44` is current highest). |
-| **`?? .sourcesList` hides a missing spec** | `WorkspaceDestinationHost.presentation(for:)` falls back silently, so a new section with no `PlaceRegistry` spec renders the ordinary Sources list while the sidebar shows Interpretation selected. Land the root spec and the sidebar case in the same PR (S5-07). Note this fallback makes the *absence* of a deep place quiet rather than loud — a stray `.interpretationGraph` location carrying a `sourceId` would render the Sources list, not an error. Assert that no such location can be constructed this spike. |
-| **Two hard test gates** | `PlaceRegistryTests.registryCoversAllPlaceIDs` switches exhaustively over `PlaceID`, and `WorkspaceDestinationHostTests` asserts `known.count == 4` over `WorkspacePresentationID`. Both fail the moment a case is added — and with no deep place this spike, that is **one** new case each, not two. |
+| **`?? .sourcesList` hides a missing spec** | `WorkspaceDestinationHost.presentation(for:)` falls back silently, so a new section with no `PlaceRegistry` spec renders the ordinary Sources list while the sidebar shows Interpretation selected. Land the root spec, deep stub spec, and the sidebar case across S5-07 / S5-08. |
+| **Two hard test gates** | `PlaceRegistryTests.registryCoversAllPlaceIDs` switches exhaustively over `PlaceID`, and `WorkspaceDestinationHostTests` asserts `known.count == 4` over `WorkspacePresentationID`. Both fail the moment a case is added — expect **two** new cases (root + deep stub). |
 | **History is not forward-compatible** | `WorkspaceSection.init(from:)` throws on an unknown raw value, so history written by a build with `interpretation` fails to decode on a build without it (surfacing as `NavigationHistoryIssue.loadFailed`). Acceptable for a solo dogfood, worth knowing before bisecting. |
 | **The Source page cannot navigate today** | Nothing in `Features/Sources/` except `SourcesListView` holds `@Environment(WorkspaceNavigation.self)`. Not this spike's problem any more — the Source-page button moved to Spike 6 — but it is the first thing that work will hit. |
-| **Inert rows are a design problem, not a `TODO`** | S5-08's rows have no destination. Do not ship a row with a tap target that silently does nothing; that reads as a bug to the only user. The board (S5-D2) has to decide how an unavailable row looks, and the implementation has to match it rather than wiring a no-op handler. |
+| **Stub destination is enough** | S5-08's deep place can be a one-line "coming soon" view. Do not build a node list behind it; do not over-design the placeholder. Spike 6 replaces the view. |
 | **Nodes are deliberately non-searchable** | Projecting them into the omnibar would mean a `KindNode`, a registry `KindSpec`, a projector, a `WorkspaceLocation` mapper, a `projection_version` bump, and `FakeStore` parity. Declare Nodes out of search for this spike and revisit when they carry names. |
 | **Onboarding tests exercise the seed** | `sourceFixture` runs full onboarding, so a bug in `nodetypes.Install` fails tests across `api/ffi/handlers`, `core/onboarding`, and several `core/database` packages at once. |
 
@@ -251,7 +251,7 @@ The one thing it did change is the name of the layout table. It is **`node_posit
 | S5-04 | Add audited node CRUD for the interpretation layer |
 | S5-05 | Persist graph node positions outside the audit trail |
 | S5-06 | Expose node types, nodes, and positions over FFI |
-| S5-07 | Register the interpretation workspace section and its root place |
+| S5-07 | Register the interpretation workspace section and its places |
 | S5-08 | Add the interpretation sources list ahead of the canvas |
 | S5-09 | Document the interpretation foundation and close spike 5 |
 
@@ -277,10 +277,10 @@ The design track is no longer a real schedule risk. Two small boards remain, bot
 
 Jake can, on his MacBook:
 
-1. Complete the in-app half of the dogfood bar above on a real project — reach the Interpretation section, see his Sources, and find the inert rows unsurprising rather than broken.
+1. Complete the in-app half of the dogfood bar above on a real project — reach the Interpretation section, open a Source, and land on the stub without surprise.
 2. Run `CGO_ENABLED=1 go test -tags fts5 ./...` and see the test-only half of the bar covered, including a `FakeStore` round-trip for every new RPC.
-3. Point at `node_types` / `nodes` / `node_positions` and the Interpretation section root as the foundation Spike 6 builds on, with no schema, Go, or FFI work left in front of the canvas.
-4. Confirm the layer is *inert but honest*: nothing in the UI claims a Node exists, is cited, or can be created yet.
+3. Point at `node_types` / `nodes` / `node_positions` and the Interpretation places as the foundation Spike 6 builds on, with no schema, Go, or FFI work left in front of the canvas.
+4. Confirm the layer is *honest*: the stub does not claim Nodes exist or can be created yet.
 
 Per [`versioning.mdc`](../../../.cursor/rules/versioning.mdc), the docs in this folder do not bump `VERSION`; cutting a release that contains the spike bumps product PATCH across `VERSION`, `core/version.go`, and both Xcode `MARKETING_VERSION` configurations.
 
@@ -294,14 +294,13 @@ So the boundary is unambiguous — on the day Spike 6 opens, these exist and wor
 - A seeded Node Type vocabulary with both `ref_prefix` and `candidate_ref_prefix` values.
 - A positions table and the RPCs to read and write it.
 - A `.sourceGraph(project:sourceId:)` query key owning Nodes and their positions in one payload (design note §5.3), warmed by `session.apply(location:)`.
-- A workspace section, its **root** place, the Sources list behind it, and working Back/Forward.
+- A workspace section, root + deep places, the Sources list, a stub behind a Source, and working Back/Forward.
 - A `FakeStore` that answers every new RPC, so Swift work can start without the dylib.
 
-Spike 6's first PR is the `NSScrollView` bridge and a bubble.
+Spike 6's first PR is the `NSScrollView` bridge and a bubble — swapping the stub view for the canvas.
 
 And these are explicitly **not** inherited — Spike 6 owns them, and they are unplanned on purpose so the canvas's results can inform them:
 
-- The deep `PlaceRegistry` spec and the destination view behind a Source row.
-- Wiring S5-08's inert rows to that destination.
+- The real canvas destination behind a Source row (replacing the stub).
 - The Source-page **Open interpretation graph** button, and its design board.
 - The canvas accessibility representation and keyboard parity, which design note §7.4 makes slice-2 work rather than polish.

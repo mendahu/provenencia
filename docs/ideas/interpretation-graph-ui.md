@@ -527,7 +527,7 @@ The test is narrow: **what does the first `nodes` INSERT actually require?** The
 | **`nodes` table + `core/database/nodes`** | Create, list, rename, delete — **with audit wiring.** Every domain write in this product goes through `audit.Record(tx, …)` (see `sources/notes.go`); that is not optional, and it is the bulk of the work here. | Medium |
 | **Layout table** | Integer grid cells, unaudited (§5). Persistence across relaunch is part of what the canvas validates, so it cannot be held in memory — and it ships in slice 1 so the canvas slice opens with no schema work in front of it. | Small |
 | **FFI handlers** | `add-ffi-handler` skill. | Small |
-| **Graph workspace place** | A `WorkspaceSection` case (**no** `WorkspaceLocation` change needed — see §11.1.2), `CatalogQueryKey`, registry loader, the **root** `PlaceRegistry` spec and the Sources list behind it, `CatalogCounts` badge entry. The deep spec and its destination view land with the canvas in slice 2, since slice 1 has nothing to show there. `add-workspace-place` and `add-workspace-location` cover it. | Medium |
+| **Graph workspace place** | A `WorkspaceSection` case (**no** `WorkspaceLocation` change needed — see §11.1.2), `CatalogQueryKey`, registry loader, root + deep `PlaceRegistry` specs, the Sources list, and a stub destination behind a Source (placeholders are fine; Spike 6 swaps in the canvas). `CatalogCounts` badge entry. `add-workspace-place` and `add-workspace-location` cover it. | Medium |
 
 ### 11.1.1 Three Node Types cost the same as one
 
@@ -550,7 +550,7 @@ WorkspaceLocation(section: .interpretationGraph, sourceId: X)   → that Source'
 
 The Source page button, when it lands in slice 2, is then one `navigation.go(to:)` call, and it should populate the denormalized `ref` and `title` so the Back/Forward jump menu reads properly.
 
-**The Sources list, though, is forced by the navigation contract rather than being a nice-to-have** — which is why it ships in slice 1 even though its rows go nowhere yet. Two mechanisms make it so:
+**The Sources list, though, is forced by the navigation contract rather than being a nice-to-have** — which is why it ships in slice 1 even though the canvas behind a row is not built yet. Two mechanisms make it so:
 
 - `WorkspaceSidebar` builds its items from `WorkspaceSection.allCases`, so adding a section **automatically adds a sidebar row**, and that row navigates to `.sectionRoot(section)` — a location with no `sourceId`. Something has to render there. (It also needs a `CatalogCounts.badge(for:)` entry, `nil` for now.)
 - Destinations prune missing deep ids with `navigation.fallbackToSectionRoot()`. So when a Source is deleted while its graph is in history, the graph view falls back to the graph section root — which means **the section root is the error-recovery destination**, not just a landing page.
@@ -584,7 +584,7 @@ Deferred, blocking nothing:
 
 ## 11.4 Slice order
 
-1. **Foundation** (§11.1) — candidate refs, `node_types` and its seed, audited `nodes` CRUD, the layout table, FFI, the Interpretation section, and the Sources list as its root (§11.1.2). **No Node UI**: rows are inert, because there is nothing to open yet.
+1. **Foundation** (§11.1) — candidate refs, `node_types` and its seed, audited `nodes` CRUD, the layout table, FFI, the Interpretation section, and the Sources list as its root (§11.1.2). **No Node UI**: a Source opens a stub until the canvas exists.
 2. **Bubbles** — the canvas proper: `NSScrollView` bridge, persons / events / places, working labels, drag / snap / select / persist, the tray for unplaced Nodes. Wires the Sources list rows to it, and ships the accessibility representation and keyboard parity alongside the first bubbles (§7.4).
 3. **Property vocabulary** — `properties`, `node_type_properties`, the browser UI, `ref_prefix` validation.
 4. **Artifact viewer + Citations** — PDF and image; `page`, `region`, `text_quote`; Go-side locator validation.
@@ -597,7 +597,7 @@ Deferred, blocking nothing:
 
 **The cost of the split is that slice 1 ships a layer with no visible capability, and that cost is now accepted rather than bought off.** An earlier draft of this note put a plain list of a Source's Nodes at the graph destination to prove the data path, justified as the structured non-canvas editing path §7.4 was committed to. Since the graph is now the only surface (§1.3), that list would be throwaway UI — built, designed, and then deleted by slice 2 — so it is dropped.
 
-What slice 1 ships instead is the sidebar entry and the Sources list, because the navigation contract forces the section root to exist (§11.1.2) and it is permanent rather than throwaway. Its rows are inert: there is no destination behind them until slice 2.
+What slice 1 ships instead is the sidebar entry and the Sources list, because the navigation contract forces the section root to exist (§11.1.2) and it is permanent rather than throwaway. Activating a Source can land on a stub / "coming soon" destination — early development; Spike 6 replaces the view with the canvas.
 
 The data path — migration → Go → FFI → store → session cache — is therefore proven by Go tests and a `FakeStore` round-trip rather than by a screen. That is a real reduction in confidence compared to seeing a row render, and it is the deliberate price of the first visible Node being a bubble. The mitigation is that slice 2 opens against a fully tested rail, so a canvas bug in slice 2 is a canvas bug and not an ambiguity about which layer is broken.
 

@@ -11,13 +11,13 @@ One board per surface, in flow order:
 | Step | Brief | Feeds | Notes |
 | --- | --- | --- | --- |
 | S5-D1 | [`S5-D1-interpretation-nav-entry.md`](S5-D1-interpretation-nav-entry.md) | PR S5-07 | The Interpretation sidebar destination — label, icon, placement. Small board. |
-| S5-D2 | [`S5-D2-interpretation-sources-list.md`](S5-D2-interpretation-sources-list.md) | PR S5-08 | The Source picker it lands on, including how an **inert** row reads |
+| S5-D2 | [`S5-D2-interpretation-sources-list.md`](S5-D2-interpretation-sources-list.md) | PR S5-08 | The Source picker it lands on; stub behind a row is fine |
 
 Both are writable immediately; neither depends on the Go track. Start S5-D1 alongside S5-01 so design never becomes the critical path.
 
 **This spike designs no Node UI at all.** The interpretation graph is the only surface for Nodes, Citations, and Observations (design note §1.3), and it is Spike 6. Two briefs that existed here were deleted when that was settled — a Source-page entry control and a per-Source node list — and they are not re-homed. Spike 6 gets a fresh design track once this spike's results are in.
 
-The one genuinely unusual thing to design here: **S5-D2's rows go nowhere in this spike**, because the graph they would open does not exist yet. That is a real design problem, not a `TODO`, and the brief treats it as one.
+The destination behind a Source can be a plain "coming soon" stub. Early development — placeholders are fine; Spike 6 replaces the view.
 
 ## Completed
 

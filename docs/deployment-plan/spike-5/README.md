@@ -6,7 +6,7 @@
 
 Lay the first Interpretation-layer track — candidate refs, Node vocabulary, Nodes, layout storage, FFI, and the Interpretation section root — so that **Spike 6 can open a file and start drawing.** The canvas itself is deliberately out of scope: this spike ends exactly where it begins.
 
-> **No Node UI ships here.** The interpretation graph is the only way to interact with Nodes, Citations, and Observations (design note §1.3), and the graph is Spike 6. So this spike adds a sidebar destination and a list of Sources whose rows do not open yet, and everything underneath is proven by Go tests. The trade is argued in the deployment plan's *Scope boundary*.
+> **No Node UI ships here.** The interpretation graph is the only way to interact with Nodes, Citations, and Observations (design note §1.3), and the graph is Spike 6. So this spike adds a sidebar destination, a Sources list, and a stub behind a Source — placeholders are fine. Everything underneath is proven by Go tests. The trade is argued in the deployment plan's *Scope boundary*.
 
 Authoritative design: [`interpretation-graph-ui.md`](../../ideas/interpretation-graph-ui.md) §11.1 ("the load-bearing minimum"). Authoritative schema: [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) §4. Seed vocabulary: [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.1.
 
@@ -23,7 +23,7 @@ The answer is small. `nodes` has exactly two foreign keys — `sources`, which e
 A researcher can:
 
 1. Click **Interpretation** in the sidebar and land on a list of the project's Sources.
-2. Tell at a glance that a Source cannot be opened yet, without it reading as a broken row.
+2. Open a Source and land on a stub / "coming soon" destination for that Source.
 3. Leave, navigate elsewhere, and return via Back/Forward or the sidebar with the place restored and the session cache warm.
 
 Everything else is proven by test rather than by clicking: `person`, `event`, and `place` Nodes can be created with candidate refs (`CPR-7KD45`, `CEV-…`, `CPL-…`), renamed, deleted, and audited; grid positions round-trip; and `FakeStore` answers every new RPC.
@@ -52,7 +52,7 @@ Spike 4 shipped **how places load and render** (`WorkspaceSession`, `CatalogQuer
 Everything below is deferred on purpose. None of it blocks the canvas.
 
 - **The canvas.** No `NSScrollView` bridge, no drawing, no drag, no snap-to-grid, no tray, no connect tool.
-- **Any UI that touches a Node.** No node list, no node table, no create/rename/delete affordance, and no placeholder destination behind a Source row. The graph is the only Node surface and it is Spike 6.
+- **Any UI that creates or edits a Node.** No node list, no node table, no create/rename/delete affordance. A stub behind a Source row is fine; the graph is still the only Node surface and it is Spike 6.
 - **Observations and Citations.** No `properties`, `node_type_properties`, `observations`, `citations`, or locator validation.
 - **Bridge Node macros.** `relationship` / `participation` / `location` types are *seeded*, but nothing creates them — they need Observations to mean anything.
 - **The artifact viewer** and NameValue (§4.4 of the design note — its own chunk of work, on the Observation path).
