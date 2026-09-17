@@ -22,6 +22,7 @@ Changes to the plan itself, as opposed to landed work.
 | [S5-01](#s5-01--pr-node-type-prefix-validation) | PR | Subject type prefix validation + reserved-prefix guard in `core/ref` |
 | [S5-02](#s5-02--pr-interpretation-schema-migration) | PR | `subject_types`, `subjects`, `subject_positions` via migration `000021` |
 | [S5-03](#s5-03--pr-subject-type-vocabulary-and-seed) | PR | Seven Subject types seeded at catalog create |
+| [S5-04](#s5-04--pr-subject-crud-with-audit) | PR | Audited Subject Create / Update / Delete |
 | [S5-D1](#s5-d1--design-interpretation-nav-entry) | Design | Interpretation sidebar destination — **superseded** |
 | [S5-D3](#s5-d3--design-sources-section-nav) | Design | Nested Sources family nav — Subject types / fields stubs |
 
@@ -117,4 +118,23 @@ CGO_ENABLED=1 go test -tags fts5 ./core/database/...
 
 ```bash
 CGO_ENABLED=1 go test -tags fts5 ./core/database/subjecttypes/... ./core/onboarding/...
+```
+
+### S5-04 — PR: Subject CRUD with audit
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S5-03 (seeded `subject_types` with `candidate_ref_prefix`) |
+| **Deliverables** | Done. [`core/database/subjects/subjects.go`](../../../core/database/subjects/subjects.go): audited `Create` / `Update` / `Delete` / `Get` / `GetByRef` / `ListBySource`. Create reads `candidate_ref_prefix` in-tx and mints with the sources-style 8-attempt unique retry. Audit EntityType `subject`; ActionTypes `create_subject` / `update_subject` / `delete_subject`. `subject_type_id` immutable after insert. Wire code `subjects.invalid`. |
+| **Tests** | Done. [`subjects_test.go`](../../../core/database/subjects/subjects_test.go): CPR/CEV minting, audit actions + entity type, update/no-op, delete + position CASCADE, ListBySource scoping, invalid ids. |
+| **Dogfood** | App unchanged (no FFI yet). Verifiable by Go tests / sqlite inspection of audit rows. |
+| **Out** | Positions query package (S5-05); FFI (S5-06); UI; omnibar search. |
+
+**Landed:** Interpretation Subjects can be created, renamed, and deleted under audit with candidate refs (`CPR-…`, `CEV-…`, …).
+
+**Verify:**
+
+```bash
+CGO_ENABLED=1 go test -tags fts5 ./core/database/subjects/...
 ```
