@@ -4,7 +4,7 @@ Interpretation foundation: candidate refs, subject vocabulary, Subjects, layout 
 
 ## Status
 
-**Planned.** Landings go in [`completed.md`](completed.md). S5-01 through S5-06, and S5-D1 / S5-D3, are recorded there.
+**Planned.** Landings go in [`completed.md`](completed.md). S5-01 through S5-07, and S5-D1 / S5-D3, are recorded there.
 
 > **This spike ships no Subject UI.** The graph is the only surface for Subjects, Citations, and Observations (design note §1.3), and the graph is Spike 6. Product nav keeps **one Sources family** — no Interpretation sidebar section (§1.4). Entry is dual action on the Sources list → graph stub. See *Scope boundary* below.
 
@@ -60,7 +60,7 @@ S5-D3  Sources nav           S5-01  Subject type prefixes (core/ref)   done
   │                            ▼
   │                          S5-06  Proto + dispatch + handlers      done
   │                            ▼
-  └────── gates ────────────▶ S5-07  Location discriminator, Subject
+  └────── gates ────────────▶ S5-07  Location discriminator, Subject  done
                                │     types/fields sections, graph place,
                                │     stub destinations
 S5-D2  List dual action        │
@@ -84,7 +84,7 @@ S5-D2  List dual action        │
 - [x] S5-04 — Subject CRUD with audit → [`completed.md`](completed.md)
 - [x] S5-05 — Graph layout positions → [`completed.md`](completed.md)
 - [x] S5-06 — FFI methods for subject types, subjects, and positions → [`completed.md`](completed.md)
-- [ ] S5-07 — Nested Sources nav + Subject* stubs + graph place + `WorkspaceLocation` discriminator
+- [x] S5-07 — Nested Sources nav + Subject* stubs + graph place + `WorkspaceLocation` discriminator → [`completed.md`](completed.md)
 - [ ] S5-08 — Sources list → Evidence graph stub
 - [ ] S5-09 — Docs, dogfood, cleanup
 
@@ -253,7 +253,7 @@ The one thing it did change is the name of the layout table. It is **`subject_po
 | **Go core (critical path)** | S5-01 → S5-06 |
 | **Mac client** | S5-07 → S5-08 → S5-09 |
 
-S5-01 and S5-D3 are done. Go critical path through S5-06 is done. Mac client: S5-07 next (after S5-D2). Design: finish S5-D2 next.
+S5-01 and S5-D3 are done. Go critical path through S5-06 and Mac client S5-07 are done. Next: S5-08 (after S5-D2). Design: finish S5-D2 next.
 
 ---
 

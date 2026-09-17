@@ -46,4 +46,19 @@ struct WorkspaceToolbarBreadcrumbTests {
         )
         #expect(bare.last?.label == "…")
     }
+
+    @Test func evidenceGraphLeafUsesGraphTitle() {
+        let items = WorkspaceToolbar.breadcrumbItems(
+            for: WorkspaceLocation(
+                section: .sources,
+                sourceId: "src-1",
+                sourceSurface: .graph,
+                ref: "SRC-AAAA",
+                title: "Deed"
+            ),
+            goToSectionRoot: { _ in }
+        )
+        #expect(items.count == 2)
+        #expect(items[1].label == String(localized: L10n.Workspace.evidenceGraphTitle))
+    }
 }

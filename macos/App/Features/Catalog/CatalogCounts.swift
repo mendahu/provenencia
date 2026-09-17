@@ -77,6 +77,7 @@ final class CatalogCounts {
         case .sources: sources
         case .sourceTypes: sourceTypes?.total
         case .sourceFields: sourceFields?.total
+        case .subjectTypes, .subjectFields: nil
         }
     }
 

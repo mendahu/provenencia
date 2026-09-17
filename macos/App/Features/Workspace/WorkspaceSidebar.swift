@@ -35,15 +35,27 @@ struct WorkspaceSidebar: View {
     private let trafficLightLeadingInset: CGFloat = 100
 
     private var items: [PVSidebarNavItem] {
-        WorkspaceSection.allCases.map { section in
+        let configSections: [WorkspaceSection] = [
+            .sourceTypes, .sourceFields, .subjectTypes, .subjectFields,
+        ]
+        let configChildren = configSections.map { section in
             PVSidebarNavItem(
                 id: section.rawValue,
                 label: section.label,
                 icon: section.icon,
-                accessibilityIdentifier: "workspace.nav.\(section.rawValue)",
-                count: catalogCounts.badge(for: section)
+                accessibilityIdentifier: "workspace.nav.\(section.rawValue)"
             )
         }
+        return [
+            PVSidebarNavItem(
+                id: WorkspaceSection.sources.rawValue,
+                label: WorkspaceSection.sources.label,
+                icon: WorkspaceSection.sources.icon,
+                accessibilityIdentifier: "workspace.nav.sources",
+                count: catalogCounts.badge(for: .sources),
+                children: configChildren
+            ),
+        ]
     }
 
     var body: some View {
@@ -52,7 +64,6 @@ struct WorkspaceSidebar: View {
                 VStack(spacing: 0) {
                     brandHeader
                     PVSidebarNav(
-                        groupLabel: L10n.Workspace.navGroupLabel,
                         items: items,
                         selection: navigation.selectedSection.rawValue,
                         collapsed: workspace.isSidebarCollapsed,

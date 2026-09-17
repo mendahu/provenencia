@@ -4,6 +4,9 @@ import Foundation
 enum WorkspacePresentationID: Hashable, Sendable, CaseIterable {
     case sourcesList
     case sourcePage
+    case sourceGraph
     case sourceFields
     case sourceTypes
+    case subjectTypes
+    case subjectFields
 }

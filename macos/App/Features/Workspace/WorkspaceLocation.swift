@@ -1,5 +1,13 @@
 import Foundation
 
+/// Distinguishes Source detail vs Evidence graph under the same `sourceId`.
+/// Sidebar selection still uses `WorkspaceSection.sources` for both; this field
+/// is for place identity / history / host routing only.
+enum SourceSurface: String, Codable, Sendable, Equatable {
+    case page
+    case graph
+}
+
 /// Result of reconciling a destination model to a navigation `WorkspaceLocation`.
 /// Views map `.missingDeepId` to `navigation.fallbackToSectionRoot()`.
 enum WorkspaceLocationReconcile: Equatable, Sendable {
@@ -19,16 +27,24 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     var sourceId: String?
     var fieldId: String?
     var typeId: String?
+    /// Page vs Evidence graph when `section == .sources` and `sourceId` is set.
+    /// Legacy history without this key decodes as `.page`.
+    var sourceSurface: SourceSurface
     /// Denormalized jump-menu cache; ignored for navigation identity.
     var ref: String?
     /// Denormalized jump-menu cache; ignored for navigation identity.
     var title: String?
+
+    enum CodingKeys: String, CodingKey {
+        case section, sourceId, fieldId, typeId, sourceSurface, ref, title
+    }
 
     init(
         section: WorkspaceSection,
         sourceId: String? = nil,
         fieldId: String? = nil,
         typeId: String? = nil,
+        sourceSurface: SourceSurface = .page,
         ref: String? = nil,
         title: String? = nil
     ) {
@@ -36,8 +52,20 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         self.sourceId = Self.nilIfEmpty(sourceId)
         self.fieldId = Self.nilIfEmpty(fieldId)
         self.typeId = Self.nilIfEmpty(typeId)
+        self.sourceSurface = sourceSurface
         self.ref = Self.nilIfEmpty(ref)
         self.title = Self.nilIfEmpty(title)
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        section = try container.decode(WorkspaceSection.self, forKey: .section)
+        sourceId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .sourceId))
+        fieldId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .fieldId))
+        typeId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .typeId))
+        sourceSurface = try container.decodeIfPresent(SourceSurface.self, forKey: .sourceSurface) ?? .page
+        ref = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .ref))
+        title = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .title))
     }
 
     /// Section list root (no deep id).
@@ -51,6 +79,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
             && lhs.sourceId == rhs.sourceId
             && lhs.fieldId == rhs.fieldId
             && lhs.typeId == rhs.typeId
+            && lhs.sourceSurface == rhs.sourceSurface
     }
 
     private static func nilIfEmpty(_ value: String?) -> String? {

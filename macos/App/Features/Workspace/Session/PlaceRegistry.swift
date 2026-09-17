@@ -16,10 +16,25 @@ struct PlaceRegistry: Sendable {
     /// Higher priority wins when multiple specs could match.
     private let specs: [Spec] = [
         Spec(
+            id: .sourceGraph,
+            presentation: .sourceGraph,
+            priority: 110,
+            matches: {
+                $0.section == .sources && $0.sourceId != nil && $0.sourceSurface == .graph
+            },
+            queryKeys: { project, location in
+                guard let sourceId = location.sourceId else { return [] }
+                return [.sourceGraph(project: project, sourceId: sourceId)]
+            },
+            deepId: { $0.sourceId }
+        ),
+        Spec(
             id: .sourceDetail,
             presentation: .sourcePage,
             priority: 100,
-            matches: { $0.section == .sources && $0.sourceId != nil },
+            matches: {
+                $0.section == .sources && $0.sourceId != nil && $0.sourceSurface == .page
+            },
             queryKeys: { project, location in
                 guard let sourceId = location.sourceId else { return [] }
                 // The page's vocabulary (type picker, credibility chips,
@@ -58,6 +73,22 @@ struct PlaceRegistry: Sendable {
                 [.metadataFieldsList(project: project)]
             },
             deepId: { $0.fieldId }
+        ),
+        Spec(
+            id: .subjectTypes,
+            presentation: .subjectTypes,
+            priority: 80,
+            matches: { $0.section == .subjectTypes },
+            queryKeys: { _, _ in [] },
+            deepId: { _ in nil }
+        ),
+        Spec(
+            id: .subjectFields,
+            presentation: .subjectFields,
+            priority: 80,
+            matches: { $0.section == .subjectFields },
+            queryKeys: { _, _ in [] },
+            deepId: { _ in nil }
         ),
         Spec(
             id: .sourcesList,

@@ -21,6 +21,14 @@ struct WorkspaceDestinationHostTests {
         )
     }
 
+    @Test func presentationSourceGraph() {
+        #expect(
+            presentation(
+                for: WorkspaceLocation(section: .sources, sourceId: "src-1", sourceSurface: .graph)
+            ) == .sourceGraph
+        )
+    }
+
     @Test func presentationSourceFieldsRootAndRow() {
         #expect(presentation(for: .sectionRoot(.sourceFields)) == .sourceFields)
         #expect(
@@ -37,9 +45,20 @@ struct WorkspaceDestinationHostTests {
         )
     }
 
-    @Test func bothSourcePresentationsUseSourcesDestination() {
+    @Test func presentationSubjectStubs() {
+        #expect(presentation(for: .sectionRoot(.subjectTypes)) == .subjectTypes)
+        #expect(presentation(for: .sectionRoot(.subjectFields)) == .subjectFields)
+    }
+
+    @Test func sourceFamilyPresentationsUseSourcesDestination() {
         #expect(WorkspaceDestinationHost.destinationKind(for: .sourcesList) == .sources)
         #expect(WorkspaceDestinationHost.destinationKind(for: .sourcePage) == .sources)
+        #expect(WorkspaceDestinationHost.destinationKind(for: .sourceGraph) == .sources)
+    }
+
+    @Test func subjectPresentationsHaveOwnKinds() {
+        #expect(WorkspaceDestinationHost.destinationKind(for: .subjectTypes) == .subjectTypes)
+        #expect(WorkspaceDestinationHost.destinationKind(for: .subjectFields) == .subjectFields)
     }
 
     @Test func registryPresentationsAreKnown() {
@@ -48,10 +67,13 @@ struct WorkspaceDestinationHostTests {
         let locations: [WorkspaceLocation] = [
             .sectionRoot(.sources),
             WorkspaceLocation(section: .sources, sourceId: "s1"),
+            WorkspaceLocation(section: .sources, sourceId: "s1", sourceSurface: .graph),
             .sectionRoot(.sourceFields),
             WorkspaceLocation(section: .sourceFields, fieldId: "f1"),
             .sectionRoot(.sourceTypes),
             WorkspaceLocation(section: .sourceTypes, typeId: "t1"),
+            .sectionRoot(.subjectTypes),
+            .sectionRoot(.subjectFields),
         ]
         let known = Set(WorkspacePresentationID.allCases)
         for location in locations {
@@ -61,6 +83,6 @@ struct WorkspaceDestinationHostTests {
             }
             #expect(known.contains(place.presentation))
         }
-        #expect(known.count == 4)
+        #expect(known.count == 7)
     }
 }

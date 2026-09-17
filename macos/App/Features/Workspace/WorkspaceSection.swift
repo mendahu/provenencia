@@ -7,6 +7,8 @@ enum WorkspaceSection: String, Sendable, CaseIterable, Codable {
     case sources
     case sourceTypes = "source-types"
     case sourceFields = "source-fields"
+    case subjectTypes = "subject-types"
+    case subjectFields = "subject-fields"
 
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
@@ -29,6 +31,8 @@ enum WorkspaceSection: String, Sendable, CaseIterable, Codable {
         case .sources: L10n.Workspace.sourcesTitle
         case .sourceTypes: L10n.Workspace.sourceTypesTitle
         case .sourceFields: L10n.Workspace.sourceFieldsTitle
+        case .subjectTypes: L10n.Workspace.subjectTypesTitle
+        case .subjectFields: L10n.Workspace.subjectFieldsTitle
         }
     }
 
@@ -37,6 +41,8 @@ enum WorkspaceSection: String, Sendable, CaseIterable, Codable {
         case .sources: .library
         case .sourceTypes: .tag
         case .sourceFields: .list
+        case .subjectTypes: .shapes
+        case .subjectFields: .listTree
         }
     }
 }

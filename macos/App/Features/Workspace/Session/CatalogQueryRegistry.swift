@@ -77,6 +77,12 @@ struct CatalogQueryRegistry: Sendable {
                 .updatedMetadataField, .deletedMetadataField,
             ]
         ),
+        Spec(
+            kind: .sourceGraph,
+            stalePolicy: .sessionFresh,
+            // Stub payload until Spike 6; subject create/delete will invalidate then.
+            invalidateOn: []
+        ),
     ]
 
     func stalePolicy(for key: CatalogQueryKey) -> CatalogQueryStalePolicy {
@@ -97,6 +103,8 @@ struct CatalogQueryRegistry: Sendable {
             return try await store.getSourceWorkspace(projectDir: project.projectDir, sourceID: sourceId)
         case .typeSuggestions(let project, let typeId):
             return try await store.listTypeSuggestions(projectDir: project.projectDir, typeID: typeId)
+        case .sourceGraph(_, let sourceId):
+            return SourceGraphSnapshot(sourceId: sourceId)
         }
     }
 
@@ -138,6 +146,8 @@ private extension CatalogQueryKey.Kind {
             default:
                 return .allCached(.typeSuggestions)
             }
+        case .sourceGraph:
+            return .allCached(.sourceGraph)
         }
     }
 }

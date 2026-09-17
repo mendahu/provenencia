@@ -25,6 +25,7 @@ Changes to the plan itself, as opposed to landed work.
 | [S5-04](#s5-04--pr-subject-crud-with-audit) | PR | Audited Subject Create / Update / Delete |
 | [S5-05](#s5-05--pr-graph-layout-positions) | PR | Unaudited `subject_positions` Set / Get / Clear |
 | [S5-06](#s5-06--pr-ffi-for-subjects-types-and-positions) | PR | Eight catalog RPCs for types, subjects, positions |
+| [S5-07](#s5-07--pr-nested-sources-nav-and-evidence-graph-place) | PR | Nested Sources rail + Subject stubs + graph place |
 | [S5-D1](#s5-d1--design-interpretation-nav-entry) | Design | Interpretation sidebar destination — **superseded** |
 | [S5-D3](#s5-d3--design-sources-section-nav) | Design | Nested Sources family nav — Subject types / fields stubs |
 
@@ -178,4 +179,27 @@ CGO_ENABLED=1 go test -tags fts5 ./core/database/subjectpositions/...
 ```bash
 CGO_ENABLED=1 go test -tags fts5 ./api/ffi/...
 xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' -only-testing:ProvenenciaTests/SubjectStoreTests
+```
+
+### S5-07 — PR: Nested Sources nav and Evidence graph place
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S5-D3 (nav chrome); S5-06 (FFI available, unused by UI) |
+| **Deliverables** | Done. Nested Sources-family sidebar in [`PVSidebarNav`](../../../macos/App/DesignSystem/Components/Navigation/PVSidebarNav.swift) / [`WorkspaceSidebar`](../../../macos/App/Features/Workspace/WorkspaceSidebar.swift) (always-expanded config children; no group eyebrow). `WorkspaceSection.subjectTypes` / `.subjectFields` with stub destinations. `SourceSurface` page-vs-graph discriminator on [`WorkspaceLocation`](../../../macos/App/Features/Workspace/WorkspaceLocation.swift) (legacy decode → `.page`). Independent Evidence graph place (`PlaceID.sourceGraph`, `CatalogQueryKey.sourceGraph`, coming-soon stub). Sidebar still highlights **Sources** for both page and graph. |
+| **Tests** | Done. `PlaceRegistryTests`, `WorkspaceDestinationHostTests`, `WorkspaceNavigationTests` (surface inequality + legacy Codable), breadcrumb graph leaf. |
+| **Dogfood** | Nested Subject types / Subject fields stubs visible in the rail. Graph place registered but not opened from the list yet (S5-08). |
+| **Out** | Sources list dual action / no-Artifact gate (S5-08); canvas; Subject type/field editors; omnibar Subjects; SemVer bump. |
+
+**Landed:** Sources family nav matches S5-D3; Spike 6 can route to an Evidence graph place without colliding Source page history.
+
+**Verify:**
+
+```bash
+xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' \
+  -only-testing:ProvenenciaTests/PlaceRegistryTests \
+  -only-testing:ProvenenciaTests/WorkspaceDestinationHostTests \
+  -only-testing:ProvenenciaTests/WorkspaceNavigationTests \
+  -only-testing:ProvenenciaTests/WorkspaceToolbarBreadcrumbTests
 ```

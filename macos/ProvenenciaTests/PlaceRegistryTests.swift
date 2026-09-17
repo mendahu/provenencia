@@ -34,6 +34,16 @@ struct PlaceRegistryTests {
             .sourceTypesList(project: project),
             .metadataFieldsList(project: project),
         ])
+
+        let subjectTypes = resolve(.sectionRoot(.subjectTypes))
+        #expect(subjectTypes?.placeID == .subjectTypes)
+        #expect(subjectTypes?.presentation == .subjectTypes)
+        #expect(subjectTypes?.queryKeys == [])
+
+        let subjectFields = resolve(.sectionRoot(.subjectFields))
+        #expect(subjectFields?.placeID == .subjectFields)
+        #expect(subjectFields?.presentation == .subjectFields)
+        #expect(subjectFields?.queryKeys == [])
     }
 
     @Test func resolvesSourceDetail() {
@@ -42,13 +52,28 @@ struct PlaceRegistryTests {
         #expect(place?.placeID == .sourceDetail)
         #expect(place?.presentation == .sourcePage)
         #expect(place?.deepId == "src-1")
-        // Page payload + the three shared vocabulary lists it reads.
         #expect(place?.queryKeys == [
             .sourceWorkspace(project: project, sourceId: "src-1"),
             .sourceTypesList(project: project),
             .metadataFieldsList(project: project),
             .credibilityGradesList(project: project),
         ])
+    }
+
+    @Test func resolvesSourceGraphDistinctFromPage() {
+        let page = WorkspaceLocation(section: .sources, sourceId: "src-1", sourceSurface: .page)
+        let graph = WorkspaceLocation(section: .sources, sourceId: "src-1", sourceSurface: .graph)
+        #expect(page != graph)
+
+        let pagePlace = resolve(page)
+        #expect(pagePlace?.placeID == .sourceDetail)
+        #expect(pagePlace?.presentation == .sourcePage)
+
+        let graphPlace = resolve(graph)
+        #expect(graphPlace?.placeID == .sourceGraph)
+        #expect(graphPlace?.presentation == .sourceGraph)
+        #expect(graphPlace?.deepId == "src-1")
+        #expect(graphPlace?.queryKeys == [.sourceGraph(project: project, sourceId: "src-1")])
     }
 
     @Test func resolvesSourceTypesWithSelection() {
@@ -106,6 +131,11 @@ struct PlaceRegistryTests {
                 ]
             ),
             (
+                WorkspaceLocation(section: .sources, sourceId: "s1", sourceSurface: .graph),
+                .sourceGraph,
+                [.sourceGraph(project: project, sourceId: "s1")]
+            ),
+            (
                 .sectionRoot(.sourceFields),
                 .sourceFields,
                 [.metadataFieldsList(project: project)]
@@ -124,6 +154,16 @@ struct PlaceRegistryTests {
                     .typeSuggestions(project: project, typeId: "t1"),
                 ]
             ),
+            (
+                .sectionRoot(.subjectTypes),
+                .subjectTypes,
+                []
+            ),
+            (
+                .sectionRoot(.subjectFields),
+                .subjectFields,
+                []
+            ),
         ]
 
         for (location, expectedID, expectedKeys) in cases {
@@ -139,10 +179,13 @@ struct PlaceRegistryTests {
         for id in PlaceID.allCases {
             let location: WorkspaceLocation = switch id {
             case .sourcesList: .sectionRoot(.sources)
-            case .sourceDetail: WorkspaceLocation(section: .sources, sourceId: "s1")
+            case .sourceDetail: WorkspaceLocation(section: .sources, sourceId: "s1", sourceSurface: .page)
+            case .sourceGraph: WorkspaceLocation(section: .sources, sourceId: "s1", sourceSurface: .graph)
             case .sourceFields: .sectionRoot(.sourceFields)
             case .sourceTypes: .sectionRoot(.sourceTypes)
             case .sourceTypesDetail: WorkspaceLocation(section: .sourceTypes, typeId: "t1")
+            case .subjectTypes: .sectionRoot(.subjectTypes)
+            case .subjectFields: .sectionRoot(.subjectFields)
             }
             let place = resolve(location)
             #expect(place?.placeID == id)

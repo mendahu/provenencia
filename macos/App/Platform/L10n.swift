@@ -725,6 +725,42 @@ enum L10n {
             comment: "Workspace sidebar destination and page title: Source fields"
         )
 
+        static let subjectTypesTitle = LocalizedStringResource(
+            "workspace.section.subjectTypes.title",
+            defaultValue: "Subject types",
+            comment: "Workspace sidebar destination and page title: Subject types"
+        )
+
+        static let subjectFieldsTitle = LocalizedStringResource(
+            "workspace.section.subjectFields.title",
+            defaultValue: "Subject fields",
+            comment: "Workspace sidebar destination and page title: Subject fields"
+        )
+
+        static let evidenceGraphTitle = LocalizedStringResource(
+            "workspace.section.evidenceGraph.title",
+            defaultValue: "Evidence graph",
+            comment: "Evidence graph deep place title (toolbar breadcrumb and stub)"
+        )
+
+        static let subjectTypesStubBody = LocalizedStringResource(
+            "workspace.stub.subjectTypes.body",
+            defaultValue: "What a document can talk about.",
+            comment: "Subject types coming-soon stub body"
+        )
+
+        static let subjectFieldsStubBody = LocalizedStringResource(
+            "workspace.stub.subjectFields.body",
+            defaultValue: "The properties a subject kind can carry.",
+            comment: "Subject fields coming-soon stub body"
+        )
+
+        static let evidenceGraphStubBody = LocalizedStringResource(
+            "workspace.stub.evidenceGraph.body",
+            defaultValue: "Interpret subjects on this source — canvas coming soon.",
+            comment: "Evidence graph coming-soon stub body"
+        )
+
         static let countsRefreshFailedTitle = LocalizedStringResource(
             "workspace.counts.refreshFailedTitle",
             defaultValue: "Couldn’t refresh catalog counts",
