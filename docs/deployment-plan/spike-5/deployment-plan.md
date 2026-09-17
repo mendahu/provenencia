@@ -4,7 +4,7 @@ Interpretation foundation: candidate refs, subject vocabulary, Subjects, layout 
 
 ## Status
 
-**Planned.** Landings go in [`completed.md`](completed.md). S5-01, S5-02, and S5-D1 / S5-D3 are recorded there.
+**Planned.** Landings go in [`completed.md`](completed.md). S5-01 through S5-03, and S5-D1 / S5-D3, are recorded there.
 
 > **This spike ships no Subject UI.** The graph is the only surface for Subjects, Citations, and Observations (design note §1.3), and the graph is Spike 6. Product nav keeps **one Sources family** — no Interpretation sidebar section (§1.4). Entry is dual action on the Sources list → graph stub. See *Scope boundary* below.
 
@@ -52,7 +52,7 @@ S5-D3  Sources nav           S5-01  Subject type prefixes (core/ref)   done
   │                          S5-02  Migration 000021                 done
   │                            │    subject_types, subjects, subject_positions
   │                            ▼
-  │                          S5-03  core/database/subjecttypes + seed
+  │                          S5-03  core/database/subjecttypes + seed done
   │                            ▼
   │                          S5-04  core/database/subjects + audit
   │                            ▼
@@ -80,7 +80,7 @@ S5-D2  List dual action        │
 - [ ] S5-D2 — Design: Sources list → Evidence graph → [`design/`](design/)
 - [x] S5-01 — Subject type prefix validation in `core/ref` → [`completed.md`](completed.md)
 - [x] S5-02 — Interpretation schema migration → [`completed.md`](completed.md)
-- [ ] S5-03 — subject type vocabulary and create-time seed
+- [x] S5-03 — subject type vocabulary and create-time seed → [`completed.md`](completed.md)
 - [ ] S5-04 — Subject CRUD with audit
 - [ ] S5-05 — Graph layout positions
 - [ ] S5-06 — FFI methods for subject types, subjects, and positions
