@@ -17,6 +17,7 @@ Changes to the plan itself, as opposed to landed work.
 | Step | Kind | One-liner |
 | --- | --- | --- |
 | [S5-01](#s5-01--pr-node-type-prefix-validation) | PR | Node Type prefix validation + reserved-prefix guard in `core/ref` |
+| [S5-D1](#s5-d1--design-interpretation-nav-entry) | Design | Interpretation sidebar destination — label, icon, placement |
 
 ---
 
@@ -49,3 +50,15 @@ Docs updated with the step: [`catalog-refs.md`](../../catalog-refs.md) §2 and �
 go test ./core/ref/
 CGO_ENABLED=1 go test -tags fts5 ./...
 ```
+
+### S5-D1 — Design: Interpretation nav entry
+
+| | |
+| --- | --- |
+| **Kind** | Design (Claude Design board) |
+| **Depends on** | Shipped workspace chrome (S2-01) |
+| **Deliverables** | Done. Board for the Interpretation sidebar destination: label, icon, placement among existing sections, selected/idle states, empty badge slot. Brief archived: [`design/archive/S5-D1-interpretation-nav-entry.md`](design/archive/S5-D1-interpretation-nav-entry.md). |
+| **Dogfood** | Design only — nothing in the app yet. Implements in S5-07. |
+| **Out** | The Sources list behind the destination (S5-D2); the canvas and Node UI (Spike 6). |
+
+**Landed:** the nav chrome for the layer. Small board by design; S5-07 commits to the label and `PVSymbol` from it.

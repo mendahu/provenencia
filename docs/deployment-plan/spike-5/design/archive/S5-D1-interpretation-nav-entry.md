@@ -4,7 +4,7 @@
 **Spike:** Provenencia Spike 5 (Interpretation foundation)
 **Implements later as:** PR S5-07 (sidebar + places)
 **Depends on:** Shipped workspace chrome (S2-01)
-**Related brief:** [`S5-D2`](S5-D2-interpretation-sources-list.md) — where this destination lands
+**Related brief:** [`S5-D2`](../S5-D2-interpretation-sources-list.md) — where this destination lands
 
 Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](README.md) first.
 

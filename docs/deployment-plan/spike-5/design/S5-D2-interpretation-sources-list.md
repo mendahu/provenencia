@@ -3,8 +3,8 @@
 **Kind:** Claude Design board
 **Spike:** Provenencia Spike 5 (Interpretation foundation)
 **Implements later as:** PR S5-08
-**Depends on:** S5-D1 (the sidebar destination that lands here), shipped Sources list (S2-04)
-**Related brief:** [`S5-D1`](S5-D1-interpretation-nav-entry.md)
+**Depends on:** S5-D1 (done — the sidebar destination that lands here), shipped Sources list (S2-04)
+**Related brief:** [`S5-D1`](archive/S5-D1-interpretation-nav-entry.md) (done)
 
 Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](README.md) first.
 

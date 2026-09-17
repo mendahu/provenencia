@@ -89,7 +89,7 @@ Nine steps, not ten: the Source nodes list is gone, and the Source-page button w
 
 ## Checklist
 
-- [ ] S5-D1 — Design: Interpretation nav entry (sidebar destination) → [`design/`](design/)
+- [x] S5-D1 — Design: Interpretation nav entry (sidebar destination) → [`completed.md`](completed.md)
 - [ ] S5-D2 — Design: Interpretation Sources list → [`design/`](design/)
 - [x] S5-01 — Node Type prefix validation in `core/ref` → [`completed.md`](completed.md)
 - [ ] S5-02 — Interpretation schema migration
