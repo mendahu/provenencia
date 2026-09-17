@@ -198,9 +198,14 @@ struct WorkspaceToolbar: View {
                 PVBreadcrumbItem(id: "section-\(location.section.rawValue)", label: sectionLabel, action: nil),
             ]
         }
-        let leaf = location.ref.flatMap { $0.nilIfEmpty }
-            ?? location.title.flatMap { $0.nilIfEmpty }
-            ?? "…"
+        let leaf: String
+        if location.sourceSurface == .graph, location.sourceId != nil {
+            leaf = String(localized: L10n.Workspace.evidenceGraphTitle)
+        } else {
+            leaf = location.ref.flatMap { $0.nilIfEmpty }
+                ?? location.title.flatMap { $0.nilIfEmpty }
+                ?? "…"
+        }
         return [
             PVBreadcrumbItem(
                 id: "section-\(location.section.rawValue)",

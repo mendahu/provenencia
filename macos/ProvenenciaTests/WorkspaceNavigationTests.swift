@@ -151,6 +151,32 @@ struct WorkspaceNavigationTests {
         let b = WorkspaceLocation(section: .sources, sourceId: "1", ref: "SRC-2", title: "New")
         #expect(a == b)
         #expect(a != WorkspaceLocation(section: .sources, sourceId: "2"))
+        #expect(
+            WorkspaceLocation(section: .sources, sourceId: "1", sourceSurface: .page)
+                != WorkspaceLocation(section: .sources, sourceId: "1", sourceSurface: .graph)
+        )
+    }
+
+    @Test func legacyHistoryMissingSourceSurfaceDecodesAsPage() throws {
+        let json = Data("""
+        {"section":"sources","sourceId":"src-legacy","title":"Deed"}
+        """.utf8)
+        let location = try JSONDecoder().decode(WorkspaceLocation.self, from: json)
+        #expect(location.sourceId == "src-legacy")
+        #expect(location.sourceSurface == .page)
+        #expect(location.title == "Deed")
+    }
+
+    @Test func goToGraphIsDistinctPlaceFromPage() throws {
+        let (navigation, _) = try attachedNavigation()
+        navigation.go(to: WorkspaceLocation(section: .sources, sourceId: "src-1", sourceSurface: .page))
+        navigation.go(to: WorkspaceLocation(section: .sources, sourceId: "src-1", sourceSurface: .graph))
+        #expect(navigation.currentLocation.sourceSurface == .graph)
+        #expect(navigation.selectedSection == .sources)
+        #expect(navigation.canGoBack)
+        navigation.goBack()
+        #expect(navigation.currentLocation.sourceSurface == .page)
+        #expect(navigation.currentLocation.sourceId == "src-1")
     }
 
     @Test func navigationFileNameStripsDashesAndBraces() {

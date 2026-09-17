@@ -6397,12 +6397,84 @@
     },
     "workspace.section.sourceFields.title" : {
       "comment" : "Workspace sidebar destination and page title: Source fields",
-      "extractionState" : "extracted_with_value",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Source fields"
+          }
+        }
+      }
+    },
+    "workspace.section.subjectTypes.title" : {
+      "comment" : "Workspace sidebar destination and page title: Subject types",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subject types"
+          }
+        }
+      }
+    },
+    "workspace.section.subjectFields.title" : {
+      "comment" : "Workspace sidebar destination and page title: Subject fields",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subject fields"
+          }
+        }
+      }
+    },
+    "workspace.section.evidenceGraph.title" : {
+      "comment" : "Evidence graph deep place title (toolbar breadcrumb and stub)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Evidence graph"
+          }
+        }
+      }
+    },
+    "workspace.stub.subjectTypes.body" : {
+      "comment" : "Subject types coming-soon stub body",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What a document can talk about."
+          }
+        }
+      }
+    },
+    "workspace.stub.subjectFields.body" : {
+      "comment" : "Subject fields coming-soon stub body",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The properties a subject kind can carry."
+          }
+        }
+      }
+    },
+    "workspace.stub.evidenceGraph.body" : {
+      "comment" : "Evidence graph coming-soon stub body",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interpret subjects on this source — canvas coming soon."
           }
         }
       }

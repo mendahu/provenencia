@@ -19,6 +19,10 @@ enum PVSymbol: String {
     case library = "books.vertical"
     case tag = "tag"
     case list = "list.bullet"
+    /// Subject types — kinds of thing a document can talk about (S5-D3 `shapes`).
+    case shapes = "square.on.circle"
+    /// Subject fields — properties hanging off a subject kind (S5-D3 `list-tree`).
+    case listTree = "list.bullet.indent"
     case account = "person.crop.circle"
     case sidebarToggle = "sidebar.left"
     case search = "magnifyingglass"
