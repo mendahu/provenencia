@@ -1,10 +1,12 @@
 # S5-D1 — Interpretation nav entry
 
+> **Superseded.** Do not implement. Product IA moved to a unified Sources family with nested config and an **Evidence graph** deep place — see [`../S5-D3-sources-section-nav.md`](../S5-D3-sources-section-nav.md). Kept for history of the Claude Design board only.
+
 **Kind:** Claude Design board
 **Spike:** Provenencia Spike 5 (Interpretation foundation)
-**Implements later as:** PR S5-07 (sidebar + places)
+**Implements later as:** ~~PR S5-07~~ — cancelled
 **Depends on:** Shipped workspace chrome (S2-01)
-**Related brief:** [`S5-D2`](../S5-D2-interpretation-sources-list.md) — where this destination lands
+**Related brief:** [`S5-D3`](../S5-D3-sources-section-nav.md) (replacement)
 
 Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](README.md) first.
 

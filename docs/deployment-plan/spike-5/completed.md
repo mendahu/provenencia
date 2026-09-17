@@ -10,7 +10,9 @@ Changes to the plan itself, as opposed to landed work.
 
 | After | Change |
 | --- | --- |
-| S5-01 | **The graph became the only surface for Nodes, Citations, and Observations** (design note §1.3). This spike therefore ships no Node UI: the *Source nodes list* step and the *Source-page entry* step were both cut, along with their design briefs, and the closing docs step moved from S5-10 to S5-09 — safe to renumber because nothing past S5-01 had landed. Ten steps became nine and four design briefs became two. A Source may open a stub / "coming soon" destination; the Node data path is proven by Go tests and `FakeStore` parity. Accessibility moved with it: the canvas's own accessibility representation is slice-2 work in Spike 6, not polish, because there is no list view to fall back to. |
+| S5-01 | **The graph became the only surface for Nodes, Citations, and Observations** (design note §1.3). Node list and Source-page entry cut; closing step renumbered S5-10 → S5-09. Data path proven by Go tests / FakeStore; canvas a11y moved to Spike 6 slice 2. |
+| S5-01 | **Unified Sources product layer** (design note §1.4): no Interpretation sidebar section; dual action on Sources list → graph; **Subject types / Subject fields** naming; S5-D1 superseded by S5-D3; S5-D2 rewritten. |
+| S5-01 | **Nested config nav** + product rename to **Evidence graph** (§1.4, §12): four vocabulary destinations are children of Sources; UI chrome uses Evidence graph rather than Interpretation graph. |
 
 ## Index
 
@@ -58,7 +60,7 @@ CGO_ENABLED=1 go test -tags fts5 ./...
 | **Kind** | Design (Claude Design board) |
 | **Depends on** | Shipped workspace chrome (S2-01) |
 | **Deliverables** | Done. Board for the Interpretation sidebar destination: label, icon, placement among existing sections, selected/idle states, empty badge slot. Brief archived: [`design/archive/S5-D1-interpretation-nav-entry.md`](design/archive/S5-D1-interpretation-nav-entry.md). |
-| **Dogfood** | Design only — nothing in the app yet. Implements in S5-07. |
-| **Out** | The Sources list behind the destination (S5-D2); the canvas and Node UI (Spike 6). |
+| **Dogfood** | Design only — nothing in the app. **Superseded before implementation:** product dropped the Interpretation sidebar item in favour of a unified Sources family (S5-D3). Do not implement this board. |
+| **Out** | — |
 
-**Landed:** the nav chrome for the layer. Small board by design; S5-07 commits to the label and `PVSymbol` from it.
+**Landed (design only):** nav chrome for a top-level Interpretation item. **Do not ship.** See plan revisions and [`design/S5-D3-sources-section-nav.md`](design/S5-D3-sources-section-nav.md).

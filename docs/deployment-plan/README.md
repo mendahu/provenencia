@@ -8,7 +8,7 @@ Authoritative domain and stack decisions remain in the sibling docs under [`docs
 
 | Spike | Goal |
 | --- | --- |
-| [Spike 5](spike-5/) | Interpretation foundation — everything up to the canvas: candidate refs, `node_types` + seed, audited `nodes` CRUD, graph layout storage, FFI, and an Interpretation workspace section rooted on a Sources list. **Ships no Node UI**: the graph is the only Node surface and it is Spike 6, so the rail is proven by Go tests. Design: [`ideas/interpretation-graph-ui.md`](../ideas/interpretation-graph-ui.md). Plan: [`spike-5/deployment-plan.md`](spike-5/deployment-plan.md). |
+| [Spike 5](spike-5/) | Interpretation foundation up to the canvas: candidate refs, `node_types` + seed, audited `nodes`, layout storage, FFI, nested Sources config (Subject types / fields stubs), Sources list → **Evidence graph** stub. **No Node UI** — canvas is Spike 6. Design: [`ideas/interpretation-graph-ui.md`](../ideas/interpretation-graph-ui.md). Plan: [`spike-5/deployment-plan.md`](spike-5/deployment-plan.md). |
 
 ## Completed
 

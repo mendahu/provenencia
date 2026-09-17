@@ -10,7 +10,7 @@ Authoritative schema for everything described here is [`interpretation-layer-dat
 
 | # | Decision | Where |
 | --- | --- | --- |
-| 1 | The primary surface is a Source-scoped spatial canvas called the **Interpretation graph**, not a list/detail pair per table | §1.2, §12 |
+| 1 | The primary surface is a Source-scoped spatial canvas called the **Evidence graph**, not a list/detail pair per table | §1.2, §12 |
 | 2 | Root bubbles (person / event / place) are placed freely; **connect** writes a bridge Node plus its edges as one atomic macro, with a required disambiguation step | §3.1, §3.2 |
 | 3 | Draft status needs **no schema flag** — "uncited" is a query for Nodes with no Observations; `nodes.label` is the free working handle | §4.2 |
 | 4 | Citation → Observation stays **one-to-many**, with one-to-one as the default *behavior* and pinning opt-in | §4.5 |
@@ -21,11 +21,13 @@ Authoritative schema for everything described here is [`interpretation-layer-dat
 | 9 | Pan/zoom needs **AppKit `NSScrollView`** regardless of deployment target; raising past macOS 14 is a separate decision on support-matrix grounds | §7.2, §7.3 |
 | 10 | Build **canvas first**, behind only the load-bearing minimum; the property vocabulary is *not* load-bearing | §11.1, §11.2 |
 | 11 | Persons, events, and places ship together — three seeded rows, not three features | §11.1.1 |
-| 12 | Entry is sidebar → Interpretation → Sources list → that Source's graph. The Sources list is **required** as the section root and error-recovery destination; the Source-page button is deferred until the graph exists to jump to | §11.1.2 |
+| 12 | Entry is from the **Sources** list (dual action: open Source page *or* open Evidence graph) and later from the Source page. There is **no** Interpretation sidebar section — filing and the source-scoped graph are one product layer | §1.4, §11.1.2 |
 | 13 | The foundation is its **own spike** (Spike 5) so the canvas spike opens with no schema work. Spike 5 ships **no Node UI at all** — the data path is proven by Go tests, and the first visible Node is a bubble | §11.4 |
 | 14 | The canvas is expected to be reused for a family tree, so **geometry goes in a neutral module** — but the position table stays concrete per layer rather than polymorphic | §13 |
 | 15 | **One ref format, two prefixes.** Candidate Nodes get their own three-letter prefix (`CPR-7KD45`) rather than a marker segment, so `node_types` carries both `ref_prefix` and `candidate_ref_prefix`. Costs a second vocabulary column; saves a parallel mint/validate/search path everywhere else | [`catalog-refs.md`](../catalog-refs.md) §2 |
 | 16 | **The graph is the only surface** for Nodes, Citations, and Observations — no co-equal list view, no view toggle, no node list destination. Accessibility is met by the canvas's own accessibility representation, built from slice 2 rather than deferred to polish | §1.3, §7.4 |
+| 17 | Product vocabulary for the graph's config mirrors Source types / Source fields: **Subject types** (`node_types`) and **Subject fields** (`properties` + bindings). Avoid "claim" — Conclusion already owns that word | §1.4 |
+| 18 | Sidebar: **Sources** is the primary work item; Source types / Source fields / Subject types / Subject fields are **nested config** under it (de-emphasized), not peer destinations | §1.4 |
 
 Two items found along the way that were on nobody's list: **candidate ref support** did not exist in `core/ref` (§11.1, resolved in S5-01), and **NameValue does not exist in either language** (§4.4).
 
@@ -66,22 +68,44 @@ A single spatial workspace, scoped to a Source, with a small tool palette:
 
 Bridge bubbles are visually differentiated from root bubbles, so the association is a *thing* on the canvas the way it is a row in the catalog — but it reads as "the relationship between these two" rather than as a mysterious extra entity.
 
-Because the graph is Source-scoped, it is reached from an **Interpretation Sources list** whose rows open a graph rather than a Source detail page, and later also from a **button on the Source page** (§11.1.2).
+Because the graph is Source-scoped, it is reached from the **Sources** list (open Source *or* open Evidence graph) and later also from a control on the Source page (§11.1.2). There is no separate Interpretation sidebar section.
 
-Two supporting destinations sit beside it:
+Two supporting destinations sit in the **same Sources family** in the sidebar:
 
-- an **Interpretation vocabulary** browser for `node_types`, `properties`, and the `node_type_properties` bindings — which Properties exist and which Node Types they attach to. The direct analogue of Source types / Source fields, reusing [`Features/CatalogVocabulary/`](../../macos/App/Features/CatalogVocabulary/). Not needed for the first slice (§11.2);
+- **Subject types** and **Subject fields** — the product names for `node_types`, `properties`, and `node_type_properties` bindings. Direct mirror of Source types / Source fields; reuse [`Features/CatalogVocabulary/`](../../macos/App/Features/CatalogVocabulary/). Not needed for the first slice (§11.2);
 - a **"what other Sources say about this one"** section on the Source page, which is where source-to-source commentary lives instead of on the canvas (§4.6).
 
 ## 1.3 One surface, not two
 
 Worth stating plainly, because an earlier draft of this note assumed otherwise. **The graph is the primary and only way to interact with Nodes, Citations, and Observations.** There is no co-equal list or table view of them, no view toggle, and no per-Source node list destination.
 
-The researcher's path into the layer is: sidebar → **Interpretation** → a list of Sources → that Source's graph. The Sources list is a picker (§11.1.2) and is the only list in the layer; everything past it is spatial.
+The researcher's path into the graph is: sidebar → **Sources** → open **Evidence graph** on a Source → that Source's graph. Everything past that click is spatial.
 
 The reasoning is that a second, visible editing surface over the same rows costs more than it returns. It doubles the UI that every later slice has to update — Citations, Observations, value types, bridge macros would all have to land twice — and it invites the researcher to form a tabular mental model of a property graph, which is the model the canvas exists to replace.
 
 This puts real weight on the canvas being good, and it removes the fallback: if the canvas turns out to be unpleasant, the answer is to fix the canvas, not to route around it. It also means accessibility cannot be satisfied by a sibling view and has to be solved inside the canvas — see §7.4, which is where the cost of this decision actually lands.
+
+## 1.4 One product layer for Source + source-scoped graph
+
+The data model still separates Source filing from Citations / Observations / Nodes (different rows, different epistemic weight, candidate refs vs concluded people). The **product** should not.
+
+Filing a Source and mapping what it appears to say are one job: *work this Source*. A sidebar group called Interpretation that only contained "pick a Source → graph" (+ later vocabulary) felt hollow — not a second world, just the deep work inside a Source. Conclusion (cross-source belief) is the interesting nav boundary, not Source vs "Interpretation."
+
+So the shipped Sources family becomes:
+
+```text
+Sources                         ← primary work: list → Source page *or* Evidence graph
+  ├─ Source types               ← config: how documents are classified
+  ├─ Source fields              ← config: metadata filed *about* the document
+  ├─ Subject types              ← config: what kinds of subject a document can talk about
+  └─ Subject fields             ← config: what can be asserted about a subject
+```
+
+**Sources** is the only primary work destination in this family. The four config items are **nested / de-emphasized** under it (smaller type, indent, disclosure — board decides), so they read as settings for how Sources work, not peer places you "go do research." Flat peer rows for all five would over-promote vocabulary admin.
+
+**Subject** (not "claim") is deliberate: Conclusion already owns *claim* (`sameness_claims`, …). **Subject types / Subject fields** mirror Source types / Source fields so the two vocabularies stay parallel and distinct.
+
+The spatial surface is the **Evidence graph** (§12) — easier once entry is already Source-scoped from the Sources list. Engine docs may still say Interpretation layer; the sidebar and the graph chrome do not have to.
 
 ---
 
@@ -97,7 +121,7 @@ The codebase has **no prior art for either half of this**. Worth stating plainly
 | Structured NameValue | **Nothing, in either language.** `name_values` has no migration, no Go package, and no Swift editor — see §4.4. |
 | Structured DateValue | **Done.** [`core/database/datevalues`](../../core/database/datevalues/) plus `DateValueDraft` / `DateValueEditorForm` in [`Features/Dates/`](../../macos/App/Features/Dates/), already wired into `SourcePageMetadataView`. The template for NameValue. |
 | Typed value dispatch | Nothing. Source metadata is `value_text` + optional `date_value_id`; no `value_type` enum exists in the product — see §11.2. |
-| Interpretation vocabulary browser | Reusable shell exists (`CatalogVocabulary`, `PVTable`, origin markers). |
+| Interpretation / Subject vocabulary UI | Reusable shell exists (`CatalogVocabulary`, `PVTable`, origin markers). Product names: Subject types / Subject fields (§1.4). |
 | Candidate refs (`CPR-…`) | **Done** (S5-01), and smaller than expected. Candidates use their own prefix, so `ref.Mint` already produces them; S5-01 reduced to `ValidatePrefix` plus the reserved-prefix guard. |
 | Interpretation schema / Go / FFI | Nothing. Migrations stop at `000020.sql`; no `nodes`, `citations`, `observations` packages. |
 
@@ -527,7 +551,8 @@ The test is narrow: **what does the first `nodes` INSERT actually require?** The
 | **`nodes` table + `core/database/nodes`** | Create, list, rename, delete — **with audit wiring.** Every domain write in this product goes through `audit.Record(tx, …)` (see `sources/notes.go`); that is not optional, and it is the bulk of the work here. | Medium |
 | **Layout table** | Integer grid cells, unaudited (§5). Persistence across relaunch is part of what the canvas validates, so it cannot be held in memory — and it ships in slice 1 so the canvas slice opens with no schema work in front of it. | Small |
 | **FFI handlers** | `add-ffi-handler` skill. | Small |
-| **Graph workspace place** | A `WorkspaceSection` case (**no** `WorkspaceLocation` change needed — see §11.1.2), `CatalogQueryKey`, registry loader, root + deep `PlaceRegistry` specs, the Sources list, and a stub destination behind a Source (placeholders are fine; Spike 6 swaps in the canvas). `CatalogCounts` badge entry. `add-workspace-place` and `add-workspace-location` cover it. | Medium |
+| **Graph workspace place** | A **deep place under Sources**, not a new sidebar section. Needs a `WorkspaceLocation` discriminator so Source page and graph are distinct at the same `sourceId` (§11.1.2). Stub destination in slice 1; canvas in slice 2. `CatalogQueryKey` for the graph payload. `add-workspace-place` / `add-workspace-location`. | Medium |
+| **Subject types / Subject fields (nav)** | Two more sidebar destinations beside Source types / Source fields (§1.4). **Nav chrome + stubs** can ship with the foundation; the real vocabulary editors are not load-bearing for bubbles (§11.2). | Small (nav) / Medium (editors later) |
 
 ### 11.1.1 Three Node Types cost the same as one
 
@@ -537,31 +562,26 @@ What does scale with the count is small and entirely presentational: three palet
 
 So the earlier split of "person first, then events and places" was a false economy — the second slice would have been almost empty. They collapse into one slice (§11.4), and the canvas gets to look like the real product from the first demo, which also makes it far easier to judge whether the idea works.
 
-### 11.1.2 Entry points, and why the Sources list is not optional
+### 11.1.2 Entry points: dual action on Sources, not a second section
 
-The graph is Source-scoped, so the researcher has to pick a Source before there is anything to draw. The primary path is an Interpretation-scoped Sources list whose rows open the graph rather than the Source detail page. A button on the Source page is a convenient second path, but it is **deferred to slice 2** — it exists only to jump to a graph, so it is meaningless until there is one.
+The graph is Source-scoped, so the researcher has to pick a Source before there is anything to draw. The primary path is the **existing Sources list**, with two actions per row: open the Source page (filing) and open the graph (structured reading). A control on the Source page is a convenient second path, deferred until the graph exists to jump to (slice 2).
 
-**Good news first: `WorkspaceLocation` needs no new field.** Its identity compares `section`, `sourceId`, `fieldId`, and `typeId`, so a new `WorkspaceSection` case plus the **existing** `sourceId` yields a distinct place:
+**There is no Interpretation `WorkspaceSection`.** Filing and mapping share the Sources family in the sidebar (§1.4). That avoids an empty layer group whose only job was a second Source picker.
+
+**`WorkspaceLocation` does need a new field.** Identity today is `section` + `sourceId` + `fieldId` + `typeId`. Source page and graph both want `section: .sources` and the same `sourceId` — without a discriminator they are the same place, which breaks history, Back/Forward, and restore:
 
 ```text
-WorkspaceLocation(section: .sources,             sourceId: X)   → Source detail page
-WorkspaceLocation(section: .interpretationGraph, sourceId: X)   → that Source's graph
+WorkspaceLocation(section: .sources, sourceId: X, sourceSurface: .page)   → Source detail
+WorkspaceLocation(section: .sources, sourceId: X, sourceSurface: .graph)  → that Source's graph
 ```
 
-The Source page button, when it lands in slice 2, is then one `navigation.go(to:)` call, and it should populate the denormalized `ref` and `title` so the Back/Forward jump menu reads properly.
+Name and encoding are an implementation choice (`sourceSurface`, `sourceView`, …); the requirement is that page and graph are unequal for `==` and for persistence. Absent the new field, treat legacy entries as `.page` so old history keeps opening the Source page.
 
-**The Sources list, though, is forced by the navigation contract rather than being a nice-to-have** — which is why it ships in slice 1 even though the canvas behind a row is not built yet. Two mechanisms make it so:
+Fallback when a Source is deleted while its graph is in history: `fallbackToSectionRoot()` → Sources list. No separate Interpretation root.
 
-- `WorkspaceSidebar` builds its items from `WorkspaceSection.allCases`, so adding a section **automatically adds a sidebar row**, and that row navigates to `.sectionRoot(section)` — a location with no `sourceId`. Something has to render there. (It also needs a `CatalogCounts.badge(for:)` entry, `nil` for now.)
-- Destinations prune missing deep ids with `navigation.fallbackToSectionRoot()`. So when a Source is deleted while its graph is in history, the graph view falls back to the graph section root — which means **the section root is the error-recovery destination**, not just a landing page.
+**Defer graph-specific columns on the Sources list.** "12 nodes, 3 uncited" needs derived counts and would stale the list when the canvas writes — out of scope for the first slices.
 
-Without a root view, both paths land on an unresolved location, and `WorkspaceDestinationHost.presentation(for:)` ends in `?? .sourcesList` — so the user would silently get the ordinary Sources list. That works by accident rather than by design, which is exactly the kind of thing that becomes a confusing bug report later.
-
-So: **build it, and keep it a plain copy.** If the Interpretation list reads the existing `.sourcesList(project:)` query key, it is genuinely cheap — sharing a key is encouraged, unlike duplicating a payload — and the only real content is different row chrome plus a different navigation target.
-
-**Defer the graph-specific columns.** "12 nodes, 3 uncited, last worked Tuesday" is the tempting part and the expensive part: it needs a new Go query with derived counts, and per [`macos-client-patterns.md`](../macos-client-patterns.md) §1, derived counts "move when another table is written" — so placing a single bubble would stale the list. That is a real invalidation dependency between the canvas and its own landing page, and it buys nothing for the risks being retired in the first two slices.
-
-One accepted oddity: clicking a button on a page in the Sources section lands the user in a different sidebar section, because `selectedSection` follows `location.section`. That is normal cross-section navigation and Back returns to the Source page, so it is fine — but it is worth noticing rather than discovering.
+**No-Artifact Sources** stay in the list; the Evidence graph action is disabled and a shortcut opens the Source page to add an Artifact (Citations require an Artifact).
 
 ## 11.2 What is not load-bearing
 
@@ -570,7 +590,7 @@ The structural fact that shrinks the prework dramatically: **`nodes` has no fore
 Deferred, blocking nothing:
 
 - `properties` and `node_type_properties` — Observation concerns, not Node concerns.
-- The vocabulary browser UI — Node Types get seeded directly from the registry in [`seeded-vocabulary.md`](../seeded-vocabulary.md) §3.1; browsing and user extension can wait. Seed all seven rather than only the three placeable ones: they are rows, not features, and a partial seed just means editing the registry again.
+- The vocabulary browser UI — **Subject types / Subject fields** in the product (§1.4). Node Types get seeded directly from the registry in [`seeded-vocabulary.md`](../seeded-vocabulary.md) §3.1; browsing and user extension can wait. Seed all seven rather than only the three placeable ones: they are rows, not features, and a partial seed just means editing the registry again. **Sidebar stubs** for those destinations can still ship early so the Sources family looks complete.
 - `ref_prefix` user-facing validation (global uniqueness across origins, reserved `SRC` / `ART` / `CIT` / `OBS` / `C`) — only needed when *users* define Node Types, which is the browser UI.
 - NameValue, the typed value dispatch, and the seven value editors — all Observation concerns. Scope notes for when they land: Interpretation needs only `name_values` and `name_value_parts`, because interpretation model §5.1 puts `name_format` in the Conclusion layer — two tables, not the four in [`structured-name-model.md`](../structured-name-model.md) §4. `date` is already done and is the template. The seven-way sparse-column dispatch is the genuinely new part, since Source metadata is only `value_text` plus an optional `date_value_id` and no `value_type` enum exists anywhere in the product yet.
 - Citations, the artifact viewer, locator validation.
@@ -584,9 +604,9 @@ Deferred, blocking nothing:
 
 ## 11.4 Slice order
 
-1. **Foundation** (§11.1) — candidate refs, `node_types` and its seed, audited `nodes` CRUD, the layout table, FFI, the Interpretation section, and the Sources list as its root (§11.1.2). **No Node UI**: a Source opens a stub until the canvas exists.
-2. **Bubbles** — the canvas proper: `NSScrollView` bridge, persons / events / places, working labels, drag / snap / select / persist, the tray for unplaced Nodes. Wires the Sources list rows to it, and ships the accessibility representation and keyboard parity alongside the first bubbles (§7.4).
-3. **Property vocabulary** — `properties`, `node_type_properties`, the browser UI, `ref_prefix` validation.
+1. **Foundation** (§11.1) — candidate refs, `node_types` and its seed, audited `nodes` CRUD, the layout table, FFI, `WorkspaceLocation` discriminator for page vs graph, Sources-list dual action, Evidence graph stub, and nested Subject types / Subject fields **nav stubs** (§1.4). **No Node UI**: Evidence graph opens a stub until the canvas exists.
+2. **Bubbles** — the canvas proper: `NSScrollView` bridge, persons / events / places, working labels, drag / snap / select / persist, the tray for unplaced Nodes. Replaces the stub, and ships the accessibility representation and keyboard parity alongside the first bubbles (§7.4).
+3. **Subject vocabulary** — `properties`, `node_type_properties`, the Subject types / Subject fields editors (replacing nav stubs), `ref_prefix` validation.
 4. **Artifact viewer + Citations** — PDF and image; `page`, `region`, `text_quote`; Go-side locator validation.
 5. **First Observation** — Add Property on a bubble, `text` value type only. The whole vertical path proven end to end.
 6. **Remaining value types** — including NameValue end to end; reuse the existing DateValue editor.
@@ -597,7 +617,7 @@ Deferred, blocking nothing:
 
 **The cost of the split is that slice 1 ships a layer with no visible capability, and that cost is now accepted rather than bought off.** An earlier draft of this note put a plain list of a Source's Nodes at the graph destination to prove the data path, justified as the structured non-canvas editing path §7.4 was committed to. Since the graph is now the only surface (§1.3), that list would be throwaway UI — built, designed, and then deleted by slice 2 — so it is dropped.
 
-What slice 1 ships instead is the sidebar entry and the Sources list, because the navigation contract forces the section root to exist (§11.1.2) and it is permanent rather than throwaway. Activating a Source can land on a stub / "coming soon" destination — early development; Spike 6 replaces the view with the canvas.
+What slice 1 ships instead is dual action on the Sources list plus an Evidence graph stub, because the navigation contract already has a Sources root (§11.1.2) and inventing a second Interpretation list was the wrong product shape (§1.4). Opening Evidence graph can land on a stub / "coming soon" destination — early development; Spike 6 replaces the view with the canvas.
 
 The data path — migration → Go → FFI → store → session cache — is therefore proven by Go tests and a `FakeStore` round-trip rather than by a screen. That is a real reduction in confidence compared to seeing a row render, and it is the deliberate price of the first visible Node being a bubble. The mitigation is that slice 2 opens against a fully tested rail, so a canvas bug in slice 2 is a canvas bug and not an ambiguity about which layer is broken.
 
@@ -605,16 +625,31 @@ The data path — migration → Go → FFI → store → session cache — is th
 
 # 12. Naming
 
-**Decided: Interpretation graph.** It matches the layer name and the data model's own language — the Interpretation layer *is* "a cited property graph" ([`interpretation-layer-data-model.md`](../interpretation-layer-data-model.md) §1.2), so the UI name and the schema vocabulary agree instead of introducing a third word for the same thing. Layer vocabulary stays intact inside it: Citations, Observations, and Nodes keep their names.
+**Decided: Evidence graph** for the spatial surface.
 
-Considered and set aside:
+Earlier drafts used **Interpretation graph** to match the data-model layer name. That still works in engine docs, but once entry is dual action on the Sources list the researcher already knows they are inside one Source — so a product name can emphasize *evidence* (what this document shows) without repeating "interpretation." **Evidence graph** is the working UI name for chrome, actions, stubs, and breadcrumbs.
 
-| Candidate | Why not |
+Layer vocabulary *inside* the graph stays Citations, Observations, and Nodes (engine / schema words).
+
+**Product sidebar vocabulary** (§1.4):
+
+| Product | Engine |
 | --- | --- |
+| Evidence graph | Interpretation-layer canvas (Citations / Observations / Nodes) |
+| Subject types | `node_types` |
+| Subject fields | `properties` (+ `node_type_properties`) |
+| Open Evidence graph (action) | open the graph place |
+
+Do not use **claim** in this family — Conclusion owns that word.
+
+Considered and set aside for the canvas name:
+
+| Candidate | Why not (as the *product* canvas name) |
+| --- | --- |
+| Interpretation graph | Accurate to the model layer; heavier once the user is already Source-scoped. Keep as the brainstorm / engine alias. |
 | Interpretation map | "Map" reads well but adds a term the data model does not use. |
-| Source map | Emphasizes Source scope, but sounds geographic — awkward alongside `place` Nodes. |
-| Evidence map | Legible to non-experts, but "evidence" sits closer to the Source layer in our vocabulary. |
-| Worksheet | Plays down the visual and plays up the work session; too humble for the layer's primary surface. |
+| Source map / Source graph | Emphasizes scope, but "map" sounds geographic beside `place` Nodes; "source graph" is fine technically, less friendly. |
+| Worksheet | Plays down the visual; too humble for the primary surface. |
 
 ---
 
