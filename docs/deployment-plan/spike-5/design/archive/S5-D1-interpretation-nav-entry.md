@@ -1,10 +1,12 @@
 # S5-D1 — Interpretation nav entry
 
+> **Superseded.** Do not implement. Product IA moved to a unified Sources family with nested config and an **Evidence graph** deep place — see [`S5-D3-sources-section-nav.md`](S5-D3-sources-section-nav.md). Kept for history of the Claude Design board only.
+
 **Kind:** Claude Design board
 **Spike:** Provenencia Spike 5 (Interpretation foundation)
-**Implements later as:** PR S5-07 (sidebar + places)
+**Implements later as:** ~~PR S5-07~~ — cancelled
 **Depends on:** Shipped workspace chrome (S2-01)
-**Related briefs:** [`S5-D2`](S5-D2-interpretation-sources-list.md) (where this destination lands), [`S5-D3`](S5-D3-source-page-entry.md), [`S5-D4`](S5-D4-source-nodes-destination.md)
+**Related brief:** [`S5-D3`](S5-D3-sources-section-nav.md) (replacement)
 
 Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](README.md) first.
 
@@ -14,7 +16,7 @@ Paste this entire document into Claude Design as the requirements for one board/
 
 Design **one new top-level sidebar destination: Interpretation.**
 
-This board is deliberately narrow — it is the nav chrome only. The screen behind the destination is S5-D2, and the other way into the layer (a control on the Source page) is S5-D3. Both are separate boards.
+This board is deliberately narrow — it is the nav chrome only. The screen behind the destination is S5-D2, a separate board.
 
 ```text
 Sidebar → Interpretation ──▶ [ S5-D2 ]
@@ -52,8 +54,9 @@ The work is a label, an icon, a position in the list, and how the destination be
 
 | ID | Requirement |
 | --- | --- |
-| NAV-7 | No badge, count, or activity indicator, now or designed-for-later. These would be derived counts, and placing a single Node would stale them. Do not leave a visible gap where one would go. |
+| NAV-7 | No badge, count, or activity indicator, now or designed-for-later. These would be derived counts, and placing a single subject would stale them. Do not leave a visible gap where one would go. |
 | NAV-8 | No second-level nav under Interpretation. Sources are reached through the destination's own screen (S5-D2), not through the sidebar. |
+| NAV-9 | Nothing in the sidebar should signal that the layer is incomplete. The destination is permanent; any "graph not built yet" caveat belongs on the stub behind a Source (S5-D2), not in the nav. |
 
 ---
 
@@ -71,9 +74,8 @@ The destination's content may be a stub frame. Do not design it here.
 ## 5. Out of scope
 
 - The Interpretation Sources list this destination lands on — **S5-D2**.
-- The Source-page entry control — **S5-D3**.
-- The per-Source node destination — **S5-D4**.
-- The canvas and anything spatial — Spike 6.
+- The interpretation graph, the canvas, and anything spatial — Spike 6.
+- A Source-page control that jumps into the layer — deferred to Spike 6 with the graph.
 - Any restyling of the existing sidebar, chrome, or window shell.
 
 ---

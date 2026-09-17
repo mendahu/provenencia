@@ -8,7 +8,7 @@ The Conclusion layer answers:
 
 > What does the researcher currently conclude about the historical world after considering one or more sources?
 
-Cross-layer philosophy is summarized in [`data-model-source-interpretation-conclusion.md`](data-model-source-interpretation-conclusion.md). Interpretation subjects (Nodes, Observations, Properties) are defined in [`interpretation-layer-data-model.md`](interpretation-layer-data-model.md). Shared date and name value models are [`structured-date-model.md`](structured-date-model.md) and [`structured-name-model.md`](structured-name-model.md). Audit history is [`audit-revision-history.md`](audit-revision-history.md). Researcher judgment (Claim confidence, and how it relates to Source credibility and Citation certainty) is [`research-judgment-model.md`](research-judgment-model.md).
+Cross-layer philosophy is summarized in [`data-model-source-interpretation-conclusion.md`](data-model-source-interpretation-conclusion.md). Interpretation subjects (Subjects, Observations, Properties) are defined in [`interpretation-layer-data-model.md`](interpretation-layer-data-model.md). Shared date and name value models are [`structured-date-model.md`](structured-date-model.md) and [`structured-name-model.md`](structured-name-model.md). Audit history is [`audit-revision-history.md`](audit-revision-history.md). Researcher judgment (Claim confidence, and how it relates to Source credibility and Citation certainty) is [`research-judgment-model.md`](research-judgment-model.md).
 
 This draft treats canonical rows as the **working set** (handles the researcher is investigating). The Conclusion **claims** are still only two kinds: Sameness and Reconciliation. Creating a handle is not a third claim type; the entity row is the origination.
 
@@ -16,17 +16,17 @@ This draft treats canonical rows as the **working set** (handles the researcher 
 
 # 1. Invariants versus conventions
 
-The graph is built to **accept** research the schema cannot judge. A toponym `York, Upper Canada, North America` on one Place, a `same_as` between that Place and a colony-level Node, a Location with only one end filled, or an Observation that stretches what a Citation supports: these must **persist**. The evidence trail (Citations, Observation subjects, claim pins, `argument`) is how a later reader evaluates them. Product UI may warn, badge, or suggest splits; it must not refuse to save because a convention was skipped.
+The graph is built to **accept** research the schema cannot judge. A toponym `York, Upper Canada, North America` on one Place, a `same_as` between that Place and a colony-level subject, a Location with only one end filled, or an Observation that stretches what a Citation supports: these must **persist**. The evidence trail (Citations, Observation subjects, claim pins, `argument`) is how a later reader evaluates them. Product UI may warn, badge, or suggest splits; it must not refuse to save because a convention was skipped.
 
 This document therefore uses three strengths of “must”:
 
 | Strength | What it is | If the researcher ignores it |
 |---|---|---|
 | **Schema invariant** | SQLite `NOT NULL`, FKs, `UNIQUE`, `CHECK` | Insert/update fails |
-| **Application invariant** | Writer/resolver rules that keep the generic graph typed (value column matches `value_type`, sameness endpoints share `node_type_id`, membership is the `same_as` component of the identity anchor) | Treat as malformed data (repair, ignore extras, or show an error on *that row*) — not as “you used Places wrong” |
+| **Application invariant** | Writer/resolver rules that keep the generic graph typed (value column matches `value_type`, sameness endpoints share `subject_type_id`, membership is the `same_as` component of the identity anchor) | Treat as malformed data (repair, ignore extras, or show an error on *that row*) — not as “you used Places wrong” |
 | **Convention** | How to get the most from search, maps, merge, and honest reading of Sources | Data remains valid; features may be weaker or the proof harder to trust |
 
-Seeded vocabulary (`location` + `event`/`place`, one-grain Places, gazetteer-as-Source) is convention plus picker defaults, not a closed ontology. Researchers may add Properties and Node Types; first-class UI may only light up for keys it knows.
+Seeded vocabulary (`location` + `event`/`place`, one-grain Places, gazetteer-as-Source) is convention plus picker defaults, not a closed ontology. Researchers may add Properties and Subject types; first-class UI may only light up for keys it knows.
 
 Use-case text in this document often describes **rigorous, evidence-backed** genealogy: that is the path the product should make easy. A user who only wants a family tree — unlinked Persons, typed names, no Citations — must still be able to save. The result need not be scientifically defensible. Encourage and badge; do not block. Broader product stance: [`data-model-source-interpretation-conclusion.md`](data-model-source-interpretation-conclusion.md) §1.0.
 
@@ -36,7 +36,7 @@ Use-case text in this document often describes **rigorous, evidence-backed** gen
 
 ## 2.1 Working subjects may be sparse or ungrounded
 
-A researcher may add a working Person, Event, Place, or association before any Interpretation Node exists for it.
+A researcher may add a working Person, Event, Place, or association before any Interpretation subject exists for it.
 
 ```text
 Person PER-7KD45
@@ -45,18 +45,18 @@ Person PER-7KD45
   argument = "James existed; he had a mother"
 ```
 
-This is valid. It is a **workspace handle**, not an Observation. Genealogical names, when known, come from cited NameValue Observations on member Nodes and/or name Reconciliation Claims. The canonical `label` is only a researcher working identifier.
+This is valid. It is a **workspace handle**, not an Observation. Genealogical names, when known, come from cited NameValue Observations on member Subjects and/or name Reconciliation Claims. The canonical `label` is only a researcher working identifier.
 
-**Schema:** Observations still require a Citation and still target a Node — you cannot make an Observation whose subject is a canonical entity. **Convention:** hang inferred geography on a knowledge or gazetteer Source (or a Reconciliation exhibit), not on a Citation that did not say it. The database will store the latter; the chain will look like the Source asserted it.
+**Schema:** Observations still require a Citation and still target a subject — you cannot make an Observation whose subject is a canonical entity. **Convention:** hang inferred geography on a knowledge or gazetteer Source (or a Reconciliation exhibit), not on a Citation that did not say it. The database will store the latter; the chain will look like the Source asserted it.
 
 ## 2.2 Identity cluster versus committed properties
 
-**Membership** (which Interpretation Nodes are this subject) is the accepted `same_as` component of an optional **identity anchor** Node.
+**Membership** (which Interpretation subjects are this subject) is the accepted `same_as` component of an optional **identity anchor** subject.
 
-**Committed values** (name, date, location ends, …) are accepted Reconciliation Claims. If there is no claim, the UI may **project** values from Observations on member Nodes. That projection is not stored.
+**Committed values** (name, date, location ends, …) are accepted Reconciliation Claims. If there is no claim, the UI may **project** values from Observations on member Subjects. That projection is not stored.
 
 ```text
-with identity_anchor     members = same_as cluster of that Node
+with identity_anchor     members = same_as cluster of that subject
                          display values = accepted Reconciliation, else member Observations
 without identity_anchor  members = ∅
                          display values = accepted Reconciliation only
@@ -64,11 +64,11 @@ without identity_anchor  members = ∅
 
 ## 2.3 Sameness and merge are related but distinct
 
-**Node sameness** correlates Interpretation subjects:
+**Subject sameness** correlates Interpretation subjects:
 
 ```text
-Node A same_as Node B
-Node A distinct_from Node B
+Subject A same_as Subject B
+Subject A distinct_from Subject B
 ```
 
 **Canonical merge** joins two Conclusion handles that were previously treated as distinct working subjects:
@@ -78,15 +78,15 @@ PER-A merged_into PER-B
 PLC-A merged_into PLC-B
 ```
 
-Accepting Node sameness may connect two entities' membership components; the application should then merge or otherwise reconcile those canonical rows. Historical relationships or succession are not sameness or merge.
+Accepting subject sameness may connect two entities' membership components; the application should then merge or otherwise reconcile those canonical rows. Historical relationships or succession are not sameness or merge.
 
-**Convention:** `same_as` is most useful between Places of the same grain (two readings of York the town). The schema will accept `same_as` between a composite “York, Upper Canada” Node and a colony Node; maps and merge will then treat them as one feature. Extra grains of “where this event happened” are usually additional Location handles rather than place identity — again a convention, not a CHECK.
+**Convention:** `same_as` is most useful between Places of the same grain (two readings of York the town). The schema will accept `same_as` between a composite “York, Upper Canada” subject and a colony subject; maps and merge will then treat them as one feature. Extra grains of “where this event happened” are usually additional Location handles rather than place identity — again a convention, not a CHECK.
 
 ## 2.4 Negation and conflict at Conclusion
 
-Node co-reference uses Sameness Claims (`same_as` / `distinct_from`). Absence of a Sameness Claim is not `distinct_from`.
+Subject co-reference uses Sameness Claims (`same_as` / `distinct_from`). Absence of a Sameness Claim is not `distinct_from`.
 
-Attribute-level conflicts across member Observations are handled by soft display merges and, when durable, by Reconciliation Claims. That is separate from Observation polarity and from Node sameness.
+Attribute-level conflicts across member Observations are handled by soft display merges and, when durable, by Reconciliation Claims. That is separate from Observation polarity and from subject sameness.
 
 ## 2.5 Resolver logic is application-level
 
@@ -106,10 +106,10 @@ Selected user-facing entities receive a required short human-readable `ref`. Can
 
 # 3. Design summary
 
-Interpretation is a cited property graph (Nodes, Observations, Citations). Conclusion adds working handles and two claim verbs. The family tree, timeline, and map pins are **views** over that graph — **projections** in the proposed Narrative layer ([`narrative-layer-data-model.md`](narrative-layer-data-model.md) §4–§6). Conclusion owns the relationships and committed values those views read; saved layouts, prose, and curated map compositions would live downstream in Narrative when that layer ships.
+Interpretation is a cited property graph (Subjects, Observations, Citations). Conclusion adds working handles and two claim verbs. The family tree, timeline, and map pins are **views** over that graph — **projections** in the proposed Narrative layer ([`narrative-layer-data-model.md`](narrative-layer-data-model.md) §4–§6). Conclusion owns the relationships and committed values those views read; saved layouts, prose, and curated map compositions would live downstream in Narrative when that layer ships.
 
 ```text
-Observations ──subject──► Node ◄──same_as──► other Nodes
+Observations ──subject──► subject ◄──same_as──► other Subjects
                               │
                               │ identity_anchor_id (optional)
                               ▼
@@ -123,20 +123,20 @@ Observations ──subject──► Node ◄──same_as──► other Nodes
 canonical_entities
   - kind (person | event | place | relationship | participation | location | …)
   - stable UUID and human ref
-  - identity_anchor_id (nullable Node; live cluster when set)
+  - identity_anchor_id (nullable Subject; live cluster when set)
   - argument (optional existence rationale)
   - label (researcher working identifier)
   - members = ∅, or accepted same_as closure from the identity anchor
-  - payload = member-Node Observations projected, overridden by reconciliation_claims
+  - payload = member-subject Observations projected, overridden by reconciliation_claims
 ```
 
 Important separations:
 
 1. **Canonical entity** — working subject; creating it *is* origination. No `origination_claims` table.
-2. **Sameness Claim** — two Nodes co-refer (or not), with Observation exhibit.
-3. **Membership** — derived from the identity anchor + `same_as` graph; not a join table of Nodes on the entity.
-4. **Reconciliation Claim** — concluded value of one Property on one entity. Exhibit Observations may be about **other** Nodes; they are not retargeted.
-5. **Canonical merge** — `merged_into_id` within the same Node Type.
+2. **Sameness Claim** — two Subjects co-refer (or not), with Observation exhibit.
+3. **Membership** — derived from the identity anchor + `same_as` graph; not a join table of Subjects on the entity.
+4. **Reconciliation Claim** — concluded value of one Property on one entity. Exhibit Observations may be about **other** Subjects; they are not retargeted.
+5. **Canonical merge** — `merged_into_id` within the same Subject type.
 6. **Independent handles** — creating a Person does not auto-create related Events, Places, or Locations.
 
 SQLite enforces foreign keys and basic checks. Cluster membership, kind/anchor consistency, split repointing, and “a Location is usable only when both ends are known” are **application invariants**.
@@ -145,7 +145,7 @@ SQLite enforces foreign keys and basic checks. Cluster membership, kind/anchor c
 
 # 4. `sameness_claims`
 
-A Sameness Claim asserts that two Nodes do or do not refer to the same historical thing.
+A Sameness Claim asserts that two Subjects do or do not refer to the same historical thing.
 
 Claim confidence grades (shared with Reconciliation Claims):
 
@@ -166,9 +166,9 @@ Seed keys: [`seeded-vocabulary.md`](seeded-vocabulary.md) §5.5. Semantics: [`re
 ```sql
 CREATE TABLE sameness_claims (
     id                   BLOB PRIMARY KEY,
-    node_a_id            BLOB NOT NULL,
-    node_b_id            BLOB NOT NULL,
-    node_type_id         BLOB NOT NULL,
+    subject_a_id            BLOB NOT NULL,
+    subject_b_id            BLOB NOT NULL,
+    subject_type_id         BLOB NOT NULL,
     relation             TEXT NOT NULL,
     status               TEXT NOT NULL,
     confidence_grade_id  BLOB REFERENCES claim_confidence_grades(id),
@@ -176,19 +176,19 @@ CREATE TABLE sameness_claims (
 
     CHECK (relation IN ('same_as', 'distinct_from')),
     CHECK (status IN ('provisional', 'accepted', 'rejected')),
-    CHECK (node_a_id < node_b_id),
-    FOREIGN KEY (node_a_id, node_type_id)
-        REFERENCES nodes (id, node_type_id),
-    FOREIGN KEY (node_b_id, node_type_id)
-        REFERENCES nodes (id, node_type_id),
-    UNIQUE (node_a_id, node_b_id)
+    CHECK (subject_a_id < subject_b_id),
+    FOREIGN KEY (subject_a_id, subject_type_id)
+        REFERENCES subjects (id, subject_type_id),
+    FOREIGN KEY (subject_b_id, subject_type_id)
+        REFERENCES subjects (id, subject_type_id),
+    UNIQUE (subject_a_id, subject_b_id)
 ) STRICT;
 ```
 
-`relation = same_as` means the researcher concludes the Nodes co-refer.  
+`relation = same_as` means the researcher concludes the subjects co-refer.  
 `relation = distinct_from` means the researcher concludes they do not.
 
-There is at most one Sameness Claim per unordered Node pair. Endpoint order is canonicalized with `node_a_id < node_b_id` so `(A, B)` and `(B, A)` cannot both exist. A pair therefore cannot simultaneously carry `same_as` and `distinct_from`; changing the conclusion updates the existing row (and is audited), rather than inserting a second Claim.
+There is at most one Sameness Claim per unordered subject pair. Endpoint order is canonicalized with `subject_a_id < subject_b_id` so `(A, B)` and `(B, A)` cannot both exist. A pair therefore cannot simultaneously carry `same_as` and `distinct_from`; changing the conclusion updates the existing row (and is audited), rather than inserting a second Claim.
 
 `status` is workflow state: `provisional`, `accepted`, or `rejected`. Only **accepted** `same_as` Claims participate in membership closure. `distinct_from` never enlarges membership regardless of status. See [`seeded-vocabulary.md`](seeded-vocabulary.md).
 
@@ -198,9 +198,9 @@ There is at most one Sameness Claim per unordered Node pair. Endpoint order is c
 
 `argument` holds the researcher's reasoning chain for the claim — correlation narrative, circumstantial synthesis, or a short note when a single Observation already makes the case. Reasoning stays here rather than scattered across evidence rows.
 
-Sameness Claims point at Nodes, not at canonical entities. Each pairwise correlation has its own row and evidence so `A same_as B` and `B same_as C` can be justified independently. Transitive membership follows from the accepted graph; evidence does not have to be repeated onto a single “cluster claim.”
+Sameness Claims point at Subjects, not at canonical entities. Each pairwise correlation has its own row and evidence so `A same_as B` and `B same_as C` can be justified independently. Transitive membership follows from the accepted graph; evidence does not have to be repeated onto a single “cluster claim.”
 
-Both endpoints must share one Node Type. `node_type_id` on the claim is copied from those Nodes so SQLite can enforce that with composite foreign keys (`nodes` has `UNIQUE (id, node_type_id)`). That copy cannot drift: Node type is immutable, and a Claim cannot point at a Node whose type differs from `node_type_id`.
+Both endpoints must share one Subject type. `subject_type_id` on the claim is copied from those subjects so SQLite can enforce that with composite foreign keys (`subjects` has `UNIQUE (id, subject_type_id)`). That copy cannot drift: subject type is immutable, and a Claim cannot point at a subject whose type differs from `subject_type_id`.
 
 ---
 
@@ -219,7 +219,7 @@ CREATE TABLE sameness_claim_evidence (
 
 Pin every relevant Observation here; write the conclusion and inference in `sameness_claims.argument`. Exhibit pins are **Observations only** for now — not Citations, Sources, or other Claims. If a prior correlation matters, say so in `argument` (and pin the Observations that support this claim). Broader exhibit types can wait until a concrete workflow needs them.
 
-The Observation's `subject_node_id` is unchanged. Pins mean “this assertion is part of my proof,” not “this Observation is now about the claim.”
+The Observation's `subject_id` is unchanged. Pins mean “this assertion is part of my proof,” not “this Observation is now about the claim.”
 
 ---
 
@@ -230,25 +230,25 @@ Because canonical rows are thin handles, they share one table instead of paralle
 ```sql
 CREATE TABLE canonical_entities (
     id                      BLOB PRIMARY KEY,
-    node_type_id            BLOB NOT NULL REFERENCES node_types(id),
+    subject_type_id            BLOB NOT NULL REFERENCES subject_types(id),
     ref                     TEXT UNIQUE NOT NULL,
-    identity_anchor_id      BLOB REFERENCES nodes(id),
+    identity_anchor_id      BLOB REFERENCES subjects(id),
     argument                TEXT,
     label                   TEXT,
     merged_into_id          BLOB REFERENCES canonical_entities(id)
 ) STRICT;
 ```
 
-`node_type_id` is the same vocabulary as Interpretation Node Types (referenced by id so origin-namespaced keys stay unambiguous). The table is an implementation detail; in the UI a `person` row is a Person (`PER-7KD45`), not a “canonical entity.” The Node Type is immutable after insert.
+`subject_type_id` is the same vocabulary as Interpretation Subject types (referenced by id so origin-namespaced keys stay unambiguous). The table is an implementation detail; in the UI a `person` row is a Person (`PER-7KD45`), not a “canonical entity.” The Subject type is immutable after insert.
 
-`ref` is required: `{ref_prefix}-{token}` from the Node Type — `PER-7KD45` for a person. Candidate person Nodes are minted off the same type's `candidate_ref_prefix` (`CPR-…`), so the two layers stay distinct by prefix while sharing one ref format.
+`ref` is required: `{ref_prefix}-{token}` from the Subject type — `PER-7KD45` for a person. Candidate person Subjects are minted off the same type's `candidate_ref_prefix` (`CPR-…`), so the two layers stay distinct by prefix while sharing one ref format.
 
-`identity_anchor_id` is the optional Node whose identity cluster *is* this subject. It replaces the older required `representative_node_id`. Creating a handle from a record sets the anchor to that Node. **Adopt** (first grounding of an inferred handle) sets it later. When the current anchor leaves the accepted `same_as` component, the application repoints to any remaining member Node; the canonical id does not change for that reason alone.
+`identity_anchor_id` is the optional subject whose identity cluster *is* this subject. It replaces the older required `representative_subject_id`. Creating a handle from a record sets the anchor to that subject. **Adopt** (first grounding of an inferred handle) sets it later. When the current anchor leaves the accepted `same_as` component, the application repoints to any remaining member subject; the canonical id does not change for that reason alone.
 
 ```text
 members(entity) =
   ∅  if identity_anchor_id IS NULL
-  else all Nodes reachable from that Node
+  else all Subjects reachable from that subject
        via accepted sameness_claims where relation = 'same_as'
 ```
 
@@ -256,12 +256,12 @@ members(entity) =
 
 Rules:
 
-- When `identity_anchor_id` is set, `node_type_id` must match that Node's `node_type_id` (application invariant).
-- `merged_into_id`, when set, should reference another entity of the same Node Type.
+- When `identity_anchor_id` is set, `subject_type_id` must match that subject's `subject_type_id` (application invariant).
+- `merged_into_id`, when set, should reference another entity of the same Subject type.
 - `label` is an optional researcher working identifier (for example `Mother of James`). It is not a genealogical name and must not substitute for NameValue Observations or name Reconciliation Claims.
 - `ref` is the stable short public reference, assigned on insert as `{ref_prefix}-{token}`. After merge, old refs keep resolving to the surviving entity.
-- Later accepted `same_as` Claims expand membership automatically from the anchor. Do not list member Nodes on the entity row.
-- Creating one handle does not auto-create related kinds. Reification `source` Nodes are not typically given canonical rows.
+- Later accepted `same_as` Claims expand membership automatically from the anchor. Do not list member Subjects on the entity row.
+- Creating one handle does not auto-create related kinds. Reification `source` subjects are not typically given canonical rows.
 - Primary kinds (`person`, `event`, `place`) may be created with no anchor, no `argument`, and no Reconciliations (stubs). Association kinds (`location`, `participation`, `relationship`) are edges: **conventionally** they are not shown as complete until endpoint Properties are known (see §7.3). Incomplete Location handles still persist.
 
 ```sql
@@ -288,7 +288,7 @@ Compute a badge from the row and its claims. Suggested labels:
 
 Unlinked stubs should stay off graphs and maps; list them in an unlinked / stubs view.
 
-A Node-backed handle is a better **trace to Interpretation**, not automatically better historical geography than a well-pinned inferred Location.
+A subject-backed handle is a better **trace to Interpretation**, not automatically better historical geography than a well-pinned inferred Location.
 
 ---
 
@@ -300,7 +300,7 @@ A Reconciliation Claim asserts:
 for canonical entity E, Property P has concluded value V
 ```
 
-The value is stored **on the claim**. Observation pins are optional exhibit. Pins may point at Observations whose subjects are other Nodes (sibling births, a gazetteer line). Those Observations are not retargeted and are not copied onto a fictional Location Node.
+The value is stored **on the claim**. Observation pins are optional exhibit. Pins may point at Observations whose subjects are other Subjects (sibling births, a gazetteer line). Those Observations are not retargeted and are not copied onto a fictional Location subject.
 
 ```sql
 CREATE TABLE reconciliation_claims (
@@ -325,13 +325,13 @@ CREATE TABLE reconciliation_claims (
 ) STRICT;
 ```
 
-`entity_id` is a real foreign key to `canonical_entities`. The entity's Node Type is available via that join; it is not duplicated on the claim row.
+`entity_id` is a real foreign key to `canonical_entities`. The entity's Subject type is available via that join; it is not duplicated on the claim row.
 
-`property_id` is the extensibility hook. Any Property in the vocabulary may be concluded on a suitable entity (subject to application rules about which Properties make sense for that Node Type).
+`property_id` is the extensibility hook. Any Property in the vocabulary may be concluded on a suitable entity (subject to application rules about which Properties make sense for that Subject type).
 
-Exactly one value representation must be populated, and it must match `properties.value_type`, parallel to Observations. For `value_type = 'node'`, Conclusion stores **`value_entity_id`** (another canonical handle). Interpretation Observations still use `value_node_id` (Node to Node). That split is intentional: a nodeless Place (asserted Canada) has no Node to point at. Matching Node Type to the Property's target hint is an application invariant.
+Exactly one value representation must be populated, and it must match `properties.value_type`, parallel to Observations. For `value_type = 'subject'`, Conclusion stores **`value_entity_id`** (another canonical handle). Interpretation Observations still use `value_subject_id` (Subject to subject). That split is intentional: a nodeless Place (asserted Canada) has no subject to point at. Matching Subject type to the Property's target hint is an application invariant.
 
-As with Observations, typed-column matching is an **application write invariant** for now. Readers prefer the column matching `value_type` if extras are present. The concluded value may match one exhibit Observation, be copied from a related Node's value, or be synthesized (for example a DateValue spanning Apr–May 1985).
+As with Observations, typed-column matching is an **application write invariant** for now. Readers prefer the column matching `value_type` if extras are present. The concluded value may match one exhibit Observation, be copied from a related subject's value, or be synthesized (for example a DateValue spanning Apr–May 1985).
 
 There is at most one Reconciliation Claim per `(entity, property)`. Changing the concluded value, `status`, or confidence grade updates that row (and is audited).
 
@@ -388,7 +388,7 @@ Evidence rows are pointers to Observations in the claim's exhibit list. Individu
 canonical_entities row E1
   kind = person
   identity_anchor → N1
-  members: person Nodes N1, N2
+  members: person Subjects N1, N2
 
 N1 Observation: birth_date → DateValue(14 MAY 1985)
 N2 Observation: birth_date → DateValue(MAY 1985)
@@ -407,7 +407,7 @@ N2 Observation: name → NameValue(form="James Robins", …)
 
 ## 7.3 Association kinds (Location, Participation, Relationship)
 
-On **Location Nodes**, `event` and `place` are node-valued Observations (Interpretation). A canonical Location **with** an identity anchor projects those Observations and resolves each target Node to a canonical Event/Place when those handles exist.
+On **Location subjects**, `event` and `place` are subject-valued Observations (Interpretation). A canonical Location **with** an identity anchor projects those Observations and resolves each target subject to a canonical Event/Place when those handles exist.
 
 A canonical Location **without** an anchor has no such Observations. Its ends are accepted Reconciliations:
 
@@ -418,7 +418,7 @@ LOC-…  (kind = location, identity_anchor_id = NULL)
   Reconciliation place → value_entity_id = PLC-…   (Upper Canada)
 ```
 
-Pins typically sit on the claim they justify (geography Observations on `place`; identifying the birth on `event` if needed). **Convention:** do not invent a Location Node for a conclusion-only edge, and do not add Observations to a Citation that did not support that end. Both are storeable; they mislabel the Source.
+Pins typically sit on the claim they justify (geography Observations on `place`; identifying the birth on `event` if needed). **Convention:** do not invent a Location subject for a conclusion-only edge, and do not add Observations to a Citation that did not support that end. Both are storeable; they mislabel the Source.
 
 The same pattern applies to Participation (`person`, `event`, `role`) and Relationship (`participant`, `relationship_type`): cluster projection when anchored; Reconciliation when not. `role` / `relationship_type` stay scalar Reconciliations (or member Observations) as today.
 
@@ -432,21 +432,21 @@ This section is **convention** unless noted. The schema does not know a township
 
 **Convention that pays off:** treat a Place as one geographic feature at **one grain** (this town, this township, this colony, this farm), and treat Location as M:N membership of Events in those Places. Genealogy then groups events and can later draw a map without a locality-history encyclopedia.
 
-**What the graph still allows:** a single Place whose `toponym` is `York, Upper Canada, North America`; `same_as` between that Place and any other place Node of the same type; a Location with only `event` filled; zero Citations. Save succeeds. Search, gazetteer bind, and “events in Upper Canada” roll-up will be weaker or misleading. The exhibit (or lack of one) is how another researcher judges it.
+**What the graph still allows:** a single Place whose `toponym` is `York, Upper Canada, North America`; `same_as` between that Place and any other place subject of the same type; a Location with only `event` filled; zero Citations. Save succeeds. Search, gazetteer bind, and “events in Upper Canada” roll-up will be weaker or misleading. The exhibit (or lack of one) is how another researcher judges it.
 
 ## 8.1 Interpretation
 
-A source phrase `"York, Upper Canada"` **can** be one place Node and one toponym string. **Convention:** split into two place Nodes (or two Location memberships) at the grains the Citation actually supports, so York does not `same_as` the colony when a second source only says Upper Canada. Toponyms on place Nodes use Property `toponym` in [`seeded-vocabulary.md`](seeded-vocabulary.md) (open: other Properties are fine). Event date is usually the time context rather than a date on the Place Node — convention, not a CHECK.
+A source phrase `"York, Upper Canada"` **can** be one place subject and one toponym string. **Convention:** split into two place Subjects (or two Location memberships) at the grains the Citation actually supports, so York does not `same_as` the colony when a second source only says Upper Canada. Toponyms on place Subjects use Property `toponym` in [`seeded-vocabulary.md`](seeded-vocabulary.md) (open: other Properties are fine). Event date is usually the time context rather than a date on the Place subject — convention, not a CHECK.
 
-A Location Node is the usual source-local association: this **event Node** at this **place Node**, each end an Observation with a Citation. Other shapes remain valid graph data.
+A Location subject is the usual source-local association: this **event subject** at this **place subject**, each end an Observation with a Citation. Other shapes remain valid graph data.
 
 ## 8.2 Canonical Places
 
 Create `PLC-…` like any other handle:
 
-- **From a record:** identity anchor = a place Node (census line, gazetteer feature, …).
+- **From a record:** identity anchor = a place subject (census line, gazetteer feature, …).
 - **Asserted:** no anchor; `label` = Canada; optional `argument`. Citing a baptism that never named Canada is allowed and will look like that baptism supported Canada.
-- **Gazetteer as Source (convention for citable geography):** ingest an editioned dump as a Source/Artifact; interpret a feature into a place Node; ground the canonical Place there. Google Maps is a renderer. Live geocoders make poor frozen Citations; dated packs (Who's On First / GeoNames SQLite, Newberry shapefiles, dated OHM extracts) match Source+Artifact better. Wikidata Q-ids are concordances; a snapshot is what you cite if Wikidata is the Source.
+- **Gazetteer as Source (convention for citable geography):** ingest an editioned dump as a Source/Artifact; interpret a feature into a place subject; ground the canonical Place there. Google Maps is a renderer. Live geocoders make poor frozen Citations; dated packs (Who's On First / GeoNames SQLite, Newberry shapefiles, dated OHM extracts) match Source+Artifact better. Wikidata Q-ids are concordances; a snapshot is what you cite if Wikidata is the Source.
 
 Farms and unnamed lots may stay project-only with no gazetteer feature.
 
@@ -457,10 +457,10 @@ Farms and unnamed lots may stay project-only with no gazetteer feature.
 Sibling births say Upper Canada; this birth says only York. **Convention:** keep three honest Interpretation Locations, then add a nodeless Location handle with Reconciliations (example below). **Also valid:** one composite Place, or `same_as` across grains — the app should not throw.
 
 ```text
-EVT-this-birth     identity-anchored on this birth Node
-PLC-york           from this register's place Node (settlement grain)
-PLC-upper-canada   from sibling place Nodes and/or asserted/gazetteer Place
-LOC-york           anchored on this birth's Location Node (event + York)
+EVT-this-birth     identity-anchored on this birth subject
+PLC-york           from this register's place subject (settlement grain)
+PLC-upper-canada   from sibling place Subjects and/or asserted/gazetteer Place
+LOC-york           anchored on this birth's Location subject (event + York)
 LOC-uc             no anchor
   Reconciliation event → EVT-this-birth
   Reconciliation place → PLC-upper-canada
@@ -486,7 +486,7 @@ Merge:
   E-A.merged_into_id = E-B
 ```
 
-Typical trigger: an accepted `same_as` Claim connects Nodes that currently sit under two different canonical entities of that kind. The application merges the entities and keeps a single identity anchor in the combined component.
+Typical trigger: an accepted `same_as` Claim connects Subjects that currently sit under two different canonical entities of that kind. The application merges the entities and keeps a single identity anchor in the combined component.
 
 Old ids and human refs should continue resolving to the surviving entity. Merge remains explicit and auditable. Reconciliation Claims on the absorbed entity must be merged or re-pointed by application rules.
 
@@ -496,20 +496,20 @@ Old ids and human refs should continue resolving to the surviving entity. Merge 
 
 These are **schema and application invariants** (see §1). Grain, gazetteer use, and interpolation are conventions in §8, not items here.
 
-1. Sameness Claims reference two distinct Nodes and never substitute for Observations.
-2. There is at most one Sameness Claim per unordered Node pair (`UNIQUE (node_a_id, node_b_id)` with canonical endpoint order).
-3. Both endpoints of a Sameness Claim have the same Node Type (`node_type_id` plus composite FKs to `nodes`). Same-type is what the schema can enforce; “same grain of place” is convention.
-4. Each accepted `same_as` component should correspond to at most one non-merged `canonical_entities` row of the matching Node Type (application).
-5. Members are ∅ if `identity_anchor_id` is NULL; otherwise the accepted `same_as` component of that Node (application resolver).
+1. Sameness Claims reference two distinct Subjects and never substitute for Observations.
+2. There is at most one Sameness Claim per unordered subject pair (`UNIQUE (subject_a_id, subject_b_id)` with canonical endpoint order).
+3. Both endpoints of a Sameness Claim have the same Subject type (`subject_type_id` plus composite FKs to `subjects`). Same-type is what the schema can enforce; “same grain of place” is convention.
+4. Each accepted `same_as` component should correspond to at most one non-merged `canonical_entities` row of the matching Subject type (application).
+5. Members are ∅ if `identity_anchor_id` is NULL; otherwise the accepted `same_as` component of that subject (application resolver).
 6. Membership is not stored as an independently editable join table.
 7. `identity_anchor_id` may change when the previous anchor leaves the component; the canonical entity id does not change for that reason alone.
-8. `node_type_id` is immutable. When an anchor is set, it matches that Node's `node_type_id` (application).
+8. `subject_type_id` is immutable. When an anchor is set, it matches that subject's `subject_type_id` (application).
 9. Every canonical entity has a required `ref` of the form `{ref_prefix}-{token}`.
 10. `distinct_from` and rejected Claims do not enlarge membership.
-11. Observations always target Nodes and always have a Citation (Interpretation schema). Canonical handles are not Observation subjects.
+11. Observations always target Subjects and always have a Citation (Interpretation schema). Canonical handles are not Observation subjects.
 12. Creating one canonical entity does not require or imply creating related entities (no cascade in schema).
 13. There is at most one Reconciliation Claim per `(entity_id, property_id)`.
-14. A Reconciliation Claim's typed value must match `properties.value_type` (application write). For `value_type = 'node'`, Conclusion uses `value_entity_id`.
+14. A Reconciliation Claim's typed value must match `properties.value_type` (application write). For `value_type = 'subject'`, Conclusion uses `value_entity_id`.
 15. Soft display merges are stateless UI projections; only an accepted Reconciliation Claim is a committed concluded value.
 16. Person name format is a Property (`name_format`) or the project default, not a column on `canonical_entities`.
 17. Association ends are Properties on the association entity (projected from member Observations and/or Reconciliation), not a separate endpoints table.
@@ -522,10 +522,10 @@ These are **schema and application invariants** (see §1). Grain, gazetteer use,
 
 This draft's Conclusion Claims are:
 
-- **Sameness Claims** (`sameness_claims`) — Node co-reference;
+- **Sameness Claims** (`sameness_claims`) — subject co-reference;
 - **Reconciliation Claims** (`reconciliation_claims`) — concluded Property values on `canonical_entities`.
 
-The entity insert is origination of a **handle**, not a third claim kind. The older generic `claims` / Record-resolution tables, per-kind canonical tables (`persons`, `events`, …), required `representative_node_id`, derived-only association FKs, and a parked Place domain are superseded by this model.
+The entity insert is origination of a **handle**, not a third claim kind. The older generic `claims` / Record-resolution tables, per-kind canonical tables (`persons`, `events`, …), required `representative_subject_id`, derived-only association FKs, and a parked Place domain are superseded by this model.
 
 ---
 
@@ -537,14 +537,14 @@ The entity insert is origination of a **handle**, not a third claim kind. The ol
 Photograph Source
   Artifact: scan.jpg
   Citation: crop around one person
-  Observation: cited crop depicts person Node N1
-  Node N1 (person, home Source = photograph)
+  Observation: cited crop depicts person subject N1
+  subject N1 (person, home Source = photograph)
 
 Testimony Source
   Artifact: audio or research note
   Citation: "That's my grandfather"
-  Observation: testimony refers to the same depicted person as Node N1
-  Node N2 (person, home Source = testimony)
+  Observation: testimony refers to the same depicted person as subject N1
+  subject N2 (person, home Source = testimony)
 
 Conclusion
   canonical_entities E1 (kind=person, identity_anchor_id = N1)
@@ -556,14 +556,14 @@ Conclusion
 
 ```text
 Birth certificate Source C
-  person Node NC, birth_date Observation → 1 JAN 1800
-  source Node SC reifying C
+  person subject NC, birth_date Observation → 1 JAN 1800
+  source subject SC reifying C
 
 Letter Source L
   Observations:
     SC -- remark --> "date of birth on certificate mistyped"
-    person Node NL -- birth_date --> 2 JAN 1800
-    person Node NL -- birth_date --> 1 JAN 1800 (polarity negative)
+    person subject NL -- birth_date --> 2 JAN 1800
+    person subject NL -- birth_date --> 1 JAN 1800 (polarity negative)
 
 Conclusion
   sameness_claim: NC same_as NL (accepted), evidence cites both Sources' Observations
@@ -580,13 +580,13 @@ Conclusion
 Source: DNA match report
 Artifact: locally retained export/screenshot/JSON/CSV
 Citation: match result
-Observations on person Node ND:
+Observations on person subject ND:
   shared DNA
   predicted relationship
   match display name
 
 Conclusion
-  sameness_claims may later correlate ND with other person Nodes
+  sameness_claims may later correlate ND with other person Subjects
   canonical person entity created/extended via identity_anchor + accepted same_as closure
 ```
 
@@ -600,18 +600,18 @@ PLC-canada
   argument = "working subject for the country; not cited from a family record"
 ```
 
-Optional later: gazetteer Source → place Node → set `identity_anchor_id`. Events appear in Canada only via Location handles, not by this insert alone.
+Optional later: gazetteer Source → place subject → set `identity_anchor_id`. Events appear in Canada only via Location handles, not by this insert alone.
 
 ## 12.5 Inferred extra Location (siblings)
 
 ```text
 Interpretation (unchanged, honest)
-  Birth A: Location Node → place York
-  Birth B (older sibling): Location Node → place Upper Canada
-  Birth C (younger sibling): Location Node → place Upper Canada
+  Birth A: Location subject → place York
+  Birth B (older sibling): Location subject → place Upper Canada
+  Birth C (younger sibling): Location subject → place Upper Canada
 
 Conclusion
-  EVT-A, PLC-york, PLC-uc, LOC-york as usual (anchors on the corresponding Nodes)
+  EVT-A, PLC-york, PLC-uc, LOC-york as usual (anchors on the corresponding Subjects)
   LOC-uc-extra
     kind = location
     identity_anchor_id = NULL

@@ -127,7 +127,7 @@ Narrative      default tree projection (often no rows)
 
 **Conclusion owns:** who is related to whom, sameness, committed Property values, existence handles.
 
-**Narrative owns:** how that structure is **shown** — root person, inclusion filters, collapse state, emphasis, labels for export, optional prose under nodes.
+**Narrative owns:** how that structure is **shown** — root person, inclusion filters, collapse state, emphasis, labels for export, optional prose under subjects.
 
 A researcher who only builds Conclusion still gets a tree “for free” as a projection. That is Narrative-layer behavior with minimal authorship.
 
@@ -188,7 +188,7 @@ Linking to an **Observation** is the finest bridge between story and proof: “t
 
 Citations use locators (for example `text_quote`) to point **into** an Artifact. Narrative references point **out from** researcher prose **to** graph entities — same “select and attach” gesture, opposite direction.
 
-Stored anchors should survive edits better than raw character offsets alone (marker tokens, block IDs, or embedded link nodes in a structured document — product decision).
+Stored anchors should survive edits better than raw character offsets alone (marker tokens, block IDs, or embedded link subjects in a structured document — product decision).
 
 ## 7.3 Multiple narratives, conflicting stories
 
@@ -207,7 +207,7 @@ Discussion examples that motivated this draft:
 | Layer | Home |
 | --- | --- |
 | Source | Census catalog metadata (sheet, dwelling number, …) |
-| Interpretation | Event Node (`event_type = census`, date, `has_radio → true` Observation) |
+| Interpretation | Event subject (`event_type = census`, date, `has_radio → true` Observation) |
 | Conclusion | Optional Reconciliation on canonical **Event**, not Person |
 | Narrative | “By 1931 the household had a radio” in prose, linked to `OBS-…` |
 
@@ -228,9 +228,9 @@ Prefer **Citation-first** capture; compose in Narrative rather than forcing a Pe
 
 | Layer | Home |
 | --- | --- |
-| Interpretation | Optional `animal` Node + Relationship when named/recurring; vague mention → text only |
+| Interpretation | Optional `animal` subject + Relationship when named/recurring; vague mention → text only |
 | Conclusion | Light touch; avoid reconciling `species` onto Person |
-| Narrative | “Rex was part of the family” in biography; link Animal Node or photo Event |
+| Narrative | “Rex was part of the family” in biography; link Animal subject or photo Event |
 
 Tier by evidence: vague mention → Narrative + Citation; named pet across sources → Interpretation graph + Narrative links.
 
@@ -284,7 +284,7 @@ Optional researcher commentary on a composition (same pattern as other typed not
 
 ## 9.4 Ref prefix
 
-Proposed catalog prefix: **`NAR`** (`narratives`). Register in [`catalog-refs.md`](catalog-refs.md) when promoted. Must not collide with reserved prefixes or `node_types.ref_prefix` values.
+Proposed catalog prefix: **`NAR`** (`narratives`). Register in [`catalog-refs.md`](catalog-refs.md) when promoted. Must not collide with reserved prefixes or `subject_types.ref_prefix` values.
 
 ## 9.5 Search and share
 

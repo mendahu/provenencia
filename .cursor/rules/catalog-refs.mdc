@@ -10,5 +10,5 @@ Follow the project skill `.cursor/skills/add-catalog-ref/SKILL.md`. Product note
 
 - Mint/validate only through `core/ref` (`Mint`, `Validate`). Do not hand-roll tokens or mint in SQL.
 - Machine id stays UUIDv7; `ref` is display/search only — never a foreign key; never recycle.
-- Reserved prefixes: `USR`, `SRC`, `ART`, `CIT`, `OBS`. Validate Node Type prefixes with `ref.ValidatePrefix`.
-- One ref format. Interpretation Nodes are ordinary refs off `node_types.candidate_ref_prefix` (`CPR-…`), canonical entities off `ref_prefix` (`PER-…`) — no marker segment, no candidate-specific mint or validator.
+- Reserved prefixes: `USR`, `SRC`, `ART`, `CIT`, `OBS`. Validate Subject type prefixes with `ref.ValidatePrefix`.
+- One ref format. Interpretation subjects are ordinary refs off `subject_types.candidate_ref_prefix` (`CPR-…`), canonical entities off `ref_prefix` (`PER-…`) — no marker segment, no candidate-specific mint or validator.

@@ -2,56 +2,48 @@
 
 ## Status
 
-**Planned.** No steps landed. Finished steps will be recorded in [`completed.md`](completed.md).
+**Planned.** Finished steps: [`completed.md`](completed.md).
 
-Lay the first Interpretation-layer track — candidate refs, Node vocabulary, Nodes, layout storage, FFI, and a workspace place — so that **Spike 6 can open a file and start drawing.** The canvas itself is deliberately out of scope: this spike ends exactly where it begins.
+Lay the Interpretation-layer **data** track — candidate refs, subject vocabulary, Subjects, layout storage, FFI — and the **Sources-family** entry into an Evidence graph stub, so **Spike 6 can start drawing.** The canvas itself is out of scope.
 
-Authoritative design: [`interpretation-graph-ui.md`](../../ideas/interpretation-graph-ui.md) §11.1 ("the load-bearing minimum"). Authoritative schema: [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) §4. Seed vocabulary: [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.1.
+> **No Subject UI.** The Evidence graph is the only surface for Subjects, Citations, and Observations (design note §1.3); Spike 6 draws it. Product nav is one **Sources** family with nested config (§1.4) — no Interpretation sidebar section. Entry: dual action on the Sources list → Evidence graph stub.
+
+Authoritative design: [`interpretation-graph-ui.md`](../../ideas/interpretation-graph-ui.md) §11.1 / §1.4. Schema: [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) §4. Seed: [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.1.
 
 ## Why this spike exists
 
-The design note argues for building the canvas **first**, because it is the only part of the Interpretation layer with no prior art and no fallback. The constraint is that a canvas needs rows to place. So the question this spike answers is narrow:
-
-> What does the first `nodes` INSERT actually require?
-
-The answer is small. `nodes` has exactly two foreign keys — `sources`, which exists, and `node_types`, which does not. Everything else in the layer (`properties`, `observations`, `citations`, NameValue, the artifact viewer) hangs off **Observations**, not Nodes, and none of it blocks a bubble on a grid. That is the whole scoping argument, and it is why this spike is shorter than it looks like it should be.
+The design note builds the canvas **first**; a canvas needs rows. Spike 5 answers: what does the first `subjects` INSERT require? (`sources` exists; `subject_types` does not.) Everything else hangs off Observations and does not block a bubble.
 
 ## Goal
 
 A researcher can:
 
-1. Open a Source, click **Interpretation**, and land on a graph destination scoped to that Source.
-2. Create `person`, `event`, and `place` Nodes there, see their candidate refs (`CPR-7KD45`, `CEV-…`, `CPL-…`), rename them, and delete them.
-3. Leave, navigate elsewhere, and return via Back/Forward or the sidebar with the place restored and the session cache warm.
-4. See every Node write in the audit log.
+1. See **Sources** as the primary sidebar item, with Source types / Source fields / Subject types / Subject fields as nested config (stubs OK for Subject*).
+2. From the Sources list, open a Source page **or** an Evidence graph stub (when the Source has an Artifact).
+3. Leave and return via Back/Forward with the place restored.
 
-Nothing here is genealogically useful yet — there are no Observations, so nothing is cited. The point is that the rail is laid.
+Everything else is proven by test: Subject CRUD with candidate refs, positions, FakeStore RPCs.
 
 ## Documents
 
 | Doc | Role |
 | --- | --- |
 | [**Deployment plan**](deployment-plan.md) | PR sequence, design gates, schema, gotchas, definition of done |
-| [**Design briefs**](design/) | Claude Design briefs (S5-D1…S5-D4, one per surface) — all UI is designed before it is built |
+| [**Design briefs**](design/) | S5-D2 open (list → Evidence graph); S5-D3 done; S5-D1 superseded |
 | [**Completed**](completed.md) | Finished steps (S5-01…) |
-| [Interpretation graph UI](../../ideas/interpretation-graph-ui.md) | Design rationale and the decision log this spike implements |
-
-Two of the ten build steps ship UI, and both are gated on a design board. The design track has no dependency on the Go track, so it starts on day one — see [`design/README.md`](design/README.md).
+| [Interpretation / Evidence graph UI](../../ideas/interpretation-graph-ui.md) | Design rationale |
 
 ## Relationship to the spikes around it
 
-Spike 4 shipped **how places load and render** (`WorkspaceSession`, `CatalogQueryRegistry`, `PlaceRegistry`). Spike 5 is the first real customer of that extension point that is not Sources-shaped — if `add-workspace-place` works as advertised, this spike is mostly registry rows.
+Spike 4 shipped place loading (`WorkspaceSession`, `PlaceRegistry`). Spike 5 extends Sources (discriminator, nested sections, graph place) rather than adding an Interpretation section.
 
-**Spike 6 is the canvas**, and it starts with zero schema work: migration, Go, FFI, store, place, and navigation are all done here. Its first PR draws bubbles.
+**Spike 6** is the Evidence graph canvas — zero schema work; first PR replaces the stub.
 
 ## Out of scope
 
-Everything below is deferred on purpose. None of it blocks the canvas.
-
-- **The canvas.** No `NSScrollView` bridge, no drawing, no drag, no snap-to-grid, no tray, no connect tool.
-- **Observations and Citations.** No `properties`, `node_type_properties`, `observations`, `citations`, or locator validation.
-- **Bridge Node macros.** `relationship` / `participation` / `location` types are *seeded*, but nothing creates them — they need Observations to mean anything.
-- **The artifact viewer** and NameValue (§4.4 of the design note — its own chunk of work, on the Observation path).
-- **The vocabulary browser UI.** Node Types are seeded and read-only; researcher-defined types and `ref_prefix` validation UX come with the browser in Spike 7.
-- **Search.** Nodes are explicitly **not** projected into the omnibar — see the deployment plan's gotcha list for the six-file surface that would entail.
-- **Source-to-source commentary.** The `source` Node Type is seeded, but the Source-page flow it feeds (design note §4.6) is unspecified and unscheduled.
+- The canvas (drawing, drag, snap, tray, connect).
+- Any UI that creates or edits a subject.
+- Observations, Citations, locator validation, NameValue, artifact viewer.
+- Subject types / Subject fields **editors** (nav stubs only).
+- Omnibar projection for Subjects.
+- Source-to-source commentary on the Source page.

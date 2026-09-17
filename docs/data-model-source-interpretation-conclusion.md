@@ -73,38 +73,38 @@ Citation
   ↓ supports
 Observation
   ↓ asserts a Property about
-Node
+Subject
 ```
 
 A Citation identifies an addressable portion of an Artifact and may preserve the researcher's transcription and description of that evidence.
 
-A Node is a source-local, globally addressable thing encountered while interpreting evidence. Nodes deliberately carry very little domain structure themselves. Their semantics come from their Node Type and the Observations that describe and connect them.
+A subject is a source-local, globally addressable thing encountered while interpreting evidence. Subjects deliberately carry very little domain structure themselves. Their semantics come from their Subject type and the Observations that describe and connect them.
 
-Each Node records a home `source_id` for the Source in which it was primarily encountered. That is a UI and organization aid, not a confinement rule: Observations from Citations under other Sources may still target the Node.
+Each subject records a home `source_id` for the Source in which it was primarily encountered. That is a UI and organization aid, not a confinement rule: Observations from Citations under other Sources may still target the subject.
 
 An Observation is the smallest independently addressable unit of interpreted evidence. It is an atomic, cited assertion with the general shape:
 
 ```text
-subject Node -- Property --> typed value
+subject -- Property --> typed value
 ```
 
 The assertion may be positive or negative. A negative Observation records that the source appears to deny the proposition (for example, that a person's name is not Jake), rather than merely omitting a positive assertion.
 
-The value may be a scalar/structured value or another Node. A Node-valued Observation therefore forms an edge in the Interpretation graph.
+The value may be a scalar/structured value or another subject. A Subject-valued Observation therefore forms an edge in the Interpretation graph.
 
 The Interpretation layer is an extensible, schema-described property graph. It stores explicit normalized assertions derived from evidence but does not persist relationships or conclusions that can merely be inferred from those assertions. Genealogical inference and higher-order semantics belong to application and Conclusion logic.
 
-A Node's assertion provenencia is derived through its Observations:
+A subject's assertion provenencia is derived through its Observations:
 
 ```text
-Node
+Subject
   ← Observation
   ← Citation
   ← Artifact
   ← Source
 ```
 
-There is no persisted `source_stack` or specialized Record hierarchy. Disconnected semantic matrices arise naturally from the resulting Node/Observation graph.
+There is no persisted `source_stack` or specialized Record hierarchy. Disconnected semantic matrices arise naturally from the resulting subject/Observation graph.
 
 Authoritative schema: [`interpretation-layer-data-model.md`](interpretation-layer-data-model.md).
 
@@ -127,24 +127,24 @@ Location
 
 These are rows in one `canonical_entities` table distinguished by `kind`, not parallel per-kind tables.
 
-Canonical does not mean complete, final, or universally authoritative. A Person may be unnamed. A Place may be an asserted handle with no Interpretation Node. Two canonical entities may later be merged.
+Canonical does not mean complete, final, or universally authoritative. A Person may be unnamed. A Place may be an asserted handle with no Interpretation subject. Two canonical entities may later be merged.
 
-Interpretation keeps source-local Nodes separate for traceability: two Sources that mention the same historical person normally produce two `person` Nodes. The Conclusion layer gives the researcher a durable **working subject** (the canonical row). Creating that row is origination of the handle, not a third claim type.
+Interpretation keeps source-local Subjects separate for traceability: two Sources that mention the same historical person normally produce two `person` Subjects. The Conclusion layer gives the researcher a durable **working subject** (the canonical row). Creating that row is origination of the handle, not a third claim type.
 
-The two Conclusion **claims** are **sameness** (Node co-reference) and **reconciliation** (committed Property values on a handle):
+The two Conclusion **claims** are **sameness** (Subject co-reference) and **reconciliation** (committed Property values on a handle):
 
 ```text
-Node A ── sameness claim (same_as / distinct_from) ── Node B
+Subject A ── sameness claim (same_as / distinct_from) ── Subject B
 
 canonical_entities E (kind = person)
-  identity_anchor_id → optional Node (live same_as cluster when set)
-  members(E) = ∅, or Nodes reachable from that anchor via accepted same_as
+  identity_anchor_id → optional subject (live same_as cluster when set)
+  members(E) = ∅, or Subjects reachable from that anchor via accepted same_as
   argument → optional existence rationale on the handle
 ```
 
-Sameness Claims are higher-order than Observations. An Observation says what a particular Source appears to assert about a Node. A Sameness Claim says the researcher concludes that two Nodes do or do not co-refer, with its own evidence chain. Exhibit pins do not retarget Observations.
+Sameness Claims are higher-order than Observations. An Observation says what a particular Source appears to assert about a subject. A Sameness Claim says the researcher concludes that two Subjects do or do not co-refer, with its own evidence chain. Exhibit pins do not retarget Observations.
 
-The same handle pattern applies across Node Types (`person`, `event`, `place`, `relationship`, `participation`, `location`). Domain payload is projected from member-Node Observations and overridden by Reconciliation Claims. For `value_type = 'node'`, Reconciliation points at another **canonical** entity (`value_entity_id`), so a nodeless Place can still be an association end.
+The same handle pattern applies across Subject types (`person`, `event`, `place`, `relationship`, `participation`, `location`). Domain payload is projected from member-subject Observations and overridden by Reconciliation Claims. For `value_type = 'subject'`, Reconciliation points at another **canonical** entity (`value_entity_id`), so a Place without Interpretation members can still be an association end.
 
 **Convention:** Places work best as thin features at one grain; Locations as M:N event–place membership; gazetteer packs as ordinary Sources; extra grains as additional Location handles rather than `same_as` between town and colony. The schema does not enforce grain. See [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §1 and §8.
 
@@ -190,7 +190,7 @@ Structured personal names use the shared model in [`structured-name-model.md`](s
 
 Selected user-facing rows receive a required short human-readable `ref`, unique within the project (application: unique across all ref-bearing tables). Implementation details (minting, schema, UI): [`catalog-refs.md`](catalog-refs.md).
 
-Catalog and Interpretation rows that are not typed Nodes use `{PREFIX}-{token}`:
+Catalog and Interpretation rows that are not typed Subjects use `{PREFIX}-{token}`:
 
 ```text
 USR   contributors     e.g. USR-F4N2P
@@ -200,11 +200,11 @@ CIT   citations        e.g. CIT-3K9M2
 OBS   observations     e.g. OBS-2F8Q1
 ```
 
-Nodes and canonical entities are both typed by `node_types`, which carries **two** prefixes per row. The concluded working subject is minted off `ref_prefix`; the source-local Interpretation Node is minted off `candidate_ref_prefix`, so it does not read as “final”:
+Nodes and canonical entities are both typed by `subject_types`, which carries **two** prefixes per row. The concluded working subject is minted off `ref_prefix`; the source-local Interpretation subject is minted off `candidate_ref_prefix`, so it does not read as “final”:
 
 ```text
 PER-7KD45    Person (canonical entity)
-CPR-7KD45    person candidate Node (Interpretation)
+CPR-7KD45    person candidate subject (Interpretation)
 ```
 
 ```text
@@ -212,11 +212,11 @@ canonical    {ref_prefix}-{token}
 node         {candidate_ref_prefix}-{token}
 ```
 
-There is **one ref format**. The layers differ by prefix alone — no marker segment, no layer-specific shape, and therefore nothing extra for consumers of a ref to parse. **Hypothetical is not modelled:** a census person Node is cited evidence, not a guess.
+There is **one ref format**. The layers differ by prefix alone — no marker segment, no layer-specific shape, and therefore nothing extra for consumers of a ref to parse. **Hypothetical is not modelled:** a census person subject is cited evidence, not a guess.
 
 Candidate prefixes conventionally begin with `C` (`CPR`, `CEV`, `CPL`, …), but the leading letter is not enforced and carries no meaning to the code. Which layer a prefix serves is a registry lookup, not a property of the string.
 
-Creating a Node Type supplies both prefixes. Catalog prefixes `USR`, `SRC`, `ART`, `CIT`, `OBS` stay reserved, and the two columns share one namespace: a prefix must be unique across every `ref_prefix` *and* every `candidate_ref_prefix`. The Node Type / canonical `kind` is immutable; a mistaken type is a new row, not an in-place change.
+Creating a Subject type supplies both prefixes. Catalog prefixes `USR`, `SRC`, `ART`, `CIT`, `OBS` stay reserved, and the two columns share one namespace: a prefix must be unique across every `ref_prefix` *and* every `candidate_ref_prefix`. The Subject type / canonical `kind` is immutable; a mistaken type is a new row, not an in-place change.
 
 Machine identity remains the UUID. `ref` is assigned by the application on insert, stable, and not recycled. After canonical merge, old refs keep resolving to the surviving entity.
 
@@ -235,14 +235,14 @@ See also the worked examples in [`conclusion-layer-data-model.md`](conclusion-la
 Photograph Source
   Artifact: scan.jpg
   Citation: crop around one person
-  Observation: cited crop depicts person Node N1
-  Node N1 (person, home Source = photograph)
+  Observation: cited crop depicts person subject N1
+  subject N1 (person, home Source = photograph)
 
 Testimony Source
   Artifact: audio or research note
   Citation: "That's my grandfather"
-  Observation: testimony refers to the same depicted person as Node N1
-  Node N2 (person, home Source = testimony)
+  Observation: testimony refers to the same depicted person as subject N1
+  subject N2 (person, home Source = testimony)
 
 Conclusion
   canonical_entities E1 (kind=person, identity_anchor_id = N1)
@@ -254,14 +254,14 @@ Conclusion
 
 ```text
 Birth certificate Source C
-  person Node NC, birth_date Observation → 1 JAN 1800
-  source Node SC reifying C
+  person subject NC, birth_date Observation → 1 JAN 1800
+  source subject SC reifying C
 
 Letter Source L
   Observations:
     SC -- remark --> "date of birth on certificate mistyped"
-    person Node NL -- birth_date --> 2 JAN 1800
-    person Node NL -- birth_date --> 1 JAN 1800 (polarity negative)
+    person subject NL -- birth_date --> 2 JAN 1800
+    person subject NL -- birth_date --> 1 JAN 1800 (polarity negative)
 
 Conclusion
   sameness_claim: NC same_as NL (accepted), evidence cites both Sources' Observations
@@ -278,13 +278,13 @@ Conclusion
 Source: DNA match report
 Artifact: locally retained export/screenshot/JSON/CSV
 Citation: match result
-Observations on person Node ND:
+Observations on person subject ND:
   shared DNA
   predicted relationship
   match display name
 
 Conclusion
-  sameness_claims may later correlate ND with other person Nodes
+  sameness_claims may later correlate ND with other person Subjects
   canonical person entity created/extended via identity_anchor + accepted same_as closure
 ```
 

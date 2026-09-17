@@ -28,18 +28,18 @@ Never use `ref` as a foreign key. Never recycle a `ref` after delete/merge; old 
 
 Examples: `USR-F4N2P`, `SRC-3K9M2`, `OBS-2F8Q1`.
 
-### Candidate Nodes (Interpretation)
+### Candidate subjects (Interpretation)
 
-There is **one ref format**. Interpretation Nodes are distinguished by their own three-letter prefix, not by a special shape:
+There is **one ref format**. Interpretation subjects are distinguished by their own three-letter prefix, not by a special shape:
 
 ```text
 canonical entity   {PREFIX}-{TOKEN}    e.g. PER-7KD45   (canonical_entities)
-candidate Node     {PREFIX}-{TOKEN}    e.g. CPR-7KD45   (nodes)
+candidate subject     {PREFIX}-{TOKEN}    e.g. CPR-7KD45   (subjects)
 ```
 
-A Node Type therefore carries **two** prefixes — `node_types.ref_prefix` for the Conclusion handle and `node_types.candidate_ref_prefix` for the Interpretation Node — because `canonical_entities` and `nodes` share the same `node_types` vocabulary. Seeded pairs are in [`seeded-vocabulary.md`](seeded-vocabulary.md) §3.1.
+A Subject type therefore carries **two** prefixes — `subject_types.ref_prefix` for the Conclusion handle and `subject_types.candidate_ref_prefix` for the Interpretation subject — because `canonical_entities` and `subjects` share the same `subject_types` vocabulary. Seeded pairs are in [`seeded-vocabulary.md`](seeded-vocabulary.md) §3.1.
 
-Candidate prefixes conventionally start with `C` (`CPR`, `CEV`, `CPL`, …), but that is **not enforced**. Both columns validate identically through `ref.ValidatePrefix`, and nothing in the format tells you which layer a prefix belongs to — that is a registry lookup. The consequence to keep in mind: all Node Type prefixes, canonical and candidate, share one three-letter namespace and must be unique across **both** columns. That is an application rule; no single SQL `UNIQUE` expresses it.
+Candidate prefixes conventionally start with `C` (`CPR`, `CEV`, `CPL`, …), but that is **not enforced**. Both columns validate identically through `ref.ValidatePrefix`, and nothing in the format tells you which layer a prefix belongs to — that is a registry lookup. The consequence to keep in mind: all Subject type prefixes, canonical and candidate, share one three-letter namespace and must be unique across **both** columns. That is an application rule; no single SQL `UNIQUE` expresses it.
 
 An earlier design used an infix marker (`PER-C-7KD45`) so one prefix could serve both layers. It was dropped because the special shape leaked into everything that touches refs — a second mint function, a second validator, partial-match handling in search — for a distinction that a separate prefix encodes for free.
 
@@ -57,7 +57,7 @@ An earlier design used an infix marker (`PER-C-7KD45`) so one prefix could serve
 | `CIT` | citations |
 | `OBS` | observations |
 
-**Node Type prefixes** come from `node_types`, two per row (see [`seeded-vocabulary.md`](seeded-vocabulary.md) §3.1): `ref_prefix` for canonical entities (`PER`, `EVT`, `PLC`, `REL`, `PTN`, `LOC`, `SRN`, …) and `candidate_ref_prefix` for Nodes (`CPR`, `CEV`, `CPL`, `CRL`, `CPA`, `CLO`, `CSR`, …). None of them may collide with the reserved catalog set above, or with each other across either column.
+**Subject type prefixes** come from `subject_types`, two per row (see [`seeded-vocabulary.md`](seeded-vocabulary.md) §3.1): `ref_prefix` for canonical entities (`PER`, `EVT`, `PLC`, `REL`, `PTN`, `LOC`, `SRN`, …) and `candidate_ref_prefix` for Subjects (`CPR`, `CEV`, `CPL`, `CRL`, `CPA`, `CLO`, `CSR`, …). None of them may collide with the reserved catalog set above, or with each other across either column.
 
 **Proposed (not shipped):** `NAR` for Narrative compositions ([`narrative-layer-data-model.md`](narrative-layer-data-model.md)). Promote to the reserved catalog table above when the layer is roadmapped.
 
@@ -74,8 +74,8 @@ r, err := ref.Mint(ref.PrefixSource)
 if err != nil { … }
 if err := ref.Validate(r); err != nil { … }
 
-// Interpretation Node — an ordinary ref off the candidate prefix
-n, err := ref.Mint(nodeType.CandidateRefPrefix) // CPR-7KD45
+// Interpretation subject — an ordinary ref off the candidate prefix
+n, err := ref.Mint(subjectType.CandidateRefPrefix) // CPR-7KD45
 if err := ref.Validate(n); err != nil { … }
 ```
 
@@ -83,13 +83,13 @@ if err := ref.Validate(n); err != nil { … }
 | --- | --- |
 | `Mint(prefix)` | Normalizes prefix to `A-Z{3}`, appends `-` + random 5-char token |
 | `Valid` / `Validate` | The one ref form (`PREFIX-TOKEN`) |
-| `ValidatePrefix(prefix)` | Normalizes a Node Type prefix — either column — and rejects the reserved catalog prefixes (`ref.reserved_prefix`) |
+| `ValidatePrefix(prefix)` | Normalizes a Subject type prefix — either column — and rejects the reserved catalog prefixes (`ref.reserved_prefix`) |
 
-There is no candidate-specific mint or validator, and no layer-specific ref grammar. A Node ref and a canonical entity ref are the same shape; only the prefix differs, so every existing consumer of `Mint` / `Valid` already handles both.
+There is no candidate-specific mint or validator, and no layer-specific ref grammar. A Subject ref and a canonical entity ref are the same shape; only the prefix differs, so every existing consumer of `Mint` / `Valid` already handles both.
 
-`Mint` still accepts reserved prefixes, because `ref.Mint(ref.PrefixSource)` is how catalog rows are minted. Only `ValidatePrefix`, which guards Node Type vocabulary, refuses them.
+`Mint` still accepts reserved prefixes, because `ref.Mint(ref.PrefixSource)` is how catalog rows are minted. Only `ValidatePrefix`, which guards Subject type vocabulary, refuses them.
 
-`ValidatePrefix` does **not** check cross-column uniqueness or enforce the leading `C` convention. Enforce uniqueness in the Node Type write path against both `ref_prefix` and `candidate_ref_prefix`.
+`ValidatePrefix` does **not** check cross-column uniqueness or enforce the leading `C` convention. Enforce uniqueness in the Subject type write path against both `ref_prefix` and `candidate_ref_prefix`.
 
 **Do not** invent refs in SQL (`hex(id)`, random literals). Mint in Go on insert (or backfill in an `EnsureRefs`-style helper after migration).
 
