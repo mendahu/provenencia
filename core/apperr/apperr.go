@@ -41,6 +41,7 @@ const (
 	CodeSourceFieldsInUse            = "sourcefields.in_use"
 	CodeSourceVocabInvalid           = "sourcevocab.invalid"
 	CodeSourcesInvalid               = "sources.invalid"
+	CodeSubjectsInvalid              = "subjects.invalid"
 	CodeFilesInvalid                 = "files.invalid"
 	CodeArtifactsInvalid             = "artifacts.invalid"
 	CodeArtifactsFileAlreadyAttached = "artifacts.file_already_attached"

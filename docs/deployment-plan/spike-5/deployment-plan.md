@@ -4,7 +4,7 @@ Interpretation foundation: candidate refs, subject vocabulary, Subjects, layout 
 
 ## Status
 
-**Planned.** Landings go in [`completed.md`](completed.md). S5-01 through S5-03, and S5-D1 / S5-D3, are recorded there.
+**Planned.** Landings go in [`completed.md`](completed.md). S5-01 through S5-04, and S5-D1 / S5-D3, are recorded there.
 
 > **This spike ships no Subject UI.** The graph is the only surface for Subjects, Citations, and Observations (design note §1.3), and the graph is Spike 6. Product nav keeps **one Sources family** — no Interpretation sidebar section (§1.4). Entry is dual action on the Sources list → graph stub. See *Scope boundary* below.
 
@@ -23,7 +23,7 @@ Split, because most of this spike is not verifiable by clicking.
 **Verifiable only by test or inspection:**
 
 6. `subjects.Create` mints a ref off its type's `candidate_ref_prefix` (`CPR-…`, `CEV-…`, `CPL-…`).
-7. Rename and delete a subject; both appear in the audit log with a `node` entity type.
+7. Rename and delete a subject; both appear in the audit log with a `subject` entity type.
 8. `subject_positions` round-trips through the FFI and survives reopen.
 9. A `FakeStore` round-trip covers every new RPC.
 
@@ -54,7 +54,7 @@ S5-D3  Sources nav           S5-01  Subject type prefixes (core/ref)   done
   │                            ▼
   │                          S5-03  core/database/subjecttypes + seed done
   │                            ▼
-  │                          S5-04  core/database/subjects + audit
+  │                          S5-04  core/database/subjects + audit    done
   │                            ▼
   │                          S5-05  core/database/subjectpositions
   │                            ▼
@@ -81,7 +81,7 @@ S5-D2  List dual action        │
 - [x] S5-01 — Subject type prefix validation in `core/ref` → [`completed.md`](completed.md)
 - [x] S5-02 — Interpretation schema migration → [`completed.md`](completed.md)
 - [x] S5-03 — subject type vocabulary and create-time seed → [`completed.md`](completed.md)
-- [ ] S5-04 — Subject CRUD with audit
+- [x] S5-04 — Subject CRUD with audit → [`completed.md`](completed.md)
 - [ ] S5-05 — Graph layout positions
 - [ ] S5-06 — FFI methods for subject types, subjects, and positions
 - [ ] S5-07 — Nested Sources nav + Subject* stubs + graph place + `WorkspaceLocation` discriminator
@@ -236,7 +236,7 @@ The one thing it did change is the name of the layout table. It is **`subject_po
 | S5-01 | Guard subject type ref prefixes in `core/ref` |
 | S5-02 | Add interpretation node schema and graph layout storage |
 | S5-03 | Seed subject type vocabulary at catalog create |
-| S5-04 | Add audited node CRUD for the interpretation layer |
+| S5-04 | Add audited subject CRUD for the interpretation layer |
 | S5-05 | Persist graph node positions outside the audit trail |
 | S5-06 | Expose subject types, subjects, and positions over FFI |
 | S5-07 | Nest Sources config nav and register the evidence graph place |
