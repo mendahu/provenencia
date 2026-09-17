@@ -76,7 +76,7 @@ S5-D2  List dual action        │
 ## Checklist
 
 - [x] S5-D1 — Design: Interpretation nav entry → [`completed.md`](completed.md) (**superseded** — do not implement)
-- [ ] S5-D3 — Design: Sources section nav (nested config + Subject*) → [`design/`](design/)
+- [x] S5-D3 — Design: Sources section nav (nested config + Subject*) → [`completed.md`](completed.md)
 - [ ] S5-D2 — Design: Sources list → Evidence graph → [`design/`](design/)
 - [x] S5-01 — Subject type prefix validation in `core/ref` → [`completed.md`](completed.md)
 - [ ] S5-02 — Interpretation schema migration
@@ -251,11 +251,11 @@ The one thing it did change is the name of the layout table. It is **`subject_po
 
 | Track | Steps |
 | --- | --- |
-| **Design (no PRs)** | S5-D3 → S5-D2 (S5-D1 superseded) |
+| **Design (no PRs)** | S5-D3 (done) → S5-D2 (S5-D1 superseded) |
 | **Go core (critical path)** | S5-01 → S5-06 |
 | **Mac client** | S5-07 → S5-08 → S5-09 |
 
-S5-01 is done. Go chain is still the critical path. Design: start S5-D3 next.
+S5-01 and S5-D3 are done. Go chain is still the critical path. Design: finish S5-D2 next.
 
 ---
 

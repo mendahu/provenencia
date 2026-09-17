@@ -3,8 +3,8 @@
 **Kind:** Claude Design board
 **Spike:** Provenencia Spike 5 (Interpretation foundation)
 **Implements later as:** PR S5-08
-**Depends on:** S5-D3 (Sources-family nav), shipped Sources list (S2-04)
-**Related brief:** [`S5-D3`](S5-D3-sources-section-nav.md)
+**Depends on:** S5-D3 (done — Sources-family nav), shipped Sources list (S2-04)
+**Related brief:** [`S5-D3`](archive/S5-D3-sources-section-nav.md) (done)
 
 Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](README.md) first.
 
@@ -74,7 +74,7 @@ Also handle **Sources with no Artifact**: still listed; Evidence graph action di
 
 ## 5. Out of scope
 
-- Nested sidebar config — **S5-D3**.
+- Nested sidebar config — **S5-D3** (done).
 - Source-page Evidence graph button — Spike 6 is fine.
 - The canvas itself.
 - Subject vocabulary editors.

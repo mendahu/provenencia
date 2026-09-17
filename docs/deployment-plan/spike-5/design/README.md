@@ -8,15 +8,13 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 
 | Step | Brief | Feeds | Notes |
 | --- | --- | --- | --- |
-| S5-D3 | [`S5-D3-sources-section-nav.md`](S5-D3-sources-section-nav.md) | PR S5-07 | Nested Sources family: Sources primary; four config children; Subject types / fields stubs |
 | S5-D2 | [`S5-D2-sources-list-graph-entry.md`](S5-D2-sources-list-graph-entry.md) | PR S5-08 | Dual action on Sources list → Source page or **Evidence graph** stub |
-
-Run **S5-D3 before S5-D2**.
 
 ## Completed
 
 | Step | Brief | Feeds | Notes |
 | --- | --- | --- | --- |
+| S5-D3 | [`archive/S5-D3-sources-section-nav.md`](archive/S5-D3-sources-section-nav.md) | PR S5-07 | Nested Sources family: Sources primary; four config children; Subject types / fields stubs |
 | S5-D1 | [`archive/S5-D1-interpretation-nav-entry.md`](archive/S5-D1-interpretation-nav-entry.md) | — | **Superseded.** Flat Interpretation item — do not implement. Replaced by S5-D3. |
 
 ## How to use
@@ -33,5 +31,5 @@ Run **S5-D3 before S5-D2**.
 - **Evidence graph** is the product name for the Source-scoped canvas (engine: Interpretation layer — Citations / Observations / Subjects).
 - **Subject types / Subject fields** map to `subject_types` / `properties`. Do **not** use "claim."
 - Candidate refs: `CPR-…` etc. vs concluded `PER-…`.
-- This spike: no Subject UI; Evidence graph may be a stub. Do not design the canvas or a node list.
+- This spike: no Subject UI; Evidence graph may be a stub. Do not design the canvas or a subject list.
 - Extend: sidebar (S2-01), Sources list (S2-04), Source page (S2-23).

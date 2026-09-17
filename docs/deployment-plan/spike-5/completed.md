@@ -20,7 +20,8 @@ Changes to the plan itself, as opposed to landed work.
 | Step | Kind | One-liner |
 | --- | --- | --- |
 | [S5-01](#s5-01--pr-node-type-prefix-validation) | PR | Subject type prefix validation + reserved-prefix guard in `core/ref` |
-| [S5-D1](#s5-d1--design-interpretation-nav-entry) | Design | Interpretation sidebar destination — label, icon, placement |
+| [S5-D1](#s5-d1--design-interpretation-nav-entry) | Design | Interpretation sidebar destination — **superseded** |
+| [S5-D3](#s5-d3--design-sources-section-nav) | Design | Nested Sources family nav — Subject types / fields stubs |
 
 ---
 
@@ -64,4 +65,16 @@ CGO_ENABLED=1 go test -tags fts5 ./...
 | **Dogfood** | Design only — nothing in the app. **Superseded before implementation:** product dropped the Interpretation sidebar item in favour of a unified Sources family (S5-D3). Do not implement this board. |
 | **Out** | — |
 
-**Landed (design only):** nav chrome for a top-level Interpretation item. **Do not ship.** See plan revisions and [`design/S5-D3-sources-section-nav.md`](design/S5-D3-sources-section-nav.md).
+**Landed (design only):** nav chrome for a top-level Interpretation item. **Do not ship.** See plan revisions and [`design/archive/S5-D3-sources-section-nav.md`](design/archive/S5-D3-sources-section-nav.md).
+
+### S5-D3 — Design: Sources section nav
+
+| | |
+| --- | --- |
+| **Kind** | Design (Claude Design board) |
+| **Depends on** | Shipped workspace chrome (S2-01), Source types / Source fields nav |
+| **Deliverables** | Done. Board for the nested Sources family: Sources as primary work destination; Source types, Source fields, Subject types, and Subject fields as de-emphasized config children; Subject types / Subject fields stub destinations; no Interpretation item. Brief archived: [`design/archive/S5-D3-sources-section-nav.md`](design/archive/S5-D3-sources-section-nav.md). |
+| **Dogfood** | Design only — nothing in the app yet. Implements in S5-07 (sidebar hierarchy + stubs). |
+| **Out** | Sources list dual action and Evidence graph stub (S5-D2); Subject types / Subject fields editors; the canvas. |
+
+**Landed:** the nav shape for the unified Sources product layer. S5-07 commits to labels, icons, nesting, and stub destinations from it.

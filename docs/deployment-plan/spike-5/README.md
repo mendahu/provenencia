@@ -29,7 +29,7 @@ Everything else is proven by test: Subject CRUD with candidate refs, positions, 
 | Doc | Role |
 | --- | --- |
 | [**Deployment plan**](deployment-plan.md) | PR sequence, design gates, schema, gotchas, definition of done |
-| [**Design briefs**](design/) | S5-D3 (nav), S5-D2 (list → Evidence graph); S5-D1 superseded |
+| [**Design briefs**](design/) | S5-D2 open (list → Evidence graph); S5-D3 done; S5-D1 superseded |
 | [**Completed**](completed.md) | Finished steps (S5-01…) |
 | [Interpretation / Evidence graph UI](../../ideas/interpretation-graph-ui.md) | Design rationale |
 

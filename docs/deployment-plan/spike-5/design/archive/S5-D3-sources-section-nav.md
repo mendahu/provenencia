@@ -4,7 +4,7 @@
 **Spike:** Provenencia Spike 5 (Interpretation foundation)
 **Implements later as:** PR S5-07 (sidebar + stub destinations)
 **Depends on:** Shipped workspace chrome (S2-01), Source types / Source fields nav (S2-01)
-**Related briefs:** [`S5-D2`](S5-D2-sources-list-graph-entry.md) (Sources list → Evidence graph); archived [`S5-D1`](archive/S5-D1-interpretation-nav-entry.md) (**superseded** — do not implement)
+**Related briefs:** [`S5-D2`](../S5-D2-sources-list-graph-entry.md) (Sources list → Evidence graph); archived [`S5-D1`](S5-D1-interpretation-nav-entry.md) (**superseded** — do not implement)
 
 Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](README.md) first.
 
