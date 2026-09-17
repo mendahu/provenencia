@@ -8,7 +8,7 @@ Authoritative domain and stack decisions remain in the sibling docs under [`docs
 
 | Spike | Goal |
 | --- | --- |
-| [Spike 5](spike-5/) | Interpretation foundation up to the canvas: candidate refs, `node_types` + seed, audited `nodes`, layout storage, FFI, nested Sources config (Subject types / fields stubs), Sources list → **Evidence graph** stub. **No Node UI** — canvas is Spike 6. Design: [`ideas/interpretation-graph-ui.md`](../ideas/interpretation-graph-ui.md). Plan: [`spike-5/deployment-plan.md`](spike-5/deployment-plan.md). |
+| [Spike 5](spike-5/) | Interpretation foundation up to the canvas: candidate refs, `subject_types` + seed, audited `subjects`, layout storage, FFI, nested Sources config (Subject types / fields stubs), Sources list → **Evidence graph** stub. **No Subject UI** — canvas is Spike 6. Design: [`ideas/interpretation-graph-ui.md`](../ideas/interpretation-graph-ui.md). Plan: [`spike-5/deployment-plan.md`](spike-5/deployment-plan.md). |
 
 ## Completed
 

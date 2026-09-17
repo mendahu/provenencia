@@ -40,11 +40,11 @@ Applies to (authoritative schemas in the linked docs):
 | Table | Doc |
 | --- | --- |
 | `source_types`, `source_metadata_fields` | [`source-layer-data-model.md`](source-layer-data-model.md) |
-| `node_types`, `properties`, `source_credibility_grades` | [`interpretation-layer-data-model.md`](interpretation-layer-data-model.md), [`research-judgment-model.md`](research-judgment-model.md) |
+| `subject_types`, `properties`, `source_credibility_grades` | [`interpretation-layer-data-model.md`](interpretation-layer-data-model.md), [`research-judgment-model.md`](research-judgment-model.md) |
 | `claim_confidence_grades` | [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md), [`research-judgment-model.md`](research-judgment-model.md) |
 | `name_format_profiles` | [`structured-name-model.md`](structured-name-model.md) |
 
-Does **not** apply to join/suggestion tables (`source_type_metadata_fields`, `node_type_properties`, `name_format_profile_parts`), domain instance rows, or open free-text picker values.
+Does **not** apply to join/suggestion tables (`source_type_metadata_fields`, `subject_type_fields`, `name_format_profile_parts`), domain instance rows, or open free-text picker values.
 
 ### Reserved `origin` values
 
@@ -60,10 +60,10 @@ plugin:<plugin_id>   -- reserved prefix for future plugin-contributed vocabulary
 
 - Uniqueness is **`UNIQUE (key, origin)`**, not bare `key`. The same machine `key` (and user-visible label) may exist under different origins so a later product seed never collides with a user- or plugin-created term.
 - Vocabulary rows use a UUID **`id`** primary key. Domain tables reference vocabulary **by `id`**, never by bare `key`, so colliding keys across origins stay unambiguous.
-- Application recognition of well-known shipped terms looks up `(key, origin = 'provenencia')` (optional first-class UX). Using a term on a Source, Node, or Claim always stores the vocabulary row’s `id`.
+- Application recognition of well-known shipped terms looks up `(key, origin = 'provenencia')` (optional first-class UX). Using a term on a Source, subject, or Claim always stores the vocabulary row’s `id`.
 - UI should surface origin (badge/caption: app / custom / plugin) without treating non-`provenencia` rows as second-class when *using* them.
 - Vocabulary rows of any origin may be **deleted when unused** (no Sources referencing a type; no `source_metadata` referencing a field). Delete is refused with a conflict error while in use. Suggestion joins cascade on delete.
-- Node Type `ref_prefix` remains **globally** unique across origins (refs must not collide in speech).
+- Subject type `ref_prefix` remains **globally** unique across origins (refs must not collide in speech).
 
 There is no separate `builtin` boolean; `origin = 'provenencia'` replaces that flag.
 
@@ -99,7 +99,7 @@ gedcom_file
 
 ## 2.2 `source_metadata_fields`
 
-Catalog fields only. Values stay descriptive text (or structured dates); they do not resolve to Interpretation Nodes or canonical entities.
+Catalog fields only. Values stay descriptive text (or structured dates); they do not resolve to Interpretation subjects or canonical entities.
 
 ```text
 key                     data_type   typical use
@@ -281,7 +281,7 @@ high_trust      3             High trust
 
 Missing assessment may display as Standard without inserting a row.
 
-## 3.1 `node_types`
+## 3.1 `subject_types`
 
 ```text
 key             ref_prefix    candidate_ref_prefix    summary
@@ -294,11 +294,11 @@ location        LOC           CLO                     Association between an eve
 source          SRN           CSR                     A Source reified so other evidence can refer to or comment on it.
 ```
 
-Both prefixes are required for every Node Type, including researcher-defined types. `ref_prefix` mints canonical entity refs in the Conclusion layer (`PER-7KD45`); `candidate_ref_prefix` mints Interpretation Node refs (`CPR-7KD45`). Same format, different prefix — see [`catalog-refs.md`](catalog-refs.md) §2.
+Both prefixes are required for every Subject type, including researcher-defined types. `ref_prefix` mints canonical entity refs in the Conclusion layer (`PER-7KD45`); `candidate_ref_prefix` mints Interpretation subject refs (`CPR-7KD45`). Same format, different prefix — see [`catalog-refs.md`](catalog-refs.md) §2.
 
 Do not reuse the reserved catalog prefixes `USR`, `SRC`, `ART`, `CIT`, `OBS`. Both columns share **one** three-letter namespace, so a new prefix must not collide with any existing value in *either* column. The leading `C` on candidate prefixes is convention only and is not validated.
 
-`SRN` is used for source-Nodes so they do not collide in speech with Source catalog refs (`SRC-…`); `CSR` is its candidate counterpart.
+`SRN` is used for source-subjects so they do not collide in speech with Source catalog refs (`SRC-…`); `CSR` is its candidate counterpart.
 
 ## 3.2 `properties`
 
@@ -313,23 +313,23 @@ event_type          text          open values; see §3.4
 date                date          event date
 role                text          open values; see §3.5
 relationship_type   text          open values; TBD starter list
-person              node          app target hint: person
-event               node          app target hint: event
-place               node          app target hint: place
-participant         node          app target hint: person
-mentions            node          app target hint: source
-remark              text          free-text commentary about a source Node
+person              subject       app target hint: person
+event               subject       app target hint: event
+place               subject       app target hint: place
+participant         subject       app target hint: person
+mentions            subject       app target hint: source
+remark              text          free-text commentary about a source subject
 toponym             text          place name as interpreted from a Source (not a personal NameValue)
 ```
 
-Target Node Type hints are application-only (not SQL allow-lists). See the Interpretation doc.
+Target Subject type hints are application-only (not SQL allow-lists). See the Interpretation doc.
 
 Additional Properties may be seeded as workflows need them (shared DNA, predicted relationship, and similar). Treat those as **TBD** until a concrete UI requires them.
 
-## 3.3 `node_type_properties`
+## 3.3 `subject_type_fields`
 
 ```text
-node_type       property
+subject_type    property
 person          name
 person          birth_date
 person          occupation
@@ -353,7 +353,7 @@ source          mentions
 source          remark
 ```
 
-`name_format` is not required on Interpretation `person` Nodes unless a Source itself asserts a naming convention.
+`name_format` is not required on Interpretation `person` Subjects unless a Source itself asserts a naming convention.
 
 ## 3.4 Open values: `event_type`
 
@@ -480,7 +480,7 @@ Not used. Soft blends are display-only. A Reconciliation Claim is a researcher-p
 
 ## 5.4 Canonical handles
 
-There is no `origination_claims` table and no `representative_node_id`. A `canonical_entities` row may have a nullable `identity_anchor_id` and optional `argument`. For node-typed Reconciliation values, Conclusion uses `value_entity_id` (canonical), not Observation `value_node_id`.
+There is no `origination_claims` table and no `representative_subject_id`. A `canonical_entities` row may have a nullable `identity_anchor_id` and optional `argument`. For subject-typed Reconciliation values, Conclusion uses `value_entity_id` (canonical), not Observation `value_subject_id`.
 
 Handle provenencia badges (from records / inferred / asserted / unlinked) are computed, not seeded workflow enums.
 

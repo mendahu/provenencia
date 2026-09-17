@@ -4,15 +4,15 @@
 
 **Planned.** Finished steps: [`completed.md`](completed.md).
 
-Lay the Interpretation-layer **data** track — candidate refs, Node vocabulary, Nodes, layout storage, FFI — and the **Sources-family** entry into an Evidence graph stub, so **Spike 6 can start drawing.** The canvas itself is out of scope.
+Lay the Interpretation-layer **data** track — candidate refs, subject vocabulary, Subjects, layout storage, FFI — and the **Sources-family** entry into an Evidence graph stub, so **Spike 6 can start drawing.** The canvas itself is out of scope.
 
-> **No Node UI.** The Evidence graph is the only surface for Nodes, Citations, and Observations (design note §1.3); Spike 6 draws it. Product nav is one **Sources** family with nested config (§1.4) — no Interpretation sidebar section. Entry: dual action on the Sources list → Evidence graph stub.
+> **No Subject UI.** The Evidence graph is the only surface for Subjects, Citations, and Observations (design note §1.3); Spike 6 draws it. Product nav is one **Sources** family with nested config (§1.4) — no Interpretation sidebar section. Entry: dual action on the Sources list → Evidence graph stub.
 
 Authoritative design: [`interpretation-graph-ui.md`](../../ideas/interpretation-graph-ui.md) §11.1 / §1.4. Schema: [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) §4. Seed: [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.1.
 
 ## Why this spike exists
 
-The design note builds the canvas **first**; a canvas needs rows. Spike 5 answers: what does the first `nodes` INSERT require? (`sources` exists; `node_types` does not.) Everything else hangs off Observations and does not block a bubble.
+The design note builds the canvas **first**; a canvas needs rows. Spike 5 answers: what does the first `subjects` INSERT require? (`sources` exists; `subject_types` does not.) Everything else hangs off Observations and does not block a bubble.
 
 ## Goal
 
@@ -22,7 +22,7 @@ A researcher can:
 2. From the Sources list, open a Source page **or** an Evidence graph stub (when the Source has an Artifact).
 3. Leave and return via Back/Forward with the place restored.
 
-Everything else is proven by test: Node CRUD with candidate refs, positions, FakeStore RPCs.
+Everything else is proven by test: Subject CRUD with candidate refs, positions, FakeStore RPCs.
 
 ## Documents
 
@@ -42,8 +42,8 @@ Spike 4 shipped place loading (`WorkspaceSession`, `PlaceRegistry`). Spike 5 ext
 ## Out of scope
 
 - The canvas (drawing, drag, snap, tray, connect).
-- Any UI that creates or edits a Node.
+- Any UI that creates or edits a subject.
 - Observations, Citations, locator validation, NameValue, artifact viewer.
 - Subject types / Subject fields **editors** (nav stubs only).
-- Omnibar projection for Nodes.
+- Omnibar projection for Subjects.
 - Source-to-source commentary on the Source page.

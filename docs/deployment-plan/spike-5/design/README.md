@@ -30,8 +30,8 @@ Run **S5-D3 before S5-D2**.
 
 - Offline-first macOS genealogy app inside a local `*.provenencia` project.
 - **Product IA:** Sources is primary work. Source types / Source fields / Subject types / Subject fields are **nested config** under Sources. No Interpretation sidebar section. Conclusion is the separate belief layer (not built).
-- **Evidence graph** is the product name for the Source-scoped canvas (engine: Interpretation layer — Citations / Observations / Nodes).
-- **Subject types / Subject fields** map to `node_types` / `properties`. Do **not** use "claim."
+- **Evidence graph** is the product name for the Source-scoped canvas (engine: Interpretation layer — Citations / Observations / Subjects).
+- **Subject types / Subject fields** map to `subject_types` / `properties`. Do **not** use "claim."
 - Candidate refs: `CPR-…` etc. vs concluded `PER-…`.
-- This spike: no Node UI; Evidence graph may be a stub. Do not design the canvas or a node list.
+- This spike: no Subject UI; Evidence graph may be a stub. Do not design the canvas or a node list.
 - Extend: sidebar (S2-01), Sources list (S2-04), Source page (S2-23).

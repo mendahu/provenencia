@@ -34,7 +34,7 @@ Also handle **Sources with no Artifact**: still listed; Evidence graph action di
 | One product layer | This is still the Sources list — not a parallel picker under another section. |
 | Two jobs per Source | Filing (Source page) vs Evidence graph. Actions must be **named differently** — not twin "Edit" labels. |
 | Graph needs an Artifact | Citations require an Artifact. No Artifact → cannot open the Evidence graph. |
-| Graph is the only Node surface | Do not imply a table of nodes behind the graph action. |
+| Graph is the only Subject surface | Do not imply a table of subjects behind the graph action. |
 | Stub is temporary | Evidence graph may be "coming soon"; keep it cheap. |
 
 ### 2.1 What this destination is not

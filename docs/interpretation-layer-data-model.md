@@ -24,15 +24,15 @@ For ambiguous handwriting, the Citation may preserve a faithful researcher trans
 
 ## 1.2 Interpretation is a cited property graph
 
-Nodes provide stable identity for source-local things. Observations provide atomic, cited assertions about those Nodes. Properties define the meaning and primitive value type of those assertions.
+Subjects provide stable identity for source-local things. Observations provide atomic, cited assertions about those subjects. Properties define the meaning and primitive value type of those assertions.
 
 The database should enforce generic graph integrity and primitive typing. It should not attempt to encode the entire genealogy ontology into rigid table structure.
 
-**Invariants** are that graph shape (Citation, subject Node, Property, typed value, polarity). **Conventions** are how to get useful genealogy out of it (one grain of Place, Observations that match what the Citation appears to say, seeded `location` ends). UI may warn; writers must not reject rows because a convention was skipped. See [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §1.
+**Invariants** are that graph shape (Citation, subject, Property, typed value, polarity). **Conventions** are how to get useful genealogy out of it (one grain of Place, Observations that match what the Citation appears to say, seeded `location` ends). UI may warn; writers must not reject rows because a convention was skipped. See [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §1.
 
 ## 1.3 Interpretation vocabulary is extensible
 
-Node Types and Properties are first-class data. Provenencia ships with a useful seeded vocabulary (`origin = 'provenencia'`), but researchers may add new Node Types and Properties (`origin = 'user'`) without a database schema migration. Future plugins use the reserved `plugin:<plugin_id>` origin namespace. Vocabulary origin rules: [`seeded-vocabulary.md`](seeded-vocabulary.md) §1.1.
+Subject types and Properties are first-class data. Provenencia ships with a useful seeded vocabulary (`origin = 'provenencia'`), but researchers may add new Subject types and Properties (`origin = 'user'`) without a database schema migration. Future plugins use the reserved `plugin:<plugin_id>` origin namespace. Vocabulary origin rules: [`seeded-vocabulary.md`](seeded-vocabulary.md) §1.1.
 
 All Properties, including user-defined Properties, declare a value type. Unknown or custom vocabulary remains preservable and generically usable even when the core application has no specialized semantics for it.
 
@@ -71,7 +71,7 @@ Structured genealogical dates use [`structured-date-model.md`](structured-date-m
 
 Generic `created_at` / `updated_at` / user bookkeeping does not belong on these domain tables; see [`audit-revision-history.md`](audit-revision-history.md).
 
-Selected user-facing entities receive a required short human-readable `ref`, unique within the project. This layer uses `CIT`, `OBS`, and Node refs minted off the Node Type's `candidate_ref_prefix` (`CPR-…`, `CEV-…`, `CPL-…`). Shared rules are in [`data-model-source-interpretation-conclusion.md`](data-model-source-interpretation-conclusion.md).
+Selected user-facing entities receive a required short human-readable `ref`, unique within the project. This layer uses `CIT`, `OBS`, and Subject refs minted off the Subject type's `candidate_ref_prefix` (`CPR-…`, `CEV-…`, `CPL-…`). Shared rules are in [`data-model-source-interpretation-conclusion.md`](data-model-source-interpretation-conclusion.md).
 
 ---
 
@@ -84,13 +84,13 @@ Source
   └── Artifact
         └── Citation
               └── Observation
-                    ├── subject Node
+                    ├── Subject
                     ├── Property
                     └── typed value
-                          └── may be another Node
+                          └── may be another Subject
 ```
 
-There are no specialized `person_records`, `event_records`, `place_records`, `relationship_records`, or `participation_records` tables. A Node's type and its cited Observations provide the structure that those Record tables previously attempted to encode.
+There are no specialized `person_records`, `event_records`, `place_records`, `relationship_records`, or `participation_records` tables. A subject's type and its cited Observations provide the structure that those Record tables previously attempted to encode.
 
 ---
 
@@ -452,14 +452,14 @@ UI hierarchy or containment can be derived from locator selector chains when use
 
 ---
 
-# 4. Node vocabulary
+# 4. Subject vocabulary
 
-## 4.1 `node_types`
+## 4.1 `subject_types`
 
-Node Types define the semantic category of a Node. They are data rather than a database enum so the vocabulary can be extended without schema migrations.
+Subject types define the semantic category of a subject. They are data rather than a database enum so the vocabulary can be extended without schema migrations.
 
 ```sql
-CREATE TABLE node_types (
+CREATE TABLE subject_types (
     id              BLOB PRIMARY KEY,          -- UUIDv7, 16 bytes
     key             TEXT NOT NULL,
     origin          TEXT NOT NULL,             -- provenencia | user | plugin:<id>
@@ -472,56 +472,56 @@ CREATE TABLE node_types (
 ) STRICT;
 ```
 
-`origin` and `UNIQUE (key, origin)` follow [`seeded-vocabulary.md`](seeded-vocabulary.md) §1.1. Domain rows reference `node_types.id`, not bare `key`, so a later product seed can reuse a `key` already taken by a user or plugin term. Application recognition of shipped types looks up `(key, origin = 'provenencia')`.
+`origin` and `UNIQUE (key, origin)` follow [`seeded-vocabulary.md`](seeded-vocabulary.md) §1.1. Domain rows reference `subject_types.id`, not bare `key`, so a later product seed can reuse a `key` already taken by a user or plugin term. Application recognition of shipped types looks up `(key, origin = 'provenencia')`.
 
-A Node Type carries **two** ref prefixes, because this vocabulary is shared with the Conclusion layer: `canonical_entities.node_type_id` references the same rows. For `person`, `ref_prefix` is `PER` (the Conclusion handle, `PER-7KD45`) and `candidate_ref_prefix` is `CPR` (the Interpretation Node, `CPR-7KD45`). Both are required when defining a Node Type, including researcher-defined types.
+A Subject type carries **two** ref prefixes, because this vocabulary is shared with the Conclusion layer: `canonical_entities.subject_type_id` references the same rows. For `person`, `ref_prefix` is `PER` (the Conclusion handle, `PER-7KD45`) and `candidate_ref_prefix` is `CPR` (the Interpretation subject, `CPR-7KD45`). Both are required when defining a Subject type, including researcher-defined types.
 
 There is one ref format; the layers are told apart by prefix, not by shape. Candidate prefixes conventionally begin with `C`, but nothing enforces that — a prefix's layer is a registry lookup, not a property of the string.
 
-Prefixes are three uppercase ASCII letters and must not use the reserved catalog prefixes `USR`, `SRC`, `ART`, `CIT`, `OBS`. Both columns draw from **one namespace**: a prefix must be globally unique among Node Types (across origins) and across *both* columns, so no `ref_prefix` may equal another type's `candidate_ref_prefix`. The two `UNIQUE` constraints above are necessary but not sufficient; enforce the cross-column check in the write path.
+Prefixes are three uppercase ASCII letters and must not use the reserved catalog prefixes `USR`, `SRC`, `ART`, `CIT`, `OBS`. Both columns draw from **one namespace**: a prefix must be globally unique among Subject types (across origins) and across *both* columns, so no `ref_prefix` may equal another type's `candidate_ref_prefix`. The two `UNIQUE` constraints above are necessary but not sufficient; enforce the cross-column check in the write path.
 
-The Node Type `source` (reification of a Source row) must not use `SRC`; the distinct prefixes `SRN` and `CSR` keep Source catalog refs (`SRC-…`) distinguishable from source-Nodes in speech.
+The Subject type `source` (reification of a Source row) must not use `SRC`; the distinct prefixes `SRN` and `CSR` keep Source catalog refs (`SRC-…`) distinguishable from source-subjects in speech.
 
-Application semantics attach to stable `key` values within an origin rather than a separate built-in flag. Horizon Node Types and their prefixes are catalogued in [`seeded-vocabulary.md`](seeded-vocabulary.md). That set is expected to include at least `person`, `event`, `place`, `relationship`, `participation`, `location`, and `source`.
+Application semantics attach to stable `key` values within an origin rather than a separate built-in flag. Horizon Subject types and their prefixes are catalogued in [`seeded-vocabulary.md`](seeded-vocabulary.md). That set is expected to include at least `person`, `event`, `place`, `relationship`, `participation`, `location`, and `source`.
 
-These names describe application semantics, not different SQL structures. Every instance is stored in the same `nodes` table.
+These names describe application semantics, not different SQL structures. Every instance is stored in the same `subjects` table.
 
-`relationship`, `participation`, and `location` are examples of bridge-like Nodes. `source` is a reification Node: it lets the Interpretation graph talk about evidentiary objects, not only historical persons, events, and places. Structurally, however, the database does not distinguish these categories. Any Node can be related to any other Node through a Node-valued Observation. The application vocabulary defines what those relationships mean and which combinations are semantically useful.
+`relationship`, `participation`, and `location` are examples of bridge-like Subjects. `source` is a reification subject: it lets the Interpretation graph talk about evidentiary objects, not only historical persons, events, and places. Structurally, however, the database does not distinguish these categories. Any subject can be related to any other subject through a Subject-valued Observation. The application vocabulary defines what those relationships mean and which combinations are semantically useful.
 
 Inferred associations that no Source asserted (for example an extra Location grain) belong on Conclusion handles and Reconciliation Claims, not as extra Observations on the wrong Citation. See [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md).
 
-## 4.2 `nodes`
+## 4.2 `subjects`
 
-A Node gives stable identity to a source-local thing or association encountered during interpretation.
+A subject gives stable identity to a source-local thing or association encountered during interpretation.
 
 ```sql
-CREATE TABLE nodes (
+CREATE TABLE subjects (
     id              BLOB PRIMARY KEY,
     ref             TEXT UNIQUE NOT NULL,      -- e.g. CPR-7KD45
     source_id       BLOB NOT NULL REFERENCES sources(id),
-    node_type_id    BLOB NOT NULL REFERENCES node_types(id),
+    subject_type_id BLOB NOT NULL REFERENCES subject_types(id),
     label           TEXT,
     description     TEXT,
 
-    UNIQUE (id, node_type_id)
+    UNIQUE (id, subject_type_id)
 ) STRICT;
 ```
 
-`ref` is required. It is minted as `{candidate_ref_prefix}-{token}` from the Node's type. Users talk about a person Node as a candidate person (`CPR-…`), distinct from the canonical Person (`PER-…`).
+`ref` is required. It is minted as `{candidate_ref_prefix}-{token}` from the subject's type. Users talk about a person subject as a candidate person (`CPR-…`), distinct from the canonical Person (`PER-…`).
 
-`UNIQUE (id, node_type_id)` exists so Sameness Claims can use a composite foreign key that pins both endpoints to the same type. It is redundant with the primary key for uniqueness of `id`; it does not allow two types per Node.
+`UNIQUE (id, subject_type_id)` exists so Sameness Claims can use a composite foreign key that pins both endpoints to the same type. It is redundant with the primary key for uniqueness of `id`; it does not allow two types per subject.
 
-`node_type_id` is immutable after insert. Correcting a wrong type means a new Node (and new `ref`), not an UPDATE of the type. The UUID remains the machine identity; the type (via `candidate_ref_prefix`) is part of the public identity encoded in `ref`.
+`subject_type_id` is immutable after insert. Correcting a wrong type means a new subject (and new `ref`), not an UPDATE of the type. The UUID remains the machine identity; the type (via `candidate_ref_prefix`) is part of the public identity encoded in `ref`.
 
-`source_id` is the Node's home Source — typically the Source being interpreted when the Node was created. It exists so the application can efficiently surface Nodes that belong with a given Source during common same-source workflows. It does not restrict which Citations or Observations may reference the Node; cross-source Observations remain valid.
+`source_id` is the subject's home Source — typically the Source being interpreted when the subject was created. It exists so the application can efficiently surface Subjects that belong with a given Source during common same-source workflows. It does not restrict which Citations or Observations may reference the subject; cross-source Observations remain valid.
 
-For Nodes of type `source`, `source_id` has a stronger meaning: it identifies the Source this Node reifies. The application should maintain at most one `source` Node per Source row. Other Sources may then make cited Observations about that Node—bare references such as “this book mentions that marriage certificate,” free-text remarks about authenticity or errors, or both—without collapsing that material into Observations about historical persons alone, and without requiring structured Source-quality columns.
+For Subjects of type `source`, `source_id` has a stronger meaning: it identifies the Source this subject reifies. The application should maintain at most one `source` subject per Source row. Other Sources may then make cited Observations about that subject—bare references such as “this book mentions that marriage certificate,” free-text remarks about authenticity or errors, or both—without collapsing that material into Observations about historical persons alone, and without requiring structured Source-quality columns.
 
-Nodes deliberately contain little domain data. A person's name, an Event's date, a Place's name, or a Participation's role belongs in cited Observations rather than fixed Node columns.
+Subjects deliberately contain little domain data. A person's name, an Event's date, a Place's name, or a Participation's role belongs in cited Observations rather than fixed subject columns.
 
-`description` is an optional short summary of the Node itself. Nodes do not have a multi-note table; researcher commentary about interpreted assertions belongs on the supporting Observations and can be aggregated from `observation_notes` when a Node-centric view is needed.
+`description` is an optional short summary of the subject itself. Subjects do not have a multi-note table; researcher commentary about interpreted assertions belongs on the supporting Observations and can be aggregated from `observation_notes` when a subject-centric view is needed.
 
-A Node can therefore be sparse. Creating a `person` Node does not require knowing a name, date, or any other property.
+A subject can therefore be sparse. Creating a `person` subject does not require knowing a name, date, or any other property.
 
 ---
 
@@ -548,14 +548,14 @@ CREATE TABLE properties (
         'boolean',
         'date',
         'name',
-        'node'
+        'subject'
     ))
 ) STRICT;
 ```
 
 `origin` and `UNIQUE (key, origin)` follow [`seeded-vocabulary.md`](seeded-vocabulary.md) §1.1. Observations and Reconciliation Claims reference `properties.id`, not bare `key`.
 
-A Property's `value_type` is intrinsic to the Property. Seeded Properties (for example `name`, `birth_date`, `event_type`, `role`, `person`, `mentions`, `remark`) and their `node_type_properties` bindings are listed in [`seeded-vocabulary.md`](seeded-vocabulary.md).
+A Property's `value_type` is intrinsic to the Property. Seeded Properties (for example `name`, `birth_date`, `event_type`, `role`, `person`, `mentions`, `remark`) and their `subject_type_fields` bindings are listed in [`seeded-vocabulary.md`](seeded-vocabulary.md).
 
 The semantic vocabulary is open, but the primitive value system is intentionally constrained. A researcher may define a new Property without introducing a new storage type.
 
@@ -563,33 +563,33 @@ The semantic vocabulary is open, but the primitive value system is intentionally
 
 `value_type = 'name'` always means the shared structured NameValue model in [`structured-name-model.md`](structured-name-model.md), not a single undifferentiated text string. A NameValue always has a full-form `form` and may optionally include ordered parts with an open part-type vocabulary for search and reconciliation.
 
-`name_format` is primarily a Conclusion Property (Reconciliation Claim on a person entity). It need not appear in `node_type_properties` for Interpretation unless a Source itself asserts a naming convention.
+`name_format` is primarily a Conclusion Property (Reconciliation Claim on a person entity). It need not appear in `subject_type_fields` for Interpretation unless a Source itself asserts a naming convention.
 
-Application semantics attach to stable `key` values within an origin, matching `node_types`. Seeded Properties may receive first-class application behavior. User-defined Properties remain first-class persisted data and can be generically displayed, searched, audited, synced, and referenced. Plugins may add specialized semantics for additional Properties later under `plugin:<plugin_id>` origins.
+Application semantics attach to stable `key` values within an origin, matching `subject_types`. Seeded Properties may receive first-class application behavior. User-defined Properties remain first-class persisted data and can be generically displayed, searched, audited, synced, and referenced. Plugins may add specialized semantics for additional Properties later under `plugin:<plugin_id>` origins.
 
 Open text values such as `event_type` and `role` are seeded with common defaults for pickers but remain researcher-extensible; see [`seeded-vocabulary.md`](seeded-vocabulary.md). The schema does not close those sets or require particular roles for particular event types; first-class workflows recognize well-known values in application logic.
 
-Interactions between `source` Nodes should stay deliberately lightweight. Provenencia does not seed a fine-grained source-quality ontology (`is_authentic`, defect codes, and similar) as Observation Properties.
+Interactions between `source` subjects should stay deliberately lightweight. Provenencia does not seed a fine-grained source-quality ontology (`is_authentic`, defect codes, and similar) as Observation Properties.
 
-**First-class Source credibility** — the researcher's reusable three-point trust rating of a Source — lives in `source_credibility_assessments`, not on the `sources` catalog row and not as a required Observation. Authoritative rules: [`research-judgment-model.md`](research-judgment-model.md). Cited commentary about a Source (another Source challenges authenticity, bare references, free-text remarks) continues to use Observations on the Source Node:
+**First-class Source credibility** — the researcher's reusable three-point trust rating of a Source — lives in `source_credibility_assessments`, not on the `sources` catalog row and not as a required Observation. Authoritative rules: [`research-judgment-model.md`](research-judgment-model.md). Cited commentary about a Source (another Source challenges authenticity, bare references, free-text remarks) continues to use Observations on the Source subject:
 
 ```text
-mentions   -> node   # bare source-to-source reference; target is typically a source Node
-remark     -> text   # free-text commentary about a source Node
+mentions   -> node   # bare source-to-source reference; target is typically a source subject
+remark     -> text   # free-text commentary about a source subject
 ```
 
 A book that merely cites a marriage certificate can record `BookSource -- mentions --> CertificateSource` with no remark. A letter that challenges a certificate can add text `remark` Observations and, when needed, ordinary person-level Observations as well. Structured Properties beyond this may be added later only if a concrete workflow requires them. First-class credibility grades: §5.3.
 
-## 5.2 `node_type_properties`
+## 5.2 `subject_type_fields`
 
-This table defines which Properties are valid for which Node Types. It is a join table with no `origin` of its own.
+This table defines which Properties are valid for which Subject types. It is a join table with no `origin` of its own.
 
 ```sql
-CREATE TABLE node_type_properties (
-    node_type_id    BLOB NOT NULL REFERENCES node_types(id),
+CREATE TABLE subject_type_fields (
+    subject_type_id BLOB NOT NULL REFERENCES subject_types(id),
     property_id     BLOB NOT NULL REFERENCES properties(id),
 
-    PRIMARY KEY (node_type_id, property_id)
+    PRIMARY KEY (subject_type_id, property_id)
 ) STRICT;
 ```
 
@@ -622,7 +622,7 @@ This is a vocabulary/schema relationship, not historical research data. It says 
 
 The vocabulary should be seeded with common definitions but remain researcher-extensible.
 
-For Node-valued Properties, allowed **target** Node Types (for example, `participation.person` should target a `person` Node) are an **application invariant** for now — the same posture as Observation value population. Seeded Properties get first-class UI/validation behavior; user-defined node Properties may remain unconstrained or warn-only. Provenencia does not persist target-type allow-lists in SQL yet (no `target_node_type_id` on `properties`, and no target join table). That can be added later if pickers and importers need a shared declarative vocabulary.
+For subject-valued Properties, allowed **target** Subject types (for example, `participation.person` should target a `person` subject) are an **application invariant** for now — the same posture as Observation value population. Seeded Properties get first-class UI/validation behavior; user-defined node Properties may remain unconstrained or warn-only. Provenencia does not persist target-type allow-lists in SQL yet (no `target_subject_type_id` on `properties`, and no target join table). That can be added later if pickers and importers need a shared declarative vocabulary.
 
 Malformed edges (wrong target type) may be warned about or ignored by typed workflows; the generic graph still stores the Observation.
 
@@ -655,14 +655,14 @@ At most one working assessment per Source. Updates are audited. Missing assessme
 
 ---
 
-# 6. Relationships between Nodes
+# 6. Relationships between Subjects
 
 There is intentionally no separate table containing historical graph edges.
 
-A relationship between two Nodes is an Observation whose Property has `value_type = 'node'`:
+A relationship between two Subjects is an Observation whose Property has `value_type = 'subject'`:
 
 ```text
-subject Node -- Property --> object Node
+subject -- Property --> object subject
 ```
 
 For example:
@@ -688,9 +688,9 @@ This allows the same structural model to represent nuclear family roles, extende
 The same mechanism covers source-to-source evidence. That includes bare references and optional free-text commentary:
 
 ```text
-Source Node SB1 (reifies book B)
-Source Node SC1 (reifies marriage certificate C)
-Person Node P1
+Source subject SB1 (reifies book B)
+Source subject SC1 (reifies marriage certificate C)
+Person subject P1
 
 Book Citation B1 supports a bare reference:
   SB1 -- mentions --> SC1
@@ -703,7 +703,7 @@ Letter Citation L1 supports commentary and historical-world facts:
   P1  -- birth_date --> DateValue(1 JAN 1800)          # polarity negative
 ```
 
-`mentions` is a Node-valued edge and need not say anything further about the referenced Source. `remark` is ordinary text-valued Interpretation of what a citing Source appears to say about another Source. Neither is a Source-layer column or a closed authenticity taxonomy. Historical-world Observations remain separate and independently citable.
+`mentions` is a Subject-valued edge and need not say anything further about the referenced Source. `remark` is ordinary text-valued Interpretation of what a citing Source appears to say about another Source. Neither is a Source-layer column or a closed authenticity taxonomy. Historical-world Observations remain separate and independently citable.
 
 ---
 
@@ -716,7 +716,7 @@ Conceptually:
 ```text
 Observation {
     citation
-    subject Node
+    subject
     Property
     polarity          -- positive | negative
     typed value
@@ -758,7 +758,7 @@ real
 boolean
 date
 name
-node
+subject
 ```
 
 A provisional SQL shape is:
@@ -768,7 +768,7 @@ CREATE TABLE observations (
     id              BLOB PRIMARY KEY,
     ref             TEXT UNIQUE NOT NULL,      -- e.g. OBS-2F8Q1
     citation_id     BLOB NOT NULL REFERENCES citations(id),
-    subject_node_id BLOB NOT NULL REFERENCES nodes(id),
+    subject_id     BLOB NOT NULL REFERENCES subjects(id),
     property_id     BLOB NOT NULL REFERENCES properties(id),
     polarity        TEXT NOT NULL DEFAULT 'positive',
 
@@ -778,7 +778,7 @@ CREATE TABLE observations (
     value_boolean   INTEGER,
     value_date_id   BLOB REFERENCES date_values(id),
     value_name_id   BLOB REFERENCES name_values(id),
-    value_node_id   BLOB REFERENCES nodes(id),
+    value_subject_id BLOB REFERENCES subjects(id),
 
     CHECK (polarity IN ('positive', 'negative')),
     CHECK (value_boolean IS NULL OR value_boolean IN (0, 1))
@@ -789,7 +789,7 @@ CREATE TABLE observations (
 
 **Value population (application invariant):** exactly one value representation must be populated, and it must match `properties.value_type`. Provenencia does **not** enforce that cross-table rule in SQLite for now (no XOR/`value_type` trigger or typed bridge tables). Writers — repository code, importers, sync — are responsible for correct population.
 
-**Read-side tolerance:** if a row is malformed, readers should prefer the column that matches the Property's `value_type` and ignore any other non-null value columns. A row with *no* usable value for that `value_type` is invalid and should be surfaced as an error or omitted rather than guessed. Reconciliation Claims use the same sparse-column idea, except `value_type = 'node'` is stored as `value_entity_id` (a canonical handle) rather than `value_node_id`. See [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md).
+**Read-side tolerance:** if a row is malformed, readers should prefer the column that matches the Property's `value_type` and ignore any other non-null value columns. A row with *no* usable value for that `value_type` is invalid and should be surfaced as an error or omitted rather than guessed. Reconciliation Claims use the same sparse-column idea, except `value_type = 'subject'` is stored as `value_entity_id` (a canonical handle) rather than `value_subject_id`. See [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md).
 
 Reading uncertainty belongs in Citation `transcription` / `transcription_uncertain` / `transcription_note` (and description when needed). Alternative or competing interpretations are modeled as separate Observations rather than a numeric confidence score on a single Observation row. Researcher commentary about a particular Observation belongs in `observation_notes`. Epistemic confidence about a *conclusion* belongs on Claims; see [`research-judgment-model.md`](research-judgment-model.md).
 
@@ -803,7 +803,7 @@ CREATE TABLE observation_notes (
 
 Notes use a typed table with a real foreign key rather than a polymorphic notes table. Creation, edit, and deletion attribution belong to audit history.
 
-For Node-valued Observations, the object Node must exist and should satisfy any target Node Type constraint defined by the vocabulary. Polarity applies to Node-valued Observations as well: a negative Observation denies that particular edge rather than deleting or omitting it.
+For subject-valued Observations, the object subject must exist and should satisfy any target Subject type constraint defined by the vocabulary. Polarity applies to subject-valued Observations as well: a negative Observation denies that particular edge rather than deleting or omitting it.
 
 A single Citation may support many atomic Observations:
 
@@ -814,7 +814,7 @@ Citation C1
   -> Person P1 -- birth_date --> DateValue(...)
 ```
 
-Multiple Observations may also make different assertions about the same Property without forcing a single value onto the Node. Conflicting or alternative interpretations therefore remain independently citable and auditable. Multiple name Observations on one person Node are expected when Sources use different forms, nicknames, or name changes.
+Multiple Observations may also make different assertions about the same Property without forcing a single value onto the subject. Conflicting or alternative interpretations therefore remain independently citable and auditable. Multiple name Observations on one person subject are expected when Sources use different forms, nicknames, or name changes.
 
 ---
 
@@ -822,26 +822,26 @@ Multiple Observations may also make different assertions about the same Property
 
 The current design aims to preserve these invariants:
 
-1. Every Node has exactly one Node Type. `node_type_id` is immutable after insert.
-2. Every Node has a required `ref` of the form `{candidate_ref_prefix}-{token}`.
-3. Every Node has a home `source_id`; that home Source does not confine which Observations may target the Node.
-4. A Node of type `source` reifies the Source identified by its `source_id`; the application should keep at most one such Node per Source.
-5. Node Types and Properties are extensible persisted vocabulary with `origin` namespaces and `UNIQUE (key, origin)`, not closed application enums. A new Node Type includes a globally unique `ref_prefix` that is not a reserved catalog prefix or layer code. See [`seeded-vocabulary.md`](seeded-vocabulary.md) §1.1.
+1. Every subject has exactly one Subject type. `subject_type_id` is immutable after insert.
+2. Every subject has a required `ref` of the form `{candidate_ref_prefix}-{token}`.
+3. Every subject has a home `source_id`; that home Source does not confine which Observations may target the subject.
+4. A subject of type `source` reifies the Source identified by its `source_id`; the application should keep at most one such subject per Source.
+5. Subject types and Properties are extensible persisted vocabulary with `origin` namespaces and `UNIQUE (key, origin)`, not closed application enums. A new Subject type includes a globally unique `ref_prefix` that is not a reserved catalog prefix or layer code. See [`seeded-vocabulary.md`](seeded-vocabulary.md) §1.1.
 6. Every Observation has its own stable identity and a required `OBS-…` `ref`.
 7. Every Observation is supported by exactly one Citation.
 8. Every Citation has a required `CIT-…` `ref`.
-9. Every Observation has exactly one subject Node and one Property.
+9. Every Observation has exactly one subject and one Property.
 10. Every Observation has exactly one typed value.
 11. Every Observation has an explicit polarity of `positive` or `negative`; absence of an Observation is not negation.
 12. The Observation value must match the Property's declared `value_type` (application write rule). Readers prefer the matching column if multiple value columns are set.
 13. Date-valued Observations reference a structured DateValue; they do not store SQL dates or free-text dates as the typed value.
 14. Name-valued Observations reference a structured NameValue; they do not store an undifferentiated name string as the typed value.
-15. A Property used on a Node must be allowed for that Node's Node Type.
-16. A Node-valued Observation forms a graph edge and its object Node must exist.
-17. Application logic may constrain the target Node Type of Node-valued Properties for seeded vocabulary; that is not enforced as SQL allow-lists in this draft.
+15. A Property used on a subject must be allowed for that subject's Subject type.
+16. A Subject-valued Observation forms a graph edge and its object subject must exist.
+17. Application logic may constrain the target Subject type of subject-valued Properties for seeded vocabulary; that is not enforced as SQL allow-lists in this draft.
 18. Citation text/description preserves the evidence representation; Observations contain normalized interpretation.
 19. Derived genealogical semantics are not duplicated into the Interpretation graph merely for convenience.
-20. Unknown/custom Node Types, Properties, and open vocabulary values (such as event types and roles) remain preservable and generically usable without first-class application support.
+20. Unknown/custom Subject types, Properties, and open vocabulary values (such as event types and roles) remain preservable and generically usable without first-class application support.
 21. First-class application behavior may recognize seeded `(key, origin = 'provenencia')` pairs and open values; it must not require the schema to close those vocabularies or encode every genealogical edge case.
 22. Source credibility assessments are Interpretation entities (`source_credibility_assessments`), not columns on `sources` and not Observation confidence scores.
 23. Citation transcription certainty is the boolean `transcription_uncertain` (+ optional note), media-agnostic; it is not Claim confidence.
@@ -854,7 +854,7 @@ To avoid competing schema definitions:
 
 - [`source-layer-data-model.md`](source-layer-data-model.md) is authoritative for Source-layer tables and Artifact/File storage.
 - This document is authoritative for Interpretation-layer tables and vocabulary schema.
-- [`seeded-vocabulary.md`](seeded-vocabulary.md) is the horizon catalog for intended Node Types, Properties, bindings, and open-value starters (not a v1 ship list).
+- [`seeded-vocabulary.md`](seeded-vocabulary.md) is the horizon catalog for intended Subject types, Properties, bindings, and open-value starters (not a v1 ship list).
 - [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) is authoritative for Conclusion-layer tables and Claims.
 - [`structured-date-model.md`](structured-date-model.md) is authoritative for shared DateValue persistence.
 - [`structured-name-model.md`](structured-name-model.md) is authoritative for shared NameValue persistence.

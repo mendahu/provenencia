@@ -39,7 +39,7 @@ This board is **nav chrome only**: hierarchy, labels, icons, selected/idle, badg
 | Subject ≠ Source | Subject types / fields = what a document can *talk about*; Source types / fields = how it is *filed*. |
 | Avoid "claim" | Conclusion owns that word. Prefer **Subject**. |
 | Subject editors not built yet | Stub / "coming soon" destinations are fine. |
-| Engine names stay internal | No "node," `node_types`, or "observation" in the rail. |
+| Engine names stay internal | No "node," `subject_types`, or "observation" in the rail. |
 
 ### 2.1 What this board is not
 
