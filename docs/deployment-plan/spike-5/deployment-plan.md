@@ -4,7 +4,7 @@ Interpretation foundation: candidate refs, subject vocabulary, Subjects, layout 
 
 ## Status
 
-**Planned.** Landings go in [`completed.md`](completed.md). S5-01 through S5-04, and S5-D1 / S5-D3, are recorded there.
+**Planned.** Landings go in [`completed.md`](completed.md). S5-01 through S5-05, and S5-D1 / S5-D3, are recorded there.
 
 > **This spike ships no Subject UI.** The graph is the only surface for Subjects, Citations, and Observations (design note §1.3), and the graph is Spike 6. Product nav keeps **one Sources family** — no Interpretation sidebar section (§1.4). Entry is dual action on the Sources list → graph stub. See *Scope boundary* below.
 
@@ -56,7 +56,7 @@ S5-D3  Sources nav           S5-01  Subject type prefixes (core/ref)   done
   │                            ▼
   │                          S5-04  core/database/subjects + audit    done
   │                            ▼
-  │                          S5-05  core/database/subjectpositions
+  │                          S5-05  core/database/subjectpositions   done
   │                            ▼
   │                          S5-06  Proto + dispatch + handlers
   │                            ▼
@@ -82,7 +82,7 @@ S5-D2  List dual action        │
 - [x] S5-02 — Interpretation schema migration → [`completed.md`](completed.md)
 - [x] S5-03 — subject type vocabulary and create-time seed → [`completed.md`](completed.md)
 - [x] S5-04 — Subject CRUD with audit → [`completed.md`](completed.md)
-- [ ] S5-05 — Graph layout positions
+- [x] S5-05 — Graph layout positions → [`completed.md`](completed.md)
 - [ ] S5-06 — FFI methods for subject types, subjects, and positions
 - [ ] S5-07 — Nested Sources nav + Subject* stubs + graph place + `WorkspaceLocation` discriminator
 - [ ] S5-08 — Sources list → Evidence graph stub
@@ -237,7 +237,7 @@ The one thing it did change is the name of the layout table. It is **`subject_po
 | S5-02 | Add interpretation node schema and graph layout storage |
 | S5-03 | Seed subject type vocabulary at catalog create |
 | S5-04 | Add audited subject CRUD for the interpretation layer |
-| S5-05 | Persist graph node positions outside the audit trail |
+| S5-05 | Persist graph subject positions outside the audit trail |
 | S5-06 | Expose subject types, subjects, and positions over FFI |
 | S5-07 | Nest Sources config nav and register the evidence graph place |
 | S5-08 | Open an evidence graph from the Sources list |

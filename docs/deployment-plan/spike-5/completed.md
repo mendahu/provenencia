@@ -23,6 +23,7 @@ Changes to the plan itself, as opposed to landed work.
 | [S5-02](#s5-02--pr-interpretation-schema-migration) | PR | `subject_types`, `subjects`, `subject_positions` via migration `000021` |
 | [S5-03](#s5-03--pr-subject-type-vocabulary-and-seed) | PR | Seven Subject types seeded at catalog create |
 | [S5-04](#s5-04--pr-subject-crud-with-audit) | PR | Audited Subject Create / Update / Delete |
+| [S5-05](#s5-05--pr-graph-layout-positions) | PR | Unaudited `subject_positions` Set / Get / Clear |
 | [S5-D1](#s5-d1--design-interpretation-nav-entry) | Design | Interpretation sidebar destination — **superseded** |
 | [S5-D3](#s5-d3--design-sources-section-nav) | Design | Nested Sources family nav — Subject types / fields stubs |
 
@@ -137,4 +138,23 @@ CGO_ENABLED=1 go test -tags fts5 ./core/database/subjecttypes/... ./core/onboard
 
 ```bash
 CGO_ENABLED=1 go test -tags fts5 ./core/database/subjects/...
+```
+
+### S5-05 — PR: Graph layout positions
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S5-04 (`subjects` rows to place) |
+| **Deliverables** | Done. [`core/database/subjectpositions/`](../../../core/database/subjectpositions/): unaudited `Set` / `Get` / `ListBySource` / `Clear`. PK `subject_id`; graph scope via join on `subjects.source_id`. Absence of a row = tray. No `userID`, no `audit.Record`. Wire code `subjectpositions.invalid`. |
+| **Tests** | Done. Round-trip (signed cells), overwrite, tray Clear, ListBySource scoping, unknown subject, no audit growth, Close/Open persistence. |
+| **Dogfood** | App unchanged (no FFI yet). Verifiable by Go tests / sqlite. |
+| **Out** | FFI (S5-06); canvas / tray UI; FakeStore. |
+
+**Landed:** bubble positions persist outside the audit trail so Spike 6 can drag without drowning revision history.
+
+**Verify:**
+
+```bash
+CGO_ENABLED=1 go test -tags fts5 ./core/database/subjectpositions/...
 ```
