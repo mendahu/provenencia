@@ -162,7 +162,8 @@ struct CatalogQueryRegistryTests {
         let _: QueryHandle<[CatalogSource]> = session.query(key)
         await waitForFetchComplete(handle)
         #expect(handle.value?.count == 2)
-        #expect(handle.value?.last?.title == "New Row")
+        // FakeStore listSources is newest-created-first (id DESC), matching Go.
+        #expect(handle.value?.map(\.title) == ["New Row", "Alpha"])
     }
 
     @Test func applyFieldCRUDInvalidatesMetadataList() async {
