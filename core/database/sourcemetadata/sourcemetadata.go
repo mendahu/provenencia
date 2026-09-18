@@ -4,6 +4,7 @@
 package sourcemetadata
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"sort"
@@ -27,7 +28,7 @@ const (
 		VALUES (?, ?, ?, ?, ?)`
 	sqlUpdate = `UPDATE source_metadata SET value_text = ?, date_value_id = ?
 		WHERE id = ?`
-	sqlDelete = `DELETE FROM source_metadata WHERE source_id = ? AND field_id = ?`
+	sqlDelete  = `DELETE FROM source_metadata WHERE source_id = ? AND field_id = ?`
 	sqlGetPair = `SELECT id, source_id, field_id, COALESCE(value_text, ''), date_value_id
 		FROM source_metadata WHERE source_id = ? AND field_id = ?`
 	sqlListBySource = `SELECT id, source_id, field_id, COALESCE(value_text, ''), date_value_id
@@ -185,7 +186,7 @@ func Set(c *database.Catalog, userID []byte, in Input) (Row, error) {
 			fields["date_value_id"] = audit.FieldDiff{Old: nil, New: uuidString(dateID)}
 		}
 	} else {
-		if prev.ValueText == in.ValueText && bytesEqual(prev.DateValueID, dateID) {
+		if prev.ValueText == in.ValueText && bytes.Equal(prev.DateValueID, dateID) {
 			_ = tx.Commit()
 			return prev, nil
 		}
@@ -203,7 +204,7 @@ func Set(c *database.Catalog, userID []byte, in Input) (Row, error) {
 		if prev.ValueText != in.ValueText {
 			fields["value_text"] = audit.FieldDiff{Old: nullJSON(prev.ValueText), New: nullJSON(in.ValueText)}
 		}
-		if !bytesEqual(prev.DateValueID, dateID) {
+		if !bytes.Equal(prev.DateValueID, dateID) {
 			fields["date_value_id"] = audit.FieldDiff{Old: uuidJSON(prev.DateValueID), New: uuidJSON(dateID)}
 		}
 	}
@@ -683,7 +684,6 @@ func requireDate(tx *sql.Tx, dateID []byte) error {
 	return err
 }
 
-
 func nullStr(s string) any {
 	if s == "" {
 		return nil
@@ -725,18 +725,6 @@ func copyBlob(b []byte) []byte {
 		return nil
 	}
 	return append([]byte(nil), b...)
-}
-
-func bytesEqual(a, b []byte) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }
 
 func mapConstraint(err error) error {

@@ -2,6 +2,7 @@
 package sources
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"strings"
@@ -222,7 +223,7 @@ func SetCover(c *database.Catalog, userID []byte, sourceID []byte, mode string, 
 		return Source{}, err
 	}
 
-	if prev.CoverMode == mode && bytesEqual(prev.PrimaryArtifactID, primaryArtifactID) {
+	if prev.CoverMode == mode && bytes.Equal(prev.PrimaryArtifactID, primaryArtifactID) {
 		if err := tx.Commit(); err != nil {
 			return Source{}, err
 		}
@@ -236,7 +237,7 @@ func SetCover(c *database.Catalog, userID []byte, sourceID []byte, mode string, 
 	fields := map[string]audit.FieldDiff{
 		"cover_mode": {Old: prev.CoverMode, New: mode},
 	}
-	if !bytesEqual(prev.PrimaryArtifactID, primaryArtifactID) {
+	if !bytes.Equal(prev.PrimaryArtifactID, primaryArtifactID) {
 		fields["primary_artifact_id"] = audit.FieldDiff{
 			Old: uuidJSON(prev.PrimaryArtifactID),
 			New: uuidJSON(primaryArtifactID),
@@ -297,7 +298,7 @@ func Update(c *database.Catalog, userID []byte, s Source) error {
 	}
 
 	fields := map[string]audit.FieldDiff{}
-	if !bytesEqual(prev.SourceTypeID, s.SourceTypeID) {
+	if !bytes.Equal(prev.SourceTypeID, s.SourceTypeID) {
 		fields["source_type_id"] = audit.FieldDiff{
 			Old: uuidString(prev.SourceTypeID),
 			New: uuidString(s.SourceTypeID),
@@ -347,8 +348,8 @@ func Get(c *database.Catalog, id []byte) (Source, error) {
 	return scanSource(db.QueryRow(sqlGet, id))
 }
 
-// GetByRef returns a Source by SRC-… ref, or sql.ErrNoRows.
-func GetByRef(c *database.Catalog, sourceRef string) (Source, error) {
+// getByRef returns a Source by SRC-… ref, or sql.ErrNoRows.
+func getByRef(c *database.Catalog, sourceRef string) (Source, error) {
 	db, err := c.DB()
 	if err != nil {
 		return Source{}, err
@@ -476,7 +477,7 @@ func requireRasterCoverArtifact(c *database.Catalog, sourceID, artifactID []byte
 	if err != nil {
 		return err
 	}
-	if !bytesEqual(artSource, sourceID) || len(fileID) != 16 {
+	if !bytes.Equal(artSource, sourceID) || len(fileID) != 16 {
 		return ErrInvalid
 	}
 	res, err := derivatives.EnsureThumbnail(c, fileID)
@@ -508,7 +509,6 @@ func uuidJSON(id []byte) any {
 	return uuidString(id)
 }
 
-
 func nullStr(s string) any {
 	if s == "" {
 		return nil
@@ -529,18 +529,6 @@ func uuidString(id []byte) string {
 		return ""
 	}
 	return u.String()
-}
-
-func bytesEqual(a, b []byte) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }
 
 func isUniqueConflict(err error) bool {

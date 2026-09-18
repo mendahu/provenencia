@@ -160,10 +160,6 @@ private struct PVSidebarNavButton: View {
         return isChild ? 14 : 15
     }
 
-    private var hitSize: CGFloat {
-        collapsed ? (isChild ? 26 : 32) : 0
-    }
-
     var body: some View {
         Button(action: action) {
             HStack(spacing: isChild ? PVSpacing.space4 : PVSpacing.space5) {

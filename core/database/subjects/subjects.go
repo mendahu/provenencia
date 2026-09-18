@@ -271,8 +271,8 @@ func Get(c *database.Catalog, id []byte) (Subject, error) {
 	return scanSubject(db.QueryRow(sqlGet, id))
 }
 
-// GetByRef returns a Subject by ref, or sql.ErrNoRows.
-func GetByRef(c *database.Catalog, subjectRef string) (Subject, error) {
+// getByRef returns a Subject by ref, or sql.ErrNoRows.
+func getByRef(c *database.Catalog, subjectRef string) (Subject, error) {
 	db, err := c.DB()
 	if err != nil {
 		return Subject{}, err
@@ -349,7 +349,6 @@ func requireTypePrefix(tx *sql.Tx, typeID []byte) (string, error) {
 	}
 	return prefix, nil
 }
-
 
 func nullStr(s string) any {
 	if s == "" {

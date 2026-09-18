@@ -132,7 +132,7 @@ func TestSubjects(t *testing.T) {
 				if err != nil || got.Label != "Alice" {
 					t.Fatalf("%v %+v", err, got)
 				}
-				byRef, err := GetByRef(c, s.Ref)
+				byRef, err := getByRef(c, s.Ref)
 				if err != nil || string(byRef.ID) != string(s.ID) {
 					t.Fatalf("%v %+v", err, byRef)
 				}

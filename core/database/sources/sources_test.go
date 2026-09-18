@@ -147,7 +147,7 @@ func TestSources(t *testing.T) {
 				if got.Title != "Family History" || got.Description != "A monograph" || got.Ref != s.Ref {
 					t.Fatalf("got %+v", got)
 				}
-				byRef, err := GetByRef(c, s.Ref)
+				byRef, err := getByRef(c, s.Ref)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -387,7 +387,7 @@ func TestSources(t *testing.T) {
 		{
 			name: "get by invalid ref",
 			run: func(t *testing.T, c *database.Catalog) {
-				if _, err := GetByRef(c, "not-a-ref"); !errors.Is(err, ErrInvalid) {
+				if _, err := getByRef(c, "not-a-ref"); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -461,7 +461,7 @@ func TestSources(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if pinned.CoverMode != CoverModeArtifact || !bytesEqual(pinned.PrimaryArtifactID, a.ID) {
+				if pinned.CoverMode != CoverModeArtifact || !bytes.Equal(pinned.PrimaryArtifactID, a.ID) {
 					t.Fatalf("pinned %+v", pinned)
 				}
 				if latestAction(t, c) != "set_source_cover" {

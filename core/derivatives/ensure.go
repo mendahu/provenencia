@@ -18,6 +18,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/derivatives/raster"
+	"github.com/mendahu/provenencia/core/objectstore"
 )
 
 var ErrInvalid = apperr.New(apperr.CodeFileDerivativesInvalid, apperr.KindUser)
@@ -320,7 +321,7 @@ func reprojectSourcesForNewThumbnail(c *database.Catalog, sourceFileID []byte, d
 }
 
 func writeObjectIfAbsent(objPath string, data []byte) error {
-	if match, err := objectMatches(objPath, sha256Hex(data)); err != nil {
+	if match, err := objectstore.MatchesChecksum(objPath, sha256Hex(data)); err != nil {
 		return err
 	} else if match {
 		return nil
@@ -351,7 +352,7 @@ func writeObjectIfAbsent(objPath string, data []byte) error {
 		return err
 	}
 	if err := os.Rename(tmpName, objPath); err != nil {
-		if match, statErr := objectMatches(objPath, sha256Hex(data)); statErr == nil && match {
+		if match, statErr := objectstore.MatchesChecksum(objPath, sha256Hex(data)); statErr == nil && match {
 			_ = os.Remove(tmpName)
 			ok = true
 			return nil
@@ -366,27 +367,4 @@ func writeObjectIfAbsent(objPath string, data []byte) error {
 func sha256Hex(data []byte) string {
 	sum := sha256.Sum256(data)
 	return hex.EncodeToString(sum[:])
-}
-
-func objectMatches(objPath, wantChecksum string) (bool, error) {
-	f, err := os.Open(objPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	defer f.Close()
-	st, err := f.Stat()
-	if err != nil {
-		return false, err
-	}
-	if !st.Mode().IsRegular() {
-		return false, nil
-	}
-	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
-		return false, err
-	}
-	return hex.EncodeToString(h.Sum(nil)) == wantChecksum, nil
 }

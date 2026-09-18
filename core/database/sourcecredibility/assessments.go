@@ -2,6 +2,7 @@
 package sourcecredibility
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"strings"
@@ -29,10 +30,10 @@ const (
 
 // Assessment is one source_credibility_assessments row.
 type Assessment struct {
-	ID                  []byte
-	SourceID            []byte
-	CredibilityGradeID  []byte
-	Argument            string
+	ID                 []byte
+	SourceID           []byte
+	CredibilityGradeID []byte
+	Argument           string
 }
 
 // UpsertInput is the mutable fields for an assessment upsert.
@@ -115,7 +116,7 @@ func Upsert(c *database.Catalog, userID []byte, in UpsertInput) (Assessment, err
 		}
 	} else {
 		id = prev.ID
-		gradeChanged := !bytesEqual(prev.CredibilityGradeID, in.CredibilityGradeID)
+		gradeChanged := !bytes.Equal(prev.CredibilityGradeID, in.CredibilityGradeID)
 		argChanged := prev.Argument != in.Argument
 		if !gradeChanged && !argChanged {
 			return Assessment{
@@ -209,18 +210,6 @@ func uuidString(id []byte) string {
 		return ""
 	}
 	return u.String()
-}
-
-func bytesEqual(a, b []byte) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }
 
 func mapConstraint(err error) error {

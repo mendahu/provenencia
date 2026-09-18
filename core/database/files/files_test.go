@@ -48,6 +48,7 @@ func TestExtensionForMediaType(t *testing.T) {
 		want string
 	}{
 		{in: "image/jpeg", want: ".jpg"},
+		{in: "image/jpg", want: ".jpg"},
 		{in: "IMAGE/PNG", want: ".png"},
 		{in: "video/quicktime", want: ".mov"},
 		{in: "audio/x-wav", want: ".wav"},
@@ -162,7 +163,7 @@ func TestCount(t *testing.T) {
 	}
 	defer c.Close()
 
-	n, err := Count(c)
+	n, err := count(c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,7 +195,7 @@ func TestCount(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	n, err = Count(c)
+	n, err = count(c)
 	if err != nil {
 		t.Fatal(err)
 	}
