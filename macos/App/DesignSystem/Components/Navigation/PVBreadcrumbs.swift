@@ -25,6 +25,7 @@ struct PVBreadcrumbs: View {
                     Text("/")
                         .font(PVFont.body(size: PVTypeScale.caption))
                         .foregroundStyle(PVColor.textFaint)
+                        .accessibilityHidden(true)
                 }
                 if let action = item.action {
                     Button(action: action) {
@@ -47,7 +48,7 @@ struct PVBreadcrumbs: View {
                 }
             }
         }
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
     }
 }
 
