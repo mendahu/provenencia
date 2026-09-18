@@ -224,6 +224,7 @@ struct HistoryJumpMenuHost: View {
     @Environment(WorkspaceNavigation.self) private var navigation
     var jumpMenu: HistoryJumpMenuModel
     @State private var dismissMonitor: Any?
+    @State private var activeIndex = -1
 
     var body: some View {
         Group {
@@ -231,16 +232,21 @@ struct HistoryJumpMenuHost: View {
                let anchor = jumpMenu.anchors[side] {
                 let items = Self.rows(for: side, navigation: navigation)
                 if !items.isEmpty {
-                    HistoryJumpMenuPanel(items: items, onSelect: { index in
-                        jumpMenu.dismiss()
-                        navigation.go(toIndex: index)
-                    })
+                    HistoryJumpMenuPanel(
+                        items: items,
+                        activeIndex: activeIndex,
+                        onSelect: { index in
+                            jumpMenu.dismiss()
+                            navigation.go(toIndex: index)
+                        }
+                    )
                     .offset(x: anchor.minX, y: anchor.maxY + 4)
                 }
             }
         }
         .onChange(of: jumpMenu.side) { _, open in
             if open != nil {
+                activeIndex = -1
                 DispatchQueue.main.async { armDismissMonitor() }
             } else {
                 removeDismissMonitor()
@@ -284,16 +290,49 @@ struct HistoryJumpMenuHost: View {
             matching: [.leftMouseUp, .keyDown]
         ) { event in
             if event.type == .keyDown {
-                if event.keyCode == 53 { // Escape
-                    DispatchQueue.main.async { jumpMenu.dismiss() }
-                    return nil
-                }
-                return event
+                return handleKeyDown(event)
             }
             // Dismiss on mouse*Up* (not Down): Button actions fire on mouseUp,
             // and tearing the panel down on mouseDown prevents the item from
             // running.
             DispatchQueue.main.async { jumpMenu.dismiss() }
+            return event
+        }
+    }
+
+    private func handleKeyDown(_ event: NSEvent) -> NSEvent? {
+        if event.keyCode == 53 { // Escape
+            DispatchQueue.main.async { jumpMenu.dismiss() }
+            return nil
+        }
+        guard let side = jumpMenu.side else { return event }
+        let items = Self.rows(for: side, navigation: navigation)
+        guard !items.isEmpty else { return event }
+
+        switch event.keyCode {
+        case 125: // Down
+            DispatchQueue.main.async {
+                activeIndex = PVFloatingMenuSelection.moveIndex(
+                    from: activeIndex, delta: 1, count: items.count
+                )
+            }
+            return nil
+        case 126: // Up
+            DispatchQueue.main.async {
+                activeIndex = PVFloatingMenuSelection.moveIndex(
+                    from: activeIndex, delta: -1, count: items.count
+                )
+            }
+            return nil
+        case 36, 76: // Return / keypad Enter
+            let highlight = activeIndex
+            DispatchQueue.main.async {
+                guard items.indices.contains(highlight) else { return }
+                jumpMenu.dismiss()
+                navigation.go(toIndex: items[highlight].index)
+            }
+            return nil
+        default:
             return event
         }
     }
@@ -410,7 +449,7 @@ private struct HistoryNavControl: View {
                 }
         )
         .overlay {
-            HistoryJumpRightClickCatcher {
+            PVRightClickCatcher { _ in
                 guard enabled, hasJumpItems else { return }
                 menuPresented = true
             }
@@ -418,52 +457,17 @@ private struct HistoryNavControl: View {
     }
 }
 
-/// Transparent hit target that reports right-clicks (and Ctrl-click) without
-/// consuming left-clicks — same idea as `PVRightClickCatcher`.
-private struct HistoryJumpRightClickCatcher: NSViewRepresentable {
-    var onRightClick: () -> Void
-
-    func makeNSView(context: Context) -> HistoryJumpRightClickCatcherView {
-        let view = HistoryJumpRightClickCatcherView()
-        view.onRightClick = onRightClick
-        return view
-    }
-
-    func updateNSView(_ nsView: HistoryJumpRightClickCatcherView, context: Context) {
-        nsView.onRightClick = onRightClick
-    }
-}
-
-private final class HistoryJumpRightClickCatcherView: NSView {
-    var onRightClick: (() -> Void)?
-
-    override var acceptsFirstResponder: Bool { false }
-
-    override func hitTest(_ point: NSPoint) -> NSView? {
-        guard let event = NSApp.currentEvent else { return nil }
-        if event.type == .rightMouseDown { return self }
-        if event.type == .leftMouseDown, event.modifierFlags.contains(.control) { return self }
-        return nil
-    }
-
-    override func rightMouseDown(with event: NSEvent) {
-        onRightClick?()
-    }
-
-    override func mouseDown(with event: NSEvent) {
-        if event.modifierFlags.contains(.control) {
-            onRightClick?()
-        }
-    }
-}
-
 private struct HistoryJumpMenuPanel: View {
     let items: [HistoryJumpRow]
+    var activeIndex: Int
     let onSelect: (Int) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(items) { item in
+        PVContextMenuPanel(
+            width: 360,
+            accessibilityIdentifier: "workspace.toolbar.jumpMenu"
+        ) {
+            ForEach(Array(items.enumerated()), id: \.element.id) { offset, item in
                 Button {
                     onSelect(item.index)
                 } label: {
@@ -501,32 +505,24 @@ private struct HistoryJumpMenuPanel: View {
                     .padding(.vertical, 6)
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(HistoryJumpRowButtonStyle())
+                .buttonStyle(HistoryJumpRowButtonStyle(isSelected: offset == activeIndex))
             }
         }
-        .padding(PVSpacing.space2)
-        .frame(width: 360, alignment: .leading)
-        .background(PVColor.surfaceCard)
-        .overlay(
-            RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                .stroke(PVColor.borderSubtle, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous))
-        .pvShadow(PVElevation.overlay)
-        .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(L10n.Workspace.jumpMenuAccessibilityLabel))
-        .accessibilityIdentifier("workspace.toolbar.jumpMenu")
     }
 }
 
 private struct HistoryJumpRowButtonStyle: ButtonStyle {
+    var isSelected: Bool = false
+
     func makeBody(configuration: Configuration) -> some View {
-        HistoryJumpRowButtonBody(configuration: configuration)
+        HistoryJumpRowButtonBody(configuration: configuration, isSelected: isSelected)
     }
 }
 
 private struct HistoryJumpRowButtonBody: View {
     let configuration: ButtonStyleConfiguration
+    var isSelected: Bool
     @State private var hovering = false
 
     var body: some View {
@@ -542,6 +538,7 @@ private struct HistoryJumpRowButtonBody: View {
 
     private var rowFill: Color {
         if configuration.isPressed { return PVColor.surfaceActive }
+        if isSelected { return PVColor.surfaceSelected }
         if hovering { return PVColor.surfaceHover }
         return .clear
     }

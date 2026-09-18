@@ -6,7 +6,7 @@
 **Depends on:** S5-D3 (done — Sources-family nav), shipped Sources list (S2-04)
 **Related brief:** [`S5-D3`](S5-D3-sources-section-nav.md) (done)
 
-Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](../README.md) first.
+Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](../../README.md) first.
 
 ---
 

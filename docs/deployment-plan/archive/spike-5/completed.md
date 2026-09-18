@@ -29,6 +29,7 @@ Changes to the plan itself, as opposed to landed work.
 | [S5-07](#s5-07--pr-nested-sources-nav-and-evidence-graph-place) | PR | Nested Sources rail + Subject stubs + graph place |
 | [S5-08](#s5-08--pr-sources-list--evidence-graph) | PR | Sources list split-row → page or graph; artifact gate |
 | [S5-09](#s5-09--docs-dogfood-product-close) | Docs | Dogfood honesty pass; product foundation closed; S5-10 leftover |
+| [S5-10](#s5-10--unify-floating-menus) | PR | Shared overlay chrome + ↑/↓/⏎; history on `PVContextMenuPanel` |
 | [S5-D1](#s5-d1--design-interpretation-nav-entry) | Design | Interpretation sidebar destination — **superseded** |
 | [S5-D2](#s5-d2--design-sources-list--evidence-graph) | Design | Sources list dual action → Evidence graph |
 | [S5-D3](#s5-d3--design-sources-section-nav) | Design | Nested Sources family nav — Subject types / fields stubs |
@@ -43,20 +44,20 @@ Changes to the plan itself, as opposed to landed work.
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | — |
-| **Deliverables** | Done. [`core/ref/ref.go`](../../../core/ref/ref.go): `ValidatePrefix(prefix)` normalizing a Subject type prefix and rejecting the reserved catalog prefixes, plus `ErrReservedPrefix` and the `reservedPrefixes` set. New wire code `ref.reserved_prefix` in [`core/apperr/apperr.go`](../../../core/apperr/apperr.go). No new mint or validate path: candidate subjects are ordinary refs. |
-| **Tests** | Done. [`core/ref/ref_test.go`](../../../core/ref/ref_test.go): `TestValidatePrefix` covering all five reserved prefixes, lowercase normalization, `SRN` allowed, and candidate prefixes (`CPR`, `CSR`, `cev`) validating identically to canonical ones. Rows added to `TestValid` asserting `CPR-7KD45` is an ordinary valid ref and that an extra segment is not. |
+| **Deliverables** | Done. [`core/ref/ref.go`](../../../../core/ref/ref.go): `ValidatePrefix(prefix)` normalizing a Subject type prefix and rejecting the reserved catalog prefixes, plus `ErrReservedPrefix` and the `reservedPrefixes` set. New wire code `ref.reserved_prefix` in [`core/apperr/apperr.go`](../../../../core/apperr/apperr.go). No new mint or validate path: candidate subjects are ordinary refs. |
+| **Tests** | Done. [`core/ref/ref_test.go`](../../../../core/ref/ref_test.go): `TestValidatePrefix` covering all five reserved prefixes, lowercase normalization, `SRN` allowed, and candidate prefixes (`CPR`, `CSR`, `cev`) validating identically to canonical ones. Rows added to `TestValid` asserting `CPR-7KD45` is an ordinary valid ref and that an extra segment is not. |
 | **Dogfood** | App unchanged. No schema, no FFI, no Swift — nothing is user-visible. |
 | **Out** | `subject_types` / `subjects` tables and their Go packages (S5-02…S5-04). Cross-column prefix uniqueness and ref uniqueness retry, both of which belong to the write paths in S5-02 / S5-04. **L10n mapping for `ref.reserved_prefix`**, deferred because the code is unreachable from Swift until researchers can define Subject types in the vocabulary browser (Spike 7); map it then. |
 
 **Landed:** the reserved-prefix guard the Subject type vocabulary needs — and, more usefully, a much smaller step than planned.
 
-This PR was originally built around an infix candidate marker (`PER-C-7KD45`) so one `ref_prefix` could serve both layers. That required `MintCandidate`, a second validator pair, `ValidAny` / `ValidPartial`, and a fix to [`core/search/refpath.go`](../../../core/search/refpath.go), whose partial-ref regex had no room for a second dash. All of it was reverted in favour of giving candidates **their own prefix** (`CPR-7KD45`, seeded in [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.1). One ref format survives, `ref.Mint` already produces Subject refs, and every existing consumer of `Valid` / `Validate` handles them untouched. The search package ends up with a zero-line diff.
+This PR was originally built around an infix candidate marker (`PER-C-7KD45`) so one `ref_prefix` could serve both layers. That required `MintCandidate`, a second validator pair, `ValidAny` / `ValidPartial`, and a fix to [`core/search/refpath.go`](../../../../core/search/refpath.go), whose partial-ref regex had no room for a second dash. All of it was reverted in favour of giving candidates **their own prefix** (`CPR-7KD45`, seeded in [`seeded-vocabulary.md`](../../../seeded-vocabulary.md) §3.1). One ref format survives, `ref.Mint` already produces Subject refs, and every existing consumer of `Valid` / `Validate` handles them untouched. The search package ends up with a zero-line diff.
 
 The cost moved into the vocabulary: `subject_types` now needs `candidate_ref_prefix` alongside `ref_prefix`, because `canonical_entities` and `subjects` share that table. That column lands with the table in S5-02.
 
 Two rules `ValidatePrefix` deliberately does **not** enforce, both left to the Subject type write path: cross-column prefix uniqueness (the per-column SQL `UNIQUE` catches only half of a single shared namespace), and the leading `C` on candidate prefixes, which is convention and carries no meaning to the code.
 
-Docs updated with the step: [`catalog-refs.md`](../../catalog-refs.md) §2 and §4, [`data-model-source-interpretation-conclusion.md`](../../data-model-source-interpretation-conclusion.md) §2, [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) §4.1–4.2, [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §6, [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.1, the [`catalog-refs`](../../../.cursor/rules/catalog-refs.mdc) rule, and [`add-catalog-ref`](../../../.cursor/skills/add-catalog-ref/SKILL.md) (whose stale test command was also corrected to include `-tags fts5`).
+Docs updated with the step: [`catalog-refs.md`](../../../catalog-refs.md) §2 and §4, [`data-model-source-interpretation-conclusion.md`](../../../data-model-source-interpretation-conclusion.md) §2, [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md) §4.1–4.2, [`conclusion-layer-data-model.md`](../../../conclusion-layer-data-model.md) §6, [`seeded-vocabulary.md`](../../../seeded-vocabulary.md) §3.1, the [`catalog-refs`](../../../../.cursor/rules/catalog-refs.mdc) rule, and [`add-catalog-ref`](../../../../.cursor/skills/add-catalog-ref/SKILL.md) (whose stale test command was also corrected to include `-tags fts5`).
 
 **Verify:**
 
@@ -95,7 +96,7 @@ CGO_ENABLED=1 go test -tags fts5 ./...
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | S5-01 (reserved Subject type prefixes) |
-| **Deliverables** | Done. [`core/database/migrations/000021.sql`](../../../core/database/migrations/000021.sql): `subject_types` (two prefixes), `subjects` (NO ACTION FKs to `sources` / `subject_types`), and `subject_positions` (PK `subject_id`, CASCADE on subject delete; unaudited layout). Schema presence test in [`core/database/subjects/schema_test.go`](../../../core/database/subjects/schema_test.go). |
+| **Deliverables** | Done. [`core/database/migrations/000021.sql`](../../../../core/database/migrations/000021.sql): `subject_types` (two prefixes), `subjects` (NO ACTION FKs to `sources` / `subject_types`), and `subject_positions` (PK `subject_id`, CASCADE on subject delete; unaudited layout). Schema presence test in [`core/database/subjects/schema_test.go`](../../../../core/database/subjects/schema_test.go). |
 | **Tests** | Done. `TestMigrationCreatesSubjectTables`: `user_version >= 21` and `PRAGMA table_info` columns for all three tables after `database.Create`. |
 | **Dogfood** | App unchanged. No seed, CRUD, FFI, or Swift — nothing is user-visible. |
 | **Out** | Seeded Subject types (S5-03); Subject CRUD + audit (S5-04); positions query package (S5-05); FFI and UI (S5-06…). |
@@ -114,7 +115,7 @@ CGO_ENABLED=1 go test -tags fts5 ./core/database/...
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | S5-02 (`subject_types` table) |
-| **Deliverables** | Done. [`core/database/subjecttypes/`](../../../core/database/subjecttypes/): `Upsert` / `Lookup` / `GetByID` / `List` / `Install` with `ref.ValidatePrefix` on both prefixes and cross-column uniqueness (`subjecttypes.duplicate_prefix`). Registry of all seven types from [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.1. Wired into [`onboarding.createCatalog`](../../../core/onboarding/ready.go) only — never healed on open. New wire codes `subjecttypes.invalid` and `subjecttypes.duplicate_prefix`. |
+| **Deliverables** | Done. [`core/database/subjecttypes/`](../../../../core/database/subjecttypes/): `Upsert` / `Lookup` / `GetByID` / `List` / `Install` with `ref.ValidatePrefix` on both prefixes and cross-column uniqueness (`subjecttypes.duplicate_prefix`). Registry of all seven types from [`seeded-vocabulary.md`](../../../seeded-vocabulary.md) §3.1. Wired into [`onboarding.createCatalog`](../../../../core/onboarding/ready.go) only — never healed on open. New wire codes `subjecttypes.invalid` and `subjecttypes.duplicate_prefix`. |
 | **Tests** | Done. Package: Install → 7 rows, idempotent ids, reserved prefix, same-column and cross-column collisions. Onboarding: `TestCreateCatalogSeedsSubjectTypes`, `TestOpenCatalogDoesNotHealSubjectTypes`. |
 | **Dogfood** | Creating a project seeds Subject types in the catalog. No UI lists them yet (S5-07 stubs / Spike 7 editors). |
 | **Out** | Subject CRUD + audit (S5-04); positions (S5-05); FFI; properties / `subject_type_fields` seed; Swift L10n for the new codes until a vocabulary browser can raise them. |
@@ -133,8 +134,8 @@ CGO_ENABLED=1 go test -tags fts5 ./core/database/subjecttypes/... ./core/onboard
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | S5-03 (seeded `subject_types` with `candidate_ref_prefix`) |
-| **Deliverables** | Done. [`core/database/subjects/subjects.go`](../../../core/database/subjects/subjects.go): audited `Create` / `Update` / `Delete` / `Get` / `GetByRef` / `ListBySource`. Create reads `candidate_ref_prefix` in-tx and mints with the sources-style 8-attempt unique retry. Audit EntityType `subject`; ActionTypes `create_subject` / `update_subject` / `delete_subject`. `subject_type_id` immutable after insert. Wire code `subjects.invalid`. |
-| **Tests** | Done. [`subjects_test.go`](../../../core/database/subjects/subjects_test.go): CPR/CEV minting, audit actions + entity type, update/no-op, delete + position CASCADE, ListBySource scoping, invalid ids. |
+| **Deliverables** | Done. [`core/database/subjects/subjects.go`](../../../../core/database/subjects/subjects.go): audited `Create` / `Update` / `Delete` / `Get` / `GetByRef` / `ListBySource`. Create reads `candidate_ref_prefix` in-tx and mints with the sources-style 8-attempt unique retry. Audit EntityType `subject`; ActionTypes `create_subject` / `update_subject` / `delete_subject`. `subject_type_id` immutable after insert. Wire code `subjects.invalid`. |
+| **Tests** | Done. [`subjects_test.go`](../../../../core/database/subjects/subjects_test.go): CPR/CEV minting, audit actions + entity type, update/no-op, delete + position CASCADE, ListBySource scoping, invalid ids. |
 | **Dogfood** | App unchanged (no FFI yet). Verifiable by Go tests / sqlite inspection of audit rows. |
 | **Out** | Positions query package (S5-05); FFI (S5-06); UI; omnibar search. |
 
@@ -152,7 +153,7 @@ CGO_ENABLED=1 go test -tags fts5 ./core/database/subjects/...
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | S5-04 (`subjects` rows to place) |
-| **Deliverables** | Done. [`core/database/subjectpositions/`](../../../core/database/subjectpositions/): unaudited `Set` / `Get` / `ListBySource` / `Clear`. PK `subject_id`; graph scope via join on `subjects.source_id`. Absence of a row = tray. No `userID`, no `audit.Record`. Wire code `subjectpositions.invalid`. |
+| **Deliverables** | Done. [`core/database/subjectpositions/`](../../../../core/database/subjectpositions/): unaudited `Set` / `Get` / `ListBySource` / `Clear`. PK `subject_id`; graph scope via join on `subjects.source_id`. Absence of a row = tray. No `userID`, no `audit.Record`. Wire code `subjectpositions.invalid`. |
 | **Tests** | Done. Round-trip (signed cells), overwrite, tray Clear, ListBySource scoping, unknown subject, no audit growth, Close/Open persistence. |
 | **Dogfood** | App unchanged (no FFI yet). Verifiable by Go tests / sqlite. |
 | **Out** | FFI (S5-06); canvas / tray UI; FakeStore. |
@@ -171,8 +172,8 @@ CGO_ENABLED=1 go test -tags fts5 ./core/database/subjectpositions/...
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | S5-03…S5-05 (types seed, subject CRUD, positions package) |
-| **Deliverables** | Done. Proto Methods **45–52** (`ListSubjectTypes`, `Create`/`Update`/`Delete`/`ListSubjects`, `Set`/`Clear`/`ListSubjectPositions`) in [`engine.proto`](../../../api/proto/engine.proto); generated Go + Swift. Dispatch + [`api/ffi/handlers/subjects.go`](../../../api/ffi/handlers/subjects.go) via `withProjectCatalog`. `GenealogyStore` / `GoStore` / `FakeStore` / `ThrowingStore` parity. L10n for `subjects.invalid` and `subjectpositions.invalid` (no Subject-type editor codes). |
-| **Tests** | Done. [`subjects_test.go`](../../../api/ffi/handlers/subjects_test.go) `runRPC` coverage (create/list/update/delete, position set/list/clear with session close persistence). [`SubjectStoreTests.swift`](../../../macos/ProvenenciaTests/SubjectStoreTests.swift) FakeStore round-trips. |
+| **Deliverables** | Done. Proto Methods **45–52** (`ListSubjectTypes`, `Create`/`Update`/`Delete`/`ListSubjects`, `Set`/`Clear`/`ListSubjectPositions`) in [`engine.proto`](../../../../api/proto/engine.proto); generated Go + Swift. Dispatch + [`api/ffi/handlers/subjects.go`](../../../../api/ffi/handlers/subjects.go) via `withProjectCatalog`. `GenealogyStore` / `GoStore` / `FakeStore` / `ThrowingStore` parity. L10n for `subjects.invalid` and `subjectpositions.invalid` (no Subject-type editor codes). |
+| **Tests** | Done. [`subjects_test.go`](../../../../api/ffi/handlers/subjects_test.go) `runRPC` coverage (create/list/update/delete, position set/list/clear with session close persistence). [`SubjectStoreTests.swift`](../../../../macos/ProvenenciaTests/SubjectStoreTests.swift) FakeStore round-trips. |
 | **Dogfood** | App unchanged — no UI destination. Verifiable by Go FFI tests and FakeStore. |
 | **Out** | Sidebar / Evidence graph place (S5-07); Sources list Interpret (S5-08); canvas / tray UI; Subject type CRUD RPCs; omnibar Subject search; product SemVer bump. |
 
@@ -191,7 +192,7 @@ xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destin
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | S5-D3 (nav chrome); S5-06 (FFI available, unused by UI) |
-| **Deliverables** | Done. Nested Sources-family sidebar in [`PVSidebarNav`](../../../macos/App/DesignSystem/Components/Navigation/PVSidebarNav.swift) / [`WorkspaceSidebar`](../../../macos/App/Features/Workspace/WorkspaceSidebar.swift) (always-expanded config children; no group eyebrow). `WorkspaceSection.subjectTypes` / `.subjectFields` with stub destinations. `SourceSurface` page-vs-graph discriminator on [`WorkspaceLocation`](../../../macos/App/Features/Workspace/WorkspaceLocation.swift) (legacy decode → `.page`). Independent Evidence graph place (`PlaceID.sourceGraph`, `CatalogQueryKey.sourceGraph`, coming-soon stub). Sidebar still highlights **Sources** for both page and graph. |
+| **Deliverables** | Done. Nested Sources-family sidebar in [`PVSidebarNav`](../../../../macos/App/DesignSystem/Components/Navigation/PVSidebarNav.swift) / [`WorkspaceSidebar`](../../../../macos/App/Features/Workspace/WorkspaceSidebar.swift) (always-expanded config children; no group eyebrow). `WorkspaceSection.subjectTypes` / `.subjectFields` with stub destinations. `SourceSurface` page-vs-graph discriminator on [`WorkspaceLocation`](../../../../macos/App/Features/Workspace/WorkspaceLocation.swift) (legacy decode → `.page`). Independent Evidence graph place (`PlaceID.sourceGraph`, `CatalogQueryKey.sourceGraph`, coming-soon stub). Sidebar still highlights **Sources** for both page and graph. |
 | **Tests** | Done. `PlaceRegistryTests`, `WorkspaceDestinationHostTests`, `WorkspaceNavigationTests` (surface inequality + legacy Codable), breadcrumb graph leaf. |
 | **Dogfood** | Nested Subject types / Subject fields stubs visible in the rail. Graph place registered but not opened from the list yet (S5-08). |
 | **Out** | Sources list dual action / no-Artifact gate (S5-08); canvas; Subject type/field editors; omnibar Subjects; SemVer bump. |
@@ -226,8 +227,8 @@ xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destin
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | S5-D2 (adopted split-row); S5-07 (graph place + `SourceSurface`) |
-| **Deliverables** | Done. `Source.has_artifact` on list/workspace enrich (`artifacts.HasAnyForSource`); `CatalogSource.hasArtifact` + FakeStore/GoStore. Sources list split-row ([`SourcesSplitRow`](../../../macos/App/Features/Sources/SourcesSplitRow.swift)) with page vs graph zones and blocked “Needs an artifact” state; caption band; custom filter/sort via [`PVPopupMenuButton`](../../../macos/App/DesignSystem/Components/Core/PVPopupMenu.swift). Graph destination remains the S5-07 stub. |
-| **Tests** | Done. Go `ListSources` `has_artifact` false→true after `CreateArtifact`. Swift [`SourcesListNavigationTests`](../../../macos/ProvenenciaTests/SourcesListNavigationTests.swift) page/graph locations + FakeStore gate. |
+| **Deliverables** | Done. `Source.has_artifact` on list/workspace enrich (`artifacts.HasAnyForSource`); `CatalogSource.hasArtifact` + FakeStore/GoStore. Sources list split-row ([`SourcesSplitRow`](../../../../macos/App/Features/Sources/SourcesSplitRow.swift)) with page vs graph zones and blocked “Needs an artifact” state; caption band; custom filter/sort via [`PVPopupMenuButton`](../../../../macos/App/DesignSystem/Components/Core/PVPopupMenu.swift). Graph destination remains the S5-07 stub. |
+| **Tests** | Done. Go `ListSources` `has_artifact` false→true after `CreateArtifact`. Swift [`SourcesListNavigationTests`](../../../../macos/ProvenenciaTests/SourcesListNavigationTests.swift) page/graph locations + FakeStore gate. |
 | **Dogfood** | From Sources list: open filing page (left zone) or Evidence graph stub (right zone when an Artifact exists); no-Artifact rows show inert graph zone. |
 | **Out** | Canvas / Spike 6; Source-page Evidence graph button; SemVer bump; Subject type/field editors. **Floating-menu unify** (history jump onto `PVContextMenu` + open policies) deferred to **S5-10**. |
 
@@ -264,3 +265,17 @@ xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destin
 | Back/Forward graph place | S5-07 + S5-08 |
 | Seed seven Subject types | S5-03 |
 | Subject CRUD / positions / FakeStore RPCs | S5-04…S5-06 |
+
+### S5-10 — Unify floating menus
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S5-09 (product docs closed); S5-08 (popup + history duplication) |
+| **Deliverables** | Done. Shared list keyboard helper [`PVFloatingMenuSelection.moveIndex`](../../../../macos/App/DesignSystem/Components/Core/PVFloatingMenuSelection.swift) (clamp, no wrap). [`PVContextMenuPresenter`](../../../../macos/App/DesignSystem/Components/Core/PVContextMenu.swift) ↑/↓/⏎ + Escape when a keyboard binding is provided; item indices + Enter via action registry. [`PVPopupMenuButton`](../../../../macos/App/DesignSystem/Components/Core/PVPopupMenu.swift) and Source cover menu wired. History jump hosts through [`PVContextMenuPanel`](../../../../macos/App/DesignSystem/Components/Core/PVContextMenu.swift) (width 360); duplicate card chrome and private right-click catcher removed; Back/Forward step-on-click + long-press/right-click unchanged. Omnibar selection movement reuses `moveIndex`; `PVComboBox` NSPanel host left alone (disabled-row stepping stays local). No SemVer bump. Spike folder archived after this step. |
+| **Tests** | Done. [`PVFloatingMenuSelectionTests`](../../../../macos/ProvenenciaTests/PVFloatingMenuSelectionTests.swift). Existing omnibar selection clamp coverage still applies. |
+| **Dogfood** | Filter/sort popups, cover thumbnail menu, and Back/Forward jump share card chrome and arrow/Enter/Escape; omnibar and type combo keep their own hosts. |
+| **Out** | Merging omnibar or `PVComboBox` onto one overlay host; changing Back/Forward primary-click semantics; Spike 6 canvas. |
+
+**Landed:** one floating-menu kit for overlay context/select/history; Spike 5 archive-ready.
+

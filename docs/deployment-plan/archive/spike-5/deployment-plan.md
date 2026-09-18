@@ -1,10 +1,10 @@
 # Deployment Plan — Spike 5
 
-Interpretation foundation: candidate refs, subject vocabulary, Subjects, layout storage, FFI, and Sources-family entry into a graph stub. Authoritative design: [`interpretation-graph-ui.md`](../../ideas/interpretation-graph-ui.md) §11.1 / §1.4. Authoritative schema: [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) §4.
+Interpretation foundation: candidate refs, subject vocabulary, Subjects, layout storage, FFI, and Sources-family entry into a graph stub. Authoritative design: [`interpretation-graph-ui.md`](../../../ideas/interpretation-graph-ui.md) §11.1 / §1.4. Authoritative schema: [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md) §4.
 
 ## Status
 
-**Product foundation done** (S5-01…S5-09). Landings go in [`completed.md`](completed.md). **S5-10** (unify floating menus) remains open before this folder is archived.
+**Product foundation done** (S5-01…S5-09). Landings go in [`completed.md`](completed.md). **S5-10** (unify floating menus) is done; archive this folder after the landing.
 
 > **This spike ships no Subject UI.** The graph is the only surface for Subjects, Citations, and Observations (design note §1.3), and the graph is Spike 6. Product nav keeps **one Sources family** — no Interpretation sidebar section (§1.4). Entry is dual action on the Sources list → graph stub. See *Scope boundary* below.
 
@@ -91,7 +91,7 @@ S5-D2  List dual action        │
 - [x] S5-07 — Nested Sources nav + Subject* stubs + graph place + `WorkspaceLocation` discriminator → [`completed.md`](completed.md)
 - [x] S5-08 — Sources list → Evidence graph stub → [`completed.md`](completed.md)
 - [x] S5-09 — Docs, dogfood, product close → [`completed.md`](completed.md)
-- [ ] S5-10 — Unify floating menus → then archive this spike folder
+- [x] S5-10 — Unify floating menus → then archive this spike folder
 
 ---
 
@@ -111,17 +111,11 @@ Floating-menu unify is **not** in this step — see S5-10.
 
 ## S5-10 — Unify floating menus
 
-Mac cleanup after S5-08 made the duplication obvious. S5-08 shipped Sources filter/sort via `PVPopupMenuButton` → `PVContextMenuPanel`, while Back/Forward still uses a private `HistoryJumpMenuPanel` / `HistoryJumpMenuHost` with the same card chrome and dismiss pattern. Cover thumbnail menus already use `PVContextMenu`.
+**Done.** See [`completed.md`](completed.md#s5-10--unify-floating-menus).
 
-**In S5-10:** fold history (and any remaining parallel) onto one design-system floating menu:
+Mac cleanup after S5-08 made the duplication obvious. Shared overlay panel chrome + ↑/↓/⏎/Esc for context, select, and history jump; omnibar/combo hosts stay separate.
 
-- Shared panel chrome + dismiss / positioning (`PVContextMenuPanel` / presenter).
-- Composable open policies: right-click, primary click, long-press (Back/Forward keeps step-on-click).
-- `PVPopupMenuButton` stays a chip trigger preset, not a second menu system.
-- History row content (icon + section › leaf + ref) stays custom row payload inside the shared panel — do not invent a third menu type.
-- Delete duplicated `HistoryJumpMenuPanel` card styling once history hosts through the shared kit.
-
-**After S5-10:** archive Spike 5 (`docs/deployment-plan/spike-5/` → `archive/spike-5/`) and point [`docs/deployment-plan/README.md`](../README.md) at the archive.
+**After S5-10:** archive Spike 5 (`docs/deployment-plan/spike-5/` → `archive/spike-5/`) and point [`docs/deployment-plan/README.md`](../../README.md) at the archive.
 
 Depends on S5-09 (product docs closed). Does not block Spike 6 canvas work.
 
@@ -174,7 +168,7 @@ Decisions baked into that DDL, each argued in the design note:
 
 ## Seeded Subject types (S5-03)
 
-All seven from [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.1, in a code registry installed at create time only — never in a migration, never healed on open:
+All seven from [`seeded-vocabulary.md`](../../../seeded-vocabulary.md) §3.1, in a code registry installed at create time only — never in a migration, never healed on open:
 
 ```text
 key              ref_prefix    candidate_ref_prefix
@@ -219,7 +213,7 @@ Findings from the pattern inventory that will otherwise cost a day each.
 | **Schema hash** | `core/database/schemahash.go` computes `expectedSchemaHash` at init by migrating an in-memory DB. There is **no committed golden constant to bump** — counterintuitive if you expect a golden file. Nothing to regenerate. |
 | **`Open` rejects unknown schema** | The digest covers all of `sqlite_schema`; `catalog_test.go` proves even a rogue *index* makes a catalog unopenable. Nothing may be created at runtime — every table and index ships in `000021.sql`. |
 | **Test tags** | `CGO_ENABLED=1 go test -tags fts5 ./...`. Bare `go test` on `core/database` fails confusingly, because migrations 18–19 create FTS5 virtual tables. |
-| **One ref format — do not reintroduce a candidate form** | Candidate subjects are ordinary `AAA-TTTTT` refs off `subject_types.candidate_ref_prefix`. There is no `MintCandidate`, no candidate validator, and nothing in `core/search` to teach. An earlier draft of S5-01 built an infix marker (`PER-C-7KD45`) and it was reverted; see [`catalog-refs.md`](../../catalog-refs.md) §2. |
+| **One ref format — do not reintroduce a candidate form** | Candidate subjects are ordinary `AAA-TTTTT` refs off `subject_types.candidate_ref_prefix`. There is no `MintCandidate`, no candidate validator, and nothing in `core/search` to teach. An earlier draft of S5-01 built an infix marker (`PER-C-7KD45`) and it was reverted; see [`catalog-refs.md`](../../../catalog-refs.md) §2. |
 | **Two prefixes per Subject type, one namespace** | `subject_types` carries `ref_prefix` (canonical, `PER`) and `candidate_ref_prefix` (Node, `CPR`) because `canonical_entities` shares the table. Both draw from the same three-letter space, so a new prefix must be checked against **both** columns — two per-column `UNIQUE` constraints do not express that. The leading `C` is convention; do not validate it. |
 | **Reserved prefixes** | The guard must reject `USR`, `SRC`, `ART`, `CIT`, `OBS`. Shipped as `ref.ValidatePrefix` in S5-01. |
 | **Prefix collisions are invisible to upsert** | `ON CONFLICT (key, origin)` does not catch a duplicate prefix; it arrives as a raw constraint error and will surface as `internal.unknown` unless mapped to its own code. |
@@ -291,7 +285,7 @@ The one thing it did change is the name of the layout table. It is **`subject_po
 | **Go core (critical path)** | S5-01 → S5-06 |
 | **Mac client** | S5-07 → S5-08 → S5-09 → S5-10 |
 
-S5-01…S5-09 and design briefs S5-D2 / S5-D3 are done. Next: S5-10 (unify floating menus), then archive this spike folder. Spike 6 may start from the product foundation without waiting on S5-10.
+S5-01…S5-10 and design briefs S5-D2 / S5-D3 are done. Archive this spike folder after S5-10. Spike 6 builds on the product foundation.
 
 ---
 
@@ -304,7 +298,7 @@ Jake can, on his MacBook:
 3. Point at `subject_types` / `subjects` / `subject_positions`, the Evidence graph place, and the location discriminator as what Spike 6 builds on.
 4. Confirm honesty: stubs do not claim Subjects exist or can be created yet.
 
-Per [`versioning.mdc`](../../../.cursor/rules/versioning.mdc), the docs in this folder do not bump `VERSION`; cutting a release that contains the spike bumps product PATCH across `VERSION`, `core/version.go`, and both Xcode `MARKETING_VERSION` configurations.
+Per [`versioning.mdc`](../../../../.cursor/rules/versioning.mdc), the docs in this folder do not bump `VERSION`; cutting a release that contains the spike bumps product PATCH across `VERSION`, `core/version.go`, and both Xcode `MARKETING_VERSION` configurations.
 
 ---
 

@@ -10,15 +10,19 @@ struct PVPopupMenuButton<MenuContent: View>: View {
     var accessibilityIdentifier: String?
     var menuWidth: CGFloat = 210
     var menuTitle: LocalizedStringResource?
+    /// Number of keyboard-activatable rows. Pass matching `index:` on each item.
+    var itemCount: Int = 0
     @ViewBuilder var menu: () -> MenuContent
 
     @State private var state = PVContextMenuState()
+    @State private var keyboard = PVContextMenuKeyboard.inactive
 
     var body: some View {
         Button {
             if state.isPresented {
                 state.dismiss()
             } else {
+                keyboard = PVContextMenuKeyboard(itemCount: itemCount, activeIndex: -1)
                 state.present(
                     at: CGPoint(x: 0, y: PVSpacing.controlHeightMedium + PVSpacing.space2)
                 )
@@ -46,7 +50,7 @@ struct PVPopupMenuButton<MenuContent: View>: View {
         .buttonStyle(.plain)
         .accessibilityLabel(Text(accessibilityLabel))
         .accessibilityAddIdentifiers(accessibilityIdentifier)
-        .pvContextMenu($state) {
+        .pvContextMenu($state, keyboard: itemCount > 0 ? $keyboard : nil) {
             PVContextMenuPanel(
                 title: menuTitle,
                 width: menuWidth,

@@ -186,18 +186,21 @@ private struct SourcesListContent: View {
             label: model.filterLabel,
             accessibilityLabel: L10n.Sources.filterMenu,
             accessibilityIdentifier: "sources.filter",
-            menuWidth: 220
+            menuWidth: 220,
+            itemCount: 1 + model.types.count
         ) {
             PVContextMenuItem(
                 L10n.Sources.filterAllTypes,
+                index: 0,
                 isSelected: model.typeFilterID.isEmpty,
                 accessibilityIdentifier: "sources.filter.all"
             ) {
                 model.typeFilterID = ""
             }
-            ForEach(model.types) { type in
+            ForEach(Array(model.types.enumerated()), id: \.element.id) { offset, type in
                 PVContextMenuItem(
                     plainTitle: type.label,
+                    index: offset + 1,
                     isSelected: model.typeFilterID == type.id,
                     accessibilityIdentifier: "sources.filter.\(type.id)"
                 ) {
@@ -208,16 +211,19 @@ private struct SourcesListContent: View {
     }
 
     private var sortMenu: some View {
-        PVPopupMenuButton(
+        let sorts = SourcesModel.Sort.allCases
+        return PVPopupMenuButton(
             icon: .sort,
             label: model.sortControlLabel,
             accessibilityLabel: L10n.Sources.sortMenu,
             accessibilityIdentifier: "sources.sort",
-            menuWidth: 220
+            menuWidth: 220,
+            itemCount: sorts.count
         ) {
-            ForEach(SourcesModel.Sort.allCases) { option in
+            ForEach(Array(sorts.enumerated()), id: \.element.id) { offset, option in
                 PVContextMenuItem(
                     option.label,
+                    index: offset,
                     isSelected: model.sort == option,
                     accessibilityIdentifier: "sources.sort.\(option.rawValue)"
                 ) {
