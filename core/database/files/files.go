@@ -36,15 +36,10 @@ type File struct {
 	ByteSize  int64
 }
 
-// ExtensionForMediaType returns a leading-dot suffix for known MIME types
-// (e.g. ".jpg"), or "" when unknown / empty. Strips ";…" parameters.
-func ExtensionForMediaType(mediaType string) string {
-	return objectpath.Extension(mediaType)
-}
-
 // StorageRelPath returns objects/{hh}/{hh}/{fullhex}{ext} for a 64-char
-// lowercase hex checksum. ext is MIME-derived (see ExtensionForMediaType);
-// unknown media types keep the bare hex basename.
+// lowercase hex checksum. Extension comes from objectpath.Extension;
+// unknown media types keep the bare hex basename. Invalid checksums map to
+// ErrInvalid.
 func StorageRelPath(checksumHex, mediaType string) (string, error) {
 	p, err := objectpath.Rel(checksumHex, mediaType)
 	if errors.Is(err, objectpath.ErrInvalidChecksum) {

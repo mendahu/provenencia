@@ -29,19 +29,32 @@ func TestRel(t *testing.T) {
 }
 
 func TestExtension(t *testing.T) {
-	if got := objectpath.Extension("IMAGE/PNG"); got != ".png" {
-		t.Fatalf("got %q", got)
+	tests := []struct {
+		in   string
+		want string
+	}{
+		{in: "image/jpeg", want: ".jpg"},
+		{in: "image/jpg", want: ".jpg"},
+		{in: "IMAGE/PNG", want: ".png"},
+		{in: "video/quicktime", want: ".mov"},
+		{in: "audio/x-wav", want: ".wav"},
+		{in: "text/plain; charset=utf-8", want: ".txt"},
+		{in: "text/csv", want: ".csv"},
+		{in: "text/markdown", want: ".md"},
+		{in: "application/msword", want: ".doc"},
+		{in: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", want: ".docx"},
+		{in: "audio/flac", want: ".flac"},
+		{in: "image/heic", want: ".heic"},
+		{in: "image/webp", want: ".webp"},
+		{in: "image/gif", want: ".gif"},
+		{in: "application/pdf", want: ".pdf"},
+		{in: "", want: ""},
 	}
-	if got := objectpath.Extension("text/plain; charset=utf-8"); got != ".txt" {
-		t.Fatalf("got %q", got)
-	}
-	if got := objectpath.Extension(""); got != "" {
-		t.Fatalf("got %q", got)
-	}
-	// Types searchindex previously inlined — must stay non-empty.
-	for _, mt := range []string{"image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"} {
-		if objectpath.Extension(mt) == "" {
-			t.Fatalf("%s: empty extension", mt)
-		}
+	for _, tt := range tests {
+		t.Run(tt.in, func(t *testing.T) {
+			if got := objectpath.Extension(tt.in); got != tt.want {
+				t.Fatalf("got %q want %q", got, tt.want)
+			}
+		})
 	}
 }
