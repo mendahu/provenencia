@@ -234,32 +234,31 @@ private struct PVContextMenuItemButtonStyle: ButtonStyle {
     var isSelected: Bool = false
 
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .background {
-                RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                    .fill(
-                        configuration.isPressed
-                            ? PVColor.surfaceActive
-                            : (isSelected ? PVColor.surfaceSelected : Color.clear)
-                    )
-            }
-            .background {
-                if !isSelected {
-                    PVContextMenuHoverFill()
-                }
-            }
+        PVContextMenuItemButtonBody(configuration: configuration, isSelected: isSelected)
     }
 }
 
-private struct PVContextMenuHoverFill: View {
+private struct PVContextMenuItemButtonBody: View {
+    let configuration: ButtonStyleConfiguration
+    var isSelected: Bool
     @State private var hovering = false
 
     var body: some View {
-        RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-            .fill(PVColor.surfaceHover)
-            .opacity(hovering ? 1 : 0)
+        configuration.label
+            .background {
+                RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                    .fill(rowFill)
+            }
+            .contentShape(Rectangle())
             .onHover { hovering = $0 }
-            .allowsHitTesting(false)
+            .pvAnimation(PVMotion.instantStandard, value: hovering)
+    }
+
+    private var rowFill: Color {
+        if configuration.isPressed { return PVColor.surfaceActive }
+        if isSelected { return PVColor.surfaceSelected }
+        if hovering { return PVColor.surfaceHover }
+        return .clear
     }
 }
 

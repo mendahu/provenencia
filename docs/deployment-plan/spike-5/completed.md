@@ -227,7 +227,7 @@ xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destin
 | **Deliverables** | Done. `Source.has_artifact` on list/workspace enrich (`artifacts.HasAnyForSource`); `CatalogSource.hasArtifact` + FakeStore/GoStore. Sources list split-row ([`SourcesSplitRow`](../../../macos/App/Features/Sources/SourcesSplitRow.swift)) with page vs graph zones and blocked “Needs an artifact” state; caption band; custom filter/sort via [`PVPopupMenuButton`](../../../macos/App/DesignSystem/Components/Core/PVPopupMenu.swift). Graph destination remains the S5-07 stub. |
 | **Tests** | Done. Go `ListSources` `has_artifact` false→true after `CreateArtifact`. Swift [`SourcesListNavigationTests`](../../../macos/ProvenenciaTests/SourcesListNavigationTests.swift) page/graph locations + FakeStore gate. |
 | **Dogfood** | From Sources list: open filing page (left zone) or Evidence graph stub (right zone when an Artifact exists); no-Artifact rows show inert graph zone. |
-| **Out** | Canvas / Spike 6; Source-page Evidence graph button; SemVer bump; Subject type/field editors. |
+| **Out** | Canvas / Spike 6; Source-page Evidence graph button; SemVer bump; Subject type/field editors. **Floating-menu unify** (history jump onto `PVContextMenu` + open policies) deferred to **S5-09**. |
 
 **Landed:** researcher can open an Evidence graph from the Sources list with an honest Artifact gate.
 

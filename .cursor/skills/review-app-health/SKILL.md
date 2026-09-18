@@ -5,7 +5,8 @@ description: >-
   Provenencia (Go core, FFI, macOS SwiftUI) against a fixed checklist: code
   cleanliness, security, performance, project structure, separation of concerns,
   idiomatic patterns, test coverage, error UX, internationalization, docs/skills/rules
-  drift, and accessibility. Use when the user asks for an app health review,
+  drift, accessibility, and UI component organization (orphans, near-duplicates,
+  generic vs domain-specific). Use when the user asks for an app health review,
   tech-debt review, maintainability audit, bloat check, architecture hygiene
   pass, or to periodically review the application for debt creep—especially
   after AI-assisted development.
@@ -50,6 +51,7 @@ App health review:
 - [ ] 9. Internationalization
 - [ ] 10. Docs / skills / rules drift
 - [ ] 11. Accessibility
+- [ ] 12. UI component organization
 - [ ] Report delivered
 ```
 
@@ -68,6 +70,7 @@ App health review:
 | Perf hotspots | Catalog session misuse, N+1 queries, SwiftUI `body` work, sync FFI on UI path, image/derivative work, search/FTS |
 | Docs / skills drift | Spot-check `.cursor/skills/`, `.cursor/rules/`, and key `docs/*.md` against the live tree; flag broken paths and contradicted “blessed” patterns |
 | Accessibility | Grep `.accessibilityIdentifier` / labels; sample interactive controls (esp. icon-only); compare to `docs/macos-client-patterns.md` §5 |
+| Component reuse | List `DesignSystem/Components/**`; for each `PV*` type, Grep call sites under `Features/`; spot near-duplicate panels/menus/lists/rows; compare feature-private chrome to `PV*` siblings |
 
 Keep commands read-only unless the user asked to fix. Prefer sampling deeply in hot paths over exhaustively listing every file.
 
@@ -86,6 +89,7 @@ Read [`criteria.md`](criteria.md) for the full rubric. In short:
 9. **i18n** — no hard-coded user-facing strings; `L10n` + catalogs; FFI codes mapped under `L10n.Errors`.
 10. **Docs/skills/rules drift** — authoritative guidance still matches code; no orphan skills, stale rules, or contradicted docs that would mis-train the next agent.
 11. **Accessibility** — VoiceOver/keyboard-ready controls; stable dotted `accessibilityIdentifier`s; labels on icon-only actions; no UI-testing by localized title.
+12. **UI component organization** — orphans, near-duplicate floating chrome/lists/rows, and feature-private copies of DesignSystem patterns; prefer one generic primitive + open/content policies over bespoke per-page reimplementations.
 
 ## Provenencia invariants (flag violations)
 
@@ -97,6 +101,7 @@ Read [`criteria.md`](criteria.md) for the full rubric. In short:
 - Prefer product-named packages/folders over grab-bags (`Shared/`, `Common/`, `Utils/`).
 - Skills/rules/docs that agents follow must stay truthful; fix or archive drift, don’t leave lying guidance.
 - Interactive Mac controls that matter for tests or AT get stable `.accessibilityIdentifier("dotted.name")`; don’t query by localized title.
+- DesignSystem `PV*` primitives are for reuse; feature folders hold product composition—not a second copy of the same floating menu / list / chip.
 
 ## Output format
 
@@ -154,6 +159,7 @@ Each action item **must** include:
 | Internationalization | … | … |
 | Docs / skills / rules drift | … | … |
 | Accessibility | … | … |
+| UI component organization | … | … |
 ```
 
 Omit an empty priority section rather than writing “None.”

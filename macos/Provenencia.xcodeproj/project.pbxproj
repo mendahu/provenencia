@@ -10,7 +10,6 @@
 		AA00000000000000000003B1 /* PVEvidenceIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003B0 /* PVEvidenceIcon.swift */; };
 		AA00000000000000000003B3 /* PVFileTypeGlyphTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003B2 /* PVFileTypeGlyphTests.swift */; };
 		AA0000000000000000000301 /* PVThumbnail.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000300 /* PVThumbnail.swift */; };
-		AA0000000000000000000303 /* PVList.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000302 /* PVList.swift */; };
 		AA000000000000000000031F /* PVReorderableList.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000320 /* PVReorderableList.swift */; };
 		AA0000000000000000000305 /* PVDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000304 /* PVDialog.swift */; };
 		AA0000000000000000000307 /* SourcesModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000306 /* SourcesModel.swift */; };
@@ -54,7 +53,6 @@
 		AA0000000000000000000333 /* DateValueDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000332 /* DateValueDraftTests.swift */; };
 		AA0000000000000000000313 /* SourcesModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000312 /* SourcesModelTests.swift */; };
 		AA000000000000000000046B /* SourcesListNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000046A /* SourcesListNavigationTests.swift */; };
-		AA0000000000000000000315 /* PVListTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000314 /* PVListTests.swift */; };
 		01574F7767F9B0AF5550AFAD /* PVMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = C355704657FB6A572BF7FD6A /* PVMotion.swift */; };
 		AA0000000000000000000210 /* OriginMarkers.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000200 /* OriginMarkers.swift */; };
 		AA0000000000000000000240 /* PVComboBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000230 /* PVComboBox.swift */; };
@@ -211,7 +209,6 @@
 		AA00000000000000000003B0 /* PVEvidenceIcon.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVEvidenceIcon.swift; sourceTree = "<group>"; };
 		AA00000000000000000003B2 /* PVFileTypeGlyphTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVFileTypeGlyphTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000300 /* PVThumbnail.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVThumbnail.swift; sourceTree = "<group>"; };
-		AA0000000000000000000302 /* PVList.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVList.swift; sourceTree = "<group>"; };
 		AA0000000000000000000320 /* PVReorderableList.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVReorderableList.swift; sourceTree = "<group>"; };
 		AA0000000000000000000304 /* PVDialog.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVDialog.swift; sourceTree = "<group>"; };
 		AA0000000000000000000306 /* SourcesModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesModel.swift; sourceTree = "<group>"; };
@@ -255,7 +252,6 @@
 		AA0000000000000000000332 /* DateValueDraftTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueDraftTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000312 /* SourcesModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesModelTests.swift; sourceTree = "<group>"; };
 		AA000000000000000000046A /* SourcesListNavigationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesListNavigationTests.swift; sourceTree = "<group>"; };
-		AA0000000000000000000314 /* PVListTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVListTests.swift; sourceTree = "<group>"; };
 		11ADAF744C32587CD34CDD23 /* PVLogoMark.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVLogoMark.swift; sourceTree = "<group>"; };
 		164584B2DB70D89A55C4178F /* WorkspaceModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceModelTests.swift; sourceTree = "<group>"; };
 		F203948576A1B2C3D4E5F605 /* WorkspaceNavigationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceNavigationTests.swift; sourceTree = "<group>"; };
@@ -772,7 +768,6 @@
 				B567080CA23230E18488F894 /* TrafficLightsTests.swift */,
 				8291342170CC4CB42EFA814C /* FieldSlugTests.swift */,
 				AA00000000000000000000C5 /* PVTableTests.swift */,
-				AA0000000000000000000314 /* PVListTests.swift */,
 				4F0CB87F6EC5759DF8D0A7AF /* SourceFieldsModelTests.swift */,
 				AA0000000000000000000206 /* SourceTypesModelTests.swift */,
 				AA0000000000000000000312 /* SourcesModelTests.swift */,
@@ -791,7 +786,6 @@
 			isa = PBXGroup;
 			children = (
 				AA00000000000000000000C2 /* PVTable.swift */,
-				AA0000000000000000000302 /* PVList.swift */,
 				AA0000000000000000000320 /* PVReorderableList.swift */,
 			);
 			name = Data;
@@ -1056,7 +1050,6 @@
 				57420D5CDD1330745ACC33FD /* SourceFieldsDetailPane.swift in Sources */,
 				AA0000000000000000000301 /* PVThumbnail.swift in Sources */,
 				AA00000000000000000003B1 /* PVEvidenceIcon.swift in Sources */,
-				AA0000000000000000000303 /* PVList.swift in Sources */,
 				AA000000000000000000031F /* PVReorderableList.swift in Sources */,
 				AA0000000000000000000305 /* PVDialog.swift in Sources */,
 				AA0000000000000000000307 /* SourcesModel.swift in Sources */,
@@ -1120,7 +1113,6 @@
 				CE7E43F00CA602E2794E0ADA /* SourceFieldsModelTests.swift in Sources */,
 				AA0000000000000000000216 /* SourceTypesModelTests.swift in Sources */,
 				AA0000000000000000000242 /* PVComboBoxTests.swift in Sources */,
-				AA0000000000000000000315 /* PVListTests.swift in Sources */,
 				AA0000000000000000000313 /* SourcesModelTests.swift in Sources */,
 				AA000000000000000000046B /* SourcesListNavigationTests.swift in Sources */,
 				AA000000000000000000031D /* SourcePageModelTests.swift in Sources */,

@@ -3216,7 +3216,7 @@
       }
     },
     "sources.list.accessibilityLabel" : {
-      "comment" : "Accessibility label for the Sources PVList",
+      "comment" : "Accessibility label for the Sources list",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {

@@ -1070,7 +1070,7 @@ enum L10n {
         static let listAccessibilityLabel = LocalizedStringResource(
             "sources.list.accessibilityLabel",
             defaultValue: "Sources",
-            comment: "Accessibility label for the Sources PVList"
+            comment: "Accessibility label for the Sources list"
         )
 
         static let columnSource = LocalizedStringResource(
