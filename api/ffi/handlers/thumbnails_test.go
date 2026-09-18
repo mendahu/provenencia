@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/catalogsession"
+	"github.com/mendahu/provenencia/core/database"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -207,6 +209,9 @@ func TestListSourcesAndWorkspaceThumbnails(t *testing.T) {
 				if list.Sources[0].GetCoverMode() != "artifact" {
 					t.Fatalf("cover_mode %q", list.Sources[0].GetCoverMode())
 				}
+				if !list.Sources[0].GetHasArtifact() {
+					t.Fatal("want has_artifact after pin")
+				}
 				lr := req.(*engine.ListSourcesRequest)
 				wout, err := GetSourceWorkspace(marshalProto(t, &engine.GetSourceWorkspaceRequest{
 					ProjectDir: lr.ProjectDir, SourceId: list.Sources[0].Id,
@@ -220,6 +225,106 @@ func TestListSourcesAndWorkspaceThumbnails(t *testing.T) {
 				}
 				if len(ws.Artifacts) != 1 || ws.Artifacts[0].GetThumbnailRelPath() == "" {
 					t.Fatalf("workspace thumbs %+v", ws.Artifacts)
+				}
+			},
+		},
+		{
+			name: "list does not regenerate missing cover thumbnail",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, typeID := sourceFixture(t)
+				cout, err := CreateSource(marshalProto(t, &engine.CreateSourceRequest{
+					ProjectDir: dir, UserId: userID, SourceTypeId: typeID, Title: "Album",
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var created engine.CreateSourceResponse
+				if err := proto.Unmarshal(cout, &created); err != nil {
+					t.Fatal(err)
+				}
+				aout, err := CreateArtifact(marshalProto(t, &engine.CreateArtifactRequest{
+					ProjectDir: dir, UserId: userID, SourceId: created.Source.Id, Label: "Page",
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var art engine.CreateArtifactResponse
+				if err := proto.Unmarshal(aout, &art); err != nil {
+					t.Fatal(err)
+				}
+				path := filepath.Join(t.TempDir(), "page.png")
+				writePNG(t, path)
+				if _, err := IngestArtifactFile(marshalProto(t, &engine.IngestArtifactFileRequest{
+					ProjectDir: dir, UserId: userID, ArtifactId: art.Artifact.Id, Path: path,
+				})); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := SetSourceCover(marshalProto(t, &engine.SetSourceCoverRequest{
+					ProjectDir: dir, UserId: userID, SourceId: created.Source.Id,
+					CoverMode: "artifact", PrimaryArtifactId: art.Artifact.Id,
+				})); err != nil {
+					t.Fatal(err)
+				}
+				// Drop the derivative SetCover created so ListSources must not
+				// regenerate it while holding the catalog session.
+				if err := catalogsession.Close(dir); err != nil {
+					t.Fatal(err)
+				}
+				c, err := database.Open(dir)
+				if err != nil {
+					t.Fatal(err)
+				}
+				db, err := c.DB()
+				if err != nil {
+					_ = c.Close()
+					t.Fatal(err)
+				}
+				if _, err := db.Exec(`DELETE FROM file_derivatives`); err != nil {
+					_ = c.Close()
+					t.Fatal(err)
+				}
+				if err := c.Close(); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.ListSourcesRequest{ProjectDir: dir}
+			},
+			after: func(t *testing.T, out []byte, req proto.Message) {
+				var list engine.ListSourcesResponse
+				if err := proto.Unmarshal(out, &list); err != nil {
+					t.Fatal(err)
+				}
+				if len(list.Sources) != 1 {
+					t.Fatalf("sources %+v", list.Sources)
+				}
+				s := list.Sources[0]
+				if s.GetCoverMode() != "artifact" {
+					t.Fatalf("cover_mode %q", s.GetCoverMode())
+				}
+				if s.GetThumbnailRelPath() != "" {
+					t.Fatalf("list must not generate thumb on cache miss, got %q", s.GetThumbnailRelPath())
+				}
+				if !s.GetHasArtifact() {
+					t.Fatal("want has_artifact even without derivative")
+				}
+				lr := req.(*engine.ListSourcesRequest)
+				if err := catalogsession.Close(lr.ProjectDir); err != nil {
+					t.Fatal(err)
+				}
+				c, err := database.Open(lr.ProjectDir)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer func() { _ = c.Close() }()
+				db, err := c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				var n int
+				if err := db.QueryRow(`SELECT COUNT(*) FROM file_derivatives`).Scan(&n); err != nil {
+					t.Fatal(err)
+				}
+				if n != 0 {
+					t.Fatalf("ListSources regenerated %d derivative row(s)", n)
 				}
 			},
 		},
@@ -244,6 +349,9 @@ func TestListSourcesAndWorkspaceThumbnails(t *testing.T) {
 				}
 				if list.Sources[0].GetThumbnailMediaType() != "" {
 					t.Fatalf("want empty media type %+v", list.Sources[0])
+				}
+				if list.Sources[0].GetHasArtifact() {
+					t.Fatal("fileless source must not set has_artifact")
 				}
 			},
 		},
@@ -295,6 +403,9 @@ func TestListSourcesAndWorkspaceThumbnails(t *testing.T) {
 				if s.GetThumbnailRelPath() != "" || s.GetThumbnailMediaType() != "" {
 					t.Fatalf("want empty source thumbs %+v", s)
 				}
+				if !s.GetHasArtifact() {
+					t.Fatal("pdf artifact still counts for has_artifact")
+				}
 			},
 		},
 		{
@@ -344,6 +455,9 @@ func TestListSourcesAndWorkspaceThumbnails(t *testing.T) {
 				}
 				if s.GetThumbnailRelPath() != "" {
 					t.Fatalf("want empty raster until pin, got %q", s.GetThumbnailRelPath())
+				}
+				if !s.GetHasArtifact() {
+					t.Fatal("want has_artifact after ingest")
 				}
 			},
 		},

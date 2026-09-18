@@ -227,6 +227,9 @@ func TestSources(t *testing.T) {
 				if !bytes.Equal(all[0].ID, second.ID) || !bytes.Equal(all[1].ID, first.ID) {
 					t.Fatalf("list order should stay newest-created-first got %+v %+v", all[0].Title, all[1].Title)
 				}
+				if all[0].HasArtifact || all[1].HasArtifact {
+					t.Fatal("want has_artifact false with no artifacts")
+				}
 			},
 		},
 		{

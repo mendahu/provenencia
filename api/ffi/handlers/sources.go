@@ -26,7 +26,7 @@ func ListSources(in []byte) ([]byte, error) {
 		}
 		out = &engine.ListSourcesResponse{}
 		for _, s := range rows {
-			sp, err := enrichSourceProto(c, s)
+			sp, err := listSourceProto(c, s)
 			if err != nil {
 				return err
 			}

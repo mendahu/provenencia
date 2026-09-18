@@ -40,6 +40,7 @@ const (
 	// Newest-first by UUIDv7 id (create time). updated_revision is the latest
 	// audit revision for this source entity (create or later update_source /
 	// set_source_cover), used by the Sources list "Updated" sort.
+	// has_artifact gates the Evidence graph zone without a per-row query.
 	sqlList = `SELECT s.id, s.ref, s.source_type_id, s.title, COALESCE(s.description, ''),
 		s.cover_mode, s.primary_artifact_id,
 		COALESCE((
@@ -47,7 +48,8 @@ const (
 			FROM audit_changes c
 			JOIN audit_transactions t ON t.id = c.audit_transaction_id
 			WHERE c.entity_type = 'source' AND c.entity_id = s.id
-		), 0)
+		), 0),
+		EXISTS (SELECT 1 FROM artifacts a WHERE a.source_id = s.id)
 		FROM sources s
 		ORDER BY s.id DESC`
 	sqlLatestRevision = `SELECT COALESCE(MAX(t.revision), 0)
@@ -72,6 +74,9 @@ type Source struct {
 	// UpdatedRevision is the latest audit revision for this source entity.
 	// Filled by List and by AttachLatestRevision; zero means unset.
 	UpdatedRevision int64
+	// HasArtifact is true when at least one artifacts row exists for this Source.
+	// Filled by List only; other reads leave it false and callers query separately.
+	HasArtifact bool
 }
 
 // CreateInput is the mutable fields for a new Source.
@@ -355,7 +360,8 @@ func GetByRef(c *database.Catalog, sourceRef string) (Source, error) {
 	return scanSource(db.QueryRow(sqlGetByRef, sourceRef))
 }
 
-// List returns Sources newest-first by UUIDv7 id, with UpdatedRevision filled.
+// List returns Sources newest-first by UUIDv7 id, with UpdatedRevision and
+// HasArtifact filled from a single list query.
 func List(c *database.Catalog) ([]Source, error) {
 	db, err := c.DB()
 	if err != nil {
@@ -433,7 +439,7 @@ func scanSourceList(row rowScanner) (Source, error) {
 	var primary []byte
 	if err := row.Scan(
 		&s.ID, &s.Ref, &s.SourceTypeID, &s.Title, &s.Description, &s.CoverMode, &primary,
-		&s.UpdatedRevision,
+		&s.UpdatedRevision, &s.HasArtifact,
 	); err != nil {
 		return Source{}, err
 	}
