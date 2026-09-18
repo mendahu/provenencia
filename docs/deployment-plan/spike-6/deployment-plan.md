@@ -61,7 +61,7 @@ S6-D2  Connect + edges        │
 
 - [ ] S6-D1 — Design: canvas + bubbles → [`design/`](design/)
 - [ ] S6-D2 — Design: connect + edges → [`design/`](design/)
-- [ ] S6-01 — `NSScrollView` shell + coordinate conversion
+- [x] S6-01 — `NSScrollView` shell + coordinate conversion → [`completed.md`](completed.md)
 - [ ] S6-02 — Bubbles on the canvas + accessibility representation
 - [ ] S6-03 — Click-to-add, drag, snap, persist, tray
 - [ ] S6-04 — Relationship lines + connect gesture (accessible)

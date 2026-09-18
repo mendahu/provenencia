@@ -71,6 +71,12 @@
 		AA0000000000000000000451 /* SubjectStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000450 /* SubjectStoreTests.swift */; };
 		AA0000000000000000000461 /* SourceGraphSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000460 /* SourceGraphSnapshot.swift */; };
 		AA0000000000000000000463 /* WorkspaceComingSoonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000462 /* WorkspaceComingSoonView.swift */; };
+		AA0000000000000000000471 /* GraphCanvasCamera.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000470 /* GraphCanvasCamera.swift */; };
+		AA0000000000000000000473 /* GraphCanvasCoordinates.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000472 /* GraphCanvasCoordinates.swift */; };
+		AA0000000000000000000475 /* GraphCanvasGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000474 /* GraphCanvasGridView.swift */; };
+		AA0000000000000000000477 /* GraphCanvasScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000476 /* GraphCanvasScrollView.swift */; };
+		AA0000000000000000000479 /* EvidenceGraphView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000478 /* EvidenceGraphView.swift */; };
+		AA000000000000000000047B /* GraphCanvasCoordinatesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000047A /* GraphCanvasCoordinatesTests.swift */; };
 		AA00000000000000000003F1 /* WorkspaceToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003F0 /* WorkspaceToolbar.swift */; };
 		AA00000000000000000003F3 /* OmnibarFocusCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003F2 /* OmnibarFocusCoordinator.swift */; };
 		AA00000000000000000003F5 /* WorkspaceToolbarBreadcrumbTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003F4 /* WorkspaceToolbarBreadcrumbTests.swift */; };
@@ -281,6 +287,12 @@
 		AA0000000000000000000450 /* SubjectStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SubjectStoreTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000460 /* SourceGraphSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceGraphSnapshot.swift; sourceTree = "<group>"; };
 		AA0000000000000000000462 /* WorkspaceComingSoonView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceComingSoonView.swift; sourceTree = "<group>"; };
+		AA0000000000000000000470 /* GraphCanvasCamera.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasCamera.swift; sourceTree = "<group>"; };
+		AA0000000000000000000472 /* GraphCanvasCoordinates.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasCoordinates.swift; sourceTree = "<group>"; };
+		AA0000000000000000000474 /* GraphCanvasGridView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasGridView.swift; sourceTree = "<group>"; };
+		AA0000000000000000000476 /* GraphCanvasScrollView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasScrollView.swift; sourceTree = "<group>"; };
+		AA0000000000000000000478 /* EvidenceGraphView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphView.swift; sourceTree = "<group>"; };
+		AA000000000000000000047A /* GraphCanvasCoordinatesTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasCoordinatesTests.swift; sourceTree = "<group>"; };
 		AA00000000000000000003F0 /* WorkspaceToolbar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceToolbar.swift; sourceTree = "<group>"; };
 		AA00000000000000000003F2 /* OmnibarFocusCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OmnibarFocusCoordinator.swift; sourceTree = "<group>"; };
 		AA00000000000000000003F4 /* WorkspaceToolbarBreadcrumbTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceToolbarBreadcrumbTests.swift; sourceTree = "<group>"; };
@@ -699,12 +711,25 @@
 				8D76A01BF603CC419C35EEBD /* Workspace */,
 				AA0000000000000000000316 /* Sources */,
 				AA0000000000000000000334 /* Dates */,
+				AA000000000000000000047C /* GraphCanvas */,
 				423C55925CCDB8118E02BF19 /* SourceFields */,
 				AA0000000000000000000221 /* SourceTypes */,
 				AA0000000000000000000220 /* Catalog */,
 				AA0000000000000000000280 /* CatalogVocabulary */,
 			);
 			path = Features;
+			sourceTree = "<group>";
+		};
+		AA000000000000000000047C /* GraphCanvas */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000470 /* GraphCanvasCamera.swift */,
+				AA0000000000000000000472 /* GraphCanvasCoordinates.swift */,
+				AA0000000000000000000474 /* GraphCanvasGridView.swift */,
+				AA0000000000000000000476 /* GraphCanvasScrollView.swift */,
+				AA0000000000000000000478 /* EvidenceGraphView.swift */,
+			);
+			path = GraphCanvas;
 			sourceTree = "<group>";
 		};
 		AA0000000000000000000334 /* Dates */ = {
@@ -775,6 +800,7 @@
 				AA0000000000000000000312 /* SourcesModelTests.swift */,
 				AA000000000000000000046A /* SourcesListNavigationTests.swift */,
 				AA000000000000000000046E /* PVFloatingMenuSelectionTests.swift */,
+				AA000000000000000000047A /* GraphCanvasCoordinatesTests.swift */,
 				AA000000000000000000031E /* SourcePageModelTests.swift */,
 				AA00000000000000000003D4 /* IngestMediaPolicyTests.swift */,
 				AA0000000000000000000394 /* ThumbnailCacheTests.swift */,
@@ -1019,6 +1045,11 @@
 				DA26E3BA97D438A7561ED96D /* WorkspaceContent.swift in Sources */,
 				AA0000000000000000000430 /* WorkspaceDestinationHost.swift in Sources */,
 				AA0000000000000000000463 /* WorkspaceComingSoonView.swift in Sources */,
+				AA0000000000000000000471 /* GraphCanvasCamera.swift in Sources */,
+				AA0000000000000000000473 /* GraphCanvasCoordinates.swift in Sources */,
+				AA0000000000000000000475 /* GraphCanvasGridView.swift in Sources */,
+				AA0000000000000000000477 /* GraphCanvasScrollView.swift in Sources */,
+				AA0000000000000000000479 /* EvidenceGraphView.swift in Sources */,
 				14A19539FB0D86BB050EC437 /* WorkspaceView.swift in Sources */,
 				13208FE0B57739DECCA156C7 /* WorkspaceChrome.swift in Sources */,
 				840A56FF5DC13597C1DFDDF9 /* TrafficLights.swift in Sources */,
@@ -1119,6 +1150,7 @@
 				AA0000000000000000000313 /* SourcesModelTests.swift in Sources */,
 				AA000000000000000000046B /* SourcesListNavigationTests.swift in Sources */,
 				AA000000000000000000046F /* PVFloatingMenuSelectionTests.swift in Sources */,
+				AA000000000000000000047B /* GraphCanvasCoordinatesTests.swift in Sources */,
 				AA000000000000000000031D /* SourcePageModelTests.swift in Sources */,
 				AA00000000000000000003D5 /* IngestMediaPolicyTests.swift in Sources */,
 				AA0000000000000000000395 /* ThumbnailCacheTests.swift in Sources */,

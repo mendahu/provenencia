@@ -30,12 +30,7 @@ struct WorkspaceDestinationHost: View {
                 )
             }
         case .sourceGraph:
-            WorkspaceComingSoonView(
-                icon: .library,
-                title: L10n.Workspace.evidenceGraphTitle,
-                message: L10n.Workspace.evidenceGraphStubBody
-            )
-            .accessibilityIdentifier("workspace.destination.evidenceGraph")
+            EvidenceGraphView()
         case .sourceFields:
             SourceFieldsView(
                 session: session,

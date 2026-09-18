@@ -2,7 +2,7 @@
 
 ## Status
 
-**Open.** Plan: [`deployment-plan.md`](deployment-plan.md). Finished steps: [`completed.md`](completed.md) (none yet).
+**Open.** Plan: [`deployment-plan.md`](deployment-plan.md). Finished steps: [`completed.md`](completed.md) (S6-01).
 
 Stand up a Source-scoped Evidence graph **prototype** and decide whether the spatial canvas is buildable and pleasant on this stack. Authoritative design: [`interpretation-graph-ui.md`](../../ideas/interpretation-graph-ui.md) §7 / §11.3 / §13. Foundation inherited from [Spike 5](../archive/spike-5/).
 
