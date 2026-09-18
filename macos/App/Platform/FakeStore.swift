@@ -27,6 +27,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var lastClosedCatalogProjectDir: String?
     /// When set, `listSources` throws instead of returning the in-memory list.
     var listSourcesError: Error?
+    /// Monotonic stand-in for audit_transactions.revision (Sources Updated sort).
+    private var nextAuditRevision: Int64 = 1
     /// When set, `searchCatalog` throws (omnibar error UI).
     var searchCatalogError: Error?
     /// When set, `workspaceNavCounts` throws instead of returning counts.
@@ -209,7 +211,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     func listSources(projectDir: String) async throws -> [CatalogSource] {
         markCatalogSessionHeld(projectDir)
         if let listSourcesError { throw listSourcesError }
-        let rows = sourcesByProject[projectDir] ?? []
+        // Match Go `sources.List`: newest-created-first (UUIDv7 / id DESC).
+        let rows = (sourcesByProject[projectDir] ?? []).sorted { $0.id > $1.id }
         return rows.map { enrichCoverFields($0) }
     }
 
@@ -233,12 +236,15 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         title: String,
         description: String
     ) async throws -> CatalogSource {
+        let rev = nextAuditRevision
+        nextAuditRevision += 1
         let source = CatalogSource(
             id: UUID().uuidString.lowercased(),
             ref: "SRC-FAKE1",
             sourceTypeID: sourceTypeID,
             title: title,
-            description: description
+            description: description,
+            updatedRevision: rev
         )
         sourcesByProject[projectDir, default: []].append(source)
         return source
@@ -260,6 +266,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         list[idx].sourceTypeID = sourceTypeID
         list[idx].title = title
         list[idx].description = description
+        list[idx].updatedRevision = nextAuditRevision
+        nextAuditRevision += 1
         sourcesByProject[projectDir] = list
         return enrichCoverFields(list[idx])
     }
@@ -291,6 +299,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         default:
             throw StoreBoom.boom
         }
+        list[idx].updatedRevision = nextAuditRevision
+        nextAuditRevision += 1
         sourcesByProject[projectDir] = list
         return enrichCoverFields(list[idx])
     }

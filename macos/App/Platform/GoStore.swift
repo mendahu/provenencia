@@ -852,7 +852,8 @@ struct GoStore: GenealogyStore {
             thumbnailOriginalFilename: s.thumbnailOriginalFilename,
             coverMode: s.coverMode.isEmpty ? "type_icon" : s.coverMode,
             primaryArtifactID: s.primaryArtifactID,
-            hasArtifact: s.hasArtifact_p
+            hasArtifact: s.hasArtifact_p,
+            updatedRevision: s.updatedRevision
         )
     }
 

@@ -173,6 +173,63 @@ func TestSources(t *testing.T) {
 			},
 		},
 		{
+			name: "list newest first by id with updated revision",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				typeID := mustType(t, c)
+				first, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: "Older"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				second, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: "Newer"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				all, err := List(c)
+				if err != nil || len(all) != 2 {
+					t.Fatalf("list %v %d", err, len(all))
+				}
+				if all[0].Title != "Newer" || all[1].Title != "Older" {
+					t.Fatalf("want newest-first got %+v %+v", all[0], all[1])
+				}
+				if all[0].UpdatedRevision <= 0 || all[1].UpdatedRevision <= 0 {
+					t.Fatalf("want create revisions got %d %d", all[0].UpdatedRevision, all[1].UpdatedRevision)
+				}
+				if all[0].UpdatedRevision <= all[1].UpdatedRevision {
+					t.Fatalf("newer create should have higher revision: %+v", all)
+				}
+				if err := Update(c, userID, Source{
+					ID: first.ID, Ref: first.Ref, SourceTypeID: typeID,
+					Title: "Older edited", Description: first.Description,
+				}); err != nil {
+					t.Fatal(err)
+				}
+				all, err = List(c)
+				if err != nil || len(all) != 2 {
+					t.Fatalf("list after update %v %d", err, len(all))
+				}
+				var older, newer Source
+				for _, s := range all {
+					switch s.Title {
+					case "Older edited":
+						older = s
+					case "Newer":
+						newer = s
+					}
+				}
+				if older.ID == nil || newer.ID == nil {
+					t.Fatalf("missing rows %+v", all)
+				}
+				if older.UpdatedRevision <= newer.UpdatedRevision {
+					t.Fatalf("updated source should lead on revision: older=%d newer=%d", older.UpdatedRevision, newer.UpdatedRevision)
+				}
+				// Default list order is still create-time (id DESC), not updated.
+				if !bytes.Equal(all[0].ID, second.ID) || !bytes.Equal(all[1].ID, first.ID) {
+					t.Fatalf("list order should stay newest-created-first got %+v %+v", all[0].Title, all[1].Title)
+				}
+			},
+		},
+		{
 			name: "list multiple",
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)

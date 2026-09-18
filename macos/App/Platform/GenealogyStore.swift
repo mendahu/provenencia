@@ -44,6 +44,9 @@ struct CatalogSource: Sendable, Equatable, Identifiable {
     /// True when this Source has at least one Artifact (fileless counts).
     /// Used by the Sources list Evidence graph gate — not cover presence.
     var hasArtifact: Bool = false
+    /// Latest audit revision for this source entity (create or identity update).
+    /// Sources list "Updated" sort; zero means unset / unknown.
+    var updatedRevision: Int64 = 0
 }
 
 struct CatalogSourceNote: Sendable, Equatable {

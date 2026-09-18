@@ -111,6 +111,9 @@ func sourceCoverThumbnail(c *database.Catalog, s sources.Source) (sourceCoverThu
 
 // enrichSourceProto fills identity + cover mode + resolved thumbnail fields + artifact gate.
 func enrichSourceProto(c *database.Catalog, s sources.Source) (*engine.Source, error) {
+	if err := sources.AttachLatestRevision(c, &s); err != nil {
+		return nil, err
+	}
 	sp := sourceProto(s)
 	cover, err := sourceCoverThumbnail(c, s)
 	if err != nil {

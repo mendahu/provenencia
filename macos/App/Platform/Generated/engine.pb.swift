@@ -700,6 +700,10 @@ public nonisolated struct Provenencia_Engine_V1_Source: Sendable {
   /// Used by Sources list Evidence graph gate — not cover presence.
   public var hasArtifact_p: Bool = false
 
+  /// Max audit_transactions.revision for entity_type=source on this id.
+  /// Sources list "Updated" sort; create-only Sources use their create revision.
+  public var updatedRevision: Int64 = 0
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -3571,7 +3575,7 @@ nonisolated extension Provenencia_Engine_V1_GetProjectInfoResponse: SwiftProtobu
 
 nonisolated extension Provenencia_Engine_V1_Source: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Source"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}ref\0\u{3}source_type_id\0\u{1}title\0\u{1}description\0\u{3}thumbnail_rel_path\0\u{3}thumbnail_media_type\0\u{3}thumbnail_original_filename\0\u{3}cover_mode\0\u{3}primary_artifact_id\0\u{3}has_artifact\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}ref\0\u{3}source_type_id\0\u{1}title\0\u{1}description\0\u{3}thumbnail_rel_path\0\u{3}thumbnail_media_type\0\u{3}thumbnail_original_filename\0\u{3}cover_mode\0\u{3}primary_artifact_id\0\u{3}has_artifact\0\u{3}updated_revision\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3590,6 +3594,7 @@ nonisolated extension Provenencia_Engine_V1_Source: SwiftProtobuf.Message, Swift
       case 9: try { try decoder.decodeSingularStringField(value: &self.coverMode) }()
       case 10: try { try decoder.decodeSingularStringField(value: &self.primaryArtifactID) }()
       case 11: try { try decoder.decodeSingularBoolField(value: &self.hasArtifact_p) }()
+      case 12: try { try decoder.decodeSingularInt64Field(value: &self.updatedRevision) }()
       default: break
       }
     }
@@ -3629,6 +3634,9 @@ nonisolated extension Provenencia_Engine_V1_Source: SwiftProtobuf.Message, Swift
     if self.hasArtifact_p != false {
       try visitor.visitSingularBoolField(value: self.hasArtifact_p, fieldNumber: 11)
     }
+    if self.updatedRevision != 0 {
+      try visitor.visitSingularInt64Field(value: self.updatedRevision, fieldNumber: 12)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -3644,6 +3652,7 @@ nonisolated extension Provenencia_Engine_V1_Source: SwiftProtobuf.Message, Swift
     if lhs.coverMode != rhs.coverMode {return false}
     if lhs.primaryArtifactID != rhs.primaryArtifactID {return false}
     if lhs.hasArtifact_p != rhs.hasArtifact_p {return false}
+    if lhs.updatedRevision != rhs.updatedRevision {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
