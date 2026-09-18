@@ -22,7 +22,7 @@ struct PVBreadcrumbs: View {
         HStack(spacing: PVSpacing.space3) {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 if index > 0 {
-                    Text("/")
+                    Text(verbatim: "/")
                         .font(PVFont.body(size: PVTypeScale.caption))
                         .foregroundStyle(PVColor.textFaint)
                         .accessibilityHidden(true)

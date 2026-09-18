@@ -481,11 +481,11 @@ private struct HistoryJumpMenuPanel: View {
                                 .foregroundStyle(PVColor.textMuted)
                                 .lineLimit(1)
                                 .layoutPriority(0)
-                            if item.leafLabel != nil {
-                                Text("›")
+                            if let leafLabel = item.leafLabel {
+                                Text(verbatim: "›")
                                     .font(PVFont.body(size: PVTypeScale.caption))
                                     .foregroundStyle(PVColor.textFaint)
-                                Text(item.leafLabel ?? "")
+                                Text(verbatim: leafLabel)
                                     .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
                                     .foregroundStyle(PVColor.textPrimary)
                                     .lineLimit(1)

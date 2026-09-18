@@ -77,6 +77,7 @@ panel.prompt = String(localized: L10n.Onboarding.openPanelPrompt)
 ## Do not
 
 - Put user-facing string literals in views/models (except non-copy data: names, paths, IDs)
+- Use bare `Text("—")` / `Text("/")` for decorative punctuation or brand — use `Text(verbatim:)` so String Catalog extraction does not rewrite `Localizable.xcstrings` on every build
 - Add SwiftGen or a localization Run Script
 - Invent a second string table outside `L10n` + the catalogs
 - Bump `VERSION` for localization-wiring-only changes

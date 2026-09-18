@@ -304,7 +304,7 @@ struct DateValueEditorForm: View {
                 .foregroundStyle(PVColor.textSecondary)
             Picker("", selection: monthBinding(start)) {
                 ForEach(months, id: \.0) { value, label in
-                    Text(label).tag(value)
+                    Text(verbatim: label).tag(value)
                 }
             }
             .labelsHidden()
