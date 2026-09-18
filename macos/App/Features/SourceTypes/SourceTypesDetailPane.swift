@@ -362,7 +362,7 @@ struct SourceTypesDetailPane: View {
         VStack(spacing: 0) {
             ForEach(Array(model.suggestions.enumerated()), id: \.element.id) { index, suggestion in
                 HStack(spacing: PVSpacing.space5) {
-                    Text("\(index + 1)")
+                    Text(verbatim: "\(index + 1)")
                         .font(PVFont.mono(size: PVTypeScale.micro))
                         .foregroundStyle(PVColor.textFaint)
                         .frame(width: 18, alignment: .leading)

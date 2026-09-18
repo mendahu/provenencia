@@ -5,7 +5,8 @@ description: >-
   Use when adding or changing user-facing SwiftUI/AppKit strings, L10n.swift,
   Localizable.xcstrings, InfoPlist.xcstrings, localization, i18n, l10n, or when
   replacing hard-coded English in macos/App. Also use when mapping a new FFI
-  error code under L10n.Errors.
+  error code under L10n.Errors. Also use when writing Text("\(…)") / Text("…")
+  that is not L10n — prefer Text(verbatim:) for numbers, glyphs, and brand.
 ---
 
 # Add or update a localized string
@@ -22,11 +23,40 @@ Copy and track:
 - [ ] L10n member added/updated under the right feature nest
 - [ ] Matching key + en value (+ comment) in the String Catalog
 - [ ] Call site uses L10n.* only (no raw English / raw key literals)
+- [ ] No bare Text("…") / Text("\(…)") — glyphs, brand, numbers, and other non-copy use Text(verbatim:)
 - [ ] Unused L10n members and catalog keys pruned together
+- [ ] Localizable.xcstrings still passes: python3 scripts/check-localizable-xcstrings.py
 - [ ] Tests that asserted old English compare via String(localized: L10n.…)
 ```
 
 Do **not** edit only `L10n.swift` or only the catalog.
+
+## Verbatim vs L10n (read this before writing `Text`)
+
+`SWIFT_EMIT_LOC_STRINGS` treats many `Text("…")` call sites as catalog keys and **rewrites** `Localizable.xcstrings` on every local build. CI then fails `scripts/check-localizable-xcstrings.py` if those junk keys are committed.
+
+| Intent | Use |
+| --- | --- |
+| User-facing words (titles, buttons, hints, errors) | `Text(L10n.…)` / `String(localized: L10n.…)` |
+| User-facing words with arguments | `L10n` helper + `%@` in the catalog — **not** `"\(name)"` inside `Text` |
+| Numbers, ordinals, refs, paths, punctuation, brand | `Text(verbatim: "\(index + 1)")`, `Text(verbatim: "—")`, `Text(verbatim: "Provenencia")` |
+
+```swift
+// ❌ BAD — extractor inserts "%lld" / "%@" / "" into Localizable.xcstrings
+Text("\(index + 1)")
+Text("\(count)")
+Text("—")
+Text("\(title), \(ref)")
+
+// ✅ GOOD
+Text(verbatim: "\(index + 1)")
+Text(verbatim: "\(count)")
+Text(verbatim: "—")
+Text(verbatim: "\(title), \(ref)")
+Text(L10n.SourceTypes.assignedCount(count: model.suggestions.count))
+```
+
+**Rule of thumb:** if the characters are not a sentence you would translate, use `Text(verbatim:)`. If they are copy, use `L10n` — never a string literal in `Text("…")`.
 
 ## Steps
 
@@ -71,15 +101,15 @@ panel.prompt = String(localized: L10n.Onboarding.openPanelPrompt)
 ```
 
 `Text(…)` accepts `LocalizedStringResource`. `Button` / `TextField` / `Picker` title inits on our macOS 14 deployment target need `StringProtocol` — wrap with `String(localized:)`.
-7. Accessibility: keep `.accessibilityIdentifier("dotted.name")`. Do not UI-test by localized title.
+7. Accessibility: keep `.accessibilityIdentifier("dotted.name")`. Do not UI-test by localized title. For interpolated a11y *values*, use `Text(verbatim:)` (same extractor trap as ordinals).
 8. Go/FFI failures arrive as protobuf `Error` codes. Add `L10n.Errors` + catalog keys (`error.<domain>.<name>`) when introducing a new user-visible code; map via `L10n.Errors.message`.
 
 ## Do not
 
 - Put user-facing string literals in views/models (except non-copy data: names, paths, IDs)
-- Use bare `Text("—")` / `Text("/")` for decorative punctuation or brand — use `Text(verbatim:)` so String Catalog extraction does not rewrite `Localizable.xcstrings` on every build
+- Use bare `Text("—")` / `Text("/")` / `Text("\(n)")` for glyphs, brand, **or numbers** — always `Text(verbatim:)` so String Catalog extraction does not rewrite `Localizable.xcstrings` on every build
 - Pass string interpolations into `Text` / `accessibilityValue` as `LocalizedStringKey` (extracts `%@` / `%lld`) — use `Text(verbatim: "\(…)")`
-- Commit `Localizable.xcstrings` changes that fail `python3 scripts/check-localizable-xcstrings.py`
+- Commit a dirty `Localizable.xcstrings` after a local build without running `python3 scripts/check-localizable-xcstrings.py`
 - Add SwiftGen or a localization Run Script
 - Invent a second string table outside `L10n` + the catalogs
 - Bump `VERSION` for localization-wiring-only changes
