@@ -246,10 +246,14 @@ struct OmnibarResultsModelTests {
         #expect(model.showsErrorState)
     }
 
-    @Test func searchFailureSurfacesErrorNotEmpty() async {
-        enum Boom: Error { case boom }
+    @Test func searchFailureSurfacesMappedErrorNotEmpty() async {
         let store = FakeStore()
-        store.searchCatalogError = Boom.boom
+        store.searchCatalogError = CoreInvokeError.coded(
+            status: 1,
+            code: "catalog.closed",
+            kind: .user,
+            params: []
+        )
         let model = OmnibarResultsModel()
         model.query = "Ilminster"
         model.scheduleSearch(
@@ -258,7 +262,7 @@ struct OmnibarResultsModelTests {
             store: store
         )
         await waitForSearch(model)
-        #expect(model.searchError != nil)
+        #expect(model.searchError == L10n.Errors.message(code: "catalog.closed"))
         #expect(model.hits.isEmpty)
         #expect(model.showsErrorState)
         #expect(!model.showsEmptyState)

@@ -142,7 +142,7 @@ final class OmnibarResultsModel {
             guard generation == searchGeneration else { return }
             hits = []
             hasSearched = true
-            searchError = String(localized: L10n.Workspace.omnibarSearchFailed)
+            searchError = L10n.Errors.message(for: error)
             isLoading = false
             selectedIndex = 0
         }

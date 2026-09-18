@@ -1555,6 +1555,12 @@ enum L10n {
             comment: "DateValue phrase field label"
         )
 
+        static let datePhrasePrompt = LocalizedStringResource(
+            "sources.page.datePhrasePrompt",
+            defaultValue: "Michaelmas term",
+            comment: "Placeholder for DateValue phrase"
+        )
+
         static let datePhraseHint = LocalizedStringResource(
             "sources.page.datePhraseHint",
             defaultValue: "A short gloss carried on the date itself — not the source's wording",
@@ -3035,6 +3041,11 @@ enum L10n {
             defaultValue: "Invalid user ID, display name, or ref.",
             comment: "FFI error users.invalid"
         )
+        static let auditInvalid = LocalizedStringResource(
+            "error.audit.invalid",
+            defaultValue: "Invalid audit record.",
+            comment: "FFI error audit.invalid"
+        )
         static let identityNotFound = LocalizedStringResource(
             "error.identity.not_found",
             defaultValue: "Identity file not found.",
@@ -3099,6 +3110,16 @@ enum L10n {
             "error.subjectpositions.invalid",
             defaultValue: "Invalid subject position.",
             comment: "FFI error subjectpositions.invalid"
+        )
+        static let subjectTypesInvalid = LocalizedStringResource(
+            "error.subjecttypes.invalid",
+            defaultValue: "Invalid subject type.",
+            comment: "FFI error subjecttypes.invalid"
+        )
+        static let subjectTypesDuplicatePrefix = LocalizedStringResource(
+            "error.subjecttypes.duplicate_prefix",
+            defaultValue: "That subject-type prefix is already in use.",
+            comment: "FFI error subjecttypes.duplicate_prefix"
         )
         static let artifactsInvalid = LocalizedStringResource(
             "error.artifacts.invalid",
@@ -3455,6 +3476,16 @@ enum L10n {
             defaultValue: "Something went wrong. Please try again.",
             comment: "FFI error internal.unknown and other unmapped codes"
         )
+        static let internalUnknownMethod = LocalizedStringResource(
+            "error.internal.unknown_method",
+            defaultValue: "That action isn’t supported in this version of Provenencia.",
+            comment: "FFI error internal.unknown_method"
+        )
+        static let internalMigrations = LocalizedStringResource(
+            "error.internal.migrations",
+            defaultValue: "Couldn’t update this catalog’s database. Try again.",
+            comment: "FFI error internal.migrations"
+        )
 
         /// Resolves a wire error code (+ params) to localized UI copy.
         static func message(code: String, params: [String] = []) -> String {
@@ -3479,6 +3510,8 @@ enum L10n {
                 return String(localized: projectMissingMetadata)
             case "users.invalid":
                 return String(localized: usersInvalid)
+            case "audit.invalid":
+                return String(localized: auditInvalid)
             case "identity.not_found":
                 return String(localized: identityNotFound)
             case "identity.invalid_name":
@@ -3505,6 +3538,10 @@ enum L10n {
                 return String(localized: subjectsInvalid)
             case "subjectpositions.invalid":
                 return String(localized: subjectPositionsInvalid)
+            case "subjecttypes.invalid":
+                return String(localized: subjectTypesInvalid)
+            case "subjecttypes.duplicate_prefix":
+                return String(localized: subjectTypesDuplicatePrefix)
             case "artifacts.invalid":
                 return String(localized: artifactsInvalid)
             case "artifacts.file_already_attached":
@@ -3561,6 +3598,12 @@ enum L10n {
                 return String(localized: fileDerivativesUnprocessable)
             case "filederivatives.corrupt_object":
                 return String(localized: fileDerivativesCorruptObject)
+            case "internal.unknown":
+                return String(localized: unknown)
+            case "internal.unknown_method":
+                return String(localized: internalUnknownMethod)
+            case "internal.migrations":
+                return String(localized: internalMigrations)
             default:
                 return String(localized: unknown)
             }
@@ -3578,8 +3621,8 @@ enum L10n {
             return String(localized: unknown)
         }
 
-        /// `ref.invalid` / `ref.invalid_prefix` are KindInternal minting failures and
-        /// intentionally fall through to `unknown` — clients never surface them as
-        /// distinct copy.
+        /// `ref.invalid` / `ref.invalid_prefix` / `ref.reserved_prefix` are
+        /// minting / reserved-prefix failures and intentionally fall through to
+        /// `unknown` unless a future client surfaces them as distinct copy.
     }
 }

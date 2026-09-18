@@ -266,11 +266,7 @@ struct DateValueEditorForm: View {
                 Text(L10n.Sources.datePhrase)
                     .font(PVFont.body(size: PVTypeScale.micro))
                     .foregroundStyle(PVColor.textSecondary)
-                PVInput(text: $draft.phrase, size: .sm, prompt: LocalizedStringResource(
-                    "sources.page.datePhrasePrompt",
-                    defaultValue: "Michaelmas term",
-                    comment: "Placeholder for DateValue phrase"
-                ))
+                PVInput(text: $draft.phrase, size: .sm, prompt: L10n.Sources.datePhrasePrompt)
                 .accessibilityIdentifier("\(accessibilityIdentifierPrefix).phrase")
                 Text(L10n.Sources.datePhraseHint)
                     .font(PVFont.body(size: PVTypeScale.micro, italic: true))
