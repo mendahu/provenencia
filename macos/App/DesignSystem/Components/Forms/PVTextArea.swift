@@ -113,11 +113,12 @@ struct PVTextArea: View {
 
     var body: some View {
         TextField(
-            "",
             text: $text,
             prompt: prompt.map { Text($0) },
             axis: .vertical
-        )
+        ) {
+            EmptyView()
+        }
         .textFieldStyle(.plain)
         .lineLimit(lineLimit)
         .focused($isFocused)

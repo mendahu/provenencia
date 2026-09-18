@@ -252,11 +252,13 @@ struct DateValueEditorForm: View {
                 Text(L10n.Sources.dateCalendar)
                     .font(PVFont.body(size: PVTypeScale.micro))
                     .foregroundStyle(PVColor.textSecondary)
-                Picker("", selection: $draft.calendar) {
+                Picker(selection: $draft.calendar) {
                     Text(L10n.Sources.dateCalendarGregorian).tag("gregorian")
                     Text(L10n.Sources.dateCalendarJulian).tag("julian")
                     Text(L10n.Sources.dateCalendarFrenchRepublican).tag("french-republican")
                     Text(L10n.Sources.dateCalendarHebrew).tag("hebrew")
+                } label: {
+                    EmptyView()
                 }
                 .labelsHidden()
                 .frame(width: 220)
@@ -302,10 +304,12 @@ struct DateValueEditorForm: View {
             Text(L10n.Sources.dateMonth)
                 .font(PVFont.body(size: PVTypeScale.micro))
                 .foregroundStyle(PVColor.textSecondary)
-            Picker("", selection: monthBinding(start)) {
+            Picker(selection: monthBinding(start)) {
                 ForEach(months, id: \.0) { value, label in
                     Text(verbatim: label).tag(value)
                 }
+            } label: {
+                EmptyView()
             }
             .labelsHidden()
             .disabled(yearBinding(start).wrappedValue.isEmpty)

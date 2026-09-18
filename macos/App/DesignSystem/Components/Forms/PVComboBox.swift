@@ -332,7 +332,9 @@ struct PVComboBox<Row: View>: View {
     // MARK: Field
 
     private var field: some View {
-        TextField("", text: typedText, prompt: placeholder.map { Text($0) })
+        TextField(text: typedText, prompt: placeholder.map { Text($0) }) {
+            EmptyView()
+        }
             .textFieldStyle(.plain)
             .focused($isFocused)
             .onKeyPress(action: handleKey)
