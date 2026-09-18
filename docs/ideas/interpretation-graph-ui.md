@@ -2,7 +2,7 @@
 
 ## Status
 
-**Brainstorm, with working decisions — now partly scheduled.** Not a UI spec, but no longer open-ended: the design questions below were worked through and settled, and slice 1 is planned as [Spike 5](../deployment-plan/archive/spike-5/). The canvas (slice 2) is Spike 6 and is not yet planned.
+**Brainstorm, with working decisions — now scheduled through the canvas prototype.** Not a UI spec, but no longer open-ended: the design questions below were worked through and settled; slice 1 shipped as [Spike 5](../deployment-plan/archive/spike-5/); slice 2 (canvas UI risk) is [Spike 6](../deployment-plan/spike-6/).
 
 Authoritative schema for everything described here is [`interpretation-layer-data-model.md`](../interpretation-layer-data-model.md). Client rules are [`macos-client-patterns.md`](../macos-client-patterns.md). Nothing in this file overrides those — where this note reaches a conclusion that would change a model doc, that edit has to be made there deliberately.
 
@@ -613,7 +613,7 @@ Deferred, blocking nothing:
 7. **Connect tool** — bridge macros, the disambiguation form, the pinned Citation (§6.1).
 8. **Honesty and polish** — negated / conflicted / uncited states, filtering, undo. Accessibility is *not* here; it moved to slice 2 (§7.4).
 
-**Spike boundary: slice 1 is [Spike 5](../deployment-plan/archive/spike-5/), slice 2 is Spike 6.** Splitting foundation from canvas keeps the canvas spike pure — Spike 6's first PR draws a bubble rather than writing a migration.
+**Spike boundary: slice 1 is [Spike 5](../deployment-plan/archive/spike-5/), slice 2 is [Spike 6](../deployment-plan/spike-6/).** Splitting foundation from canvas keeps the canvas spike pure — Spike 6's first PR draws a bubble rather than writing a migration. Spike 6 also prototypes **connect lines** as UI risk (not Observation macros); see that plan's S6-04 scope note.
 
 **The cost of the split is that slice 1 ships a layer with no visible capability, and that cost is now accepted rather than bought off.** An earlier draft of this note put a plain list of a Source's Subjects at the graph destination to prove the data path, justified as the structured non-canvas editing path §7.4 was committed to. Since the graph is now the only surface (§1.3), that list would be throwaway UI — built, designed, and then deleted by slice 2 — so it is dropped.
 
