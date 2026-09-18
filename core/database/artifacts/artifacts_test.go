@@ -135,7 +135,7 @@ func TestArtifacts(t *testing.T) {
 				if got.Label != "Physical copy" || got.Description != "held by Mary" || got.FileID != nil {
 					t.Fatalf("got %+v", got)
 				}
-				byRef, err := GetByRef(c, a.Ref)
+				byRef, err := getByRef(c, a.Ref)
 				if err != nil || string(byRef.ID) != string(a.ID) {
 					t.Fatalf("%v %+v", err, byRef)
 				}

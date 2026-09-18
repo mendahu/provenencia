@@ -42,33 +42,6 @@ func TestStorageRelPath(t *testing.T) {
 	}
 }
 
-func TestExtensionForMediaType(t *testing.T) {
-	tests := []struct {
-		in   string
-		want string
-	}{
-		{in: "image/jpeg", want: ".jpg"},
-		{in: "IMAGE/PNG", want: ".png"},
-		{in: "video/quicktime", want: ".mov"},
-		{in: "audio/x-wav", want: ".wav"},
-		{in: "text/plain; charset=utf-8", want: ".txt"},
-		{in: "text/csv", want: ".csv"},
-		{in: "text/markdown", want: ".md"},
-		{in: "application/msword", want: ".doc"},
-		{in: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", want: ".docx"},
-		{in: "audio/flac", want: ".flac"},
-		{in: "image/heic", want: ".heic"},
-		{in: "", want: ""},
-	}
-	for _, tt := range tests {
-		t.Run(tt.in, func(t *testing.T) {
-			if got := ExtensionForMediaType(tt.in); got != tt.want {
-				t.Fatalf("got %q want %q", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestLookupInsert(t *testing.T) {
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {
@@ -162,7 +135,7 @@ func TestCount(t *testing.T) {
 	}
 	defer c.Close()
 
-	n, err := Count(c)
+	n, err := count(c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,7 +167,7 @@ func TestCount(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	n, err = Count(c)
+	n, err = count(c)
 	if err != nil {
 		t.Fatal(err)
 	}

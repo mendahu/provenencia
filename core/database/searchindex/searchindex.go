@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/objectpath"
 )
 
 // Kind ids must match core/search constants (wire SearchHit.kind).
@@ -501,8 +502,7 @@ func listIDs(q Querier, query string) ([][]byte, error) {
 
 // existingSourceCoverThumb returns objects/… when cover is an artifact and a
 // thumbnail derivative already exists (lookup-only; no EnsureThumbnail).
-// Path layout matches files.StorageRelPath; kept local to avoid an import cycle
-// (files → searchindex).
+// Paths come from objectpath (same helper as files.StorageRelPath).
 func existingSourceCoverThumb(q Querier, sourceID []byte) (string, error) {
 	var checksum, mediaType string
 	err := q.QueryRow(`
@@ -531,34 +531,13 @@ func existingSourceCoverThumb(q Querier, sourceID []byte) (string, error) {
 }
 
 func objectsRelPath(checksumHex, mediaType string) (string, error) {
+	// Catalog checksums are lowercase; tolerate mixed case from legacy rows.
 	checksumHex = strings.TrimSpace(strings.ToLower(checksumHex))
-	if len(checksumHex) != 64 {
+	p, err := objectpath.Rel(checksumHex, mediaType)
+	if err != nil {
 		return "", fmt.Errorf("searchindex: bad checksum for object path")
 	}
-	for _, r := range checksumHex {
-		if (r < '0' || r > '9') && (r < 'a' || r > 'f') {
-			return "", fmt.Errorf("searchindex: bad checksum for object path")
-		}
-	}
-	base := "objects/" + checksumHex[0:2] + "/" + checksumHex[2:4] + "/" + checksumHex
-	mt := strings.ToLower(strings.TrimSpace(mediaType))
-	if i := strings.IndexByte(mt, ';'); i >= 0 {
-		mt = strings.TrimSpace(mt[:i])
-	}
-	switch mt {
-	case "image/jpeg", "image/jpg":
-		return base + ".jpg", nil
-	case "image/png":
-		return base + ".png", nil
-	case "image/webp":
-		return base + ".webp", nil
-	case "image/gif":
-		return base + ".gif", nil
-	case "application/pdf":
-		return base + ".pdf", nil
-	default:
-		return base, nil
-	}
+	return p, nil
 }
 
 func uuidString(id []byte) string {

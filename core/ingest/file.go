@@ -23,6 +23,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/ingest/mediatypes"
+	"github.com/mendahu/provenencia/core/objectstore"
 )
 
 var (
@@ -373,7 +374,7 @@ func streamSource(src *os.File, objectsDir string) (tmpPath, checksum string, by
 func installObject(tmpPath, objPath, checksum string) (wrote bool, err error) {
 	defer func() { _ = os.Remove(tmpPath) }()
 
-	match, err := objectMatches(objPath, checksum)
+	match, err := objectstore.MatchesChecksum(objPath, checksum)
 	if err != nil {
 		return false, err
 	}
@@ -385,7 +386,7 @@ func installObject(tmpPath, objPath, checksum string) (wrote bool, err error) {
 	}
 	_ = os.Remove(objPath)
 	if err := os.Rename(tmpPath, objPath); err != nil {
-		match, matchErr := objectMatches(objPath, checksum)
+		match, matchErr := objectstore.MatchesChecksum(objPath, checksum)
 		if matchErr != nil {
 			return false, matchErr
 		}
@@ -399,30 +400,6 @@ func installObject(tmpPath, objPath, checksum string) (wrote bool, err error) {
 	}
 	return true, nil
 }
-
-func objectMatches(objPath, wantChecksum string) (bool, error) {
-	f, err := os.Open(objPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	defer f.Close()
-	st, err := f.Stat()
-	if err != nil {
-		return false, err
-	}
-	if !st.Mode().IsRegular() {
-		return false, nil
-	}
-	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
-		return false, err
-	}
-	return hex.EncodeToString(h.Sum(nil)) == wantChecksum, nil
-}
-
 
 func mapOpenErr(err error) error {
 	if err == nil {

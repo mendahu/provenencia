@@ -2,6 +2,7 @@
 package artifacts
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"strings"
@@ -35,9 +36,9 @@ const (
 		ORDER BY ref COLLATE NOCASE`
 	sqlExistsBySource = `SELECT 1 FROM artifacts WHERE source_id = ? LIMIT 1`
 	sqlExistsByFile   = `SELECT 1 FROM artifacts WHERE file_id = ? LIMIT 1`
-	sqlSourceExists = `SELECT 1 FROM sources WHERE id = ?`
-	sqlFileExists   = `SELECT 1 FROM files WHERE id = ?`
-	maxRefRetries   = 8
+	sqlSourceExists   = `SELECT 1 FROM sources WHERE id = ?`
+	sqlFileExists     = `SELECT 1 FROM files WHERE id = ?`
+	maxRefRetries     = 8
 )
 
 // Artifact is one artifacts row. FileID is nil when fileless.
@@ -193,7 +194,7 @@ func Update(c *database.Catalog, userID []byte, a Artifact) error {
 	if len(prev.FileID) == 16 && len(a.FileID) == 0 {
 		return ErrInvalid
 	}
-	if len(prev.FileID) == 16 && len(a.FileID) == 16 && !bytesEqual(prev.FileID, a.FileID) {
+	if len(prev.FileID) == 16 && len(a.FileID) == 16 && !bytes.Equal(prev.FileID, a.FileID) {
 		return ErrFileAlreadyAttached
 	}
 	if len(a.FileID) == 16 {
@@ -203,7 +204,7 @@ func Update(c *database.Catalog, userID []byte, a Artifact) error {
 	}
 
 	fields := map[string]audit.FieldDiff{}
-	if !bytesEqual(prev.FileID, a.FileID) {
+	if !bytes.Equal(prev.FileID, a.FileID) {
 		fields["file_id"] = audit.FieldDiff{
 			Old: uuidJSON(prev.FileID),
 			New: uuidJSON(a.FileID),
@@ -253,8 +254,8 @@ func Get(c *database.Catalog, id []byte) (Artifact, error) {
 	return scanArtifact(db.QueryRow(sqlGet, id))
 }
 
-// GetByRef returns an Artifact by ART-… ref, or sql.ErrNoRows.
-func GetByRef(c *database.Catalog, artRef string) (Artifact, error) {
+// getByRef returns an Artifact by ART-… ref, or sql.ErrNoRows.
+func getByRef(c *database.Catalog, artRef string) (Artifact, error) {
 	db, err := c.DB()
 	if err != nil {
 		return Artifact{}, err
@@ -367,7 +368,6 @@ func requireFile(tx *sql.Tx, fileID []byte) error {
 	return err
 }
 
-
 func nullStr(s string) any {
 	if s == "" {
 		return nil
@@ -409,18 +409,6 @@ func copyBlob(b []byte) []byte {
 		return nil
 	}
 	return append([]byte(nil), b...)
-}
-
-func bytesEqual(a, b []byte) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }
 
 func mapConstraint(err error) error {

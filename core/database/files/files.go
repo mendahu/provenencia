@@ -3,12 +3,14 @@ package files
 
 import (
 	"database/sql"
+	"errors"
 	"strings"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/searchindex"
+	"github.com/mendahu/provenencia/core/objectpath"
 )
 
 var ErrInvalid = apperr.New(apperr.CodeFilesInvalid, apperr.KindUser)
@@ -34,82 +36,16 @@ type File struct {
 	ByteSize  int64
 }
 
-// ExtensionForMediaType returns a leading-dot suffix for known MIME types
-// (e.g. ".jpg"), or "" when unknown / empty. Strips ";…" parameters.
-func ExtensionForMediaType(mediaType string) string {
-	mediaType = strings.TrimSpace(mediaType)
-	if i := strings.IndexByte(mediaType, ';'); i >= 0 {
-		mediaType = mediaType[:i]
-	}
-	mediaType = strings.ToLower(strings.TrimSpace(mediaType))
-	switch mediaType {
-	case "image/jpeg":
-		return ".jpg"
-	case "image/png":
-		return ".png"
-	case "image/gif":
-		return ".gif"
-	case "image/webp":
-		return ".webp"
-	case "image/bmp":
-		return ".bmp"
-	case "image/tiff", "image/tif":
-		return ".tiff"
-	case "image/heic":
-		return ".heic"
-	case "image/heif":
-		return ".heif"
-	case "application/pdf":
-		return ".pdf"
-	case "application/msword":
-		return ".doc"
-	case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-		return ".docx"
-	case "text/plain":
-		return ".txt"
-	case "text/csv", "application/csv":
-		return ".csv"
-	case "text/markdown", "text/x-markdown":
-		return ".md"
-	case "video/mp4":
-		return ".mp4"
-	case "video/quicktime":
-		return ".mov"
-	case "video/webm":
-		return ".webm"
-	case "video/x-m4v":
-		return ".m4v"
-	case "video/x-msvideo":
-		return ".avi"
-	case "audio/mpeg":
-		return ".mp3"
-	case "audio/mp4", "audio/x-m4a":
-		return ".m4a"
-	case "audio/aac":
-		return ".aac"
-	case "audio/wav", "audio/wave", "audio/x-wav":
-		return ".wav"
-	case "audio/ogg":
-		return ".ogg"
-	case "audio/flac":
-		return ".flac"
-	case "audio/aiff", "audio/x-aiff":
-		return ".aiff"
-	default:
-		return ""
-	}
-}
-
 // StorageRelPath returns objects/{hh}/{hh}/{fullhex}{ext} for a 64-char
-// lowercase hex checksum. ext is MIME-derived (see ExtensionForMediaType);
-// unknown media types keep the bare hex basename.
+// lowercase hex checksum. Extension comes from objectpath.Extension;
+// unknown media types keep the bare hex basename. Invalid checksums map to
+// ErrInvalid.
 func StorageRelPath(checksumHex, mediaType string) (string, error) {
-	checksumHex = strings.TrimSpace(checksumHex)
-	if len(checksumHex) != 64 || !isLowerHex(checksumHex) {
+	p, err := objectpath.Rel(checksumHex, mediaType)
+	if errors.Is(err, objectpath.ErrInvalidChecksum) {
 		return "", ErrInvalid
 	}
-	base := "objects/" + checksumHex[0:2] + "/" + checksumHex[2:4] + "/" + checksumHex
-	return base + ExtensionForMediaType(mediaType), nil
+	return p, err
 }
 
 // Lookup returns a File by id, or sql.ErrNoRows.
@@ -193,7 +129,7 @@ func UpdateOriginalFilename(tx *sql.Tx, id []byte, name string) error {
 
 // Count returns the total number of files rows — content-addressed, so
 // this is distinct files, not the (larger, per-source) artifact count.
-func Count(c *database.Catalog) (int, error) {
+func count(c *database.Catalog) (int, error) {
 	db, err := c.DB()
 	if err != nil {
 		return 0, err

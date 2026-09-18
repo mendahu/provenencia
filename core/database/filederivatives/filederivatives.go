@@ -2,6 +2,7 @@
 package filederivatives
 
 import (
+	"bytes"
 	"database/sql"
 	"strings"
 
@@ -53,7 +54,7 @@ func Insert(tx *sql.Tx, link Link) error {
 	}
 	link.DerivativeType = strings.TrimSpace(link.DerivativeType)
 	if len(link.ID) != 16 || len(link.SourceFileID) != 16 || len(link.DerivedFileID) != 16 ||
-		link.DerivativeType == "" || bytesEqual(link.SourceFileID, link.DerivedFileID) {
+		link.DerivativeType == "" || bytes.Equal(link.SourceFileID, link.DerivedFileID) {
 		return ErrInvalid
 	}
 	_, err := tx.Exec(sqlInsert, link.ID, link.SourceFileID, link.DerivedFileID, link.DerivativeType)
@@ -107,18 +108,6 @@ func scanLink(row rowScanner) (Link, error) {
 		return Link{}, err
 	}
 	return link, nil
-}
-
-func bytesEqual(a, b []byte) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }
 
 func mapConstraint(err error) error {
