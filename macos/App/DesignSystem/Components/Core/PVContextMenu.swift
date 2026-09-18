@@ -120,7 +120,12 @@ struct PVContextMenuItem: View {
 
     var body: some View {
         let highlighted = isSelected || isKeyboardActive
-        Group {
+        // Register during body evaluation (not only onAppear) so Enter always
+        // hits the live registry after open/arrow-key re-renders.
+        if isEnabled, let index {
+            keyboard?.register(index, action)
+        }
+        return Group {
             if isEnabled {
                 Button {
                     dismiss()
@@ -136,10 +141,6 @@ struct PVContextMenuItem: View {
                     .accessibilityAddIdentifiers(accessibilityIdentifier)
                     .accessibilityRemoveTraits(.isButton)
             }
-        }
-        .onAppear {
-            guard isEnabled, let index else { return }
-            keyboard?.register(index, action)
         }
     }
 
@@ -208,6 +209,10 @@ final class PVContextMenuActionRegistry {
     func activate(_ index: Int) {
         actions[index]?()
     }
+
+    func clear() {
+        actions.removeAll(keepingCapacity: true)
+    }
 }
 
 private struct PVContextMenuKeyboardContext {
@@ -253,11 +258,14 @@ private struct PVContextMenuPresenter<MenuContent: View>: ViewModifier {
             }
             .onChange(of: state.isPresented) { _, open in
                 if open {
-                    actionRegistry = PVContextMenuActionRegistry()
-                    // Defer so the opening right-click does not immediately dismiss.
+                    // Defer so the opening click does not immediately dismiss.
+                    // Do not replace/clear the registry here — items register
+                    // during body evaluation; clearing after first paint left
+                    // Enter calling an empty map.
                     DispatchQueue.main.async { installDismissMonitor() }
                 } else {
                     removeDismissMonitor()
+                    actionRegistry.clear()
                 }
             }
             .onDisappear {
