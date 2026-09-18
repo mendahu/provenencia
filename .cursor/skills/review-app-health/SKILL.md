@@ -63,7 +63,7 @@ App health review:
 | Dead / vague names | Grep for `common`, `shared`, `util`, `utils`, `helpers`, `misc`, `temp` |
 | Hard-coded UI copy | Grep SwiftUI `Text("…")`, `Button("…")`, raw English in `macos/App` (exclude Generated, previews if clearly fixture) |
 | Error surface | Trace `apperr` → FFI protobuf codes → `L10n.Errors` → toast/inline UI |
-| Go tests | `CGO_ENABLED=1 go test ./...` (or focused packages); note skips/failures |
+| Go tests | `CGO_ENABLED=1 go test -tags fts5 ./...` (or focused packages); note skips/failures |
 | Swift tests | Note ProvenenciaTests coverage gaps; run `xcodebuild test` only if practical / user wants |
 | Imports / cycles | Inspect Go import graph for cross-domain edges; Swift feature→feature coupling |
 | Security (recent delta) | Optional: `/review-security` / security-review subagent for **branch/uncommitted** diffs—not a substitute for whole-app §2 |

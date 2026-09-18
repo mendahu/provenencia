@@ -13,6 +13,7 @@ Audience: someone comfortable with JavaScript and Go, new to Apple platforms.
 | `App/` | Process entry: scenes, menus. Stay thin. | `ProvenenciaApp.swift` |
 | `Platform/` | Reused for the whole Mac client: store protocol, FFI, fakes, `L10n`. Not a screen. | `GenealogyStore`, `GoStore`, `CoreInvoke`, `L10n` |
 | `Platform/Generated/` | `protoc` output. Do not edit by hand. | `engine.pb.swift` |
+| `DesignSystem/` | Reusable `PV*` tokens and primitives (buttons, tables, sidebar nav, floating menus). Product composition stays in `Features/`. See [`DesignSystem/README.md`](../macos/App/DesignSystem/README.md). | `PVButton`, `PVTable`, `PVSidebarNav`, `PVContextMenu` |
 | `Features/<Name>/` | One product flow (view + model). | `Onboarding`, `Workspace`, `SourceFields` |
 | `Features/Catalog/` | Catalog-wide markers and session counts — not a screen. Prefer a product concept over a `Shared/` dump. | `CatalogCounts`, `OriginMarkers`, `MetadataFieldBadges` |
 | `Features/CatalogVocabulary/` | Reusable vocabulary-browser shell (list + detail chrome) for Fields, Types, and later vocab destinations. | `VocabularyListPane`, `VocabularyChrome` |

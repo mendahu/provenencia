@@ -4,24 +4,30 @@ description: >-
   Extends Provenencia product-seeded catalog vocabulary (origin=provenencia)
   via declarative registries and create-time Install. Use when adding or changing
   source types, source metadata fields, type→field suggestions, sourcevocab
-  registry/Install, seeding Interpretation grades or name profiles later, or when
-  the user mentions seeded vocabulary, dogfood seeds, or create-time seed.
+  registry/Install, subject types, source credibility grades, seeding later
+  Interpretation domains, or when the user mentions seeded vocabulary, dogfood
+  seeds, or create-time seed.
 ---
 
 # Add seeded vocabulary
 
-Shipped Source taxonomy is **data** installed once at catalog create, not SQL
-enums and not migration `INSERT`s. Authoritative key catalog (horizon intent):
+Shipped taxonomy is **data** installed once at catalog create, not SQL enums
+and not migration `INSERT`s. Authoritative key catalog (horizon intent):
 [`docs/seeded-vocabulary.md`](../../../docs/seeded-vocabulary.md) §1.1.
 Source schema: [`docs/source-layer-data-model.md`](../../../docs/source-layer-data-model.md).
 
-## Current Source seed
+## Create-time seed domains (today)
 
-```
-core/database/sourcetypes/     # Upsert / Lookup(key, origin) / List / Delete
-core/database/sourcefields/    # same + data_type text|date
-core/database/sourcevocab/     # suggestions + registry.go + Install
-```
+Each domain owns a declarative `registry.go` + `Install(c) error`. Wire every
+new Install into **`onboarding.createCatalog` only**.
+
+| Package | Registry | What it seeds |
+| --- | --- | --- |
+| `core/database/sourcevocab/` | `registry.go` (`seedTypes` / `seedFields` / `seedSuggestions`) | Source types, metadata fields, type→field suggestions (uses `sourcetypes` / `sourcefields`) |
+| `core/database/sourcecredibilitygrades/` | `registry.go` (`seedGrades`) | Credibility grades (`low_trust` / `standard` / `high_trust`) |
+| `core/database/subjecttypes/` | `registry.go` (`seedTypes`) | Interpretation Subject types + ref prefixes |
+
+### Source vocabulary (`sourcevocab`)
 
 1. Edit **`core/database/sourcevocab/registry.go`** — declarative lists:
    - `seedTypes` — `key`, `label`, `description`
@@ -36,18 +42,26 @@ core/database/sourcevocab/     # suggestions + registry.go + Install
    starter. Do not reintroduce open-time heal.
 6. Tests in `sourcevocab_test.go`: empty → trimmed counts; user twin left alone;
    deleted rows stay deleted without re-Install. Onboarding: open does not heal.
-7. Run `CGO_ENABLED=1 go test ./core/database/sourcevocab/... ./core/onboarding/...`.
+7. Run `CGO_ENABLED=1 go test -tags fts5 ./core/database/sourcevocab/... ./core/onboarding/...`.
+
+### Subject types / credibility grades
+
+Same pattern as Source: edit that package’s `registry.go`, keep
+`origin = provenencia`, no SQL seeds, tests that create installs and open does
+not heal. Subject type keys/prefixes: `docs/seeded-vocabulary.md` §3.1.
 
 Uniqueness is **`UNIQUE (key, origin)`**. Lookup is always `(key, origin)`, never bare key. Domain FKs store vocabulary **`id`**, not key.
 
 ### Install semantics (pinned)
 
-- `sourcevocab.Install` upserts registry types/fields and suggestion joins.
+- Each domain’s `Install` upserts its registry into a new catalog.
 - Call **only** from `onboarding.createCatalog` (after `database.Create` +
-  `users.EnsureRefs`).
+  `users.EnsureRefs` / `project.EnsureUUID`). Today that is:
+  `sourcevocab.Install` → `sourcecredibilitygrades.Install` → `subjecttypes.Install`
+  (then `searchindex.EnsureCatalog`).
 - **Do not** call `Install` from `OpenCatalog`, `catalogsession.Do`, or on every open.
 - **Do not** heal deleted `provenencia` rows or restored suggestion joins on open.
-- Calling `Install` twice would refresh labels via Upsert — create path calls it once.
+- Calling `Install` twice would refresh labels via Upsert — create path calls each once.
 - Types/fields of any origin may be deleted when unused (`ErrInUse` while referenced).
 
 ## Where create vs open run
@@ -57,7 +71,9 @@ Researcher-facing paths:
 
 ```
 core/onboarding/ready.go
-  createCatalog → database.Create + users.EnsureRefs + sourcevocab.Install (+ grades)
+  createCatalog → database.Create + users.EnsureRefs + project.EnsureUUID
+                  + sourcevocab.Install + sourcecredibilitygrades.Install
+                  + subjecttypes.Install + searchindex.EnsureCatalog
   OpenCatalog   → database.Open + users.EnsureRefs   # one-shot / tests
 
 core/catalogsession
@@ -69,15 +85,16 @@ ListContributors and catalog FFI handlers use **`catalogsession.Do`** (or
 `withProjectCatalog` in handlers), not raw `database.Create`/`Open` and not
 open-per-call `OpenCatalog`. See `.cursor/skills/use-catalog-session/SKILL.md`.
 
-Do **not** scatter `sourcevocab.Install` at each use-case.
+Do **not** scatter `*.Install` at each use-case.
 
 When adding another seed domain’s create-time install, call it from
 **`createCatalog` only** (not open / not `Do`), unless that domain explicitly needs
-open-time policy of its own.
+open-time policy of its own. Mirror an existing domain (`subjecttypes` or
+`sourcecredibilitygrades`) rather than inventing a generic multi-domain framework.
 
-## Future vocabulary domains (Interpretation, names, …)
+## Future vocabulary domains
 
-Mirror Source — do **not** build a generic multi-domain seed framework:
+Mirror Source / Subject types — do **not** build a generic multi-domain seed framework:
 
 1. Migration for definition tables (`origin`, `UNIQUE (key, origin)`). Follow `.cursor/skills/add-catalog-migration/SKILL.md`.
 2. Nested query package(s) under `core/database/<domain>/`. Follow `.cursor/skills/add-catalog-query/SKILL.md`.
@@ -90,8 +107,8 @@ Join/suggestion tables have **no `origin`** column.
 ## Do not
 
 - Seed via SQL migrations (unless a later explicit backfill policy says otherwise)
-- Call `sourcevocab.Install` from FFI handlers, Swift, `OpenCatalog`, or `catalogsession.Do`
+- Call domain `Install` from FFI handlers, Swift, `OpenCatalog`, or `catalogsession.Do`
 - Put seed install inside `database.Open`/`Create` (import cycle; couples migrate to product policy)
 - Treat `provenencia` as a `builtin` boolean — use `origin`
 - Expand the full horizon catalog in one PR “just because” it is listed in the docs
-- Reintroduce open-time Ensure/heal for Source vocabulary
+- Reintroduce open-time Ensure/heal for seeded vocabulary

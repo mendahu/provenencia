@@ -1,6 +1,6 @@
 ---
 description: Product-seeded vocabulary uses registries + create-time Install
-globs: core/database/sourcevocab/**,core/database/sourcetypes/**,core/database/sourcefields/**,core/onboarding/ready.go,docs/seeded-vocabulary.md
+globs: core/database/sourcevocab/**,core/database/sourcetypes/**,core/database/sourcefields/**,core/database/subjecttypes/**,core/database/sourcecredibilitygrades/**,core/onboarding/ready.go,docs/seeded-vocabulary.md
 alwaysApply: false
 ---
 
@@ -8,7 +8,7 @@ alwaysApply: false
 
 Follow the project skill `.cursor/skills/add-seeded-vocabulary/SKILL.md`. Origin rules: `docs/seeded-vocabulary.md` §1.1.
 
-- Edit `sourcevocab/registry.go` for Source types/fields/suggestions; no SQL seed INSERTs.
-- Install only in `onboarding.createCatalog`. `OpenCatalog` / `catalogsession.Do` ensure user refs only — no Source vocab heal.
+- Edit each domain’s `registry.go` (Source: `sourcevocab/`; Subject types: `subjecttypes/`; credibility grades: `sourcecredibilitygrades/`); no SQL seed INSERTs.
+- Install only in `onboarding.createCatalog`. `OpenCatalog` / `catalogsession.Do` ensure user refs only — no vocab heal.
 - `UNIQUE (key, origin)`; Lookup `(key, origin)`; FKs use vocabulary `id`.
 - Delete types/fields when unused (`ErrInUse` while referenced).
