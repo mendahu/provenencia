@@ -509,13 +509,7 @@ func uuidJSON(id []byte) any {
 }
 
 func requireUserID(userID []byte) error {
-	if len(userID) == 0 {
-		return nil
-	}
-	if len(userID) != 16 {
-		return ErrInvalid
-	}
-	return nil
+	return database.RequireUserID(userID, ErrInvalid)
 }
 
 func nullStr(s string) any {

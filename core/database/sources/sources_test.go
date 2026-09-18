@@ -112,6 +112,16 @@ func TestSources(t *testing.T) {
 			},
 		},
 		{
+			name: "create rejects empty user id",
+			run: func(t *testing.T, c *database.Catalog) {
+				typeID := mustType(t, c)
+				_, err := Create(c, nil, CreateInput{SourceTypeID: typeID, Title: "No user"})
+				if !errors.Is(err, ErrInvalid) {
+					t.Fatalf("got %v want ErrInvalid", err)
+				}
+			},
+		},
+		{
 			name: "create get and get by ref",
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)

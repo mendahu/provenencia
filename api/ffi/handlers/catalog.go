@@ -10,7 +10,10 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 )
 
-var errInvalidID = apperr.New(apperr.CodeSourcesInvalid, apperr.KindUser)
+var (
+	errInvalidID     = apperr.New(apperr.CodeSourcesInvalid, apperr.KindUser)
+	errInvalidUserID = apperr.New(apperr.CodeUsersInvalid, apperr.KindUser)
+)
 
 // withProjectCatalog runs fn on the held exclusive catalog session for projectDir.
 func withProjectCatalog(projectDir string, fn func(*database.Catalog) error) error {
@@ -20,7 +23,7 @@ func withProjectCatalog(projectDir string, fn func(*database.Catalog) error) err
 func parseUserID(s string) ([]byte, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
-		return nil, nil
+		return nil, errInvalidUserID
 	}
 	return parseID(s)
 }

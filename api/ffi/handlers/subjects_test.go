@@ -84,6 +84,21 @@ func TestCreateSubject(t *testing.T) {
 	runRPC(t, CreateSubject, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 		{
+			name: "rejects empty user id",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _, sourceID, typeID := subjectFixture(t)
+				return &engine.CreateSubjectRequest{
+					ProjectDir:    dir,
+					UserId:        "",
+					SourceId:      sourceID,
+					SubjectTypeId: typeID,
+					Label:         "Nameless",
+				}
+			},
+			wantErr:   true,
+			wantErrIs: errInvalidUserID,
+		},
+		{
 			name: "creates subject",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, sourceID, typeID := subjectFixture(t)

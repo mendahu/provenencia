@@ -82,6 +82,26 @@ func TestSubjects(t *testing.T) {
 		run  func(t *testing.T, c *database.Catalog)
 	}{
 		{
+			name: "create rejects empty user id",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				mustSubjectTypes(t, c)
+				src := mustSource(t, c)
+				person, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				_, err = Create(c, nil, CreateInput{
+					SourceID:      src.ID,
+					SubjectTypeID: person.ID,
+					Label:         "Alice",
+				})
+				if !errors.Is(err, ErrInvalid) {
+					t.Fatalf("got %v want ErrInvalid", err)
+				}
+			},
+		},
+		{
 			name: "create person mints CPR ref and audits",
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)

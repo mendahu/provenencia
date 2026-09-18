@@ -672,10 +672,7 @@ func requireDate(tx *sql.Tx, dateID []byte) error {
 }
 
 func requireUserID(userID []byte) error {
-	if len(userID) != 16 {
-		return ErrInvalid
-	}
-	return nil
+	return database.RequireUserID(userID, ErrInvalid)
 }
 
 func nullStr(s string) any {

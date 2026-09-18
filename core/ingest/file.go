@@ -424,10 +424,7 @@ func objectMatches(objPath, wantChecksum string) (bool, error) {
 }
 
 func requireUserID(userID []byte) error {
-	if len(userID) != 16 {
-		return ErrInvalid
-	}
-	return nil
+	return database.RequireUserID(userID, ErrInvalid)
 }
 
 func mapOpenErr(err error) error {
