@@ -64,7 +64,7 @@ func File(c *database.Catalog, absPath string, userID []byte) (Result, error) {
 	if absPath == "" || !filepath.IsAbs(absPath) {
 		return Result{}, ErrInvalid
 	}
-	if err := requireUserID(userID); err != nil {
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return Result{}, err
 	}
 
@@ -234,7 +234,7 @@ func File(c *database.Catalog, absPath string, userID []byte) (Result, error) {
 
 // SetFilename updates a File’s original_filename after a reuse keep/overwrite choice.
 func SetFilename(c *database.Catalog, fileID []byte, name string, userID []byte) error {
-	if err := requireUserID(userID); err != nil {
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return err
 	}
 	name = sanitizeFilename(name)
@@ -423,9 +423,6 @@ func objectMatches(objPath, wantChecksum string) (bool, error) {
 	return hex.EncodeToString(h.Sum(nil)) == wantChecksum, nil
 }
 
-func requireUserID(userID []byte) error {
-	return database.RequireUserID(userID, ErrInvalid)
-}
 
 func mapOpenErr(err error) error {
 	if err == nil {

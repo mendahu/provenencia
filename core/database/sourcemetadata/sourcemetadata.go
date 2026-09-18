@@ -105,7 +105,7 @@ func Set(c *database.Catalog, userID []byte, in Input) (Row, error) {
 	if len(in.DateValueID) != 0 && len(in.DateValueID) != 16 {
 		return Row{}, ErrInvalid
 	}
-	if err := requireUserID(userID); err != nil {
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return Row{}, err
 	}
 
@@ -227,7 +227,7 @@ func Clear(c *database.Catalog, userID, sourceID, fieldID []byte) error {
 	if len(sourceID) != 16 || len(fieldID) != 16 {
 		return ErrInvalid
 	}
-	if err := requireUserID(userID); err != nil {
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return err
 	}
 
@@ -292,7 +292,7 @@ func DismissSuggestion(c *database.Catalog, userID, sourceID, fieldID []byte) er
 	if len(sourceID) != 16 || len(fieldID) != 16 {
 		return ErrInvalid
 	}
-	if err := requireUserID(userID); err != nil {
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return err
 	}
 
@@ -368,7 +368,7 @@ func Reorder(c *database.Catalog, userID, sourceID []byte, fieldIDs [][]byte) er
 	if len(sourceID) != 16 || len(fieldIDs) == 0 {
 		return ErrInvalid
 	}
-	if err := requireUserID(userID); err != nil {
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return err
 	}
 	seen := make(map[string]struct{}, len(fieldIDs))
@@ -671,9 +671,6 @@ func requireDate(tx *sql.Tx, dateID []byte) error {
 	return err
 }
 
-func requireUserID(userID []byte) error {
-	return database.RequireUserID(userID, ErrInvalid)
-}
 
 func nullStr(s string) any {
 	if s == "" {

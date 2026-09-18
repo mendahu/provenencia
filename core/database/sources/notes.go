@@ -82,7 +82,7 @@ func AddNote(c *database.Catalog, userID, sourceID []byte, body string) (Note, e
 	if len(sourceID) != 16 || body == "" {
 		return Note{}, ErrInvalid
 	}
-	if err := requireUserID(userID); err != nil {
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return Note{}, err
 	}
 
@@ -150,7 +150,7 @@ func UpdateNote(c *database.Catalog, userID, noteID []byte, body string) error {
 	if len(noteID) != 16 || body == "" {
 		return ErrInvalid
 	}
-	if err := requireUserID(userID); err != nil {
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return err
 	}
 
@@ -203,7 +203,7 @@ func DeleteNote(c *database.Catalog, userID, noteID []byte) error {
 	if len(noteID) != 16 {
 		return ErrInvalid
 	}
-	if err := requireUserID(userID); err != nil {
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return err
 	}
 
