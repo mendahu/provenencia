@@ -8,8 +8,8 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 
 | Step | Brief | Feeds | Notes |
 | --- | --- | --- | --- |
-| S6-D1 | [`S6-D1-canvas-bubbles.md`](S6-D1-canvas-bubbles.md) | PRs S6-02, S6-03 | Grid, palette, root bubbles, tray, empty state |
-| S6-D2 | [`S6-D2-connect-edges.md`](S6-D2-connect-edges.md) | PR S6-04 | Lines, mid-bubble, connect affordance |
+| S6-D1 | [`S6-D1-canvas-bubbles.md`](S6-D1-canvas-bubbles.md) | PRs S6-02, S6-03 | Primary cards + place/create only |
+| S6-D2 | [`S6-D2-connect-edges.md`](S6-D2-connect-edges.md) | PR S6-04 | Connect, bridge cards, cited-row growth language (wiring later) |
 
 ## Completed
 
