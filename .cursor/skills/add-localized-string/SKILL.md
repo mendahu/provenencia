@@ -40,6 +40,7 @@ Do **not** edit only `L10n.swift` or only the catalog.
 | User-facing words (titles, buttons, hints, errors) | `Text(L10n.…)` / `String(localized: L10n.…)` |
 | User-facing words with arguments | `L10n` helper + `%@` in the catalog — **not** `"\(name)"` inside `Text` |
 | Numbers, ordinals, refs, paths, punctuation, brand | `Text(verbatim: "\(index + 1)")`, `Text(verbatim: "—")`, `Text(verbatim: "Provenencia")` |
+| Optional String in `Text` | `if let s = value { Text(verbatim: s) }` — **never** `Text(value ?? "")` or even `Text(verbatim: value ?? "")` (the `""` literal can still be extracted as catalog key `""`) |
 | Unlabeled `TextField` / `Picker` (label elsewhere) | `TextField(text:prompt:) { EmptyView() }` / `Picker(selection:) { … } label: { EmptyView() }` — **never** `TextField("", …)` / `Picker("", …)` (extracts catalog key `""`) |
 
 ```swift
@@ -48,6 +49,8 @@ Text("\(index + 1)")
 Text("\(count)")
 Text("—")
 Text("\(title), \(ref)")
+Text(name ?? "")            // extracts as ""
+Text(verbatim: name ?? "")  // still may extract "" — avoid the literal
 TextField("", text: $text)   // extracts as ""
 Picker("", selection: $value) { … }
 
@@ -56,6 +59,7 @@ Text(verbatim: "\(index + 1)")
 Text(verbatim: "\(count)")
 Text(verbatim: "—")
 Text(verbatim: "\(title), \(ref)")
+if let name { Text(verbatim: name) }
 TextField(text: $text, prompt: prompt.map { Text($0) }) { EmptyView() }
 Picker(selection: $value) { … } label: { EmptyView() }
 Text(L10n.SourceTypes.assignedCount(count: model.suggestions.count))

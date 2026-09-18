@@ -138,12 +138,14 @@ struct WorkspaceSidebar: View {
     private var expandedFooter: some View {
         HStack(spacing: PVSpacing.space4) {
             VStack(alignment: .leading, spacing: 1) {
-                Text(session?.displayName ?? "")
-                    .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.semibold))
-                    .foregroundStyle(PVColor.textPrimary)
-                    .lineLimit(1)
+                if let name = session?.displayName, !name.isEmpty {
+                    Text(verbatim: name)
+                        .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.semibold))
+                        .foregroundStyle(PVColor.textPrimary)
+                        .lineLimit(1)
+                }
                 if let ref = session?.ref, !ref.isEmpty {
-                    Text(ref)
+                    Text(verbatim: ref)
                         .font(PVFont.mono(size: PVTypeScale.micro))
                         .foregroundStyle(PVColor.textMuted)
                 }

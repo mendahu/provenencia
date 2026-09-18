@@ -239,10 +239,12 @@ struct PVEvidenceIcon: View {
         Rectangle()
             .frame(width: bandWidth, height: bandHeight)
             .overlay {
-                Text(verbatim: key.label ?? "")
-                    .font(PVFont.mono(size: labelSize, weight: PVFontWeight.semibold))
-                    .tracking(size * 0.28 / 24)
-                    .blendMode(.destinationOut)
+                if let label = key.label {
+                    Text(verbatim: label)
+                        .font(PVFont.mono(size: labelSize, weight: PVFontWeight.semibold))
+                        .tracking(size * 0.28 / 24)
+                        .blendMode(.destinationOut)
+                }
             }
             .compositingGroup()
             .offset(y: bandOffsetY)
