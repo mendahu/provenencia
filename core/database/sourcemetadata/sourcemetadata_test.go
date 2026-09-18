@@ -181,6 +181,16 @@ func TestSourceMetadata(t *testing.T) {
 				if both.ValueText != "about the year 1890" || string(both.DateValueID) != string(dv) {
 					t.Fatalf("%+v", both)
 				}
+				kept, err := Set(c, userID, Input{
+					SourceID: src.ID, FieldID: rec.ID,
+					ValueText: "circa 1890",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if kept.ValueText != "circa 1890" || string(kept.DateValueID) != string(dv) {
+					t.Fatalf("text-only must keep date: %+v", kept)
+				}
 				if _, err := Set(c, userID, Input{SourceID: src.ID, FieldID: rec.ID}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("empty set %v", err)
 				}
