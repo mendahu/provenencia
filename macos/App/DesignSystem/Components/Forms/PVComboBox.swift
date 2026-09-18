@@ -931,11 +931,11 @@ private struct PVComboBoxPreview: View {
                     PVComboBoxOption(value: "f3", label: "Publisher", subtext: "publisher"),
                     PVComboBoxOption(value: "f4", label: "Repository", subtext: "repository"),
                 ],
-                placeholder: "Field label or key",
-                emptyLabel: "No match for what you typed",
-                label: "Source field"
+                placeholder: L10n.SourceTypes.assignPlaceholder,
+                emptyLabel: L10n.SourceTypes.assignNoMatch,
+                label: L10n.SourceTypes.assignFieldLabel
             )
-            Text(selection.isEmpty ? "nothing chosen" : selection)
+            Text(verbatim: selection.isEmpty ? "nothing chosen" : selection)
                 .font(PVFont.mono(size: PVTypeScale.micro))
                 .foregroundStyle(PVColor.textMuted)
             Spacer()

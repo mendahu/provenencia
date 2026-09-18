@@ -11,9 +11,19 @@ on:
       - "go.mod"
       - "go.sum"
       - "scripts/build-macos-core.sh"
+      - "scripts/check-localizable-xcstrings.py"
       - ".github/workflows/macos-test.yml"
 
 jobs:
+  # Independent of Xcode tests — only needs the catalog + Python.
+  localizable:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lint Localizable.xcstrings
+        run: python3 scripts/check-localizable-xcstrings.py
+
   test:
     if: github.event.pull_request.draft == false
     runs-on: macos-15

@@ -91,7 +91,7 @@ struct PVThumbnail: View {
                         .foregroundStyle(PVColor.textFaint)
                 }
             case .empty:
-                Text("—")
+                Text(verbatim: "—")
                     .font(PVFont.mono(size: max(11, (size * 0.3).rounded())))
                     .foregroundStyle(PVColor.textFaint)
                     .accessibilityHidden(true)

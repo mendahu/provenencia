@@ -180,7 +180,7 @@ struct SourcePageIdentityHeader: View {
                     .accessibilityIdentifier("sources.page.ref")
             }
 
-            Text("·")
+            Text(verbatim: "·")
                 .foregroundStyle(PVColor.borderDefault)
 
             if model.identity.editingType {

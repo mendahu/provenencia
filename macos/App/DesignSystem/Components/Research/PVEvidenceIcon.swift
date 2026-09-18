@@ -232,14 +232,14 @@ struct PVEvidenceIcon: View {
             .frame(width: size, height: size)
             .overlay { if labelled { band } }
             .accessibilityHidden(decorative)
-            .accessibilityLabel(decorative ? Text(verbatim: "") : Text(key.accessibilityName))
+            .accessibilityLabel(Text(key.accessibilityName))
     }
 
     private var band: some View {
         Rectangle()
             .frame(width: bandWidth, height: bandHeight)
             .overlay {
-                Text(key.label ?? "")
+                Text(verbatim: key.label ?? "")
                     .font(PVFont.mono(size: labelSize, weight: PVFontWeight.semibold))
                     .tracking(size * 0.28 / 24)
                     .blendMode(.destinationOut)

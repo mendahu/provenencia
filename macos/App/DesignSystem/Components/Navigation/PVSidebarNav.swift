@@ -170,7 +170,7 @@ private struct PVSidebarNavButton: View {
                         .truncationMode(.tail)
                     Spacer(minLength: 0)
                     if !isChild, let count = item.count {
-                        Text("\(count)")
+                        Text(count, format: .number)
                             .font(PVFont.mono(size: PVTypeScale.micro))
                             .foregroundStyle(PVColor.textFaint)
                     }
@@ -271,10 +271,11 @@ private extension View {
     /// Exposes the trailing count badge to VoiceOver as the row's
     /// accessibility value, not just visual decoration. `nil` (no count,
     /// or collapsed — the badge isn't shown then either) attaches nothing.
+    /// Uses locale-aware number formatting (not a String Catalog key).
     @ViewBuilder
     func pvAccessibilityCount(_ count: Int?) -> some View {
         if let count {
-            accessibilityValue(Text("\(count)"))
+            accessibilityValue(Text(count, format: .number))
         } else {
             self
         }
