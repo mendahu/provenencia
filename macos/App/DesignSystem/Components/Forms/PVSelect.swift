@@ -70,7 +70,11 @@ struct PVSelect: View {
             if menuState.isPresented {
                 menuState.dismiss()
             } else {
-                keyboard = PVContextMenuKeyboard(itemCount: options.count, activeIndex: -1)
+                let selectedIndex = options.firstIndex(where: { $0.id == selection }) ?? -1
+                keyboard = PVContextMenuKeyboard(
+                    itemCount: options.count,
+                    activeIndex: selectedIndex
+                )
                 menuState.present(at: CGPoint(x: 0, y: triggerHeight + PVSpacing.space2))
             }
         } label: {
