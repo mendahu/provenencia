@@ -62,7 +62,7 @@ func Create(c *database.Catalog, userID []byte, in CreateInput) (Subject, error)
 	if len(in.SourceID) != 16 || len(in.SubjectTypeID) != 16 {
 		return Subject{}, ErrInvalid
 	}
-	if err := requireUserID(userID); err != nil {
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return Subject{}, err
 	}
 
@@ -154,7 +154,7 @@ func Update(c *database.Catalog, userID, id []byte, label, description string) e
 	if len(id) != 16 {
 		return ErrInvalid
 	}
-	if err := requireUserID(userID); err != nil {
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return err
 	}
 
@@ -211,7 +211,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	if len(id) != 16 {
 		return ErrInvalid
 	}
-	if err := requireUserID(userID); err != nil {
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return err
 	}
 
@@ -350,15 +350,6 @@ func requireTypePrefix(tx *sql.Tx, typeID []byte) (string, error) {
 	return prefix, nil
 }
 
-func requireUserID(userID []byte) error {
-	if len(userID) == 0 {
-		return nil
-	}
-	if len(userID) != 16 {
-		return ErrInvalid
-	}
-	return nil
-}
 
 func nullStr(s string) any {
 	if s == "" {

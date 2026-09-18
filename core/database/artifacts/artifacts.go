@@ -72,7 +72,7 @@ func Create(c *database.Catalog, userID []byte, in CreateInput) (Artifact, error
 	if len(in.FileID) != 0 && len(in.FileID) != 16 {
 		return Artifact{}, ErrInvalid
 	}
-	if err := requireUserID(userID); err != nil {
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return Artifact{}, err
 	}
 
@@ -173,7 +173,7 @@ func Update(c *database.Catalog, userID []byte, a Artifact) error {
 	if len(a.FileID) != 0 && len(a.FileID) != 16 {
 		return ErrInvalid
 	}
-	if err := requireUserID(userID); err != nil {
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return err
 	}
 
@@ -367,12 +367,6 @@ func requireFile(tx *sql.Tx, fileID []byte) error {
 	return err
 }
 
-func requireUserID(userID []byte) error {
-	if len(userID) != 16 {
-		return ErrInvalid
-	}
-	return nil
-}
 
 func nullStr(s string) any {
 	if s == "" {

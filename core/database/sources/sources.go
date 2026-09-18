@@ -97,7 +97,7 @@ func Create(c *database.Catalog, userID []byte, in CreateInput) (Source, error) 
 	if len(in.SourceTypeID) != 16 || in.Title == "" {
 		return Source{}, ErrInvalid
 	}
-	if err := requireUserID(userID); err != nil {
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return Source{}, err
 	}
 
@@ -187,7 +187,7 @@ func SetCover(c *database.Catalog, userID []byte, sourceID []byte, mode string, 
 	if len(sourceID) != 16 {
 		return Source{}, ErrInvalid
 	}
-	if err := requireUserID(userID); err != nil {
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return Source{}, err
 	}
 	mode = strings.TrimSpace(mode)
@@ -275,7 +275,7 @@ func Update(c *database.Catalog, userID []byte, s Source) error {
 	if len(s.ID) != 16 || len(s.SourceTypeID) != 16 || s.Title == "" {
 		return ErrInvalid
 	}
-	if err := requireUserID(userID); err != nil {
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return err
 	}
 
@@ -508,15 +508,6 @@ func uuidJSON(id []byte) any {
 	return uuidString(id)
 }
 
-func requireUserID(userID []byte) error {
-	if len(userID) == 0 {
-		return nil
-	}
-	if len(userID) != 16 {
-		return ErrInvalid
-	}
-	return nil
-}
 
 func nullStr(s string) any {
 	if s == "" {

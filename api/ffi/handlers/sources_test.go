@@ -76,6 +76,20 @@ func TestCreateSourceAndWorkspace(t *testing.T) {
 	runRPC(t, CreateSource, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 		{
+			name: "rejects empty user id",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _, typeID := sourceFixture(t)
+				return &engine.CreateSourceRequest{
+					ProjectDir:   dir,
+					UserId:       "",
+					SourceTypeId: typeID,
+					Title:        "Orphan",
+				}
+			},
+			wantErr:   true,
+			wantErrIs: errInvalidUserID,
+		},
+		{
 			name: "creates source",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, typeID := sourceFixture(t)
