@@ -60,19 +60,40 @@ struct PVContextMenuPanel<Content: View>: View {
 struct PVContextMenuItem: View {
     @Environment(\.pvContextMenuDismiss) private var dismiss
 
-    let title: LocalizedStringResource
+    private let titleResource: LocalizedStringResource?
+    private let titleString: String?
     var isEnabled: Bool = true
+    var isSelected: Bool = false
     var accessibilityIdentifier: String?
     var action: () -> Void
 
     init(
         _ title: LocalizedStringResource,
         isEnabled: Bool = true,
+        isSelected: Bool = false,
         accessibilityIdentifier: String? = nil,
         action: @escaping () -> Void = {}
     ) {
-        self.title = title
+        self.titleResource = title
+        self.titleString = nil
         self.isEnabled = isEnabled
+        self.isSelected = isSelected
+        self.accessibilityIdentifier = accessibilityIdentifier
+        self.action = action
+    }
+
+    /// Dynamic catalog / runtime labels that are not String Catalog keys.
+    init(
+        plainTitle: String,
+        isEnabled: Bool = true,
+        isSelected: Bool = false,
+        accessibilityIdentifier: String? = nil,
+        action: @escaping () -> Void = {}
+    ) {
+        self.titleResource = nil
+        self.titleString = plainTitle
+        self.isEnabled = isEnabled
+        self.isSelected = isSelected
         self.accessibilityIdentifier = accessibilityIdentifier
         self.action = action
     }
@@ -85,8 +106,9 @@ struct PVContextMenuItem: View {
             } label: {
                 label(foreground: PVColor.textPrimary)
             }
-            .buttonStyle(PVContextMenuItemButtonStyle())
+            .buttonStyle(PVContextMenuItemButtonStyle(isSelected: isSelected))
             .accessibilityAddIdentifiers(accessibilityIdentifier)
+            .accessibilityAddTraits(isSelected ? .isSelected : [])
         } else {
             label(foreground: PVColor.textFaint)
                 .accessibilityAddIdentifiers(accessibilityIdentifier)
@@ -95,13 +117,19 @@ struct PVContextMenuItem: View {
     }
 
     private func label(foreground: Color) -> some View {
-        Text(title)
-            .font(PVFont.body(size: PVTypeScale.bodySmall))
-            .foregroundStyle(foreground)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, PVSpacing.space5)
-            .padding(.vertical, PVSpacing.space4)
-            .contentShape(Rectangle())
+        Group {
+            if let titleResource {
+                Text(titleResource)
+            } else if let titleString {
+                Text(titleString)
+            }
+        }
+        .font(PVFont.body(size: PVTypeScale.bodySmall))
+        .foregroundStyle(foreground)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, PVSpacing.space5)
+        .padding(.vertical, PVSpacing.space4)
+        .contentShape(Rectangle())
     }
 }
 
@@ -203,27 +231,34 @@ private struct PVContextMenuPresenter<MenuContent: View>: ViewModifier {
 }
 
 private struct PVContextMenuItemButtonStyle: ButtonStyle {
+    var isSelected: Bool = false
+
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .background {
-                RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                    .fill(configuration.isPressed ? PVColor.surfaceActive : Color.clear)
-            }
-            .background {
-                PVContextMenuHoverFill()
-            }
+        PVContextMenuItemButtonBody(configuration: configuration, isSelected: isSelected)
     }
 }
 
-private struct PVContextMenuHoverFill: View {
+private struct PVContextMenuItemButtonBody: View {
+    let configuration: ButtonStyleConfiguration
+    var isSelected: Bool
     @State private var hovering = false
 
     var body: some View {
-        RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-            .fill(PVColor.surfaceHover)
-            .opacity(hovering ? 1 : 0)
+        configuration.label
+            .background {
+                RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                    .fill(rowFill)
+            }
+            .contentShape(Rectangle())
             .onHover { hovering = $0 }
-            .allowsHitTesting(false)
+            .pvAnimation(PVMotion.instantStandard, value: hovering)
+    }
+
+    private var rowFill: Color {
+        if configuration.isPressed { return PVColor.surfaceActive }
+        if isSelected { return PVColor.surfaceSelected }
+        if hovering { return PVColor.surfaceHover }
+        return .clear
     }
 }
 

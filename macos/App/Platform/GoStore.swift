@@ -851,7 +851,8 @@ struct GoStore: GenealogyStore {
             thumbnailMediaType: s.thumbnailMediaType,
             thumbnailOriginalFilename: s.thumbnailOriginalFilename,
             coverMode: s.coverMode.isEmpty ? "type_icon" : s.coverMode,
-            primaryArtifactID: s.primaryArtifactID
+            primaryArtifactID: s.primaryArtifactID,
+            hasArtifact: s.hasArtifact_p
         )
     }
 

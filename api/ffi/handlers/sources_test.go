@@ -27,6 +27,48 @@ func TestListSources(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "has_artifact false then true after create",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, typeID := sourceFixture(t)
+				cout, err := CreateSource(marshalProto(t, &engine.CreateSourceRequest{
+					ProjectDir: dir, UserId: userID, SourceTypeId: typeID, Title: "Bare",
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var created engine.CreateSourceResponse
+				if err := proto.Unmarshal(cout, &created); err != nil {
+					t.Fatal(err)
+				}
+				lout, err := ListSources(marshalProto(t, &engine.ListSourcesRequest{ProjectDir: dir}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var before engine.ListSourcesResponse
+				if err := proto.Unmarshal(lout, &before); err != nil {
+					t.Fatal(err)
+				}
+				if len(before.Sources) != 1 || before.Sources[0].GetHasArtifact() {
+					t.Fatalf("want has_artifact false got %+v", before.Sources)
+				}
+				if _, err := CreateArtifact(marshalProto(t, &engine.CreateArtifactRequest{
+					ProjectDir: dir, UserId: userID, SourceId: created.Source.Id, Label: "Scan",
+				})); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.ListSourcesRequest{ProjectDir: dir}
+			},
+			after: func(t *testing.T, out []byte, req proto.Message) {
+				var list engine.ListSourcesResponse
+				if err := proto.Unmarshal(out, &list); err != nil {
+					t.Fatal(err)
+				}
+				if len(list.Sources) != 1 || !list.Sources[0].GetHasArtifact() {
+					t.Fatalf("want has_artifact true got %+v", list.Sources)
+				}
+			},
+		},
 	})
 }
 

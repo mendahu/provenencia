@@ -4,7 +4,7 @@ Interpretation foundation: candidate refs, subject vocabulary, Subjects, layout 
 
 ## Status
 
-**Planned.** Landings go in [`completed.md`](completed.md). S5-01 through S5-07, and S5-D1 / S5-D3, are recorded there.
+**Planned.** Landings go in [`completed.md`](completed.md). S5-01 through S5-08, and S5-D1 / S5-D2 / S5-D3, are recorded there.
 
 > **This spike ships no Subject UI.** The graph is the only surface for Subjects, Citations, and Observations (design note §1.3), and the graph is Spike 6. Product nav keeps **one Sources family** — no Interpretation sidebar section (§1.4). Entry is dual action on the Sources list → graph stub. See *Scope boundary* below.
 
@@ -69,6 +69,7 @@ S5-D2  List dual action        │
                                │     + no-Artifact gate
                                ▼
                              S5-09  Docs, dogfood, cleanup
+                                   (+ unify floating menus)
 ```
 
 ---
@@ -77,7 +78,7 @@ S5-D2  List dual action        │
 
 - [x] S5-D1 — Design: Interpretation nav entry → [`completed.md`](completed.md) (**superseded** — do not implement)
 - [x] S5-D3 — Design: Sources section nav (nested config + Subject*) → [`completed.md`](completed.md)
-- [ ] S5-D2 — Design: Sources list → Evidence graph → [`design/`](design/)
+- [x] S5-D2 — Design: Sources list → Evidence graph → [`completed.md`](completed.md)
 - [x] S5-01 — Subject type prefix validation in `core/ref` → [`completed.md`](completed.md)
 - [x] S5-02 — Interpretation schema migration → [`completed.md`](completed.md)
 - [x] S5-03 — subject type vocabulary and create-time seed → [`completed.md`](completed.md)
@@ -85,8 +86,33 @@ S5-D2  List dual action        │
 - [x] S5-05 — Graph layout positions → [`completed.md`](completed.md)
 - [x] S5-06 — FFI methods for subject types, subjects, and positions → [`completed.md`](completed.md)
 - [x] S5-07 — Nested Sources nav + Subject* stubs + graph place + `WorkspaceLocation` discriminator → [`completed.md`](completed.md)
-- [ ] S5-08 — Sources list → Evidence graph stub
-- [ ] S5-09 — Docs, dogfood, cleanup
+- [x] S5-08 — Sources list → Evidence graph stub → [`completed.md`](completed.md)
+- [ ] S5-09 — Docs, dogfood, cleanup (incl. unify floating menus)
+
+---
+
+## S5-09 — Docs, dogfood, cleanup
+
+Closing step immediately after S5-08. Docs + dogfood pass, plus small Mac cleanup that S5-08 made obvious.
+
+### Unify floating menus (immediate follow-up to S5-08)
+
+S5-08 shipped Sources filter/sort via `PVPopupMenuButton` → `PVContextMenuPanel`, while Back/Forward still uses a private `HistoryJumpMenuPanel` / `HistoryJumpMenuHost` with the same card chrome and dismiss pattern. Cover thumbnail menus already use `PVContextMenu`.
+
+**In S5-09:** fold history (and any remaining parallel) onto one design-system floating menu:
+
+- Shared panel chrome + dismiss / positioning (`PVContextMenuPanel` / presenter).
+- Composable open policies: right-click, primary click, long-press (Back/Forward keeps step-on-click).
+- `PVPopupMenuButton` stays a chip trigger preset, not a second menu system.
+- History row content (icon + section › leaf + ref) stays custom row payload inside the shared panel — do not invent a third menu type.
+- Delete duplicated `HistoryJumpMenuPanel` card styling once history hosts through the shared kit.
+
+Do this in the S5-09 PR (or a tiny PR stacked immediately under it before closing the spike). Do **not** block S5-08 merge on it.
+
+### Also in S5-09
+
+- Spike docs / dogfood honesty pass against the goal bar above.
+- Close Spike 5 in [`completed.md`](completed.md) / [`README.md`](README.md) when the bar is met.
 
 ---
 
@@ -241,7 +267,7 @@ The one thing it did change is the name of the layout table. It is **`subject_po
 | S5-06 | Expose subject types, subjects, and positions over FFI |
 | S5-07 | Nest Sources config nav and register the evidence graph place |
 | S5-08 | Open an evidence graph from the Sources list |
-| S5-09 | Document the interpretation foundation and close spike 5 |
+| S5-09 | Document the interpretation foundation, unify floating menus, and close spike 5 |
 
 ---
 
@@ -249,11 +275,11 @@ The one thing it did change is the name of the layout table. It is **`subject_po
 
 | Track | Steps |
 | --- | --- |
-| **Design (no PRs)** | S5-D3 (done) → S5-D2 (S5-D1 superseded) |
+| **Design (no PRs)** | S5-D3 → S5-D2 (done; S5-D1 superseded) |
 | **Go core (critical path)** | S5-01 → S5-06 |
 | **Mac client** | S5-07 → S5-08 → S5-09 |
 
-S5-01 and S5-D3 are done. Go critical path through S5-06 and Mac client S5-07 are done. Next: S5-08 (after S5-D2). Design: finish S5-D2 next.
+S5-01…S5-08 and design briefs S5-D2 / S5-D3 are done. Next: S5-09 (docs, dogfood, unify floating menus, close spike).
 
 ---
 

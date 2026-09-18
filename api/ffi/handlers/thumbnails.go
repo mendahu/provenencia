@@ -109,7 +109,7 @@ func sourceCoverThumbnail(c *database.Catalog, s sources.Source) (sourceCoverThu
 	return sourceCoverThumb{RelPath: rel}, nil
 }
 
-// enrichSourceProto fills identity + cover mode + resolved thumbnail fields.
+// enrichSourceProto fills identity + cover mode + resolved thumbnail fields + artifact gate.
 func enrichSourceProto(c *database.Catalog, s sources.Source) (*engine.Source, error) {
 	sp := sourceProto(s)
 	cover, err := sourceCoverThumbnail(c, s)
@@ -117,5 +117,10 @@ func enrichSourceProto(c *database.Catalog, s sources.Source) (*engine.Source, e
 		return nil, err
 	}
 	sp.ThumbnailRelPath = cover.RelPath
+	has, err := artifacts.HasAnyForSource(c, s.ID)
+	if err != nil {
+		return nil, err
+	}
+	sp.HasArtifact = has
 	return sp, nil
 }

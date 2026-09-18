@@ -98,6 +98,7 @@ Prefer renaming toward a **product concept** (see existing `Features/Catalog/` o
 - God types: one model/store that knows every screen
 - Business rules in SwiftUI `View` / `body`
 - Duplicated discrete functionality that should be a reusable utility **once** there are ≥2 real call sites and a clear name
+- UI chrome duplication (menus, lists, panels) — review under **§12 UI component organization**; still flag here when a feature module depends sideways on another feature’s private control instead of a shared primitive
 
 **Principle** — Modules compose elegantly; boundaries are deliberate; shared code moves **up**, not sideways via spaghetti.
 
@@ -217,6 +218,39 @@ Mac client AT and UI-test hygiene. Notes: [`docs/macos-client-patterns.md`](../.
 
 ---
 
+## 12. UI component organization
+
+Catch LLM- and rush-driven UI debt: the same interaction reimplemented per screen, DesignSystem primitives left orphaned, or “almost the same” chrome living in both `DesignSystem/` and `Features/`.
+
+**Look for**
+
+- **Orphans** — `PV*` (or other DesignSystem) types with zero production call sites under `Features/` / `Platform/` (previews and tests alone do not count as product use). Dead after a feature moved to a bespoke view.
+- **Near-duplicates** — two or more floating panels, menus, chips, list shells, row templates, empty states, or dialogs that share the same visual language (card, border, shadow, hover row, dismiss monitor) but diverge only in open gesture or row payload.
+- **Bespoke per page** — a feature-private control that reimplements an existing `PV*` pattern instead of composing it (new `*MenuPanel`, `*List`, `*Chip` under `Features/` when DesignSystem already has one).
+- **Generic trapped in a domain** — reusable chrome or interaction policy living under `Features/<OneDomain>/` that a second surface already copied or will need (menus, split rows, caption bands, toolbar jump hosts).
+- **Wrong layer** — product/domain copy or navigation policy baked into a DesignSystem primitive (hard-coded “Sources”, history semantics inside a generic panel), or the reverse: a one-off product layout promoted to `PV*` with a single call site and no second consumer.
+- **Wrapper sprawl** — thin wrappers that only change how a menu opens (click vs right-click vs long-press) implemented as entirely separate panel stacks instead of one panel + composable open policies.
+
+**How to sample**
+
+1. Inventory `macos/App/DesignSystem/Components/**` (`PV*` types).
+2. For each candidate primitive (menus, lists, dialogs, chips, empty states), Grep `macos/App/Features` and `Platform` for call sites—flag zero-use orphans.
+3. Spot-check high-churn UI (workspace toolbar, Sources list, Source page, omnibar overlays) for private `*Panel` / `*Menu` / `*Row` types; diff their chrome against the nearest `PV*`.
+4. Ask: if a third screen needed this tomorrow, would we copy-paste again or extend one primitive?
+
+**Provenencia notes**
+
+- Target layout: reusable primitives in `DesignSystem/`; product composition in `Features/<Name>/`; store/FFI in `Platform/`.
+- Prefer **one floating-menu kit** (panel + item + dismiss/positioning) with open policies (primary click, right-click, long-press) over parallel hosts—see S5-09 cleanup note on unifying `PVContextMenu` / `PVPopupMenuButton` / history jump chrome.
+- Split-row / dual-action lists may stay feature-owned when forcing every consumer into a dual-zone API would be wrong—but then delete or shrink the unused single-target primitive rather than leaving both forever.
+- Do not invent new DesignSystem components for a single unproven call site; hoist when ≥2 real surfaces share the pattern.
+
+**Good finding shape** — “`HistoryJumpMenuPanel` duplicates `PVContextMenuPanel` card chrome; only open gesture and row content differ—host history through shared panel + custom rows (S5-09).”
+
+**Allow** — Deliberate one-off product layouts with no second consumer yet; AppKit escape hatches wrapped once; Generated / preview-only fixtures.
+
+---
+
 ## Priority guide
 
 Action items land in one of three groups (see skill Output format). When unsure,
@@ -225,7 +259,7 @@ prefer **medium** over **high**. An empty high-priority section is a fine outcom
 | Priority | Use when |
 | --- | --- |
 | **High** | Security risk, data loss/corruption risk, severe UX breakage, clear layering violation actively causing bugs, guidance that would cause unsafe/wrong agent edits on a critical path, primary flows hard or impossible for AT |
-| **Medium** | Meaningful debt, perf likely to hurt dogfood, structural smell that will multiply under AI edits, docs/skills that systematically mis-train agents, missing coverage on important boundaries |
+| **Medium** | Meaningful debt, perf likely to hurt dogfood, structural smell that will multiply under AI edits, docs/skills that systematically mis-train agents, missing coverage on important boundaries, orphaned or near-duplicate UI primitives that encourage copy-paste |
 | **Low** | Nits, naming polish, optional cleanup, speculative perf, missing identifiers on low-traffic controls, minor doc stale phrasing |
 
 ### Sizing action items

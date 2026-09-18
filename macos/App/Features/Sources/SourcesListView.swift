@@ -177,62 +177,54 @@ private struct SourcesListContent: View {
         .overlay(alignment: .bottom) {
             PVDivider()
         }
+        .zIndex(1)
     }
 
     private var filterMenu: some View {
-        Menu {
-            Picker(String(localized: L10n.Sources.filterMenu), selection: $model.typeFilterID) {
-                Text(L10n.Sources.filterAllTypes).tag("")
-                ForEach(model.types) { type in
-                    Text(type.label).tag(type.id)
+        PVPopupMenuButton(
+            icon: .filter,
+            label: model.filterLabel,
+            accessibilityLabel: L10n.Sources.filterMenu,
+            accessibilityIdentifier: "sources.filter",
+            menuWidth: 220
+        ) {
+            PVContextMenuItem(
+                L10n.Sources.filterAllTypes,
+                isSelected: model.typeFilterID.isEmpty,
+                accessibilityIdentifier: "sources.filter.all"
+            ) {
+                model.typeFilterID = ""
+            }
+            ForEach(model.types) { type in
+                PVContextMenuItem(
+                    plainTitle: type.label,
+                    isSelected: model.typeFilterID == type.id,
+                    accessibilityIdentifier: "sources.filter.\(type.id)"
+                ) {
+                    model.typeFilterID = type.id
                 }
             }
-            .pickerStyle(.inline)
-            .labelsHidden()
-        } label: {
-            toolbarChip(icon: .filter, label: model.filterLabel)
         }
-        .menuStyle(.borderlessButton)
-        .accessibilityLabel(Text(L10n.Sources.filterMenu))
-        .accessibilityIdentifier("sources.filter")
     }
 
     private var sortMenu: some View {
-        Menu {
-            Picker(String(localized: L10n.Sources.sortMenu), selection: $model.sort) {
-                ForEach(SourcesModel.Sort.allCases) { option in
-                    Text(option.label).tag(option)
+        PVPopupMenuButton(
+            icon: .sort,
+            label: model.sortControlLabel,
+            accessibilityLabel: L10n.Sources.sortMenu,
+            accessibilityIdentifier: "sources.sort",
+            menuWidth: 220
+        ) {
+            ForEach(SourcesModel.Sort.allCases) { option in
+                PVContextMenuItem(
+                    option.label,
+                    isSelected: model.sort == option,
+                    accessibilityIdentifier: "sources.sort.\(option.rawValue)"
+                ) {
+                    model.sort = option
                 }
             }
-            .pickerStyle(.inline)
-            .labelsHidden()
-        } label: {
-            toolbarChip(icon: .sort, label: model.sortControlLabel)
         }
-        .menuStyle(.borderlessButton)
-        .accessibilityLabel(Text(L10n.Sources.sortMenu))
-        .accessibilityIdentifier("sources.sort")
-    }
-
-    private func toolbarChip(icon: PVSymbol, label: String) -> some View {
-        HStack(spacing: PVSpacing.space3) {
-            PVIcon(icon, size: 12)
-            Text(label)
-                .lineLimit(1)
-            PVIcon(.chevronDown, size: 11)
-        }
-        .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
-        .foregroundStyle(PVColor.textPrimary)
-        .padding(.horizontal, PVSpacing.space4)
-        .frame(height: PVSpacing.controlHeightMedium)
-        .background(
-            RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                .fill(PVColor.surfaceRaised)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                .stroke(PVColor.borderDefault, lineWidth: 1)
-        )
     }
 
     @ViewBuilder
@@ -249,32 +241,58 @@ private struct SourcesListContent: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .accessibilityIdentifier("sources.filterEmpty")
         } else {
-            PVList(
-                rows: model.visibleSources,
-                label: L10n.Sources.listAccessibilityLabel,
-                primary: { $0.title },
-                secondary: { model.typeLabel(for: $0) },
-                meta: { $0.ref },
-                thumbnail: { source in
-                    CachedThumbnail(
-                        projectDir: model.pageProjectDir,
-                        relPath: source.thumbnailRelPath,
-                        typeIconKey: model.typeIconKey(for: source)
-                    )
-                },
-                onActivate: { id in
-                    let source = model.sources.first(where: { $0.id == id })
-                    navigation.go(to: WorkspaceLocation(
-                        section: .sources,
-                        sourceId: id,
-                        ref: source?.ref,
-                        title: source?.title
-                    ))
-                },
-                rowAccessibilityIdentifier: { "sources.row.\($0.id)" }
-            )
+            ScrollView {
+                LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
+                    Section {
+                        ForEach(model.visibleSources) { source in
+                            SourcesSplitRow(
+                                source: source,
+                                typeLabel: model.typeLabel(for: source),
+                                typeIconKey: model.typeIconKey(for: source),
+                                projectDir: model.pageProjectDir,
+                                onOpenPage: {
+                                    navigation.go(to: SourcesListNavigation.pageLocation(for: source))
+                                },
+                                onOpenGraph: {
+                                    if let location = SourcesListNavigation.graphLocation(for: source) {
+                                        navigation.go(to: location)
+                                    }
+                                }
+                            )
+                        }
+                    } header: {
+                        captionBand
+                    }
+                }
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(Text(L10n.Sources.listAccessibilityLabel))
             .accessibilityIdentifier("sources.list")
         }
+    }
+
+    private var captionBand: some View {
+        SourcesSplitLayout.columns {
+            Text(L10n.Sources.columnSource)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, PVSpacing.gutterPage)
+                .padding(.trailing, PVSpacing.space6)
+        } graph: {
+            Text(L10n.Sources.columnEvidenceGraph)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                // Padding inside the fixed 210pt track (not outside — that skewed the hairline).
+                .padding(.horizontal, PVSpacing.space6)
+        }
+        .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
+        .tracking(PVTypeScale.micro * PVTracking.caps)
+        .textCase(.uppercase)
+        .foregroundStyle(PVColor.textMuted)
+        .padding(.vertical, PVSpacing.space3)
+        .background(PVColor.surfaceCard)
+        .overlay(alignment: .bottom) {
+            PVDivider()
+        }
+        .accessibilityIdentifier("sources.captionBand")
     }
 
     private var emptyState: some View {
