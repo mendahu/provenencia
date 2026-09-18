@@ -109,12 +109,16 @@ struct PVInput: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .modifier(chrome(isFocused: false))
             } else if let externalFocus {
-                TextField("", text: $text, prompt: prompt.map { Text($0) })
+                TextField(text: $text, prompt: prompt.map { Text($0) }) {
+                    EmptyView()
+                }
                     .textFieldStyle(.plain)
                     .focused(externalFocus)
                     .modifier(chrome(isFocused: externalFocus.wrappedValue))
             } else {
-                TextField("", text: $text, prompt: prompt.map { Text($0) })
+                TextField(text: $text, prompt: prompt.map { Text($0) }) {
+                    EmptyView()
+                }
                     .textFieldStyle(.plain)
                     .focused($ownedFocus)
                     .modifier(chrome(isFocused: ownedFocus))

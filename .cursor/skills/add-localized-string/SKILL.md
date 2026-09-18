@@ -40,6 +40,7 @@ Do **not** edit only `L10n.swift` or only the catalog.
 | User-facing words (titles, buttons, hints, errors) | `Text(L10n.…)` / `String(localized: L10n.…)` |
 | User-facing words with arguments | `L10n` helper + `%@` in the catalog — **not** `"\(name)"` inside `Text` |
 | Numbers, ordinals, refs, paths, punctuation, brand | `Text(verbatim: "\(index + 1)")`, `Text(verbatim: "—")`, `Text(verbatim: "Provenencia")` |
+| Unlabeled `TextField` / `Picker` (label elsewhere) | `TextField(text:prompt:) { EmptyView() }` / `Picker(selection:) { … } label: { EmptyView() }` — **never** `TextField("", …)` / `Picker("", …)` (extracts catalog key `""`) |
 
 ```swift
 // ❌ BAD — extractor inserts "%lld" / "%@" / "" into Localizable.xcstrings
@@ -47,12 +48,16 @@ Text("\(index + 1)")
 Text("\(count)")
 Text("—")
 Text("\(title), \(ref)")
+TextField("", text: $text)   // extracts as ""
+Picker("", selection: $value) { … }
 
 // ✅ GOOD
 Text(verbatim: "\(index + 1)")
 Text(verbatim: "\(count)")
 Text(verbatim: "—")
 Text(verbatim: "\(title), \(ref)")
+TextField(text: $text, prompt: prompt.map { Text($0) }) { EmptyView() }
+Picker(selection: $value) { … } label: { EmptyView() }
 Text(L10n.SourceTypes.assignedCount(count: model.suggestions.count))
 ```
 
@@ -108,6 +113,7 @@ panel.prompt = String(localized: L10n.Onboarding.openPanelPrompt)
 
 - Put user-facing string literals in views/models (except non-copy data: names, paths, IDs)
 - Use bare `Text("—")` / `Text("/")` / `Text("\(n)")` for glyphs, brand, **or numbers** — always `Text(verbatim:)` so String Catalog extraction does not rewrite `Localizable.xcstrings` on every build
+- Use `TextField("", …)` or `Picker("", …)` for unlabeled controls — use the `label: { EmptyView() }` / title-less `TextField(text:prompt:)` forms instead (empty string extracts as catalog key `""`)
 - Pass string interpolations into `Text` / `accessibilityValue` as `LocalizedStringKey` (extracts `%@` / `%lld`) — use `Text(verbatim: "\(…)")`
 - Commit a dirty `Localizable.xcstrings` after a local build without running `python3 scripts/check-localizable-xcstrings.py`
 - Add SwiftGen or a localization Run Script
