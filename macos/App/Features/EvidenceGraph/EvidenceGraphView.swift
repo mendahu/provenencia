@@ -1,10 +1,13 @@
 import SwiftUI
 
-/// Evidence graph workspace destination — Source-scoped canvas shell (S6-01).
+/// Workspace destination for a Source’s Evidence graph.
 ///
-/// Pan/zoom only. Bubbles, palette, and subject loading arrive in later Spike 6 PRs.
+/// Product place under Sources (`sourceSurface: .graph`). Composes the
+/// reusable [`GraphCanvas`](../GraphCanvas/) shell; later PRs add subjects,
+/// palette, and connect on top of that tooling — other visualizations can
+/// use the same canvas without living in this feature.
 struct EvidenceGraphView: View {
-    /// Large enough to pan; not a whole-project graph (design note §7.1).
+    /// Large enough to pan; Source-scoped graphs stay small (design note §7.1).
     private static let contentSize = CGSize(width: 4_000, height: 4_000)
 
     var body: some View {

@@ -2,8 +2,8 @@ import CoreGraphics
 
 /// Ephemeral pan/zoom camera for a graph canvas (design note §5.2).
 ///
-/// Not research state — never written to the catalog. Spike 6-01 keeps this
-/// in memory only; leaving the Evidence graph discards it.
+/// Reusable canvas state — not research data, never written to the catalog.
+/// Callers decide persistence (Evidence graph S6-01: in-memory only).
 struct GraphCanvasCamera: Equatable, Sendable {
     /// Pinch / magnification factor applied by `NSScrollView`.
     var magnification: CGFloat

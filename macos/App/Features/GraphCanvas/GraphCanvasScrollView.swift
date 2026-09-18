@@ -1,11 +1,12 @@
 @preconcurrency import AppKit
 import SwiftUI
 
-/// AppKit pan/zoom shell for graph canvases (design note §7.2).
+/// AppKit pan/zoom shell for any graph-style canvas (design note §7.2).
 ///
-/// SwiftUI `ScrollView` has no magnification. This bridge is the escape hatch:
-/// `allowsMagnification` + native scroll momentum. Hit-testing math stays in
-/// `GraphCanvasCoordinates` — do not trust raw SwiftUI gesture locations under zoom.
+/// Product-agnostic tooling: SwiftUI `ScrollView` has no magnification, so
+/// hosts compose this bridge with their own document content. Hit-testing
+/// math stays in `GraphCanvasCoordinates` — do not trust raw SwiftUI gesture
+/// locations under zoom.
 struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
     var contentSize: CGSize
     @ViewBuilder var content: () -> Content
@@ -31,7 +32,7 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
         scrollView.documentView = hosting
         context.coordinator.hostingView = hosting
 
-        // Start near the center of the content plane so the empty grid feels open.
+        // Start near the center of the content plane so an empty canvas feels open.
         DispatchQueue.main.async {
             Self.centerDocument(in: scrollView, contentSize: contentSize)
         }

@@ -712,6 +712,7 @@
 				AA0000000000000000000316 /* Sources */,
 				AA0000000000000000000334 /* Dates */,
 				AA000000000000000000047C /* GraphCanvas */,
+				AA000000000000000000047D /* EvidenceGraph */,
 				423C55925CCDB8118E02BF19 /* SourceFields */,
 				AA0000000000000000000221 /* SourceTypes */,
 				AA0000000000000000000220 /* Catalog */,
@@ -727,9 +728,16 @@
 				AA0000000000000000000472 /* GraphCanvasCoordinates.swift */,
 				AA0000000000000000000474 /* GraphCanvasGridView.swift */,
 				AA0000000000000000000476 /* GraphCanvasScrollView.swift */,
-				AA0000000000000000000478 /* EvidenceGraphView.swift */,
 			);
 			path = GraphCanvas;
+			sourceTree = "<group>";
+		};
+		AA000000000000000000047D /* EvidenceGraph */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000478 /* EvidenceGraphView.swift */,
+			);
+			path = EvidenceGraph;
 			sourceTree = "<group>";
 		};
 		AA0000000000000000000334 /* Dates */ = {

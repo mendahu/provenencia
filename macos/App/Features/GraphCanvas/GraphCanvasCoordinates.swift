@@ -2,9 +2,10 @@ import CoreGraphics
 
 /// Pure view ↔ content coordinate conversion under magnification.
 ///
+/// Shared by every product surface that hosts `GraphCanvasScrollView`.
 /// `NSScrollView` magnification does not correctly map SwiftUI gesture
-/// locations into document space on its own (design note §7.2). All canvas
-/// hit-testing and drag math must go through this seam.
+/// locations into document space on its own (design note §7.2) — hit-testing
+/// and drag math must go through this seam.
 enum GraphCanvasCoordinates {
     static func clampMagnification(_ value: CGFloat) -> CGFloat {
         min(max(value, GraphCanvasCamera.minMagnification), GraphCanvasCamera.maxMagnification)
