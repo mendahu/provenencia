@@ -69,10 +69,14 @@ type Row struct {
 
 // Input is the payload for Set.
 type Input struct {
-	SourceID    []byte
-	FieldID     []byte
-	ValueText   string
-	DateValueID []byte // nil/empty when unset
+	SourceID  []byte
+	FieldID   []byte
+	ValueText string
+	// DateValueID is the structured date for this value. On create, nil/empty
+	// leaves the date unset. On update, nil/empty with a non-empty ValueText
+	// keeps any existing date_value_id (text-only edit); omit both to mean an
+	// empty payload (rejected for date fields).
+	DateValueID []byte
 }
 
 // WorkspaceEntry is a suggested or extra field for Source edit UI.
@@ -122,19 +126,27 @@ func Set(c *database.Catalog, userID []byte, in Input) (Row, error) {
 	if err != nil {
 		return Row{}, err
 	}
-	if err := validateValue(field.DataType, in.ValueText, in.DateValueID); err != nil {
-		return Row{}, err
-	}
-	if len(in.DateValueID) == 16 {
-		if err := requireDate(tx, in.DateValueID); err != nil {
-			return Row{}, err
-		}
-	}
 
 	prev, err := getPairTx(tx, in.SourceID, in.FieldID)
 	creating := errors.Is(err, sql.ErrNoRows)
 	if err != nil && !creating {
 		return Row{}, err
+	}
+
+	dateID := copyBlob(in.DateValueID)
+	// Text-only updates keep any existing structured DateValue (inside the
+	// write tx so it cannot race a concurrent Clear).
+	if !creating && len(dateID) == 0 && in.ValueText != "" {
+		dateID = copyBlob(prev.DateValueID)
+	}
+
+	if err := validateValue(field.DataType, in.ValueText, dateID); err != nil {
+		return Row{}, err
+	}
+	if len(dateID) == 16 {
+		if err := requireDate(tx, dateID); err != nil {
+			return Row{}, err
+		}
 	}
 
 	var row Row
@@ -147,7 +159,7 @@ func Set(c *database.Catalog, userID []byte, in Input) (Row, error) {
 			return Row{}, err
 		}
 		idBytes := id[:]
-		if _, err := tx.Exec(sqlInsert, idBytes, in.SourceID, in.FieldID, nullStr(in.ValueText), nullBlob(in.DateValueID)); err != nil {
+		if _, err := tx.Exec(sqlInsert, idBytes, in.SourceID, in.FieldID, nullStr(in.ValueText), nullBlob(dateID)); err != nil {
 			return Row{}, mapConstraint(err)
 		}
 		// A field the researcher just filled needs a place in the Source's
@@ -160,7 +172,7 @@ func Set(c *database.Catalog, userID []byte, in Input) (Row, error) {
 			SourceID:    append([]byte(nil), in.SourceID...),
 			FieldID:     append([]byte(nil), in.FieldID...),
 			ValueText:   in.ValueText,
-			DateValueID: copyBlob(in.DateValueID),
+			DateValueID: copyBlob(dateID),
 		}
 		action = audit.ActionCreate
 		fields["id"] = audit.FieldDiff{Old: nil, New: id.String()}
@@ -169,15 +181,15 @@ func Set(c *database.Catalog, userID []byte, in Input) (Row, error) {
 		if in.ValueText != "" {
 			fields["value_text"] = audit.FieldDiff{Old: nil, New: in.ValueText}
 		}
-		if len(in.DateValueID) == 16 {
-			fields["date_value_id"] = audit.FieldDiff{Old: nil, New: uuidString(in.DateValueID)}
+		if len(dateID) == 16 {
+			fields["date_value_id"] = audit.FieldDiff{Old: nil, New: uuidString(dateID)}
 		}
 	} else {
-		if prev.ValueText == in.ValueText && bytesEqual(prev.DateValueID, in.DateValueID) {
+		if prev.ValueText == in.ValueText && bytesEqual(prev.DateValueID, dateID) {
 			_ = tx.Commit()
 			return prev, nil
 		}
-		if _, err := tx.Exec(sqlUpdate, nullStr(in.ValueText), nullBlob(in.DateValueID), prev.ID); err != nil {
+		if _, err := tx.Exec(sqlUpdate, nullStr(in.ValueText), nullBlob(dateID), prev.ID); err != nil {
 			return Row{}, mapConstraint(err)
 		}
 		row = Row{
@@ -185,14 +197,14 @@ func Set(c *database.Catalog, userID []byte, in Input) (Row, error) {
 			SourceID:    append([]byte(nil), in.SourceID...),
 			FieldID:     append([]byte(nil), in.FieldID...),
 			ValueText:   in.ValueText,
-			DateValueID: copyBlob(in.DateValueID),
+			DateValueID: copyBlob(dateID),
 		}
 		action = audit.ActionUpdate
 		if prev.ValueText != in.ValueText {
 			fields["value_text"] = audit.FieldDiff{Old: nullJSON(prev.ValueText), New: nullJSON(in.ValueText)}
 		}
-		if !bytesEqual(prev.DateValueID, in.DateValueID) {
-			fields["date_value_id"] = audit.FieldDiff{Old: uuidJSON(prev.DateValueID), New: uuidJSON(in.DateValueID)}
+		if !bytesEqual(prev.DateValueID, dateID) {
+			fields["date_value_id"] = audit.FieldDiff{Old: uuidJSON(prev.DateValueID), New: uuidJSON(dateID)}
 		}
 	}
 

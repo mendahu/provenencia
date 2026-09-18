@@ -331,18 +331,6 @@ func SetSourceMetadata(in []byte) ([]byte, error) {
 			if err != nil {
 				return err
 			}
-		} else {
-			// Text-only updates keep any existing structured DateValue.
-			existing, listErr := sourcemetadata.ListBySource(c, sourceID)
-			if listErr != nil {
-				return listErr
-			}
-			for _, row := range existing {
-				if bytes.Equal(row.FieldID, fieldID) {
-					dateID = row.DateValueID
-					break
-				}
-			}
 		}
 		if _, err := sourcemetadata.Set(c, userID, sourcemetadata.Input{
 			SourceID:    sourceID,
