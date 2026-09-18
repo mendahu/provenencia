@@ -241,11 +241,11 @@ Catch LLM- and rush-driven UI debt: the same interaction reimplemented per scree
 **Provenencia notes**
 
 - Target layout: reusable primitives in `DesignSystem/`; product composition in `Features/<Name>/`; store/FFI in `Platform/`.
-- Prefer **one floating-menu kit** (panel + item + dismiss/positioning) with open policies (primary click, right-click, long-press) over parallel hosts—see S5-09 cleanup note on unifying `PVContextMenu` / `PVPopupMenuButton` / history jump chrome.
+- Prefer **one floating-menu kit** (panel + item + dismiss/positioning) with open policies (primary click, right-click, long-press) over parallel hosts—landed in S5-10 (`PVContextMenu` / Forms `PVSelect` / history jump on shared panel; see [`archive/spike-5`](../../../docs/deployment-plan/archive/spike-5/completed.md#s5-10--unify-floating-menus)). Omnibar and `PVComboBox` keep separate hosts by design.
 - Split-row / dual-action lists may stay feature-owned when forcing every consumer into a dual-zone API would be wrong—but then delete or shrink the unused single-target primitive rather than leaving both forever.
 - Do not invent new DesignSystem components for a single unproven call site; hoist when ≥2 real surfaces share the pattern.
 
-**Good finding shape** — “`HistoryJumpMenuPanel` duplicates `PVContextMenuPanel` card chrome; only open gesture and row content differ—host history through shared panel + custom rows (S5-09).”
+**Good finding shape** — “New overlay menu reimplements card chrome instead of `PVContextMenuPanel`; wire it through the shared kit with a custom row payload.”
 
 **Allow** — Deliberate one-off product layouts with no second consumer yet; AppKit escape hatches wrapped once; Generated / preview-only fixtures.
 

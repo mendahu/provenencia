@@ -85,6 +85,8 @@ struct PVSidebarNav: View {
             )
 
             if !item.children.isEmpty {
+                // Guide rule sits on the leading edge of the indented block
+                // (CSS `marginLeft: 21` + `borderLeft`), not in the margin gutter.
                 VStack(alignment: .leading, spacing: 1) {
                     ForEach(item.children) { child in
                         PVSidebarNavButton(
@@ -96,12 +98,12 @@ struct PVSidebarNav: View {
                         )
                     }
                 }
-                .padding(.leading, 21)
                 .overlay(alignment: .leading) {
                     Rectangle()
                         .fill(childActive ? PVColor.borderDefault : PVColor.borderSubtle)
                         .frame(width: 1)
                 }
+                .padding(.leading, 21)
             }
         }
     }

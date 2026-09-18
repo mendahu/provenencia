@@ -18,6 +18,14 @@ struct PVContextMenuState: Equatable {
     }
 }
 
+/// Optional ↑/↓/⏎ navigation for an open overlay menu.
+struct PVContextMenuKeyboard: Equatable {
+    var itemCount: Int
+    var activeIndex: Int
+
+    static let inactive = PVContextMenuKeyboard(itemCount: 0, activeIndex: -1)
+}
+
 // MARK: - Panel + items
 
 /// Floating menu chrome: card surface, subtle border, overlay shadow.
@@ -57,11 +65,14 @@ struct PVContextMenuPanel<Content: View>: View {
 }
 
 /// A single menu row. Enabled items dismiss the hosting menu, then run `action`.
+/// Pass `index` when the host provides keyboard navigation so ↑/↓ highlight works.
 struct PVContextMenuItem: View {
     @Environment(\.pvContextMenuDismiss) private var dismiss
+    @Environment(\.pvContextMenuKeyboardContext) private var keyboard
 
     private let titleResource: LocalizedStringResource?
     private let titleString: String?
+    var index: Int?
     var isEnabled: Bool = true
     var isSelected: Bool = false
     var accessibilityIdentifier: String?
@@ -69,6 +80,7 @@ struct PVContextMenuItem: View {
 
     init(
         _ title: LocalizedStringResource,
+        index: Int? = nil,
         isEnabled: Bool = true,
         isSelected: Bool = false,
         accessibilityIdentifier: String? = nil,
@@ -76,6 +88,7 @@ struct PVContextMenuItem: View {
     ) {
         self.titleResource = title
         self.titleString = nil
+        self.index = index
         self.isEnabled = isEnabled
         self.isSelected = isSelected
         self.accessibilityIdentifier = accessibilityIdentifier
@@ -85,6 +98,7 @@ struct PVContextMenuItem: View {
     /// Dynamic catalog / runtime labels that are not String Catalog keys.
     init(
         plainTitle: String,
+        index: Int? = nil,
         isEnabled: Bool = true,
         isSelected: Bool = false,
         accessibilityIdentifier: String? = nil,
@@ -92,27 +106,41 @@ struct PVContextMenuItem: View {
     ) {
         self.titleResource = nil
         self.titleString = plainTitle
+        self.index = index
         self.isEnabled = isEnabled
         self.isSelected = isSelected
         self.accessibilityIdentifier = accessibilityIdentifier
         self.action = action
     }
 
+    private var isKeyboardActive: Bool {
+        guard let index, let keyboard else { return false }
+        return keyboard.activeIndex == index
+    }
+
     var body: some View {
-        if isEnabled {
-            Button {
-                dismiss()
-                action()
-            } label: {
-                label(foreground: PVColor.textPrimary)
-            }
-            .buttonStyle(PVContextMenuItemButtonStyle(isSelected: isSelected))
-            .accessibilityAddIdentifiers(accessibilityIdentifier)
-            .accessibilityAddTraits(isSelected ? .isSelected : [])
-        } else {
-            label(foreground: PVColor.textFaint)
+        let highlighted = isSelected || isKeyboardActive
+        // Register during body evaluation (not only onAppear) so Enter always
+        // hits the live registry after open/arrow-key re-renders.
+        if isEnabled, let index {
+            keyboard?.register(index, action)
+        }
+        return Group {
+            if isEnabled {
+                Button {
+                    dismiss()
+                    action()
+                } label: {
+                    label(foreground: PVColor.textPrimary)
+                }
+                .buttonStyle(PVContextMenuItemButtonStyle(isSelected: highlighted))
                 .accessibilityAddIdentifiers(accessibilityIdentifier)
-                .accessibilityRemoveTraits(.isButton)
+                .accessibilityAddTraits(highlighted ? .isSelected : [])
+            } else {
+                label(foreground: PVColor.textFaint)
+                    .accessibilityAddIdentifiers(accessibilityIdentifier)
+                    .accessibilityRemoveTraits(.isButton)
+            }
         }
     }
 
@@ -153,9 +181,10 @@ extension View {
     /// thumbnail) clips clicks on overflow rows.
     func pvContextMenu<Content: View>(
         _ state: Binding<PVContextMenuState>,
+        keyboard: Binding<PVContextMenuKeyboard>? = nil,
         @ViewBuilder content: @escaping () -> Content
     ) -> some View {
-        modifier(PVContextMenuPresenter(state: state, content: content))
+        modifier(PVContextMenuPresenter(state: state, keyboard: keyboard, content: content))
     }
 }
 
@@ -165,17 +194,54 @@ private struct PVContextMenuDismissKey: EnvironmentKey {
     nonisolated(unsafe) static let defaultValue: () -> Void = {}
 }
 
+private struct PVContextMenuKeyboardContextKey: EnvironmentKey {
+    nonisolated(unsafe) static let defaultValue: PVContextMenuKeyboardContext? = nil
+}
+
+/// Registers row actions for Enter activation. Highlight uses `activeIndex` (value).
+final class PVContextMenuActionRegistry {
+    private var actions: [Int: () -> Void] = [:]
+
+    func register(_ index: Int, _ action: @escaping () -> Void) {
+        actions[index] = action
+    }
+
+    func activate(_ index: Int) {
+        actions[index]?()
+    }
+
+    func clear() {
+        actions.removeAll(keepingCapacity: true)
+    }
+}
+
+private struct PVContextMenuKeyboardContext {
+    var activeIndex: Int
+    var registry: PVContextMenuActionRegistry
+
+    func register(_ index: Int, _ action: @escaping () -> Void) {
+        registry.register(index, action)
+    }
+}
+
 extension EnvironmentValues {
     var pvContextMenuDismiss: () -> Void {
         get { self[PVContextMenuDismissKey.self] }
         set { self[PVContextMenuDismissKey.self] = newValue }
     }
+
+    fileprivate var pvContextMenuKeyboardContext: PVContextMenuKeyboardContext? {
+        get { self[PVContextMenuKeyboardContextKey.self] }
+        set { self[PVContextMenuKeyboardContextKey.self] = newValue }
+    }
 }
 
 private struct PVContextMenuPresenter<MenuContent: View>: ViewModifier {
     @Binding var state: PVContextMenuState
+    var keyboard: Binding<PVContextMenuKeyboard>?
     @ViewBuilder var content: () -> MenuContent
     @State private var dismissMonitor: Any?
+    @State private var actionRegistry = PVContextMenuActionRegistry()
 
     func body(content host: Content) -> some View {
         host
@@ -185,22 +251,35 @@ private struct PVContextMenuPresenter<MenuContent: View>: ViewModifier {
                         .environment(\.pvContextMenuDismiss) {
                             state.dismiss()
                         }
+                        .environment(\.pvContextMenuKeyboardContext, keyboardContext)
                         .fixedSize()
                         .offset(x: state.origin.x, y: state.origin.y)
                 }
             }
             .onChange(of: state.isPresented) { _, open in
                 if open {
-                    // Defer so the opening right-click does not immediately dismiss.
+                    // Defer so the opening click does not immediately dismiss.
+                    // Do not replace/clear the registry here — items register
+                    // during body evaluation; clearing after first paint left
+                    // Enter calling an empty map.
                     DispatchQueue.main.async { installDismissMonitor() }
                 } else {
                     removeDismissMonitor()
+                    actionRegistry.clear()
                 }
             }
             .onDisappear {
                 state.dismiss()
                 removeDismissMonitor()
             }
+    }
+
+    private var keyboardContext: PVContextMenuKeyboardContext? {
+        guard let keyboard else { return nil }
+        return PVContextMenuKeyboardContext(
+            activeIndex: keyboard.wrappedValue.activeIndex,
+            registry: actionRegistry
+        )
     }
 
     private func installDismissMonitor() {
@@ -211,13 +290,48 @@ private struct PVContextMenuPresenter<MenuContent: View>: ViewModifier {
             matching: [.leftMouseUp, .rightMouseDown, .otherMouseDown, .keyDown]
         ) { event in
             if event.type == .keyDown {
-                if event.keyCode == 53 { // Escape
-                    DispatchQueue.main.async { state.dismiss() }
-                    return nil
-                }
-                return event
+                return handleKeyDown(event)
             }
             DispatchQueue.main.async { state.dismiss() }
+            return event
+        }
+    }
+
+    private func handleKeyDown(_ event: NSEvent) -> NSEvent? {
+        if event.keyCode == 53 { // Escape
+            DispatchQueue.main.async { state.dismiss() }
+            return nil
+        }
+        guard var nav = keyboard?.wrappedValue, nav.itemCount > 0 else {
+            return event
+        }
+        switch event.keyCode {
+        case 125: // Down
+            DispatchQueue.main.async {
+                nav.activeIndex = PVFloatingMenuSelection.moveIndex(
+                    from: nav.activeIndex, delta: 1, count: nav.itemCount
+                )
+                keyboard?.wrappedValue = nav
+            }
+            return nil
+        case 126: // Up
+            DispatchQueue.main.async {
+                nav.activeIndex = PVFloatingMenuSelection.moveIndex(
+                    from: nav.activeIndex, delta: -1, count: nav.itemCount
+                )
+                keyboard?.wrappedValue = nav
+            }
+            return nil
+        case 36, 76: // Return / keypad Enter
+            let index = nav.activeIndex
+            let registry = actionRegistry
+            DispatchQueue.main.async {
+                guard index >= 0 else { return }
+                state.dismiss()
+                registry.activate(index)
+            }
+            return nil
+        default:
             return event
         }
     }
@@ -263,8 +377,8 @@ private struct PVContextMenuItemButtonBody: View {
 }
 
 /// Transparent hit target that reports right-clicks (and Ctrl-click) without
-/// consuming left-clicks.
-private struct PVRightClickCatcher: NSViewRepresentable {
+/// consuming left-clicks. Shared by context-menu triggers and history jump.
+struct PVRightClickCatcher: NSViewRepresentable {
     var onRightClick: (CGPoint) -> Void
 
     func makeNSView(context: Context) -> PVRightClickCatcherView {
@@ -278,7 +392,7 @@ private struct PVRightClickCatcher: NSViewRepresentable {
     }
 }
 
-private final class PVRightClickCatcherView: NSView {
+final class PVRightClickCatcherView: NSView {
     var onRightClick: ((CGPoint) -> Void)?
 
     override var acceptsFirstResponder: Bool { false }

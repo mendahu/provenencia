@@ -181,50 +181,49 @@ private struct SourcesListContent: View {
     }
 
     private var filterMenu: some View {
-        PVPopupMenuButton(
-            icon: .filter,
-            label: model.filterLabel,
-            accessibilityLabel: L10n.Sources.filterMenu,
-            accessibilityIdentifier: "sources.filter",
-            menuWidth: 220
-        ) {
-            PVContextMenuItem(
-                L10n.Sources.filterAllTypes,
-                isSelected: model.typeFilterID.isEmpty,
-                accessibilityIdentifier: "sources.filter.all"
-            ) {
-                model.typeFilterID = ""
-            }
-            ForEach(model.types) { type in
-                PVContextMenuItem(
-                    plainTitle: type.label,
-                    isSelected: model.typeFilterID == type.id,
-                    accessibilityIdentifier: "sources.filter.\(type.id)"
-                ) {
-                    model.typeFilterID = type.id
-                }
-            }
+        let options = [PVSelectOption(
+            value: "",
+            label: String(localized: L10n.Sources.filterAllTypes),
+            accessibilityIdentifier: "sources.filter.all"
+        )] + model.types.map {
+            PVSelectOption(
+                value: $0.id,
+                label: $0.label,
+                accessibilityIdentifier: "sources.filter.\($0.id)"
+            )
         }
+        return PVSelect(
+            selection: $model.typeFilterID,
+            options: options,
+            icon: .filter,
+            menuWidth: 220,
+            fillsWidth: false,
+            accessibilityLabel: L10n.Sources.filterMenu,
+            accessibilityIdentifier: "sources.filter"
+        )
     }
 
     private var sortMenu: some View {
-        PVPopupMenuButton(
-            icon: .sort,
-            label: model.sortControlLabel,
-            accessibilityLabel: L10n.Sources.sortMenu,
-            accessibilityIdentifier: "sources.sort",
-            menuWidth: 220
-        ) {
-            ForEach(SourcesModel.Sort.allCases) { option in
-                PVContextMenuItem(
-                    option.label,
-                    isSelected: model.sort == option,
-                    accessibilityIdentifier: "sources.sort.\(option.rawValue)"
-                ) {
-                    model.sort = option
-                }
-            }
+        let options = SourcesModel.Sort.allCases.map {
+            PVSelectOption(
+                value: $0.rawValue,
+                label: String(localized: $0.label),
+                accessibilityIdentifier: "sources.sort.\($0.rawValue)"
+            )
         }
+        return PVSelect(
+            selection: Binding(
+                get: { model.sort.rawValue },
+                set: { if let sort = SourcesModel.Sort(rawValue: $0) { model.sort = sort } }
+            ),
+            options: options,
+            icon: .sort,
+            displayLabel: model.sortControlLabel,
+            menuWidth: 220,
+            fillsWidth: false,
+            accessibilityLabel: L10n.Sources.sortMenu,
+            accessibilityIdentifier: "sources.sort"
+        )
     }
 
     @ViewBuilder

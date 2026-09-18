@@ -7,6 +7,11 @@ struct SourcePageIdentityHeader: View {
     /// observation graph on every character.
     @State private var titleDraft = ""
     @State private var coverMenu = PVContextMenuState()
+    @State private var coverKeyboard = PVContextMenuKeyboard.inactive
+
+    private var coverMenuItemCount: Int {
+        model.source?.coverMode == "type_icon" ? 0 : 1
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space5) {
@@ -17,7 +22,10 @@ struct SourcePageIdentityHeader: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 // Menu on the row (not the 72pt thumb) so overflow hits register.
-                .pvContextMenu($coverMenu) {
+                .pvContextMenu(
+                    $coverMenu,
+                    keyboard: coverMenuItemCount > 0 ? $coverKeyboard : nil
+                ) {
                     coverMenuPanel
                 }
                 .frame(maxWidth: PVSpacing.widthContentMax, alignment: .leading)
@@ -47,6 +55,14 @@ struct SourcePageIdentityHeader: View {
         .accessibilityHint(String(localized: L10n.Sources.thumbnailMenuHint))
         .accessibilityIdentifier("sources.page.cover")
         .pvContextMenuTrigger($coverMenu)
+        .onChange(of: coverMenu.isPresented) { _, open in
+            if open {
+                coverKeyboard = PVContextMenuKeyboard(
+                    itemCount: coverMenuItemCount,
+                    activeIndex: -1
+                )
+            }
+        }
         .help(String(localized: L10n.Sources.thumbnailMenuHint))
     }
 
@@ -60,6 +76,7 @@ struct SourcePageIdentityHeader: View {
             } else {
                 PVContextMenuItem(
                     L10n.Sources.thumbnailRevertToDefault,
+                    index: 0,
                     accessibilityIdentifier: "sources.page.cover.revert"
                 ) {
                     Task { await model.artifacts.revertCoverToTypeIcon() }

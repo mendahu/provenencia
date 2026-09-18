@@ -130,7 +130,7 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 | Icon | `Components/Core/PVIcon.swift` |
 | Field | `Components/Forms/PVField.swift` |
 | Input | `Components/Forms/PVInput.swift` |
-| Select | `Components/Forms/PVSelect.swift` |
+| Select | `Components/Forms/PVSelect.swift` (floating `PVContextMenu` kit — field + optional chip/icon style; not SwiftUI `Menu`) |
 | Toast | `Components/Feedback/PVToast.swift` |
 | LogoMark | `Components/Core/PVLogoMark.swift` |
 | SidebarNav | `Components/Navigation/PVSidebarNav.swift` (added for the S2-01 workspace chrome; ports that board's revised `collapsed`-capable `SidebarNav.jsx`) |

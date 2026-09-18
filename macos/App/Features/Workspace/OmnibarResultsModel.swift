@@ -109,9 +109,9 @@ final class OmnibarResultsModel {
     }
 
     func moveSelection(delta: Int) {
-        guard !hits.isEmpty else { return }
-        let next = selectedIndex + delta
-        selectedIndex = max(0, min(hits.count - 1, next))
+        selectedIndex = PVFloatingMenuSelection.moveIndex(
+            from: selectedIndex, delta: delta, count: hits.count
+        )
     }
 
     func selectedHit() -> CatalogSearchHit? {
