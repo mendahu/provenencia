@@ -6,7 +6,9 @@ Authoritative domain and stack decisions remain in the sibling docs under [`docs
 
 ## Current
 
-_None open._ Next product spike is the Evidence graph canvas (Spike 6) — not yet scheduled under this folder.
+| Spike | Goal |
+| --- | --- |
+| [Spike 6](spike-6/) | Evidence graph **canvas prototype**: pan/zoom, click-to-add bubbles, drag/snap, relationship lines, accessibility. Retires UI risk before Citations/Observations. Design in Claude Design first (S6-D1/D2). Plan: [`spike-6/deployment-plan.md`](spike-6/deployment-plan.md). Design note: [`ideas/interpretation-graph-ui.md`](../ideas/interpretation-graph-ui.md). |
 
 ## Completed
 
@@ -17,6 +19,12 @@ _None open._ Next product spike is the Evidence graph canvas (Spike 6) — not y
 | [Spike 3](archive/spike-3/) | Workspace chrome + first-class nav history and catalog search: Back/Forward (persisted, `project.uuid`), toolbar omnibar with Go registry + FTS5 ranking. Archive: [`archive/spike-3/README.md`](archive/spike-3/README.md), [`completed.md`](archive/spike-3/completed.md). Notes: [`navigation-history.md`](archive/spike-3/navigation-history.md), [`omnibar-search.md`](archive/spike-3/omnibar-search.md). |
 | [Spike 2](archive/spike-2/) | Validate the Source layer: app workspace chrome (sidebar), audit + schema + Go CRUD/ingest + FFI + macOS Source catalog UI (create Sources, Artifacts, Files, extensible types/metadata). Design steps in Claude Design interleaved with PRs. Dogfood: [`archive/spike-2/dogfood.md`](archive/spike-2/dogfood.md). |
 | [Spike 1](archive/spike-1.md) | Scaffold the macOS app, local SQLite project, and first-run onboarding. **Retired the cgo SQLite + Swift dylib risk** (plan A: `mattn/go-sqlite3` inside `libprovenencia.dylib`). |
+
+Spike 6 (current):
+
+- [`spike-6/README.md`](spike-6/README.md) — spike overview
+- [`spike-6/deployment-plan.md`](spike-6/deployment-plan.md) — PR sequence, design gates, go/no-go
+- [`spike-6/design/`](spike-6/design/) — Claude Design briefs (S6-D1, S6-D2)
 
 Spike 5 archive:
 
