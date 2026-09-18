@@ -200,6 +200,9 @@ message Source {
   // True when this Source has at least one Artifact row (fileless counts).
   // Used by Sources list Evidence graph gate — not cover presence.
   bool has_artifact = 11;
+  // Max audit_transactions.revision for entity_type=source on this id.
+  // Sources list "Updated" sort; create-only Sources use their create revision.
+  int64 updated_revision = 12;
 }
 
 message SourceNote {

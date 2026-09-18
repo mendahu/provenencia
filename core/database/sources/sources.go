@@ -37,10 +37,23 @@ const (
 	sqlGetByRef = `SELECT id, ref, source_type_id, title, COALESCE(description, ''),
 		cover_mode, primary_artifact_id
 		FROM sources WHERE ref = ?`
-	sqlList = `SELECT id, ref, source_type_id, title, COALESCE(description, ''),
-		cover_mode, primary_artifact_id
-		FROM sources
-		ORDER BY title COLLATE NOCASE, ref COLLATE NOCASE`
+	// Newest-first by UUIDv7 id (create time). updated_revision is the latest
+	// audit revision for this source entity (create or later update_source /
+	// set_source_cover), used by the Sources list "Updated" sort.
+	sqlList = `SELECT s.id, s.ref, s.source_type_id, s.title, COALESCE(s.description, ''),
+		s.cover_mode, s.primary_artifact_id,
+		COALESCE((
+			SELECT MAX(t.revision)
+			FROM audit_changes c
+			JOIN audit_transactions t ON t.id = c.audit_transaction_id
+			WHERE c.entity_type = 'source' AND c.entity_id = s.id
+		), 0)
+		FROM sources s
+		ORDER BY s.id DESC`
+	sqlLatestRevision = `SELECT COALESCE(MAX(t.revision), 0)
+		FROM audit_changes c
+		JOIN audit_transactions t ON t.id = c.audit_transaction_id
+		WHERE c.entity_type = 'source' AND c.entity_id = ?`
 	sqlCount            = `SELECT COUNT(*) FROM sources`
 	sqlTypeExists       = `SELECT 1 FROM source_types WHERE id = ?`
 	sqlArtifactForCover = `SELECT id, source_id, file_id FROM artifacts WHERE id = ?`
@@ -56,6 +69,9 @@ type Source struct {
 	Description       string
 	CoverMode         string
 	PrimaryArtifactID []byte // nil when CoverModeTypeIcon
+	// UpdatedRevision is the latest audit revision for this source entity.
+	// Filled by List and by AttachLatestRevision; zero means unset.
+	UpdatedRevision int64
 }
 
 // CreateInput is the mutable fields for a new Source.
@@ -123,7 +139,7 @@ func Create(c *database.Catalog, userID []byte, in CreateInput) (Source, error) 
 	if in.Description != "" {
 		fields["description"] = audit.FieldDiff{Old: nil, New: in.Description}
 	}
-	if _, err := audit.Record(tx, audit.Revision{
+	rev, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
 		ActionType: "create_source",
 		CreatedAt:  project.NowUTC(),
@@ -133,7 +149,8 @@ func Create(c *database.Catalog, userID []byte, in CreateInput) (Source, error) 
 			Action:     audit.ActionCreate,
 			Fields:     fields,
 		}},
-	}); err != nil {
+	})
+	if err != nil {
 		return Source{}, err
 	}
 	if err := searchindex.ReprojectSource(tx, idBytes); err != nil {
@@ -143,12 +160,13 @@ func Create(c *database.Catalog, userID []byte, in CreateInput) (Source, error) 
 		return Source{}, err
 	}
 	return Source{
-		ID:           append([]byte(nil), idBytes...),
-		Ref:          sourceRef,
-		SourceTypeID: append([]byte(nil), in.SourceTypeID...),
-		Title:        in.Title,
-		Description:  in.Description,
-		CoverMode:    CoverModeTypeIcon,
+		ID:              append([]byte(nil), idBytes...),
+		Ref:             sourceRef,
+		SourceTypeID:    append([]byte(nil), in.SourceTypeID...),
+		Title:           in.Title,
+		Description:     in.Description,
+		CoverMode:       CoverModeTypeIcon,
+		UpdatedRevision: rev,
 	}, nil
 }
 
@@ -337,7 +355,7 @@ func GetByRef(c *database.Catalog, sourceRef string) (Source, error) {
 	return scanSource(db.QueryRow(sqlGetByRef, sourceRef))
 }
 
-// List returns Sources ordered for a catalog list.
+// List returns Sources newest-first by UUIDv7 id, with UpdatedRevision filled.
 func List(c *database.Catalog) ([]Source, error) {
 	db, err := c.DB()
 	if err != nil {
@@ -350,13 +368,33 @@ func List(c *database.Catalog) ([]Source, error) {
 	defer rows.Close()
 	var out []Source
 	for rows.Next() {
-		s, err := scanSource(rows)
+		s, err := scanSourceList(rows)
 		if err != nil {
 			return nil, err
 		}
 		out = append(out, s)
 	}
 	return out, rows.Err()
+}
+
+// AttachLatestRevision sets UpdatedRevision from the source entity's audit trail.
+func AttachLatestRevision(c *database.Catalog, s *Source) error {
+	if s == nil || len(s.ID) != 16 {
+		return ErrInvalid
+	}
+	if s.UpdatedRevision > 0 {
+		return nil
+	}
+	db, err := c.DB()
+	if err != nil {
+		return err
+	}
+	var rev int64
+	if err := db.QueryRow(sqlLatestRevision, s.ID).Scan(&rev); err != nil {
+		return err
+	}
+	s.UpdatedRevision = rev
+	return nil
 }
 
 // Count returns how many Sources are in the catalog — used by the workspace
@@ -381,6 +419,22 @@ func scanSource(row rowScanner) (Source, error) {
 	var s Source
 	var primary []byte
 	if err := row.Scan(&s.ID, &s.Ref, &s.SourceTypeID, &s.Title, &s.Description, &s.CoverMode, &primary); err != nil {
+		return Source{}, err
+	}
+	s.PrimaryArtifactID = primary
+	if s.CoverMode == "" {
+		s.CoverMode = CoverModeTypeIcon
+	}
+	return s, nil
+}
+
+func scanSourceList(row rowScanner) (Source, error) {
+	var s Source
+	var primary []byte
+	if err := row.Scan(
+		&s.ID, &s.Ref, &s.SourceTypeID, &s.Title, &s.Description, &s.CoverMode, &primary,
+		&s.UpdatedRevision,
+	); err != nil {
 		return Source{}, err
 	}
 	s.PrimaryArtifactID = primary

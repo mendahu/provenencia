@@ -26,9 +26,17 @@ struct SourcesModelTests {
         id: String,
         title: String,
         typeID: String,
-        ref: String = "SRC-AAAAA"
+        ref: String = "SRC-AAAAA",
+        updatedRevision: Int64 = 0
     ) -> CatalogSource {
-        CatalogSource(id: id, ref: ref, sourceTypeID: typeID, title: title, description: "")
+        CatalogSource(
+            id: id,
+            ref: ref,
+            sourceTypeID: typeID,
+            title: title,
+            description: "",
+            updatedRevision: updatedRevision
+        )
     }
 
     private func makeSession(store: FakeStore) -> WorkspaceSession {
@@ -95,7 +103,9 @@ struct SourcesModelTests {
         #expect(model.sources.count == 2)
         #expect(model.types.count == 2)
         #expect(counts.sources == 2)
-        #expect(model.typeLabel(for: model.sources[0]) == "Photograph")
+        let album = model.sources.first { $0.id == "s1" }
+        #expect(album != nil)
+        #expect(model.typeLabel(for: album!) == "Photograph")
     }
 
     @Test func listSourcesFillsThumbnailFromPinnedArtifact() async {
@@ -135,29 +145,32 @@ struct SourcesModelTests {
         )
         await warmLists(model, session: session)
         model.typeFilterID = "t1"
-        #expect(model.visibleSources.map(\.id) == ["s1", "s3"])
+        #expect(model.visibleSources.map(\.id) == ["s3", "s1"])
     }
 
-    @Test func sortOrdersByTitleAndCatalogOrder() async {
+    @Test func sortOrdersByAddedUpdatedAndTitle() async {
         let (model, session) = makeModel(
             sources: [
-                source(id: "s1", title: "Charlie", typeID: "t1"),
-                source(id: "s2", title: "Alpha", typeID: "t1"),
-                source(id: "s3", title: "Bravo", typeID: "t1"),
+                source(id: "s1", title: "Charlie", typeID: "t1", updatedRevision: 1),
+                source(id: "s2", title: "Alpha", typeID: "t1", updatedRevision: 3),
+                source(id: "s3", title: "Bravo", typeID: "t1", updatedRevision: 2),
             ],
             types: [photoType()]
         )
         await warmLists(model, session: session)
-        #expect(model.visibleSources.map(\.id) == ["s1", "s2", "s3"])
+
+        // FakeStore + model: id DESC (s3 > s2 > s1).
+        model.sort = .added
+        #expect(model.visibleSources.map(\.id) == ["s3", "s2", "s1"])
+
+        model.sort = .updated
+        #expect(model.visibleSources.map(\.id) == ["s2", "s3", "s1"])
 
         model.sort = .az
         #expect(model.visibleSources.map(\.title) == ["Alpha", "Bravo", "Charlie"])
 
         model.sort = .za
         #expect(model.visibleSources.map(\.title) == ["Charlie", "Bravo", "Alpha"])
-
-        model.sort = .updated
-        #expect(model.visibleSources.map(\.id) == ["s3", "s2", "s1"])
     }
 
     @Test func createRequiresTypeAndTitle() async {

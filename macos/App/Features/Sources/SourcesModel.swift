@@ -117,9 +117,15 @@ final class SourcesModel {
         }
         switch sort {
         case .added:
-            break
+            // UUIDv7 string form preserves create-time byte order (newest first).
+            rows = rows.sorted { $0.id > $1.id }
         case .updated:
-            rows = rows.reversed()
+            rows = rows.sorted {
+                if $0.updatedRevision != $1.updatedRevision {
+                    return $0.updatedRevision > $1.updatedRevision
+                }
+                return $0.id > $1.id
+            }
         case .az:
             rows = rows.sorted {
                 $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
