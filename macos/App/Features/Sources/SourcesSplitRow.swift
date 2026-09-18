@@ -82,7 +82,7 @@ struct SourcesSplitRow: View {
         }
         .buttonStyle(SourcesSplitZoneButtonStyle(emphasizeOnHover: false))
         .accessibilityLabel(Text(L10n.Sources.openSourcePage))
-        .accessibilityValue("\(source.title), \(source.ref)")
+        .accessibilityValue(Text(verbatim: "\(source.title), \(source.ref)"))
         .accessibilityIdentifier("sources.row.\(source.id).page")
     }
 

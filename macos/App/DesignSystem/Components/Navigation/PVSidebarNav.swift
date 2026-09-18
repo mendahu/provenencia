@@ -278,7 +278,7 @@ private extension View {
     @ViewBuilder
     func pvAccessibilityCount(_ count: Int?) -> some View {
         if let count {
-            accessibilityValue(Text("\(count)"))
+            accessibilityValue(Text(verbatim: "\(count)"))
         } else {
             self
         }
