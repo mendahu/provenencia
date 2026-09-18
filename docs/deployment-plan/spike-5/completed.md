@@ -14,6 +14,7 @@ Changes to the plan itself, as opposed to landed work.
 | S5-01 | **Unified Sources product layer** (design note §1.4): no Interpretation sidebar section; dual action on Sources list → graph; **Subject types / Subject fields** naming; S5-D1 superseded by S5-D3; S5-D2 rewritten. |
 | S5-01 | **Nested config nav** + product rename to **Evidence graph** (§1.4, §12): four vocabulary destinations are children of Sources; UI chrome uses Evidence graph rather than Interpretation graph. |
 | S5-01 | **Schema rename Node → Subject** before S5-02: `subjects`, `subject_types`, `subject_positions`, `subject_type_fields`. Product and engine share one word (design note decision 19). |
+| S5-09 | **Floating-menu unify moved to S5-10** so S5-09 stays docs-only product close; archive the spike folder after S5-10. |
 
 ## Index
 
@@ -27,6 +28,7 @@ Changes to the plan itself, as opposed to landed work.
 | [S5-06](#s5-06--pr-ffi-for-subjects-types-and-positions) | PR | Eight catalog RPCs for types, subjects, positions |
 | [S5-07](#s5-07--pr-nested-sources-nav-and-evidence-graph-place) | PR | Nested Sources rail + Subject stubs + graph place |
 | [S5-08](#s5-08--pr-sources-list--evidence-graph) | PR | Sources list split-row → page or graph; artifact gate |
+| [S5-09](#s5-09--docs-dogfood-product-close) | Docs | Dogfood honesty pass; product foundation closed; S5-10 leftover |
 | [S5-D1](#s5-d1--design-interpretation-nav-entry) | Design | Interpretation sidebar destination — **superseded** |
 | [S5-D2](#s5-d2--design-sources-list--evidence-graph) | Design | Sources list dual action → Evidence graph |
 | [S5-D3](#s5-d3--design-sources-section-nav) | Design | Nested Sources family nav — Subject types / fields stubs |
@@ -227,7 +229,7 @@ xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destin
 | **Deliverables** | Done. `Source.has_artifact` on list/workspace enrich (`artifacts.HasAnyForSource`); `CatalogSource.hasArtifact` + FakeStore/GoStore. Sources list split-row ([`SourcesSplitRow`](../../../macos/App/Features/Sources/SourcesSplitRow.swift)) with page vs graph zones and blocked “Needs an artifact” state; caption band; custom filter/sort via [`PVPopupMenuButton`](../../../macos/App/DesignSystem/Components/Core/PVPopupMenu.swift). Graph destination remains the S5-07 stub. |
 | **Tests** | Done. Go `ListSources` `has_artifact` false→true after `CreateArtifact`. Swift [`SourcesListNavigationTests`](../../../macos/ProvenenciaTests/SourcesListNavigationTests.swift) page/graph locations + FakeStore gate. |
 | **Dogfood** | From Sources list: open filing page (left zone) or Evidence graph stub (right zone when an Artifact exists); no-Artifact rows show inert graph zone. |
-| **Out** | Canvas / Spike 6; Source-page Evidence graph button; SemVer bump; Subject type/field editors. **Floating-menu unify** (history jump onto `PVContextMenu` + open policies) deferred to **S5-09**. |
+| **Out** | Canvas / Spike 6; Source-page Evidence graph button; SemVer bump; Subject type/field editors. **Floating-menu unify** (history jump onto `PVContextMenu` + open policies) deferred to **S5-10**. |
 
 **Landed:** researcher can open an Evidence graph from the Sources list with an honest Artifact gate.
 
@@ -238,3 +240,27 @@ CGO_ENABLED=1 go test -tags fts5 ./api/ffi/handlers/ -run TestListSources
 xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' \
   -only-testing:ProvenenciaTests/SourcesListNavigationTests
 ```
+
+### S5-09 — Docs: dogfood, product close
+
+| | |
+| --- | --- |
+| **Kind** | Docs (PR) |
+| **Depends on** | S5-01…S5-08 (product + design briefs) |
+| **Deliverables** | Done. Honesty pass against the Spike 5 [dogfood bar](deployment-plan.md#goal-dogfood-bar). Plan/README status: product foundation closed; floating-menu unify descoped to **S5-10**. Folder stays under `docs/deployment-plan/spike-5/` until S5-10 archives it. No SemVer bump. |
+| **Tests** | No new product tests. Prior steps already cover the bar (Go `fts5` handlers / subject packages; Swift place/nav/Sources list gate). |
+| **Dogfood** | In-app bar met by prior landings: nested Sources config + stubs (S5-07); list → page / Evidence graph stub + no-Artifact gate (S5-08); Back/Forward graph place (S5-07/S5-08); seven Subject types at create (S5-03). Test/inspection bar met by S5-04…S5-06. |
+| **Out** | Canvas / Spike 6; Source-page Evidence graph button; Subject editors; product SemVer bump; **S5-10** menu unify; moving this spike folder to `archive/`. |
+
+**Landed:** Spike 5’s interpretation foundation is documented as dogfood-complete for Spike 6. One Mac hygiene PR remains (S5-10).
+
+**Bar → landing map:**
+
+| Bar item | Met by |
+| --- | --- |
+| Nested Sources config, no Interpretation item | S5-07 |
+| List → Evidence graph stub / Source page | S5-08 |
+| No-Artifact gate | S5-08 |
+| Back/Forward graph place | S5-07 + S5-08 |
+| Seed seven Subject types | S5-03 |
+| Subject CRUD / positions / FakeStore RPCs | S5-04…S5-06 |

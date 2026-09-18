@@ -4,7 +4,7 @@ Interpretation foundation: candidate refs, subject vocabulary, Subjects, layout 
 
 ## Status
 
-**Planned.** Landings go in [`completed.md`](completed.md). S5-01 through S5-08, and S5-D1 / S5-D2 / S5-D3, are recorded there.
+**Product foundation done** (S5-01…S5-09). Landings go in [`completed.md`](completed.md). **S5-10** (unify floating menus) remains open before this folder is archived.
 
 > **This spike ships no Subject UI.** The graph is the only surface for Subjects, Citations, and Observations (design note §1.3), and the graph is Spike 6. Product nav keeps **one Sources family** — no Interpretation sidebar section (§1.4). Entry is dual action on the Sources list → graph stub. See *Scope boundary* below.
 
@@ -68,8 +68,11 @@ S5-D2  List dual action        │
   └────── gates ────────────▶ S5-08  Sources list Interpret action
                                │     + no-Artifact gate
                                ▼
-                             S5-09  Docs, dogfood, cleanup
-                                   (+ unify floating menus)
+                             S5-09  Docs, dogfood, product close   done
+                               │
+                               ▼
+                             S5-10  Unify floating menus
+                                   then archive spike-5
 ```
 
 ---
@@ -87,19 +90,30 @@ S5-D2  List dual action        │
 - [x] S5-06 — FFI methods for subject types, subjects, and positions → [`completed.md`](completed.md)
 - [x] S5-07 — Nested Sources nav + Subject* stubs + graph place + `WorkspaceLocation` discriminator → [`completed.md`](completed.md)
 - [x] S5-08 — Sources list → Evidence graph stub → [`completed.md`](completed.md)
-- [ ] S5-09 — Docs, dogfood, cleanup (incl. unify floating menus)
+- [x] S5-09 — Docs, dogfood, product close → [`completed.md`](completed.md)
+- [ ] S5-10 — Unify floating menus → then archive this spike folder
 
 ---
 
-## S5-09 — Docs, dogfood, cleanup
+## S5-09 — Docs, dogfood, product close
 
-Closing step immediately after S5-08. Docs + dogfood pass, plus small Mac cleanup that S5-08 made obvious.
+Docs-only closing step for the **product** dogfood bar after S5-08. No SemVer bump. No menu code.
 
-### Unify floating menus (immediate follow-up to S5-08)
+**In S5-09:**
 
-S5-08 shipped Sources filter/sort via `PVPopupMenuButton` → `PVContextMenuPanel`, while Back/Forward still uses a private `HistoryJumpMenuPanel` / `HistoryJumpMenuHost` with the same card chrome and dismiss pattern. Cover thumbnail menus already use `PVContextMenu`.
+- Honesty pass against the [goal bar](#goal-dogfood-bar) above — every in-app and test item is met by S5-01…S5-08.
+- Write `### S5-09` in [`completed.md`](completed.md); update [`README.md`](README.md) status.
+- Leave this folder in place until **S5-10** finishes; then move `docs/deployment-plan/spike-5/` to `docs/deployment-plan/archive/spike-5/`.
 
-**In S5-09:** fold history (and any remaining parallel) onto one design-system floating menu:
+Floating-menu unify is **not** in this step — see S5-10.
+
+---
+
+## S5-10 — Unify floating menus
+
+Mac cleanup after S5-08 made the duplication obvious. S5-08 shipped Sources filter/sort via `PVPopupMenuButton` → `PVContextMenuPanel`, while Back/Forward still uses a private `HistoryJumpMenuPanel` / `HistoryJumpMenuHost` with the same card chrome and dismiss pattern. Cover thumbnail menus already use `PVContextMenu`.
+
+**In S5-10:** fold history (and any remaining parallel) onto one design-system floating menu:
 
 - Shared panel chrome + dismiss / positioning (`PVContextMenuPanel` / presenter).
 - Composable open policies: right-click, primary click, long-press (Back/Forward keeps step-on-click).
@@ -107,12 +121,9 @@ S5-08 shipped Sources filter/sort via `PVPopupMenuButton` → `PVContextMenuPane
 - History row content (icon + section › leaf + ref) stays custom row payload inside the shared panel — do not invent a third menu type.
 - Delete duplicated `HistoryJumpMenuPanel` card styling once history hosts through the shared kit.
 
-Do this in the S5-09 PR (or a tiny PR stacked immediately under it before closing the spike). Do **not** block S5-08 merge on it.
+**After S5-10:** archive Spike 5 (`docs/deployment-plan/spike-5/` → `archive/spike-5/`) and point [`docs/deployment-plan/README.md`](../README.md) at the archive.
 
-### Also in S5-09
-
-- Spike docs / dogfood honesty pass against the goal bar above.
-- Close Spike 5 in [`completed.md`](completed.md) / [`README.md`](README.md) when the bar is met.
+Depends on S5-09 (product docs closed). Does not block Spike 6 canvas work.
 
 ---
 
@@ -267,7 +278,8 @@ The one thing it did change is the name of the layout table. It is **`subject_po
 | S5-06 | Expose subject types, subjects, and positions over FFI |
 | S5-07 | Nest Sources config nav and register the evidence graph place |
 | S5-08 | Open an evidence graph from the Sources list |
-| S5-09 | Document the interpretation foundation, unify floating menus, and close spike 5 |
+| S5-09 | Document the interpretation foundation and close Spike 5 product work |
+| S5-10 | Unify workspace floating menus onto PVContextMenu |
 
 ---
 
@@ -277,9 +289,9 @@ The one thing it did change is the name of the layout table. It is **`subject_po
 | --- | --- |
 | **Design (no PRs)** | S5-D3 → S5-D2 (done; S5-D1 superseded) |
 | **Go core (critical path)** | S5-01 → S5-06 |
-| **Mac client** | S5-07 → S5-08 → S5-09 |
+| **Mac client** | S5-07 → S5-08 → S5-09 → S5-10 |
 
-S5-01…S5-08 and design briefs S5-D2 / S5-D3 are done. Next: S5-09 (docs, dogfood, unify floating menus, close spike).
+S5-01…S5-09 and design briefs S5-D2 / S5-D3 are done. Next: S5-10 (unify floating menus), then archive this spike folder. Spike 6 may start from the product foundation without waiting on S5-10.
 
 ---
 
