@@ -26,7 +26,7 @@ Authoritative schema: interpretation-layer Properties / `subject_type_fields`; s
 | --- | --- |
 | Property `label`, `key`, `origin`, `description` | Same vocabulary grammar as Source fields. |
 | `value_type` | **Exactly five:** `text`, `integer`, `date`, `name`, `subject`. Chosen at create; **immutable** afterward. No `real` / `boolean`. |
-| Bindings | `subject_type_fields` joins Subject type ↔ Property. Subject types are a **fixed seeded picker**, not a link into a types editor. |
+| Bindings | `subject_type_fields` joins Subject type ↔ Property. Subject types are a **fixed seeded picker**, not a link into a types editor. **Required/locked** seeded bindings (bridge edges) come from the Interpretation subject registry — UI must not treat them as freely deletable. |
 | Seeded Properties | Install at project create; list with system origin. |
 | Subject-valued Properties | `person`, `event`, `place`, `participant` are edges; UI may hint target kind in copy, but no SQL allow-list chrome required for v1. |
 | Avoid "claim" | Use **Subject fields** / Property language. |
@@ -56,8 +56,8 @@ Authoritative schema: interpretation-layer Properties / `subject_type_fields`; s
 | SF-2 | List Properties across origins; show `value_type` and origin. |
 | SF-3 | Detail: label, description, key, origin, value_type (read-only after create), bindings to Subject types. |
 | SF-4 | Create: label → key slug; **value_type** picker with only the five types; origin = user. |
-| SF-5 | Bind / unbind Properties to **seeded** Subject types (propose UX on Property detail — fixed type checklist/picker, not a types admin screen). |
-| SF-6 | Delete Property when unused; refuse while Observations or bindings require it (propose clear conflict copy). |
+| SF-5 | Bind / unbind Properties to **seeded** Subject types (propose UX on Property detail — fixed type checklist/picker, not a types admin screen). **Locked/required** registry bindings are non-removable (show why). |
+| SF-6 | Delete Property when unused; refuse while Observations or bindings require it (propose clear conflict copy). Locked provenencia edge Properties follow the same refuse path. |
 | SF-7 | Seeded Properties discoverable; first-class keys (`name`, `birth_date`, …) need no special chrome beyond origin. |
 | SF-8 | Accessibility parity with Source fields. |
 

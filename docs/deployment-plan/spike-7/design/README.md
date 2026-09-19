@@ -36,6 +36,7 @@ _None yet._
 - **Product IA:** Sources is primary work. Source types / Source fields / Subject fields are nested config under Sources. **Subject types** stay seeded (person / event / place / bridges / source) with first-class UI — not a researcher-editable vocabulary. Spike 5 may still show a Subject types stub in the rail; do not design an editor for it.
 - **Evidence graph** is the product name for the Source-scoped canvas (engine: Interpretation layer — Citations / Observations / Subjects).
 - **Subject fields** map to `properties` (+ bindings). Do **not** use "claim."
+- **Interpretation subject registry** (S7-01) is the SoT for type capabilities, locked bindings, and connect rules — UI must not hard-code type keys.
 - Candidate refs: `CPR-…` etc. vs concluded `PER-…`.
 - **Citation composer is a navigable place** (Option B): leave the graph, full-window viewer\|form, Back returns. Not a sheet over the canvas.
 - Value types in this spike: **text**, **integer**, **date**, **name**, **subject** only (no `real` / `boolean`).

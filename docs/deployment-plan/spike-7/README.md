@@ -8,7 +8,7 @@ Stand up the Interpretation **Citation → Observation** pipeline on the Evidenc
 
 > **Composer is Option B:** navigate away from the graph to a first-class workspace place (viewer \| form). Not an in-window modal over the canvas, and not a companion `NSWindow`.
 
-> **Subject types are not user-editable.** The seven seeded kinds (person / event / place / bridges / source) stay product-seeded with first-class graph plumbing. No Subject types CatalogVocabulary UI in this spike (S7-D1 / S7-04 descoped).
+> **Subject types are not user-editable.** The seven seeded kinds (person / event / place / bridges / source) stay product-seeded with first-class graph plumbing. No Subject types CatalogVocabulary UI in this spike (S7-D1 / S7-04 descoped). Behavior (capabilities, locked bindings, connect matrix) is declared in one **Interpretation subject registry** in S7-01 — the plugin extension point later.
 
 ## Documents
 

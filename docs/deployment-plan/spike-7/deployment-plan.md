@@ -10,6 +10,8 @@ Citations, Observations, NameValue, Subject **fields** editor, citation composer
 
 > **Subject types stay product-seeded.** person / event / place / relationship / participation / location / source are first-class app kinds (palette, cards, macros), not a researcher-extensible CatalogVocabulary. **S7-D1 / S7-04 are descoped.**
 
+> **Behavior lives in one registry.** Classification (root / bridge / reification), canvas placeability, required/locked bindings, and connect endpoint rules are declared next to the create-time seed — not hard-coded across graph, composer, and Subject fields UI. Future `plugin:<id>` types extend that same registry shape.
+
 ## Goal (dogfood bar)
 
 All of the following must be true in the app:
@@ -38,6 +40,30 @@ Product value types: **`text`**, **`integer`**, **`date`**, **`name`**, **`subje
 | **integer** | `age_at_event` |
 
 **Seed:** [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.2–3.3 for person / event / place / participation / location / relationship. Defer `source` / `mentions` / `remark` UI. Open pickers for `event_type` / `role`; `relationship_type` open text (± short starter).
+
+## Interpretation subject registry (central source of truth)
+
+Spike 5 already seeds Subject types from [`core/database/subjecttypes/registry.go`](../../../core/database/subjecttypes/registry.go). Spike 7 **must not** sprinkle “person is placeable,” “participation needs person+event,” or connect pair rules across Swift views and handlers.
+
+**In S7-01**, grow a single declarative Interpretation vocabulary registry (prefer one package parallel to [`sourcevocab`](../../../core/database/sourcevocab/) — e.g. expand `subjecttypes` into / introduce `subjectvocab` that owns Install for types + properties + bindings). That registry is the **only** product definition of:
+
+| Concern | Declared on | Used by |
+| --- | --- | --- |
+| Type identity | `key`, labels, ref prefixes, `origin=provenencia` | DB seed rows (as today) |
+| **Role / capabilities** | e.g. root vs bridge vs reification; placeable on Evidence graph; create requires Citation | Palette, card chrome, connect entry, empty states |
+| **Properties** | key, value_type, labels | `properties` seed + Subject fields + Observation editors |
+| **Bindings** | type_key → property_key (+ sort) | `subject_type_fields` seed; Add-property menus |
+| **Required / locked bindings** | which seeded bindings macros need and UI must not unbind | Subject fields delete/unbind; connect pre-fill |
+| **Connect matrix** | allowed endpoint pairs + which bridge type + which edge Properties / disambiguation fields | S7-10 macros (read registry; do not re-encode §3.2 in the view) |
+
+**Rules:**
+
+1. **DB stays structural** — no requirement to add `kind` columns in Spike 7; capabilities live in the registry (and may be exported over FFI as read-only config if the client needs them).
+2. **UI and FFI handlers look up by `(key, origin)` / registry helpers** — no scattered `if typeKey == "participation"` copies in card chrome, composer, and connect sheet.
+3. **Create-time Install only** — same `add-seeded-vocabulary` semantics as Source; open does not heal.
+4. **Plugin seam** — later `plugin:<id>` contributes additional registry modules (or merged Install entries) with the **same capability fields**; researcher UI still does not invent Subject types. Document the registry shape in code comments / package README so the first plugin spike knows where to plug in.
+
+Dogfood check for the registry: changing a capability or locked binding in **one** place changes seed + app behavior without hunting call sites.
 
 ## Composer presentation (locked: Option B)
 
@@ -96,7 +122,9 @@ design                              build
 ─────────────                       ─────────────────────────────────────────
 
 S7-D2 Subject fields                S7-01  properties + subject_type_fields
-  │                                 │      + seed registry + Go CRUD/FFI
+  │                                 │      + **central subject registry**
+  │                                 │      (capabilities, locked bindings,
+  │                                 │       connect matrix, Install)
   │                                 ▼
 S7-D5 NameValue editor              S7-02  NameValue schema + Go
   │                                 │      (ungated; tables + package)
@@ -141,7 +169,7 @@ Schema/Go PRs (01–03, 02) may start before design finishes; **UI PRs gate on t
 - [ ] S7-D3 — Design: Evidence graph updates → [`completed.md`](completed.md)
 - [ ] S7-D4 — Design: Citation composer place → [`completed.md`](completed.md)
 - [ ] S7-D5 — Design: NameValue editor → [`completed.md`](completed.md)
-- [ ] S7-01 — `properties` + `subject_type_fields` + seed + Go/FFI → [`completed.md`](completed.md)
+- [ ] S7-01 — `properties` + `subject_type_fields` + **central Interpretation subject registry** + Go/FFI → [`completed.md`](completed.md)
 - [ ] S7-02 — NameValue schema + Go → [`completed.md`](completed.md)
 - [ ] S7-02b — NameValue Swift editor → [`completed.md`](completed.md)
 - [ ] S7-03 — Citations + Observations + locator validation + FFI → [`completed.md`](completed.md)
@@ -189,12 +217,22 @@ Claude Design board for the reusable NameValue modal (DateValue twin). Brief: [`
 
 Migration(s) for `properties`, `subject_type_fields`; `value_type` limited to text / integer / date / name / subject; create-time seed via `add-seeded-vocabulary`; audited CRUD + FFI; list bindings for Add-property menus. Update interpretation-layer model docs to drop `real` / `boolean`. Bindings reference existing Spike 5 `subject_types` rows only.
 
+**Registry (required):** Centralize Interpretation subject vocabulary in one declarative registry (expand `subjecttypes` and/or add `subjectvocab` parallel to `sourcevocab`) that:
+
+- Seeds Subject types (move/keep today’s seven rows here), Properties, and `subject_type_fields`
+- Declares **capabilities** per type (root / bridge / reification, canvas placeable, citation-required-at-create, …)
+- Declares **required/locked** bindings for bridge macros
+- Declares the **connect matrix** (endpoint pairs → bridge type → edge Properties / disambiguation fields)
+- Exposes lookup helpers so graph, Subject fields, composer, and connect **do not hard-code type keys**
+
+Wire Install into `onboarding.createCatalog` only. Follow [`.cursor/skills/add-seeded-vocabulary`](../../../.cursor/skills/add-seeded-vocabulary/SKILL.md); update that skill’s domain table when the package lands.
+
 | | |
 | --- | --- |
-| **In** | Tables, seed registry, Go packages, FFI list/create/update/delete (unused), bindings query. |
-| **Out** | Subject fields UI (S7-05); Observations; Subject types user CRUD. |
-| **Testable** | Create project seeds §3.2–3.3 bindings; Go tests; FakeStore round-trip. |
-| **Depends on** | Spike 5 `subject_types`. **Not** gated on design. |
+| **In** | Tables; central registry + Install; Go packages; FFI list/create/update/delete (unused Properties); bindings query; capability/connect lookup API. |
+| **Out** | Subject fields UI (S7-05); Observations; Subject types user CRUD; scattering capability checks in Swift views. |
+| **Testable** | Create project seeds §3.2–3.3 bindings; registry tests for capabilities + locked bindings; Go tests; FakeStore round-trip. |
+| **Depends on** | Spike 5 `subject_types` table (may fold Install into the new registry package). **Not** gated on design. |
 
 ---
 
@@ -243,7 +281,7 @@ Properties + `subject_type_fields` bindings; five value_types only; mirror Sourc
 
 | | |
 | --- | --- |
-| **In** | Vocabulary browser; bind Properties to seeded Subject types; value_type at create (immutable). |
+| **In** | Vocabulary browser; bind Properties to seeded Subject types; value_type at create (immutable); respect registry **locked** bindings. |
 | **Out** | Composer; Observation editors beyond type pickers; Subject types CRUD. |
 | **Testable** | Bind a field; see it available for that type. |
 | **Depends on** | S7-01, **S7-D2**. |
@@ -308,10 +346,10 @@ Disambiguation sheet on graph (§3.2 matrix); navigate to composer with pre-fill
 
 | | |
 | --- | --- |
-| **In** | person→event role; person→person relationship vs shared-event choice; event→place clean; refuse unsupported; atomic bridge + Citation + edges. |
-| **Out** | Pinning; full conflicted/negated chrome. |
-| **Testable** | Connect two people → disambiguate → cite → bridge persists with Observations; relaunch keeps edges. |
-| **Depends on** | S7-09, **S7-D3**. |
+| **In** | person→event role; person→person relationship vs shared-event choice; event→place clean; refuse unsupported; atomic bridge + Citation + edges — **driven by the S7-01 registry connect matrix**, not a second hard-coded table in the view. |
+| **Out** | Pinning; full conflicted/negated chrome; inventing connect rules outside the registry. |
+| **Testable** | Connect two people → disambiguate → cite → bridge persists with Observations; relaunch keeps edges; unsupported pairs refuse per registry. |
+| **Depends on** | S7-09, **S7-D3**, S7-01 registry. |
 
 ---
 
@@ -346,6 +384,8 @@ Honesty pass against the [goal bar](#goal-dogfood-bar). Record in [`completed.md
 6. **Provisional Spike 6 links** must be replaced or clearly migrated; do not leave honesty labels as permanent UI.
 7. **NameValue ≠ transcription** — transcription stays on the Citation; NameValue is the Observation normalization.
 8. **Drop `real` / `boolean` in model docs** when shipping S7-01/S7-03 so product and schema stay aligned.
+9. **No sprinkled type keys** — placeability, bridge vs root, locked bindings, and connect pairs come from the S7-01 Interpretation subject registry. Views call helpers; they do not re-encode `participation` / `relationship` special cases.
+10. **Plugin path is the registry** — when plugins arrive, they extend Install/registry modules with the same capability fields; do not invent a second configuration channel.
 
 ---
 
