@@ -192,6 +192,8 @@ var seedTerms = []seedTerm{
 	{PropertyKey: "sex_at_birth", Key: "female", Label: "Female"},
 	{PropertyKey: "sex_at_birth", Key: "male", Label: "Male"},
 	{PropertyKey: "sex_at_birth", Key: "intersex", Label: "Intersex"},
+	{PropertyKey: "sex_at_birth", Key: "indeterminate", Label: "Indeterminate"},
+	{PropertyKey: "sex_at_birth", Key: "unknown", Label: "Unknown"},
 
 	{PropertyKey: "event_type", Key: "birth", Label: "Birth"},
 	{PropertyKey: "event_type", Key: "death", Label: "Death"},

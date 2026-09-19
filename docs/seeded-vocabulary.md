@@ -416,9 +416,11 @@ Product-seeded **term keys** for sex recorded or assigned at birth (not gender i
 female
 male
 intersex
+indeterminate
+unknown
 ```
 
-Researchers may add further `origin=user` terms for source-specific wording. Do not treat these as free-text Observation strings.
+Use `intersex` when the source indicates intersex / DSD variation; `indeterminate` when sex was considered but could not be determined; `unknown` when the source is silent, illegible, or explicitly unknown. Researchers may add further `origin=user` terms for source-specific wording. Do not treat these as free-text Observation strings.
 
 ---
 
