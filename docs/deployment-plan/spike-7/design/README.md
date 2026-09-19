@@ -8,7 +8,7 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 
 | Step | Brief | Feeds | Notes |
 | --- | --- | --- | --- |
-| S7-D2 | [`S7-D2-subject-fields.md`](S7-D2-subject-fields.md) | PR S7-05 | Subject fields — few types / many Properties; creative IA (e.g. type cards), not Source fields |
+| S7-D2 | [`S7-D2-subject-fields.md`](S7-D2-subject-fields.md) | PR S7-05 | Subject fields — few types / many Properties; six value_types incl. **`term`**; creative IA (e.g. type cards), not Source fields; no Event types / Roles admin |
 | S7-D3 | [`S7-D3-evidence-graph-updates.md`](S7-D3-evidence-graph-updates.md) | PRs S7-09, S7-10 | Graph first: Add property + card growth (**S7-09** before thick composer) |
 | S7-D4 | [`S7-D4-citation-composer.md`](S7-D4-citation-composer.md) | PR S7-08 | Thin composer first (form + text); viewers/locators later |
 | S7-D5 | [`S7-D5-name-value-editor.md`](S7-D5-name-value-editor.md) | PR S7-02b | NameValue modal — late fill-in after thin composer; not on path to S7-05 |
@@ -36,10 +36,11 @@ _None yet._
 - **Product IA:** Sources is primary work. Source types / Source fields / Subject fields are nested config under Sources. **Subject types** stay seeded (person / event / place / bridges / source) with first-class UI — not a researcher-editable vocabulary. Spike 5 may still show a Subject types stub in the rail; do not design an editor for it.
 - **Evidence graph** is the product name for the Source-scoped canvas (engine: Interpretation layer — Citations / Observations / Subjects).
 - **Subject fields** map to `properties` (+ bindings). Do **not** use "claim."
-- **Interpretation subject registry** (S7-01) is the SoT for type capabilities, locked bindings, and connect rules — UI must not hard-code type keys.
+- **Interpretation subject registry** (S7-01 / S7-01b) is the SoT for type capabilities, locked bindings, connect rules, and **Property term** sets — UI must not hard-code type keys or invent Event types / Roles places.
 - Candidate refs: `CPR-…` etc. vs concluded `PER-…`.
 - **Citation composer is a navigable place** (Option B): leave the graph, full-window viewer\|form, Back returns. Not a sheet over the canvas.
-- Value types in this spike: **text**, **integer**, **date**, **name**, **subject** only (no `real` / `boolean`).
+- Value types in this spike: **text**, **integer**, **date**, **name**, **subject**, **`term`** only (no `real` / `boolean`). Kind/edge Properties use `term`.
 - **NameValue** has its own brief (**S7-D5**) — not designed inside the composer board.
+- **Term picker** (search product terms + Add custom / rename / delete user terms) belongs in the composer board (**S7-D4**), not as a Subject fields CatalogVocabulary.
 - Media in composer: **image** and **PDF** only (audio/video later).
 - Extend: Subject fields stub (S5-D3), Evidence graph cards (S6-D1/D2), DateValue editor (`Features/Dates/`). Source types/fields are **contrast** for Subject fields — do not copy that chrome for S7-D2.
