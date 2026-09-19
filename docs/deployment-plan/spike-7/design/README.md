@@ -8,7 +8,7 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 
 | Step | Brief | Feeds | Notes |
 | --- | --- | --- | --- |
-| S7-D2 | [`S7-D2-subject-fields.md`](S7-D2-subject-fields.md) | PR S7-05 | Subject fields — few types / many Properties; six value_types incl. **`term`**; creative IA (e.g. type cards), not Source fields; no Event types / Roles admin |
+| S7-D2 | [`S7-D2-subject-fields.md`](S7-D2-subject-fields.md) | PR S7-05 | Subject fields — few types / many Properties; create offers five value_types (**not** `term`); creative IA; no Event types / Roles admin |
 | S7-D3 | [`S7-D3-evidence-graph-updates.md`](S7-D3-evidence-graph-updates.md) | PRs S7-09, S7-10 | Graph first: Add property + card growth (**S7-09** before thick composer) |
 | S7-D4 | [`S7-D4-citation-composer.md`](S7-D4-citation-composer.md) | PR S7-08 | Thin composer first (form + text); viewers/locators later |
 | S7-D5 | [`S7-D5-name-value-editor.md`](S7-D5-name-value-editor.md) | PR S7-02b | NameValue modal — late fill-in after thin composer; not on path to S7-05 |
@@ -39,8 +39,8 @@ _None yet._
 - **Interpretation subject registry** (S7-01 / S7-01b) is the SoT for type capabilities, locked bindings, connect rules, and **Property term** sets — UI must not hard-code type keys or invent Event types / Roles places.
 - Candidate refs: `CPR-…` etc. vs concluded `PER-…`.
 - **Citation composer is a navigable place** (Option B): leave the graph, full-window viewer\|form, Back returns. Not a sheet over the canvas.
-- Value types in this spike: **text**, **integer**, **date**, **name**, **subject**, **`term`** only (no `real` / `boolean`). Kind/edge Properties use `term`.
+- Value types in this spike: **text**, **integer**, **date**, **name**, **subject**, **`term`** (schema). Kind/edge Properties use `term` via **registry only** — Subject fields create UI does **not** offer `term`.
 - **NameValue** has its own brief (**S7-D5**) — not designed inside the composer board.
-- **Term picker** (search product terms + Add custom / rename / delete user terms) belongs in the composer board (**S7-D4**), not as a Subject fields CatalogVocabulary.
+- **Term picker** (search product terms + Add custom / rename / delete user *term rows*) belongs in the composer board (**S7-D4**), not as a Subject fields CatalogVocabulary.
 - Media in composer: **image** and **PDF** only (audio/video later).
 - Extend: Subject fields stub (S5-D3), Evidence graph cards (S6-D1/D2), DateValue editor (`Features/Dates/`). Source types/fields are **contrast** for Subject fields — do not copy that chrome for S7-D2.

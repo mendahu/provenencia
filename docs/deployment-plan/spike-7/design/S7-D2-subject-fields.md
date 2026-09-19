@@ -38,8 +38,8 @@ Authoritative schema: interpretation-layer Properties / `subject_type_fields` / 
 | Seven fixed types | Show them as a closed, knowable set. Icons/colors may align with Evidence graph presentation tokens later; for this board, clear type identity is enough. |
 | Many Properties | Search / filter / density required for the property side. |
 | Bindings | Many-to-few: Properties ↔ the seven types. Locked/required bridge bindings from the Interpretation subject registry are not freely removable. |
-| `value_type` | Exactly **six**: `text`, `integer`, `date`, `name`, `subject`, **`term`**. Immutable after create. |
-| **`term` Properties** | Kind/edge Properties (`event_type`, `role`, `relationship_type`) are term-valued. Creating a Property with `value_type = term` is in scope here; **installing / browsing term *values*** is **not** a new sidebar destination — product terms ship via seed; user terms are managed in the **composer picker** (S7-D4) or a lightweight per-Property sheet if you show one from Subject fields. |
+| `value_type` | Product schema has six: `text`, `integer`, `date`, `name`, `subject`, **`term`**. **Create Property UI offers five** — never `term`. `term` Properties exist only via registry Install (product/plugin). Immutable after create. |
+| **`term` Properties** | Kind/edge Properties (`event_type`, `role`, `relationship_type`) are registry-seeded and term-valued. Show them in the list/bindings like other seeded Properties. **Do not** let researchers create a Property with `value_type = term`. Term *values* (including user-minted rows) are managed in the **composer picker** (S7-D4), not as a Subject fields CatalogVocabulary. |
 | Origin | Seeded (`provenencia`) vs user — visible without cluttering a dense property surface. |
 | Avoid "claim" | **Subject fields** / Property language only. |
 
@@ -56,7 +56,7 @@ Authoritative schema: interpretation-layer Properties / `subject_type_fields` / 
 
 | Ships in S7-05 | Does **not** ship there |
 | --- | --- |
-| Create/edit Properties (six value_types incl. `term`); bind to the seven seeded types | Citation composer; NameValue/DateValue editors; full term-value CRUD UI (unless a tiny “manage custom terms for this Property” sheet is justified) |
+| Create/edit Properties (**five** researcher value_types — no `term`); bind to the seven seeded types; show seeded `term` Properties read-only as to value_type | Citation composer; NameValue/DateValue editors; term-value CRUD; offering `term` in create Property |
 | Layout from **this** board (whatever IA you choose) | Source-fields chrome; a types list that pretends types are a large catalog; Event types / Roles browsers |
 
 ---
@@ -71,8 +71,8 @@ Questions the board should answer (without prescribing answers):
 2. Could types be a **horizontal card strip**, tab bar, or other non-list treatment?
 3. How does someone **find** one Property among dozens once a type (or “all”) is in focus?
 4. How are **locked** registry bindings shown without looking like broken checkboxes?
-5. What does create Property feel like in this IA — especially choosing **`term`** vs `text`?
-6. If a Property is term-typed, how (if at all) do you surface “this has N product terms / M custom terms” without becoming an Event types browser?
+5. What does create Property feel like in this IA (five value types — **no** `term`)?
+6. How are seeded **`term`** Properties shown so it’s clear they’re product vocabulary (not “broken” or missing an edit affordance for value type)?
 7. Narrow workspace column: how do you use width for types vs depth for Properties?
 
 Still mounts in the existing **Subject fields** sidebar destination — no new top-level section.
@@ -86,14 +86,14 @@ Still mounts in the existing **Subject fields** sidebar destination — no new t
 | SF-1 | Mount in **Subject fields**. **New UI** — not Source fields / CatalogVocabulary list chrome. |
 | SF-2 | **Seven types** treated as a fixed, small set — visible together without a long type list. Explore non-list type chrome (e.g. horizontal cards). |
 | SF-3 | **Properties** usable at ~30–40 rows: search and/or filter required; justify if omitted. |
-| SF-4 | Researcher can create/edit a Property: label, description, key (slug), origin=user, value_type (**six** options including `term`, immutable after create). |
+| SF-4 | Researcher can create/edit a Property: label, description, key (slug), origin=user, value_type (**five** options: `text` / `integer` / `date` / `name` / `subject` — **not** `term`, immutable after create). |
 | SF-5 | Researcher can see and change bindings to the seven types; **locked** bindings non-removable (show why). |
 | SF-6 | Delete Property when unused; refuse while in use / locked. |
-| SF-7 | Seeded vs user Properties distinguishable. |
+| SF-7 | Seeded vs user Properties distinguishable; seeded `term` Properties visible without inviting value_type edit. |
 | SF-8 | Keyboard / VoiceOver complete for the chosen IA. |
 | SF-9 | Board includes **at least two layout directions** explored; annotate why the chosen one fits “few types / many properties.” |
 | SF-10 | Contrast frame vs Source fields (short stack) — optional but useful. |
-| SF-11 | **No** Event types / Roles / Relationship-types destinations. Term *values* are not a CatalogVocabulary place on this board. |
+| SF-11 | **No** Event types / Roles / Relationship-types destinations. **No** create-Property path for `value_type = term`. |
 
 ---
 
@@ -102,9 +102,9 @@ Still mounts in the existing **Subject fields** sidebar destination — no new t
 1. Destination overview showing **all seven types** in the chosen type chrome + a dense Property surface.
 2. Focused state (one type selected / filtered) with its Properties and bindings.
 3. Search / filter among many Properties.
-4. Create Property (**six** value_types, including `term`).
+4. Create Property (**five** researcher value_types — no `term`).
 5. Locked binding treatment on a bridge type (e.g. participation).
-6. Optional: a term-typed Property detail that acknowledges terms exist without becoming a full term browser (defer deep term CRUD to composer / S7-D4).
+6. Optional: a seeded `term` Property in the list showing value type as product vocabulary (not creatable).
 7. Alternate layout exploration (second direction) — even if not chosen.
 
 ---

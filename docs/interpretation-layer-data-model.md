@@ -560,6 +560,8 @@ Product value types are **`text`**, **`integer`**, **`date`**, **`name`**, **`su
 
 `value_type = 'term'` means the Observation value is a row in `property_terms` for that Property (§5.1.1). Kind and edge Properties (`event_type`, `role`, `relationship_type`) use `term`.
 
+**Who may create a Property with `value_type = term`:** product/plugin Install (Interpretation subject registry) only. Researcher Property create (`origin=user`) must **not** offer or accept `term` — those Properties stay `text` / `integer` / `date` / `name` / `subject`. Researchers may still mint additional **term rows** (`origin=user`) under an existing registry term Property via the composer picker.
+
 The semantic vocabulary is open, but the primitive value system is intentionally constrained. A researcher may define a new Property without introducing a new storage type.
 
 `value_type = 'date'` always means the shared structured DateValue model in [`structured-date-model.md`](structured-date-model.md), not a SQL date or free-text date string.
@@ -589,7 +591,7 @@ CREATE TABLE property_terms (
 
 Domain rows (Observations, and later Reconciliation Claims when term-valued) reference `property_terms.id`, never bare `key`. Application recognition of shipped terms looks up `(property key, term key, origin = 'provenencia')`.
 
-**Policy (product default for kind/edge Properties):** Install seeds a **large** product term set so `other` is rare. Researchers may mint additional `origin=user` terms (composer picker **Add custom…**, with rename/delete when unused — not a per-vocabulary sidebar destination). Product/plugin terms are not researcher-editable. First-class behavior (capabilities) is declared in the Interpretation subject registry on recognized terms; user terms remain valid identity without app specialization.
+**Policy (product default for kind/edge Properties):** Install (registry) is the only path that creates Properties with `value_type = term`. Install seeds a **large** product term set so `other` is rare. Researchers may mint additional `origin=user` **term rows** under those Properties (composer picker **Add custom…**, with rename/delete when unused — not a per-vocabulary sidebar destination). Product/plugin terms are not researcher-editable. First-class behavior (capabilities) is declared in the Interpretation subject registry on recognized terms; user term rows remain valid identity without app specialization.
 
 `subjects.label` stays a free working handle on the Evidence graph. It is **not** event-type or role identity.
 
