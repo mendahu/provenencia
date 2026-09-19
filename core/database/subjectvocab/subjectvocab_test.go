@@ -61,8 +61,16 @@ func TestSubjectVocab(t *testing.T) {
 				if err := Install(c); err != nil {
 					t.Fatal(err)
 				}
-				prop, err := properties.Lookup(c, "age_at_event", properties.OriginProvenencia)
+				prop, err := properties.Lookup(c, "remark", properties.OriginProvenencia)
 				if err != nil {
+					t.Fatal(err)
+				}
+				// Unbind source.remark first so the Property can be deleted.
+				srcType, err := subjecttypes.Lookup(c, "source", subjecttypes.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := DeleteBinding(c, srcType.ID, prop.ID); err != nil {
 					t.Fatal(err)
 				}
 				db, err := c.DB()
@@ -79,9 +87,9 @@ func TestSubjectVocab(t *testing.T) {
 					t.Fatal(err)
 				}
 				defer reopened.Close()
-				_, err = properties.Lookup(reopened, "age_at_event", properties.OriginProvenencia)
+				_, err = properties.Lookup(reopened, "remark", properties.OriginProvenencia)
 				if err == nil {
-					t.Fatal("healed age_at_event on open")
+					t.Fatal("healed remark on open")
 				}
 			},
 		},

@@ -305,8 +305,6 @@ Do not reuse the reserved catalog prefixes `USR`, `SRC`, `ART`, `CIT`, `OBS`. Bo
 ```text
 key                 value_type    notes
 name                name
-name_format         text          primarily Conclusion reconciliation; profile key
-age_at_event        integer
 event_type          text          open values; see §3.4
 date                date          event date
 role                text          open values; see §3.5
@@ -349,7 +347,7 @@ source          mentions
 source          remark
 ```
 
-`name_format` is not required on Interpretation `person` Subjects unless a Source itself asserts a naming convention.
+`name_format` (Conclusion naming profiles) is not an Interpretation Property in the create-time seed.
 
 ## 3.4 Open values: `event_type`
 
