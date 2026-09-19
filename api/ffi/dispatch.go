@@ -61,6 +61,16 @@ const (
 	MethodSetSubjectPosition                  = int32(engine.Method_METHOD_SET_SUBJECT_POSITION)
 	MethodClearSubjectPosition                = int32(engine.Method_METHOD_CLEAR_SUBJECT_POSITION)
 	MethodListSubjectPositions                = int32(engine.Method_METHOD_LIST_SUBJECT_POSITIONS)
+	MethodListProperties                      = int32(engine.Method_METHOD_LIST_PROPERTIES)
+	MethodCreateProperty                      = int32(engine.Method_METHOD_CREATE_PROPERTY)
+	MethodUpdateProperty                      = int32(engine.Method_METHOD_UPDATE_PROPERTY)
+	MethodDeleteProperty                      = int32(engine.Method_METHOD_DELETE_PROPERTY)
+	MethodListSubjectTypeFields               = int32(engine.Method_METHOD_LIST_SUBJECT_TYPE_FIELDS)
+	MethodAssignSubjectTypeField              = int32(engine.Method_METHOD_ASSIGN_SUBJECT_TYPE_FIELD)
+	MethodRemoveSubjectTypeField              = int32(engine.Method_METHOD_REMOVE_SUBJECT_TYPE_FIELD)
+	MethodListPlaceableSubjectTypes           = int32(engine.Method_METHOD_LIST_PLACEABLE_SUBJECT_TYPES)
+	MethodGetSubjectTypePresentation          = int32(engine.Method_METHOD_GET_SUBJECT_TYPE_PRESENTATION)
+	MethodListConnectRules                    = int32(engine.Method_METHOD_LIST_CONNECT_RULES)
 )
 
 // Call routes one coarse FFI operation to api/ffi/handlers.
@@ -168,6 +178,26 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.ClearSubjectPosition(in)
 	case MethodListSubjectPositions:
 		return handlers.ListSubjectPositions(in)
+	case MethodListProperties:
+		return handlers.ListProperties(in)
+	case MethodCreateProperty:
+		return handlers.CreateProperty(in)
+	case MethodUpdateProperty:
+		return handlers.UpdateProperty(in)
+	case MethodDeleteProperty:
+		return handlers.DeleteProperty(in)
+	case MethodListSubjectTypeFields:
+		return handlers.ListSubjectTypeFields(in)
+	case MethodAssignSubjectTypeField:
+		return handlers.AssignSubjectTypeField(in)
+	case MethodRemoveSubjectTypeField:
+		return handlers.RemoveSubjectTypeField(in)
+	case MethodListPlaceableSubjectTypes:
+		return handlers.ListPlaceableSubjectTypes(in)
+	case MethodGetSubjectTypePresentation:
+		return handlers.GetSubjectTypePresentation(in)
+	case MethodListConnectRules:
+		return handlers.ListConnectRules(in)
 	default:
 		return nil, apperr.New(apperr.CodeInternalUnknownMethod, apperr.KindInternal, strconv.Itoa(int(method)))
 	}

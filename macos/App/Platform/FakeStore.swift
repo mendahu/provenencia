@@ -20,6 +20,11 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     /// order they were assigned — the engine's `sort_order`.
     var suggestionsByType: [String: [CatalogTypeSuggestion]] = [:]
     var fieldsByProject: [String: [CatalogMetadataField]] = [:]
+    var propertiesByProject: [String: [CatalogProperty]] = [:]
+    var subjectTypeFieldsByType: [String: [CatalogSubjectTypeField]] = [:]
+    var placeableSubjectTypes: [CatalogSubjectTypePresentation] = []
+    var subjectTypePresentations: [String: CatalogSubjectTypePresentation] = [:]
+    var connectRules: [CatalogConnectRule] = []
     var metadataBySource: [String: [CatalogMetadataEntry]] = [:]
     /// Project dir for which a catalog RPC has “held” a session (tests only).
     var heldCatalogProjectDir: String?
@@ -1024,6 +1029,113 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 if $0.gridX != $1.gridX { return $0.gridX < $1.gridX }
                 return $0.subjectID < $1.subjectID
             }
+    }
+
+    func listProperties(projectDir: String) async throws -> [CatalogProperty] {
+        markCatalogSessionHeld(projectDir)
+        return propertiesByProject[projectDir] ?? []
+    }
+
+    func createProperty(
+        projectDir: String,
+        userID _: String,
+        label: String,
+        valueType: String,
+        description: String
+    ) async throws -> CatalogProperty {
+        markCatalogSessionHeld(projectDir)
+        let key = label
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "-")
+            .filter { $0.isLetter || $0.isNumber || $0 == "-" }
+        let property = CatalogProperty(
+            id: UUID().uuidString.lowercased(),
+            key: key,
+            origin: "user",
+            label: label,
+            description: description,
+            valueType: valueType
+        )
+        propertiesByProject[projectDir, default: []].append(property)
+        return property
+    }
+
+    func updateProperty(
+        projectDir: String,
+        userID _: String,
+        propertyID: String,
+        label: String,
+        valueType _: String,
+        description: String
+    ) async throws -> CatalogProperty {
+        markCatalogSessionHeld(projectDir)
+        guard var list = propertiesByProject[projectDir],
+              let idx = list.firstIndex(where: { $0.id == propertyID })
+        else {
+            throw CoreInvokeError.coded(status: 1, code: "properties.invalid", kind: .user, params: [])
+        }
+        list[idx].label = label
+        list[idx].description = description
+        propertiesByProject[projectDir] = list
+        return list[idx]
+    }
+
+    func deleteProperty(projectDir: String, userID _: String, propertyID: String) async throws {
+        markCatalogSessionHeld(projectDir)
+        propertiesByProject[projectDir]?.removeAll { $0.id == propertyID }
+    }
+
+    func listSubjectTypeFields(projectDir: String, subjectTypeID: String) async throws -> [CatalogSubjectTypeField] {
+        markCatalogSessionHeld(projectDir)
+        return subjectTypeFieldsByType[subjectTypeID] ?? []
+    }
+
+    func assignSubjectTypeField(
+        projectDir: String,
+        userID _: String,
+        subjectTypeID: String,
+        propertyID: String
+    ) async throws {
+        markCatalogSessionHeld(projectDir)
+        let property = (propertiesByProject[projectDir] ?? []).first { $0.id == propertyID }
+            ?? CatalogProperty(
+                id: propertyID, key: "prop", origin: "user", label: "Prop",
+                description: "", valueType: "text"
+            )
+        var list = subjectTypeFieldsByType[subjectTypeID] ?? []
+        guard !list.contains(where: { $0.property.id == propertyID }) else { return }
+        list.append(CatalogSubjectTypeField(property: property, sortOrder: list.count, locked: false))
+        subjectTypeFieldsByType[subjectTypeID] = list
+    }
+
+    func removeSubjectTypeField(
+        projectDir: String,
+        userID _: String,
+        subjectTypeID: String,
+        propertyID: String
+    ) async throws {
+        markCatalogSessionHeld(projectDir)
+        if let field = subjectTypeFieldsByType[subjectTypeID]?.first(where: { $0.property.id == propertyID }),
+           field.locked
+        {
+            throw CoreInvokeError.coded(status: 1, code: "subjectvocab.locked", kind: .conflict, params: [])
+        }
+        subjectTypeFieldsByType[subjectTypeID]?.removeAll { $0.property.id == propertyID }
+    }
+
+    func listPlaceableSubjectTypes() async throws -> [CatalogSubjectTypePresentation] {
+        placeableSubjectTypes
+    }
+
+    func getSubjectTypePresentation(typeKey: String) async throws -> CatalogSubjectTypePresentation {
+        if let found = subjectTypePresentations[typeKey] {
+            return found
+        }
+        throw CoreInvokeError.coded(status: 1, code: "subjectvocab.invalid", kind: .user, params: [])
+    }
+
+    func listConnectRules() async throws -> [CatalogConnectRule] {
+        connectRules
     }
 
     private func markCatalogSessionHeld(_ projectDir: String) {

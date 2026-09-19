@@ -544,8 +544,6 @@ CREATE TABLE properties (
     CHECK (value_type IN (
         'text',
         'integer',
-        'real',
-        'boolean',
         'date',
         'name',
         'subject'
@@ -556,6 +554,8 @@ CREATE TABLE properties (
 `origin` and `UNIQUE (key, origin)` follow [`seeded-vocabulary.md`](seeded-vocabulary.md) §1.1. Observations and Reconciliation Claims reference `properties.id`, not bare `key`.
 
 A Property's `value_type` is intrinsic to the Property. Seeded Properties (for example `name`, `birth_date`, `event_type`, `role`, `person`, `mentions`, `remark`) and their `subject_type_fields` bindings are listed in [`seeded-vocabulary.md`](seeded-vocabulary.md).
+
+Product value types are **`text`**, **`integer`**, **`date`**, **`name`**, and **`subject`** only. `real` and `boolean` are not used.
 
 The semantic vocabulary is open, but the primitive value system is intentionally constrained. A researcher may define a new Property without introducing a new storage type.
 
@@ -586,12 +586,15 @@ This table defines which Properties are valid for which Subject types. It is a j
 
 ```sql
 CREATE TABLE subject_type_fields (
-    subject_type_id BLOB NOT NULL REFERENCES subject_types(id),
-    property_id     BLOB NOT NULL REFERENCES properties(id),
+    subject_type_id BLOB NOT NULL REFERENCES subject_types(id) ON DELETE CASCADE,
+    property_id     BLOB NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+    sort_order      INTEGER NOT NULL,
 
     PRIMARY KEY (subject_type_id, property_id)
 ) STRICT;
 ```
+
+`sort_order` orders Add-property menus and Subject fields lists. Locked bindings (cannot unbind while required for connect macros) live in the compiled Interpretation subject registry (`subjectvocab`), not as a column here.
 
 For example (full matrix in [`seeded-vocabulary.md`](seeded-vocabulary.md)):
 

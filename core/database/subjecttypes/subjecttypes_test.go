@@ -16,53 +16,47 @@ func TestSubjectTypes(t *testing.T) {
 		run  func(t *testing.T, c *database.Catalog)
 	}{
 		{
-			name: "install seeds seven provenencia types",
+			name: "upsert list lookup",
 			run: func(t *testing.T, c *database.Catalog) {
-				if err := Install(c); err != nil {
-					t.Fatal(err)
-				}
-				list, err := List(c)
+				id, err := Upsert(c, Type{
+					Key: "person", Origin: OriginProvenencia, Label: "Person",
+					RefPrefix: "PER", CandidateRefPrefix: "CPR",
+				})
 				if err != nil {
 					t.Fatal(err)
-				}
-				if len(list) != 7 {
-					t.Fatalf("len=%d", len(list))
 				}
 				person, err := Lookup(c, "person", OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
-				if person.RefPrefix != "PER" || person.CandidateRefPrefix != "CPR" {
-					t.Fatalf("prefixes %+v", person)
+				if string(person.ID) != string(id) || person.RefPrefix != "PER" {
+					t.Fatalf("%+v", person)
 				}
-				if person.Label != "Person" {
-					t.Fatalf("label %q", person.Label)
+				list, err := List(c)
+				if err != nil || len(list) != 1 {
+					t.Fatalf("%v len=%d", err, len(list))
 				}
 			},
 		},
 		{
-			name: "install twice keeps same ids",
+			name: "upsert twice keeps same id",
 			run: func(t *testing.T, c *database.Catalog) {
-				if err := Install(c); err != nil {
-					t.Fatal(err)
-				}
-				first, err := Lookup(c, "person", OriginProvenencia)
+				first, err := Upsert(c, Type{
+					Key: "person", Origin: OriginProvenencia, Label: "Person",
+					RefPrefix: "PER", CandidateRefPrefix: "CPR",
+				})
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err := Install(c); err != nil {
-					t.Fatal(err)
-				}
-				second, err := Lookup(c, "person", OriginProvenencia)
+				second, err := Upsert(c, Type{
+					Key: "person", Origin: OriginProvenencia, Label: "Person",
+					RefPrefix: "PER", CandidateRefPrefix: "CPR",
+				})
 				if err != nil {
 					t.Fatal(err)
 				}
-				if string(first.ID) != string(second.ID) {
-					t.Fatal("id changed on reinstall")
-				}
-				list, err := List(c)
-				if err != nil || len(list) != 7 {
-					t.Fatalf("%v len=%d", err, len(list))
+				if string(first) != string(second) {
+					t.Fatal("id changed")
 				}
 			},
 		},
@@ -105,9 +99,12 @@ func TestSubjectTypes(t *testing.T) {
 			},
 		},
 		{
-			name: "reject cross-column collision with seeded candidate",
+			name: "reject cross-column collision with existing candidate",
 			run: func(t *testing.T, c *database.Catalog) {
-				if err := Install(c); err != nil {
+				if _, err := Upsert(c, Type{
+					Key: "person", Origin: OriginProvenencia, Label: "Person",
+					RefPrefix: "PER", CandidateRefPrefix: "CPR",
+				}); err != nil {
 					t.Fatal(err)
 				}
 				_, err := Upsert(c, Type{

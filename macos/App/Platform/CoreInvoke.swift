@@ -87,6 +87,16 @@ enum CoreMethod {
     static let setSubjectPosition = Int32(Provenencia_Engine_V1_Method.setSubjectPosition.rawValue)
     static let clearSubjectPosition = Int32(Provenencia_Engine_V1_Method.clearSubjectPosition.rawValue)
     static let listSubjectPositions = Int32(Provenencia_Engine_V1_Method.listSubjectPositions.rawValue)
+    static let listProperties = Int32(Provenencia_Engine_V1_Method.listProperties.rawValue)
+    static let createProperty = Int32(Provenencia_Engine_V1_Method.createProperty.rawValue)
+    static let updateProperty = Int32(Provenencia_Engine_V1_Method.updateProperty.rawValue)
+    static let deleteProperty = Int32(Provenencia_Engine_V1_Method.deleteProperty.rawValue)
+    static let listSubjectTypeFields = Int32(Provenencia_Engine_V1_Method.listSubjectTypeFields.rawValue)
+    static let assignSubjectTypeField = Int32(Provenencia_Engine_V1_Method.assignSubjectTypeField.rawValue)
+    static let removeSubjectTypeField = Int32(Provenencia_Engine_V1_Method.removeSubjectTypeField.rawValue)
+    static let listPlaceableSubjectTypes = Int32(Provenencia_Engine_V1_Method.listPlaceableSubjectTypes.rawValue)
+    static let getSubjectTypePresentation = Int32(Provenencia_Engine_V1_Method.getSubjectTypePresentation.rawValue)
+    static let listConnectRules = Int32(Provenencia_Engine_V1_Method.listConnectRules.rawValue)
 }
 
 func provenenciaInvoke(method: Int32, request: Data) throws -> Data {
