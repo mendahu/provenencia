@@ -627,7 +627,7 @@ For example (full matrix in [`seeded-vocabulary.md`](seeded-vocabulary.md)):
 ```text
 person        -> name
 
-event         -> event_type   # S7-01b (term); create-time Install may omit until then
+event         -> event_type   # term
 event         -> date         # locked (point / ordering)
 event         -> start_date   # locked (span start)
 event         -> end_date     # locked (span end)
@@ -636,13 +636,13 @@ place         -> toponym
 
 participation -> person
 participation -> event
-participation -> role         # S7-01b (term)
+participation -> role         # term
 
 location      -> event
 location      -> place
 
 relationship  -> participant
-relationship  -> relationship_type  # S7-01b (term)
+relationship  -> relationship_type  # term
 
 source        -> mentions
 source        -> remark

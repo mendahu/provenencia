@@ -17,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 )
 
@@ -245,6 +246,21 @@ func Install(c *database.Catalog) error {
 		}
 		propIDs[p.Key] = id
 	}
+	for _, term := range seedTerms {
+		propID := propIDs[term.PropertyKey]
+		if len(propID) == 0 {
+			return ErrInvalid
+		}
+		if _, err := propertyterms.Upsert(c, propertyterms.Term{
+			PropertyID:  propID,
+			Key:         term.Key,
+			Origin:      propertyterms.OriginProvenencia,
+			Label:       term.Label,
+			Description: term.Description,
+		}); err != nil {
+			return err
+		}
+	}
 	for _, b := range seedBindings {
 		typeID := typeIDs[b.TypeKey]
 		propID := propIDs[b.PropertyKey]
@@ -312,6 +328,31 @@ func LockedBinding(typeKey, propertyKey string) bool {
 	for _, b := range seedBindings {
 		if b.TypeKey == typeKey && b.PropertyKey == propertyKey {
 			return b.Locked
+		}
+	}
+	return false
+}
+
+// TermCapabilities returns compiled capabilities for a proveniencia (propertyKey, termKey).
+func TermCapabilities(propertyKey, termKey string) []string {
+	propertyKey = strings.TrimSpace(propertyKey)
+	termKey = strings.TrimSpace(termKey)
+	for _, t := range seedTerms {
+		if t.PropertyKey == propertyKey && t.Key == termKey {
+			out := make([]string, len(t.Capabilities))
+			copy(out, t.Capabilities)
+			return out
+		}
+	}
+	return nil
+}
+
+// TermHasCapability reports whether a proveniencia term declares capability.
+func TermHasCapability(propertyKey, termKey, capability string) bool {
+	capability = strings.TrimSpace(capability)
+	for _, c := range TermCapabilities(propertyKey, termKey) {
+		if c == capability {
+			return true
 		}
 	}
 	return false

@@ -838,6 +838,68 @@ struct GoStore: GenealogyStore {
         )
     }
 
+    func listPropertyTerms(projectDir: String, propertyID: String) async throws -> [CatalogPropertyTerm] {
+        var req = Provenencia_Engine_V1_ListPropertyTermsRequest()
+        req.projectDir = projectDir
+        req.propertyID = propertyID
+        let resp: Provenencia_Engine_V1_ListPropertyTermsResponse = try await provenenciaCall(
+            method: CoreMethod.listPropertyTerms,
+            request: req
+        )
+        return resp.terms.map(Self.mapPropertyTerm)
+    }
+
+    func createPropertyTerm(
+        projectDir: String,
+        userID: String,
+        propertyID: String,
+        label: String,
+        description: String
+    ) async throws -> CatalogPropertyTerm {
+        var req = Provenencia_Engine_V1_CreatePropertyTermRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.propertyID = propertyID
+        req.label = label
+        req.description_p = description
+        let resp: Provenencia_Engine_V1_CreatePropertyTermResponse = try await provenenciaCall(
+            method: CoreMethod.createPropertyTerm,
+            request: req
+        )
+        return Self.mapPropertyTerm(resp.term)
+    }
+
+    func updatePropertyTerm(
+        projectDir: String,
+        userID: String,
+        termID: String,
+        label: String,
+        description: String
+    ) async throws -> CatalogPropertyTerm {
+        var req = Provenencia_Engine_V1_UpdatePropertyTermRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.termID = termID
+        req.label = label
+        req.description_p = description
+        let resp: Provenencia_Engine_V1_UpdatePropertyTermResponse = try await provenenciaCall(
+            method: CoreMethod.updatePropertyTerm,
+            request: req
+        )
+        return Self.mapPropertyTerm(resp.term)
+    }
+
+    func deletePropertyTerm(projectDir: String, userID: String, termID: String) async throws {
+        var req = Provenencia_Engine_V1_DeletePropertyTermRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.termID = termID
+        let _: Provenencia_Engine_V1_DeletePropertyTermResponse = try await provenenciaCall(
+            method: CoreMethod.deletePropertyTerm,
+            request: req
+        )
+    }
+
     func listSubjectTypeFields(projectDir: String, subjectTypeID: String) async throws -> [CatalogSubjectTypeField] {
         var req = Provenencia_Engine_V1_ListSubjectTypeFieldsRequest()
         req.projectDir = projectDir
@@ -1096,6 +1158,17 @@ struct GoStore: GenealogyStore {
             description: p.description_p,
             valueType: p.valueType,
             usedBy: Int(p.usedBy)
+        )
+    }
+
+    private static func mapPropertyTerm(_ t: Provenencia_Engine_V1_PropertyTerm) -> CatalogPropertyTerm {
+        CatalogPropertyTerm(
+            id: t.id,
+            propertyID: t.propertyID,
+            key: t.key,
+            origin: t.origin,
+            label: t.label,
+            description: t.description_p
         )
     }
 

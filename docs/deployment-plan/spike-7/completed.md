@@ -9,6 +9,7 @@ IDs stay stable (`S7-NN`, `S7-DN`). Do not renumber when moving steps here.
 | Step | Kind | One-liner |
 | --- | --- | --- |
 | [S7-01](#s7-01--pr-properties--bindings--subject-registry) | PR | `properties` + `subject_type_fields` + `subjectvocab` registry / Install / FFI |
+| [S7-01b](#s7-01b--pr-property-terms) | PR | `property_terms` + `value_type=term` + kind/edge seed + FFI term CRUD |
 
 ## Steps
 
@@ -29,5 +30,25 @@ IDs stay stable (`S7-NN`, `S7-DN`). Do not renumber when moving steps here.
 
 ```bash
 CGO_ENABLED=1 go test -tags fts5 ./core/database/properties/... ./core/database/subjectvocab/... ./core/onboarding/... ./api/ffi/...
+python3 scripts/check-localizable-xcstrings.py
+```
+
+### S7-01b — PR: Property terms
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S7-01 |
+| **Deliverables** | Done. Migration [`000024.sql`](../../../core/database/migrations/000024.sql) rebuilds `properties` CHECK to include `term` and adds `property_terms`. Package [`core/database/propertyterms/`](../../../core/database/propertyterms/) with audited CRUD (product/plugin terms locked; `ErrInUse` stub until S7-03). `properties.Create` refuses `value_type = term` for researchers; Upsert/seed allows it. `subjectvocab` Install seeds kind/edge Properties (`event_type`, `role`, `relationship_type`), bindings, `seedTerms` (§3.4–3.6), and term capabilities (birthday / tree-edge). FFI: List/Create/Update/Delete PropertyTerm. Swift: GenealogyStore + FakeStore + GoStore stubs + L10n for `propertyterms.*`. Docs: seeded-vocabulary §3.6 starter set; interpretation binding matrix. |
+| **Tests** | Done. Go: `properties`, `propertyterms`, `subjectvocab`, onboarding; FFI `property_terms_test` via `runRPC`. |
+| **Dogfood** | Create a new project → 14 seeded Properties including three `term` kind/edge rows; ListPropertyTerms on `event_type` includes `birth`; Create Property with `term` fails; user term create/update/delete works; product term update fails. |
+| **Out** | Observation `value_term_id` (S7-03); composer term picker UI (S7-D4 / S7-08); Subject fields UI (S7-05); Event types / Roles admin destinations. |
+
+**Landed:** kind/edge vocabulary as Property terms; registry-only `term` Properties.
+
+**Verify:**
+
+```bash
+CGO_ENABLED=1 go test -tags fts5 ./core/database/properties/... ./core/database/propertyterms/... ./core/database/subjectvocab/... ./core/onboarding/... ./api/ffi/...
 python3 scripts/check-localizable-xcstrings.py
 ```

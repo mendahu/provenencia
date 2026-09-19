@@ -5,8 +5,8 @@ import (
 )
 
 // Declarative provenencia Interpretation subject vocabulary (create-time starter).
-// Capabilities, presentation, locked bindings, and connect rules live here —
-// Install writes only structural catalog rows (types, properties, bindings).
+// Capabilities, presentation, locked bindings, term capabilities, and connect rules live here —
+// Install writes only structural catalog rows (types, properties, terms, bindings).
 
 const (
 	RoleRoot         = "root"
@@ -17,15 +17,18 @@ const (
 	DisambiguationRole               = "role"
 	DisambiguationRelationshipType   = "relationship_type"
 	DisambiguationPersonPersonChoice = "person_person_choice"
+
+	TermCapBirthday = "birthday"
+	TermCapTreeEdge = "tree_edge"
 )
 
 type presentation struct {
-	L10nKey      string
-	IconSymbol   string
-	InkToken     string
-	TintToken    string
-	ChipToken    string
-	LineToken    string
+	L10nKey       string
+	IconSymbol    string
+	InkToken      string
+	TintToken     string
+	ChipToken     string
+	LineToken     string
 	EdgeFromToken string
 	EdgeToToken   string
 }
@@ -47,6 +50,11 @@ type seedBinding struct {
 	TypeKey, PropertyKey string
 	SortOrder            int
 	Locked               bool
+}
+
+type seedTerm struct {
+	PropertyKey, Key, Label, Description string
+	Capabilities                         []string
 }
 
 type seedConnectRule struct {
@@ -139,9 +147,12 @@ var seedTypes = []seedType{
 
 var seedProperties = []seedProperty{
 	{Key: "name", Label: "Name", ValueType: properties.ValueTypeName},
+	{Key: "event_type", Label: "Event type", Description: "Kind of event (birth, census, …). Product term vocabulary.", ValueType: properties.ValueTypeTerm},
 	{Key: "date", Label: "Date", Description: "Point-in-time when the event occurred (or the best single date when a span is unknown). Prefer this for births, deaths, and other one-day facts. Use start/end date instead when the event clearly lasts across a range.", ValueType: properties.ValueTypeDate},
 	{Key: "start_date", Label: "Start date", Description: "When a multi-day or open-ended event began (census day range, residence, military service, voyage). Leave empty for instantaneous events that only need Date.", ValueType: properties.ValueTypeDate},
 	{Key: "end_date", Label: "End date", Description: "When a spanned event ended or was last known. Pair with Start date; leave empty for instantaneous events that only need Date.", ValueType: properties.ValueTypeDate},
+	{Key: "role", Label: "Role", Description: "Participation role (subject, father, …). Product term vocabulary.", ValueType: properties.ValueTypeTerm},
+	{Key: "relationship_type", Label: "Relationship type", Description: "Kind of person–person relationship. Product term vocabulary.", ValueType: properties.ValueTypeTerm},
 	{Key: "person", Label: "Person", Description: "Target hint: person", ValueType: properties.ValueTypeSubject},
 	{Key: "event", Label: "Event", Description: "Target hint: event", ValueType: properties.ValueTypeSubject},
 	{Key: "place", Label: "Place", Description: "Target hint: place", ValueType: properties.ValueTypeSubject},
@@ -153,31 +164,62 @@ var seedProperties = []seedProperty{
 
 // Bindings from docs/seeded-vocabulary.md §3.3.
 // Locked = required for connect macros and/or Conclusion ordering (event dates).
-// Kind/edge Properties (event_type, role, relationship_type) land in S7-01b as value_type=term.
 var seedBindings = []seedBinding{
 	{TypeKey: "person", PropertyKey: "name", SortOrder: 0},
 
-	{TypeKey: "event", PropertyKey: "date", SortOrder: 0, Locked: true},
-	{TypeKey: "event", PropertyKey: "start_date", SortOrder: 1, Locked: true},
-	{TypeKey: "event", PropertyKey: "end_date", SortOrder: 2, Locked: true},
+	{TypeKey: "event", PropertyKey: "event_type", SortOrder: 0},
+	{TypeKey: "event", PropertyKey: "date", SortOrder: 1, Locked: true},
+	{TypeKey: "event", PropertyKey: "start_date", SortOrder: 2, Locked: true},
+	{TypeKey: "event", PropertyKey: "end_date", SortOrder: 3, Locked: true},
 
 	{TypeKey: "place", PropertyKey: "toponym", SortOrder: 0},
 
 	{TypeKey: "participation", PropertyKey: "person", SortOrder: 0, Locked: true},
 	{TypeKey: "participation", PropertyKey: "event", SortOrder: 1, Locked: true},
+	{TypeKey: "participation", PropertyKey: "role", SortOrder: 2},
 
 	{TypeKey: "location", PropertyKey: "event", SortOrder: 0, Locked: true},
 	{TypeKey: "location", PropertyKey: "place", SortOrder: 1, Locked: true},
 
 	{TypeKey: "relationship", PropertyKey: "participant", SortOrder: 0, Locked: true},
+	{TypeKey: "relationship", PropertyKey: "relationship_type", SortOrder: 1},
 
 	{TypeKey: "source", PropertyKey: "mentions", SortOrder: 0},
 	{TypeKey: "source", PropertyKey: "remark", SortOrder: 1},
 }
 
+// Property terms from docs/seeded-vocabulary.md §3.4–3.6.
+var seedTerms = []seedTerm{
+	{PropertyKey: "event_type", Key: "birth", Label: "Birth", Capabilities: []string{TermCapBirthday}},
+	{PropertyKey: "event_type", Key: "death", Label: "Death"},
+	{PropertyKey: "event_type", Key: "marriage", Label: "Marriage"},
+	{PropertyKey: "event_type", Key: "baptism", Label: "Baptism"},
+	{PropertyKey: "event_type", Key: "burial", Label: "Burial"},
+	{PropertyKey: "event_type", Key: "census", Label: "Census"},
+	{PropertyKey: "event_type", Key: "residence", Label: "Residence"},
+	{PropertyKey: "event_type", Key: "immigration", Label: "Immigration"},
+	{PropertyKey: "event_type", Key: "military", Label: "Military"},
+	{PropertyKey: "event_type", Key: "probate", Label: "Probate"},
+	{PropertyKey: "event_type", Key: "other", Label: "Other"},
+
+	{PropertyKey: "role", Key: "subject", Label: "Subject", Capabilities: []string{TermCapTreeEdge}},
+	{PropertyKey: "role", Key: "father", Label: "Father", Capabilities: []string{TermCapTreeEdge}},
+	{PropertyKey: "role", Key: "mother", Label: "Mother", Capabilities: []string{TermCapTreeEdge}},
+	{PropertyKey: "role", Key: "spouse", Label: "Spouse"},
+	{PropertyKey: "role", Key: "child", Label: "Child"},
+	{PropertyKey: "role", Key: "witness", Label: "Witness"},
+	{PropertyKey: "role", Key: "informant", Label: "Informant"},
+	{PropertyKey: "role", Key: "other", Label: "Other"},
+
+	{PropertyKey: "relationship_type", Key: "spouse", Label: "Spouse"},
+	{PropertyKey: "relationship_type", Key: "sibling", Label: "Sibling"},
+	{PropertyKey: "relationship_type", Key: "parent_child", Label: "Parent / child"},
+	{PropertyKey: "relationship_type", Key: "cousin", Label: "Cousin"},
+	{PropertyKey: "relationship_type", Key: "guardian", Label: "Guardian"},
+	{PropertyKey: "relationship_type", Key: "other", Label: "Other"},
+}
+
 // Connect matrix from interpretation-graph-ui.md §3.2. Omitted pairs refuse by default.
-// DisambiguationRole / relationship_type name Property keys that S7-01b installs as term;
-// the matrix is valid before those rows exist (macros land after S7-01b).
 var seedConnect = []seedConnectRule{
 	{
 		FromTypeKey: "person", ToTypeKey: "event",

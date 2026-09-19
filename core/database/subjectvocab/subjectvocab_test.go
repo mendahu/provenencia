@@ -6,6 +6,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 )
 
@@ -28,6 +29,24 @@ func TestSubjectVocab(t *testing.T) {
 				if err != nil || len(props) != len(seedProperties) {
 					t.Fatalf("props %v len=%d want %d", err, len(props), len(seedProperties))
 				}
+				et, err := properties.Lookup(c, "event_type", properties.OriginProvenencia)
+				if err != nil || et.ValueType != properties.ValueTypeTerm {
+					t.Fatalf("event_type %+v %v", et, err)
+				}
+				terms, err := propertyterms.ListByProperty(c, et.ID)
+				if err != nil || len(terms) != 11 {
+					t.Fatalf("event_type terms %v len=%d", err, len(terms))
+				}
+				birth, err := propertyterms.Lookup(c, et.ID, "birth", propertyterms.OriginProvenencia)
+				if err != nil || birth.Label != "Birth" {
+					t.Fatalf("birth %+v %v", birth, err)
+				}
+				if !TermHasCapability("event_type", "birth", TermCapBirthday) {
+					t.Fatal("birth birthday capability")
+				}
+				if !TermHasCapability("role", "father", TermCapTreeEdge) {
+					t.Fatal("father tree_edge capability")
+				}
 				person, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
@@ -35,6 +54,14 @@ func TestSubjectVocab(t *testing.T) {
 				bindings, err := ListBindings(c, person.ID)
 				if err != nil || len(bindings) != 1 {
 					t.Fatalf("person bindings %v len=%d want 1", err, len(bindings))
+				}
+				evt, err := subjecttypes.Lookup(c, "event", subjecttypes.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				eb, err := ListBindings(c, evt.ID)
+				if err != nil || len(eb) != 4 {
+					t.Fatalf("event bindings %v len=%d want 4", err, len(eb))
 				}
 				participation, err := subjecttypes.Lookup(c, "participation", subjecttypes.OriginProvenencia)
 				if err != nil {

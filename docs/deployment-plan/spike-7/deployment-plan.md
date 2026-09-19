@@ -284,7 +284,7 @@ Schema/Go (01–03, 01b) may start before design finishes; **UI PRs gate on the 
 - [ ] S7-D4 — Design: Citation composer place → [`completed.md`](completed.md)
 - [ ] S7-D5 — Design: NameValue editor → [`completed.md`](completed.md)
 - [x] S7-01 — `properties` + `subject_type_fields` + **central Interpretation subject registry** + Go/FFI → [`completed.md`](completed.md)
-- [ ] S7-01b — Property terms (`property_terms`, `value_type=term`, kind/edge seed) → [`completed.md`](completed.md)
+- [x] S7-01b — Property terms (`property_terms`, `value_type=term`, kind/edge seed) → [`completed.md`](completed.md)
 - [ ] S7-05 — Subject fields UI → [`completed.md`](completed.md)
 - [ ] S7-02 — NameValue schema + Go → [`completed.md`](completed.md)
 - [ ] S7-03 — Citations + Observations + locator validation + FFI → [`completed.md`](completed.md)

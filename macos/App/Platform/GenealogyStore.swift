@@ -136,10 +136,19 @@ struct CatalogProperty: Sendable, Equatable, Identifiable {
     var origin: String
     var label: String
     var description: String
-    /// text | integer | date | name | subject
+    /// text | integer | date | name | subject | term
     var valueType: String
     /// subject_type_fields references; delete only at 0.
     var usedBy: Int = 0
+}
+
+struct CatalogPropertyTerm: Sendable, Equatable, Identifiable {
+    var id: String
+    var propertyID: String
+    var key: String
+    var origin: String
+    var label: String
+    var description: String
 }
 
 struct CatalogSubjectTypeField: Sendable, Equatable, Identifiable {
@@ -532,6 +541,22 @@ protocol GenealogyStore: Sendable {
         description: String
     ) async throws -> CatalogProperty
     func deleteProperty(projectDir: String, userID: String, propertyID: String) async throws
+    func listPropertyTerms(projectDir: String, propertyID: String) async throws -> [CatalogPropertyTerm]
+    func createPropertyTerm(
+        projectDir: String,
+        userID: String,
+        propertyID: String,
+        label: String,
+        description: String
+    ) async throws -> CatalogPropertyTerm
+    func updatePropertyTerm(
+        projectDir: String,
+        userID: String,
+        termID: String,
+        label: String,
+        description: String
+    ) async throws -> CatalogPropertyTerm
+    func deletePropertyTerm(projectDir: String, userID: String, termID: String) async throws
     func listSubjectTypeFields(projectDir: String, subjectTypeID: String) async throws -> [CatalogSubjectTypeField]
     func assignSubjectTypeField(
         projectDir: String,

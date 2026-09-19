@@ -324,7 +324,7 @@ Target Subject type hints are application-only (not SQL allow-lists). See the In
 
 `name_format` (Conclusion naming profiles) is not an Interpretation Property in the create-time seed. `integer` remains a valid value_type with no seed row yet.
 
-**S7-01 create-time Install** omits `event_type`, `role`, and `relationship_type` (and their bindings). Those kind/edge Properties land in **S7-01b** as `value_type = term` with `property_terms` — do not seed them as free text in the interim. Horizon lists §3.2–3.6 remain the intended product vocabulary.
+Create-time Install seeds the full §3.2 matrix, including kind/edge Properties as `value_type = term` with `property_terms` (§3.4–3.6).
 
 Event date Properties (`date`, `start_date`, `end_date`) are locked on `event`: Conclusion ordering and timelines may key into them; Subject fields must not unbind. **Coexistence:** use `date` for a single point (birth, death, marriage day); use `start_date` / `end_date` when the event spans time (residence, service, voyage). Instantaneous events leave start/end empty; spanned events may leave `date` empty when only the range is known.
 
@@ -336,7 +336,7 @@ Additional Properties may be seeded as workflows need them (shared DNA, predicte
 subject_type    property
 person          name
 
-event           event_type          # S7-01b (term)
+event           event_type          # term
 event           date                # locked
 event           start_date          # locked
 event           end_date            # locked
@@ -345,19 +345,19 @@ place           toponym
 
 participation   person
 participation   event
-participation   role                # S7-01b (term)
+participation   role                # term
 
 location        event
 location        place
 
 relationship    participant
-relationship    relationship_type   # S7-01b (term)
+relationship    relationship_type   # term
 
 source          mentions
 source          remark
 ```
 
-Until S7-01b, create-time Install binds the non-kind/edge rows above (`name`, event dates, `toponym`, locked bridge ends, `mentions` / `remark`).
+Create-time Install binds the full matrix above (including kind/edge term Properties).
 
 ## 3.4 Property terms: `event_type`
 
@@ -398,7 +398,18 @@ Tree / connect behavior attaches to recognized keys (e.g. `father`, `mother`, `s
 
 ## 3.6 Property terms: `relationship_type`
 
-Product-seeded **term keys** are **TBD** (for example `cousin`, `guardian`, household roles). Seed a useful set when connect macros need them; keep `other` as escape.
+Product-seeded **term keys** (starter set for connect macros; grow with use):
+
+```text
+spouse
+sibling
+parent_child
+cousin
+guardian
+other
+```
+
+Prefer expanding the product set so `other` stays rare. First-class connect behavior attaches to recognized keys in the subject registry.
 
 ---
 
