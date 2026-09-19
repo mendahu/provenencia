@@ -33,8 +33,8 @@ func TestSubjectVocab(t *testing.T) {
 					t.Fatal(err)
 				}
 				bindings, err := ListBindings(c, person.ID)
-				if err != nil || len(bindings) != 0 {
-					t.Fatalf("person bindings %v len=%d want 0", err, len(bindings))
+				if err != nil || len(bindings) != 1 {
+					t.Fatalf("person bindings %v len=%d want 1", err, len(bindings))
 				}
 				participation, err := subjecttypes.Lookup(c, "participation", subjecttypes.OriginProvenencia)
 				if err != nil {

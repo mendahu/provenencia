@@ -36,7 +36,7 @@ Product value types: **`text`**, **`integer`**, **`date`**, **`name`**, **`subje
 | **text** | Most seeded Properties (`event_type`, `role`, `relationship_type`, `toponym`, …) |
 | **subject** | Bridge edges (`person`, `event`, `place`, `participant`) |
 | **date** | `date` (event); reuse DateValue |
-| **name** | Researcher-defined NameValue Properties (no seed Property yet; `name_values` + `name_value_parts`) |
+| **name** | Primary person assertion; NameValue (`name_values` + `name_value_parts` only) |
 | **integer** | Researcher-defined counts / ages (no seed Property yet) |
 
 **Seed:** [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.2–3.3 for person / event / place / participation / location / relationship. Defer `source` / `mentions` / `remark` UI. Open pickers for `event_type` / `role`; `relationship_type` open text (± short starter).
