@@ -192,9 +192,9 @@ var seedTerms = []seedTerm{
 	{PropertyKey: "event_type", Key: "marriage", Label: "Marriage"},
 	{PropertyKey: "event_type", Key: "baptism", Label: "Baptism"},
 	{PropertyKey: "event_type", Key: "burial", Label: "Burial"},
-	{PropertyKey: "event_type", Key: "census", Label: "Census"},
+	{PropertyKey: "event_type", Key: "census", Label: "Census Enumeration"},
 	{PropertyKey: "event_type", Key: "residence", Label: "Residence"},
-	{PropertyKey: "event_type", Key: "immigration", Label: "Immigration"},
+	{PropertyKey: "event_type", Key: "migration", Label: "Migration"},
 
 	{PropertyKey: "role", Key: "subject", Label: "Subject"},
 	{PropertyKey: "role", Key: "father", Label: "Father"},
