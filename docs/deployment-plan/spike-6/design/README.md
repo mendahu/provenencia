@@ -6,15 +6,14 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 
 ## Open
 
-| Step | Brief | Feeds | Notes |
-| --- | --- | --- | --- |
-| S6-D2 | [`S6-D2-connect-edges.md`](S6-D2-connect-edges.md) | PR S6-04 | Connect, lines, bridge cards (no citation modal) |
+_None._
 
 ## Completed
 
 | Step | Brief | Feeds | Notes |
 | --- | --- | --- | --- |
 | S6-D1 | [`archive/S6-D1-canvas-bubbles.md`](archive/S6-D1-canvas-bubbles.md) | PRs S6-02, S6-03 | Primary cards + place/create + uncited shell — write-up in [`../completed.md`](../completed.md) |
+| S6-D2 | [`archive/S6-D2-connect-edges.md`](archive/S6-D2-connect-edges.md) | PR S6-04 | Connect, lines, bridge cards (no citation modal) — write-up in [`../completed.md`](../completed.md) |
 
 ## How to use
 

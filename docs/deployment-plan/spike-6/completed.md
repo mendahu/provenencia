@@ -12,6 +12,8 @@ IDs stay stable (`S6-NN`, `S6-DN`). Do not renumber when moving steps here.
 | [S6-01](#s6-01--pr-panzoom-shell) | PR | `NSScrollView` Evidence graph shell + unit-tested coordinate seam |
 | [S6-02](#s6-02--pr-primary-cards--accessibility) | PR | Placed primary cards + VoiceOver representation |
 | [S6-03](#s6-03--pr-click-to-place--drag--persist) | PR | Palette place/create, drag snap, position patch |
+| [S6-D2](#s6-d2--design-connect--bridge-cards) | Design | Connect tool, lines, subordinate bridge cards, honesty |
+| [S6-04](#s6-04--pr-connect--bridge-cards) | PR | Connect A→B, bridge create, provisional endpoints, edge draw |
 
 ---
 
@@ -89,5 +91,41 @@ xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destin
 xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' \
   -only-testing:ProvenenciaTests/EvidenceGraphModelTests \
   -only-testing:ProvenenciaTests/SourceGraphSnapshotTests \
+  -only-testing:ProvenenciaTests/CatalogQueryRegistryTests
+```
+
+### S6-D2 — Design: Connect + bridge cards
+
+| | |
+| --- | --- |
+| **Kind** | Design (Claude Design board) |
+| **Depends on** | S6-D1 |
+| **Deliverables** | Done. Board for Connect tool (hairline-separated from Add tools), two-click A→B, bridge create (label + description only), subordinate bridge cards (188px, no pigment, honesty body), cubic A—bridge—B lines meeting card edges, selected-bridge brightens both segments in-place (same primary→neutral hues). No citation / Source-viewer modal. Brief archived: [`design/archive/S6-D2-connect-edges.md`](design/archive/S6-D2-connect-edges.md). |
+| **Dogfood** | Design only — implemented in S6-04. |
+| **Out** | Citation composer, Observations, catalog edge migration, person→person shared-event macro. |
+
+**Landed (design only):** connect + bridge chrome language for S6-04.
+
+### S6-04 — PR: Connect + bridge cards
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S6-03, S6-D2 |
+| **Deliverables** | Done. Connect palette tool + [`EvidenceCanvasInputMode.connecting`](../../../macos/App/Features/EvidenceGraph/EvidenceCanvasInputMode.swift). Two-click A→B with kind inference (`participation` / `location` / `relationship`); create sheet reuses D1 label/description; bridge subject + position via existing store APIs; provisional endpoints in [`EvidenceProvisionalLinkStore`](../../../macos/App/Features/EvidenceGraph/EvidenceProvisionalLinkStore.swift) (Application Support). [`SourceGraphSnapshot`](../../../macos/App/Features/Workspace/Session/SourceGraphSnapshot.swift) includes bridges; [`EvidenceBridgeCard`](../../../macos/App/Features/EvidenceGraph/EvidenceBridgeCard.swift) (188px, honesty copy); [`EvidenceGraphEdgeLayer`](../../../macos/App/Features/EvidenceGraph/EvidenceGraphEdgeLayer.swift) + [`GraphCanvasEdgeGeometry`](../../../macos/App/Features/GraphCanvas/GraphCanvasEdgeGeometry.swift). **Pointer:** [`GraphCanvasDocumentView`](../../../macos/App/Features/GraphCanvas/GraphCanvasDocumentView.swift) + [`GraphCanvasPointerController`](../../../macos/App/Features/GraphCanvas/GraphCanvasPointerController.swift) own select/drag/place/empty-canvas pan/connect; cards are paint-only (no spatial Tab). Links VoiceOver rotor; arrow-move selected. |
+| **Tests** | Done. Model connect/cancel/invalid-pair; snapshot bridges + inference; edge geometry; pointer hit-test helpers; provisional link file round-trip; registry includes placed bridges. |
+| **Dogfood** | Place Person + Event → Connect → pick both → label → save; lines through mid-card; drag endpoints (lines follow); click-drag empty canvas to pan; relaunch keeps bridge subject + provisional link. Esc / cancel create leaves A held. Cold launch click/drag must work without reload. |
+| **Out** | Citation modal, Observations, edge migration, shared-event macro, fancy routers. |
+
+**Landed:** connect gesture and bridge chrome dogfood without pretending links are cited evidence.
+
+**Verify:**
+
+```bash
+xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' \
+  -only-testing:ProvenenciaTests/EvidenceGraphModelTests \
+  -only-testing:ProvenenciaTests/SourceGraphSnapshotTests \
+  -only-testing:ProvenenciaTests/GraphCanvasEdgeGeometryTests \
+  -only-testing:ProvenenciaTests/EvidenceProvisionalLinkStoreTests \
   -only-testing:ProvenenciaTests/CatalogQueryRegistryTests
 ```

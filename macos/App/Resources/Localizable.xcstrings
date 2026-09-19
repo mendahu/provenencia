@@ -1021,6 +1021,162 @@
         }
       }
     },
+    "evidenceGraph.armed.hintConnect" : {
+      "comment" : "Banner when Connect is armed and no origin is chosen yet",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select the first subject"
+          }
+        }
+      }
+    },
+    "evidenceGraph.armed.hintConnectPickB" : {
+      "comment" : "Banner when Connect has origin A and is waiting for B",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select the second subject"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.honestyAccessibility" : {
+      "comment" : "VoiceOver fragment for bridge honesty",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prototype link, not cited evidence"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.honestyBody" : {
+      "comment" : "Permanent honesty copy on S6-04 bridge cards",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prototype link — not cited evidence"
+          }
+        }
+      }
+    },
+    "evidenceGraph.connect.connectingFrom" : {
+      "comment" : "Mono status line on primary card A while Connect waits for B",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "connecting from"
+          }
+        }
+      }
+    },
+    "evidenceGraph.connect.invalidPairBody" : {
+      "comment" : "Toast body explaining which primary pairs Connect accepts",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try person↔event, person↔place, event↔place, or two people."
+          }
+        }
+      }
+    },
+    "evidenceGraph.connect.invalidPairTitle" : {
+      "comment" : "Toast title when Connect picks an unsupported primary pair",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can't connect those"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.defaultLabelLocation" : {
+      "comment" : "Prefill label when creating a location bridge",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New location"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.defaultLabelParticipation" : {
+      "comment" : "Prefill label when creating a participation bridge",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New participation"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.defaultLabelRelationship" : {
+      "comment" : "Prefill label when creating a relationship bridge",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New relationship"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.locationTitle" : {
+      "comment" : "Create-bridge dialog title for a location mid-card",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add location"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.participationTitle" : {
+      "comment" : "Create-bridge dialog title for a participation mid-card",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add participation"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.relationshipTitle" : {
+      "comment" : "Create-bridge dialog title for a relationship mid-card",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add relationship"
+          }
+        }
+      }
+    },
     "evidenceGraph.empty.message" : {
       "comment" : "Empty Evidence graph body guiding the researcher to arm a palette tool",
       "extractionState" : "manual",
@@ -1041,6 +1197,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "No subjects yet"
+          }
+        }
+      }
+    },
+    "evidenceGraph.palette.connect" : {
+      "comment" : "Evidence graph palette tool to link two primary subjects with a bridge",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect"
           }
         }
       }
@@ -1341,6 +1509,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld subjects"
+          }
+        }
+      }
+    },
+    "evidenceGraph.rotor.links" : {
+      "comment" : "VoiceOver rotor name for jumping between Evidence graph bridge cards",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Links"
           }
         }
       }

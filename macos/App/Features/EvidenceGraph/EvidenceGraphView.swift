@@ -4,8 +4,8 @@ import SwiftUI
 /// Workspace destination for a Source’s Evidence graph.
 ///
 /// Product place under Sources (`sourceSurface: .graph`). Composes the
-/// reusable [`GraphCanvas`](../GraphCanvas/) shell with primary subject cards,
-/// palette place/create, and drag persist (S6-02 / S6-03).
+/// reusable [`GraphCanvas`](../GraphCanvas/) shell with primary + bridge cards,
+/// palette place/create/connect, and drag persist (S6-02–S6-04).
 struct EvidenceGraphView: View {
     /// Large enough to pan; Source-scoped graphs stay small (design note §7.1).
     private static let contentSize = CGSize(width: 4_000, height: 4_000)
@@ -68,12 +68,19 @@ struct EvidenceGraphView: View {
         .onChange(of: model.armedKind) { _, kind in
             if kind != nil {
                 NSCursor.crosshair.push()
-            } else {
+            } else if !model.armedConnect {
+                NSCursor.pop()
+            }
+        }
+        .onChange(of: model.armedConnect) { _, armed in
+            if armed {
+                NSCursor.crosshair.push()
+            } else if model.armedKind == nil {
                 NSCursor.pop()
             }
         }
         .onDisappear {
-            if model.armedKind != nil {
+            if model.armedKind != nil || model.armedConnect {
                 NSCursor.pop()
             }
         }
@@ -111,11 +118,15 @@ private struct EvidenceGraphContent: View {
     @FocusState private var focus: EvidenceGraphFocus?
 
     private var snapshot: SourceGraphSnapshot {
-        handle.value ?? SourceGraphSnapshot(sourceId: "")
+        model.displaySnapshot(from: handle.value)
     }
 
     private var subjects: [SourceGraphPlacedSubject] {
         snapshot.subjects
+    }
+
+    private var bridges: [SourceGraphPlacedBridge] {
+        snapshot.bridges
     }
 
     private var createPresented: Binding<Bool> {
@@ -149,12 +160,21 @@ private struct EvidenceGraphContent: View {
                 }
             }
         }
+        .accessibilityRotor(String(localized: L10n.EvidenceGraph.linksRotor)) {
+            ForEach(bridges) { placed in
+                AccessibilityRotorEntry(
+                    EvidenceBridgeCard.accessibilityLabel(for: placed),
+                    id: placed.id
+                ) {
+                    model.selectSubject(id: placed.id)
+                }
+            }
+        }
         .vocabularyToastOverlay($model.toast, identifier: "evidenceGraph.toast")
         .pvDialog(
             isPresented: createPresented,
             copy: PVDialogCopy(
-                title: model.armedKind.map { model.createDialogTitle(for: $0) }
-                    ?? L10n.EvidenceGraph.addPersonTitle,
+                title: model.createDialogTitle(),
                 confirm: L10n.EvidenceGraph.createConfirm,
                 cancel: L10n.EvidenceGraph.createCancel
             ),
@@ -174,7 +194,9 @@ private struct EvidenceGraphContent: View {
     }
 
     private var accessibilityGraphLabel: Text {
-        if let kind = model.armedKind {
+        if model.armedConnect {
+            Text(model.connectArmedHint)
+        } else if let kind = model.armedKind {
             Text(model.armedHint(for: kind))
         } else {
             Text(L10n.Workspace.evidenceGraphTitle)
@@ -193,7 +215,7 @@ private struct EvidenceGraphContent: View {
                     .lineLimit(1)
             }
             Spacer(minLength: 0)
-            Text(L10n.EvidenceGraph.subjectCount(count: subjects.count))
+            Text(L10n.EvidenceGraph.subjectCount(count: subjects.count + bridges.count))
                 .font(PVFont.mono(size: PVTypeScale.caption))
                 .foregroundStyle(PVColor.textFaint)
         }
@@ -204,9 +226,6 @@ private struct EvidenceGraphContent: View {
 
     private var canvasPane: some View {
         ZStack(alignment: .top) {
-            // Hosted document observes `handle` / `model` in place. Do not
-            // rebuild rootView on every selection or drag frame (see
-            // GraphCanvasScrollView.contentID).
             GraphCanvasScrollView(contentSize: contentSize, contentID: sourceID) {
                 EvidenceGraphDocument(
                     handle: handle,
@@ -219,7 +238,9 @@ private struct EvidenceGraphContent: View {
                 EvidenceGraphPalette(model: model, focus: $focus)
                 Spacer(minLength: 0)
                 if case .placing(let kind) = model.inputMode {
-                    armedBanner(kind)
+                    armedBanner(Text(model.armedHint(for: kind)))
+                } else if case .connecting = model.inputMode {
+                    armedBanner(Text(model.connectArmedHint))
                 }
             }
             .padding(.horizontal, PVSpacing.space5)
@@ -227,14 +248,22 @@ private struct EvidenceGraphContent: View {
         }
     }
 
-    private func armedBanner(_ kind: EvidencePrimaryKind) -> some View {
+    private func armedBanner(_ hint: Text) -> some View {
         HStack(spacing: 12) {
-            Text(model.armedHint(for: kind))
+            hint
                 .font(PVFont.body(size: PVTypeScale.caption))
                 .foregroundStyle(PVColor.textPrimary)
-            Text(L10n.EvidenceGraph.armedEscHint)
-                .font(PVFont.mono(size: 11))
-                .foregroundStyle(PVColor.textMuted)
+            Button {
+                model.disarm()
+                focus = nil
+            } label: {
+                Text(L10n.EvidenceGraph.createCancel)
+                    .font(PVFont.mono(size: 11, weight: PVFontWeight.medium))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(PVColor.textSecondary)
+            .accessibilityIdentifier("evidenceGraph.armed.cancel")
+            .keyboardShortcut(.cancelAction)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 7)
@@ -245,13 +274,34 @@ private struct EvidenceGraphContent: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous))
         .shadow(color: Color.black.opacity(0.06), radius: 6, y: 1)
-        .allowsHitTesting(false)
     }
 
     @ViewBuilder
     private var createForm: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space6) {
-            if let kind = model.armedKind {
+            if let bridgeKind = model.pendingBridgeKind {
+                HStack(spacing: 8) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(PVColor.surfacePage)
+                        PVSubjectIcon(kind: bridgeKind.subjectIconKind, size: 15)
+                            .foregroundStyle(PVColor.textMuted)
+                    }
+                    .frame(width: 28, height: 28)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: model.typeLabelByKind[bridgeKind.rawValue] ?? bridgeKind.rawValue)
+                            .font(PVFont.mono(size: 10, weight: PVFontWeight.medium))
+                            .tracking(1)
+                            .textCase(.uppercase)
+                            .foregroundStyle(PVColor.textMuted)
+                        if let line = model.bridgeEndpointLine() {
+                            Text(verbatim: line)
+                                .font(PVFont.mono(size: 11))
+                                .foregroundStyle(PVColor.textFaint)
+                        }
+                    }
+                }
+            } else if let kind = model.armedKind {
                 let style = EvidenceSubjectKindStyle.forKind(kind)
                 HStack(spacing: 8) {
                     ZStack {
@@ -306,7 +356,7 @@ private struct EvidenceGraphContent: View {
         if model.isCreating { return .ignored }
 
         if press.key == .escape {
-            if model.armedKind != nil {
+            if model.armedConnect || model.armedKind != nil {
                 model.disarm()
                 return .handled
             }
@@ -323,9 +373,18 @@ private struct EvidenceGraphContent: View {
         }
 
         guard model.inputMode == .idle,
-              let selectedID = model.selectedSubjectID,
-              let placed = subjects.first(where: { $0.id == selectedID })
+              let selectedID = model.selectedSubjectID
         else { return .ignored }
+
+        let grid: (Int64, Int64)?
+        if let placed = subjects.first(where: { $0.id == selectedID }) {
+            grid = (placed.gridX, placed.gridY)
+        } else if let bridge = bridges.first(where: { $0.id == selectedID }) {
+            grid = (bridge.gridX, bridge.gridY)
+        } else {
+            grid = nil
+        }
+        guard let (fromX, fromY) = grid else { return .ignored }
 
         let delta: (Int64, Int64)?
         switch press.key {
@@ -339,9 +398,9 @@ private struct EvidenceGraphContent: View {
 
         Task {
             _ = await model.moveSubject(
-                subjectID: placed.id,
-                fromGridX: placed.gridX,
-                fromGridY: placed.gridY,
+                subjectID: selectedID,
+                fromGridX: fromX,
+                fromGridY: fromY,
                 deltaX: dx,
                 deltaY: dy
             )
@@ -350,28 +409,49 @@ private struct EvidenceGraphContent: View {
     }
 }
 
-// MARK: - Document (inside NSHostingView)
+// MARK: - Document (paint-only; AppKit owns pointer)
 
-/// Lives inside `GraphCanvasScrollView`'s hosting view. Observes session /
-/// model directly so card list, selection, and create state update without
-/// replacing the hosting root mid-drag.
-///
-/// Exclusive ``EvidenceCanvasInputMode`` installs one gesture set — idle pan /
-/// card drag, or place overlay. Cards are `.focusable()` views (not Buttons)
-/// so Tab can reach them; subject `@FocusState` is local to this hosted tree.
 private struct EvidenceGraphDocument: View {
     @Bindable var handle: QueryHandle<SourceGraphSnapshot>
     @Bindable var model: EvidenceGraphModel
     let contentSize: CGSize
-    @Environment(\.graphCanvasViewport) private var viewport
-    @FocusState private var focusedSubjectID: String?
+    @Environment(\.graphCanvasPointer) private var pointer
 
-    /// Last drag translation while click-panning the empty canvas.
-    @State private var panTranslation: CGSize = .zero
-    @State private var isPanning = false
+    var body: some View {
+        Group {
+            if let pointer {
+                EvidenceGraphDocumentBody(
+                    handle: handle,
+                    model: model,
+                    contentSize: contentSize,
+                    pointer: pointer
+                )
+            } else {
+                Color.clear
+                    .frame(width: contentSize.width, height: contentSize.height)
+            }
+        }
+        .frame(width: contentSize.width, height: contentSize.height)
+    }
+}
+
+/// Observes ``GraphCanvasPointerController`` so live drag offsets refresh paint.
+private struct EvidenceGraphDocumentBody: View {
+    @Bindable var handle: QueryHandle<SourceGraphSnapshot>
+    @Bindable var model: EvidenceGraphModel
+    let contentSize: CGSize
+    @Bindable var pointer: GraphCanvasPointerController
+
+    private var snapshot: SourceGraphSnapshot {
+        model.displaySnapshot(from: handle.value)
+    }
 
     private var subjects: [SourceGraphPlacedSubject] {
-        handle.value?.subjects ?? []
+        snapshot.subjects
+    }
+
+    private var bridges: [SourceGraphPlacedBridge] {
+        snapshot.bridges
     }
 
     private var inputMode: EvidenceCanvasInputMode {
@@ -380,7 +460,30 @@ private struct EvidenceGraphDocument: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            gridLayer
+            GraphCanvasGridView(contentSize: contentSize)
+                .accessibilityHidden(true)
+
+            EvidenceGraphEdgesHost(
+                pointer: pointer,
+                snapshot: snapshot,
+                selectedBridgeID: bridges.contains(where: { $0.id == model.selectedSubjectID })
+                    ? model.selectedSubjectID
+                    : nil
+            )
+            .frame(width: contentSize.width, height: contentSize.height)
+
+            if case .connecting = inputMode,
+               let originID = model.connectOriginID,
+               let origin = subjects.first(where: { $0.id == originID }),
+               let cursor = model.connectHoverPoint
+            {
+                EvidenceGraphConnectRubberBand(origin: origin, cursor: cursor)
+                    .frame(width: contentSize.width, height: contentSize.height)
+            }
+
+            ForEach(bridges) { placed in
+                bridgeCardView(for: placed)
+            }
 
             ForEach(subjects) { placed in
                 cardView(for: placed)
@@ -391,134 +494,164 @@ private struct EvidenceGraphDocument: View {
                     .position(EvidenceSubjectCard.contentCenter(gridX: ghost.gridX, gridY: ghost.gridY))
             }
 
-            if subjects.isEmpty, handle.status == .ready, inputMode == .idle {
+            if subjects.isEmpty, bridges.isEmpty, handle.status == .ready, inputMode == .idle {
                 emptyOverlay
-            }
-
-            if case .placing = inputMode {
-                placeOverlay
             }
         }
         .frame(width: contentSize.width, height: contentSize.height)
         .coordinateSpace(name: EvidenceSubjectCard.documentCoordinateSpace)
-        .onChange(of: focusedSubjectID) { _, id in
-            // Tab onto / off a card is selection. One subject is the target.
+        .onAppear { wirePointer() }
+        .onChange(of: inputMode) { _, _ in
+            syncPointerMode()
+        }
+        .onChange(of: subjects.map(\.id)) { _, _ in
+            publishHitTargets()
+        }
+        .onChange(of: bridges.map(\.id)) { _, _ in
+            publishHitTargets()
+        }
+        .onChange(of: pointer.offsets.count) { _, _ in
+            publishHitTargets()
+        }
+        .onChange(of: subjects.map { "\($0.id):\($0.gridX),\($0.gridY)" }) { _, _ in
+            publishHitTargets()
+        }
+        .onChange(of: bridges.map { "\($0.id):\($0.gridX),\($0.gridY)" }) { _, _ in
+            publishHitTargets()
+        }
+    }
+
+    private func wirePointer() {
+        syncPointerMode()
+        publishHitTargets()
+        let model = model
+        let handle = handle
+        pointer.onSelect = { id in
             model.selectSubject(id: id)
         }
-        .onChange(of: inputMode) { _, mode in
-            if mode != .idle {
-                focusedSubjectID = nil
-                model.selectSubject(id: nil)
-            }
+        pointer.onDeselect = {
+            model.selectSubject(id: nil)
         }
-        .onChange(of: viewport?.documentContainsKeyboardFocus ?? false) { _, inside in
-            if !inside {
-                focusedSubjectID = nil
-                model.selectSubject(id: nil)
+        pointer.onDragEnded = { id, delta in
+            let snap = model.displaySnapshot(from: handle.value)
+            let grid: (Int64, Int64)?
+            if let placed = snap.subjects.first(where: { $0.id == id }) {
+                grid = (placed.gridX, placed.gridY)
+            } else if let bridge = snap.bridges.first(where: { $0.id == id }) {
+                grid = (bridge.gridX, bridge.gridY)
+            } else {
+                grid = nil
             }
+            guard let (ox, oy) = grid else { return }
+            _ = model.commitDrag(
+                subjectID: id,
+                originGridX: ox,
+                originGridY: oy,
+                documentDelta: delta
+            )
         }
-    }
-
-    @ViewBuilder
-    private var gridLayer: some View {
-        let grid = GraphCanvasGridView(contentSize: contentSize)
-            .accessibilityHidden(true)
-            .contentShape(Rectangle())
-
-        switch inputMode {
-        case .idle:
-            grid
-                .onTapGesture {
-                    model.selectSubject(id: nil)
-                    focusedSubjectID = nil
-                }
-                .gesture(backgroundPanGesture)
-        case .placing:
-            grid.allowsHitTesting(false)
+        pointer.onPlace = { point in
+            model.beginCreate(at: point)
         }
-    }
-
-    private var placeOverlay: some View {
-        Color.clear
-            .contentShape(Rectangle())
-            .frame(width: contentSize.width, height: contentSize.height)
-            .onTapGesture {
-                if let point = viewport?.contentPointUnderCursor() {
-                    model.beginCreate(at: point)
-                }
-            }
-            .onContinuousHover { phase in
-                switch phase {
-                case .active:
-                    if let point = viewport?.contentPointUnderCursor() {
-                        model.updateHover(contentPoint: point)
-                    }
-                case .ended:
+        pointer.onConnectPick = { id in
+            let snap = model.displaySnapshot(from: handle.value)
+            guard let placed = snap.subjects.first(where: { $0.id == id }) else { return }
+            model.handleConnectPick(
+                subjectID: placed.id,
+                kind: placed.kind,
+                label: placed.subject.label
+            )
+        }
+        pointer.onHover = { point in
+            switch model.inputMode {
+            case .placing:
+                if let point {
+                    model.updateHover(contentPoint: point)
+                } else {
                     model.clearHover()
                 }
+            case .connecting:
+                if let point {
+                    model.updateConnectHover(contentPoint: point)
+                } else {
+                    model.clearHover()
+                }
+            case .idle:
+                break
             }
+        }
     }
 
-    private var backgroundPanGesture: some Gesture {
-        DragGesture(minimumDistance: 4, coordinateSpace: .global)
-            .onChanged { value in
-                guard let viewport else { return }
-                if !isPanning {
-                    isPanning = true
-                    NSCursor.closedHand.push()
-                }
-                let delta = CGSize(
-                    width: value.translation.width - panTranslation.width,
-                    height: value.translation.height - panTranslation.height
+    private func syncPointerMode() {
+        switch inputMode {
+        case .idle:
+            pointer.mode = .idle
+        case .placing:
+            pointer.mode = .placing
+            model.selectSubject(id: nil)
+        case .connecting:
+            pointer.mode = .connecting
+        }
+    }
+
+    private func publishHitTargets() {
+        var targets: [GraphCanvasHitTarget] = []
+        for placed in bridges {
+            let offset = pointer.offsets[placed.id] ?? .zero
+            targets.append(
+                GraphCanvasHitTarget(
+                    id: placed.id,
+                    frame: EvidenceBridgeCard.contentFrame(
+                        gridX: placed.gridX,
+                        gridY: placed.gridY,
+                        dragOffset: offset
+                    ),
+                    acceptsConnect: false
                 )
-                panTranslation = value.translation
-                viewport.panByViewDelta(delta)
-            }
-            .onEnded { _ in
-                panTranslation = .zero
-                if isPanning {
-                    NSCursor.pop()
-                    isPanning = false
-                }
-            }
+            )
+        }
+        for placed in subjects {
+            let offset = pointer.offsets[placed.id] ?? .zero
+            targets.append(
+                GraphCanvasHitTarget(
+                    id: placed.id,
+                    frame: EvidenceSubjectCard.edgeFrame(
+                        gridX: placed.gridX,
+                        gridY: placed.gridY,
+                        dragOffset: offset
+                    ),
+                    acceptsConnect: true
+                )
+            )
+        }
+        pointer.hitTargets = targets
     }
 
     @ViewBuilder
     private func cardView(for placed: SourceGraphPlacedSubject) -> some View {
-        let idle = inputMode == .idle
-        let offset = EvidenceSubjectCard.topLeadingOffset(gridX: placed.gridX, gridY: placed.gridY)
+        let layout = EvidenceSubjectCard.topLeadingOffset(gridX: placed.gridX, gridY: placed.gridY)
+        let drag = pointer.offsets[placed.id] ?? .zero
         EvidenceSubjectCard(
             placed: placed,
             isSelected: model.selectedSubjectID == placed.id,
             isActivated: model.activatedSubjectID == placed.id,
-            dragEnabled: idle,
-            keyboardFocus: $focusedSubjectID,
-            onSelect: {
-                model.selectSubject(id: placed.id)
-            },
-            onActivate: {
-                model.activateSubject(id: placed.id)
-            },
-            onEscape: {
-                if model.activatedSubjectID != nil {
-                    model.deactivateSubject()
-                } else {
-                    focusedSubjectID = nil
-                    model.selectSubject(id: nil)
-                }
-            },
-            onDragEnded: idle
-                ? { delta in
-                    _ = model.commitDrag(
-                        subjectID: placed.id,
-                        originGridX: placed.gridX,
-                        originGridY: placed.gridY,
-                        documentDelta: delta
-                    )
-                }
-                : nil
+            isConnectingFrom: model.connectOriginID == placed.id,
+            dragOffset: drag
         )
-        .offset(x: offset.width, y: offset.height)
+        .offset(x: layout.width, y: layout.height)
+    }
+
+    @ViewBuilder
+    private func bridgeCardView(for placed: SourceGraphPlacedBridge) -> some View {
+        let layout = EvidenceBridgeCard.topLeadingOffset(gridX: placed.gridX, gridY: placed.gridY)
+        let drag = pointer.offsets[placed.id] ?? .zero
+        EvidenceBridgeCard(
+            placed: placed,
+            isSelected: model.selectedSubjectID == placed.id,
+            isActivated: model.activatedSubjectID == placed.id,
+            dragOffset: drag
+        )
+        .offset(x: layout.width, y: layout.height)
     }
 
     private var emptyOverlay: some View {
@@ -529,6 +662,5 @@ private struct EvidenceGraphDocument: View {
         )
         .frame(width: 420)
         .position(x: contentSize.width / 2, y: contentSize.height / 2)
-        .allowsHitTesting(false)
     }
 }

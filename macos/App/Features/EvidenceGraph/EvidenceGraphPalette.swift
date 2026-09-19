@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Floating Add Person / Event / Place tools over the Evidence graph pane (S6-D1).
+/// Floating Add Person / Event / Place + Connect tools over the Evidence graph (S6-D1 / S6-D2).
 struct EvidenceGraphPalette: View {
     @Bindable var model: EvidenceGraphModel
     var focus: FocusState<EvidenceGraphFocus?>.Binding
@@ -10,6 +10,11 @@ struct EvidenceGraphPalette: View {
             ForEach(EvidencePrimaryKind.allCases, id: \.self) { kind in
                 toolButton(kind)
             }
+            Rectangle()
+                .fill(PVColor.borderSubtle)
+                .frame(width: 1, height: 22)
+                .padding(.horizontal, 4)
+            connectButton
         }
         .padding(4)
         .background(
@@ -53,15 +58,58 @@ struct EvidenceGraphPalette: View {
         }
         .buttonStyle(.plain)
         .focused(focus, equals: .tool(kind))
+        .onKeyPress(.escape) {
+            model.disarm()
+            focus.wrappedValue = nil
+            return .handled
+        }
         .accessibilityLabel(Text(verbatim: model.toolAccessibilityLabel(for: kind, armed: armed)))
         .accessibilityAddTraits(armed ? [.isSelected] : [])
         .accessibilityIdentifier("evidenceGraph.palette.\(kind.rawValue)")
     }
+
+    private var connectButton: some View {
+        let armed = model.armedConnect
+        return Button {
+            model.toggleConnect()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "point.topleft.down.to.point.bottomright.curvepath")
+                    .font(.system(size: 13, weight: .medium))
+                Text(L10n.EvidenceGraph.toolConnect)
+                    .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
+            }
+            .padding(.horizontal, 11)
+            .padding(.vertical, 6)
+            .foregroundStyle(armed ? PVColor.accentForeground : PVColor.textSecondary)
+            .background(
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .fill(armed ? PVColor.accent : Color.clear)
+            )
+            .background {
+                if armed {
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(PVColor.graphRing)
+                        .padding(-3)
+                }
+            }
+            .pvFocusRing(focus.wrappedValue == .toolConnect, cornerRadius: 4)
+        }
+        .buttonStyle(.plain)
+        .focused(focus, equals: .toolConnect)
+        .onKeyPress(.escape) {
+            model.disarm()
+            focus.wrappedValue = nil
+            return .handled
+        }
+        .accessibilityLabel(Text(verbatim: model.connectToolAccessibilityLabel(armed: armed)))
+        .accessibilityAddTraits(armed ? [.isSelected] : [])
+        .accessibilityIdentifier("evidenceGraph.palette.connect")
+    }
 }
 
 /// Keyboard focus targets for the floating palette tools.
-/// Subject cards use a separate `@FocusState` inside the hosted document
-/// (`.focusable()` views — not Buttons).
 enum EvidenceGraphFocus: Hashable {
     case tool(EvidencePrimaryKind)
+    case toolConnect
 }
