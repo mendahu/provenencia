@@ -149,6 +149,9 @@ struct CatalogQueryRegistryTests {
         #expect(handle.value?.subjects.first?.id == "sub-1")
         #expect(handle.value?.subjects.first?.kind == .person)
         #expect(handle.value?.subjects.first?.gridX == 2)
+        #expect(handle.value?.bridges.count == 1)
+        #expect(handle.value?.bridges.first?.id == "sub-bridge")
+        #expect(handle.value?.bridges.first?.kind == .location)
     }
 
     @Test func registryBackedQueryDoesNotRecallLoader() async {

@@ -30,11 +30,41 @@ struct EvidenceGraphModelTests {
                 refPrefix: "EVT",
                 candidateRefPrefix: "CEV"
             ),
+            CatalogSubjectType(
+                id: "type-location",
+                key: "location",
+                origin: "provenencia",
+                label: "Location",
+                description: "",
+                refPrefix: "LOC",
+                candidateRefPrefix: "CLO"
+            ),
+            CatalogSubjectType(
+                id: "type-participation",
+                key: "participation",
+                origin: "provenencia",
+                label: "Participation",
+                description: "",
+                refPrefix: "PTN",
+                candidateRefPrefix: "CPA"
+            ),
+            CatalogSubjectType(
+                id: "type-relationship",
+                key: "relationship",
+                origin: "provenencia",
+                label: "Relationship",
+                description: "",
+                refPrefix: "REL",
+                candidateRefPrefix: "CRL"
+            ),
         ]
         return store
     }
 
-    private func makeModel(store: FakeStore) -> EvidenceGraphModel {
+    private func makeModel(
+        store: FakeStore,
+        linkStore: (any EvidenceProvisionalLinkStoring)? = nil
+    ) -> EvidenceGraphModel {
         let session = WorkspaceSession(
             projectKey: ProjectKey(projectDir: projectDir),
             store: store
@@ -43,7 +73,8 @@ struct EvidenceGraphModelTests {
             sourceID: sourceID,
             session: session,
             store: store,
-            userID: "user-1"
+            userID: "user-1",
+            linkStore: linkStore ?? InMemoryEvidenceProvisionalLinkStore()
         )
     }
 
@@ -53,7 +84,8 @@ struct EvidenceGraphModelTests {
         await model.prepare()
         #expect(model.typeIDByKind["person"] == personTypeID)
         #expect(model.typeIDByKind["event"] == "type-event")
-        #expect(model.typeIDByKind["location"] == nil)
+        #expect(model.typeIDByKind["location"] == "type-location")
+        #expect(model.typeIDByKind["participation"] == "type-participation")
     }
 
     @Test func confirmCreateWritesSubjectAndPositionThenDisarms() async throws {
@@ -223,5 +255,181 @@ struct EvidenceGraphModelTests {
             project: project
         )
         #expect(effects == [.allCached(.sourceGraph)])
+    }
+
+    @Test func connectExcludesPlacingAndPickCreatesBridge() async throws {
+        let store = makeStore()
+        let links = InMemoryEvidenceProvisionalLinkStore()
+        let model = makeModel(store: store, linkStore: links)
+        await model.prepare()
+
+        let person = CatalogSubject(
+            id: "p1",
+            ref: "CPR-1",
+            sourceID: sourceID,
+            subjectTypeID: personTypeID,
+            label: "Alice",
+            description: ""
+        )
+        let event = CatalogSubject(
+            id: "e1",
+            ref: "CEV-1",
+            sourceID: sourceID,
+            subjectTypeID: "type-event",
+            label: "Birth",
+            description: ""
+        )
+        store.subjectsBySource[sourceID] = [person, event]
+        store.subjectPositionsBySubject["p1"] = CatalogSubjectPosition(
+            subjectID: "p1", gridX: 1, gridY: 1
+        )
+        store.subjectPositionsBySubject["e1"] = CatalogSubjectPosition(
+            subjectID: "e1", gridX: 5, gridY: 1
+        )
+
+        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        model.session.setQueryValue(
+            key,
+            value: SourceGraphSnapshot.build(
+                sourceId: sourceID,
+                subjects: [person, event],
+                positions: [
+                    CatalogSubjectPosition(subjectID: "p1", gridX: 1, gridY: 1),
+                    CatalogSubjectPosition(subjectID: "e1", gridX: 5, gridY: 1),
+                ],
+                types: store.subjectTypesByProject[projectDir] ?? []
+            )
+        )
+
+        model.toggleConnect()
+        #expect(model.inputMode == .connecting)
+        model.toggleArm(.person)
+        #expect(model.armedConnect == false)
+        #expect(model.inputMode == .placing(.person))
+
+        model.toggleConnect()
+        model.handleConnectPick(subjectID: "p1", kind: .person, label: "Alice")
+        #expect(model.connectOriginID == "p1")
+        model.handleConnectPick(subjectID: "e1", kind: .event, label: "Birth")
+        #expect(model.isCreating)
+        #expect(model.pendingBridgeKind == .participation)
+
+        model.draft.label = "Witness"
+        let bridgeID = await model.confirmCreate()
+        #expect(bridgeID != nil)
+        #expect(model.armedConnect == false)
+        #expect(links.links(for: sourceID).first?.endpointAID == "p1")
+        #expect(links.links(for: sourceID).first?.endpointBID == "e1")
+
+        let subjects = try await store.listSubjects(projectDir: projectDir, sourceID: sourceID)
+        #expect(subjects.contains(where: { $0.label == "Witness" }))
+    }
+
+    @Test func cancelBridgeCreateKeepsOriginHeld() async {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.prepare()
+
+        store.subjectTypesByProject[projectDir]?.append(
+            CatalogSubjectType(
+                id: "type-place",
+                key: "place",
+                origin: "provenencia",
+                label: "Place",
+                description: "",
+                refPrefix: "PLC",
+                candidateRefPrefix: "CPL"
+            )
+        )
+        await model.prepare()
+
+        let person = CatalogSubject(
+            id: "p1",
+            ref: "CPR-1",
+            sourceID: sourceID,
+            subjectTypeID: personTypeID,
+            label: "Alice",
+            description: ""
+        )
+        let placeSubject = CatalogSubject(
+            id: "pl1",
+            ref: "CPL-1",
+            sourceID: sourceID,
+            subjectTypeID: "type-place",
+            label: "Town",
+            description: ""
+        )
+        store.subjectsBySource[sourceID] = [person, placeSubject]
+        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        model.session.setQueryValue(
+            key,
+            value: SourceGraphSnapshot.build(
+                sourceId: sourceID,
+                subjects: [person, placeSubject],
+                positions: [
+                    CatalogSubjectPosition(subjectID: "p1", gridX: 0, gridY: 0),
+                    CatalogSubjectPosition(subjectID: "pl1", gridX: 4, gridY: 0),
+                ],
+                types: store.subjectTypesByProject[projectDir] ?? []
+            )
+        )
+
+        model.toggleConnect()
+        model.handleConnectPick(subjectID: "p1", kind: .person, label: "Alice")
+        model.handleConnectPick(subjectID: "pl1", kind: .place, label: "Town")
+        #expect(model.pendingBridgeKind == .location)
+        model.cancelCreate()
+        #expect(model.isCreating == false)
+        #expect(model.armedConnect == true)
+        #expect(model.connectOriginID == "p1")
+    }
+
+    @Test func invalidConnectPairToastsAndKeepsOrigin() async {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.prepare()
+        let e1 = CatalogSubject(
+            id: "e1",
+            ref: "CEV-1",
+            sourceID: sourceID,
+            subjectTypeID: "type-event",
+            label: "A",
+            description: ""
+        )
+        let e2 = CatalogSubject(
+            id: "e2",
+            ref: "CEV-2",
+            sourceID: sourceID,
+            subjectTypeID: "type-event",
+            label: "B",
+            description: ""
+        )
+        store.subjectsBySource[sourceID] = [e1, e2]
+        store.subjectPositionsBySubject["e1"] = CatalogSubjectPosition(
+            subjectID: "e1", gridX: 0, gridY: 0
+        )
+        store.subjectPositionsBySubject["e2"] = CatalogSubjectPosition(
+            subjectID: "e2", gridX: 2, gridY: 0
+        )
+        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        model.session.setQueryValue(
+            key,
+            value: SourceGraphSnapshot.build(
+                sourceId: sourceID,
+                subjects: [e1, e2],
+                positions: [
+                    CatalogSubjectPosition(subjectID: "e1", gridX: 0, gridY: 0),
+                    CatalogSubjectPosition(subjectID: "e2", gridX: 2, gridY: 0),
+                ],
+                types: store.subjectTypesByProject[projectDir] ?? []
+            )
+        )
+
+        model.toggleConnect()
+        model.handleConnectPick(subjectID: "e1", kind: .event, label: "A")
+        model.handleConnectPick(subjectID: "e2", kind: .event, label: "B")
+        #expect(model.isCreating == false)
+        #expect(model.connectOriginID == "e1")
+        #expect(model.toast?.tone == .danger)
     }
 }

@@ -1,11 +1,17 @@
 import Foundation
 
 /// Primary subject kinds drawn on the Evidence graph (S6-02).
-/// Bridge / `source` types are filtered out of the canvas payload.
 enum EvidencePrimaryKind: String, Sendable, Equatable, CaseIterable {
     case person
     case event
     case place
+}
+
+/// Bridge / association kinds drawn as mid-cards (S6-04).
+enum EvidenceBridgeKind: String, Sendable, Equatable, CaseIterable {
+    case relationship
+    case participation
+    case location
 }
 
 /// A primary subject with a persisted grid position for the Evidence graph.
@@ -21,60 +27,143 @@ struct SourceGraphPlacedSubject: Identifiable, Sendable, Equatable {
     var isCited: Bool
 }
 
-/// Source-scoped Evidence graph payload (subjects + positions).
+/// A bridge subject with position and provisional endpoint ids (S6-04).
+struct SourceGraphPlacedBridge: Identifiable, Sendable, Equatable {
+    var id: String { subject.id }
+    var subject: CatalogSubject
+    var kind: EvidenceBridgeKind
+    var typeLabel: String
+    var gridX: Int64
+    var gridY: Int64
+    /// Provisional A/B endpoint subject ids (app-local until Citations exist).
+    var endpointAID: String?
+    var endpointBID: String?
+}
+
+/// Source-scoped Evidence graph payload (primaries + bridges + positions).
 struct SourceGraphSnapshot: Sendable, Equatable {
     var sourceId: String
     var subjects: [SourceGraphPlacedSubject]
+    var bridges: [SourceGraphPlacedBridge]
 
-    init(sourceId: String, subjects: [SourceGraphPlacedSubject] = []) {
+    init(
+        sourceId: String,
+        subjects: [SourceGraphPlacedSubject] = [],
+        bridges: [SourceGraphPlacedBridge] = []
+    ) {
         self.sourceId = sourceId
         self.subjects = subjects
+        self.bridges = bridges
     }
 
-    /// Joins catalog rows into placed primaries. Bridges and unplaced subjects
-    /// are omitted. Stable order: label, then ref.
+    /// Joins catalog rows into placed primaries and bridges. Unplaced subjects
+    /// and `source` types are omitted. Endpoint ids come from `provisionalLinks`.
     static func build(
         sourceId: String,
         subjects: [CatalogSubject],
         positions: [CatalogSubjectPosition],
         types: [CatalogSubjectType],
+        provisionalLinks: [EvidenceProvisionalLink] = [],
         isCited: (CatalogSubject) -> Bool = { _ in false }
     ) -> SourceGraphSnapshot {
         let typeByID = Dictionary(uniqueKeysWithValues: types.map { ($0.id, $0) })
         let positionBySubject = Dictionary(uniqueKeysWithValues: positions.map { ($0.subjectID, $0) })
+        let linkByBridge = Dictionary(uniqueKeysWithValues: provisionalLinks.map {
+            ($0.bridgeSubjectID, $0)
+        })
 
         var placed: [SourceGraphPlacedSubject] = []
+        var placedBridges: [SourceGraphPlacedBridge] = []
         placed.reserveCapacity(subjects.count)
+        placedBridges.reserveCapacity(subjects.count)
+
         for subject in subjects {
             guard let type = typeByID[subject.subjectTypeID],
-                  let kind = EvidencePrimaryKind(rawValue: type.key),
                   let position = positionBySubject[subject.id]
             else { continue }
-            placed.append(
-                SourceGraphPlacedSubject(
-                    subject: subject,
-                    kind: kind,
-                    typeLabel: type.label,
-                    gridX: position.gridX,
-                    gridY: position.gridY,
-                    isCited: isCited(subject)
+
+            if let kind = EvidencePrimaryKind(rawValue: type.key) {
+                placed.append(
+                    SourceGraphPlacedSubject(
+                        subject: subject,
+                        kind: kind,
+                        typeLabel: type.label,
+                        gridX: position.gridX,
+                        gridY: position.gridY,
+                        isCited: isCited(subject)
+                    )
                 )
-            )
+            } else if let kind = EvidenceBridgeKind(rawValue: type.key) {
+                let link = linkByBridge[subject.id]
+                placedBridges.append(
+                    SourceGraphPlacedBridge(
+                        subject: subject,
+                        kind: kind,
+                        typeLabel: type.label,
+                        gridX: position.gridX,
+                        gridY: position.gridY,
+                        endpointAID: link?.endpointAID,
+                        endpointBID: link?.endpointBID
+                    )
+                )
+            }
         }
+
         placed.sort { lhs, rhs in
             let labelCompare = lhs.subject.label.localizedStandardCompare(rhs.subject.label)
             if labelCompare != .orderedSame { return labelCompare == .orderedAscending }
             return lhs.subject.ref.localizedStandardCompare(rhs.subject.ref) == .orderedAscending
         }
-        return SourceGraphSnapshot(sourceId: sourceId, subjects: placed)
+        placedBridges.sort { lhs, rhs in
+            let labelCompare = lhs.subject.label.localizedStandardCompare(rhs.subject.label)
+            if labelCompare != .orderedSame { return labelCompare == .orderedAscending }
+            return lhs.subject.ref.localizedStandardCompare(rhs.subject.ref) == .orderedAscending
+        }
+        return SourceGraphSnapshot(sourceId: sourceId, subjects: placed, bridges: placedBridges)
     }
 
-    /// Returns a copy with one subject's grid cell updated (drag / arrow move).
+    /// Returns a copy with provisional endpoint ids applied to matching bridges.
+    func attaching(links: [EvidenceProvisionalLink]) -> SourceGraphSnapshot {
+        guard !bridges.isEmpty else { return self }
+        let byBridge = Dictionary(uniqueKeysWithValues: links.map { ($0.bridgeSubjectID, $0) })
+        let next = bridges.map { bridge -> SourceGraphPlacedBridge in
+            guard let link = byBridge[bridge.id] else { return bridge }
+            var copy = bridge
+            copy.endpointAID = link.endpointAID
+            copy.endpointBID = link.endpointBID
+            return copy
+        }
+        return SourceGraphSnapshot(sourceId: sourceId, subjects: subjects, bridges: next)
+    }
+
+    /// Returns a copy with one subject's or bridge's grid cell updated.
     func updatingPosition(subjectID: String, gridX: Int64, gridY: Int64) -> SourceGraphSnapshot {
-        var next = subjects
-        guard let index = next.firstIndex(where: { $0.id == subjectID }) else { return self }
-        next[index].gridX = gridX
-        next[index].gridY = gridY
-        return SourceGraphSnapshot(sourceId: sourceId, subjects: next)
+        if let index = subjects.firstIndex(where: { $0.id == subjectID }) {
+            var next = subjects
+            next[index].gridX = gridX
+            next[index].gridY = gridY
+            return SourceGraphSnapshot(sourceId: sourceId, subjects: next, bridges: bridges)
+        }
+        if let index = bridges.firstIndex(where: { $0.id == subjectID }) {
+            var next = bridges
+            next[index].gridX = gridX
+            next[index].gridY = gridY
+            return SourceGraphSnapshot(sourceId: sourceId, subjects: subjects, bridges: next)
+        }
+        return self
+    }
+}
+
+/// Infers the bridge kind for a primary pair (S6-04). Returns nil for invalid pairs.
+enum EvidenceBridgeKindInference {
+    static func kind(
+        _ a: EvidencePrimaryKind,
+        _ b: EvidencePrimaryKind
+    ) -> EvidenceBridgeKind? {
+        let pair = Set([a, b])
+        if pair == [.person, .event] { return .participation }
+        if pair == [.person, .place] || pair == [.event, .place] { return .location }
+        if a == .person, b == .person { return .relationship }
+        return nil
     }
 }

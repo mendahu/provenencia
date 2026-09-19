@@ -1096,6 +1096,96 @@ enum L10n {
             comment: "Toast title when setSubjectPosition fails after drag or arrow move"
         )
 
+        static let toolConnect = LocalizedStringResource(
+            "evidenceGraph.palette.connect",
+            defaultValue: "Connect",
+            comment: "Evidence graph palette tool to link two primary subjects with a bridge"
+        )
+
+        static let armedHintConnect = LocalizedStringResource(
+            "evidenceGraph.armed.hintConnect",
+            defaultValue: "Select the first subject",
+            comment: "Banner when Connect is armed and no origin is chosen yet"
+        )
+
+        static let armedHintConnectPickB = LocalizedStringResource(
+            "evidenceGraph.armed.hintConnectPickB",
+            defaultValue: "Select the second subject",
+            comment: "Banner when Connect has origin A and is waiting for B"
+        )
+
+        static let connectingFrom = LocalizedStringResource(
+            "evidenceGraph.connect.connectingFrom",
+            defaultValue: "connecting from",
+            comment: "Mono status line on primary card A while Connect waits for B"
+        )
+
+        static let addRelationshipTitle = LocalizedStringResource(
+            "evidenceGraph.create.relationshipTitle",
+            defaultValue: "Add relationship",
+            comment: "Create-bridge dialog title for a relationship mid-card"
+        )
+
+        static let addParticipationTitle = LocalizedStringResource(
+            "evidenceGraph.create.participationTitle",
+            defaultValue: "Add participation",
+            comment: "Create-bridge dialog title for a participation mid-card"
+        )
+
+        static let addLocationTitle = LocalizedStringResource(
+            "evidenceGraph.create.locationTitle",
+            defaultValue: "Add location",
+            comment: "Create-bridge dialog title for a location mid-card"
+        )
+
+        static let defaultLabelRelationship = LocalizedStringResource(
+            "evidenceGraph.create.defaultLabelRelationship",
+            defaultValue: "New relationship",
+            comment: "Prefill label when creating a relationship bridge"
+        )
+
+        static let defaultLabelParticipation = LocalizedStringResource(
+            "evidenceGraph.create.defaultLabelParticipation",
+            defaultValue: "New participation",
+            comment: "Prefill label when creating a participation bridge"
+        )
+
+        static let defaultLabelLocation = LocalizedStringResource(
+            "evidenceGraph.create.defaultLabelLocation",
+            defaultValue: "New location",
+            comment: "Prefill label when creating a location bridge"
+        )
+
+        static let bridgeHonestyBody = LocalizedStringResource(
+            "evidenceGraph.bridge.honestyBody",
+            defaultValue: "Prototype link — not cited evidence",
+            comment: "Permanent honesty copy on S6-04 bridge cards"
+        )
+
+        static let bridgeHonestyAccessibility = LocalizedStringResource(
+            "evidenceGraph.bridge.honestyAccessibility",
+            defaultValue: "Prototype link, not cited evidence",
+            comment: "VoiceOver fragment for bridge honesty"
+        )
+
+        static let linksRotor = LocalizedStringResource(
+            "evidenceGraph.rotor.links",
+            defaultValue: "Links",
+            comment: "VoiceOver rotor name for jumping between Evidence graph bridge cards"
+        )
+
+        static let connectInvalidPairTitle = LocalizedStringResource(
+            "evidenceGraph.connect.invalidPairTitle",
+            defaultValue: "Can't connect those",
+            comment: "Toast title when Connect picks an unsupported primary pair"
+        )
+
+        static let connectInvalidPairBody = LocalizedStringResource(
+            "evidenceGraph.connect.invalidPairBody",
+            defaultValue: "Try person↔event, person↔place, event↔place, or two people.",
+            comment: "Toast body explaining which primary pairs Connect accepts"
+        )
+
         static func subjectCount(count: Int) -> LocalizedStringResource {
             count == 1 ? subjectCountOne : subjectCountOther(count: count)
         }
