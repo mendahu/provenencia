@@ -1,6 +1,6 @@
 # Deployment Plan — Spike 6
 
-Evidence graph **canvas prototype**: pan/zoom, place and drag bubbles, draw relationship lines, and do it accessibly. Authoritative design: [`interpretation-graph-ui.md`](../../ideas/interpretation-graph-ui.md) §7 / §11.3 / §13. Foundation: [Spike 5 archive](../archive/spike-5/).
+Evidence graph **canvas prototype**: pan/zoom, place and drag bubbles, draw relationship lines, and do it accessibly. Authoritative design: [`interpretation-graph-ui.md`](../../../ideas/interpretation-graph-ui.md) §7 / §11.3 / §13. Foundation: [Spike 5 archive](../spike-5/).
 
 ## Status
 
@@ -65,7 +65,7 @@ S6-D2  Connect + bridges      │
 - [x] S6-02 — Primary cards on the canvas + accessibility representation → [`completed.md`](completed.md)
 - [x] S6-03 — Click-to-place, create modal, drag, snap, persist → [`completed.md`](completed.md)
 - [x] S6-04 — Connect + bridge cards (accessible) → [`completed.md`](completed.md)
-- [ ] S6-05 — Docs, dogfood, go-nogo
+- [x] S6-05 — Docs, dogfood, go-nogo → [`completed.md`](completed.md)
 
 ---
 
@@ -167,11 +167,11 @@ No SemVer bump for docs-only close. Archive this folder when the spike is accept
 
 ## Definition of done
 
-- [ ] Checklist above complete
-- [ ] Dogfood bar items 1–7 met (or explicit no-go recorded)
-- [ ] Design briefs archived under `design/archive/`
-- [ ] [`docs/deployment-plan/README.md`](../README.md) points at archive when closed
-- [ ] Design note status line points at this spike as scheduled (slice 2)
+- [x] Checklist above complete
+- [x] Dogfood bar items 1–7 met (or explicit no-go recorded) — **Go** in [`completed.md`](completed.md)
+- [x] Design briefs archived under `design/archive/`
+- [x] [`docs/deployment-plan/README.md`](../../README.md) points at archive when closed
+- [x] Design note status line points at Spike 6 archive (slice 2 complete)
 
 ## What the next spike inherits
 

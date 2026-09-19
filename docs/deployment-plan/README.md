@@ -8,23 +8,25 @@ Authoritative domain and stack decisions remain in the sibling docs under [`docs
 
 | Spike | Goal |
 | --- | --- |
-| [Spike 6](spike-6/) | Evidence graph **canvas prototype**: pan/zoom, click-to-add bubbles, drag/snap, relationship lines, accessibility. Retires UI risk before Citations/Observations. Design in Claude Design first (S6-D1/D2). Plan: [`spike-6/deployment-plan.md`](spike-6/deployment-plan.md). Design note: [`ideas/interpretation-graph-ui.md`](../ideas/interpretation-graph-ui.md). |
+| — | No open spike. Next Interpretation work (Citations / Observations / durable connect macros) is not yet scheduled. |
 
 ## Completed
 
 | Spike | Goal |
 | --- | --- |
+| [Spike 6](archive/spike-6/) | Evidence graph **canvas prototype**: pan/zoom, click-to-add bubbles, drag/snap, relationship lines, accessibility. **Go** — UI risk retired; provisional connect honesty labeled. Neutral `GraphCanvas` reuse contract. Design: [`ideas/interpretation-graph-ui.md`](../ideas/interpretation-graph-ui.md). Archive: [`archive/spike-6/README.md`](archive/spike-6/README.md), [`completed.md`](archive/spike-6/completed.md). |
 | [Spike 5](archive/spike-5/) | Interpretation foundation up to the canvas: candidate refs, `subject_types` + seed, audited `subjects`, layout storage, FFI, nested Sources config (Subject types / fields stubs), Sources list → **Evidence graph** stub, floating-menu unify (S5-10). **No Subject UI** — canvas is Spike 6. Design: [`ideas/interpretation-graph-ui.md`](../ideas/interpretation-graph-ui.md). Archive: [`archive/spike-5/README.md`](archive/spike-5/README.md), [`completed.md`](archive/spike-5/completed.md). |
 | [Spike 4](archive/spike-4/) | Workspace session + catalog query cache + declarative place registry: fast, consistent navigation; Sources/fields/types on query handles; `add-workspace-place` skill. Design: [`ideas/archive/page-navigation-performance.md`](../ideas/archive/page-navigation-performance.md). Archive: [`archive/spike-4/README.md`](archive/spike-4/README.md), [`completed.md`](archive/spike-4/completed.md). |
 | [Spike 3](archive/spike-3/) | Workspace chrome + first-class nav history and catalog search: Back/Forward (persisted, `project.uuid`), toolbar omnibar with Go registry + FTS5 ranking. Archive: [`archive/spike-3/README.md`](archive/spike-3/README.md), [`completed.md`](archive/spike-3/completed.md). Notes: [`navigation-history.md`](archive/spike-3/navigation-history.md), [`omnibar-search.md`](archive/spike-3/omnibar-search.md). |
 | [Spike 2](archive/spike-2/) | Validate the Source layer: app workspace chrome (sidebar), audit + schema + Go CRUD/ingest + FFI + macOS Source catalog UI (create Sources, Artifacts, Files, extensible types/metadata). Design steps in Claude Design interleaved with PRs. Dogfood: [`archive/spike-2/dogfood.md`](archive/spike-2/dogfood.md). |
 | [Spike 1](archive/spike-1.md) | Scaffold the macOS app, local SQLite project, and first-run onboarding. **Retired the cgo SQLite + Swift dylib risk** (plan A: `mattn/go-sqlite3` inside `libprovenencia.dylib`). |
 
-Spike 6 (current):
+Spike 6 archive:
 
-- [`spike-6/README.md`](spike-6/README.md) — spike overview
-- [`spike-6/deployment-plan.md`](spike-6/deployment-plan.md) — PR sequence, design gates, go/no-go
-- [`spike-6/design/`](spike-6/design/) — Claude Design briefs (S6-D1, S6-D2)
+- [`archive/spike-6/README.md`](archive/spike-6/README.md) — spike overview (no open steps); **Go**
+- [`archive/spike-6/completed.md`](archive/spike-6/completed.md) — finished Spike 6 steps (S6-D1…S6-05)
+- [`archive/spike-6/deployment-plan.md`](archive/spike-6/deployment-plan.md) — PR sequence, design gates, dogfood bar, go/no-go
+- [`archive/spike-6/design/`](archive/spike-6/design/) — Claude Design briefs (S6-D1, S6-D2); archived briefs in [`archive/spike-6/design/archive/`](archive/spike-6/design/archive/)
 
 Spike 5 archive:
 

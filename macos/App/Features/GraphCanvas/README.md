@@ -22,6 +22,23 @@ catalog types so geometry stays extractable (design note §13).
 | `GraphCanvasGridView` | Optional empty grid document content |
 | `GraphCanvasEdgeGeometry` | Cubic edges + tuck-under endpoints |
 
+## Reuse contract
+
+Hosts supply product policy; GraphCanvas supplies plumbing.
+
+| Host must supply | Stays in the product folder |
+| --- | --- |
+| `hitTargets` (string ids + document rects) | Card chrome, palette, create dialogs |
+| Pointer `mode` + callbacks (select / drag end / place / connect) | Catalog / store / FFI / session queries |
+| Document `rootView` (paint-only SwiftUI) | VoiceOver product rotors and honesty copy |
+| Magnification range + document size (host policy) | Auto-layout, virtualization, position tables |
+
+**Transfers to a future tree / workflow host:** scroll shell, pointer controller + hit targets, viewport convert, optional grid and edge helpers.
+
+**Does not transfer** (design note §13.3–§13.4): auto-layout engines, viewport virtualization, polymorphic `subject_positions`, Evidence card chrome, or a Source-scoped fixed board size. Those stay product-owned; GraphCanvas only provides the geometry primitives.
+
+Audit bar: zero Evidence / catalog / store types under `GraphCanvas/`.
+
 ## Pointer ownership
 
 AppKit owns **all** canvas mouse sequences. Hosted SwiftUI is paint-only
@@ -51,9 +68,10 @@ gesture locations into the hosted document correctly (design note §7.2).
 | Click-drag on empty document | Pan (idle mode) |
 | Click / drag on hit targets | Product callbacks (select, move, place, connect) |
 
-Magnification range is **zoom-out oriented** (`0.25` … `1.25`): overview of a
-large graph, then back toward identity. Deliberate zoom-*in* past ~125% is
-capped so layer-scaled SwiftUI cards do not go soft.
+Magnification range defaults are **zoom-out oriented** (`0.25` … `1.25`): overview of a
+large graph, then back toward identity. Hosts may choose different clamps.
+Deliberate zoom-*in* past ~125% is capped in the default camera so layer-scaled
+SwiftUI content does not go soft.
 
 Changing `contentID` resets magnification to `1` and re-centers the document.
 Paint `rootView` may update every representable pass — safe because AppKit owns gestures.

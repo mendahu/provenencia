@@ -3,9 +3,9 @@ import Foundation
 
 /// Pure grid-cell ↔ content-point conversion for canvas documents.
 ///
-/// Matches `GraphCanvasGridView` spacing so snap and card placement share one
-/// unit. Product hosts (Evidence graph, later trees) call these helpers; keep
-/// catalog types out of this module.
+/// Matches `GraphCanvasGridView` spacing so snap and placement share one
+/// unit. Product hosts call these helpers; keep catalog types out of this
+/// module.
 enum GraphCanvasGridMapping {
     /// Default spacing — keep in sync with `GraphCanvasGridView.gridSpacing`.
     static let defaultSpacing: CGFloat = 40

@@ -2,8 +2,8 @@ import SwiftUI
 
 /// Optional grid underlay for a canvas document view.
 ///
-/// Product-agnostic — Evidence graph, a future tree, or any other host can
-/// use it or supply different document content to `GraphCanvasScrollView`.
+/// Product-agnostic — any graph host can use it or supply different document
+/// content to `GraphCanvasScrollView`.
 struct GraphCanvasGridView: View {
     /// Size of the pannable document in content points.
     var contentSize: CGSize
