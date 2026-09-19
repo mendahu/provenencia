@@ -14,11 +14,11 @@ Stand up the Interpretation **Citation → Observation** pipeline on the Evidenc
 | --- | --- |
 | [**Deployment plan**](deployment-plan.md) | PR sequence, design gates, dogfood bar, scope |
 | [**Completed**](completed.md) | Finished steps (empty until landings) |
-| [Design briefs](design/) | Claude Design — open S7-D1…S7-D4 |
+| [Design briefs](design/) | Claude Design — open S7-D1…S7-D5 |
 
 ## Relationship to Spike 5 / 6 / later
 
-Spike 5 shipped subjects, positions, Subject types seed, and Sources-family stubs. Spike 6 shipped the canvas prototype (provisional connect). Spike 7 is slices **3–7** of the design note collapsed into one spike: vocabulary editors, artifact viewer + Citations, Observations (five value types including NameValue), and durable connect.
+Spike 5 shipped subjects, positions, Subject types seed, and Sources-family stubs. Spike 6 shipped the canvas prototype (provisional connect). Spike 7 is slices **3–7** of the design note collapsed into one spike: vocabulary editors, artifact viewer + Citations, Observations (five value types including NameValue as its **own design stream**), and durable connect.
 
 **Later (not this spike):** Source-page `mentions` / `remark`, audio/video composers, Citation pinning across graph edits, conflicted/negated visual language, unplaced tray / minimap.
 

@@ -16,7 +16,7 @@ All of the following must be true in the app:
 2. On the Evidence graph, a card has **Add property** → navigate to the **citation composer place** (Artifact pick as needed inside that place or as a short prelude).
 3. Composer supports **images** (zoom/pan + region polygon) and **PDFs** (page nav + zoom/pan + region); audio/video deferred.
 4. One submit writes **one Citation + N Observations**; **Back** returns to the graph; card **grows** with cited property rows.
-5. **NameValue** works end-to-end (schema → Go → reusable Swift editor modal, DateValue-shaped) — nested modal/sheet *inside* the composer place is fine.
+5. **NameValue** works end-to-end (schema → Go → reusable Swift editor per **S7-D5**, DateValue-shaped) — nested modal/sheet *inside* the composer place is fine.
 6. **Connect** is durable: disambiguation on the graph → navigate to composer with two edge Observations pre-filled → submit → back to graph with a real bridge (replaces Spike 6 provisional links).
 7. Empty Artifact gate is honest (cannot cite without an Artifact).
 8. Composer has its **own accessibility tree** — not layered on the canvas.
@@ -72,7 +72,7 @@ Sources › {Source title} › Evidence graph › Connect › Cite
 
 Pinning a Citation across successive graph edits is **out** (one Citation + N Observations per submit).
 
-## Design track (four briefs — one view each)
+## Design track (five briefs — one view / surface each)
 
 **All UI is designed in Claude Design before the matching UI PR.** Briefs: [`design/`](design/).
 
@@ -81,9 +81,10 @@ Pinning a Citation across successive graph edits is **out** (one Citation + N Ob
 | **S7-D1** | Subject types | Replace stub; list/detail; origin; ref prefixes; create/edit/delete unused | S7-04 |
 | **S7-D2** | Subject fields | Properties + bindings; five value_types; mirror Source fields | S7-05 |
 | **S7-D3** | Evidence graph updates | Add-property; cited-data rows; Artifact gate; connect disambiguation → composer handoff; bridge honesty once cited | S7-09, S7-10 |
-| **S7-D4** | Citation composer place | Full-window viewer\|form; Artifact pick; locators; observation list; NameValue nested editor; breadcrumbs; composer-only a11y | S7-08 |
+| **S7-D4** | Citation composer place | Full-window viewer\|form; Artifact pick; locators; observation list; DateValue reuse; breadcrumbs; composer-only a11y — **hosts** NameValue modal, does not design it | S7-08 |
+| **S7-D5** | NameValue editor | Reusable NameValue modal (DateValue twin); form + optional parts | S7-02b |
 
-Run **S7-D1 / D2** early (parallel with schema). **S7-D3 before card/connect UI.** **S7-D4 before composer place UI.** D3 and D4 may run in parallel once boundaries are clear.
+Run **S7-D1 / D2 / D5** early (parallel with schema). **S7-D3 before card/connect UI.** **S7-D4 before composer place UI.** **S7-D5 before NameValue Swift UI.** D3, D4, and D5 may run in parallel once boundaries are clear.
 
 ## PR sequence
 
@@ -94,15 +95,19 @@ design                              build
 S7-D1 Subject types                 S7-01  properties + subject_type_fields
   │                                 │      + seed registry + Go CRUD/FFI
   │                                 ▼
-S7-D2 Subject fields                S7-02  NameValue schema + Go + Swift editor
-  │                                 │      (reusable modal; DateValue twin)
+S7-D2 Subject fields                S7-02  NameValue schema + Go
+  │                                 │      (ungated; tables + package)
   │                                 ▼
+S7-D5 NameValue editor              │
   │                                 S7-03  citations + observations + locator
   │                                 │      validation (Go) + FFI macros
   │                                 ▼
-  └────── gates ──────────────────▶ S7-04  Subject types UI
+  └────── gates ──────────────────▶ S7-02b NameValue Swift editor
+                                    │      (reusable modal; DateValue twin)
                                     │
-  └────── gates ──────────────────▶ S7-05  Subject fields UI
+  └────── D1 gates ───────────────▶ S7-04  Subject types UI
+                                    │
+  └────── D2 gates ───────────────▶ S7-05  Subject fields UI
                                     │
 S7-D3 Graph updates                 │
 S7-D4 Composer place                │
@@ -113,6 +118,7 @@ S7-D4 Composer place                │
   │                                 │
   │                                 ▼
   └────── D4 gates ───────────────▶ S7-08  Citation composer place (B)
+  │                                 │      (+ host NameValue from S7-02b)
   │                                 │      WorkspaceLocation + breadcrumbs
   │                                 │      Citation + N Observations submit
   │                                 ▼
@@ -125,7 +131,7 @@ S7-D4 Composer place                │
                                   S7-11  Dogfood close / docs
 ```
 
-Schema/Go PRs (01–03) may start before design finishes; **UI PRs gate on the matching brief.**
+Schema/Go PRs (01–03, 02) may start before design finishes; **UI PRs gate on the matching brief.** S7-03 needs S7-02 (schema) only — not S7-02b. S7-08 needs **S7-02b** + **S7-D4**.
 
 ---
 
@@ -135,8 +141,10 @@ Schema/Go PRs (01–03) may start before design finishes; **UI PRs gate on the m
 - [ ] S7-D2 — Design: Subject fields → [`completed.md`](completed.md)
 - [ ] S7-D3 — Design: Evidence graph updates → [`completed.md`](completed.md)
 - [ ] S7-D4 — Design: Citation composer place → [`completed.md`](completed.md)
+- [ ] S7-D5 — Design: NameValue editor → [`completed.md`](completed.md)
 - [ ] S7-01 — `properties` + `subject_type_fields` + seed + Go/FFI → [`completed.md`](completed.md)
-- [ ] S7-02 — NameValue schema + Go + Swift editor → [`completed.md`](completed.md)
+- [ ] S7-02 — NameValue schema + Go → [`completed.md`](completed.md)
+- [ ] S7-02b — NameValue Swift editor → [`completed.md`](completed.md)
 - [ ] S7-03 — Citations + Observations + locator validation + FFI → [`completed.md`](completed.md)
 - [ ] S7-04 — Subject types UI → [`completed.md`](completed.md)
 - [ ] S7-05 — Subject fields UI → [`completed.md`](completed.md)
@@ -169,7 +177,13 @@ Claude Design board for Add property, cited rows, connect disambiguation handoff
 
 ## S7-D4 — Design: Citation composer place
 
-Claude Design board for the navigable composer. Brief: [`design/S7-D4-citation-composer.md`](design/S7-D4-citation-composer.md). Gates **S7-08**. Confirms breadcrumbs and history policy.
+Claude Design board for the navigable composer. Brief: [`design/S7-D4-citation-composer.md`](design/S7-D4-citation-composer.md). Gates **S7-08**. Confirms breadcrumbs and history policy. **Does not** design the NameValue editor (S7-D5) — only the host affordance that opens it.
+
+---
+
+## S7-D5 — Design: NameValue editor
+
+Claude Design board for the reusable NameValue modal (DateValue twin). Brief: [`design/S7-D5-name-value-editor.md`](design/S7-D5-name-value-editor.md). Gates **S7-02b**.
 
 ---
 
@@ -186,16 +200,29 @@ Migration(s) for `properties`, `subject_type_fields`; `value_type` limited to te
 
 ---
 
-## S7-02 — NameValue end to end
+## S7-02 — NameValue schema + Go
 
-`name_values` / `name_value_parts` per structured-name-model §2–3 (Interpretation only — not Conclusion `name_format`); `core/database/namevalues`; Swift `NameValueDraft` / editor modal under `Features/Names/` (mirror `Features/Dates/`).
+`name_values` / `name_value_parts` per structured-name-model §2–3 (Interpretation only — not Conclusion `name_format`); `core/database/namevalues`. **No Swift UI** in this PR.
 
 | | |
 | --- | --- |
-| **In** | Schema, Go, reusable Swift editor modal. |
-| **Out** | Wiring into Observations (S7-08); name_format profiles. |
-| **Testable** | Go round-trip; Swift unit tests for draft validation. |
-| **Depends on** | — (can parallel S7-01). |
+| **In** | Schema, Go package, tests. |
+| **Out** | Swift editor (S7-02b); composer wiring (S7-08); name_format profiles. |
+| **Testable** | Go round-trip create/read parts. |
+| **Depends on** | — (can parallel S7-01). **Not** gated on S7-D5. |
+
+---
+
+## S7-02b — NameValue Swift editor
+
+Swift `NameValueDraft` / editor modal under `Features/Names/` (mirror `Features/Dates/`). Reusable from the composer and later hosts.
+
+| | |
+| --- | --- |
+| **In** | Reusable modal UI per S7-D5; unit tests for draft validation. |
+| **Out** | Composer host wiring (S7-08 opens the modal); schema (S7-02). |
+| **Testable** | Swift tests for form-required / parts ordering; preview of modal. |
+| **Depends on** | S7-02, **S7-D5**. |
 
 ---
 
@@ -270,10 +297,10 @@ New workspace place + location discriminant; breadcrumb per S7-D4; Artifact pick
 
 | | |
 | --- | --- |
-| **In** | Navigable place; viewer\|form layout; submit Citation + Observations; NameValue nested editor. |
-| **Out** | Card growth wiring (S7-09); connect macros (S7-10); pinning. |
-| **Testable** | From a temporary entry point or FakeStore-driven nav: cite a page/region, add two Observations, submit, see rows in catalog; Back returns to graph. |
-| **Depends on** | S7-03, S7-06, S7-07, **S7-D4**. |
+| **In** | Navigable place; viewer\|form layout; submit Citation + Observations; host NameValue modal from S7-02b; reuse DateValue. |
+| **Out** | Card growth wiring (S7-09); connect macros (S7-10); pinning; designing NameValue itself (S7-D5 / S7-02b). |
+| **Testable** | From a temporary entry point or FakeStore-driven nav: cite a page/region, add two Observations (including a name), submit, see rows in catalog; Back returns to graph. |
+| **Depends on** | S7-03, S7-06, S7-07, S7-02b, **S7-D4**. |
 
 ---
 
@@ -316,7 +343,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar). Record in [`completed.md
 | Subject types / fields editors | Source-page `mentions` / `remark` |
 | Composer as **navigable place** (Option B) | In-window modal (A); companion window (C) |
 | Image + PDF + page/region | Audio / video / QuickLook-as-composer |
-| NameValue (interpretation tables) | Conclusion name_format |
+| NameValue schema + reusable editor (S7-D5 stream) | Conclusion name_format |
 | Durable connect via composer | Citation pinning across graph edits |
 | Card cited-property rows | Unplaced tray, minimap, auto-layout |
 | Five value-type editors | `real` / `boolean`; full conflicted/negated visual language |

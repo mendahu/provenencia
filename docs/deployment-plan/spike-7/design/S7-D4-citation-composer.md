@@ -3,8 +3,8 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 7 (Citations / Observations / composer)  
 **Implements later as:** PR **S7-08** only (viewers/locators land in S7-06/S7-07; this board owns place chrome)  
-**Depends on:** Evidence graph handoff designed in **S7-D3**; NameValue editor is a nested modal (DateValue twin)  
-**Related briefs:** [`S7-D3`](S7-D3-evidence-graph-updates.md) — graph entry / return
+**Depends on:** Evidence graph handoff designed in **S7-D3**; NameValue editor designed separately in **S7-D5** (composer only hosts it)  
+**Related briefs:** [`S7-D3`](S7-D3-evidence-graph-updates.md) — graph entry / return; [`S7-D5`](S7-D5-name-value-editor.md) — NameValue modal
 
 Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](README.md) first.
 
@@ -37,7 +37,7 @@ Also decide **breadcrumbs**, title, and cancel/submit chrome so Back/Forward and
 | Citation needs an Artifact | First step or left-rail: pick Artifact when Source has many; auto-select when one. |
 | Locator is composable | Tools: **page** (PDF), **region** polygon (image or PDF page). Nestable (page then region). |
 | One Citation → many Observations | Form: citation block once; observation list with Add; single submit. |
-| Value types | Editors for text, integer, date (existing), name (NameValue modal), subject (graph-scoped picker). No real/boolean. |
+| Value types | Editors for text, integer, date (existing DateValue), name (**open S7-D5 NameValue modal**), subject (graph-scoped picker). No real/boolean. |
 | Transcription ≠ Observation | Citation: transcription, uncertain flag, note, description. Observations: Property + polarity + typed value. |
 | Media MVP | Image + PDF only. Unsupported Artifact types: honest empty / disable with explanation. |
 | Own a11y tree | This place is not an overlay on the canvas — design focus order for viewer + form. |
@@ -47,6 +47,7 @@ Also decide **breadcrumbs**, title, and cancel/submit chrome so Back/Forward and
 
 - Not graph card growth / Add property chrome — **S7-D3**.
 - Not Subject types / fields admin — **S7-D1 / D2**.
+- Not the **NameValue editor** internals — **S7-D5** (only the host control that opens it).
 - Not audio/video players.
 - Not Citation pinning across multiple graph sessions.
 - Not a sheet/modal covering the still-visible graph (Option A rejected).
@@ -57,7 +58,7 @@ Also decide **breadcrumbs**, title, and cancel/submit chrome so Back/Forward and
 | --- | --- |
 | Place + breadcrumbs + viewer\|form layout | Wiring Add property on cards (S7-09) |
 | Artifact pick, citation fields, N Observations, submit | Connect disambiguation sheet (S7-10 / D3) |
-| Nested NameValue / DateValue editors | Companion NSWindow |
+| Host affordance for NameValue + DateValue editors | Designing NameValue chrome (S7-D5 / S7-02b); companion NSWindow |
 
 ---
 
@@ -97,7 +98,7 @@ Workspace location needs a discriminant beyond page|graph (e.g. `citationCompose
 | CC-5 | **Locator tool chrome:** select tool (page / region); clear/edit locator; show active selector chain readably. |
 | CC-6 | **Citation fields:** transcription, uncertain + note, description (and notes if in scope). |
 | CC-7 | **Observations list:** Add/remove rows; Property picker filtered by subject type bindings; polarity; typed value editor. |
-| CC-8 | **NameValue** nested modal (DateValue twin); **DateValue** reuse; subject picker scoped to this Source’s graph. |
+| CC-8 | **Host** NameValue modal designed in **S7-D5**; reuse DateValue; subject picker scoped to this Source’s graph. Do not redesign NameValue on this board. |
 | CC-9 | **Submit** writes one Citation + N Observations; **Cancel / Back** writes nothing. |
 | CC-10 | Breadcrumbs + page title per §3; toolbar Back works. |
 | CC-11 | Accessibility: complete keyboard path for form and tools; VoiceOver structure for this place alone. |
@@ -110,7 +111,7 @@ Workspace location needs a discriminant beyond page|graph (e.g. `citationCompose
 1. Composer with PDF, page selected, one Observation (text).
 2. Composer with image + polygon region tool active.
 3. Artifact picker (multi-Artifact Source).
-4. Observations list with two rows (e.g. name + occupation); NameValue modal open.
+4. Observations list with two rows (e.g. name + occupation); annotation that name opens the **S7-D5** modal (do not detail that modal here).
 5. Connect-prefilled composer (two subject-valued edges).
 6. Breadcrumb states: Add-property path and Connect path.
 7. Unsupported media / no Artifact empty states.
@@ -120,6 +121,7 @@ Workspace location needs a discriminant beyond page|graph (e.g. `citationCompose
 ## 6. Out of scope
 
 - Graph card layouts (S7-D3).
+- NameValue editor layout / parts UX (S7-D5).
 - Audio/video/`time_range`.
 - Companion window.
 - Editing an existing Citation in place (create path first unless trivial).

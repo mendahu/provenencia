@@ -43,7 +43,7 @@ Authoritative schema: interpretation-layer Properties / `subject_type_fields`; s
 | Ships in S7-05 | Does **not** ship there |
 | --- | --- |
 | Properties list/detail/create | Citation composer |
-| Bind Properties to Subject types | NameValue / DateValue editors (reuse in composer) |
+| Bind Properties to Subject types | NameValue / DateValue editors (**S7-D5** / existing Dates) |
 | Five value_type picker on create | Graph Add property chrome |
 
 ---
