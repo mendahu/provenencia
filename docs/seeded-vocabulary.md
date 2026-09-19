@@ -402,11 +402,12 @@ Product-seeded **term keys** (starter set for connect macros; grow with use):
 spouse
 sibling
 parent_child
+pibling_nibling
 cousin
 guardian
 ```
 
-Prefer expanding the product set as connect macros need them. Long-tail labels are `origin=user` terms — there is no product `other` escape hatch. First-class connect behavior attaches to recognized keys in the subject registry when that behavior lands.
+`pibling_nibling` is the gender-neutral parent’s-sibling ↔ sibling’s-child class (aunt/uncle ↔ niece/nephew). Prefer expanding the product set as connect macros need them. Long-tail labels are `origin=user` terms — there is no product `other` escape hatch. First-class connect behavior attaches to recognized keys in the subject registry when that behavior lands.
 
 ## 3.7 Property terms: `sex_at_birth`
 

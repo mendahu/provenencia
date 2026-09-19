@@ -215,6 +215,7 @@ var seedTerms = []seedTerm{
 	{PropertyKey: "relationship_type", Key: "spouse", Label: "Spouse"},
 	{PropertyKey: "relationship_type", Key: "sibling", Label: "Sibling"},
 	{PropertyKey: "relationship_type", Key: "parent_child", Label: "Parent / child"},
+	{PropertyKey: "relationship_type", Key: "pibling_nibling", Label: "Parent’s sibling / sibling’s child"},
 	{PropertyKey: "relationship_type", Key: "cousin", Label: "Cousin"},
 	{PropertyKey: "relationship_type", Key: "guardian", Label: "Guardian"},
 }
