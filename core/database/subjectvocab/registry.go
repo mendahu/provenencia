@@ -159,8 +159,7 @@ var seedProperties = []seedProperty{
 // Bindings from docs/seeded-vocabulary.md §3.3. Locked = required for connect macros.
 var seedBindings = []seedBinding{
 	{TypeKey: "person", PropertyKey: "name", SortOrder: 0},
-	{TypeKey: "person", PropertyKey: "birth_date", SortOrder: 1},
-	{TypeKey: "person", PropertyKey: "occupation", SortOrder: 2},
+	{TypeKey: "person", PropertyKey: "occupation", SortOrder: 1},
 
 	{TypeKey: "event", PropertyKey: "event_type", SortOrder: 0},
 	{TypeKey: "event", PropertyKey: "date", SortOrder: 1},

@@ -331,7 +331,6 @@ Additional Properties may be seeded as workflows need them (shared DNA, predicte
 ```text
 subject_type    property
 person          name
-person          birth_date
 person          occupation
 
 event           event_type
