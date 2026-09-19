@@ -8,7 +8,7 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 
 | Step | Brief | Feeds | Notes |
 | --- | --- | --- | --- |
-| S6-D2 | [`S6-D2-connect-edges.md`](S6-D2-connect-edges.md) | PR S6-04 | Connect, bridge cards, shared citation-composer handoff |
+| S6-D2 | [`S6-D2-connect-edges.md`](S6-D2-connect-edges.md) | PR S6-04 | Connect, lines, bridge cards (no citation modal) |
 
 ## Completed
 
