@@ -203,7 +203,6 @@ var seedTerms = []seedTerm{
 	{PropertyKey: "role", Key: "child", Label: "Child"},
 	{PropertyKey: "role", Key: "witness", Label: "Witness"},
 	{PropertyKey: "role", Key: "informant", Label: "Informant"},
-	{PropertyKey: "role", Key: "other", Label: "Other"},
 
 	{PropertyKey: "relationship_type", Key: "spouse", Label: "Spouse"},
 	{PropertyKey: "relationship_type", Key: "sibling", Label: "Sibling"},
