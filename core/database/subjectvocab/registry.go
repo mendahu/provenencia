@@ -138,7 +138,6 @@ var seedTypes = []seedType{
 }
 
 var seedProperties = []seedProperty{
-	{Key: "name", Label: "Name", ValueType: properties.ValueTypeName},
 	{Key: "event_type", Label: "Event type", ValueType: properties.ValueTypeText},
 	{Key: "date", Label: "Date", Description: "Event date", ValueType: properties.ValueTypeDate},
 	{Key: "role", Label: "Role", ValueType: properties.ValueTypeText},
@@ -153,9 +152,8 @@ var seedProperties = []seedProperty{
 }
 
 // Bindings from docs/seeded-vocabulary.md §3.3. Locked = required for connect macros.
+// person has no create-time Property bindings (researchers bind NameValue fields in S7-05).
 var seedBindings = []seedBinding{
-	{TypeKey: "person", PropertyKey: "name", SortOrder: 0},
-
 	{TypeKey: "event", PropertyKey: "event_type", SortOrder: 0},
 	{TypeKey: "event", PropertyKey: "date", SortOrder: 1},
 

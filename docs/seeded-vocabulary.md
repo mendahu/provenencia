@@ -304,7 +304,6 @@ Do not reuse the reserved catalog prefixes `USR`, `SRC`, `ART`, `CIT`, `OBS`. Bo
 
 ```text
 key                 value_type    notes
-name                name
 event_type          text          open values; see §3.4
 date                date          event date
 role                text          open values; see §3.5
@@ -320,13 +319,15 @@ toponym             text          place name as interpreted from a Source (not a
 
 Target Subject type hints are application-only (not SQL allow-lists). See the Interpretation doc.
 
+`name` (NameValue) and `name_format` (Conclusion naming profiles) are not create-time seed Properties — researchers add a `name`-typed Property when they need it. `integer` remains a valid value_type with no seed row yet.
+
 Additional Properties may be seeded as workflows need them (shared DNA, predicted relationship, and similar). Treat those as **TBD** until a concrete UI requires them.
 
 ## 3.3 `subject_type_fields`
 
 ```text
 subject_type    property
-person          name
+# person — no create-time bindings
 
 event           event_type
 event           date
@@ -346,8 +347,6 @@ relationship    relationship_type
 source          mentions
 source          remark
 ```
-
-`name_format` (Conclusion naming profiles) is not an Interpretation Property in the create-time seed.
 
 ## 3.4 Open values: `event_type`
 
