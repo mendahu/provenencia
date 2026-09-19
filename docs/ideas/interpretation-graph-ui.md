@@ -162,7 +162,7 @@ Type-pair inference works, and the pairs match the seeded `subject_type_fields` 
 | From → To | Bridge subject | Edges written | What the app must ask |
 | --- | --- | --- | --- |
 | person → event | `participation` | `person`, `event` | `role` — subject, father, witness, … |
-| person → person | `relationship` | `participant` ×2 | `relationship_type` — and *whether* it is a direct relationship at all (see below) |
+| person → person | `relationship` | `person` + `related_to` | `relationship_type` (directed: person is X of related_to) — and *whether* it is a direct relationship at all (see below) |
 | event → place | `location` | `event`, `place` | nothing; clean |
 | person → place | *none seeded* | — | residence is `person → event(residence) → place`; offer a two-hop macro or refuse |
 | event → event, place → place | *none seeded* | — | refuse |

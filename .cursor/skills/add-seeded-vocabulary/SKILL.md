@@ -25,7 +25,7 @@ new Install into **`onboarding.createCatalog` only**.
 | --- | --- | --- |
 | `core/database/sourcevocab/` | `registry.go` (`seedTypes` / `seedFields` / `seedSuggestions`) | Source types, metadata fields, type→field suggestions (uses `sourcetypes` / `sourcefields`) |
 | `core/database/sourcecredibilitygrades/` | `registry.go` (`seedGrades`) | Credibility grades (`low_trust` / `standard` / `high_trust`) |
-| `core/database/subjectvocab/` | `registry.go` (`seedTypes` / `seedProperties` / `seedBindings` / `seedTerms` / `seedConnect`) | Interpretation Subject types, Properties, `subject_type_fields`, **`property_terms`** (S7-01b), plus compiled capabilities / presentation / connect / term capabilities (uses `subjecttypes` / `properties`) |
+| `core/database/subjectvocab/` | `registry.go` (`seedTypes` / `seedProperties` / `seedBindings` / `seedTerms` / `seedConnect`) | Interpretation Subject types, Properties, `subject_type_fields`, **`property_terms`** (S7-01b), plus compiled presentation / locked bindings / connect (uses `subjecttypes` / `properties`) |
 
 ### Source vocabulary (`sourcevocab`)
 
@@ -53,8 +53,9 @@ Property value types: `text` \| `integer` \| `date` \| `name` \| `subject` \| **
 Kind/edge Properties (`event_type`, `role`, `relationship_type`) use `term` + `property_terms` (S7-01b) — not free-text Observation strings.
 **`value_type = term` Properties are Install/registry only** (`origin=provenencia` or `plugin:<id>`). Researcher Create Property must refuse `term`.
 Researchers may still add `origin=user` **term rows** under those Properties via the composer picker.
-Capabilities, presentation tokens, locked bindings, term capabilities, and the connect matrix stay
-in the compiled `subjectvocab` registry (not SQL columns).
+Capabilities, presentation tokens, locked bindings, and the connect matrix stay
+in the compiled `subjectvocab` registry (not SQL columns). Term capabilities
+(birthday facets, tree-edge roles, …) are deferred until a later PR.
 
 Uniqueness is **`UNIQUE (key, origin)`**. Lookup is always `(key, origin)`, never bare key. Domain FKs store vocabulary **`id`**, not key.
 

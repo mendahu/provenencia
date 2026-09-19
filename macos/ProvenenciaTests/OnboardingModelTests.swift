@@ -527,6 +527,26 @@ private struct ThrowingStore: GenealogyStore {
     func deleteProperty(projectDir _: String, userID _: String, propertyID _: String) async throws {
         throw StoreBoom.boom
     }
+    func listPropertyTerms(projectDir _: String, propertyID _: String) async throws -> [CatalogPropertyTerm] {
+        throw StoreBoom.boom
+    }
+    func createPropertyTerm(
+        projectDir _: String,
+        userID _: String,
+        propertyID _: String,
+        label _: String,
+        description _: String
+    ) async throws -> CatalogPropertyTerm { throw StoreBoom.boom }
+    func updatePropertyTerm(
+        projectDir _: String,
+        userID _: String,
+        termID _: String,
+        label _: String,
+        description _: String
+    ) async throws -> CatalogPropertyTerm { throw StoreBoom.boom }
+    func deletePropertyTerm(projectDir _: String, userID _: String, termID _: String) async throws {
+        throw StoreBoom.boom
+    }
     func listSubjectTypeFields(projectDir _: String, subjectTypeID _: String) async throws
         -> [CatalogSubjectTypeField] { throw StoreBoom.boom }
     func assignSubjectTypeField(

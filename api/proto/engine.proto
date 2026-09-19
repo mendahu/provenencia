@@ -71,6 +71,10 @@ enum Method {
   METHOD_LIST_PLACEABLE_SUBJECT_TYPES = 60;
   METHOD_GET_SUBJECT_TYPE_PRESENTATION = 61;
   METHOD_LIST_CONNECT_RULES = 62;
+  METHOD_LIST_PROPERTY_TERMS = 63;
+  METHOD_CREATE_PROPERTY_TERM = 64;
+  METHOD_UPDATE_PROPERTY_TERM = 65;
+  METHOD_DELETE_PROPERTY_TERM = 66;
 }
 
 message PingRequest {
@@ -865,8 +869,18 @@ message Property {
   string origin = 3;
   string label = 4;
   string description = 5;
-  string value_type = 6; // text | integer | date | name | subject
+  string value_type = 6; // text | integer | date | name | subject | term
   int32 used_by = 7; // subject_type_fields references; delete only at 0
+}
+
+// PropertyTerm is one categorical value for a term-typed Property.
+message PropertyTerm {
+  string id = 1;
+  string property_id = 2;
+  string key = 3;
+  string origin = 4;
+  string label = 5;
+  string description = 6;
 }
 
 message SubjectTypeField {
@@ -990,6 +1004,47 @@ message ListConnectRulesRequest {}
 message ListConnectRulesResponse {
   repeated ConnectRule rules = 1;
 }
+
+message ListPropertyTermsRequest {
+  string project_dir = 1;
+  string property_id = 2;
+}
+
+message ListPropertyTermsResponse {
+  repeated PropertyTerm terms = 1;
+}
+
+message CreatePropertyTermRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string property_id = 3;
+  string label = 4;
+  string description = 5;
+}
+
+message CreatePropertyTermResponse {
+  PropertyTerm term = 1;
+}
+
+message UpdatePropertyTermRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string term_id = 3;
+  string label = 4;
+  string description = 5;
+}
+
+message UpdatePropertyTermResponse {
+  PropertyTerm term = 1;
+}
+
+message DeletePropertyTermRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string term_id = 3;
+}
+
+message DeletePropertyTermResponse {}
 
 // ErrorKind classifies a failure for client UX (tone, retry hints). Copy still
 // comes from the client's L10n map keyed by Error.code.

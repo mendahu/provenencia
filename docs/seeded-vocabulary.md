@@ -305,16 +305,17 @@ Do not reuse the reserved catalog prefixes `USR`, `SRC`, `ART`, `CIT`, `OBS`. Bo
 ```text
 key                 value_type    notes
 name                name
+sex_at_birth        term          recorded/assigned sex at birth; terms §3.7
 event_type          term          kind identity; terms §3.4
 date                date          point-in-time (or best single date); locked on event
 start_date          date          span start; locked on event — leave empty if only Date applies
 end_date            date          span end; locked on event — leave empty if only Date applies
 role                term          participation edge label; terms §3.5
-relationship_type   term          relationship edge label; terms §3.6
-person              subject       app target hint: person
+relationship_type   term          directed: person is this of related_to; terms §3.6
+person              subject       app target hint: person (also relationship “who is the X”)
 event               subject       app target hint: event
 place               subject       app target hint: place
-participant         subject       app target hint: person
+related_to          subject       app target hint: person (relationship other end)
 mentions            subject       app target hint: source
 remark              text          free-text commentary about a source subject
 toponym             text          place name as interpreted from a Source (not a personal NameValue)
@@ -324,7 +325,7 @@ Target Subject type hints are application-only (not SQL allow-lists). See the In
 
 `name_format` (Conclusion naming profiles) is not an Interpretation Property in the create-time seed. `integer` remains a valid value_type with no seed row yet.
 
-**S7-01 create-time Install** omits `event_type`, `role`, and `relationship_type` (and their bindings). Those kind/edge Properties land in **S7-01b** as `value_type = term` with `property_terms` — do not seed them as free text in the interim. Horizon lists §3.2–3.6 remain the intended product vocabulary.
+Create-time Install seeds the full §3.2 matrix, including kind/edge and person term Properties as `value_type = term` with `property_terms` (§3.4–3.7).
 
 Event date Properties (`date`, `start_date`, `end_date`) are locked on `event`: Conclusion ordering and timelines may key into them; Subject fields must not unbind. **Coexistence:** use `date` for a single point (birth, death, marriage day); use `start_date` / `end_date` when the event spans time (residence, service, voyage). Instantaneous events leave start/end empty; spanned events may leave `date` empty when only the range is known.
 
@@ -335,8 +336,9 @@ Additional Properties may be seeded as workflows need them (shared DNA, predicte
 ```text
 subject_type    property
 person          name
+person          sex_at_birth        # term
 
-event           event_type          # S7-01b (term)
+event           event_type          # term
 event           date                # locked
 event           start_date          # locked
 event           end_date            # locked
@@ -345,19 +347,20 @@ place           toponym
 
 participation   person
 participation   event
-participation   role                # S7-01b (term)
+participation   role                # term
 
 location        event
 location        place
 
-relationship    participant
-relationship    relationship_type   # S7-01b (term)
+relationship    person              # locked; who is the X
+relationship    related_to          # locked; …of this person
+relationship    relationship_type   # term (directed)
 
 source          mentions
 source          remark
 ```
 
-Until S7-01b, create-time Install binds the non-kind/edge rows above (`name`, event dates, `toponym`, locked bridge ends, `mentions` / `remark`).
+Create-time Install binds the full matrix above (including kind/edge term Properties).
 
 ## 3.4 Property terms: `event_type`
 
@@ -371,13 +374,10 @@ baptism
 burial
 census
 residence
-immigration
-military
-probate
-other
+migration
 ```
 
-Exact GEDCOM alignment and additional vital/event kinds are **TBD**. Prefer a large product set so `other` stays rare. First-class facets (e.g. birthday) attach to recognized keys such as `birth` in the subject registry.
+Exact GEDCOM alignment and additional vital/event kinds are **TBD**. Researchers add long-tail kinds as `origin=user` terms — there is no product `other` escape hatch. First-class facets (e.g. birthday) will attach to recognized keys such as `birth` in the subject registry when that behavior lands — not part of the create-time term seed itself.
 
 ## 3.5 Property terms: `role` (participation)
 
@@ -391,14 +391,43 @@ spouse
 child
 witness
 informant
-other
 ```
 
-Tree / connect behavior attaches to recognized keys (e.g. `father`, `mother`, `subject`) in the registry.
+Long-tail participation roles are `origin=user` terms — there is no product `other` escape hatch. Tree / connect behavior will attach to recognized keys (e.g. `father`, `mother`, `subject`) in the registry when that behavior lands — not part of the create-time term seed itself.
 
 ## 3.6 Property terms: `relationship_type`
 
-Product-seeded **term keys** are **TBD** (for example `cousin`, `guardian`, household roles). Seed a useful set when connect macros need them; keep `other` as escape.
+Directed kinship: **`person` is this type of `related_to`**. Symmetric terms (`spouse`, `sibling`, `cousin`) may be stored with either end as `person`.
+
+```text
+spouse
+sibling
+cousin
+parent
+child
+grandparent
+grandchild
+pibling
+nibling
+guardian
+ward
+```
+
+`pibling` / `nibling` keep gender-neutral keys; labels show as aunt/uncle and niece/nephew. Prefer expanding the product set as connect macros need them. Long-tail labels are `origin=user` terms — there is no product `other` escape hatch. First-class connect behavior attaches to recognized keys in the subject registry when that behavior lands.
+
+## 3.7 Property terms: `sex_at_birth`
+
+Product-seeded **term keys** for sex recorded or assigned at birth (not gender identity):
+
+```text
+female
+male
+intersex
+indeterminate
+unknown
+```
+
+Use `intersex` when the source indicates intersex / DSD variation; `indeterminate` when sex was considered but could not be determined; `unknown` when the source is silent, illegible, or explicitly unknown. Researchers may add further `origin=user` terms for source-specific wording. Do not treat these as free-text Observation strings.
 
 ---
 

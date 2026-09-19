@@ -5,8 +5,9 @@ import (
 )
 
 // Declarative provenencia Interpretation subject vocabulary (create-time starter).
-// Capabilities, presentation, locked bindings, and connect rules live here —
-// Install writes only structural catalog rows (types, properties, bindings).
+// Presentation, locked bindings, and connect rules live here —
+// Install writes only structural catalog rows (types, properties, terms, bindings).
+// Term capabilities (birthday facets, tree-edge roles, …) are deferred until a later PR.
 
 const (
 	RoleRoot         = "root"
@@ -20,12 +21,12 @@ const (
 )
 
 type presentation struct {
-	L10nKey      string
-	IconSymbol   string
-	InkToken     string
-	TintToken    string
-	ChipToken    string
-	LineToken    string
+	L10nKey       string
+	IconSymbol    string
+	InkToken      string
+	TintToken     string
+	ChipToken     string
+	LineToken     string
 	EdgeFromToken string
 	EdgeToToken   string
 }
@@ -47,6 +48,10 @@ type seedBinding struct {
 	TypeKey, PropertyKey string
 	SortOrder            int
 	Locked               bool
+}
+
+type seedTerm struct {
+	PropertyKey, Key, Label, Description string
 }
 
 type seedConnectRule struct {
@@ -139,13 +144,17 @@ var seedTypes = []seedType{
 
 var seedProperties = []seedProperty{
 	{Key: "name", Label: "Name", ValueType: properties.ValueTypeName},
+	{Key: "sex_at_birth", Label: "Sex at birth", Description: "Sex recorded or assigned at birth. Product term vocabulary.", ValueType: properties.ValueTypeTerm},
+	{Key: "event_type", Label: "Event type", Description: "Kind of event (birth, census, …). Product term vocabulary.", ValueType: properties.ValueTypeTerm},
 	{Key: "date", Label: "Date", Description: "Point-in-time when the event occurred (or the best single date when a span is unknown). Prefer this for births, deaths, and other one-day facts. Use start/end date instead when the event clearly lasts across a range.", ValueType: properties.ValueTypeDate},
 	{Key: "start_date", Label: "Start date", Description: "When a multi-day or open-ended event began (census day range, residence, military service, voyage). Leave empty for instantaneous events that only need Date.", ValueType: properties.ValueTypeDate},
 	{Key: "end_date", Label: "End date", Description: "When a spanned event ended or was last known. Pair with Start date; leave empty for instantaneous events that only need Date.", ValueType: properties.ValueTypeDate},
-	{Key: "person", Label: "Person", Description: "Target hint: person", ValueType: properties.ValueTypeSubject},
+	{Key: "role", Label: "Role", Description: "Participation role (subject, father, …). Product term vocabulary.", ValueType: properties.ValueTypeTerm},
+	{Key: "relationship_type", Label: "Relationship type", Description: "Directed kinship: person is this type of related_to. Spouse, sibling, and cousin are symmetric.", ValueType: properties.ValueTypeTerm},
+	{Key: "person", Label: "Person", Description: "Target hint: person (on a relationship: who is the typed relative)", ValueType: properties.ValueTypeSubject},
 	{Key: "event", Label: "Event", Description: "Target hint: event", ValueType: properties.ValueTypeSubject},
 	{Key: "place", Label: "Place", Description: "Target hint: place", ValueType: properties.ValueTypeSubject},
-	{Key: "participant", Label: "Participant", Description: "Target hint: person", ValueType: properties.ValueTypeSubject},
+	{Key: "related_to", Label: "Related to", Description: "Target hint: person (on a relationship: the other end — person is the X of related_to)", ValueType: properties.ValueTypeSubject},
 	{Key: "mentions", Label: "Mentions", Description: "Target hint: source", ValueType: properties.ValueTypeSubject},
 	{Key: "remark", Label: "Remark", Description: "Free-text commentary about a source subject", ValueType: properties.ValueTypeText},
 	{Key: "toponym", Label: "Toponym", Description: "Place name as interpreted from a Source", ValueType: properties.ValueTypeText},
@@ -153,31 +162,71 @@ var seedProperties = []seedProperty{
 
 // Bindings from docs/seeded-vocabulary.md §3.3.
 // Locked = required for connect macros and/or Conclusion ordering (event dates).
-// Kind/edge Properties (event_type, role, relationship_type) land in S7-01b as value_type=term.
 var seedBindings = []seedBinding{
 	{TypeKey: "person", PropertyKey: "name", SortOrder: 0},
+	{TypeKey: "person", PropertyKey: "sex_at_birth", SortOrder: 1},
 
-	{TypeKey: "event", PropertyKey: "date", SortOrder: 0, Locked: true},
-	{TypeKey: "event", PropertyKey: "start_date", SortOrder: 1, Locked: true},
-	{TypeKey: "event", PropertyKey: "end_date", SortOrder: 2, Locked: true},
+	{TypeKey: "event", PropertyKey: "event_type", SortOrder: 0},
+	{TypeKey: "event", PropertyKey: "date", SortOrder: 1, Locked: true},
+	{TypeKey: "event", PropertyKey: "start_date", SortOrder: 2, Locked: true},
+	{TypeKey: "event", PropertyKey: "end_date", SortOrder: 3, Locked: true},
 
 	{TypeKey: "place", PropertyKey: "toponym", SortOrder: 0},
 
 	{TypeKey: "participation", PropertyKey: "person", SortOrder: 0, Locked: true},
 	{TypeKey: "participation", PropertyKey: "event", SortOrder: 1, Locked: true},
+	{TypeKey: "participation", PropertyKey: "role", SortOrder: 2},
 
 	{TypeKey: "location", PropertyKey: "event", SortOrder: 0, Locked: true},
 	{TypeKey: "location", PropertyKey: "place", SortOrder: 1, Locked: true},
 
-	{TypeKey: "relationship", PropertyKey: "participant", SortOrder: 0, Locked: true},
+	{TypeKey: "relationship", PropertyKey: "person", SortOrder: 0, Locked: true},
+	{TypeKey: "relationship", PropertyKey: "related_to", SortOrder: 1, Locked: true},
+	{TypeKey: "relationship", PropertyKey: "relationship_type", SortOrder: 2},
 
 	{TypeKey: "source", PropertyKey: "mentions", SortOrder: 0},
 	{TypeKey: "source", PropertyKey: "remark", SortOrder: 1},
 }
 
+// Property terms from docs/seeded-vocabulary.md §3.4–3.7.
+var seedTerms = []seedTerm{
+	{PropertyKey: "sex_at_birth", Key: "female", Label: "Female"},
+	{PropertyKey: "sex_at_birth", Key: "male", Label: "Male"},
+	{PropertyKey: "sex_at_birth", Key: "intersex", Label: "Intersex"},
+	{PropertyKey: "sex_at_birth", Key: "indeterminate", Label: "Indeterminate"},
+	{PropertyKey: "sex_at_birth", Key: "unknown", Label: "Unknown"},
+
+	{PropertyKey: "event_type", Key: "birth", Label: "Birth"},
+	{PropertyKey: "event_type", Key: "death", Label: "Death"},
+	{PropertyKey: "event_type", Key: "marriage", Label: "Marriage"},
+	{PropertyKey: "event_type", Key: "baptism", Label: "Baptism"},
+	{PropertyKey: "event_type", Key: "burial", Label: "Burial"},
+	{PropertyKey: "event_type", Key: "census", Label: "Census Enumeration"},
+	{PropertyKey: "event_type", Key: "residence", Label: "Residence"},
+	{PropertyKey: "event_type", Key: "migration", Label: "Migration"},
+
+	{PropertyKey: "role", Key: "subject", Label: "Subject"},
+	{PropertyKey: "role", Key: "father", Label: "Father"},
+	{PropertyKey: "role", Key: "mother", Label: "Mother"},
+	{PropertyKey: "role", Key: "spouse", Label: "Spouse"},
+	{PropertyKey: "role", Key: "child", Label: "Child"},
+	{PropertyKey: "role", Key: "witness", Label: "Witness"},
+	{PropertyKey: "role", Key: "informant", Label: "Informant"},
+
+	{PropertyKey: "relationship_type", Key: "spouse", Label: "Spouse"},
+	{PropertyKey: "relationship_type", Key: "sibling", Label: "Sibling"},
+	{PropertyKey: "relationship_type", Key: "cousin", Label: "Cousin"},
+	{PropertyKey: "relationship_type", Key: "parent", Label: "Parent"},
+	{PropertyKey: "relationship_type", Key: "child", Label: "Child"},
+	{PropertyKey: "relationship_type", Key: "grandparent", Label: "Grandparent"},
+	{PropertyKey: "relationship_type", Key: "grandchild", Label: "Grandchild"},
+	{PropertyKey: "relationship_type", Key: "pibling", Label: "Aunt / uncle"},
+	{PropertyKey: "relationship_type", Key: "nibling", Label: "Niece / nephew"},
+	{PropertyKey: "relationship_type", Key: "guardian", Label: "Guardian"},
+	{PropertyKey: "relationship_type", Key: "ward", Label: "Ward"},
+}
+
 // Connect matrix from interpretation-graph-ui.md §3.2. Omitted pairs refuse by default.
-// DisambiguationRole / relationship_type name Property keys that S7-01b installs as term;
-// the matrix is valid before those rows exist (macros land after S7-01b).
 var seedConnect = []seedConnectRule{
 	{
 		FromTypeKey: "person", ToTypeKey: "event",
@@ -194,7 +243,7 @@ var seedConnect = []seedConnectRule{
 	{
 		FromTypeKey: "person", ToTypeKey: "person",
 		BridgeTypeKey: "relationship",
-		EdgePropertyKeys: []string{"participant", "participant"},
+		EdgePropertyKeys: []string{"person", "related_to"},
 		Disambiguation: DisambiguationPersonPersonChoice,
 	},
 	{

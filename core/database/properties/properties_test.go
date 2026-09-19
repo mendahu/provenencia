@@ -86,6 +86,30 @@ func TestProperties(t *testing.T) {
 			},
 		},
 		{
+			name: "create refuses term value type",
+			run: func(t *testing.T, c *database.Catalog, userID []byte) {
+				_, err := Create(c, userID, "Event Kind", ValueTypeTerm, "")
+				if !errors.Is(err, ErrInvalid) {
+					t.Fatalf("got %v", err)
+				}
+			},
+		},
+		{
+			name: "upsert allows proveniencia term",
+			run: func(t *testing.T, c *database.Catalog, _ []byte) {
+				id, err := Upsert(c, Property{
+					Key: "event_type", Origin: OriginProvenencia, Label: "Event type", ValueType: ValueTypeTerm,
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				got, err := Lookup(c, "event_type", OriginProvenencia)
+				if err != nil || got.ValueType != ValueTypeTerm || string(got.ID) != string(id) {
+					t.Fatalf("got %+v %v", got, err)
+				}
+			},
+		},
+		{
 			name: "migration creates properties table",
 			run: func(t *testing.T, c *database.Catalog, _ []byte) {
 				db, err := c.DB()
@@ -102,7 +126,7 @@ func TestProperties(t *testing.T) {
 				if err := db.QueryRow(`PRAGMA user_version`).Scan(&ver); err != nil {
 					t.Fatal(err)
 				}
-				if ver < 23 {
+				if ver < 24 {
 					t.Fatalf("user_version=%d", ver)
 				}
 			},

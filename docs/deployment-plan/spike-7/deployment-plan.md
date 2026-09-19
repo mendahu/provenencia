@@ -35,7 +35,7 @@ Product value types: **`text`**, **`integer`**, **`date`**, **`name`**, **`subje
 | --- | --- |
 | **text** | Prose Properties (`toponym`, `remark`, researcher-defined notes) |
 | **term** | Kind/edge identity via **registry-only** Properties (`event_type`, `role`, `relationship_type`) → `property_terms` + `value_term_id` (**S7-01b**). Not offered when researchers create Properties. |
-| **subject** | Bridge edges (`person`, `event`, `place`, `participant`) |
+| **subject** | Bridge edges (`person`, `event`, `place`, `related_to`) |
 | **date** | Event `date` / `start_date` / `end_date` (locked on event for Conclusion ordering); reuse DateValue |
 | **name** | Primary person assertion; NameValue (`name_values` + `name_value_parts` only) |
 | **integer** | Researcher-defined counts / ages (no seed Property yet) |
@@ -284,7 +284,7 @@ Schema/Go (01–03, 01b) may start before design finishes; **UI PRs gate on the 
 - [ ] S7-D4 — Design: Citation composer place → [`completed.md`](completed.md)
 - [ ] S7-D5 — Design: NameValue editor → [`completed.md`](completed.md)
 - [x] S7-01 — `properties` + `subject_type_fields` + **central Interpretation subject registry** + Go/FFI → [`completed.md`](completed.md)
-- [ ] S7-01b — Property terms (`property_terms`, `value_type=term`, kind/edge seed) → [`completed.md`](completed.md)
+- [x] S7-01b — Property terms (`property_terms`, `value_type=term`, kind/edge seed) → [`completed.md`](completed.md)
 - [ ] S7-05 — Subject fields UI → [`completed.md`](completed.md)
 - [ ] S7-02 — NameValue schema + Go → [`completed.md`](completed.md)
 - [ ] S7-03 — Citations + Observations + locator validation + FFI → [`completed.md`](completed.md)
@@ -358,13 +358,13 @@ Land **immediately after S7-01**, before Subject fields UI and before Observatio
 
 **Problem:** Free-text `event_type` / `role` / `relationship_type` lets researchers invent synonyms (`birth` vs `birthday` vs `DOB`); UI facets (birthday, family tree, connect disambiguation) and Conclusion type-identity then miss. Tiny enum + `other` + free-text name fails the same way for sameness. Graph `subjects.label` stays working identity only — not type identity.
 
-**Model:** New `value_type = term` + `property_terms` table (origin-namespaced vocabulary rows). Observations (S7-03) store `value_term_id`. **Introduce** kind/edge Properties (`event_type`, `role`, `relationship_type`) here as `term` — they are **not** seeded as `text` in S7-01. Install seeds those Properties + bindings + **large** product term sets ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.4–3.6); registry declares term capabilities (birthday, tree-edge, …). **`term` Properties are registry-only** — Create Property for `origin=user` refuses `value_type = term` (Subject fields offers the other five types only). Researchers may mint `origin=user` **term rows** under those registry Properties via composer picker **Add custom…** (rename/delete when unused) — **no** Event types / Roles CatalogVocabulary destinations. Plugins that add bridge or kind subjects contribute term-typed Properties + term sets through the same `subjectvocab` registry shape.
+**Model:** New `value_type = term` + `property_terms` table (origin-namespaced vocabulary rows). Observations (S7-03) store `value_term_id`. **Introduce** kind/edge Properties (`event_type`, `role`, `relationship_type`) here as `term` — they are **not** seeded as `text` in S7-01. Install seeds those Properties + bindings + **large** product term sets ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.4–3.6). Term capabilities (birthday, tree-edge, …) are **deferred** to a later discussion/PR. **`term` Properties are registry-only** — Create Property for `origin=user` refuses `value_type = term` (Subject fields offers the other five types only). Researchers may mint `origin=user` **term rows** under those registry Properties via composer picker **Add custom…** (rename/delete when unused) — **no** Event types / Roles CatalogVocabulary destinations. Plugins that add bridge or kind subjects contribute term-typed Properties + term sets through the same `subjectvocab` registry shape.
 
 Authoritative schema notes: [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) §5.1.1. Design decision: [`interpretation-graph-ui.md`](../../ideas/interpretation-graph-ui.md) #23.
 
 | | |
 | --- | --- |
-| **In** | Migration: `property_terms`; extend `properties.value_type` CHECK with `term`; Go package + audited CRUD for terms; registry `seedProperties`/`seedBindings`/`seedTerms` for kind/edge + term capabilities; FFI list/create/update/delete (user **term rows**; product terms locked); Create Property refuses `term` for user origin; docs/skill updates. |
+| **In** | Migration: `property_terms`; extend `properties.value_type` CHECK with `term`; Go package + audited CRUD for terms; registry `seedProperties`/`seedBindings`/`seedTerms` for kind/edge (term capabilities deferred); FFI list/create/update/delete (user **term rows**; product terms locked); Create Property refuses `term` for user origin; docs/skill updates. |
 | **Out** | Observation writers (S7-03); composer term picker UI (S7-08 / S7-D4); Subject fields layout (S7-05); Event types / Roles sidebar destinations; researcher-created term-typed Properties. |
 | **Testable** | New project seeds term-typed kind/edge Properties + term rows; Lookup by `(property, key, origin)`; refuse delete while in use; product terms not user-editable; user Create Property with `term` refused; registry capability helpers. |
 | **Depends on** | **S7-01**. **Not** gated on design (S7-D2 must not offer `term` in create Property). |

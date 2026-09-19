@@ -35,6 +35,7 @@ const (
 	ValueTypeDate     = "date"
 	ValueTypeName     = "name"
 	ValueTypeSubject  = "subject"
+	ValueTypeTerm     = "term"
 
 	sqlUpsert = `INSERT INTO properties (id, key, origin, label, description, value_type)
 		VALUES (?, ?, ?, ?, ?, ?)
@@ -122,9 +123,14 @@ func Upsert(c *database.Catalog, p Property) ([]byte, error) {
 }
 
 // Create mints a kebab-case key from label and inserts a user-origin Property with audit.
+// value_type = term is registry/Install only — Create refuses it for researchers.
 func Create(c *database.Catalog, userID []byte, label, valueType, description string) (Property, error) {
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return Property{}, err
+	}
+	valueType = strings.TrimSpace(valueType)
+	if valueType == ValueTypeTerm {
+		return Property{}, ErrInvalid
 	}
 	key := slug.Kebab(label)
 	if key == "" {
@@ -152,7 +158,6 @@ func Create(c *database.Catalog, userID []byte, label, valueType, description st
 	}
 	id := uid[:]
 	label = strings.TrimSpace(label)
-	valueType = strings.TrimSpace(valueType)
 	description = strings.TrimSpace(description)
 	if label == "" || !valueTypeOK(valueType) {
 		return Property{}, ErrInvalid
@@ -451,7 +456,7 @@ func originOK(origin string) bool {
 
 func valueTypeOK(vt string) bool {
 	switch vt {
-	case ValueTypeText, ValueTypeInteger, ValueTypeDate, ValueTypeName, ValueTypeSubject:
+	case ValueTypeText, ValueTypeInteger, ValueTypeDate, ValueTypeName, ValueTypeSubject, ValueTypeTerm:
 		return true
 	default:
 		return false

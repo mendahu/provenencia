@@ -71,6 +71,10 @@ const (
 	MethodListPlaceableSubjectTypes           = int32(engine.Method_METHOD_LIST_PLACEABLE_SUBJECT_TYPES)
 	MethodGetSubjectTypePresentation          = int32(engine.Method_METHOD_GET_SUBJECT_TYPE_PRESENTATION)
 	MethodListConnectRules                    = int32(engine.Method_METHOD_LIST_CONNECT_RULES)
+	MethodListPropertyTerms                   = int32(engine.Method_METHOD_LIST_PROPERTY_TERMS)
+	MethodCreatePropertyTerm                  = int32(engine.Method_METHOD_CREATE_PROPERTY_TERM)
+	MethodUpdatePropertyTerm                  = int32(engine.Method_METHOD_UPDATE_PROPERTY_TERM)
+	MethodDeletePropertyTerm                  = int32(engine.Method_METHOD_DELETE_PROPERTY_TERM)
 )
 
 // Call routes one coarse FFI operation to api/ffi/handlers.
@@ -198,6 +202,14 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.GetSubjectTypePresentation(in)
 	case MethodListConnectRules:
 		return handlers.ListConnectRules(in)
+	case MethodListPropertyTerms:
+		return handlers.ListPropertyTerms(in)
+	case MethodCreatePropertyTerm:
+		return handlers.CreatePropertyTerm(in)
+	case MethodUpdatePropertyTerm:
+		return handlers.UpdatePropertyTerm(in)
+	case MethodDeletePropertyTerm:
+		return handlers.DeletePropertyTerm(in)
 	default:
 		return nil, apperr.New(apperr.CodeInternalUnknownMethod, apperr.KindInternal, strconv.Itoa(int(method)))
 	}

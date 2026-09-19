@@ -3747,6 +3747,29 @@ enum L10n {
             defaultValue: "That property is still bound to one or more subject types.",
             comment: "FFI error properties.in_use"
         )
+        static let propertyTermsInvalid = LocalizedStringResource(
+            "error.propertyterms.invalid",
+            defaultValue: "Invalid property term.",
+            comment: "FFI error propertyterms.invalid"
+        )
+        static func propertyTermsDuplicateKey(key: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "error.propertyterms.duplicate_key",
+                defaultValue: "You already have a term with the key %@. Give this one a different label.",
+                comment: "FFI error propertyterms.duplicate_key; argument is the colliding key"
+            ))
+            return String(format: format, locale: .current, key)
+        }
+        static let propertyTermsLocked = LocalizedStringResource(
+            "error.propertyterms.locked",
+            defaultValue: "That term is locked by the product vocabulary and cannot be changed.",
+            comment: "FFI error propertyterms.locked"
+        )
+        static let propertyTermsInUse = LocalizedStringResource(
+            "error.propertyterms.in_use",
+            defaultValue: "That term is still used by one or more observations.",
+            comment: "FFI error propertyterms.in_use"
+        )
         static let subjectVocabInvalid = LocalizedStringResource(
             "error.subjectvocab.invalid",
             defaultValue: "Invalid subject vocabulary.",
@@ -3902,6 +3925,14 @@ enum L10n {
                 return propertiesDuplicateKey(key: params.first ?? "?")
             case "properties.in_use":
                 return String(localized: propertiesInUse)
+            case "propertyterms.invalid":
+                return String(localized: propertyTermsInvalid)
+            case "propertyterms.duplicate_key":
+                return propertyTermsDuplicateKey(key: params.first ?? "?")
+            case "propertyterms.locked":
+                return String(localized: propertyTermsLocked)
+            case "propertyterms.in_use":
+                return String(localized: propertyTermsInUse)
             case "subjectvocab.invalid":
                 return String(localized: subjectVocabInvalid)
             case "subjectvocab.locked":

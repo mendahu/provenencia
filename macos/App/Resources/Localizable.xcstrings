@@ -2437,6 +2437,54 @@
         }
       }
     },
+    "error.propertyterms.invalid" : {
+      "comment" : "FFI error propertyterms.invalid",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid property term."
+          }
+        }
+      }
+    },
+    "error.propertyterms.duplicate_key" : {
+      "comment" : "FFI error propertyterms.duplicate_key; argument is the colliding key",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You already have a term with the key %@. Give this one a different label."
+          }
+        }
+      }
+    },
+    "error.propertyterms.locked" : {
+      "comment" : "FFI error propertyterms.locked",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That term is locked by the product vocabulary and cannot be changed."
+          }
+        }
+      }
+    },
+    "error.propertyterms.in_use" : {
+      "comment" : "FFI error propertyterms.in_use",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That term is still used by one or more observations."
+          }
+        }
+      }
+    },
     "error.subjectvocab.invalid" : {
       "comment" : "FFI error subjectvocab.invalid",
       "extractionState" : "manual",

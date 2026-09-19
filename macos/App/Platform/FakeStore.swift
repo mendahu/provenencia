@@ -21,6 +21,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var suggestionsByType: [String: [CatalogTypeSuggestion]] = [:]
     var fieldsByProject: [String: [CatalogMetadataField]] = [:]
     var propertiesByProject: [String: [CatalogProperty]] = [:]
+    var propertyTermsByProperty: [String: [CatalogPropertyTerm]] = [:]
     var subjectTypeFieldsByType: [String: [CatalogSubjectTypeField]] = [:]
     var placeableSubjectTypes: [CatalogSubjectTypePresentation] = []
     var subjectTypePresentations: [String: CatalogSubjectTypePresentation] = [:]
@@ -1083,6 +1084,70 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     func deleteProperty(projectDir: String, userID _: String, propertyID: String) async throws {
         markCatalogSessionHeld(projectDir)
         propertiesByProject[projectDir]?.removeAll { $0.id == propertyID }
+        propertyTermsByProperty[propertyID] = nil
+    }
+
+    func listPropertyTerms(projectDir: String, propertyID: String) async throws -> [CatalogPropertyTerm] {
+        markCatalogSessionHeld(projectDir)
+        return propertyTermsByProperty[propertyID] ?? []
+    }
+
+    func createPropertyTerm(
+        projectDir: String,
+        userID _: String,
+        propertyID: String,
+        label: String,
+        description: String
+    ) async throws -> CatalogPropertyTerm {
+        markCatalogSessionHeld(projectDir)
+        let key = label
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "-")
+            .filter { $0.isLetter || $0.isNumber || $0 == "-" }
+        let term = CatalogPropertyTerm(
+            id: UUID().uuidString.lowercased(),
+            propertyID: propertyID,
+            key: key,
+            origin: "user",
+            label: label,
+            description: description
+        )
+        propertyTermsByProperty[propertyID, default: []].append(term)
+        return term
+    }
+
+    func updatePropertyTerm(
+        projectDir: String,
+        userID _: String,
+        termID: String,
+        label: String,
+        description: String
+    ) async throws -> CatalogPropertyTerm {
+        markCatalogSessionHeld(projectDir)
+        for (propertyID, var list) in propertyTermsByProperty {
+            guard let idx = list.firstIndex(where: { $0.id == termID }) else { continue }
+            if list[idx].origin != "user" {
+                throw CoreInvokeError.coded(status: 1, code: "propertyterms.locked", kind: .user, params: [])
+            }
+            list[idx].label = label
+            list[idx].description = description
+            propertyTermsByProperty[propertyID] = list
+            return list[idx]
+        }
+        throw CoreInvokeError.coded(status: 1, code: "propertyterms.invalid", kind: .user, params: [])
+    }
+
+    func deletePropertyTerm(projectDir: String, userID _: String, termID: String) async throws {
+        markCatalogSessionHeld(projectDir)
+        for (propertyID, list) in propertyTermsByProperty {
+            guard let term = list.first(where: { $0.id == termID }) else { continue }
+            if term.origin != "user" {
+                throw CoreInvokeError.coded(status: 1, code: "propertyterms.locked", kind: .user, params: [])
+            }
+            propertyTermsByProperty[propertyID]?.removeAll { $0.id == termID }
+            return
+        }
+        throw CoreInvokeError.coded(status: 1, code: "propertyterms.invalid", kind: .user, params: [])
     }
 
     func listSubjectTypeFields(projectDir: String, subjectTypeID: String) async throws -> [CatalogSubjectTypeField] {

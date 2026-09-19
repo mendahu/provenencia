@@ -3,9 +3,10 @@
 //
 // Install upserts shipped Subject types, Properties, and bindings once at
 // catalog create. Call it only from onboarding.createCatalog — not on open.
-// Capabilities, presentation tokens, locked bindings, and the connect matrix
+// Capabilities (type-level), presentation tokens, locked bindings, and the connect matrix
 // live in the compiled registry and are exposed via lookup helpers (no SQLite
-// JSON). Future plugin:<id> modules extend the same registry shape.
+// JSON). Term capabilities (birthday / tree-edge) are deferred. Future plugin:<id>
+// modules extend the same registry shape.
 package subjectvocab
 
 import (
@@ -17,6 +18,7 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 )
 
@@ -244,6 +246,21 @@ func Install(c *database.Catalog) error {
 			return err
 		}
 		propIDs[p.Key] = id
+	}
+	for _, term := range seedTerms {
+		propID := propIDs[term.PropertyKey]
+		if len(propID) == 0 {
+			return ErrInvalid
+		}
+		if _, err := propertyterms.Upsert(c, propertyterms.Term{
+			PropertyID:  propID,
+			Key:         term.Key,
+			Origin:      propertyterms.OriginProvenencia,
+			Label:       term.Label,
+			Description: term.Description,
+		}); err != nil {
+			return err
+		}
 	}
 	for _, b := range seedBindings {
 		typeID := typeIDs[b.TypeKey]
