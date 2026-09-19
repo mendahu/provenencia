@@ -78,6 +78,16 @@ const (
 	Method_METHOD_SET_SUBJECT_POSITION                 Method = 50
 	Method_METHOD_CLEAR_SUBJECT_POSITION               Method = 51
 	Method_METHOD_LIST_SUBJECT_POSITIONS               Method = 52
+	Method_METHOD_LIST_PROPERTIES                      Method = 53
+	Method_METHOD_CREATE_PROPERTY                      Method = 54
+	Method_METHOD_UPDATE_PROPERTY                      Method = 55
+	Method_METHOD_DELETE_PROPERTY                      Method = 56
+	Method_METHOD_LIST_SUBJECT_TYPE_FIELDS             Method = 57
+	Method_METHOD_ASSIGN_SUBJECT_TYPE_FIELD            Method = 58
+	Method_METHOD_REMOVE_SUBJECT_TYPE_FIELD            Method = 59
+	Method_METHOD_LIST_PLACEABLE_SUBJECT_TYPES         Method = 60
+	Method_METHOD_GET_SUBJECT_TYPE_PRESENTATION        Method = 61
+	Method_METHOD_LIST_CONNECT_RULES                   Method = 62
 )
 
 // Enum value maps for Method.
@@ -135,6 +145,16 @@ var (
 		50: "METHOD_SET_SUBJECT_POSITION",
 		51: "METHOD_CLEAR_SUBJECT_POSITION",
 		52: "METHOD_LIST_SUBJECT_POSITIONS",
+		53: "METHOD_LIST_PROPERTIES",
+		54: "METHOD_CREATE_PROPERTY",
+		55: "METHOD_UPDATE_PROPERTY",
+		56: "METHOD_DELETE_PROPERTY",
+		57: "METHOD_LIST_SUBJECT_TYPE_FIELDS",
+		58: "METHOD_ASSIGN_SUBJECT_TYPE_FIELD",
+		59: "METHOD_REMOVE_SUBJECT_TYPE_FIELD",
+		60: "METHOD_LIST_PLACEABLE_SUBJECT_TYPES",
+		61: "METHOD_GET_SUBJECT_TYPE_PRESENTATION",
+		62: "METHOD_LIST_CONNECT_RULES",
 	}
 	Method_value = map[string]int32{
 		"METHOD_UNSPECIFIED":                          0,
@@ -189,6 +209,16 @@ var (
 		"METHOD_SET_SUBJECT_POSITION":                 50,
 		"METHOD_CLEAR_SUBJECT_POSITION":               51,
 		"METHOD_LIST_SUBJECT_POSITIONS":               52,
+		"METHOD_LIST_PROPERTIES":                      53,
+		"METHOD_CREATE_PROPERTY":                      54,
+		"METHOD_UPDATE_PROPERTY":                      55,
+		"METHOD_DELETE_PROPERTY":                      56,
+		"METHOD_LIST_SUBJECT_TYPE_FIELDS":             57,
+		"METHOD_ASSIGN_SUBJECT_TYPE_FIELD":            58,
+		"METHOD_REMOVE_SUBJECT_TYPE_FIELD":            59,
+		"METHOD_LIST_PLACEABLE_SUBJECT_TYPES":         60,
+		"METHOD_GET_SUBJECT_TYPE_PRESENTATION":        61,
+		"METHOD_LIST_CONNECT_RULES":                   62,
 	}
 )
 
@@ -7521,6 +7551,1375 @@ func (x *ListSubjectPositionsResponse) GetPositions() []*SubjectPosition {
 	return nil
 }
 
+// Property is one properties vocabulary row (Observation predicate).
+type Property struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Key           string                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
+	Origin        string                 `protobuf:"bytes,3,opt,name=origin,proto3" json:"origin,omitempty"`
+	Label         string                 `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
+	Description   string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
+	ValueType     string                 `protobuf:"bytes,6,opt,name=value_type,json=valueType,proto3" json:"value_type,omitempty"` // text | integer | date | name | subject
+	UsedBy        int32                  `protobuf:"varint,7,opt,name=used_by,json=usedBy,proto3" json:"used_by,omitempty"`         // subject_type_fields references; delete only at 0
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Property) Reset() {
+	*x = Property{}
+	mi := &file_engine_proto_msgTypes[121]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Property) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Property) ProtoMessage() {}
+
+func (x *Property) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[121]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Property.ProtoReflect.Descriptor instead.
+func (*Property) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{121}
+}
+
+func (x *Property) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Property) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *Property) GetOrigin() string {
+	if x != nil {
+		return x.Origin
+	}
+	return ""
+}
+
+func (x *Property) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *Property) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *Property) GetValueType() string {
+	if x != nil {
+		return x.ValueType
+	}
+	return ""
+}
+
+func (x *Property) GetUsedBy() int32 {
+	if x != nil {
+		return x.UsedBy
+	}
+	return 0
+}
+
+type SubjectTypeField struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Property      *Property              `protobuf:"bytes,1,opt,name=property,proto3" json:"property,omitempty"`
+	SortOrder     int32                  `protobuf:"varint,2,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	Locked        bool                   `protobuf:"varint,3,opt,name=locked,proto3" json:"locked,omitempty"` // registry-locked; client must not offer remove
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SubjectTypeField) Reset() {
+	*x = SubjectTypeField{}
+	mi := &file_engine_proto_msgTypes[122]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubjectTypeField) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubjectTypeField) ProtoMessage() {}
+
+func (x *SubjectTypeField) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[122]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubjectTypeField.ProtoReflect.Descriptor instead.
+func (*SubjectTypeField) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{122}
+}
+
+func (x *SubjectTypeField) GetProperty() *Property {
+	if x != nil {
+		return x.Property
+	}
+	return nil
+}
+
+func (x *SubjectTypeField) GetSortOrder() int32 {
+	if x != nil {
+		return x.SortOrder
+	}
+	return 0
+}
+
+func (x *SubjectTypeField) GetLocked() bool {
+	if x != nil {
+		return x.Locked
+	}
+	return false
+}
+
+type SubjectTypePresentation struct {
+	state                    protoimpl.MessageState `protogen:"open.v1"`
+	TypeKey                  string                 `protobuf:"bytes,1,opt,name=type_key,json=typeKey,proto3" json:"type_key,omitempty"`
+	L10NKey                  string                 `protobuf:"bytes,2,opt,name=l10n_key,json=l10nKey,proto3" json:"l10n_key,omitempty"`
+	IconSymbol               string                 `protobuf:"bytes,3,opt,name=icon_symbol,json=iconSymbol,proto3" json:"icon_symbol,omitempty"`
+	InkToken                 string                 `protobuf:"bytes,4,opt,name=ink_token,json=inkToken,proto3" json:"ink_token,omitempty"`
+	TintToken                string                 `protobuf:"bytes,5,opt,name=tint_token,json=tintToken,proto3" json:"tint_token,omitempty"`
+	ChipToken                string                 `protobuf:"bytes,6,opt,name=chip_token,json=chipToken,proto3" json:"chip_token,omitempty"`
+	LineToken                string                 `protobuf:"bytes,7,opt,name=line_token,json=lineToken,proto3" json:"line_token,omitempty"`
+	EdgeFromToken            string                 `protobuf:"bytes,8,opt,name=edge_from_token,json=edgeFromToken,proto3" json:"edge_from_token,omitempty"`
+	EdgeToToken              string                 `protobuf:"bytes,9,opt,name=edge_to_token,json=edgeToToken,proto3" json:"edge_to_token,omitempty"`
+	Role                     string                 `protobuf:"bytes,10,opt,name=role,proto3" json:"role,omitempty"` // root | bridge | reification
+	Placeable                bool                   `protobuf:"varint,11,opt,name=placeable,proto3" json:"placeable,omitempty"`
+	PaletteSort              int32                  `protobuf:"varint,12,opt,name=palette_sort,json=paletteSort,proto3" json:"palette_sort,omitempty"`
+	RequiresCitationAtCreate bool                   `protobuf:"varint,13,opt,name=requires_citation_at_create,json=requiresCitationAtCreate,proto3" json:"requires_citation_at_create,omitempty"`
+	Label                    string                 `protobuf:"bytes,14,opt,name=label,proto3" json:"label,omitempty"` // English seed fallback
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
+}
+
+func (x *SubjectTypePresentation) Reset() {
+	*x = SubjectTypePresentation{}
+	mi := &file_engine_proto_msgTypes[123]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubjectTypePresentation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubjectTypePresentation) ProtoMessage() {}
+
+func (x *SubjectTypePresentation) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[123]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubjectTypePresentation.ProtoReflect.Descriptor instead.
+func (*SubjectTypePresentation) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{123}
+}
+
+func (x *SubjectTypePresentation) GetTypeKey() string {
+	if x != nil {
+		return x.TypeKey
+	}
+	return ""
+}
+
+func (x *SubjectTypePresentation) GetL10NKey() string {
+	if x != nil {
+		return x.L10NKey
+	}
+	return ""
+}
+
+func (x *SubjectTypePresentation) GetIconSymbol() string {
+	if x != nil {
+		return x.IconSymbol
+	}
+	return ""
+}
+
+func (x *SubjectTypePresentation) GetInkToken() string {
+	if x != nil {
+		return x.InkToken
+	}
+	return ""
+}
+
+func (x *SubjectTypePresentation) GetTintToken() string {
+	if x != nil {
+		return x.TintToken
+	}
+	return ""
+}
+
+func (x *SubjectTypePresentation) GetChipToken() string {
+	if x != nil {
+		return x.ChipToken
+	}
+	return ""
+}
+
+func (x *SubjectTypePresentation) GetLineToken() string {
+	if x != nil {
+		return x.LineToken
+	}
+	return ""
+}
+
+func (x *SubjectTypePresentation) GetEdgeFromToken() string {
+	if x != nil {
+		return x.EdgeFromToken
+	}
+	return ""
+}
+
+func (x *SubjectTypePresentation) GetEdgeToToken() string {
+	if x != nil {
+		return x.EdgeToToken
+	}
+	return ""
+}
+
+func (x *SubjectTypePresentation) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
+func (x *SubjectTypePresentation) GetPlaceable() bool {
+	if x != nil {
+		return x.Placeable
+	}
+	return false
+}
+
+func (x *SubjectTypePresentation) GetPaletteSort() int32 {
+	if x != nil {
+		return x.PaletteSort
+	}
+	return 0
+}
+
+func (x *SubjectTypePresentation) GetRequiresCitationAtCreate() bool {
+	if x != nil {
+		return x.RequiresCitationAtCreate
+	}
+	return false
+}
+
+func (x *SubjectTypePresentation) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+type ConnectRule struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	FromTypeKey      string                 `protobuf:"bytes,1,opt,name=from_type_key,json=fromTypeKey,proto3" json:"from_type_key,omitempty"`
+	ToTypeKey        string                 `protobuf:"bytes,2,opt,name=to_type_key,json=toTypeKey,proto3" json:"to_type_key,omitempty"`
+	BridgeTypeKey    string                 `protobuf:"bytes,3,opt,name=bridge_type_key,json=bridgeTypeKey,proto3" json:"bridge_type_key,omitempty"`
+	EdgePropertyKeys []string               `protobuf:"bytes,4,rep,name=edge_property_keys,json=edgePropertyKeys,proto3" json:"edge_property_keys,omitempty"`
+	Disambiguation   string                 `protobuf:"bytes,5,opt,name=disambiguation,proto3" json:"disambiguation,omitempty"` // none | role | relationship_type | person_person_choice
+	Refuse           bool                   `protobuf:"varint,6,opt,name=refuse,proto3" json:"refuse,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ConnectRule) Reset() {
+	*x = ConnectRule{}
+	mi := &file_engine_proto_msgTypes[124]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ConnectRule) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConnectRule) ProtoMessage() {}
+
+func (x *ConnectRule) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[124]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConnectRule.ProtoReflect.Descriptor instead.
+func (*ConnectRule) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{124}
+}
+
+func (x *ConnectRule) GetFromTypeKey() string {
+	if x != nil {
+		return x.FromTypeKey
+	}
+	return ""
+}
+
+func (x *ConnectRule) GetToTypeKey() string {
+	if x != nil {
+		return x.ToTypeKey
+	}
+	return ""
+}
+
+func (x *ConnectRule) GetBridgeTypeKey() string {
+	if x != nil {
+		return x.BridgeTypeKey
+	}
+	return ""
+}
+
+func (x *ConnectRule) GetEdgePropertyKeys() []string {
+	if x != nil {
+		return x.EdgePropertyKeys
+	}
+	return nil
+}
+
+func (x *ConnectRule) GetDisambiguation() string {
+	if x != nil {
+		return x.Disambiguation
+	}
+	return ""
+}
+
+func (x *ConnectRule) GetRefuse() bool {
+	if x != nil {
+		return x.Refuse
+	}
+	return false
+}
+
+type ListPropertiesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPropertiesRequest) Reset() {
+	*x = ListPropertiesRequest{}
+	mi := &file_engine_proto_msgTypes[125]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPropertiesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPropertiesRequest) ProtoMessage() {}
+
+func (x *ListPropertiesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[125]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPropertiesRequest.ProtoReflect.Descriptor instead.
+func (*ListPropertiesRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{125}
+}
+
+func (x *ListPropertiesRequest) GetProjectDir() string {
+	if x != nil {
+		return x.ProjectDir
+	}
+	return ""
+}
+
+type ListPropertiesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Properties    []*Property            `protobuf:"bytes,1,rep,name=properties,proto3" json:"properties,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPropertiesResponse) Reset() {
+	*x = ListPropertiesResponse{}
+	mi := &file_engine_proto_msgTypes[126]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPropertiesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPropertiesResponse) ProtoMessage() {}
+
+func (x *ListPropertiesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[126]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPropertiesResponse.ProtoReflect.Descriptor instead.
+func (*ListPropertiesResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{126}
+}
+
+func (x *ListPropertiesResponse) GetProperties() []*Property {
+	if x != nil {
+		return x.Properties
+	}
+	return nil
+}
+
+type CreatePropertyRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Label         string                 `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
+	ValueType     string                 `protobuf:"bytes,5,opt,name=value_type,json=valueType,proto3" json:"value_type,omitempty"`
+	Description   string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreatePropertyRequest) Reset() {
+	*x = CreatePropertyRequest{}
+	mi := &file_engine_proto_msgTypes[127]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreatePropertyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreatePropertyRequest) ProtoMessage() {}
+
+func (x *CreatePropertyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[127]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreatePropertyRequest.ProtoReflect.Descriptor instead.
+func (*CreatePropertyRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{127}
+}
+
+func (x *CreatePropertyRequest) GetProjectDir() string {
+	if x != nil {
+		return x.ProjectDir
+	}
+	return ""
+}
+
+func (x *CreatePropertyRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *CreatePropertyRequest) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *CreatePropertyRequest) GetValueType() string {
+	if x != nil {
+		return x.ValueType
+	}
+	return ""
+}
+
+func (x *CreatePropertyRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+type CreatePropertyResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Property      *Property              `protobuf:"bytes,1,opt,name=property,proto3" json:"property,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreatePropertyResponse) Reset() {
+	*x = CreatePropertyResponse{}
+	mi := &file_engine_proto_msgTypes[128]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreatePropertyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreatePropertyResponse) ProtoMessage() {}
+
+func (x *CreatePropertyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[128]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreatePropertyResponse.ProtoReflect.Descriptor instead.
+func (*CreatePropertyResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{128}
+}
+
+func (x *CreatePropertyResponse) GetProperty() *Property {
+	if x != nil {
+		return x.Property
+	}
+	return nil
+}
+
+type UpdatePropertyRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	PropertyId    string                 `protobuf:"bytes,3,opt,name=property_id,json=propertyId,proto3" json:"property_id,omitempty"`
+	Label         string                 `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
+	ValueType     string                 `protobuf:"bytes,5,opt,name=value_type,json=valueType,proto3" json:"value_type,omitempty"`
+	Description   string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdatePropertyRequest) Reset() {
+	*x = UpdatePropertyRequest{}
+	mi := &file_engine_proto_msgTypes[129]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdatePropertyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdatePropertyRequest) ProtoMessage() {}
+
+func (x *UpdatePropertyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[129]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdatePropertyRequest.ProtoReflect.Descriptor instead.
+func (*UpdatePropertyRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{129}
+}
+
+func (x *UpdatePropertyRequest) GetProjectDir() string {
+	if x != nil {
+		return x.ProjectDir
+	}
+	return ""
+}
+
+func (x *UpdatePropertyRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *UpdatePropertyRequest) GetPropertyId() string {
+	if x != nil {
+		return x.PropertyId
+	}
+	return ""
+}
+
+func (x *UpdatePropertyRequest) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *UpdatePropertyRequest) GetValueType() string {
+	if x != nil {
+		return x.ValueType
+	}
+	return ""
+}
+
+func (x *UpdatePropertyRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+type UpdatePropertyResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Property      *Property              `protobuf:"bytes,1,opt,name=property,proto3" json:"property,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdatePropertyResponse) Reset() {
+	*x = UpdatePropertyResponse{}
+	mi := &file_engine_proto_msgTypes[130]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdatePropertyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdatePropertyResponse) ProtoMessage() {}
+
+func (x *UpdatePropertyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[130]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdatePropertyResponse.ProtoReflect.Descriptor instead.
+func (*UpdatePropertyResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{130}
+}
+
+func (x *UpdatePropertyResponse) GetProperty() *Property {
+	if x != nil {
+		return x.Property
+	}
+	return nil
+}
+
+type DeletePropertyRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	PropertyId    string                 `protobuf:"bytes,3,opt,name=property_id,json=propertyId,proto3" json:"property_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeletePropertyRequest) Reset() {
+	*x = DeletePropertyRequest{}
+	mi := &file_engine_proto_msgTypes[131]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeletePropertyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeletePropertyRequest) ProtoMessage() {}
+
+func (x *DeletePropertyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[131]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeletePropertyRequest.ProtoReflect.Descriptor instead.
+func (*DeletePropertyRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{131}
+}
+
+func (x *DeletePropertyRequest) GetProjectDir() string {
+	if x != nil {
+		return x.ProjectDir
+	}
+	return ""
+}
+
+func (x *DeletePropertyRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *DeletePropertyRequest) GetPropertyId() string {
+	if x != nil {
+		return x.PropertyId
+	}
+	return ""
+}
+
+type DeletePropertyResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeletePropertyResponse) Reset() {
+	*x = DeletePropertyResponse{}
+	mi := &file_engine_proto_msgTypes[132]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeletePropertyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeletePropertyResponse) ProtoMessage() {}
+
+func (x *DeletePropertyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[132]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeletePropertyResponse.ProtoReflect.Descriptor instead.
+func (*DeletePropertyResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{132}
+}
+
+type ListSubjectTypeFieldsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	SubjectTypeId string                 `protobuf:"bytes,2,opt,name=subject_type_id,json=subjectTypeId,proto3" json:"subject_type_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSubjectTypeFieldsRequest) Reset() {
+	*x = ListSubjectTypeFieldsRequest{}
+	mi := &file_engine_proto_msgTypes[133]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSubjectTypeFieldsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSubjectTypeFieldsRequest) ProtoMessage() {}
+
+func (x *ListSubjectTypeFieldsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[133]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSubjectTypeFieldsRequest.ProtoReflect.Descriptor instead.
+func (*ListSubjectTypeFieldsRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{133}
+}
+
+func (x *ListSubjectTypeFieldsRequest) GetProjectDir() string {
+	if x != nil {
+		return x.ProjectDir
+	}
+	return ""
+}
+
+func (x *ListSubjectTypeFieldsRequest) GetSubjectTypeId() string {
+	if x != nil {
+		return x.SubjectTypeId
+	}
+	return ""
+}
+
+type ListSubjectTypeFieldsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Fields        []*SubjectTypeField    `protobuf:"bytes,1,rep,name=fields,proto3" json:"fields,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSubjectTypeFieldsResponse) Reset() {
+	*x = ListSubjectTypeFieldsResponse{}
+	mi := &file_engine_proto_msgTypes[134]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSubjectTypeFieldsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSubjectTypeFieldsResponse) ProtoMessage() {}
+
+func (x *ListSubjectTypeFieldsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[134]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSubjectTypeFieldsResponse.ProtoReflect.Descriptor instead.
+func (*ListSubjectTypeFieldsResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{134}
+}
+
+func (x *ListSubjectTypeFieldsResponse) GetFields() []*SubjectTypeField {
+	if x != nil {
+		return x.Fields
+	}
+	return nil
+}
+
+type AssignSubjectTypeFieldRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	SubjectTypeId string                 `protobuf:"bytes,3,opt,name=subject_type_id,json=subjectTypeId,proto3" json:"subject_type_id,omitempty"`
+	PropertyId    string                 `protobuf:"bytes,4,opt,name=property_id,json=propertyId,proto3" json:"property_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AssignSubjectTypeFieldRequest) Reset() {
+	*x = AssignSubjectTypeFieldRequest{}
+	mi := &file_engine_proto_msgTypes[135]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AssignSubjectTypeFieldRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AssignSubjectTypeFieldRequest) ProtoMessage() {}
+
+func (x *AssignSubjectTypeFieldRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[135]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AssignSubjectTypeFieldRequest.ProtoReflect.Descriptor instead.
+func (*AssignSubjectTypeFieldRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{135}
+}
+
+func (x *AssignSubjectTypeFieldRequest) GetProjectDir() string {
+	if x != nil {
+		return x.ProjectDir
+	}
+	return ""
+}
+
+func (x *AssignSubjectTypeFieldRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *AssignSubjectTypeFieldRequest) GetSubjectTypeId() string {
+	if x != nil {
+		return x.SubjectTypeId
+	}
+	return ""
+}
+
+func (x *AssignSubjectTypeFieldRequest) GetPropertyId() string {
+	if x != nil {
+		return x.PropertyId
+	}
+	return ""
+}
+
+type AssignSubjectTypeFieldResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AssignSubjectTypeFieldResponse) Reset() {
+	*x = AssignSubjectTypeFieldResponse{}
+	mi := &file_engine_proto_msgTypes[136]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AssignSubjectTypeFieldResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AssignSubjectTypeFieldResponse) ProtoMessage() {}
+
+func (x *AssignSubjectTypeFieldResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[136]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AssignSubjectTypeFieldResponse.ProtoReflect.Descriptor instead.
+func (*AssignSubjectTypeFieldResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{136}
+}
+
+type RemoveSubjectTypeFieldRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	SubjectTypeId string                 `protobuf:"bytes,3,opt,name=subject_type_id,json=subjectTypeId,proto3" json:"subject_type_id,omitempty"`
+	PropertyId    string                 `protobuf:"bytes,4,opt,name=property_id,json=propertyId,proto3" json:"property_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemoveSubjectTypeFieldRequest) Reset() {
+	*x = RemoveSubjectTypeFieldRequest{}
+	mi := &file_engine_proto_msgTypes[137]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveSubjectTypeFieldRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveSubjectTypeFieldRequest) ProtoMessage() {}
+
+func (x *RemoveSubjectTypeFieldRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[137]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveSubjectTypeFieldRequest.ProtoReflect.Descriptor instead.
+func (*RemoveSubjectTypeFieldRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{137}
+}
+
+func (x *RemoveSubjectTypeFieldRequest) GetProjectDir() string {
+	if x != nil {
+		return x.ProjectDir
+	}
+	return ""
+}
+
+func (x *RemoveSubjectTypeFieldRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *RemoveSubjectTypeFieldRequest) GetSubjectTypeId() string {
+	if x != nil {
+		return x.SubjectTypeId
+	}
+	return ""
+}
+
+func (x *RemoveSubjectTypeFieldRequest) GetPropertyId() string {
+	if x != nil {
+		return x.PropertyId
+	}
+	return ""
+}
+
+type RemoveSubjectTypeFieldResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemoveSubjectTypeFieldResponse) Reset() {
+	*x = RemoveSubjectTypeFieldResponse{}
+	mi := &file_engine_proto_msgTypes[138]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveSubjectTypeFieldResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveSubjectTypeFieldResponse) ProtoMessage() {}
+
+func (x *RemoveSubjectTypeFieldResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[138]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveSubjectTypeFieldResponse.ProtoReflect.Descriptor instead.
+func (*RemoveSubjectTypeFieldResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{138}
+}
+
+type ListPlaceableSubjectTypesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPlaceableSubjectTypesRequest) Reset() {
+	*x = ListPlaceableSubjectTypesRequest{}
+	mi := &file_engine_proto_msgTypes[139]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPlaceableSubjectTypesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPlaceableSubjectTypesRequest) ProtoMessage() {}
+
+func (x *ListPlaceableSubjectTypesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[139]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPlaceableSubjectTypesRequest.ProtoReflect.Descriptor instead.
+func (*ListPlaceableSubjectTypesRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{139}
+}
+
+type ListPlaceableSubjectTypesResponse struct {
+	state         protoimpl.MessageState     `protogen:"open.v1"`
+	Types         []*SubjectTypePresentation `protobuf:"bytes,1,rep,name=types,proto3" json:"types,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPlaceableSubjectTypesResponse) Reset() {
+	*x = ListPlaceableSubjectTypesResponse{}
+	mi := &file_engine_proto_msgTypes[140]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPlaceableSubjectTypesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPlaceableSubjectTypesResponse) ProtoMessage() {}
+
+func (x *ListPlaceableSubjectTypesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[140]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPlaceableSubjectTypesResponse.ProtoReflect.Descriptor instead.
+func (*ListPlaceableSubjectTypesResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{140}
+}
+
+func (x *ListPlaceableSubjectTypesResponse) GetTypes() []*SubjectTypePresentation {
+	if x != nil {
+		return x.Types
+	}
+	return nil
+}
+
+type GetSubjectTypePresentationRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TypeKey       string                 `protobuf:"bytes,1,opt,name=type_key,json=typeKey,proto3" json:"type_key,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetSubjectTypePresentationRequest) Reset() {
+	*x = GetSubjectTypePresentationRequest{}
+	mi := &file_engine_proto_msgTypes[141]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSubjectTypePresentationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSubjectTypePresentationRequest) ProtoMessage() {}
+
+func (x *GetSubjectTypePresentationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[141]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSubjectTypePresentationRequest.ProtoReflect.Descriptor instead.
+func (*GetSubjectTypePresentationRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{141}
+}
+
+func (x *GetSubjectTypePresentationRequest) GetTypeKey() string {
+	if x != nil {
+		return x.TypeKey
+	}
+	return ""
+}
+
+type GetSubjectTypePresentationResponse struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	Presentation  *SubjectTypePresentation `protobuf:"bytes,1,opt,name=presentation,proto3" json:"presentation,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetSubjectTypePresentationResponse) Reset() {
+	*x = GetSubjectTypePresentationResponse{}
+	mi := &file_engine_proto_msgTypes[142]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSubjectTypePresentationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSubjectTypePresentationResponse) ProtoMessage() {}
+
+func (x *GetSubjectTypePresentationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[142]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSubjectTypePresentationResponse.ProtoReflect.Descriptor instead.
+func (*GetSubjectTypePresentationResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{142}
+}
+
+func (x *GetSubjectTypePresentationResponse) GetPresentation() *SubjectTypePresentation {
+	if x != nil {
+		return x.Presentation
+	}
+	return nil
+}
+
+type ListConnectRulesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListConnectRulesRequest) Reset() {
+	*x = ListConnectRulesRequest{}
+	mi := &file_engine_proto_msgTypes[143]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListConnectRulesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListConnectRulesRequest) ProtoMessage() {}
+
+func (x *ListConnectRulesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[143]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListConnectRulesRequest.ProtoReflect.Descriptor instead.
+func (*ListConnectRulesRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{143}
+}
+
+type ListConnectRulesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Rules         []*ConnectRule         `protobuf:"bytes,1,rep,name=rules,proto3" json:"rules,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListConnectRulesResponse) Reset() {
+	*x = ListConnectRulesResponse{}
+	mi := &file_engine_proto_msgTypes[144]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListConnectRulesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListConnectRulesResponse) ProtoMessage() {}
+
+func (x *ListConnectRulesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[144]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListConnectRulesResponse.ProtoReflect.Descriptor instead.
+func (*ListConnectRulesResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{144}
+}
+
+func (x *ListConnectRulesResponse) GetRules() []*ConnectRule {
+	if x != nil {
+		return x.Rules
+	}
+	return nil
+}
+
 // Error is the protobuf payload on provenencia_call status 1 (failure).
 // Success payloads remain method-specific response messages.
 type Error struct {
@@ -7534,7 +8933,7 @@ type Error struct {
 
 func (x *Error) Reset() {
 	*x = Error{}
-	mi := &file_engine_proto_msgTypes[121]
+	mi := &file_engine_proto_msgTypes[145]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7546,7 +8945,7 @@ func (x *Error) String() string {
 func (*Error) ProtoMessage() {}
 
 func (x *Error) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[121]
+	mi := &file_engine_proto_msgTypes[145]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7559,7 +8958,7 @@ func (x *Error) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Error.ProtoReflect.Descriptor instead.
 func (*Error) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{121}
+	return file_engine_proto_rawDescGZIP(), []int{145}
 }
 
 func (x *Error) GetCode() string {
@@ -8160,11 +9559,120 @@ const file_engine_proto_rawDesc = "" +
 	"projectDir\x12\x1b\n" +
 	"\tsource_id\x18\x02 \x01(\tR\bsourceId\"d\n" +
 	"\x1cListSubjectPositionsResponse\x12D\n" +
-	"\tpositions\x18\x01 \x03(\v2&.provenencia.engine.v1.SubjectPositionR\tpositions\"i\n" +
+	"\tpositions\x18\x01 \x03(\v2&.provenencia.engine.v1.SubjectPositionR\tpositions\"\xb4\x01\n" +
+	"\bProperty\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\x12\x16\n" +
+	"\x06origin\x18\x03 \x01(\tR\x06origin\x12\x14\n" +
+	"\x05label\x18\x04 \x01(\tR\x05label\x12 \n" +
+	"\vdescription\x18\x05 \x01(\tR\vdescription\x12\x1d\n" +
+	"\n" +
+	"value_type\x18\x06 \x01(\tR\tvalueType\x12\x17\n" +
+	"\aused_by\x18\a \x01(\x05R\x06usedBy\"\x86\x01\n" +
+	"\x10SubjectTypeField\x12;\n" +
+	"\bproperty\x18\x01 \x01(\v2\x1f.provenencia.engine.v1.PropertyR\bproperty\x12\x1d\n" +
+	"\n" +
+	"sort_order\x18\x02 \x01(\x05R\tsortOrder\x12\x16\n" +
+	"\x06locked\x18\x03 \x01(\bR\x06locked\"\xe0\x03\n" +
+	"\x17SubjectTypePresentation\x12\x19\n" +
+	"\btype_key\x18\x01 \x01(\tR\atypeKey\x12\x19\n" +
+	"\bl10n_key\x18\x02 \x01(\tR\al10nKey\x12\x1f\n" +
+	"\vicon_symbol\x18\x03 \x01(\tR\n" +
+	"iconSymbol\x12\x1b\n" +
+	"\tink_token\x18\x04 \x01(\tR\binkToken\x12\x1d\n" +
+	"\n" +
+	"tint_token\x18\x05 \x01(\tR\ttintToken\x12\x1d\n" +
+	"\n" +
+	"chip_token\x18\x06 \x01(\tR\tchipToken\x12\x1d\n" +
+	"\n" +
+	"line_token\x18\a \x01(\tR\tlineToken\x12&\n" +
+	"\x0fedge_from_token\x18\b \x01(\tR\redgeFromToken\x12\"\n" +
+	"\redge_to_token\x18\t \x01(\tR\vedgeToToken\x12\x12\n" +
+	"\x04role\x18\n" +
+	" \x01(\tR\x04role\x12\x1c\n" +
+	"\tplaceable\x18\v \x01(\bR\tplaceable\x12!\n" +
+	"\fpalette_sort\x18\f \x01(\x05R\vpaletteSort\x12=\n" +
+	"\x1brequires_citation_at_create\x18\r \x01(\bR\x18requiresCitationAtCreate\x12\x14\n" +
+	"\x05label\x18\x0e \x01(\tR\x05label\"\xe7\x01\n" +
+	"\vConnectRule\x12\"\n" +
+	"\rfrom_type_key\x18\x01 \x01(\tR\vfromTypeKey\x12\x1e\n" +
+	"\vto_type_key\x18\x02 \x01(\tR\ttoTypeKey\x12&\n" +
+	"\x0fbridge_type_key\x18\x03 \x01(\tR\rbridgeTypeKey\x12,\n" +
+	"\x12edge_property_keys\x18\x04 \x03(\tR\x10edgePropertyKeys\x12&\n" +
+	"\x0edisambiguation\x18\x05 \x01(\tR\x0edisambiguation\x12\x16\n" +
+	"\x06refuse\x18\x06 \x01(\bR\x06refuse\"8\n" +
+	"\x15ListPropertiesRequest\x12\x1f\n" +
+	"\vproject_dir\x18\x01 \x01(\tR\n" +
+	"projectDir\"Y\n" +
+	"\x16ListPropertiesResponse\x12?\n" +
+	"\n" +
+	"properties\x18\x01 \x03(\v2\x1f.provenencia.engine.v1.PropertyR\n" +
+	"properties\"\xb3\x01\n" +
+	"\x15CreatePropertyRequest\x12\x1f\n" +
+	"\vproject_dir\x18\x01 \x01(\tR\n" +
+	"projectDir\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x14\n" +
+	"\x05label\x18\x04 \x01(\tR\x05label\x12\x1d\n" +
+	"\n" +
+	"value_type\x18\x05 \x01(\tR\tvalueType\x12 \n" +
+	"\vdescription\x18\x06 \x01(\tR\vdescriptionJ\x04\b\x03\x10\x04R\x03key\"U\n" +
+	"\x16CreatePropertyResponse\x12;\n" +
+	"\bproperty\x18\x01 \x01(\v2\x1f.provenencia.engine.v1.PropertyR\bproperty\"\xc9\x01\n" +
+	"\x15UpdatePropertyRequest\x12\x1f\n" +
+	"\vproject_dir\x18\x01 \x01(\tR\n" +
+	"projectDir\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1f\n" +
+	"\vproperty_id\x18\x03 \x01(\tR\n" +
+	"propertyId\x12\x14\n" +
+	"\x05label\x18\x04 \x01(\tR\x05label\x12\x1d\n" +
+	"\n" +
+	"value_type\x18\x05 \x01(\tR\tvalueType\x12 \n" +
+	"\vdescription\x18\x06 \x01(\tR\vdescription\"U\n" +
+	"\x16UpdatePropertyResponse\x12;\n" +
+	"\bproperty\x18\x01 \x01(\v2\x1f.provenencia.engine.v1.PropertyR\bproperty\"r\n" +
+	"\x15DeletePropertyRequest\x12\x1f\n" +
+	"\vproject_dir\x18\x01 \x01(\tR\n" +
+	"projectDir\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1f\n" +
+	"\vproperty_id\x18\x03 \x01(\tR\n" +
+	"propertyId\"\x18\n" +
+	"\x16DeletePropertyResponse\"g\n" +
+	"\x1cListSubjectTypeFieldsRequest\x12\x1f\n" +
+	"\vproject_dir\x18\x01 \x01(\tR\n" +
+	"projectDir\x12&\n" +
+	"\x0fsubject_type_id\x18\x02 \x01(\tR\rsubjectTypeId\"`\n" +
+	"\x1dListSubjectTypeFieldsResponse\x12?\n" +
+	"\x06fields\x18\x01 \x03(\v2'.provenencia.engine.v1.SubjectTypeFieldR\x06fields\"\xa2\x01\n" +
+	"\x1dAssignSubjectTypeFieldRequest\x12\x1f\n" +
+	"\vproject_dir\x18\x01 \x01(\tR\n" +
+	"projectDir\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12&\n" +
+	"\x0fsubject_type_id\x18\x03 \x01(\tR\rsubjectTypeId\x12\x1f\n" +
+	"\vproperty_id\x18\x04 \x01(\tR\n" +
+	"propertyId\" \n" +
+	"\x1eAssignSubjectTypeFieldResponse\"\xa2\x01\n" +
+	"\x1dRemoveSubjectTypeFieldRequest\x12\x1f\n" +
+	"\vproject_dir\x18\x01 \x01(\tR\n" +
+	"projectDir\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12&\n" +
+	"\x0fsubject_type_id\x18\x03 \x01(\tR\rsubjectTypeId\x12\x1f\n" +
+	"\vproperty_id\x18\x04 \x01(\tR\n" +
+	"propertyId\" \n" +
+	"\x1eRemoveSubjectTypeFieldResponse\"\"\n" +
+	" ListPlaceableSubjectTypesRequest\"i\n" +
+	"!ListPlaceableSubjectTypesResponse\x12D\n" +
+	"\x05types\x18\x01 \x03(\v2..provenencia.engine.v1.SubjectTypePresentationR\x05types\">\n" +
+	"!GetSubjectTypePresentationRequest\x12\x19\n" +
+	"\btype_key\x18\x01 \x01(\tR\atypeKey\"x\n" +
+	"\"GetSubjectTypePresentationResponse\x12R\n" +
+	"\fpresentation\x18\x01 \x01(\v2..provenencia.engine.v1.SubjectTypePresentationR\fpresentation\"\x19\n" +
+	"\x17ListConnectRulesRequest\"T\n" +
+	"\x18ListConnectRulesResponse\x128\n" +
+	"\x05rules\x18\x01 \x03(\v2\".provenencia.engine.v1.ConnectRuleR\x05rules\"i\n" +
 	"\x05Error\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x124\n" +
 	"\x04kind\x18\x02 \x01(\x0e2 .provenencia.engine.v1.ErrorKindR\x04kind\x12\x16\n" +
-	"\x06params\x18\x03 \x03(\tR\x06params*\xf7\f\n" +
+	"\x06params\x18\x03 \x03(\tR\x06params*\xca\x0f\n" +
 	"\x06Method\x12\x16\n" +
 	"\x12METHOD_UNSPECIFIED\x10\x00\x12\x0f\n" +
 	"\vMETHOD_PING\x10\x01\x12\x16\n" +
@@ -8218,7 +9726,17 @@ const file_engine_proto_rawDesc = "" +
 	"\x14METHOD_LIST_SUBJECTS\x101\x12\x1f\n" +
 	"\x1bMETHOD_SET_SUBJECT_POSITION\x102\x12!\n" +
 	"\x1dMETHOD_CLEAR_SUBJECT_POSITION\x103\x12!\n" +
-	"\x1dMETHOD_LIST_SUBJECT_POSITIONS\x104\"\x04\b\x1b\x10\x1b*\x12METHOD_COUNT_FILES*\x88\x01\n" +
+	"\x1dMETHOD_LIST_SUBJECT_POSITIONS\x104\x12\x1a\n" +
+	"\x16METHOD_LIST_PROPERTIES\x105\x12\x1a\n" +
+	"\x16METHOD_CREATE_PROPERTY\x106\x12\x1a\n" +
+	"\x16METHOD_UPDATE_PROPERTY\x107\x12\x1a\n" +
+	"\x16METHOD_DELETE_PROPERTY\x108\x12#\n" +
+	"\x1fMETHOD_LIST_SUBJECT_TYPE_FIELDS\x109\x12$\n" +
+	" METHOD_ASSIGN_SUBJECT_TYPE_FIELD\x10:\x12$\n" +
+	" METHOD_REMOVE_SUBJECT_TYPE_FIELD\x10;\x12'\n" +
+	"#METHOD_LIST_PLACEABLE_SUBJECT_TYPES\x10<\x12(\n" +
+	"$METHOD_GET_SUBJECT_TYPE_PRESENTATION\x10=\x12\x1d\n" +
+	"\x19METHOD_LIST_CONNECT_RULES\x10>\"\x04\b\x1b\x10\x1b*\x12METHOD_COUNT_FILES*\x88\x01\n" +
 	"\tErrorKind\x12\x1a\n" +
 	"\x16ERROR_KIND_UNSPECIFIED\x10\x00\x12\x13\n" +
 	"\x0fERROR_KIND_USER\x10\x01\x12\x17\n" +
@@ -8239,7 +9757,7 @@ func file_engine_proto_rawDescGZIP() []byte {
 }
 
 var file_engine_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 122)
+var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 146)
 var file_engine_proto_goTypes = []any{
 	(Method)(0),                                       // 0: provenencia.engine.v1.Method
 	(ErrorKind)(0),                                    // 1: provenencia.engine.v1.ErrorKind
@@ -8364,7 +9882,31 @@ var file_engine_proto_goTypes = []any{
 	(*ClearSubjectPositionResponse)(nil),              // 120: provenencia.engine.v1.ClearSubjectPositionResponse
 	(*ListSubjectPositionsRequest)(nil),               // 121: provenencia.engine.v1.ListSubjectPositionsRequest
 	(*ListSubjectPositionsResponse)(nil),              // 122: provenencia.engine.v1.ListSubjectPositionsResponse
-	(*Error)(nil),                                     // 123: provenencia.engine.v1.Error
+	(*Property)(nil),                                  // 123: provenencia.engine.v1.Property
+	(*SubjectTypeField)(nil),                          // 124: provenencia.engine.v1.SubjectTypeField
+	(*SubjectTypePresentation)(nil),                   // 125: provenencia.engine.v1.SubjectTypePresentation
+	(*ConnectRule)(nil),                               // 126: provenencia.engine.v1.ConnectRule
+	(*ListPropertiesRequest)(nil),                     // 127: provenencia.engine.v1.ListPropertiesRequest
+	(*ListPropertiesResponse)(nil),                    // 128: provenencia.engine.v1.ListPropertiesResponse
+	(*CreatePropertyRequest)(nil),                     // 129: provenencia.engine.v1.CreatePropertyRequest
+	(*CreatePropertyResponse)(nil),                    // 130: provenencia.engine.v1.CreatePropertyResponse
+	(*UpdatePropertyRequest)(nil),                     // 131: provenencia.engine.v1.UpdatePropertyRequest
+	(*UpdatePropertyResponse)(nil),                    // 132: provenencia.engine.v1.UpdatePropertyResponse
+	(*DeletePropertyRequest)(nil),                     // 133: provenencia.engine.v1.DeletePropertyRequest
+	(*DeletePropertyResponse)(nil),                    // 134: provenencia.engine.v1.DeletePropertyResponse
+	(*ListSubjectTypeFieldsRequest)(nil),              // 135: provenencia.engine.v1.ListSubjectTypeFieldsRequest
+	(*ListSubjectTypeFieldsResponse)(nil),             // 136: provenencia.engine.v1.ListSubjectTypeFieldsResponse
+	(*AssignSubjectTypeFieldRequest)(nil),             // 137: provenencia.engine.v1.AssignSubjectTypeFieldRequest
+	(*AssignSubjectTypeFieldResponse)(nil),            // 138: provenencia.engine.v1.AssignSubjectTypeFieldResponse
+	(*RemoveSubjectTypeFieldRequest)(nil),             // 139: provenencia.engine.v1.RemoveSubjectTypeFieldRequest
+	(*RemoveSubjectTypeFieldResponse)(nil),            // 140: provenencia.engine.v1.RemoveSubjectTypeFieldResponse
+	(*ListPlaceableSubjectTypesRequest)(nil),          // 141: provenencia.engine.v1.ListPlaceableSubjectTypesRequest
+	(*ListPlaceableSubjectTypesResponse)(nil),         // 142: provenencia.engine.v1.ListPlaceableSubjectTypesResponse
+	(*GetSubjectTypePresentationRequest)(nil),         // 143: provenencia.engine.v1.GetSubjectTypePresentationRequest
+	(*GetSubjectTypePresentationResponse)(nil),        // 144: provenencia.engine.v1.GetSubjectTypePresentationResponse
+	(*ListConnectRulesRequest)(nil),                   // 145: provenencia.engine.v1.ListConnectRulesRequest
+	(*ListConnectRulesResponse)(nil),                  // 146: provenencia.engine.v1.ListConnectRulesResponse
+	(*Error)(nil),                                     // 147: provenencia.engine.v1.Error
 }
 var file_engine_proto_depIdxs = []int32{
 	24,  // 0: provenencia.engine.v1.CompleteOnboardingResponse.project:type_name -> provenencia.engine.v1.ProjectInfo
@@ -8416,12 +9958,20 @@ var file_engine_proto_depIdxs = []int32{
 	105, // 46: provenencia.engine.v1.ListSubjectsResponse.subjects:type_name -> provenencia.engine.v1.Subject
 	106, // 47: provenencia.engine.v1.SetSubjectPositionResponse.position:type_name -> provenencia.engine.v1.SubjectPosition
 	106, // 48: provenencia.engine.v1.ListSubjectPositionsResponse.positions:type_name -> provenencia.engine.v1.SubjectPosition
-	1,   // 49: provenencia.engine.v1.Error.kind:type_name -> provenencia.engine.v1.ErrorKind
-	50,  // [50:50] is the sub-list for method output_type
-	50,  // [50:50] is the sub-list for method input_type
-	50,  // [50:50] is the sub-list for extension type_name
-	50,  // [50:50] is the sub-list for extension extendee
-	0,   // [0:50] is the sub-list for field type_name
+	123, // 49: provenencia.engine.v1.SubjectTypeField.property:type_name -> provenencia.engine.v1.Property
+	123, // 50: provenencia.engine.v1.ListPropertiesResponse.properties:type_name -> provenencia.engine.v1.Property
+	123, // 51: provenencia.engine.v1.CreatePropertyResponse.property:type_name -> provenencia.engine.v1.Property
+	123, // 52: provenencia.engine.v1.UpdatePropertyResponse.property:type_name -> provenencia.engine.v1.Property
+	124, // 53: provenencia.engine.v1.ListSubjectTypeFieldsResponse.fields:type_name -> provenencia.engine.v1.SubjectTypeField
+	125, // 54: provenencia.engine.v1.ListPlaceableSubjectTypesResponse.types:type_name -> provenencia.engine.v1.SubjectTypePresentation
+	125, // 55: provenencia.engine.v1.GetSubjectTypePresentationResponse.presentation:type_name -> provenencia.engine.v1.SubjectTypePresentation
+	126, // 56: provenencia.engine.v1.ListConnectRulesResponse.rules:type_name -> provenencia.engine.v1.ConnectRule
+	1,   // 57: provenencia.engine.v1.Error.kind:type_name -> provenencia.engine.v1.ErrorKind
+	58,  // [58:58] is the sub-list for method output_type
+	58,  // [58:58] is the sub-list for method input_type
+	58,  // [58:58] is the sub-list for extension type_name
+	58,  // [58:58] is the sub-list for extension extendee
+	0,   // [0:58] is the sub-list for field type_name
 }
 
 func init() { file_engine_proto_init() }
@@ -8436,7 +9986,7 @@ func file_engine_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_engine_proto_rawDesc), len(file_engine_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   122,
+			NumMessages:   146,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
