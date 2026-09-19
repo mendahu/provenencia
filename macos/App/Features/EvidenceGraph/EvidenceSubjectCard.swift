@@ -1,13 +1,14 @@
 import SwiftUI
 
-/// Floating primary subject card on the Evidence graph (S6-D1 / S6-02).
-///
-/// Header-forward: icon chip + working label + type caption + optional
-/// description. Uncited chrome is the default until Observations exist.
+/// Drag-enabled primary subject card (S6-03).
 struct EvidenceSubjectCard: View {
     let placed: SourceGraphPlacedSubject
     var isSelected: Bool
+    var isDragging: Bool = false
+    var dragEnabled: Bool = true
     var onSelect: () -> Void
+    var onDragChanged: ((CGSize) -> Void)?
+    var onDragEnded: (() -> Void)?
 
     private var style: EvidenceSubjectKindStyle {
         EvidenceSubjectKindStyle.forKind(placed.kind)
@@ -22,51 +23,84 @@ struct EvidenceSubjectCard: View {
     }
 
     var body: some View {
-        Button(action: onSelect) {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .top, spacing: 10) {
-                    iconChip
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(verbatim: displayLabel)
-                            .font(PVFont.display(size: 16, weight: PVFontWeight.medium))
-                            .foregroundStyle(placed.isCited ? PVColor.textDisplay : PVColor.textSecondary)
-                            .lineLimit(2)
-                            .multilineTextAlignment(.leading)
-                        Text(verbatim: placed.typeLabel)
-                            .font(PVFont.mono(size: 10, weight: PVFontWeight.medium))
-                            .tracking(1)
-                            .textCase(.uppercase)
-                            .foregroundStyle(style.ink)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    citationMark
-                }
-                if let description = nonEmptyDescription {
-                    Text(verbatim: description)
-                        .font(PVFont.body(size: PVTypeScale.bodySmall))
-                        .foregroundStyle(PVColor.textMuted)
-                        .lineLimit(3)
+        cardChrome
+            .opacity(ghostOpacity)
+            .gesture(dragGesture)
+            .onTapGesture(perform: onSelect)
+            .accessibilityHidden(true)
+    }
+
+    /// Non-interactive placement preview while a tool is armed.
+    static func ghost(placed: SourceGraphPlacedSubject) -> some View {
+        EvidenceSubjectCard(
+            placed: placed,
+            isSelected: false,
+            isDragging: false,
+            dragEnabled: false,
+            onSelect: {}
+        )
+        .opacity(0.62)
+        .allowsHitTesting(false)
+    }
+
+    private var ghostOpacity: Double {
+        if isDragging { return 0.92 }
+        return placed.isCited ? 1 : 0.76
+    }
+
+    private var cardChrome: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
+                iconChip
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: displayLabel)
+                        .font(PVFont.display(size: 16, weight: PVFontWeight.medium))
+                        .foregroundStyle(placed.isCited ? PVColor.textDisplay : PVColor.textSecondary)
+                        .lineLimit(2)
                         .multilineTextAlignment(.leading)
+                    Text(verbatim: placed.typeLabel)
+                        .font(PVFont.mono(size: 10, weight: PVFontWeight.medium))
+                        .tracking(1)
+                        .textCase(.uppercase)
+                        .foregroundStyle(style.ink)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                citationMark
             }
-            .padding(.horizontal, 13)
-            .padding(.vertical, 12)
-            .frame(width: 236, alignment: .leading)
-            .background(cardBackground)
-            .overlay(cardBorder)
-            .clipShape(RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous))
-            .shadow(
-                color: placed.isCited && !isSelected
-                    ? Color.black.opacity(0.08)
-                    : .clear,
-                radius: 6,
-                y: 2
-            )
-            .opacity(placed.isCited ? 1 : 0.76)
-            .background(selectionHalo)
+            if let description = nonEmptyDescription {
+                Text(verbatim: description)
+                    .font(PVFont.body(size: PVTypeScale.bodySmall))
+                    .foregroundStyle(PVColor.textMuted)
+                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
+            }
         }
-        .buttonStyle(.plain)
-        .accessibilityHidden(true)
+        .padding(.horizontal, 13)
+        .padding(.vertical, 12)
+        .frame(width: 236, alignment: .leading)
+        .background(cardBackground)
+        .overlay(cardBorder)
+        .clipShape(RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous))
+        .shadow(
+            color: (placed.isCited || isDragging) && !isSelected
+                ? Color.black.opacity(0.1)
+                : .clear,
+            radius: isDragging ? 10 : 6,
+            y: isDragging ? 4 : 2
+        )
+        .background(selectionHalo)
+    }
+
+    private var dragGesture: some Gesture {
+        DragGesture(minimumDistance: dragEnabled ? 4 : 10_000)
+            .onChanged { value in
+                guard dragEnabled else { return }
+                onDragChanged?(value.translation)
+            }
+            .onEnded { _ in
+                guard dragEnabled else { return }
+                onDragEnded?()
+            }
     }
 
     private var displayLabel: String {
@@ -126,22 +160,20 @@ struct EvidenceSubjectCard: View {
             .strokeBorder(
                 borderColor,
                 style: StrokeStyle(
-                    lineWidth: isSelected ? 1.5 : 1,
+                    lineWidth: (isSelected || isDragging) ? 1.5 : 1,
                     dash: placed.isCited ? [] : [4, 3]
                 )
             )
     }
 
     private var borderColor: Color {
-        if isSelected {
-            return placed.isCited ? PVColor.accent : PVColor.accent
-        }
+        if isSelected || isDragging { return PVColor.accent }
         return placed.isCited ? style.line : PVColor.borderDefault
     }
 
     @ViewBuilder
     private var selectionHalo: some View {
-        if isSelected {
+        if isSelected || isDragging {
             RoundedRectangle(cornerRadius: PVRadius.md + 2, style: .continuous)
                 .fill(PVColor.graphRing)
                 .padding(-3)

@@ -80,8 +80,7 @@ struct CatalogQueryRegistry: Sendable {
         Spec(
             kind: .sourceGraph,
             stalePolicy: .sessionFresh,
-            // Subject create/delete/position mutations land in S6-03.
-            invalidateOn: []
+            invalidateOn: [.createdSubject]
         ),
     ]
 

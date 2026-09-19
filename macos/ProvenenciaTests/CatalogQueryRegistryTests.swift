@@ -390,6 +390,9 @@ struct CatalogQueryRegistryTests {
             .allCached(.sourceWorkspace),
             .key(.typeSuggestions(project: project, typeId: "t1")),
         ])
+        #expect(registry.invalidations(by: .createdSubject(sourceId: "s1"), project: project) == [
+            .allCached(.sourceGraph),
+        ])
         // Grades are seeded vocabulary with no CRUD surface, so nothing stales them.
         let everyMutation: [CatalogMutation] = [
             .updatedSource(source), .changedSourceType(source), .createdSource,
@@ -397,6 +400,7 @@ struct CatalogQueryRegistryTests {
             .createdMetadataField, .updatedMetadataField(id: "f1"), .deletedMetadataField(id: "f1"),
             .assignedTypeSuggestion(typeId: "t1"), .removedTypeSuggestion(typeId: "t1"),
             .mutatedSourceWorkspace(sourceId: "s1"), .mutatedSourceMetadata(sourceId: "s1"),
+            .createdSubject(sourceId: "s1"),
         ]
         #expect(everyMutation.allSatisfy { mutation in
             !registry.invalidations(by: mutation, project: project).contains(

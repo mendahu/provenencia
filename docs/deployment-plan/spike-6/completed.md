@@ -11,6 +11,7 @@ IDs stay stable (`S6-NN`, `S6-DN`). Do not renumber when moving steps here.
 | [S6-D1](#s6-d1--design-canvas--primary-cards) | Design | Primary floating cards, place/create, uncited shell |
 | [S6-01](#s6-01--pr-panzoom-shell) | PR | `NSScrollView` Evidence graph shell + unit-tested coordinate seam |
 | [S6-02](#s6-02--pr-primary-cards--accessibility) | PR | Placed primary cards + VoiceOver representation |
+| [S6-03](#s6-03--pr-click-to-place--drag--persist) | PR | Palette place/create, drag snap, position patch |
 
 ---
 
@@ -23,7 +24,7 @@ IDs stay stable (`S6-NN`, `S6-DN`). Do not renumber when moving steps here.
 | **Kind** | Design (Claude Design board) |
 | **Depends on** | Spike 5 Evidence graph place; S6-01 shell may already exist |
 | **Deliverables** | Done. Board for Evidence graph primary surface: toggle Add Person/Event/Place tools, click-to-place + label/description create modal, floating rounded Person/Event/Place cards (icon + color tinge), and **uncited** chrome (ghost/shell/badge) for primaries with no Observations. Cited-shell contrast frame. Bridges explicitly out (never uncited). Brief archived: [`design/archive/S6-D1-canvas-bubbles.md`](design/archive/S6-D1-canvas-bubbles.md). |
-| **Dogfood** | Design only — implemented in S6-02 (cards/uncited); place/create tools still S6-03. |
+| **Dogfood** | Design only — implemented in S6-02 (cards/uncited) and S6-03 (palette place/create/drag). |
 | **Out** | Connect, bridge cards, cited-data rows, citation composer (S6-D2 / later). |
 
 **Landed (design only):** primary card language and uncited vs cited-shell states for S6-02 / S6-03. Connect and shared citation handoff remain **S6-D2**.
@@ -55,10 +56,10 @@ xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destin
 | **Depends on** | S6-01, S6-D1 |
 | **Deliverables** | Done. [`SourceGraphSnapshot`](../../../macos/App/Features/Workspace/Session/SourceGraphSnapshot.swift) loads placed Person/Event/Place subjects via [`CatalogQueryRegistry`](../../../macos/App/Features/Workspace/Session/CatalogQueryRegistry.swift). [`EvidenceGraphView`](../../../macos/App/Features/EvidenceGraph/EvidenceGraphView.swift) shows floating [`EvidenceSubjectCard`](../../../macos/App/Features/EvidenceGraph/EvidenceSubjectCard.swift)s (tinge wash, uncited dashed chrome, selection) over the grid using [`GraphCanvasGridMapping`](../../../macos/App/Features/GraphCanvas/GraphCanvasGridMapping.swift). [`PVSubjectIcon`](../../../macos/App/DesignSystem/Components/Research/PVSubjectIcon.swift) + kind colors on [`PVColor`](../../../macos/App/DesignSystem/Tokens/PVColor.swift). `accessibilityRepresentation` list + Subjects rotor. Empty state when no placed primaries. |
 | **Tests** | Done. `SourceGraphSnapshotTests` (filter bridges/unplaced; a11y labels), `GraphCanvasGridMappingTests`, `CatalogQueryRegistryTests.sourceGraphLoadsPlacedPrimaries`. |
-| **Dogfood** | Open Evidence graph for a Source that already has placed subjects (seed via FakeStore / FFI until S6-03 create). VoiceOver lists subjects. Empty graph shows “No subjects yet.” |
-| **Out** | Palette, create modal, drag/persist (S6-03); connect / bridges (S6-04); Observation-driven cited transition. |
+| **Dogfood** | Open Evidence graph for a Source that already has placed subjects. VoiceOver lists subjects. Empty graph prompts picking a tool (S6-03). |
+| **Out** | Connect / bridges (S6-04); Observation-driven cited transition. |
 
-**Landed:** first subject cards on the canvas and the accessibility representation required by design note §7.4. Create/drag remain S6-03.
+**Landed:** first subject cards on the canvas and the accessibility representation required by design note §7.4.
 
 **Verify:**
 
@@ -66,5 +67,27 @@ xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destin
 xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' \
   -only-testing:ProvenenciaTests/SourceGraphSnapshotTests \
   -only-testing:ProvenenciaTests/GraphCanvasGridMappingTests \
+  -only-testing:ProvenenciaTests/CatalogQueryRegistryTests
+```
+
+### S6-03 — PR: Click-to-place + drag + persist
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S6-02, S6-D1 |
+| **Deliverables** | Done. Floating [`EvidenceGraphPalette`](../../../macos/App/Features/EvidenceGraph/EvidenceGraphPalette.swift) over the canvas viewport (not inside the scroll document). [`EvidenceGraphModel`](../../../macos/App/Features/EvidenceGraph/EvidenceGraphModel.swift) arms Person/Event/Place tools, placement ghost (~62% opacity), click-to-place [`PVDialog`](../../../macos/App/DesignSystem/Components/Feedback/PVDialog.swift) (label + description), create via store + `.createdSubject` invalidate. Card drag (idle only) snaps and persists with `setSubjectPosition` + `session.setQueryValue` patch of [`SourceGraphSnapshot.updatingPosition`](../../../macos/App/Features/Workspace/Session/SourceGraphSnapshot.swift). Arrow-key move and Esc disarm/deselect parity. |
+| **Tests** | Done. [`EvidenceGraphModelTests`](../../../macos/ProvenenciaTests/EvidenceGraphModelTests.swift) (create+position, cancel keeps armed, position patch, `.createdSubject` invalidation); snapshot + registry coverage extended. |
+| **Dogfood** | Arm Add Person → click grid → label → confirm; drag cards; relaunch — positions stick. Cancel leaves tool armed; confirm disarms. |
+| **Out** | Unplaced tray; connect / bridges (S6-04); delete UX; Observation `isCited` wiring; keyboard shortcuts to arm tools. |
+
+**Landed:** dogfoodable create + rearrange on the Evidence graph without per-move query invalidation.
+
+**Verify:**
+
+```bash
+xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' \
+  -only-testing:ProvenenciaTests/EvidenceGraphModelTests \
+  -only-testing:ProvenenciaTests/SourceGraphSnapshotTests \
   -only-testing:ProvenenciaTests/CatalogQueryRegistryTests
 ```

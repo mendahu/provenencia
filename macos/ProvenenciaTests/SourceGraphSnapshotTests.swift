@@ -85,6 +85,33 @@ struct SourceGraphSnapshotTests {
         #expect(snapshot.subjects[1].kind == .event)
     }
 
+    @Test func updatingPositionChangesOnlyMatchingSubject() {
+        let alice = CatalogSubject(
+            id: "s-alice",
+            ref: "CPR-A",
+            sourceID: "src-1",
+            subjectTypeID: personType.id,
+            label: "Alice",
+            description: ""
+        )
+        let snapshot = SourceGraphSnapshot(
+            sourceId: "src-1",
+            subjects: [
+                SourceGraphPlacedSubject(
+                    subject: alice,
+                    kind: .person,
+                    typeLabel: "Person",
+                    gridX: 1,
+                    gridY: 2,
+                    isCited: false
+                ),
+            ]
+        )
+        let next = snapshot.updatingPosition(subjectID: alice.id, gridX: 9, gridY: 8)
+        #expect(next.subjects[0].gridX == 9)
+        #expect(next.subjects[0].gridY == 8)
+    }
+
     @Test func accessibilityLabelIncludesUncited() {
         let placed = SourceGraphPlacedSubject(
             subject: CatalogSubject(

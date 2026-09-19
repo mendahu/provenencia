@@ -33,7 +33,9 @@ struct WorkspaceDestinationHost: View {
             if let sourceID = navigation.currentLocation.sourceId {
                 EvidenceGraphView(
                     sourceID: sourceID,
-                    session: session
+                    session: session,
+                    store: store,
+                    userID: userID
                 )
             }
         case .sourceFields:

@@ -1022,13 +1022,13 @@
       }
     },
     "evidenceGraph.empty.message" : {
-      "comment" : "Empty Evidence graph body; create tools arrive in a later PR",
+      "comment" : "Empty Evidence graph body guiding the researcher to arm a palette tool",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Subjects you place on this Source will appear on the canvas."
+            "value" : "Pick a tool above, then click the grid to place the first person, event or place from this source."
           }
         }
       }
@@ -1041,6 +1041,270 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "No subjects yet"
+          }
+        }
+      }
+    },
+    "evidenceGraph.palette.person" : {
+      "comment" : "Evidence graph palette tool to place a Person subject",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add person"
+          }
+        }
+      }
+    },
+    "evidenceGraph.palette.event" : {
+      "comment" : "Evidence graph palette tool to place an Event subject",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.palette.place" : {
+      "comment" : "Evidence graph palette tool to place a Place subject",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add place"
+          }
+        }
+      }
+    },
+    "evidenceGraph.palette.toolRole" : {
+      "comment" : "VoiceOver middle token for a palette toggle (Add person, tool, off)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tool"
+          }
+        }
+      }
+    },
+    "evidenceGraph.palette.toolOn" : {
+      "comment" : "VoiceOver state when a palette tool is armed",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "on"
+          }
+        }
+      }
+    },
+    "evidenceGraph.palette.toolOff" : {
+      "comment" : "VoiceOver state when a palette tool is idle",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "off"
+          }
+        }
+      }
+    },
+    "evidenceGraph.armed.hintPerson" : {
+      "comment" : "Banner when Add person is armed",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Click the grid to place a person"
+          }
+        }
+      }
+    },
+    "evidenceGraph.armed.hintEvent" : {
+      "comment" : "Banner when Add event is armed",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Click the grid to place an event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.armed.hintPlace" : {
+      "comment" : "Banner when Add place is armed",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Click the grid to place a place"
+          }
+        }
+      }
+    },
+    "evidenceGraph.armed.escHint" : {
+      "comment" : "Secondary hint beside the armed placement banner",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "esc to cancel"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.personTitle" : {
+      "comment" : "Create-subject dialog title when placing a Person",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add person"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.eventTitle" : {
+      "comment" : "Create-subject dialog title when placing an Event",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.placeTitle" : {
+      "comment" : "Create-subject dialog title when placing a Place",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add place"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.confirm" : {
+      "comment" : "Confirm button on the Evidence graph create-subject dialog",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.cancel" : {
+      "comment" : "Cancel button on the Evidence graph create-subject dialog",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.labelField" : {
+      "comment" : "Label field title on the create-subject dialog",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Label"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.descriptionField" : {
+      "comment" : "Description field title on the create-subject dialog",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Description"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.labelRequired" : {
+      "comment" : "Validation when create-subject label is blank",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter a working label"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.typesUnavailable" : {
+      "comment" : "Error when seeded Person/Event/Place types could not be loaded",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subject types are not available for this project"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.defaultLabelPerson" : {
+      "comment" : "Prefill label when creating a Person from the palette",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New person"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.defaultLabelEvent" : {
+      "comment" : "Prefill label when creating an Event from the palette",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.defaultLabelPlace" : {
+      "comment" : "Prefill label when creating a Place from the palette",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New place"
           }
         }
       }

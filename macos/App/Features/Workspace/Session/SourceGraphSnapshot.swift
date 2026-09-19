@@ -68,4 +68,13 @@ struct SourceGraphSnapshot: Sendable, Equatable {
         }
         return SourceGraphSnapshot(sourceId: sourceId, subjects: placed)
     }
+
+    /// Returns a copy with one subject's grid cell updated (drag / arrow move).
+    func updatingPosition(subjectID: String, gridX: Int64, gridY: Int64) -> SourceGraphSnapshot {
+        var next = subjects
+        guard let index = next.firstIndex(where: { $0.id == subjectID }) else { return self }
+        next[index].gridX = gridX
+        next[index].gridY = gridY
+        return SourceGraphSnapshot(sourceId: sourceId, subjects: next)
+    }
 }

@@ -29,6 +29,9 @@ enum CatalogMutation: Sendable, Equatable {
     /// Metadata values for one source changed. Narrower than
     /// `mutatedSourceWorkspace` because it also moves each field's `usedBy`.
     case mutatedSourceMetadata(sourceId: String)
+
+    /// A primary subject was created on this Source's Evidence graph.
+    case createdSubject(sourceId: String)
 }
 
 /// Mutation kind for registry invalidation tags (no associated payload).
@@ -45,6 +48,7 @@ enum CatalogMutationKind: Hashable, Sendable {
     case removedTypeSuggestion
     case mutatedSourceWorkspace
     case mutatedSourceMetadata
+    case createdSubject
 }
 
 extension CatalogMutation {
@@ -77,6 +81,8 @@ extension CatalogMutation {
             return .mutatedSourceWorkspace
         case .mutatedSourceMetadata:
             return .mutatedSourceMetadata
+        case .createdSubject:
+            return .createdSubject
         }
     }
 
