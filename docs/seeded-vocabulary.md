@@ -377,7 +377,7 @@ probate
 other
 ```
 
-Exact GEDCOM alignment and additional vital/event kinds are **TBD**. Prefer a large product set so `other` stays rare. First-class facets (e.g. birthday) attach to recognized keys such as `birth` in the subject registry.
+Exact GEDCOM alignment and additional vital/event kinds are **TBD**. Prefer a large product set so `other` stays rare. First-class facets (e.g. birthday) will attach to recognized keys such as `birth` in the subject registry when that behavior lands — not part of the create-time term seed itself.
 
 ## 3.5 Property terms: `role` (participation)
 
@@ -394,7 +394,7 @@ informant
 other
 ```
 
-Tree / connect behavior attaches to recognized keys (e.g. `father`, `mother`, `subject`) in the registry.
+Tree / connect behavior will attach to recognized keys (e.g. `father`, `mother`, `subject`) in the registry when that behavior lands — not part of the create-time term seed itself.
 
 ## 3.6 Property terms: `relationship_type`
 

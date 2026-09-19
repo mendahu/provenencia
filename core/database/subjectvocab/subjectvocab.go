@@ -3,9 +3,10 @@
 //
 // Install upserts shipped Subject types, Properties, and bindings once at
 // catalog create. Call it only from onboarding.createCatalog — not on open.
-// Capabilities, presentation tokens, locked bindings, and the connect matrix
+// Capabilities (type-level), presentation tokens, locked bindings, and the connect matrix
 // live in the compiled registry and are exposed via lookup helpers (no SQLite
-// JSON). Future plugin:<id> modules extend the same registry shape.
+// JSON). Term capabilities (birthday / tree-edge) are deferred. Future plugin:<id>
+// modules extend the same registry shape.
 package subjectvocab
 
 import (
@@ -328,31 +329,6 @@ func LockedBinding(typeKey, propertyKey string) bool {
 	for _, b := range seedBindings {
 		if b.TypeKey == typeKey && b.PropertyKey == propertyKey {
 			return b.Locked
-		}
-	}
-	return false
-}
-
-// TermCapabilities returns compiled capabilities for a proveniencia (propertyKey, termKey).
-func TermCapabilities(propertyKey, termKey string) []string {
-	propertyKey = strings.TrimSpace(propertyKey)
-	termKey = strings.TrimSpace(termKey)
-	for _, t := range seedTerms {
-		if t.PropertyKey == propertyKey && t.Key == termKey {
-			out := make([]string, len(t.Capabilities))
-			copy(out, t.Capabilities)
-			return out
-		}
-	}
-	return nil
-}
-
-// TermHasCapability reports whether a proveniencia term declares capability.
-func TermHasCapability(propertyKey, termKey, capability string) bool {
-	capability = strings.TrimSpace(capability)
-	for _, c := range TermCapabilities(propertyKey, termKey) {
-		if c == capability {
-			return true
 		}
 	}
 	return false

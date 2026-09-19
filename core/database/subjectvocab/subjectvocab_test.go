@@ -41,12 +41,6 @@ func TestSubjectVocab(t *testing.T) {
 				if err != nil || birth.Label != "Birth" {
 					t.Fatalf("birth %+v %v", birth, err)
 				}
-				if !TermHasCapability("event_type", "birth", TermCapBirthday) {
-					t.Fatal("birth birthday capability")
-				}
-				if !TermHasCapability("role", "father", TermCapTreeEdge) {
-					t.Fatal("father tree_edge capability")
-				}
 				person, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)

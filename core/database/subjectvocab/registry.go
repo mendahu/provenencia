@@ -5,8 +5,9 @@ import (
 )
 
 // Declarative provenencia Interpretation subject vocabulary (create-time starter).
-// Capabilities, presentation, locked bindings, term capabilities, and connect rules live here —
+// Presentation, locked bindings, and connect rules live here —
 // Install writes only structural catalog rows (types, properties, terms, bindings).
+// Term capabilities (birthday facets, tree-edge roles, …) are deferred until a later PR.
 
 const (
 	RoleRoot         = "root"
@@ -17,9 +18,6 @@ const (
 	DisambiguationRole               = "role"
 	DisambiguationRelationshipType   = "relationship_type"
 	DisambiguationPersonPersonChoice = "person_person_choice"
-
-	TermCapBirthday = "birthday"
-	TermCapTreeEdge = "tree_edge"
 )
 
 type presentation struct {
@@ -54,7 +52,6 @@ type seedBinding struct {
 
 type seedTerm struct {
 	PropertyKey, Key, Label, Description string
-	Capabilities                         []string
 }
 
 type seedConnectRule struct {
@@ -190,7 +187,7 @@ var seedBindings = []seedBinding{
 
 // Property terms from docs/seeded-vocabulary.md §3.4–3.6.
 var seedTerms = []seedTerm{
-	{PropertyKey: "event_type", Key: "birth", Label: "Birth", Capabilities: []string{TermCapBirthday}},
+	{PropertyKey: "event_type", Key: "birth", Label: "Birth"},
 	{PropertyKey: "event_type", Key: "death", Label: "Death"},
 	{PropertyKey: "event_type", Key: "marriage", Label: "Marriage"},
 	{PropertyKey: "event_type", Key: "baptism", Label: "Baptism"},
@@ -202,9 +199,9 @@ var seedTerms = []seedTerm{
 	{PropertyKey: "event_type", Key: "probate", Label: "Probate"},
 	{PropertyKey: "event_type", Key: "other", Label: "Other"},
 
-	{PropertyKey: "role", Key: "subject", Label: "Subject", Capabilities: []string{TermCapTreeEdge}},
-	{PropertyKey: "role", Key: "father", Label: "Father", Capabilities: []string{TermCapTreeEdge}},
-	{PropertyKey: "role", Key: "mother", Label: "Mother", Capabilities: []string{TermCapTreeEdge}},
+	{PropertyKey: "role", Key: "subject", Label: "Subject"},
+	{PropertyKey: "role", Key: "father", Label: "Father"},
+	{PropertyKey: "role", Key: "mother", Label: "Mother"},
 	{PropertyKey: "role", Key: "spouse", Label: "Spouse"},
 	{PropertyKey: "role", Key: "child", Label: "Child"},
 	{PropertyKey: "role", Key: "witness", Label: "Witness"},
