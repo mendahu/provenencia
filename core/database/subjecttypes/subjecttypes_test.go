@@ -61,13 +61,41 @@ func TestSubjectTypes(t *testing.T) {
 			},
 		},
 		{
-			name: "reject empty key label prefixes",
+			name: "reject empty key label",
 			run: func(t *testing.T, c *database.Catalog) {
-				if _, err := Upsert(c, Type{Key: "", Origin: OriginUser, Label: "X", RefPrefix: "AAA", CandidateRefPrefix: "BBB"}); !errors.Is(err, ErrInvalid) {
+				if _, err := Upsert(c, Type{Key: "", Origin: OriginProvenencia, Label: "X", RefPrefix: "AAA", CandidateRefPrefix: "BBB"}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("empty key %v", err)
 				}
-				if _, err := Upsert(c, Type{Key: "x", Origin: OriginUser, Label: "", RefPrefix: "AAA", CandidateRefPrefix: "BBB"}); !errors.Is(err, ErrInvalid) {
+				if _, err := Upsert(c, Type{Key: "x", Origin: OriginProvenencia, Label: "", RefPrefix: "AAA", CandidateRefPrefix: "BBB"}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("empty label %v", err)
+				}
+			},
+		},
+		{
+			name: "reject user origin",
+			run: func(t *testing.T, c *database.Catalog) {
+				_, err := Upsert(c, Type{
+					Key: "custom", Origin: "user", Label: "Custom",
+					RefPrefix: "AAA", CandidateRefPrefix: "BBB",
+				})
+				if !errors.Is(err, ErrInvalid) {
+					t.Fatalf("got %v", err)
+				}
+			},
+		},
+		{
+			name: "accept plugin origin",
+			run: func(t *testing.T, c *database.Catalog) {
+				id, err := Upsert(c, Type{
+					Key: "dna_match", Origin: "plugin:example", Label: "DNA match",
+					RefPrefix: "DNA", CandidateRefPrefix: "CDM",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				got, err := Lookup(c, "dna_match", "plugin:example")
+				if err != nil || string(got.ID) != string(id) {
+					t.Fatalf("%+v %v", got, err)
 				}
 			},
 		},
@@ -75,7 +103,7 @@ func TestSubjectTypes(t *testing.T) {
 			name: "reject reserved prefix",
 			run: func(t *testing.T, c *database.Catalog) {
 				_, err := Upsert(c, Type{
-					Key: "bad", Origin: OriginUser, Label: "Bad",
+					Key: "bad", Origin: OriginProvenencia, Label: "Bad",
 					RefPrefix: "SRC", CandidateRefPrefix: "BBB",
 				})
 				if !errors.Is(err, ref.ErrReservedPrefix) {
@@ -90,7 +118,7 @@ func TestSubjectTypes(t *testing.T) {
 			name: "reject same prefix on both columns",
 			run: func(t *testing.T, c *database.Catalog) {
 				_, err := Upsert(c, Type{
-					Key: "dup", Origin: OriginUser, Label: "Dup",
+					Key: "dup", Origin: OriginProvenencia, Label: "Dup",
 					RefPrefix: "ZZZ", CandidateRefPrefix: "zzz",
 				})
 				if !errors.Is(err, ErrDuplicatePrefix) {
@@ -108,7 +136,7 @@ func TestSubjectTypes(t *testing.T) {
 					t.Fatal(err)
 				}
 				_, err := Upsert(c, Type{
-					Key: "collide", Origin: OriginUser, Label: "Collide",
+					Key: "collide", Origin: OriginProvenencia, Label: "Collide",
 					RefPrefix: "CPR", CandidateRefPrefix: "QQQ",
 				})
 				if !errors.Is(err, ErrDuplicatePrefix) {

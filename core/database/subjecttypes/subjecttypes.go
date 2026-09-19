@@ -1,4 +1,8 @@
 // Package subjecttypes accesses the subject_types vocabulary table.
+//
+// Subject types are product-seeded (and later plugin-seeded), not researcher-
+// authored. Upsert is for create-time Install / plugin Install only — there is
+// no user-origin Create/Update/Delete path.
 package subjecttypes
 
 import (
@@ -20,7 +24,6 @@ var ErrDuplicatePrefix = apperr.New(apperr.CodeSubjectTypesDuplicatePrefix, appe
 
 const (
 	OriginProvenencia = "provenencia"
-	OriginUser        = "user"
 
 	sqlUpsert = `INSERT INTO subject_types (
 			id, key, origin, label, description, ref_prefix, candidate_ref_prefix
@@ -59,7 +62,8 @@ type Type struct {
 }
 
 // Upsert inserts or updates by (key, origin). Mints a UUIDv7 id when ID is empty on insert.
-// Validates both prefixes via ref.ValidatePrefix and enforces cross-column uniqueness.
+// Origin must be proveniencia or plugin:<id>. Validates both prefixes via ref.ValidatePrefix
+// and enforces cross-column uniqueness.
 func Upsert(c *database.Catalog, t Type) ([]byte, error) {
 	db, err := c.DB()
 	if err != nil {
@@ -190,8 +194,9 @@ func scanType(row rowScanner) (Type, error) {
 }
 
 func originOK(origin string) bool {
-	if origin == OriginProvenencia || origin == OriginUser {
+	if origin == OriginProvenencia {
 		return true
 	}
+	// Future plugin:<id> Install modules use the same Upsert path.
 	return strings.HasPrefix(origin, "plugin:") && len(origin) > len("plugin:")
 }
