@@ -7,26 +7,24 @@ import SwiftUI
 /// Product-agnostic tooling: SwiftUI `ScrollView` has no magnification, so
 /// hosts compose this bridge with their own document content.
 ///
+/// **Pointer ownership**
+/// ``GraphCanvasDocumentView`` owns all canvas mouse sequences (select, drag,
+/// place, empty-canvas pan, connect). Hosted SwiftUI is paint-only — update its
+/// `rootView` freely; there is no SwiftUI `DragGesture` to cancel.
+///
 /// **Coordinate seams**
-/// - Live pointer hit-test (place / ghost): AppKit `convert` via
-///   ``GraphCanvasViewportController/contentPointUnderCursor()``
-/// - Pure layout / unit tests: ``GraphCanvasCoordinates`` camera math + clamp
+/// - Live pointer: AppKit `convert` on the document view
+/// - Pure layout / unit tests: ``GraphCanvasCoordinates``
 ///
 /// **Input mapping**
 /// - Trackpad (precise scroll): two-finger pan (system default)
 /// - Trackpad pinch: zoom (system magnification)
 /// - Mouse wheel (line scroll): zoom toward the cursor
-/// - Click-drag on empty document: pan (via ``GraphCanvasViewportController``)
-///
-/// `updateNSView` only replaces the hosting root when `contentID` or
-/// `contentSize` changes. Live `@Observable` / `@GestureState` updates must
-/// happen **inside** the hosted tree — rewriting `rootView` every parent
-/// render destroys in-flight drags.
+/// - Click-drag on empty document: pan (via ``GraphCanvasPointerController``)
 struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
     var contentSize: CGSize
-    /// Stable identity for the document (e.g. source id). Changing it rebuilds
-    /// the hosted root and resets magnification; keeping it stable preserves
-    /// gesture state and zoom.
+    /// Stable identity for the document (e.g. source id). Changing it resets
+    /// magnification; keeping it stable preserves zoom.
     var contentID: AnyHashable
     @ViewBuilder var content: () -> Content
 
@@ -46,19 +44,21 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
         scrollView.drawsBackground = false
         scrollView.borderType = .noBorder
 
-        context.coordinator.viewport.scrollView = scrollView
-        scrollView.viewport = context.coordinator.viewport
+        let coordinator = context.coordinator
+        coordinator.viewport.scrollView = scrollView
+        scrollView.viewport = coordinator.viewport
+        coordinator.pointer.viewport = coordinator.viewport
 
-        // Must accept first responder so `.focusable()` cards inside the
-        // document join the window tab loop (plain `NSHostingView` does not).
-        let hosting = FocusableHostingView(rootView: hostedRoot(context: context))
-        hosting.frame = CGRect(origin: .zero, size: contentSize)
-        scrollView.documentView = hosting
-        context.coordinator.hostingView = hosting
-        context.coordinator.installedContentID = contentID
-        context.coordinator.installedContentSize = contentSize
+        let document = GraphCanvasDocumentView(
+            pointer: coordinator.pointer,
+            frame: CGRect(origin: .zero, size: contentSize)
+        )
+        document.installHostingRoot(hostedRoot(context: context))
+        scrollView.documentView = document
+        coordinator.documentView = document
+        coordinator.installedContentID = contentID
+        coordinator.installedContentSize = contentSize
 
-        // Start near the center of the content plane so an empty canvas feels open.
         DispatchQueue.main.async {
             Self.centerDocument(in: scrollView, contentSize: contentSize)
         }
@@ -69,20 +69,23 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
         let coordinator = context.coordinator
         coordinator.viewport.scrollView = scrollView
         scrollView.viewport = coordinator.viewport
+        coordinator.pointer.viewport = coordinator.viewport
+
         let idChanged = coordinator.installedContentID != contentID
         let sizeChanged = coordinator.installedContentSize != contentSize
-        if idChanged || sizeChanged {
-            coordinator.installedContentID = contentID
-            coordinator.installedContentSize = contentSize
-            coordinator.hostingView?.rootView = hostedRoot(context: context)
-            if let document = scrollView.documentView {
-                document.frame = CGRect(origin: .zero, size: contentSize)
-            }
-            if idChanged {
-                scrollView.magnification = 1
-                DispatchQueue.main.async {
-                    Self.centerDocument(in: scrollView, contentSize: contentSize)
-                }
+        coordinator.installedContentID = contentID
+        coordinator.installedContentSize = contentSize
+
+        // Paint updates every representable pass — safe now that AppKit owns gestures.
+        coordinator.documentView?.installHostingRoot(hostedRoot(context: context))
+
+        if sizeChanged {
+            coordinator.documentView?.resizeDocument(to: contentSize)
+        }
+        if idChanged {
+            scrollView.magnification = 1
+            DispatchQueue.main.async {
+                Self.centerDocument(in: scrollView, contentSize: contentSize)
             }
         }
     }
@@ -91,6 +94,8 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
         AnyView(
             content()
                 .environment(\.graphCanvasViewport, context.coordinator.viewport)
+                .environment(\.graphCanvasPointer, context.coordinator.pointer)
+                .allowsHitTesting(false)
         )
     }
 
@@ -118,35 +123,18 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
     }
 
     final class Coordinator {
-        var hostingView: NSHostingView<AnyView>?
+        var documentView: GraphCanvasDocumentView?
         var installedContentID: AnyHashable?
         var installedContentSize: CGSize?
         let viewport: GraphCanvasViewportController
+        let pointer: GraphCanvasPointerController
 
         @MainActor
         init() {
             viewport = GraphCanvasViewportController()
+            pointer = GraphCanvasPointerController()
+            pointer.viewport = viewport
         }
-    }
-}
-
-/// `NSHostingView` that stays in the window key-view loop so SwiftUI
-/// `.focusable()` document content (Evidence subject cards) can be Tab targets.
-///
-/// It must **not** become first responder on mouse-down. `NSScrollView`
-/// plus a first-responder document view swallows the drag before SwiftUI
-/// `DragGesture` sees it. Tab still reaches hosted `.focusable()` views
-/// via `acceptsFirstResponder`; pointer stays a pointer.
-private final class FocusableHostingView<Content: View>: NSHostingView<Content> {
-    override var acceptsFirstResponder: Bool { true }
-
-    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { false }
-
-    override func becomeFirstResponder() -> Bool {
-        // Keyboard (Tab) may focus hosted content. A mouse click that made
-        // this view first responder is what kills card drag.
-        guard NSApp.currentEvent?.type != .leftMouseDown else { return false }
-        return super.becomeFirstResponder()
     }
 }
 
@@ -171,7 +159,6 @@ final class GraphCanvasNSScrollView: NSScrollView {
             super.scrollWheel(with: event)
             return
         }
-        // Discrete mouse wheel → zoom toward the cursor (scroll up = zoom in).
         let sensitivity: CGFloat = 0.08
         let factor = exp(event.scrollingDeltaY * sensitivity)
         let target = GraphCanvasCoordinates.clampMagnification(magnification * factor)
@@ -180,10 +167,6 @@ final class GraphCanvasNSScrollView: NSScrollView {
     }
 
     /// Zooms so the document point under `windowLocation` stays under the cursor.
-    ///
-    /// Avoids `setMagnification(_:centeredAt:)`, which mis-anchors against an
-    /// `NSHostingView` document. Anchor math uses the clip view’s bounds space
-    /// (already document coordinates under magnification).
     func zoom(to newMagnification: CGFloat, windowLocation: CGPoint) {
         guard documentView != nil else {
             magnification = newMagnification
@@ -194,14 +177,11 @@ final class GraphCanvasNSScrollView: NSScrollView {
         guard abs(newMag - oldMag) > 0.000_1 else { return }
 
         let clip = contentView
-        // Clip-view bounds space == document coordinates of the point under the cursor.
         let anchor = clip.convert(windowLocation, from: nil)
 
         magnification = newMag
 
         let after = clip.convert(windowLocation, from: nil)
-        // If the cursor now maps to a higher document point than before, scroll
-        // origin down so the original anchor returns under the cursor.
         var origin = clip.bounds.origin
         origin.x -= after.x - anchor.x
         origin.y -= after.y - anchor.y
@@ -218,8 +198,6 @@ final class GraphCanvasNSScrollView: NSScrollView {
         reflectScrolledClipView(clip)
     }
 
-    /// Precise / phase-bearing events come from trackpads and Magic Mouse —
-    /// keep those as pan. Traditional mouse wheels are line-delta only.
     static func isTrackpadOrMagicMouseScroll(_ event: NSEvent) -> Bool {
         GraphCanvasScrollInput.isTrackpadStyleScroll(
             hasPreciseScrollingDeltas: event.hasPreciseScrollingDeltas,
@@ -229,9 +207,9 @@ final class GraphCanvasNSScrollView: NSScrollView {
     }
 }
 
-// MARK: - Click-drag pan (from SwiftUI document background)
+// MARK: - Viewport bridge
 
-/// Bridges empty-canvas drag gestures into the hosting `NSScrollView`.
+/// Bridges pan deltas into the hosting `NSScrollView`.
 @MainActor
 @Observable
 final class GraphCanvasViewportController: NSObject {
@@ -240,9 +218,9 @@ final class GraphCanvasViewportController: NSObject {
     private(set) var documentContainsKeyboardFocus = false
     private var observedWindow: NSWindow?
 
-    /// Pans by a delta measured in **window / view** points (e.g. SwiftUI
-    /// `.global` drag translation). Divides by magnification so one screen
-    /// pixel of drag moves one screen pixel of content.
+    /// Pans by a delta measured in **window / view** points (Y down).
+    /// Divides by magnification so one screen pixel of drag moves one screen
+    /// pixel of content.
     func panByViewDelta(_ delta: CGSize) {
         guard let scrollView, let document = scrollView.documentView else { return }
         let mag = max(scrollView.magnification, 0.000_1)
@@ -262,11 +240,6 @@ final class GraphCanvasViewportController: NSObject {
     }
 
     /// Document-space point under the cursor via AppKit conversion.
-    ///
-    /// This is the **live hit-test seam**. Prefer it over SwiftUI hover/tap
-    /// locations under magnification — `NSScrollView` does not map those into
-    /// the hosted document correctly (design note §7.2). Pure
-    /// `GraphCanvasCoordinates` helpers remain for layout and unit tests.
     func contentPointUnderCursor() -> CGPoint? {
         guard let scrollView,
               let window = scrollView.window,
@@ -322,9 +295,18 @@ private struct GraphCanvasViewportKey: EnvironmentKey {
     static let defaultValue: GraphCanvasViewportController? = nil
 }
 
+private struct GraphCanvasPointerKey: EnvironmentKey {
+    static let defaultValue: GraphCanvasPointerController? = nil
+}
+
 extension EnvironmentValues {
     var graphCanvasViewport: GraphCanvasViewportController? {
         get { self[GraphCanvasViewportKey.self] }
         set { self[GraphCanvasViewportKey.self] = newValue }
+    }
+
+    var graphCanvasPointer: GraphCanvasPointerController? {
+        get { self[GraphCanvasPointerKey.self] }
+        set { self[GraphCanvasPointerKey.self] = newValue }
     }
 }

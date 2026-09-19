@@ -18,6 +18,7 @@ struct EvidenceProvisionalLinkDocument: Codable, Equatable, Sendable {
 }
 
 /// Protocol so tests can inject an in-memory double.
+@MainActor
 protocol EvidenceProvisionalLinkStoring: AnyObject {
     func links(for sourceID: String) -> [EvidenceProvisionalLink]
     func upsert(_ link: EvidenceProvisionalLink, sourceID: String)

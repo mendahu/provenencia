@@ -58,6 +58,11 @@ struct EvidenceGraphPalette: View {
         }
         .buttonStyle(.plain)
         .focused(focus, equals: .tool(kind))
+        .onKeyPress(.escape) {
+            model.disarm()
+            focus.wrappedValue = nil
+            return .handled
+        }
         .accessibilityLabel(Text(verbatim: model.toolAccessibilityLabel(for: kind, armed: armed)))
         .accessibilityAddTraits(armed ? [.isSelected] : [])
         .accessibilityIdentifier("evidenceGraph.palette.\(kind.rawValue)")
@@ -92,6 +97,11 @@ struct EvidenceGraphPalette: View {
         }
         .buttonStyle(.plain)
         .focused(focus, equals: .toolConnect)
+        .onKeyPress(.escape) {
+            model.disarm()
+            focus.wrappedValue = nil
+            return .handled
+        }
         .accessibilityLabel(Text(verbatim: model.connectToolAccessibilityLabel(armed: armed)))
         .accessibilityAddTraits(armed ? [.isSelected] : [])
         .accessibilityIdentifier("evidenceGraph.palette.connect")

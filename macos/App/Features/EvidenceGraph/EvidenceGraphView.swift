@@ -253,9 +253,17 @@ private struct EvidenceGraphContent: View {
             hint
                 .font(PVFont.body(size: PVTypeScale.caption))
                 .foregroundStyle(PVColor.textPrimary)
-            Text(L10n.EvidenceGraph.armedEscHint)
-                .font(PVFont.mono(size: 11))
-                .foregroundStyle(PVColor.textMuted)
+            Button {
+                model.disarm()
+                focus = nil
+            } label: {
+                Text(L10n.EvidenceGraph.createCancel)
+                    .font(PVFont.mono(size: 11, weight: PVFontWeight.medium))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(PVColor.textSecondary)
+            .accessibilityIdentifier("evidenceGraph.armed.cancel")
+            .keyboardShortcut(.cancelAction)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 7)
@@ -266,7 +274,6 @@ private struct EvidenceGraphContent: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous))
         .shadow(color: Color.black.opacity(0.06), radius: 6, y: 1)
-        .allowsHitTesting(false)
     }
 
     @ViewBuilder
@@ -402,17 +409,38 @@ private struct EvidenceGraphContent: View {
     }
 }
 
-// MARK: - Document (inside NSHostingView)
+// MARK: - Document (paint-only; AppKit owns pointer)
 
 private struct EvidenceGraphDocument: View {
     @Bindable var handle: QueryHandle<SourceGraphSnapshot>
     @Bindable var model: EvidenceGraphModel
     let contentSize: CGSize
-    @Environment(\.graphCanvasViewport) private var viewport
-    @FocusState private var focusedSubjectID: String?
+    @Environment(\.graphCanvasPointer) private var pointer
 
-    @State private var panTranslation: CGSize = .zero
-    @State private var isPanning = false
+    var body: some View {
+        Group {
+            if let pointer {
+                EvidenceGraphDocumentBody(
+                    handle: handle,
+                    model: model,
+                    contentSize: contentSize,
+                    pointer: pointer
+                )
+            } else {
+                Color.clear
+                    .frame(width: contentSize.width, height: contentSize.height)
+            }
+        }
+        .frame(width: contentSize.width, height: contentSize.height)
+    }
+}
+
+/// Observes ``GraphCanvasPointerController`` so live drag offsets refresh paint.
+private struct EvidenceGraphDocumentBody: View {
+    @Bindable var handle: QueryHandle<SourceGraphSnapshot>
+    @Bindable var model: EvidenceGraphModel
+    let contentSize: CGSize
+    @Bindable var pointer: GraphCanvasPointerController
 
     private var snapshot: SourceGraphSnapshot {
         model.displaySnapshot(from: handle.value)
@@ -432,9 +460,11 @@ private struct EvidenceGraphDocument: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            gridLayer
+            GraphCanvasGridView(contentSize: contentSize)
+                .accessibilityHidden(true)
 
-            EvidenceGraphEdgeLayer(
+            EvidenceGraphEdgesHost(
+                pointer: pointer,
                 snapshot: snapshot,
                 selectedBridgeID: bridges.contains(where: { $0.id == model.selectedSubjectID })
                     ? model.selectedSubjectID
@@ -467,209 +497,161 @@ private struct EvidenceGraphDocument: View {
             if subjects.isEmpty, bridges.isEmpty, handle.status == .ready, inputMode == .idle {
                 emptyOverlay
             }
-
-            if case .placing = inputMode {
-                placeOverlay
-            } else if case .connecting = inputMode {
-                connectHoverOverlay
-            }
         }
         .frame(width: contentSize.width, height: contentSize.height)
         .coordinateSpace(name: EvidenceSubjectCard.documentCoordinateSpace)
-        .onChange(of: focusedSubjectID) { _, id in
+        .onAppear { wirePointer() }
+        .onChange(of: inputMode) { _, _ in
+            syncPointerMode()
+        }
+        .onChange(of: subjects.map(\.id)) { _, _ in
+            publishHitTargets()
+        }
+        .onChange(of: bridges.map(\.id)) { _, _ in
+            publishHitTargets()
+        }
+        .onChange(of: pointer.offsets.count) { _, _ in
+            publishHitTargets()
+        }
+        .onChange(of: subjects.map { "\($0.id):\($0.gridX),\($0.gridY)" }) { _, _ in
+            publishHitTargets()
+        }
+        .onChange(of: bridges.map { "\($0.id):\($0.gridX),\($0.gridY)" }) { _, _ in
+            publishHitTargets()
+        }
+    }
+
+    private func wirePointer() {
+        syncPointerMode()
+        publishHitTargets()
+        let model = model
+        let handle = handle
+        pointer.onSelect = { id in
             model.selectSubject(id: id)
         }
-        .onChange(of: inputMode) { _, mode in
-            if case .placing = mode {
-                focusedSubjectID = nil
-                model.selectSubject(id: nil)
-            }
+        pointer.onDeselect = {
+            model.selectSubject(id: nil)
         }
-        .onChange(of: viewport?.documentContainsKeyboardFocus ?? false) { _, inside in
-            if !inside {
-                focusedSubjectID = nil
-                model.selectSubject(id: nil)
+        pointer.onDragEnded = { id, delta in
+            let snap = model.displaySnapshot(from: handle.value)
+            let grid: (Int64, Int64)?
+            if let placed = snap.subjects.first(where: { $0.id == id }) {
+                grid = (placed.gridX, placed.gridY)
+            } else if let bridge = snap.bridges.first(where: { $0.id == id }) {
+                grid = (bridge.gridX, bridge.gridY)
+            } else {
+                grid = nil
+            }
+            guard let (ox, oy) = grid else { return }
+            _ = model.commitDrag(
+                subjectID: id,
+                originGridX: ox,
+                originGridY: oy,
+                documentDelta: delta
+            )
+        }
+        pointer.onPlace = { point in
+            model.beginCreate(at: point)
+        }
+        pointer.onConnectPick = { id in
+            let snap = model.displaySnapshot(from: handle.value)
+            guard let placed = snap.subjects.first(where: { $0.id == id }) else { return }
+            model.handleConnectPick(
+                subjectID: placed.id,
+                kind: placed.kind,
+                label: placed.subject.label
+            )
+        }
+        pointer.onHover = { point in
+            switch model.inputMode {
+            case .placing:
+                if let point {
+                    model.updateHover(contentPoint: point)
+                } else {
+                    model.clearHover()
+                }
+            case .connecting:
+                if let point {
+                    model.updateConnectHover(contentPoint: point)
+                } else {
+                    model.clearHover()
+                }
+            case .idle:
+                break
             }
         }
     }
 
-    @ViewBuilder
-    private var gridLayer: some View {
-        let grid = GraphCanvasGridView(contentSize: contentSize)
-            .accessibilityHidden(true)
-            .contentShape(Rectangle())
-
+    private func syncPointerMode() {
         switch inputMode {
         case .idle:
-            grid
-                .onTapGesture {
-                    model.selectSubject(id: nil)
-                    focusedSubjectID = nil
-                }
-                .gesture(backgroundPanGesture)
-        case .placing, .connecting:
-            grid.allowsHitTesting(false)
+            pointer.mode = .idle
+        case .placing:
+            pointer.mode = .placing
+            model.selectSubject(id: nil)
+        case .connecting:
+            pointer.mode = .connecting
         }
     }
 
-    private var placeOverlay: some View {
-        Color.clear
-            .contentShape(Rectangle())
-            .frame(width: contentSize.width, height: contentSize.height)
-            .onTapGesture {
-                if let point = viewport?.contentPointUnderCursor() {
-                    model.beginCreate(at: point)
-                }
-            }
-            .onContinuousHover { phase in
-                switch phase {
-                case .active:
-                    if let point = viewport?.contentPointUnderCursor() {
-                        model.updateHover(contentPoint: point)
-                    }
-                case .ended:
-                    model.clearHover()
-                }
-            }
-    }
-
-    private var connectHoverOverlay: some View {
-        Color.clear
-            .frame(width: contentSize.width, height: contentSize.height)
-            .allowsHitTesting(false)
-            .onContinuousHover { phase in
-                switch phase {
-                case .active:
-                    if let point = viewport?.contentPointUnderCursor() {
-                        model.updateConnectHover(contentPoint: point)
-                    }
-                case .ended:
-                    model.clearHover()
-                }
-            }
-    }
-
-    private var backgroundPanGesture: some Gesture {
-        DragGesture(minimumDistance: 4, coordinateSpace: .global)
-            .onChanged { value in
-                guard let viewport else { return }
-                if !isPanning {
-                    isPanning = true
-                    NSCursor.closedHand.push()
-                }
-                let delta = CGSize(
-                    width: value.translation.width - panTranslation.width,
-                    height: value.translation.height - panTranslation.height
+    private func publishHitTargets() {
+        var targets: [GraphCanvasHitTarget] = []
+        for placed in bridges {
+            let offset = pointer.offsets[placed.id] ?? .zero
+            targets.append(
+                GraphCanvasHitTarget(
+                    id: placed.id,
+                    frame: EvidenceBridgeCard.contentFrame(
+                        gridX: placed.gridX,
+                        gridY: placed.gridY,
+                        dragOffset: offset
+                    ),
+                    acceptsConnect: false
                 )
-                panTranslation = value.translation
-                viewport.panByViewDelta(delta)
-            }
-            .onEnded { _ in
-                panTranslation = .zero
-                if isPanning {
-                    NSCursor.pop()
-                    isPanning = false
-                }
-            }
+            )
+        }
+        for placed in subjects {
+            let offset = pointer.offsets[placed.id] ?? .zero
+            targets.append(
+                GraphCanvasHitTarget(
+                    id: placed.id,
+                    frame: EvidenceSubjectCard.edgeFrame(
+                        gridX: placed.gridX,
+                        gridY: placed.gridY,
+                        dragOffset: offset
+                    ),
+                    acceptsConnect: true
+                )
+            )
+        }
+        pointer.hitTargets = targets
     }
 
     @ViewBuilder
     private func cardView(for placed: SourceGraphPlacedSubject) -> some View {
-        let idle = inputMode == .idle
-        let connecting = inputMode == .connecting
-        let offset = EvidenceSubjectCard.topLeadingOffset(gridX: placed.gridX, gridY: placed.gridY)
+        let layout = EvidenceSubjectCard.topLeadingOffset(gridX: placed.gridX, gridY: placed.gridY)
+        let drag = pointer.offsets[placed.id] ?? .zero
         EvidenceSubjectCard(
             placed: placed,
             isSelected: model.selectedSubjectID == placed.id,
             isActivated: model.activatedSubjectID == placed.id,
             isConnectingFrom: model.connectOriginID == placed.id,
-            dragEnabled: idle,
-            keyboardFocus: $focusedSubjectID,
-            onSelect: {
-                if connecting {
-                    model.handleConnectPick(
-                        subjectID: placed.id,
-                        kind: placed.kind,
-                        label: placed.subject.label
-                    )
-                } else {
-                    model.selectSubject(id: placed.id)
-                }
-            },
-            onActivate: {
-                if connecting {
-                    model.handleConnectPick(
-                        subjectID: placed.id,
-                        kind: placed.kind,
-                        label: placed.subject.label
-                    )
-                } else {
-                    model.activateSubject(id: placed.id)
-                }
-            },
-            onEscape: {
-                if model.armedConnect {
-                    model.disarm()
-                } else if model.activatedSubjectID != nil {
-                    model.deactivateSubject()
-                } else {
-                    focusedSubjectID = nil
-                    model.selectSubject(id: nil)
-                }
-            },
-            onDragEnded: idle
-                ? { delta in
-                    _ = model.commitDrag(
-                        subjectID: placed.id,
-                        originGridX: placed.gridX,
-                        originGridY: placed.gridY,
-                        documentDelta: delta
-                    )
-                }
-                : nil
+            dragOffset: drag
         )
-        .offset(x: offset.width, y: offset.height)
+        .offset(x: layout.width, y: layout.height)
     }
 
     @ViewBuilder
     private func bridgeCardView(for placed: SourceGraphPlacedBridge) -> some View {
-        let idle = inputMode == .idle
-        let offset = EvidenceBridgeCard.topLeadingOffset(gridX: placed.gridX, gridY: placed.gridY)
+        let layout = EvidenceBridgeCard.topLeadingOffset(gridX: placed.gridX, gridY: placed.gridY)
+        let drag = pointer.offsets[placed.id] ?? .zero
         EvidenceBridgeCard(
             placed: placed,
             isSelected: model.selectedSubjectID == placed.id,
             isActivated: model.activatedSubjectID == placed.id,
-            dragEnabled: idle,
-            keyboardFocus: $focusedSubjectID,
-            onSelect: {
-                // Bridges are not Connect endpoints.
-                guard inputMode != .connecting else { return }
-                model.selectSubject(id: placed.id)
-            },
-            onActivate: {
-                guard inputMode != .connecting else { return }
-                model.activateSubject(id: placed.id)
-            },
-            onEscape: {
-                if model.activatedSubjectID != nil {
-                    model.deactivateSubject()
-                } else {
-                    focusedSubjectID = nil
-                    model.selectSubject(id: nil)
-                }
-            },
-            onDragEnded: idle
-                ? { delta in
-                    _ = model.commitDrag(
-                        subjectID: placed.id,
-                        originGridX: placed.gridX,
-                        originGridY: placed.gridY,
-                        documentDelta: delta
-                    )
-                }
-                : nil
+            dragOffset: drag
         )
-        .offset(x: offset.width, y: offset.height)
+        .offset(x: layout.width, y: layout.height)
     }
 
     private var emptyOverlay: some View {
@@ -680,6 +662,5 @@ private struct EvidenceGraphDocument: View {
         )
         .frame(width: 420)
         .position(x: contentSize.width / 2, y: contentSize.height / 2)
-        .allowsHitTesting(false)
     }
 }

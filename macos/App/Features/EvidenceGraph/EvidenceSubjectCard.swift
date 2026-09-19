@@ -2,38 +2,41 @@ import SwiftUI
 
 /// Primary subject card on the Evidence graph (S6-02 / S6-03).
 ///
-/// Plain view — not a `Button`. Pointer chrome (select / drag) lives on the
-/// card body. Keyboard Tab / Space / Return live on a sibling overlay so
-/// `.focusable()` never owns the drag gesture (AppKit first-responder on the
-/// same view steals mouse-drag).
+/// Paint-only: AppKit ``GraphCanvasPointerController`` owns select / drag.
+/// Accessibility labels + rotors remain the keyboard/VoiceOver path.
 struct EvidenceSubjectCard: View {
     /// Must match the name on the Evidence graph document `ZStack`.
     static let documentCoordinateSpace = "evidenceGraphDocument"
 
     /// Fixed card width — keep in sync with content centering / offset.
     static let width: CGFloat = 236
-    /// Approximate half-height for top-leading offset centering.
+    /// Top of the card sits this far above the grid center (layout + edges share it).
     static let approximateHalfHeight: CGFloat = 36
+    /// Edge hit-testing height from that same top. Sized near a header-only card
+    /// so the bottom edge is not stranded below short chrome; taller cards still
+    /// cover the stroked tip after ``GraphCanvasEdgeGeometry.endpointTuck``.
+    static let edgeLayoutHeight: CGFloat = 64
+
+    /// Document-space frame used for edge attachment and AppKit hit targets.
+    static func edgeFrame(gridX: Int64, gridY: Int64, dragOffset: CGSize = .zero) -> CGRect {
+        let center = contentCenter(gridX: gridX, gridY: gridY)
+        return CGRect(
+            x: center.x - width / 2 + dragOffset.width,
+            y: center.y - approximateHalfHeight + dragOffset.height,
+            width: width,
+            height: edgeLayoutHeight
+        )
+    }
 
     let placed: SourceGraphPlacedSubject
-    /// Current target — click, Tab, and VoiceOver share this look.
+    /// Current target — click, rotor, and VoiceOver share this look.
     var isSelected: Bool
     /// Space/Return opened the card for inner controls (future actions).
     var isActivated: Bool
     /// Connect tool: this card is origin A waiting for B.
     var isConnectingFrom: Bool = false
-    var dragEnabled: Bool
-    /// Keyboard focus binding for the sibling overlay (not the drag surface).
-    var keyboardFocus: FocusState<String?>.Binding
-    var onSelect: () -> Void
-    /// Space / Return while keyboard-focused — select and enter the card.
-    var onActivate: () -> Void
-    /// Escape resigns this card so Tab is not trapped in the hosted document.
-    var onEscape: () -> Void = {}
-    /// Document-space delta from gesture start to end (snap + persist).
-    var onDragEnded: ((CGSize) -> Void)?
-
-    @GestureState private var dragOffset: CGSize = .zero
+    /// Live document-space drag offset from AppKit pointer ownership.
+    var dragOffset: CGSize = .zero
 
     private var isDragging: Bool {
         dragOffset != .zero
@@ -50,30 +53,6 @@ struct EvidenceSubjectCard: View {
         .opacity(ghostOpacity)
         .offset(dragOffset)
         .zIndex(isDragging || isActivated ? 1 : 0)
-        .contentShape(RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous))
-        .gesture(dragGesture)
-        .onTapGesture(perform: onSelect)
-        .background {
-            // Keyboard / VoiceOver target sits behind the pointer surface so
-            // Tab still lands here, but mouse-down never hits `.focusable()`.
-            Color.clear
-                .focusable()
-                .focusEffectDisabled()
-                .focused(keyboardFocus, equals: placed.id)
-                .onKeyPress(.space) {
-                    onActivate()
-                    return .handled
-                }
-                .onKeyPress(.return) {
-                    onActivate()
-                    return .handled
-                }
-                .onKeyPress(.escape) {
-                    onEscape()
-                    return .handled
-                }
-                .accessibilityHidden(true)
-        }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(verbatim: Self.accessibilityLabel(for: placed)))
         .accessibilityAddTraits((isSelected || isActivated) ? .isSelected : [])
@@ -90,7 +69,6 @@ struct EvidenceSubjectCard: View {
             isConnectingFrom: false
         )
         .opacity(0.62)
-        .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
 
@@ -99,9 +77,7 @@ struct EvidenceSubjectCard: View {
         GraphCanvasGridMapping.contentPoint(gridX: gridX, gridY: gridY)
     }
 
-    /// Top-leading offset so the card keeps a real layout frame (required for
-    /// Tab / `.focusable()`). `.position` collapses the frame and drops the
-    /// key-view loop.
+    /// Top-leading offset so the card keeps a real layout frame.
     static func topLeadingOffset(gridX: Int64, gridY: Int64) -> CGSize {
         let center = contentCenter(gridX: gridX, gridY: gridY)
         return CGSize(
@@ -123,32 +99,6 @@ struct EvidenceSubjectCard: View {
     private var ghostOpacity: Double {
         if isDragging { return 0.92 }
         return placed.isCited ? 1 : 0.76
-    }
-
-    private var dragGesture: some Gesture {
-        DragGesture(
-            minimumDistance: dragEnabled ? 4 : 10_000,
-            coordinateSpace: .named(Self.documentCoordinateSpace)
-        )
-            .updating($dragOffset) { value, state, _ in
-                guard dragEnabled else { return }
-                state = CGSize(
-                    width: value.location.x - value.startLocation.x,
-                    height: value.location.y - value.startLocation.y
-                )
-            }
-            .onEnded { value in
-                guard dragEnabled else {
-                    onSelect()
-                    return
-                }
-                onSelect()
-                let delta = CGSize(
-                    width: value.location.x - value.startLocation.x,
-                    height: value.location.y - value.startLocation.y
-                )
-                onDragEnded?(delta)
-            }
     }
 }
 
@@ -273,7 +223,7 @@ private struct EvidenceSubjectCardChrome: View {
                 borderColor,
                 style: StrokeStyle(
                     lineWidth: showsSelectionChrome ? 1.5 : 1,
-                    dash: placed.isCited ? [] : [4, 3]
+                    dash: (placed.isCited || showsSelectionChrome) ? [] : [4, 3]
                 )
             )
     }

@@ -87,6 +87,10 @@
 		AA00000000000000000004A5 /* EvidenceGraphEdgeLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004A4 /* EvidenceGraphEdgeLayer.swift */; };
 		AA00000000000000000004A7 /* GraphCanvasEdgeGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004A6 /* GraphCanvasEdgeGeometry.swift */; };
 		AA00000000000000000004A9 /* GraphCanvasEdgeGeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004A8 /* GraphCanvasEdgeGeometryTests.swift */; };
+		AA00000000000000000004C1 /* GraphCanvasHitTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004C0 /* GraphCanvasHitTarget.swift */; };
+		AA00000000000000000004C3 /* GraphCanvasPointerController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004C2 /* GraphCanvasPointerController.swift */; };
+		AA00000000000000000004C5 /* GraphCanvasDocumentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004C4 /* GraphCanvasDocumentView.swift */; };
+		AA00000000000000000004C7 /* GraphCanvasPointerHitTestingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004C6 /* GraphCanvasPointerHitTestingTests.swift */; };
 		AA00000000000000000004AB /* EvidenceProvisionalLinkStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004AA /* EvidenceProvisionalLinkStoreTests.swift */; };
 		AA0000000000000000000483 /* EvidenceSubjectKindStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000482 /* EvidenceSubjectKindStyle.swift */; };
 		AA0000000000000000000485 /* PVSubjectIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000484 /* PVSubjectIcon.swift */; };
@@ -320,6 +324,10 @@
 		AA00000000000000000004A4 /* EvidenceGraphEdgeLayer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphEdgeLayer.swift; sourceTree = "<group>"; };
 		AA00000000000000000004A6 /* GraphCanvasEdgeGeometry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasEdgeGeometry.swift; sourceTree = "<group>"; };
 		AA00000000000000000004A8 /* GraphCanvasEdgeGeometryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasEdgeGeometryTests.swift; sourceTree = "<group>"; };
+		AA00000000000000000004C0 /* GraphCanvasHitTarget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasHitTarget.swift; sourceTree = "<group>"; };
+		AA00000000000000000004C2 /* GraphCanvasPointerController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasPointerController.swift; sourceTree = "<group>"; };
+		AA00000000000000000004C4 /* GraphCanvasDocumentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasDocumentView.swift; sourceTree = "<group>"; };
+		AA00000000000000000004C6 /* GraphCanvasPointerHitTestingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasPointerHitTestingTests.swift; sourceTree = "<group>"; };
 		AA00000000000000000004AA /* EvidenceProvisionalLinkStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceProvisionalLinkStoreTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000482 /* EvidenceSubjectKindStyle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceSubjectKindStyle.swift; sourceTree = "<group>"; };
 		AA0000000000000000000484 /* PVSubjectIcon.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSubjectIcon.swift; sourceTree = "<group>"; };
@@ -762,6 +770,9 @@
 				AA0000000000000000000476 /* GraphCanvasScrollView.swift */,
 				AA000000000000000000047E /* GraphCanvasGridMapping.swift */,
 				AA00000000000000000004A6 /* GraphCanvasEdgeGeometry.swift */,
+				AA00000000000000000004C0 /* GraphCanvasHitTarget.swift */,
+				AA00000000000000000004C2 /* GraphCanvasPointerController.swift */,
+				AA00000000000000000004C4 /* GraphCanvasDocumentView.swift */,
 			);
 			path = GraphCanvas;
 			sourceTree = "<group>";
@@ -855,6 +866,7 @@
 				AA0000000000000000000488 /* SourceGraphSnapshotTests.swift */,
 				AA0000000000000000000494 /* EvidenceGraphModelTests.swift */,
 				AA00000000000000000004A8 /* GraphCanvasEdgeGeometryTests.swift */,
+				AA00000000000000000004C6 /* GraphCanvasPointerHitTestingTests.swift */,
 				AA00000000000000000004AA /* EvidenceProvisionalLinkStoreTests.swift */,
 				AA000000000000000000031E /* SourcePageModelTests.swift */,
 				AA00000000000000000003D4 /* IngestMediaPolicyTests.swift */,
@@ -1111,6 +1123,9 @@
 				AA00000000000000000004A3 /* EvidenceBridgeCard.swift in Sources */,
 				AA00000000000000000004A5 /* EvidenceGraphEdgeLayer.swift in Sources */,
 				AA00000000000000000004A7 /* GraphCanvasEdgeGeometry.swift in Sources */,
+				AA00000000000000000004C1 /* GraphCanvasHitTarget.swift in Sources */,
+				AA00000000000000000004C3 /* GraphCanvasPointerController.swift in Sources */,
+				AA00000000000000000004C5 /* GraphCanvasDocumentView.swift in Sources */,
 				AA000000000000000000047F /* GraphCanvasGridMapping.swift in Sources */,
 				AA0000000000000000000481 /* EvidenceSubjectCard.swift in Sources */,
 				AA0000000000000000000491 /* EvidenceGraphModel.swift in Sources */,
@@ -1222,6 +1237,7 @@
 				AA0000000000000000000489 /* SourceGraphSnapshotTests.swift in Sources */,
 				AA0000000000000000000495 /* EvidenceGraphModelTests.swift in Sources */,
 				AA00000000000000000004A9 /* GraphCanvasEdgeGeometryTests.swift in Sources */,
+				AA00000000000000000004C7 /* GraphCanvasPointerHitTestingTests.swift in Sources */,
 				AA00000000000000000004AB /* EvidenceProvisionalLinkStoreTests.swift in Sources */,
 				AA000000000000000000031D /* SourcePageModelTests.swift in Sources */,
 				AA00000000000000000003D5 /* IngestMediaPolicyTests.swift in Sources */,

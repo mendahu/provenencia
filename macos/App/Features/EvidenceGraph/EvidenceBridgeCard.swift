@@ -2,23 +2,19 @@ import SwiftUI
 
 /// Subordinate bridge / relationship card on the Evidence graph (S6-04).
 ///
-/// Same focusable (not Button) + drag pattern as ``EvidenceSubjectCard``, but
-/// quieter: 188px, no kind wash, honesty body instead of description.
+/// Paint-only: same AppKit pointer ownership as ``EvidenceSubjectCard``.
 struct EvidenceBridgeCard: View {
     static let width: CGFloat = 188
     static let approximateHalfHeight: CGFloat = 40
+    /// Edge hit-testing height from the same top as layout — near a one-line
+    /// honesty body so bottoms are not stranded below the fill.
+    static let edgeLayoutHeight: CGFloat = 88
 
     let placed: SourceGraphPlacedBridge
     var isSelected: Bool
     var isActivated: Bool
-    var dragEnabled: Bool
-    var keyboardFocus: FocusState<String?>.Binding
-    var onSelect: () -> Void
-    var onActivate: () -> Void
-    var onEscape: () -> Void = {}
-    var onDragEnded: ((CGSize) -> Void)?
-
-    @GestureState private var dragOffset: CGSize = .zero
+    /// Live document-space drag offset from AppKit pointer ownership.
+    var dragOffset: CGSize = .zero
 
     private var isDragging: Bool {
         dragOffset != .zero
@@ -33,28 +29,6 @@ struct EvidenceBridgeCard: View {
         )
         .offset(dragOffset)
         .zIndex(isDragging || isActivated ? 1 : 0)
-        .contentShape(RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous))
-        .gesture(dragGesture)
-        .onTapGesture(perform: onSelect)
-        .background {
-            Color.clear
-                .focusable()
-                .focusEffectDisabled()
-                .focused(keyboardFocus, equals: placed.id)
-                .onKeyPress(.space) {
-                    onActivate()
-                    return .handled
-                }
-                .onKeyPress(.return) {
-                    onActivate()
-                    return .handled
-                }
-                .onKeyPress(.escape) {
-                    onEscape()
-                    return .handled
-                }
-                .accessibilityHidden(true)
-        }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(verbatim: Self.accessibilityLabel(for: placed)))
         .accessibilityAddTraits((isSelected || isActivated) ? .isSelected : [])
@@ -73,13 +47,14 @@ struct EvidenceBridgeCard: View {
         )
     }
 
+    /// Document-space frame used for edge attachment and AppKit hit targets.
     static func contentFrame(gridX: Int64, gridY: Int64, dragOffset: CGSize = .zero) -> CGRect {
         let center = contentCenter(gridX: gridX, gridY: gridY)
         return CGRect(
             x: center.x - width / 2 + dragOffset.width,
             y: center.y - approximateHalfHeight + dragOffset.height,
             width: width,
-            height: approximateHalfHeight * 2
+            height: edgeLayoutHeight
         )
     }
 
@@ -88,29 +63,6 @@ struct EvidenceBridgeCard: View {
         let name = trimmed.isEmpty ? placed.typeLabel : trimmed
         let honesty = String(localized: L10n.EvidenceGraph.bridgeHonestyAccessibility)
         return "\(placed.typeLabel), \(name), \(honesty)"
-    }
-
-    private var dragGesture: some Gesture {
-        DragGesture(
-            minimumDistance: dragEnabled ? 4 : 10_000,
-            coordinateSpace: .named(EvidenceSubjectCard.documentCoordinateSpace)
-        )
-        .updating($dragOffset) { value, state, _ in
-            guard dragEnabled else { return }
-            state = CGSize(
-                width: value.location.x - value.startLocation.x,
-                height: value.location.y - value.startLocation.y
-            )
-        }
-        .onEnded { value in
-            guard dragEnabled else { return }
-            onSelect()
-            let delta = CGSize(
-                width: value.location.x - value.startLocation.x,
-                height: value.location.y - value.startLocation.y
-            )
-            onDragEnded?(delta)
-        }
     }
 }
 
@@ -156,33 +108,38 @@ private struct EvidenceBridgeCardChrome: View {
             RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
                 .fill(PVColor.surfaceCard)
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
-                .strokeBorder(
-                    showsSelectionChrome ? PVColor.accent : PVColor.borderSubtle,
-                    lineWidth: showsSelectionChrome ? 1.5 : 1
-                )
-        )
+        .overlay(cardBorder)
         .clipShape(RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous))
         .shadow(
             color: showsSelectionChrome && !isSelected
-                ? Color.black.opacity(0.08)
+                ? Color.black.opacity(0.1)
                 : .clear,
-            radius: isDragging ? 8 : 4,
-            y: isDragging ? 3 : 1
+            radius: isDragging ? 10 : 6,
+            y: isDragging ? 4 : 2
         )
-        .background {
-            if showsSelectionChrome {
-                RoundedRectangle(cornerRadius: PVRadius.md + 2, style: .continuous)
-                    .fill(PVColor.graphRing)
-                    .padding(-3)
-            }
-        }
+        .background(selectionHalo)
     }
 
     private var displayLabel: String {
         let trimmed = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? placed.typeLabel : trimmed
+    }
+
+    private var cardBorder: some View {
+        RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
+            .strokeBorder(
+                showsSelectionChrome ? PVColor.accent : PVColor.borderDefault,
+                lineWidth: showsSelectionChrome ? 1.5 : 1
+            )
+    }
+
+    @ViewBuilder
+    private var selectionHalo: some View {
+        if showsSelectionChrome {
+            RoundedRectangle(cornerRadius: PVRadius.md + 2, style: .continuous)
+                .fill(PVColor.graphRing)
+                .padding(-3)
+        }
     }
 
     private var iconChip: some View {
