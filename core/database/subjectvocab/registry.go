@@ -139,9 +139,9 @@ var seedTypes = []seedType{
 
 var seedProperties = []seedProperty{
 	{Key: "name", Label: "Name", ValueType: properties.ValueTypeName},
-	{Key: "date", Label: "Date", Description: "Event date (point in time)", ValueType: properties.ValueTypeDate},
-	{Key: "start_date", Label: "Start date", Description: "Start of a spanned event", ValueType: properties.ValueTypeDate},
-	{Key: "end_date", Label: "End date", Description: "End of a spanned event", ValueType: properties.ValueTypeDate},
+	{Key: "date", Label: "Date", Description: "Point-in-time when the event occurred (or the best single date when a span is unknown). Prefer this for births, deaths, and other one-day facts. Use start/end date instead when the event clearly lasts across a range.", ValueType: properties.ValueTypeDate},
+	{Key: "start_date", Label: "Start date", Description: "When a multi-day or open-ended event began (census day range, residence, military service, voyage). Leave empty for instantaneous events that only need Date.", ValueType: properties.ValueTypeDate},
+	{Key: "end_date", Label: "End date", Description: "When a spanned event ended or was last known. Pair with Start date; leave empty for instantaneous events that only need Date.", ValueType: properties.ValueTypeDate},
 	{Key: "person", Label: "Person", Description: "Target hint: person", ValueType: properties.ValueTypeSubject},
 	{Key: "event", Label: "Event", Description: "Target hint: event", ValueType: properties.ValueTypeSubject},
 	{Key: "place", Label: "Place", Description: "Target hint: place", ValueType: properties.ValueTypeSubject},

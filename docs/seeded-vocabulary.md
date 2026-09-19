@@ -306,9 +306,9 @@ Do not reuse the reserved catalog prefixes `USR`, `SRC`, `ART`, `CIT`, `OBS`. Bo
 key                 value_type    notes
 name                name
 event_type          term          kind identity; terms §3.4
-date                date          event point-in-time date (locked on event)
-start_date          date          start of a spanned event (locked on event)
-end_date            date          end of a spanned event (locked on event)
+date                date          point-in-time (or best single date); locked on event
+start_date          date          span start; locked on event — leave empty if only Date applies
+end_date            date          span end; locked on event — leave empty if only Date applies
 role                term          participation edge label; terms §3.5
 relationship_type   term          relationship edge label; terms §3.6
 person              subject       app target hint: person
@@ -326,7 +326,7 @@ Target Subject type hints are application-only (not SQL allow-lists). See the In
 
 **S7-01 create-time Install** omits `event_type`, `role`, and `relationship_type` (and their bindings). Those kind/edge Properties land in **S7-01b** as `value_type = term` with `property_terms` — do not seed them as free text in the interim. Horizon lists §3.2–3.6 remain the intended product vocabulary.
 
-Event date Properties (`date`, `start_date`, `end_date`) are locked on `event`: Conclusion ordering and timelines may key into them; Subject fields must not unbind.
+Event date Properties (`date`, `start_date`, `end_date`) are locked on `event`: Conclusion ordering and timelines may key into them; Subject fields must not unbind. **Coexistence:** use `date` for a single point (birth, death, marriage day); use `start_date` / `end_date` when the event spans time (residence, service, voyage). Instantaneous events leave start/end empty; spanned events may leave `date` empty when only the range is known.
 
 Additional Properties may be seeded as workflows need them (shared DNA, predicted relationship, and similar). Treat those as **TBD** until a concrete UI requires them.
 
