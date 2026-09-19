@@ -311,11 +311,11 @@ date                date          point-in-time (or best single date); locked on
 start_date          date          span start; locked on event — leave empty if only Date applies
 end_date            date          span end; locked on event — leave empty if only Date applies
 role                term          participation edge label; terms §3.5
-relationship_type   term          relationship edge label; terms §3.6
-person              subject       app target hint: person
+relationship_type   term          directed: person is this of related_to; terms §3.6
+person              subject       app target hint: person (also relationship “who is the X”)
 event               subject       app target hint: event
 place               subject       app target hint: place
-participant         subject       app target hint: person
+related_to          subject       app target hint: person (relationship other end)
 mentions            subject       app target hint: source
 remark              text          free-text commentary about a source subject
 toponym             text          place name as interpreted from a Source (not a personal NameValue)
@@ -352,8 +352,9 @@ participation   role                # term
 location        event
 location        place
 
-relationship    participant
-relationship    relationship_type   # term
+relationship    person              # locked; who is the X
+relationship    related_to          # locked; …of this person
+relationship    relationship_type   # term (directed)
 
 source          mentions
 source          remark
@@ -396,19 +397,23 @@ Long-tail participation roles are `origin=user` terms — there is no product `o
 
 ## 3.6 Property terms: `relationship_type`
 
-Product-seeded **term keys** (starter set for connect macros; grow with use):
+Directed kinship: **`person` is this type of `related_to`**. Symmetric terms (`spouse`, `sibling`, `cousin`) may be stored with either end as `person`.
 
 ```text
 spouse
 sibling
-parent_child
-grandparent_grandchild
-pibling_nibling
 cousin
+parent
+child
+grandparent
+grandchild
+pibling
+nibling
 guardian
+ward
 ```
 
-`pibling_nibling` is the gender-neutral parent’s-sibling ↔ sibling’s-child class (aunt/uncle ↔ niece/nephew). Prefer expanding the product set as connect macros need them. Long-tail labels are `origin=user` terms — there is no product `other` escape hatch. First-class connect behavior attaches to recognized keys in the subject registry when that behavior lands.
+`pibling` / `nibling` are gender-neutral parent’s-sibling / sibling’s-child. Prefer expanding the product set as connect macros need them. Long-tail labels are `origin=user` terms — there is no product `other` escape hatch. First-class connect behavior attaches to recognized keys in the subject registry when that behavior lands.
 
 ## 3.7 Property terms: `sex_at_birth`
 

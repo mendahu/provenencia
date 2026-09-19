@@ -150,11 +150,11 @@ var seedProperties = []seedProperty{
 	{Key: "start_date", Label: "Start date", Description: "When a multi-day or open-ended event began (census day range, residence, military service, voyage). Leave empty for instantaneous events that only need Date.", ValueType: properties.ValueTypeDate},
 	{Key: "end_date", Label: "End date", Description: "When a spanned event ended or was last known. Pair with Start date; leave empty for instantaneous events that only need Date.", ValueType: properties.ValueTypeDate},
 	{Key: "role", Label: "Role", Description: "Participation role (subject, father, …). Product term vocabulary.", ValueType: properties.ValueTypeTerm},
-	{Key: "relationship_type", Label: "Relationship type", Description: "Kind of person–person relationship. Product term vocabulary.", ValueType: properties.ValueTypeTerm},
-	{Key: "person", Label: "Person", Description: "Target hint: person", ValueType: properties.ValueTypeSubject},
+	{Key: "relationship_type", Label: "Relationship type", Description: "Directed kinship: person is this type of related_to. Spouse, sibling, and cousin are symmetric.", ValueType: properties.ValueTypeTerm},
+	{Key: "person", Label: "Person", Description: "Target hint: person (on a relationship: who is the typed relative)", ValueType: properties.ValueTypeSubject},
 	{Key: "event", Label: "Event", Description: "Target hint: event", ValueType: properties.ValueTypeSubject},
 	{Key: "place", Label: "Place", Description: "Target hint: place", ValueType: properties.ValueTypeSubject},
-	{Key: "participant", Label: "Participant", Description: "Target hint: person", ValueType: properties.ValueTypeSubject},
+	{Key: "related_to", Label: "Related to", Description: "Target hint: person (on a relationship: the other end — person is the X of related_to)", ValueType: properties.ValueTypeSubject},
 	{Key: "mentions", Label: "Mentions", Description: "Target hint: source", ValueType: properties.ValueTypeSubject},
 	{Key: "remark", Label: "Remark", Description: "Free-text commentary about a source subject", ValueType: properties.ValueTypeText},
 	{Key: "toponym", Label: "Toponym", Description: "Place name as interpreted from a Source", ValueType: properties.ValueTypeText},
@@ -180,8 +180,9 @@ var seedBindings = []seedBinding{
 	{TypeKey: "location", PropertyKey: "event", SortOrder: 0, Locked: true},
 	{TypeKey: "location", PropertyKey: "place", SortOrder: 1, Locked: true},
 
-	{TypeKey: "relationship", PropertyKey: "participant", SortOrder: 0, Locked: true},
-	{TypeKey: "relationship", PropertyKey: "relationship_type", SortOrder: 1},
+	{TypeKey: "relationship", PropertyKey: "person", SortOrder: 0, Locked: true},
+	{TypeKey: "relationship", PropertyKey: "related_to", SortOrder: 1, Locked: true},
+	{TypeKey: "relationship", PropertyKey: "relationship_type", SortOrder: 2},
 
 	{TypeKey: "source", PropertyKey: "mentions", SortOrder: 0},
 	{TypeKey: "source", PropertyKey: "remark", SortOrder: 1},
@@ -214,11 +215,15 @@ var seedTerms = []seedTerm{
 
 	{PropertyKey: "relationship_type", Key: "spouse", Label: "Spouse"},
 	{PropertyKey: "relationship_type", Key: "sibling", Label: "Sibling"},
-	{PropertyKey: "relationship_type", Key: "parent_child", Label: "Parent / child"},
-	{PropertyKey: "relationship_type", Key: "grandparent_grandchild", Label: "Grandparent / grandchild"},
-	{PropertyKey: "relationship_type", Key: "pibling_nibling", Label: "Parent’s sibling / sibling’s child"},
 	{PropertyKey: "relationship_type", Key: "cousin", Label: "Cousin"},
+	{PropertyKey: "relationship_type", Key: "parent", Label: "Parent"},
+	{PropertyKey: "relationship_type", Key: "child", Label: "Child"},
+	{PropertyKey: "relationship_type", Key: "grandparent", Label: "Grandparent"},
+	{PropertyKey: "relationship_type", Key: "grandchild", Label: "Grandchild"},
+	{PropertyKey: "relationship_type", Key: "pibling", Label: "Parent’s sibling"},
+	{PropertyKey: "relationship_type", Key: "nibling", Label: "Sibling’s child"},
 	{PropertyKey: "relationship_type", Key: "guardian", Label: "Guardian"},
+	{PropertyKey: "relationship_type", Key: "ward", Label: "Ward"},
 }
 
 // Connect matrix from interpretation-graph-ui.md §3.2. Omitted pairs refuse by default.
@@ -238,7 +243,7 @@ var seedConnect = []seedConnectRule{
 	{
 		FromTypeKey: "person", ToTypeKey: "person",
 		BridgeTypeKey: "relationship",
-		EdgePropertyKeys: []string{"participant", "participant"},
+		EdgePropertyKeys: []string{"person", "related_to"},
 		Disambiguation: DisambiguationPersonPersonChoice,
 	},
 	{

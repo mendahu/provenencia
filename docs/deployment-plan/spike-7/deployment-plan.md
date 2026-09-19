@@ -35,7 +35,7 @@ Product value types: **`text`**, **`integer`**, **`date`**, **`name`**, **`subje
 | --- | --- |
 | **text** | Prose Properties (`toponym`, `remark`, researcher-defined notes) |
 | **term** | Kind/edge identity via **registry-only** Properties (`event_type`, `role`, `relationship_type`) → `property_terms` + `value_term_id` (**S7-01b**). Not offered when researchers create Properties. |
-| **subject** | Bridge edges (`person`, `event`, `place`, `participant`) |
+| **subject** | Bridge edges (`person`, `event`, `place`, `related_to`) |
 | **date** | Event `date` / `start_date` / `end_date` (locked on event for Conclusion ordering); reuse DateValue |
 | **name** | Primary person assertion; NameValue (`name_values` + `name_value_parts` only) |
 | **integer** | Researcher-defined counts / ages (no seed Property yet) |
