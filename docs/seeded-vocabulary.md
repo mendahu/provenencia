@@ -413,7 +413,7 @@ guardian
 ward
 ```
 
-`pibling` / `nibling` are gender-neutral parent’s-sibling / sibling’s-child. Prefer expanding the product set as connect macros need them. Long-tail labels are `origin=user` terms — there is no product `other` escape hatch. First-class connect behavior attaches to recognized keys in the subject registry when that behavior lands.
+`pibling` / `nibling` keep gender-neutral keys; labels show as aunt/uncle and niece/nephew. Prefer expanding the product set as connect macros need them. Long-tail labels are `origin=user` terms — there is no product `other` escape hatch. First-class connect behavior attaches to recognized keys in the subject registry when that behavior lands.
 
 ## 3.7 Property terms: `sex_at_birth`
 

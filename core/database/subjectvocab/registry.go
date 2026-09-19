@@ -220,8 +220,8 @@ var seedTerms = []seedTerm{
 	{PropertyKey: "relationship_type", Key: "child", Label: "Child"},
 	{PropertyKey: "relationship_type", Key: "grandparent", Label: "Grandparent"},
 	{PropertyKey: "relationship_type", Key: "grandchild", Label: "Grandchild"},
-	{PropertyKey: "relationship_type", Key: "pibling", Label: "Parent’s sibling"},
-	{PropertyKey: "relationship_type", Key: "nibling", Label: "Sibling’s child"},
+	{PropertyKey: "relationship_type", Key: "pibling", Label: "Aunt / uncle"},
+	{PropertyKey: "relationship_type", Key: "nibling", Label: "Niece / nephew"},
 	{PropertyKey: "relationship_type", Key: "guardian", Label: "Guardian"},
 	{PropertyKey: "relationship_type", Key: "ward", Label: "Ward"},
 }
