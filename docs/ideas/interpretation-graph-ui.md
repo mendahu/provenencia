@@ -2,7 +2,7 @@
 
 ## Status
 
-**Brainstorm, with working decisions — canvas prototype complete (Go).** Not a UI spec, but no longer open-ended: the design questions below were worked through and settled; slice 1 shipped as [Spike 5](../deployment-plan/archive/spike-5/); slice 2 (canvas UI risk) shipped as [Spike 6](../deployment-plan/archive/spike-6/) with a **Go** dogfood verdict.
+**Brainstorm, with working decisions — canvas prototype complete (Go); Citations / Observations spike open.** Not a UI spec, but no longer open-ended: the design questions below were worked through and settled; slice 1 shipped as [Spike 5](../deployment-plan/archive/spike-5/); slice 2 (canvas UI risk) shipped as [Spike 6](../deployment-plan/archive/spike-6/) with a **Go** dogfood verdict; slices 3–7 are scheduled as [Spike 7](../deployment-plan/spike-7/) (Subject vocabulary, NameValue, citation composer **place**, durable connect).
 
 Authoritative schema for everything described here is [`interpretation-layer-data-model.md`](../interpretation-layer-data-model.md). Client rules are [`macos-client-patterns.md`](../macos-client-patterns.md). Nothing in this file overrides those — where this note reaches a conclusion that would change a model doc, that edit has to be made there deliberately.
 
@@ -29,8 +29,10 @@ Authoritative schema for everything described here is [`interpretation-layer-dat
 | 17 | Product vocabulary for the graph's config mirrors Source types / Source fields: **Subject types** (`subject_types`) and **Subject fields** (`properties` + bindings). Avoid "claim" — Conclusion already owns that word | §1.4 |
 | 18 | Sidebar: **Sources** is the primary work item; Source types / Source fields / Subject types / Subject fields are **nested config** under it (de-emphasized), not peer destinations | §1.4 |
 | 19 | **Schema rename: Node → Subject.** Catalog tables are `subjects`, `subject_types`, `subject_positions`, `subject_type_fields`; product and engine share one word. Bridge rows are subjects too. Do not use "claim." | §1.4, interpretation model §4 |
+| 20 | **Citation composer is a navigable place** (not a sheet over the graph, not a companion window). Leave the Evidence graph → full-window viewer\|form → Back returns. Keeps composer a11y off the canvas. | §6.1, [Spike 7](../deployment-plan/spike-7/) |
+| 21 | **Observation value types for v1 product:** `text`, `integer`, `date`, `name`, `subject` — not `real` / `boolean`. | Spike 7; align interpretation model when shipping |
 
-Two items found along the way that were on nobody's list: **candidate ref support** did not exist in `core/ref` (§11.1, resolved in S5-01), and **NameValue does not exist in either language** (§4.4).
+Two items found along the way that were on nobody's list: **candidate ref support** did not exist in `core/ref` (§11.1, resolved in S5-01), and **NameValue does not exist in either language** (§4.4) — scheduled in Spike 7.
 
 ---
 
@@ -453,7 +455,7 @@ One Citation may support many Observations — the data model says so explicitly
 
 That matters because it dissolves a workflow question this note originally treated as either/or. Map-first ("place things, then cite them") and citation-first ("read one line, then record what it contains") become the same UI operated in a different order. Nothing has to be bet on which one researchers actually prefer.
 
-It also argues strongly for **side-by-side, not modal**. A sheet that covers the graph you are annotating is the wrong default; the composer wants to be an inspector or a companion window that persists across successive edits.
+It also argues strongly for **side-by-side, not a sheet over the graph**. A sheet that covers the canvas you are annotating is the wrong default. **Spike 7 locks Option B:** navigate away to a first-class **composer place** (viewer\|form full-window; Back returns to the Evidence graph). That keeps composer accessibility off the canvas. A companion window remains a possible later refinement; pinning across successive graph edits is still deferred.
 
 ---
 
@@ -613,7 +615,7 @@ Deferred, blocking nothing:
 7. **Connect tool** — bridge macros, the disambiguation form, the pinned Citation (§6.1).
 8. **Honesty and polish** — negated / conflicted / uncited states, filtering, undo. Accessibility is *not* here; it moved to slice 2 (§7.4).
 
-**Spike boundary: slice 1 is [Spike 5](../deployment-plan/archive/spike-5/), slice 2 is [Spike 6](../deployment-plan/archive/spike-6/) (complete / Go).** Splitting foundation from canvas keeps the canvas spike pure — Spike 6's first PR draws a bubble rather than writing a migration. Spike 6 also prototypes **connect lines** as UI risk (not Observation macros); see that plan's S6-04 scope note.
+**Spike boundary: slice 1 is [Spike 5](../deployment-plan/archive/spike-5/), slice 2 is [Spike 6](../deployment-plan/archive/spike-6/) (complete / Go), slices 3–7 are [Spike 7](../deployment-plan/spike-7/) (open).** Splitting foundation from canvas kept the canvas spike pure — Spike 6's first PR drew a bubble rather than writing a migration. Spike 6 also prototyped **connect lines** as UI risk (not Observation macros); Spike 7 replaces those with durable Citation-backed edges. Spike 7 collapses vocabulary editors, NameValue, artifact viewer + Citations, Observations (five value types), and connect macros into one spike with a **navigable composer place**.
 
 **The cost of the split is that slice 1 ships a layer with no visible capability, and that cost is now accepted rather than bought off.** An earlier draft of this note put a plain list of a Source's Subjects at the graph destination to prove the data path, justified as the structured non-canvas editing path §7.4 was committed to. Since the graph is now the only surface (§1.3), that list would be throwaway UI — built, designed, and then deleted by slice 2 — so it is dropped.
 

@@ -8,7 +8,7 @@ Authoritative domain and stack decisions remain in the sibling docs under [`docs
 
 | Spike | Goal |
 | --- | --- |
-| — | No open spike. Next Interpretation work (Citations / Observations / durable connect macros) is not yet scheduled. |
+| [Spike 7](spike-7/) | Citations / Observations / NameValue / Subject vocabulary editors / citation **composer place** (Option B) / durable connect macros. Design: [`ideas/interpretation-graph-ui.md`](../ideas/interpretation-graph-ui.md). Plan: [`spike-7/deployment-plan.md`](spike-7/deployment-plan.md). |
 
 ## Completed
 
@@ -20,6 +20,13 @@ Authoritative domain and stack decisions remain in the sibling docs under [`docs
 | [Spike 3](archive/spike-3/) | Workspace chrome + first-class nav history and catalog search: Back/Forward (persisted, `project.uuid`), toolbar omnibar with Go registry + FTS5 ranking. Archive: [`archive/spike-3/README.md`](archive/spike-3/README.md), [`completed.md`](archive/spike-3/completed.md). Notes: [`navigation-history.md`](archive/spike-3/navigation-history.md), [`omnibar-search.md`](archive/spike-3/omnibar-search.md). |
 | [Spike 2](archive/spike-2/) | Validate the Source layer: app workspace chrome (sidebar), audit + schema + Go CRUD/ingest + FFI + macOS Source catalog UI (create Sources, Artifacts, Files, extensible types/metadata). Design steps in Claude Design interleaved with PRs. Dogfood: [`archive/spike-2/dogfood.md`](archive/spike-2/dogfood.md). |
 | [Spike 1](archive/spike-1.md) | Scaffold the macOS app, local SQLite project, and first-run onboarding. **Retired the cgo SQLite + Swift dylib risk** (plan A: `mattn/go-sqlite3` inside `libprovenencia.dylib`). |
+
+Spike 7 (open):
+
+- [`spike-7/README.md`](spike-7/README.md) — spike overview
+- [`spike-7/deployment-plan.md`](spike-7/deployment-plan.md) — PR sequence, design gates, dogfood bar
+- [`spike-7/completed.md`](spike-7/completed.md) — finished steps (none yet)
+- [`spike-7/design/`](spike-7/design/) — Claude Design briefs S7-D1…S7-D4
 
 Spike 6 archive:
 
