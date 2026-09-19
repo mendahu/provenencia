@@ -25,8 +25,11 @@ final class EvidenceGraphModel {
     var createError: String?
     var hoverGridX: Int64?
     var hoverGridY: Int64?
-    var draggingSubjectID: String?
-    var dragTranslation: CGSize = .zero
+    var selectedSubjectID: String?
+    /// Space/Return opened this card for inner controls (cleared on Esc / other select).
+    var activatedSubjectID: String?
+    /// Shown when drag / arrow persist fails after an optimistic patch.
+    var toast: VocabularyToast?
 
     /// Seeded type ids keyed by `EvidencePrimaryKind.rawValue`.
     private(set) var typeIDByKind: [String: String] = [:]
@@ -73,8 +76,6 @@ final class EvidenceGraphModel {
             armedKind = kind
             hoverGridX = nil
             hoverGridY = nil
-            draggingSubjectID = nil
-            dragTranslation = .zero
         }
     }
 
@@ -82,6 +83,22 @@ final class EvidenceGraphModel {
         armedKind = nil
         hoverGridX = nil
         hoverGridY = nil
+    }
+
+    func selectSubject(id: String?) {
+        selectedSubjectID = id
+        if activatedSubjectID != id {
+            activatedSubjectID = nil
+        }
+    }
+
+    func activateSubject(id: String) {
+        selectedSubjectID = id
+        activatedSubjectID = id
+    }
+
+    func deactivateSubject() {
+        activatedSubjectID = nil
     }
 
     func updateHover(contentPoint: CGPoint) {
@@ -117,7 +134,7 @@ final class EvidenceGraphModel {
         isCreating = false
         labelError = nil
         createError = nil
-        // Board: cancel leaves the tool armed.
+        disarm()
     }
 
     /// Creates the subject + position. On success disarms and returns the new id.
@@ -153,7 +170,9 @@ final class EvidenceGraphModel {
                 gridX: pendingGridX,
                 gridY: pendingGridY
             )
+            // `apply` only marks the graph query stale — re-query to refetch.
             session.apply(.createdSubject(sourceId: sourceID))
+            let _: QueryHandle<SourceGraphSnapshot> = session.query(graphKey)
             isCreating = false
             disarm()
             return created.id
@@ -163,35 +182,34 @@ final class EvidenceGraphModel {
         }
     }
 
-    func beginDrag(subjectID: String) {
-        guard armedKind == nil, !isCreating else { return }
-        draggingSubjectID = subjectID
-        dragTranslation = .zero
-    }
-
-    func updateDrag(translation: CGSize) {
-        guard draggingSubjectID != nil else { return }
-        dragTranslation = translation
-    }
-
-    /// Snaps and persists; returns the new cell if the move succeeded.
+    /// Snaps a completed card drag. Patches the session cache **synchronously**
+    /// so `@GestureState` can clear onto the new cell, then writes the store.
+    /// On persist failure, reverts the patch and surfaces a toast.
     @discardableResult
-    func endDrag(
+    func commitDrag(
         subjectID: String,
         originGridX: Int64,
-        originGridY: Int64
-    ) async -> (gridX: Int64, gridY: Int64)? {
-        defer {
-            draggingSubjectID = nil
-            dragTranslation = .zero
-        }
+        originGridY: Int64,
+        documentDelta: CGSize
+    ) -> (gridX: Int64, gridY: Int64)? {
+        guard inputMode == .idle else { return nil }
         let origin = GraphCanvasGridMapping.contentPoint(gridX: originGridX, gridY: originGridY)
         let dropped = CGPoint(
-            x: origin.x + dragTranslation.width,
-            y: origin.y + dragTranslation.height
+            x: origin.x + documentDelta.width,
+            y: origin.y + documentDelta.height
         )
         let cell = GraphCanvasGridMapping.gridCell(contentPoint: dropped)
-        return await persistPosition(subjectID: subjectID, gridX: cell.gridX, gridY: cell.gridY)
+        applyPositionPatch(subjectID: subjectID, gridX: cell.gridX, gridY: cell.gridY)
+        Task {
+            await persistPositionOrRevert(
+                subjectID: subjectID,
+                gridX: cell.gridX,
+                gridY: cell.gridY,
+                revertGridX: originGridX,
+                revertGridY: originGridY
+            )
+        }
+        return (cell.gridX, cell.gridY)
     }
 
     /// Moves a selected subject one grid cell (arrow keys).
@@ -203,10 +221,18 @@ final class EvidenceGraphModel {
         deltaX: Int64,
         deltaY: Int64
     ) async -> (gridX: Int64, gridY: Int64)? {
-        guard armedKind == nil, !isCreating else { return nil }
+        guard inputMode == .idle else { return nil }
         let nextX = fromGridX + deltaX
         let nextY = fromGridY + deltaY
-        return await persistPosition(subjectID: subjectID, gridX: nextX, gridY: nextY)
+        applyPositionPatch(subjectID: subjectID, gridX: nextX, gridY: nextY)
+        let ok = await persistPositionOrRevert(
+            subjectID: subjectID,
+            gridX: nextX,
+            gridY: nextY,
+            revertGridX: fromGridX,
+            revertGridY: fromGridY
+        )
+        return ok ? (nextX, nextY) : nil
     }
 
     func ghostPlacedSubject() -> SourceGraphPlacedSubject? {
@@ -273,11 +299,25 @@ final class EvidenceGraphModel {
         }
     }
 
-    private func persistPosition(
+    private func applyPositionPatch(subjectID: String, gridX: Int64, gridY: Int64) {
+        if let handle: QueryHandle<SourceGraphSnapshot> = session.queryHandle(graphKey),
+           let snapshot = handle.value
+        {
+            session.setQueryValue(
+                graphKey,
+                value: snapshot.updatingPosition(subjectID: subjectID, gridX: gridX, gridY: gridY)
+            )
+        }
+    }
+
+    @discardableResult
+    private func persistPositionOrRevert(
         subjectID: String,
         gridX: Int64,
-        gridY: Int64
-    ) async -> (gridX: Int64, gridY: Int64)? {
+        gridY: Int64,
+        revertGridX: Int64,
+        revertGridY: Int64
+    ) async -> Bool {
         do {
             _ = try await store.setSubjectPosition(
                 projectDir: session.projectKey.projectDir,
@@ -285,17 +325,15 @@ final class EvidenceGraphModel {
                 gridX: gridX,
                 gridY: gridY
             )
-            if let handle: QueryHandle<SourceGraphSnapshot> = session.queryHandle(graphKey),
-               let snapshot = handle.value
-            {
-                session.setQueryValue(
-                    graphKey,
-                    value: snapshot.updatingPosition(subjectID: subjectID, gridX: gridX, gridY: gridY)
-                )
-            }
-            return (gridX, gridY)
+            return true
         } catch {
-            return nil
+            applyPositionPatch(subjectID: subjectID, gridX: revertGridX, gridY: revertGridY)
+            toast = VocabularyToast(
+                title: String(localized: L10n.EvidenceGraph.positionPersistFailedTitle),
+                body: L10n.Errors.message(for: error),
+                tone: .danger
+            )
+            return false
         }
     }
 }

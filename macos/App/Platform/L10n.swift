@@ -1090,6 +1090,12 @@ enum L10n {
             comment: "Prefill label when creating a Place from the palette"
         )
 
+        static let positionPersistFailedTitle = LocalizedStringResource(
+            "evidenceGraph.position.persistFailedTitle",
+            defaultValue: "Couldn't save position",
+            comment: "Toast title when setSubjectPosition fails after drag or arrow move"
+        )
+
         static func subjectCount(count: Int) -> LocalizedStringResource {
             count == 1 ? subjectCountOne : subjectCountOther(count: count)
         }

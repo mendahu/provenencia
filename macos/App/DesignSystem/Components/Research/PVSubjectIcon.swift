@@ -40,7 +40,7 @@ private struct PersonMark: View {
             let transform = CGAffineTransform(scaleX: scale, y: scale)
             let style = StrokeStyle(lineWidth: 1.4 * scale, lineCap: .round, lineJoin: .round)
 
-            var head = Path(ellipseIn: CGRect(x: 12 - 3.3, y: 8.2 - 3.3, width: 6.6, height: 6.6))
+            let head = Path(ellipseIn: CGRect(x: 12 - 3.3, y: 8.2 - 3.3, width: 6.6, height: 6.6))
             context.stroke(head.applying(transform), with: .foreground, style: style)
 
             // M5.2 19.4c0-3.5 3-5.9 6.8-5.9s6.8 2.4 6.8 5.9

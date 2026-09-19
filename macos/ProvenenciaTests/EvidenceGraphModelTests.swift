@@ -82,9 +82,21 @@ struct EvidenceGraphModelTests {
         let positions = try await store.listSubjectPositions(projectDir: projectDir, sourceID: sourceID)
         #expect(positions.first?.gridX == 2)
         #expect(positions.first?.gridY == 3)
+
+        // Session must re-query so the canvas leaves the stale empty snapshot.
+        let handle: QueryHandle<SourceGraphSnapshot>? = model.session.queryHandle(
+            CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        )
+        var waited = 0
+        while handle?.value?.subjects.isEmpty != false, waited < 40 {
+            try await Task.sleep(nanoseconds: 25_000_000)
+            waited += 1
+        }
+        #expect(handle?.value?.subjects.count == 1)
+        #expect(handle?.value?.subjects.first?.subject.label == "Alice")
     }
 
-    @Test func cancelCreateLeavesToolArmed() async {
+    @Test func cancelCreateDisarmsTool() async {
         let store = makeStore()
         let model = makeModel(store: store)
         await model.prepare()
@@ -92,7 +104,88 @@ struct EvidenceGraphModelTests {
         model.beginCreate(at: .zero)
         model.cancelCreate()
         #expect(model.isCreating == false)
-        #expect(model.armedKind == .event)
+        #expect(model.armedKind == nil)
+        #expect(model.inputMode == .idle)
+    }
+
+    @Test func inputModePlacingWhenArmedIdleWhenCreating() async {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.prepare()
+        #expect(model.inputMode == .idle)
+        model.toggleArm(.person)
+        #expect(model.inputMode == .placing(.person))
+        model.beginCreate(at: CGPoint(x: 40, y: 40))
+        #expect(model.inputMode == .idle)
+    }
+
+    @Test func activateSubjectThenSelectOtherClearsActivation() {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        model.activateSubject(id: "a")
+        #expect(model.selectedSubjectID == "a")
+        #expect(model.activatedSubjectID == "a")
+        model.selectSubject(id: "b")
+        #expect(model.selectedSubjectID == "b")
+        #expect(model.activatedSubjectID == nil)
+        model.activateSubject(id: "b")
+        model.deactivateSubject()
+        #expect(model.activatedSubjectID == nil)
+        #expect(model.selectedSubjectID == "b")
+    }
+
+    @Test func moveSubjectPersistFailureRevertsAndToasts() async {
+        let store = makeStore()
+        let subject = CatalogSubject(
+            id: "s1",
+            ref: "CPR-1",
+            sourceID: sourceID,
+            subjectTypeID: personTypeID,
+            label: "A",
+            description: ""
+        )
+        store.subjectsBySource[sourceID] = [subject]
+        store.subjectPositionsBySubject["s1"] = CatalogSubjectPosition(
+            subjectID: "s1",
+            gridX: 1,
+            gridY: 2
+        )
+        let model = makeModel(store: store)
+        await model.prepare()
+        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        model.session.setQueryValue(
+            key,
+            value: SourceGraphSnapshot(
+                sourceId: sourceID,
+                subjects: [
+                    SourceGraphPlacedSubject(
+                        subject: subject,
+                        kind: .person,
+                        typeLabel: "Person",
+                        gridX: 1,
+                        gridY: 2,
+                        isCited: false
+                    ),
+                ]
+            )
+        )
+
+        store.setSubjectPositionError = CoreInvokeError.coded(
+            status: 1, code: "internal.unknown", kind: .internal, params: []
+        )
+        let result = await model.moveSubject(
+            subjectID: "s1",
+            fromGridX: 1,
+            fromGridY: 2,
+            deltaX: 1,
+            deltaY: 0
+        )
+        #expect(result == nil)
+        let handle: QueryHandle<SourceGraphSnapshot>? = model.session.queryHandle(key)
+        #expect(handle?.value?.subjects.first?.gridX == 1)
+        #expect(handle?.value?.subjects.first?.gridY == 2)
+        #expect(model.toast?.tone == .danger)
+        #expect(model.toast?.title == String(localized: L10n.EvidenceGraph.positionPersistFailedTitle))
     }
 
     @Test func updatingPositionPatchesSnapshot() {

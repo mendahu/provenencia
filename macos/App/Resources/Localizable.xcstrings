@@ -1309,6 +1309,18 @@
         }
       }
     },
+    "evidenceGraph.position.persistFailedTitle" : {
+      "comment" : "Toast title when setSubjectPosition fails after drag or arrow move",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't save position"
+          }
+        }
+      }
+    },
     "evidenceGraph.header.subjectCountOne" : {
       "comment" : "Evidence graph header count when exactly one placed primary is on the canvas",
       "extractionState" : "manual",

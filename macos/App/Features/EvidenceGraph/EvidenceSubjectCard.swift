@@ -1,46 +1,119 @@
 import SwiftUI
 
-/// Drag-enabled primary subject card (S6-03).
+/// Primary subject card on the Evidence graph (S6-02 / S6-03).
+///
+/// Plain view — not a `Button`. Pointer chrome (select / drag) lives on the
+/// card body. Keyboard Tab / Space / Return live on a sibling overlay so
+/// `.focusable()` never owns the drag gesture (AppKit first-responder on the
+/// same view steals mouse-drag).
 struct EvidenceSubjectCard: View {
+    /// Must match the name on the Evidence graph document `ZStack`.
+    static let documentCoordinateSpace = "evidenceGraphDocument"
+
+    /// Fixed card width — keep in sync with content centering / offset.
+    static let width: CGFloat = 236
+    /// Approximate half-height for top-leading offset centering.
+    static let approximateHalfHeight: CGFloat = 36
+
     let placed: SourceGraphPlacedSubject
+    /// Current target — click, Tab, and VoiceOver share this look.
     var isSelected: Bool
-    var isDragging: Bool = false
-    var dragEnabled: Bool = true
+    /// Space/Return opened the card for inner controls (future actions).
+    var isActivated: Bool
+    var dragEnabled: Bool
+    /// Keyboard focus binding for the sibling overlay (not the drag surface).
+    var keyboardFocus: FocusState<String?>.Binding
     var onSelect: () -> Void
-    var onDragChanged: ((CGSize) -> Void)?
-    var onDragEnded: (() -> Void)?
+    /// Space / Return while keyboard-focused — select and enter the card.
+    var onActivate: () -> Void
+    /// Escape resigns this card so Tab is not trapped in the hosted document.
+    var onEscape: () -> Void = {}
+    /// Document-space delta from gesture start to end (snap + persist).
+    var onDragEnded: ((CGSize) -> Void)?
 
-    private var style: EvidenceSubjectKindStyle {
-        EvidenceSubjectKindStyle.forKind(placed.kind)
-    }
+    @GestureState private var dragOffset: CGSize = .zero
 
-    private var iconKind: PVSubjectIconKind {
-        switch placed.kind {
-        case .person: .person
-        case .event: .event
-        case .place: .place
-        }
+    private var isDragging: Bool {
+        dragOffset != .zero
     }
 
     var body: some View {
-        cardChrome
-            .opacity(ghostOpacity)
-            .gesture(dragGesture)
-            .onTapGesture(perform: onSelect)
-            .accessibilityHidden(true)
+        EvidenceSubjectCardChrome(
+            placed: placed,
+            isSelected: isSelected,
+            isActivated: isActivated,
+            isDragging: isDragging
+        )
+        .opacity(ghostOpacity)
+        .offset(dragOffset)
+        .zIndex(isDragging || isActivated ? 1 : 0)
+        .contentShape(RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous))
+        .gesture(dragGesture)
+        .onTapGesture(perform: onSelect)
+        .background {
+            // Keyboard / VoiceOver target sits behind the pointer surface so
+            // Tab still lands here, but mouse-down never hits `.focusable()`.
+            Color.clear
+                .focusable()
+                .focusEffectDisabled()
+                .focused(keyboardFocus, equals: placed.id)
+                .onKeyPress(.space) {
+                    onActivate()
+                    return .handled
+                }
+                .onKeyPress(.return) {
+                    onActivate()
+                    return .handled
+                }
+                .onKeyPress(.escape) {
+                    onEscape()
+                    return .handled
+                }
+                .accessibilityHidden(true)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text(verbatim: Self.accessibilityLabel(for: placed)))
+        .accessibilityAddTraits((isSelected || isActivated) ? .isSelected : [])
+        .accessibilityIdentifier("evidenceGraph.subject.\(placed.id)")
     }
 
     /// Non-interactive placement preview while a tool is armed.
     static func ghost(placed: SourceGraphPlacedSubject) -> some View {
-        EvidenceSubjectCard(
+        EvidenceSubjectCardChrome(
             placed: placed,
             isSelected: false,
-            isDragging: false,
-            dragEnabled: false,
-            onSelect: {}
+            isActivated: false,
+            isDragging: false
         )
         .opacity(0.62)
         .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    /// Content-space center for a placed (or ghost) card.
+    static func contentCenter(gridX: Int64, gridY: Int64) -> CGPoint {
+        GraphCanvasGridMapping.contentPoint(gridX: gridX, gridY: gridY)
+    }
+
+    /// Top-leading offset so the card keeps a real layout frame (required for
+    /// Tab / `.focusable()`). `.position` collapses the frame and drops the
+    /// key-view loop.
+    static func topLeadingOffset(gridX: Int64, gridY: Int64) -> CGSize {
+        let center = contentCenter(gridX: gridX, gridY: gridY)
+        return CGSize(
+            width: center.x - width / 2,
+            height: center.y - approximateHalfHeight
+        )
+    }
+
+    /// VoiceOver / rotor label for a placed subject.
+    static func accessibilityLabel(for placed: SourceGraphPlacedSubject) -> String {
+        let trimmed = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = trimmed.isEmpty ? placed.typeLabel : trimmed
+        let citation = placed.isCited
+            ? String(localized: L10n.EvidenceGraph.citedAccessibility)
+            : String(localized: L10n.EvidenceGraph.uncitedAccessibility)
+        return "\(placed.typeLabel), \(name), \(citation)"
     }
 
     private var ghostOpacity: Double {
@@ -48,7 +121,41 @@ struct EvidenceSubjectCard: View {
         return placed.isCited ? 1 : 0.76
     }
 
-    private var cardChrome: some View {
+    private var dragGesture: some Gesture {
+        DragGesture(minimumDistance: 4, coordinateSpace: .named(Self.documentCoordinateSpace))
+            .updating($dragOffset) { value, state, _ in
+                state = CGSize(
+                    width: value.location.x - value.startLocation.x,
+                    height: value.location.y - value.startLocation.y
+                )
+            }
+            .onEnded { value in
+                onSelect()
+                let delta = CGSize(
+                    width: value.location.x - value.startLocation.x,
+                    height: value.location.y - value.startLocation.y
+                )
+                onDragEnded?(delta)
+            }
+    }
+}
+
+/// Visual shell shared by live cards and the placement ghost.
+private struct EvidenceSubjectCardChrome: View {
+    let placed: SourceGraphPlacedSubject
+    var isSelected: Bool
+    var isActivated: Bool
+    var isDragging: Bool
+
+    private var style: EvidenceSubjectKindStyle {
+        EvidenceSubjectKindStyle.forKind(placed.kind)
+    }
+
+    private var showsSelectionChrome: Bool {
+        isSelected || isActivated || isDragging
+    }
+
+    var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 10) {
                 iconChip
@@ -77,30 +184,18 @@ struct EvidenceSubjectCard: View {
         }
         .padding(.horizontal, 13)
         .padding(.vertical, 12)
-        .frame(width: 236, alignment: .leading)
+        .frame(width: EvidenceSubjectCard.width, alignment: .leading)
         .background(cardBackground)
         .overlay(cardBorder)
         .clipShape(RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous))
         .shadow(
-            color: (placed.isCited || isDragging) && !isSelected
+            color: showsSelectionChrome && !isSelected
                 ? Color.black.opacity(0.1)
                 : .clear,
             radius: isDragging ? 10 : 6,
             y: isDragging ? 4 : 2
         )
         .background(selectionHalo)
-    }
-
-    private var dragGesture: some Gesture {
-        DragGesture(minimumDistance: dragEnabled ? 4 : 10_000)
-            .onChanged { value in
-                guard dragEnabled else { return }
-                onDragChanged?(value.translation)
-            }
-            .onEnded { _ in
-                guard dragEnabled else { return }
-                onDragEnded?()
-            }
     }
 
     private var displayLabel: String {
@@ -125,7 +220,7 @@ struct EvidenceSubjectCard: View {
                         dash: placed.isCited ? [] : [3, 2]
                     )
                 )
-            PVSubjectIcon(kind: iconKind, size: 15)
+            PVSubjectIcon(kind: placed.kind.subjectIconKind, size: 15)
                 .foregroundStyle(style.ink)
         }
         .frame(width: 28, height: 28)
@@ -160,37 +255,23 @@ struct EvidenceSubjectCard: View {
             .strokeBorder(
                 borderColor,
                 style: StrokeStyle(
-                    lineWidth: (isSelected || isDragging) ? 1.5 : 1,
+                    lineWidth: showsSelectionChrome ? 1.5 : 1,
                     dash: placed.isCited ? [] : [4, 3]
                 )
             )
     }
 
     private var borderColor: Color {
-        if isSelected || isDragging { return PVColor.accent }
+        if showsSelectionChrome { return PVColor.accent }
         return placed.isCited ? style.line : PVColor.borderDefault
     }
 
     @ViewBuilder
     private var selectionHalo: some View {
-        if isSelected || isDragging {
+        if showsSelectionChrome {
             RoundedRectangle(cornerRadius: PVRadius.md + 2, style: .continuous)
                 .fill(PVColor.graphRing)
                 .padding(-3)
         }
-    }
-}
-
-extension EvidenceSubjectCard {
-    /// VoiceOver label for the accessibility representation (not the drawn card).
-    static func accessibilityLabel(for placed: SourceGraphPlacedSubject) -> String {
-        let name = {
-            let trimmed = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
-            return trimmed.isEmpty ? placed.typeLabel : trimmed
-        }()
-        let citation = placed.isCited
-            ? String(localized: L10n.EvidenceGraph.citedAccessibility)
-            : String(localized: L10n.EvidenceGraph.uncitedAccessibility)
-        return "\(placed.typeLabel), \(name), \(citation)"
     }
 }

@@ -106,12 +106,17 @@ final class WorkspaceSession {
         handle.beginLoading(stale: hadStaleValue)
 
         let task = Task { @MainActor in
-            defer { self.inFlight[key] = nil }
             do {
                 let result = try await loader()
                 handle.applySuccess(result)
             } catch {
                 handle.applyFailure(error, clearValue: !hadStaleValue)
+            }
+            // Clear before a possible follow-up — `query` early-returns while
+            // `inFlight` is set, so a mutation mid-load would otherwise stick.
+            self.inFlight[key] = nil
+            if self.invalidatedKeys.contains(key) {
+                let _: QueryHandle<Value> = self.ensureQuery(key, loader: loader)
             }
         }
         inFlight[key] = task
