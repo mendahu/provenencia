@@ -25,7 +25,7 @@ new Install into **`onboarding.createCatalog` only**.
 | --- | --- | --- |
 | `core/database/sourcevocab/` | `registry.go` (`seedTypes` / `seedFields` / `seedSuggestions`) | Source types, metadata fields, type→field suggestions (uses `sourcetypes` / `sourcefields`) |
 | `core/database/sourcecredibilitygrades/` | `registry.go` (`seedGrades`) | Credibility grades (`low_trust` / `standard` / `high_trust`) |
-| `core/database/subjecttypes/` | `registry.go` (`seedTypes`) | Interpretation Subject types + ref prefixes |
+| `core/database/subjectvocab/` | `registry.go` (`seedTypes` / `seedProperties` / `seedBindings` / `seedTerms` / `seedConnect`) | Interpretation Subject types, Properties, `subject_type_fields`, **`property_terms`** (S7-01b), plus compiled capabilities / presentation / connect / term capabilities (uses `subjecttypes` / `properties`) |
 
 ### Source vocabulary (`sourcevocab`)
 
@@ -44,11 +44,17 @@ new Install into **`onboarding.createCatalog` only**.
    deleted rows stay deleted without re-Install. Onboarding: open does not heal.
 7. Run `CGO_ENABLED=1 go test -tags fts5 ./core/database/sourcevocab/... ./core/onboarding/...`.
 
-### Subject types / credibility grades
+### Subject vocabulary / credibility grades
 
 Same pattern as Source: edit that package’s `registry.go`, keep
 `origin = provenencia`, no SQL seeds, tests that create installs and open does
 not heal. Subject type keys/prefixes: `docs/seeded-vocabulary.md` §3.1.
+Property value types: `text` \| `integer` \| `date` \| `name` \| `subject` \| **`term`**.
+Kind/edge Properties (`event_type`, `role`, `relationship_type`) use `term` + `property_terms` (S7-01b) — not free-text Observation strings.
+**`value_type = term` Properties are Install/registry only** (`origin=provenencia` or `plugin:<id>`). Researcher Create Property must refuse `term`.
+Researchers may still add `origin=user` **term rows** under those Properties via the composer picker.
+Capabilities, presentation tokens, locked bindings, term capabilities, and the connect matrix stay
+in the compiled `subjectvocab` registry (not SQL columns).
 
 Uniqueness is **`UNIQUE (key, origin)`**. Lookup is always `(key, origin)`, never bare key. Domain FKs store vocabulary **`id`**, not key.
 
@@ -57,7 +63,7 @@ Uniqueness is **`UNIQUE (key, origin)`**. Lookup is always `(key, origin)`, neve
 - Each domain’s `Install` upserts its registry into a new catalog.
 - Call **only** from `onboarding.createCatalog` (after `database.Create` +
   `users.EnsureRefs` / `project.EnsureUUID`). Today that is:
-  `sourcevocab.Install` → `sourcecredibilitygrades.Install` → `subjecttypes.Install`
+  `sourcevocab.Install` → `sourcecredibilitygrades.Install` → `subjectvocab.Install`
   (then `searchindex.EnsureCatalog`).
 - **Do not** call `Install` from `OpenCatalog`, `catalogsession.Do`, or on every open.
 - **Do not** heal deleted `provenencia` rows or restored suggestion joins on open.
@@ -73,7 +79,7 @@ Researcher-facing paths:
 core/onboarding/ready.go
   createCatalog → database.Create + users.EnsureRefs + project.EnsureUUID
                   + sourcevocab.Install + sourcecredibilitygrades.Install
-                  + subjecttypes.Install + searchindex.EnsureCatalog
+                  + subjectvocab.Install + searchindex.EnsureCatalog
   OpenCatalog   → database.Open + users.EnsureRefs   # one-shot / tests
 
 core/catalogsession
@@ -89,7 +95,7 @@ Do **not** scatter `*.Install` at each use-case.
 
 When adding another seed domain’s create-time install, call it from
 **`createCatalog` only** (not open / not `Do`), unless that domain explicitly needs
-open-time policy of its own. Mirror an existing domain (`subjecttypes` or
+open-time policy of its own. Mirror an existing domain (`subjectvocab` or
 `sourcecredibilitygrades`) rather than inventing a generic multi-domain framework.
 
 ## Future vocabulary domains
@@ -101,6 +107,7 @@ Mirror Source / Subject types — do **not** build a generic multi-domain seed f
 3. Package owning the seed: `registry` lists + `Install(c) error` (or domain-specific name).
 4. Wire install into `createCatalog` in `ready.go` when create-time-only is correct for that domain.
 5. Document intended keys in `docs/seeded-vocabulary.md`; implement only the dogfood slice needed now.
+   Prefer mirroring `subjectvocab` (or `sourcevocab`) rather than inventing a generic multi-domain framework.
 
 Join/suggestion tables have **no `origin`** column.
 

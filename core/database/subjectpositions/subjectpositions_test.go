@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
+	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
 )
@@ -45,7 +46,7 @@ func TestSubjectPositions(t *testing.T) {
 	}
 	mustPerson := func(t *testing.T, c *database.Catalog, sourceID []byte, label string) subjects.Subject {
 		t.Helper()
-		if err := subjecttypes.Install(c); err != nil {
+		if err := subjectvocab.Install(c); err != nil {
 			t.Fatal(err)
 		}
 		person, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)

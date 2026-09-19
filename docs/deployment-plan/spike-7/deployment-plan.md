@@ -27,19 +27,20 @@ All of the following must be true in the app **by spike close**. Build them as i
 
 ## Observation value types (locked)
 
-Product value types: **`text`**, **`integer`**, **`date`**, **`name`**, **`subject`**.
+Product value types: **`text`**, **`integer`**, **`date`**, **`name`**, **`subject`**, **`term`**.
 
-**Dropped:** `real` and `boolean` — no editors, not offered when creating Properties, no seed Properties use them. Align [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) in S7-01 / S7-03 so the schema does not invent unused columns.
+**Dropped:** `real` and `boolean` — no editors, not offered when creating Properties, no seed Properties use them. Align [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) in S7-01 / S7-01b / S7-03 so the schema does not invent unused columns.
 
 | Type | Why |
 | --- | --- |
-| **text** | Most seeded Properties (`occupation`, `event_type`, `role`, `relationship_type`, `toponym`, …) |
+| **text** | Prose Properties (`toponym`, `remark`, researcher-defined notes) |
+| **term** | Kind/edge identity via **registry-only** Properties (`event_type`, `role`, `relationship_type`) → `property_terms` + `value_term_id` (**S7-01b**). Not offered when researchers create Properties. |
 | **subject** | Bridge edges (`person`, `event`, `place`, `participant`) |
-| **date** | `birth_date`, `date`; reuse DateValue |
+| **date** | Event `date` / `start_date` / `end_date` (locked on event for Conclusion ordering); reuse DateValue |
 | **name** | Primary person assertion; NameValue (`name_values` + `name_value_parts` only) |
-| **integer** | `age_at_event` |
+| **integer** | Researcher-defined counts / ages (no seed Property yet) |
 
-**Seed:** [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.2–3.3 for person / event / place / participation / location / relationship. Defer `source` / `mentions` / `remark` UI. Open pickers for `event_type` / `role`; `relationship_type` open text (± short starter).
+**Seed:** [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.2–3.3 for person / event / place / participation / location / relationship. Defer `source` / `mentions` / `remark` UI. Kind/edge Properties use **Property terms** (large product sets + optional user terms via picker) — not free-text pickers.
 
 ## Interpretation subject registry (central source of truth)
 
@@ -53,6 +54,7 @@ Spike 5 already seeds Subject types from [`core/database/subjecttypes/registry.g
 | **Role / capabilities** | e.g. root vs bridge vs reification; placeable on Evidence graph; create requires Citation | Palette, card chrome, connect entry, empty states |
 | **Graph presentation** | Everything type-keyed for Evidence graph chrome: display name / `L10n` key, icon symbol token, card colors (ink / tint / chip / line tokens), edge/gradient tokens for roots **and** bridges | Palette, cards, ghosts, bridge cards, relationship **lines** |
 | **Properties** | key, value_type, labels | `properties` seed + Subject fields + Observation editors |
+| **Property terms** | term keys per Property (+ capabilities on recognized terms) | `property_terms` seed (**S7-01b**); composer term picker; birthday / tree / connect |
 | **Bindings** | type_key → property_key (+ sort) | `subject_type_fields` seed; Add-property menus |
 | **Required / locked bindings** | which seeded bindings macros need and UI must not unbind | Subject fields delete/unbind; connect pre-fill |
 | **Connect matrix** | allowed endpoint pairs + which bridge type + which edge Properties / disambiguation fields | S7-10 macros (read registry; do not re-encode §3.2 in the view) |
@@ -80,6 +82,7 @@ subjectvocab/   (name flexible — may absorb today’s subjecttypes.Install)
     seedTypes[]       → subject_types rows + capabilities + presentation
     seedProperties[]  → properties rows
     seedBindings[]    → subject_type_fields rows (+ locked)
+    seedTerms[]       → property_terms rows (+ term capabilities)   # S7-01b
     seedConnect[]     → connect macros (app-only; no table)
 ```
 
@@ -109,14 +112,21 @@ subjectvocab/   (name flexible — may absorb today’s subjecttypes.Install)
 | Field | Purpose |
 | --- | --- |
 | `Key`, `Label`, `Description` | Catalog identity |
-| `ValueType` | `text` \| `integer` \| `date` \| `name` \| `subject` |
+| `ValueType` | `text` \| `integer` \| `date` \| `name` \| `subject` \| `term` |
+
+**`seedTerm`** (S7-01b)
+
+| Field | Purpose |
+| --- | --- |
+| `PropertyKey`, `Key`, `Label`, `Description` | Catalog identity under that Property |
+| `Capabilities` (optional) | e.g. birthday facet, tree-edge role — compiled registry, not SQL columns |
 
 **`seedBinding`**
 
 | Field | Purpose |
 | --- | --- |
 | `TypeKey`, `PropertyKey`, `SortOrder` | Seed `subject_type_fields` |
-| `Locked` | Required for macros / product integrity — Subject fields UI must not unbind or delete while locked |
+| `Locked` | Required for macros / product integrity (incl. event dates for Conclusion ordering) — Subject fields UI must not unbind or delete while locked |
 
 **`seedConnect`** (one row per allowed endpoint pair)
 
@@ -173,7 +183,7 @@ Pinning a Citation across successive graph edits is **out** (one Citation + N Ob
 
 | Step | Brief | Covers | Gates |
 | --- | --- | --- | --- |
-| **S7-D2** | Subject fields | Properties + bindings; **few types (7) / many Properties** — creative IA, not Source fields; explore type cards etc. | S7-05 |
+| **S7-D2** | Subject fields | Properties + bindings; create Property offers **five** types (**not** `term`); **few types (7) / many Properties** — creative IA, not Source fields; explore type cards etc. **No** Event types / Roles admin destinations | S7-05 |
 | **S7-D3** | Evidence graph updates | Add-property; cited-data rows; Artifact gate; connect disambiguation → composer handoff; bridge honesty once cited | S7-09, S7-10 |
 | **S7-D4** | Citation composer place | Full-window viewer\|form; Artifact pick; locators; observation list; DateValue reuse; breadcrumbs; composer-only a11y — **hosts** NameValue modal, does not design it | S7-08 |
 | **S7-D5** | NameValue editor | Reusable NameValue modal (DateValue twin); form + optional parts | S7-02b |
@@ -200,7 +210,7 @@ S7-10  Durable connect macros
 S7-11  Full dogfood bar / close
 ```
 
-Each step is independently testable in the running app against **S7-03** (and S7-01/02 as needed).
+Each step is independently testable in the running app against **S7-03** (and S7-01 / S7-01b / S7-02 as needed).
 
 ## PR sequence
 
@@ -211,6 +221,10 @@ design                              build
 S7-D2 Subject fields                S7-01  properties + subject_type_fields
   │                                 │      + **central subject registry**
   │                                 ▼
+  │                                 S7-01b Property terms (`property_terms`,
+  │                                 │      value_type=term, seed terms,
+  │                                 │      migrate kind/edge Properties)
+  │                                 ▼
   └────── D2 gates ───────────────▶ S7-05  Subject fields UI
 
                                     S7-02  NameValue schema + Go
@@ -218,6 +232,7 @@ S7-D2 Subject fields                S7-01  properties + subject_type_fields
                                     ▼
                                     S7-03  citations + observations + locator
                                     │      validation (Go) + FFI macros
+                                    │      (includes value_term_id)
                                     │
 S7-D3 Graph updates                 │
   │                                 ▼
@@ -230,7 +245,7 @@ S7-D4 Composer place                │
   │                                 ▼
   └────── D4 gates ───────────────▶ S7-08  Thin composer (submit path)
                                     │      Artifact pick, citation fields,
-                                    │      text Observations, submit → card grows
+                                    │      text + term Observations, submit → card grows
                                     │      Viewer pane: placeholder OK
                                     │
                                     S7-06  Image + PDF viewers → composer
@@ -251,13 +266,14 @@ S7-D5 NameValue editor              │
 
 **Dependency notes:**
 
-- **S7-05** → **S7-01** + **S7-D2** only (no NameValue UI).
+- **S7-01b** → **S7-01**. Lands **before** S7-05 and **before** S7-03; introduces kind/edge Properties as `term` (they are not seeded as text in S7-01).
+- **S7-05** → **S7-01** + **S7-01b** + **S7-D2** only (no NameValue UI).
 - **S7-09** → **S7-03** (graph payload can show Observations) + **S7-D3**. Registers composer `WorkspaceLocation`; destination may stub until S7-08.
-- **S7-08** → **S7-09** + **S7-D4** + **S7-03**. **Does not** require S7-06/07/02b — text-only Observations and a placeholder viewer are enough to dogfood submit + card growth.
+- **S7-08** → **S7-09** + **S7-D4** + **S7-03**. **Does not** require S7-06/07/02b — text/term Observations and a placeholder viewer are enough to dogfood submit + card growth.
 - **S7-06 / S7-07 / S7-02b** fill the composer in place; each is dogfoodable on top of S7-08.
 - **S7-10** → working composer submit (S7-08+) + **S7-D3**.
 
-Schema/Go (01–03) may start before design finishes; **UI PRs gate on the matching brief.**
+Schema/Go (01–03, 01b) may start before design finishes; **UI PRs gate on the matching brief.**
 
 ---
 
@@ -267,7 +283,8 @@ Schema/Go (01–03) may start before design finishes; **UI PRs gate on the match
 - [ ] S7-D3 — Design: Evidence graph updates → [`completed.md`](completed.md)
 - [ ] S7-D4 — Design: Citation composer place → [`completed.md`](completed.md)
 - [ ] S7-D5 — Design: NameValue editor → [`completed.md`](completed.md)
-- [ ] S7-01 — `properties` + `subject_type_fields` + **central Interpretation subject registry** + Go/FFI → [`completed.md`](completed.md)
+- [x] S7-01 — `properties` + `subject_type_fields` + **central Interpretation subject registry** + Go/FFI → [`completed.md`](completed.md)
+- [ ] S7-01b — Property terms (`property_terms`, `value_type=term`, kind/edge seed) → [`completed.md`](completed.md)
 - [ ] S7-05 — Subject fields UI → [`completed.md`](completed.md)
 - [ ] S7-02 — NameValue schema + Go → [`completed.md`](completed.md)
 - [ ] S7-03 — Citations + Observations + locator validation + FFI → [`completed.md`](completed.md)
@@ -289,7 +306,7 @@ Schema/Go (01–03) may start before design finishes; **UI PRs gate on the match
 
 ## S7-D2 — Design: Subject fields
 
-Claude Design board for Subject fields. Brief: [`design/S7-D2-subject-fields.md`](design/S7-D2-subject-fields.md). Gates **S7-05**. Design around **seven fixed types** (non-list type chrome welcome) and **many Properties**. Source fields layout explicitly out.
+Claude Design board for Subject fields. Brief: [`design/S7-D2-subject-fields.md`](design/S7-D2-subject-fields.md). Gates **S7-05**. Design around **seven fixed types** (non-list type chrome welcome) and **many Properties**. Source fields layout explicitly out. Board must treat **`term` as registry-only** (visible on seeded Properties, not in create Property) and must **not** invent Event types / Roles destinations. Boards already started: paste [`design/S7-D2-subject-fields-addendum-property-terms.md`](design/S7-D2-subject-fields-addendum-property-terms.md).
 
 ---
 
@@ -329,9 +346,28 @@ Wire Install into `onboarding.createCatalog` only. Follow [`.cursor/skills/add-s
 | | |
 | --- | --- |
 | **In** | Tables; central registry + Install; Go packages; FFI list/create/update/delete (unused Properties); bindings query; capability/presentation/connect lookup API (incl. “list placeable types for palette” and “presentation for type key”). |
-| **Out** | Subject fields UI (S7-05); Observations; Subject types user CRUD; scattering capability checks, palette membership, or kind→color/gradient maps in Swift views. |
+| **Out** | Subject fields UI (S7-05); Observations; Subject types user CRUD; scattering capability checks, palette membership, or kind→color/gradient maps in Swift views. Property terms (**S7-01b**). |
 | **Testable** | Create project seeds §3.2–3.3 bindings; registry tests for capabilities, full presentation tokens, locked bindings, placeable set; Go tests; FakeStore round-trip. |
 | **Depends on** | Spike 5 `subject_types` table (may fold Install into the new registry package). **Not** gated on design. |
+
+---
+
+## S7-01b — Property terms
+
+Land **immediately after S7-01**, before Subject fields UI and before Observations write kind/edge values as free text.
+
+**Problem:** Free-text `event_type` / `role` / `relationship_type` lets researchers invent synonyms (`birth` vs `birthday` vs `DOB`); UI facets (birthday, family tree, connect disambiguation) and Conclusion type-identity then miss. Tiny enum + `other` + free-text name fails the same way for sameness. Graph `subjects.label` stays working identity only — not type identity.
+
+**Model:** New `value_type = term` + `property_terms` table (origin-namespaced vocabulary rows). Observations (S7-03) store `value_term_id`. **Introduce** kind/edge Properties (`event_type`, `role`, `relationship_type`) here as `term` — they are **not** seeded as `text` in S7-01. Install seeds those Properties + bindings + **large** product term sets ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.4–3.6); registry declares term capabilities (birthday, tree-edge, …). **`term` Properties are registry-only** — Create Property for `origin=user` refuses `value_type = term` (Subject fields offers the other five types only). Researchers may mint `origin=user` **term rows** under those registry Properties via composer picker **Add custom…** (rename/delete when unused) — **no** Event types / Roles CatalogVocabulary destinations. Plugins that add bridge or kind subjects contribute term-typed Properties + term sets through the same `subjectvocab` registry shape.
+
+Authoritative schema notes: [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) §5.1.1. Design decision: [`interpretation-graph-ui.md`](../../ideas/interpretation-graph-ui.md) #23.
+
+| | |
+| --- | --- |
+| **In** | Migration: `property_terms`; extend `properties.value_type` CHECK with `term`; Go package + audited CRUD for terms; registry `seedProperties`/`seedBindings`/`seedTerms` for kind/edge + term capabilities; FFI list/create/update/delete (user **term rows**; product terms locked); Create Property refuses `term` for user origin; docs/skill updates. |
+| **Out** | Observation writers (S7-03); composer term picker UI (S7-08 / S7-D4); Subject fields layout (S7-05); Event types / Roles sidebar destinations; researcher-created term-typed Properties. |
+| **Testable** | New project seeds term-typed kind/edge Properties + term rows; Lookup by `(property, key, origin)`; refuse delete while in use; product terms not user-editable; user Create Property with `term` refused; registry capability helpers. |
+| **Depends on** | **S7-01**. **Not** gated on design (S7-D2 must not offer `term` in create Property). |
 
 ---
 
@@ -352,27 +388,27 @@ Lives on the **Observations branch**, not the Subject fields branch. Needed so *
 
 ## S7-03 — Citations + Observations + locator validation
 
-`citations`, `citation_notes`, `observations`, `observation_notes`; value columns for the five types only; Go locator validate (`page`, `region`; optional `text_quote`); atomic “create Citation + Observations” RPC; graph payload includes Observations for card rows.
+`citations`, `citation_notes`, `observations`, `observation_notes`; value columns for the six types (including **`value_term_id`**); Go locator validate (`page`, `region`; optional `text_quote`); atomic “create Citation + Observations” RPC; graph payload includes Observations for card rows.
 
 | | |
 | --- | --- |
 | **In** | Migrations, Go packages, locator invariants, FFI macros, graph query enrichment. |
 | **Out** | Composer UI; card chrome. |
-| **Testable** | Go locator reject/accept; atomic create; FakeStore. |
-| **Depends on** | S7-01, S7-02 (name column / FK). |
+| **Testable** | Go locator reject/accept; atomic create (text + term); FakeStore. |
+| **Depends on** | S7-01, **S7-01b**, S7-02 (name column / FK). |
 
 ---
 
 ## S7-05 — Subject fields UI
 
-Properties + `subject_type_fields` bindings; five value_types only (including **`name` as a type label** — no NameValue editor). Bindings pick among **seeded** Subject types only. Implement the **S7-D2** IA.
+Properties + `subject_type_fields` bindings; researcher create offers **five** value_types (`text` / `integer` / `date` / `name` / `subject`). Seeded **`term`** Properties from the registry appear in the list/bindings like any other Property but are not creatable here. Implement the **S7-D2** IA. Do **not** invent Event types / Roles destinations — user **term rows** under registry term Properties are composer-local (S7-D4).
 
 | | |
 | --- | --- |
-| **In** | Browse/create/edit at scale; search/filter; bind to seeded Subject types; respect registry **locked** bindings. |
-| **Out** | Composer; NameValue tables/editor; Observation editors; Subject types CRUD; Source-fields layout reuse. |
-| **Testable** | Find a Property in a long list; create a `name`-typed Property; bind a field; locked binding cannot be removed. |
-| **Depends on** | S7-01, **S7-D2** — **not** S7-02 / S7-02b. |
+| **In** | Browse/create/edit at scale; search/filter; bind to seeded Subject types; respect registry **locked** bindings; create Property with five researcher value_types only. |
+| **Out** | Composer; NameValue tables/editor; Observation editors; Subject types CRUD; Source-fields layout reuse; Event types / Roles admin; offering `term` in create Property. |
+| **Testable** | Find a Property in a long list; create a `name`-typed Property; bind a field; locked binding cannot be removed; create UI has no `term` option. |
+| **Depends on** | S7-01, **S7-01b**, **S7-D2** — **not** S7-02 / S7-02b. |
 
 ---
 
@@ -476,8 +512,9 @@ Honesty pass against the [goal bar](#goal-dogfood-bar), including viewers/locato
 | NameValue schema + reusable editor (S7-D5 stream) | Conclusion name_format |
 | Durable connect via composer | Citation pinning across graph edits |
 | Card cited-property rows | Unplaced tray, minimap, auto-layout |
-| Five value-type editors | `real` / `boolean`; full conflicted/negated visual language |
+| Five→six value-type editors (incl. term picker) | `real` / `boolean`; full conflicted/negated visual language |
 | Seeded Subject types (Spike 5) | **Subject types** CatalogVocabulary / user-defined types |
+| Property terms (S7-01b) | Event types / Roles admin destinations; free-text kind/edge values |
 
 ---
 
@@ -492,7 +529,8 @@ Honesty pass against the [goal bar](#goal-dogfood-bar), including viewers/locato
 7. **NameValue ≠ transcription** — transcription stays on the Citation; NameValue is the Observation normalization.
 8. **Drop `real` / `boolean` in model docs** when shipping S7-01/S7-03 so product and schema stay aligned.
 9. **No sprinkled type keys** — placeability, palette membership, and **all type-keyed chrome** (card names, icons, colors, line/gradient tokens), bridge vs root, locked bindings, and connect pairs come from the S7-01 Interpretation subject registry. Views resolve tokens; they do not own `EvidencePrimaryKind` / style switch maps.
-10. **Plugin path is the registry** — when plugins arrive, they extend Install/registry modules with the same capability fields; do not invent a second configuration channel.
+10. **Plugin path is the registry** — when plugins arrive, they extend Install/registry modules with the same capability fields (including **Property term** sets); do not invent a second configuration channel.
+11. **Kind/edge values are Property terms** — do not write free-text Observations for `event_type` / `role` / `relationship_type` after S7-01b; do not use `subjects.label` as type identity; do not let researchers create Properties with `value_type = term`.
 
 ---
 

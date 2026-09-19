@@ -36,9 +36,9 @@ Subject types and Properties are first-class data. Provenencia ships with a usef
 
 All Properties, including user-defined Properties, declare a value type. Unknown or custom vocabulary remains preservable and generically usable even when the core application has no specialized semantics for it.
 
-Predicate _values_ such as `event_type` and participation `role` are likewise open text vocabulary: seeded with useful defaults, researcher-extensible, and not enforced as closed database enums. The Interpretation layer must remain ready for event kinds and roles the product cannot anticipate. Those free-text value sets are not origin-namespaced definition tables.
+Predicate _values_ that carry **kind or edge identity** — notably `event_type`, participation `role`, and `relationship_type` — are **Property terms**: origin-namespaced vocabulary rows (`property_terms`), not free-text Observation strings. Observations store `value_term_id`. Product and plugins seed large term sets; researchers may add `origin=user` terms for the long tail. First-class UI behavior (birthday facets, family-tree edges, connect disambiguation) attaches to recognized `(property key, term key, origin)` pairs in the Interpretation subject registry — without encoding birth-specific tables.
 
-Core application logic and future plugins may provide first-class behavior for recognized `(key, origin)` pairs while leaving storage generic. For example, the application may treat an Event with `event_type = birth` and a Participation with `role = subject` as that person's birth, without requiring the schema to encode birth-specific tables or mandatory role constraints.
+Free text remains appropriate for true prose Properties (`remark`, `toponym`, researcher-defined notes), not for kind/edge vocabulary. Name part `type` strings stay an open part vocabulary on NameValue (see [`structured-name-model.md`](structured-name-model.md)); they are not Property terms.
 
 ## 1.4 Derived semantics belong to the application layer
 
@@ -544,18 +544,23 @@ CREATE TABLE properties (
     CHECK (value_type IN (
         'text',
         'integer',
-        'real',
-        'boolean',
         'date',
         'name',
-        'subject'
+        'subject',
+        'term'
     ))
 ) STRICT;
 ```
 
 `origin` and `UNIQUE (key, origin)` follow [`seeded-vocabulary.md`](seeded-vocabulary.md) §1.1. Observations and Reconciliation Claims reference `properties.id`, not bare `key`.
 
-A Property's `value_type` is intrinsic to the Property. Seeded Properties (for example `name`, `birth_date`, `event_type`, `role`, `person`, `mentions`, `remark`) and their `subject_type_fields` bindings are listed in [`seeded-vocabulary.md`](seeded-vocabulary.md).
+A Property's `value_type` is intrinsic to the Property. Seeded Properties (for example `name`, `event_type`, `role`, `person`, `mentions`, `remark`) and their `subject_type_fields` bindings are listed in [`seeded-vocabulary.md`](seeded-vocabulary.md).
+
+Product value types are **`text`**, **`integer`**, **`date`**, **`name`**, **`subject`**, and **`term`**. `real` and `boolean` are not used.
+
+`value_type = 'term'` means the Observation value is a row in `property_terms` for that Property (§5.1.1). Kind and edge Properties (`event_type`, `role`, `relationship_type`) use `term`.
+
+**Who may create a Property with `value_type = term`:** product/plugin Install (Interpretation subject registry) only. Researcher Property create (`origin=user`) must **not** offer or accept `term` — those Properties stay `text` / `integer` / `date` / `name` / `subject`. Researchers may still mint additional **term rows** (`origin=user`) under an existing registry term Property via the composer picker.
 
 The semantic vocabulary is open, but the primitive value system is intentionally constrained. A researcher may define a new Property without introducing a new storage type.
 
@@ -567,7 +572,28 @@ The semantic vocabulary is open, but the primitive value system is intentionally
 
 Application semantics attach to stable `key` values within an origin, matching `subject_types`. Seeded Properties may receive first-class application behavior. User-defined Properties remain first-class persisted data and can be generically displayed, searched, audited, synced, and referenced. Plugins may add specialized semantics for additional Properties later under `plugin:<plugin_id>` origins.
 
-Open text values such as `event_type` and `role` are seeded with common defaults for pickers but remain researcher-extensible; see [`seeded-vocabulary.md`](seeded-vocabulary.md). The schema does not close those sets or require particular roles for particular event types; first-class workflows recognize well-known values in application logic.
+### 5.1.1 `property_terms`
+
+Categorical values for Properties with `value_type = 'term'`. Same origin rules as other vocabulary-definition tables ([`seeded-vocabulary.md`](seeded-vocabulary.md) §1.1).
+
+```sql
+CREATE TABLE property_terms (
+    id           BLOB PRIMARY KEY,
+    property_id  BLOB NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+    key          TEXT NOT NULL,
+    origin       TEXT NOT NULL,             -- provenencia | user | plugin:<id>
+    label        TEXT NOT NULL,
+    description  TEXT,
+
+    UNIQUE (property_id, key, origin)
+) STRICT;
+```
+
+Domain rows (Observations, and later Reconciliation Claims when term-valued) reference `property_terms.id`, never bare `key`. Application recognition of shipped terms looks up `(property key, term key, origin = 'provenencia')`.
+
+**Policy (product default for kind/edge Properties):** Install (registry) is the only path that creates Properties with `value_type = term`. Install seeds a **large** product term set so `other` is rare. Researchers may mint additional `origin=user` **term rows** under those Properties (composer picker **Add custom…**, with rename/delete when unused — not a per-vocabulary sidebar destination). Product/plugin terms are not researcher-editable. First-class behavior (capabilities) is declared in the Interpretation subject registry on recognized terms; user term rows remain valid identity without app specialization.
+
+`subjects.label` stays a free working handle on the Evidence graph. It is **not** event-type or role identity.
 
 Interactions between `source` subjects should stay deliberately lightweight. Provenencia does not seed a fine-grained source-quality ontology (`is_authentic`, defect codes, and similar) as Observation Properties.
 
@@ -586,33 +612,37 @@ This table defines which Properties are valid for which Subject types. It is a j
 
 ```sql
 CREATE TABLE subject_type_fields (
-    subject_type_id BLOB NOT NULL REFERENCES subject_types(id),
-    property_id     BLOB NOT NULL REFERENCES properties(id),
+    subject_type_id BLOB NOT NULL REFERENCES subject_types(id) ON DELETE CASCADE,
+    property_id     BLOB NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+    sort_order      INTEGER NOT NULL,
 
     PRIMARY KEY (subject_type_id, property_id)
 ) STRICT;
 ```
 
+`sort_order` orders Add-property menus and Subject fields lists. Locked bindings (cannot unbind while required for connect macros, Conclusion ordering, or other product integrity) live in the compiled Interpretation subject registry (`subjectvocab`), not as a column here.
+
 For example (full matrix in [`seeded-vocabulary.md`](seeded-vocabulary.md)):
 
 ```text
 person        -> name
-person        -> birth_date
 
-event         -> event_type
-event         -> date
+event         -> event_type   # S7-01b (term); create-time Install may omit until then
+event         -> date         # locked (point / ordering)
+event         -> start_date   # locked (span start)
+event         -> end_date     # locked (span end)
 
 place         -> toponym
 
 participation -> person
 participation -> event
-participation -> role
+participation -> role         # S7-01b (term)
 
 location      -> event
 location      -> place
 
 relationship  -> participant
-relationship  -> relationship_type
+relationship  -> relationship_type  # S7-01b (term)
 
 source        -> mentions
 source        -> remark
@@ -749,17 +779,18 @@ Absence of any name Observation means the name is unknown from that evidence. It
 
 This distinction lets Observation values remain strongly typed without attempting to reproduce every possible source representation.
 
-The intended primitive value categories are currently:
+The intended primitive value categories are:
 
 ```text
 text
 integer
-real
-boolean
 date
 name
 subject
+term
 ```
+
+(`real` and `boolean` are not product value types.)
 
 A provisional SQL shape is:
 
@@ -774,14 +805,12 @@ CREATE TABLE observations (
 
     value_text      TEXT,
     value_integer   INTEGER,
-    value_real      REAL,
-    value_boolean   INTEGER,
     value_date_id   BLOB REFERENCES date_values(id),
     value_name_id   BLOB REFERENCES name_values(id),
     value_subject_id BLOB REFERENCES subjects(id),
+    value_term_id   BLOB REFERENCES property_terms(id),
 
-    CHECK (polarity IN ('positive', 'negative')),
-    CHECK (value_boolean IS NULL OR value_boolean IN (0, 1))
+    CHECK (polarity IN ('positive', 'negative'))
 ) STRICT;
 ```
 
@@ -841,7 +870,7 @@ The current design aims to preserve these invariants:
 17. Application logic may constrain the target Subject type of subject-valued Properties for seeded vocabulary; that is not enforced as SQL allow-lists in this draft.
 18. Citation text/description preserves the evidence representation; Observations contain normalized interpretation.
 19. Derived genealogical semantics are not duplicated into the Interpretation graph merely for convenience.
-20. Unknown/custom Subject types, Properties, and open vocabulary values (such as event types and roles) remain preservable and generically usable without first-class application support.
+20. Unknown/custom Subject types, Properties, and Property terms (including `origin=user` terms) remain preservable and generically usable without first-class application support; capabilities attach only to recognized `(key, origin)` pairs.
 21. First-class application behavior may recognize seeded `(key, origin = 'provenencia')` pairs and open values; it must not require the schema to close those vocabularies or encode every genealogical edge case.
 22. Source credibility assessments are Interpretation entities (`source_credibility_assessments`), not columns on `sources` and not Observation confidence scores.
 23. Citation transcription certainty is the boolean `transcription_uncertain` (+ optional note), media-agnostic; it is not Claim confidence.

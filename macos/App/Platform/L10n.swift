@@ -3729,6 +3729,34 @@ enum L10n {
             defaultValue: "Invalid source vocabulary.",
             comment: "FFI error sourcevocab.invalid"
         )
+        static let propertiesInvalid = LocalizedStringResource(
+            "error.properties.invalid",
+            defaultValue: "Invalid property.",
+            comment: "FFI error properties.invalid"
+        )
+        static func propertiesDuplicateKey(key: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "error.properties.duplicate_key",
+                defaultValue: "You already have a property with the key %@. Give this one a different label.",
+                comment: "FFI error properties.duplicate_key; argument is the colliding key"
+            ))
+            return String(format: format, locale: .current, key)
+        }
+        static let propertiesInUse = LocalizedStringResource(
+            "error.properties.in_use",
+            defaultValue: "That property is still bound to one or more subject types.",
+            comment: "FFI error properties.in_use"
+        )
+        static let subjectVocabInvalid = LocalizedStringResource(
+            "error.subjectvocab.invalid",
+            defaultValue: "Invalid subject vocabulary.",
+            comment: "FFI error subjectvocab.invalid"
+        )
+        static let subjectVocabLocked = LocalizedStringResource(
+            "error.subjectvocab.locked",
+            defaultValue: "That binding is locked by the product vocabulary and cannot be removed.",
+            comment: "FFI error subjectvocab.locked"
+        )
         static let dateValuesInvalid = LocalizedStringResource(
             "error.datevalues.invalid",
             defaultValue: "Invalid date value.",
@@ -3868,6 +3896,16 @@ enum L10n {
                 return String(localized: sourceFieldsInUse)
             case "sourcevocab.invalid":
                 return String(localized: sourceVocabInvalid)
+            case "properties.invalid":
+                return String(localized: propertiesInvalid)
+            case "properties.duplicate_key":
+                return propertiesDuplicateKey(key: params.first ?? "?")
+            case "properties.in_use":
+                return String(localized: propertiesInUse)
+            case "subjectvocab.invalid":
+                return String(localized: subjectVocabInvalid)
+            case "subjectvocab.locked":
+                return String(localized: subjectVocabLocked)
             case "datevalues.invalid":
                 return String(localized: dateValuesInvalid)
             case "filederivatives.invalid":

@@ -61,6 +61,16 @@ enum Method {
   METHOD_SET_SUBJECT_POSITION = 50;
   METHOD_CLEAR_SUBJECT_POSITION = 51;
   METHOD_LIST_SUBJECT_POSITIONS = 52;
+  METHOD_LIST_PROPERTIES = 53;
+  METHOD_CREATE_PROPERTY = 54;
+  METHOD_UPDATE_PROPERTY = 55;
+  METHOD_DELETE_PROPERTY = 56;
+  METHOD_LIST_SUBJECT_TYPE_FIELDS = 57;
+  METHOD_ASSIGN_SUBJECT_TYPE_FIELD = 58;
+  METHOD_REMOVE_SUBJECT_TYPE_FIELD = 59;
+  METHOD_LIST_PLACEABLE_SUBJECT_TYPES = 60;
+  METHOD_GET_SUBJECT_TYPE_PRESENTATION = 61;
+  METHOD_LIST_CONNECT_RULES = 62;
 }
 
 message PingRequest {
@@ -846,6 +856,139 @@ message ListSubjectPositionsRequest {
 
 message ListSubjectPositionsResponse {
   repeated SubjectPosition positions = 1;
+}
+
+// Property is one properties vocabulary row (Observation predicate).
+message Property {
+  string id = 1;
+  string key = 2;
+  string origin = 3;
+  string label = 4;
+  string description = 5;
+  string value_type = 6; // text | integer | date | name | subject
+  int32 used_by = 7; // subject_type_fields references; delete only at 0
+}
+
+message SubjectTypeField {
+  Property property = 1;
+  int32 sort_order = 2;
+  bool locked = 3; // registry-locked; client must not offer remove
+}
+
+message SubjectTypePresentation {
+  string type_key = 1;
+  string l10n_key = 2;
+  string icon_symbol = 3;
+  string ink_token = 4;
+  string tint_token = 5;
+  string chip_token = 6;
+  string line_token = 7;
+  string edge_from_token = 8;
+  string edge_to_token = 9;
+  string role = 10; // root | bridge | reification
+  bool placeable = 11;
+  int32 palette_sort = 12;
+  bool requires_citation_at_create = 13;
+  string label = 14; // English seed fallback
+}
+
+message ConnectRule {
+  string from_type_key = 1;
+  string to_type_key = 2;
+  string bridge_type_key = 3;
+  repeated string edge_property_keys = 4;
+  string disambiguation = 5; // none | role | relationship_type | person_person_choice
+  bool refuse = 6;
+}
+
+message ListPropertiesRequest {
+  string project_dir = 1;
+}
+
+message ListPropertiesResponse {
+  repeated Property properties = 1;
+}
+
+message CreatePropertyRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  reserved 3;
+  reserved "key";
+  string label = 4;
+  string value_type = 5;
+  string description = 6;
+}
+
+message CreatePropertyResponse {
+  Property property = 1;
+}
+
+message UpdatePropertyRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string property_id = 3;
+  string label = 4;
+  string value_type = 5;
+  string description = 6;
+}
+
+message UpdatePropertyResponse {
+  Property property = 1;
+}
+
+message DeletePropertyRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string property_id = 3;
+}
+
+message DeletePropertyResponse {}
+
+message ListSubjectTypeFieldsRequest {
+  string project_dir = 1;
+  string subject_type_id = 2;
+}
+
+message ListSubjectTypeFieldsResponse {
+  repeated SubjectTypeField fields = 1;
+}
+
+message AssignSubjectTypeFieldRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string subject_type_id = 3;
+  string property_id = 4;
+}
+
+message AssignSubjectTypeFieldResponse {}
+
+message RemoveSubjectTypeFieldRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string subject_type_id = 3;
+  string property_id = 4;
+}
+
+message RemoveSubjectTypeFieldResponse {}
+
+message ListPlaceableSubjectTypesRequest {}
+
+message ListPlaceableSubjectTypesResponse {
+  repeated SubjectTypePresentation types = 1;
+}
+
+message GetSubjectTypePresentationRequest {
+  string type_key = 1;
+}
+
+message GetSubjectTypePresentationResponse {
+  SubjectTypePresentation presentation = 1;
+}
+
+message ListConnectRulesRequest {}
+
+message ListConnectRulesResponse {
+  repeated ConnectRule rules = 1;
 }
 
 // ErrorKind classifies a failure for client UX (tone, retry hints). Copy still

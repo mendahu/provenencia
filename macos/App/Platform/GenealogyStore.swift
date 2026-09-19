@@ -130,6 +130,54 @@ struct CatalogSubjectPosition: Sendable, Equatable {
     var gridY: Int64
 }
 
+struct CatalogProperty: Sendable, Equatable, Identifiable {
+    var id: String
+    var key: String
+    var origin: String
+    var label: String
+    var description: String
+    /// text | integer | date | name | subject
+    var valueType: String
+    /// subject_type_fields references; delete only at 0.
+    var usedBy: Int = 0
+}
+
+struct CatalogSubjectTypeField: Sendable, Equatable, Identifiable {
+    var property: CatalogProperty
+    var sortOrder: Int
+    var locked: Bool
+
+    var id: String { property.id }
+}
+
+struct CatalogSubjectTypePresentation: Sendable, Equatable, Identifiable {
+    var typeKey: String
+    var l10nKey: String
+    var iconSymbol: String
+    var inkToken: String
+    var tintToken: String
+    var chipToken: String
+    var lineToken: String
+    var edgeFromToken: String
+    var edgeToToken: String
+    var role: String
+    var placeable: Bool
+    var paletteSort: Int
+    var requiresCitationAtCreate: Bool
+    var label: String
+
+    var id: String { typeKey }
+}
+
+struct CatalogConnectRule: Sendable, Equatable {
+    var fromTypeKey: String
+    var toTypeKey: String
+    var bridgeTypeKey: String
+    var edgePropertyKeys: [String]
+    var disambiguation: String
+    var refuse: Bool
+}
+
 struct CatalogCredibilityAssessment: Sendable, Equatable {
     var id: String
     var sourceID: String
@@ -466,4 +514,38 @@ protocol GenealogyStore: Sendable {
     ) async throws -> CatalogSubjectPosition
     func clearSubjectPosition(projectDir: String, subjectID: String) async throws
     func listSubjectPositions(projectDir: String, sourceID: String) async throws -> [CatalogSubjectPosition]
+
+    func listProperties(projectDir: String) async throws -> [CatalogProperty]
+    func createProperty(
+        projectDir: String,
+        userID: String,
+        label: String,
+        valueType: String,
+        description: String
+    ) async throws -> CatalogProperty
+    func updateProperty(
+        projectDir: String,
+        userID: String,
+        propertyID: String,
+        label: String,
+        valueType: String,
+        description: String
+    ) async throws -> CatalogProperty
+    func deleteProperty(projectDir: String, userID: String, propertyID: String) async throws
+    func listSubjectTypeFields(projectDir: String, subjectTypeID: String) async throws -> [CatalogSubjectTypeField]
+    func assignSubjectTypeField(
+        projectDir: String,
+        userID: String,
+        subjectTypeID: String,
+        propertyID: String
+    ) async throws
+    func removeSubjectTypeField(
+        projectDir: String,
+        userID: String,
+        subjectTypeID: String,
+        propertyID: String
+    ) async throws
+    func listPlaceableSubjectTypes() async throws -> [CatalogSubjectTypePresentation]
+    func getSubjectTypePresentation(typeKey: String) async throws -> CatalogSubjectTypePresentation
+    func listConnectRules() async throws -> [CatalogConnectRule]
 }

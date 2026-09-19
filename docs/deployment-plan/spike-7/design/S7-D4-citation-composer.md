@@ -5,7 +5,7 @@
 **Implements later as:** PR **S7-08** (thin submit path); viewers/locators/NameValue fill in via **S7-06 / S7-07 / S7-02b**  
 **Depends on:** Evidence graph handoff designed in **S7-D3**; NameValue editor designed separately in **S7-D5** (composer only hosts it)  
 **Related briefs:** [`S7-D3`](S7-D3-evidence-graph-updates.md) — graph entry / return; [`S7-D5`](S7-D5-name-value-editor.md) — NameValue modal  
-**Phase the board:** prioritize shell + form + text Observations + breadcrumbs (enough for S7-08). Viewer, locator tools, and NameValue host can be later frames on the same board.
+**Phase the board:** prioritize shell + form + text/term Observations + breadcrumbs (enough for S7-08). Viewer, locator tools, and NameValue host can be later frames on the same board.
 
 Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](README.md) first.
 
@@ -38,7 +38,8 @@ Also decide **breadcrumbs**, title, and cancel/submit chrome so Back/Forward and
 | Citation needs an Artifact | First step or left-rail: pick Artifact when Source has many; auto-select when one. |
 | Locator is composable | Tools: **page** (PDF), **region** polygon (image or PDF page). Nestable (page then region). |
 | One Citation → many Observations | Form: citation block once; observation list with Add; single submit. |
-| Value types | Editors for text, integer, date (existing DateValue), name (**open S7-D5 NameValue modal**), subject (graph-scoped picker). No real/boolean. |
+| Value types | Editors for text, integer, **term** (searchable term picker), date (existing DateValue), name (**open S7-D5 NameValue modal**), subject (graph-scoped picker). No real/boolean. |
+| Property terms | Kind/edge Properties (`event_type`, `role`, `relationship_type`) pick a `property_terms` row — not free text. Product terms are fixed; **Add custom…** / rename / delete (when unused) for `origin=user` only. No Event types / Roles destinations. |
 | Transcription ≠ Observation | Citation: transcription, uncertain flag, note, description. Observations: Property + polarity + typed value. |
 | Media MVP | Image + PDF only. Unsupported Artifact types: honest empty / disable with explanation. |
 | Own a11y tree | This place is not an overlay on the canvas — design focus order for viewer + form. |
@@ -100,10 +101,11 @@ Workspace location needs a discriminant beyond page|graph (e.g. `citationCompose
 | CC-6 | **Citation fields:** transcription, uncertain + note, description (and notes if in scope). |
 | CC-7 | **Observations list:** Add/remove rows; Property picker filtered by subject type bindings; polarity; typed value editor. |
 | CC-8 | **Host** NameValue modal designed in **S7-D5**; reuse DateValue; subject picker scoped to this Source’s graph. Do not redesign NameValue on this board. |
-| CC-9 | **Submit** writes one Citation + N Observations; **Cancel / Back** writes nothing. |
-| CC-10 | Breadcrumbs + page title per §3; toolbar Back works. |
-| CC-11 | Accessibility: complete keyboard path for form and tools; VoiceOver structure for this place alone. |
-| CC-12 | Connect-prefilled mode: show that two edge Observations are required/pre-filled without looking like a broken empty form. |
+| CC-9 | **Term picker** for `value_type = term`: searchable list of installed terms for that Property; **Add custom…** creates `origin=user` term; rename/delete user terms when unused; product/plugin terms not editable. |
+| CC-10 | **Submit** writes one Citation + N Observations; **Cancel / Back** writes nothing. |
+| CC-11 | Breadcrumbs + page title per §3; toolbar Back works. |
+| CC-12 | Accessibility: complete keyboard path for form and tools; VoiceOver structure for this place alone. |
+| CC-13 | Connect-prefilled mode: show that two edge Observations are required/pre-filled without looking like a broken empty form. |
 
 ---
 
@@ -111,7 +113,7 @@ Workspace location needs a discriminant beyond page|graph (e.g. `citationCompose
 
 **Must for S7-08 (thin):**
 
-1. Composer shell with form + text Observation; left pane placeholder or Artifact metadata only.
+1. Composer shell with form + text or **term** Observation; left pane placeholder or Artifact metadata only.
 2. Artifact picker (multi-Artifact Source).
 3. Breadcrumb states: Add-property path (and Connect path if sketched).
 4. No-Artifact empty state.

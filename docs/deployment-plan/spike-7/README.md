@@ -10,7 +10,9 @@ Stand up the Interpretation **Citation → Observation** pipeline on the Evidenc
 
 > **Composer is Option B:** navigate away from the graph to a first-class workspace place (viewer \| form). Not an in-window modal over the canvas, and not a companion `NSWindow`.
 
-> **Subject types are not user-editable.** The seven seeded kinds (person / event / place / bridges / source) stay product-seeded with first-class graph plumbing. No Subject types CatalogVocabulary UI in this spike (S7-D1 / S7-04 descoped). Behavior (capabilities, locked bindings, connect matrix) is declared in one **Interpretation subject registry** in S7-01 — the plugin extension point later.
+> **Subject types are not user-editable.** The seven seeded kinds (person / event / place / bridges / source) stay product-seeded with first-class graph plumbing. No Subject types CatalogVocabulary UI in this spike (S7-D1 / S7-04 descoped). Behavior (capabilities, locked bindings, connect matrix, **Property term** sets) is declared in one **Interpretation subject registry** in S7-01 / **S7-01b** — the plugin extension point later.
+
+> **Property terms (S7-01b):** kind/edge Properties (`event_type`, `role`, `relationship_type`) use `value_type = term` + `property_terms` — registry-driven only (not offered in Subject fields create). No Event types / Roles admin destinations; composer picker ± Add custom for user **term rows**.
 
 ## Documents
 
@@ -22,13 +24,14 @@ Stand up the Interpretation **Citation → Observation** pipeline on the Evidenc
 
 ## Relationship to Spike 5 / 6 / later
 
-Spike 5 shipped subjects, positions, Subject types seed, and Sources-family stubs. Spike 6 shipped the canvas prototype (provisional connect). Spike 7 is slices **3–7** of the design note collapsed into one spike: Subject **fields** editor (not types), artifact viewer + Citations, Observations (five value types including NameValue as its **own design stream**), and durable connect.
+Spike 5 shipped subjects, positions, Subject types seed, and Sources-family stubs. Spike 6 shipped the canvas prototype (provisional connect). Spike 7 is slices **3–7** of the design note collapsed into one spike: Subject **fields** editor (not types), **Property terms**, artifact viewer + Citations, Observations (six value types including NameValue as its **own design stream**), and durable connect.
 
 **Later (not this spike):** Source-page `mentions` / `remark`, audio/video composers, Citation pinning across graph edits, conflicted/negated visual language, unplaced tray / minimap, removing the Subject types sidebar stub if desired.
 
 ## Out of scope (for this spike)
 
 - **Subject types** CatalogVocabulary editor / user-defined Subject types (product-seeded + first-class only)
+- Event types / Roles / Relationship-types CatalogVocabulary destinations (Property terms use composer picker ± Add custom)
 - In-window composer modal over the graph; companion `NSWindow`
 - `real` / `boolean` Property value types
 - Audio / video / QuickLook-as-composer

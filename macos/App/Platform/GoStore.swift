@@ -775,6 +775,142 @@ struct GoStore: GenealogyStore {
         return resp.positions.map(Self.mapSubjectPosition)
     }
 
+    func listProperties(projectDir: String) async throws -> [CatalogProperty] {
+        var req = Provenencia_Engine_V1_ListPropertiesRequest()
+        req.projectDir = projectDir
+        let resp: Provenencia_Engine_V1_ListPropertiesResponse = try await provenenciaCall(
+            method: CoreMethod.listProperties,
+            request: req
+        )
+        return resp.properties.map(Self.mapProperty)
+    }
+
+    func createProperty(
+        projectDir: String,
+        userID: String,
+        label: String,
+        valueType: String,
+        description: String
+    ) async throws -> CatalogProperty {
+        var req = Provenencia_Engine_V1_CreatePropertyRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.label = label
+        req.valueType = valueType
+        req.description_p = description
+        let resp: Provenencia_Engine_V1_CreatePropertyResponse = try await provenenciaCall(
+            method: CoreMethod.createProperty,
+            request: req
+        )
+        return Self.mapProperty(resp.property)
+    }
+
+    func updateProperty(
+        projectDir: String,
+        userID: String,
+        propertyID: String,
+        label: String,
+        valueType: String,
+        description: String
+    ) async throws -> CatalogProperty {
+        var req = Provenencia_Engine_V1_UpdatePropertyRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.propertyID = propertyID
+        req.label = label
+        req.valueType = valueType
+        req.description_p = description
+        let resp: Provenencia_Engine_V1_UpdatePropertyResponse = try await provenenciaCall(
+            method: CoreMethod.updateProperty,
+            request: req
+        )
+        return Self.mapProperty(resp.property)
+    }
+
+    func deleteProperty(projectDir: String, userID: String, propertyID: String) async throws {
+        var req = Provenencia_Engine_V1_DeletePropertyRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.propertyID = propertyID
+        let _: Provenencia_Engine_V1_DeletePropertyResponse = try await provenenciaCall(
+            method: CoreMethod.deleteProperty,
+            request: req
+        )
+    }
+
+    func listSubjectTypeFields(projectDir: String, subjectTypeID: String) async throws -> [CatalogSubjectTypeField] {
+        var req = Provenencia_Engine_V1_ListSubjectTypeFieldsRequest()
+        req.projectDir = projectDir
+        req.subjectTypeID = subjectTypeID
+        let resp: Provenencia_Engine_V1_ListSubjectTypeFieldsResponse = try await provenenciaCall(
+            method: CoreMethod.listSubjectTypeFields,
+            request: req
+        )
+        return resp.fields.map(Self.mapSubjectTypeField)
+    }
+
+    func assignSubjectTypeField(
+        projectDir: String,
+        userID: String,
+        subjectTypeID: String,
+        propertyID: String
+    ) async throws {
+        var req = Provenencia_Engine_V1_AssignSubjectTypeFieldRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.subjectTypeID = subjectTypeID
+        req.propertyID = propertyID
+        let _: Provenencia_Engine_V1_AssignSubjectTypeFieldResponse = try await provenenciaCall(
+            method: CoreMethod.assignSubjectTypeField,
+            request: req
+        )
+    }
+
+    func removeSubjectTypeField(
+        projectDir: String,
+        userID: String,
+        subjectTypeID: String,
+        propertyID: String
+    ) async throws {
+        var req = Provenencia_Engine_V1_RemoveSubjectTypeFieldRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.subjectTypeID = subjectTypeID
+        req.propertyID = propertyID
+        let _: Provenencia_Engine_V1_RemoveSubjectTypeFieldResponse = try await provenenciaCall(
+            method: CoreMethod.removeSubjectTypeField,
+            request: req
+        )
+    }
+
+    func listPlaceableSubjectTypes() async throws -> [CatalogSubjectTypePresentation] {
+        let req = Provenencia_Engine_V1_ListPlaceableSubjectTypesRequest()
+        let resp: Provenencia_Engine_V1_ListPlaceableSubjectTypesResponse = try await provenenciaCall(
+            method: CoreMethod.listPlaceableSubjectTypes,
+            request: req
+        )
+        return resp.types.map(Self.mapSubjectTypePresentation)
+    }
+
+    func getSubjectTypePresentation(typeKey: String) async throws -> CatalogSubjectTypePresentation {
+        var req = Provenencia_Engine_V1_GetSubjectTypePresentationRequest()
+        req.typeKey = typeKey
+        let resp: Provenencia_Engine_V1_GetSubjectTypePresentationResponse = try await provenenciaCall(
+            method: CoreMethod.getSubjectTypePresentation,
+            request: req
+        )
+        return Self.mapSubjectTypePresentation(resp.presentation)
+    }
+
+    func listConnectRules() async throws -> [CatalogConnectRule] {
+        let req = Provenencia_Engine_V1_ListConnectRulesRequest()
+        let resp: Provenencia_Engine_V1_ListConnectRulesResponse = try await provenenciaCall(
+            method: CoreMethod.listConnectRules,
+            request: req
+        )
+        return resp.rules.map(Self.mapConnectRule)
+    }
+
     private static func mapOriginCounts(
         _ c: Provenencia_Engine_V1_VocabularyOriginCounts
     ) -> WorkspaceNavOriginCounts {
@@ -949,6 +1085,58 @@ struct GoStore: GenealogyStore {
 
     private static func mapSubjectPosition(_ p: Provenencia_Engine_V1_SubjectPosition) -> CatalogSubjectPosition {
         CatalogSubjectPosition(subjectID: p.subjectID, gridX: p.gridX, gridY: p.gridY)
+    }
+
+    private static func mapProperty(_ p: Provenencia_Engine_V1_Property) -> CatalogProperty {
+        CatalogProperty(
+            id: p.id,
+            key: p.key,
+            origin: p.origin,
+            label: p.label,
+            description: p.description_p,
+            valueType: p.valueType,
+            usedBy: Int(p.usedBy)
+        )
+    }
+
+    private static func mapSubjectTypeField(_ f: Provenencia_Engine_V1_SubjectTypeField) -> CatalogSubjectTypeField {
+        CatalogSubjectTypeField(
+            property: Self.mapProperty(f.property),
+            sortOrder: Int(f.sortOrder),
+            locked: f.locked
+        )
+    }
+
+    private static func mapSubjectTypePresentation(
+        _ p: Provenencia_Engine_V1_SubjectTypePresentation
+    ) -> CatalogSubjectTypePresentation {
+        CatalogSubjectTypePresentation(
+            typeKey: p.typeKey,
+            l10nKey: p.l10NKey,
+            iconSymbol: p.iconSymbol,
+            inkToken: p.inkToken,
+            tintToken: p.tintToken,
+            chipToken: p.chipToken,
+            lineToken: p.lineToken,
+            edgeFromToken: p.edgeFromToken,
+            edgeToToken: p.edgeToToken,
+            role: p.role,
+            placeable: p.placeable,
+            paletteSort: Int(p.paletteSort),
+            requiresCitationAtCreate: p.requiresCitationAtCreate,
+            label: p.label
+        )
+    }
+
+    private static func mapConnectRule(_ r: Provenencia_Engine_V1_ConnectRule) -> CatalogConnectRule {
+        CatalogConnectRule(
+            fromTypeKey: r.fromTypeKey,
+            toTypeKey: r.toTypeKey,
+            bridgeTypeKey: r.bridgeTypeKey,
+            edgePropertyKeys: r.edgePropertyKeys,
+            disambiguation: r.disambiguation,
+            refuse: r.refuse
+        )
     }
 
     private static func mapTypeSuggestion(_ s: Provenencia_Engine_V1_TypeSuggestion) -> CatalogTypeSuggestion {

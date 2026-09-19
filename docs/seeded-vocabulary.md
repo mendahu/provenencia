@@ -26,7 +26,7 @@ Items marked **TBD** are expected seeds whose exact set is still being refined.
 2. This file may stay ahead of the product. Keeping a larger catalog here is documentation, not a commitment to pre-make unused pickers, metadata fields, or event types.
 3. Seeds are data inserted into a project database, not SQL enums.
 4. Shipped keys are not structurally privileged subclasses; they are convenient defaults with optional first-class UX. Their privilege is **origin**, not a separate table or enum.
-5. Open text vocabularies (`event_type`, `role`, name part `type`, and similar) stay extensible even when a starter list exists for pickers. Those free-text value sets are **not** vocabulary-definition tables and do not carry an `origin` column; see §1.1 for tables that do.
+5. **Property terms** (`event_type`, `role`, `relationship_type`, and similar kind/edge vocabularies) are vocabulary-definition rows with `origin` (§1.1), not free-text Observation strings. **Term-typed Properties are Install/registry only** (product or plugin) — researchers do not create Properties with `value_type = term`. Product/plugin Install seeds large term sets; researchers may add `origin=user` **term rows** under those Properties without a dedicated Event types / Roles admin destination. True prose Properties (`remark`, `toponym`) stay `value_type = text`. Name part `type` on NameValue remains a separate open part vocabulary.
 6. Do not seed a fine-grained source-quality ontology (`is_authentic`, defect codes, and similar) on Source catalog rows or as Observation defect codes unless a concrete workflow requires it. First-class **Source credibility** uses the three-point assessment vocabulary in §3.0 and [`research-judgment-model.md`](research-judgment-model.md), not ad hoc Source metadata.
 7. Expanding this catalog does not require a schema migration when the underlying tables already use open keys.
 8. Source credibility grades and Claim confidence grades share a three-point *shape* but **must not share keys or labels** — they answer different questions.
@@ -40,11 +40,11 @@ Applies to (authoritative schemas in the linked docs):
 | Table | Doc |
 | --- | --- |
 | `source_types`, `source_metadata_fields` | [`source-layer-data-model.md`](source-layer-data-model.md) |
-| `subject_types`, `properties`, `source_credibility_grades` | [`interpretation-layer-data-model.md`](interpretation-layer-data-model.md), [`research-judgment-model.md`](research-judgment-model.md) |
+| `subject_types`, `properties`, `property_terms`, `source_credibility_grades` | [`interpretation-layer-data-model.md`](interpretation-layer-data-model.md), [`research-judgment-model.md`](research-judgment-model.md) |
 | `claim_confidence_grades` | [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md), [`research-judgment-model.md`](research-judgment-model.md) |
 | `name_format_profiles` | [`structured-name-model.md`](structured-name-model.md) |
 
-Does **not** apply to join/suggestion tables (`source_type_metadata_fields`, `subject_type_fields`, `name_format_profile_parts`), domain instance rows, or open free-text picker values.
+Does **not** apply to join/suggestion tables (`source_type_metadata_fields`, `subject_type_fields`, `name_format_profile_parts`), domain instance rows, or NameValue part `type` strings (open part vocabulary, not `property_terms`).
 
 ### Reserved `origin` values
 
@@ -305,14 +305,12 @@ Do not reuse the reserved catalog prefixes `USR`, `SRC`, `ART`, `CIT`, `OBS`. Bo
 ```text
 key                 value_type    notes
 name                name
-name_format         text          primarily Conclusion reconciliation; profile key
-birth_date          date
-age_at_event        integer
-occupation          text
-event_type          text          open values; see §3.4
-date                date          event date
-role                text          open values; see §3.5
-relationship_type   text          open values; TBD starter list
+event_type          term          kind identity; terms §3.4
+date                date          point-in-time (or best single date); locked on event
+start_date          date          span start; locked on event — leave empty if only Date applies
+end_date            date          span end; locked on event — leave empty if only Date applies
+role                term          participation edge label; terms §3.5
+relationship_type   term          relationship edge label; terms §3.6
 person              subject       app target hint: person
 event               subject       app target hint: event
 place               subject       app target hint: place
@@ -324,6 +322,12 @@ toponym             text          place name as interpreted from a Source (not a
 
 Target Subject type hints are application-only (not SQL allow-lists). See the Interpretation doc.
 
+`name_format` (Conclusion naming profiles) is not an Interpretation Property in the create-time seed. `integer` remains a valid value_type with no seed row yet.
+
+**S7-01 create-time Install** omits `event_type`, `role`, and `relationship_type` (and their bindings). Those kind/edge Properties land in **S7-01b** as `value_type = term` with `property_terms` — do not seed them as free text in the interim. Horizon lists §3.2–3.6 remain the intended product vocabulary.
+
+Event date Properties (`date`, `start_date`, `end_date`) are locked on `event`: Conclusion ordering and timelines may key into them; Subject fields must not unbind. **Coexistence:** use `date` for a single point (birth, death, marriage day); use `start_date` / `end_date` when the event spans time (residence, service, voyage). Instantaneous events leave start/end empty; spanned events may leave `date` empty when only the range is known.
+
 Additional Properties may be seeded as workflows need them (shared DNA, predicted relationship, and similar). Treat those as **TBD** until a concrete UI requires them.
 
 ## 3.3 `subject_type_fields`
@@ -331,33 +335,33 @@ Additional Properties may be seeded as workflows need them (shared DNA, predicte
 ```text
 subject_type    property
 person          name
-person          birth_date
-person          occupation
 
-event           event_type
-event           date
+event           event_type          # S7-01b (term)
+event           date                # locked
+event           start_date          # locked
+event           end_date            # locked
 
 place           toponym
 
 participation   person
 participation   event
-participation   role
+participation   role                # S7-01b (term)
 
 location        event
 location        place
 
 relationship    participant
-relationship    relationship_type
+relationship    relationship_type   # S7-01b (term)
 
 source          mentions
 source          remark
 ```
 
-`name_format` is not required on Interpretation `person` Subjects unless a Source itself asserts a naming convention.
+Until S7-01b, create-time Install binds the non-kind/edge rows above (`name`, event dates, `toponym`, locked bridge ends, `mentions` / `remark`).
 
-## 3.4 Open values: `event_type`
+## 3.4 Property terms: `event_type`
 
-Starter picker values (**extensible**):
+Product-seeded **term keys** (horizon list; Install grows with use). Researchers may add further `origin=user` terms; do not treat these as free-text Observation strings.
 
 ```text
 birth
@@ -373,11 +377,11 @@ probate
 other
 ```
 
-Exact GEDCOM alignment and additional vital/event kinds are **TBD**.
+Exact GEDCOM alignment and additional vital/event kinds are **TBD**. Prefer a large product set so `other` stays rare. First-class facets (e.g. birthday) attach to recognized keys such as `birth` in the subject registry.
 
-## 3.5 Open values: `role` (participation)
+## 3.5 Property terms: `role` (participation)
 
-Starter picker values (**extensible**):
+Product-seeded **term keys** (horizon list):
 
 ```text
 subject
@@ -390,9 +394,11 @@ informant
 other
 ```
 
-## 3.6 Open values: `relationship_type`
+Tree / connect behavior attaches to recognized keys (e.g. `father`, `mother`, `subject`) in the registry.
 
-Starter picker values are **TBD** (for example `cousin`, `guardian`, household roles). Keep open text; seed only what pickers need.
+## 3.6 Property terms: `relationship_type`
+
+Product-seeded **term keys** are **TBD** (for example `cousin`, `guardian`, household roles). Seed a useful set when connect macros need them; keep `other` as escape.
 
 ---
 
@@ -454,7 +460,7 @@ Conclusion seeds are mostly workflow vocabularies, not large type catalogs.
 
 ## 5.1 Sameness claim `status`
 
-Closed workflow vocabulary (not researcher-extensible like `event_type`):
+Closed workflow vocabulary (not researcher-extensible like user-minted Property terms on `event_type`):
 
 ```text
 provisional       -- persisted; UI should distinguish from accepted; not in membership

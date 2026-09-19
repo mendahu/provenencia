@@ -2401,6 +2401,66 @@
         }
       }
     },
+    "error.properties.invalid" : {
+      "comment" : "FFI error properties.invalid",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid property."
+          }
+        }
+      }
+    },
+    "error.properties.duplicate_key" : {
+      "comment" : "FFI error properties.duplicate_key; argument is the colliding key",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You already have a property with the key %@. Give this one a different label."
+          }
+        }
+      }
+    },
+    "error.properties.in_use" : {
+      "comment" : "FFI error properties.in_use",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That property is still bound to one or more subject types."
+          }
+        }
+      }
+    },
+    "error.subjectvocab.invalid" : {
+      "comment" : "FFI error subjectvocab.invalid",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid subject vocabulary."
+          }
+        }
+      }
+    },
+    "error.subjectvocab.locked" : {
+      "comment" : "FFI error subjectvocab.locked",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That binding is locked by the product vocabulary and cannot be removed."
+          }
+        }
+      }
+    },
     "error.subjectpositions.invalid" : {
       "comment" : "FFI error subjectpositions.invalid",
       "extractionState" : "manual",
