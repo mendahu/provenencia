@@ -139,10 +139,7 @@ var seedTypes = []seedType{
 
 var seedProperties = []seedProperty{
 	{Key: "name", Label: "Name", ValueType: properties.ValueTypeName},
-	{Key: "event_type", Label: "Event type", ValueType: properties.ValueTypeText},
 	{Key: "date", Label: "Date", Description: "Event date", ValueType: properties.ValueTypeDate},
-	{Key: "role", Label: "Role", ValueType: properties.ValueTypeText},
-	{Key: "relationship_type", Label: "Relationship type", ValueType: properties.ValueTypeText},
 	{Key: "person", Label: "Person", Description: "Target hint: person", ValueType: properties.ValueTypeSubject},
 	{Key: "event", Label: "Event", Description: "Target hint: event", ValueType: properties.ValueTypeSubject},
 	{Key: "place", Label: "Place", Description: "Target hint: place", ValueType: properties.ValueTypeSubject},
@@ -153,29 +150,29 @@ var seedProperties = []seedProperty{
 }
 
 // Bindings from docs/seeded-vocabulary.md §3.3. Locked = required for connect macros.
+// Kind/edge Properties (event_type, role, relationship_type) land in S7-01b as value_type=term.
 var seedBindings = []seedBinding{
 	{TypeKey: "person", PropertyKey: "name", SortOrder: 0},
 
-	{TypeKey: "event", PropertyKey: "event_type", SortOrder: 0},
-	{TypeKey: "event", PropertyKey: "date", SortOrder: 1},
+	{TypeKey: "event", PropertyKey: "date", SortOrder: 0},
 
 	{TypeKey: "place", PropertyKey: "toponym", SortOrder: 0},
 
 	{TypeKey: "participation", PropertyKey: "person", SortOrder: 0, Locked: true},
 	{TypeKey: "participation", PropertyKey: "event", SortOrder: 1, Locked: true},
-	{TypeKey: "participation", PropertyKey: "role", SortOrder: 2},
 
 	{TypeKey: "location", PropertyKey: "event", SortOrder: 0, Locked: true},
 	{TypeKey: "location", PropertyKey: "place", SortOrder: 1, Locked: true},
 
 	{TypeKey: "relationship", PropertyKey: "participant", SortOrder: 0, Locked: true},
-	{TypeKey: "relationship", PropertyKey: "relationship_type", SortOrder: 1},
 
 	{TypeKey: "source", PropertyKey: "mentions", SortOrder: 0},
 	{TypeKey: "source", PropertyKey: "remark", SortOrder: 1},
 }
 
 // Connect matrix from interpretation-graph-ui.md §3.2. Omitted pairs refuse by default.
+// DisambiguationRole / relationship_type name Property keys that S7-01b installs as term;
+// the matrix is valid before those rows exist (macros land after S7-01b).
 var seedConnect = []seedConnectRule{
 	{
 		FromTypeKey: "person", ToTypeKey: "event",

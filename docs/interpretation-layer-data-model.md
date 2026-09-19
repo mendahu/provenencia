@@ -627,20 +627,20 @@ For example (full matrix in [`seeded-vocabulary.md`](seeded-vocabulary.md)):
 ```text
 person        -> name
 
-event         -> event_type
+event         -> event_type   # S7-01b (term); create-time Install may omit until then
 event         -> date
 
 place         -> toponym
 
 participation -> person
 participation -> event
-participation -> role
+participation -> role         # S7-01b (term)
 
 location      -> event
 location      -> place
 
 relationship  -> participant
-relationship  -> relationship_type
+relationship  -> relationship_type  # S7-01b (term)
 
 source        -> mentions
 source        -> remark

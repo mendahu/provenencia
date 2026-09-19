@@ -322,7 +322,7 @@ Target Subject type hints are application-only (not SQL allow-lists). See the In
 
 `name_format` (Conclusion naming profiles) is not an Interpretation Property in the create-time seed. `integer` remains a valid value_type with no seed row yet.
 
-**S7-01 note:** the create-time seed may still install `event_type` / `role` / `relationship_type` as `text` until **S7-01b** lands Property terms and migrates those Properties to `value_type = term`. Treat §3.4–3.6 lists as the intended **term keys**, not free-text picker strings.
+**S7-01 create-time Install** omits `event_type`, `role`, and `relationship_type` (and their bindings). Those kind/edge Properties land in **S7-01b** as `value_type = term` with `property_terms` — do not seed them as free text in the interim. Horizon lists §3.2–3.6 remain the intended product vocabulary.
 
 Additional Properties may be seeded as workflows need them (shared DNA, predicted relationship, and similar). Treat those as **TBD** until a concrete UI requires them.
 
@@ -332,24 +332,26 @@ Additional Properties may be seeded as workflows need them (shared DNA, predicte
 subject_type    property
 person          name
 
-event           event_type
+event           event_type          # S7-01b (term)
 event           date
 
 place           toponym
 
 participation   person
 participation   event
-participation   role
+participation   role                # S7-01b (term)
 
 location        event
 location        place
 
 relationship    participant
-relationship    relationship_type
+relationship    relationship_type   # S7-01b (term)
 
 source          mentions
 source          remark
 ```
+
+Until S7-01b, create-time Install binds only the non-kind/edge rows above (`name`, `date`, `toponym`, locked bridge ends, `mentions` / `remark`).
 
 ## 3.4 Property terms: `event_type`
 
