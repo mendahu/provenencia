@@ -4,7 +4,7 @@
 **Spike:** Provenencia Spike 6 (Evidence graph canvas)  
 **Implements later as:** PR **S6-04** (connect + bridge card chrome). Citation-composer wiring may land later — this board still designs the **chained create → cite** flow so we don’t invent a second evidence UI.  
 **Depends on:** S6-D1 (primary card language done)  
-**Related brief:** [`S6-D1`](S6-D1-canvas-bubbles.md)
+**Related brief:** [`S6-D1`](archive/S6-D1-canvas-bubbles.md) (completed)
 
 Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](README.md) first.
 

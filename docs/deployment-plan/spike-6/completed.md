@@ -8,11 +8,24 @@ IDs stay stable (`S6-NN`, `S6-DN`). Do not renumber when moving steps here.
 
 | Step | Kind | One-liner |
 | --- | --- | --- |
+| [S6-D1](#s6-d1--design-canvas--primary-cards) | Design | Primary floating cards, place/create, uncited shell |
 | [S6-01](#s6-01--pr-panzoom-shell) | PR | `NSScrollView` Evidence graph shell + unit-tested coordinate seam |
 
 ---
 
 ## Steps
+
+### S6-D1 — Design: Canvas + primary cards
+
+| | |
+| --- | --- |
+| **Kind** | Design (Claude Design board) |
+| **Depends on** | Spike 5 Evidence graph place; S6-01 shell may already exist |
+| **Deliverables** | Done. Board for Evidence graph primary surface: toggle Add Person/Event/Place tools, click-to-place + label/description create modal, floating rounded Person/Event/Place cards (icon + color tinge), and **uncited** chrome (ghost/shell/badge) for primaries with no Observations. Cited-shell contrast frame. Bridges explicitly out (never uncited). Brief archived: [`design/archive/S6-D1-canvas-bubbles.md`](design/archive/S6-D1-canvas-bubbles.md). |
+| **Dogfood** | Design only — nothing in the app yet. Implements in S6-02 / S6-03. |
+| **Out** | Connect, bridge cards, cited-data rows, citation composer (S6-D2 / later). |
+
+**Landed (design only):** primary card language and uncited vs cited-shell states for S6-02 / S6-03. Connect and shared citation handoff remain **S6-D2**.
 
 ### S6-01 — PR: Pan/zoom shell
 

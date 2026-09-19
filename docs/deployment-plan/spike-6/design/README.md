@@ -8,12 +8,13 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 
 | Step | Brief | Feeds | Notes |
 | --- | --- | --- | --- |
-| S6-D1 | [`S6-D1-canvas-bubbles.md`](S6-D1-canvas-bubbles.md) | PRs S6-02, S6-03 | Primary cards + place/create only |
-| S6-D2 | [`S6-D2-connect-edges.md`](S6-D2-connect-edges.md) | PR S6-04 | Connect, bridge cards, cited-row growth language (wiring later) |
+| S6-D2 | [`S6-D2-connect-edges.md`](S6-D2-connect-edges.md) | PR S6-04 | Connect, bridge cards, shared citation-composer handoff |
 
 ## Completed
 
-_None yet._
+| Step | Brief | Feeds | Notes |
+| --- | --- | --- | --- |
+| S6-D1 | [`archive/S6-D1-canvas-bubbles.md`](archive/S6-D1-canvas-bubbles.md) | PRs S6-02, S6-03 | Primary cards + place/create + uncited shell — write-up in [`../completed.md`](../completed.md) |
 
 ## How to use
 
