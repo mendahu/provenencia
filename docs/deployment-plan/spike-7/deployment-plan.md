@@ -51,19 +51,22 @@ Spike 5 already seeds Subject types from [`core/database/subjecttypes/registry.g
 | --- | --- | --- |
 | Type identity | `key`, labels, ref prefixes, `origin=provenencia` | DB seed rows (as today) |
 | **Role / capabilities** | e.g. root vs bridge vs reification; placeable on Evidence graph; create requires Citation | Palette, card chrome, connect entry, empty states |
+| **Graph presentation** | display label / `L10n` key, icon symbol token, color/tinge token | Evidence graph **palette buttons**, cards, ghost preview |
 | **Properties** | key, value_type, labels | `properties` seed + Subject fields + Observation editors |
 | **Bindings** | type_key → property_key (+ sort) | `subject_type_fields` seed; Add-property menus |
 | **Required / locked bindings** | which seeded bindings macros need and UI must not unbind | Subject fields delete/unbind; connect pre-fill |
 | **Connect matrix** | allowed endpoint pairs + which bridge type + which edge Properties / disambiguation fields | S7-10 macros (read registry; do not re-encode §3.2 in the view) |
 
+**Palette example (today’s Add Person / Event / Place):** those three tools are not a hard-coded Swift enum forever. The Evidence graph asks the registry (via Go/FFI): *which Subject types are placeable on this canvas, in what order?* For each, it renders a toggle from that type’s **presentation** (copy + icon + tinge). Adding a future plugin placeable type — or dropping one from the product seed — changes the palette by changing the registry, not by editing `EvidenceGraphPalette` / `EvidenceSubjectKindStyle` switch statements. Connect stays a separate chrome tool (not a Subject type), unless the registry later declares other non-type tools.
+
 **Rules:**
 
-1. **DB stays structural** — no requirement to add `kind` columns in Spike 7; capabilities live in the registry (and may be exported over FFI as read-only config if the client needs them).
-2. **UI and FFI handlers look up by `(key, origin)` / registry helpers** — no scattered `if typeKey == "participation"` copies in card chrome, composer, and connect sheet.
+1. **DB stays structural** — no requirement to add `kind` columns in Spike 7; capabilities + presentation tokens live in the registry (exported read-only to the client as needed).
+2. **UI and FFI handlers look up by `(key, origin)` / registry helpers** — no scattered `if typeKey == "participation"` (or `EvidencePrimaryKind` exhaustive switches that invent the placeable set) across card chrome, composer, and connect sheet.
 3. **Create-time Install only** — same `add-seeded-vocabulary` semantics as Source; open does not heal.
-4. **Plugin seam** — later `plugin:<id>` contributes additional registry modules (or merged Install entries) with the **same capability fields**; researcher UI still does not invent Subject types. Document the registry shape in code comments / package README so the first plugin spike knows where to plug in.
+4. **Plugin seam** — later `plugin:<id>` contributes additional registry modules (or merged Install entries) with the **same capability + presentation fields**; researcher UI still does not invent Subject types. Document the registry shape in code comments / package README so the first plugin spike knows where to plug in.
 
-Dogfood check for the registry: changing a capability or locked binding in **one** place changes seed + app behavior without hunting call sites.
+Dogfood check for the registry: changing a capability, palette presentation, or locked binding in **one** place changes seed + app behavior without hunting call sites. After S7-01 lands the API, graph PRs (**S7-09** / earlier if needed) **migrate** the Spike 6 palette and kind style off hard-coded primary kinds onto registry-driven placeables.
 
 ## Composer presentation (locked: Option B)
 
@@ -221,17 +224,18 @@ Migration(s) for `properties`, `subject_type_fields`; `value_type` limited to te
 
 - Seeds Subject types (move/keep today’s seven rows here), Properties, and `subject_type_fields`
 - Declares **capabilities** per type (root / bridge / reification, canvas placeable, citation-required-at-create, …)
+- Declares **graph presentation** per placeable type (label/`L10n` key, icon symbol token, color/tinge token) for palette + cards
 - Declares **required/locked** bindings for bridge macros
 - Declares the **connect matrix** (endpoint pairs → bridge type → edge Properties / disambiguation fields)
-- Exposes lookup helpers so graph, Subject fields, composer, and connect **do not hard-code type keys**
+- Exposes lookup helpers / FFI so graph, Subject fields, composer, and connect **do not hard-code type keys or the placeable set**
 
 Wire Install into `onboarding.createCatalog` only. Follow [`.cursor/skills/add-seeded-vocabulary`](../../../.cursor/skills/add-seeded-vocabulary/SKILL.md); update that skill’s domain table when the package lands.
 
 | | |
 | --- | --- |
-| **In** | Tables; central registry + Install; Go packages; FFI list/create/update/delete (unused Properties); bindings query; capability/connect lookup API. |
-| **Out** | Subject fields UI (S7-05); Observations; Subject types user CRUD; scattering capability checks in Swift views. |
-| **Testable** | Create project seeds §3.2–3.3 bindings; registry tests for capabilities + locked bindings; Go tests; FakeStore round-trip. |
+| **In** | Tables; central registry + Install; Go packages; FFI list/create/update/delete (unused Properties); bindings query; capability/presentation/connect lookup API (incl. “list placeable types for palette”). |
+| **Out** | Subject fields UI (S7-05); Observations; Subject types user CRUD; scattering capability checks or palette membership in Swift views. |
+| **Testable** | Create project seeds §3.2–3.3 bindings; registry tests for capabilities, presentation tokens, locked bindings, placeable set; Go tests; FakeStore round-trip. |
 | **Depends on** | Spike 5 `subject_types` table (may fold Install into the new registry package). **Not** gated on design. |
 
 ---
@@ -333,7 +337,7 @@ Grow `EvidenceSubjectCardChrome`; Add property → `go(to: composer)`; edge layo
 
 | | |
 | --- | --- |
-| **In** | Cited-data rows; Add property control; navigation to composer; uncited → cited shell when Observations exist. |
+| **In** | Cited-data rows; Add property control; navigation to composer; uncited → cited shell when Observations exist; **palette + kind chrome driven by registry placeables/presentation** (retire hard-coded Add Person/Event/Place set). |
 | **Out** | Connect durability (S7-10). |
 | **Testable** | Add property on a Person → composer → submit → card shows row and grows. |
 | **Depends on** | S7-08, **S7-D3**. |
@@ -384,7 +388,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar). Record in [`completed.md
 6. **Provisional Spike 6 links** must be replaced or clearly migrated; do not leave honesty labels as permanent UI.
 7. **NameValue ≠ transcription** — transcription stays on the Citation; NameValue is the Observation normalization.
 8. **Drop `real` / `boolean` in model docs** when shipping S7-01/S7-03 so product and schema stay aligned.
-9. **No sprinkled type keys** — placeability, bridge vs root, locked bindings, and connect pairs come from the S7-01 Interpretation subject registry. Views call helpers; they do not re-encode `participation` / `relationship` special cases.
+9. **No sprinkled type keys** — placeability, palette membership, presentation (copy/icon/tinge), bridge vs root, locked bindings, and connect pairs come from the S7-01 Interpretation subject registry. Views call helpers; they do not re-encode `participation` / `relationship` / `EvidencePrimaryKind` special cases.
 10. **Plugin path is the registry** — when plugins arrive, they extend Install/registry modules with the same capability fields; do not invent a second configuration channel.
 
 ---
