@@ -599,7 +599,7 @@ CREATE TABLE subject_type_fields (
 For example (full matrix in [`seeded-vocabulary.md`](seeded-vocabulary.md)):
 
 ```text
-person        -> name
+# person — no create-time bindings (NameValue Properties are researcher-defined)
 
 event         -> event_type
 event         -> date
