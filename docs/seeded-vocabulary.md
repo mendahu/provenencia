@@ -402,6 +402,7 @@ Product-seeded **term keys** (starter set for connect macros; grow with use):
 spouse
 sibling
 parent_child
+grandparent_grandchild
 pibling_nibling
 cousin
 guardian
