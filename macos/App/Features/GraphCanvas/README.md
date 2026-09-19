@@ -12,5 +12,6 @@ catalog types so geometry stays extractable (design note §13).
 | --- | --- |
 | `GraphCanvasCamera` | Magnification + content offset (value type) |
 | `GraphCanvasCoordinates` | View ↔ content conversion under zoom |
+| `GraphCanvasGridMapping` | Grid cell ↔ content point (snap unit) |
 | `GraphCanvasScrollView` | AppKit magnification bridge |
 | `GraphCanvasGridView` | Optional empty grid document content |

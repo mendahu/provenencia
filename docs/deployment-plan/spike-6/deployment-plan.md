@@ -62,7 +62,7 @@ S6-D2  Connect + bridges      │
 - [x] S6-D1 — Design: canvas + primary cards → [`completed.md`](completed.md)
 - [ ] S6-D2 — Design: connect + bridge cards → [`design/`](design/)
 - [x] S6-01 — `NSScrollView` shell + coordinate conversion → [`completed.md`](completed.md)
-- [ ] S6-02 — Primary cards on the canvas + accessibility representation
+- [x] S6-02 — Primary cards on the canvas + accessibility representation → [`completed.md`](completed.md)
 - [ ] S6-03 — Click-to-place, create modal, drag, snap, persist
 - [ ] S6-04 — Connect + bridge cards (accessible)
 - [ ] S6-05 — Docs, dogfood, go-nogo

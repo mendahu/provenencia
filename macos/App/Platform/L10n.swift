@@ -927,6 +927,56 @@ enum L10n {
         )
     }
 
+    enum EvidenceGraph {
+        static let emptyTitle = LocalizedStringResource(
+            "evidenceGraph.empty.title",
+            defaultValue: "No subjects yet",
+            comment: "Empty Evidence graph title before any Person/Event/Place cards exist"
+        )
+
+        static let emptyMessage = LocalizedStringResource(
+            "evidenceGraph.empty.message",
+            defaultValue: "Subjects you place on this Source will appear on the canvas.",
+            comment: "Empty Evidence graph body; create tools arrive in a later PR"
+        )
+
+        static let uncitedAccessibility = LocalizedStringResource(
+            "evidenceGraph.subject.uncitedAccessibility",
+            defaultValue: "Uncited — no citations attached yet",
+            comment: "VoiceOver fragment when a primary subject card has no Observations"
+        )
+
+        static let citedAccessibility = LocalizedStringResource(
+            "evidenceGraph.subject.citedAccessibility",
+            defaultValue: "Cited",
+            comment: "VoiceOver fragment when a primary subject card has at least one Observation"
+        )
+
+        static let subjectsRotor = LocalizedStringResource(
+            "evidenceGraph.rotor.subjects",
+            defaultValue: "Subjects",
+            comment: "VoiceOver rotor name for jumping between Evidence graph subject cards"
+        )
+
+        static func subjectCount(count: Int) -> LocalizedStringResource {
+            count == 1 ? subjectCountOne : subjectCountOther(count: count)
+        }
+
+        private static let subjectCountOne = LocalizedStringResource(
+            "evidenceGraph.header.subjectCountOne",
+            defaultValue: "1 subject",
+            comment: "Evidence graph header count when exactly one placed primary is on the canvas"
+        )
+
+        private static func subjectCountOther(count: Int) -> LocalizedStringResource {
+            LocalizedStringResource(
+                "evidenceGraph.header.subjectCountOther",
+                defaultValue: "\(count) subjects",
+                comment: "Evidence graph header count; argument is how many placed primaries are on the canvas"
+            )
+        }
+    }
+
     /// The **Source fields** workspace destination (S2-15): browse, search,
     /// and create/edit the project's `source_metadata_fields` vocabulary.
     /// Origin markers shared by every catalog vocabulary destination —

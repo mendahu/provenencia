@@ -124,6 +124,29 @@ enum PVColor {
     static let linePaternal = Color.pvDynamic(light: PVPalette.iron500, dark: PVPalette.iron300)
     static let lineMaternal = Color.pvDynamic(light: PVPalette.plum500, dark: PVPalette.hex("#C08FB2"))
     static let lineInferred = Color.pvDynamic(light: PVPalette.paper400, dark: PVPalette.paper600)
+
+    // MARK: Evidence graph subject kinds (S6-D1 / S6-02)
+    // Person = iron, Event = copper, Place = verdigris — card tinge wash.
+    static let subjectPersonInk = Color.pvDynamic(light: PVPalette.iron700, dark: PVPalette.iron300)
+    static let subjectPersonTint = Color.pvDynamic(light: PVPalette.iron100, dark: PVPalette.hex("#1A252C"))
+    static let subjectPersonLine = Color.pvDynamic(light: PVPalette.iron300, dark: PVPalette.hex("#2E4450"))
+    static let subjectPersonChip = Color.pvDynamic(light: PVPalette.hex("#FFFDF9"), dark: PVPalette.hex("#141B20"))
+
+    static let subjectEventInk = Color.pvDynamic(light: PVPalette.copper700, dark: PVPalette.copper300)
+    static let subjectEventTint = Color.pvDynamic(light: PVPalette.copper100, dark: PVPalette.hex("#271A11"))
+    static let subjectEventLine = Color.pvDynamic(light: PVPalette.copper300, dark: PVPalette.hex("#48301D"))
+    static let subjectEventChip = Color.pvDynamic(light: PVPalette.hex("#FFFDF9"), dark: PVPalette.hex("#1D1510"))
+
+    static let subjectPlaceInk = Color.pvDynamic(light: PVPalette.verdigris700, dark: PVPalette.verdigris300)
+    static let subjectPlaceTint = Color.pvDynamic(light: PVPalette.verdigris100, dark: PVPalette.hex("#13221C"))
+    static let subjectPlaceLine = Color.pvDynamic(light: PVPalette.verdigris300, dark: PVPalette.hex("#234135"))
+    static let subjectPlaceChip = Color.pvDynamic(light: PVPalette.hex("#FFFDF9"), dark: PVPalette.hex("#101914"))
+
+    /// Selection halo behind an Evidence graph card (`--graph-ring`).
+    static let graphRing = Color.pvDynamic(
+        light: Color(.sRGB, red: 62.0 / 255, green: 110.0 / 255, blue: 133.0 / 255, opacity: 0.28),
+        dark: Color(.sRGB, red: 143.0 / 255, green: 177.0 / 255, blue: 192.0 / 255, opacity: 0.32)
+    )
 }
 
 /// Raw pigment ramps. Prefer `PVColor` semantic aliases at call sites; reach

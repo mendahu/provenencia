@@ -1021,6 +1021,90 @@
         }
       }
     },
+    "evidenceGraph.empty.message" : {
+      "comment" : "Empty Evidence graph body; create tools arrive in a later PR",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subjects you place on this Source will appear on the canvas."
+          }
+        }
+      }
+    },
+    "evidenceGraph.empty.title" : {
+      "comment" : "Empty Evidence graph title before any Person/Event/Place cards exist",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No subjects yet"
+          }
+        }
+      }
+    },
+    "evidenceGraph.header.subjectCountOne" : {
+      "comment" : "Evidence graph header count when exactly one placed primary is on the canvas",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 subject"
+          }
+        }
+      }
+    },
+    "evidenceGraph.header.subjectCountOther" : {
+      "comment" : "Evidence graph header count; argument is how many placed primaries are on the canvas",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld subjects"
+          }
+        }
+      }
+    },
+    "evidenceGraph.rotor.subjects" : {
+      "comment" : "VoiceOver rotor name for jumping between Evidence graph subject cards",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subjects"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.citedAccessibility" : {
+      "comment" : "VoiceOver fragment when a primary subject card has at least one Observation",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cited"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.uncitedAccessibility" : {
+      "comment" : "VoiceOver fragment when a primary subject card has no Observations",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uncited — no citations attached yet"
+          }
+        }
+      }
+    },
     "error.artifacts.file_already_attached" : {
       "comment" : "FFI error artifacts.file_already_attached",
       "extractionState" : "manual",

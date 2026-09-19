@@ -80,7 +80,7 @@ struct CatalogQueryRegistry: Sendable {
         Spec(
             kind: .sourceGraph,
             stalePolicy: .sessionFresh,
-            // Stub payload until Spike 6; subject create/delete will invalidate then.
+            // Subject create/delete/position mutations land in S6-03.
             invalidateOn: []
         ),
     ]
@@ -103,8 +103,22 @@ struct CatalogQueryRegistry: Sendable {
             return try await store.getSourceWorkspace(projectDir: project.projectDir, sourceID: sourceId)
         case .typeSuggestions(let project, let typeId):
             return try await store.listTypeSuggestions(projectDir: project.projectDir, typeID: typeId)
-        case .sourceGraph(_, let sourceId):
-            return SourceGraphSnapshot(sourceId: sourceId)
+        case .sourceGraph(let project, let sourceId):
+            async let subjects = store.listSubjects(
+                projectDir: project.projectDir,
+                sourceID: sourceId
+            )
+            async let positions = store.listSubjectPositions(
+                projectDir: project.projectDir,
+                sourceID: sourceId
+            )
+            async let types = store.listSubjectTypes(projectDir: project.projectDir)
+            return SourceGraphSnapshot.build(
+                sourceId: sourceId,
+                subjects: try await subjects,
+                positions: try await positions,
+                types: try await types
+            )
         }
     }
 
