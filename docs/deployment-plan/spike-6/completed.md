@@ -27,7 +27,7 @@ IDs stay stable (`S6-NN`, `S6-DN`). Do not renumber when moving steps here.
 | **Dogfood** | Design only — implemented in S6-02 (cards/uncited) and S6-03 (palette place/create/drag). |
 | **Out** | Connect, bridge cards, cited-data rows, citation composer (S6-D2 / later). |
 
-**Landed (design only):** primary card language and uncited vs cited-shell states for S6-02 / S6-03. Connect and shared citation handoff remain **S6-D2**.
+**Landed (design only):** primary card language and uncited vs cited-shell states for S6-02 / S6-03. Connect + bridge chrome remain **S6-D2** (citation composer is later, not D2).
 
 ### S6-01 — PR: Pan/zoom shell
 

@@ -29,7 +29,7 @@ All of the following must be true in the app (VoiceOver / keyboard where noted):
 | Step | Brief | Covers | Gates |
 | --- | --- | --- | --- |
 | **S6-D1** | Canvas + primary cards | Grid, toggle tools, click-to-place + create modal, **Person/Event/Place floating cards** (header chrome; tray/connect/cited-rows out) | S6-02, S6-03 |
-| **S6-D2** | Connect + bridge cards | Connect tool, lines, **subordinate bridge cards**, card growth / cited-row language (wiring later) | S6-04 |
+| **S6-D2** | Connect + bridge cards | Connect tool, lines, **subordinate bridge cards**, honesty for prototype links (citation composer later) | S6-04 |
 
 Run **S6-D1 before any bubble chrome.** **S6-01** (scroll shell) may start in parallel with S6-D1 — it has no product chrome. **S6-D2 before S6-04.**
 
@@ -116,7 +116,7 @@ Connect tool: click A then B → line through a **bridge card**. Gesture and hit
 
 **Persistence scope (deliberate):** retires *drawing and gesture* risk, not Observation macros. Prefer creating a bridge `subjects` row + position. Endpoint association may be **provisional** until Citations + Observations exist — **no new migration**. Do not pretend provisional links are research data.
 
-**Cited-data rows / add-property:** designed in S6-D2; **not required** to wire in this PR (empty bridge body OK).
+**Cited-data rows / add-property / citation composer:** **out** of S6-04. Bridge body may use honesty labeling for prototype links; empty or quiet body OK.
 
 | | |
 | --- | --- |
