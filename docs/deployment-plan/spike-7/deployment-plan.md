@@ -70,6 +70,68 @@ Spike 5 already seeds Subject types from [`core/database/subjecttypes/registry.g
 
 Dogfood check for the registry: changing a capability, type presentation (name/icon/colors/line tokens), or locked binding in **one** place changes seed + app behavior without hunting call sites. After S7-01 lands the API, graph PRs (**S7-09** / earlier if needed) **migrate** Spike 6 palette, card kind style, and edge gradient styling off hard-coded primary kinds onto registry-driven presentation.
 
+### Proposed registry shape (lock in S7-01)
+
+Decide the **Go struct layout** in S7-01 (same spirit as `sourcevocab/registry.go`). This is the plugin contract later; tweak field names in implementation if needed, but keep the partitions below. **Not** persisted as JSON in SQLite in Spike 7 — Install writes only the structural catalog rows; the rest is read from the compiled registry (and exposed read-only over FFI as needed).
+
+```text
+subjectvocab/   (name flexible — may absorb today’s subjecttypes.Install)
+  registry.go
+    seedTypes[]       → subject_types rows + capabilities + presentation
+    seedProperties[]  → properties rows
+    seedBindings[]    → subject_type_fields rows (+ locked)
+    seedConnect[]     → connect macros (app-only; no table)
+```
+
+**`seedType`**
+
+| Field | Purpose |
+| --- | --- |
+| `Key`, `Label`, `Description` | Catalog identity (seeded into `subject_types`) |
+| `RefPrefix`, `CandidateRefPrefix` | Minting |
+| `Role` | `root` \| `bridge` \| `reification` |
+| `Placeable` | Appears on Evidence graph palette / click-to-place |
+| `PaletteSort` | Order among placeables (`0…`; ignored if not placeable) |
+| `RequiresCitationAtCreate` | Bridges: true; roots: false |
+| `Presentation` | See below |
+
+**`Presentation`** (string **tokens**, not raw colors)
+
+| Field | Purpose |
+| --- | --- |
+| `L10nKey` | Client display name (palette + card); DB `Label` remains English seed fallback |
+| `IconSymbol` | SF Symbol / `PVSymbol` token |
+| `InkToken`, `TintToken`, `ChipToken`, `LineToken` | Map to `PVColor` (or equivalent) in Swift — card wash, chip, stroke |
+| `EdgeFromToken` / `EdgeToToken` | Optional; default edge gradients can derive from endpoint `InkToken` / `LineToken` if unset |
+
+**`seedProperty`**
+
+| Field | Purpose |
+| --- | --- |
+| `Key`, `Label`, `Description` | Catalog identity |
+| `ValueType` | `text` \| `integer` \| `date` \| `name` \| `subject` |
+
+**`seedBinding`**
+
+| Field | Purpose |
+| --- | --- |
+| `TypeKey`, `PropertyKey`, `SortOrder` | Seed `subject_type_fields` |
+| `Locked` | Required for macros / product integrity — Subject fields UI must not unbind or delete while locked |
+
+**`seedConnect`** (one row per allowed endpoint pair)
+
+| Field | Purpose |
+| --- | --- |
+| `FromTypeKey`, `ToTypeKey` | Ordered pair (or undirected flag if needed) |
+| `BridgeTypeKey` | e.g. `participation`, `relationship`, `location` |
+| `EdgePropertyKeys[]` | Observations to pre-fill (usually two) |
+| `Disambiguation` | e.g. `none` \| `role` \| `relationship_type` \| `person_person_choice` (shared-event vs relationship) |
+| `Refuse` | If true, pair is explicitly illegal (optional; omit row = refuse by default) |
+
+**Lookup API (package + FFI as needed):** `PlaceableTypes()`, `Presentation(key)`, `BindingsForType(key)`, `LockedBinding(type, property)`, `Connect(from, to)`. Graph / Subject fields / connect call these — never re-list the three primaries in Swift.
+
+**Out of registry for Spike 7:** researcher-authored types; raw hex colors; full plugin manifest file format (same structs, different Install source, later).
+
 ## Composer presentation (locked: Option B)
 
 **Navigate away** to a first-class workspace place. Canvas unloads; full-window side-by-side viewer|form; **Back** returns to the Evidence graph.
