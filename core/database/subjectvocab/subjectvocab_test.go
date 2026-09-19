@@ -134,6 +134,9 @@ func TestSubjectVocab(t *testing.T) {
 				if !LockedBinding("participation", "person") {
 					t.Fatal("expected locked")
 				}
+				if !LockedBinding("event", "date") || !LockedBinding("event", "start_date") || !LockedBinding("event", "end_date") {
+					t.Fatal("expected event date Properties locked")
+				}
 				rule := Connect("person", "event")
 				if rule.Refuse || rule.BridgeTypeKey != "participation" || rule.Disambiguation != DisambiguationRole {
 					t.Fatalf("%+v", rule)

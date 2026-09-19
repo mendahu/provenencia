@@ -139,7 +139,9 @@ var seedTypes = []seedType{
 
 var seedProperties = []seedProperty{
 	{Key: "name", Label: "Name", ValueType: properties.ValueTypeName},
-	{Key: "date", Label: "Date", Description: "Event date", ValueType: properties.ValueTypeDate},
+	{Key: "date", Label: "Date", Description: "Event date (point in time)", ValueType: properties.ValueTypeDate},
+	{Key: "start_date", Label: "Start date", Description: "Start of a spanned event", ValueType: properties.ValueTypeDate},
+	{Key: "end_date", Label: "End date", Description: "End of a spanned event", ValueType: properties.ValueTypeDate},
 	{Key: "person", Label: "Person", Description: "Target hint: person", ValueType: properties.ValueTypeSubject},
 	{Key: "event", Label: "Event", Description: "Target hint: event", ValueType: properties.ValueTypeSubject},
 	{Key: "place", Label: "Place", Description: "Target hint: place", ValueType: properties.ValueTypeSubject},
@@ -149,12 +151,15 @@ var seedProperties = []seedProperty{
 	{Key: "toponym", Label: "Toponym", Description: "Place name as interpreted from a Source", ValueType: properties.ValueTypeText},
 }
 
-// Bindings from docs/seeded-vocabulary.md §3.3. Locked = required for connect macros.
+// Bindings from docs/seeded-vocabulary.md §3.3.
+// Locked = required for connect macros and/or Conclusion ordering (event dates).
 // Kind/edge Properties (event_type, role, relationship_type) land in S7-01b as value_type=term.
 var seedBindings = []seedBinding{
 	{TypeKey: "person", PropertyKey: "name", SortOrder: 0},
 
-	{TypeKey: "event", PropertyKey: "date", SortOrder: 0},
+	{TypeKey: "event", PropertyKey: "date", SortOrder: 0, Locked: true},
+	{TypeKey: "event", PropertyKey: "start_date", SortOrder: 1, Locked: true},
+	{TypeKey: "event", PropertyKey: "end_date", SortOrder: 2, Locked: true},
 
 	{TypeKey: "place", PropertyKey: "toponym", SortOrder: 0},
 

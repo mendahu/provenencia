@@ -306,7 +306,9 @@ Do not reuse the reserved catalog prefixes `USR`, `SRC`, `ART`, `CIT`, `OBS`. Bo
 key                 value_type    notes
 name                name
 event_type          term          kind identity; terms §3.4
-date                date          event date
+date                date          event point-in-time date (locked on event)
+start_date          date          start of a spanned event (locked on event)
+end_date            date          end of a spanned event (locked on event)
 role                term          participation edge label; terms §3.5
 relationship_type   term          relationship edge label; terms §3.6
 person              subject       app target hint: person
@@ -324,6 +326,8 @@ Target Subject type hints are application-only (not SQL allow-lists). See the In
 
 **S7-01 create-time Install** omits `event_type`, `role`, and `relationship_type` (and their bindings). Those kind/edge Properties land in **S7-01b** as `value_type = term` with `property_terms` — do not seed them as free text in the interim. Horizon lists §3.2–3.6 remain the intended product vocabulary.
 
+Event date Properties (`date`, `start_date`, `end_date`) are locked on `event`: Conclusion ordering and timelines may key into them; Subject fields must not unbind.
+
 Additional Properties may be seeded as workflows need them (shared DNA, predicted relationship, and similar). Treat those as **TBD** until a concrete UI requires them.
 
 ## 3.3 `subject_type_fields`
@@ -333,7 +337,9 @@ subject_type    property
 person          name
 
 event           event_type          # S7-01b (term)
-event           date
+event           date                # locked
+event           start_date          # locked
+event           end_date            # locked
 
 place           toponym
 
@@ -351,7 +357,7 @@ source          mentions
 source          remark
 ```
 
-Until S7-01b, create-time Install binds only the non-kind/edge rows above (`name`, `date`, `toponym`, locked bridge ends, `mentions` / `remark`).
+Until S7-01b, create-time Install binds the non-kind/edge rows above (`name`, event dates, `toponym`, locked bridge ends, `mentions` / `remark`).
 
 ## 3.4 Property terms: `event_type`
 

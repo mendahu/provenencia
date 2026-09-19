@@ -620,7 +620,7 @@ CREATE TABLE subject_type_fields (
 ) STRICT;
 ```
 
-`sort_order` orders Add-property menus and Subject fields lists. Locked bindings (cannot unbind while required for connect macros) live in the compiled Interpretation subject registry (`subjectvocab`), not as a column here.
+`sort_order` orders Add-property menus and Subject fields lists. Locked bindings (cannot unbind while required for connect macros, Conclusion ordering, or other product integrity) live in the compiled Interpretation subject registry (`subjectvocab`), not as a column here.
 
 For example (full matrix in [`seeded-vocabulary.md`](seeded-vocabulary.md)):
 
@@ -628,7 +628,9 @@ For example (full matrix in [`seeded-vocabulary.md`](seeded-vocabulary.md)):
 person        -> name
 
 event         -> event_type   # S7-01b (term); create-time Install may omit until then
-event         -> date
+event         -> date         # locked (point / ordering)
+event         -> start_date   # locked (span start)
+event         -> end_date     # locked (span end)
 
 place         -> toponym
 

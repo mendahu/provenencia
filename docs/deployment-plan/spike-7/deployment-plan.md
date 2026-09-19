@@ -36,7 +36,7 @@ Product value types: **`text`**, **`integer`**, **`date`**, **`name`**, **`subje
 | **text** | Prose Properties (`toponym`, `remark`, researcher-defined notes) |
 | **term** | Kind/edge identity via **registry-only** Properties (`event_type`, `role`, `relationship_type`) → `property_terms` + `value_term_id` (**S7-01b**). Not offered when researchers create Properties. |
 | **subject** | Bridge edges (`person`, `event`, `place`, `participant`) |
-| **date** | `date` (event); reuse DateValue |
+| **date** | Event `date` / `start_date` / `end_date` (locked on event for Conclusion ordering); reuse DateValue |
 | **name** | Primary person assertion; NameValue (`name_values` + `name_value_parts` only) |
 | **integer** | Researcher-defined counts / ages (no seed Property yet) |
 
@@ -126,7 +126,7 @@ subjectvocab/   (name flexible — may absorb today’s subjecttypes.Install)
 | Field | Purpose |
 | --- | --- |
 | `TypeKey`, `PropertyKey`, `SortOrder` | Seed `subject_type_fields` |
-| `Locked` | Required for macros / product integrity — Subject fields UI must not unbind or delete while locked |
+| `Locked` | Required for macros / product integrity (incl. event dates for Conclusion ordering) — Subject fields UI must not unbind or delete while locked |
 
 **`seedConnect`** (one row per allowed endpoint pair)
 
