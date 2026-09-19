@@ -173,7 +173,7 @@ Pinning a Citation across successive graph edits is **out** (one Citation + N Ob
 
 | Step | Brief | Covers | Gates |
 | --- | --- | --- | --- |
-| **S7-D2** | Subject fields | Properties + bindings to **seeded** Subject types; five value_types; **new large-list IA** (do **not** mirror Source fields) | S7-05 |
+| **S7-D2** | Subject fields | Properties + bindings; **few types (7) / many Properties** — creative IA, not Source fields; explore type cards etc. | S7-05 |
 | **S7-D3** | Evidence graph updates | Add-property; cited-data rows; Artifact gate; connect disambiguation → composer handoff; bridge honesty once cited | S7-09, S7-10 |
 | **S7-D4** | Citation composer place | Full-window viewer\|form; Artifact pick; locators; observation list; DateValue reuse; breadcrumbs; composer-only a11y — **hosts** NameValue modal, does not design it | S7-08 |
 | **S7-D5** | NameValue editor | Reusable NameValue modal (DateValue twin); form + optional parts | S7-02b |
@@ -258,7 +258,7 @@ Schema/Go PRs (01–03, 02) may start before design finishes; **UI PRs gate on t
 
 ## S7-D2 — Design: Subject fields
 
-Claude Design board for Subject fields (Properties + bindings). Brief: [`design/S7-D2-subject-fields.md`](design/S7-D2-subject-fields.md). Gates **S7-05**. Bindings target the **fixed seeded** Subject types. **Layout must accommodate dozens of Properties** — Source fields chrome is explicitly not the template.
+Claude Design board for Subject fields. Brief: [`design/S7-D2-subject-fields.md`](design/S7-D2-subject-fields.md). Gates **S7-05**. Design around **seven fixed types** (non-list type chrome welcome) and **many Properties**. Source fields layout explicitly out.
 
 ---
 
