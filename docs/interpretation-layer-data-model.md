@@ -626,6 +626,7 @@ For example (full matrix in [`seeded-vocabulary.md`](seeded-vocabulary.md)):
 
 ```text
 person        -> name
+person        -> sex_at_birth  # term
 
 event         -> event_type   # term
 event         -> date         # locked (point / ordering)

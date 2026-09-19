@@ -46,8 +46,17 @@ func TestSubjectVocab(t *testing.T) {
 					t.Fatal(err)
 				}
 				bindings, err := ListBindings(c, person.ID)
-				if err != nil || len(bindings) != 1 {
-					t.Fatalf("person bindings %v len=%d want 1", err, len(bindings))
+				if err != nil {
+					t.Fatal(err)
+				}
+				got := map[string]bool{}
+				for _, b := range bindings {
+					got[b.Property.Key] = true
+				}
+				for _, key := range []string{"name", "sex_at_birth"} {
+					if !got[key] {
+						t.Fatalf("person missing binding %q", key)
+					}
 				}
 				evt, err := subjecttypes.Lookup(c, "event", subjecttypes.OriginProvenencia)
 				if err != nil {

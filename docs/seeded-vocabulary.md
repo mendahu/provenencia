@@ -305,6 +305,7 @@ Do not reuse the reserved catalog prefixes `USR`, `SRC`, `ART`, `CIT`, `OBS`. Bo
 ```text
 key                 value_type    notes
 name                name
+sex_at_birth        term          recorded/assigned sex at birth; terms §3.7
 event_type          term          kind identity; terms §3.4
 date                date          point-in-time (or best single date); locked on event
 start_date          date          span start; locked on event — leave empty if only Date applies
@@ -324,7 +325,7 @@ Target Subject type hints are application-only (not SQL allow-lists). See the In
 
 `name_format` (Conclusion naming profiles) is not an Interpretation Property in the create-time seed. `integer` remains a valid value_type with no seed row yet.
 
-Create-time Install seeds the full §3.2 matrix, including kind/edge Properties as `value_type = term` with `property_terms` (§3.4–3.6).
+Create-time Install seeds the full §3.2 matrix, including kind/edge and person term Properties as `value_type = term` with `property_terms` (§3.4–3.7).
 
 Event date Properties (`date`, `start_date`, `end_date`) are locked on `event`: Conclusion ordering and timelines may key into them; Subject fields must not unbind. **Coexistence:** use `date` for a single point (birth, death, marriage day); use `start_date` / `end_date` when the event spans time (residence, service, voyage). Instantaneous events leave start/end empty; spanned events may leave `date` empty when only the range is known.
 
@@ -335,6 +336,7 @@ Additional Properties may be seeded as workflows need them (shared DNA, predicte
 ```text
 subject_type    property
 person          name
+person          sex_at_birth        # term
 
 event           event_type          # term
 event           date                # locked
@@ -405,6 +407,18 @@ guardian
 ```
 
 Prefer expanding the product set as connect macros need them. Long-tail labels are `origin=user` terms — there is no product `other` escape hatch. First-class connect behavior attaches to recognized keys in the subject registry when that behavior lands.
+
+## 3.7 Property terms: `sex_at_birth`
+
+Product-seeded **term keys** for sex recorded or assigned at birth (not gender identity):
+
+```text
+female
+male
+intersex
+```
+
+Researchers may add further `origin=user` terms for source-specific wording. Do not treat these as free-text Observation strings.
 
 ---
 

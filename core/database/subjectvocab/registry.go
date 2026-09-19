@@ -144,6 +144,7 @@ var seedTypes = []seedType{
 
 var seedProperties = []seedProperty{
 	{Key: "name", Label: "Name", ValueType: properties.ValueTypeName},
+	{Key: "sex_at_birth", Label: "Sex at birth", Description: "Sex recorded or assigned at birth. Product term vocabulary.", ValueType: properties.ValueTypeTerm},
 	{Key: "event_type", Label: "Event type", Description: "Kind of event (birth, census, …). Product term vocabulary.", ValueType: properties.ValueTypeTerm},
 	{Key: "date", Label: "Date", Description: "Point-in-time when the event occurred (or the best single date when a span is unknown). Prefer this for births, deaths, and other one-day facts. Use start/end date instead when the event clearly lasts across a range.", ValueType: properties.ValueTypeDate},
 	{Key: "start_date", Label: "Start date", Description: "When a multi-day or open-ended event began (census day range, residence, military service, voyage). Leave empty for instantaneous events that only need Date.", ValueType: properties.ValueTypeDate},
@@ -163,6 +164,7 @@ var seedProperties = []seedProperty{
 // Locked = required for connect macros and/or Conclusion ordering (event dates).
 var seedBindings = []seedBinding{
 	{TypeKey: "person", PropertyKey: "name", SortOrder: 0},
+	{TypeKey: "person", PropertyKey: "sex_at_birth", SortOrder: 1},
 
 	{TypeKey: "event", PropertyKey: "event_type", SortOrder: 0},
 	{TypeKey: "event", PropertyKey: "date", SortOrder: 1, Locked: true},
@@ -185,8 +187,12 @@ var seedBindings = []seedBinding{
 	{TypeKey: "source", PropertyKey: "remark", SortOrder: 1},
 }
 
-// Property terms from docs/seeded-vocabulary.md §3.4–3.6.
+// Property terms from docs/seeded-vocabulary.md §3.4–3.7.
 var seedTerms = []seedTerm{
+	{PropertyKey: "sex_at_birth", Key: "female", Label: "Female"},
+	{PropertyKey: "sex_at_birth", Key: "male", Label: "Male"},
+	{PropertyKey: "sex_at_birth", Key: "intersex", Label: "Intersex"},
+
 	{PropertyKey: "event_type", Key: "birth", Label: "Birth"},
 	{PropertyKey: "event_type", Key: "death", Label: "Death"},
 	{PropertyKey: "event_type", Key: "marriage", Label: "Marriage"},
