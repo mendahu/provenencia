@@ -553,7 +553,7 @@ CREATE TABLE properties (
 
 `origin` and `UNIQUE (key, origin)` follow [`seeded-vocabulary.md`](seeded-vocabulary.md) §1.1. Observations and Reconciliation Claims reference `properties.id`, not bare `key`.
 
-A Property's `value_type` is intrinsic to the Property. Seeded Properties (for example `name`, `birth_date`, `event_type`, `role`, `person`, `mentions`, `remark`) and their `subject_type_fields` bindings are listed in [`seeded-vocabulary.md`](seeded-vocabulary.md).
+A Property's `value_type` is intrinsic to the Property. Seeded Properties (for example `name`, `event_type`, `role`, `person`, `mentions`, `remark`) and their `subject_type_fields` bindings are listed in [`seeded-vocabulary.md`](seeded-vocabulary.md).
 
 Product value types are **`text`**, **`integer`**, **`date`**, **`name`**, and **`subject`** only. `real` and `boolean` are not used.
 
@@ -600,7 +600,6 @@ For example (full matrix in [`seeded-vocabulary.md`](seeded-vocabulary.md)):
 
 ```text
 person        -> name
-person        -> birth_date
 
 event         -> event_type
 event         -> date

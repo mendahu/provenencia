@@ -33,9 +33,9 @@ Product value types: **`text`**, **`integer`**, **`date`**, **`name`**, **`subje
 
 | Type | Why |
 | --- | --- |
-| **text** | Most seeded Properties (`occupation`, `event_type`, `role`, `relationship_type`, `toponym`, …) |
+| **text** | Most seeded Properties (`event_type`, `role`, `relationship_type`, `toponym`, …) |
 | **subject** | Bridge edges (`person`, `event`, `place`, `participant`) |
-| **date** | `birth_date`, `date`; reuse DateValue |
+| **date** | `date` (event); reuse DateValue |
 | **name** | Primary person assertion; NameValue (`name_values` + `name_value_parts` only) |
 | **integer** | `age_at_event` |
 
