@@ -14,13 +14,13 @@ Citations, Observations, NameValue, Subject **fields** editor, citation composer
 
 ## Goal (dogfood bar)
 
-All of the following must be true in the app:
+All of the following must be true in the app **by spike close**. Build them as incremental dogfood slices (see [back half](#incremental-ui-dogfood-back-half)) — do not wait for the whole bar before testing in the app.
 
 1. **Subject fields** replaces its stub with a real editor for Properties + bindings to **seeded** Subject types — **new IA for a long property list**, not a Source fields clone. Subject types destination stays stub / non-editable.
 2. On the Evidence graph, a card has **Add property** → navigate to the **citation composer place** (Artifact pick as needed inside that place or as a short prelude).
-3. Composer supports **images** (zoom/pan + region polygon) and **PDFs** (page nav + zoom/pan + region); audio/video deferred.
-4. One submit writes **one Citation + N Observations**; **Back** returns to the graph; card **grows** with cited property rows.
-5. **NameValue** works end-to-end (schema → Go → reusable Swift editor per **S7-D5**, DateValue-shaped) — nested modal/sheet *inside* the composer place is fine.
+3. Composer supports **images** (zoom/pan + region polygon) and **PDFs** (page nav + zoom/pan + region); audio/video deferred — *after* a thin text-only cite path already works.
+4. One submit writes **one Citation + N Observations**; **Back** returns to the graph; card **grows** with cited property rows — *shippable with text Observations before viewers/locators*.
+5. **NameValue** works end-to-end (schema → Go → reusable Swift editor per **S7-D5**, DateValue-shaped) — nested modal/sheet *inside* the composer place is fine; *late fill-in*.
 6. **Connect** is durable: disambiguation on the graph → navigate to composer with two edge Observations pre-filled → submit → back to graph with a real bridge (replaces Spike 6 provisional links).
 7. Empty Artifact gate is honest (cannot cite without an Artifact).
 8. Composer has its **own accessibility tree** — not layered on the canvas.
@@ -180,7 +180,27 @@ Pinning a Citation across successive graph edits is **out** (one Citation + N Ob
 
 ~~**S7-D1** Subject types editor~~ — **descoped** (see [Descoped](#descoped) below).
 
-**Scheduling:** **S7-D2** early (unblocks S7-05). **S7-D5** only needs to finish before **S7-02b** / composer — not on the path to Subject fields. **S7-D3** before card/connect UI; **S7-D4** before composer place UI. D3/D4/D5 may run in parallel once boundaries are clear.
+**Scheduling:** **S7-D2** early (unblocks S7-05). **S7-D3** before Add-property / card UI (**S7-09**). **S7-D4** before thin composer (**S7-08**). **S7-D5** before NameValue Swift (**S7-02b**), late in the composer fill-in. Prefer **D3 → implement 09** so the graph is dogfoodable before viewers exist.
+
+## Incremental UI dogfood (back half)
+
+Do **not** stack viewers → locators → NameValue → composer → Add property. That forces building five PRs before anything is clickable in the app.
+
+**Invert:** ship a thin vertical path you can click immediately, then thicken the composer.
+
+```text
+S7-09  Add property on cards → navigate to composer place (stub/shell OK)
+         dogfood: button, place, breadcrumbs, Back
+S7-08  Thin composer: Artifact pick + citation + text Observations + submit
+         dogfood: cite a line of text, card grows (no fancy viewer yet)
+S7-06  Image + PDF viewers in the composer
+S7-07  Locator tools (page + region)
+S7-02b NameValue editor hosted in composer
+S7-10  Durable connect macros
+S7-11  Full dogfood bar / close
+```
+
+Each step is independently testable in the running app against **S7-03** (and S7-01/02 as needed).
 
 ## PR sequence
 
@@ -192,41 +212,50 @@ S7-D2 Subject fields                S7-01  properties + subject_type_fields
   │                                 │      + **central subject registry**
   │                                 ▼
   └────── D2 gates ───────────────▶ S7-05  Subject fields UI
-                                    │      (value_type=name is just an enum —
-                                    │       no NameValue tables/editor yet)
 
                                     S7-02  NameValue schema + Go
-                                    │      (parallel; needed before Observations)
+                                    │      (parallel; before Observations)
                                     ▼
                                     S7-03  citations + observations + locator
                                     │      validation (Go) + FFI macros
                                     │
 S7-D3 Graph updates                 │
+  │                                 ▼
+  └────── D3 gates ───────────────▶ S7-09  Add property + composer navigation
+                                    │      (+ card chrome / cited-row slots;
+                                    │       composer may be a thin stub)
+                                    │      dogfood: click Add property → place
+                                    │
 S7-D4 Composer place                │
+  │                                 ▼
+  └────── D4 gates ───────────────▶ S7-08  Thin composer (submit path)
+                                    │      Artifact pick, citation fields,
+                                    │      text Observations, submit → card grows
+                                    │      Viewer pane: placeholder OK
+                                    │
+                                    S7-06  Image + PDF viewers → composer
+                                    │
+                                    ▼
+                                    S7-07  Locator tools (page + region)
+                                    │
 S7-D5 NameValue editor              │
-  │                                 S7-06  Artifact viewers: image + PDF
-  │                                 │
   │                                 ▼
-  │                                 S7-07  Locator tools: page + region
-  │                                 │
-  │                                 ▼
-  └────── D5 gates ───────────────▶ S7-02b NameValue Swift editor
-  │                                 │
-  └────── D4 gates ───────────────▶ S7-08  Citation composer place (B)
-  │                                 │      (+ host NameValue from S7-02b)
-  │                                 ▼
-  └────── D3 gates ───────────────▶ S7-09  Card growth + Add property
+  └────── D5 gates ───────────────▶ S7-02b NameValue Swift editor → composer
+                                    │
                                     ▼
                                   S7-10  Durable connect macros
+                                    │
                                     ▼
                                   S7-11  Dogfood close / docs
 ```
 
 **Dependency notes:**
 
-- **S7-05** depends on **S7-01** + **S7-D2** only — **not** NameValue (S7-02 / S7-02b / S7-D5).
-- **S7-02** (schema) sits on the Observations branch: required before **S7-03** (`value_name_id` FK). May parallel S7-05.
-- **S7-02b** (Swift editor) is only required for **S7-08**; gate on **S7-D5**. First product use of the editor is the composer.
+- **S7-05** → **S7-01** + **S7-D2** only (no NameValue UI).
+- **S7-09** → **S7-03** (graph payload can show Observations) + **S7-D3**. Registers composer `WorkspaceLocation`; destination may stub until S7-08.
+- **S7-08** → **S7-09** + **S7-D4** + **S7-03**. **Does not** require S7-06/07/02b — text-only Observations and a placeholder viewer are enough to dogfood submit + card growth.
+- **S7-06 / S7-07 / S7-02b** fill the composer in place; each is dogfoodable on top of S7-08.
+- **S7-10** → working composer submit (S7-08+) + **S7-D3**.
 
 Schema/Go (01–03) may start before design finishes; **UI PRs gate on the matching brief.**
 
@@ -242,11 +271,11 @@ Schema/Go (01–03) may start before design finishes; **UI PRs gate on the match
 - [ ] S7-05 — Subject fields UI → [`completed.md`](completed.md)
 - [ ] S7-02 — NameValue schema + Go → [`completed.md`](completed.md)
 - [ ] S7-03 — Citations + Observations + locator validation + FFI → [`completed.md`](completed.md)
-- [ ] S7-06 — Artifact viewers (image + PDF) → [`completed.md`](completed.md)
+- [ ] S7-09 — Add property + composer navigation (stub OK) → [`completed.md`](completed.md)
+- [ ] S7-08 — Thin composer (submit + card growth; viewer placeholder OK) → [`completed.md`](completed.md)
+- [ ] S7-06 — Image + PDF viewers in composer → [`completed.md`](completed.md)
 - [ ] S7-07 — Locator tools (page + region) → [`completed.md`](completed.md)
 - [ ] S7-02b — NameValue Swift editor → [`completed.md`](completed.md)
-- [ ] S7-08 — Citation composer place → [`completed.md`](completed.md)
-- [ ] S7-09 — Card growth + Add property → [`completed.md`](completed.md)
 - [ ] S7-10 — Durable connect macros → [`completed.md`](completed.md)
 - [ ] S7-11 — Dogfood close / docs → [`completed.md`](completed.md)
 
@@ -266,19 +295,19 @@ Claude Design board for Subject fields. Brief: [`design/S7-D2-subject-fields.md`
 
 ## S7-D3 — Design: Evidence graph updates
 
-Claude Design board for Add property, cited rows, connect disambiguation handoff. Brief: [`design/S7-D3-evidence-graph-updates.md`](design/S7-D3-evidence-graph-updates.md). Gates **S7-09**, **S7-10**. Does **not** design the composer place (S7-D4).
+Claude Design board for Add property, cited rows, connect disambiguation handoff. Brief: [`design/S7-D3-evidence-graph-updates.md`](design/S7-D3-evidence-graph-updates.md). Gates **S7-09**, **S7-10**. Does **not** design the composer place (S7-D4). **Implement S7-09 before the thick composer** so Add property is dogfoodable early.
 
 ---
 
 ## S7-D4 — Design: Citation composer place
 
-Claude Design board for the navigable composer. Brief: [`design/S7-D4-citation-composer.md`](design/S7-D4-citation-composer.md). Gates **S7-08**. Confirms breadcrumbs and history policy. **Does not** design the NameValue editor (S7-D5) — only the host affordance that opens it.
+Claude Design board for the navigable composer. Brief: [`design/S7-D4-citation-composer.md`](design/S7-D4-citation-composer.md). Gates **S7-08**. Confirms breadcrumbs and history policy. **Phase the board:** shell + form first (text Observations); viewer/locator/NameValue as later fill-ins. Does **not** design the NameValue editor (S7-D5).
 
 ---
 
 ## S7-D5 — Design: NameValue editor
 
-Claude Design board for the reusable NameValue modal (DateValue twin). Brief: [`design/S7-D5-name-value-editor.md`](design/S7-D5-name-value-editor.md). Gates **S7-02b**.
+Claude Design board for the reusable NameValue modal (DateValue twin). Brief: [`design/S7-D5-name-value-editor.md`](design/S7-D5-name-value-editor.md). Gates **S7-02b**. Schedule late — after thin composer works.
 
 ---
 
@@ -321,21 +350,6 @@ Lives on the **Observations branch**, not the Subject fields branch. Needed so *
 
 ---
 
-## S7-02b — NameValue Swift editor
-
-Swift `NameValueDraft` / editor modal under `Features/Names/` (mirror `Features/Dates/`). Reusable from the composer and later hosts.
-
-**First product host is S7-08.** Schedule with composer work; not required for S7-05.
-
-| | |
-| --- | --- |
-| **In** | Reusable modal UI per S7-D5; unit tests for draft validation. |
-| **Out** | Composer host wiring (S7-08 opens the modal); schema (S7-02). |
-| **Testable** | Swift tests for form-required / parts ordering; preview of modal. |
-| **Depends on** | S7-02, **S7-D5**. |
-
----
-
 ## S7-03 — Citations + Observations + locator validation
 
 `citations`, `citation_notes`, `observations`, `observation_notes`; value columns for the five types only; Go locator validate (`page`, `region`; optional `text_quote`); atomic “create Citation + Observations” RPC; graph payload includes Observations for card rows.
@@ -362,16 +376,46 @@ Properties + `subject_type_fields` bindings; five value_types only (including **
 
 ---
 
-## S7-06 — Artifact viewers (image + PDF)
+## S7-09 — Add property + composer navigation
 
-PDFKit + image overlay; resolve files via `ProjectFiles`; no QuickLook for composer (no locator API).
+Grow `EvidenceSubjectCardChrome`; Add property → `go(to: composer)`; cited-row **slots** / growth chrome; uncited → cited shell when Observations exist; edge layout heights; registry-driven palette/presentation migration; graph a11y for new controls.
+
+**Composer destination may be a stub** (“form next”) as long as navigation, breadcrumbs, and Back work. Real submit lands in S7-08.
 
 | | |
 | --- | --- |
-| **In** | Zoom/pan image; PDF page nav + zoom/pan; hostable in composer. |
+| **In** | Add property control; composer `WorkspaceLocation`; card chrome for cited rows; Artifact gate messaging; registry presentation for kinds. |
+| **Out** | Full composer form (S7-08); connect (S7-10). |
+| **Testable** | Select a Person → Add property → land on composer place → Back to graph. No submit required yet. |
+| **Depends on** | S7-03 (optional empty cited rows), **S7-D3**. |
+
+---
+
+## S7-08 — Thin citation composer (submit path)
+
+New workspace place + location discriminant; breadcrumb per S7-D4; Artifact pick; citation fields; N Observations with **text** (and other simple types if cheap); single submit; cancel/Back; composer-only a11y.
+
+**Intentionally thin:** left pane may be a **placeholder** (“viewer in S7-06”) or Artifact title/metadata only. **No** requirement for PDF/image viewers, locators, or NameValue in this PR — those land as follow-ons so this PR is dogfoodable as soon as Add property exists.
+
+| | |
+| --- | --- |
+| **In** | Navigable place; form; submit Citation + Observations via S7-03; card growth when returning to graph; DateValue reuse if needed. |
+| **Out** | Image/PDF viewers (S7-06); locators (S7-07); NameValue modal (S7-02b); connect macros (S7-10). |
+| **Testable** | Add property → composer → pick Artifact → add text Observation → submit → Back → card shows cited row. |
+| **Depends on** | S7-09, S7-03, **S7-D4**. |
+
+---
+
+## S7-06 — Artifact viewers (image + PDF)
+
+PDFKit + image overlay; resolve files via `ProjectFiles`; no QuickLook for composer (no locator API). **Plug into the existing composer** from S7-08 (replace placeholder).
+
+| | |
+| --- | --- |
+| **In** | Zoom/pan image; PDF page nav + zoom/pan; left pane of composer. |
 | **Out** | Locator drawing (S7-07); audio/video. |
-| **Testable** | Open a PDF Artifact and an image Artifact in a host preview/harness. |
-| **Depends on** | Existing Artifacts / Files. **Not** gated on S7-D4 (chrome waits on D4). |
+| **Testable** | Open composer on an image/PDF Artifact — see viewer; submit still works. |
+| **Depends on** | S7-08. |
 
 ---
 
@@ -383,34 +427,23 @@ Interactive tools feeding nested selectors; Go is source of truth for invariants
 | --- | --- |
 | **In** | Page selector UI; polygon region draw on image/PDF page; produce `locator_json`. |
 | **Out** | `time_range`; required `text_quote` (optional if cheap). |
-| **Testable** | Drawn region validates in Go; invalid polygons rejected. |
+| **Testable** | Draw region in composer → submit → Citation stores validated locator. |
 | **Depends on** | S7-06, S7-03 validation. |
 
 ---
 
-## S7-08 — Citation composer place (Option B)
+## S7-02b — NameValue Swift editor
 
-New workspace place + location discriminant; breadcrumb per S7-D4; Artifact pick; form (citation fields + N Observations); typed value dispatch; single submit; cancel/Back policy; composer-only a11y.
+Swift `NameValueDraft` / editor modal under `Features/Names/` (mirror `Features/Dates/`). Host in the composer for `value_type = name`.
 
-| | |
-| --- | --- |
-| **In** | Navigable place; viewer\|form layout; submit Citation + Observations; host NameValue modal from S7-02b; reuse DateValue. |
-| **Out** | Card growth wiring (S7-09); connect macros (S7-10); pinning; designing NameValue itself (S7-D5 / S7-02b). |
-| **Testable** | From a temporary entry point or FakeStore-driven nav: cite a page/region, add two Observations (including a name), submit, see rows in catalog; Back returns to graph. |
-| **Depends on** | S7-03, S7-06, S7-07, S7-02b, **S7-D4**. |
-
----
-
-## S7-09 — Card growth + Add property
-
-Grow `EvidenceSubjectCardChrome`; Add property → `go(to: composer)`; edge layout heights; graph a11y only for new card controls.
+**Late fill-in** after thin composer works. Not required for S7-05 or S7-08/09.
 
 | | |
 | --- | --- |
-| **In** | Cited-data rows; Add property control; navigation to composer; uncited → cited shell when Observations exist; **palette, card, and edge chrome driven by registry presentation** (retire hard-coded Add Person/Event/Place set and kind→style switches). |
-| **Out** | Connect durability (S7-10). |
-| **Testable** | Add property on a Person → composer → submit → card shows row and grows. |
-| **Depends on** | S7-08, **S7-D3**. |
+| **In** | Reusable modal UI per S7-D5; unit tests for draft validation; wire into S7-08 observation rows. |
+| **Out** | Schema (S7-02); name_format profiles. |
+| **Testable** | In composer, add a name Observation → edit NameValue → submit. |
+| **Depends on** | S7-02, S7-08, **S7-D5**. |
 
 ---
 
@@ -420,16 +453,16 @@ Disambiguation sheet on graph (§3.2 matrix); navigate to composer with pre-fill
 
 | | |
 | --- | --- |
-| **In** | person→event role; person→person relationship vs shared-event choice; event→place clean; refuse unsupported; atomic bridge + Citation + edges — **driven by the S7-01 registry connect matrix**, not a second hard-coded table in the view. |
+| **In** | person→event role; person→person relationship vs shared-event choice; event→place clean; refuse unsupported; atomic bridge + Citation + edges — **driven by the S7-01 registry connect matrix**. |
 | **Out** | Pinning; full conflicted/negated chrome; inventing connect rules outside the registry. |
-| **Testable** | Connect two people → disambiguate → cite → bridge persists with Observations; relaunch keeps edges; unsupported pairs refuse per registry. |
-| **Depends on** | S7-09, **S7-D3**, S7-01 registry. |
+| **Testable** | Connect two people → disambiguate → cite (thin or thick composer) → bridge persists; relaunch keeps edges. |
+| **Depends on** | S7-08 (submit path), S7-09, **S7-D3**, S7-01 registry. |
 
 ---
 
 ## S7-11 — Dogfood close / docs
 
-Honesty pass against the [goal bar](#goal-dogfood-bar). Record in [`completed.md`](completed.md); update [`README.md`](README.md); archive design briefs; point [`docs/deployment-plan/README.md`](../README.md) at archive when closed; SemVer only if cutting a product release.
+Honesty pass against the [goal bar](#goal-dogfood-bar), including viewers/locators/NameValue/connect. Record in [`completed.md`](completed.md); update [`README.md`](README.md); archive design briefs; point [`docs/deployment-plan/README.md`](../README.md) at archive when closed; SemVer only if cutting a product release.
 
 ---
 

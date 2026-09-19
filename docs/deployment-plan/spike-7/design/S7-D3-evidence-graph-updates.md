@@ -2,9 +2,10 @@
 
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 7 (Citations / Observations / composer)  
-**Implements later as:** PRs **S7-09**, **S7-10** only  
-**Depends on:** Spike 6 canvas + cards (S6-D1/D2); composer place designed in **S7-D4** (handoff target)  
-**Related briefs:** [`S7-D4`](S7-D4-citation-composer.md) — composer place (do not design it here)
+**Implements later as:** PRs **S7-09** first (Add property + card growth), then **S7-10** (connect)  
+**Depends on:** Spike 6 canvas + cards (S6-D1/D2). Composer place chrome is **S7-D4** — this board only needs a handoff target (navigate away), not the finished composer.  
+**Related briefs:** [`S7-D4`](S7-D4-citation-composer.md) — composer place (do not design it here)  
+**Dogfood order:** Design and ship **S7-09** before thick composer work so Add property is clickable early.
 
 Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](README.md) first.
 

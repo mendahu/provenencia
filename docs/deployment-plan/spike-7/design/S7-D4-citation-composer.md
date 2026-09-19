@@ -2,9 +2,10 @@
 
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 7 (Citations / Observations / composer)  
-**Implements later as:** PR **S7-08** only (viewers/locators land in S7-06/S7-07; this board owns place chrome)  
+**Implements later as:** PR **S7-08** (thin submit path); viewers/locators/NameValue fill in via **S7-06 / S7-07 / S7-02b**  
 **Depends on:** Evidence graph handoff designed in **S7-D3**; NameValue editor designed separately in **S7-D5** (composer only hosts it)  
-**Related briefs:** [`S7-D3`](S7-D3-evidence-graph-updates.md) — graph entry / return; [`S7-D5`](S7-D5-name-value-editor.md) — NameValue modal
+**Related briefs:** [`S7-D3`](S7-D3-evidence-graph-updates.md) — graph entry / return; [`S7-D5`](S7-D5-name-value-editor.md) — NameValue modal  
+**Phase the board:** prioritize shell + form + text Observations + breadcrumbs (enough for S7-08). Viewer, locator tools, and NameValue host can be later frames on the same board.
 
 Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](README.md) first.
 
@@ -52,13 +53,13 @@ Also decide **breadcrumbs**, title, and cancel/submit chrome so Back/Forward and
 - Not Citation pinning across multiple graph sessions.
 - Not a sheet/modal covering the still-visible graph (Option A rejected).
 
-### 2.2 Implementation gate (S7-08)
+### 2.2 Implementation gates (thin → thick)
 
-| Ships in S7-08 | Does **not** ship there |
-| --- | --- |
-| Place + breadcrumbs + viewer\|form layout | Wiring Add property on cards (S7-09) |
-| Artifact pick, citation fields, N Observations, submit | Connect disambiguation sheet (S7-10 / D3) |
-| Host affordance for NameValue + DateValue editors | Designing NameValue chrome (S7-D5 / S7-02b); companion NSWindow |
+| Ships in **S7-08** (thin) | Later PRs | Never this board |
+| --- | --- | --- |
+| Place + breadcrumbs + form; Artifact pick; text Observations; submit | Image/PDF viewers (**S7-06**); locators (**S7-07**); NameValue host (**S7-02b**) | Add property / card growth (**S7-D3** / **S7-09**) |
+| Left pane may be placeholder or Artifact title only | Full viewer\|form composition | Connect disambiguation (**S7-10**) |
+| DateValue reuse if needed | NameValue modal chrome | Designing NameValue (**S7-D5**); companion NSWindow |
 
 ---
 
@@ -108,13 +109,20 @@ Workspace location needs a discriminant beyond page|graph (e.g. `citationCompose
 
 ## 5. Screen / frame inventory (minimum)
 
-1. Composer with PDF, page selected, one Observation (text).
-2. Composer with image + polygon region tool active.
-3. Artifact picker (multi-Artifact Source).
-4. Observations list with two rows (e.g. name + occupation); annotation that name opens the **S7-D5** modal (do not detail that modal here).
-5. Connect-prefilled composer (two subject-valued edges).
-6. Breadcrumb states: Add-property path and Connect path.
-7. Unsupported media / no Artifact empty states.
+**Must for S7-08 (thin):**
+
+1. Composer shell with form + text Observation; left pane placeholder or Artifact metadata only.
+2. Artifact picker (multi-Artifact Source).
+3. Breadcrumb states: Add-property path (and Connect path if sketched).
+4. No-Artifact empty state.
+
+**Later frames (same board, thicken after thin ships):**
+
+5. Composer with PDF, page selected.
+6. Composer with image + polygon region tool active.
+7. Observations list with two rows (e.g. name + occupation); annotation that name opens the **S7-D5** modal.
+8. Connect-prefilled composer (two subject-valued edges).
+9. Unsupported media empty states.
 
 ---
 

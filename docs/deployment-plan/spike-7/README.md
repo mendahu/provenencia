@@ -6,6 +6,8 @@
 
 Stand up the Interpretation **Citation → Observation** pipeline on the Evidence graph: **Subject fields** editor, NameValue, image/PDF citation composer as a **navigable place**, cited property rows on cards, and durable connect macros. Authoritative design: [`interpretation-graph-ui.md`](../../ideas/interpretation-graph-ui.md) §4–§6 / slices 3–7. Canvas inherits from [Spike 6](../archive/spike-6/) (Go).
 
+> **UI dogfood is inverted:** Add property + card chrome first, then a **thin** composer (text cite → card grows), then viewers / locators / NameValue. See [`deployment-plan.md`](deployment-plan.md) § Incremental UI dogfood.
+
 > **Composer is Option B:** navigate away from the graph to a first-class workspace place (viewer \| form). Not an in-window modal over the canvas, and not a companion `NSWindow`.
 
 > **Subject types are not user-editable.** The seven seeded kinds (person / event / place / bridges / source) stay product-seeded with first-class graph plumbing. No Subject types CatalogVocabulary UI in this spike (S7-D1 / S7-04 descoped). Behavior (capabilities, locked bindings, connect matrix) is declared in one **Interpretation subject registry** in S7-01 — the plugin extension point later.
