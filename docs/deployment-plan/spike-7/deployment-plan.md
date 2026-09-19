@@ -51,13 +51,15 @@ Spike 5 already seeds Subject types from [`core/database/subjecttypes/registry.g
 | --- | --- | --- |
 | Type identity | `key`, labels, ref prefixes, `origin=provenencia` | DB seed rows (as today) |
 | **Role / capabilities** | e.g. root vs bridge vs reification; placeable on Evidence graph; create requires Citation | Palette, card chrome, connect entry, empty states |
-| **Graph presentation** | display label / `L10n` key, icon symbol token, color/tinge token | Evidence graph **palette buttons**, cards, ghost preview |
+| **Graph presentation** | Everything type-keyed for Evidence graph chrome: display name / `L10n` key, icon symbol token, card colors (ink / tint / chip / line tokens), edge/gradient tokens for roots **and** bridges | Palette, cards, ghosts, bridge cards, relationship **lines** |
 | **Properties** | key, value_type, labels | `properties` seed + Subject fields + Observation editors |
 | **Bindings** | type_key → property_key (+ sort) | `subject_type_fields` seed; Add-property menus |
 | **Required / locked bindings** | which seeded bindings macros need and UI must not unbind | Subject fields delete/unbind; connect pre-fill |
 | **Connect matrix** | allowed endpoint pairs + which bridge type + which edge Properties / disambiguation fields | S7-10 macros (read registry; do not re-encode §3.2 in the view) |
 
-**Palette example (today’s Add Person / Event / Place):** those three tools are not a hard-coded Swift enum forever. The Evidence graph asks the registry (via Go/FFI): *which Subject types are placeable on this canvas, in what order?* For each, it renders a toggle from that type’s **presentation** (copy + icon + tinge). Adding a future plugin placeable type — or dropping one from the product seed — changes the palette by changing the registry, not by editing `EvidenceGraphPalette` / `EvidenceSubjectKindStyle` switch statements. Connect stays a separate chrome tool (not a Subject type), unless the registry later declares other non-type tools.
+**Type-keyed chrome:** Today’s `EvidencePrimaryKind` / `EvidenceSubjectKindStyle` (and edge gradients that sample primary ink) are the anti-pattern. The graph loads presentation from the registry for **every** Subject type it can show, then maps tokens to design-system colors/symbols locally. If it is configured *because of the type* (card name, palette label, wash, chip, line ink, gradient endpoints), it belongs in the registry. Platform tokens (`PVColor.…`, SF Symbols, `L10n` keys) stay in the design system / catalogs; the registry stores **which token for which type**.
+
+**Palette example (today’s Add Person / Event / Place):** those three tools are not a hard-coded Swift enum forever. The Evidence graph asks the registry (via Go/FFI): *which Subject types are placeable on this canvas, in what order?* For each, it renders a toggle from that type’s **presentation**. Adding or dropping a placeable type changes palette **and** card/line chrome via the registry, not via style `switch`es. Connect stays a separate chrome tool (not a Subject type), unless the registry later declares other non-type tools.
 
 **Rules:**
 
