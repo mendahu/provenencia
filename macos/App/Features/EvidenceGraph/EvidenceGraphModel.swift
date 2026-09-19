@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// Create / place / drag logic for the Evidence graph (S6-03).
+/// Create / place / drag / connect logic for the Evidence graph (S6-03 / S6-04).
 @MainActor
 @Observable
 final class EvidenceGraphModel {
@@ -14,8 +14,18 @@ final class EvidenceGraphModel {
     let session: WorkspaceSession
     let store: any GenealogyStore
     let userID: String
+    let linkStore: any EvidenceProvisionalLinkStoring
 
     var armedKind: EvidencePrimaryKind?
+    /// Connect tool armed (mutually exclusive with `armedKind`).
+    var armedConnect = false
+    /// First primary chosen while connecting.
+    var connectOriginID: String?
+    /// Inferred bridge kind while the create sheet is open for a connect.
+    var pendingBridgeKind: EvidenceBridgeKind?
+    /// Endpoint B id while creating a bridge (A is `connectOriginID`).
+    var pendingEndpointBID: String?
+
     var isCreating = false
     var pendingGridX: Int64 = 0
     var pendingGridY: Int64 = 0
@@ -25,13 +35,15 @@ final class EvidenceGraphModel {
     var createError: String?
     var hoverGridX: Int64?
     var hoverGridY: Int64?
+    /// Content-space point for the connect rubber-band (under cursor).
+    var connectHoverPoint: CGPoint?
     var selectedSubjectID: String?
     /// Space/Return opened this card for inner controls (cleared on Esc / other select).
     var activatedSubjectID: String?
     /// Shown when drag / arrow persist fails after an optimistic patch.
     var toast: VocabularyToast?
 
-    /// Seeded type ids keyed by `EvidencePrimaryKind.rawValue`.
+    /// Seeded type ids keyed by primary or bridge kind rawValue.
     private(set) var typeIDByKind: [String: String] = [:]
     private(set) var typeLabelByKind: [String: String] = [:]
 
@@ -43,12 +55,28 @@ final class EvidenceGraphModel {
         sourceID: String,
         session: WorkspaceSession,
         store: any GenealogyStore,
-        userID: String
+        userID: String,
+        linkStore: (any EvidenceProvisionalLinkStoring)? = nil
     ) {
         self.sourceID = sourceID
         self.session = session
         self.store = store
         self.userID = userID
+        if let linkStore {
+            self.linkStore = linkStore
+        } else if let live = try? EvidenceProvisionalLinkStore(
+            projectDir: session.projectKey.projectDir
+        ) {
+            self.linkStore = live
+        } else {
+            self.linkStore = InMemoryEvidenceProvisionalLinkStore()
+        }
+    }
+
+    /// Snapshot with provisional endpoints attached for drawing.
+    func displaySnapshot(from raw: SourceGraphSnapshot?) -> SourceGraphSnapshot {
+        let base = raw ?? SourceGraphSnapshot(sourceId: sourceID)
+        return base.attaching(links: linkStore.links(for: sourceID))
     }
 
     func prepare() async {
@@ -57,7 +85,9 @@ final class EvidenceGraphModel {
             var ids: [String: String] = [:]
             var labels: [String: String] = [:]
             for type in types {
-                guard EvidencePrimaryKind(rawValue: type.key) != nil else { continue }
+                let isPrimary = EvidencePrimaryKind(rawValue: type.key) != nil
+                let isBridge = EvidenceBridgeKind(rawValue: type.key) != nil
+                guard isPrimary || isBridge else { continue }
                 ids[type.key] = type.id
                 labels[type.key] = type.label
             }
@@ -73,9 +103,25 @@ final class EvidenceGraphModel {
         if armedKind == kind {
             disarm()
         } else {
+            clearConnectState()
             armedKind = kind
             hoverGridX = nil
             hoverGridY = nil
+        }
+    }
+
+    func toggleConnect() {
+        if armedConnect {
+            disarm()
+        } else {
+            armedKind = nil
+            hoverGridX = nil
+            hoverGridY = nil
+            armedConnect = true
+            connectOriginID = nil
+            connectHoverPoint = nil
+            pendingBridgeKind = nil
+            pendingEndpointBID = nil
         }
     }
 
@@ -83,6 +129,15 @@ final class EvidenceGraphModel {
         armedKind = nil
         hoverGridX = nil
         hoverGridY = nil
+        clearConnectState()
+    }
+
+    private func clearConnectState() {
+        armedConnect = false
+        connectOriginID = nil
+        connectHoverPoint = nil
+        pendingBridgeKind = nil
+        pendingEndpointBID = nil
     }
 
     func selectSubject(id: String?) {
@@ -101,6 +156,23 @@ final class EvidenceGraphModel {
         activatedSubjectID = nil
     }
 
+    /// Pointer / keyboard pick while Connect is armed.
+    func handleConnectPick(subjectID: String, kind: EvidencePrimaryKind, label: String) {
+        guard armedConnect, !isCreating, !isSaving else { return }
+        if connectOriginID == nil {
+            connectOriginID = subjectID
+            selectSubject(id: subjectID)
+            return
+        }
+        guard let originID = connectOriginID, originID != subjectID else { return }
+        beginBridgeCreate(
+            originID: originID,
+            targetID: subjectID,
+            targetKind: kind,
+            targetLabel: label
+        )
+    }
+
     func updateHover(contentPoint: CGPoint) {
         guard armedKind != nil, !isCreating else { return }
         let cell = GraphCanvasGridMapping.gridCell(contentPoint: contentPoint)
@@ -108,9 +180,18 @@ final class EvidenceGraphModel {
         hoverGridY = cell.gridY
     }
 
+    func updateConnectHover(contentPoint: CGPoint) {
+        guard armedConnect, connectOriginID != nil, !isCreating else {
+            connectHoverPoint = nil
+            return
+        }
+        connectHoverPoint = contentPoint
+    }
+
     func clearHover() {
         hoverGridX = nil
         hoverGridY = nil
+        connectHoverPoint = nil
     }
 
     /// Opens the create dialog at the snapped cell (tool must be armed).
@@ -119,6 +200,8 @@ final class EvidenceGraphModel {
         let cell = GraphCanvasGridMapping.gridCell(contentPoint: contentPoint)
         pendingGridX = cell.gridX
         pendingGridY = cell.gridY
+        pendingBridgeKind = nil
+        pendingEndpointBID = nil
         draft = CreateDraft(
             label: defaultLabel(for: kind),
             description: ""
@@ -129,17 +212,64 @@ final class EvidenceGraphModel {
         clearHover()
     }
 
+    private func beginBridgeCreate(
+        originID: String,
+        targetID: String,
+        targetKind: EvidencePrimaryKind,
+        targetLabel: String
+    ) {
+        guard let origin = primary(in: currentSnapshot(), id: originID) else { return }
+        guard let bridgeKind = EvidenceBridgeKindInference.kind(origin.kind, targetKind) else {
+            toast = VocabularyToast(
+                title: String(localized: L10n.EvidenceGraph.connectInvalidPairTitle),
+                body: String(localized: L10n.EvidenceGraph.connectInvalidPairBody),
+                tone: .danger
+            )
+            return
+        }
+
+        let mid = midpointCell(origin: origin, targetID: targetID)
+        pendingGridX = mid.gridX
+        pendingGridY = mid.gridY
+        pendingBridgeKind = bridgeKind
+        pendingEndpointBID = targetID
+        draft = CreateDraft(
+            label: defaultBridgeLabel(for: bridgeKind),
+            description: ""
+        )
+        labelError = nil
+        createError = nil
+        isCreating = true
+        connectHoverPoint = nil
+        _ = targetLabel
+    }
+
     func cancelCreate() {
         guard !isSaving else { return }
+        let wasBridge = pendingBridgeKind != nil
         isCreating = false
         labelError = nil
         createError = nil
+        pendingBridgeKind = nil
+        pendingEndpointBID = nil
+        if wasBridge {
+            // Keep Connect armed with A held (S6-D2).
+            return
+        }
         disarm()
     }
 
-    /// Creates the subject + position. On success disarms and returns the new id.
+    /// Creates a primary subject + position, or a bridge + provisional link.
     @discardableResult
     func confirmCreate() async -> String? {
+        if pendingBridgeKind != nil {
+            return await confirmBridgeCreate()
+        }
+        return await confirmPrimaryCreate()
+    }
+
+    @discardableResult
+    private func confirmPrimaryCreate() async -> String? {
         guard let kind = armedKind, !isSaving else { return nil }
         let trimmed = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
@@ -170,7 +300,6 @@ final class EvidenceGraphModel {
                 gridX: pendingGridX,
                 gridY: pendingGridY
             )
-            // `apply` only marks the graph query stale — re-query to refetch.
             session.apply(.createdSubject(sourceId: sourceID))
             let _: QueryHandle<SourceGraphSnapshot> = session.query(graphKey)
             isCreating = false
@@ -182,9 +311,68 @@ final class EvidenceGraphModel {
         }
     }
 
+    @discardableResult
+    private func confirmBridgeCreate() async -> String? {
+        guard let bridgeKind = pendingBridgeKind,
+              let originID = connectOriginID,
+              let endpointBID = pendingEndpointBID,
+              !isSaving
+        else { return nil }
+
+        let trimmed = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            labelError = String(localized: L10n.EvidenceGraph.labelRequired)
+            return nil
+        }
+        guard let typeID = typeIDByKind[bridgeKind.rawValue] else {
+            createError = String(localized: L10n.EvidenceGraph.typesUnavailable)
+            return nil
+        }
+
+        isSaving = true
+        defer { isSaving = false }
+        labelError = nil
+        createError = nil
+        do {
+            let created = try await store.createSubject(
+                projectDir: session.projectKey.projectDir,
+                userID: userID,
+                sourceID: sourceID,
+                subjectTypeID: typeID,
+                label: trimmed,
+                description: draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
+            )
+            _ = try await store.setSubjectPosition(
+                projectDir: session.projectKey.projectDir,
+                subjectID: created.id,
+                gridX: pendingGridX,
+                gridY: pendingGridY
+            )
+            linkStore.upsert(
+                EvidenceProvisionalLink(
+                    bridgeSubjectID: created.id,
+                    endpointAID: originID,
+                    endpointBID: endpointBID
+                ),
+                sourceID: sourceID
+            )
+            session.apply(.createdSubject(sourceId: sourceID))
+            let _: QueryHandle<SourceGraphSnapshot> = session.query(graphKey)
+            isCreating = false
+            pendingBridgeKind = nil
+            pendingEndpointBID = nil
+            connectOriginID = nil
+            connectHoverPoint = nil
+            armedConnect = false
+            return created.id
+        } catch {
+            createError = L10n.Errors.message(for: error)
+            return nil
+        }
+    }
+
     /// Snaps a completed card drag. Patches the session cache **synchronously**
     /// so `@GestureState` can clear onto the new cell, then writes the store.
-    /// On persist failure, reverts the patch and surfaces a toast.
     @discardableResult
     func commitDrag(
         subjectID: String,
@@ -212,7 +400,6 @@ final class EvidenceGraphModel {
         return (cell.gridX, cell.gridY)
     }
 
-    /// Moves a selected subject one grid cell (arrow keys).
     @discardableResult
     func moveSubject(
         subjectID: String,
@@ -259,6 +446,18 @@ final class EvidenceGraphModel {
         )
     }
 
+    func createDialogTitle() -> LocalizedStringResource {
+        if let bridgeKind = pendingBridgeKind {
+            return bridgeCreateTitle(for: bridgeKind)
+        }
+        switch armedKind {
+        case .person: return L10n.EvidenceGraph.addPersonTitle
+        case .event: return L10n.EvidenceGraph.addEventTitle
+        case .place: return L10n.EvidenceGraph.addPlaceTitle
+        case .none: return L10n.EvidenceGraph.addPersonTitle
+        }
+    }
+
     func createDialogTitle(for kind: EvidencePrimaryKind) -> LocalizedStringResource {
         switch kind {
         case .person: L10n.EvidenceGraph.addPersonTitle
@@ -267,8 +466,36 @@ final class EvidenceGraphModel {
         }
     }
 
+    func bridgeCreateTitle(for kind: EvidenceBridgeKind) -> LocalizedStringResource {
+        switch kind {
+        case .relationship: L10n.EvidenceGraph.addRelationshipTitle
+        case .participation: L10n.EvidenceGraph.addParticipationTitle
+        case .location: L10n.EvidenceGraph.addLocationTitle
+        }
+    }
+
+    /// Mono endpoint line under the bridge create title.
+    func bridgeEndpointLine() -> String? {
+        guard pendingBridgeKind != nil,
+              let originID = connectOriginID,
+              let endpointBID = pendingEndpointBID,
+              let snapshot = currentSnapshot()
+        else { return nil }
+        let a = displayLabel(forPrimaryID: originID, in: snapshot)
+        let b = displayLabel(forPrimaryID: endpointBID, in: snapshot)
+        return "\(a) → \(b)"
+    }
+
     func toolAccessibilityLabel(for kind: EvidencePrimaryKind, armed: Bool) -> String {
         let name = String(localized: toolName(for: kind))
+        let state = armed
+            ? String(localized: L10n.EvidenceGraph.toolOn)
+            : String(localized: L10n.EvidenceGraph.toolOff)
+        return "\(name), \(String(localized: L10n.EvidenceGraph.toolRole)), \(state)"
+    }
+
+    func connectToolAccessibilityLabel(armed: Bool) -> String {
+        let name = String(localized: L10n.EvidenceGraph.toolConnect)
         let state = armed
             ? String(localized: L10n.EvidenceGraph.toolOn)
             : String(localized: L10n.EvidenceGraph.toolOff)
@@ -291,12 +518,57 @@ final class EvidenceGraphModel {
         }
     }
 
+    var connectArmedHint: LocalizedStringResource {
+        if connectOriginID != nil {
+            return L10n.EvidenceGraph.armedHintConnectPickB
+        }
+        return L10n.EvidenceGraph.armedHintConnect
+    }
+
     private func defaultLabel(for kind: EvidencePrimaryKind) -> String {
         switch kind {
         case .person: String(localized: L10n.EvidenceGraph.defaultLabelPerson)
         case .event: String(localized: L10n.EvidenceGraph.defaultLabelEvent)
         case .place: String(localized: L10n.EvidenceGraph.defaultLabelPlace)
         }
+    }
+
+    private func defaultBridgeLabel(for kind: EvidenceBridgeKind) -> String {
+        switch kind {
+        case .relationship: String(localized: L10n.EvidenceGraph.defaultLabelRelationship)
+        case .participation: String(localized: L10n.EvidenceGraph.defaultLabelParticipation)
+        case .location: String(localized: L10n.EvidenceGraph.defaultLabelLocation)
+        }
+    }
+
+    private func currentSnapshot() -> SourceGraphSnapshot? {
+        guard let handle: QueryHandle<SourceGraphSnapshot> = session.queryHandle(graphKey) else {
+            return nil
+        }
+        return displaySnapshot(from: handle.value)
+    }
+
+    private func primary(in snapshot: SourceGraphSnapshot?, id: String) -> SourceGraphPlacedSubject? {
+        snapshot?.subjects.first { $0.id == id }
+    }
+
+    private func displayLabel(forPrimaryID id: String, in snapshot: SourceGraphSnapshot) -> String {
+        guard let placed = snapshot.subjects.first(where: { $0.id == id }) else { return id }
+        let trimmed = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? placed.typeLabel : trimmed
+    }
+
+    private func midpointCell(
+        origin: SourceGraphPlacedSubject,
+        targetID: String
+    ) -> (gridX: Int64, gridY: Int64) {
+        guard let target = primary(in: currentSnapshot(), id: targetID) else {
+            return (origin.gridX, origin.gridY)
+        }
+        let pa = GraphCanvasGridMapping.contentPoint(gridX: origin.gridX, gridY: origin.gridY)
+        let pb = GraphCanvasGridMapping.contentPoint(gridX: target.gridX, gridY: target.gridY)
+        let mid = CGPoint(x: (pa.x + pb.x) / 2, y: (pa.y + pb.y) / 2)
+        return GraphCanvasGridMapping.gridCell(contentPoint: mid)
     }
 
     private func applyPositionPatch(subjectID: String, gridX: Int64, gridY: Int64) {

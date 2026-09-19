@@ -20,6 +20,8 @@ struct EvidenceSubjectCard: View {
     var isSelected: Bool
     /// Space/Return opened the card for inner controls (future actions).
     var isActivated: Bool
+    /// Connect tool: this card is origin A waiting for B.
+    var isConnectingFrom: Bool = false
     var dragEnabled: Bool
     /// Keyboard focus binding for the sibling overlay (not the drag surface).
     var keyboardFocus: FocusState<String?>.Binding
@@ -40,9 +42,10 @@ struct EvidenceSubjectCard: View {
     var body: some View {
         EvidenceSubjectCardChrome(
             placed: placed,
-            isSelected: isSelected,
+            isSelected: isSelected || isConnectingFrom,
             isActivated: isActivated,
-            isDragging: isDragging
+            isDragging: isDragging,
+            isConnectingFrom: isConnectingFrom
         )
         .opacity(ghostOpacity)
         .offset(dragOffset)
@@ -83,7 +86,8 @@ struct EvidenceSubjectCard: View {
             placed: placed,
             isSelected: false,
             isActivated: false,
-            isDragging: false
+            isDragging: false,
+            isConnectingFrom: false
         )
         .opacity(0.62)
         .allowsHitTesting(false)
@@ -122,14 +126,22 @@ struct EvidenceSubjectCard: View {
     }
 
     private var dragGesture: some Gesture {
-        DragGesture(minimumDistance: 4, coordinateSpace: .named(Self.documentCoordinateSpace))
+        DragGesture(
+            minimumDistance: dragEnabled ? 4 : 10_000,
+            coordinateSpace: .named(Self.documentCoordinateSpace)
+        )
             .updating($dragOffset) { value, state, _ in
+                guard dragEnabled else { return }
                 state = CGSize(
                     width: value.location.x - value.startLocation.x,
                     height: value.location.y - value.startLocation.y
                 )
             }
             .onEnded { value in
+                guard dragEnabled else {
+                    onSelect()
+                    return
+                }
                 onSelect()
                 let delta = CGSize(
                     width: value.location.x - value.startLocation.x,
@@ -146,13 +158,14 @@ private struct EvidenceSubjectCardChrome: View {
     var isSelected: Bool
     var isActivated: Bool
     var isDragging: Bool
+    var isConnectingFrom: Bool
 
     private var style: EvidenceSubjectKindStyle {
         EvidenceSubjectKindStyle.forKind(placed.kind)
     }
 
     private var showsSelectionChrome: Bool {
-        isSelected || isActivated || isDragging
+        isSelected || isActivated || isDragging || isConnectingFrom
     }
 
     var body: some View {
@@ -174,7 +187,11 @@ private struct EvidenceSubjectCardChrome: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 citationMark
             }
-            if let description = nonEmptyDescription {
+            if isConnectingFrom {
+                Text(L10n.EvidenceGraph.connectingFrom)
+                    .font(PVFont.mono(size: 11))
+                    .foregroundStyle(PVColor.accent)
+            } else if let description = nonEmptyDescription {
                 Text(verbatim: description)
                     .font(PVFont.body(size: PVTypeScale.bodySmall))
                     .foregroundStyle(PVColor.textMuted)

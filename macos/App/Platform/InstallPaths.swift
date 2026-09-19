@@ -6,7 +6,7 @@ enum InstallPaths {
     static let catalogFile = "provenencia.sqlite"
 
     /// `{Application Support}/Provenencia`. Holds `identity.json`, `active-project.json`,
-    /// and `navigation/{uuid}.json` (workspace history).
+    /// `navigation/{uuid}.json` (workspace history), and `evidence-links/` (S6-04).
     static func identityDirectory(fileManager: FileManager = .default) throws -> URL {
         let base = try fileManager.url(
             for: .applicationSupportDirectory,
@@ -21,6 +21,29 @@ enum InstallPaths {
     static func navigationDirectory(fileManager: FileManager = .default) throws -> URL {
         try identityDirectory(fileManager: fileManager)
             .appendingPathComponent("navigation", isDirectory: true)
+    }
+
+    /// `{Application Support}/Provenencia/evidence-links`.
+    static func evidenceLinksDirectory(fileManager: FileManager = .default) throws -> URL {
+        try identityDirectory(fileManager: fileManager)
+            .appendingPathComponent("evidence-links", isDirectory: true)
+    }
+
+    /// Stable filename for a project directory path (no catalog UUID required).
+    static func evidenceLinksFileName(projectDir: String) -> String {
+        let digest = projectDir.data(using: .utf8).map { data -> String in
+            var hash: UInt64 = 5381
+            for byte in data {
+                hash = ((hash << 5) &+ hash) &+ UInt64(byte)
+            }
+            return String(hash, radix: 16)
+        } ?? "unknown"
+        return "\(digest).json"
+    }
+
+    static func evidenceLinksFile(projectDir: String, fileManager: FileManager = .default) throws -> URL {
+        try evidenceLinksDirectory(fileManager: fileManager)
+            .appendingPathComponent(evidenceLinksFileName(projectDir: projectDir), isDirectory: false)
     }
 
     /// Filename key: lowercase hex of the catalog project UUID with no dashes/braces.

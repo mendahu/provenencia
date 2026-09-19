@@ -32,7 +32,7 @@ struct SourceGraphSnapshotTests {
         candidateRefPrefix: "CLO"
     )
 
-    @Test func buildKeepsPlacedPrimariesOnly() {
+    @Test func buildKeepsPlacedPrimariesAndBridgesWithLinks() {
         let alice = CatalogSubject(
             id: "s-alice",
             ref: "CPR-A",
@@ -74,7 +74,14 @@ struct SourceGraphSnapshotTests {
                 CatalogSubjectPosition(subjectID: birth.id, gridX: 3, gridY: 4),
                 CatalogSubjectPosition(subjectID: bridge.id, gridX: 5, gridY: 6),
             ],
-            types: [personType, eventType, locationType]
+            types: [personType, eventType, locationType],
+            provisionalLinks: [
+                EvidenceProvisionalLink(
+                    bridgeSubjectID: bridge.id,
+                    endpointAID: alice.id,
+                    endpointBID: birth.id
+                ),
+            ]
         )
 
         #expect(snapshot.sourceId == "src-1")
@@ -83,6 +90,50 @@ struct SourceGraphSnapshotTests {
         #expect(snapshot.subjects[0].gridX == 1)
         #expect(snapshot.subjects[0].isCited == false)
         #expect(snapshot.subjects[1].kind == .event)
+        #expect(snapshot.bridges.count == 1)
+        #expect(snapshot.bridges[0].id == bridge.id)
+        #expect(snapshot.bridges[0].kind == .location)
+        #expect(snapshot.bridges[0].endpointAID == alice.id)
+        #expect(snapshot.bridges[0].endpointBID == birth.id)
+    }
+
+    @Test func attachingLinksFillsBridgeEndpoints() {
+        let bridge = SourceGraphPlacedBridge(
+            subject: CatalogSubject(
+                id: "s-loc",
+                ref: "CLO-L",
+                sourceID: "src-1",
+                subjectTypeID: locationType.id,
+                label: "At home",
+                description: ""
+            ),
+            kind: .location,
+            typeLabel: "Location",
+            gridX: 5,
+            gridY: 6,
+            endpointAID: nil,
+            endpointBID: nil
+        )
+        let snapshot = SourceGraphSnapshot(sourceId: "src-1", bridges: [bridge])
+        let next = snapshot.attaching(links: [
+            EvidenceProvisionalLink(
+                bridgeSubjectID: bridge.id,
+                endpointAID: "a",
+                endpointBID: "b"
+            ),
+        ])
+        #expect(next.bridges[0].endpointAID == "a")
+        #expect(next.bridges[0].endpointBID == "b")
+    }
+
+    @Test func bridgeKindInferenceTable() {
+        #expect(EvidenceBridgeKindInference.kind(.person, .event) == .participation)
+        #expect(EvidenceBridgeKindInference.kind(.event, .person) == .participation)
+        #expect(EvidenceBridgeKindInference.kind(.person, .place) == .location)
+        #expect(EvidenceBridgeKindInference.kind(.event, .place) == .location)
+        #expect(EvidenceBridgeKindInference.kind(.person, .person) == .relationship)
+        #expect(EvidenceBridgeKindInference.kind(.event, .event) == nil)
+        #expect(EvidenceBridgeKindInference.kind(.place, .place) == nil)
     }
 
     @Test func updatingPositionChangesOnlyMatchingSubject() {
