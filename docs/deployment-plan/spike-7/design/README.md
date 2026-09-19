@@ -11,7 +11,7 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 | S7-D2 | [`S7-D2-subject-fields.md`](S7-D2-subject-fields.md) | PR S7-05 | Subject fields — few types / many Properties; creative IA (e.g. type cards), not Source fields |
 | S7-D3 | [`S7-D3-evidence-graph-updates.md`](S7-D3-evidence-graph-updates.md) | PRs S7-09, S7-10 | Graph: Add property, cited rows, connect handoff — **not** the composer |
 | S7-D4 | [`S7-D4-citation-composer.md`](S7-D4-citation-composer.md) | PR S7-08 | Citation composer **place** (Option B); breadcrumbs / history — hosts NameValue, does not design it |
-| S7-D5 | [`S7-D5-name-value-editor.md`](S7-D5-name-value-editor.md) | PR S7-02b | NameValue reusable modal (DateValue twin); separate stream from composer |
+| S7-D5 | [`S7-D5-name-value-editor.md`](S7-D5-name-value-editor.md) | PR S7-02b | NameValue modal — schedule with composer (**S7-08**); not on path to S7-05 |
 
 ## Descoped
 

@@ -180,7 +180,7 @@ Pinning a Citation across successive graph edits is **out** (one Citation + N Ob
 
 ~~**S7-D1** Subject types editor~~ — **descoped** (see [Descoped](#descoped) below).
 
-Run **S7-D2 / D5** early (parallel with schema). **S7-D3 before card/connect UI.** **S7-D4 before composer place UI.** **S7-D5 before NameValue Swift UI.** D3, D4, and D5 may run in parallel once boundaries are clear.
+**Scheduling:** **S7-D2** early (unblocks S7-05). **S7-D5** only needs to finish before **S7-02b** / composer — not on the path to Subject fields. **S7-D3** before card/connect UI; **S7-D4** before composer place UI. D3/D4/D5 may run in parallel once boundaries are clear.
 
 ## PR sequence
 
@@ -190,43 +190,45 @@ design                              build
 
 S7-D2 Subject fields                S7-01  properties + subject_type_fields
   │                                 │      + **central subject registry**
-  │                                 │      (capabilities, locked bindings,
-  │                                 │       connect matrix, Install)
   │                                 ▼
-S7-D5 NameValue editor              S7-02  NameValue schema + Go
-  │                                 │      (ungated; tables + package)
-  │                                 ▼
-  │                                 S7-03  citations + observations + locator
-  │                                 │      validation (Go) + FFI macros
-  │                                 ▼
-  └────── gates ──────────────────▶ S7-02b NameValue Swift editor
-                                    │      (reusable modal; DateValue twin)
-                                    │
   └────── D2 gates ───────────────▶ S7-05  Subject fields UI
+                                    │      (value_type=name is just an enum —
+                                    │       no NameValue tables/editor yet)
+
+                                    S7-02  NameValue schema + Go
+                                    │      (parallel; needed before Observations)
+                                    ▼
+                                    S7-03  citations + observations + locator
+                                    │      validation (Go) + FFI macros
                                     │
 S7-D3 Graph updates                 │
 S7-D4 Composer place                │
+S7-D5 NameValue editor              │
   │                                 S7-06  Artifact viewers: image + PDF
   │                                 │
   │                                 ▼
   │                                 S7-07  Locator tools: page + region
   │                                 │
   │                                 ▼
+  └────── D5 gates ───────────────▶ S7-02b NameValue Swift editor
+  │                                 │
   └────── D4 gates ───────────────▶ S7-08  Citation composer place (B)
   │                                 │      (+ host NameValue from S7-02b)
-  │                                 │      WorkspaceLocation + breadcrumbs
-  │                                 │      Citation + N Observations submit
   │                                 ▼
   └────── D3 gates ───────────────▶ S7-09  Card growth + Add property
-                                    │      (navigates to composer)
                                     ▼
                                   S7-10  Durable connect macros
-                                    │      (disambiguation → composer)
                                     ▼
                                   S7-11  Dogfood close / docs
 ```
 
-Schema/Go PRs (01–03, 02) may start before design finishes; **UI PRs gate on the matching brief.** S7-03 needs S7-02 (schema) only — not S7-02b. S7-08 needs **S7-02b** + **S7-D4**.
+**Dependency notes:**
+
+- **S7-05** depends on **S7-01** + **S7-D2** only — **not** NameValue (S7-02 / S7-02b / S7-D5).
+- **S7-02** (schema) sits on the Observations branch: required before **S7-03** (`value_name_id` FK). May parallel S7-05.
+- **S7-02b** (Swift editor) is only required for **S7-08**; gate on **S7-D5**. First product use of the editor is the composer.
+
+Schema/Go (01–03) may start before design finishes; **UI PRs gate on the matching brief.**
 
 ---
 
@@ -237,12 +239,12 @@ Schema/Go PRs (01–03, 02) may start before design finishes; **UI PRs gate on t
 - [ ] S7-D4 — Design: Citation composer place → [`completed.md`](completed.md)
 - [ ] S7-D5 — Design: NameValue editor → [`completed.md`](completed.md)
 - [ ] S7-01 — `properties` + `subject_type_fields` + **central Interpretation subject registry** + Go/FFI → [`completed.md`](completed.md)
-- [ ] S7-02 — NameValue schema + Go → [`completed.md`](completed.md)
-- [ ] S7-02b — NameValue Swift editor → [`completed.md`](completed.md)
-- [ ] S7-03 — Citations + Observations + locator validation + FFI → [`completed.md`](completed.md)
 - [ ] S7-05 — Subject fields UI → [`completed.md`](completed.md)
+- [ ] S7-02 — NameValue schema + Go → [`completed.md`](completed.md)
+- [ ] S7-03 — Citations + Observations + locator validation + FFI → [`completed.md`](completed.md)
 - [ ] S7-06 — Artifact viewers (image + PDF) → [`completed.md`](completed.md)
 - [ ] S7-07 — Locator tools (page + region) → [`completed.md`](completed.md)
+- [ ] S7-02b — NameValue Swift editor → [`completed.md`](completed.md)
 - [ ] S7-08 — Citation composer place → [`completed.md`](completed.md)
 - [ ] S7-09 — Card growth + Add property → [`completed.md`](completed.md)
 - [ ] S7-10 — Durable connect macros → [`completed.md`](completed.md)
@@ -308,18 +310,22 @@ Wire Install into `onboarding.createCatalog` only. Follow [`.cursor/skills/add-s
 
 `name_values` / `name_value_parts` per structured-name-model §2–3 (Interpretation only — not Conclusion `name_format`); `core/database/namevalues`. **No Swift UI** in this PR.
 
+Lives on the **Observations branch**, not the Subject fields branch. Needed so **S7-03** can FK `value_name_id`. Does **not** block **S7-05**.
+
 | | |
 | --- | --- |
 | **In** | Schema, Go package, tests. |
-| **Out** | Swift editor (S7-02b); composer wiring (S7-08); name_format profiles. |
+| **Out** | Swift editor (S7-02b); composer wiring (S7-08); name_format profiles; Subject fields UI. |
 | **Testable** | Go round-trip create/read parts. |
-| **Depends on** | — (can parallel S7-01). **Not** gated on S7-D5. |
+| **Depends on** | — (parallel with S7-05 after S7-01). **Not** gated on S7-D5. |
 
 ---
 
 ## S7-02b — NameValue Swift editor
 
 Swift `NameValueDraft` / editor modal under `Features/Names/` (mirror `Features/Dates/`). Reusable from the composer and later hosts.
+
+**First product host is S7-08.** Schedule with composer work; not required for S7-05.
 
 | | |
 | --- | --- |
@@ -345,14 +351,14 @@ Swift `NameValueDraft` / editor modal under `Features/Names/` (mirror `Features/
 
 ## S7-05 — Subject fields UI
 
-Properties + `subject_type_fields` bindings; five value_types only. Bindings pick among **seeded** Subject types only. Implement the **S7-D2 large-list IA** — do not ship a Source fields / CatalogVocabulary clone.
+Properties + `subject_type_fields` bindings; five value_types only (including **`name` as a type label** — no NameValue editor). Bindings pick among **seeded** Subject types only. Implement the **S7-D2** IA.
 
 | | |
 | --- | --- |
-| **In** | Browse/create/edit at scale (~dozens of Properties); search/filter; bind to seeded Subject types; respect registry **locked** bindings. |
-| **Out** | Composer; Observation editors beyond type pickers; Subject types CRUD; Source-fields layout reuse. |
-| **Testable** | Find a Property in a long list; bind a field; locked binding cannot be removed. |
-| **Depends on** | S7-01, **S7-D2**. |
+| **In** | Browse/create/edit at scale; search/filter; bind to seeded Subject types; respect registry **locked** bindings. |
+| **Out** | Composer; NameValue tables/editor; Observation editors; Subject types CRUD; Source-fields layout reuse. |
+| **Testable** | Find a Property in a long list; create a `name`-typed Property; bind a field; locked binding cannot be removed. |
+| **Depends on** | S7-01, **S7-D2** — **not** S7-02 / S7-02b. |
 
 ---
 
