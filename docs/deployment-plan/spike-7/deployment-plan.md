@@ -266,7 +266,7 @@ S7-D5 NameValue editor              │
 
 **Dependency notes:**
 
-- **S7-01b** → **S7-01**. Lands **before** S7-05 and **before** S7-03 writes kind/edge Properties as free text.
+- **S7-01b** → **S7-01**. Lands **before** S7-05 and **before** S7-03; introduces kind/edge Properties as `term` (they are not seeded as text in S7-01).
 - **S7-05** → **S7-01** + **S7-01b** + **S7-D2** only (no NameValue UI).
 - **S7-09** → **S7-03** (graph payload can show Observations) + **S7-D3**. Registers composer `WorkspaceLocation`; destination may stub until S7-08.
 - **S7-08** → **S7-09** + **S7-D4** + **S7-03**. **Does not** require S7-06/07/02b — text/term Observations and a placeholder viewer are enough to dogfood submit + card growth.
