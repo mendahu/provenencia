@@ -16,7 +16,7 @@ Citations, Observations, NameValue, Subject **fields** editor, citation composer
 
 All of the following must be true in the app:
 
-1. **Subject fields** replaces its stub with a real CatalogVocabulary editor (Properties + bindings to the **seeded** Subject types). Subject types destination stays stub / non-editable.
+1. **Subject fields** replaces its stub with a real editor for Properties + bindings to **seeded** Subject types — **new IA for a long property list**, not a Source fields clone. Subject types destination stays stub / non-editable.
 2. On the Evidence graph, a card has **Add property** → navigate to the **citation composer place** (Artifact pick as needed inside that place or as a short prelude).
 3. Composer supports **images** (zoom/pan + region polygon) and **PDFs** (page nav + zoom/pan + region); audio/video deferred.
 4. One submit writes **one Citation + N Observations**; **Back** returns to the graph; card **grows** with cited property rows.
@@ -173,7 +173,7 @@ Pinning a Citation across successive graph edits is **out** (one Citation + N Ob
 
 | Step | Brief | Covers | Gates |
 | --- | --- | --- | --- |
-| **S7-D2** | Subject fields | Properties + bindings to **seeded** Subject types; five value_types; mirror Source fields | S7-05 |
+| **S7-D2** | Subject fields | Properties + bindings to **seeded** Subject types; five value_types; **new large-list IA** (do **not** mirror Source fields) | S7-05 |
 | **S7-D3** | Evidence graph updates | Add-property; cited-data rows; Artifact gate; connect disambiguation → composer handoff; bridge honesty once cited | S7-09, S7-10 |
 | **S7-D4** | Citation composer place | Full-window viewer\|form; Artifact pick; locators; observation list; DateValue reuse; breadcrumbs; composer-only a11y — **hosts** NameValue modal, does not design it | S7-08 |
 | **S7-D5** | NameValue editor | Reusable NameValue modal (DateValue twin); form + optional parts | S7-02b |
@@ -258,7 +258,7 @@ Schema/Go PRs (01–03, 02) may start before design finishes; **UI PRs gate on t
 
 ## S7-D2 — Design: Subject fields
 
-Claude Design board for Subject fields (Properties + bindings). Brief: [`design/S7-D2-subject-fields.md`](design/S7-D2-subject-fields.md). Gates **S7-05**. Bindings target the **fixed seeded** Subject types — not a user type browser.
+Claude Design board for Subject fields (Properties + bindings). Brief: [`design/S7-D2-subject-fields.md`](design/S7-D2-subject-fields.md). Gates **S7-05**. Bindings target the **fixed seeded** Subject types. **Layout must accommodate dozens of Properties** — Source fields chrome is explicitly not the template.
 
 ---
 
@@ -345,13 +345,13 @@ Swift `NameValueDraft` / editor modal under `Features/Names/` (mirror `Features/
 
 ## S7-05 — Subject fields UI
 
-Properties + `subject_type_fields` bindings; five value_types only; mirror Source fields. Bindings pick among **seeded** Subject types only (no Subject types admin destination).
+Properties + `subject_type_fields` bindings; five value_types only. Bindings pick among **seeded** Subject types only. Implement the **S7-D2 large-list IA** — do not ship a Source fields / CatalogVocabulary clone.
 
 | | |
 | --- | --- |
-| **In** | Vocabulary browser; bind Properties to seeded Subject types; value_type at create (immutable); respect registry **locked** bindings. |
-| **Out** | Composer; Observation editors beyond type pickers; Subject types CRUD. |
-| **Testable** | Bind a field; see it available for that type. |
+| **In** | Browse/create/edit at scale (~dozens of Properties); search/filter; bind to seeded Subject types; respect registry **locked** bindings. |
+| **Out** | Composer; Observation editors beyond type pickers; Subject types CRUD; Source-fields layout reuse. |
+| **Testable** | Find a Property in a long list; bind a field; locked binding cannot be removed. |
 | **Depends on** | S7-01, **S7-D2**. |
 
 ---

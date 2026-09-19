@@ -8,7 +8,7 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 
 | Step | Brief | Feeds | Notes |
 | --- | --- | --- | --- |
-| S7-D2 | [`S7-D2-subject-fields.md`](S7-D2-subject-fields.md) | PR S7-05 | Subject fields (Properties + bindings to **seeded** Subject types) |
+| S7-D2 | [`S7-D2-subject-fields.md`](S7-D2-subject-fields.md) | PR S7-05 | Subject fields — **new large-list IA** (not Source fields); bindings to seeded Subject types |
 | S7-D3 | [`S7-D3-evidence-graph-updates.md`](S7-D3-evidence-graph-updates.md) | PRs S7-09, S7-10 | Graph: Add property, cited rows, connect handoff — **not** the composer |
 | S7-D4 | [`S7-D4-citation-composer.md`](S7-D4-citation-composer.md) | PR S7-08 | Citation composer **place** (Option B); breadcrumbs / history — hosts NameValue, does not design it |
 | S7-D5 | [`S7-D5-name-value-editor.md`](S7-D5-name-value-editor.md) | PR S7-02b | NameValue reusable modal (DateValue twin); separate stream from composer |
@@ -42,4 +42,4 @@ _None yet._
 - Value types in this spike: **text**, **integer**, **date**, **name**, **subject** only (no `real` / `boolean`).
 - **NameValue** has its own brief (**S7-D5**) — not designed inside the composer board.
 - Media in composer: **image** and **PDF** only (audio/video later).
-- Extend: Subject fields stub (S5-D3), Evidence graph cards (S6-D1/D2), Source types/fields CatalogVocabulary (Spike 2), DateValue editor (`Features/Dates/`).
+- Extend: Subject fields stub (S5-D3), Evidence graph cards (S6-D1/D2), DateValue editor (`Features/Dates/`). Source types/fields are **contrast** for Subject fields — do not copy that chrome for S7-D2.
