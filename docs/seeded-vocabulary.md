@@ -372,12 +372,9 @@ burial
 census
 residence
 immigration
-military
-probate
-other
 ```
 
-Exact GEDCOM alignment and additional vital/event kinds are **TBD**. Prefer a large product set so `other` stays rare. First-class facets (e.g. birthday) will attach to recognized keys such as `birth` in the subject registry when that behavior lands — not part of the create-time term seed itself.
+Exact GEDCOM alignment and additional vital/event kinds are **TBD**. Researchers add long-tail kinds as `origin=user` terms — there is no product `other` escape hatch. First-class facets (e.g. birthday) will attach to recognized keys such as `birth` in the subject registry when that behavior lands — not part of the create-time term seed itself.
 
 ## 3.5 Property terms: `role` (participation)
 
@@ -406,10 +403,9 @@ sibling
 parent_child
 cousin
 guardian
-other
 ```
 
-Prefer expanding the product set so `other` stays rare. First-class connect behavior attaches to recognized keys in the subject registry.
+Prefer expanding the product set as connect macros need them. Long-tail labels are `origin=user` terms — there is no product `other` escape hatch. First-class connect behavior attaches to recognized keys in the subject registry when that behavior lands.
 
 ---
 

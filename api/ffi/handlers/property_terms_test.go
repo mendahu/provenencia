@@ -22,8 +22,8 @@ func TestListPropertyTerms(t *testing.T) {
 				if err := proto.Unmarshal(out, &resp); err != nil {
 					t.Fatal(err)
 				}
-				if len(resp.Terms) != 11 {
-					t.Fatalf("len=%d want 11", len(resp.Terms))
+				if len(resp.Terms) != 8 {
+					t.Fatalf("len=%d want 8", len(resp.Terms))
 				}
 				found := false
 				for _, term := range resp.Terms {

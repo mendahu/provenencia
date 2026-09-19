@@ -195,9 +195,6 @@ var seedTerms = []seedTerm{
 	{PropertyKey: "event_type", Key: "census", Label: "Census"},
 	{PropertyKey: "event_type", Key: "residence", Label: "Residence"},
 	{PropertyKey: "event_type", Key: "immigration", Label: "Immigration"},
-	{PropertyKey: "event_type", Key: "military", Label: "Military"},
-	{PropertyKey: "event_type", Key: "probate", Label: "Probate"},
-	{PropertyKey: "event_type", Key: "other", Label: "Other"},
 
 	{PropertyKey: "role", Key: "subject", Label: "Subject"},
 	{PropertyKey: "role", Key: "father", Label: "Father"},
@@ -213,7 +210,6 @@ var seedTerms = []seedTerm{
 	{PropertyKey: "relationship_type", Key: "parent_child", Label: "Parent / child"},
 	{PropertyKey: "relationship_type", Key: "cousin", Label: "Cousin"},
 	{PropertyKey: "relationship_type", Key: "guardian", Label: "Guardian"},
-	{PropertyKey: "relationship_type", Key: "other", Label: "Other"},
 }
 
 // Connect matrix from interpretation-graph-ui.md §3.2. Omitted pairs refuse by default.

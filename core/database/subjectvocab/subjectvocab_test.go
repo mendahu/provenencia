@@ -34,7 +34,7 @@ func TestSubjectVocab(t *testing.T) {
 					t.Fatalf("event_type %+v %v", et, err)
 				}
 				terms, err := propertyterms.ListByProperty(c, et.ID)
-				if err != nil || len(terms) != 11 {
+				if err != nil || len(terms) != 8 {
 					t.Fatalf("event_type terms %v len=%d", err, len(terms))
 				}
 				birth, err := propertyterms.Lookup(c, et.ID, "birth", propertyterms.OriginProvenencia)
