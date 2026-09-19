@@ -106,16 +106,14 @@ private struct EvidenceGraphContent: View {
 
     private var header: some View {
         HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space5) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(L10n.Workspace.evidenceGraphTitle)
-                    .font(PVFont.display(size: PVTypeScale.h1, weight: PVFontWeight.medium))
-                    .foregroundStyle(PVColor.textDisplay)
-                if !sourceTitle.isEmpty {
-                    Text(verbatim: sourceTitle)
-                        .font(PVFont.mono(size: PVTypeScale.caption))
-                        .foregroundStyle(PVColor.textMuted)
-                        .lineLimit(1)
-                }
+            Text(L10n.Workspace.evidenceGraphTitle)
+                .font(PVFont.display(size: PVTypeScale.h1, weight: PVFontWeight.medium))
+                .foregroundStyle(PVColor.textDisplay)
+            if !sourceTitle.isEmpty {
+                Text(verbatim: sourceTitle)
+                    .font(PVFont.mono(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textMuted)
+                    .lineLimit(1)
             }
             Spacer(minLength: 0)
             Text(L10n.EvidenceGraph.subjectCount(count: subjects.count))
