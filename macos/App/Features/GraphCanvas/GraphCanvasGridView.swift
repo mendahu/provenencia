@@ -8,7 +8,7 @@ struct GraphCanvasGridView: View {
     /// Size of the pannable document in content points.
     var contentSize: CGSize
     /// Spacing between grid lines in content points (future snap unit).
-    var gridSpacing: CGFloat = 40
+    var gridSpacing: CGFloat = GraphCanvasGridMapping.defaultSpacing
 
     var body: some View {
         Canvas { context, size in

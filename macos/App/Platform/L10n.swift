@@ -927,6 +927,194 @@ enum L10n {
         )
     }
 
+    enum EvidenceGraph {
+        static let emptyTitle = LocalizedStringResource(
+            "evidenceGraph.empty.title",
+            defaultValue: "No subjects yet",
+            comment: "Empty Evidence graph title before any Person/Event/Place cards exist"
+        )
+
+        static let emptyMessage = LocalizedStringResource(
+            "evidenceGraph.empty.message",
+            defaultValue: "Pick a tool above, then click the grid to place the first person, event or place from this source.",
+            comment: "Empty Evidence graph body guiding the researcher to arm a palette tool"
+        )
+
+        static let uncitedAccessibility = LocalizedStringResource(
+            "evidenceGraph.subject.uncitedAccessibility",
+            defaultValue: "Uncited — no citations attached yet",
+            comment: "VoiceOver fragment when a primary subject card has no Observations"
+        )
+
+        static let citedAccessibility = LocalizedStringResource(
+            "evidenceGraph.subject.citedAccessibility",
+            defaultValue: "Cited",
+            comment: "VoiceOver fragment when a primary subject card has at least one Observation"
+        )
+
+        static let subjectsRotor = LocalizedStringResource(
+            "evidenceGraph.rotor.subjects",
+            defaultValue: "Subjects",
+            comment: "VoiceOver rotor name for jumping between Evidence graph subject cards"
+        )
+
+        static let toolPerson = LocalizedStringResource(
+            "evidenceGraph.palette.person",
+            defaultValue: "Add person",
+            comment: "Evidence graph palette tool to place a Person subject"
+        )
+
+        static let toolEvent = LocalizedStringResource(
+            "evidenceGraph.palette.event",
+            defaultValue: "Add event",
+            comment: "Evidence graph palette tool to place an Event subject"
+        )
+
+        static let toolPlace = LocalizedStringResource(
+            "evidenceGraph.palette.place",
+            defaultValue: "Add place",
+            comment: "Evidence graph palette tool to place a Place subject"
+        )
+
+        static let toolRole = LocalizedStringResource(
+            "evidenceGraph.palette.toolRole",
+            defaultValue: "tool",
+            comment: "VoiceOver middle token for a palette toggle (Add person, tool, off)"
+        )
+
+        static let toolOn = LocalizedStringResource(
+            "evidenceGraph.palette.toolOn",
+            defaultValue: "on",
+            comment: "VoiceOver state when a palette tool is armed"
+        )
+
+        static let toolOff = LocalizedStringResource(
+            "evidenceGraph.palette.toolOff",
+            defaultValue: "off",
+            comment: "VoiceOver state when a palette tool is idle"
+        )
+
+        static let armedHintPerson = LocalizedStringResource(
+            "evidenceGraph.armed.hintPerson",
+            defaultValue: "Click the grid to place a person",
+            comment: "Banner when Add person is armed"
+        )
+
+        static let armedHintEvent = LocalizedStringResource(
+            "evidenceGraph.armed.hintEvent",
+            defaultValue: "Click the grid to place an event",
+            comment: "Banner when Add event is armed"
+        )
+
+        static let armedHintPlace = LocalizedStringResource(
+            "evidenceGraph.armed.hintPlace",
+            defaultValue: "Click the grid to place a place",
+            comment: "Banner when Add place is armed"
+        )
+
+        static let armedEscHint = LocalizedStringResource(
+            "evidenceGraph.armed.escHint",
+            defaultValue: "esc to cancel",
+            comment: "Secondary hint beside the armed placement banner"
+        )
+
+        static let addPersonTitle = LocalizedStringResource(
+            "evidenceGraph.create.personTitle",
+            defaultValue: "Add person",
+            comment: "Create-subject dialog title when placing a Person"
+        )
+
+        static let addEventTitle = LocalizedStringResource(
+            "evidenceGraph.create.eventTitle",
+            defaultValue: "Add event",
+            comment: "Create-subject dialog title when placing an Event"
+        )
+
+        static let addPlaceTitle = LocalizedStringResource(
+            "evidenceGraph.create.placeTitle",
+            defaultValue: "Add place",
+            comment: "Create-subject dialog title when placing a Place"
+        )
+
+        static let createConfirm = LocalizedStringResource(
+            "evidenceGraph.create.confirm",
+            defaultValue: "Add",
+            comment: "Confirm button on the Evidence graph create-subject dialog"
+        )
+
+        static let createCancel = LocalizedStringResource(
+            "evidenceGraph.create.cancel",
+            defaultValue: "Cancel",
+            comment: "Cancel button on the Evidence graph create-subject dialog"
+        )
+
+        static let labelField = LocalizedStringResource(
+            "evidenceGraph.create.labelField",
+            defaultValue: "Label",
+            comment: "Label field title on the create-subject dialog"
+        )
+
+        static let descriptionField = LocalizedStringResource(
+            "evidenceGraph.create.descriptionField",
+            defaultValue: "Description",
+            comment: "Description field title on the create-subject dialog"
+        )
+
+        static let labelRequired = LocalizedStringResource(
+            "evidenceGraph.create.labelRequired",
+            defaultValue: "Enter a working label",
+            comment: "Validation when create-subject label is blank"
+        )
+
+        static let typesUnavailable = LocalizedStringResource(
+            "evidenceGraph.create.typesUnavailable",
+            defaultValue: "Subject types are not available for this project",
+            comment: "Error when seeded Person/Event/Place types could not be loaded"
+        )
+
+        static let defaultLabelPerson = LocalizedStringResource(
+            "evidenceGraph.create.defaultLabelPerson",
+            defaultValue: "New person",
+            comment: "Prefill label when creating a Person from the palette"
+        )
+
+        static let defaultLabelEvent = LocalizedStringResource(
+            "evidenceGraph.create.defaultLabelEvent",
+            defaultValue: "New event",
+            comment: "Prefill label when creating an Event from the palette"
+        )
+
+        static let defaultLabelPlace = LocalizedStringResource(
+            "evidenceGraph.create.defaultLabelPlace",
+            defaultValue: "New place",
+            comment: "Prefill label when creating a Place from the palette"
+        )
+
+        static let positionPersistFailedTitle = LocalizedStringResource(
+            "evidenceGraph.position.persistFailedTitle",
+            defaultValue: "Couldn't save position",
+            comment: "Toast title when setSubjectPosition fails after drag or arrow move"
+        )
+
+        static func subjectCount(count: Int) -> LocalizedStringResource {
+            count == 1 ? subjectCountOne : subjectCountOther(count: count)
+        }
+
+        private static let subjectCountOne = LocalizedStringResource(
+            "evidenceGraph.header.subjectCountOne",
+            defaultValue: "1 subject",
+            comment: "Evidence graph header count when exactly one placed primary is on the canvas"
+        )
+
+        private static func subjectCountOther(count: Int) -> LocalizedStringResource {
+            LocalizedStringResource(
+                "evidenceGraph.header.subjectCountOther",
+                defaultValue: "\(count) subjects",
+                comment: "Evidence graph header count; argument is how many placed primaries are on the canvas"
+            )
+        }
+    }
+
     /// The **Source fields** workspace destination (S2-15): browse, search,
     /// and create/edit the project's `source_metadata_fields` vocabulary.
     /// Origin markers shared by every catalog vocabulary destination —

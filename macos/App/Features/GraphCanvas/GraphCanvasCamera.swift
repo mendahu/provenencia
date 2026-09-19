@@ -10,8 +10,11 @@ struct GraphCanvasCamera: Equatable, Sendable {
     /// Top-left of the visible rect in **content** (document) space.
     var contentOffset: CGPoint
 
+    /// Zoom out for overview of a large graph (Evidence-style canvases).
     static let minMagnification: CGFloat = 0.25
-    static let maxMagnification: CGFloat = 4
+    /// Cap zoom-in near identity — magnification is for overview, not to
+    /// enlarge cards (layer zoom would look soft past ~1.25 anyway).
+    static let maxMagnification: CGFloat = 1.25
 
     static let `default` = GraphCanvasCamera(magnification: 1, contentOffset: .zero)
 

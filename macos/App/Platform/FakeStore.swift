@@ -37,6 +37,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var updateSourceError: Error?
     /// When set, `reorderSourceMetadata` throws (optimistic move should revert).
     var reorderSourceMetadataError: Error?
+    /// When set, `setSubjectPosition` throws (Evidence graph drag should revert).
+    var setSubjectPositionError: Error?
     /// When set, `addSourceNote` throws (`pageError` surfacing).
     var addSourceNoteError: Error?
     /// When set, `ingestArtifactFile` throws before mutating artifacts.
@@ -1000,6 +1002,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         gridY: Int64
     ) async throws -> CatalogSubjectPosition {
         markCatalogSessionHeld(projectDir)
+        if let setSubjectPositionError {
+            throw setSubjectPositionError
+        }
         let position = CatalogSubjectPosition(subjectID: subjectID, gridX: gridX, gridY: gridY)
         subjectPositionsBySubject[subjectID] = position
         return position

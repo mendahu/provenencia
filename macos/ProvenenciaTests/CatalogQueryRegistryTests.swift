@@ -86,6 +86,71 @@ struct CatalogQueryRegistryTests {
         #expect(suggestionsHandle.value?.count == 1)
     }
 
+    @Test func sourceGraphLoadsPlacedPrimaries() async {
+        let store = FakeStore()
+        seedStore(store)
+        store.subjectTypesByProject[projectDir] = [
+            CatalogSubjectType(
+                id: "type-person",
+                key: "person",
+                origin: "provenencia",
+                label: "Person",
+                description: "",
+                refPrefix: "PER",
+                candidateRefPrefix: "CPR"
+            ),
+            CatalogSubjectType(
+                id: "type-location",
+                key: "location",
+                origin: "provenencia",
+                label: "Location",
+                description: "",
+                refPrefix: "LOC",
+                candidateRefPrefix: "CLO"
+            ),
+        ]
+        store.subjectsBySource["s1"] = [
+            CatalogSubject(
+                id: "sub-1",
+                ref: "CPR-1",
+                sourceID: "s1",
+                subjectTypeID: "type-person",
+                label: "Alice",
+                description: ""
+            ),
+            CatalogSubject(
+                id: "sub-bridge",
+                ref: "CLO-1",
+                sourceID: "s1",
+                subjectTypeID: "type-location",
+                label: "Somewhere",
+                description: ""
+            ),
+        ]
+        store.subjectPositionsBySubject["sub-1"] = CatalogSubjectPosition(
+            subjectID: "sub-1",
+            gridX: 2,
+            gridY: 3
+        )
+        store.subjectPositionsBySubject["sub-bridge"] = CatalogSubjectPosition(
+            subjectID: "sub-bridge",
+            gridX: 4,
+            gridY: 5
+        )
+
+        let session = makeSession(store: store)
+        let handle: QueryHandle<SourceGraphSnapshot> = session.query(
+            CatalogQueryKey.sourceGraph(project: session.projectKey, sourceId: "s1")
+        )
+        await waitForFetchComplete(handle)
+
+        #expect(handle.value?.sourceId == "s1")
+        #expect(handle.value?.subjects.count == 1)
+        #expect(handle.value?.subjects.first?.id == "sub-1")
+        #expect(handle.value?.subjects.first?.kind == .person)
+        #expect(handle.value?.subjects.first?.gridX == 2)
+    }
+
     @Test func registryBackedQueryDoesNotRecallLoader() async {
         let store = FakeStore()
         seedStore(store)
@@ -325,6 +390,9 @@ struct CatalogQueryRegistryTests {
             .allCached(.sourceWorkspace),
             .key(.typeSuggestions(project: project, typeId: "t1")),
         ])
+        #expect(registry.invalidations(by: .createdSubject(sourceId: "s1"), project: project) == [
+            .allCached(.sourceGraph),
+        ])
         // Grades are seeded vocabulary with no CRUD surface, so nothing stales them.
         let everyMutation: [CatalogMutation] = [
             .updatedSource(source), .changedSourceType(source), .createdSource,
@@ -332,6 +400,7 @@ struct CatalogQueryRegistryTests {
             .createdMetadataField, .updatedMetadataField(id: "f1"), .deletedMetadataField(id: "f1"),
             .assignedTypeSuggestion(typeId: "t1"), .removedTypeSuggestion(typeId: "t1"),
             .mutatedSourceWorkspace(sourceId: "s1"), .mutatedSourceMetadata(sourceId: "s1"),
+            .createdSubject(sourceId: "s1"),
         ]
         #expect(everyMutation.allSatisfy { mutation in
             !registry.invalidations(by: mutation, project: project).contains(
