@@ -31,6 +31,7 @@ Authoritative schema for everything described here is [`interpretation-layer-dat
 | 19 | **Schema rename: Node → Subject.** Catalog tables are `subjects`, `subject_types`, `subject_positions`, `subject_type_fields`; product and engine share one word. Bridge rows are subjects too. Do not use "claim." | §1.4, interpretation model §4 |
 | 20 | **Citation composer is a navigable place** (not a sheet over the graph, not a companion window). Leave the Evidence graph → full-window viewer\|form → Back returns. Keeps composer a11y off the canvas. | §6.1, [Spike 7](../deployment-plan/spike-7/) |
 | 21 | **Observation value types for v1 product:** `text`, `integer`, `date`, `name`, `subject` — not `real` / `boolean`. | Spike 7; align interpretation model when shipping |
+| 22 | **Subject types are product-seeded + first-class only** — not a user-extensible CatalogVocabulary. Researchers do not create Subject types; person / event / place / bridges / source ship with app plumbing. **Subject fields** (`properties`) remain the extensible config surface. | §1.4, [Spike 7](../deployment-plan/spike-7/) (S7-D1/S7-04 descoped) |
 
 Two items found along the way that were on nobody's list: **candidate ref support** did not exist in `core/ref` (§11.1, resolved in S5-01), and **NameValue does not exist in either language** (§4.4) — scheduled in Spike 7.
 
@@ -608,7 +609,7 @@ Deferred, blocking nothing:
 
 1. **Foundation** (§11.1) — candidate refs, `subject_types` and its seed, audited `subjects` CRUD, the layout table, FFI, `WorkspaceLocation` discriminator for page vs graph, Sources-list dual action, Evidence graph stub, and nested Subject types / Subject fields **nav stubs** (§1.4). **No Subject UI**: Evidence graph opens a stub until the canvas exists.
 2. **Bubbles** — the canvas proper: `NSScrollView` bridge, persons / events / places, working labels, drag / snap / select / persist, the tray for unplaced subjects. Replaces the stub, and ships the accessibility representation and keyboard parity alongside the first bubbles (§7.4).
-3. **Subject vocabulary** — `properties`, `subject_type_fields`, the Subject types / Subject fields editors (replacing nav stubs), `ref_prefix` validation.
+3. **Subject vocabulary** — `properties`, `subject_type_fields`, the Subject **fields** editor (replacing that nav stub). Subject **types** stay product-seeded with first-class plumbing — no user types browser ([Spike 7](../deployment-plan/spike-7/) decision 22).
 4. **Artifact viewer + Citations** — PDF and image; `page`, `region`, `text_quote`; Go-side locator validation.
 5. **First Observation** — Add Property on a bubble, `text` value type only. The whole vertical path proven end to end.
 6. **Remaining value types** — including NameValue end to end; reuse the existing DateValue editor.

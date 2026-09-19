@@ -3,8 +3,8 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 7 (Citations / Observations / composer)  
 **Implements later as:** PR **S7-05** only  
-**Depends on:** Subject types destination chrome (S7-D1 / S7-04 may land first); S7-01 schema/seed  
-**Related briefs:** [`S7-D1`](S7-D1-subject-types.md); Source fields (S2-02)
+**Depends on:** Spike 5 seeded `subject_types` (listable for bindings; **no** Subject types editor); S7-01 schema/seed  
+**Related briefs:** Source fields (S2-02); archived [`S7-D1`](archive/S7-D1-subject-types.md) (**descoped** — do not implement)
 
 Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](README.md) first.
 
@@ -12,9 +12,9 @@ Paste this entire document into Claude Design as the requirements for one board/
 
 ## 1. Objective
 
-Design the **Subject fields** destination: the product name for `properties` plus `subject_type_fields` bindings. Mirror **Source fields** / type↔field suggestions: browse Properties, create/edit them, and bind which Properties apply to which Subject types.
+Design the **Subject fields** destination: the product name for `properties` plus `subject_type_fields` bindings. Mirror **Source fields** / type↔field suggestions: browse Properties, create/edit them, and bind which Properties apply to which **seeded** Subject types (person, event, place, bridges, source — fixed product set).
 
-This is config for what can be asserted on a subject — not the citation composer and not Observation value entry on the graph.
+This is config for what can be asserted on a subject — not the citation composer and not Observation value entry on the graph. **There is no Subject types admin** in this spike (or planned as user vocabulary).
 
 ---
 
@@ -26,14 +26,14 @@ Authoritative schema: interpretation-layer Properties / `subject_type_fields`; s
 | --- | --- |
 | Property `label`, `key`, `origin`, `description` | Same vocabulary grammar as Source fields. |
 | `value_type` | **Exactly five:** `text`, `integer`, `date`, `name`, `subject`. Chosen at create; **immutable** afterward. No `real` / `boolean`. |
-| Bindings | `subject_type_fields` joins Subject type ↔ Property (like Source type ↔ metadata field suggestions). |
+| Bindings | `subject_type_fields` joins Subject type ↔ Property. Subject types are a **fixed seeded picker**, not a link into a types editor. |
 | Seeded Properties | Install at project create; list with system origin. |
 | Subject-valued Properties | `person`, `event`, `place`, `participant` are edges; UI may hint target kind in copy, but no SQL allow-list chrome required for v1. |
 | Avoid "claim" | Use **Subject fields** / Property language. |
 
 ### 2.1 What this board is not
 
-- Not Subject types CRUD — **S7-D1**.
+- Not Subject types CRUD / CatalogVocabulary for types — **descoped** (S7-D1 archived).
 - Not the Observation form inside the composer — **S7-D4** (value editors live there).
 - Not Evidence graph cited rows — **S7-D3**.
 - Not open-value picker lists for `event_type` / `role` as separate admin (those are free-text starters in the composer).
@@ -43,8 +43,8 @@ Authoritative schema: interpretation-layer Properties / `subject_type_fields`; s
 | Ships in S7-05 | Does **not** ship there |
 | --- | --- |
 | Properties list/detail/create | Citation composer |
-| Bind Properties to Subject types | NameValue / DateValue editors (**S7-D5** / existing Dates) |
-| Five value_type picker on create | Graph Add property chrome |
+| Bind Properties to **seeded** Subject types | NameValue / DateValue editors (**S7-D5** / existing Dates) |
+| Five value_type picker on create | Graph Add property chrome; Subject types destination |
 
 ---
 
@@ -56,7 +56,7 @@ Authoritative schema: interpretation-layer Properties / `subject_type_fields`; s
 | SF-2 | List Properties across origins; show `value_type` and origin. |
 | SF-3 | Detail: label, description, key, origin, value_type (read-only after create), bindings to Subject types. |
 | SF-4 | Create: label → key slug; **value_type** picker with only the five types; origin = user. |
-| SF-5 | Bind / unbind Properties to Subject types (propose UX: on Property detail, on Subject type detail, or both — pick one primary). |
+| SF-5 | Bind / unbind Properties to **seeded** Subject types (propose UX on Property detail — fixed type checklist/picker, not a types admin screen). |
 | SF-6 | Delete Property when unused; refuse while Observations or bindings require it (propose clear conflict copy). |
 | SF-7 | Seeded Properties discoverable; first-class keys (`name`, `birth_date`, …) need no special chrome beyond origin. |
 | SF-8 | Accessibility parity with Source fields. |

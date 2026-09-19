@@ -39,7 +39,7 @@ Design **Evidence graph chrome updates** now that Citations / Observations exist
 ### 2.1 What this board is not
 
 - Not the citation composer place (viewer\|form, breadcrumbs) — **S7-D4**.
-- Not Subject types / fields admin — **S7-D1 / D2**.
+- Not Subject types / fields admin — fields are **S7-D2**; types editor is **descoped**.
 - Not NameValue editor chrome — **S7-D5**.
 - Not conflicted / negated Observation visual language (thin OK; full polish later).
 - Not unplaced-subjects tray / minimap.

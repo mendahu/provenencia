@@ -1,6 +1,6 @@
 # Deployment Plan — Spike 7
 
-Citations, Observations, NameValue, Subject vocabulary editors, citation composer place, and durable connect macros. Authoritative design: [`interpretation-graph-ui.md`](../../ideas/interpretation-graph-ui.md) §4–§6 / slices 3–7. Schema: [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md), [`structured-name-model.md`](../../structured-name-model.md). Canvas: [Spike 6 archive](../archive/spike-6/). Navigation skills: [`add-workspace-location`](../../../.cursor/skills/add-workspace-location/SKILL.md), [`add-workspace-place`](../../../.cursor/skills/add-workspace-place/SKILL.md).
+Citations, Observations, NameValue, Subject **fields** editor, citation composer place, and durable connect macros. Authoritative design: [`interpretation-graph-ui.md`](../../ideas/interpretation-graph-ui.md) §4–§6 / slices 3–7. Schema: [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md), [`structured-name-model.md`](../../structured-name-model.md). Canvas: [Spike 6 archive](../archive/spike-6/). Navigation skills: [`add-workspace-location`](../../../.cursor/skills/add-workspace-location/SKILL.md), [`add-workspace-place`](../../../.cursor/skills/add-workspace-place/SKILL.md).
 
 ## Status
 
@@ -8,11 +8,13 @@ Citations, Observations, NameValue, Subject vocabulary editors, citation compose
 
 > **Goal of this spike:** prove the full evidence path — cite an Artifact portion, assert typed Observations on a subject, see them on the card, and make connect write real Citation-backed edges — without layering composer a11y onto the canvas.
 
+> **Subject types stay product-seeded.** person / event / place / relationship / participation / location / source are first-class app kinds (palette, cards, macros), not a researcher-extensible CatalogVocabulary. **S7-D1 / S7-04 are descoped.**
+
 ## Goal (dogfood bar)
 
 All of the following must be true in the app:
 
-1. **Subject types** and **Subject fields** replace stubs with real CatalogVocabulary editors (mirror Source types / fields).
+1. **Subject fields** replaces its stub with a real CatalogVocabulary editor (Properties + bindings to the **seeded** Subject types). Subject types destination stays stub / non-editable.
 2. On the Evidence graph, a card has **Add property** → navigate to the **citation composer place** (Artifact pick as needed inside that place or as a short prelude).
 3. Composer supports **images** (zoom/pan + region polygon) and **PDFs** (page nav + zoom/pan + region); audio/video deferred.
 4. One submit writes **one Citation + N Observations**; **Back** returns to the graph; card **grows** with cited property rows.
@@ -72,19 +74,20 @@ Sources › {Source title} › Evidence graph › Connect › Cite
 
 Pinning a Citation across successive graph edits is **out** (one Citation + N Observations per submit).
 
-## Design track (five briefs — one view / surface each)
+## Design track (four briefs — one view / surface each)
 
 **All UI is designed in Claude Design before the matching UI PR.** Briefs: [`design/`](design/).
 
 | Step | Brief | Covers | Gates |
 | --- | --- | --- | --- |
-| **S7-D1** | Subject types | Replace stub; list/detail; origin; ref prefixes; create/edit/delete unused | S7-04 |
-| **S7-D2** | Subject fields | Properties + bindings; five value_types; mirror Source fields | S7-05 |
+| **S7-D2** | Subject fields | Properties + bindings to **seeded** Subject types; five value_types; mirror Source fields | S7-05 |
 | **S7-D3** | Evidence graph updates | Add-property; cited-data rows; Artifact gate; connect disambiguation → composer handoff; bridge honesty once cited | S7-09, S7-10 |
 | **S7-D4** | Citation composer place | Full-window viewer\|form; Artifact pick; locators; observation list; DateValue reuse; breadcrumbs; composer-only a11y — **hosts** NameValue modal, does not design it | S7-08 |
 | **S7-D5** | NameValue editor | Reusable NameValue modal (DateValue twin); form + optional parts | S7-02b |
 
-Run **S7-D1 / D2 / D5** early (parallel with schema). **S7-D3 before card/connect UI.** **S7-D4 before composer place UI.** **S7-D5 before NameValue Swift UI.** D3, D4, and D5 may run in parallel once boundaries are clear.
+~~**S7-D1** Subject types editor~~ — **descoped** (see [Descoped](#descoped) below).
+
+Run **S7-D2 / D5** early (parallel with schema). **S7-D3 before card/connect UI.** **S7-D4 before composer place UI.** **S7-D5 before NameValue Swift UI.** D3, D4, and D5 may run in parallel once boundaries are clear.
 
 ## PR sequence
 
@@ -92,20 +95,17 @@ Run **S7-D1 / D2 / D5** early (parallel with schema). **S7-D3 before card/connec
 design                              build
 ─────────────                       ─────────────────────────────────────────
 
-S7-D1 Subject types                 S7-01  properties + subject_type_fields
+S7-D2 Subject fields                S7-01  properties + subject_type_fields
   │                                 │      + seed registry + Go CRUD/FFI
   │                                 ▼
-S7-D2 Subject fields                S7-02  NameValue schema + Go
+S7-D5 NameValue editor              S7-02  NameValue schema + Go
   │                                 │      (ungated; tables + package)
   │                                 ▼
-S7-D5 NameValue editor              │
   │                                 S7-03  citations + observations + locator
   │                                 │      validation (Go) + FFI macros
   │                                 ▼
   └────── gates ──────────────────▶ S7-02b NameValue Swift editor
                                     │      (reusable modal; DateValue twin)
-                                    │
-  └────── D1 gates ───────────────▶ S7-04  Subject types UI
                                     │
   └────── D2 gates ───────────────▶ S7-05  Subject fields UI
                                     │
@@ -137,7 +137,6 @@ Schema/Go PRs (01–03, 02) may start before design finishes; **UI PRs gate on t
 
 ## Checklist
 
-- [ ] S7-D1 — Design: Subject types → [`completed.md`](completed.md)
 - [ ] S7-D2 — Design: Subject fields → [`completed.md`](completed.md)
 - [ ] S7-D3 — Design: Evidence graph updates → [`completed.md`](completed.md)
 - [ ] S7-D4 — Design: Citation composer place → [`completed.md`](completed.md)
@@ -146,7 +145,6 @@ Schema/Go PRs (01–03, 02) may start before design finishes; **UI PRs gate on t
 - [ ] S7-02 — NameValue schema + Go → [`completed.md`](completed.md)
 - [ ] S7-02b — NameValue Swift editor → [`completed.md`](completed.md)
 - [ ] S7-03 — Citations + Observations + locator validation + FFI → [`completed.md`](completed.md)
-- [ ] S7-04 — Subject types UI → [`completed.md`](completed.md)
 - [ ] S7-05 — Subject fields UI → [`completed.md`](completed.md)
 - [ ] S7-06 — Artifact viewers (image + PDF) → [`completed.md`](completed.md)
 - [ ] S7-07 — Locator tools (page + region) → [`completed.md`](completed.md)
@@ -155,17 +153,17 @@ Schema/Go PRs (01–03, 02) may start before design finishes; **UI PRs gate on t
 - [ ] S7-10 — Durable connect macros → [`completed.md`](completed.md)
 - [ ] S7-11 — Dogfood close / docs → [`completed.md`](completed.md)
 
----
+## Descoped
 
-## S7-D1 — Design: Subject types
-
-Claude Design board for the Subject types destination. Brief: [`design/S7-D1-subject-types.md`](design/S7-D1-subject-types.md). Gates **S7-04**.
+| Step | Notes |
+| --- | --- |
+| **S7-D1** / **S7-04** | Subject types CatalogVocabulary editor. Types remain Spike 5 seeded rows + first-class graph behavior. Brief archived: [`design/archive/S7-D1-subject-types.md`](design/archive/S7-D1-subject-types.md). |
 
 ---
 
 ## S7-D2 — Design: Subject fields
 
-Claude Design board for Subject fields (Properties + bindings). Brief: [`design/S7-D2-subject-fields.md`](design/S7-D2-subject-fields.md). Gates **S7-05**.
+Claude Design board for Subject fields (Properties + bindings). Brief: [`design/S7-D2-subject-fields.md`](design/S7-D2-subject-fields.md). Gates **S7-05**. Bindings target the **fixed seeded** Subject types — not a user type browser.
 
 ---
 
@@ -189,12 +187,12 @@ Claude Design board for the reusable NameValue modal (DateValue twin). Brief: [`
 
 ## S7-01 — Properties + subject_type_fields + seed
 
-Migration(s) for `properties`, `subject_type_fields`; `value_type` limited to text / integer / date / name / subject; create-time seed via `add-seeded-vocabulary`; audited CRUD + FFI; list bindings for Add-property menus. Update interpretation-layer model docs to drop `real` / `boolean`.
+Migration(s) for `properties`, `subject_type_fields`; `value_type` limited to text / integer / date / name / subject; create-time seed via `add-seeded-vocabulary`; audited CRUD + FFI; list bindings for Add-property menus. Update interpretation-layer model docs to drop `real` / `boolean`. Bindings reference existing Spike 5 `subject_types` rows only.
 
 | | |
 | --- | --- |
 | **In** | Tables, seed registry, Go packages, FFI list/create/update/delete (unused), bindings query. |
-| **Out** | Vocabulary UI (S7-04 / S7-05); Observations. |
+| **Out** | Subject fields UI (S7-05); Observations; Subject types user CRUD. |
 | **Testable** | Create project seeds §3.2–3.3 bindings; Go tests; FakeStore round-trip. |
 | **Depends on** | Spike 5 `subject_types`. **Not** gated on design. |
 
@@ -239,27 +237,14 @@ Swift `NameValueDraft` / editor modal under `Features/Names/` (mirror `Features/
 
 ---
 
-## S7-04 — Subject types UI
-
-Replace stub with CatalogVocabulary master–detail. `add-workspace-place` for real queries.
-
-| | |
-| --- | --- |
-| **In** | List/detail; origin; ref prefixes; create/edit; delete when unused. |
-| **Out** | Subject fields; Observations. |
-| **Testable** | Create a user Subject type; see it in list; VoiceOver list. |
-| **Depends on** | S7-01, **S7-D1**. |
-
----
-
 ## S7-05 — Subject fields UI
 
-Properties + `subject_type_fields` bindings; five value_types only; mirror Source fields.
+Properties + `subject_type_fields` bindings; five value_types only; mirror Source fields. Bindings pick among **seeded** Subject types only (no Subject types admin destination).
 
 | | |
 | --- | --- |
-| **In** | Vocabulary browser; bind Properties to Subject types; value_type at create (immutable). |
-| **Out** | Composer; Observation editors beyond type pickers. |
+| **In** | Vocabulary browser; bind Properties to seeded Subject types; value_type at create (immutable). |
+| **Out** | Composer; Observation editors beyond type pickers; Subject types CRUD. |
 | **Testable** | Bind a field; see it available for that type. |
 | **Depends on** | S7-01, **S7-D2**. |
 
@@ -340,13 +325,14 @@ Honesty pass against the [goal bar](#goal-dogfood-bar). Record in [`completed.md
 
 | In | Out |
 | --- | --- |
-| Subject types / fields editors | Source-page `mentions` / `remark` |
+| Subject **fields** editor | Source-page `mentions` / `remark` |
 | Composer as **navigable place** (Option B) | In-window modal (A); companion window (C) |
 | Image + PDF + page/region | Audio / video / QuickLook-as-composer |
 | NameValue schema + reusable editor (S7-D5 stream) | Conclusion name_format |
 | Durable connect via composer | Citation pinning across graph edits |
 | Card cited-property rows | Unplaced tray, minimap, auto-layout |
 | Five value-type editors | `real` / `boolean`; full conflicted/negated visual language |
+| Seeded Subject types (Spike 5) | **Subject types** CatalogVocabulary / user-defined types |
 
 ---
 
@@ -373,4 +359,4 @@ Honesty pass against the [goal bar](#goal-dogfood-bar). Record in [`completed.md
 
 ## What the next spike inherits
 
-On success: a cited Evidence graph — vocabulary configurable, properties visible on cards, connect writes real evidence, NameValue available for person names. Ready for honesty/polish (conflicted/negated), Source-page commentary, and media types beyond image/PDF.
+On success: a cited Evidence graph — Subject fields configurable against seeded types, properties visible on cards, connect writes real evidence, NameValue available for person names. Ready for honesty/polish (conflicted/negated), Source-page commentary, and media types beyond image/PDF.

@@ -1,8 +1,10 @@
 # S7-D1 — Subject types (vocabulary editor)
 
+> **Superseded / descoped.** Subject types are **product-seeded only** with first-class app plumbing (palette, cards, connect macros). They are not a user-extensible vocabulary like Source types. Do **not** implement a Subject types CatalogVocabulary editor. Spike 5 sidebar stub may remain; removing it from the rail is optional follow-on, not Spike 7. See [`../README.md`](../README.md) and the Spike 7 deployment plan *Descoped* section.
+
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 7 (Citations / Observations / composer)  
-**Implements later as:** PR **S7-04** only  
+**Implements later as:** ~~PR **S7-04**~~ — **cancelled**  
 **Depends on:** Spike 5 nested Sources config stubs (S5-D3); S7-01 schema/seed may land in parallel  
 **Related briefs:** [`S7-D2`](S7-D2-subject-fields.md) — Subject fields; Source types pattern from Spike 2
 

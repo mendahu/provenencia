@@ -46,7 +46,7 @@ Also decide **breadcrumbs**, title, and cancel/submit chrome so Back/Forward and
 ### 2.1 What this board is not
 
 - Not graph card growth / Add property chrome — **S7-D3**.
-- Not Subject types / fields admin — **S7-D1 / D2**.
+- Not Subject fields admin — **S7-D2**. Not Subject types admin (descoped).
 - Not the **NameValue editor** internals — **S7-D5** (only the host control that opens it).
 - Not audio/video players.
 - Not Citation pinning across multiple graph sessions.
