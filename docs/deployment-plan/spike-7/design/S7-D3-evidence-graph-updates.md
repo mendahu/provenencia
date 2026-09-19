@@ -66,7 +66,7 @@ Build on Spike 6 primary / bridge cards.
 | **Growth** | Card height grows with rows; propose max before scroll-inside-card vs always grow (prefer grow for tens of rows on a Source). |
 | **Uncited → cited** | After ≥1 Observation about the subject, drop uncited shell (Spike 6 contrast frame). |
 | **Bridge cards** | Subordinate chrome remains; body shows relationship/role summary from Observations once durable. |
-| **Palette (implementation)** | Add Person / Event / Place membership, copy, and icons come from the Interpretation subject registry’s placeable types — design may keep the same three tools visually; implementers must not keep a hard-coded primary-kind set as SoT (see deployment plan registry section). |
+| **Palette / type chrome (implementation)** | Membership, copy, icons, card colors, and line/gradient tokens for **every** shown Subject type (roots and bridges) come from the Interpretation subject registry — design may keep today’s look; implementers must not keep hard-coded kind→style maps as SoT (see deployment plan registry section). |
 
 ---
 
