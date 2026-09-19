@@ -33,7 +33,7 @@ func TestSubjectVocab(t *testing.T) {
 					t.Fatal(err)
 				}
 				bindings, err := ListBindings(c, person.ID)
-				if err != nil || len(bindings) != 2 {
+				if err != nil || len(bindings) != 1 {
 					t.Fatalf("person bindings %v len=%d", err, len(bindings))
 				}
 				participation, err := subjecttypes.Lookup(c, "participation", subjecttypes.OriginProvenencia)
@@ -61,16 +61,8 @@ func TestSubjectVocab(t *testing.T) {
 				if err := Install(c); err != nil {
 					t.Fatal(err)
 				}
-				prop, err := properties.Lookup(c, "occupation", properties.OriginProvenencia)
+				prop, err := properties.Lookup(c, "age_at_event", properties.OriginProvenencia)
 				if err != nil {
-					t.Fatal(err)
-				}
-				// Unbind person.occupation first so delete is allowed.
-				person, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if err := DeleteBinding(c, person.ID, prop.ID); err != nil {
 					t.Fatal(err)
 				}
 				db, err := c.DB()
@@ -87,9 +79,9 @@ func TestSubjectVocab(t *testing.T) {
 					t.Fatal(err)
 				}
 				defer reopened.Close()
-				_, err = properties.Lookup(reopened, "occupation", properties.OriginProvenencia)
+				_, err = properties.Lookup(reopened, "age_at_event", properties.OriginProvenencia)
 				if err == nil {
-					t.Fatal("healed occupation on open")
+					t.Fatal("healed age_at_event on open")
 				}
 			},
 		},

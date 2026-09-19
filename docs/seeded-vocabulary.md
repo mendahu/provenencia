@@ -306,9 +306,7 @@ Do not reuse the reserved catalog prefixes `USR`, `SRC`, `ART`, `CIT`, `OBS`. Bo
 key                 value_type    notes
 name                name
 name_format         text          primarily Conclusion reconciliation; profile key
-birth_date          date
 age_at_event        integer
-occupation          text
 event_type          text          open values; see §3.4
 date                date          event date
 role                text          open values; see §3.5
@@ -331,7 +329,6 @@ Additional Properties may be seeded as workflows need them (shared DNA, predicte
 ```text
 subject_type    property
 person          name
-person          occupation
 
 event           event_type
 event           date

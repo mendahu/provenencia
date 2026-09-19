@@ -140,9 +140,7 @@ var seedTypes = []seedType{
 var seedProperties = []seedProperty{
 	{Key: "name", Label: "Name", ValueType: properties.ValueTypeName},
 	{Key: "name_format", Label: "Name format", Description: "Primarily Conclusion reconciliation; profile key", ValueType: properties.ValueTypeText},
-	{Key: "birth_date", Label: "Birth date", ValueType: properties.ValueTypeDate},
 	{Key: "age_at_event", Label: "Age at event", ValueType: properties.ValueTypeInteger},
-	{Key: "occupation", Label: "Occupation", ValueType: properties.ValueTypeText},
 	{Key: "event_type", Label: "Event type", ValueType: properties.ValueTypeText},
 	{Key: "date", Label: "Date", Description: "Event date", ValueType: properties.ValueTypeDate},
 	{Key: "role", Label: "Role", ValueType: properties.ValueTypeText},
@@ -159,7 +157,6 @@ var seedProperties = []seedProperty{
 // Bindings from docs/seeded-vocabulary.md §3.3. Locked = required for connect macros.
 var seedBindings = []seedBinding{
 	{TypeKey: "person", PropertyKey: "name", SortOrder: 0},
-	{TypeKey: "person", PropertyKey: "occupation", SortOrder: 1},
 
 	{TypeKey: "event", PropertyKey: "event_type", SortOrder: 0},
 	{TypeKey: "event", PropertyKey: "date", SortOrder: 1},
