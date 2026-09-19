@@ -6,6 +6,8 @@
 **Depends on:** Spike 5 seeded `subject_types` (fixed product set; **no** Subject types editor); S7-01 schema/seed; **S7-01b Property terms** (sixth `value_type = term`)  
 **Related briefs:** archived [`S7-D1`](archive/S7-D1-subject-types.md) (**descoped**); Source fields (S2-02) is **contrast only** — do not copy its layout; composer term picker lives in **S7-D4** (not this board)
 
+**Already running a board from an older brief?** Paste the delta only: [`S7-D2-subject-fields-addendum-property-terms.md`](S7-D2-subject-fields-addendum-property-terms.md).
+
 Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](README.md) first.
 
 ---

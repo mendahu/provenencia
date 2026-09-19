@@ -306,7 +306,7 @@ Schema/Go (01–03, 01b) may start before design finishes; **UI PRs gate on the 
 
 ## S7-D2 — Design: Subject fields
 
-Claude Design board for Subject fields. Brief: [`design/S7-D2-subject-fields.md`](design/S7-D2-subject-fields.md). Gates **S7-05**. Design around **seven fixed types** (non-list type chrome welcome) and **many Properties**. Source fields layout explicitly out. Board must treat **`term` as registry-only** (visible on seeded Properties, not in create Property) and must **not** invent Event types / Roles destinations.
+Claude Design board for Subject fields. Brief: [`design/S7-D2-subject-fields.md`](design/S7-D2-subject-fields.md). Gates **S7-05**. Design around **seven fixed types** (non-list type chrome welcome) and **many Properties**. Source fields layout explicitly out. Board must treat **`term` as registry-only** (visible on seeded Properties, not in create Property) and must **not** invent Event types / Roles destinations. Boards already started: paste [`design/S7-D2-subject-fields-addendum-property-terms.md`](design/S7-D2-subject-fields-addendum-property-terms.md).
 
 ---
 
