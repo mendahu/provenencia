@@ -2727,6 +2727,259 @@ enum L10n {
         }
     }
 
+    enum SubjectFields {
+        static let description = LocalizedStringResource(
+            "subjectFields.list.description",
+            defaultValue: "The properties a subject can carry, and which of the seven subject types carry them.",
+            comment: "Explanatory copy under the Subject fields page title"
+        )
+        static let allProperties = LocalizedStringResource(
+            "subjectFields.strip.all",
+            defaultValue: "All properties",
+            comment: "Type strip card that clears the subject-type filter"
+        )
+        static func stripFieldCount(count: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "subjectFields.strip.fieldCount",
+                defaultValue: "%lld fields",
+                comment: "Type strip count under a subject type; argument is binding count"
+            ))
+            return String(format: format, locale: .current, count)
+        }
+        static let searchPlaceholder = LocalizedStringResource(
+            "subjectFields.search.placeholder",
+            defaultValue: "Search properties",
+            comment: "Search field placeholder on Subject fields"
+        )
+        static let originFilterAll = LocalizedStringResource(
+            "subjectFields.filter.originAll",
+            defaultValue: "All",
+            comment: "Origin filter: all properties"
+        )
+        static let originFilterSeeded = LocalizedStringResource(
+            "subjectFields.filter.originSeeded",
+            defaultValue: "Seeded",
+            comment: "Origin filter: provenencia-seeded properties"
+        )
+        static let originFilterUser = LocalizedStringResource(
+            "subjectFields.filter.originUser",
+            defaultValue: "User",
+            comment: "Origin filter: researcher-created properties"
+        )
+        static let valueTypeAny = LocalizedStringResource(
+            "subjectFields.filter.valueTypeAny",
+            defaultValue: "Any value type",
+            comment: "Value type filter: no restriction"
+        )
+        static let valueTypeText = LocalizedStringResource(
+            "subjectFields.valueType.text",
+            defaultValue: "Text",
+            comment: "Property value type label: text"
+        )
+        static let valueTypeInteger = LocalizedStringResource(
+            "subjectFields.valueType.integer",
+            defaultValue: "Integer",
+            comment: "Property value type label: integer"
+        )
+        static let valueTypeDate = LocalizedStringResource(
+            "subjectFields.valueType.date",
+            defaultValue: "Date",
+            comment: "Property value type label: date"
+        )
+        static let valueTypeName = LocalizedStringResource(
+            "subjectFields.valueType.name",
+            defaultValue: "Name",
+            comment: "Property value type label: name"
+        )
+        static let valueTypeSubject = LocalizedStringResource(
+            "subjectFields.valueType.subject",
+            defaultValue: "Subject",
+            comment: "Property value type label: subject"
+        )
+        static let valueTypeTerm = LocalizedStringResource(
+            "subjectFields.valueType.term",
+            defaultValue: "Term",
+            comment: "Property value type label: term (registry-only)"
+        )
+        static let columnProperty = LocalizedStringResource(
+            "subjectFields.table.columnProperty",
+            defaultValue: "Property",
+            comment: "Subject fields table column: property label"
+        )
+        static let columnValueType = LocalizedStringResource(
+            "subjectFields.table.columnValueType",
+            defaultValue: "Value type",
+            comment: "Subject fields table column: value type"
+        )
+        static let columnOrigin = LocalizedStringResource(
+            "subjectFields.table.columnOrigin",
+            defaultValue: "Origin",
+            comment: "Subject fields table column: origin"
+        )
+        static let columnBoundTo = LocalizedStringResource(
+            "subjectFields.table.columnBoundTo",
+            defaultValue: "Bound to",
+            comment: "Subject fields table column: bound subject types"
+        )
+        static let emptySearch = LocalizedStringResource(
+            "subjectFields.table.emptySearch",
+            defaultValue: "Clear the search, or create it as a user property",
+            comment: "Empty state when search/filter matches no properties"
+        )
+        static let newProperty = LocalizedStringResource(
+            "subjectFields.toolbar.newProperty",
+            defaultValue: "New property",
+            comment: "Toolbar button to open create Property sheet"
+        )
+        static func addToType(typeLabel: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "subjectFields.toolbar.addToType",
+                defaultValue: "Add a property to %@",
+                comment: "Toolbar button when a type is selected; argument is type label"
+            ))
+            return String(format: format, locale: .current, typeLabel)
+        }
+        static let inspectorTitle = LocalizedStringResource(
+            "subjectFields.inspector.title",
+            defaultValue: "Property",
+            comment: "Inspector eyebrow when a property is selected"
+        )
+        static let inspectorEmpty = LocalizedStringResource(
+            "subjectFields.inspector.empty",
+            defaultValue: "Select a property to see its description and bindings.",
+            comment: "Inspector empty state"
+        )
+        static let bindingsSection = LocalizedStringResource(
+            "subjectFields.inspector.bindings",
+            defaultValue: "Subject type bindings",
+            comment: "Inspector section label for bindings list"
+        )
+        static let termNote = LocalizedStringResource(
+            "subjectFields.inspector.termNote",
+            defaultValue: "Values come from the product vocabulary. You choose one when citing this property.",
+            comment: "Inspector note for term-typed seeded properties"
+        )
+        static let deleteProperty = LocalizedStringResource(
+            "subjectFields.inspector.delete",
+            defaultValue: "Delete property",
+            comment: "Delete button in property inspector"
+        )
+        static let deleteInUse = LocalizedStringResource(
+            "subjectFields.inspector.deleteInUse",
+            defaultValue: "This property is still bound to one or more subject types.",
+            comment: "Why delete is disabled when usedBy > 0"
+        )
+        static let deleteSeeded = LocalizedStringResource(
+            "subjectFields.inspector.deleteSeeded",
+            defaultValue: "Seeded properties cannot be deleted.",
+            comment: "Why delete is disabled for provenencia-origin properties"
+        )
+        static func lockedBindingReason(typeLabel: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "subjectFields.inspector.lockedBinding",
+                defaultValue: "The Interpretation subject registry requires this property on %@. The binding cannot be removed.",
+                comment: "Callout when activating a locked binding; argument is subject type label"
+            ))
+            return String(format: format, locale: .current, typeLabel)
+        }
+        static let bindingLocked = LocalizedStringResource(
+            "subjectFields.inspector.bindingLocked",
+            defaultValue: "Locked",
+            comment: "Accessibility / badge for a locked subject-type binding"
+        )
+        static let bindingBound = LocalizedStringResource(
+            "subjectFields.inspector.bindingBound",
+            defaultValue: "Bound",
+            comment: "Accessibility label for an active unbound-able binding"
+        )
+        static let createTitle = LocalizedStringResource(
+            "subjectFields.create.title",
+            defaultValue: "New property",
+            comment: "Create property sheet title"
+        )
+        static let createLabel = LocalizedStringResource(
+            "subjectFields.create.label",
+            defaultValue: "Label",
+            comment: "Create property form: label field"
+        )
+        static let createLabelHint = LocalizedStringResource(
+            "subjectFields.create.labelHint",
+            defaultValue: "What a researcher sees on the subject",
+            comment: "Hint under create property label"
+        )
+        static let createValueType = LocalizedStringResource(
+            "subjectFields.create.valueType",
+            defaultValue: "Value type",
+            comment: "Create property form: value type picker"
+        )
+        static let createDescription = LocalizedStringResource(
+            "subjectFields.create.description",
+            defaultValue: "Description",
+            comment: "Create property form: description"
+        )
+        static let createCancel = LocalizedStringResource(
+            "subjectFields.create.cancel",
+            defaultValue: "Cancel",
+            comment: "Create property sheet cancel"
+        )
+        static let createSubmit = LocalizedStringResource(
+            "subjectFields.create.submit",
+            defaultValue: "Create property",
+            comment: "Create property sheet primary action"
+        )
+        static let errorLabelRequired = LocalizedStringResource(
+            "subjectFields.create.errorLabelRequired",
+            defaultValue: "Enter a label for this property.",
+            comment: "Validation when create label is empty"
+        )
+        static let errorValueType = LocalizedStringResource(
+            "subjectFields.create.errorValueType",
+            defaultValue: "Choose a researcher value type. Term properties are product vocabulary only.",
+            comment: "Validation when create value type is invalid"
+        )
+        static let toastCreatedTitle = LocalizedStringResource(
+            "subjectFields.toast.createdTitle",
+            defaultValue: "Property created",
+            comment: "Success toast title after creating a property"
+        )
+        static func toastCreatedBody(label: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "subjectFields.toast.createdBody",
+                defaultValue: "%@ is ready to bind.",
+                comment: "Success toast body after creating a property; argument is label"
+            ))
+            return String(format: format, locale: .current, label)
+        }
+        static let toastDeletedTitle = LocalizedStringResource(
+            "subjectFields.toast.deletedTitle",
+            defaultValue: "Property deleted",
+            comment: "Success toast title after deleting a property"
+        )
+        static func toastDeletedBody(label: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "subjectFields.toast.deletedBody",
+                defaultValue: "%@ was removed from this project.",
+                comment: "Success toast body after deleting a property; argument is label"
+            ))
+            return String(format: format, locale: .current, label)
+        }
+        static let deleteConfirmTitle = LocalizedStringResource(
+            "subjectFields.delete.confirmTitle",
+            defaultValue: "Delete this property?",
+            comment: "Confirm sheet title for deleting a user property"
+        )
+        static let deleteConfirmMessage = LocalizedStringResource(
+            "subjectFields.delete.confirmMessage",
+            defaultValue: "This removes the property definition. It cannot be undone.",
+            comment: "Confirm sheet message for deleting a user property"
+        )
+        static let deleteKeep = LocalizedStringResource(
+            "subjectFields.delete.keep",
+            defaultValue: "Keep",
+            comment: "Confirm sheet cancel for delete property"
+        )
+    }
+
     /// Maps stable Go/FFI error codes to localized user-facing copy.
     enum SourceTypes {
         static let description = LocalizedStringResource(

@@ -60,10 +60,11 @@ struct WorkspaceDestinationHost: View {
             )
             .accessibilityIdentifier("workspace.destination.subjectTypes")
         case .subjectFields:
-            WorkspaceComingSoonView(
-                icon: .listTree,
-                title: L10n.Workspace.subjectFieldsTitle,
-                message: L10n.Workspace.subjectFieldsStubBody
+            SubjectFieldsView(
+                session: session,
+                userID: userID,
+                store: store,
+                catalogCounts: catalogCounts
             )
             .accessibilityIdentifier("workspace.destination.subjectFields")
         }

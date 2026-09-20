@@ -32,6 +32,11 @@ enum CatalogMutation: Sendable, Equatable {
 
     /// A primary subject was created on this Source's Evidence graph.
     case createdSubject(sourceId: String)
+
+    case createdProperty
+    case updatedProperty
+    case deletedProperty
+    case mutatedSubjectTypeFields
 }
 
 /// Mutation kind for registry invalidation tags (no associated payload).
@@ -49,6 +54,10 @@ enum CatalogMutationKind: Hashable, Sendable {
     case mutatedSourceWorkspace
     case mutatedSourceMetadata
     case createdSubject
+    case createdProperty
+    case updatedProperty
+    case deletedProperty
+    case mutatedSubjectTypeFields
 }
 
 extension CatalogMutation {
@@ -83,6 +92,14 @@ extension CatalogMutation {
             return .mutatedSourceMetadata
         case .createdSubject:
             return .createdSubject
+        case .createdProperty:
+            return .createdProperty
+        case .updatedProperty:
+            return .updatedProperty
+        case .deletedProperty:
+            return .deletedProperty
+        case .mutatedSubjectTypeFields:
+            return .mutatedSubjectTypeFields
         }
     }
 

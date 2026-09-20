@@ -43,7 +43,9 @@ struct PlaceRegistryTests {
         let subjectFields = resolve(.sectionRoot(.subjectFields))
         #expect(subjectFields?.placeID == .subjectFields)
         #expect(subjectFields?.presentation == .subjectFields)
-        #expect(subjectFields?.queryKeys == [])
+        #expect(subjectFields?.queryKeys == [
+            .subjectFieldsWorkspace(project: project),
+        ])
     }
 
     @Test func resolvesSourceDetail() {
@@ -162,7 +164,7 @@ struct PlaceRegistryTests {
             (
                 .sectionRoot(.subjectFields),
                 .subjectFields,
-                []
+                [.subjectFieldsWorkspace(project: project)]
             ),
         ]
 

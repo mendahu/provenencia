@@ -151,6 +151,8 @@ final class WorkspaceSession {
             let _: QueryHandle<[CatalogTypeSuggestion]> = query(key)
         case .sourceGraph:
             let _: QueryHandle<SourceGraphSnapshot> = query(key)
+        case .subjectFieldsWorkspace:
+            let _: QueryHandle<SubjectFieldsSnapshot> = query(key)
         }
     }
 

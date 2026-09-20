@@ -194,6 +194,10 @@
 		B2C3D4E5F60718293A4B5C6D /* WindowDragRegion.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5C /* WindowDragRegion.swift */; };
 		327D9751467546DCB56EC478 /* WindowSizing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F69681C808F487B9BD6E7AA /* WindowSizing.swift */; };
 		BD1582FF721A5711F38C97A0 /* SourceFieldsModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B7791238B5C7C6F0C5BE388 /* SourceFieldsModel.swift */; };
+		A70500000000000000000005 /* SubjectFieldsModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70500000000000000000001 /* SubjectFieldsModel.swift */; };
+		A70500000000000000000006 /* SubjectFieldsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70500000000000000000002 /* SubjectFieldsView.swift */; };
+		A70500000000000000000007 /* SubjectFieldsSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70500000000000000000003 /* SubjectFieldsSnapshot.swift */; };
+		A70500000000000000000008 /* SubjectFieldsModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70500000000000000000004 /* SubjectFieldsModelTests.swift */; };
 		BE57602FF7EBA86C1DEE63FF /* PVBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3E732F3D44BB89512758F85 /* PVBadge.swift */; };
 		A1B2C3D4E5F60718293A4B5E /* PVDivider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F60718293A4B5E01 /* PVDivider.swift */; };
 		CA918E2A0BCB420DA8CD87E5 /* PVButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0AE6B1748FA280F95478205 /* PVButton.swift */; };
@@ -366,6 +370,10 @@
 		AA0000000000000000000205 /* SourceTypesDetailPane.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTypesDetailPane.swift; sourceTree = "<group>"; };
 		AA0000000000000000000206 /* SourceTypesModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTypesModelTests.swift; sourceTree = "<group>"; };
 		3B7791238B5C7C6F0C5BE388 /* SourceFieldsModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceFieldsModel.swift; sourceTree = "<group>"; };
+		A70500000000000000000001 /* SubjectFieldsModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SubjectFieldsModel.swift; sourceTree = "<group>"; };
+		A70500000000000000000002 /* SubjectFieldsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SubjectFieldsView.swift; sourceTree = "<group>"; };
+		A70500000000000000000003 /* SubjectFieldsSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SubjectFieldsSnapshot.swift; sourceTree = "<group>"; };
+		A70500000000000000000004 /* SubjectFieldsModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SubjectFieldsModelTests.swift; sourceTree = "<group>"; };
 		4094CD05F31CFF0AA37C888A /* PVColor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVColor.swift; sourceTree = "<group>"; };
 		40F72A548E04F25E0AA30CDB /* PVInput.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVInput.swift; sourceTree = "<group>"; };
 		48B417D5E38F11219198BF91 /* WorkspaceContent.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceContent.swift; sourceTree = "<group>"; };
@@ -531,6 +539,17 @@
 			);
 			name = SourceFields;
 			path = SourceFields;
+			sourceTree = "<group>";
+		};
+		A70500000000000000000009 /* SubjectFields */ = {
+			isa = PBXGroup;
+			children = (
+				A70500000000000000000001 /* SubjectFieldsModel.swift */,
+				A70500000000000000000002 /* SubjectFieldsView.swift */,
+				A70500000000000000000003 /* SubjectFieldsSnapshot.swift */,
+			);
+			name = SubjectFields;
+			path = SubjectFields;
 			sourceTree = "<group>";
 		};
 		4890BA38D028388F6C2157E5 /* Navigation */ = {
@@ -754,6 +773,7 @@
 				AA000000000000000000047C /* GraphCanvas */,
 				AA000000000000000000047D /* EvidenceGraph */,
 				423C55925CCDB8118E02BF19 /* SourceFields */,
+				A70500000000000000000009 /* SubjectFields */,
 				AA0000000000000000000221 /* SourceTypes */,
 				AA0000000000000000000220 /* Catalog */,
 				AA0000000000000000000280 /* CatalogVocabulary */,
@@ -857,6 +877,7 @@
 				8291342170CC4CB42EFA814C /* FieldSlugTests.swift */,
 				AA00000000000000000000C5 /* PVTableTests.swift */,
 				4F0CB87F6EC5759DF8D0A7AF /* SourceFieldsModelTests.swift */,
+				A70500000000000000000004 /* SubjectFieldsModelTests.swift */,
 				AA0000000000000000000206 /* SourceTypesModelTests.swift */,
 				AA0000000000000000000312 /* SourcesModelTests.swift */,
 				AA000000000000000000046A /* SourcesListNavigationTests.swift */,
@@ -1148,6 +1169,9 @@
 				AA00000000000000000000C1 /* PVTable.swift in Sources */,
 				A62122AE913D5F5B8B72D083 /* PVCallout.swift in Sources */,
 				BD1582FF721A5711F38C97A0 /* SourceFieldsModel.swift in Sources */,
+				A70500000000000000000005 /* SubjectFieldsModel.swift in Sources */,
+				A70500000000000000000006 /* SubjectFieldsView.swift in Sources */,
+				A70500000000000000000007 /* SubjectFieldsSnapshot.swift in Sources */,
 				AA0000000000000000000210 /* OriginMarkers.swift in Sources */,
 				AA0000000000000000000240 /* PVComboBox.swift in Sources */,
 				AA0000000000000000000211 /* MetadataFieldBadges.swift in Sources */,
@@ -1227,6 +1251,7 @@
 				E63D8CEC3F6AC5C7E90EBBFE /* FieldSlugTests.swift in Sources */,
 				AA00000000000000000000C4 /* PVTableTests.swift in Sources */,
 				CE7E43F00CA602E2794E0ADA /* SourceFieldsModelTests.swift in Sources */,
+				A70500000000000000000008 /* SubjectFieldsModelTests.swift in Sources */,
 				AA0000000000000000000216 /* SourceTypesModelTests.swift in Sources */,
 				AA0000000000000000000242 /* PVComboBoxTests.swift in Sources */,
 				AA0000000000000000000313 /* SourcesModelTests.swift in Sources */,

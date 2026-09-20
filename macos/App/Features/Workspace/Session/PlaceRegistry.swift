@@ -87,7 +87,9 @@ struct PlaceRegistry: Sendable {
             presentation: .subjectFields,
             priority: 80,
             matches: { $0.section == .subjectFields },
-            queryKeys: { _, _ in [] },
+            queryKeys: { project, _ in
+                [.subjectFieldsWorkspace(project: project)]
+            },
             deepId: { _ in nil }
         ),
         Spec(

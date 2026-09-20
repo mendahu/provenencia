@@ -10,6 +10,8 @@ IDs stay stable (`S7-NN`, `S7-DN`). Do not renumber when moving steps here.
 | --- | --- | --- |
 | [S7-01](#s7-01--pr-properties--bindings--subject-registry) | PR | `properties` + `subject_type_fields` + `subjectvocab` registry / Install / FFI |
 | [S7-01b](#s7-01b--pr-property-terms) | PR | `property_terms` + `value_type=term` + kind/edge seed + FFI term CRUD |
+| [S7-D2](#s7-d2--design-subject-fields) | Design | Type strip over property table; gates S7-05 |
+| [S7-05](#s7-05--pr-subject-fields-ui) | PR | Subject fields destination: strip + table + inspector |
 
 ## Steps
 
@@ -51,4 +53,36 @@ python3 scripts/check-localizable-xcstrings.py
 ```bash
 CGO_ENABLED=1 go test -tags fts5 ./core/database/properties/... ./core/database/propertyterms/... ./core/database/subjectvocab/... ./core/onboarding/... ./api/ffi/...
 python3 scripts/check-localizable-xcstrings.py
+```
+
+### S7-D2 — Design: Subject fields
+
+| | |
+| --- | --- |
+| **Kind** | Design (Claude Design board) |
+| **Depends on** | S7-01 / S7-01b schema; Subject fields stub nav (S5-D3) |
+| **Deliverables** | Done. Board **S7-D2 Subject Fields**: type strip (All + seven fixed types) over a dense property table with search/filters and a right inspector (description, bindings, delete). Create Property offers five researcher value_types only (**not** `term`). Locked registry bindings as lock boxes (not refused checkboxes). Seeded `term` Properties visible as product vocabulary. Briefs archived: [`design/archive/S7-D2-subject-fields.md`](design/archive/S7-D2-subject-fields.md), [`design/archive/S7-D2-subject-fields-addendum-property-terms.md`](design/archive/S7-D2-subject-fields-addendum-property-terms.md). |
+| **Dogfood** | Design only — implements in **S7-05**. |
+| **Out** | Composer / term picker (S7-D4); NameValue (S7-D5); Event types / Roles admin; Source-fields chrome. |
+
+**Landed:** IA for Subject fields config; feeds **S7-05**.
+
+### S7-05 — PR: Subject fields UI
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S7-01, S7-01b, **S7-D2** |
+| **Deliverables** | Done. Replaces Subject fields stub with S7-D2 IA: type strip (All + seven types) over searchable property table + right inspector (description, bindings, delete). Create Property sheet offers five researcher value_types only (**not** `term`). Locked registry bindings as lock boxes with reason callout. Seeded `term` Properties visible with inspector note. Workspace place: `subjectFieldsWorkspace` CatalogQueryKey, PlaceRegistry warm, CatalogCounts badge, DestinationHost → `SubjectFieldsView`. L10n.SubjectFields + xcstrings. |
+| **Tests** | Done. `SubjectFieldsModelTests` (FakeStore): type filter, create without `term`, locked binding callout, assign/remove unlocked, refuse seeded/in-use delete. `PlaceRegistryTests` expect workspace query key. |
+| **Dogfood** | Open Subject fields → strip filters table → create a `name` Property → bind to Person → locked event date binding cannot be removed → seeded `event_type` shows as `term` without create-`term`. |
+| **Out** | Composer / term picker (S7-D4 / S7-08); NameValue (S7-D5 / S7-02b); Observation editors; Subject types CRUD; Source-fields layout reuse; Event types / Roles admin; Property-term CRUD UI. |
+
+**Landed:** Subject fields config destination matching S7-D2 board.
+
+**Verify:**
+
+```bash
+python3 scripts/check-localizable-xcstrings.py
+xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' -only-testing:ProvenenciaTests/SubjectFieldsModelTests -only-testing:ProvenenciaTests/PlaceRegistryTests CODE_SIGNING_ALLOWED=NO
 ```
