@@ -73,7 +73,7 @@ Search for siblings that share chrome but diverge in payload or open gesture:
 - Same visual band: sunken footer, `PVDivider`, title `h3` + subtitle, card/shadow,
   dismiss monitor, hover row, chip/badge shell.
 - Name patterns: `*Sheet`, `*Dialog`, `*Panel`, `*Menu`, `*Chip`, `*Badge`, `*Row`.
-- Grep distinctive tokens (`surfaceSunken`, `.pvDialog`, `.pvConfirm`, custom
+- Grep distinctive tokens (`surfaceSunken`, `.pvFormDialog`, `.pvConfirm`, custom
   scrim, `xmark` dismiss in a sheet header).
 
 List cousins with path + one-line how they differ. Flag **copy-paste drift**.
@@ -83,7 +83,7 @@ List cousins with path + one-line how they differ. Flag **copy-paste drift**.
 Walk **down** the stack the subject should sit on:
 
 1. Tokens / existing primitives (`PVButton`, `PVBadge`, `PVField`, `PVDivider`, …)
-2. Composites (`.pvDialog`, `.pvConfirm`, `.pvConfirmSheet`, `PVContextMenu`, …)
+2. Composites (`.pvFormDialog`, `.pvConfirm`, `.pvConfirmSheet`, `PVContextMenu`, …)
 3. Existing recipes in `DesignSystem/Recipes/`
 
 Ask: can this subject’s chrome be **deleted** in favor of a lower control +
@@ -153,5 +153,5 @@ Which items should I implement?
 ## Example triggers
 
 - “Evaluate `SourceTypeIconPickerSheet` against our layering rules”
-- “Look at `PVDialog` / `PVConfirm` for compose opportunities”
+- “Look at `PVFormDialog` / `PVConfirm` for compose opportunities”
 - “Audit this badge — can we drill into a primitive and make a recipe?”

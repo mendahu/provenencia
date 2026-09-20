@@ -171,9 +171,9 @@ private struct EvidenceGraphContent: View {
             }
         }
         .vocabularyToastOverlay($model.toast, identifier: "evidenceGraph.toast")
-        .pvDialog(
+        .pvFormDialog(
             isPresented: createPresented,
-            copy: PVDialogCopy(
+            copy: PVFormDialogCopy(
                 title: model.createDialogTitle(),
                 confirm: L10n.EvidenceGraph.createConfirm,
                 cancel: L10n.EvidenceGraph.createCancel

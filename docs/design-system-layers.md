@@ -110,7 +110,7 @@ No `components/forms/` category nesting. Each control is `components/<Name>/`.
 | `DesignSystem/Snowflakes/<Name>/` | Prefer `PV` if the name would collide with SwiftUI/AppKit; otherwise a clear product name is OK |
 | `Features/<Feature>/` snowflakes | **Do not** require `PV` — use feature/product names |
 
-Related View modifiers follow the same house prefix in camelCase: `.pvDialog`, `.pvConfirm`, `.buttonStyle(.pv(…))`.
+Related View modifiers follow the same house prefix in camelCase: `.pvFormDialog`, `.pvConfirm`, `.buttonStyle(.pv(…))`.
 
 **Not required**
 
@@ -133,7 +133,7 @@ Shared, **content-agnostic** controls in `DesignSystem/Components/`. They would 
 
 Composites are still design-system components in Frost’s sense: maximal reuse, no product entity types. Prefer flexible slots over forking a whole new root control for a slight variant.
 
-**Examples:** `PVButton`, `PVBadge`, `PVInput`, `PVField`, `PVConfirm` / `PVDialog` (target: both on one panel primitive).
+**Examples:** `PVButton`, `PVBadge`, `PVInput`, `PVField`, `PVPanel`, `PVConfirm` / `PVFormDialog` (composites on the panel primitive).
 
 ## 2. Recipes
 
@@ -154,7 +154,7 @@ Bespoke UI for **one** screen (or private helpers inside one feature). Written o
 - **Not OK:** quietly becoming the de-facto way we do dialogs while living as a one-off — promote into `Components/` or `Recipes/` instead.
 - **Second call site promotes** a snowflake → recipe (same product kind, now shared) or into `Components/` if it was content-agnostic all along.
 
-**Example:** `SourceTypeIconPickerSheet`’s icon grid (and any chrome that isn’t absorbed by a shared panel).
+**Example:** `SourceTypeIconPickerSheet`’s icon grid (target: form body inside `.pvFormDialog`; chrome via `PVPanel` / FormDialog — not hand-rolled header/footer).
 
 ## Layering rules
 
@@ -178,6 +178,6 @@ Not every delete flow needs all three layers:
 
 Typical Source-fields delete: **component confirm at the view** (`.pvConfirmSheet` + `PVConfirmCopy` + optional `PVConfirmKeyChip`). That is fine. No recipe required unless the same wiring repeats.
 
-`PVDialog` and `PVConfirm` sheet content still duplicate panel chrome in places; feature sheets that reimplement header/footer by hand should compose the kit instead. Chip away with [`evaluate-ui-component`](../.cursor/skills/evaluate-ui-component/SKILL.md) rather than one mega-refactor.
+`PVFormDialog` composes ``PVPanel``; `PVConfirm` sheet content still duplicates panel chrome until a follow-up. Feature sheets that reimplement header/footer by hand should compose the kit instead. Chip away with [`evaluate-ui-component`](../.cursor/skills/evaluate-ui-component/SKILL.md) rather than one mega-refactor.
 
-Sheet presentation details (no scrim, sunken footer as content): DesignSystem README “Confirmations are system chrome” and `PVConfirm.swift` / `PVDialog.swift`.
+Sheet presentation details (no scrim, sunken footer as content): DesignSystem README “Confirmations are system chrome” and `PVConfirm.swift` / `PVFormDialog.swift`.

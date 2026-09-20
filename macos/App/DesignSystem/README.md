@@ -157,12 +157,13 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 | Callout | `Components/Callout/PVCallout.swift` (added for S2-02's "this field is locked" note; only the subset S2-02 needs is ported — see the file's header comment) |
 | Table | `Components/Table/PVTable.swift` (added for S2-22, extracted from the Source fields list; see "The table tradeoff" below) |
 | Confirm | `Components/Confirm/PVConfirm.swift` (added for S2-22's delete confirmation; the macOS answer to `ConfirmDialog.jsx`, which the web spec says not to port — see "Confirmations are system chrome" below) |
+| Panel | `Components/Panel/PVPanel.swift` (sheet content shell: title / subtitle / body / optional footer; no window chrome) |
+| FormDialog | `Components/FormDialog/PVFormDialog.swift` (short create/edit form sheet on `PVPanel`; optional `width`, default 480 — see note below) |
 | ComboBox | `Components/ComboBox/PVComboBox.swift` (added for S2-16's assign-field control, where the pool is the whole Source fields vocabulary; single-select subset only — see "The combo box subset" below) |
 | Thumbnail | `Components/Thumbnail/PVThumbnail.swift` (added for S2-17 Sources list rows; image / evidence glyph / SF glyph / empty / loading tile) |
 | EvidenceIcon | `Recipes/EvidenceIcon/PVEvidenceIcon.swift` (`file_*` + `type_*`; see colocated `EVIDENCE-ICONS.md`; not SF Symbols) |
 | SubjectIcon | `Recipes/SubjectIcon/PVSubjectIcon.swift` |
 | OmnibarHitRow | `Recipes/OmnibarHitRow/PVOmnibarHitRow.swift` |
-| Dialog | `Components/Dialog/PVDialog.swift` (added for S2-17 Add Source; sheet form with content slot + footer — see note below) |
 | Breadcrumbs | `Components/Breadcrumbs/PVBreadcrumbs.swift` (added for S2-18 Source page trail; Sources → `SRC-…`) |
 | ReorderableList | `Components/ReorderableList/PVReorderableList.swift` (+ `PVReorderHandle`; added for S2-25 Metadata drag order) |
 
@@ -183,10 +184,11 @@ demand, following the pattern above, when a screen needs one:
 | PersonChip | Research | A person with life dates and a lineage-colored rule |
 | SourceCitation | Research | Citation + repository + scan thumbnail + grade, as one unit |
 
-**Dialog on macOS:** the web `Dialog.jsx` draws a scrim because the browser
-gives it none. Here `PVDialog` is a `.sheet` — same family as `PVConfirm`'s
-rich sheet — and leaves window chrome to the system. Prefer `PVConfirm` for
-destructive confirmations; use `PVDialog` for short create/edit forms.
+**Form dialog on macOS:** the web `Dialog.jsx` draws a scrim because the browser
+gives it none. Here `PVFormDialog` is a `.sheet` on ``PVPanel`` — same family as
+`PVConfirm`'s rich sheet — and leaves window chrome to the system. Prefer
+`PVConfirm` for destructive confirmations; use `PVFormDialog` for short
+create/edit forms.
 
 ## The combo box subset
 

@@ -76,11 +76,11 @@ Prefer extending a composite with slots over a new root `PV*` for a slight varia
 
 | Need | Use |
 | --- | --- |
-| Short create/edit form | `.pvDialog` / `PVDialogContent` |
+| Short create/edit form | `.pvFormDialog` / `PVFormDialogContent` (on `PVPanel`) |
 | Destructive / irreversible, plain text | `.pvConfirm` (system alert) — preferred when enough |
 | Same, rich detail (key chip, list) | `.pvConfirmSheet(item:)` — snapshot via `item:`, not Bool |
 | One-off body | Pass a snowflake into the DS body/detail slot |
-| Custom chrome that copies header/footer by hand | **Don’t** — compose panel/composite; only the unique body stays snowflake |
+| Custom chrome that copies header/footer by hand | **Don’t** — compose `PVPanel` / FormDialog / Confirm; only the unique body stays snowflake |
 
 macOS sheets: **no scrim/dim**, no redrawing window corner radius/shadow on panel content.
 Dismissal for async work stays on the caller binding (`isRunning` can show). See
@@ -106,7 +106,7 @@ struct SourceTypeBadge: View {
 struct AddArtifactSheet: View { /* custom scrim, footer, buttons */ }
 
 // ✅ GOOD — component form dialog + snowflake form body
-.pvDialog(isPresented: $open, copy: …, onConfirm: …) { artifactForm }
+.pvFormDialog(isPresented: $open, copy: …, onConfirm: …) { artifactForm }
 ```
 
 ```swift
@@ -123,7 +123,7 @@ enum VocabularyDeleteDialog { static func sheet(…) }  // only SourceFields use
    `PV<Name>` — required prefix; plus optional README/helpers in the same folder).
 3. Follow `PVButton.swift` shape: header names mirrored `.jsx` / deliberate deviations; tokens only; `#Preview` at bottom.
 4. Register new files in `macos/Provenencia.xcodeproj`.
-5. Prefer View modifiers for presentation (`.pvDialog`, `.pvConfirmSheet`) when the control is a sheet/alert family.
+5. Prefer View modifiers for presentation (`.pvFormDialog`, `.pvConfirmSheet`) when the control is a sheet/alert family.
 6. Leave `.accessibilityIdentifier` to call sites unless the control owns fixed chrome ids by documented convention.
 
 ## Steps when adding a recipe

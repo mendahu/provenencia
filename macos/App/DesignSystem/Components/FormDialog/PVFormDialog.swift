@@ -1,15 +1,15 @@
 import SwiftUI
 
 /// Form dialog sheet — the macOS answer to `components/feedback/Dialog.jsx`
-/// for short create/edit panels (Add Source, later Add Artifact, etc.).
+/// for short create/edit panels (Add Source, Add Artifact, icon pickers, etc.).
 ///
-/// Same presentation family as `PVConfirmSheetContent`: a window-owned
-/// `.sheet` (no custom scrim, corner radius, or shadow on the panel). The
-/// sunken footer band is content, carried over from `Dialog.jsx`. Prefer
-/// `PVConfirm` for destructive / irreversible confirmations — this type is
-/// for forms with a content slot.
+/// Same presentation family as the confirm sheet: a window-owned `.sheet`
+/// (no custom scrim, corner radius, or shadow on the panel). Composes
+/// ``PVPanel`` for chrome; the sunken footer band is content, carried over
+/// from `Dialog.jsx`. Prefer ``PVConfirm`` for destructive / irreversible
+/// confirmations — this type is for forms with a content slot.
 
-struct PVDialogCopy {
+struct PVFormDialogCopy {
     let title: LocalizedStringResource
     let subtitle: LocalizedStringResource?
     let confirm: LocalizedStringResource
@@ -29,9 +29,11 @@ struct PVDialogCopy {
 }
 
 /// Sheet body for a short form. Draws **no** panel background, corner radius,
-/// shadow or scrim — the sheet window owns those.
-struct PVDialogContent<Form: View>: View {
-    let copy: PVDialogCopy
+/// shadow or scrim — the sheet window owns those. Layout chrome comes from
+/// ``PVPanel``.
+struct PVFormDialogContent<Form: View>: View {
+    let copy: PVFormDialogCopy
+    let width: CGFloat
     let isRunning: Bool
     let confirmDisabled: Bool
     /// When set, confirm/cancel mint `{prefix}.confirm` / `{prefix}.cancel`.
@@ -42,10 +44,9 @@ struct PVDialogContent<Form: View>: View {
 
     @FocusState private var cancelFocused: Bool
 
-    private let width: CGFloat = 480
-
     init(
-        copy: PVDialogCopy,
+        copy: PVFormDialogCopy,
+        width: CGFloat = 480,
         isRunning: Bool = false,
         confirmDisabled: Bool = false,
         accessibilityIdentifierPrefix: String? = nil,
@@ -54,6 +55,7 @@ struct PVDialogContent<Form: View>: View {
         @ViewBuilder form: @escaping () -> Form
     ) {
         self.copy = copy
+        self.width = width
         self.isRunning = isRunning
         self.confirmDisabled = confirmDisabled
         self.accessibilityIdentifierPrefix = accessibilityIdentifierPrefix
@@ -63,69 +65,47 @@ struct PVDialogContent<Form: View>: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            headerAndForm
-            actionBar
-        }
-        .frame(width: width)
-    }
-
-    private var headerAndForm: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space7) {
-            VStack(alignment: .leading, spacing: PVSpacing.space2) {
-                Text(copy.title)
-                    .font(PVFont.display(size: PVTypeScale.h3))
-                    .foregroundStyle(PVColor.textDisplay)
-                    .fixedSize(horizontal: false, vertical: true)
-                if let subtitle = copy.subtitle {
-                    Text(subtitle)
-                        .font(PVFont.body(size: PVTypeScale.bodySmall))
-                        .foregroundStyle(PVColor.textSecondary)
-                        .lineSpacing((PVLineHeight.relaxed - 1) * PVTypeScale.bodySmall)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
+        PVPanel(
+            title: Text(copy.title),
+            subtitle: copy.subtitle.map { Text($0) },
+            width: width,
+            footerChrome: .sunken
+        ) {
             form()
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, PVSpacing.space7)
-        .padding(.vertical, PVSpacing.space9)
-    }
-
-    private var actionBar: some View {
-        HStack(spacing: PVSpacing.space5) {
-            Spacer(minLength: PVSpacing.space8)
-            Button(String(localized: copy.cancel)) { onCancel() }
-                .buttonStyle(.pv(.secondary, size: .lg))
-                .keyboardShortcut(.cancelAction)
-                .disabled(isRunning)
-                .focused($cancelFocused)
-                .modifier(OptionalAccessibilityIdentifier(prefix: accessibilityIdentifierPrefix, suffix: "cancel"))
-            Button(String(localized: copy.confirm)) { onConfirm() }
-                .buttonStyle(.pv(.primary, size: .lg))
-                .keyboardShortcut(.defaultAction)
-                .disabled(isRunning || confirmDisabled)
-                .modifier(OptionalAccessibilityIdentifier(prefix: accessibilityIdentifierPrefix, suffix: "confirm"))
-                .overlay(alignment: .trailing) {
-                    if isRunning {
-                        ProgressView()
-                            .controlSize(.small)
-                            .offset(x: 22)
+        } footer: {
+            HStack(spacing: PVSpacing.space5) {
+                Spacer(minLength: PVSpacing.space8)
+                Button(String(localized: copy.cancel)) { onCancel() }
+                    .buttonStyle(.pv(.secondary, size: .lg))
+                    .keyboardShortcut(.cancelAction)
+                    .disabled(isRunning)
+                    .focused($cancelFocused)
+                    .modifier(FormDialogOptionalAccessibilityIdentifier(
+                        prefix: accessibilityIdentifierPrefix,
+                        suffix: "cancel"
+                    ))
+                Button(String(localized: copy.confirm)) { onConfirm() }
+                    .buttonStyle(.pv(.primary, size: .lg))
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(isRunning || confirmDisabled)
+                    .modifier(FormDialogOptionalAccessibilityIdentifier(
+                        prefix: accessibilityIdentifierPrefix,
+                        suffix: "confirm"
+                    ))
+                    .overlay(alignment: .trailing) {
+                        if isRunning {
+                            ProgressView()
+                                .controlSize(.small)
+                                .offset(x: 22)
+                        }
                     }
-                }
-        }
-        .padding(.horizontal, PVSpacing.space8)
-        .padding(.vertical, PVSpacing.space8)
-        .frame(maxWidth: .infinity)
-        .background(PVColor.surfaceSunken)
-        .overlay(alignment: .top) {
-            PVDivider()
+            }
         }
     }
 }
 
 /// Applies `{prefix}.{suffix}` only when a prefix is provided.
-private struct OptionalAccessibilityIdentifier: ViewModifier {
+private struct FormDialogOptionalAccessibilityIdentifier: ViewModifier {
     let prefix: String?
     let suffix: String
 
@@ -142,9 +122,10 @@ extension View {
     /// Sheet-based form dialog. Dismissal is left to the caller's binding so
     /// an async Create can stay on screen while it runs and keep field errors
     /// visible if validation or the store fails.
-    func pvDialog<Form: View>(
+    func pvFormDialog<Form: View>(
         isPresented: Binding<Bool>,
-        copy: PVDialogCopy,
+        copy: PVFormDialogCopy,
+        width: CGFloat = 480,
         isRunning: Bool = false,
         confirmDisabled: Bool = false,
         accessibilityIdentifierPrefix: String? = nil,
@@ -152,8 +133,9 @@ extension View {
         @ViewBuilder form: @escaping () -> Form
     ) -> some View {
         sheet(isPresented: isPresented) {
-            PVDialogContent(
+            PVFormDialogContent(
                 copy: copy,
+                width: width,
                 isRunning: isRunning,
                 confirmDisabled: confirmDisabled,
                 accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
@@ -165,9 +147,9 @@ extension View {
     }
 }
 
-#Preview("Dialog — Add source") {
-    PVDialogContent(
-        copy: PVDialogCopy(
+#Preview("Form dialog — Add source") {
+    PVFormDialogContent(
+        copy: PVFormDialogCopy(
             title: "Add source",
             subtitle: "A thin record now — artifacts, notes and metadata live on the Source page.",
             confirm: "Create source",

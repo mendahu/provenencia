@@ -73,9 +73,9 @@ private struct SubjectFieldsContent: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(PVColor.surfacePage)
         .vocabularyToastOverlay($model.toast, identifier: "subjectFields.toast")
-        .pvDialog(
+        .pvFormDialog(
             isPresented: createOpenBinding,
-            copy: PVDialogCopy(
+            copy: PVFormDialogCopy(
                 title: L10n.SubjectFields.createTitle,
                 subtitle: L10n.SubjectFields.createOriginNote,
                 confirm: L10n.SubjectFields.createSubmit,
