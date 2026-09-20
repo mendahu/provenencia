@@ -7568,7 +7568,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Subject type bindings"
+            "value": "Bound to"
           }
         }
       }
@@ -7845,6 +7845,186 @@
           "stringUnit": {
             "state": "translated",
             "value": "Keep"
+          }
+        }
+      }
+    },
+    "subjectFields.strip.bridge": {
+      "comment": "Micro-label on bridge subject-type strip cards (relationship / participation / location)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bridge"
+          }
+        }
+      }
+    },
+    "subjectFields.strip.accessibility": {
+      "comment": "Accessibility label for the type strip pressed-button group",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subject types"
+          }
+        }
+      }
+    },
+    "subjectFields.list.countLine": {
+      "comment": "Subject fields header count; total, seeded, user",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld properties · %lld seeded · %lld yours"
+          }
+        }
+      }
+    },
+    "subjectFields.table.originUser": {
+      "comment": "Table origin column for researcher-created properties",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "user"
+          }
+        }
+      }
+    },
+    "subjectFields.table.columnOn": {
+      "comment": "Subject fields table column: binding toggle for the focused type",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On"
+          }
+        }
+      }
+    },
+    "subjectFields.table.boundOverflow": {
+      "comment": "Overflow when more than three Bound-to chips; argument is remaining count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+%lld"
+          }
+        }
+      }
+    },
+    "subjectFields.table.rowBoundAnnouncement": {
+      "comment": "VoiceOver fragment for how many types a property is bound to",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bound to %lld types"
+          }
+        }
+      }
+    },
+    "subjectFields.table.emptySearchTitle": {
+      "comment": "Empty search title on Subject fields table",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No properties match"
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.valueType": {
+      "comment": "Inspector meta label: value type",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Value type"
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.origin": {
+      "comment": "Inspector meta label: origin",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Origin"
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.valuesRecorded": {
+      "comment": "Inspector meta label: use / binding count from engine",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Values recorded"
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.valuesRecordedCount": {
+      "comment": "Inspector values-recorded count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.bindCount": {
+      "comment": "Inspector bound-type count beside Bound to",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        }
+      }
+    },
+    "subjectFields.create.originNote": {
+      "comment": "Create property sheet note about origin",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Origin is recorded as user — seeded properties come from Provenencia"
+          }
+        }
+      }
+    },
+    "subjectFields.create.bindSection": {
+      "comment": "Create property sheet: bind checklist section",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bind to subject types"
           }
         }
       }

@@ -132,16 +132,21 @@ struct CatalogQueryRegistry: Sendable {
             async let types = store.listSubjectTypes(projectDir: dir)
             let loadedTypes = try await types
             var fieldsByTypeID: [String: [CatalogSubjectTypeField]] = [:]
+            var presentationsByKey: [String: CatalogSubjectTypePresentation] = [:]
             for type in loadedTypes {
                 fieldsByTypeID[type.id] = try await store.listSubjectTypeFields(
                     projectDir: dir,
                     subjectTypeID: type.id
                 )
+                if let presentation = try? await store.getSubjectTypePresentation(typeKey: type.key) {
+                    presentationsByKey[type.key] = presentation
+                }
             }
             return SubjectFieldsSnapshot(
                 properties: try await properties,
                 types: loadedTypes,
-                fieldsByTypeID: fieldsByTypeID
+                fieldsByTypeID: fieldsByTypeID,
+                presentationsByKey: presentationsByKey
             )
         }
     }

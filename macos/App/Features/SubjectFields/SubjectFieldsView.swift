@@ -1,5 +1,69 @@
 import SwiftUI
 
+// MARK: - Shared chrome (S7-D2)
+
+/// Filled lock box — never a disabled checkbox (board Locked bindings).
+struct SubjectFieldsLockBox: View {
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "lock.fill")
+            Text(L10n.SubjectFields.bindingLocked)
+        }
+        .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
+        .foregroundStyle(PVColor.textPrimary)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(PVColor.surfaceInset)
+        .overlay(
+            RoundedRectangle(cornerRadius: PVRadius.sm)
+                .strokeBorder(PVColor.borderStrong, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: PVRadius.sm))
+        .accessibilityLabel(L10n.SubjectFields.bindingLocked)
+    }
+}
+
+struct SubjectFieldsBoundChip: View {
+    let type: CatalogSubjectType
+    let presentation: CatalogSubjectTypePresentation?
+    let locked: Bool
+
+    var body: some View {
+        HStack(spacing: 4) {
+            if let kind = SubjectFieldsTypeChrome.iconKind(
+                symbol: presentation?.iconSymbol,
+                typeKey: type.key
+            ) {
+                PVSubjectIcon(kind: kind, size: 11)
+                    .foregroundStyle(SubjectFieldsTypeChrome.ink(for: presentation))
+            }
+            Text(verbatim: type.label)
+                .font(PVFont.body(size: PVTypeScale.micro))
+                .foregroundStyle(PVColor.textSecondary)
+                .lineLimit(1)
+            if locked {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(PVColor.textMuted)
+            }
+        }
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .background(PVColor.surfaceInset)
+        .clipShape(RoundedRectangle(cornerRadius: PVRadius.sm))
+    }
+}
+
+struct SubjectFieldsValueTypePill: View {
+    let valueType: String
+
+    var body: some View {
+        PVBadge(SubjectPropertyValueType.label(valueType), tone: .neutral, subtle: true)
+    }
+}
+
+// MARK: - Destination
+
 /// Subject fields workspace destination (S7-D2 / S7-05): type strip + property table + inspector.
 struct SubjectFieldsView: View {
     @Environment(WorkspaceSession.self) private var session
@@ -44,6 +108,7 @@ private struct SubjectFieldsContent: View {
     @Bindable var handle: QueryHandle<SubjectFieldsSnapshot>
     @Bindable var model: SubjectFieldsModel
     let inspectorWidth: CGFloat
+    @FocusState private var searchFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -57,10 +122,10 @@ private struct SubjectFieldsContent: View {
             } else {
                 typeStrip
                     .padding(.horizontal, PVSpacing.gutterPage)
-                    .padding(.vertical, PVSpacing.space8)
+                    .padding(.vertical, PVSpacing.space6)
                 toolbar
                     .padding(.horizontal, PVSpacing.gutterPage)
-                    .padding(.bottom, PVSpacing.space8)
+                    .padding(.bottom, PVSpacing.space6)
                 PVDivider()
                 HStack(spacing: 0) {
                     propertyTable
@@ -104,8 +169,31 @@ private struct SubjectFieldsContent: View {
         .onChange(of: handle.status) { _, status in
             if status == .ready { model.syncCatalogCounts() }
         }
+        .onChange(of: model.searchFocused) { _, focused in
+            if focused { searchFocused = true }
+        }
+        .onChange(of: searchFocused) { _, focused in
+            model.searchFocused = focused
+        }
         .onAppear {
             if handle.status == .ready { model.syncCatalogCounts() }
+        }
+        .background {
+            Button(action: { model.focusSearch() }) { EmptyView() }
+                .keyboardShortcut("f", modifiers: .command)
+                .opacity(0)
+                .accessibilityHidden(true)
+            Button(action: { model.openCreate() }) { EmptyView() }
+                .keyboardShortcut("n", modifiers: .command)
+                .opacity(0)
+                .accessibilityHidden(true)
+        }
+        .onKeyPress(.space) {
+            guard model.selectedType != nil, model.selectedProperty != nil else {
+                return .ignored
+            }
+            Task { await model.toggleFocusedTypeBinding() }
+            return .handled
         }
         .accessibilityIdentifier("subjectFields")
     }
@@ -125,67 +213,101 @@ private struct SubjectFieldsContent: View {
     }
 
     private var header: some View {
-        VocabularyHeader(
-            title: L10n.Workspace.subjectFieldsTitle,
-            description: L10n.SubjectFields.description,
-            countLine: countLine,
-            addLabel: L10n.SubjectFields.newProperty,
-            isAddDisabled: false,
-            identifierPrefix: "subjectFields",
-            onAdd: { model.openCreate() }
-        )
-    }
-
-    private var countLine: String {
-        let summary = CatalogCountSummary.from(model.snapshot.properties)
-        return L10n.SourceFields.countLine(
-            total: summary.total,
-            seeded: summary.seeded,
-            user: summary.user
-        )
+        HStack(alignment: .bottom, spacing: PVSpacing.space8) {
+            VStack(alignment: .leading, spacing: PVSpacing.space2) {
+                Text(L10n.Workspace.subjectFieldsTitle)
+                    .font(PVFont.display(size: PVTypeScale.h1))
+                    .foregroundStyle(PVColor.textDisplay)
+                Text(L10n.SubjectFields.description)
+                    .font(PVFont.body(size: PVTypeScale.bodySmall, italic: true))
+                    .foregroundStyle(PVColor.textMuted)
+                    .frame(maxWidth: PVSpacing.measureProse, alignment: .leading)
+            }
+            Spacer(minLength: PVSpacing.space6)
+            HStack(spacing: PVSpacing.space6) {
+                Text(verbatim: model.countLine)
+                    .font(PVFont.mono(size: PVTypeScale.micro))
+                    .foregroundStyle(PVColor.textMuted)
+                    .accessibilityIdentifier("subjectFields.countLine")
+                PVButton(L10n.SubjectFields.newProperty, variant: .primary, icon: .plus) {
+                    model.openCreate()
+                }
+                .accessibilityIdentifier("subjectFields.add")
+            }
+        }
+        .padding(.horizontal, PVSpacing.gutterPage)
+        .padding(.top, PVSpacing.space8)
+        .padding(.bottom, PVSpacing.space6)
     }
 
     private var typeStrip: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: PVSpacing.space4) {
+        HStack(spacing: PVSpacing.space3) {
+            typeCard(
+                key: nil,
+                title: Text(L10n.SubjectFields.allProperties),
+                count: model.snapshot.properties.count,
+                presentation: nil,
+                selected: model.selectedTypeKey == nil
+            )
+            ForEach(model.types) { type in
                 typeCard(
-                    key: nil,
-                    title: Text(L10n.SubjectFields.allProperties),
-                    count: model.snapshot.properties.count,
-                    selected: model.selectedTypeKey == nil
+                    key: type.key,
+                    title: Text(verbatim: type.label),
+                    count: model.snapshot.propertyCount(forTypeID: type.id),
+                    presentation: model.snapshot.presentation(for: type),
+                    selected: model.selectedTypeKey == type.key
                 )
-                ForEach(model.types) { type in
-                    typeCard(
-                        key: type.key,
-                        title: Text(verbatim: type.label),
-                        count: model.snapshot.propertyCount(forTypeID: type.id),
-                        selected: model.selectedTypeKey == type.key
-                    )
-                }
             }
         }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(L10n.SubjectFields.typeStripAccessibility)
     }
 
     private func typeCard(
         key: String?,
         title: Text,
         count: Int,
+        presentation: CatalogSubjectTypePresentation?,
         selected: Bool
     ) -> some View {
-        Button {
+        let ink = SubjectFieldsTypeChrome.ink(for: presentation)
+        let bridge = SubjectFieldsTypeChrome.isBridge(role: presentation?.role)
+        return Button {
             model.selectType(key)
         } label: {
-            VStack(alignment: .leading, spacing: PVSpacing.space2) {
+            VStack(alignment: .leading, spacing: PVSpacing.space3) {
+                HStack(alignment: .top) {
+                    if let kind = SubjectFieldsTypeChrome.iconKind(
+                        symbol: presentation?.iconSymbol,
+                        typeKey: key ?? ""
+                    ) {
+                        PVSubjectIcon(kind: kind, size: 22)
+                            .foregroundStyle(ink)
+                    } else if key == nil {
+                        Image(systemName: "square.grid.2x2")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(PVColor.textPrimary)
+                            .frame(width: 22, height: 22)
+                    }
+                    Spacer(minLength: 0)
+                    if bridge {
+                        Text(L10n.SubjectFields.bridgeRole)
+                            .font(PVFont.body(size: PVTypeScale.micro))
+                            .foregroundStyle(PVColor.textMuted)
+                    }
+                }
                 title
                     .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.semibold))
                     .foregroundStyle(PVColor.textPrimary)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.85)
                 Text(verbatim: L10n.SubjectFields.stripFieldCount(count: count))
                     .font(PVFont.mono(size: PVTypeScale.micro))
                     .foregroundStyle(PVColor.textMuted)
             }
             .padding(PVSpacing.space5)
-            .frame(minWidth: 120, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(selected ? PVColor.surfaceSelected : PVColor.surfaceRaised)
             .overlay(
                 RoundedRectangle(cornerRadius: PVRadius.md)
@@ -194,16 +316,18 @@ private struct SubjectFieldsContent: View {
             .clipShape(RoundedRectangle(cornerRadius: PVRadius.md))
         }
         .buttonStyle(.plain)
-        .accessibilityAddTraits(selected ? .isSelected : [])
+        .accessibilityAddTraits(selected ? [.isSelected, .isButton] : .isButton)
     }
 
     private var toolbar: some View {
         HStack(spacing: PVSpacing.space4) {
-            TextField(
+            PVInput(
                 text: $model.searchQuery,
-                prompt: Text(L10n.SubjectFields.searchPlaceholder)
-            ) { EmptyView() }
-            .textFieldStyle(.roundedBorder)
+                size: .sm,
+                prompt: L10n.SubjectFields.searchPlaceholder,
+                icon: .search,
+                focused: $searchFocused
+            )
             .frame(maxWidth: 280)
 
             Picker(selection: Binding(
@@ -236,8 +360,7 @@ private struct SubjectFieldsContent: View {
                 } label: {
                     Text(verbatim: L10n.SubjectFields.addToType(typeLabel: type.label))
                 }
-                .buttonStyle(.borderedProminent)
-                .keyboardShortcut("n", modifiers: .command)
+                .buttonStyle(.bordered)
             }
         }
     }
@@ -245,70 +368,136 @@ private struct SubjectFieldsContent: View {
     private var propertyTable: some View {
         Group {
             if model.visibleProperties.isEmpty {
-                Text(L10n.SubjectFields.emptySearch)
-                    .font(PVFont.body(size: PVTypeScale.bodySmall, italic: true))
-                    .foregroundStyle(PVColor.textMuted)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    .padding(PVSpacing.gutterPage)
-            } else {
-                List(selection: Binding(
-                    get: { model.selectedPropertyID },
-                    set: { model.selectProperty($0) }
-                )) {
-                    Section {
-                        ForEach(model.visibleProperties) { property in
-                            propertyRow(property)
-                                .tag(property.id)
-                        }
-                    } header: {
-                        HStack {
-                            Text(L10n.SubjectFields.columnProperty)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            Text(L10n.SubjectFields.columnValueType)
-                                .frame(width: 90, alignment: .leading)
-                            Text(L10n.SubjectFields.columnOrigin)
-                                .frame(width: 80, alignment: .leading)
-                            Text(L10n.SubjectFields.columnBoundTo)
-                                .frame(width: 140, alignment: .leading)
-                        }
-                        .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
+                VStack(alignment: .leading, spacing: PVSpacing.space3) {
+                    Text(L10n.SubjectFields.emptySearchTitle)
+                        .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.semibold))
+                    Text(L10n.SubjectFields.emptySearch)
+                        .font(PVFont.body(size: PVTypeScale.bodySmall, italic: true))
                         .foregroundStyle(PVColor.textMuted)
-                        .textCase(nil)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .padding(PVSpacing.gutterPage)
+            } else {
+                PVTable(
+                    rows: model.visibleProperties,
+                    columns: tableColumns,
+                    selection: Binding(
+                        get: { model.selectedPropertyID },
+                        set: { model.selectProperty($0) }
+                    ),
+                    primaryText: { $0.label },
+                    density: .compact,
+                    label: L10n.Workspace.subjectFieldsTitle,
+                    rowAccessibilityIdentifier: { "subjectFields.row.\($0.id)" },
+                    content: { EmptyView() }
+                )
+            }
+        }
+    }
+
+    private var tableColumns: [PVTableColumn<CatalogProperty>] {
+        [
+            PVTableColumn(id: "on", title: L10n.SubjectFields.columnOn, width: 72) { property in
+                onCell(for: property)
+            },
+            PVTableColumn(id: "property", title: L10n.SubjectFields.columnProperty) { property in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: property.label)
+                        .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.semibold))
+                        .foregroundStyle(PVColor.textPrimary)
+                        .lineLimit(1)
+                    Text(verbatim: property.key)
+                        .font(PVFont.mono(size: PVTypeScale.micro))
+                        .foregroundStyle(PVColor.textMuted)
+                        .lineLimit(1)
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(rowAccessibilityLabel(property))
+            },
+            PVTableColumn(id: "valueType", title: L10n.SubjectFields.columnValueType, width: 100) { property in
+                SubjectFieldsValueTypePill(valueType: property.valueType)
+            },
+            PVTableColumn(id: "origin", title: L10n.SubjectFields.columnOrigin, width: 88) { property in
+                if property.origin == CatalogOrigin.provenencia {
+                    OriginPill(origin: property.origin)
+                } else if property.origin == CatalogOrigin.user {
+                    Text(L10n.SubjectFields.originUserShort)
+                        .font(PVFont.body(size: PVTypeScale.micro))
+                        .foregroundStyle(PVColor.textMuted)
+                } else {
+                    OriginPill(origin: property.origin)
+                }
+            },
+            PVTableColumn(id: "boundTo", title: L10n.SubjectFields.columnBoundTo, width: 200) { property in
+                boundToCell(for: property)
+            },
+        ]
+    }
+
+    @ViewBuilder
+    private func onCell(for property: CatalogProperty) -> some View {
+        if let type = model.selectedType {
+            let locked = model.bindingLocked(propertyID: property.id, typeID: type.id)
+            let bound = model.isBound(propertyID: property.id, typeID: type.id)
+            if locked {
+                Button {
+                    model.selectProperty(property.id)
+                    Task { await model.toggleBinding(to: type) }
+                } label: {
+                    SubjectFieldsLockBox()
+                }
+                .buttonStyle(.plain)
+            } else {
+                Toggle(
+                    isOn: Binding(
+                        get: { bound },
+                        set: { _ in
+                            model.selectProperty(property.id)
+                            Task { await model.toggleBinding(to: type) }
+                        }
+                    )
+                ) { EmptyView() }
+                .toggleStyle(.checkbox)
+                .labelsHidden()
+            }
+        } else {
+            Text(verbatim: "—")
+                .font(PVFont.mono(size: PVTypeScale.micro))
+                .foregroundStyle(PVColor.textFaint)
+        }
+    }
+
+    private func boundToCell(for property: CatalogProperty) -> some View {
+        let bound = model.snapshot.boundTypes(for: property.id)
+        return Group {
+            if bound.isEmpty {
+                Text(verbatim: "—")
+                    .font(PVFont.mono(size: PVTypeScale.micro))
+                    .foregroundStyle(PVColor.textFaint)
+            } else {
+                HStack(spacing: 4) {
+                    ForEach(bound.prefix(3)) { type in
+                        SubjectFieldsBoundChip(
+                            type: type,
+                            presentation: model.snapshot.presentation(for: type),
+                            locked: model.bindingLocked(propertyID: property.id, typeID: type.id)
+                        )
+                    }
+                    if bound.count > 3 {
+                        Text(verbatim: L10n.SubjectFields.boundOverflow(count: bound.count - 3))
+                            .font(PVFont.mono(size: PVTypeScale.micro))
+                            .foregroundStyle(PVColor.textMuted)
                     }
                 }
-                .listStyle(.inset)
             }
         }
     }
 
-    private func propertyRow(_ property: CatalogProperty) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(verbatim: property.label)
-                    .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.semibold))
-                Text(verbatim: property.key)
-                    .font(PVFont.mono(size: PVTypeScale.micro))
-                    .foregroundStyle(PVColor.textMuted)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            Text(SubjectPropertyValueType.label(property.valueType))
-                .font(PVFont.body(size: PVTypeScale.caption))
-                .frame(width: 90, alignment: .leading)
-            OriginBadge(origin: property.origin)
-                .frame(width: 80, alignment: .leading)
-            Text(verbatim: boundSummary(for: property))
-                .font(PVFont.body(size: PVTypeScale.micro))
-                .foregroundStyle(PVColor.textSecondary)
-                .frame(width: 140, alignment: .leading)
-                .lineLimit(1)
-        }
-        .contentShape(Rectangle())
-    }
-
-    private func boundSummary(for property: CatalogProperty) -> String {
-        let keys = model.snapshot.boundTypeKeys(for: property.id)
-        if keys.isEmpty { return "—" }
-        return keys.joined(separator: ", ")
+    private func rowAccessibilityLabel(_ property: CatalogProperty) -> String {
+        let bound = model.snapshot.boundTypes(for: property.id)
+        let valueType = String(localized: SubjectPropertyValueType.label(property.valueType))
+        let boundText = L10n.SubjectFields.rowBoundAnnouncement(count: bound.count)
+        return "\(property.label), \(valueType), \(property.origin), \(boundText)"
     }
 
     private var inspector: some View {
@@ -328,6 +517,19 @@ private struct SubjectFieldsContent: View {
                         .font(PVFont.body(size: PVTypeScale.bodySmall))
                         .foregroundStyle(PVColor.textSecondary)
                 }
+
+                inspectorMetaRow(label: L10n.SubjectFields.inspectorValueType) {
+                    SubjectFieldsValueTypePill(valueType: property.valueType)
+                }
+                inspectorMetaRow(label: L10n.SubjectFields.inspectorOrigin) {
+                    OriginBadge(origin: property.origin)
+                }
+                inspectorMetaRow(label: L10n.SubjectFields.inspectorValuesRecorded) {
+                    Text(verbatim: L10n.SubjectFields.valuesRecordedCount(count: property.usedBy))
+                        .font(PVFont.mono(size: PVTypeScale.micro))
+                        .foregroundStyle(PVColor.textMuted)
+                }
+
                 if property.valueType == "term" {
                     Text(L10n.SubjectFields.termNote)
                         .font(PVFont.body(size: PVTypeScale.caption, italic: true))
@@ -339,10 +541,17 @@ private struct SubjectFieldsContent: View {
                 if let formError = model.formError {
                     PVCallout(tone: .danger, message: formError)
                 }
-                Text(L10n.SubjectFields.bindingsSection)
-                    .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
-                    .foregroundStyle(PVColor.textMuted)
-                    .textCase(.uppercase)
+
+                HStack {
+                    Text(L10n.SubjectFields.bindingsSection)
+                        .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
+                        .foregroundStyle(PVColor.textMuted)
+                        .textCase(.uppercase)
+                    Spacer()
+                    Text(verbatim: L10n.SubjectFields.bindCount(count: model.snapshot.boundTypes(for: property.id).count))
+                        .font(PVFont.mono(size: PVTypeScale.micro))
+                        .foregroundStyle(PVColor.textMuted)
+                }
                 VStack(spacing: 2) {
                     ForEach(model.types) { type in
                         bindingRow(property: property, type: type)
@@ -361,30 +570,52 @@ private struct SubjectFieldsContent: View {
         .background(PVColor.surfaceRaised)
     }
 
+    private func inspectorMetaRow<Content: View>(
+        label: LocalizedStringResource,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(label)
+                .font(PVFont.body(size: PVTypeScale.caption))
+                .foregroundStyle(PVColor.textMuted)
+                .frame(width: 110, alignment: .leading)
+            content()
+            Spacer(minLength: 0)
+        }
+    }
+
     private func bindingRow(property: CatalogProperty, type: CatalogSubjectType) -> some View {
         let bound = model.isBound(propertyID: property.id, typeID: type.id)
         let locked = model.bindingLocked(propertyID: property.id, typeID: type.id)
+        let presentation = model.snapshot.presentation(for: type)
         return Button {
             Task { await model.toggleBinding(to: type) }
         } label: {
-            HStack {
-                Text(verbatim: type.label)
-                    .foregroundStyle(PVColor.textPrimary)
+            HStack(spacing: PVSpacing.space3) {
+                if let kind = SubjectFieldsTypeChrome.iconKind(
+                    symbol: presentation?.iconSymbol,
+                    typeKey: type.key
+                ) {
+                    PVSubjectIcon(kind: kind, size: 14)
+                        .foregroundStyle(SubjectFieldsTypeChrome.ink(for: presentation))
+                }
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(verbatim: type.label)
+                        .foregroundStyle(PVColor.textPrimary)
+                    if SubjectFieldsTypeChrome.isBridge(role: presentation?.role) {
+                        Text(L10n.SubjectFields.bridgeRole)
+                            .font(PVFont.body(size: PVTypeScale.micro))
+                            .foregroundStyle(PVColor.textMuted)
+                    }
+                }
                 Spacer()
                 if locked {
-                    HStack(spacing: 4) {
-                        Image(systemName: "lock.fill")
-                        Text(L10n.SubjectFields.bindingLocked)
-                    }
-                    .font(PVFont.body(size: PVTypeScale.micro))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(PVColor.surfaceSelected)
-                    .clipShape(RoundedRectangle(cornerRadius: PVRadius.sm))
+                    SubjectFieldsLockBox()
                 } else if bound {
-                    Text(L10n.SubjectFields.bindingBound)
-                        .font(PVFont.body(size: PVTypeScale.micro))
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(PVColor.accentSoftForeground)
+                        .accessibilityLabel(L10n.SubjectFields.bindingBound)
                 }
             }
             .padding(.vertical, 6)
@@ -398,13 +629,9 @@ private struct SubjectFieldsContent: View {
     @ViewBuilder
     private func deleteControls(for property: CatalogProperty) -> some View {
         if property.origin != CatalogOrigin.user {
-            Text(L10n.SubjectFields.deleteSeeded)
-                .font(PVFont.body(size: PVTypeScale.caption))
-                .foregroundStyle(PVColor.textMuted)
+            PVCallout(tone: .info, message: String(localized: L10n.SubjectFields.deleteSeeded))
         } else if property.usedBy > 0 {
-            Text(L10n.SubjectFields.deleteInUse)
-                .font(PVFont.body(size: PVTypeScale.caption))
-                .foregroundStyle(PVColor.textMuted)
+            PVCallout(tone: .warning, message: String(localized: L10n.SubjectFields.deleteInUse))
         } else {
             Button(role: .destructive) {
                 model.askDelete()
@@ -427,6 +654,9 @@ private struct SubjectFieldsContent: View {
                 }
                 .buttonStyle(.borderless)
             }
+            Text(L10n.SubjectFields.createOriginNote)
+                .font(PVFont.body(size: PVTypeScale.caption))
+                .foregroundStyle(PVColor.textMuted)
             VStack(alignment: .leading, spacing: PVSpacing.space2) {
                 Text(L10n.SubjectFields.createLabel)
                 TextField(text: Binding(
@@ -458,6 +688,36 @@ private struct SubjectFieldsContent: View {
                 .lineLimit(3...6)
                 .textFieldStyle(.roundedBorder)
             }
+            VStack(alignment: .leading, spacing: PVSpacing.space3) {
+                Text(L10n.SubjectFields.createBindSection)
+                    .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
+                    .foregroundStyle(PVColor.textMuted)
+                    .textCase(.uppercase)
+                ForEach(model.types) { type in
+                    let presentation = model.snapshot.presentation(for: type)
+                    Toggle(isOn: Binding(
+                        get: { model.draft?.bindTypeIDs.contains(type.id) == true },
+                        set: { _ in model.toggleDraftBind(typeID: type.id) }
+                    )) {
+                        HStack(spacing: 8) {
+                            if let kind = SubjectFieldsTypeChrome.iconKind(
+                                symbol: presentation?.iconSymbol,
+                                typeKey: type.key
+                            ) {
+                                PVSubjectIcon(kind: kind, size: 14)
+                                    .foregroundStyle(SubjectFieldsTypeChrome.ink(for: presentation))
+                            }
+                            Text(verbatim: type.label)
+                            if SubjectFieldsTypeChrome.isBridge(role: presentation?.role) {
+                                Text(L10n.SubjectFields.bridgeRole)
+                                    .font(PVFont.body(size: PVTypeScale.micro))
+                                    .foregroundStyle(PVColor.textMuted)
+                            }
+                        }
+                    }
+                    .toggleStyle(.checkbox)
+                }
+            }
             if let formError = model.formError {
                 PVCallout(tone: .danger, message: formError)
             }
@@ -472,6 +732,6 @@ private struct SubjectFieldsContent: View {
             }
         }
         .padding(PVSpacing.gutterPage)
-        .frame(width: 420)
+        .frame(width: 440)
     }
 }

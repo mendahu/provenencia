@@ -2738,6 +2738,16 @@ enum L10n {
             defaultValue: "All properties",
             comment: "Type strip card that clears the subject-type filter"
         )
+        static let bridgeRole = LocalizedStringResource(
+            "subjectFields.strip.bridge",
+            defaultValue: "bridge",
+            comment: "Micro-label on bridge subject-type strip cards (relationship / participation / location)"
+        )
+        static let typeStripAccessibility = LocalizedStringResource(
+            "subjectFields.strip.accessibility",
+            defaultValue: "Subject types",
+            comment: "Accessibility label for the type strip pressed-button group"
+        )
         static func stripFieldCount(count: Int) -> String {
             let format = String(localized: LocalizedStringResource(
                 "subjectFields.strip.fieldCount",
@@ -2745,6 +2755,14 @@ enum L10n {
                 comment: "Type strip count under a subject type; argument is binding count"
             ))
             return String(format: format, locale: .current, count)
+        }
+        static func countLine(total: Int, seeded: Int, user: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "subjectFields.list.countLine",
+                defaultValue: "%lld properties · %lld seeded · %lld yours",
+                comment: "Subject fields header count; total, seeded, user"
+            ))
+            return String(format: format, locale: .current, total, seeded, user)
         }
         static let searchPlaceholder = LocalizedStringResource(
             "subjectFields.search.placeholder",
@@ -2765,6 +2783,11 @@ enum L10n {
             "subjectFields.filter.originUser",
             defaultValue: "User",
             comment: "Origin filter: researcher-created properties"
+        )
+        static let originUserShort = LocalizedStringResource(
+            "subjectFields.table.originUser",
+            defaultValue: "user",
+            comment: "Table origin column for researcher-created properties"
         )
         static let valueTypeAny = LocalizedStringResource(
             "subjectFields.filter.valueTypeAny",
@@ -2801,6 +2824,11 @@ enum L10n {
             defaultValue: "Term",
             comment: "Property value type label: term (registry-only)"
         )
+        static let columnOn = LocalizedStringResource(
+            "subjectFields.table.columnOn",
+            defaultValue: "On",
+            comment: "Subject fields table column: binding toggle for the focused type"
+        )
         static let columnProperty = LocalizedStringResource(
             "subjectFields.table.columnProperty",
             defaultValue: "Property",
@@ -2820,6 +2848,27 @@ enum L10n {
             "subjectFields.table.columnBoundTo",
             defaultValue: "Bound to",
             comment: "Subject fields table column: bound subject types"
+        )
+        static func boundOverflow(count: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "subjectFields.table.boundOverflow",
+                defaultValue: "+%lld",
+                comment: "Overflow when more than three Bound-to chips; argument is remaining count"
+            ))
+            return String(format: format, locale: .current, count)
+        }
+        static func rowBoundAnnouncement(count: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "subjectFields.table.rowBoundAnnouncement",
+                defaultValue: "bound to %lld types",
+                comment: "VoiceOver fragment for how many types a property is bound to"
+            ))
+            return String(format: format, locale: .current, count)
+        }
+        static let emptySearchTitle = LocalizedStringResource(
+            "subjectFields.table.emptySearchTitle",
+            defaultValue: "No properties match",
+            comment: "Empty search title on Subject fields table"
         )
         static let emptySearch = LocalizedStringResource(
             "subjectFields.table.emptySearch",
@@ -2849,11 +2898,42 @@ enum L10n {
             defaultValue: "Select a property to see its description and bindings.",
             comment: "Inspector empty state"
         )
+        static let inspectorValueType = LocalizedStringResource(
+            "subjectFields.inspector.valueType",
+            defaultValue: "Value type",
+            comment: "Inspector meta label: value type"
+        )
+        static let inspectorOrigin = LocalizedStringResource(
+            "subjectFields.inspector.origin",
+            defaultValue: "Origin",
+            comment: "Inspector meta label: origin"
+        )
+        static let inspectorValuesRecorded = LocalizedStringResource(
+            "subjectFields.inspector.valuesRecorded",
+            defaultValue: "Values recorded",
+            comment: "Inspector meta label: use / binding count from engine"
+        )
+        static func valuesRecordedCount(count: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "subjectFields.inspector.valuesRecordedCount",
+                defaultValue: "%lld",
+                comment: "Inspector values-recorded count"
+            ))
+            return String(format: format, locale: .current, count)
+        }
         static let bindingsSection = LocalizedStringResource(
             "subjectFields.inspector.bindings",
-            defaultValue: "Subject type bindings",
+            defaultValue: "Bound to",
             comment: "Inspector section label for bindings list"
         )
+        static func bindCount(count: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "subjectFields.inspector.bindCount",
+                defaultValue: "%lld",
+                comment: "Inspector bound-type count beside Bound to"
+            ))
+            return String(format: format, locale: .current, count)
+        }
         static let termNote = LocalizedStringResource(
             "subjectFields.inspector.termNote",
             defaultValue: "Values come from the product vocabulary. You choose one when citing this property.",
@@ -2896,6 +2976,16 @@ enum L10n {
             "subjectFields.create.title",
             defaultValue: "New property",
             comment: "Create property sheet title"
+        )
+        static let createOriginNote = LocalizedStringResource(
+            "subjectFields.create.originNote",
+            defaultValue: "Origin is recorded as user — seeded properties come from Provenencia",
+            comment: "Create property sheet note about origin"
+        )
+        static let createBindSection = LocalizedStringResource(
+            "subjectFields.create.bindSection",
+            defaultValue: "Bind to subject types",
+            comment: "Create property sheet: bind checklist section"
         )
         static let createLabel = LocalizedStringResource(
             "subjectFields.create.label",

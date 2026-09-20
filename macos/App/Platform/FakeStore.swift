@@ -1196,7 +1196,47 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         if let found = subjectTypePresentations[typeKey] {
             return found
         }
-        throw CoreInvokeError.coded(status: 1, code: "subjectvocab.invalid", kind: .user, params: [])
+        return Self.syntheticPresentation(typeKey: typeKey)
+    }
+
+    private static func syntheticPresentation(typeKey: String) -> CatalogSubjectTypePresentation {
+        let role: String
+        let sort: Int
+        switch typeKey {
+        case "person": role = "root"; sort = 0
+        case "event": role = "root"; sort = 1
+        case "place": role = "root"; sort = 2
+        case "relationship": role = "bridge"; sort = 3
+        case "participation": role = "bridge"; sort = 4
+        case "location": role = "bridge"; sort = 5
+        case "source": role = "reification"; sort = 6
+        default: role = "root"; sort = 99
+        }
+        let ink: String
+        switch typeKey {
+        case "event", "participation": ink = "subjectEventInk"
+        case "place", "location": ink = "subjectPlaceInk"
+        default: ink = "subjectPersonInk"
+        }
+        let tint = ink.replacingOccurrences(of: "Ink", with: "Tint")
+        let chip = ink.replacingOccurrences(of: "Ink", with: "Chip")
+        let line = ink.replacingOccurrences(of: "Ink", with: "Line")
+        return CatalogSubjectTypePresentation(
+            typeKey: typeKey,
+            l10nKey: "subjectType.\(typeKey)",
+            iconSymbol: typeKey,
+            inkToken: ink,
+            tintToken: tint,
+            chipToken: chip,
+            lineToken: line,
+            edgeFromToken: "",
+            edgeToToken: "",
+            role: role,
+            placeable: role == "root",
+            paletteSort: sort,
+            requiresCitationAtCreate: role == "bridge",
+            label: typeKey.replacingOccurrences(of: "_", with: " ").capitalized
+        )
     }
 
     func listConnectRules() async throws -> [CatalogConnectRule] {

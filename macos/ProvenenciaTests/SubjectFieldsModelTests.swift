@@ -118,14 +118,30 @@ struct SubjectFieldsModelTests {
     }
 
     @Test func createPropertyUsesResearcherValueTypesOnly() async {
-        let (model, session, store) = makeModel(types: [personType()])
+        let person = personType()
+        let (model, session, store) = makeModel(types: [person])
         await warm(model, session: session)
+        model.selectType("person")
         model.openCreate()
-        model.draft = SubjectFieldsModel.Draft(label: "Custom Fact", valueType: "text", description: "")
+        model.draft = SubjectFieldsModel.Draft(
+            label: "Custom Fact",
+            valueType: "text",
+            description: "",
+            bindTypeIDs: [person.id]
+        )
         let ok = await model.submitCreate()
         #expect(ok)
         #expect(store.propertiesByProject[projectDir]?.contains { $0.key == "custom-fact" } == true)
+        #expect(store.subjectTypeFieldsByType[person.id]?.contains { $0.property.key == "custom-fact" } == true)
         #expect(!(SubjectPropertyValueType.researcherCreatable.contains("term")))
+    }
+
+    @Test func typesFollowPaletteOrderNotAlphabetical() async {
+        let (model, session, _) = makeModel(
+            types: [eventType(), personType()]
+        )
+        await warm(model, session: session)
+        #expect(model.types.map(\.key) == ["person", "event"])
     }
 
     @Test func lockedBindingShowsCalloutInsteadOfRemoving() async {

@@ -43,6 +43,8 @@ final class SubjectFieldsModel {
         var label: String
         var valueType: String
         var description: String
+        /// Subject type ids to bind on create.
+        var bindTypeIDs: Set<String>
     }
 
     private(set) var selectedTypeKey: String?
@@ -59,6 +61,8 @@ final class SubjectFieldsModel {
     private(set) var pendingDeleteID: String?
     private(set) var isDeleting = false
     private(set) var deleteError: String?
+    /// Drives ⌘F → search field focus.
+    var searchFocused = false
 
     private let userID: String
     private let store: any GenealogyStore
@@ -102,7 +106,7 @@ final class SubjectFieldsModel {
     }
 
     var types: [CatalogSubjectType] {
-        snapshot.types.sorted { $0.label.localizedCaseInsensitiveCompare($1.label) == .orderedAscending }
+        snapshot.typesInPaletteOrder
     }
 
     var selectedType: CatalogSubjectType? {
@@ -163,6 +167,15 @@ final class SubjectFieldsModel {
         return snapshot.properties.first { $0.id == pendingDeleteID }
     }
 
+    var countLine: String {
+        let summary = CatalogCountSummary.from(snapshot.properties)
+        return L10n.SubjectFields.countLine(
+            total: summary.total,
+            seeded: summary.seeded,
+            user: summary.user
+        )
+    }
+
     func syncCatalogCounts() {
         catalogCounts?.publishSubjectFields(.from(snapshot.properties))
     }
@@ -186,17 +199,34 @@ final class SubjectFieldsModel {
         formError = nil
     }
 
+    func focusSearch() {
+        searchFocused = true
+    }
+
     func openCreate() {
         formError = nil
         lockedCallout = nil
         createOpen = true
-        draft = Draft(label: "", valueType: "text", description: "")
+        var bind = Set<String>()
+        if let selectedType {
+            bind.insert(selectedType.id)
+        }
+        draft = Draft(label: "", valueType: "text", description: "", bindTypeIDs: bind)
     }
 
     func closeCreate() {
         createOpen = false
         draft = nil
         formError = nil
+    }
+
+    func toggleDraftBind(typeID: String) {
+        guard draft != nil else { return }
+        if draft!.bindTypeIDs.contains(typeID) {
+            draft!.bindTypeIDs.remove(typeID)
+        } else {
+            draft!.bindTypeIDs.insert(typeID)
+        }
     }
 
     func askDelete() {
@@ -263,16 +293,18 @@ final class SubjectFieldsModel {
                 valueType: draft.valueType,
                 description: draft.description
             )
-            if let type = selectedType {
+            for typeID in draft.bindTypeIDs {
                 try await store.assignSubjectTypeField(
                     projectDir: session.projectKey.projectDir,
                     userID: userID,
-                    subjectTypeID: type.id,
+                    subjectTypeID: typeID,
                     propertyID: created.id
                 )
-                session.apply(.mutatedSubjectTypeFields)
-            } else {
+            }
+            if draft.bindTypeIDs.isEmpty {
                 session.apply(.createdProperty)
+            } else {
+                session.apply(.mutatedSubjectTypeFields)
             }
             warmWorkspaceQuery()
             closeCreate()
@@ -325,6 +357,12 @@ final class SubjectFieldsModel {
         } catch {
             formError = L10n.Errors.message(for: error)
         }
+    }
+
+    /// Space: toggle binding to the focused type when a type filter is active.
+    func toggleFocusedTypeBinding() async {
+        guard let type = selectedType else { return }
+        await toggleBinding(to: type)
     }
 
     func bindingLocked(propertyID: String, typeID: String) -> Bool {
