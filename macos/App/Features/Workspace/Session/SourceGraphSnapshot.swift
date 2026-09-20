@@ -22,9 +22,10 @@ struct SourceGraphPlacedSubject: Identifiable, Sendable, Equatable {
     var typeLabel: String
     var gridX: Int64
     var gridY: Int64
-    /// True when the subject has at least one Observation. Always false until
-    /// Observation wiring exists; previews/tests may set it for chrome contrast.
+    /// True when the subject has at least one Observation on this Source.
     var isCited: Bool
+    /// Observations about this subject (property summaries for card rows).
+    var observations: [CatalogObservation] = []
 }
 
 /// A bridge subject with position and provisional endpoint ids (S6-04).
@@ -64,10 +65,11 @@ struct SourceGraphSnapshot: Sendable, Equatable {
         positions: [CatalogSubjectPosition],
         types: [CatalogSubjectType],
         provisionalLinks: [EvidenceProvisionalLink] = [],
-        isCited: (CatalogSubject) -> Bool = { _ in false }
+        observations: [CatalogObservation] = []
     ) -> SourceGraphSnapshot {
         let typeByID = Dictionary(uniqueKeysWithValues: types.map { ($0.id, $0) })
         let positionBySubject = Dictionary(uniqueKeysWithValues: positions.map { ($0.subjectID, $0) })
+        let observationsBySubject = Dictionary(grouping: observations, by: \.subjectID)
         let linkByBridge = Dictionary(uniqueKeysWithValues: provisionalLinks.map {
             ($0.bridgeSubjectID, $0)
         })
@@ -83,6 +85,7 @@ struct SourceGraphSnapshot: Sendable, Equatable {
             else { continue }
 
             if let kind = EvidencePrimaryKind(rawValue: type.key) {
+                let subjectObservations = observationsBySubject[subject.id] ?? []
                 placed.append(
                     SourceGraphPlacedSubject(
                         subject: subject,
@@ -90,7 +93,8 @@ struct SourceGraphSnapshot: Sendable, Equatable {
                         typeLabel: type.label,
                         gridX: position.gridX,
                         gridY: position.gridY,
-                        isCited: isCited(subject)
+                        isCited: !subjectObservations.isEmpty,
+                        observations: subjectObservations
                     )
                 )
             } else if let kind = EvidenceBridgeKind(rawValue: type.key) {

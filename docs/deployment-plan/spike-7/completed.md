@@ -13,6 +13,7 @@ IDs stay stable (`S7-NN`, `S7-DN`). Do not renumber when moving steps here.
 | [S7-D2](#s7-d2--design-subject-fields) | Design | Type strip over property table; gates S7-05 |
 | [S7-05](#s7-05--pr-subject-fields-ui) | PR | Subject fields destination: strip + table + inspector |
 | [S7-02](#s7-02--pr-namevalue-schema--go) | PR | `name_values` / `name_value_parts` + `namevalues` Insert/Lookup |
+| [S7-03](#s7-03--pr-citations--observations--locator) | PR | Citations + Observations + locator validate + FFI + graph `isCited` |
 
 ## Steps
 
@@ -105,4 +106,24 @@ xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destin
 
 ```bash
 CGO_ENABLED=1 go test -tags fts5 ./core/database/namevalues/... ./core/database/...
+```
+
+### S7-03 — PR: Citations + Observations + locator
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S7-01, S7-01b, S7-02 |
+| **Deliverables** | Done. Migration [`000026.sql`](../../../core/database/migrations/000026.sql) adds `citations`, `citation_notes`, `observations`, `observation_notes`. Package [`core/locator/`](../../../core/locator/) validates `page` / `region` / `text_quote` (unknown types preserved). Packages [`core/database/citations/`](../../../core/database/citations/) (`CreateWithObservations`) and [`core/database/observations/`](../../../core/database/observations/) (`AddToCitation`, `ListBySource`). Tx-scoped `datevalues.InsertTx` / `namevalues.InsertTx`. Property / property-term `InUse` checks Observations. FFI: create + append + list-by-source. Swift: GenealogyStore / FakeStore / GoStore; `SourceGraphSnapshot` sets `isCited` + per-subject observations; `CatalogMutation.createdCitation` / `addedObservations`. L10n for `locator.invalid` / `citations.invalid` / `observations.invalid`. |
+| **Tests** | Done. Go: locator, citations, observations; FFI `citations_test` via `runRPC`. Swift: SourceGraphSnapshot cited flag; CatalogQueryRegistry invalidation. |
+| **Dogfood** | Schema/FFI ready — composer submit UI is **S7-08**; card chrome **S7-09**. Create-with-observations + append + list round-trip via FakeStore / Go tests. |
+| **Out** | Composer UI (S7-08); Add-property / cited-row chrome (S7-09); NameValue Swift editor (S7-02b); durable connect (S7-10). |
+
+**Landed:** durable Citation + Observation writes (first submit and append) so the Evidence graph can mark cited subjects.
+
+**Verify:**
+
+```bash
+CGO_ENABLED=1 go test -tags fts5 ./core/locator/... ./core/database/citations/... ./core/database/observations/... ./core/database/... ./api/ffi/...
+python3 scripts/check-localizable-xcstrings.py
 ```

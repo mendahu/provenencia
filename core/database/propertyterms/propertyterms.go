@@ -24,7 +24,6 @@ var ErrDuplicateKey = apperr.New(apperr.CodePropertyTermsDuplicateKey, apperr.Ki
 var ErrLocked = apperr.New(apperr.CodePropertyTermsLocked, apperr.KindUser)
 
 // ErrInUse is returned by Delete when Observations still reference the term.
-// Until S7-03 adds observations.value_term_id, InUse always reports unused.
 var ErrInUse = apperr.New(apperr.CodePropertyTermsInUse, apperr.KindConflict)
 
 const (
@@ -45,8 +44,7 @@ const (
 		ORDER BY label COLLATE NOCASE, origin, key`
 	sqlUpdate = `UPDATE property_terms SET label = ?, description = ? WHERE id = ?`
 	sqlDelete = `DELETE FROM property_terms WHERE id = ?`
-	// TODO(S7-03): SELECT 1 FROM observations WHERE value_term_id = ? LIMIT 1
-	sqlInUse = `SELECT 0 WHERE 0`
+	sqlInUse  = `SELECT 1 FROM observations WHERE value_term_id = ? LIMIT 1`
 )
 
 // Term is one property_terms row.
@@ -365,7 +363,7 @@ func InUse(c *database.Catalog, id []byte) (bool, error) {
 		return false, ErrInvalid
 	}
 	var one int
-	err = db.QueryRow(sqlInUse).Scan(&one)
+	err = db.QueryRow(sqlInUse, id).Scan(&one)
 	if errors.Is(err, sql.ErrNoRows) {
 		return false, nil
 	}

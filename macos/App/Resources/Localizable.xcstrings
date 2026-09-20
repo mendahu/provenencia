@@ -1681,6 +1681,18 @@
         }
       }
     },
+    "error.citations.invalid": {
+      "comment": "FFI error citations.invalid",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That citation isn’t valid."
+          }
+        }
+      }
+    },
     "error.datevalues.invalid": {
       "comment": "FFI error datevalues.invalid",
       "extractionState": "manual",
@@ -1689,6 +1701,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "Invalid date value."
+          }
+        }
+      }
+    },
+    "error.locator.invalid": {
+      "comment": "FFI error locator.invalid",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That citation locator isn’t valid."
+          }
+        }
+      }
+    },
+    "error.observations.invalid": {
+      "comment": "FFI error observations.invalid",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That observation isn’t valid."
           }
         }
       }

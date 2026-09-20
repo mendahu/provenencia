@@ -568,4 +568,25 @@ private struct ThrowingStore: GenealogyStore {
         throw StoreBoom.boom
     }
     func listConnectRules() async throws -> [CatalogConnectRule] { throw StoreBoom.boom }
+    func createCitationWithObservations(
+        projectDir _: String,
+        userID _: String,
+        artifactID _: String,
+        locatorJSON _: String,
+        transcription _: String,
+        description _: String,
+        transcriptionUncertain _: Bool,
+        transcriptionNote _: String,
+        citationNotes _: [String],
+        observations _: [CatalogObservationDraft]
+    ) async throws -> (CatalogCitation, [CatalogObservation]) { throw StoreBoom.boom }
+    func addObservationsToCitation(
+        projectDir _: String,
+        userID _: String,
+        citationID _: String,
+        observations _: [CatalogObservationDraft]
+    ) async throws -> [CatalogObservation] { throw StoreBoom.boom }
+    func listObservationsBySource(projectDir _: String, sourceID _: String) async throws -> [CatalogObservation] {
+        throw StoreBoom.boom
+    }
 }

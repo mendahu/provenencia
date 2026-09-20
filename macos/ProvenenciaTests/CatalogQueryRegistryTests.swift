@@ -394,7 +394,13 @@ struct CatalogQueryRegistryTests {
             .key(.typeSuggestions(project: project, typeId: "t1")),
         ])
         #expect(registry.invalidations(by: .createdSubject(sourceId: "s1"), project: project) == [
-            .allCached(.sourceGraph),
+            .key(.sourceGraph(project: project, sourceId: "s1")),
+        ])
+        #expect(registry.invalidations(by: .createdCitation(sourceId: "s1"), project: project) == [
+            .key(.sourceGraph(project: project, sourceId: "s1")),
+        ])
+        #expect(registry.invalidations(by: .addedObservations(sourceId: "s1"), project: project) == [
+            .key(.sourceGraph(project: project, sourceId: "s1")),
         ])
         // Grades are seeded vocabulary with no CRUD surface, so nothing stales them.
         let everyMutation: [CatalogMutation] = [

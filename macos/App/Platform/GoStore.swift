@@ -973,6 +973,65 @@ struct GoStore: GenealogyStore {
         return resp.rules.map(Self.mapConnectRule)
     }
 
+    func createCitationWithObservations(
+        projectDir: String,
+        userID: String,
+        artifactID: String,
+        locatorJSON: String,
+        transcription: String,
+        description: String,
+        transcriptionUncertain: Bool,
+        transcriptionNote: String,
+        citationNotes: [String],
+        observations: [CatalogObservationDraft]
+    ) async throws -> (CatalogCitation, [CatalogObservation]) {
+        var req = Provenencia_Engine_V1_CreateCitationWithObservationsRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.artifactID = artifactID
+        req.locatorJson = locatorJSON
+        req.transcription = transcription
+        req.description_p = description
+        req.transcriptionUncertain = transcriptionUncertain
+        req.transcriptionNote = transcriptionNote
+        req.citationNotes = citationNotes
+        req.observations = observations.map(Self.mapObservationDraft)
+        let resp: Provenencia_Engine_V1_CreateCitationWithObservationsResponse = try await provenenciaCall(
+            method: CoreMethod.createCitationWithObservations,
+            request: req
+        )
+        return (Self.mapCitation(resp.citation), resp.observations.map(Self.mapObservation))
+    }
+
+    func addObservationsToCitation(
+        projectDir: String,
+        userID: String,
+        citationID: String,
+        observations: [CatalogObservationDraft]
+    ) async throws -> [CatalogObservation] {
+        var req = Provenencia_Engine_V1_AddObservationsToCitationRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.citationID = citationID
+        req.observations = observations.map(Self.mapObservationDraft)
+        let resp: Provenencia_Engine_V1_AddObservationsToCitationResponse = try await provenenciaCall(
+            method: CoreMethod.addObservationsToCitation,
+            request: req
+        )
+        return resp.observations.map(Self.mapObservation)
+    }
+
+    func listObservationsBySource(projectDir: String, sourceID: String) async throws -> [CatalogObservation] {
+        var req = Provenencia_Engine_V1_ListObservationsBySourceRequest()
+        req.projectDir = projectDir
+        req.sourceID = sourceID
+        let resp: Provenencia_Engine_V1_ListObservationsBySourceResponse = try await provenenciaCall(
+            method: CoreMethod.listObservationsBySource,
+            request: req
+        )
+        return resp.observations.map(Self.mapObservation)
+    }
+
     private static func mapOriginCounts(
         _ c: Provenencia_Engine_V1_VocabularyOriginCounts
     ) -> WorkspaceNavOriginCounts {
@@ -1210,6 +1269,95 @@ struct GoStore: GenealogyStore {
             disambiguation: r.disambiguation,
             refuse: r.refuse
         )
+    }
+
+    private static func mapCitation(_ c: Provenencia_Engine_V1_Citation) -> CatalogCitation {
+        CatalogCitation(
+            id: c.id,
+            ref: c.ref,
+            artifactID: c.artifactID,
+            locatorJSON: c.locatorJson,
+            transcription: c.transcription,
+            description: c.description_p,
+            transcriptionUncertain: c.transcriptionUncertain,
+            transcriptionNote: c.transcriptionNote
+        )
+    }
+
+    private static func mapObservation(_ o: Provenencia_Engine_V1_Observation) -> CatalogObservation {
+        CatalogObservation(
+            id: o.id,
+            ref: o.ref,
+            citationID: o.citationID,
+            subjectID: o.subjectID,
+            propertyID: o.propertyID,
+            polarity: o.polarity,
+            valueText: o.valueText,
+            valueInteger: o.hasValueInteger ? o.valueInteger : nil,
+            valueDateID: o.valueDateID,
+            valueNameID: o.valueNameID,
+            valueSubjectID: o.valueSubjectID,
+            valueTermID: o.valueTermID,
+            propertyKey: o.propertyKey,
+            propertyLabel: o.propertyLabel,
+            propertyValueType: o.propertyValueType
+        )
+    }
+
+    private static func mapObservationDraft(_ d: CatalogObservationDraft) -> Provenencia_Engine_V1_ObservationDraft {
+        var o = Provenencia_Engine_V1_ObservationDraft()
+        o.subjectID = d.subjectID
+        o.propertyID = d.propertyID
+        o.polarity = d.polarity
+        o.valueText = d.valueText
+        if let valueInteger = d.valueInteger {
+            o.valueInteger = valueInteger
+        }
+        if let date = d.date {
+            o.date = Self.mapDateValueToProto(date)
+        }
+        o.valueDateID = d.valueDateID
+        if !d.nameForm.isEmpty {
+            var name = Provenencia_Engine_V1_NameValueInput()
+            name.form = d.nameForm
+            for part in d.nameParts {
+                var p = Provenencia_Engine_V1_NameValuePartInput()
+                p.value = part.value
+                p.type = part.type
+                name.parts.append(p)
+            }
+            o.name = name
+        }
+        o.valueNameID = d.valueNameID
+        o.valueSubjectID = d.valueSubjectID
+        o.valueTermID = d.valueTermID
+        o.notes = d.notes
+        return o
+    }
+
+    private static func mapDateValueToProto(_ d: CatalogDateValueInput) -> Provenencia_Engine_V1_DateValueInput {
+        var p = Provenencia_Engine_V1_DateValueInput()
+        p.kind = d.kind
+        p.qualifier = d.qualifier
+        p.calendar = d.calendar
+        if let startYear = d.startYear { p.startYear = startYear }
+        if let startMonth = d.startMonth { p.startMonth = startMonth }
+        if let startDay = d.startDay { p.startDay = startDay }
+        if let startHour = d.startHour { p.startHour = startHour }
+        if let startMinute = d.startMinute { p.startMinute = startMinute }
+        if let startSecond = d.startSecond { p.startSecond = startSecond }
+        if let startMillisecond = d.startMillisecond { p.startMillisecond = startMillisecond }
+        p.startTz = d.startTZ
+        if let endYear = d.endYear { p.endYear = endYear }
+        if let endMonth = d.endMonth { p.endMonth = endMonth }
+        if let endDay = d.endDay { p.endDay = endDay }
+        if let endHour = d.endHour { p.endHour = endHour }
+        if let endMinute = d.endMinute { p.endMinute = endMinute }
+        if let endSecond = d.endSecond { p.endSecond = endSecond }
+        if let endMillisecond = d.endMillisecond { p.endMillisecond = endMillisecond }
+        p.endTz = d.endTZ
+        p.phrase = d.phrase
+        return p
     }
 
     private static func mapTypeSuggestion(_ s: Provenencia_Engine_V1_TypeSuggestion) -> CatalogTypeSuggestion {

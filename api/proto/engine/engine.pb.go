@@ -92,6 +92,9 @@ const (
 	Method_METHOD_CREATE_PROPERTY_TERM                 Method = 64
 	Method_METHOD_UPDATE_PROPERTY_TERM                 Method = 65
 	Method_METHOD_DELETE_PROPERTY_TERM                 Method = 66
+	Method_METHOD_CREATE_CITATION_WITH_OBSERVATIONS    Method = 67
+	Method_METHOD_ADD_OBSERVATIONS_TO_CITATION         Method = 68
+	Method_METHOD_LIST_OBSERVATIONS_BY_SOURCE          Method = 69
 )
 
 // Enum value maps for Method.
@@ -163,6 +166,9 @@ var (
 		64: "METHOD_CREATE_PROPERTY_TERM",
 		65: "METHOD_UPDATE_PROPERTY_TERM",
 		66: "METHOD_DELETE_PROPERTY_TERM",
+		67: "METHOD_CREATE_CITATION_WITH_OBSERVATIONS",
+		68: "METHOD_ADD_OBSERVATIONS_TO_CITATION",
+		69: "METHOD_LIST_OBSERVATIONS_BY_SOURCE",
 	}
 	Method_value = map[string]int32{
 		"METHOD_UNSPECIFIED":                          0,
@@ -231,6 +237,9 @@ var (
 		"METHOD_CREATE_PROPERTY_TERM":                 64,
 		"METHOD_UPDATE_PROPERTY_TERM":                 65,
 		"METHOD_DELETE_PROPERTY_TERM":                 66,
+		"METHOD_CREATE_CITATION_WITH_OBSERVATIONS":    67,
+		"METHOD_ADD_OBSERVATIONS_TO_CITATION":         68,
+		"METHOD_LIST_OBSERVATIONS_BY_SOURCE":          69,
 	}
 )
 
@@ -9449,6 +9458,895 @@ func (*DeletePropertyTermResponse) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{153}
 }
 
+// NameValuePartInput is one ordered segment when inserting a NameValue.
+type NameValuePartInput struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Value         string                 `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
+	Type          string                 `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NameValuePartInput) Reset() {
+	*x = NameValuePartInput{}
+	mi := &file_engine_proto_msgTypes[154]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NameValuePartInput) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NameValuePartInput) ProtoMessage() {}
+
+func (x *NameValuePartInput) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[154]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NameValuePartInput.ProtoReflect.Descriptor instead.
+func (*NameValuePartInput) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{154}
+}
+
+func (x *NameValuePartInput) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
+func (x *NameValuePartInput) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+// NameValueInput maps to namevalues.Insert (form + optional parts).
+type NameValueInput struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Form          string                 `protobuf:"bytes,1,opt,name=form,proto3" json:"form,omitempty"`
+	Parts         []*NameValuePartInput  `protobuf:"bytes,2,rep,name=parts,proto3" json:"parts,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NameValueInput) Reset() {
+	*x = NameValueInput{}
+	mi := &file_engine_proto_msgTypes[155]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NameValueInput) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NameValueInput) ProtoMessage() {}
+
+func (x *NameValueInput) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[155]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NameValueInput.ProtoReflect.Descriptor instead.
+func (*NameValueInput) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{155}
+}
+
+func (x *NameValueInput) GetForm() string {
+	if x != nil {
+		return x.Form
+	}
+	return ""
+}
+
+func (x *NameValueInput) GetParts() []*NameValuePartInput {
+	if x != nil {
+		return x.Parts
+	}
+	return nil
+}
+
+// Citation is one citations row.
+type Citation struct {
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Id                     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Ref                    string                 `protobuf:"bytes,2,opt,name=ref,proto3" json:"ref,omitempty"`
+	ArtifactId             string                 `protobuf:"bytes,3,opt,name=artifact_id,json=artifactId,proto3" json:"artifact_id,omitempty"`
+	LocatorJson            string                 `protobuf:"bytes,4,opt,name=locator_json,json=locatorJson,proto3" json:"locator_json,omitempty"`
+	Transcription          string                 `protobuf:"bytes,5,opt,name=transcription,proto3" json:"transcription,omitempty"`
+	Description            string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
+	TranscriptionUncertain bool                   `protobuf:"varint,7,opt,name=transcription_uncertain,json=transcriptionUncertain,proto3" json:"transcription_uncertain,omitempty"`
+	TranscriptionNote      string                 `protobuf:"bytes,8,opt,name=transcription_note,json=transcriptionNote,proto3" json:"transcription_note,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *Citation) Reset() {
+	*x = Citation{}
+	mi := &file_engine_proto_msgTypes[156]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Citation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Citation) ProtoMessage() {}
+
+func (x *Citation) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[156]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Citation.ProtoReflect.Descriptor instead.
+func (*Citation) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{156}
+}
+
+func (x *Citation) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Citation) GetRef() string {
+	if x != nil {
+		return x.Ref
+	}
+	return ""
+}
+
+func (x *Citation) GetArtifactId() string {
+	if x != nil {
+		return x.ArtifactId
+	}
+	return ""
+}
+
+func (x *Citation) GetLocatorJson() string {
+	if x != nil {
+		return x.LocatorJson
+	}
+	return ""
+}
+
+func (x *Citation) GetTranscription() string {
+	if x != nil {
+		return x.Transcription
+	}
+	return ""
+}
+
+func (x *Citation) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *Citation) GetTranscriptionUncertain() bool {
+	if x != nil {
+		return x.TranscriptionUncertain
+	}
+	return false
+}
+
+func (x *Citation) GetTranscriptionNote() string {
+	if x != nil {
+		return x.TranscriptionNote
+	}
+	return ""
+}
+
+// Observation is one observations row plus Property summary for graph/card rows.
+type Observation struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Ref               string                 `protobuf:"bytes,2,opt,name=ref,proto3" json:"ref,omitempty"`
+	CitationId        string                 `protobuf:"bytes,3,opt,name=citation_id,json=citationId,proto3" json:"citation_id,omitempty"`
+	SubjectId         string                 `protobuf:"bytes,4,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	PropertyId        string                 `protobuf:"bytes,5,opt,name=property_id,json=propertyId,proto3" json:"property_id,omitempty"`
+	Polarity          string                 `protobuf:"bytes,6,opt,name=polarity,proto3" json:"polarity,omitempty"`
+	ValueText         string                 `protobuf:"bytes,7,opt,name=value_text,json=valueText,proto3" json:"value_text,omitempty"`
+	ValueInteger      *int64                 `protobuf:"varint,8,opt,name=value_integer,json=valueInteger,proto3,oneof" json:"value_integer,omitempty"`
+	ValueDateId       string                 `protobuf:"bytes,9,opt,name=value_date_id,json=valueDateId,proto3" json:"value_date_id,omitempty"`
+	Date              *DateValueInput        `protobuf:"bytes,10,opt,name=date,proto3" json:"date,omitempty"`
+	ValueNameId       string                 `protobuf:"bytes,11,opt,name=value_name_id,json=valueNameId,proto3" json:"value_name_id,omitempty"`
+	Name              *NameValueInput        `protobuf:"bytes,12,opt,name=name,proto3" json:"name,omitempty"`
+	ValueSubjectId    string                 `protobuf:"bytes,13,opt,name=value_subject_id,json=valueSubjectId,proto3" json:"value_subject_id,omitempty"`
+	ValueTermId       string                 `protobuf:"bytes,14,opt,name=value_term_id,json=valueTermId,proto3" json:"value_term_id,omitempty"`
+	PropertyKey       string                 `protobuf:"bytes,15,opt,name=property_key,json=propertyKey,proto3" json:"property_key,omitempty"`
+	PropertyLabel     string                 `protobuf:"bytes,16,opt,name=property_label,json=propertyLabel,proto3" json:"property_label,omitempty"`
+	PropertyValueType string                 `protobuf:"bytes,17,opt,name=property_value_type,json=propertyValueType,proto3" json:"property_value_type,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *Observation) Reset() {
+	*x = Observation{}
+	mi := &file_engine_proto_msgTypes[157]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Observation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Observation) ProtoMessage() {}
+
+func (x *Observation) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[157]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Observation.ProtoReflect.Descriptor instead.
+func (*Observation) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{157}
+}
+
+func (x *Observation) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Observation) GetRef() string {
+	if x != nil {
+		return x.Ref
+	}
+	return ""
+}
+
+func (x *Observation) GetCitationId() string {
+	if x != nil {
+		return x.CitationId
+	}
+	return ""
+}
+
+func (x *Observation) GetSubjectId() string {
+	if x != nil {
+		return x.SubjectId
+	}
+	return ""
+}
+
+func (x *Observation) GetPropertyId() string {
+	if x != nil {
+		return x.PropertyId
+	}
+	return ""
+}
+
+func (x *Observation) GetPolarity() string {
+	if x != nil {
+		return x.Polarity
+	}
+	return ""
+}
+
+func (x *Observation) GetValueText() string {
+	if x != nil {
+		return x.ValueText
+	}
+	return ""
+}
+
+func (x *Observation) GetValueInteger() int64 {
+	if x != nil && x.ValueInteger != nil {
+		return *x.ValueInteger
+	}
+	return 0
+}
+
+func (x *Observation) GetValueDateId() string {
+	if x != nil {
+		return x.ValueDateId
+	}
+	return ""
+}
+
+func (x *Observation) GetDate() *DateValueInput {
+	if x != nil {
+		return x.Date
+	}
+	return nil
+}
+
+func (x *Observation) GetValueNameId() string {
+	if x != nil {
+		return x.ValueNameId
+	}
+	return ""
+}
+
+func (x *Observation) GetName() *NameValueInput {
+	if x != nil {
+		return x.Name
+	}
+	return nil
+}
+
+func (x *Observation) GetValueSubjectId() string {
+	if x != nil {
+		return x.ValueSubjectId
+	}
+	return ""
+}
+
+func (x *Observation) GetValueTermId() string {
+	if x != nil {
+		return x.ValueTermId
+	}
+	return ""
+}
+
+func (x *Observation) GetPropertyKey() string {
+	if x != nil {
+		return x.PropertyKey
+	}
+	return ""
+}
+
+func (x *Observation) GetPropertyLabel() string {
+	if x != nil {
+		return x.PropertyLabel
+	}
+	return ""
+}
+
+func (x *Observation) GetPropertyValueType() string {
+	if x != nil {
+		return x.PropertyValueType
+	}
+	return ""
+}
+
+// ObservationDraft is one Observation insert payload (create or append).
+type ObservationDraft struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	SubjectId      string                 `protobuf:"bytes,1,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	PropertyId     string                 `protobuf:"bytes,2,opt,name=property_id,json=propertyId,proto3" json:"property_id,omitempty"`
+	Polarity       string                 `protobuf:"bytes,3,opt,name=polarity,proto3" json:"polarity,omitempty"`
+	ValueText      string                 `protobuf:"bytes,4,opt,name=value_text,json=valueText,proto3" json:"value_text,omitempty"`
+	ValueInteger   *int64                 `protobuf:"varint,5,opt,name=value_integer,json=valueInteger,proto3,oneof" json:"value_integer,omitempty"`
+	Date           *DateValueInput        `protobuf:"bytes,6,opt,name=date,proto3" json:"date,omitempty"`
+	ValueDateId    string                 `protobuf:"bytes,7,opt,name=value_date_id,json=valueDateId,proto3" json:"value_date_id,omitempty"`
+	Name           *NameValueInput        `protobuf:"bytes,8,opt,name=name,proto3" json:"name,omitempty"`
+	ValueNameId    string                 `protobuf:"bytes,9,opt,name=value_name_id,json=valueNameId,proto3" json:"value_name_id,omitempty"`
+	ValueSubjectId string                 `protobuf:"bytes,10,opt,name=value_subject_id,json=valueSubjectId,proto3" json:"value_subject_id,omitempty"`
+	ValueTermId    string                 `protobuf:"bytes,11,opt,name=value_term_id,json=valueTermId,proto3" json:"value_term_id,omitempty"`
+	Notes          []string               `protobuf:"bytes,12,rep,name=notes,proto3" json:"notes,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ObservationDraft) Reset() {
+	*x = ObservationDraft{}
+	mi := &file_engine_proto_msgTypes[158]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ObservationDraft) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ObservationDraft) ProtoMessage() {}
+
+func (x *ObservationDraft) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[158]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ObservationDraft.ProtoReflect.Descriptor instead.
+func (*ObservationDraft) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{158}
+}
+
+func (x *ObservationDraft) GetSubjectId() string {
+	if x != nil {
+		return x.SubjectId
+	}
+	return ""
+}
+
+func (x *ObservationDraft) GetPropertyId() string {
+	if x != nil {
+		return x.PropertyId
+	}
+	return ""
+}
+
+func (x *ObservationDraft) GetPolarity() string {
+	if x != nil {
+		return x.Polarity
+	}
+	return ""
+}
+
+func (x *ObservationDraft) GetValueText() string {
+	if x != nil {
+		return x.ValueText
+	}
+	return ""
+}
+
+func (x *ObservationDraft) GetValueInteger() int64 {
+	if x != nil && x.ValueInteger != nil {
+		return *x.ValueInteger
+	}
+	return 0
+}
+
+func (x *ObservationDraft) GetDate() *DateValueInput {
+	if x != nil {
+		return x.Date
+	}
+	return nil
+}
+
+func (x *ObservationDraft) GetValueDateId() string {
+	if x != nil {
+		return x.ValueDateId
+	}
+	return ""
+}
+
+func (x *ObservationDraft) GetName() *NameValueInput {
+	if x != nil {
+		return x.Name
+	}
+	return nil
+}
+
+func (x *ObservationDraft) GetValueNameId() string {
+	if x != nil {
+		return x.ValueNameId
+	}
+	return ""
+}
+
+func (x *ObservationDraft) GetValueSubjectId() string {
+	if x != nil {
+		return x.ValueSubjectId
+	}
+	return ""
+}
+
+func (x *ObservationDraft) GetValueTermId() string {
+	if x != nil {
+		return x.ValueTermId
+	}
+	return ""
+}
+
+func (x *ObservationDraft) GetNotes() []string {
+	if x != nil {
+		return x.Notes
+	}
+	return nil
+}
+
+type CreateCitationWithObservationsRequest struct {
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir             string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	UserId                 string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	ArtifactId             string                 `protobuf:"bytes,3,opt,name=artifact_id,json=artifactId,proto3" json:"artifact_id,omitempty"`
+	LocatorJson            string                 `protobuf:"bytes,4,opt,name=locator_json,json=locatorJson,proto3" json:"locator_json,omitempty"`
+	Transcription          string                 `protobuf:"bytes,5,opt,name=transcription,proto3" json:"transcription,omitempty"`
+	Description            string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
+	TranscriptionUncertain bool                   `protobuf:"varint,7,opt,name=transcription_uncertain,json=transcriptionUncertain,proto3" json:"transcription_uncertain,omitempty"`
+	TranscriptionNote      string                 `protobuf:"bytes,8,opt,name=transcription_note,json=transcriptionNote,proto3" json:"transcription_note,omitempty"`
+	CitationNotes          []string               `protobuf:"bytes,9,rep,name=citation_notes,json=citationNotes,proto3" json:"citation_notes,omitempty"`
+	Observations           []*ObservationDraft    `protobuf:"bytes,10,rep,name=observations,proto3" json:"observations,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *CreateCitationWithObservationsRequest) Reset() {
+	*x = CreateCitationWithObservationsRequest{}
+	mi := &file_engine_proto_msgTypes[159]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateCitationWithObservationsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateCitationWithObservationsRequest) ProtoMessage() {}
+
+func (x *CreateCitationWithObservationsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[159]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateCitationWithObservationsRequest.ProtoReflect.Descriptor instead.
+func (*CreateCitationWithObservationsRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{159}
+}
+
+func (x *CreateCitationWithObservationsRequest) GetProjectDir() string {
+	if x != nil {
+		return x.ProjectDir
+	}
+	return ""
+}
+
+func (x *CreateCitationWithObservationsRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *CreateCitationWithObservationsRequest) GetArtifactId() string {
+	if x != nil {
+		return x.ArtifactId
+	}
+	return ""
+}
+
+func (x *CreateCitationWithObservationsRequest) GetLocatorJson() string {
+	if x != nil {
+		return x.LocatorJson
+	}
+	return ""
+}
+
+func (x *CreateCitationWithObservationsRequest) GetTranscription() string {
+	if x != nil {
+		return x.Transcription
+	}
+	return ""
+}
+
+func (x *CreateCitationWithObservationsRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *CreateCitationWithObservationsRequest) GetTranscriptionUncertain() bool {
+	if x != nil {
+		return x.TranscriptionUncertain
+	}
+	return false
+}
+
+func (x *CreateCitationWithObservationsRequest) GetTranscriptionNote() string {
+	if x != nil {
+		return x.TranscriptionNote
+	}
+	return ""
+}
+
+func (x *CreateCitationWithObservationsRequest) GetCitationNotes() []string {
+	if x != nil {
+		return x.CitationNotes
+	}
+	return nil
+}
+
+func (x *CreateCitationWithObservationsRequest) GetObservations() []*ObservationDraft {
+	if x != nil {
+		return x.Observations
+	}
+	return nil
+}
+
+type CreateCitationWithObservationsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Citation      *Citation              `protobuf:"bytes,1,opt,name=citation,proto3" json:"citation,omitempty"`
+	Observations  []*Observation         `protobuf:"bytes,2,rep,name=observations,proto3" json:"observations,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateCitationWithObservationsResponse) Reset() {
+	*x = CreateCitationWithObservationsResponse{}
+	mi := &file_engine_proto_msgTypes[160]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateCitationWithObservationsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateCitationWithObservationsResponse) ProtoMessage() {}
+
+func (x *CreateCitationWithObservationsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[160]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateCitationWithObservationsResponse.ProtoReflect.Descriptor instead.
+func (*CreateCitationWithObservationsResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{160}
+}
+
+func (x *CreateCitationWithObservationsResponse) GetCitation() *Citation {
+	if x != nil {
+		return x.Citation
+	}
+	return nil
+}
+
+func (x *CreateCitationWithObservationsResponse) GetObservations() []*Observation {
+	if x != nil {
+		return x.Observations
+	}
+	return nil
+}
+
+type AddObservationsToCitationRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	CitationId    string                 `protobuf:"bytes,3,opt,name=citation_id,json=citationId,proto3" json:"citation_id,omitempty"`
+	Observations  []*ObservationDraft    `protobuf:"bytes,4,rep,name=observations,proto3" json:"observations,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddObservationsToCitationRequest) Reset() {
+	*x = AddObservationsToCitationRequest{}
+	mi := &file_engine_proto_msgTypes[161]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddObservationsToCitationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddObservationsToCitationRequest) ProtoMessage() {}
+
+func (x *AddObservationsToCitationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[161]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddObservationsToCitationRequest.ProtoReflect.Descriptor instead.
+func (*AddObservationsToCitationRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{161}
+}
+
+func (x *AddObservationsToCitationRequest) GetProjectDir() string {
+	if x != nil {
+		return x.ProjectDir
+	}
+	return ""
+}
+
+func (x *AddObservationsToCitationRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *AddObservationsToCitationRequest) GetCitationId() string {
+	if x != nil {
+		return x.CitationId
+	}
+	return ""
+}
+
+func (x *AddObservationsToCitationRequest) GetObservations() []*ObservationDraft {
+	if x != nil {
+		return x.Observations
+	}
+	return nil
+}
+
+type AddObservationsToCitationResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Observations  []*Observation         `protobuf:"bytes,1,rep,name=observations,proto3" json:"observations,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddObservationsToCitationResponse) Reset() {
+	*x = AddObservationsToCitationResponse{}
+	mi := &file_engine_proto_msgTypes[162]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddObservationsToCitationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddObservationsToCitationResponse) ProtoMessage() {}
+
+func (x *AddObservationsToCitationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[162]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddObservationsToCitationResponse.ProtoReflect.Descriptor instead.
+func (*AddObservationsToCitationResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{162}
+}
+
+func (x *AddObservationsToCitationResponse) GetObservations() []*Observation {
+	if x != nil {
+		return x.Observations
+	}
+	return nil
+}
+
+type ListObservationsBySourceRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	SourceId      string                 `protobuf:"bytes,2,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListObservationsBySourceRequest) Reset() {
+	*x = ListObservationsBySourceRequest{}
+	mi := &file_engine_proto_msgTypes[163]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListObservationsBySourceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListObservationsBySourceRequest) ProtoMessage() {}
+
+func (x *ListObservationsBySourceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[163]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListObservationsBySourceRequest.ProtoReflect.Descriptor instead.
+func (*ListObservationsBySourceRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{163}
+}
+
+func (x *ListObservationsBySourceRequest) GetProjectDir() string {
+	if x != nil {
+		return x.ProjectDir
+	}
+	return ""
+}
+
+func (x *ListObservationsBySourceRequest) GetSourceId() string {
+	if x != nil {
+		return x.SourceId
+	}
+	return ""
+}
+
+type ListObservationsBySourceResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Observations  []*Observation         `protobuf:"bytes,1,rep,name=observations,proto3" json:"observations,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListObservationsBySourceResponse) Reset() {
+	*x = ListObservationsBySourceResponse{}
+	mi := &file_engine_proto_msgTypes[164]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListObservationsBySourceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListObservationsBySourceResponse) ProtoMessage() {}
+
+func (x *ListObservationsBySourceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[164]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListObservationsBySourceResponse.ProtoReflect.Descriptor instead.
+func (*ListObservationsBySourceResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{164}
+}
+
+func (x *ListObservationsBySourceResponse) GetObservations() []*Observation {
+	if x != nil {
+		return x.Observations
+	}
+	return nil
+}
+
 // Error is the protobuf payload on provenencia_call status 1 (failure).
 // Success payloads remain method-specific response messages.
 type Error struct {
@@ -9462,7 +10360,7 @@ type Error struct {
 
 func (x *Error) Reset() {
 	*x = Error{}
-	mi := &file_engine_proto_msgTypes[154]
+	mi := &file_engine_proto_msgTypes[165]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9474,7 +10372,7 @@ func (x *Error) String() string {
 func (*Error) ProtoMessage() {}
 
 func (x *Error) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[154]
+	mi := &file_engine_proto_msgTypes[165]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9487,7 +10385,7 @@ func (x *Error) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Error.ProtoReflect.Descriptor instead.
 func (*Error) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{154}
+	return file_engine_proto_rawDescGZIP(), []int{165}
 }
 
 func (x *Error) GetCode() string {
@@ -10237,11 +11135,101 @@ const file_engine_proto_rawDesc = "" +
 	"projectDir\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x17\n" +
 	"\aterm_id\x18\x03 \x01(\tR\x06termId\"\x1c\n" +
-	"\x1aDeletePropertyTermResponse\"i\n" +
+	"\x1aDeletePropertyTermResponse\">\n" +
+	"\x12NameValuePartInput\x12\x14\n" +
+	"\x05value\x18\x01 \x01(\tR\x05value\x12\x12\n" +
+	"\x04type\x18\x02 \x01(\tR\x04type\"e\n" +
+	"\x0eNameValueInput\x12\x12\n" +
+	"\x04form\x18\x01 \x01(\tR\x04form\x12?\n" +
+	"\x05parts\x18\x02 \x03(\v2).provenencia.engine.v1.NameValuePartInputR\x05parts\"\xa0\x02\n" +
+	"\bCitation\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
+	"\x03ref\x18\x02 \x01(\tR\x03ref\x12\x1f\n" +
+	"\vartifact_id\x18\x03 \x01(\tR\n" +
+	"artifactId\x12!\n" +
+	"\flocator_json\x18\x04 \x01(\tR\vlocatorJson\x12$\n" +
+	"\rtranscription\x18\x05 \x01(\tR\rtranscription\x12 \n" +
+	"\vdescription\x18\x06 \x01(\tR\vdescription\x127\n" +
+	"\x17transcription_uncertain\x18\a \x01(\bR\x16transcriptionUncertain\x12-\n" +
+	"\x12transcription_note\x18\b \x01(\tR\x11transcriptionNote\"\x8d\x05\n" +
+	"\vObservation\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
+	"\x03ref\x18\x02 \x01(\tR\x03ref\x12\x1f\n" +
+	"\vcitation_id\x18\x03 \x01(\tR\n" +
+	"citationId\x12\x1d\n" +
+	"\n" +
+	"subject_id\x18\x04 \x01(\tR\tsubjectId\x12\x1f\n" +
+	"\vproperty_id\x18\x05 \x01(\tR\n" +
+	"propertyId\x12\x1a\n" +
+	"\bpolarity\x18\x06 \x01(\tR\bpolarity\x12\x1d\n" +
+	"\n" +
+	"value_text\x18\a \x01(\tR\tvalueText\x12(\n" +
+	"\rvalue_integer\x18\b \x01(\x03H\x00R\fvalueInteger\x88\x01\x01\x12\"\n" +
+	"\rvalue_date_id\x18\t \x01(\tR\vvalueDateId\x129\n" +
+	"\x04date\x18\n" +
+	" \x01(\v2%.provenencia.engine.v1.DateValueInputR\x04date\x12\"\n" +
+	"\rvalue_name_id\x18\v \x01(\tR\vvalueNameId\x129\n" +
+	"\x04name\x18\f \x01(\v2%.provenencia.engine.v1.NameValueInputR\x04name\x12(\n" +
+	"\x10value_subject_id\x18\r \x01(\tR\x0evalueSubjectId\x12\"\n" +
+	"\rvalue_term_id\x18\x0e \x01(\tR\vvalueTermId\x12!\n" +
+	"\fproperty_key\x18\x0f \x01(\tR\vpropertyKey\x12%\n" +
+	"\x0eproperty_label\x18\x10 \x01(\tR\rpropertyLabel\x12.\n" +
+	"\x13property_value_type\x18\x11 \x01(\tR\x11propertyValueTypeB\x10\n" +
+	"\x0e_value_integer\"\xeb\x03\n" +
+	"\x10ObservationDraft\x12\x1d\n" +
+	"\n" +
+	"subject_id\x18\x01 \x01(\tR\tsubjectId\x12\x1f\n" +
+	"\vproperty_id\x18\x02 \x01(\tR\n" +
+	"propertyId\x12\x1a\n" +
+	"\bpolarity\x18\x03 \x01(\tR\bpolarity\x12\x1d\n" +
+	"\n" +
+	"value_text\x18\x04 \x01(\tR\tvalueText\x12(\n" +
+	"\rvalue_integer\x18\x05 \x01(\x03H\x00R\fvalueInteger\x88\x01\x01\x129\n" +
+	"\x04date\x18\x06 \x01(\v2%.provenencia.engine.v1.DateValueInputR\x04date\x12\"\n" +
+	"\rvalue_date_id\x18\a \x01(\tR\vvalueDateId\x129\n" +
+	"\x04name\x18\b \x01(\v2%.provenencia.engine.v1.NameValueInputR\x04name\x12\"\n" +
+	"\rvalue_name_id\x18\t \x01(\tR\vvalueNameId\x12(\n" +
+	"\x10value_subject_id\x18\n" +
+	" \x01(\tR\x0evalueSubjectId\x12\"\n" +
+	"\rvalue_term_id\x18\v \x01(\tR\vvalueTermId\x12\x14\n" +
+	"\x05notes\x18\f \x03(\tR\x05notesB\x10\n" +
+	"\x0e_value_integer\"\xc9\x03\n" +
+	"%CreateCitationWithObservationsRequest\x12\x1f\n" +
+	"\vproject_dir\x18\x01 \x01(\tR\n" +
+	"projectDir\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1f\n" +
+	"\vartifact_id\x18\x03 \x01(\tR\n" +
+	"artifactId\x12!\n" +
+	"\flocator_json\x18\x04 \x01(\tR\vlocatorJson\x12$\n" +
+	"\rtranscription\x18\x05 \x01(\tR\rtranscription\x12 \n" +
+	"\vdescription\x18\x06 \x01(\tR\vdescription\x127\n" +
+	"\x17transcription_uncertain\x18\a \x01(\bR\x16transcriptionUncertain\x12-\n" +
+	"\x12transcription_note\x18\b \x01(\tR\x11transcriptionNote\x12%\n" +
+	"\x0ecitation_notes\x18\t \x03(\tR\rcitationNotes\x12K\n" +
+	"\fobservations\x18\n" +
+	" \x03(\v2'.provenencia.engine.v1.ObservationDraftR\fobservations\"\xad\x01\n" +
+	"&CreateCitationWithObservationsResponse\x12;\n" +
+	"\bcitation\x18\x01 \x01(\v2\x1f.provenencia.engine.v1.CitationR\bcitation\x12F\n" +
+	"\fobservations\x18\x02 \x03(\v2\".provenencia.engine.v1.ObservationR\fobservations\"\xca\x01\n" +
+	" AddObservationsToCitationRequest\x12\x1f\n" +
+	"\vproject_dir\x18\x01 \x01(\tR\n" +
+	"projectDir\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1f\n" +
+	"\vcitation_id\x18\x03 \x01(\tR\n" +
+	"citationId\x12K\n" +
+	"\fobservations\x18\x04 \x03(\v2'.provenencia.engine.v1.ObservationDraftR\fobservations\"k\n" +
+	"!AddObservationsToCitationResponse\x12F\n" +
+	"\fobservations\x18\x01 \x03(\v2\".provenencia.engine.v1.ObservationR\fobservations\"_\n" +
+	"\x1fListObservationsBySourceRequest\x12\x1f\n" +
+	"\vproject_dir\x18\x01 \x01(\tR\n" +
+	"projectDir\x12\x1b\n" +
+	"\tsource_id\x18\x02 \x01(\tR\bsourceId\"j\n" +
+	" ListObservationsBySourceResponse\x12F\n" +
+	"\fobservations\x18\x01 \x03(\v2\".provenencia.engine.v1.ObservationR\fobservations\"i\n" +
 	"\x05Error\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x124\n" +
 	"\x04kind\x18\x02 \x01(\x0e2 .provenencia.engine.v1.ErrorKindR\x04kind\x12\x16\n" +
-	"\x06params\x18\x03 \x03(\tR\x06params*\xcd\x10\n" +
+	"\x06params\x18\x03 \x03(\tR\x06params*\xcc\x11\n" +
 	"\x06Method\x12\x16\n" +
 	"\x12METHOD_UNSPECIFIED\x10\x00\x12\x0f\n" +
 	"\vMETHOD_PING\x10\x01\x12\x16\n" +
@@ -10309,7 +11297,10 @@ const file_engine_proto_rawDesc = "" +
 	"\x1aMETHOD_LIST_PROPERTY_TERMS\x10?\x12\x1f\n" +
 	"\x1bMETHOD_CREATE_PROPERTY_TERM\x10@\x12\x1f\n" +
 	"\x1bMETHOD_UPDATE_PROPERTY_TERM\x10A\x12\x1f\n" +
-	"\x1bMETHOD_DELETE_PROPERTY_TERM\x10B\"\x04\b\x1b\x10\x1b*\x12METHOD_COUNT_FILES*\x88\x01\n" +
+	"\x1bMETHOD_DELETE_PROPERTY_TERM\x10B\x12,\n" +
+	"(METHOD_CREATE_CITATION_WITH_OBSERVATIONS\x10C\x12'\n" +
+	"#METHOD_ADD_OBSERVATIONS_TO_CITATION\x10D\x12&\n" +
+	"\"METHOD_LIST_OBSERVATIONS_BY_SOURCE\x10E\"\x04\b\x1b\x10\x1b*\x12METHOD_COUNT_FILES*\x88\x01\n" +
 	"\tErrorKind\x12\x1a\n" +
 	"\x16ERROR_KIND_UNSPECIFIED\x10\x00\x12\x13\n" +
 	"\x0fERROR_KIND_USER\x10\x01\x12\x17\n" +
@@ -10330,7 +11321,7 @@ func file_engine_proto_rawDescGZIP() []byte {
 }
 
 var file_engine_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 155)
+var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 166)
 var file_engine_proto_goTypes = []any{
 	(Method)(0),                                       // 0: provenencia.engine.v1.Method
 	(ErrorKind)(0),                                    // 1: provenencia.engine.v1.ErrorKind
@@ -10488,7 +11479,18 @@ var file_engine_proto_goTypes = []any{
 	(*UpdatePropertyTermResponse)(nil),                // 153: provenencia.engine.v1.UpdatePropertyTermResponse
 	(*DeletePropertyTermRequest)(nil),                 // 154: provenencia.engine.v1.DeletePropertyTermRequest
 	(*DeletePropertyTermResponse)(nil),                // 155: provenencia.engine.v1.DeletePropertyTermResponse
-	(*Error)(nil),                                     // 156: provenencia.engine.v1.Error
+	(*NameValuePartInput)(nil),                        // 156: provenencia.engine.v1.NameValuePartInput
+	(*NameValueInput)(nil),                            // 157: provenencia.engine.v1.NameValueInput
+	(*Citation)(nil),                                  // 158: provenencia.engine.v1.Citation
+	(*Observation)(nil),                               // 159: provenencia.engine.v1.Observation
+	(*ObservationDraft)(nil),                          // 160: provenencia.engine.v1.ObservationDraft
+	(*CreateCitationWithObservationsRequest)(nil),     // 161: provenencia.engine.v1.CreateCitationWithObservationsRequest
+	(*CreateCitationWithObservationsResponse)(nil),    // 162: provenencia.engine.v1.CreateCitationWithObservationsResponse
+	(*AddObservationsToCitationRequest)(nil),          // 163: provenencia.engine.v1.AddObservationsToCitationRequest
+	(*AddObservationsToCitationResponse)(nil),         // 164: provenencia.engine.v1.AddObservationsToCitationResponse
+	(*ListObservationsBySourceRequest)(nil),           // 165: provenencia.engine.v1.ListObservationsBySourceRequest
+	(*ListObservationsBySourceResponse)(nil),          // 166: provenencia.engine.v1.ListObservationsBySourceResponse
+	(*Error)(nil),                                     // 167: provenencia.engine.v1.Error
 }
 var file_engine_proto_depIdxs = []int32{
 	24,  // 0: provenencia.engine.v1.CompleteOnboardingResponse.project:type_name -> provenencia.engine.v1.ProjectInfo
@@ -10551,12 +11553,23 @@ var file_engine_proto_depIdxs = []int32{
 	124, // 57: provenencia.engine.v1.ListPropertyTermsResponse.terms:type_name -> provenencia.engine.v1.PropertyTerm
 	124, // 58: provenencia.engine.v1.CreatePropertyTermResponse.term:type_name -> provenencia.engine.v1.PropertyTerm
 	124, // 59: provenencia.engine.v1.UpdatePropertyTermResponse.term:type_name -> provenencia.engine.v1.PropertyTerm
-	1,   // 60: provenencia.engine.v1.Error.kind:type_name -> provenencia.engine.v1.ErrorKind
-	61,  // [61:61] is the sub-list for method output_type
-	61,  // [61:61] is the sub-list for method input_type
-	61,  // [61:61] is the sub-list for extension type_name
-	61,  // [61:61] is the sub-list for extension extendee
-	0,   // [0:61] is the sub-list for field type_name
+	156, // 60: provenencia.engine.v1.NameValueInput.parts:type_name -> provenencia.engine.v1.NameValuePartInput
+	36,  // 61: provenencia.engine.v1.Observation.date:type_name -> provenencia.engine.v1.DateValueInput
+	157, // 62: provenencia.engine.v1.Observation.name:type_name -> provenencia.engine.v1.NameValueInput
+	36,  // 63: provenencia.engine.v1.ObservationDraft.date:type_name -> provenencia.engine.v1.DateValueInput
+	157, // 64: provenencia.engine.v1.ObservationDraft.name:type_name -> provenencia.engine.v1.NameValueInput
+	160, // 65: provenencia.engine.v1.CreateCitationWithObservationsRequest.observations:type_name -> provenencia.engine.v1.ObservationDraft
+	158, // 66: provenencia.engine.v1.CreateCitationWithObservationsResponse.citation:type_name -> provenencia.engine.v1.Citation
+	159, // 67: provenencia.engine.v1.CreateCitationWithObservationsResponse.observations:type_name -> provenencia.engine.v1.Observation
+	160, // 68: provenencia.engine.v1.AddObservationsToCitationRequest.observations:type_name -> provenencia.engine.v1.ObservationDraft
+	159, // 69: provenencia.engine.v1.AddObservationsToCitationResponse.observations:type_name -> provenencia.engine.v1.Observation
+	159, // 70: provenencia.engine.v1.ListObservationsBySourceResponse.observations:type_name -> provenencia.engine.v1.Observation
+	1,   // 71: provenencia.engine.v1.Error.kind:type_name -> provenencia.engine.v1.ErrorKind
+	72,  // [72:72] is the sub-list for method output_type
+	72,  // [72:72] is the sub-list for method input_type
+	72,  // [72:72] is the sub-list for extension type_name
+	72,  // [72:72] is the sub-list for extension extendee
+	0,   // [0:72] is the sub-list for field type_name
 }
 
 func init() { file_engine_proto_init() }
@@ -10565,13 +11578,15 @@ func file_engine_proto_init() {
 		return
 	}
 	file_engine_proto_msgTypes[34].OneofWrappers = []any{}
+	file_engine_proto_msgTypes[157].OneofWrappers = []any{}
+	file_engine_proto_msgTypes[158].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_engine_proto_rawDesc), len(file_engine_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   155,
+			NumMessages:   166,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
