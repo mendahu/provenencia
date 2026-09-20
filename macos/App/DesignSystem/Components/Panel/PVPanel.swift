@@ -22,7 +22,8 @@ struct PVPanel<Body: View, Footer: View>: View {
     @ViewBuilder let panelBody: () -> Body
     @ViewBuilder let footer: () -> Footer
 
-    private let showsFooter: Bool
+    /// Whether the footer band is rendered. `false` for the no-footer initializer.
+    let showsFooter: Bool
 
     init(
         title: Text,

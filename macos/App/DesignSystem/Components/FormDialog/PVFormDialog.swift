@@ -28,6 +28,25 @@ struct PVFormDialogCopy {
     }
 }
 
+/// Pure enablement rules for the form-dialog footer — extracted so unit tests
+/// can cover them without mounting SwiftUI.
+enum PVFormDialogControls {
+    static func isCancelDisabled(isRunning: Bool) -> Bool { isRunning }
+
+    static func isConfirmDisabled(isRunning: Bool, confirmDisabled: Bool) -> Bool {
+        isRunning || confirmDisabled
+    }
+}
+
+/// Accessibility ids for form-dialog chrome buttons.
+enum PVFormDialogAccessibility {
+    /// `{prefix}.{suffix}` when a prefix is set; otherwise `nil` (no id).
+    static func identifier(prefix: String?, suffix: String) -> String? {
+        guard let prefix else { return nil }
+        return "\(prefix).\(suffix)"
+    }
+}
+
 /// Sheet body for a short form. Draws **no** panel background, corner radius,
 /// shadow or scrim — the sheet window owns those. Layout chrome comes from
 /// ``PVPanel``.
@@ -78,7 +97,7 @@ struct PVFormDialogContent<Form: View>: View {
                 Button(String(localized: copy.cancel)) { onCancel() }
                     .buttonStyle(.pv(.secondary, size: .lg))
                     .keyboardShortcut(.cancelAction)
-                    .disabled(isRunning)
+                    .disabled(PVFormDialogControls.isCancelDisabled(isRunning: isRunning))
                     .focused($cancelFocused)
                     .modifier(FormDialogOptionalAccessibilityIdentifier(
                         prefix: accessibilityIdentifierPrefix,
@@ -87,7 +106,10 @@ struct PVFormDialogContent<Form: View>: View {
                 Button(String(localized: copy.confirm)) { onConfirm() }
                     .buttonStyle(.pv(.primary, size: .lg))
                     .keyboardShortcut(.defaultAction)
-                    .disabled(isRunning || confirmDisabled)
+                    .disabled(PVFormDialogControls.isConfirmDisabled(
+                        isRunning: isRunning,
+                        confirmDisabled: confirmDisabled
+                    ))
                     .modifier(FormDialogOptionalAccessibilityIdentifier(
                         prefix: accessibilityIdentifierPrefix,
                         suffix: "confirm"
@@ -110,8 +132,8 @@ private struct FormDialogOptionalAccessibilityIdentifier: ViewModifier {
     let suffix: String
 
     func body(content: Content) -> some View {
-        if let prefix {
-            content.accessibilityIdentifier("\(prefix).\(suffix)")
+        if let id = PVFormDialogAccessibility.identifier(prefix: prefix, suffix: suffix) {
+            content.accessibilityIdentifier(id)
         } else {
             content
         }

@@ -55,6 +55,7 @@
 		AA0000000000000000000313 /* SourcesModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000312 /* SourcesModelTests.swift */; };
 		AA000000000000000000046B /* SourcesListNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000046A /* SourcesListNavigationTests.swift */; };
 		AA000000000000000000046F /* PVFloatingMenuSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000046E /* PVFloatingMenuSelectionTests.swift */; };
+		AA0000000000000000000503 /* PVPanelFormDialogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000502 /* PVPanelFormDialogTests.swift */; };
 		01574F7767F9B0AF5550AFAD /* PVMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = C355704657FB6A572BF7FD6A /* PVMotion.swift */; };
 		AA0000000000000000000210 /* OriginMarkers.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000200 /* OriginMarkers.swift */; };
 		AA0000000000000000000240 /* PVComboBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000230 /* PVComboBox.swift */; };
@@ -285,6 +286,7 @@
 		AA0000000000000000000312 /* SourcesModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesModelTests.swift; sourceTree = "<group>"; };
 		AA000000000000000000046A /* SourcesListNavigationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesListNavigationTests.swift; sourceTree = "<group>"; };
 		AA000000000000000000046E /* PVFloatingMenuSelectionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVFloatingMenuSelectionTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000502 /* PVPanelFormDialogTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVPanelFormDialogTests.swift; sourceTree = "<group>"; };
 		11ADAF744C32587CD34CDD23 /* PVLogoMark.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVLogoMark.swift; sourceTree = "<group>"; };
 		164584B2DB70D89A55C4178F /* WorkspaceModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceModelTests.swift; sourceTree = "<group>"; };
 		F203948576A1B2C3D4E5F605 /* WorkspaceNavigationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceNavigationTests.swift; sourceTree = "<group>"; };
@@ -828,6 +830,7 @@
 				AA0000000000000000000312 /* SourcesModelTests.swift */,
 				AA000000000000000000046A /* SourcesListNavigationTests.swift */,
 				AA000000000000000000046E /* PVFloatingMenuSelectionTests.swift */,
+				AA0000000000000000000502 /* PVPanelFormDialogTests.swift */,
 				AA000000000000000000047A /* GraphCanvasCoordinatesTests.swift */,
 				AA0000000000000000000486 /* GraphCanvasGridMappingTests.swift */,
 				AA0000000000000000000488 /* SourceGraphSnapshotTests.swift */,
@@ -1507,6 +1510,7 @@
 				AA0000000000000000000313 /* SourcesModelTests.swift in Sources */,
 				AA000000000000000000046B /* SourcesListNavigationTests.swift in Sources */,
 				AA000000000000000000046F /* PVFloatingMenuSelectionTests.swift in Sources */,
+				AA0000000000000000000503 /* PVPanelFormDialogTests.swift in Sources */,
 				AA000000000000000000047B /* GraphCanvasCoordinatesTests.swift in Sources */,
 				AA0000000000000000000487 /* GraphCanvasGridMappingTests.swift in Sources */,
 				AA0000000000000000000489 /* SourceGraphSnapshotTests.swift in Sources */,
