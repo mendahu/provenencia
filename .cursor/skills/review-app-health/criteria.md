@@ -236,7 +236,7 @@ Catch LLM- and rush-driven UI debt against Frost layers (**design system / recip
 1. Inventory `macos/App/DesignSystem/Components/**` (`PV*` types).
 2. Grep `Features` / `Platform` for call sites—flag zero-use orphans.
 3. Spot-check high-churn UI for private `*Panel` / `*Sheet` / `*Row`; diff against nearest `PV*`.
-4. Ask: design system, recipe, or snowflake? If a third screen needed this tomorrow, compose or promote—don’t copy.
+4. Ask: design system, recipe, or snowflake? If a third screen needed this tomorrow, compose or promote—don’t copy. For a single hot type, prefer [`.cursor/skills/evaluate-ui-component`](../evaluate-ui-component/SKILL.md) over expanding this whole-app pass.
 
 **Provenencia notes**
 

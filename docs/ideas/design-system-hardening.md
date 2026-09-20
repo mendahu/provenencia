@@ -110,7 +110,8 @@ Today `PVDialog` and `PVConfirm` sheet content duplicate panel chrome; the icon 
 ## Agent guidance (started)
 
 - Rule: [`.cursor/rules/design-system-layers.mdc`](../../.cursor/rules/design-system-layers.mdc) (applies under `macos/App/**/*.swift`)
-- Skill: [`.cursor/skills/add-ui-component/SKILL.md`](../../.cursor/skills/add-ui-component/SKILL.md)
+- Skill: [`.cursor/skills/add-ui-component/SKILL.md`](../../.cursor/skills/add-ui-component/SKILL.md) — classify before adding
+- Skill: [`.cursor/skills/evaluate-ui-component/SKILL.md`](../../.cursor/skills/evaluate-ui-component/SKILL.md) — point at one type; cousins + compose-down + incremental PR plan
 - App-health dimension 12 uses the same vocabulary
 ## Related docs
 
