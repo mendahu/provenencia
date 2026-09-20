@@ -15,6 +15,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 
 ## Current ideas
 
-- [`design-system-hardening.md`](design-system-hardening.md) — component layering (design system → recipes → snowflakes); pause Spike 7 UI drift
 - [`interpretation-graph-ui.md`](interpretation-graph-ui.md)
 - [`share-packages.md`](share-packages.md)
+
+Layering for macOS UI (design system / recipes / snowflakes) graduated to [`docs/design-system-layers.md`](../design-system-layers.md); draft archived under [`archive/design-system-hardening.md`](archive/design-system-hardening.md).

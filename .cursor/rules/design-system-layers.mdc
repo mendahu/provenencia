@@ -8,7 +8,7 @@ alwaysApply: false
 
 # Design system layers
 
-Authoritative idea: [`docs/ideas/design-system-hardening.md`](../../docs/ideas/design-system-hardening.md).
+Authoritative: [`docs/design-system-layers.md`](../../docs/design-system-layers.md).
 When adding or splitting UI, follow [`.cursor/skills/add-ui-component/SKILL.md`](../skills/add-ui-component/SKILL.md).
 When auditing an existing type for compose/refactor opportunities, follow [`.cursor/skills/evaluate-ui-component/SKILL.md`](../skills/evaluate-ui-component/SKILL.md).
 

@@ -44,12 +44,10 @@ at call sites — never a literal color, font, or number.
 
 ## The component pattern
 
-**Layering:** new UI is classified as design system / recipe / snowflake before
-a file is added — see [`docs/ideas/design-system-hardening.md`](../../../docs/ideas/design-system-hardening.md),
-[`.cursor/rules/design-system-layers.mdc`](../../../.cursor/rules/design-system-layers.mdc),
-and [`.cursor/skills/add-ui-component/SKILL.md`](../../../.cursor/skills/add-ui-component/SKILL.md).
-To audit an existing control for cousins and compose-down PRs, use
-[`.cursor/skills/evaluate-ui-component/SKILL.md`](../../../.cursor/skills/evaluate-ui-component/SKILL.md).
+**Layering (authoritative):** design system / recipes / snowflakes — see
+[`docs/design-system-layers.md`](../../../docs/design-system-layers.md).
+Classify before adding a file ([`add-ui-component`](../../../.cursor/skills/add-ui-component/SKILL.md));
+audit an existing type with [`evaluate-ui-component`](../../../.cursor/skills/evaluate-ui-component/SKILL.md).
 Do not fork a `PV*` for a slight variant; compose down. Product-specific reused
 maps are recipes; one-screen glue stays a snowflake under `Features/`.
 

@@ -220,7 +220,7 @@ Mac client AT and UI-test hygiene. Notes: [`docs/macos-client-patterns.md`](../.
 
 ## 12. UI component organization
 
-Catch LLM- and rush-driven UI debt against Frost layers (**design system / recipes / snowflakes** — [`docs/ideas/design-system-hardening.md`](../../../docs/ideas/design-system-hardening.md)). This dimension **samples and flags**; for a full classify → cousins → compose-down → small-PR plan on one type, hand off to [`evaluate-ui-component`](../evaluate-ui-component/SKILL.md). For adding new chrome, [`add-ui-component`](../add-ui-component/SKILL.md).
+Catch LLM- and rush-driven UI debt against Frost layers (**design system / recipes / snowflakes** — [`docs/design-system-layers.md`](../../../docs/design-system-layers.md)). This dimension **samples and flags**; for a full classify → cousins → compose-down → small-PR plan on one type, hand off to [`evaluate-ui-component`](../evaluate-ui-component/SKILL.md). For adding new chrome, [`add-ui-component`](../add-ui-component/SKILL.md).
 
 **Look for**
 

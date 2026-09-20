@@ -1,25 +1,8 @@
-# Design system hardening
+# Design system layers (macOS)
 
-**Status:** idea only — not roadmapped. Spike 7 pauses here until this cleanup has a home (or we deliberately resume Spike 7 first).
-
-## Problem
-
-Rapid LLM-assisted UI work has left the macOS design system drifting:
-
-- Near-duplicate components that differ only slightly from an existing `PV*` piece
-- Whole new implementations when a call site did not match an existing API one-to-one
-- Domain or screen chrome living where a reusable primitive should
-- Composability suffering as every new view invents its own pattern
-
-This will get worse as we add more workspace surfaces. Before more Spike 7 UI, we need shared standards for **how components are layered**, so maintainability holds long-term.
-
-This note starts with the composition model. Later passes can inventory drift, refactor call sites, and tighten `macos/App/DesignSystem/README.md` / folder layout against these categories.
-
-## Component layers
+Authoritative composition model for Provenencia UI. Agents: [`.cursor/rules/design-system-layers.mdc`](../.cursor/rules/design-system-layers.mdc), [`.cursor/skills/add-ui-component`](../.cursor/skills/add-ui-component/SKILL.md), [`.cursor/skills/evaluate-ui-component`](../.cursor/skills/evaluate-ui-component/SKILL.md). Kit conventions (tokens, `PV*` file shape): [`macos/App/DesignSystem/README.md`](../macos/App/DesignSystem/README.md). Client folder layout: [`macos-client-patterns.md`](macos-client-patterns.md).
 
 We follow Brad Frost’s **[components / recipes / snowflakes](https://bradfrost.com/blog/post/design-system-components-recipes-and-snowflakes/)** split — three layers of increasing product coupling, not a stack you must climb on every screen.
-
-(An earlier draft used four layers by splitting “domain” and “view-local.” Those are the same *kind* of thing — product-aware UI — differing only by **reuse**. Frost already names that: recipes vs snowflakes. Collapsing to three keeps the decision tree honest.)
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -39,11 +22,11 @@ Every building block belongs in **exactly one** layer. Higher layers may compose
 - A **recipe** exists only when the same Provenencia meaning is reused and deserves a named mapping.
 - A **snowflake** exists only for glue unique to that screen.
 
-Do **not** invent a recipe or snowflake shell “for completeness.” Extra wrappers without a second call site (or real product meaning) are the same drift we’re trying to stop.
+Do **not** invent a recipe or snowflake shell “for completeness.” Extra wrappers without a second call site (or real product meaning) are the same drift this model prevents.
 
 When a new control is needed, ask which layer it is **before** writing a new file. Prefer composing downward over forking sideways.
 
-### 1. Design system components
+## 1. Design system components
 
 Shared, **content-agnostic** controls in `macos/App/DesignSystem/`. They would work if dropped into another app with the same tokens.
 
@@ -51,13 +34,13 @@ Shared, **content-agnostic** controls in `macos/App/DesignSystem/`. They would w
 - **What they do not carry:** Source / Subject / catalog vocabulary, `GenealogyStore` types, or feature-specific meaning.
 - **Inside the kit**, still distinguish *primitive* vs *composite* when useful — same layer, different size:
   - **Primitive:** button, badge, input, field, sheet **panel** (title / subtitle / body / optional footer).
-  - **Composite:** confirm dialog, form dialog — prescribed recipes *of* the panel (button roles, focus defaults, presentation API) that remain domain-agnostic.
+  - **Composite:** confirm dialog, form dialog — prescribed use of the panel (button roles, focus defaults, presentation API) that remain domain-agnostic.
 
 Composites are still design-system components in Frost’s sense: maximal reuse, no product entity types. Prefer flexible slots over forking a whole new root control for a slight variant.
 
 **Examples:** `PVButton`, `PVBadge`, `PVInput`, `PVField`, `PVConfirm` / `PVDialog` (target: both on one panel primitive).
 
-### 2. Recipes
+## 2. Recipes
 
 Product-specific compositions used **consistently across more than one place**. Valuable and reusable, but not agnostic enough for the portable kit.
 
@@ -67,7 +50,7 @@ Product-specific compositions used **consistently across more than one place**. 
 
 **Examples:** source-type / evidence-grade badge families; a shared “delete vocabulary row” confirm shell *if* several screens share the same wiring (otherwise the DS confirm + call-site copy is enough).
 
-### 3. Snowflakes
+## 3. Snowflakes
 
 Bespoke UI for **one** screen (or private helpers inside one feature). Written once, called from that feature only.
 
@@ -78,7 +61,7 @@ Bespoke UI for **one** screen (or private helpers inside one feature). Written o
 
 **Example:** `SourceTypeIconPickerSheet`’s icon grid (and any chrome that isn’t absorbed by a shared panel).
 
-## Layering rules (starter)
+## Layering rules
 
 1. **Stop at the layer you need.** Design-system controls are valid end products at a call site. Recipes and snowflakes are optional specialization.
 2. **Compose down, don’t clone sideways.** A slightly different confirm is still DS confirm + props, not a new root dialog.
@@ -96,26 +79,13 @@ Not every delete flow needs all three layers:
 | Recipe | Only if several screens share the same catalog-shaped confirm wiring. | Optional |
 | Snowflake | Icon picker grid, graph create form fields, etc., passed into a DS body slot — or omitted when slots + call-site copy are enough. | Optional |
 
-Typical Source-fields delete today: **DS confirm at the view** (`.pvConfirmSheet` + `PVConfirmCopy` + optional `PVConfirmKeyChip`). That is fine. No recipe required unless the same wiring repeats.
+Typical Source-fields delete: **DS confirm at the view** (`.pvConfirmSheet` + `PVConfirmCopy` + optional `PVConfirmKeyChip`). That is fine. No recipe required unless the same wiring repeats.
 
-Today `PVDialog` and `PVConfirm` sheet content duplicate panel chrome; the icon picker reimplements header/footer by hand. Hardening should collapse that toward the table above rather than adding another modal type.
+`PVDialog` and `PVConfirm` sheet content still duplicate panel chrome in places; feature sheets that reimplement header/footer by hand should compose the kit instead. Chip away with [`evaluate-ui-component`](../.cursor/skills/evaluate-ui-component/SKILL.md) rather than one mega-refactor.
 
-## Open questions (later)
+Sheet presentation details (no scrim, sunken footer as content): DesignSystem README “Confirmations are system chrome” and `PVConfirm.swift` / `PVDialog.swift`.
+
+## Open questions
 
 - Exact folder / naming for recipes vs `PV*` design-system types
 - Whether `Components/Research/` is exclusively recipes
-- Inventory pass: classify every existing `PV*` and feature-private sheet
-- Fold agreed bits into `macos/App/DesignSystem/README.md` once the cleanup ships
-
-## Agent guidance (started)
-
-- Rule: [`.cursor/rules/design-system-layers.mdc`](../../.cursor/rules/design-system-layers.mdc) (applies under `macos/App/**/*.swift`)
-- Skill: [`.cursor/skills/add-ui-component/SKILL.md`](../../.cursor/skills/add-ui-component/SKILL.md) — classify before adding
-- Skill: [`.cursor/skills/evaluate-ui-component/SKILL.md`](../../.cursor/skills/evaluate-ui-component/SKILL.md) — point at one type; cousins + compose-down + incremental PR plan
-- App-health dimension 12 uses the same vocabulary
-## Related docs
-
-- Brad Frost: [Design system components, recipes, and snowflakes](https://bradfrost.com/blog/post/design-system-components-recipes-and-snowflakes/)
-- [`macos/App/DesignSystem/README.md`](../../macos/App/DesignSystem/README.md)
-- [`macos-client-patterns.md`](../macos-client-patterns.md)
-- Spike 7: [`deployment-plan/spike-7/`](../deployment-plan/spike-7/) (paused relative to this cleanup — not a commitment either way until scheduled)

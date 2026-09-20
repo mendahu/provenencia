@@ -12,8 +12,8 @@ description: >-
 # Add or classify a UI component
 
 Provenencia UI is layered so LLM- and rush-driven forks don’t accumulate. Read
-[`docs/ideas/design-system-hardening.md`](../../../docs/ideas/design-system-hardening.md)
-for the full rationale. Kit conventions: [`macos/App/DesignSystem/README.md`](../../../macos/App/DesignSystem/README.md).
+[`docs/design-system-layers.md`](../../../docs/design-system-layers.md)
+for the full model. Kit conventions: [`macos/App/DesignSystem/README.md`](../../../macos/App/DesignSystem/README.md).
 macOS thin-client rules: [`.cursor/rules/macos-client.mdc`](../../rules/macos-client.mdc).
 
 ## Decision (do this first)
@@ -131,4 +131,4 @@ enum VocabularyDeleteDialog { static func sheet(…) }  // only SourceFields use
 - [`evaluate-ui-component`](../evaluate-ui-component/SKILL.md) — point at an existing type; cousins + compose-down + small PR plan (no drive-by mega-refactor)
 - [`add-localized-string`](../add-localized-string/SKILL.md) — all user-facing copy
 - [`review-app-health`](../review-app-health/SKILL.md) — dimension 12 audits this layering across the app
-- Dialog/token details: DesignSystem README; idea note above
+- Dialog/token details: DesignSystem README; [`docs/design-system-layers.md`](../../../docs/design-system-layers.md)

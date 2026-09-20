@@ -19,7 +19,7 @@ into a whole-app cleanup (use [`review-app-health`](../review-app-health/SKILL.m
 for that). Prefer chipping away: one focused plan the user can approve slice by
 slice.
 
-Layers: [`docs/ideas/design-system-hardening.md`](../../../docs/ideas/design-system-hardening.md).
+Layers: [`docs/design-system-layers.md`](../../../docs/design-system-layers.md).
 Adding new chrome: [`add-ui-component`](../add-ui-component/SKILL.md).
 Kit notes: [`macos/App/DesignSystem/README.md`](../../../macos/App/DesignSystem/README.md).
 
