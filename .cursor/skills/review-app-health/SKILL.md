@@ -70,7 +70,7 @@ App health review:
 | Perf hotspots | Catalog session misuse, N+1 queries, SwiftUI `body` work, sync FFI on UI path, image/derivative work, search/FTS |
 | Docs / skills drift | Spot-check `.cursor/skills/`, `.cursor/rules/`, and key `docs/*.md` against the live tree; flag broken paths and contradicted “blessed” patterns |
 | Accessibility | Grep `.accessibilityIdentifier` / labels; sample interactive controls (esp. icon-only); compare to `docs/macos-client-patterns.md` §5 |
-| Component reuse | List `DesignSystem/Components/**`; for each `PV*` type, Grep call sites under `Features/`; spot near-duplicate panels/menus/lists/rows; compare feature-private chrome to `PV*` siblings |
+| Component reuse | Sample `DesignSystem/Components/**` + hot feature chrome; flag orphans/near-duplicates. Deep dive on one named type → [`evaluate-ui-component`](../evaluate-ui-component/SKILL.md) (do not expand §12 into full per-type plans here) |
 
 Keep commands read-only unless the user asked to fix. Prefer sampling deeply in hot paths over exhaustively listing every file.
 
@@ -89,7 +89,7 @@ Read [`criteria.md`](criteria.md) for the full rubric. In short:
 9. **i18n** — no hard-coded user-facing strings; `L10n` + catalogs; FFI codes mapped under `L10n.Errors`.
 10. **Docs/skills/rules drift** — authoritative guidance still matches code; no orphan skills, stale rules, or contradicted docs that would mis-train the next agent.
 11. **Accessibility** — VoiceOver/keyboard-ready controls; stable dotted `accessibilityIdentifier`s; labels on icon-only actions; no UI-testing by localized title.
-12. **UI component organization** — orphans, near-duplicates, and wrong Frost layer (DS vs recipe vs snowflake); prefer compose-down over bespoke per-page reimplementations (`.cursor/skills/add-ui-component`).
+12. **UI component organization** — orphans, near-duplicates, and wrong Frost layer (DS vs recipe vs snowflake); sample and flag; for a pointed deep-dive + compose plan use [`evaluate-ui-component`](../evaluate-ui-component/SKILL.md); for new chrome use [`add-ui-component`](../add-ui-component/SKILL.md).
 
 ## Provenencia invariants (flag violations)
 
@@ -170,12 +170,15 @@ Rules for action items:
 - One item ≈ one small PR: single concern, reviewable diff, clear done state.
 - Do **not** bundle unrelated fixes; do **not** invent work outside the checklist.
 - Cite evidence in **Problem**; keep **Benefit** concrete (what lands in the PR).
+- For UI organization items that name a specific type, **Benefit** may say “run evaluate-ui-component on X” rather than embedding a full compose plan in this report.
 - Call out **false alarms** you considered and dismissed when useful.
 - If a dimension looks healthy, say so briefly in the table—do not invent issues.
 - Priority mapping: see [`criteria.md`](criteria.md) § Priority guide.
 
 ## Related skills (fix only, do not run unless asked)
 
+- Pointed UI layering audit / compose-down plan: [`evaluate-ui-component`](../evaluate-ui-component/SKILL.md) — prefer this when an action item names a specific `PV*` or feature sheet
+- New UI classification: [`add-ui-component`](../add-ui-component/SKILL.md)
 - Diff security: Cursor `review-security` / security-review subagent
 - L10n fixes: `add-localized-string`
 - Catalog session: `use-catalog-session`
