@@ -26,6 +26,26 @@ struct PVContextMenuKeyboard: Equatable {
     static let inactive = PVContextMenuKeyboard(itemCount: 0, activeIndex: -1)
 }
 
+/// Screen-space frame for the child `NSPanel`.
+///
+/// `anchorOnScreen` is AppKit screen coordinates (y grows up). `origin` is the
+/// SwiftUI top-leading offset inside the anchor (y grows down) — the same
+/// local point `PVContextMenuState.present(at:)` stores.
+enum PVContextMenuPlacement {
+    static func panelFrame(
+        anchorOnScreen: CGRect,
+        origin: CGPoint,
+        size: CGSize
+    ) -> CGRect {
+        let width = max(size.width, 1)
+        let height = max(size.height, 1)
+        let x = anchorOnScreen.minX + origin.x
+        let top = anchorOnScreen.maxY - origin.y
+        let y = top - height
+        return CGRect(x: x, y: y, width: width, height: height)
+    }
+}
+
 // MARK: - Panel + items
 
 /// Floating menu chrome: card surface, subtle border, overlay shadow.
@@ -477,11 +497,11 @@ private struct PVContextMenuPopupWindow<Content: View>: NSViewRepresentable {
             let frameSize = shownSize ?? measured
 
             let anchorOnScreen = window.convertToScreen(anchor.convert(anchor.bounds, to: nil))
-            // `origin` is SwiftUI top-leading local offset; AppKit screen y grows up.
-            let x = anchorOnScreen.minX + origin.x
-            let top = anchorOnScreen.maxY - origin.y
-            let y = top - frameSize.height
-            let next = NSRect(x: x, y: y, width: frameSize.width, height: frameSize.height)
+            let next = PVContextMenuPlacement.panelFrame(
+                anchorOnScreen: anchorOnScreen,
+                origin: origin,
+                size: frameSize
+            )
             if panel.frame != next {
                 panel.setFrame(next, display: true)
             }
