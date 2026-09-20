@@ -7201,18 +7201,6 @@
         }
       }
     },
-    "workspace.section.subjectTypes.title": {
-      "comment": "Workspace sidebar destination and page title: Subject types",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Subject types"
-          }
-        }
-      }
-    },
     "workspace.sidebar.collapse": {
       "comment": "Tooltip/accessibility label for the sidebar toggle when expanded",
       "extractionState": "manual",
@@ -7257,30 +7245,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Interpret subjects on this source — canvas coming soon."
-          }
-        }
-      }
-    },
-    "workspace.stub.subjectFields.body": {
-      "comment": "Subject fields coming-soon stub body",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The properties a subject kind can carry."
-          }
-        }
-      }
-    },
-    "workspace.stub.subjectTypes.body": {
-      "comment": "Subject types coming-soon stub body",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "What a document can talk about."
           }
         }
       }

@@ -35,11 +35,6 @@ struct PlaceRegistryTests {
             .metadataFieldsList(project: project),
         ])
 
-        let subjectTypes = resolve(.sectionRoot(.subjectTypes))
-        #expect(subjectTypes?.placeID == .subjectTypes)
-        #expect(subjectTypes?.presentation == .subjectTypes)
-        #expect(subjectTypes?.queryKeys == [])
-
         let subjectFields = resolve(.sectionRoot(.subjectFields))
         #expect(subjectFields?.placeID == .subjectFields)
         #expect(subjectFields?.presentation == .subjectFields)
@@ -157,11 +152,6 @@ struct PlaceRegistryTests {
                 ]
             ),
             (
-                .sectionRoot(.subjectTypes),
-                .subjectTypes,
-                []
-            ),
-            (
                 .sectionRoot(.subjectFields),
                 .subjectFields,
                 [.subjectFieldsWorkspace(project: project)]
@@ -186,7 +176,6 @@ struct PlaceRegistryTests {
             case .sourceFields: .sectionRoot(.sourceFields)
             case .sourceTypes: .sectionRoot(.sourceTypes)
             case .sourceTypesDetail: WorkspaceLocation(section: .sourceTypes, typeId: "t1")
-            case .subjectTypes: .sectionRoot(.subjectTypes)
             case .subjectFields: .sectionRoot(.subjectFields)
             }
             let place = resolve(location)

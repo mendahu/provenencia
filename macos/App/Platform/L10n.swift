@@ -725,12 +725,6 @@ enum L10n {
             comment: "Workspace sidebar destination and page title: Source fields"
         )
 
-        static let subjectTypesTitle = LocalizedStringResource(
-            "workspace.section.subjectTypes.title",
-            defaultValue: "Subject types",
-            comment: "Workspace sidebar destination and page title: Subject types"
-        )
-
         static let subjectFieldsTitle = LocalizedStringResource(
             "workspace.section.subjectFields.title",
             defaultValue: "Subject fields",
@@ -741,18 +735,6 @@ enum L10n {
             "workspace.section.evidenceGraph.title",
             defaultValue: "Evidence graph",
             comment: "Evidence graph deep place title (toolbar breadcrumb and stub)"
-        )
-
-        static let subjectTypesStubBody = LocalizedStringResource(
-            "workspace.stub.subjectTypes.body",
-            defaultValue: "What a document can talk about.",
-            comment: "Subject types coming-soon stub body"
-        )
-
-        static let subjectFieldsStubBody = LocalizedStringResource(
-            "workspace.stub.subjectFields.body",
-            defaultValue: "The properties a subject kind can carry.",
-            comment: "Subject fields coming-soon stub body"
         )
 
         static let evidenceGraphStubBody = LocalizedStringResource(

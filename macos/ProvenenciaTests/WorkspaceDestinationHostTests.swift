@@ -45,8 +45,7 @@ struct WorkspaceDestinationHostTests {
         )
     }
 
-    @Test func presentationSubjectStubs() {
-        #expect(presentation(for: .sectionRoot(.subjectTypes)) == .subjectTypes)
+    @Test func presentationSubjectFields() {
         #expect(presentation(for: .sectionRoot(.subjectFields)) == .subjectFields)
     }
 
@@ -56,8 +55,7 @@ struct WorkspaceDestinationHostTests {
         #expect(WorkspaceDestinationHost.destinationKind(for: .sourceGraph) == .sources)
     }
 
-    @Test func subjectPresentationsHaveOwnKinds() {
-        #expect(WorkspaceDestinationHost.destinationKind(for: .subjectTypes) == .subjectTypes)
+    @Test func subjectFieldsPresentationHasOwnKind() {
         #expect(WorkspaceDestinationHost.destinationKind(for: .subjectFields) == .subjectFields)
     }
 
@@ -72,7 +70,6 @@ struct WorkspaceDestinationHostTests {
             WorkspaceLocation(section: .sourceFields, fieldId: "f1"),
             .sectionRoot(.sourceTypes),
             WorkspaceLocation(section: .sourceTypes, typeId: "t1"),
-            .sectionRoot(.subjectTypes),
             .sectionRoot(.subjectFields),
         ]
         let known = Set(WorkspacePresentationID.allCases)
@@ -83,6 +80,6 @@ struct WorkspaceDestinationHostTests {
             }
             #expect(known.contains(place.presentation))
         }
-        #expect(known.count == 7)
+        #expect(known.count == 6)
     }
 }

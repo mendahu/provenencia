@@ -7,6 +7,5 @@ enum WorkspacePresentationID: Hashable, Sendable, CaseIterable {
     case sourceGraph
     case sourceFields
     case sourceTypes
-    case subjectTypes
     case subjectFields
 }
