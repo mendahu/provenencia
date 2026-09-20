@@ -21,7 +21,8 @@ struct SourcePageIdentityHeader: View {
                     titleCluster
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                // Menu on the row (not the 72pt thumb) so overflow hits register.
+                // Menu on the row (not the 72pt thumb) so click origin shares
+                // the panel's coordinate space.
                 .pvContextMenu(
                     $coverMenu,
                     keyboard: coverMenuItemCount > 0 ? $coverKeyboard : nil

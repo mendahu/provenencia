@@ -11,8 +11,7 @@ struct WorkspaceContent: View {
     let catalogCounts: CatalogCounts
 
     /// Hosted here (not on the 52pt toolbar row) so the jump menu / omnibar
-    /// results can paint and receive hits over the page below — same reason
-    /// `pvContextMenu` wants a large ancestor.
+    /// results can paint and receive hits over the page below.
     @State private var jumpMenu = HistoryJumpMenuModel()
     @State private var omnibarResults = OmnibarResultsModel()
 

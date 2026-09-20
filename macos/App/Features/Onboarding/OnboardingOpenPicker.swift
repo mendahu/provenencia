@@ -41,9 +41,6 @@ struct OnboardingOpenPicker: View {
                         .strokeBorder(PVColor.borderDefault, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
                 )
             } else {
-                // Sibling of the project meta card below — lift so PVSelect's
-                // overlay menu paints above that card (zIndex only orders
-                // among siblings; lifting the Select alone is not enough).
                 HStack(alignment: .center, spacing: PVSpacing.space5) {
                     PVSelect(selection: selectedProjectPath, options: projectOptions)
                         .accessibilityIdentifier("onboarding.existingProject")
@@ -52,7 +49,6 @@ struct OnboardingOpenPicker: View {
                     }
                     .accessibilityIdentifier("onboarding.chooseFolder")
                 }
-                .zIndex(1)
             }
             if model.selectedProject != nil, let project = model.project {
                 OnboardingProjectMetaLines(
