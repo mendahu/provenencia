@@ -256,6 +256,10 @@ private struct PVContextMenuPresenter<MenuContent: View>: ViewModifier {
                         .offset(x: state.origin.x, y: state.origin.y)
                 }
             }
+            // Menu is an overlay on this host. Later siblings in a VStack/ZStack
+            // paint above us by default (e.g. onboarding project meta under a
+            // PVSelect) — lift the open host so the panel wins hit-testing too.
+            .zIndex(state.isPresented ? 1 : 0)
             .onChange(of: state.isPresented) { _, open in
                 if open {
                     // Defer so the opening click does not immediately dismiss.
