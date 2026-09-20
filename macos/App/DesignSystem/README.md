@@ -44,23 +44,31 @@ at call sites — never a literal color, font, or number.
 
 ## The component pattern
 
-**Layering (authoritative):** design system / recipes / snowflakes — see
+**Layering (authoritative):** flat **Components / Recipes / Snowflakes** — see
 [`docs/design-system-layers.md`](../../../docs/design-system-layers.md).
-Classify before adding a file ([`add-ui-component`](../../../.cursor/skills/add-ui-component/SKILL.md));
-audit an existing type with [`evaluate-ui-component`](../../../.cursor/skills/evaluate-ui-component/SKILL.md).
-Do not fork a `PV*` for a slight variant; compose down. Product-specific reused
-maps are recipes; one-screen glue stays a snowflake under `Features/`.
+Classify before adding ([`add-ui-component`](../../../.cursor/skills/add-ui-component/SKILL.md));
+audit with [`evaluate-ui-component`](../../../.cursor/skills/evaluate-ui-component/SKILL.md).
+Do not fork a `PV*` for a slight variant; compose down. **No UI-category
+subfolders** (`Core`, `Forms`, `Feedback`, `Research`, …).
 
-`Components/Core/PVButton.swift` is the **canonical example** — read its
-header comment before adding a new component. In short:
+```text
+DesignSystem/Components/   # flat — content-agnostic PV*
+DesignSystem/Recipes/      # flat — product-specific, ≥2 call sites
+DesignSystem/Snowflakes/   # flat — named one-offs (rare; prefer Features/)
+Features/<Feature>/        # typical snowflake home
+```
 
-- A component lives at `Components/<Category>/PV<Name>.swift`, where
-  `<Category>` mirrors the web design system's own `components/<category>/`
-  folder (`core`, `forms`, `navigation`, `feedback`, `research`).
-  `PVButton` is `components/core/Button.jsx` → `Components/Core/PVButton.swift`.
-- The file's header comment names the `.jsx` it mirrors and calls out any
-  deliberate deviation (a prop that isn't ported yet, a platform-specific
-  approximation).
+Until the flatten PR lands, legacy paths under `Components/Core|Forms|…` may
+still exist — **do not add new files there.**
+
+`Components/PVButton.swift` (today still `Components/Core/PVButton.swift` until
+moved) is the **canonical example** — read its header comment before adding a
+new component. In short:
+
+- A **component** lives at `DesignSystem/Components/PV<Name>.swift` (flat). A
+  **recipe** at `DesignSystem/Recipes/<Name>.swift`. Do not nest by category.
+- The file's header comment names the `.jsx` it mirrors (when ported from the
+  Claude Design kit) and calls out any deliberate deviation.
 - The type only ever reaches for `PV*` tokens — never a literal color,
   font, or size.
 - User-facing text is a `LocalizedStringResource`, never a raw `String`
@@ -75,10 +83,9 @@ header comment before adding a new component. In short:
 - Each component file ends with a `#Preview` using static sample data (no
   live `GenealogyStore` needed).
 
-To add another component: pick its category folder (create it if this is the
-first component in that category), copy `PVButton.swift`'s shape, and read
-its exact CSS/JS spec out of the source design-system project first — don't
-guess at colors/spacing/sizes.
+To add another component: classify the layer, drop the file in the matching
+**flat** folder, and read its CSS/JS spec from the source design-system project
+first when porting — don't guess at colors/spacing/sizes.
 
 **Check `swift/` in the source project before porting anything.** That
 project ships a Swift reference implementation (`ProvenenciaTokens.swift`,

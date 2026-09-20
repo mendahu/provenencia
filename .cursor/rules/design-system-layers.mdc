@@ -1,6 +1,6 @@
 ---
 description: >-
-  macOS UI layering — design system / recipes / snowflakes; compose down,
+  macOS UI layering — flat Components / Recipes / Snowflakes; compose down,
   don’t fork PV* for slight variants
 globs: macos/App/**/*.swift
 alwaysApply: false
@@ -10,28 +10,29 @@ alwaysApply: false
 
 Authoritative: [`docs/design-system-layers.md`](../../docs/design-system-layers.md).
 When adding or splitting UI, follow [`.cursor/skills/add-ui-component/SKILL.md`](../skills/add-ui-component/SKILL.md).
-When auditing an existing type for compose/refactor opportunities, follow [`.cursor/skills/evaluate-ui-component/SKILL.md`](../skills/evaluate-ui-component/SKILL.md).
+When auditing an existing type, follow [`.cursor/skills/evaluate-ui-component/SKILL.md`](../skills/evaluate-ui-component/SKILL.md).
 
-Three layers (Brad Frost: components / recipes / snowflakes). **Stop at the highest layer you need** — do not wrap for completeness.
+Three layers (Brad Frost). **Stop at the highest layer you need.** Folder layout is **flat** — no `Core` / `Forms` / `Feedback` / `Research` nesting.
 
-| Layer | Where | Rule |
+| Layer | Where (flat) | Rule |
 |---|---|---|
-| **Design system** | `DesignSystem/` (`PV*`) | Content-agnostic; tokens + slots only. No catalog / store / feature meaning. |
-| **Recipes** | Shared product home (e.g. `Components/Research/`) | Provenencia-specific, **≥2 call sites**. Thin map onto `PV*`. |
-| **Snowflakes** | `Features/<Feature>/` (`private`) | One screen. Promote on second real consumer. |
+| **Components** | `DesignSystem/Components/PV*.swift` | Content-agnostic; tokens + slots only. |
+| **Recipes** | `DesignSystem/Recipes/` | Provenencia-specific, **≥2 call sites**. Thin map onto components. |
+| **Snowflakes** | `Features/<Feature>/` or `DesignSystem/Snowflakes/` | One screen. Promote on second real consumer. |
 
-Inside the kit: **primitive** (button, panel) vs **composite** (confirm, form dialog) — same layer, different size. Prefer one panel + slots over a new root dialog.
+Inside `Components/`: **primitive** vs **composite** is a concept, not a subfolder. Prefer one panel + slots over a new root dialog.
 
 ```swift
-// ❌ BAD — new PV* for one screen, or domain types inside DesignSystem
-struct PVDeleteSourceFieldDialog { … }  // catalog meaning in the kit
+// ❌ BAD — category nesting, or domain types in Components/
+// DesignSystem/Components/Forms/PVInput.swift
+// DesignSystem/Components/Research/PVEvidenceIcon.swift
 
-// ✅ GOOD — DS composite at the call site; snowflake only for unique body
-.pvConfirmSheet(item: pendingDelete, copy: deleteCopy(for:), …) { field in
-    PVConfirmKeyChip(label: …, value: field.key)
-}
+// ✅ GOOD — flat by layer
+// DesignSystem/Components/PVInput.swift
+// DesignSystem/Recipes/PVEvidenceIcon.swift
 ```
 
+- Do **not** add new files under legacy `Components/Core|Forms|Feedback|Navigation|Data|Research/`.
 - Compose down; don’t clone sideways for a slight variant.
 - No dimming/scrim on sheets — window owns chrome (see `PVConfirm` / DesignSystem README).
-- Search existing `PV*` before inventing chrome under `Features/`.
+- Search existing components/recipes before inventing chrome under `Features/`.

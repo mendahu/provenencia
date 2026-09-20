@@ -101,7 +101,7 @@ Read [`criteria.md`](criteria.md) for the full rubric. In short:
 - Prefer product-named packages/folders over grab-bags (`Shared/`, `Common/`, `Utils/`).
 - Skills/rules/docs that agents follow must stay truthful; fix or archive drift, don’t leave lying guidance.
 - Interactive Mac controls that matter for tests or AT get stable `.accessibilityIdentifier("dotted.name")`; don’t query by localized title.
-- DesignSystem `PV*` is content-agnostic; recipes are product-specific reused maps onto `PV*`; snowflakes stay feature-private—not a second copy of the same floating menu / list / chip / dialog chrome.
+- DesignSystem uses flat **Components / Recipes / Snowflakes** (no category nesting); recipes are product-specific reused maps onto components; typical snowflakes stay feature-private—not a second copy of the same floating menu / list / chip / dialog chrome.
 
 ## Output format
 

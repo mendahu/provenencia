@@ -56,10 +56,11 @@ Evaluate UI component:
 
 | Question | Points to |
 | --- | --- |
-| Content-agnostic (tokens + slots only)? | Design system |
-| Provenencia meaning, ≥2 real call sites? | Recipe |
-| One feature / one screen? | Snowflake |
-| Slight variant of an existing `PV*`? | Should compose that `PV*` — not a new root |
+| Content-agnostic (tokens + slots only)? | `DesignSystem/Components/` (flat) |
+| Provenencia meaning, ≥2 real call sites? | `DesignSystem/Recipes/` (flat) |
+| One feature / one screen? | `Features/<Feature>/` or `DesignSystem/Snowflakes/` |
+| Slight variant of an existing component? | Should compose that component — not a new root |
+| Still under `Components/Core\|Forms\|…`? | Flag for flatten/reclassify move PR |
 
 Inside DesignSystem: **primitive** vs **composite** (same layer, different size).
 
@@ -83,7 +84,7 @@ Walk **down** the stack the subject should sit on:
 
 1. Tokens / existing primitives (`PVButton`, `PVBadge`, `PVField`, `PVDivider`, …)
 2. Composites (`.pvDialog`, `.pvConfirm`, `.pvConfirmSheet`, `PVContextMenu`, …)
-3. Existing recipes in `Components/Research/` (or similar)
+3. Existing recipes in `DesignSystem/Recipes/`
 
 Ask: can this subject’s chrome be **deleted** in favor of a lower control +
 slots/props? Prefer extending a lower type’s slot over keeping a parallel stack.

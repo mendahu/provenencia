@@ -13,8 +13,8 @@ Audience: someone comfortable with JavaScript and Go, new to Apple platforms.
 | `App/` | Process entry: scenes, menus. Stay thin. | `ProvenenciaApp.swift` |
 | `Platform/` | Reused for the whole Mac client: store protocol, FFI, fakes, `L10n`. Not a screen. | `GenealogyStore`, `GoStore`, `CoreInvoke`, `L10n` |
 | `Platform/Generated/` | `protoc` output. Do not edit by hand. | `engine.pb.swift` |
-| `DesignSystem/` | Content-agnostic `PV*` tokens and controls (buttons, tables, dialogs, menus). Product recipes and feature snowflakes stay out of the portable kit. See [`DesignSystem/README.md`](../macos/App/DesignSystem/README.md) and [`design-system-layers.md`](design-system-layers.md). | `PVButton`, `PVTable`, `PVDialog`, `PVConfirm` |
-| `Features/<Name>/` | One product flow (view + model). View-local snowflakes live here (`private`). | `Onboarding`, `Workspace`, `SourceFields` |
+| `DesignSystem/` | Flat layer folders: `Components/` (content-agnostic `PV*`), `Recipes/` (product-specific, reused), optional `Snowflakes/`; plus `Tokens/`. See [`DesignSystem/README.md`](../macos/App/DesignSystem/README.md) and [`design-system-layers.md`](design-system-layers.md). **No** `Core`/`Forms`/`Research` nesting. | `Components/PVButton`, `Recipes/PVEvidenceIcon` |
+| `Features/<Name>/` | One product flow (view + model). Typical home for snowflake helpers (`private`). | `Onboarding`, `Workspace`, `SourceFields` |
 | `Features/Catalog/` | Catalog-wide markers and session counts — not a screen. Prefer a product concept over a `Shared/` dump. | `CatalogCounts`, `OriginMarkers`, `MetadataFieldBadges` |
 | `Features/CatalogVocabulary/` | Reusable vocabulary-browser shell (list + detail chrome) for Fields, Types, and later vocab destinations. | `VocabularyListPane`, `VocabularyChrome` |
 | `Features/Onboarding/` | File vs new, then contributor or names; home stub; relaunch uses active project. | `OnboardingView` |
@@ -26,7 +26,7 @@ Open **`macos/Provenencia.xcodeproj`**, not `macos/App`. The latter is the sourc
 
 ### UI composition layers
 
-UI building blocks are **design system** (content-agnostic `PV*`), **recipes** (Provenencia-specific, reused), or **snowflakes** (one screen). Stop at the highest layer you need — do not wrap for completeness. Full model: [`design-system-layers.md`](design-system-layers.md). Agent workflows: `add-ui-component`, `evaluate-ui-component`.
+UI building blocks are **components** (content-agnostic `PV*`), **recipes** (Provenencia-specific, reused), or **snowflakes** (one screen). Folders are **flat** by layer (`DesignSystem/Components|Recipes|Snowflakes/`) — not by UI category. Stop at the highest layer you need. Full model: [`design-system-layers.md`](design-system-layers.md). Agent workflows: `add-ui-component`, `evaluate-ui-component`.
 
 ---
 

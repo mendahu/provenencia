@@ -240,7 +240,7 @@ Catch LLM- and rush-driven UI debt against Frost layers (**design system / recip
 
 **Provenencia notes**
 
-- Target: content-agnostic `PV*` in `DesignSystem/`; recipes as thin product maps when ≥2 call sites; snowflakes under `Features/<Name>/`; store/FFI in `Platform/`.
+- Target: flat `DesignSystem/Components/` (content-agnostic), `DesignSystem/Recipes/` (≥2 call sites), snowflakes under `Features/<Name>/` or `DesignSystem/Snowflakes/`; store/FFI in `Platform/`. Flag new files still landing in legacy `Components/Core|Forms|Research/`.
 - Prefer **one floating-menu kit** (`PVContextMenu` / `PVSelect` / jump menu—see [`archive/spike-5`](../../../docs/deployment-plan/archive/spike-5/completed.md#s5-10--unify-floating-menus)). Omnibar and `PVComboBox` keep separate hosts by design.
 - Dialogs: compose `.pvDialog` / `.pvConfirm` / `.pvConfirmSheet`; don’t redraw scrim/footer chrome in a feature sheet.
 - Do not invent new DesignSystem types for a single unproven call site; hoist snowflake → recipe (or into DS if agnostic) at ≥2 real surfaces.

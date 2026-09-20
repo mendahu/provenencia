@@ -19,28 +19,30 @@ macOS thin-client rules: [`.cursor/rules/macos-client.mdc`](../../rules/macos-cl
 ## Decision (do this first)
 
 ```
-1. Does an existing PV* (or recipe) already cover this with props/slots?
+1. Does an existing component or recipe already cover this with props/slots?
    → Compose it. Stop.
 2. Is the control content-agnostic (would work in another app with our tokens)?
-   → Design system (primitive or composite). Place under DesignSystem/.
+   → Component. Place flat under DesignSystem/Components/.
 3. Is it Provenencia-specific AND needed in ≥2 real call sites?
-   → Recipe. Shared product home; thin wrapper over PV*.
+   → Recipe. Place flat under DesignSystem/Recipes/.
 4. Otherwise
-   → Snowflake under Features/<Feature>/ (prefer private). Do not add a PV*.
+   → Snowflake under Features/<Feature>/ (prefer private) or DesignSystem/Snowflakes/.
 ```
 
 **Stop at the highest layer you need.** A view may call `.pvConfirmSheet` / `PVButton`
 directly. Do not invent a recipe or snowflake shell for completeness.
 
-| Layer | Home | Carries | Must not |
+**Flat folders only.** Do not create or use `Components/Core|Forms|Feedback|Navigation|Data|Research/`.
+
+| Layer | Home (flat) | Carries | Must not |
 | --- | --- | --- | --- |
-| Design system | `macos/App/DesignSystem/` | Tokens, slots, interaction chrome | Catalog models, `GenealogyStore`, feature meaning, hard-coded “Sources” |
-| Recipe | Shared (e.g. `Components/Research/`) | Domain → `PV*` mapping | Reimplement badge/chip/panel chrome |
-| Snowflake | `Features/<Feature>/` | One-screen glue | Become the de-facto dialog/menu pattern while private |
+| Component | `DesignSystem/Components/PV*.swift` | Tokens, slots, interaction chrome | Catalog models, `GenealogyStore`, feature meaning |
+| Recipe | `DesignSystem/Recipes/` | Domain → component props | Reimplement badge/chip/panel chrome; category nesting |
+| Snowflake | `Features/<Feature>/` or `DesignSystem/Snowflakes/` | One-screen glue | Become the de-facto dialog/menu pattern while one-off |
 
-### Primitive vs composite (inside the design system)
+### Primitive vs composite (inside Components/)
 
-Same layer — different size:
+Same folder — different size (not subfolders):
 
 - **Primitive:** button, badge, input, field, sheet **panel** (title / subtitle / body / optional footer).
 - **Composite:** confirm, form dialog — prescribed use of the panel (roles, focus, presentation) still **domain-agnostic**.
@@ -50,14 +52,15 @@ Prefer extending a composite with slots over a new root `PV*` for a slight varia
 ## Checklist
 
 ```
-- [ ] Classified: design system | recipe | snowflake (written down or in PR notes)
+- [ ] Classified: component | recipe | snowflake
+- [ ] Path is flat under Components/ | Recipes/ | Snowflakes/ | Features/ (no category nesting)
 - [ ] Grep’d DesignSystem + Features for an existing near-match
 - [ ] Composed down instead of cloning sideways
-- [ ] Layer home matches table above (no catalog types in PV*)
+- [ ] No catalog types in Components/
 - [ ] User copy via add-localized-string; a11y ids at call sites when UI-tested
 - [ ] #Preview with static sample data for new DesignSystem types
-- [ ] New .swift under DesignSystem registered in the Xcode project (pbxproj)
-- [ ] Second call site? Snowflake → recipe (or into DS if it was agnostic)
+- [ ] New .swift registered in the Xcode project (pbxproj)
+- [ ] Second call site? Snowflake → Recipes/ (or Components/ if agnostic)
 ```
 
 ## Dialogs / sheets (current kit)
@@ -77,13 +80,15 @@ Dismissal for async work stays on the caller binding (`isRunning` can show). See
 ## Anti-patterns
 
 ```swift
-// ❌ BAD — domain meaning inside DesignSystem
+// ❌ BAD — domain meaning inside Components/, or category nesting
+// DesignSystem/Components/Research/PVSourceTypeBadge.swift
 struct PVSourceTypeBadge: View {
-    let type: CatalogSourceType  // catalog type in the kit
+    let type: CatalogSourceType
 }
 
-// ✅ GOOD — recipe (if reused) or call-site mapping onto PVBadge
-struct SourceTypeBadge: View {  // Features or Research/
+// ✅ GOOD — recipe, flat path
+// DesignSystem/Recipes/SourceTypeBadge.swift
+struct SourceTypeBadge: View {
     let type: CatalogSourceType
     var body: some View { PVBadge(…) }
 }
@@ -93,7 +98,7 @@ struct SourceTypeBadge: View {  // Features or Research/
 // ❌ BAD — new dialog stack for one screen
 struct AddArtifactSheet: View { /* custom scrim, footer, buttons */ }
 
-// ✅ GOOD — DS form dialog + snowflake form body
+// ✅ GOOD — component form dialog + snowflake form body
 .pvDialog(isPresented: $open, copy: …, onConfirm: …) { artifactForm }
 ```
 
@@ -104,27 +109,28 @@ enum VocabularyDeleteDialog { static func sheet(…) }  // only SourceFields use
 // ✅ GOOD — wait for second call site; use .pvConfirmSheet at the view today
 ```
 
-## Steps when adding a design-system type
+## Steps when adding a component
 
-1. Confirm layer = design system (step 2 in Decision).
-2. Pick `Components/<Category>/` mirroring the web kit (`core`, `forms`, `feedback`, …).
+1. Confirm layer = component (decision step 2).
+2. Add **`DesignSystem/Components/PV<Name>.swift`** (flat — no category subfolder).
 3. Follow `PVButton.swift` shape: header names mirrored `.jsx` / deliberate deviations; tokens only; `#Preview` at bottom.
-4. Add the file to `macos/Provenencia.xcodeproj` (not a synchronized root).
+4. Register the file in `macos/Provenencia.xcodeproj`.
 5. Prefer View modifiers for presentation (`.pvDialog`, `.pvConfirmSheet`) when the control is a sheet/alert family.
 6. Leave `.accessibilityIdentifier` to call sites unless the control owns fixed chrome ids by documented convention.
 
 ## Steps when adding a recipe
 
 1. Confirm ≥2 real call sites (or an imminent second in the same change).
-2. Keep it a thin map: domain value → existing `PV*` props.
-3. Do not duplicate sunken footers, focus rings, or menu hosts — those stay in DesignSystem.
-4. If only one caller exists, leave a snowflake and note “promote when reused.”
+2. Add **`DesignSystem/Recipes/<Name>.swift`** (flat).
+3. Keep it a thin map: domain value → existing component props.
+4. Do not duplicate sunken footers, focus rings, or menu hosts — those stay in `Components/`.
+5. If only one caller exists, leave a snowflake and note “promote when reused.”
 
 ## Steps when adding a snowflake
 
-1. Colocate under `Features/<Feature>/`; mark `private` when possible.
-2. Prefer filling a DS slot over owning sheet chrome.
-3. If a second feature needs it, promote before copying.
+1. Prefer `Features/<Feature>/` (`private`); use `DesignSystem/Snowflakes/` only for named kit-side one-offs.
+2. Prefer filling a component slot over owning sheet chrome.
+3. If a second feature needs it, promote to `Recipes/` (or `Components/` if agnostic) before copying.
 
 ## Related skills
 
