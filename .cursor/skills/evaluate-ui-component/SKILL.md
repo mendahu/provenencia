@@ -56,11 +56,11 @@ Evaluate UI component:
 
 | Question | Points to |
 | --- | --- |
-| Content-agnostic (tokens + slots only)? | `DesignSystem/Components/` (flat) |
-| Provenencia meaning, ≥2 real call sites? | `DesignSystem/Recipes/` (flat) |
-| One feature / one screen? | `Features/<Feature>/` or `DesignSystem/Snowflakes/` |
+| Content-agnostic (tokens + slots only)? | `DesignSystem/Components/<Name>/` |
+| Provenencia meaning, ≥2 real call sites? | `DesignSystem/Recipes/<Name>/` |
+| One feature / one screen? | `Features/<Feature>/` or `DesignSystem/Snowflakes/<Name>/` |
 | Slight variant of an existing component? | Should compose that component — not a new root |
-| Still under `Components/Core\|Forms\|…`? | Flag for flatten/reclassify move PR |
+| Still under `Components/Core\|Forms\|…` or loose at layer root? | Flag for reorganize move PR |
 
 Inside DesignSystem: **primitive** vs **composite** (same layer, different size).
 

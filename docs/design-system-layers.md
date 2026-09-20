@@ -26,48 +26,74 @@ Do **not** invent a recipe or snowflake shell “for completeness.” Extra wrap
 
 When a new control is needed, ask which layer it is **before** writing a new file. Prefer composing downward over forking sideways.
 
-## Folder layout (flat)
+## Folder layout
 
-Layer **is** the folder. Do **not** nest UI-category subfolders (`Core`, `Forms`, `Feedback`, `Navigation`, `Data`, `Research`, etc.). Discoverability is by layer and file name, not by “this is a form control.”
+Three **layer roots** — not UI-category buckets (`Core`, `Forms`, `Feedback`, `Research`, …). Under each root, **one folder per component** so Swift, docs, helpers, and models colocate.
 
 ### macOS (`macos/App/DesignSystem/`)
 
 ```text
 DesignSystem/
-  Tokens/           # colors, type, space, radii, elevation, motion
-  Components/       # flat — design-system PV* only
-  Recipes/          # flat — Provenencia-specific, ≥2 call sites
-  Snowflakes/       # flat — named one-off kit pieces (rare)
-Features/<Feature>/ # screen views/models; private snowflake helpers OK here too
+  Tokens/                         # shared tokens (not a component)
+  Components/                     # design-system layer
+    Button/
+      PVButton.swift
+      # optional: README.md, private helpers, previews-only fixtures
+    Input/
+      PVInput.swift
+    Confirm/
+      PVConfirm.swift
+    …
+  Recipes/                        # product recipes
+    EvidenceIcon/
+      PVEvidenceIcon.swift
+      # optional: EVIDENCE-ICONS.md, asset notes
+    SubjectIcon/
+      PVSubjectIcon.swift
+    …
+  Snowflakes/                     # named kit-side one-offs (rare)
+    <Name>/
+      …
+Features/<Feature>/               # screens; private snowflake helpers OK here too
 ```
 
-| Folder | Layer | Contents |
+| Root | Layer | Child folders |
 |---|---|---|
-| `DesignSystem/Components/` | Design system | Content-agnostic `PV*` (Button, Badge, Dialog, Input, …) — **flat** |
-| `DesignSystem/Recipes/` | Recipes | Product maps onto components (evidence icons, subject icons, omnibar hit row, …) — **flat** |
-| `DesignSystem/Snowflakes/` | Snowflakes | Named one-screen controls that still live in the DesignSystem tree — **flat** |
-| `Features/<Feature>/` | Snowflakes (typical) | Feature views + `private` helpers; prefer this for screen glue |
+| `DesignSystem/Components/<Name>/` | Design system | One folder per content-agnostic control |
+| `DesignSystem/Recipes/<Name>/` | Recipes | One folder per product recipe |
+| `DesignSystem/Snowflakes/<Name>/` | Snowflakes | One folder per named kit-side one-off |
+| `Features/<Feature>/` | Snowflakes (typical) | Feature views + `private` helpers |
 
-Prefer **`Features/<Feature>/`** for snowflakes that are glued to one screen. Use **`DesignSystem/Snowflakes/`** only when a named type should live next to the kit (e.g. shared preview host) but is not a recipe or component.
+**Folder naming:** PascalCase **without** the `PV` prefix (`Button`, `EvidenceIcon`). The primary Swift type may still be `PVButton` / `PVEvidenceIcon` inside that folder.
 
-**Incorrect:** `Components/Forms/PVInput.swift`, `Components/Research/PVEvidenceIcon.swift`.  
-**Correct:** `Components/PVInput.swift`, `Recipes/PVEvidenceIcon.swift`.
+**Colocate** in the component folder: the main view, private backing types, small helpers, and component-specific docs. Do **not** dump unrelated controls into the same folder. Shared cross-cutting tokens stay in `Tokens/`.
+
+Prefer **`Features/<Feature>/`** for snowflakes glued to one screen. Use **`DesignSystem/Snowflakes/<Name>/`** only when a named type should live next to the kit but is not a recipe or component.
+
+**Incorrect:** `Components/Forms/PVInput.swift`, `Components/PVInput.swift` (loose file at layer root), `Components/Research/PVEvidenceIcon.swift`.  
+**Correct:** `Components/Input/PVInput.swift`, `Recipes/EvidenceIcon/PVEvidenceIcon.swift`.
 
 ### Claude Design / web kit (parity)
 
-Same three flat roots — no `components/forms/` style nesting:
-
 ```text
 tokens/
-components/    # flat
-recipes/       # flat
-snowflakes/    # flat
+components/
+  Button/
+  Input/
+  …
+recipes/
+  EvidenceIcon/
+  …
+snowflakes/
+  <Name>/
 boards/        # screen mockups that compose the above
 ```
 
+No `components/forms/` category nesting. Each control is `components/<Name>/`.
+
 ### Transition
 
-Until the move PR lands, some files may still live under legacy `Components/Core|Forms|Feedback|Navigation|Data|Research/`. **Do not add new files to those category folders.** New work targets the flat layout above; the cleanup PR flattens and reclassifies what remains.
+Until the move PR lands, some files may still live under legacy `Components/Core|Forms|Feedback|Navigation|Data|Research/`. **Do not add new files to those category folders or as loose files at a layer root.** New work uses `Components|<Name>/`, `Recipes/<Name>/`, or `Snowflakes/<Name>/` (or feature-local snowflakes).
 
 ## 1. Components (design system)
 
@@ -75,7 +101,7 @@ Shared, **content-agnostic** controls in `DesignSystem/Components/`. They would 
 
 - **What they carry:** Provenencia theming (`PV*` tokens) and generic interaction chrome (slots for title, body, actions).
 - **What they do not carry:** Source / Subject / catalog vocabulary, `GenealogyStore` types, or feature-specific meaning.
-- **Inside the kit**, still distinguish *primitive* vs *composite* when useful — same folder, different size (not subfolders):
+- **Inside the kit**, still distinguish *primitive* vs *composite* when useful — same layer, different size (each still gets its own `<Name>/` folder):
   - **Primitive:** button, badge, input, field, sheet **panel** (title / subtitle / body / optional footer).
   - **Composite:** confirm dialog, form dialog — prescribed use of the panel (button roles, focus defaults, presentation API) that remain domain-agnostic.
 
@@ -89,7 +115,7 @@ Product-specific compositions used **consistently across more than one place**. 
 
 - Map Provenencia meaning → component props (icons, colors, grade, type key).
 - Thin wrappers preferred — do not reimplement badge / chip / row chrome.
-- Live flat under `DesignSystem/Recipes/`.
+- Live under `DesignSystem/Recipes/<Name>/`.
 
 **Examples:** `PVEvidenceIcon`, `PVSubjectIcon`, evidence-grade / source-type badge families; a shared “delete vocabulary row” confirm shell *if* several screens share the same wiring.
 
@@ -110,7 +136,7 @@ Bespoke UI for **one** screen (or private helpers inside one feature). Written o
 2. **Compose down, don’t clone sideways.** A slightly different confirm is still DS confirm + props, not a new root dialog.
 3. **Components stay portable.** No `GenealogyStore`, catalog models, or feature `L10n` namespaces inside `Components/` (generic chrome labels owned by the control are fine).
 4. **Reuse is what separates recipes from snowflakes** — same product-coupled kind; promote on the second real call site instead of pre-building a recipe.
-5. **Flat folders only.** Layer = `Components/` | `Recipes/` | `Snowflakes/` (plus feature-local snowflakes under `Features/`). No UI-category nesting.
+5. **Layer roots + per-component folders.** Roots are only `Components/` | `Recipes/` | `Snowflakes/` (plus feature-local snowflakes under `Features/`). No UI-category nesting. Each control is `…/<Name>/` with colocated Swift/docs/helpers — not a loose `.swift` at the layer root.
 6. **No orphans.** Recipes and named snowflakes get an intentional home — don’t leave domain chrome under `Components/`.
 
 ## Dialogs as a worked example

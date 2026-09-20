@@ -1,7 +1,7 @@
 ---
 description: >-
-  macOS UI layering — flat Components / Recipes / Snowflakes; compose down,
-  don’t fork PV* for slight variants
+  macOS UI layering — Components/Recipes/Snowflakes with one folder per
+  control; compose down, don’t fork PV* for slight variants
 globs: macos/App/**/*.swift
 alwaysApply: false
 ---
@@ -12,27 +12,28 @@ Authoritative: [`docs/design-system-layers.md`](../../docs/design-system-layers.
 When adding or splitting UI, follow [`.cursor/skills/add-ui-component/SKILL.md`](../skills/add-ui-component/SKILL.md).
 When auditing an existing type, follow [`.cursor/skills/evaluate-ui-component/SKILL.md`](../skills/evaluate-ui-component/SKILL.md).
 
-Three layers (Brad Frost). **Stop at the highest layer you need.** Folder layout is **flat** — no `Core` / `Forms` / `Feedback` / `Research` nesting.
+Three layers (Brad Frost). **Stop at the highest layer you need.** Layer roots only — no `Core` / `Forms` / `Research`. **One folder per component** under the root (colocate Swift, docs, helpers).
 
-| Layer | Where (flat) | Rule |
+| Layer | Where | Rule |
 |---|---|---|
-| **Components** | `DesignSystem/Components/PV*.swift` | Content-agnostic; tokens + slots only. |
-| **Recipes** | `DesignSystem/Recipes/` | Provenencia-specific, **≥2 call sites**. Thin map onto components. |
-| **Snowflakes** | `Features/<Feature>/` or `DesignSystem/Snowflakes/` | One screen. Promote on second real consumer. |
+| **Components** | `DesignSystem/Components/<Name>/` | Content-agnostic; tokens + slots only. |
+| **Recipes** | `DesignSystem/Recipes/<Name>/` | Provenencia-specific, **≥2 call sites**. Thin map onto components. |
+| **Snowflakes** | `Features/<Feature>/` or `DesignSystem/Snowflakes/<Name>/` | One screen. Promote on second real consumer. |
 
-Inside `Components/`: **primitive** vs **composite** is a concept, not a subfolder. Prefer one panel + slots over a new root dialog.
+Folder name = PascalCase without `PV` (`Button`, `EvidenceIcon`). Primary type may still be `PVButton` inside.
 
 ```swift
-// ❌ BAD — category nesting, or domain types in Components/
+// ❌ BAD — UI-category nesting, loose file at layer root, or domain in Components/
 // DesignSystem/Components/Forms/PVInput.swift
+// DesignSystem/Components/PVInput.swift
 // DesignSystem/Components/Research/PVEvidenceIcon.swift
 
-// ✅ GOOD — flat by layer
-// DesignSystem/Components/PVInput.swift
-// DesignSystem/Recipes/PVEvidenceIcon.swift
+// ✅ GOOD — layer root + per-component folder
+// DesignSystem/Components/Input/PVInput.swift
+// DesignSystem/Recipes/EvidenceIcon/PVEvidenceIcon.swift
 ```
 
-- Do **not** add new files under legacy `Components/Core|Forms|Feedback|Navigation|Data|Research/`.
+- Do **not** add new files under legacy `Components/Core|Forms|Feedback|Navigation|Data|Research/`, or as loose `.swift` files directly under `Components|Recipes|Snowflakes/`.
 - Compose down; don’t clone sideways for a slight variant.
 - No dimming/scrim on sheets — window owns chrome (see `PVConfirm` / DesignSystem README).
 - Search existing components/recipes before inventing chrome under `Features/`.

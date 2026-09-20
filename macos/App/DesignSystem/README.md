@@ -44,29 +44,33 @@ at call sites — never a literal color, font, or number.
 
 ## The component pattern
 
-**Layering (authoritative):** flat **Components / Recipes / Snowflakes** — see
-[`docs/design-system-layers.md`](../../../docs/design-system-layers.md).
+**Layering (authoritative):** **Components / Recipes / Snowflakes** with **one
+folder per control** — see [`docs/design-system-layers.md`](../../../docs/design-system-layers.md).
 Classify before adding ([`add-ui-component`](../../../.cursor/skills/add-ui-component/SKILL.md));
 audit with [`evaluate-ui-component`](../../../.cursor/skills/evaluate-ui-component/SKILL.md).
 Do not fork a `PV*` for a slight variant; compose down. **No UI-category
-subfolders** (`Core`, `Forms`, `Feedback`, `Research`, …).
+subfolders** (`Core`, `Forms`, `Feedback`, `Research`, …). **No loose `.swift`
+at a layer root.**
 
 ```text
-DesignSystem/Components/   # flat — content-agnostic PV*
-DesignSystem/Recipes/      # flat — product-specific, ≥2 call sites
-DesignSystem/Snowflakes/   # flat — named one-offs (rare; prefer Features/)
-Features/<Feature>/        # typical snowflake home
+DesignSystem/Components/<Name>/   # e.g. Button/PVButton.swift + optional docs/helpers
+DesignSystem/Recipes/<Name>/      # e.g. EvidenceIcon/PVEvidenceIcon.swift
+DesignSystem/Snowflakes/<Name>/   # named kit-side one-offs (rare; prefer Features/)
+Features/<Feature>/               # typical snowflake home
 ```
 
-Until the flatten PR lands, legacy paths under `Components/Core|Forms|…` may
-still exist — **do not add new files there.**
+Until the reorganize PR lands, legacy paths under `Components/Core|Forms|…` may
+still exist — **do not add new files there or as loose files under
+`Components|Recipes|Snowflakes/`.**
 
-`Components/PVButton.swift` (today still `Components/Core/PVButton.swift` until
-moved) is the **canonical example** — read its header comment before adding a
-new component. In short:
+`Components/Button/PVButton.swift` (today still `Components/Core/PVButton.swift`
+until moved) is the **canonical example** — read its header comment before
+adding a new component. In short:
 
-- A **component** lives at `DesignSystem/Components/PV<Name>.swift` (flat). A
-  **recipe** at `DesignSystem/Recipes/<Name>.swift`. Do not nest by category.
+- A **component** lives at `DesignSystem/Components/<Name>/PV<Name>.swift`
+  (folder PascalCase without `PV`). A **recipe** at
+  `DesignSystem/Recipes/<Name>/…`. Colocate helpers and component docs in that
+  folder.
 - The file's header comment names the `.jsx` it mirrors (when ported from the
   Claude Design kit) and calls out any deliberate deviation.
 - The type only ever reaches for `PV*` tokens — never a literal color,
@@ -83,9 +87,10 @@ new component. In short:
 - Each component file ends with a `#Preview` using static sample data (no
   live `GenealogyStore` needed).
 
-To add another component: classify the layer, drop the file in the matching
-**flat** folder, and read its CSS/JS spec from the source design-system project
-first when porting — don't guess at colors/spacing/sizes.
+To add another component: classify the layer, create `…/<Name>/`, drop the
+primary Swift file (and any colocated docs/helpers) there, and read its CSS/JS
+spec from the source design-system project first when porting — don't guess at
+colors/spacing/sizes.
 
 **Check `swift/` in the source project before porting anything.** That
 project ships a Swift reference implementation (`ProvenenciaTokens.swift`,
