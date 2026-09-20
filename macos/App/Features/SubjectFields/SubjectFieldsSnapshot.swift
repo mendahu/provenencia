@@ -157,7 +157,7 @@ struct SubjectFieldsValueTypePill: View {
                     .strokeBorder(PVColor.borderSubtle, lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: PVRadius.xs, style: .continuous))
-            .accessibilityLabel(SubjectPropertyValueType.label(valueType))
+            .accessibilityLabel(Text(SubjectPropertyValueType.label(valueType)))
     }
 }
 

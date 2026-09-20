@@ -211,7 +211,7 @@ private struct SubjectFieldsContent: View {
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(L10n.SubjectFields.typeStripAccessibility)
+        .accessibilityLabel(Text(L10n.SubjectFields.typeStripAccessibility))
     }
 
     private func typeCard(
@@ -460,7 +460,7 @@ private struct SubjectFieldsContent: View {
                 }
             }
         }
-        .accessibilityLabel(L10n.SubjectFields.inspectorAccessibility)
+        .accessibilityLabel(Text(L10n.SubjectFields.inspectorAccessibility))
     }
 
     private func inspectorBody(_ property: CatalogProperty) -> some View {
@@ -488,7 +488,7 @@ private struct SubjectFieldsContent: View {
                         Image(systemName: "lock.fill")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(PVColor.textFaint)
-                            .accessibilityLabel(L10n.SubjectFields.valueTypeImmutable)
+                            .accessibilityLabel(Text(L10n.SubjectFields.valueTypeImmutable))
                     }
                 }
                 inspectorMetaRow(label: L10n.SubjectFields.inspectorOrigin) {
@@ -548,7 +548,7 @@ private struct SubjectFieldsContent: View {
                     }
                 }
                 .accessibilityElement(children: .contain)
-                .accessibilityLabel(L10n.SubjectFields.bindingsAccessibility)
+                .accessibilityLabel(Text(L10n.SubjectFields.bindingsAccessibility))
             }
 
             PVDivider()
@@ -702,7 +702,7 @@ private struct SubjectFieldsContent: View {
                         .accessibilityIdentifier("subjectFields.create.valueType.\(vt)")
                     }
                 }
-                .accessibilityLabel(L10n.SubjectFields.createValueType)
+                .accessibilityLabel(Text(L10n.SubjectFields.createValueType))
             }
 
             VStack(alignment: .leading, spacing: PVSpacing.space4) {
@@ -724,7 +724,7 @@ private struct SubjectFieldsContent: View {
                     }
                 }
                 .accessibilityElement(children: .contain)
-                .accessibilityLabel(L10n.SubjectFields.createBindSection)
+                .accessibilityLabel(Text(L10n.SubjectFields.createBindSection))
             }
         }
     }
