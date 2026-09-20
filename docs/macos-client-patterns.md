@@ -13,8 +13,8 @@ Audience: someone comfortable with JavaScript and Go, new to Apple platforms.
 | `App/` | Process entry: scenes, menus. Stay thin. | `ProvenenciaApp.swift` |
 | `Platform/` | Reused for the whole Mac client: store protocol, FFI, fakes, `L10n`. Not a screen. | `GenealogyStore`, `GoStore`, `CoreInvoke`, `L10n` |
 | `Platform/Generated/` | `protoc` output. Do not edit by hand. | `engine.pb.swift` |
-| `DesignSystem/` | Reusable `PV*` tokens and primitives (buttons, tables, sidebar nav, floating menus). Product composition stays in `Features/`. See [`DesignSystem/README.md`](../macos/App/DesignSystem/README.md). | `PVButton`, `PVTable`, `PVSidebarNav`, `PVContextMenu` |
-| `Features/<Name>/` | One product flow (view + model). | `Onboarding`, `Workspace`, `SourceFields` |
+| `DesignSystem/` | Layer roots `Components/` / `Recipes/` / optional `Snowflakes/` — **one folder per control** (e.g. `Components/Button/PVButton.swift`); plus `Tokens/`. See [`DesignSystem/README.md`](../macos/App/DesignSystem/README.md) and [`design-system-layers.md`](design-system-layers.md). No `Core`/`Forms`/`Research` nesting; no loose `.swift` at a layer root. | `Components/Button/`, `Recipes/EvidenceIcon/` |
+| `Features/<Name>/` | One product flow (view + model). Typical home for snowflake helpers (`private`). | `Onboarding`, `Workspace`, `SourceFields` |
 | `Features/Catalog/` | Catalog-wide markers and session counts — not a screen. Prefer a product concept over a `Shared/` dump. | `CatalogCounts`, `OriginMarkers`, `MetadataFieldBadges` |
 | `Features/CatalogVocabulary/` | Reusable vocabulary-browser shell (list + detail chrome) for Fields, Types, and later vocab destinations. | `VocabularyListPane`, `VocabularyChrome` |
 | `Features/Onboarding/` | File vs new, then contributor or names; home stub; relaunch uses active project. | `OnboardingView` |
@@ -23,6 +23,10 @@ Audience: someone comfortable with JavaScript and Go, new to Apple platforms.
 The Go dylib is written to [`macos/Core/`](../macos/Core/) as a **build artifact** (gitignored). Do not commit `libprovenencia.dylib`.
 
 Open **`macos/Provenencia.xcodeproj`**, not `macos/App`. The latter is the source tree; it is not an Xcode project.
+
+### UI composition layers
+
+UI building blocks are **components** (content-agnostic `PV*`), **recipes** (Provenencia-specific, reused), or **snowflakes** (one screen). Under each DesignSystem layer root, use **one folder per control** (`Components/Button/…`) — not UI-category nesting and not loose files at the layer root. Public Components/Recipes types use the **`PV` prefix** so they do not collide with SwiftUI/AppKit (`PVButton`, not `Button`). Stop at the highest layer you need. Full model: [`design-system-layers.md`](design-system-layers.md). Agent workflows: `add-ui-component`, `evaluate-ui-component`.
 
 ---
 

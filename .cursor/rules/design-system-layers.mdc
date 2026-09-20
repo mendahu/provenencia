@@ -1,0 +1,41 @@
+---
+description: >-
+  macOS UI layering — Components/Recipes/Snowflakes with one folder per
+  control; PV* type prefix (not folders) to avoid SwiftUI clashes; compose
+  down, don’t fork for slight variants
+globs: macos/App/**/*.swift
+alwaysApply: false
+---
+
+# Design system layers
+
+Authoritative: [`docs/design-system-layers.md`](../../docs/design-system-layers.md).
+When adding or splitting UI, follow [`.cursor/skills/add-ui-component/SKILL.md`](../skills/add-ui-component/SKILL.md).
+When auditing an existing type, follow [`.cursor/skills/evaluate-ui-component/SKILL.md`](../skills/evaluate-ui-component/SKILL.md).
+
+Three layers (Brad Frost). **Stop at the highest layer you need.** Layer roots only — no `Core` / `Forms` / `Research`. **One folder per component** under the root (colocate Swift, docs, helpers).
+
+| Layer | Where | Rule |
+|---|---|---|
+| **Components** | `DesignSystem/Components/<Name>/` | Content-agnostic; tokens + slots only. |
+| **Recipes** | `DesignSystem/Recipes/<Name>/` | Provenencia-specific, **≥2 call sites**. Thin map onto components. |
+| **Snowflakes** | `Features/<Feature>/` or `DesignSystem/Snowflakes/<Name>/` | One screen. Promote on second real consumer. |
+
+Folder name = PascalCase **without** `PV` (`Button`, `EvidenceIcon`). Public types under `Components/` and `Recipes/` **must** use the `PV` prefix (`PVButton`, `PVEvidenceIcon`) so they do not collide with SwiftUI/AppKit and stay greppable as kit API. Details: [`docs/design-system-layers.md`](../../docs/design-system-layers.md) § PV type prefix.
+
+```swift
+// ❌ BAD — UI-category nesting, loose file at layer root, domain in Components/, or bare SwiftUI-colliding type name
+// DesignSystem/Components/Forms/PVInput.swift
+// DesignSystem/Components/PVInput.swift
+struct Button: View { … }  // fights SwiftUI.Button
+
+// ✅ GOOD — layer root + per-component folder + PV type
+// DesignSystem/Components/Input/PVInput.swift
+// DesignSystem/Recipes/EvidenceIcon/PVEvidenceIcon.swift
+```
+
+- Do **not** add new files under legacy `Components/Core|Forms|Feedback|Navigation|Data|Research/`, or as loose `.swift` files directly under `Components|Recipes|Snowflakes/`.
+- New `Components/` / `Recipes/` public types use `PV*`; do not introduce bare `Button` / `Table`-style kit types.
+- Compose down; don’t clone sideways for a slight variant.
+- No dimming/scrim on sheets — window owns chrome (see `PVConfirm` / DesignSystem README).
+- Search existing components/recipes before inventing chrome under `Features/`.
