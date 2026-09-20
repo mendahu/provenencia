@@ -123,7 +123,7 @@ Product-specific compositions used **consistently across more than one place**. 
 
 Bespoke UI for **one** screen (or private helpers inside one feature). Written once, called from that feature only.
 
-- Prefer `Features/<Feature>/`, `private` / file-scoped; or `DesignSystem/Snowflakes/` when a named kit-side one-off is warranted.
+- Prefer `Features/<Feature>/`, `private` / file-scoped; or `DesignSystem/Snowflakes/<Name>/` when a named kit-side one-off is warranted.
 - **OK:** layout glue, one-off section chrome, a sheet body that will never be reused.
 - **Not OK:** quietly becoming the de-facto way we do dialogs while living as a one-off — promote into `Components/` or `Recipes/` instead.
 - **Second call site promotes** a snowflake → recipe (same product kind, now shared) or into `Components/` if it was content-agnostic all along.
