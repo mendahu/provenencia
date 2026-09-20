@@ -31,6 +31,7 @@ const (
 	CodeUsersInvalid                 = "users.invalid"
 	CodeAuditInvalid                 = "audit.invalid"
 	CodeDateValuesInvalid            = "datevalues.invalid"
+	CodeNameValuesInvalid            = "namevalues.invalid"
 	CodeSourceTypesInvalid           = "sourcetypes.invalid"
 	CodeSourceTypesInUse             = "sourcetypes.in_use"
 	CodeSourceTypesDuplicateKey      = "sourcetypes.duplicate_key"
