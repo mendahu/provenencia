@@ -157,7 +157,9 @@ Notes use a typed table with a real foreign key rather than a polymorphic notes 
 
 Metadata fields form a controlled but extensible vocabulary.
 
-Most fields are text. Structured dates are the deliberate exception.
+Most fields are text. Structured dates are the deliberate exception for shared
+genealogical date values. `url` is text-shaped (still stored in `value_text`) and
+exists so clients can treat those fields as external links.
 
 ```sql
 CREATE TABLE source_metadata_fields (
@@ -169,7 +171,7 @@ CREATE TABLE source_metadata_fields (
     description     TEXT,
 
     UNIQUE (key, origin),
-    CHECK (data_type IN ('text', 'date'))
+    CHECK (data_type IN ('text', 'date', 'url'))
 ) STRICT;
 ```
 
@@ -467,7 +469,7 @@ The audit tables are cross-cutting infrastructure and are defined separately in 
 1. Sources are evidentiary objects and remain free of genealogical interpretation. Structured Source **credibility** is an Interpretation assessment entity, not a column on `sources`; see [`research-judgment-model.md`](research-judgment-model.md).
 2. Source types and metadata fields use a seeded, controlled, origin-namespaced vocabulary (`UNIQUE (key, origin)`) rather than an enum; see [`seeded-vocabulary.md`](seeded-vocabulary.md) §1.1.
 3. Source metadata is descriptive and minimally structured.
-4. Metadata values are text by default; shared structured genealogical dates are the intentional exception.
+4. Metadata values are text by default; shared structured genealogical dates are the intentional structured exception; `url` is text-shaped for external-link affordances.
 5. Source types may suggest metadata fields but do not require them; how one Source presents those suggestions (dismissed, ordered) lives in `source_metadata_layout` rather than on the shared type join or on `source_metadata`.
 6. External provenencia belongs to the Source and must not be required to access ingested evidence.
 7. Artifacts are concrete representations of Sources and do not have an `artifact_type` taxonomy.

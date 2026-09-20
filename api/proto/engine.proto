@@ -300,7 +300,7 @@ message MetadataField {
   string key = 2;
   string origin = 3;
   string label = 4;
-  string data_type = 5; // text | date
+  string data_type = 5; // text | date | url
   string description = 6;
   // How many source_metadata rows reference this field. Deleting is only
   // allowed at 0 (see sourcefields.ErrInUse); the client uses the count to

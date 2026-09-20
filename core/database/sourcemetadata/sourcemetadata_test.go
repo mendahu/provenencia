@@ -155,6 +155,32 @@ func TestSourceMetadata(t *testing.T) {
 			},
 		},
 		{
+			name: "set url and reject date on url field",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				src := mustSeededSource(t, c)
+				field, err := sourcefields.Create(c, "Landing page", sourcefields.DataTypeURL, "")
+				if err != nil {
+					t.Fatal(err)
+				}
+				row, err := Set(c, userID, Input{
+					SourceID: src.ID, FieldID: field.ID, ValueText: "https://example.com/record",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if row.ValueText != "https://example.com/record" || row.DateValueID != nil {
+					t.Fatalf("%+v", row)
+				}
+				dv := mustYear(t, c, 1890, datevalues.QualifierABT)
+				if _, err := Set(c, userID, Input{
+					SourceID: src.ID, FieldID: field.ID, ValueText: "x", DateValueID: dv,
+				}); !errors.Is(err, ErrInvalid) {
+					t.Fatalf("got %v", err)
+				}
+			},
+		},
+		{
 			name: "date text only structured only and both",
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)

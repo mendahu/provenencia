@@ -2292,7 +2292,7 @@ type MetadataField struct {
 	Key         string                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
 	Origin      string                 `protobuf:"bytes,3,opt,name=origin,proto3" json:"origin,omitempty"`
 	Label       string                 `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
-	DataType    string                 `protobuf:"bytes,5,opt,name=data_type,json=dataType,proto3" json:"data_type,omitempty"` // text | date
+	DataType    string                 `protobuf:"bytes,5,opt,name=data_type,json=dataType,proto3" json:"data_type,omitempty"` // text | date | url
 	Description string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
 	// How many source_metadata rows reference this field. Deleting is only
 	// allowed at 0 (see sourcefields.ErrInUse); the client uses the count to
