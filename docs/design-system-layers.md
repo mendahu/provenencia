@@ -98,7 +98,7 @@ No `components/forms/` category nesting. Each control is `components/<Name>/`.
 **Why it exists**
 
 1. **Disambiguate from SwiftUI / AppKit** — bare names like `Button`, `TextField`, `Image`, `Toggle`, and `Table` already belong to the platform. In our single Mac app target, a type literally named `Button` collides with `SwiftUI.Button` in `View` builders and imports.
-2. **Mark kit ownership** — `PV*` greps as design-system surface; feature snowflakes can keep product names (`SourceTypeIconPickerSheet`).
+2. **Mark kit ownership** — `PV*` greps as design-system surface; feature snowflakes can keep product names (`SourceTypeIconPickerForm`).
 
 **Rule (enforce for all new DesignSystem UI)**
 
