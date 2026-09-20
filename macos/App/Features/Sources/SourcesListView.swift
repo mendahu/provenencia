@@ -78,9 +78,9 @@ private struct SourcesListContent: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(PVColor.surfacePage)
         .vocabularyToastOverlay($model.toast, identifier: "sources.toast")
-        .pvDialog(
+        .pvFormDialog(
             isPresented: addPresented,
-            copy: PVDialogCopy(
+            copy: PVFormDialogCopy(
                 title: L10n.Sources.addDialogTitle,
                 subtitle: L10n.Sources.addDialogSubtitle,
                 confirm: L10n.Sources.createAction,

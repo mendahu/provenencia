@@ -29,7 +29,7 @@ macOS thin-client rules: [`.cursor/rules/macos-client.mdc`](../../rules/macos-cl
    → Snowflake under Features/<Feature>/ (prefer private) or DesignSystem/Snowflakes/<Name>/.
 ```
 
-**Stop at the highest layer you need.** A view may call `.pvConfirmSheet` / `PVButton`
+**Stop at the highest layer you need.** A view may call `.pvConfirm` / `PVButton`
 directly. Do not invent a recipe or snowflake shell for completeness.
 
 **Layer roots + one folder per control.** No `Components/Core|Forms|…`. No loose
@@ -76,11 +76,10 @@ Prefer extending a composite with slots over a new root `PV*` for a slight varia
 
 | Need | Use |
 | --- | --- |
-| Short create/edit form | `.pvDialog` / `PVDialogContent` |
-| Destructive / irreversible, plain text | `.pvConfirm` (system alert) — preferred when enough |
-| Same, rich detail (key chip, list) | `.pvConfirmSheet(item:)` — snapshot via `item:`, not Bool |
+| Short create/edit form | `.pvFormDialog` / `PVFormDialogContent` (on `PVPanel`) |
+| Destructive / irreversible confirm | `.pvConfirm(item:)` — snapshot via `item:`, not Bool; detail slot for key chip / callout |
 | One-off body | Pass a snowflake into the DS body/detail slot |
-| Custom chrome that copies header/footer by hand | **Don’t** — compose panel/composite; only the unique body stays snowflake |
+| Custom chrome that copies header/footer by hand | **Don’t** — compose `PVPanel` / FormDialog / Confirm; only the unique body stays snowflake |
 
 macOS sheets: **no scrim/dim**, no redrawing window corner radius/shadow on panel content.
 Dismissal for async work stays on the caller binding (`isRunning` can show). See
@@ -106,14 +105,14 @@ struct SourceTypeBadge: View {
 struct AddArtifactSheet: View { /* custom scrim, footer, buttons */ }
 
 // ✅ GOOD — component form dialog + snowflake form body
-.pvDialog(isPresented: $open, copy: …, onConfirm: …) { artifactForm }
+.pvFormDialog(isPresented: $open, copy: …, onConfirm: …) { artifactForm }
 ```
 
 ```swift
 // ❌ BAD — preemptive recipe with one caller
 enum VocabularyDeleteDialog { static func sheet(…) }  // only SourceFields uses it
 
-// ✅ GOOD — wait for second call site; use .pvConfirmSheet at the view today
+// ✅ GOOD — wait for second call site; use .pvConfirm at the view today
 ```
 
 ## Steps when adding a component
@@ -123,7 +122,7 @@ enum VocabularyDeleteDialog { static func sheet(…) }  // only SourceFields use
    `PV<Name>` — required prefix; plus optional README/helpers in the same folder).
 3. Follow `PVButton.swift` shape: header names mirrored `.jsx` / deliberate deviations; tokens only; `#Preview` at bottom.
 4. Register new files in `macos/Provenencia.xcodeproj`.
-5. Prefer View modifiers for presentation (`.pvDialog`, `.pvConfirmSheet`) when the control is a sheet/alert family.
+5. Prefer View modifiers for presentation (`.pvFormDialog`, `.pvConfirm`) when the control is a sheet/alert family.
 6. Leave `.accessibilityIdentifier` to call sites unless the control owns fixed chrome ids by documented convention.
 
 ## Steps when adding a recipe

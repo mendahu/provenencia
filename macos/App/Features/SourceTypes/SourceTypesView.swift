@@ -76,7 +76,7 @@ private struct SourceTypesContent: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(PVColor.surfacePage)
         .vocabularyToastOverlay($model.toast, identifier: "sourceTypes.toast")
-        .pvConfirmSheet(
+        .pvConfirm(
             item: pendingDelete,
             copy: deleteCopy(for:),
             isRunning: model.isDeleting,

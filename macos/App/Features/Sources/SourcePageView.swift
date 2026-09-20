@@ -120,9 +120,9 @@ private struct SourcePageContent: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(PVColor.surfacePage)
         .vocabularyToastOverlay($model.toast, identifier: "sources.page.toast")
-        .pvDialog(
+        .pvFormDialog(
             isPresented: addArtifactPresented,
-            copy: PVDialogCopy(
+            copy: PVFormDialogCopy(
                 title: L10n.Sources.addArtifactDialogTitle,
                 subtitle: L10n.Sources.addArtifactDialogSubtitle,
                 confirm: L10n.Sources.addArtifactConfirm,
@@ -135,9 +135,9 @@ private struct SourcePageContent: View {
         ) {
             SourcePageArtifactsView(model: model).addForm
         }
-        .pvDialog(
+        .pvFormDialog(
             isPresented: addFilePresented,
-            copy: PVDialogCopy(
+            copy: PVFormDialogCopy(
                 title: L10n.Sources.addFileDialogTitle,
                 subtitle: L10n.Sources.addFileDialogSubtitle,
                 confirm: L10n.Sources.addFileConfirm,
@@ -150,9 +150,9 @@ private struct SourcePageContent: View {
         ) {
             SourcePageArtifactsView(model: model).addFileForm
         }
-        .pvDialog(
+        .pvFormDialog(
             isPresented: addMetadataPresented,
-            copy: PVDialogCopy(
+            copy: PVFormDialogCopy(
                 title: L10n.Sources.addMetadataDialogTitle,
                 subtitle: L10n.Sources.addMetadataDialogSubtitle,
                 confirm: L10n.Sources.addMetadataConfirm,
@@ -165,9 +165,9 @@ private struct SourcePageContent: View {
         ) {
             SourcePageMetadataView(model: model).addForm
         }
-        .pvDialog(
+        .pvFormDialog(
             isPresented: dateEditorPresented,
-            copy: PVDialogCopy(
+            copy: PVFormDialogCopy(
                 title: model.metadata.isDateEditMode
                     ? L10n.Sources.editDateDialogTitle
                     : L10n.Sources.addDateDialogTitle,

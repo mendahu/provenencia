@@ -1,34 +1,25 @@
 import SwiftUI
 
-/// The macOS-native counterpart to `components/feedback/ConfirmDialog.jsx`,
-/// ported from the design system's `swift/ProvenenciaConfirm.swift`.
+/// The macOS confirm composite — counterpart to `ConfirmDialog.jsx`, composed
+/// on ``PVPanel``.
 ///
-/// **`ConfirmDialog` is deliberately not ported.** Its own `prompt.md` says so:
-/// the web component draws a scrim, a backdrop blur, a corner radius and a
-/// shadow only because a browser gives it none of them. On macOS all four
-/// belong to the window:
+/// **`ConfirmDialog` is deliberately not ported as a web-style modal.** Its
+/// `prompt.md` says so: the web component draws a scrim, blur, corner radius
+/// and shadow because a browser gives it none. On macOS those belong to the
+/// window:
 ///
-/// - macOS does **not** dim the parent window behind a sheet — the parent's
-///   controls just go inactive. A dark scrim is a web/iOS idiom and reads as
-///   wrong here. The absent scrim is correct, not missing.
-/// - The sheet window supplies its own corner radius, shadow and material.
-///   Setting `.background` / `.cornerRadius` / `.shadow` on the sheet's *panel*
-///   is what produces the double-rounded, double-shadowed look — so nothing
-///   here does. Styling *within* the panel is still ours: the action bar keeps
-///   `Dialog.jsx`'s `--surface-sunken` band and hairline top rule.
-/// - Sheets are modal to their *window*, not the app, and slide from the
-///   titlebar. That comes free from `.sheet`.
+/// - macOS does **not** dim the parent behind a sheet — controls go inactive.
+///   A dark scrim is a web/iOS idiom and reads wrong here.
+/// - The sheet window supplies corner radius, shadow and material. Painting
+///   those on panel *content* double-rounds / double-shadows — so we don't.
+/// - Sheets are modal to their *window* and slide from the titlebar via
+///   `.sheet`.
 ///
-/// So there are two right answers, and both live here:
-///
-/// 1. ``SwiftUI/View/pvConfirm(isPresented:copy:tone:onConfirm:)`` — a system
-///    alert. The default: Apple's own pattern, fully system-drawn, and it
-///    inherits keyboard, VoiceOver and Reduce Motion behaviour for free.
-///    Message copy is plain text only.
-/// 2. ``SwiftUI/View/pvConfirmSheet(item:copy:tone:isRunning:onConfirm:detail:)``
-///    — a sheet, for when the consequence needs rich content (a mono-set key,
-///    a list of affected records). Chrome still belongs to the window; this
-///    only lays out content and the button row.
+/// Provenencia's confirm is this rich sheet (``pvConfirm(item:…)``): title,
+/// consequence message, optional detail (e.g. ``PVConfirmKeyChip``), cancel-
+/// first focus, and a sunken Keep/Delete footer. Plain SwiftUI `.alert` stays
+/// available at call sites if a future flow needs text-only system chrome; the
+/// kit does not wrap it.
 
 // MARK: - Copy model
 
@@ -61,67 +52,45 @@ struct PVConfirmCopy {
 }
 
 enum PVConfirmTone {
-    /// Actual loss. The system tints the button's title red.
+    /// Actual loss. Confirm uses the danger button chrome and a trash glyph.
     case danger
     /// Irreversible but non-destructive — merging two people, publishing a tree.
     case irreversible
 
     var buttonRole: ButtonRole? { self == .danger ? .destructive : nil }
 
-    /// Confirm-button chrome in the sheet form, where the button is content
-    /// and takes design-system styling (the system alert keeps native buttons).
+    /// Confirm-button chrome — design-system styling inside the panel footer.
     var buttonVariant: PVButtonVariant { self == .danger ? .danger : .primary }
+
+    /// Leading glyph on the confirm control (`PVConfirmDialog`'s `confirmIcon`).
+    var confirmIcon: PVSymbol? { self == .danger ? .trash : nil }
 }
 
-// MARK: - System alert (preferred)
+/// Pure enablement for confirm footer buttons — extracted for unit tests.
+enum PVConfirmControls {
+    static func isActionDisabled(isRunning: Bool) -> Bool { isRunning }
+}
 
-private struct PVConfirmAlert: ViewModifier {
-    @Binding var isPresented: Bool
-    let copy: PVConfirmCopy
-    let tone: PVConfirmTone
-    let onConfirm: () -> Void
+/// Layout constants for the confirm sheet.
+enum PVConfirmLayout {
+    /// Kit default (`PVConfirmDialog` width) — alert-family, slightly under form sheets.
+    static let panelWidth: CGFloat = 440
+}
 
-    func body(content: Content) -> some View {
-        content.alert(copy.title, isPresented: $isPresented) {
-            // Order matters: AppKit lays alert buttons out trailing-first, and
-            // cancel is made the DEFAULT so Return dismisses safely. A
-            // destructive action must never be one reflexive Return away.
-            Button(String(localized: copy.cancel), role: .cancel) { isPresented = false }
-                .keyboardShortcut(.defaultAction)
-            Button(String(localized: copy.confirm), role: tone.buttonRole) {
-                isPresented = false
-                onConfirm()
-            }
-        } message: {
-            Text(copy.message)
-        }
+/// Accessibility ids for confirm chrome buttons.
+enum PVConfirmAccessibility {
+    /// `{prefix}.{suffix}` when a prefix is set; otherwise `nil` (no id).
+    static func identifier(prefix: String?, suffix: String) -> String? {
+        guard let prefix else { return nil }
+        return "\(prefix).\(suffix)"
     }
 }
 
-extension View {
-    /// Native confirmation alert. Escape and Return both cancel; the confirm
-    /// button carries the destructive role so the system tints it.
-    ///
-    /// Prefer this over ``pvConfirmSheet(item:copy:tone:isRunning:onConfirm:detail:)``
-    /// unless the consequence genuinely needs formatted content.
-    func pvConfirm(
-        isPresented: Binding<Bool>,
-        copy: PVConfirmCopy,
-        tone: PVConfirmTone = .danger,
-        onConfirm: @escaping () -> Void
-    ) -> some View {
-        modifier(PVConfirmAlert(isPresented: isPresented, copy: copy, tone: tone, onConfirm: onConfirm))
-    }
-}
+// MARK: - Sheet content
 
-// MARK: - Sheet, for rich consequence copy
-
-/// Sheet body for a confirmation whose consequence needs more than a string.
-///
-/// Draws **no** panel background, corner radius, shadow or scrim — the sheet
-/// window owns all four. The action bar's own `surfaceSunken` band is content,
-/// not window chrome, and is carried over from `Dialog.jsx`'s footer.
-struct PVConfirmSheetContent<Detail: View>: View {
+/// Sheet body for a confirmation. Layout chrome comes from ``PVPanel``
+/// (message as subtitle; detail in the body slot), including the warm card fill.
+struct PVConfirmContent<Detail: View>: View {
     let copy: PVConfirmCopy
     let tone: PVConfirmTone
     let isRunning: Bool
@@ -132,9 +101,6 @@ struct PVConfirmSheetContent<Detail: View>: View {
     @ViewBuilder let detail: () -> Detail
 
     @FocusState private var cancelFocused: Bool
-
-    /// Alert-family width. A sheet should not size itself to the parent window.
-    private let width: CGFloat = 420
 
     init(
         copy: PVConfirmCopy,
@@ -155,89 +121,50 @@ struct PVConfirmSheetContent<Detail: View>: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            message
-            actionBar
-        }
-        .frame(width: width)
-        // Focus starts on cancel, matching the web component and AppKit's own
-        // destructive alerts — Return must not complete a destructive action.
-        .onAppear { cancelFocused = true }
-    }
-
-    private var message: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space7) {
-            // Alerts are centred; a sheet carrying body copy reads better
-            // leading-aligned.
-            Text(copy.title)
-                .font(PVFont.display(size: PVTypeScale.h3))
-                .foregroundStyle(PVColor.textDisplay)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text(copy.message)
-                .font(PVFont.body(size: PVTypeScale.bodySmall))
-                .foregroundStyle(PVColor.textSecondary)
-                .lineSpacing((PVLineHeight.relaxed - 1) * PVTypeScale.bodySmall)
-                .fixedSize(horizontal: false, vertical: true)
-
+        PVPanel(
+            title: Text(copy.title),
+            subtitle: Text(copy.message),
+            width: PVConfirmLayout.panelWidth,
+            footerChrome: .sunken
+        ) {
             detail()
+        } footer: {
+            HStack(spacing: PVSpacing.space5) {
+                Spacer(minLength: PVSpacing.space8)
+                Button(String(localized: copy.cancel)) { onCancel() }
+                    .buttonStyle(.pv(.secondary, size: .lg))
+                    .keyboardShortcut(.cancelAction)
+                    .disabled(PVConfirmControls.isActionDisabled(isRunning: isRunning))
+                    .focused($cancelFocused)
+                    .modifier(ConfirmOptionalAccessibilityIdentifier(
+                        prefix: accessibilityIdentifierPrefix,
+                        suffix: "cancel"
+                    ))
+                PVButton(
+                    copy.confirm,
+                    variant: tone.buttonVariant,
+                    size: .lg,
+                    icon: tone.confirmIcon,
+                    loading: isRunning,
+                    action: onConfirm
+                )
+                .keyboardShortcut(.defaultAction)
+                .disabled(PVConfirmControls.isActionDisabled(isRunning: isRunning))
+                .modifier(ConfirmOptionalAccessibilityIdentifier(
+                    prefix: accessibilityIdentifierPrefix,
+                    suffix: "confirm"
+                ))
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, PVSpacing.space7)
-        .padding(.vertical, PVSpacing.space9)
-    }
-
-    /// `Dialog.jsx` sets its footer on `--surface-sunken` with a hairline top
-    /// rule, and `ConfirmDialog` passes its buttons straight into that slot —
-    /// so the band is part of the design, not browser-only chrome. The
-    /// "draw none of it" rule this file follows names four things the *window*
-    /// owns (scrim, blur, corner radius, shadow); an internal action bar is
-    /// content, the same as the divider above it, so it is ours to paint.
-    /// `swift/ProvenenciaConfirm.swift` omits it; this restores it.
-    /// The buttons take design-system chrome (`.pv(…)`), not the system
-    /// `.borderedProminent` pill — they sit *inside* the panel, in a band this
-    /// view already paints, so they are content by the same rule as the
-    /// `surfaceSunken` fill above. Nothing native is lost by the swap: the
-    /// keyboard shortcuts, focus, roles and disabled state live on `Button`
-    /// itself, and the destructive tint was already ours (`PVColor.danger`).
-    /// Only the *window's* chrome — corner radius, shadow, slide-in — stays
-    /// system-drawn, and the plain `.pvConfirm` alert stays fully native.
-    private var actionBar: some View {
-        HStack(spacing: PVSpacing.space5) {
-            Spacer(minLength: PVSpacing.space8)
-            Button(String(localized: copy.cancel)) { onCancel() }
-                .buttonStyle(.pv(.secondary, size: .lg))
-                .keyboardShortcut(.cancelAction)
-                .disabled(isRunning)
-                .focused($cancelFocused)
-                .modifier(ConfirmOptionalAccessibilityIdentifier(prefix: accessibilityIdentifierPrefix, suffix: "cancel"))
-            Button(String(localized: copy.confirm), role: tone.buttonRole) { onConfirm() }
-                .buttonStyle(.pv(tone.buttonVariant, size: .lg))
-                .disabled(isRunning)
-                .modifier(ConfirmOptionalAccessibilityIdentifier(prefix: accessibilityIdentifierPrefix, suffix: "confirm"))
-                .overlay(alignment: .trailing) {
-                    if isRunning {
-                        ProgressView()
-                            .controlSize(.small)
-                            .offset(x: 22)
-                    }
-                }
-        }
-        .padding(.horizontal, PVSpacing.space8)
-        .padding(.vertical, PVSpacing.space8)
-        .frame(maxWidth: .infinity)
-        .background(PVColor.surfaceSunken)
-        .overlay(alignment: .top) {
-            PVDivider()
-        }
+        // Focus starts on cancel — Return must not complete a destructive action.
+        .onAppear { cancelFocused = true }
     }
 }
 
 extension View {
-    /// Sheet-based confirmation for rich consequence copy, keyed to the
-    /// record it names. `copy` and `detail` render under the title — a
-    /// mono-set key, an affected-record list — and both receive the record
-    /// as a snapshot.
+    /// Confirmation sheet keyed to the record it names. `copy` and `detail`
+    /// render under the title — a mono-set key, an affected-record list — and
+    /// both receive the record as a snapshot.
     ///
     /// **Why `item:` and not `isPresented: Bool`:** a confirmation's copy
     /// names a record held by a model, and dismissing clears that model
@@ -247,13 +174,10 @@ extension View {
     /// `.sheet(item:)` hands the closures the last non-nil record, so the
     /// sheet slides out still showing what it named.
     ///
-    /// **Deviation from `swift/ProvenenciaConfirm.swift`:** the reference
-    /// clears its presentation state before invoking `onConfirm`, which would
-    /// close the sheet the instant a confirm starts — leaving its own
-    /// `isRunning` spinner and any failure with nowhere to show. Dismissal is
-    /// left to the caller's binding instead, so an async action can stay on
-    /// screen while it runs and report an error in `detail` if it fails.
-    func pvConfirmSheet<Item: Identifiable, Detail: View>(
+    /// Dismissal is left to the caller's binding so an async action can stay
+    /// on screen while it runs (`isRunning`) and report an error in `detail`
+    /// if it fails.
+    func pvConfirm<Item: Identifiable, Detail: View>(
         item: Binding<Item?>,
         copy: @escaping (Item) -> PVConfirmCopy,
         tone: PVConfirmTone = .danger,
@@ -263,7 +187,7 @@ extension View {
         @ViewBuilder detail: @escaping (Item) -> Detail
     ) -> some View {
         sheet(item: item) { value in
-            PVConfirmSheetContent(
+            PVConfirmContent(
                 copy: copy(value),
                 tone: tone,
                 isRunning: isRunning,
@@ -282,8 +206,8 @@ private struct ConfirmOptionalAccessibilityIdentifier: ViewModifier {
     let suffix: String
 
     func body(content: Content) -> some View {
-        if let prefix {
-            content.accessibilityIdentifier("\(prefix).\(suffix)")
+        if let id = PVConfirmAccessibility.identifier(prefix: prefix, suffix: suffix) {
+            content.accessibilityIdentifier(id)
         } else {
             content
         }
@@ -292,7 +216,7 @@ private struct ConfirmOptionalAccessibilityIdentifier: ViewModifier {
 
 /// A released/affected identifier shown under a confirmation's message — the
 /// `<code>` slot in `ConfirmDialog`'s own example, and the reason a delete
-/// confirmation earns a sheet rather than a plain alert.
+/// confirmation uses a sheet with a detail slot.
 struct PVConfirmKeyChip: View {
     let label: LocalizedStringResource
     let value: String
@@ -316,8 +240,8 @@ struct PVConfirmKeyChip: View {
     }
 }
 
-#Preview("Confirm — sheet with released key") {
-    PVConfirmSheetContent(
+#Preview("Confirm — released key") {
+    PVConfirmContent(
         copy: PVConfirmCopy(
             title: "Delete Photographer?",
             message: "No source in this project carries a value for this field, so nothing is lost. The key is released and can be minted again by a later field with the same label.",

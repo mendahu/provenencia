@@ -3340,10 +3340,16 @@ enum L10n {
             comment: "Subtitle of the Source-type icon picker dialog"
         )
 
-        static let iconPickerDone = LocalizedStringResource(
-            "sourceTypes.iconPicker.done",
-            defaultValue: "Done",
-            comment: "Closes the Source-type icon picker dialog"
+        static let iconPickerConfirm = LocalizedStringResource(
+            "sourceTypes.iconPicker.confirm",
+            defaultValue: "Use icon",
+            comment: "Commits the selected icon in the Source-type icon picker form dialog"
+        )
+
+        static let iconPickerCancel = LocalizedStringResource(
+            "sourceTypes.iconPicker.cancel",
+            defaultValue: "Keep current",
+            comment: "Dismisses the Source-type icon picker without changing the draft icon"
         )
 
         static let iconPickerGroupLabel = LocalizedStringResource(

@@ -157,12 +157,13 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 | Callout | `Components/Callout/PVCallout.swift` (added for S2-02's "this field is locked" note; only the subset S2-02 needs is ported — see the file's header comment) |
 | Table | `Components/Table/PVTable.swift` (added for S2-22, extracted from the Source fields list; see "The table tradeoff" below) |
 | Confirm | `Components/Confirm/PVConfirm.swift` (added for S2-22's delete confirmation; the macOS answer to `ConfirmDialog.jsx`, which the web spec says not to port — see "Confirmations are system chrome" below) |
+| Panel | `Components/Panel/PVPanel.swift` (sheet content shell: title / subtitle / body / optional footer; no window chrome) |
+| FormDialog | `Components/FormDialog/PVFormDialog.swift` (short create/edit form sheet on `PVPanel`; optional `width`, default 480 — see note below) |
 | ComboBox | `Components/ComboBox/PVComboBox.swift` (added for S2-16's assign-field control, where the pool is the whole Source fields vocabulary; single-select subset only — see "The combo box subset" below) |
 | Thumbnail | `Components/Thumbnail/PVThumbnail.swift` (added for S2-17 Sources list rows; image / evidence glyph / SF glyph / empty / loading tile) |
 | EvidenceIcon | `Recipes/EvidenceIcon/PVEvidenceIcon.swift` (`file_*` + `type_*`; see colocated `EVIDENCE-ICONS.md`; not SF Symbols) |
 | SubjectIcon | `Recipes/SubjectIcon/PVSubjectIcon.swift` |
 | OmnibarHitRow | `Recipes/OmnibarHitRow/PVOmnibarHitRow.swift` |
-| Dialog | `Components/Dialog/PVDialog.swift` (added for S2-17 Add Source; sheet form with content slot + footer — see note below) |
 | Breadcrumbs | `Components/Breadcrumbs/PVBreadcrumbs.swift` (added for S2-18 Source page trail; Sources → `SRC-…`) |
 | ReorderableList | `Components/ReorderableList/PVReorderableList.swift` (+ `PVReorderHandle`; added for S2-25 Metadata drag order) |
 
@@ -183,10 +184,11 @@ demand, following the pattern above, when a screen needs one:
 | PersonChip | Research | A person with life dates and a lineage-colored rule |
 | SourceCitation | Research | Citation + repository + scan thumbnail + grade, as one unit |
 
-**Dialog on macOS:** the web `Dialog.jsx` draws a scrim because the browser
-gives it none. Here `PVDialog` is a `.sheet` — same family as `PVConfirm`'s
-rich sheet — and leaves window chrome to the system. Prefer `PVConfirm` for
-destructive confirmations; use `PVDialog` for short create/edit forms.
+**Form dialog on macOS:** the web `Dialog.jsx` draws a scrim because the browser
+gives it none. Here `PVFormDialog` is a `.sheet` on ``PVPanel`` — same family as
+`PVConfirm`'s rich sheet — and leaves window chrome to the system. Prefer
+`PVConfirm` for destructive confirmations; use `PVFormDialog` for short
+create/edit forms.
 
 ## The combo box subset
 
@@ -357,12 +359,15 @@ what makes a native dialog look off:
   all free from `.sheet`.
 
 `Components/Confirm/PVConfirm.swift` carries the web component's **copy
-rules** across without its chrome, and offers the two right answers:
+rules** across without its chrome. The kit confirm is a **rich sheet on
+``PVPanel``** — not a system alert wrapper:
 
 | Modifier | Use |
 |---|---|
-| `.pvConfirm(isPresented:copy:tone:onConfirm:)` | **The default.** A system alert — Apple's own pattern, fully system-drawn, inherits keyboard, VoiceOver and Reduce Motion for free. Plain-text message only. |
-| `.pvConfirmSheet(item:copy:tone:isRunning:onConfirm:detail:)` | When the consequence needs rich content — a mono-set key (`PVConfirmKeyChip`), a list of affected records. Chrome still belongs to the window; only content and the button row are ours. Keyed to the record it names (`item:`, not an `isPresented` Bool) so the copy and detail render from a snapshot and the sheet animates out still showing them, rather than blanking the instant the model clears. |
+| `.pvConfirm(item:copy:tone:isRunning:onConfirm:detail:)` | Standard confirm. Title + consequence message + optional detail (`PVConfirmKeyChip`, error callout, …). Chrome belongs to the window; content and the button row are ours. Keyed to the record it names (`item:`, not an `isPresented` Bool) so copy and detail render from a snapshot and the sheet animates out still showing them, rather than blanking the instant the model clears. |
+
+Plain SwiftUI `.alert` remains available at a call site if a future flow needs
+text-only system chrome; the kit does not wrap it.
 
 The action bar keeps `Dialog.jsx`'s footer treatment — `surfaceSunken` with a
 hairline top rule — because that band is *content*, not window chrome. The
@@ -381,8 +386,8 @@ panel in a band we already paint, so by the content rule above they take
 and disabled state live on `Button`, not the style, and the destructive
 tint was already `PVColor.danger` rather than the system role tint. (This
 reverses an earlier decision to keep native buttons in the sheet; the
-system *alert* form still draws its own buttons and stays fully native.)
-In-content shapes keep Provenencia radii as before — `PVConfirmKeyChip`
+system *alert* if a call site uses SwiftUI `.alert` directly; the kit confirm
+is sheet-only.) In-content shapes keep Provenencia radii as before — `PVConfirmKeyChip`
 uses `PVRadius.xs`, matching the design's square treatment for citable
 values. Because a custom `ButtonStyle` draws no focus indication of its
 own, `PVButtonStyle` shows `pvFocusRing` when focused, so the sheet's
@@ -391,8 +396,8 @@ cancel-first focus stays visible to keyboard users.
 The copy rules travel in `PVConfirmCopy`: the title is a question naming the
 record ("Delete Photographer?", never "Are you sure?"), the message says what
 is *and is not* lost, confirm repeats the verb ("Delete field", never "OK"),
-and cancel names the safe outcome ("Keep field"). **Focus starts on cancel** in
-both forms, so Return cannot complete a destructive action by reflex.
+and cancel names the safe outcome ("Keep field"). **Focus starts on cancel**,
+so Return cannot complete a destructive action by reflex.
 
 Two further rules from the spec: a blocked action never reaches a confirmation
 — disable the control and explain why in its tooltip, the way Source fields'
@@ -400,11 +405,11 @@ delete button does. And a *reversible* action should not confirm at all: act,
 then offer undo in a `PVToast`.
 
 One deviation from the design system's `swift/ProvenenciaConfirm.swift`
-reference: it clears `isPresented` before invoking `onConfirm`, which closes
-the sheet the instant a confirm starts and leaves its own `isRunning` spinner
-nowhere to appear. `pvConfirmSheet` leaves dismissal to the caller's binding
-so an async action can stay on screen while it runs and report a failure in
-`detail`.
+reference: it clears presentation state before invoking `onConfirm`, which
+closes the sheet the instant a confirm starts and leaves its own `isRunning`
+spinner nowhere to appear. `.pvConfirm` leaves dismissal to the caller's
+binding so an async action can stay on screen while it runs and report a
+failure in `detail`.
 
 ## Fonts
 

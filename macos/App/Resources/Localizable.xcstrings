@@ -6385,14 +6385,26 @@
         }
       }
     },
-    "sourceTypes.iconPicker.done": {
-      "comment": "Closes the Source-type icon picker dialog",
+    "sourceTypes.iconPicker.cancel": {
+      "comment": "Dismisses the Source-type icon picker without changing the draft icon",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Done"
+            "value": "Keep current"
+          }
+        }
+      }
+    },
+    "sourceTypes.iconPicker.confirm": {
+      "comment": "Commits the selected icon in the Source-type icon picker form dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use icon"
           }
         }
       }

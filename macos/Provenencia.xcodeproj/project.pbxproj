@@ -11,7 +11,8 @@
 		AA00000000000000000003B3 /* PVFileTypeGlyphTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003B2 /* PVFileTypeGlyphTests.swift */; };
 		AA0000000000000000000301 /* PVThumbnail.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000300 /* PVThumbnail.swift */; };
 		AA000000000000000000031F /* PVReorderableList.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000320 /* PVReorderableList.swift */; };
-		AA0000000000000000000305 /* PVDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000304 /* PVDialog.swift */; };
+		AA0000000000000000000305 /* PVFormDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000304 /* PVFormDialog.swift */; };
+		AA0000000000000000000501 /* PVPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000500 /* PVPanel.swift */; };
 		AA0000000000000000000307 /* SourcesModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000306 /* SourcesModel.swift */; };
 		AA0000000000000000000309 /* SourcesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000308 /* SourcesListView.swift */; };
 		AA0000000000000000000311 /* SourcePageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000310 /* SourcePageView.swift */; };
@@ -54,6 +55,8 @@
 		AA0000000000000000000313 /* SourcesModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000312 /* SourcesModelTests.swift */; };
 		AA000000000000000000046B /* SourcesListNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000046A /* SourcesListNavigationTests.swift */; };
 		AA000000000000000000046F /* PVFloatingMenuSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000046E /* PVFloatingMenuSelectionTests.swift */; };
+		AA0000000000000000000503 /* PVPanelFormDialogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000502 /* PVPanelFormDialogTests.swift */; };
+		AA0000000000000000000505 /* PVConfirmTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000504 /* PVConfirmTests.swift */; };
 		01574F7767F9B0AF5550AFAD /* PVMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = C355704657FB6A572BF7FD6A /* PVMotion.swift */; };
 		AA0000000000000000000210 /* OriginMarkers.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000200 /* OriginMarkers.swift */; };
 		AA0000000000000000000240 /* PVComboBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000230 /* PVComboBox.swift */; };
@@ -240,7 +243,8 @@
 		AA00000000000000000003B2 /* PVFileTypeGlyphTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVFileTypeGlyphTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000300 /* PVThumbnail.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVThumbnail.swift; sourceTree = "<group>"; };
 		AA0000000000000000000320 /* PVReorderableList.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVReorderableList.swift; sourceTree = "<group>"; };
-		AA0000000000000000000304 /* PVDialog.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVDialog.swift; sourceTree = "<group>"; };
+		AA0000000000000000000304 /* PVFormDialog.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVFormDialog.swift; sourceTree = "<group>"; };
+		AA0000000000000000000500 /* PVPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVPanel.swift; sourceTree = "<group>"; };
 		AA0000000000000000000306 /* SourcesModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesModel.swift; sourceTree = "<group>"; };
 		AA0000000000000000000308 /* SourcesListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesListView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000310 /* SourcePageView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcePageView.swift; sourceTree = "<group>"; };
@@ -283,6 +287,8 @@
 		AA0000000000000000000312 /* SourcesModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesModelTests.swift; sourceTree = "<group>"; };
 		AA000000000000000000046A /* SourcesListNavigationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesListNavigationTests.swift; sourceTree = "<group>"; };
 		AA000000000000000000046E /* PVFloatingMenuSelectionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVFloatingMenuSelectionTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000502 /* PVPanelFormDialogTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVPanelFormDialogTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000504 /* PVConfirmTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVConfirmTests.swift; sourceTree = "<group>"; };
 		11ADAF744C32587CD34CDD23 /* PVLogoMark.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVLogoMark.swift; sourceTree = "<group>"; };
 		164584B2DB70D89A55C4178F /* WorkspaceModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceModelTests.swift; sourceTree = "<group>"; };
 		F203948576A1B2C3D4E5F605 /* WorkspaceNavigationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceNavigationTests.swift; sourceTree = "<group>"; };
@@ -826,6 +832,8 @@
 				AA0000000000000000000312 /* SourcesModelTests.swift */,
 				AA000000000000000000046A /* SourcesListNavigationTests.swift */,
 				AA000000000000000000046E /* PVFloatingMenuSelectionTests.swift */,
+				AA0000000000000000000502 /* PVPanelFormDialogTests.swift */,
+				AA0000000000000000000504 /* PVConfirmTests.swift */,
 				AA000000000000000000047A /* GraphCanvasCoordinatesTests.swift */,
 				AA0000000000000000000486 /* GraphCanvasGridMappingTests.swift */,
 				AA0000000000000000000488 /* SourceGraphSnapshotTests.swift */,
@@ -1044,13 +1052,22 @@
 			path = Confirm;
 			sourceTree = "<group>";
 		};
-		D5C000000000000000000014 /* Dialog */ = {
+		D5C000000000000000000014 /* FormDialog */ = {
 			isa = PBXGroup;
 			children = (
-				AA0000000000000000000304 /* PVDialog.swift */,
+				AA0000000000000000000304 /* PVFormDialog.swift */,
 			);
-			name = Dialog;
-			path = Dialog;
+			name = FormDialog;
+			path = FormDialog;
+			sourceTree = "<group>";
+		};
+		D5C000000000000000000021 /* Panel */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000500 /* PVPanel.swift */,
+			);
+			name = Panel;
+			path = Panel;
 			sourceTree = "<group>";
 		};
 		D5C000000000000000000005 /* Callout */ = {
@@ -1150,7 +1167,8 @@
 				D5C00000000000000000001E /* Toast */,
 				D5C000000000000000000010 /* EmptyState */,
 				D5C000000000000000000019 /* Confirm */,
-				D5C000000000000000000014 /* Dialog */,
+				D5C000000000000000000014 /* FormDialog */,
+				D5C000000000000000000021 /* Panel */,
 				D5C000000000000000000005 /* Callout */,
 				D5C000000000000000000003 /* SidebarNav */,
 				D5C000000000000000000018 /* Breadcrumbs */,
@@ -1428,7 +1446,8 @@
 				AA0000000000000000000301 /* PVThumbnail.swift in Sources */,
 				AA00000000000000000003B1 /* PVEvidenceIcon.swift in Sources */,
 				AA000000000000000000031F /* PVReorderableList.swift in Sources */,
-				AA0000000000000000000305 /* PVDialog.swift in Sources */,
+				AA0000000000000000000305 /* PVFormDialog.swift in Sources */,
+				AA0000000000000000000501 /* PVPanel.swift in Sources */,
 				AA0000000000000000000307 /* SourcesModel.swift in Sources */,
 				AA0000000000000000000309 /* SourcesListView.swift in Sources */,
 				AA0000000000000000000311 /* SourcePageView.swift in Sources */,
@@ -1494,6 +1513,8 @@
 				AA0000000000000000000313 /* SourcesModelTests.swift in Sources */,
 				AA000000000000000000046B /* SourcesListNavigationTests.swift in Sources */,
 				AA000000000000000000046F /* PVFloatingMenuSelectionTests.swift in Sources */,
+				AA0000000000000000000503 /* PVPanelFormDialogTests.swift in Sources */,
+				AA0000000000000000000505 /* PVConfirmTests.swift in Sources */,
 				AA000000000000000000047B /* GraphCanvasCoordinatesTests.swift in Sources */,
 				AA0000000000000000000487 /* GraphCanvasGridMappingTests.swift in Sources */,
 				AA0000000000000000000489 /* SourceGraphSnapshotTests.swift in Sources */,
