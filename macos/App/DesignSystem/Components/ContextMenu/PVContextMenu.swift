@@ -256,9 +256,11 @@ private struct PVContextMenuPresenter<MenuContent: View>: ViewModifier {
                         .offset(x: state.origin.x, y: state.origin.y)
                 }
             }
-            // Menu is an overlay on this host. Later siblings in a VStack/ZStack
-            // paint above us by default (e.g. onboarding project meta under a
-            // PVSelect) — lift the open host so the panel wins hit-testing too.
+            // Menu is an overlay on this host. Later *siblings of this host*
+            // paint above us by default — lift while open so the panel wins
+            // hit-testing when the overlapping view is a direct sibling.
+            // Call sites where the host is nested (Select inside an HStack,
+            // meta card as a VStack sibling) must zIndex the shared ancestor.
             .zIndex(state.isPresented ? 1 : 0)
             .onChange(of: state.isPresented) { _, open in
                 if open {
