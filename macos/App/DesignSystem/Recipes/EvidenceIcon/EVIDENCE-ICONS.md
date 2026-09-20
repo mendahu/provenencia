@@ -1,7 +1,7 @@
 # Evidence icons (macOS)
 
 Curated marks for **evidence representation** in thumbnail slots. Not SF Symbols —
-see `Components/Research/PVEvidenceIcon.swift`.
+see `PVEvidenceIcon.swift` in this folder.
 
 ## PR1 (`file_*`) — done
 

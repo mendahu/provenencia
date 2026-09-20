@@ -59,13 +59,8 @@ DesignSystem/Snowflakes/<Name>/   # named kit-side one-offs (rare; prefer Featur
 Features/<Feature>/               # typical snowflake home
 ```
 
-Until the reorganize PR lands, legacy paths under `Components/Core|Forms|…` may
-still exist — **do not add new files there or as loose files under
-`Components|Recipes|Snowflakes/`.**
-
-`Components/Button/PVButton.swift` (today still `Components/Core/PVButton.swift`
-until moved) is the **canonical example** — read its header comment before
-adding a new component. In short:
+`Components/Button/PVButton.swift` is the **canonical example** — read its
+header comment before adding a new component. In short:
 
 - A **component** lives at `DesignSystem/Components/<Name>/PV<Name>.swift`
   (folder PascalCase without `PV`; **type** uses the `PV` prefix — see
@@ -147,27 +142,29 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 
 | Component | File | 
 |---|---|
-| Button | `Components/Core/PVButton.swift` (icon-left, loading spinner, and a chrome-less `link` variant added for S2-02) |
-| Icon | `Components/Core/PVIcon.swift` |
-| Field | `Components/Forms/PVField.swift` |
-| Input | `Components/Forms/PVInput.swift` |
-| Select | `Components/Forms/PVSelect.swift` (floating `PVContextMenu` kit — field + optional chip/icon style; not SwiftUI `Menu`) |
-| Toast | `Components/Feedback/PVToast.swift` |
-| LogoMark | `Components/Core/PVLogoMark.swift` |
-| SidebarNav | `Components/Navigation/PVSidebarNav.swift` (added for the S2-01 workspace chrome; ports that board's revised `collapsed`-capable `SidebarNav.jsx`) |
-| IconButton | `Components/Core/PVIconButton.swift` (added for the workspace sidebar's collapse toggle, which needed real hover feedback; `label` is required per `IconButton.jsx` and doubles as the `.help` tooltip; pass `accessibilityLabel` when the spoken label has to name a target the tooltip can leave implicit; `tone: .danger` tints a destructive action) |
-| Badge | `Components/Core/PVBadge.swift` (added for S2-02's data-type/origin badges; a glyph-only variant carries the S2-22 seeded pill) |
-| Divider | `Components/Core/PVDivider.swift` (1pt hairline; horizontal/vertical) |
-| EmptyState | `Components/Feedback/PVEmptyState.swift` (added for S2-02's empty/no-match states; the web spec's `action` slot isn't ported — see the file's header comment) |
-| Callout | `Components/Feedback/PVCallout.swift` (added for S2-02's "this field is locked" note; only the subset S2-02 needs is ported — see the file's header comment) |
-| Table | `Components/Data/PVTable.swift` (added for S2-22, extracted from the Source fields list; see "The table tradeoff" below) |
-| Confirm | `Components/Feedback/PVConfirm.swift` (added for S2-22's delete confirmation; the macOS answer to `ConfirmDialog.jsx`, which the web spec says not to port — see "Confirmations are system chrome" below) |
-| ComboBox | `Components/Forms/PVComboBox.swift` (added for S2-16's assign-field control, where the pool is the whole Source fields vocabulary; single-select subset only — see "The combo box subset" below) |
-| Thumbnail | `Components/Core/PVThumbnail.swift` (added for S2-17 Sources list rows; image / evidence glyph / SF glyph / empty / loading tile) |
-| EvidenceIcon | `Components/Research/PVEvidenceIcon.swift` (`file_*` + `type_*`; see `EVIDENCE-ICONS.md`; not SF Symbols) |
-| Dialog | `Components/Feedback/PVDialog.swift` (added for S2-17 Add Source; sheet form with content slot + footer — see note below) |
-| Breadcrumbs | `Components/Navigation/PVBreadcrumbs.swift` (added for S2-18 Source page trail; Sources → `SRC-…`) |
-| ReorderableList | `Components/Data/PVReorderableList.swift` (+ `PVReorderHandle`; added for S2-25 Metadata drag order) |
+| Button | `Components/Button/PVButton.swift` (icon-left, loading spinner, and a chrome-less `link` variant added for S2-02) |
+| Icon | `Components/Icon/PVIcon.swift` |
+| Field | `Components/Field/PVField.swift` |
+| Input | `Components/Input/PVInput.swift` |
+| Select | `Components/Select/PVSelect.swift` (floating `PVContextMenu` kit — field + optional chip/icon style; not SwiftUI `Menu`) |
+| Toast | `Components/Toast/PVToast.swift` |
+| LogoMark | `Components/LogoMark/PVLogoMark.swift` |
+| SidebarNav | `Components/SidebarNav/PVSidebarNav.swift` (added for the S2-01 workspace chrome; ports that board's revised `collapsed`-capable `SidebarNav.jsx`) |
+| IconButton | `Components/IconButton/PVIconButton.swift` (added for the workspace sidebar's collapse toggle, which needed real hover feedback; `label` is required per `IconButton.jsx` and doubles as the `.help` tooltip; pass `accessibilityLabel` when the spoken label has to name a target the tooltip can leave implicit; `tone: .danger` tints a destructive action) |
+| Badge | `Components/Badge/PVBadge.swift` (added for S2-02's data-type/origin badges; a glyph-only variant carries the S2-22 seeded pill) |
+| Divider | `Components/Divider/PVDivider.swift` (1pt hairline; horizontal/vertical) |
+| EmptyState | `Components/EmptyState/PVEmptyState.swift` (added for S2-02's empty/no-match states; the web spec's `action` slot isn't ported — see the file's header comment) |
+| Callout | `Components/Callout/PVCallout.swift` (added for S2-02's "this field is locked" note; only the subset S2-02 needs is ported — see the file's header comment) |
+| Table | `Components/Table/PVTable.swift` (added for S2-22, extracted from the Source fields list; see "The table tradeoff" below) |
+| Confirm | `Components/Confirm/PVConfirm.swift` (added for S2-22's delete confirmation; the macOS answer to `ConfirmDialog.jsx`, which the web spec says not to port — see "Confirmations are system chrome" below) |
+| ComboBox | `Components/ComboBox/PVComboBox.swift` (added for S2-16's assign-field control, where the pool is the whole Source fields vocabulary; single-select subset only — see "The combo box subset" below) |
+| Thumbnail | `Components/Thumbnail/PVThumbnail.swift` (added for S2-17 Sources list rows; image / evidence glyph / SF glyph / empty / loading tile) |
+| EvidenceIcon | `Recipes/EvidenceIcon/PVEvidenceIcon.swift` (`file_*` + `type_*`; see colocated `EVIDENCE-ICONS.md`; not SF Symbols) |
+| SubjectIcon | `Recipes/SubjectIcon/PVSubjectIcon.swift` |
+| OmnibarHitRow | `Recipes/OmnibarHitRow/PVOmnibarHitRow.swift` |
+| Dialog | `Components/Dialog/PVDialog.swift` (added for S2-17 Add Source; sheet form with content slot + footer — see note below) |
+| Breadcrumbs | `Components/Breadcrumbs/PVBreadcrumbs.swift` (added for S2-18 Source page trail; Sources → `SRC-…`) |
+| ReorderableList | `Components/ReorderableList/PVReorderableList.swift` (+ `PVReorderHandle`; added for S2-25 Metadata drag order) |
 
 The other design-system components have **no files yet** — add them on
 demand, following the pattern above, when a screen needs one:
@@ -359,7 +356,7 @@ what makes a native dialog look off:
 - Sheets are modal to their window, not the app, and slide from the titlebar —
   all free from `.sheet`.
 
-`Components/Feedback/PVConfirm.swift` carries the web component's **copy
+`Components/Confirm/PVConfirm.swift` carries the web component's **copy
 rules** across without its chrome, and offers the two right answers:
 
 | Modifier | Use |

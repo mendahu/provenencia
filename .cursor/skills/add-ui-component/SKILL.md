@@ -90,7 +90,7 @@ Dismissal for async work stays on the caller binding (`isRunning` can show). See
 
 ```swift
 // ❌ BAD — domain meaning inside Components/, or category nesting / loose root file
-// DesignSystem/Components/Research/PVSourceTypeBadge.swift
+// DesignSystem/Components/Forms/PVSourceTypeBadge.swift
 // DesignSystem/Components/PVSourceTypeBadge.swift
 
 // ✅ GOOD — recipe, per-component folder
