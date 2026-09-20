@@ -297,12 +297,6 @@ private extension View {
             accessibilityIdentifier: "preview.nav.sourceFields"
         ),
         PVSidebarNavItem(
-            id: "subject-types",
-            label: L10n.Workspace.subjectTypesTitle,
-            icon: .shapes,
-            accessibilityIdentifier: "preview.nav.subjectTypes"
-        ),
-        PVSidebarNavItem(
             id: "subject-fields",
             label: L10n.Workspace.subjectFieldsTitle,
             icon: .listTree,
