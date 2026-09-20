@@ -12,6 +12,7 @@ IDs stay stable (`S7-NN`, `S7-DN`). Do not renumber when moving steps here.
 | [S7-01b](#s7-01b--pr-property-terms) | PR | `property_terms` + `value_type=term` + kind/edge seed + FFI term CRUD |
 | [S7-D2](#s7-d2--design-subject-fields) | Design | Type strip over property table; gates S7-05 |
 | [S7-05](#s7-05--pr-subject-fields-ui) | PR | Subject fields destination: strip + table + inspector |
+| [S7-02](#s7-02--pr-namevalue-schema--go) | PR | `name_values` / `name_value_parts` + `namevalues` Insert/Lookup |
 
 ## Steps
 
@@ -85,4 +86,23 @@ python3 scripts/check-localizable-xcstrings.py
 ```bash
 python3 scripts/check-localizable-xcstrings.py
 xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' -only-testing:ProvenenciaTests/SubjectFieldsModelTests -only-testing:ProvenenciaTests/PlaceRegistryTests CODE_SIGNING_ALLOWED=NO
+```
+
+### S7-02 — PR: NameValue schema + Go
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | — (parallel after S7-01; not gated on S7-D5) |
+| **Deliverables** | Done. Migration [`000025.sql`](../../../core/database/migrations/000025.sql) adds `name_values` + `name_value_parts` per structured-name-model §§2–3. Package [`core/database/namevalues/`](../../../core/database/namevalues/) with DateValue-shaped `Insert` / `Lookup` (write-once value object; transactional parent + parts). `apperr.CodeNameValuesInvalid`. Starter part-type consts (open vocabulary, not enforced). Skill [`add-name-value`](../../../.cursor/skills/add-name-value/SKILL.md) + rule `name-values.mdc`. |
+| **Tests** | Done. Go: `namevalues` table-driven Insert/Lookup (form-only, parts, rejects, schema/`user_version`). |
+| **Dogfood** | Schema/Go only — no app UI yet. Consumers: Observations `value_name_id` (**S7-03**); Swift editor (**S7-02b**). |
+| **Out** | Swift NameValue editor (**S7-02b**); Observation FK / composer (**S7-03** / **S7-08**); `name_format_profiles` / project defaults; FFI. |
+
+**Landed:** shared NameValue persistence so later Observations can reference structured names.
+
+**Verify:**
+
+```bash
+CGO_ENABLED=1 go test -tags fts5 ./core/database/namevalues/... ./core/database/...
 ```
