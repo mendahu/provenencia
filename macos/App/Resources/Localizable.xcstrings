@@ -7333,54 +7333,6 @@
         }
       }
     },
-    "subjectFields.filter.originAll": {
-      "comment": "Origin filter: all properties",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "All"
-          }
-        }
-      }
-    },
-    "subjectFields.filter.originSeeded": {
-      "comment": "Origin filter: provenencia-seeded properties",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seeded"
-          }
-        }
-      }
-    },
-    "subjectFields.filter.originUser": {
-      "comment": "Origin filter: researcher-created properties",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "User"
-          }
-        }
-      }
-    },
-    "subjectFields.filter.valueTypeAny": {
-      "comment": "Value type filter: no restriction",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Any value type"
-          }
-        }
-      }
-    },
     "subjectFields.valueType.text": {
       "comment": "Property value type label: text",
       "extractionState": "manual",
@@ -7521,30 +7473,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "New property"
-          }
-        }
-      }
-    },
-    "subjectFields.toolbar.addToType": {
-      "comment": "Toolbar button when a type is selected; argument is type label",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add a property to %@"
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.title": {
-      "comment": "Inspector eyebrow when a property is selected",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Property"
           }
         }
       }
@@ -7850,7 +7778,7 @@
       }
     },
     "subjectFields.strip.bridge": {
-      "comment": "Micro-label on bridge subject-type strip cards (relationship / participation / location)",
+      "comment": "Micro-label on bridge subject-type strip cards; rendered uppercase (BRIDGE)",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -7869,18 +7797,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Subject types"
-          }
-        }
-      }
-    },
-    "subjectFields.list.countLine": {
-      "comment": "Subject fields header count; total, seeded, user",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld properties · %lld seeded · %lld yours"
           }
         }
       }
@@ -7934,7 +7850,7 @@
       }
     },
     "subjectFields.table.emptySearchTitle": {
-      "comment": "Empty search title on Subject fields table",
+      "comment": "Empty table title when no properties are visible",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -7994,13 +7910,13 @@
       }
     },
     "subjectFields.inspector.bindCount": {
-      "comment": "Inspector bound-type count beside Bound to",
+      "comment": "Inspector bound-type count beside Bound to; bound, then total types",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld"
+            "value": "%lld of %lld"
           }
         }
       }
@@ -8025,6 +7941,150 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bind to subject types"
+          }
+        }
+      }
+    },
+    "subjectFields.table.originSeeded": {
+      "comment": "Table origin column for Provenencia-seeded properties",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "seeded"
+          }
+        }
+      }
+    },
+    "subjectFields.table.emptySearchTitleQuery": {
+      "comment": "Empty table title when search matches nothing; argument is the query",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No property matches “%@”"
+          }
+        }
+      }
+    },
+    "subjectFields.toolbar.addPropertyPlaceholder": {
+      "comment": "ComboBox placeholder when a subject type is focused; argument is type label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add a property to %@"
+          }
+        }
+      }
+    },
+    "subjectFields.toolbar.addPropertyEmpty": {
+      "comment": "ComboBox empty state when binding an existing property to the focused type",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No unbound property matches that name"
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.accessibility": {
+      "comment": "Accessibility label for the property inspector card",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Property inspector"
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.valueTypeImmutable": {
+      "comment": "Accessibility label for the lock beside value type in the inspector",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Immutable after create"
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.originUser": {
+      "comment": "Inspector origin line for researcher-created properties",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "User — you created this"
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.originSeeded": {
+      "comment": "Inspector origin line for product-seeded properties",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seeded by Provenencia"
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.bindingsAccessibility": {
+      "comment": "Accessibility label for the Bound-to checkbox list",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subject type bindings"
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.deleteUnused": {
+      "comment": "Inspector note when a user property can be deleted",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not in use. Deleting removes it from every type it is bound to."
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.bindingNotBound": {
+      "comment": "Accessibility label for an inactive binding checkbox",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "not bound"
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.bindingRegistry": {
+      "comment": "Micro-label beside a locked Bound-to row (registry-held)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "registry"
           }
         }
       }

@@ -1,13 +1,11 @@
 import Foundation
 import SwiftUI
 
-/// Session-cached Subject fields destination payload (properties + types + bindings + presentation).
+/// Session-cached Subject fields destination payload.
 struct SubjectFieldsSnapshot: Sendable, Equatable {
     var properties: [CatalogProperty]
     var types: [CatalogSubjectType]
-    /// Bindings keyed by subject type id.
     var fieldsByTypeID: [String: [CatalogSubjectTypeField]]
-    /// Presentation keyed by subject type key (person, event, …).
     var presentationsByKey: [String: CatalogSubjectTypePresentation]
 
     static let empty = SubjectFieldsSnapshot(
@@ -17,13 +15,10 @@ struct SubjectFieldsSnapshot: Sendable, Equatable {
         presentationsByKey: [:]
     )
 
-    /// Types in registry palette order (All strip uses this after the All card).
+    /// Board TYPES order: Person → Event → Place → Relationship → Participation → Location → Source.
     var typesInPaletteOrder: [CatalogSubjectType] {
-        types.sorted { lhs, rhs in
-            let l = presentationsByKey[lhs.key]?.paletteSort ?? SubjectFieldsTypeChrome.fallbackSort(lhs.key)
-            let r = presentationsByKey[rhs.key]?.paletteSort ?? SubjectFieldsTypeChrome.fallbackSort(rhs.key)
-            if l != r { return l < r }
-            return lhs.label.localizedCaseInsensitiveCompare(rhs.label) == .orderedAscending
+        types.sorted {
+            SubjectFieldsTypeChrome.sortIndex($0.key) < SubjectFieldsTypeChrome.sortIndex($1.key)
         }
     }
 
@@ -46,9 +41,9 @@ struct SubjectFieldsSnapshot: Sendable, Equatable {
     }
 }
 
-/// Maps registry presentation tokens / type keys onto S6 canvas chrome.
+/// S7-D2 strip / chip chrome — matches the board's TYPES + VT_COLOR tables.
 enum SubjectFieldsTypeChrome {
-    static func fallbackSort(_ key: String) -> Int {
+    static func sortIndex(_ key: String) -> Int {
         switch key {
         case "person": return 0
         case "event": return 1
@@ -61,27 +56,35 @@ enum SubjectFieldsTypeChrome {
         }
     }
 
-    static func iconKind(symbol: String?, typeKey: String) -> PVSubjectIconKind? {
-        let raw = symbol ?? typeKey
-        return PVSubjectIconKind(rawValue: raw)
-    }
-
-    static func isBridge(role: String?) -> Bool {
-        role == "bridge"
-    }
-
-    /// Primaries carry pigment; bridges and unknown roles stay ink-neutral.
-    static func ink(for presentation: CatalogSubjectTypePresentation?) -> Color {
-        guard let presentation, !isBridge(role: presentation.role) else {
-            return PVColor.textPrimary
+    /// Board: Relationship / Participation / Location share the bridge mark; Source is its own folio.
+    static func stripIconKind(typeKey: String) -> PVSubjectIconKind? {
+        switch typeKey {
+        case "person": return .person
+        case "event": return .event
+        case "place": return .place
+        case "relationship", "participation", "location": return .relationship
+        case "source": return .source
+        default: return PVSubjectIconKind(rawValue: typeKey)
         }
-        switch presentation.inkToken {
+    }
+
+    /// Board TYPES mark Relationship / Participation / Location / Source with the bridge micro-label.
+    static func showsBridgeLabel(typeKey: String) -> Bool {
+        switch typeKey {
+        case "relationship", "participation", "location", "source": return true
+        default: return false
+        }
+    }
+
+    static func ink(typeKey: String, presentation: CatalogSubjectTypePresentation?) -> Color {
+        if showsBridgeLabel(typeKey: typeKey) { return PVColor.textMuted }
+        switch presentation?.inkToken ?? "" {
         case "subjectPersonInk": return PVColor.subjectPersonInk
         case "subjectEventInk": return PVColor.subjectEventInk
         case "subjectPlaceInk": return PVColor.subjectPlaceInk
         default:
-            switch presentation.typeKey {
-            case "person", "source": return PVColor.subjectPersonInk
+            switch typeKey {
+            case "person": return PVColor.subjectPersonInk
             case "event": return PVColor.subjectEventInk
             case "place": return PVColor.subjectPlaceInk
             default: return PVColor.textPrimary
@@ -89,15 +92,120 @@ enum SubjectFieldsTypeChrome {
         }
     }
 
-    static func tint(for presentation: CatalogSubjectTypePresentation?) -> Color {
-        guard let presentation, !isBridge(role: presentation.role) else {
-            return PVColor.surfaceRaised
+    /// Board VT_COLOR — mono pill foreground.
+    static func valueTypeForeground(_ valueType: String) -> Color {
+        switch valueType {
+        case "text": return PVPalette.paper600
+        case "integer": return PVPalette.copper700
+        case "date": return PVPalette.lapis700
+        case "name": return PVPalette.iron700
+        case "subject": return PVPalette.plum700
+        case "term": return PVPalette.ochre700
+        default: return PVColor.textSecondary
         }
-        switch presentation.tintToken {
-        case "subjectPersonTint": return PVColor.subjectPersonTint
-        case "subjectEventTint": return PVColor.subjectEventTint
-        case "subjectPlaceTint": return PVColor.subjectPlaceTint
-        default: return PVColor.surfaceRaised
+    }
+}
+
+// MARK: - Board bind control (16×16 filled box — not a native checkbox)
+
+/// Matches the board `box(on, locked)` control used in On column + inspector binds.
+struct SubjectFieldsBindBox: View {
+    var on: Bool
+    var locked: Bool
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: PVRadius.xs, style: .continuous)
+                .fill(fill)
+                .overlay(
+                    RoundedRectangle(cornerRadius: PVRadius.xs, style: .continuous)
+                        .strokeBorder(stroke, lineWidth: 1)
+                )
+            if on {
+                Image(systemName: locked ? "lock.fill" : "checkmark")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(PVColor.accentForeground)
+            }
         }
+        .frame(width: 16, height: 16)
+        .accessibilityHidden(true)
+    }
+
+    private var fill: Color {
+        guard on else { return PVColor.surfaceCard }
+        return locked ? PVPalette.paper500 : PVColor.accent
+    }
+
+    private var stroke: Color {
+        on ? .clear : PVColor.borderDefault
+    }
+}
+
+struct SubjectFieldsValueTypePill: View {
+    let valueType: String
+
+    var body: some View {
+        // Board shows the raw value-type key in mono + VT_COLOR, not a title-cased label.
+        Text(verbatim: valueType)
+            .font(PVFont.mono(size: PVTypeScale.micro))
+            .foregroundStyle(SubjectFieldsTypeChrome.valueTypeForeground(valueType))
+            .padding(.horizontal, 6)
+            .frame(height: 18)
+            .background(PVColor.surfaceSunken)
+            .overlay(
+                RoundedRectangle(cornerRadius: PVRadius.xs, style: .continuous)
+                    .strokeBorder(PVColor.borderSubtle, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: PVRadius.xs, style: .continuous))
+            .accessibilityLabel(SubjectPropertyValueType.label(valueType))
+    }
+}
+
+/// Board origin column: warning badge for user; accent dot + “seeded” for provenencia.
+struct SubjectFieldsOriginCell: View {
+    let origin: String
+
+    var body: some View {
+        if origin == CatalogOrigin.user {
+            PVBadge(L10n.SubjectFields.originUserShort, tone: .warning, subtle: true)
+        } else if origin == CatalogOrigin.provenencia {
+            HStack(spacing: 5) {
+                Circle()
+                    .fill(PVColor.accentLine)
+                    .frame(width: 5, height: 5)
+                Text(L10n.SubjectFields.originSeededShort)
+                    .font(PVFont.body(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textMuted)
+            }
+        } else {
+            OriginPill(origin: origin)
+        }
+    }
+}
+
+struct SubjectFieldsBoundChip: View {
+    let label: String
+    let locked: Bool
+    var emphasized: Bool = false
+
+    var body: some View {
+        HStack(spacing: 3) {
+            if locked {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 9, weight: .semibold))
+            }
+            Text(verbatim: label)
+                .font(PVFont.body(size: PVTypeScale.micro))
+                .lineLimit(1)
+        }
+        .foregroundStyle(emphasized ? PVColor.accentSoftForeground : PVColor.textSecondary)
+        .padding(.horizontal, 6)
+        .frame(height: 18)
+        .background(emphasized ? PVColor.accentSoft : Color.clear)
+        .overlay(
+            Capsule(style: .continuous)
+                .strokeBorder(emphasized ? PVColor.accentLine : PVColor.borderSubtle, lineWidth: 1)
+        )
+        .clipShape(Capsule(style: .continuous))
     }
 }

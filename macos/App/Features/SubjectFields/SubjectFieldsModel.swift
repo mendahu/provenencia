@@ -19,22 +19,6 @@ enum SubjectPropertyValueType {
     }
 }
 
-enum SubjectFieldsOriginFilter: String, CaseIterable, Identifiable {
-    case all
-    case seeded
-    case user
-
-    var id: String { rawValue }
-
-    var label: LocalizedStringResource {
-        switch self {
-        case .all: return L10n.SubjectFields.originFilterAll
-        case .seeded: return L10n.SubjectFields.originFilterSeeded
-        case .user: return L10n.SubjectFields.originFilterUser
-        }
-    }
-}
-
 /// State for the **Subject fields** workspace destination (S7-D2 board / S7-05).
 @MainActor
 @Observable
@@ -43,14 +27,13 @@ final class SubjectFieldsModel {
         var label: String
         var valueType: String
         var description: String
-        /// Subject type ids to bind on create.
         var bindTypeIDs: Set<String>
     }
 
     private(set) var selectedTypeKey: String?
     var searchQuery = ""
-    private(set) var originFilter: SubjectFieldsOriginFilter = .all
-    private(set) var valueTypeFilter: String?
+    /// ComboBox selection for “Add a property to {Type}” (resets after bind).
+    var addPropertySelection = ""
     private(set) var selectedPropertyID: String?
     private(set) var createOpen = false
     var draft: Draft?
@@ -61,7 +44,6 @@ final class SubjectFieldsModel {
     private(set) var pendingDeleteID: String?
     private(set) var isDeleting = false
     private(set) var deleteError: String?
-    /// Drives ⌘F → search field focus.
     var searchFocused = false
 
     private let userID: String
@@ -105,15 +87,14 @@ final class SubjectFieldsModel {
         return handle?.error
     }
 
-    var types: [CatalogSubjectType] {
-        snapshot.typesInPaletteOrder
-    }
+    var types: [CatalogSubjectType] { snapshot.typesInPaletteOrder }
 
     var selectedType: CatalogSubjectType? {
         guard let selectedTypeKey else { return nil }
         return snapshot.types.first { $0.key == selectedTypeKey }
     }
 
+    /// Board: type filter + keyword search only (no origin / value-type filters).
     var visibleProperties: [CatalogProperty] {
         let q = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return snapshot.properties
@@ -123,14 +104,6 @@ final class SubjectFieldsModel {
                     let bound = snapshot.fieldsByTypeID[type.id]?.contains { $0.property.id == property.id } == true
                     if !bound { return false }
                 }
-                switch originFilter {
-                case .all: break
-                case .seeded:
-                    if property.origin != CatalogOrigin.provenencia { return false }
-                case .user:
-                    if property.origin != CatalogOrigin.user { return false }
-                }
-                if let valueTypeFilter, property.valueType != valueTypeFilter { return false }
                 if !q.isEmpty {
                     let hay = (property.label + " " + property.key).lowercased()
                     if !hay.contains(q) { return false }
@@ -138,6 +111,21 @@ final class SubjectFieldsModel {
                 return true
             }
             .sorted { $0.label.localizedCaseInsensitiveCompare($1.label) == .orderedAscending }
+    }
+
+    /// Unbound properties offered by the “Add a property to {Type}” combo.
+    var addPropertyOptions: [PVComboBoxOption] {
+        guard let type = selectedType else { return [] }
+        return snapshot.properties
+            .filter { snapshot.binding(propertyID: $0.id, typeID: type.id) == nil }
+            .sorted { $0.label.localizedCaseInsensitiveCompare($1.label) == .orderedAscending }
+            .map {
+                PVComboBoxOption(
+                    value: $0.id,
+                    label: $0.label,
+                    subtext: "\($0.key) · \($0.valueType) · \($0.origin)"
+                )
+            }
     }
 
     var selectedProperty: CatalogProperty? {
@@ -167,30 +155,15 @@ final class SubjectFieldsModel {
         return snapshot.properties.first { $0.id == pendingDeleteID }
     }
 
-    var countLine: String {
-        let summary = CatalogCountSummary.from(snapshot.properties)
-        return L10n.SubjectFields.countLine(
-            total: summary.total,
-            seeded: summary.seeded,
-            user: summary.user
-        )
-    }
-
     func syncCatalogCounts() {
         catalogCounts?.publishSubjectFields(.from(snapshot.properties))
     }
 
     func selectType(_ key: String?) {
-        selectedTypeKey = key
+        // Board: pressing the focused type again clears the filter.
+        selectedTypeKey = (key != nil && key == selectedTypeKey) ? nil : key
         lockedCallout = nil
-    }
-
-    func setOriginFilter(_ filter: SubjectFieldsOriginFilter) {
-        originFilter = filter
-    }
-
-    func setValueTypeFilter(_ valueType: String?) {
-        valueTypeFilter = valueType
+        addPropertySelection = ""
     }
 
     func selectProperty(_ id: String?) {
@@ -203,7 +176,7 @@ final class SubjectFieldsModel {
         searchFocused = true
     }
 
-    func openCreate() {
+    func openCreate(prefillLabel: String = "") {
         formError = nil
         lockedCallout = nil
         createOpen = true
@@ -211,7 +184,13 @@ final class SubjectFieldsModel {
         if let selectedType {
             bind.insert(selectedType.id)
         }
-        draft = Draft(label: "", valueType: "text", description: "", bindTypeIDs: bind)
+        let label = prefillLabel
+        draft = Draft(
+            label: label,
+            valueType: "text",
+            description: "",
+            bindTypeIDs: bind
+        )
     }
 
     func closeCreate() {
@@ -239,6 +218,17 @@ final class SubjectFieldsModel {
         guard !isDeleting else { return }
         pendingDeleteID = nil
         deleteError = nil
+    }
+
+    /// ComboBox picked an unbound property — bind it to the focused type.
+    func addPropertyFromCombo() async {
+        guard let type = selectedType,
+              !addPropertySelection.isEmpty,
+              let property = snapshot.properties.first(where: { $0.id == addPropertySelection })
+        else { return }
+        selectedPropertyID = property.id
+        await toggleBinding(to: type)
+        addPropertySelection = ""
     }
 
     @discardableResult
@@ -322,7 +312,6 @@ final class SubjectFieldsModel {
         }
     }
 
-    /// Toggles binding for the selected property to `type`. Locked bindings show a callout.
     func toggleBinding(to type: CatalogSubjectType) async {
         guard let property = selectedProperty else { return }
         lockedCallout = nil
@@ -359,7 +348,6 @@ final class SubjectFieldsModel {
         }
     }
 
-    /// Space: toggle binding to the focused type when a type filter is active.
     func toggleFocusedTypeBinding() async {
         guard let type = selectedType else { return }
         await toggleBinding(to: type)
