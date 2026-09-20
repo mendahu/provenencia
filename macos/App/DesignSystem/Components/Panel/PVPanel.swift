@@ -10,10 +10,9 @@ enum PVPanelFooterChrome {
 }
 
 /// Content-agnostic sheet **panel** primitive: title, optional subtitle, body
-/// slot, optional footer. Draws **no** panel background, corner radius, shadow,
-/// or scrim — the sheet window owns those. Composites (``PVFormDialogContent``,
-/// confirm sheet) and one-off feature sheets compose this instead of
-/// reimplementing header/footer chrome.
+/// slot, optional footer. Draws the warm ``PVColor/surfaceCard`` fill so sheet
+/// content matches the design kit; **does not** redraw corner radius, shadow,
+/// or scrim — the sheet window still owns those.
 struct PVPanel<Body: View, Footer: View>: View {
     let title: Text
     let subtitle: Text?
@@ -50,13 +49,17 @@ struct PVPanel<Body: View, Footer: View>: View {
             }
         }
         .frame(width: width)
+        // Warm paper fill from the kit (`--surface-card`). Radius/shadow stay
+        // on the sheet window — only the fill is content so mocks and app match.
+        .background(PVColor.surfaceCard)
     }
 
     private var headerAndBody: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space7) {
-            VStack(alignment: .leading, spacing: PVSpacing.space2) {
+            VStack(alignment: .leading, spacing: PVSpacing.space1) {
                 title
                     .font(PVFont.display(size: PVTypeScale.h3))
+                    .tracking(PVTypeScale.h3 * PVTracking.display)
                     .foregroundStyle(PVColor.textDisplay)
                     .fixedSize(horizontal: false, vertical: true)
                 if let subtitle {

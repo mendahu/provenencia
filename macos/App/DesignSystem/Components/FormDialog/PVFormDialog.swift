@@ -47,9 +47,9 @@ enum PVFormDialogAccessibility {
     }
 }
 
-/// Sheet body for a short form. Draws **no** panel background, corner radius,
-/// shadow or scrim — the sheet window owns those. Layout chrome comes from
-/// ``PVPanel``.
+/// Sheet body for a short form. Layout chrome comes from ``PVPanel``
+/// (including the warm card fill). Corner radius, shadow, and scrim stay on
+/// the sheet window.
 struct PVFormDialogContent<Form: View>: View {
     let copy: PVFormDialogCopy
     let width: CGFloat

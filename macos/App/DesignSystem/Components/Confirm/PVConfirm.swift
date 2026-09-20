@@ -52,7 +52,7 @@ struct PVConfirmCopy {
 }
 
 enum PVConfirmTone {
-    /// Actual loss. Confirm uses the danger button chrome.
+    /// Actual loss. Confirm uses the danger button chrome and a trash glyph.
     case danger
     /// Irreversible but non-destructive — merging two people, publishing a tree.
     case irreversible
@@ -61,6 +61,9 @@ enum PVConfirmTone {
 
     /// Confirm-button chrome — design-system styling inside the panel footer.
     var buttonVariant: PVButtonVariant { self == .danger ? .danger : .primary }
+
+    /// Leading glyph on the confirm control (`PVConfirmDialog`'s `confirmIcon`).
+    var confirmIcon: PVSymbol? { self == .danger ? .trash : nil }
 }
 
 /// Pure enablement for confirm footer buttons — extracted for unit tests.
@@ -70,8 +73,8 @@ enum PVConfirmControls {
 
 /// Layout constants for the confirm sheet.
 enum PVConfirmLayout {
-    /// Fixed alert-family width — a confirm sheet should not size to the parent.
-    static let panelWidth: CGFloat = 420
+    /// Kit default (`PVConfirmDialog` width) — alert-family, slightly under form sheets.
+    static let panelWidth: CGFloat = 440
 }
 
 /// Accessibility ids for confirm chrome buttons.
@@ -85,9 +88,8 @@ enum PVConfirmAccessibility {
 
 // MARK: - Sheet content
 
-/// Sheet body for a confirmation. Draws **no** panel background, corner radius,
-/// shadow or scrim — the sheet window owns those. Layout chrome comes from
-/// ``PVPanel`` (message as subtitle; detail in the body slot).
+/// Sheet body for a confirmation. Layout chrome comes from ``PVPanel``
+/// (message as subtitle; detail in the body slot), including the warm card fill.
 struct PVConfirmContent<Detail: View>: View {
     let copy: PVConfirmCopy
     let tone: PVConfirmTone
@@ -138,20 +140,20 @@ struct PVConfirmContent<Detail: View>: View {
                         prefix: accessibilityIdentifierPrefix,
                         suffix: "cancel"
                     ))
-                Button(String(localized: copy.confirm), role: tone.buttonRole) { onConfirm() }
-                    .buttonStyle(.pv(tone.buttonVariant, size: .lg))
-                    .disabled(PVConfirmControls.isActionDisabled(isRunning: isRunning))
-                    .modifier(ConfirmOptionalAccessibilityIdentifier(
-                        prefix: accessibilityIdentifierPrefix,
-                        suffix: "confirm"
-                    ))
-                    .overlay(alignment: .trailing) {
-                        if isRunning {
-                            ProgressView()
-                                .controlSize(.small)
-                                .offset(x: 22)
-                        }
-                    }
+                PVButton(
+                    copy.confirm,
+                    variant: tone.buttonVariant,
+                    size: .lg,
+                    icon: tone.confirmIcon,
+                    loading: isRunning,
+                    action: onConfirm
+                )
+                .keyboardShortcut(.defaultAction)
+                .disabled(PVConfirmControls.isActionDisabled(isRunning: isRunning))
+                .modifier(ConfirmOptionalAccessibilityIdentifier(
+                    prefix: accessibilityIdentifierPrefix,
+                    suffix: "confirm"
+                ))
             }
         }
         // Focus starts on cancel — Return must not complete a destructive action.

@@ -19,14 +19,16 @@ struct PVConfirmCopyTests {
 
 @Suite
 struct PVConfirmToneTests {
-    @Test func dangerUsesDestructiveRoleAndDangerVariant() {
+    @Test func dangerUsesDestructiveRoleDangerVariantAndTrashIcon() {
         #expect(PVConfirmTone.danger.buttonRole == .destructive)
         #expect(PVConfirmTone.danger.buttonVariant == .danger)
+        #expect(PVConfirmTone.danger.confirmIcon == .trash)
     }
 
-    @Test func irreversibleUsesPrimaryVariantWithoutDestructiveRole() {
+    @Test func irreversibleUsesPrimaryVariantWithoutDestructiveRoleOrIcon() {
         #expect(PVConfirmTone.irreversible.buttonRole == nil)
         #expect(PVConfirmTone.irreversible.buttonVariant == .primary)
+        #expect(PVConfirmTone.irreversible.confirmIcon == nil)
     }
 }
 
@@ -68,7 +70,7 @@ struct PVConfirmContentTests {
     }
 
     @Test func usesFixedAlertFamilyWidth() {
-        #expect(PVConfirmLayout.panelWidth == 420)
+        #expect(PVConfirmLayout.panelWidth == 440)
     }
 
     @Test func defaultsToneDangerAndNotRunning() {
