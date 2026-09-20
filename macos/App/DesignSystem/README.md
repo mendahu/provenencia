@@ -44,6 +44,13 @@ at call sites — never a literal color, font, or number.
 
 ## The component pattern
 
+**Layering:** new UI is classified as design system / recipe / snowflake before
+a file is added — see [`docs/ideas/design-system-hardening.md`](../../../docs/ideas/design-system-hardening.md),
+[`.cursor/rules/design-system-layers.mdc`](../../../.cursor/rules/design-system-layers.mdc),
+and [`.cursor/skills/add-ui-component/SKILL.md`](../../../.cursor/skills/add-ui-component/SKILL.md).
+Do not fork a `PV*` for a slight variant; compose down. Product-specific reused
+maps are recipes; one-screen glue stays a snowflake under `Features/`.
+
 `Components/Core/PVButton.swift` is the **canonical example** — read its
 header comment before adding a new component. In short:
 

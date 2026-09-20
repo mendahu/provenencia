@@ -89,7 +89,7 @@ Read [`criteria.md`](criteria.md) for the full rubric. In short:
 9. **i18n** — no hard-coded user-facing strings; `L10n` + catalogs; FFI codes mapped under `L10n.Errors`.
 10. **Docs/skills/rules drift** — authoritative guidance still matches code; no orphan skills, stale rules, or contradicted docs that would mis-train the next agent.
 11. **Accessibility** — VoiceOver/keyboard-ready controls; stable dotted `accessibilityIdentifier`s; labels on icon-only actions; no UI-testing by localized title.
-12. **UI component organization** — orphans, near-duplicate floating chrome/lists/rows, and feature-private copies of DesignSystem patterns; prefer one generic primitive + open/content policies over bespoke per-page reimplementations.
+12. **UI component organization** — orphans, near-duplicates, and wrong Frost layer (DS vs recipe vs snowflake); prefer compose-down over bespoke per-page reimplementations (`.cursor/skills/add-ui-component`).
 
 ## Provenencia invariants (flag violations)
 
@@ -101,7 +101,7 @@ Read [`criteria.md`](criteria.md) for the full rubric. In short:
 - Prefer product-named packages/folders over grab-bags (`Shared/`, `Common/`, `Utils/`).
 - Skills/rules/docs that agents follow must stay truthful; fix or archive drift, don’t leave lying guidance.
 - Interactive Mac controls that matter for tests or AT get stable `.accessibilityIdentifier("dotted.name")`; don’t query by localized title.
-- DesignSystem `PV*` primitives are for reuse; feature folders hold product composition—not a second copy of the same floating menu / list / chip.
+- DesignSystem `PV*` is content-agnostic; recipes are product-specific reused maps onto `PV*`; snowflakes stay feature-private—not a second copy of the same floating menu / list / chip / dialog chrome.
 
 ## Output format
 

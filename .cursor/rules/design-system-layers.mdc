@@ -1,0 +1,36 @@
+---
+description: >-
+  macOS UI layering — design system / recipes / snowflakes; compose down,
+  don’t fork PV* for slight variants
+globs: macos/App/**/*.swift
+alwaysApply: false
+---
+
+# Design system layers
+
+Authoritative idea: [`docs/ideas/design-system-hardening.md`](../../docs/ideas/design-system-hardening.md).
+When adding or splitting UI, follow [`.cursor/skills/add-ui-component/SKILL.md`](../skills/add-ui-component/SKILL.md).
+
+Three layers (Brad Frost: components / recipes / snowflakes). **Stop at the highest layer you need** — do not wrap for completeness.
+
+| Layer | Where | Rule |
+|---|---|---|
+| **Design system** | `DesignSystem/` (`PV*`) | Content-agnostic; tokens + slots only. No catalog / store / feature meaning. |
+| **Recipes** | Shared product home (e.g. `Components/Research/`) | Provenencia-specific, **≥2 call sites**. Thin map onto `PV*`. |
+| **Snowflakes** | `Features/<Feature>/` (`private`) | One screen. Promote on second real consumer. |
+
+Inside the kit: **primitive** (button, panel) vs **composite** (confirm, form dialog) — same layer, different size. Prefer one panel + slots over a new root dialog.
+
+```swift
+// ❌ BAD — new PV* for one screen, or domain types inside DesignSystem
+struct PVDeleteSourceFieldDialog { … }  // catalog meaning in the kit
+
+// ✅ GOOD — DS composite at the call site; snowflake only for unique body
+.pvConfirmSheet(item: pendingDelete, copy: deleteCopy(for:), …) { field in
+    PVConfirmKeyChip(label: …, value: field.key)
+}
+```
+
+- Compose down; don’t clone sideways for a slight variant.
+- No dimming/scrim on sheets — window owns chrome (see `PVConfirm` / DesignSystem README).
+- Search existing `PV*` before inventing chrome under `Features/`.

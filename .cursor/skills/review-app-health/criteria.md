@@ -220,34 +220,34 @@ Mac client AT and UI-test hygiene. Notes: [`docs/macos-client-patterns.md`](../.
 
 ## 12. UI component organization
 
-Catch LLM- and rush-driven UI debt: the same interaction reimplemented per screen, DesignSystem primitives left orphaned, or “almost the same” chrome living in both `DesignSystem/` and `Features/`.
+Catch LLM- and rush-driven UI debt against Frost layers (**design system / recipes / snowflakes** — [`docs/ideas/design-system-hardening.md`](../../../docs/ideas/design-system-hardening.md), [`.cursor/skills/add-ui-component`](../add-ui-component/SKILL.md)): the same interaction reimplemented per screen, `PV*` left orphaned, or “almost the same” chrome in both `DesignSystem/` and `Features/`.
 
 **Look for**
 
-- **Orphans** — `PV*` (or other DesignSystem) types with zero production call sites under `Features/` / `Platform/` (previews and tests alone do not count as product use). Dead after a feature moved to a bespoke view.
-- **Near-duplicates** — two or more floating panels, menus, chips, list shells, row templates, empty states, or dialogs that share the same visual language (card, border, shadow, hover row, dismiss monitor) but diverge only in open gesture or row payload.
-- **Bespoke per page** — a feature-private control that reimplements an existing `PV*` pattern instead of composing it (new `*MenuPanel`, `*List`, `*Chip` under `Features/` when DesignSystem already has one).
-- **Generic trapped in a domain** — reusable chrome or interaction policy living under `Features/<OneDomain>/` that a second surface already copied or will need (menus, split rows, caption bands, toolbar jump hosts).
-- **Wrong layer** — product/domain copy or navigation policy baked into a DesignSystem primitive (hard-coded “Sources”, history semantics inside a generic panel), or the reverse: a one-off product layout promoted to `PV*` with a single call site and no second consumer.
-- **Wrapper sprawl** — thin wrappers that only change how a menu opens (click vs right-click vs long-press) implemented as entirely separate panel stacks instead of one panel + composable open policies.
+- **Orphans** — `PV*` types with zero production call sites under `Features/` / `Platform/` (previews/tests alone don’t count).
+- **Near-duplicates** — panels, menus, chips, list shells, empty states, or dialogs that share chrome but diverge only in open gesture or payload.
+- **Snowflake reimplementing DS** — feature-private control that redraws an existing `PV*` (dialog footer, menu host, chip) instead of composing it.
+- **Recipe trapped as snowflake** — reusable product mapping living under `Features/<OneDomain>/` that a second surface already copied (promote to a recipe).
+- **Wrong layer** — catalog/store/feature meaning inside `DesignSystem/`; or a one-off promoted to `PV*` with a single call site; or a preemptive recipe with one caller.
+- **Wrapper sprawl** — separate panel stacks for open-policy differences instead of one panel + composable open policies.
 
 **How to sample**
 
 1. Inventory `macos/App/DesignSystem/Components/**` (`PV*` types).
-2. For each candidate primitive (menus, lists, dialogs, chips, empty states), Grep `macos/App/Features` and `Platform` for call sites—flag zero-use orphans.
-3. Spot-check high-churn UI (workspace toolbar, Sources list, Source page, omnibar overlays) for private `*Panel` / `*Menu` / `*Row` types; diff their chrome against the nearest `PV*`.
-4. Ask: if a third screen needed this tomorrow, would we copy-paste again or extend one primitive?
+2. Grep `Features` / `Platform` for call sites—flag zero-use orphans.
+3. Spot-check high-churn UI for private `*Panel` / `*Sheet` / `*Row`; diff against nearest `PV*`.
+4. Ask: design system, recipe, or snowflake? If a third screen needed this tomorrow, compose or promote—don’t copy.
 
 **Provenencia notes**
 
-- Target layout: reusable primitives in `DesignSystem/`; product composition in `Features/<Name>/`; store/FFI in `Platform/`.
-- Prefer **one floating-menu kit** (panel + item + dismiss/positioning) with open policies (primary click, right-click, long-press) over parallel hosts—landed in S5-10 (`PVContextMenu` / Forms `PVSelect` / history jump on shared panel; see [`archive/spike-5`](../../../docs/deployment-plan/archive/spike-5/completed.md#s5-10--unify-floating-menus)). Omnibar and `PVComboBox` keep separate hosts by design.
-- Split-row / dual-action lists may stay feature-owned when forcing every consumer into a dual-zone API would be wrong—but then delete or shrink the unused single-target primitive rather than leaving both forever.
-- Do not invent new DesignSystem components for a single unproven call site; hoist when ≥2 real surfaces share the pattern.
+- Target: content-agnostic `PV*` in `DesignSystem/`; recipes as thin product maps when ≥2 call sites; snowflakes under `Features/<Name>/`; store/FFI in `Platform/`.
+- Prefer **one floating-menu kit** (`PVContextMenu` / `PVSelect` / jump menu—see [`archive/spike-5`](../../../docs/deployment-plan/archive/spike-5/completed.md#s5-10--unify-floating-menus)). Omnibar and `PVComboBox` keep separate hosts by design.
+- Dialogs: compose `.pvDialog` / `.pvConfirm` / `.pvConfirmSheet`; don’t redraw scrim/footer chrome in a feature sheet.
+- Do not invent new DesignSystem types for a single unproven call site; hoist snowflake → recipe (or into DS if agnostic) at ≥2 real surfaces.
 
 **Good finding shape** — “New overlay menu reimplements card chrome instead of `PVContextMenuPanel`; wire it through the shared kit with a custom row payload.”
 
-**Allow** — Deliberate one-off product layouts with no second consumer yet; AppKit escape hatches wrapped once; Generated / preview-only fixtures.
+**Allow** — Deliberate snowflakes with no second consumer yet; AppKit escape hatches wrapped once; Generated / preview-only fixtures.
 
 ---
 

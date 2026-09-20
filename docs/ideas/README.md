@@ -12,3 +12,9 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - **Rough is fine.** Bullets, open questions, and “maybe later” notes are enough.
 - **Promote out.** When an idea is pulled into a deployment-plan spike, move the file into that spike folder.
 - **Archive when shipped.** Move finished ideas into [`archive/`](archive/).
+
+## Current ideas
+
+- [`design-system-hardening.md`](design-system-hardening.md) — component layering (design system → recipes → snowflakes); pause Spike 7 UI drift
+- [`interpretation-graph-ui.md`](interpretation-graph-ui.md)
+- [`share-packages.md`](share-packages.md)
