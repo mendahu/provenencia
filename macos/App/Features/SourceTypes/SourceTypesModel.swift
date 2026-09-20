@@ -151,6 +151,13 @@ final class SourceTypesModel {
         FieldSlug.kebab(draft?.label ?? "")
     }
 
+    /// Writes a pending icon pick into the draft (form-dialog confirm path).
+    func applyDraftIconKey(_ key: String) {
+        guard var draft else { return }
+        draft.iconKey = key
+        self.draft = draft
+    }
+
     var isDirty: Bool {
         guard case .editing = mode, let type = selectedType, let draft else { return false }
         return draft.label != type.label

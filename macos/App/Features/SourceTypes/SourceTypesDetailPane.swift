@@ -8,6 +8,8 @@ struct SourceTypesDetailPane: View {
     @Environment(WorkspaceNavigation.self) private var navigation
     @Bindable var model: SourceTypesModel
     @State private var iconPickerOpen = false
+    /// Pending selection while the form dialog is open — draft updates only on confirm.
+    @State private var pendingIconKey = PVEvidenceIconKey.defaultTypeIcon.rawValue
 
     var body: some View {
         ScrollView {
@@ -15,24 +17,30 @@ struct SourceTypesDetailPane: View {
         }
         .background(PVColor.surfaceCard)
         .accessibilityIdentifier("sourceTypes.detail")
-        .sheet(isPresented: $iconPickerOpen) {
-            SourceTypeIconPickerSheet(
-                selection: Binding(
-                    get: {
-                        model.draft?.iconKey ?? PVEvidenceIconKey.defaultTypeIcon.rawValue
-                    },
-                    set: { newValue in
-                        guard var draft = model.draft else { return }
-                        draft.iconKey = newValue
-                        model.draft = draft
-                    }
-                ),
-                onDone: { iconPickerOpen = false }
-            )
+        .pvFormDialog(
+            isPresented: $iconPickerOpen,
+            copy: PVFormDialogCopy(
+                title: L10n.SourceTypes.iconPickerTitle,
+                subtitle: L10n.SourceTypes.iconPickerSubtitle,
+                confirm: L10n.SourceTypes.iconPickerConfirm,
+                cancel: L10n.SourceTypes.iconPickerCancel
+            ),
+            width: 660,
+            accessibilityIdentifierPrefix: "sourceTypes.iconPicker",
+            onConfirm: {
+                commitPendingIconKey()
+                iconPickerOpen = false
+            }
+        ) {
+            SourceTypeIconPickerForm(selection: $pendingIconKey)
         }
         .onChange(of: panelIdentity) { _, _ in
             iconPickerOpen = false
         }
+    }
+
+    private func commitPendingIconKey() {
+        model.applyDraftIconKey(pendingIconKey)
     }
 
     @ViewBuilder
@@ -211,6 +219,7 @@ struct SourceTypesDetailPane: View {
     private func iconFieldButton(selection: Binding<String>) -> some View {
         let key = PVEvidenceIconKey(catalogKey: selection.wrappedValue)
         return Button {
+            pendingIconKey = selection.wrappedValue
             iconPickerOpen = true
         } label: {
             HStack(spacing: PVSpacing.space5) {
@@ -482,60 +491,30 @@ struct SourceTypesDetailPane: View {
     }
 }
 
-/// Modal grid of closed `type_*` marks — S2-03 board §08 / design pane
-/// "Choose an icon". Selection updates the draft immediately; Done dismisses.
-private struct SourceTypeIconPickerSheet: View {
+/// Icon grid + metaphor for the Source-type icon ``pvFormDialog`` body.
+/// Selection is local until the form dialog confirms.
+private struct SourceTypeIconPickerForm: View {
     @Binding var selection: String
-    let onDone: () -> Void
 
     private let columns = [GridItem(.adaptive(minimum: 108), spacing: PVSpacing.space4)]
 
     var body: some View {
-        VStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: PVSpacing.space7) {
-                VStack(alignment: .leading, spacing: PVSpacing.space2) {
-                    Text(L10n.SourceTypes.iconPickerTitle)
-                        .font(PVFont.display(size: PVTypeScale.h3))
-                        .foregroundStyle(PVColor.textDisplay)
-                    Text(L10n.SourceTypes.iconPickerSubtitle)
-                        .font(PVFont.body(size: PVTypeScale.bodySmall))
-                        .foregroundStyle(PVColor.textSecondary)
-                        .lineSpacing((PVLineHeight.relaxed - 1) * PVTypeScale.bodySmall)
-                        .fixedSize(horizontal: false, vertical: true)
+        VStack(alignment: .leading, spacing: PVSpacing.space7) {
+            LazyVGrid(columns: columns, spacing: PVSpacing.space4) {
+                ForEach(PVEvidenceIconKey.typeKeys, id: \.rawValue) { key in
+                    iconCell(key)
                 }
-                LazyVGrid(columns: columns, spacing: PVSpacing.space4) {
-                    ForEach(PVEvidenceIconKey.typeKeys, id: \.rawValue) { key in
-                        iconCell(key)
-                    }
-                }
-                .accessibilityElement(children: .contain)
-                .accessibilityLabel(Text(L10n.SourceTypes.iconPickerGroupLabel))
             }
-            .padding(.horizontal, PVSpacing.space7)
-            .padding(.vertical, PVSpacing.space9)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(Text(L10n.SourceTypes.iconPickerGroupLabel))
+            .accessibilityIdentifier("sourceTypes.iconPicker")
 
-            HStack(alignment: .center, spacing: PVSpacing.space5) {
-                Text(selectedKey.typeMetaphor)
-                    .font(PVFont.body(size: PVTypeScale.micro, italic: true))
-                    .foregroundStyle(PVColor.textMuted)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .fixedSize(horizontal: false, vertical: true)
-                Button(String(localized: L10n.SourceTypes.iconPickerDone)) {
-                    onDone()
-                }
-                .buttonStyle(.pv(.ghost, size: .lg))
-                .keyboardShortcut(.defaultAction)
-                .accessibilityIdentifier("sourceTypes.iconPicker.done")
-            }
-            .padding(.horizontal, PVSpacing.space8)
-            .padding(.vertical, PVSpacing.space8)
-            .overlay(alignment: .top) {
-                PVDivider()
-            }
+            Text(selectedKey.typeMetaphor)
+                .font(PVFont.body(size: PVTypeScale.micro, italic: true))
+                .foregroundStyle(PVColor.textMuted)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .frame(width: 660)
-        .background(PVColor.surfaceCard)
-        .accessibilityIdentifier("sourceTypes.iconPicker")
     }
 
     private var selectedKey: PVEvidenceIconKey {

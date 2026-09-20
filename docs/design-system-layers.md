@@ -154,7 +154,7 @@ Bespoke UI for **one** screen (or private helpers inside one feature). Written o
 - **Not OK:** quietly becoming the de-facto way we do dialogs while living as a one-off — promote into `Components/` or `Recipes/` instead.
 - **Second call site promotes** a snowflake → recipe (same product kind, now shared) or into `Components/` if it was content-agnostic all along.
 
-**Example:** `SourceTypeIconPickerSheet`’s icon grid (target: form body inside `.pvFormDialog`; chrome via `PVPanel` / FormDialog — not hand-rolled header/footer).
+**Example:** Source Types icon grid — snowflake form body inside `.pvFormDialog` (chrome via FormDialog → `PVPanel`).
 
 ## Layering rules
 

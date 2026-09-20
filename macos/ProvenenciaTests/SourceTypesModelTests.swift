@@ -349,6 +349,24 @@ struct SourceTypesModelTests {
         #expect(!model.isDirty)
     }
 
+    @Test func applyDraftIconKeyUpdatesPendingPickerSelection() async {
+        let (model, session) = makeModel(types: [userType()])
+        await warm(model, session: session)
+        model.select("t2")
+        let before = model.draft?.iconKey
+        #expect(before == PVEvidenceIconKey.defaultTypeIcon.rawValue)
+
+        model.applyDraftIconKey("type_photograph")
+        #expect(model.draft?.iconKey == "type_photograph")
+        #expect(model.isDirty)
+
+        // Cancel path: caller simply discards pending UI state; draft unchanged
+        // until applyDraftIconKey — reverting restores the saved icon.
+        model.revertEdit()
+        #expect(model.draft?.iconKey == before)
+        #expect(!model.isDirty)
+    }
+
     @Test func revertingDiscardsUnsavedEdits() async {
         let (model, session) = makeModel(types: [userType()])
         await warm(model, session: session)
