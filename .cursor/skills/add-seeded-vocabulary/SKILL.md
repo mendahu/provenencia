@@ -31,7 +31,7 @@ new Install into **`onboarding.createCatalog` only**.
 
 1. Edit **`core/database/sourcevocab/registry.go`** — declarative lists:
    - `seedTypes` — `key`, `label`, `description`
-   - `seedFields` — `key`, `label`, `data_type` (`text`|`date`), optional description
+   - `seedFields` — `key`, `label`, `data_type` (`text`|`date`|`url`), optional description
    - `seedSuggestions` — `(type_key, field_key, sort_order)`
 2. Prefer a tiny starter set. New projects get whatever is in the registry at
    create time; existing catalogs are not backfilled on open.

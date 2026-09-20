@@ -3157,6 +3157,18 @@
         }
       }
     },
+    "sourceFields.dataType.url": {
+      "comment": "Source field data type badge/option: url",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "url"
+          }
+        }
+      }
+    },
     "sourceFields.delete.action": {
       "comment": "Delete button in the Source fields detail pane, and the confirm dialog's destructive button",
       "extractionState": "manual",
@@ -3428,7 +3440,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Only text and date exist in the Source layer today"
+            "value": "Text, date, or url — chosen at create and immutable afterward"
           }
         }
       }

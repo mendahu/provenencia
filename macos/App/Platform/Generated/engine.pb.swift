@@ -973,7 +973,7 @@ public nonisolated struct Provenencia_Engine_V1_MetadataField: Sendable {
 
   public var label: String = String()
 
-  /// text | date
+  /// text | date | url
   public var dataType: String = String()
 
   public var description_p: String = String()

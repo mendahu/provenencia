@@ -594,7 +594,7 @@ func validateValue(dataType, valueText string, dateValueID []byte) error {
 	hasDate := len(dateValueID) == 16
 	hasText := valueText != ""
 	switch dataType {
-	case sourcefields.DataTypeText:
+	case sourcefields.DataTypeText, sourcefields.DataTypeURL:
 		if hasDate {
 			return ErrInvalid
 		}

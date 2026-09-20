@@ -59,6 +59,24 @@ func TestUpsertLookupList(t *testing.T) {
 			},
 		},
 		{
+			name: "upsert accepts url data type",
+			run: func(t *testing.T, c *database.Catalog) {
+				id, err := Upsert(c, Field{
+					Key: "landing-page", Origin: OriginUser, Label: "Landing page", DataType: DataTypeURL,
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				got, err := Lookup(c, "landing-page", OriginUser)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if string(got.ID) != string(id) || got.DataType != DataTypeURL {
+					t.Fatalf("got %+v", got)
+				}
+			},
+		},
+		{
 			name: "lookup missing",
 			run: func(t *testing.T, c *database.Catalog) {
 				_, err := Lookup(c, "nope", OriginProvenencia)

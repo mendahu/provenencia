@@ -50,7 +50,7 @@ extension View {
 
 /// Label column used by metadata saved / suggestion rows.
 ///
-/// Saved rows pass `dataType` so the board's kind microcaps (icon + TEXT/DATE)
+/// Saved rows pass `dataType` so the board's kind microcaps (icon + type label)
 /// sit under the field name. Suggestions omit it and stay a muted caption.
 struct SourcePageMetadataLabel: View {
     let text: String
@@ -70,7 +70,7 @@ struct SourcePageMetadataLabel: View {
                         .foregroundStyle(PVColor.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
                     HStack(spacing: PVSpacing.space2) {
-                        PVIcon(dataType == CatalogFieldDataType.date ? .calendar : .textType, size: 11)
+                        PVIcon(CatalogFieldDataType.icon(for: dataType), size: 11)
                         Text(CatalogFieldDataType.label(for: dataType))
                             .font(PVFont.mono(size: PVTypeScale.micro))
                             .tracking(PVTypeScale.micro * PVTracking.caps)

@@ -99,7 +99,7 @@ gedcom_file
 
 ## 2.2 `source_metadata_fields`
 
-Catalog fields only. Values stay descriptive text (or structured dates); they do not resolve to Interpretation subjects or canonical entities.
+Catalog fields only. Values stay descriptive text, structured dates, or text-shaped URLs; they do not resolve to Interpretation subjects or canonical entities.
 
 ```text
 key                     data_type   typical use
@@ -116,7 +116,7 @@ isbn                    text        book
 series                  text        book series; census microfilm series
 volume                  text        book volume; vital-record volume
 page                    text        catalog page/sheet identity for a record-as-source
-url                     text        originating website, vendor report, or download location
+url                     url         originating website, vendor report, or download location
 site_name               text        website
 software                text        GEDCOM exporting program
 gedcom_version          text        GEDCOM

@@ -2438,6 +2438,12 @@ enum L10n {
             comment: "Source field data type badge/option: date"
         )
 
+        static let dataTypeUrl = LocalizedStringResource(
+            "sourceFields.dataType.url",
+            defaultValue: "url",
+            comment: "Source field data type badge/option: url"
+        )
+
         static let deleteField = LocalizedStringResource(
             "sourceFields.delete.action",
             defaultValue: "Delete field",
@@ -2614,7 +2620,7 @@ enum L10n {
 
         static let formDataTypeHint = LocalizedStringResource(
             "sourceFields.form.dataTypeHint",
-            defaultValue: "Only text and date exist in the Source layer today",
+            defaultValue: "Text, date, or url — chosen at create and immutable afterward",
             comment: "Hint under the data type picker on add"
         )
 
