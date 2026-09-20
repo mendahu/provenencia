@@ -41,8 +41,12 @@ directly. Do not invent a recipe or snowflake shell for completeness.
 | Recipe | `DesignSystem/Recipes/<Name>/` | Domain → component props | Reimplement badge/chip/panel chrome; category nesting |
 | Snowflake | `Features/<Feature>/` or `DesignSystem/Snowflakes/<Name>/` | One-screen glue | Become the de-facto dialog/menu pattern while one-off |
 
-Folder name: PascalCase **without** `PV` (`Button`, `EvidenceIcon`). Colocate the
-main Swift file, private helpers, and component-specific docs in that folder.
+Folder name: PascalCase **without** `PV` (`Button`, `EvidenceIcon`). Public
+types under `Components/` and `Recipes/` **must** use the `PV` prefix
+(`PVButton`, `PVEvidenceIcon`) so they do not collide with SwiftUI/AppKit and
+read as kit API — see [`docs/design-system-layers.md`](../../../docs/design-system-layers.md)
+§ PV type prefix. Colocate the main Swift file, private helpers, and
+component-specific docs in that folder.
 
 ### Primitive vs composite (inside Components/)
 
@@ -57,6 +61,7 @@ Prefer extending a composite with slots over a new root `PV*` for a slight varia
 
 ```
 - [ ] Classified: component | recipe | snowflake
+- [ ] Public Components/Recipes type uses `PV*` prefix (not bare `Button` / SwiftUI-colliding names)
 - [ ] Path is Components|Recipes|Snowflakes/<Name>/… (or Features/) — no category nesting, no loose layer-root .swift
 - [ ] Grep’d DesignSystem + Features for an existing near-match
 - [ ] Composed down instead of cloning sideways
@@ -114,7 +119,8 @@ enum VocabularyDeleteDialog { static func sheet(…) }  // only SourceFields use
 ## Steps when adding a component
 
 1. Confirm layer = component (decision step 2).
-2. Create **`DesignSystem/Components/<Name>/`** and add `PV<Name>.swift` (plus optional README/helpers in the same folder).
+2. Create **`DesignSystem/Components/<Name>/`** and add `PV<Name>.swift` (type
+   `PV<Name>` — required prefix; plus optional README/helpers in the same folder).
 3. Follow `PVButton.swift` shape: header names mirrored `.jsx` / deliberate deviations; tokens only; `#Preview` at bottom.
 4. Register new files in `macos/Provenencia.xcodeproj`.
 5. Prefer View modifiers for presentation (`.pvDialog`, `.pvConfirmSheet`) when the control is a sheet/alert family.

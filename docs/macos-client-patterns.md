@@ -26,7 +26,7 @@ Open **`macos/Provenencia.xcodeproj`**, not `macos/App`. The latter is the sourc
 
 ### UI composition layers
 
-UI building blocks are **components** (content-agnostic `PV*`), **recipes** (Provenencia-specific, reused), or **snowflakes** (one screen). Under each DesignSystem layer root, use **one folder per control** (`Components/Button/…`) — not UI-category nesting and not loose files at the layer root. Stop at the highest layer you need. Full model: [`design-system-layers.md`](design-system-layers.md). Agent workflows: `add-ui-component`, `evaluate-ui-component`.
+UI building blocks are **components** (content-agnostic `PV*`), **recipes** (Provenencia-specific, reused), or **snowflakes** (one screen). Under each DesignSystem layer root, use **one folder per control** (`Components/Button/…`) — not UI-category nesting and not loose files at the layer root. Public Components/Recipes types use the **`PV` prefix** so they do not collide with SwiftUI/AppKit (`PVButton`, not `Button`). Stop at the highest layer you need. Full model: [`design-system-layers.md`](design-system-layers.md). Agent workflows: `add-ui-component`, `evaluate-ui-component`.
 
 ---
 

@@ -68,9 +68,11 @@ until moved) is the **canonical example** — read its header comment before
 adding a new component. In short:
 
 - A **component** lives at `DesignSystem/Components/<Name>/PV<Name>.swift`
-  (folder PascalCase without `PV`). A **recipe** at
-  `DesignSystem/Recipes/<Name>/…`. Colocate helpers and component docs in that
-  folder.
+  (folder PascalCase without `PV`; **type** uses the `PV` prefix — see
+  [`docs/design-system-layers.md`](../../../docs/design-system-layers.md) § PV
+  type prefix: disambiguate from SwiftUI/AppKit and mark kit ownership). A
+  **recipe** at `DesignSystem/Recipes/<Name>/…` likewise uses a `PV*` public
+  type. Colocate helpers and component docs in that folder.
 - The file's header comment names the `.jsx` it mirrors (when ported from the
   Claude Design kit) and calls out any deliberate deviation.
 - The type only ever reaches for `PV*` tokens — never a literal color,

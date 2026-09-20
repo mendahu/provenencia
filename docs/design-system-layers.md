@@ -64,7 +64,7 @@ Features/<Feature>/               # screens; private snowflake helpers OK here t
 | `DesignSystem/Snowflakes/<Name>/` | Snowflakes | One folder per named kit-side one-off |
 | `Features/<Feature>/` | Snowflakes (typical) | Feature views + `private` helpers |
 
-**Folder naming:** PascalCase **without** the `PV` prefix (`Button`, `EvidenceIcon`). The primary Swift type may still be `PVButton` / `PVEvidenceIcon` inside that folder.
+**Folder naming:** PascalCase **without** the `PV` prefix (`Button`, `EvidenceIcon`). The **Swift type** inside still uses the `PV` prefix — see [PV type prefix](#pv-type-prefix) below.
 
 **Colocate** in the component folder: the main view, private backing types, small helpers, and component-specific docs. Do **not** dump unrelated controls into the same folder. Shared cross-cutting tokens stay in `Tokens/`.
 
@@ -93,7 +93,37 @@ No `components/forms/` category nesting. Each control is `components/<Name>/`.
 
 ### Transition
 
-Until the move PR lands, some files may still live under legacy `Components/Core|Forms|Feedback|Navigation|Data|Research/`. **Do not add new files to those category folders or as loose files at a layer root.** New work uses `Components|<Name>/`, `Recipes/<Name>/`, or `Snowflakes/<Name>/` (or feature-local snowflakes).
+Until the move PR lands, some files may still live under legacy `Components/Core|Forms|Feedback|Navigation|Data|Research/`. **Do not add new files to those category folders or as loose files at a layer root.** New work uses `Components/<Name>/`, `Recipes/<Name>/`, or `Snowflakes/<Name>/` (or feature-local snowflakes).
+
+## PV type prefix
+
+`PV` means **Provenencia** design-system API. It is a **Swift type-naming** rule, not a folder rule.
+
+**Why it exists**
+
+1. **Disambiguate from SwiftUI / AppKit** — bare names like `Button`, `TextField`, `Image`, `Toggle`, and `Table` already belong to the platform. In our single Mac app target, a type literally named `Button` collides with `SwiftUI.Button` in `View` builders and imports.
+2. **Mark kit ownership** — `PV*` greps as design-system surface; feature snowflakes can keep product names (`SourceTypeIconPickerSheet`).
+
+**Rule (enforce for all new DesignSystem UI)**
+
+| Location | Public type / primary file naming |
+|---|---|
+| `DesignSystem/Components/<Name>/` | **Must** use the `PV` prefix: type `PVButton`, file typically `PVButton.swift` |
+| `DesignSystem/Recipes/<Name>/` | **Must** use the `PV` prefix on the public recipe type (e.g. `PVEvidenceIcon`) — same collision and ownership reasons |
+| `DesignSystem/Tokens/` | Existing `PV*` token types (`PVColor`, `PVSpacing`, …) keep the prefix |
+| `DesignSystem/Snowflakes/<Name>/` | Prefer `PV` if the name would collide with SwiftUI/AppKit; otherwise a clear product name is OK |
+| `Features/<Feature>/` snowflakes | **Do not** require `PV` — use feature/product names |
+
+Related View modifiers follow the same house prefix in camelCase: `.pvDialog`, `.pvConfirm`, `.buttonStyle(.pv(…))`.
+
+**Not required**
+
+- Folder names do **not** include `PV` (`Components/Button/`, not `Components/PVButton/`).
+- Private nested helpers inside a component file (`PVButtonBody`) may keep the prefix for consistency with the public type.
+
+**Debt**
+
+Some existing types may not yet follow this consistently. Do not rename in drive-by PRs unless that is the task; **new** DesignSystem components and recipes must use `PV*`. Fix stragglers in a dedicated pass.
 
 ## 1. Components (design system)
 
@@ -137,7 +167,8 @@ Bespoke UI for **one** screen (or private helpers inside one feature). Written o
 3. **Components stay portable.** No `GenealogyStore`, catalog models, or feature `L10n` namespaces inside `Components/` (generic chrome labels owned by the control are fine).
 4. **Reuse is what separates recipes from snowflakes** — same product-coupled kind; promote on the second real call site instead of pre-building a recipe.
 5. **Layer roots + per-component folders.** Roots are only `Components/` | `Recipes/` | `Snowflakes/` (plus feature-local snowflakes under `Features/`). No UI-category nesting. Each control is `…/<Name>/` with colocated Swift/docs/helpers — not a loose `.swift` at the layer root.
-6. **No orphans.** Recipes and named snowflakes get an intentional home — don’t leave domain chrome under `Components/`.
+6. **`PV` prefix on DesignSystem public types** — Components and Recipes use `PVButton`-style names so they do not collide with SwiftUI/AppKit and read as kit API. Folders omit `PV`. See [PV type prefix](#pv-type-prefix).
+7. **No orphans.** Recipes and named snowflakes get an intentional home — don’t leave domain chrome under `Components/`.
 
 ## Dialogs as a worked example
 
