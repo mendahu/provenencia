@@ -26,6 +26,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var placeableSubjectTypes: [CatalogSubjectTypePresentation] = []
     var subjectTypePresentations: [String: CatalogSubjectTypePresentation] = [:]
     var connectRules: [CatalogConnectRule] = []
+    var observationsBySource: [String: [CatalogObservation]] = [:]
     var metadataBySource: [String: [CatalogMetadataEntry]] = [:]
     /// Project dir for which a catalog RPC has “held” a session (tests only).
     var heldCatalogProjectDir: String?
@@ -1241,6 +1242,92 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     func listConnectRules() async throws -> [CatalogConnectRule] {
         connectRules
+    }
+
+    func createCitationWithObservations(
+        projectDir: String,
+        userID _: String,
+        artifactID: String,
+        locatorJSON: String,
+        transcription: String,
+        description: String,
+        transcriptionUncertain: Bool,
+        transcriptionNote: String,
+        citationNotes _: [String],
+        observations drafts: [CatalogObservationDraft]
+    ) async throws -> (CatalogCitation, [CatalogObservation]) {
+        markCatalogSessionHeld(projectDir)
+        let citation = CatalogCitation(
+            id: UUID().uuidString.lowercased(),
+            ref: "CIT-FAKE1",
+            artifactID: artifactID,
+            locatorJSON: locatorJSON,
+            transcription: transcription,
+            description: description,
+            transcriptionUncertain: transcriptionUncertain,
+            transcriptionNote: transcriptionNote
+        )
+        let created = try appendFakeObservations(
+            projectDir: projectDir,
+            citationID: citation.id,
+            drafts: drafts
+        )
+        return (citation, created)
+    }
+
+    func addObservationsToCitation(
+        projectDir: String,
+        userID _: String,
+        citationID: String,
+        observations drafts: [CatalogObservationDraft]
+    ) async throws -> [CatalogObservation] {
+        markCatalogSessionHeld(projectDir)
+        return try appendFakeObservations(
+            projectDir: projectDir,
+            citationID: citationID,
+            drafts: drafts
+        )
+    }
+
+    func listObservationsBySource(projectDir: String, sourceID: String) async throws -> [CatalogObservation] {
+        markCatalogSessionHeld(projectDir)
+        return observationsBySource[sourceID] ?? []
+    }
+
+    private func appendFakeObservations(
+        projectDir: String,
+        citationID: String,
+        drafts: [CatalogObservationDraft]
+    ) throws -> [CatalogObservation] {
+        guard !drafts.isEmpty else { throw StoreBoom.boom }
+        var created: [CatalogObservation] = []
+        for draft in drafts {
+            guard let subject = subjectsBySource.values.flatMap({ $0 }).first(where: { $0.id == draft.subjectID })
+            else {
+                throw StoreBoom.boom
+            }
+            let property = propertiesByProject[projectDir]?.first(where: { $0.id == draft.propertyID })
+            let obs = CatalogObservation(
+                id: UUID().uuidString.lowercased(),
+                ref: "OBS-FAKE1",
+                citationID: citationID,
+                subjectID: draft.subjectID,
+                propertyID: draft.propertyID,
+                polarity: draft.polarity.isEmpty ? "positive" : draft.polarity,
+                valueText: draft.valueText,
+                valueInteger: draft.valueInteger,
+                valueDateID: draft.valueDateID,
+                valueNameID: draft.valueNameID,
+                valueSubjectID: draft.valueSubjectID,
+                valueTermID: draft.valueTermID,
+                propertyKey: property?.key ?? "",
+                propertyLabel: property?.label ?? "",
+                propertyValueType: property?.valueType ?? ""
+            )
+            observationsBySource[subject.sourceID, default: []].append(obs)
+            created.append(obs)
+        }
+        return created
     }
 
     private func markCatalogSessionHeld(_ projectDir: String) {

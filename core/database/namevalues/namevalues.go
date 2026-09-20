@@ -64,6 +64,26 @@ func Insert(c *database.Catalog, v Value) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	id, err := InsertTx(tx, v)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return id, nil
+}
+
+// InsertTx validates and inserts form + parts on an existing transaction.
+func InsertTx(tx *sql.Tx, v Value) ([]byte, error) {
+	if tx == nil {
+		return nil, ErrInvalid
+	}
 	v.Form = strings.TrimSpace(v.Form)
 	parts := make([]Part, len(v.Parts))
 	for i, p := range v.Parts {
@@ -76,12 +96,6 @@ func Insert(c *database.Catalog, v Value) ([]byte, error) {
 	if err := validate(v.Form, parts); err != nil {
 		return nil, err
 	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = tx.Rollback() }()
 
 	id, err := uuid.NewV7()
 	if err != nil {
@@ -106,9 +120,6 @@ func Insert(c *database.Catalog, v Value) ([]byte, error) {
 		); err != nil {
 			return nil, err
 		}
-	}
-	if err := tx.Commit(); err != nil {
-		return nil, err
 	}
 	return idBytes, nil
 }

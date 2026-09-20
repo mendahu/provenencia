@@ -80,7 +80,7 @@ struct CatalogQueryRegistry: Sendable {
         Spec(
             kind: .sourceGraph,
             stalePolicy: .sessionFresh,
-            invalidateOn: [.createdSubject]
+            invalidateOn: [.createdSubject, .createdCitation, .addedObservations]
         ),
         Spec(
             kind: .subjectFieldsWorkspace,
@@ -120,11 +120,16 @@ struct CatalogQueryRegistry: Sendable {
                 sourceID: sourceId
             )
             async let types = store.listSubjectTypes(projectDir: project.projectDir)
+            async let observations = store.listObservationsBySource(
+                projectDir: project.projectDir,
+                sourceID: sourceId
+            )
             return SourceGraphSnapshot.build(
                 sourceId: sourceId,
                 subjects: try await subjects,
                 positions: try await positions,
-                types: try await types
+                types: try await types,
+                observations: try await observations
             )
         case .subjectFieldsWorkspace(let project):
             let dir = project.projectDir
@@ -190,7 +195,14 @@ private extension CatalogQueryKey.Kind {
                 return .allCached(.typeSuggestions)
             }
         case .sourceGraph:
-            return .allCached(.sourceGraph)
+            switch mutation {
+            case .createdSubject(let sourceId),
+                 .createdCitation(let sourceId),
+                 .addedObservations(let sourceId):
+                return .key(.sourceGraph(project: project, sourceId: sourceId))
+            default:
+                return .allCached(.sourceGraph)
+            }
         case .subjectFieldsWorkspace:
             return .key(.subjectFieldsWorkspace(project: project))
         }

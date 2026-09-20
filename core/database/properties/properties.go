@@ -52,7 +52,11 @@ const (
 		FROM properties p ORDER BY p.label COLLATE NOCASE, p.origin, p.key`
 	sqlUpdate = `UPDATE properties SET label = ?, description = ? WHERE id = ?`
 	sqlDelete = `DELETE FROM properties WHERE id = ?`
-	sqlInUse  = `SELECT 1 FROM subject_type_fields WHERE property_id = ? LIMIT 1`
+	sqlInUse  = `SELECT 1 FROM (
+			SELECT 1 AS x FROM subject_type_fields WHERE property_id = ?
+			UNION ALL
+			SELECT 1 FROM observations WHERE property_id = ?
+		) LIMIT 1`
 	sqlUsedBy = `SELECT COUNT(*) FROM subject_type_fields WHERE property_id = ?`
 	sqlCountByOrigin = `SELECT origin, COUNT(*) FROM properties GROUP BY origin`
 )
@@ -404,7 +408,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 		return err
 	}
 	var one int
-	err = db.QueryRow(sqlInUse, id).Scan(&one)
+	err = db.QueryRow(sqlInUse, id, id).Scan(&one)
 	if err == nil {
 		return ErrInUse
 	}

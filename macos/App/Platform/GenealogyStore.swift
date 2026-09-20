@@ -130,6 +130,36 @@ struct CatalogSubjectPosition: Sendable, Equatable {
     var gridY: Int64
 }
 
+struct CatalogCitation: Sendable, Equatable, Identifiable {
+    var id: String
+    var ref: String
+    var artifactID: String
+    var locatorJSON: String
+    var transcription: String
+    var description: String
+    var transcriptionUncertain: Bool
+    var transcriptionNote: String
+}
+
+/// One Observation row with Property summary (graph / card payloads).
+struct CatalogObservation: Sendable, Equatable, Identifiable {
+    var id: String
+    var ref: String
+    var citationID: String
+    var subjectID: String
+    var propertyID: String
+    var polarity: String
+    var valueText: String
+    var valueInteger: Int64?
+    var valueDateID: String
+    var valueNameID: String
+    var valueSubjectID: String
+    var valueTermID: String
+    var propertyKey: String
+    var propertyLabel: String
+    var propertyValueType: String
+}
+
 struct CatalogProperty: Sendable, Equatable, Identifiable {
     var id: String
     var key: String
@@ -573,4 +603,43 @@ protocol GenealogyStore: Sendable {
     func listPlaceableSubjectTypes() async throws -> [CatalogSubjectTypePresentation]
     func getSubjectTypePresentation(typeKey: String) async throws -> CatalogSubjectTypePresentation
     func listConnectRules() async throws -> [CatalogConnectRule]
+
+    func createCitationWithObservations(
+        projectDir: String,
+        userID: String,
+        artifactID: String,
+        locatorJSON: String,
+        transcription: String,
+        description: String,
+        transcriptionUncertain: Bool,
+        transcriptionNote: String,
+        citationNotes: [String],
+        observations: [CatalogObservationDraft]
+    ) async throws -> (CatalogCitation, [CatalogObservation])
+
+    func addObservationsToCitation(
+        projectDir: String,
+        userID: String,
+        citationID: String,
+        observations: [CatalogObservationDraft]
+    ) async throws -> [CatalogObservation]
+
+    func listObservationsBySource(projectDir: String, sourceID: String) async throws -> [CatalogObservation]
+}
+
+/// Draft payload for one Observation insert (FFI ObservationDraft).
+struct CatalogObservationDraft: Sendable {
+    var subjectID: String
+    var propertyID: String
+    var polarity: String = ""
+    var valueText: String = ""
+    var valueInteger: Int64?
+    var date: CatalogDateValueInput?
+    var valueDateID: String = ""
+    var nameForm: String = ""
+    var nameParts: [(value: String, type: String)] = []
+    var valueNameID: String = ""
+    var valueSubjectID: String = ""
+    var valueTermID: String = ""
+    var notes: [String] = []
 }

@@ -1,0 +1,239 @@
+package handlers
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/locator"
+	"google.golang.org/protobuf/proto"
+)
+
+const validLocatorJSON = `{"version":1,"selectors":[{"type":"page","artifact_page":12,"page_label":"10"}]}`
+
+func citationFixture(t *testing.T) (projectDir, userID, sourceID, artifactID, placeSubjectID, toponymPropertyID string) {
+	t.Helper()
+	dir, userID, sourceID, _ := subjectFixture(t)
+	aout, err := CreateArtifact(marshalProto(t, &engine.CreateArtifactRequest{
+		ProjectDir: dir,
+		UserId:     userID,
+		SourceId:   sourceID,
+		Label:      "Scan",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var art engine.CreateArtifactResponse
+	if err := proto.Unmarshal(aout, &art); err != nil {
+		t.Fatal(err)
+	}
+	typesOut, err := ListSubjectTypes(marshalProto(t, &engine.ListSubjectTypesRequest{ProjectDir: dir}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var types engine.ListSubjectTypesResponse
+	if err := proto.Unmarshal(typesOut, &types); err != nil {
+		t.Fatal(err)
+	}
+	placeTypeID := ""
+	for _, typ := range types.Types {
+		if typ.GetKey() == "place" {
+			placeTypeID = typ.GetId()
+			break
+		}
+	}
+	if placeTypeID == "" {
+		t.Fatal("place subject type missing")
+	}
+	sout, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
+		ProjectDir:    dir,
+		UserId:        userID,
+		SourceId:      sourceID,
+		SubjectTypeId: placeTypeID,
+		Label:         "Boston",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var subj engine.CreateSubjectResponse
+	if err := proto.Unmarshal(sout, &subj); err != nil {
+		t.Fatal(err)
+	}
+	propsOut, err := ListProperties(marshalProto(t, &engine.ListPropertiesRequest{ProjectDir: dir}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var props engine.ListPropertiesResponse
+	if err := proto.Unmarshal(propsOut, &props); err != nil {
+		t.Fatal(err)
+	}
+	toponymID := ""
+	for _, p := range props.Properties {
+		if p.GetKey() == "toponym" {
+			toponymID = p.GetId()
+			break
+		}
+	}
+	if toponymID == "" {
+		t.Fatal("toponym property missing")
+	}
+	return dir, userID, sourceID, art.Artifact.GetId(), subj.Subject.GetId(), toponymID
+}
+
+func TestCreateCitationWithObservations(t *testing.T) {
+	runRPC(t, CreateCitationWithObservations, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "bad locator",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _, artifactID, placeID, propID := citationFixture(t)
+				return &engine.CreateCitationWithObservationsRequest{
+					ProjectDir:  dir,
+					UserId:      userID,
+					ArtifactId:  artifactID,
+					LocatorJson: `{}`,
+					Observations: []*engine.ObservationDraft{{
+						SubjectId:  placeID,
+						PropertyId: propID,
+						ValueText:  "Boston",
+					}},
+				}
+			},
+			wantErr:   true,
+			wantErrIs: locator.ErrInvalid,
+		},
+		{
+			name: "creates citation with text observation",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _, artifactID, placeID, propID := citationFixture(t)
+				return &engine.CreateCitationWithObservationsRequest{
+					ProjectDir:    dir,
+					UserId:        userID,
+					ArtifactId:    artifactID,
+					LocatorJson:   validLocatorJSON,
+					Transcription: "Boston",
+					Observations: []*engine.ObservationDraft{{
+						SubjectId:  placeID,
+						PropertyId: propID,
+						ValueText:  "Boston",
+					}},
+				}
+			},
+			after: func(t *testing.T, out []byte, req proto.Message) {
+				var created engine.CreateCitationWithObservationsResponse
+				if err := proto.Unmarshal(out, &created); err != nil {
+					t.Fatal(err)
+				}
+				if !strings.HasPrefix(created.Citation.GetRef(), "CIT-") {
+					t.Fatalf("citation ref %q", created.Citation.GetRef())
+				}
+				if len(created.Observations) != 1 {
+					t.Fatalf("observations %+v", created.Observations)
+				}
+				if !strings.HasPrefix(created.Observations[0].GetRef(), "OBS-") {
+					t.Fatalf("obs ref %q", created.Observations[0].GetRef())
+				}
+				if created.Observations[0].GetValueText() != "Boston" {
+					t.Fatalf("value %+v", created.Observations[0])
+				}
+				cr := req.(*engine.CreateCitationWithObservationsRequest)
+				assertLatestAuditAction(t, cr.ProjectDir, "create_citation_with_observations")
+			},
+		},
+	})
+}
+
+func TestAddObservationsToCitation(t *testing.T) {
+	runRPC(t, AddObservationsToCitation, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "appends observation",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _, artifactID, placeID, propID := citationFixture(t)
+				createOut, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
+					ProjectDir:  dir,
+					UserId:      userID,
+					ArtifactId:  artifactID,
+					LocatorJson: validLocatorJSON,
+					Observations: []*engine.ObservationDraft{{
+						SubjectId:  placeID,
+						PropertyId: propID,
+						ValueText:  "Cambridge",
+					}},
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var created engine.CreateCitationWithObservationsResponse
+				if err := proto.Unmarshal(createOut, &created); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.AddObservationsToCitationRequest{
+					ProjectDir:  dir,
+					UserId:      userID,
+					CitationId:  created.Citation.GetId(),
+					Observations: []*engine.ObservationDraft{{
+						SubjectId:  placeID,
+						PropertyId: propID,
+						ValueText:  "MA",
+					}},
+				}
+			},
+			after: func(t *testing.T, out []byte, req proto.Message) {
+				var added engine.AddObservationsToCitationResponse
+				if err := proto.Unmarshal(out, &added); err != nil {
+					t.Fatal(err)
+				}
+				if len(added.Observations) != 1 || added.Observations[0].GetValueText() != "MA" {
+					t.Fatalf("%+v", added.Observations)
+				}
+				ar := req.(*engine.AddObservationsToCitationRequest)
+				assertLatestAuditAction(t, ar.ProjectDir, "add_observations")
+			},
+		},
+	})
+}
+
+func TestListObservationsBySource(t *testing.T) {
+	runRPC(t, ListObservationsBySource, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "lists by source",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, sourceID, artifactID, placeID, propID := citationFixture(t)
+				if _, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
+					ProjectDir:  dir,
+					UserId:      userID,
+					ArtifactId:  artifactID,
+					LocatorJson: validLocatorJSON,
+					Observations: []*engine.ObservationDraft{{
+						SubjectId:  placeID,
+						PropertyId: propID,
+						ValueText:  "Boston",
+					}},
+				})); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.ListObservationsBySourceRequest{
+					ProjectDir: dir,
+					SourceId:   sourceID,
+				}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var list engine.ListObservationsBySourceResponse
+				if err := proto.Unmarshal(out, &list); err != nil {
+					t.Fatal(err)
+				}
+				if len(list.Observations) != 1 {
+					t.Fatalf("%+v", list.Observations)
+				}
+				if list.Observations[0].GetPropertyKey() != "toponym" {
+					t.Fatalf("property summary %+v", list.Observations[0])
+				}
+				if list.Observations[0].GetValueText() != "Boston" {
+					t.Fatalf("value %+v", list.Observations[0])
+				}
+			},
+		},
+	})
+}

@@ -4168,6 +4168,21 @@ enum L10n {
             defaultValue: "That binding is locked by the product vocabulary and cannot be removed.",
             comment: "FFI error subjectvocab.locked"
         )
+        static let locatorInvalid = LocalizedStringResource(
+            "error.locator.invalid",
+            defaultValue: "That citation locator isn’t valid.",
+            comment: "FFI error locator.invalid"
+        )
+        static let citationsInvalid = LocalizedStringResource(
+            "error.citations.invalid",
+            defaultValue: "That citation isn’t valid.",
+            comment: "FFI error citations.invalid"
+        )
+        static let observationsInvalid = LocalizedStringResource(
+            "error.observations.invalid",
+            defaultValue: "That observation isn’t valid.",
+            comment: "FFI error observations.invalid"
+        )
         static let dateValuesInvalid = LocalizedStringResource(
             "error.datevalues.invalid",
             defaultValue: "Invalid date value.",
@@ -4325,6 +4340,12 @@ enum L10n {
                 return String(localized: subjectVocabInvalid)
             case "subjectvocab.locked":
                 return String(localized: subjectVocabLocked)
+            case "locator.invalid":
+                return String(localized: locatorInvalid)
+            case "citations.invalid":
+                return String(localized: citationsInvalid)
+            case "observations.invalid":
+                return String(localized: observationsInvalid)
             case "datevalues.invalid":
                 return String(localized: dateValuesInvalid)
             case "filederivatives.invalid":

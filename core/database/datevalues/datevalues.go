@@ -96,6 +96,13 @@ func Insert(c *database.Catalog, v Value) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	return InsertTx(db, v)
+}
+
+// InsertTx validates and inserts on an existing connection or transaction.
+func InsertTx(q interface {
+	Exec(query string, args ...any) (sql.Result, error)
+}, v Value) ([]byte, error) {
 	v.Kind = strings.TrimSpace(v.Kind)
 	v.Qualifier = strings.TrimSpace(v.Qualifier)
 	v.Calendar = strings.TrimSpace(v.Calendar)
@@ -109,7 +116,7 @@ func Insert(c *database.Catalog, v Value) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = db.Exec(
+	_, err = q.Exec(
 		sqlInsert,
 		id[:],
 		v.Kind,

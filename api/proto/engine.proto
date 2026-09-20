@@ -75,6 +75,9 @@ enum Method {
   METHOD_CREATE_PROPERTY_TERM = 64;
   METHOD_UPDATE_PROPERTY_TERM = 65;
   METHOD_DELETE_PROPERTY_TERM = 66;
+  METHOD_CREATE_CITATION_WITH_OBSERVATIONS = 67;
+  METHOD_ADD_OBSERVATIONS_TO_CITATION = 68;
+  METHOD_LIST_OBSERVATIONS_BY_SOURCE = 69;
 }
 
 message PingRequest {
@@ -1045,6 +1048,105 @@ message DeletePropertyTermRequest {
 }
 
 message DeletePropertyTermResponse {}
+
+// NameValuePartInput is one ordered segment when inserting a NameValue.
+message NameValuePartInput {
+  string value = 1;
+  string type = 2;
+}
+
+// NameValueInput maps to namevalues.Insert (form + optional parts).
+message NameValueInput {
+  string form = 1;
+  repeated NameValuePartInput parts = 2;
+}
+
+// Citation is one citations row.
+message Citation {
+  string id = 1;
+  string ref = 2;
+  string artifact_id = 3;
+  string locator_json = 4;
+  string transcription = 5;
+  string description = 6;
+  bool transcription_uncertain = 7;
+  string transcription_note = 8;
+}
+
+// Observation is one observations row plus Property summary for graph/card rows.
+message Observation {
+  string id = 1;
+  string ref = 2;
+  string citation_id = 3;
+  string subject_id = 4;
+  string property_id = 5;
+  string polarity = 6;
+  string value_text = 7;
+  optional int64 value_integer = 8;
+  string value_date_id = 9;
+  DateValueInput date = 10;
+  string value_name_id = 11;
+  NameValueInput name = 12;
+  string value_subject_id = 13;
+  string value_term_id = 14;
+  string property_key = 15;
+  string property_label = 16;
+  string property_value_type = 17;
+}
+
+// ObservationDraft is one Observation insert payload (create or append).
+message ObservationDraft {
+  string subject_id = 1;
+  string property_id = 2;
+  string polarity = 3;
+  string value_text = 4;
+  optional int64 value_integer = 5;
+  DateValueInput date = 6;
+  string value_date_id = 7;
+  NameValueInput name = 8;
+  string value_name_id = 9;
+  string value_subject_id = 10;
+  string value_term_id = 11;
+  repeated string notes = 12;
+}
+
+message CreateCitationWithObservationsRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string artifact_id = 3;
+  string locator_json = 4;
+  string transcription = 5;
+  string description = 6;
+  bool transcription_uncertain = 7;
+  string transcription_note = 8;
+  repeated string citation_notes = 9;
+  repeated ObservationDraft observations = 10;
+}
+
+message CreateCitationWithObservationsResponse {
+  Citation citation = 1;
+  repeated Observation observations = 2;
+}
+
+message AddObservationsToCitationRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string citation_id = 3;
+  repeated ObservationDraft observations = 4;
+}
+
+message AddObservationsToCitationResponse {
+  repeated Observation observations = 1;
+}
+
+message ListObservationsBySourceRequest {
+  string project_dir = 1;
+  string source_id = 2;
+}
+
+message ListObservationsBySourceResponse {
+  repeated Observation observations = 1;
+}
 
 // ErrorKind classifies a failure for client UX (tone, retry hints). Copy still
 // comes from the client's L10n map keyed by Error.code.

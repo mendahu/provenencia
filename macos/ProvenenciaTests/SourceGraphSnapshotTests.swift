@@ -32,6 +32,45 @@ struct SourceGraphSnapshotTests {
         candidateRefPrefix: "CLO"
     )
 
+    @Test func buildMarksCitedFromObservations() {
+        let alice = CatalogSubject(
+            id: "s-alice",
+            ref: "CPR-A",
+            sourceID: "src-1",
+            subjectTypeID: personType.id,
+            label: "Alice",
+            description: ""
+        )
+        let observation = CatalogObservation(
+            id: "obs-1",
+            ref: "OBS-1",
+            citationID: "cit-1",
+            subjectID: alice.id,
+            propertyID: "prop-1",
+            polarity: "positive",
+            valueText: "Boston",
+            valueInteger: nil,
+            valueDateID: "",
+            valueNameID: "",
+            valueSubjectID: "",
+            valueTermID: "",
+            propertyKey: "toponym",
+            propertyLabel: "Toponym",
+            propertyValueType: "text"
+        )
+        let snapshot = SourceGraphSnapshot.build(
+            sourceId: "src-1",
+            subjects: [alice],
+            positions: [CatalogSubjectPosition(subjectID: alice.id, gridX: 0, gridY: 0)],
+            types: [personType],
+            observations: [observation]
+        )
+        #expect(snapshot.subjects.count == 1)
+        #expect(snapshot.subjects[0].isCited)
+        #expect(snapshot.subjects[0].observations.count == 1)
+        #expect(snapshot.subjects[0].observations[0].valueText == "Boston")
+    }
+
     @Test func buildKeepsPlacedPrimariesAndBridgesWithLinks() {
         let alice = CatalogSubject(
             id: "s-alice",

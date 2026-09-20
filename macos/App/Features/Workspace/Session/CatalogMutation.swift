@@ -33,6 +33,12 @@ enum CatalogMutation: Sendable, Equatable {
     /// A primary subject was created on this Source's Evidence graph.
     case createdSubject(sourceId: String)
 
+    /// A Citation with Observations was created for this Source.
+    case createdCitation(sourceId: String)
+
+    /// Observations were appended to a Citation on this Source.
+    case addedObservations(sourceId: String)
+
     case createdProperty
     case updatedProperty
     case deletedProperty
@@ -54,6 +60,8 @@ enum CatalogMutationKind: Hashable, Sendable {
     case mutatedSourceWorkspace
     case mutatedSourceMetadata
     case createdSubject
+    case createdCitation
+    case addedObservations
     case createdProperty
     case updatedProperty
     case deletedProperty
@@ -92,6 +100,10 @@ extension CatalogMutation {
             return .mutatedSourceMetadata
         case .createdSubject:
             return .createdSubject
+        case .createdCitation:
+            return .createdCitation
+        case .addedObservations:
+            return .addedObservations
         case .createdProperty:
             return .createdProperty
         case .updatedProperty:

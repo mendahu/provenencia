@@ -254,7 +254,7 @@ struct EvidenceGraphModelTests {
             by: .createdSubject(sourceId: sourceID),
             project: project
         )
-        #expect(effects == [.allCached(.sourceGraph)])
+        #expect(effects == [.key(.sourceGraph(project: project, sourceId: sourceID))])
     }
 
     @Test func connectExcludesPlacingAndPickCreatesBridge() async throws {

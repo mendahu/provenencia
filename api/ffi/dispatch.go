@@ -75,6 +75,9 @@ const (
 	MethodCreatePropertyTerm                  = int32(engine.Method_METHOD_CREATE_PROPERTY_TERM)
 	MethodUpdatePropertyTerm                  = int32(engine.Method_METHOD_UPDATE_PROPERTY_TERM)
 	MethodDeletePropertyTerm                  = int32(engine.Method_METHOD_DELETE_PROPERTY_TERM)
+	MethodCreateCitationWithObservations      = int32(engine.Method_METHOD_CREATE_CITATION_WITH_OBSERVATIONS)
+	MethodAddObservationsToCitation           = int32(engine.Method_METHOD_ADD_OBSERVATIONS_TO_CITATION)
+	MethodListObservationsBySource            = int32(engine.Method_METHOD_LIST_OBSERVATIONS_BY_SOURCE)
 )
 
 // Call routes one coarse FFI operation to api/ffi/handlers.
@@ -210,6 +213,12 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.UpdatePropertyTerm(in)
 	case MethodDeletePropertyTerm:
 		return handlers.DeletePropertyTerm(in)
+	case MethodCreateCitationWithObservations:
+		return handlers.CreateCitationWithObservations(in)
+	case MethodAddObservationsToCitation:
+		return handlers.AddObservationsToCitation(in)
+	case MethodListObservationsBySource:
+		return handlers.ListObservationsBySource(in)
 	default:
 		return nil, apperr.New(apperr.CodeInternalUnknownMethod, apperr.KindInternal, strconv.Itoa(int(method)))
 	}
