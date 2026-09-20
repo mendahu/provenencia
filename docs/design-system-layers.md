@@ -18,7 +18,7 @@ Every building block belongs in **exactly one** layer. Higher layers may compose
 
 **You stop at the highest layer you need.** Most call sites never touch all three:
 
-- A view can drop in a **component** directly (`.pvConfirmSheet`, `PVButton`) with copy and slots filled at the call site.
+- A view can drop in a **component** directly (`.pvConfirm`, `PVButton`) with copy and slots filled at the call site.
 - A **recipe** exists only when the same Provenencia meaning is reused and deserves a named mapping.
 - A **snowflake** exists only for glue unique to that screen.
 
@@ -176,8 +176,8 @@ Not every delete flow needs all three layers:
 | Recipe | Only if several screens share the same catalog-shaped confirm wiring. | Optional |
 | Snowflake | Icon picker grid, graph create form fields, etc., passed into a component body slot — or omitted when slots + call-site copy are enough. | Optional |
 
-Typical Source-fields delete: **component confirm at the view** (`.pvConfirmSheet` + `PVConfirmCopy` + optional `PVConfirmKeyChip`). That is fine. No recipe required unless the same wiring repeats.
+Typical Source-fields delete: **component confirm at the view** (`.pvConfirm` + `PVConfirmCopy` + optional `PVConfirmKeyChip`). That is fine. No recipe required unless the same wiring repeats.
 
-`PVFormDialog` composes ``PVPanel``; `PVConfirm` sheet content still duplicates panel chrome until a follow-up. Feature sheets that reimplement header/footer by hand should compose the kit instead. Chip away with [`evaluate-ui-component`](../.cursor/skills/evaluate-ui-component/SKILL.md) rather than one mega-refactor.
+`PVFormDialog` and `PVConfirm` both compose ``PVPanel``. Feature sheets that reimplement header/footer by hand should compose the kit instead. Chip away with [`evaluate-ui-component`](../.cursor/skills/evaluate-ui-component/SKILL.md) rather than one mega-refactor.
 
 Sheet presentation details (no scrim, sunken footer as content): DesignSystem README “Confirmations are system chrome” and `PVConfirm.swift` / `PVFormDialog.swift`.

@@ -83,7 +83,7 @@ List cousins with path + one-line how they differ. Flag **copy-paste drift**.
 Walk **down** the stack the subject should sit on:
 
 1. Tokens / existing primitives (`PVButton`, `PVBadge`, `PVField`, `PVDivider`, …)
-2. Composites (`.pvFormDialog`, `.pvConfirm`, `.pvConfirmSheet`, `PVContextMenu`, …)
+2. Composites (`.pvFormDialog`, `.pvConfirm`, `PVContextMenu`, …)
 3. Existing recipes in `DesignSystem/Recipes/`
 
 Ask: can this subject’s chrome be **deleted** in favor of a lower control +

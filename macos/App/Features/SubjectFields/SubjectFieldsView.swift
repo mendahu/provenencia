@@ -90,7 +90,7 @@ private struct SubjectFieldsContent: View {
         ) {
             createForm
         }
-        .pvConfirmSheet(
+        .pvConfirm(
             item: pendingDelete,
             copy: { _ in
                 PVConfirmCopy(

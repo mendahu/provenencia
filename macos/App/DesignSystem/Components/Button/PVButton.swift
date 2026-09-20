@@ -165,7 +165,7 @@ private struct PVButtonBody: View {
     /// Keyboard focus on the button this style is rendering. Unlike the
     /// system bordered styles, a custom `ButtonStyle` draws no focus
     /// indication of its own, so without this a focused `.pv` button is
-    /// invisible to keyboard users (e.g. `PVConfirmSheetContent`, which
+    /// invisible to keyboard users (e.g. `PVConfirmContent`, which
     /// starts focus on its cancel button).
     @Environment(\.isFocused) private var isFocused
 
