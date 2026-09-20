@@ -56,6 +56,7 @@ final class CatalogCounts {
     private(set) var sources: Int?
     private(set) var sourceFields: CatalogCountSummary?
     private(set) var sourceTypes: CatalogCountSummary?
+    private(set) var subjectFields: CatalogCountSummary?
     /// Set when `refreshAll` fails; cleared on the next successful refresh.
     private(set) var lastRefreshError: String?
 
@@ -77,7 +78,7 @@ final class CatalogCounts {
         case .sources: sources
         case .sourceTypes: sourceTypes?.total
         case .sourceFields: sourceFields?.total
-        case .subjectTypes, .subjectFields: nil
+        case .subjectFields: subjectFields?.total
         }
     }
 
@@ -89,6 +90,10 @@ final class CatalogCounts {
 
     func publishSourceTypes(_ summary: CatalogCountSummary) {
         sourceTypes = summary
+    }
+
+    func publishSubjectFields(_ summary: CatalogCountSummary) {
+        subjectFields = summary
     }
 
     /// Writes the Sources total the feature model already knows from its

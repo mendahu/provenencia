@@ -297,12 +297,6 @@ private extension View {
             accessibilityIdentifier: "preview.nav.sourceFields"
         ),
         PVSidebarNavItem(
-            id: "subject-types",
-            label: L10n.Workspace.subjectTypesTitle,
-            icon: .shapes,
-            accessibilityIdentifier: "preview.nav.subjectTypes"
-        ),
-        PVSidebarNavItem(
             id: "subject-fields",
             label: L10n.Workspace.subjectFieldsTitle,
             icon: .listTree,
@@ -322,7 +316,7 @@ private extension View {
     return HStack(alignment: .top, spacing: PVSpacing.space9) {
         PVSidebarNav(items: items, selection: "sources", collapsed: false, onSelect: { _ in })
             .frame(width: 220)
-        PVSidebarNav(items: items, selection: "subject-types", collapsed: true, onSelect: { _ in })
+        PVSidebarNav(items: items, selection: "subject-fields", collapsed: true, onSelect: { _ in })
             .frame(width: 78)
     }
     .padding(PVSpacing.space9)

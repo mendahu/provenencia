@@ -12,6 +12,7 @@ enum PVSubjectIconKind: String, Sendable, CaseIterable {
     case relationship
     case participation
     case location
+    case source
 }
 
 struct PVSubjectIcon: View {
@@ -33,6 +34,8 @@ struct PVSubjectIcon: View {
                 ParticipationMark()
             case .location:
                 LocationMark()
+            case .source:
+                SourceMark()
             }
         }
         .frame(width: size, height: size)
@@ -225,6 +228,36 @@ private struct LocationMark: View {
 
             let hole = Path(ellipseIn: CGRect(x: 10, y: 8.5, width: 4, height: 4))
             context.stroke(hole.applying(transform), with: .foreground, style: style)
+        }
+    }
+}
+
+/// Open folio for Source reification (S7-D2 board — same 24×24 grid as S6 marks).
+private struct SourceMark: View {
+    var body: some View {
+        Canvas { context, size in
+            let scale = min(size.width, size.height) / 24
+            let transform = CGAffineTransform(scaleX: scale, y: scale)
+            let style = StrokeStyle(lineWidth: 1.5 * scale, lineCap: .round, lineJoin: .round)
+
+            var left = Path()
+            left.move(to: CGPoint(x: 12, y: 5.5))
+            left.addLine(to: CGPoint(x: 5.5, y: 5.5))
+            left.addLine(to: CGPoint(x: 5.5, y: 18.5))
+            left.addLine(to: CGPoint(x: 12, y: 18.5))
+            context.stroke(left.applying(transform), with: .foreground, style: style)
+
+            var right = Path()
+            right.move(to: CGPoint(x: 12, y: 5.5))
+            right.addLine(to: CGPoint(x: 18.5, y: 5.5))
+            right.addLine(to: CGPoint(x: 18.5, y: 18.5))
+            right.addLine(to: CGPoint(x: 12, y: 18.5))
+            context.stroke(right.applying(transform), with: .foreground, style: style)
+
+            var spine = Path()
+            spine.move(to: CGPoint(x: 12, y: 5.5))
+            spine.addLine(to: CGPoint(x: 12, y: 18.5))
+            context.stroke(spine.applying(transform), with: .foreground, style: style)
         }
     }
 }

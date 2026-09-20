@@ -75,19 +75,13 @@ struct PlaceRegistry: Sendable {
             deepId: { $0.fieldId }
         ),
         Spec(
-            id: .subjectTypes,
-            presentation: .subjectTypes,
-            priority: 80,
-            matches: { $0.section == .subjectTypes },
-            queryKeys: { _, _ in [] },
-            deepId: { _ in nil }
-        ),
-        Spec(
             id: .subjectFields,
             presentation: .subjectFields,
             priority: 80,
             matches: { $0.section == .subjectFields },
-            queryKeys: { _, _ in [] },
+            queryKeys: { project, _ in
+                [.subjectFieldsWorkspace(project: project)]
+            },
             deepId: { _ in nil }
         ),
         Spec(

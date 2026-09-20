@@ -16,6 +16,7 @@ protocol CatalogVocabularyRow: Identifiable where ID == String {
 
 extension CatalogSourceType: CatalogVocabularyRow {}
 extension CatalogMetadataField: CatalogVocabularyRow {}
+extension CatalogProperty: CatalogVocabularyRow {}
 
 extension Array where Element: CatalogVocabularyRow {
     // The header's count line splits the vocabulary by origin.

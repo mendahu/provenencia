@@ -279,13 +279,13 @@ Schema/Go (01–03, 01b) may start before design finishes; **UI PRs gate on the 
 
 ## Checklist
 
-- [ ] S7-D2 — Design: Subject fields → [`completed.md`](completed.md)
+- [x] S7-D2 — Design: Subject fields → [`completed.md`](completed.md)
 - [ ] S7-D3 — Design: Evidence graph updates → [`completed.md`](completed.md)
 - [ ] S7-D4 — Design: Citation composer place → [`completed.md`](completed.md)
 - [ ] S7-D5 — Design: NameValue editor → [`completed.md`](completed.md)
 - [x] S7-01 — `properties` + `subject_type_fields` + **central Interpretation subject registry** + Go/FFI → [`completed.md`](completed.md)
 - [x] S7-01b — Property terms (`property_terms`, `value_type=term`, kind/edge seed) → [`completed.md`](completed.md)
-- [ ] S7-05 — Subject fields UI → [`completed.md`](completed.md)
+- [x] S7-05 — Subject fields UI → [`completed.md`](completed.md)
 - [ ] S7-02 — NameValue schema + Go → [`completed.md`](completed.md)
 - [ ] S7-03 — Citations + Observations + locator validation + FFI → [`completed.md`](completed.md)
 - [ ] S7-09 — Add property + composer navigation (stub OK) → [`completed.md`](completed.md)
@@ -306,7 +306,7 @@ Schema/Go (01–03, 01b) may start before design finishes; **UI PRs gate on the 
 
 ## S7-D2 — Design: Subject fields
 
-Claude Design board for Subject fields. Brief: [`design/S7-D2-subject-fields.md`](design/S7-D2-subject-fields.md). Gates **S7-05**. Design around **seven fixed types** (non-list type chrome welcome) and **many Properties**. Source fields layout explicitly out. Board must treat **`term` as registry-only** (visible on seeded Properties, not in create Property) and must **not** invent Event types / Roles destinations. Boards already started: paste [`design/S7-D2-subject-fields-addendum-property-terms.md`](design/S7-D2-subject-fields-addendum-property-terms.md).
+Claude Design board for Subject fields. Brief archived: [`design/archive/S7-D2-subject-fields.md`](design/archive/S7-D2-subject-fields.md). Gates **S7-05**. Design around **seven fixed types** (non-list type chrome welcome) and **many Properties**. Source fields layout explicitly out. Board must treat **`term` as registry-only** (visible on seeded Properties, not in create Property) and must **not** invent Event types / Roles destinations. Addendum archived: [`design/archive/S7-D2-subject-fields-addendum-property-terms.md`](design/archive/S7-D2-subject-fields-addendum-property-terms.md).
 
 ---
 

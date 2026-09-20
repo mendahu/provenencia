@@ -82,6 +82,14 @@ struct CatalogQueryRegistry: Sendable {
             stalePolicy: .sessionFresh,
             invalidateOn: [.createdSubject]
         ),
+        Spec(
+            kind: .subjectFieldsWorkspace,
+            stalePolicy: .sessionFresh,
+            invalidateOn: [
+                .createdProperty, .updatedProperty, .deletedProperty,
+                .mutatedSubjectTypeFields,
+            ]
+        ),
     ]
 
     func stalePolicy(for key: CatalogQueryKey) -> CatalogQueryStalePolicy {
@@ -117,6 +125,28 @@ struct CatalogQueryRegistry: Sendable {
                 subjects: try await subjects,
                 positions: try await positions,
                 types: try await types
+            )
+        case .subjectFieldsWorkspace(let project):
+            let dir = project.projectDir
+            async let properties = store.listProperties(projectDir: dir)
+            async let types = store.listSubjectTypes(projectDir: dir)
+            let loadedTypes = try await types
+            var fieldsByTypeID: [String: [CatalogSubjectTypeField]] = [:]
+            var presentationsByKey: [String: CatalogSubjectTypePresentation] = [:]
+            for type in loadedTypes {
+                fieldsByTypeID[type.id] = try await store.listSubjectTypeFields(
+                    projectDir: dir,
+                    subjectTypeID: type.id
+                )
+                if let presentation = try? await store.getSubjectTypePresentation(typeKey: type.key) {
+                    presentationsByKey[type.key] = presentation
+                }
+            }
+            return SubjectFieldsSnapshot(
+                properties: try await properties,
+                types: loadedTypes,
+                fieldsByTypeID: fieldsByTypeID,
+                presentationsByKey: presentationsByKey
             )
         }
     }
@@ -161,6 +191,8 @@ private extension CatalogQueryKey.Kind {
             }
         case .sourceGraph:
             return .allCached(.sourceGraph)
+        case .subjectFieldsWorkspace:
+            return .key(.subjectFieldsWorkspace(project: project))
         }
     }
 }

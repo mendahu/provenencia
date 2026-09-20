@@ -36,7 +36,7 @@ struct WorkspaceSidebar: View {
 
     private var items: [PVSidebarNavItem] {
         let configSections: [WorkspaceSection] = [
-            .sourceTypes, .sourceFields, .subjectTypes, .subjectFields,
+            .sourceTypes, .sourceFields, .subjectFields,
         ]
         let configChildren = configSections.map { section in
             PVSidebarNavItem(

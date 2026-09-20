@@ -52,18 +52,12 @@ struct WorkspaceDestinationHost: View {
                 store: store,
                 catalogCounts: catalogCounts
             )
-        case .subjectTypes:
-            WorkspaceComingSoonView(
-                icon: .shapes,
-                title: L10n.Workspace.subjectTypesTitle,
-                message: L10n.Workspace.subjectTypesStubBody
-            )
-            .accessibilityIdentifier("workspace.destination.subjectTypes")
         case .subjectFields:
-            WorkspaceComingSoonView(
-                icon: .listTree,
-                title: L10n.Workspace.subjectFieldsTitle,
-                message: L10n.Workspace.subjectFieldsStubBody
+            SubjectFieldsView(
+                session: session,
+                userID: userID,
+                store: store,
+                catalogCounts: catalogCounts
             )
             .accessibilityIdentifier("workspace.destination.subjectFields")
         }
@@ -87,8 +81,6 @@ struct WorkspaceDestinationHost: View {
             return .sourceFields
         case .sourceTypes:
             return .sourceTypes
-        case .subjectTypes:
-            return .subjectTypes
         case .subjectFields:
             return .subjectFields
         }
@@ -100,6 +92,5 @@ enum WorkspaceDestinationKind: Equatable {
     case sources
     case sourceFields
     case sourceTypes
-    case subjectTypes
     case subjectFields
 }
