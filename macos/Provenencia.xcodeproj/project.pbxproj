@@ -550,22 +550,14 @@
 			path = SubjectFields;
 			sourceTree = "<group>";
 		};
-		4890BA38D028388F6C2157E5 /* Navigation */ = {
-			isa = PBXGroup;
-			children = (
-				E98DA667F92287934B46B640 /* PVSidebarNav.swift */,
-				AA0000000000000000000318 /* PVBreadcrumbs.swift */,
-			);
-			name = Navigation;
-			path = Navigation;
-			sourceTree = "<group>";
-		};
+
 		550D63589090B3E5D65DBED2 /* DesignSystem */ = {
 			isa = PBXGroup;
 			children = (
 				6AAC04817D6F4CCC9CDC9B17 /* README.md */,
 				60D6F777C59834E056413F38 /* Tokens */,
 				C17391C6B09DD9AAD985A390 /* Components */,
+				D5C000000000000000000020 /* Recipes */,
 			);
 			name = DesignSystem;
 			path = DesignSystem;
@@ -585,34 +577,8 @@
 			path = Tokens;
 			sourceTree = "<group>";
 		};
-		751809A4EF38DC6F6B1B17A4 /* Forms */ = {
-			isa = PBXGroup;
-			children = (
-				16D4D3531F81FABFCDDE4F84 /* PVField.swift */,
-				40F72A548E04F25E0AA30CDB /* PVInput.swift */,
-				AA0000000000000000000370 /* PVInlineEdit.swift */,
-				AA0000000000000000000372 /* PVTextArea.swift */,
-				AA0000000000000000000374 /* PVChip.swift */,
-				28FB7FB1DE947EE962F4BA83 /* PVSelect.swift */,
-				AA0000000000000000000230 /* PVComboBox.swift */,
-			);
-			name = Forms;
-			path = Forms;
-			sourceTree = "<group>";
-		};
-		7CE27BCE83A155C8F77EF85E /* Feedback */ = {
-			isa = PBXGroup;
-			children = (
-				8FC0B0A893C7248A08303738 /* PVToast.swift */,
-				3555554CD714B1FD24C2DB2F /* PVEmptyState.swift */,
-				AA00000000000000000000C7 /* PVConfirm.swift */,
-				AA0000000000000000000304 /* PVDialog.swift */,
-				C9B9D94DAB5FD1587C260FE3 /* PVCallout.swift */,
-			);
-			name = Feedback;
-			path = Feedback;
-			sourceTree = "<group>";
-		};
+
+
 		AA0000000000000000000410 /* Session */ = {
 			isa = PBXGroup;
 			children = (
@@ -657,26 +623,7 @@
 			path = Workspace;
 			sourceTree = "<group>";
 		};
-		A6C6775E822CC039D1AF078F /* Core */ = {
-			isa = PBXGroup;
-			children = (
-				A0AE6B1748FA280F95478205 /* PVButton.swift */,
-				36412B0A6A6851ADB45A7AA8 /* PVIcon.swift */,
-				11ADAF744C32587CD34CDD23 /* PVLogoMark.swift */,
-				68425DFE8D1974D7A4AC5BF8 /* PVIconButton.swift */,
-				CEC485E7480EE58A01EA9A85 /* PVHoverEffect.swift */,
-				F3E732F3D44BB89512758F85 /* PVBadge.swift */,
-				B2C3D4E5F60718293A4B5E01 /* PVDivider.swift */,
-				AA0000000000000000000300 /* PVThumbnail.swift */,
-				AA0000000000000000000376 /* PVCard.swift */,
-				AA0000000000000000000378 /* PVSectionHeader.swift */,
-				AA00000000000000000003C0 /* PVContextMenu.swift */,
-				AA000000000000000000046C /* PVFloatingMenuSelection.swift */,
-			);
-			name = Core;
-			path = Core;
-			sourceTree = "<group>";
-		};
+
 		AA0000000000000000000040 = {
 			isa = PBXGroup;
 			children = (
@@ -896,39 +843,333 @@
 			path = ProvenenciaTests;
 			sourceTree = "<group>";
 		};
-		AA00000000000000000000C3 /* Data */ = {
+
+
+
+		D5C000000000000000000006 /* Button */ = {
+			isa = PBXGroup;
+			children = (
+				A0AE6B1748FA280F95478205 /* PVButton.swift */,
+			);
+			name = Button;
+			path = Button;
+			sourceTree = "<group>";
+		};
+		D5C000000000000000000001 /* Icon */ = {
+			isa = PBXGroup;
+			children = (
+				36412B0A6A6851ADB45A7AA8 /* PVIcon.swift */,
+			);
+			name = Icon;
+			path = Icon;
+			sourceTree = "<group>";
+		};
+		D5C00000000000000000000E /* LogoMark */ = {
+			isa = PBXGroup;
+			children = (
+				11ADAF744C32587CD34CDD23 /* PVLogoMark.swift */,
+			);
+			name = LogoMark;
+			path = LogoMark;
+			sourceTree = "<group>";
+		};
+		D5C00000000000000000000F /* IconButton */ = {
+			isa = PBXGroup;
+			children = (
+				68425DFE8D1974D7A4AC5BF8 /* PVIconButton.swift */,
+			);
+			name = IconButton;
+			path = IconButton;
+			sourceTree = "<group>";
+		};
+		D5C000000000000000000015 /* HoverEffect */ = {
+			isa = PBXGroup;
+			children = (
+				CEC485E7480EE58A01EA9A85 /* PVHoverEffect.swift */,
+			);
+			name = HoverEffect;
+			path = HoverEffect;
+			sourceTree = "<group>";
+		};
+		D5C000000000000000000008 /* Badge */ = {
+			isa = PBXGroup;
+			children = (
+				F3E732F3D44BB89512758F85 /* PVBadge.swift */,
+			);
+			name = Badge;
+			path = Badge;
+			sourceTree = "<group>";
+		};
+		D5C00000000000000000000C /* Divider */ = {
+			isa = PBXGroup;
+			children = (
+				B2C3D4E5F60718293A4B5E01 /* PVDivider.swift */,
+			);
+			name = Divider;
+			path = Divider;
+			sourceTree = "<group>";
+		};
+		D5C00000000000000000001A /* Thumbnail */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000300 /* PVThumbnail.swift */,
+			);
+			name = Thumbnail;
+			path = Thumbnail;
+			sourceTree = "<group>";
+		};
+		D5C000000000000000000007 /* Card */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000376 /* PVCard.swift */,
+			);
+			name = Card;
+			path = Card;
+			sourceTree = "<group>";
+		};
+		D5C00000000000000000000D /* SectionHeader */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000378 /* PVSectionHeader.swift */,
+			);
+			name = SectionHeader;
+			path = SectionHeader;
+			sourceTree = "<group>";
+		};
+		D5C000000000000000000012 /* ContextMenu */ = {
+			isa = PBXGroup;
+			children = (
+				AA00000000000000000003C0 /* PVContextMenu.swift */,
+			);
+			name = ContextMenu;
+			path = ContextMenu;
+			sourceTree = "<group>";
+		};
+		D5C00000000000000000001B /* FloatingMenuSelection */ = {
+			isa = PBXGroup;
+			children = (
+				AA000000000000000000046C /* PVFloatingMenuSelection.swift */,
+			);
+			name = FloatingMenuSelection;
+			path = FloatingMenuSelection;
+			sourceTree = "<group>";
+		};
+		D5C000000000000000000011 /* Field */ = {
+			isa = PBXGroup;
+			children = (
+				16D4D3531F81FABFCDDE4F84 /* PVField.swift */,
+			);
+			name = Field;
+			path = Field;
+			sourceTree = "<group>";
+		};
+		D5C00000000000000000001D /* Input */ = {
+			isa = PBXGroup;
+			children = (
+				40F72A548E04F25E0AA30CDB /* PVInput.swift */,
+			);
+			name = Input;
+			path = Input;
+			sourceTree = "<group>";
+		};
+		D5C00000000000000000000B /* InlineEdit */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000370 /* PVInlineEdit.swift */,
+			);
+			name = InlineEdit;
+			path = InlineEdit;
+			sourceTree = "<group>";
+		};
+		D5C00000000000000000001C /* TextArea */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000372 /* PVTextArea.swift */,
+			);
+			name = TextArea;
+			path = TextArea;
+			sourceTree = "<group>";
+		};
+		D5C000000000000000000002 /* Chip */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000374 /* PVChip.swift */,
+			);
+			name = Chip;
+			path = Chip;
+			sourceTree = "<group>";
+		};
+		D5C000000000000000000013 /* Select */ = {
+			isa = PBXGroup;
+			children = (
+				28FB7FB1DE947EE962F4BA83 /* PVSelect.swift */,
+			);
+			name = Select;
+			path = Select;
+			sourceTree = "<group>";
+		};
+		D5C000000000000000000016 /* ComboBox */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000230 /* PVComboBox.swift */,
+			);
+			name = ComboBox;
+			path = ComboBox;
+			sourceTree = "<group>";
+		};
+		D5C00000000000000000001E /* Toast */ = {
+			isa = PBXGroup;
+			children = (
+				8FC0B0A893C7248A08303738 /* PVToast.swift */,
+			);
+			name = Toast;
+			path = Toast;
+			sourceTree = "<group>";
+		};
+		D5C000000000000000000010 /* EmptyState */ = {
+			isa = PBXGroup;
+			children = (
+				3555554CD714B1FD24C2DB2F /* PVEmptyState.swift */,
+			);
+			name = EmptyState;
+			path = EmptyState;
+			sourceTree = "<group>";
+		};
+		D5C000000000000000000019 /* Confirm */ = {
+			isa = PBXGroup;
+			children = (
+				AA00000000000000000000C7 /* PVConfirm.swift */,
+			);
+			name = Confirm;
+			path = Confirm;
+			sourceTree = "<group>";
+		};
+		D5C000000000000000000014 /* Dialog */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000304 /* PVDialog.swift */,
+			);
+			name = Dialog;
+			path = Dialog;
+			sourceTree = "<group>";
+		};
+		D5C000000000000000000005 /* Callout */ = {
+			isa = PBXGroup;
+			children = (
+				C9B9D94DAB5FD1587C260FE3 /* PVCallout.swift */,
+			);
+			name = Callout;
+			path = Callout;
+			sourceTree = "<group>";
+		};
+		D5C000000000000000000003 /* SidebarNav */ = {
+			isa = PBXGroup;
+			children = (
+				E98DA667F92287934B46B640 /* PVSidebarNav.swift */,
+			);
+			name = SidebarNav;
+			path = SidebarNav;
+			sourceTree = "<group>";
+		};
+		D5C000000000000000000018 /* Breadcrumbs */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000318 /* PVBreadcrumbs.swift */,
+			);
+			name = Breadcrumbs;
+			path = Breadcrumbs;
+			sourceTree = "<group>";
+		};
+		D5C000000000000000000017 /* Table */ = {
 			isa = PBXGroup;
 			children = (
 				AA00000000000000000000C2 /* PVTable.swift */,
+			);
+			name = Table;
+			path = Table;
+			sourceTree = "<group>";
+		};
+		D5C000000000000000000004 /* ReorderableList */ = {
+			isa = PBXGroup;
+			children = (
 				AA0000000000000000000320 /* PVReorderableList.swift */,
 			);
-			name = Data;
-			path = Data;
+			name = ReorderableList;
+			path = ReorderableList;
+			sourceTree = "<group>";
+		};
+		D5C00000000000000000001F /* EvidenceIcon */ = {
+			isa = PBXGroup;
+			children = (
+				AA00000000000000000003B0 /* PVEvidenceIcon.swift */,
+			);
+			name = EvidenceIcon;
+			path = EvidenceIcon;
+			sourceTree = "<group>";
+		};
+		D5C000000000000000000009 /* SubjectIcon */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000484 /* PVSubjectIcon.swift */,
+			);
+			name = SubjectIcon;
+			path = SubjectIcon;
+			sourceTree = "<group>";
+		};
+		D5C00000000000000000000A /* OmnibarHitRow */ = {
+			isa = PBXGroup;
+			children = (
+				AA00000000000000000003F6 /* PVOmnibarHitRow.swift */,
+			);
+			name = OmnibarHitRow;
+			path = OmnibarHitRow;
 			sourceTree = "<group>";
 		};
 		C17391C6B09DD9AAD985A390 /* Components */ = {
 			isa = PBXGroup;
 			children = (
-				A6C6775E822CC039D1AF078F /* Core */,
-				AA00000000000000000000C3 /* Data */,
-				751809A4EF38DC6F6B1B17A4 /* Forms */,
-				7CE27BCE83A155C8F77EF85E /* Feedback */,
-				4890BA38D028388F6C2157E5 /* Navigation */,
-				AA00000000000000000003B4 /* Research */,
+				D5C000000000000000000006 /* Button */,
+				D5C000000000000000000001 /* Icon */,
+				D5C00000000000000000000E /* LogoMark */,
+				D5C00000000000000000000F /* IconButton */,
+				D5C000000000000000000015 /* HoverEffect */,
+				D5C000000000000000000008 /* Badge */,
+				D5C00000000000000000000C /* Divider */,
+				D5C00000000000000000001A /* Thumbnail */,
+				D5C000000000000000000007 /* Card */,
+				D5C00000000000000000000D /* SectionHeader */,
+				D5C000000000000000000012 /* ContextMenu */,
+				D5C00000000000000000001B /* FloatingMenuSelection */,
+				D5C000000000000000000011 /* Field */,
+				D5C00000000000000000001D /* Input */,
+				D5C00000000000000000000B /* InlineEdit */,
+				D5C00000000000000000001C /* TextArea */,
+				D5C000000000000000000002 /* Chip */,
+				D5C000000000000000000013 /* Select */,
+				D5C000000000000000000016 /* ComboBox */,
+				D5C00000000000000000001E /* Toast */,
+				D5C000000000000000000010 /* EmptyState */,
+				D5C000000000000000000019 /* Confirm */,
+				D5C000000000000000000014 /* Dialog */,
+				D5C000000000000000000005 /* Callout */,
+				D5C000000000000000000003 /* SidebarNav */,
+				D5C000000000000000000018 /* Breadcrumbs */,
+				D5C000000000000000000017 /* Table */,
+				D5C000000000000000000004 /* ReorderableList */,
 			);
 			name = Components;
 			path = Components;
 			sourceTree = "<group>";
 		};
-		AA00000000000000000003B4 /* Research */ = {
+		D5C000000000000000000020 /* Recipes */ = {
 			isa = PBXGroup;
 			children = (
-				AA00000000000000000003B0 /* PVEvidenceIcon.swift */,
-				AA0000000000000000000484 /* PVSubjectIcon.swift */,
-				AA00000000000000000003F6 /* PVOmnibarHitRow.swift */,
+				D5C00000000000000000001F /* EvidenceIcon */,
+				D5C000000000000000000009 /* SubjectIcon */,
+				D5C00000000000000000000A /* OmnibarHitRow */,
 			);
-			name = Research;
-			path = Research;
+			name = Recipes;
+			path = Recipes;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

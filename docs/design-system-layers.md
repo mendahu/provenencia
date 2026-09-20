@@ -91,10 +91,6 @@ boards/        # screen mockups that compose the above
 
 No `components/forms/` category nesting. Each control is `components/<Name>/`.
 
-### Transition
-
-Until the move PR lands, some files may still live under legacy `Components/Core|Forms|Feedback|Navigation|Data|Research/`. **Do not add new files to those category folders or as loose files at a layer root.** New work uses `Components/<Name>/`, `Recipes/<Name>/`, or `Snowflakes/<Name>/` (or feature-local snowflakes).
-
 ## PV type prefix
 
 `PV` means **Provenencia** design-system API. It is a **Swift type-naming** rule, not a folder rule.
