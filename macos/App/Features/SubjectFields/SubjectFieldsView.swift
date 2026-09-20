@@ -73,8 +73,22 @@ private struct SubjectFieldsContent: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(PVColor.surfacePage)
         .vocabularyToastOverlay($model.toast, identifier: "subjectFields.toast")
-        .sheet(isPresented: createOpenBinding) {
-            createSheet
+        .pvDialog(
+            isPresented: createOpenBinding,
+            copy: PVDialogCopy(
+                title: L10n.SubjectFields.createTitle,
+                subtitle: L10n.SubjectFields.createOriginNote,
+                confirm: L10n.SubjectFields.createSubmit,
+                cancel: L10n.SubjectFields.createCancel
+            ),
+            isRunning: model.isSaving,
+            confirmDisabled: !model.canSubmitCreate,
+            accessibilityIdentifierPrefix: "subjectFields.create",
+            onConfirm: {
+                Task { _ = await model.submitCreate() }
+            }
+        ) {
+            createForm
         }
         .pvConfirmSheet(
             item: pendingDelete,
@@ -621,99 +635,125 @@ private struct SubjectFieldsContent: View {
         return L10n.SubjectFields.deleteUnused
     }
 
-    private var createSheet: some View {
+    private var createForm: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space6) {
-            HStack {
-                Text(L10n.SubjectFields.createTitle)
-                    .font(PVFont.display(size: PVTypeScale.h3))
-                Spacer()
-                Button {
-                    model.closeCreate()
-                } label: {
-                    Image(systemName: "xmark")
-                }
-                .buttonStyle(.borderless)
+            if let formError = model.formError {
+                PVCallout(tone: .danger, message: formError)
+                    .accessibilityIdentifier("subjectFields.create.error")
             }
-            Text(L10n.SubjectFields.createOriginNote)
-                .font(PVFont.body(size: PVTypeScale.caption, italic: true))
-                .foregroundStyle(PVColor.textMuted)
-            VStack(alignment: .leading, spacing: PVSpacing.space2) {
-                Text(L10n.SubjectFields.createLabel)
-                TextField(text: Binding(
-                    get: { model.draft?.label ?? "" },
-                    set: { model.draft?.label = $0 }
-                ), prompt: Text(L10n.SubjectFields.createLabelHint)) { EmptyView() }
-                .textFieldStyle(.roundedBorder)
-                Text(verbatim: model.draftKey)
-                    .font(PVFont.mono())
-                    .foregroundStyle(PVColor.textMuted)
+
+            PVField(
+                label: L10n.SubjectFields.createLabel,
+                hint: L10n.SubjectFields.createLabelHint,
+                required: true
+            ) {
+                PVInput(
+                    text: Binding(
+                        get: { model.draft?.label ?? "" },
+                        set: { model.draft?.label = $0 }
+                    ),
+                    prompt: L10n.SubjectFields.createLabelPlaceholder
+                )
+                .accessibilityIdentifier("subjectFields.create.label")
             }
-            VStack(alignment: .leading, spacing: PVSpacing.space2) {
-                Text(L10n.SubjectFields.createValueType)
-                Picker(selection: Binding(
-                    get: { model.draft?.valueType ?? "text" },
-                    set: { model.draft?.valueType = $0 }
-                )) {
+
+            PVField(
+                label: L10n.SubjectFields.createKey,
+                hint: L10n.SubjectFields.createKeyHint
+            ) {
+                PVInput(
+                    text: Binding(
+                        get: { model.draftKey },
+                        set: { _ in }
+                    ),
+                    mono: true,
+                    isReadOnly: true,
+                    prompt: L10n.SubjectFields.createKeyPlaceholder
+                )
+                .accessibilityIdentifier("subjectFields.create.key")
+            }
+
+            PVField(label: L10n.SubjectFields.createDescription) {
+                PVTextArea(
+                    text: Binding(
+                        get: { model.draft?.description ?? "" },
+                        set: { model.draft?.description = $0 }
+                    ),
+                    lineLimit: 2...4,
+                    prompt: L10n.SubjectFields.createDescriptionPlaceholder
+                )
+                .accessibilityIdentifier("subjectFields.create.description")
+            }
+
+            PVField(
+                label: L10n.SubjectFields.createValueType,
+                hint: L10n.SubjectFields.createValueTypeHint,
+                required: true
+            ) {
+                PVChipGroup(style: .segmented) {
                     ForEach(SubjectPropertyValueType.researcherCreatable, id: \.self) { vt in
-                        Text(SubjectPropertyValueType.label(vt)).tag(vt)
+                        PVChip(
+                            text: vt,
+                            isSelected: (model.draft?.valueType ?? "text") == vt,
+                            expands: true,
+                            selectionLift: true,
+                            action: { model.draft?.valueType = vt }
+                        )
+                        .accessibilityIdentifier("subjectFields.create.valueType.\(vt)")
                     }
-                } label: { EmptyView() }
+                }
+                .accessibilityLabel(L10n.SubjectFields.createValueType)
             }
-            VStack(alignment: .leading, spacing: PVSpacing.space2) {
-                Text(L10n.SubjectFields.createDescription)
-                TextField(text: Binding(
-                    get: { model.draft?.description ?? "" },
-                    set: { model.draft?.description = $0 }
-                ), prompt: Text(L10n.SubjectFields.createDescription), axis: .vertical) { EmptyView() }
-                .lineLimit(3...6)
-                .textFieldStyle(.roundedBorder)
-            }
-            VStack(alignment: .leading, spacing: PVSpacing.space3) {
+
+            VStack(alignment: .leading, spacing: PVSpacing.space4) {
                 Text(L10n.SubjectFields.createBindSection)
                     .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
                     .foregroundStyle(PVColor.textMuted)
+                    .tracking(PVTypeScale.micro * PVTracking.caps)
                     .textCase(.uppercase)
-                ForEach(model.types) { type in
-                    let presentation = model.snapshot.presentation(for: type)
-                    let ink = SubjectFieldsTypeChrome.ink(typeKey: type.key, presentation: presentation)
-                    Button {
-                        model.toggleDraftBind(typeID: type.id)
-                    } label: {
-                        HStack(spacing: PVSpacing.space5) {
-                            SubjectFieldsBindBox(
-                                on: model.draft?.bindTypeIDs.contains(type.id) == true,
-                                locked: false
-                            )
-                            if let kind = SubjectFieldsTypeChrome.stripIconKind(typeKey: type.key) {
-                                PVSubjectIcon(kind: kind, size: 14)
-                                    .foregroundStyle(ink)
-                            }
-                            Text(verbatim: type.label)
-                                .font(PVFont.body(size: PVTypeScale.bodySmall))
-                                .foregroundStyle(PVColor.textPrimary)
-                            Spacer(minLength: 0)
-                        }
-                        .padding(.horizontal, 8)
-                        .frame(height: 30)
-                        .contentShape(Rectangle())
+
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible(), spacing: 2),
+                        GridItem(.flexible(), spacing: 2),
+                    ],
+                    spacing: 2
+                ) {
+                    ForEach(model.types) { type in
+                        createBindRow(type)
                     }
-                    .buttonStyle(.plain)
                 }
-            }
-            if let formError = model.formError {
-                PVCallout(tone: .danger, message: formError)
-            }
-            HStack {
-                Spacer()
-                Button(L10n.SubjectFields.createCancel) { model.closeCreate() }
-                Button(L10n.SubjectFields.createSubmit) {
-                    Task { _ = await model.submitCreate() }
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(!model.canSubmitCreate || model.isSaving)
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel(L10n.SubjectFields.createBindSection)
             }
         }
-        .padding(PVSpacing.gutterPage)
-        .frame(width: 440)
+    }
+
+    private func createBindRow(_ type: CatalogSubjectType) -> some View {
+        let presentation = model.snapshot.presentation(for: type)
+        let ink = SubjectFieldsTypeChrome.ink(typeKey: type.key, presentation: presentation)
+        let on = model.draft?.bindTypeIDs.contains(type.id) == true
+        return Button {
+            model.toggleDraftBind(typeID: type.id)
+        } label: {
+            HStack(spacing: PVSpacing.space5) {
+                SubjectFieldsBindBox(on: on, locked: false)
+                if let kind = SubjectFieldsTypeChrome.stripIconKind(typeKey: type.key) {
+                    PVSubjectIcon(kind: kind, size: 14)
+                        .foregroundStyle(ink)
+                }
+                Text(verbatim: type.label)
+                    .font(PVFont.body(size: PVTypeScale.bodySmall))
+                    .foregroundStyle(PVColor.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.horizontal, 8)
+            .frame(height: 30)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(type.label)
+        .accessibilityAddTraits(on ? [.isSelected] : [])
+        .accessibilityIdentifier("subjectFields.create.bind.\(type.key)")
     }
 }

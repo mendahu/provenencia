@@ -3024,15 +3024,45 @@ enum L10n {
             defaultValue: "What a researcher sees on the subject",
             comment: "Hint under create property label"
         )
+        static let createLabelPlaceholder = LocalizedStringResource(
+            "subjectFields.create.labelPlaceholder",
+            defaultValue: "Burial ground",
+            comment: "Placeholder for create property label field"
+        )
+        static let createKey = LocalizedStringResource(
+            "subjectFields.create.key",
+            defaultValue: "Key",
+            comment: "Create property form: machine key field"
+        )
+        static let createKeyHint = LocalizedStringResource(
+            "subjectFields.create.keyHint",
+            defaultValue: "Generated from the label",
+            comment: "Hint under create property key; key is minted server-side from label"
+        )
+        static let createKeyPlaceholder = LocalizedStringResource(
+            "subjectFields.create.keyPlaceholder",
+            defaultValue: "burial-ground",
+            comment: "Placeholder for create property key preview"
+        )
         static let createValueType = LocalizedStringResource(
             "subjectFields.create.valueType",
             defaultValue: "Value type",
             comment: "Create property form: value type picker"
         )
+        static let createValueTypeHint = LocalizedStringResource(
+            "subjectFields.create.valueTypeHint",
+            defaultValue: "Cannot be changed once the property exists",
+            comment: "Hint under create property value type chips"
+        )
         static let createDescription = LocalizedStringResource(
             "subjectFields.create.description",
             defaultValue: "Description",
             comment: "Create property form: description"
+        )
+        static let createDescriptionPlaceholder = LocalizedStringResource(
+            "subjectFields.create.descriptionPlaceholder",
+            defaultValue: "How the value should be read from the record",
+            comment: "Placeholder for create property description"
         )
         static let createCancel = LocalizedStringResource(
             "subjectFields.create.cancel",

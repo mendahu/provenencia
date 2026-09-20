@@ -8088,6 +8088,78 @@
           }
         }
       }
+    },
+    "subjectFields.create.labelPlaceholder": {
+      "comment": "Placeholder for create property label field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Burial ground"
+          }
+        }
+      }
+    },
+    "subjectFields.create.key": {
+      "comment": "Create property form: machine key field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Key"
+          }
+        }
+      }
+    },
+    "subjectFields.create.keyHint": {
+      "comment": "Hint under create property key; key is minted server-side from label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generated from the label"
+          }
+        }
+      }
+    },
+    "subjectFields.create.keyPlaceholder": {
+      "comment": "Placeholder for create property key preview",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "burial-ground"
+          }
+        }
+      }
+    },
+    "subjectFields.create.valueTypeHint": {
+      "comment": "Hint under create property value type chips",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cannot be changed once the property exists"
+          }
+        }
+      }
+    },
+    "subjectFields.create.descriptionPlaceholder": {
+      "comment": "Placeholder for create property description",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How the value should be read from the record"
+          }
+        }
+      }
     }
   },
   "version": "1.1"
