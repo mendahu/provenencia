@@ -914,7 +914,7 @@ message ConnectRule {
   string to_type_key = 2;
   string bridge_type_key = 3;
   repeated string edge_property_keys = 4;
-  string disambiguation = 5; // none | role | relationship_type | person_person_choice
+  string disambiguation = 5; // none | role | relationship_type
   bool refuse = 6;
 }
 

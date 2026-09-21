@@ -162,12 +162,12 @@ Type-pair inference works, and the pairs match the seeded `subject_type_fields` 
 | From → To | Bridge subject | Edges written | What the app must ask |
 | --- | --- | --- | --- |
 | person → event | `participation` | `person`, `event` | `role` — subject, father, witness, … |
-| person → person | `relationship` | `person` + `related_to` | `relationship_type` (directed: person is X of related_to) — and *whether* it is a direct relationship at all (see below) |
+| person → person | `relationship` | `person` + `related_to` | `relationship_type` only (directed: person is X of related_to). **Always** a relationship — shared events are modelled by placing an Event and connecting each person to it |
 | event → place | `location` | `event`, `place` | nothing; clean |
 | person → place | *none seeded* | — | residence is `person → event(residence) → place`; offer a two-hop macro or refuse |
 | event → event, place → place | *none seeded* | — | refuse |
 
-The person → person case is genuinely ambiguous: two people in one record might be in a direct `relationship` ("cousins"), or might simply both participate in one Event ("both at this wedding"), which is a pair of `participation` Subjects instead. The connect tool has to offer that choice rather than pick.
+There is **no** person→person “relationship vs shared event” fork. A line between two people is a `relationship`. If two people share an event, the researcher creates the Event bubble and draws person→event lines (each with a `role`).
 
 This is fine, because the gesture already opens a form (§6). The form carries the role/type picker. **The rule is: no macro silently invents vocabulary.**
 
@@ -521,7 +521,7 @@ A free-form spatial canvas is genuinely hostile to VoiceOver and keyboard-only u
 
 # 10. Hiccups checklist
 
-1. **Edge macros** — the matrix in §3.2, including the refusals and the person→person disambiguation.
+1. **Edge macros** — the matrix in §3.2, including the refusals (person→person is always `relationship`).
 2. **Reverse rendering rules** — visual states for negated, conflicted, and incomplete; collapse/expand of bridge bubbles.
 3. **Deletion semantics** — `ON DELETE` choice at migration time; subject *and* object references; the confirmation that counts the damage.
 4. **Type correction** — delete-and-recreate, gated on having no Observations.
@@ -709,6 +709,6 @@ Still open:
 - Can one graph span Sources (a "case view")? Source scope should be hard for editing; a read-only multi-Source view is a different feature and would need the Conclusion layer to be meaningful.
 - What does the Source-page commentary surface actually look like? `mentions` and `remark` Observations stay in the data model (§4.6) but now need a home that is not the canvas, and it is unspecified.
 - Before `mentions` ships: does mentioning an unheld document create a placeholder Source, and what resolves two placeholders that turn out to be the same document? Source merge does not exist (§4.6).
-- Does the person → person disambiguation (§3.2) earn its complexity, or should person → person simply always mean `relationship` and let shared-event modelling go through the event bubble?
+- ~~Does the person → person disambiguation (§3.2) earn its complexity?~~ **Answered:** person→person always means `relationship`; shared events go through the Event bubble (§3.2).
 - Is a Citation with zero Observations a legal, useful state — "I transcribed this line, I have not interpreted it yet" — or should the composer refuse to save a Citation that asserts nothing? This is the one real loose end left by keeping one-to-many (§4.5), and it is a UI policy question rather than a schema one.
 - How does Conclusion-layer work ([`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md)) surface here later — same canvas with a layer toggle, or a separate reconciliation view? "Not now" is fine; "never" would be a mistake.

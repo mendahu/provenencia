@@ -7964,7 +7964,7 @@ type ConnectRule struct {
 	ToTypeKey        string                 `protobuf:"bytes,2,opt,name=to_type_key,json=toTypeKey,proto3" json:"to_type_key,omitempty"`
 	BridgeTypeKey    string                 `protobuf:"bytes,3,opt,name=bridge_type_key,json=bridgeTypeKey,proto3" json:"bridge_type_key,omitempty"`
 	EdgePropertyKeys []string               `protobuf:"bytes,4,rep,name=edge_property_keys,json=edgePropertyKeys,proto3" json:"edge_property_keys,omitempty"`
-	Disambiguation   string                 `protobuf:"bytes,5,opt,name=disambiguation,proto3" json:"disambiguation,omitempty"` // none | role | relationship_type | person_person_choice
+	Disambiguation   string                 `protobuf:"bytes,5,opt,name=disambiguation,proto3" json:"disambiguation,omitempty"` // none | role | relationship_type
 	Refuse           bool                   `protobuf:"varint,6,opt,name=refuse,proto3" json:"refuse,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
