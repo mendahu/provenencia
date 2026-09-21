@@ -59,7 +59,7 @@ Spike 5 already seeds Subject types from [`core/database/subjecttypes/registry.g
 | **Required / locked bindings** | which seeded bindings macros need and UI must not unbind | Subject fields delete/unbind; connect pre-fill |
 | **Connect matrix** | allowed endpoint pairs + which bridge type + which edge Properties / disambiguation fields | S7-10 macros (read registry; do not re-encode §3.2 in the view) |
 
-**Type-keyed chrome:** Today’s `EvidencePrimaryKind` / `EvidenceSubjectKindStyle` (and edge gradients that sample primary ink) are the anti-pattern. The graph loads presentation from the registry for **every** Subject type it can show, then maps tokens to design-system colors/symbols locally. If it is configured *because of the type* (card name, palette label, wash, chip, line ink, gradient endpoints), it belongs in the registry. Platform tokens (`PVColor.…`, SF Symbols, `L10n` keys) stay in the design system / catalogs; the registry stores **which token for which type**.
+**Type-keyed chrome:** Today’s `EvidencePrimaryKind` / `EvidenceSubjectKindStyle` (and edge gradients that sample primary ink) are the anti-pattern. The graph loads presentation from the registry for **every** Subject type it can show, then maps tokens to design-system colors/symbols locally. If it is configured *because of the type* (card name, palette label, wash, chip, line ink, gradient endpoints), it belongs in the registry. Platform tokens (`PVColor.…`, curated mark keys after **S7-12**, `L10n` keys) stay in the design system / catalogs; the registry stores **which token for which type**.
 
 **Palette example (today’s Add Person / Event / Place):** those three tools are not a hard-coded Swift enum forever. The Evidence graph asks the registry (via Go/FFI): *which Subject types are placeable on this canvas, in what order?* For each, it renders a toggle from that type’s **presentation**. Adding or dropping a placeable type changes palette **and** card/line chrome via the registry, not via style `switch`es. Connect stays a separate chrome tool (not a Subject type), unless the registry later declares other non-type tools.
 
@@ -103,7 +103,7 @@ subjectvocab/   (name flexible — may absorb today’s subjecttypes.Install)
 | Field | Purpose |
 | --- | --- |
 | `L10nKey` | Client display name (palette + card); DB `Label` remains English seed fallback |
-| `IconSymbol` | SF Symbol / `PVSymbol` token |
+| `IconSymbol` | Curated mark key after **S7-12** (subject family in the shared pack); not SF Symbol forever |
 | `InkToken`, `TintToken`, `ChipToken`, `LineToken` | Map to `PVColor` (or equivalent) in Swift — card wash, chip, stroke |
 | `EdgeFromToken` / `EdgeToToken` | Optional; default edge gradients can derive from endpoint `InkToken` / `LineToken` if unset |
 
@@ -177,20 +177,21 @@ Sources › {Source title} › Evidence graph › Connect › Cite
 
 Pinning a Citation across successive graph edits is **out** (one Citation + N Observations per submit).
 
-## Design track (four briefs — one view / surface each)
+## Design track (five briefs)
 
-**All UI is designed in Claude Design before the matching UI PR.** Briefs: [`design/`](design/).
+**All UI is designed in Claude Design before the matching UI PR** (S7-D6 may be a light handoff rather than a full surface board). Briefs: [`design/`](design/).
 
 | Step | Brief | Covers | Gates |
 | --- | --- | --- | --- |
 | **S7-D2** | Subject fields | Properties + bindings; create Property offers **five** types (**not** `term`); **few types (7) / many Properties** — creative IA, not Source fields; explore type cards etc. **No** Event types / Roles admin destinations | S7-05 |
+| **S7-D6** | Curated marks | Unify into `Recipes/Marks/` (move evidence + add subject, incl. **source** from Subject fields); tint / size API; migrate graph **and** Subject fields | S7-12 |
 | **S7-D3** | Evidence graph updates | Add-property; cited-data rows; Artifact gate; connect disambiguation → composer handoff; bridge honesty once cited | S7-09, S7-10 |
 | **S7-D4** | Citation composer place | Full-window viewer\|form; Artifact pick; locators; observation list; DateValue reuse; breadcrumbs; composer-only a11y — **hosts** NameValue modal, does not design it | S7-08 |
 | **S7-D5** | NameValue editor | Reusable NameValue modal (DateValue twin); form + optional parts | S7-02b |
 
 ~~**S7-D1** Subject types editor~~ — **descoped** (see [Descoped](#descoped) below).
 
-**Scheduling:** **S7-D2** early (unblocks S7-05). **S7-D3** before Add-property / card UI (**S7-09**). **S7-D4** before thin composer (**S7-08**). **S7-D5** before NameValue Swift (**S7-02b**), late in the composer fill-in. Prefer **D3 → implement 09** so the graph is dogfoodable before viewers exist.
+**Scheduling:** **S7-D2** early (unblocks S7-05). **S7-D6** before mark consolidation (**S7-12**), which lands before Add-property / card UI (**S7-09**). **S7-D3** before **S7-09**. **S7-D4** before thin composer (**S7-08**). **S7-D5** before NameValue Swift (**S7-02b**), late in the composer fill-in. Prefer **D6 → 12 → D3 → 09** so the graph thickens on one icon pipeline.
 
 ## Incremental UI dogfood (back half)
 
@@ -199,6 +200,8 @@ Do **not** stack viewers → locators → NameValue → composer → Add propert
 **Invert:** ship a thin vertical path you can click immediately, then thicken the composer.
 
 ```text
+S7-12  → Recipes/Marks/ (move evidence + subject_*; tint API; graph + Subject fields)
+         dogfood: cards / palette / fields strip at zoom; source mark present; type_* hosts still work
 S7-09  Add property on cards → navigate to composer place (stub/shell OK)
          dogfood: button, place, breadcrumbs, Back
 S7-08  Thin composer: Artifact pick + citation + text Observations + submit
@@ -210,7 +213,7 @@ S7-10  Durable connect macros
 S7-11  Full dogfood bar / close
 ```
 
-Each step is independently testable in the running app against **S7-03** (and S7-01 / S7-01b / S7-02 as needed).
+Each step is independently testable in the running app against **S7-03** (and S7-01 / S7-01b / S7-02 / **S7-12** as needed).
 
 ## PR sequence
 
@@ -233,6 +236,12 @@ S7-D2 Subject fields                S7-01  properties + subject_type_fields
                                     S7-03  citations + observations + locator
                                     │      validation (Go) + FFI macros
                                     │      (includes value_term_id)
+                                    │
+S7-D6 Curated marks                 │
+  │                                 ▼
+  └────── D6 gates ───────────────▶ S7-12 → Recipes/Marks/
+                                    │      (move EvidenceIcon + subject_*;
+                                    │       graph + Subject fields migrated)
                                     │
 S7-D3 Graph updates                 │
   │                                 ▼
@@ -268,7 +277,8 @@ S7-D5 NameValue editor              │
 
 - **S7-01b** → **S7-01**. Lands **before** S7-05 and **before** S7-03; introduces kind/edge Properties as `term` (they are not seeded as text in S7-01).
 - **S7-05** → **S7-01** + **S7-01b** + **S7-D2** only (no NameValue UI).
-- **S7-09** → **S7-03** (graph payload can show Observations) + **S7-D3**. Registers composer `WorkspaceLocation`; destination may stub until S7-08.
+- **S7-12** → **S7-D6** only (design-system consolidation). **Not** related to Citations/Observations work. Schedule after schema/Go (**S7-03**) and **before** S7-09 so graph chrome thickens on one mark pipeline.
+- **S7-09** → **S7-03** (graph payload can show Observations) + **S7-12** + **S7-D3**. Registers composer `WorkspaceLocation`; destination may stub until S7-08.
 - **S7-08** → **S7-09** + **S7-D4** + **S7-03**. **Does not** require S7-06/07/02b — text/term Observations and a placeholder viewer are enough to dogfood submit + card growth.
 - **S7-06 / S7-07 / S7-02b** fill the composer in place; each is dogfoodable on top of S7-08.
 - **S7-10** → working composer submit (S7-08+) + **S7-D3**.
@@ -288,6 +298,8 @@ Schema/Go (01–03, 01b) may start before design finishes; **UI PRs gate on the 
 - [x] S7-05 — Subject fields UI → [`completed.md`](completed.md)
 - [x] S7-02 — NameValue schema + Go → [`completed.md`](completed.md)
 - [x] S7-03 — Citations + Observations + locator validation + FFI → [`completed.md`](completed.md)
+- [ ] S7-D6 — Design: Curated marks (subject → evidence icon pack) → [`completed.md`](completed.md)
+- [ ] S7-12 — `Recipes/Marks/` consolidation + graph / Subject fields migration → [`completed.md`](completed.md)
 - [ ] S7-09 — Add property + composer navigation (stub OK) → [`completed.md`](completed.md)
 - [ ] S7-08 — Thin composer (submit + card growth; viewer placeholder OK) → [`completed.md`](completed.md)
 - [ ] S7-06 — Image + PDF viewers in composer → [`completed.md`](completed.md)
@@ -310,9 +322,15 @@ Claude Design board for Subject fields. Brief archived: [`design/archive/S7-D2-s
 
 ---
 
+## S7-D6 — Design: Curated marks
+
+Handoff / light board for the unified **Marks** recipe (`DesignSystem/Recipes/Marks/` — move evidence icons + add subject marks). Brief: [`design/S7-D6-curated-marks.md`](design/S7-D6-curated-marks.md) (Claude Design board links for Evidence graph + Subject fields artwork). Gates **S7-12**. Pulls the **source** folio from Subject fields (S7-D2) into the same set as S6 graph marks. Locks tint/size API (template assets + call-site `.foregroundStyle`). Includes **UI building-block inventory** (§7: New/Extend **Marks**, Extend graph + Subject fields call sites, Retire `EvidenceIcon` + `SubjectIcon`). Does **not** redesign graph cards (**S7-D3**) or Subject fields IA.
+
+---
+
 ## S7-D3 — Design: Evidence graph updates
 
-Claude Design board for Add property, cited rows, connect disambiguation handoff. Brief: [`design/S7-D3-evidence-graph-updates.md`](design/S7-D3-evidence-graph-updates.md). Gates **S7-09**, **S7-10**. Does **not** design the composer place (S7-D4). **Implement S7-09 before the thick composer** so Add property is dogfoodable early.
+Claude Design board for Add property, cited rows, connect disambiguation handoff. Brief: [`design/S7-D3-evidence-graph-updates.md`](design/S7-D3-evidence-graph-updates.md). Gates **S7-09**, **S7-10**. Does **not** design the composer place (S7-D4). Prefer **S7-12** already landed. **Implement S7-09 before the thick composer** so Add property is dogfoodable early.
 
 ---
 
@@ -399,6 +417,23 @@ Lives on the **Observations branch**, not the Subject fields branch. Needed so *
 
 ---
 
+## S7-12 — Curated marks consolidation
+
+Move subject type marks (`PVSubjectIcon` Canvas paths) **and** today’s evidence icons into one asset-backed recipe: **`DesignSystem/Recipes/Marks/`** (`file_*` + `type_*` + `subject_*`). Rename/move `Recipes/EvidenceIcon/` + `Assets.xcassets/EvidenceIcons/` into Marks in the same PR. Template-rendered SVGs; document tint API (call-site `.foregroundStyle` / ambient foreground — colors not baked into assets).
+
+**Artwork:** export S6 graph marks **and** the **source** folio from Subject fields (S7-D2 / `SourceMark`) — board links in [`design/S7-D6-curated-marks.md`](design/S7-D6-curated-marks.md).
+
+**Call sites:** migrate **every** `PVSubjectIcon` / `PVSubjectIconKind` use — Evidence graph (cards, palette, bridges) **and** Subject fields type strip / binding chrome — onto Marks; update existing `PVEvidenceIcon` hosts to the new home; then retire `EvidenceIcon` + `SubjectIcon`. Align registry presentation icon tokens with curated mark keys so **S7-09** does not invent a second icon channel.
+
+| | |
+| --- | --- |
+| **In** | `Recipes/Marks/` (+ asset catalog); seven `subject_*` glyphs incl. **source**; key enum / View API; tint + size docs (`MARKS.md`); graph **+ Subject fields** + existing evidence-icon call-site migration; retire `EvidenceIcon` / `SubjectIcon`; DesignSystem README update. |
+| **Out** | Card Add-property / cited-row UX (**S7-09**); Subject fields IA changes; researcher-editable subject icons; new mark metaphors beyond today’s seven kinds; keeping a permanent `EvidenceIcon` folder. |
+| **Testable** | Palette + cards show subject marks at zoom; Subject fields type strip still shows all kinds incl. source; Sources/type icons still tint; `rg` clean of old recipe paths (or only deprecated shim). |
+| **Depends on** | **S7-D6**. Schedule after **S7-03**, before **S7-09** — not gated on Citations/Observations code. |
+
+---
+
 ## S7-05 — Subject fields UI
 
 Properties + `subject_type_fields` bindings; researcher create offers **five** value_types (`text` / `integer` / `date` / `name` / `subject`). Seeded **`term`** Properties from the registry appear in the list/bindings like any other Property but are not creatable here. Implement the **S7-D2** IA. Do **not** invent Event types / Roles destinations — user **term rows** under registry term Properties are composer-local (S7-D4).
@@ -420,10 +455,10 @@ Grow `EvidenceSubjectCardChrome`; Add property → `go(to: composer)`; cited-row
 
 | | |
 | --- | --- |
-| **In** | Add property control; composer `WorkspaceLocation`; card chrome for cited rows; Artifact gate messaging; registry presentation for kinds. |
+| **In** | Add property control; composer `WorkspaceLocation`; card chrome for cited rows; Artifact gate messaging; registry presentation for kinds (icons via **S7-12** pack). |
 | **Out** | Full composer form (S7-08); connect (S7-10). |
 | **Testable** | Select a Person → Add property → land on composer place → Back to graph. No submit required yet. |
-| **Depends on** | S7-03 (optional empty cited rows), **S7-D3**. |
+| **Depends on** | S7-03 (optional empty cited rows), **S7-12**, **S7-D3**. |
 
 ---
 

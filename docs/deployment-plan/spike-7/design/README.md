@@ -8,6 +8,7 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 
 | Step | Brief | Feeds | Notes |
 | --- | --- | --- | --- |
+| S7-D6 | [`S7-D6-curated-marks.md`](S7-D6-curated-marks.md) | PR S7-12 | → `Recipes/Marks/` (evidence + subject, incl. **source**); board links in brief; before **S7-09** |
 | S7-D3 | [`S7-D3-evidence-graph-updates.md`](S7-D3-evidence-graph-updates.md) | PRs S7-09, S7-10 | Graph first: Add property + card growth (**S7-09** before thick composer) |
 | S7-D4 | [`S7-D4-citation-composer.md`](S7-D4-citation-composer.md) | PR S7-08 | Thin composer first (form + text); viewers/locators later |
 | S7-D5 | [`S7-D5-name-value-editor.md`](S7-D5-name-value-editor.md) | PR S7-02b | NameValue modal — late fill-in after thin composer; not on path to S7-05 |
@@ -29,7 +30,8 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 1. Open the Provenencia Claude Design project / design-system bundle (`macos/App/DesignSystem/README.md`).
 2. Paste **one** open brief as the prompt for a new board or flow.
 3. Keep the shipped visual language. Prefer existing `PV*` components; no new design-system primitives unless raised as a finding.
-4. When the board is done, archive the brief under `archive/` and write up [`../completed.md`](../completed.md).
+4. Every open brief must include a **UI building-block inventory** (§ layered as components / recipes / snowflakes per [`docs/design-system-layers.md`](../../../design-system-layers.md)): each control lists layer, status (Ship / Extend / New / Retire), and repo home. **S7-D3** §9 is the template; **S7-D6** §7 is the design-system consolidation example.
+5. When the board is done, archive the brief under `archive/` and write up [`../completed.md`](../completed.md).
 
 ## Shared product facts (all briefs)
 

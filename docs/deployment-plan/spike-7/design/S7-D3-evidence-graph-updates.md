@@ -5,9 +5,10 @@
 **Implements later as:** PRs **S7-09** first (Add property + card growth), then **S7-10** (connect)  
 **Depends on:** Spike 6 canvas + cards (S6-D1/D2). Composer place chrome is **S7-D4** — this board only needs a handoff target (navigate away), not the finished composer.  
 **Related briefs:** [`S7-D4`](S7-D4-citation-composer.md) — composer place (do not design it here)  
+**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md) — inventory in §9  
 **Dogfood order:** Design and ship **S7-09** before thick composer work so Add property is clickable early.
 
-Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](README.md) first.
+Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](README.md) first. When implementing, treat **§9 UI building-block inventory** as binding: compose existing kit pieces; only invent what the table marks **New**.
 
 ---
 
@@ -134,3 +135,69 @@ Disambiguation is **not** a history entry. Composer place is.
 ## 8. Deliverable
 
 Claude Design board + short notes for S7-09 / S7-10. Archive this brief when done.
+
+---
+
+## 9. UI building-block inventory (binding for design + implement)
+
+Provenencia UI is layered as **components / recipes / snowflakes** ([`docs/design-system-layers.md`](../../../design-system-layers.md)). This table is the repo SoT for *what* this board may introduce. Paths are from `macos/App/` unless noted.
+
+**How to read**
+
+| Column | Meaning |
+| --- | --- |
+| **Layer** | Frost layer: Component (`DesignSystem/Components/<Name>/`), Recipe (`DesignSystem/Recipes/<Name>/`), or Snowflake (`Features/…` or rare `DesignSystem/Snowflakes/`). |
+| **Status** | **Ship** = already correct; compose as-is. **Extend** = exists; this brief changes it. **New** = create (prefer snowflake under `Features/EvidenceGraph/` unless a second call site is already known). |
+| **Home** | Intended file / folder after S7-09 / S7-10. |
+
+Do **not** invent new design-system **components** on this board unless a row says so and a finding is raised. Prefer slots on existing kit chrome (`PVFormDialog`, `PVButton`, `PVCallout`, …).
+
+### 9.1 Destination shell (already shipping)
+
+| Building block | Layer | Status | Home | Notes for Claude Design / implementers |
+| --- | --- | --- | --- | --- |
+| Evidence graph destination | Snowflake | Ship | `Features/EvidenceGraph/EvidenceGraphView.swift` | Hosts canvas, palette, create sheet, banners. Extend wiring only (handoff, gates). |
+| Graph canvas shell | Snowflake | Ship | `Features/GraphCanvas/` (`GraphCanvasScrollView`, pointer, edges) | Pan/zoom/hit targets. Not redesigned here; taller cards affect edge attachment (EG-8). |
+| Floating place / connect palette | Snowflake | Ship | `Features/EvidenceGraph/EvidenceGraphPalette.swift` | Keep Connect tool; do not redesign palette IA. |
+| Subject type marks | Recipe | Ship → **S7-D6 / S7-12** | Today: `DesignSystem/Recipes/SubjectIcon/`. After: `DesignSystem/Recipes/Marks/` (`subject_*` beside `file_*` / `type_*`). | Card / palette icons. Pigment still follows registry / kind style — not Lucide. **S7-D6** owns the Marks merge; this board does not redesign marks. |
+| Create-subject form dialog | Component | Ship | `DesignSystem/Components/FormDialog/PVFormDialog.swift` | Already used for place/create. Disambiguation (§9.3) should reuse this chrome, not a hand-rolled sheet. |
+| Create-subject form body | Snowflake | Ship | Private form inside `EvidenceGraphView` | Label field for new Person/Event/Place. Connect durable path may still land here after disambiguation, or skip straight to composer — board proposes. |
+| Armed / connect hint banner | Snowflake | Ship | Private in `EvidenceGraphView` | Keep lightweight; not a new kit control. |
+| Edge + rubber-band paint | Snowflake | Ship | `Features/EvidenceGraph/EvidenceGraphEdgeLayer.swift` (+ GraphCanvas edge geometry) | Recompute attach points when cards grow. |
+| Feedback toast | Component | Ship | `DesignSystem/Components/Toast/` (+ vocabulary toast overlay) | Invalid connect already toasts; optional for gates if not a callout. |
+
+### 9.2 Card chrome (S7-09 — Add property + cited rows)
+
+| Building block | Layer | Status | Home | Notes for Claude Design / implementers |
+| --- | --- | --- | --- | --- |
+| Primary subject card | Snowflake | **Extend** | `Features/EvidenceGraph/EvidenceSubjectCard.swift` | Fixed width (~236). Grow height with cited rows; keep uncited → cited shell transition. Private chrome today (`EvidenceSubjectCardChrome`). |
+| Bridge / relationship card | Snowflake | **Extend** | `Features/EvidenceGraph/EvidenceBridgeCard.swift` | Subordinate width (~188). Replace provisional honesty body with cited relationship/role summary when durable. |
+| Kind → ink / gradient map | Snowflake (debt) | **Extend** | `Features/EvidenceGraph/EvidenceSubjectKindStyle.swift` | Implementation must move SoT to Interpretation subject registry (deployment plan). Design may keep today’s look. |
+| **Add property** control | Component + Snowflake | **New** (control uses kit) | Affordance on card: prefer `DesignSystem/Components/Button/PVButton.swift` or `IconButton/PVIconButton.swift`; placement/wiring stays in `EvidenceSubjectCard` | Quiet on selected/activated card (board proposes always-visible vs activated-only). Opens navigation — not a sheet. |
+| **Cited-data row** | Snowflake | **New** | Prefer `private` row view colocated with `EvidenceSubjectCard` (e.g. `EvidenceCitedPropertyRow`) | Property label + value summary + optional polarity. Canvas-zoom density is a design finding. **Do not** promote to a recipe until a second call site exists. |
+| Card growth / scroll rule | Snowflake | **New** (behavior on card) | Same card files | Prefer grow for tens of rows; propose max-before-inner-scroll if needed. Update `edgeLayoutHeight` / attach math with real body height. |
+
+### 9.3 Gates, connect handoff (S7-09 gate + S7-10)
+
+| Building block | Layer | Status | Home | Notes for Claude Design / implementers |
+| --- | --- | --- | --- | --- |
+| **No-Artifact** gate | Component + Snowflake | **New** (compose kit) | Prefer `DesignSystem/Components/Callout/PVCallout.swift` or EmptyState; copy + recovery action in `EvidenceGraphView` / model | Disable Add property or intercept click; recovery → Source page add Artifact. Do not invent a new dialog primitive. |
+| **Connect disambiguation** sheet | Component + Snowflake | **New** (body) | Chrome: `PVFormDialog` (or Confirm if the choice set stays tiny). Body: private snowflake under `Features/EvidenceGraph/` | Covers person→event, person→person, event→place, refusals. **Not** a history entry. Confirm → navigate to composer with pre-scoped bridge + edge Observations. |
+| Choice chips / segmented options (if needed in disambiguation) | Component | Ship | `DesignSystem/Components/Chip/PVChip.swift` (+ `PVChipGroup`) | Use for short closed lists (role / relationship_type). Longer vocabularies → ComboBox (composer / later). |
+| Navigation handoff (graph → composer) | Platform (not DS) | **New** place later | `WorkspaceNavigation` + future composer `WorkspaceLocation` (S7-D4 / S7-08) | Board only annotates leave-canvas cue. Do not mock composer UI here. |
+
+### 9.4 Explicit non-goals for this inventory
+
+| Do not add | Why |
+| --- | --- |
+| New `DesignSystem/Components/*` for “graph card” or “cited row” | Cards and rows are Evidence-graph snowflakes until a second product surface needs them. |
+| Composer viewer / observation form / term picker | **S7-D4**. |
+| Subject fields admin chrome | **S7-D2** (shipped / archived). |
+| Replacing subject marks with Lucide / SF Symbols | Curated pack stays; consolidation is **S7-D6** / **S7-12**, not this board. |
+
+### 9.5 Suggested implement order (matches dogfood)
+
+1. **Extend** `EvidenceSubjectCard` — Add property (`PVButton` / `PVIconButton`) + cited-row snowflake + growth + uncited shell.  
+2. **No-Artifact** gate via `PVCallout` (or toast) + model check.  
+3. **Extend** `EvidenceBridgeCard` body once durable Observations exist.  
+4. **Connect disambiguation** snowflake inside `PVFormDialog` → navigate to composer place.
