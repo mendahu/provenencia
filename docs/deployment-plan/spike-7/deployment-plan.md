@@ -154,26 +154,23 @@ In-window modal over the graph and companion `NSWindow` are **out**.
 
 Composer is a **deep place under Sources**. Extend `WorkspaceLocation` (Spike 5 `sourceSurface` page|graph) with a composer discriminant plus context (`subjectId`, optional connect draft ids). Follow `add-workspace-location`.
 
-**Breadcrumb shape (default):**
+**Breadcrumb shape (default — lock / revise in S7-D4):**
 
 ```text
-Sources › {Source title} › Evidence graph › Cite {subject label}
+Sources › {Source title} › Evidence graph › Citation for {scope}
 ```
 
-Connect entry:
+Same crumb for Add property and Connect (`{scope}` = subject label, or bridge endpoints + edge phrase). No separate `Connect ›` segment.
 
-```text
-Sources › {Source title} › Evidence graph › Connect › Cite
-```
+**History policy (defaults — lock / revise in S7-D4):**
 
-**History policy (defaults):**
-
-- Entering the composer **pushes** history (Back → graph, same `sourceId`).
-- **Successful submit** pops or replaces back to the graph (prefer single Back, not stacked drafts).
-- **Cancel / Back** without submit writes nothing.
-- Persist across relaunch only if subject still exists; else fallback to Evidence graph for that Source.
+- Composer is a **first-class** history place (`go(to:)` / Back / Forward). No special stack surgery for Cancel or submit.
+- **Cancel / Back** without submit writes nothing; the composer entry may remain in history.
+- **Successful submit** navigates to the graph normally — do not pop/replace solely to scrub drafts.
+- Persist across relaunch if subject still exists; else fallback to Evidence graph for that Source (same as other deep places).
+- Form field values are UI ephemera (not restored from history JSON).
 - Camera/selection stay out of the composer location.
-- Connect **disambiguation** is a small sheet on the graph (not its own history entry).
+- Connect **disambiguation** is a small sheet on the graph (not its own history entry). Connect-prefilled Observations must be reconstructible from the composer location payload.
 
 Pinning a Citation across successive graph edits is **out** (one Citation + N Observations per submit).
 
