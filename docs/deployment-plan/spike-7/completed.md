@@ -16,6 +16,8 @@ IDs stay stable (`S7-NN`, `S7-DN`). Do not renumber when moving steps here.
 | [S7-03](#s7-03--pr-citations--observations--locator) | PR | Citations + Observations + locator validate + FFI + graph `isCited` |
 | [S7-D6](#s7-d6--design-curated-marks) | Design | Marks pack brief; gates S7-12 |
 | [S7-12](#s7-12--pr-curated-marks-consolidation) | PR | `Recipes/Marks/` + asset pack; retire EvidenceIcon/SubjectIcon |
+| [S7-D8](#s7-d8--design-pvcallout-actions) | Design | Callout actions slot; gates S7-14 |
+| [S7-14](#s7-14--pr-pvcallout-actions-slot) | PR | Optional `@ViewBuilder` actions on `PVCallout` |
 
 ## Steps
 
@@ -161,4 +163,36 @@ python3 scripts/check-localizable-xcstrings.py
 CGO_ENABLED=1 go test -tags fts5 ./core/database/subjectvocab/... ./api/ffi/...
 python3 scripts/check-localizable-xcstrings.py
 rg -n 'PVEvidenceIcon|PVSubjectIcon|EvidenceIcons|evidenceIcon|Recipes/EvidenceIcon|Recipes/SubjectIcon' macos
+```
+
+### S7-D8 — Design: PVCallout actions
+
+| | |
+| --- | --- |
+| **Kind** | Design (Claude Design kit handoff) |
+| **Depends on** | Shipped `PVCallout`; S7-D3 message-center need |
+| **Deliverables** | Done. Board / kit specimen for optional Callout **actions** under the body (one / two buttons; compact). Content-agnostic slot — call-site `PVButton`s. Defers `onDismiss` / `detail` / `plain`. Brief archived: [`design/archive/S7-D8-pvcallout-actions.md`](design/archive/S7-D8-pvcallout-actions.md). |
+| **Dogfood** | Design only — implements in **S7-14**. |
+| **Out** | Evidence graph No-Artifact gate wiring (**S7-09**); new banner/message-center component. |
+
+**Landed:** contract for `PVCallout` actions before graph message center.
+
+### S7-14 — PR: PVCallout actions slot
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | **S7-D8**; after S7-12, before S7-09 |
+| **Deliverables** | Done. `PVCallout` is generic over an optional `@ViewBuilder` actions slot (row under body, `space-5` gap / top padding). `EmptyView` convenience init keeps text-only call sites unchanged. Previews cover zero / one / two actions + compact. DesignSystem README Callout row updated. `onDismiss` / `detail` / `plain` still deferred. |
+| **Tests** | Existing call sites type-check; SwiftUI preview specimens. |
+| **Dogfood** | Preview shows callout + action; Subject fields / Sources locked notes still look correct. |
+| **Out** | Graph No-Artifact gate (**S7-09**); new banner component. |
+
+**Landed:** kit Callout can host a recovery CTA for the Evidence graph message center.
+
+**Verify:**
+
+```bash
+# Existing PVCallout(…) call sites compile; preview actions under body.
+rg -n 'struct PVCallout' macos/App/DesignSystem/Components/Callout/PVCallout.swift
 ```
