@@ -318,8 +318,8 @@ Schema/Go (01–03, 01b) may start before design finishes; **UI PRs gate on the 
 - [x] S7-03 — Citations + Observations + locator validation + FFI → [`completed.md`](completed.md)
 - [x] S7-D6 — Design: Curated marks (subject → evidence icon pack) → [`completed.md`](completed.md)
 - [x] S7-12 — `Recipes/Marks/` consolidation + graph / Subject fields migration → [`completed.md`](completed.md)
-- [ ] S7-D8 — Design: PVCallout actions slot → [`completed.md`](completed.md)
-- [ ] S7-14 — `PVCallout` actions slot (kit Extend) → [`completed.md`](completed.md)
+- [x] S7-D8 — Design: PVCallout actions slot → [`completed.md`](completed.md)
+- [x] S7-14 — `PVCallout` actions slot (kit Extend) → [`completed.md`](completed.md)
 - [ ] S7-09 — Add property + composer navigation (stub OK) → [`completed.md`](completed.md)
 - [ ] S7-08 — Thin composer (submit + card growth; viewer placeholder OK) → [`completed.md`](completed.md)
 - [ ] S7-06 — Image + PDF viewers in composer → [`completed.md`](completed.md)
@@ -370,7 +370,7 @@ Claude Design board for the reusable NameValue modal (DateValue twin). Brief: [`
 
 ## S7-D8 — Design: PVCallout actions
 
-Light Claude Design board / kit handoff for an optional **actions** slot on Callout. Brief: [`design/S7-D8-pvcallout-actions.md`](design/S7-D8-pvcallout-actions.md). Gates **S7-14**. Unblocks the Evidence graph No-Artifact message center recovery CTA without a parallel banner. Schedule after **S7-12**, before **S7-09**. Does **not** wire the graph gate (that’s **S7-D3** / **S7-09**).
+Light Claude Design board / kit handoff for an optional **actions** slot on Callout. Brief archived: [`design/archive/S7-D8-pvcallout-actions.md`](design/archive/S7-D8-pvcallout-actions.md). Gates **S7-14**. Unblocks the Evidence graph No-Artifact message center recovery CTA without a parallel banner. Schedule after **S7-12**, before **S7-09**. Does **not** wire the graph gate (that’s **S7-D3** / **S7-09**).
 
 ---
 

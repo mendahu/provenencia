@@ -45,30 +45,31 @@ enum PVCalloutTone {
 }
 
 /// An inline status/explanation banner — mirrors `components/feedback/Callout.jsx`
-/// (tone-tinted fill, 3pt left rule, optional title). Only the subset this
-/// codebase currently needs is ported (tone, icon override, title, body,
-/// compact) — the web spec's `actions`, `onDismiss`, `detail`, and `plain`
-/// variant slots aren't used by any call site yet; add them here, following
-/// `PVButton`'s pattern, when one needs them.
-struct PVCallout: View {
+/// (tone-tinted fill, 3pt left rule, optional title, optional actions row under the
+/// body). `onDismiss`, `detail`, and `plain` variant remain deferred until a call
+/// site needs them.
+struct PVCallout<Actions: View>: View {
     private let tone: PVCalloutTone
     private let icon: PVSymbol?
     private let title: LocalizedStringResource?
     private let message: String
     private let compact: Bool
+    private let actions: Actions
 
     init(
         tone: PVCalloutTone = .info,
         icon: PVSymbol? = nil,
         title: LocalizedStringResource? = nil,
         message: String,
-        compact: Bool = false
+        compact: Bool = false,
+        @ViewBuilder actions: () -> Actions
     ) {
         self.tone = tone
         self.icon = icon
         self.title = title
         self.message = message
         self.compact = compact
+        self.actions = actions()
     }
 
     var body: some View {
@@ -86,6 +87,12 @@ struct PVCallout: View {
                     .font(PVFont.body(size: compact ? PVTypeScale.caption : PVTypeScale.bodySmall))
                     .foregroundStyle(tone.foreground.opacity(0.92))
                     .fixedSize(horizontal: false, vertical: true)
+                if Actions.self != EmptyView.self {
+                    HStack(spacing: PVSpacing.space5) {
+                        actions
+                    }
+                    .padding(.top, PVSpacing.space5)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -104,6 +111,26 @@ struct PVCallout: View {
     }
 }
 
+extension PVCallout where Actions == EmptyView {
+    init(
+        tone: PVCalloutTone = .info,
+        icon: PVSymbol? = nil,
+        title: LocalizedStringResource? = nil,
+        message: String,
+        compact: Bool = false
+    ) {
+        self.init(
+            tone: tone,
+            icon: icon,
+            title: title,
+            message: message,
+            compact: compact
+        ) {
+            EmptyView()
+        }
+    }
+}
+
 #Preview {
     VStack(spacing: PVSpacing.space6) {
         PVCallout(
@@ -112,6 +139,28 @@ struct PVCallout: View {
             compact: true
         )
         PVCallout(tone: .info, title: "Heads up", message: "This project was last opened on another Mac.")
+        PVCallout(
+            tone: .danger,
+            title: "No artifact linked to this record",
+            message: "The evidence graph needs a source before this fact can be graded."
+        ) {
+            PVButton("Add an Artifact", variant: .secondary, size: .sm) {}
+        }
+        PVCallout(
+            tone: .danger,
+            title: "Two sources give different death dates",
+            message: "Provenencia keeps this fact at disputed until the conflict is resolved in writing."
+        ) {
+            PVButton("Record a conclusion", variant: .secondary, size: .sm) {}
+            PVButton("View both sources", variant: .link, size: .sm) {}
+        }
+        PVCallout(
+            tone: .info,
+            message: "Index entries are derivative sources.",
+            compact: true
+        ) {
+            PVButton("Order the original", variant: .link, size: .sm) {}
+        }
     }
     .padding(PVSpacing.space9)
     .background(PVColor.surfacePage)
