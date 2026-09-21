@@ -33,11 +33,11 @@ struct CachedThumbnail: View {
             || !originalFilename.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    private var resolvedTypeIcon: PVEvidenceIconKey? {
+    private var resolvedTypeIcon: PVMarkKey? {
         guard let raw = typeIconKey?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else {
             return nil
         }
-        let key = PVEvidenceIconKey(catalogKey: raw)
+        let key = PVMarkKey(catalogKey: raw)
         guard key.family == .type else { return nil }
         return key
     }
@@ -47,11 +47,11 @@ struct CachedThumbnail: View {
             mediaType: mediaType.isEmpty ? nil : mediaType,
             originalFilename: originalFilename.isEmpty ? nil : originalFilename
         )
-        return PVThumbnail.Content(evidenceIcon: key, label: key.accessibilityName)
+        return PVThumbnail.Content(mark: key, label: key.accessibilityName)
     }
 
-    private func typeGlyphContent(_ key: PVEvidenceIconKey) -> PVThumbnail.Content {
-        PVThumbnail.Content(evidenceIcon: key, label: key.accessibilityName)
+    private func typeGlyphContent(_ key: PVMarkKey) -> PVThumbnail.Content {
+        PVThumbnail.Content(mark: key, label: key.accessibilityName)
     }
 
     private func fallbackContent() -> PVThumbnail.Content {

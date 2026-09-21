@@ -1,7 +1,19 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "designSystem.evidenceIcon.fileAudio": {
+    "designSystem.field.requiredMarker": {
+      "comment": "Marks a required PVField as required, shown beside its label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "*"
+          }
+        }
+      }
+    },
+    "designSystem.mark.fileAudio": {
       "comment": "Accessibility name for the file_audio evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -13,7 +25,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.fileDoc": {
+    "designSystem.mark.fileDoc": {
       "comment": "Accessibility name for the file_doc evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -25,7 +37,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.fileGeneric": {
+    "designSystem.mark.fileGeneric": {
       "comment": "Accessibility name for the file_generic evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -37,7 +49,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.fileImageMissing": {
+    "designSystem.mark.fileImageMissing": {
       "comment": "Accessibility name for the file_image_missing evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -49,7 +61,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.filePdf": {
+    "designSystem.mark.filePdf": {
       "comment": "Accessibility name for the file_pdf evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -61,7 +73,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.fileSheet": {
+    "designSystem.mark.fileSheet": {
       "comment": "Accessibility name for the file_sheet evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -73,7 +85,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.fileSlides": {
+    "designSystem.mark.fileSlides": {
       "comment": "Accessibility name for the file_slides evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -85,7 +97,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.fileTxt": {
+    "designSystem.mark.fileTxt": {
       "comment": "Accessibility name for the file_txt evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -97,7 +109,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.fileVideo": {
+    "designSystem.mark.fileVideo": {
       "comment": "Accessibility name for the file_video evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -109,7 +121,84 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeBook": {
+    "designSystem.mark.subjectEvent": {
+      "comment": "Accessibility name for curated mark.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Event subject"
+          }
+        }
+      }
+    },
+    "designSystem.mark.subjectLocation": {
+      "comment": "Accessibility name for curated mark.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Location bridge"
+          }
+        }
+      }
+    },
+    "designSystem.mark.subjectParticipation": {
+      "comment": "Accessibility name for curated mark.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Participation bridge"
+          }
+        }
+      }
+    },
+    "designSystem.mark.subjectPerson": {
+      "comment": "Accessibility name for curated mark.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Person subject"
+          }
+        }
+      }
+    },
+    "designSystem.mark.subjectPlace": {
+      "comment": "Accessibility name for curated mark.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Place subject"
+          }
+        }
+      }
+    },
+    "designSystem.mark.subjectRelationship": {
+      "comment": "Accessibility name for curated mark.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relationship bridge"
+          }
+        }
+      }
+    },
+    "designSystem.mark.subjectSource": {
+      "comment": "Accessibility name for curated mark.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source subject"
+          }
+        }
+      }
+    },
+    "designSystem.mark.typeBook": {
       "comment": "Accessibility name for the type_book evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -121,7 +210,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeBook.metaphor": {
+    "designSystem.mark.typeBook.metaphor": {
       "comment": "Metaphor for typeBook in the icon picker footer",
       "extractionState": "manual",
       "localizations": {
@@ -133,7 +222,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeBook.title": {
+    "designSystem.mark.typeBook.title": {
       "comment": "Short title for typeBook in the icon picker",
       "extractionState": "manual",
       "localizations": {
@@ -145,7 +234,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeCassette": {
+    "designSystem.mark.typeCassette": {
       "comment": "Accessibility name for the type_cassette evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -157,7 +246,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeCassette.metaphor": {
+    "designSystem.mark.typeCassette.metaphor": {
       "comment": "Metaphor for typeCassette in the icon picker footer",
       "extractionState": "manual",
       "localizations": {
@@ -169,7 +258,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeCassette.title": {
+    "designSystem.mark.typeCassette.title": {
       "comment": "Short title for typeCassette in the icon picker",
       "extractionState": "manual",
       "localizations": {
@@ -181,7 +270,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeCensus": {
+    "designSystem.mark.typeCensus": {
       "comment": "Accessibility name for the type_census evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -193,7 +282,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeCensus.metaphor": {
+    "designSystem.mark.typeCensus.metaphor": {
       "comment": "Metaphor for typeCensus in the icon picker footer",
       "extractionState": "manual",
       "localizations": {
@@ -205,7 +294,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeCensus.title": {
+    "designSystem.mark.typeCensus.title": {
       "comment": "Short title for typeCensus in the icon picker",
       "extractionState": "manual",
       "localizations": {
@@ -217,7 +306,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeCertificate": {
+    "designSystem.mark.typeCertificate": {
       "comment": "Accessibility name for the type_certificate evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -229,7 +318,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeCertificate.metaphor": {
+    "designSystem.mark.typeCertificate.metaphor": {
       "comment": "Metaphor for typeCertificate in the icon picker footer",
       "extractionState": "manual",
       "localizations": {
@@ -241,7 +330,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeCertificate.title": {
+    "designSystem.mark.typeCertificate.title": {
       "comment": "Short title for typeCertificate in the icon picker",
       "extractionState": "manual",
       "localizations": {
@@ -253,19 +342,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeDna": {
-      "comment": "Accessibility name for the type_dna evidence glyph",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "DNA match source type"
-          }
-        }
-      }
-    },
-    "designSystem.evidenceIcon.typeDNA.metaphor": {
+    "designSystem.mark.typeDNA.metaphor": {
       "comment": "Metaphor for typeDNA in the icon picker footer",
       "extractionState": "manual",
       "localizations": {
@@ -277,7 +354,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeDNA.title": {
+    "designSystem.mark.typeDNA.title": {
       "comment": "Short title for typeDNA in the icon picker",
       "extractionState": "manual",
       "localizations": {
@@ -289,7 +366,19 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeDocument": {
+    "designSystem.mark.typeDna": {
+      "comment": "Accessibility name for the type_dna evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DNA match source type"
+          }
+        }
+      }
+    },
+    "designSystem.mark.typeDocument": {
       "comment": "Accessibility name for the type_document evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -301,7 +390,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeDocument.metaphor": {
+    "designSystem.mark.typeDocument.metaphor": {
       "comment": "Metaphor for typeDocument in the icon picker footer",
       "extractionState": "manual",
       "localizations": {
@@ -313,7 +402,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeDocument.title": {
+    "designSystem.mark.typeDocument.title": {
       "comment": "Short title for typeDocument in the icon picker",
       "extractionState": "manual",
       "localizations": {
@@ -325,7 +414,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeEmail": {
+    "designSystem.mark.typeEmail": {
       "comment": "Accessibility name for the type_email evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -337,7 +426,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeEmail.metaphor": {
+    "designSystem.mark.typeEmail.metaphor": {
       "comment": "Metaphor for typeEmail in the icon picker footer",
       "extractionState": "manual",
       "localizations": {
@@ -349,7 +438,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeEmail.title": {
+    "designSystem.mark.typeEmail.title": {
       "comment": "Short title for typeEmail in the icon picker",
       "extractionState": "manual",
       "localizations": {
@@ -361,7 +450,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeEvidence": {
+    "designSystem.mark.typeEvidence": {
       "comment": "Accessibility name for the type_evidence evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -373,7 +462,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeEvidence.metaphor": {
+    "designSystem.mark.typeEvidence.metaphor": {
       "comment": "Metaphor for typeEvidence in the icon picker footer",
       "extractionState": "manual",
       "localizations": {
@@ -385,7 +474,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeEvidence.title": {
+    "designSystem.mark.typeEvidence.title": {
       "comment": "Short title for typeEvidence in the icon picker",
       "extractionState": "manual",
       "localizations": {
@@ -397,7 +486,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeFolderArchive": {
+    "designSystem.mark.typeFolderArchive": {
       "comment": "Accessibility name for the type_folder_archive evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -409,7 +498,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeFolderArchive.metaphor": {
+    "designSystem.mark.typeFolderArchive.metaphor": {
       "comment": "Metaphor for typeFolderArchive in the icon picker footer",
       "extractionState": "manual",
       "localizations": {
@@ -421,7 +510,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeFolderArchive.title": {
+    "designSystem.mark.typeFolderArchive.title": {
       "comment": "Short title for typeFolderArchive in the icon picker",
       "extractionState": "manual",
       "localizations": {
@@ -433,19 +522,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeGedcom": {
-      "comment": "Accessibility name for the type_gedcom evidence glyph",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "GEDCOM source type"
-          }
-        }
-      }
-    },
-    "designSystem.evidenceIcon.typeGEDCOM.metaphor": {
+    "designSystem.mark.typeGEDCOM.metaphor": {
       "comment": "Metaphor for typeGEDCOM in the icon picker footer",
       "extractionState": "manual",
       "localizations": {
@@ -457,7 +534,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeGEDCOM.title": {
+    "designSystem.mark.typeGEDCOM.title": {
       "comment": "Short title for typeGEDCOM in the icon picker",
       "extractionState": "manual",
       "localizations": {
@@ -469,7 +546,19 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeGrave": {
+    "designSystem.mark.typeGedcom": {
+      "comment": "Accessibility name for the type_gedcom evidence glyph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GEDCOM source type"
+          }
+        }
+      }
+    },
+    "designSystem.mark.typeGrave": {
       "comment": "Accessibility name for the type_grave evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -481,7 +570,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeGrave.metaphor": {
+    "designSystem.mark.typeGrave.metaphor": {
       "comment": "Metaphor for typeGrave in the icon picker footer",
       "extractionState": "manual",
       "localizations": {
@@ -493,7 +582,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeGrave.title": {
+    "designSystem.mark.typeGrave.title": {
       "comment": "Short title for typeGrave in the icon picker",
       "extractionState": "manual",
       "localizations": {
@@ -505,7 +594,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeMap": {
+    "designSystem.mark.typeMap": {
       "comment": "Accessibility name for the type_map evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -517,7 +606,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeMap.metaphor": {
+    "designSystem.mark.typeMap.metaphor": {
       "comment": "Metaphor for typeMap in the icon picker footer",
       "extractionState": "manual",
       "localizations": {
@@ -529,7 +618,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeMap.title": {
+    "designSystem.mark.typeMap.title": {
       "comment": "Short title for typeMap in the icon picker",
       "extractionState": "manual",
       "localizations": {
@@ -541,7 +630,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeMicrofilm": {
+    "designSystem.mark.typeMicrofilm": {
       "comment": "Accessibility name for the type_microfilm evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -553,7 +642,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeMicrofilm.metaphor": {
+    "designSystem.mark.typeMicrofilm.metaphor": {
       "comment": "Metaphor for typeMicrofilm in the icon picker footer",
       "extractionState": "manual",
       "localizations": {
@@ -565,7 +654,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeMicrofilm.title": {
+    "designSystem.mark.typeMicrofilm.title": {
       "comment": "Short title for typeMicrofilm in the icon picker",
       "extractionState": "manual",
       "localizations": {
@@ -577,7 +666,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeNewspaper": {
+    "designSystem.mark.typeNewspaper": {
       "comment": "Accessibility name for the type_newspaper evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -589,7 +678,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeNewspaper.metaphor": {
+    "designSystem.mark.typeNewspaper.metaphor": {
       "comment": "Metaphor for typeNewspaper in the icon picker footer",
       "extractionState": "manual",
       "localizations": {
@@ -601,7 +690,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeNewspaper.title": {
+    "designSystem.mark.typeNewspaper.title": {
       "comment": "Short title for typeNewspaper in the icon picker",
       "extractionState": "manual",
       "localizations": {
@@ -613,7 +702,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeOralHistory": {
+    "designSystem.mark.typeOralHistory": {
       "comment": "Accessibility name for the type_oral_history evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -625,7 +714,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeOralHistory.metaphor": {
+    "designSystem.mark.typeOralHistory.metaphor": {
       "comment": "Metaphor for typeOralHistory in the icon picker footer",
       "extractionState": "manual",
       "localizations": {
@@ -637,7 +726,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeOralHistory.title": {
+    "designSystem.mark.typeOralHistory.title": {
       "comment": "Short title for typeOralHistory in the icon picker",
       "extractionState": "manual",
       "localizations": {
@@ -649,7 +738,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typePassport": {
+    "designSystem.mark.typePassport": {
       "comment": "Accessibility name for the type_passport evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -661,7 +750,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typePassport.metaphor": {
+    "designSystem.mark.typePassport.metaphor": {
       "comment": "Metaphor for typePassport in the icon picker footer",
       "extractionState": "manual",
       "localizations": {
@@ -673,7 +762,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typePassport.title": {
+    "designSystem.mark.typePassport.title": {
       "comment": "Short title for typePassport in the icon picker",
       "extractionState": "manual",
       "localizations": {
@@ -685,7 +774,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typePhotograph": {
+    "designSystem.mark.typePhotograph": {
       "comment": "Accessibility name for the type_photograph evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -697,7 +786,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typePhotograph.metaphor": {
+    "designSystem.mark.typePhotograph.metaphor": {
       "comment": "Metaphor for typePhotograph in the icon picker footer",
       "extractionState": "manual",
       "localizations": {
@@ -709,7 +798,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typePhotograph.title": {
+    "designSystem.mark.typePhotograph.title": {
       "comment": "Short title for typePhotograph in the icon picker",
       "extractionState": "manual",
       "localizations": {
@@ -721,7 +810,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typePostcard": {
+    "designSystem.mark.typePostcard": {
       "comment": "Accessibility name for the type_postcard evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -733,7 +822,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typePostcard.metaphor": {
+    "designSystem.mark.typePostcard.metaphor": {
       "comment": "Metaphor for typePostcard in the icon picker footer",
       "extractionState": "manual",
       "localizations": {
@@ -745,7 +834,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typePostcard.title": {
+    "designSystem.mark.typePostcard.title": {
       "comment": "Short title for typePostcard in the icon picker",
       "extractionState": "manual",
       "localizations": {
@@ -757,7 +846,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeScrapbook": {
+    "designSystem.mark.typeScrapbook": {
       "comment": "Accessibility name for the type_scrapbook evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -769,7 +858,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeScrapbook.metaphor": {
+    "designSystem.mark.typeScrapbook.metaphor": {
       "comment": "Metaphor for typeScrapbook in the icon picker footer",
       "extractionState": "manual",
       "localizations": {
@@ -781,7 +870,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeScrapbook.title": {
+    "designSystem.mark.typeScrapbook.title": {
       "comment": "Short title for typeScrapbook in the icon picker",
       "extractionState": "manual",
       "localizations": {
@@ -793,7 +882,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeScroll": {
+    "designSystem.mark.typeScroll": {
       "comment": "Accessibility name for the type_scroll evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -805,7 +894,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeScroll.metaphor": {
+    "designSystem.mark.typeScroll.metaphor": {
       "comment": "Metaphor for typeScroll in the icon picker footer",
       "extractionState": "manual",
       "localizations": {
@@ -817,7 +906,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeScroll.title": {
+    "designSystem.mark.typeScroll.title": {
       "comment": "Short title for typeScroll in the icon picker",
       "extractionState": "manual",
       "localizations": {
@@ -829,7 +918,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeVideo": {
+    "designSystem.mark.typeVideo": {
       "comment": "Accessibility name for the type_video evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -841,7 +930,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeVideo.metaphor": {
+    "designSystem.mark.typeVideo.metaphor": {
       "comment": "Metaphor for typeVideo in the icon picker footer",
       "extractionState": "manual",
       "localizations": {
@@ -853,7 +942,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeVideo.title": {
+    "designSystem.mark.typeVideo.title": {
       "comment": "Short title for typeVideo in the icon picker",
       "extractionState": "manual",
       "localizations": {
@@ -865,7 +954,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeWebsite": {
+    "designSystem.mark.typeWebsite": {
       "comment": "Accessibility name for the type_website evidence glyph",
       "extractionState": "manual",
       "localizations": {
@@ -877,7 +966,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeWebsite.metaphor": {
+    "designSystem.mark.typeWebsite.metaphor": {
       "comment": "Metaphor for typeWebsite in the icon picker footer",
       "extractionState": "manual",
       "localizations": {
@@ -889,7 +978,7 @@
         }
       }
     },
-    "designSystem.evidenceIcon.typeWebsite.title": {
+    "designSystem.mark.typeWebsite.title": {
       "comment": "Short title for typeWebsite in the icon picker",
       "extractionState": "manual",
       "localizations": {
@@ -897,18 +986,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Website"
-          }
-        }
-      }
-    },
-    "designSystem.field.requiredMarker": {
-      "comment": "Marks a required PVField as required, shown beside its label",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "*"
           }
         }
       }
@@ -1017,546 +1094,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dismiss"
-          }
-        }
-      }
-    },
-    "evidenceGraph.armed.hintConnect": {
-      "comment": "Banner when Connect is armed and no origin is chosen yet",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Select the first subject"
-          }
-        }
-      }
-    },
-    "evidenceGraph.armed.hintConnectPickB": {
-      "comment": "Banner when Connect has origin A and is waiting for B",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Select the second subject"
-          }
-        }
-      }
-    },
-    "evidenceGraph.bridge.honestyAccessibility": {
-      "comment": "VoiceOver fragment for bridge honesty",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Prototype link, not cited evidence"
-          }
-        }
-      }
-    },
-    "evidenceGraph.bridge.honestyBody": {
-      "comment": "Permanent honesty copy on S6-04 bridge cards",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Prototype link — not cited evidence"
-          }
-        }
-      }
-    },
-    "evidenceGraph.connect.connectingFrom": {
-      "comment": "Mono status line on primary card A while Connect waits for B",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "connecting from"
-          }
-        }
-      }
-    },
-    "evidenceGraph.connect.invalidPairBody": {
-      "comment": "Toast body explaining which primary pairs Connect accepts",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Try person↔event, person↔place, event↔place, or two people."
-          }
-        }
-      }
-    },
-    "evidenceGraph.connect.invalidPairTitle": {
-      "comment": "Toast title when Connect picks an unsupported primary pair",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Can't connect those"
-          }
-        }
-      }
-    },
-    "evidenceGraph.create.defaultLabelLocation": {
-      "comment": "Prefill label when creating a location bridge",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "New location"
-          }
-        }
-      }
-    },
-    "evidenceGraph.create.defaultLabelParticipation": {
-      "comment": "Prefill label when creating a participation bridge",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "New participation"
-          }
-        }
-      }
-    },
-    "evidenceGraph.create.defaultLabelRelationship": {
-      "comment": "Prefill label when creating a relationship bridge",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "New relationship"
-          }
-        }
-      }
-    },
-    "evidenceGraph.create.locationTitle": {
-      "comment": "Create-bridge dialog title for a location mid-card",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add location"
-          }
-        }
-      }
-    },
-    "evidenceGraph.create.participationTitle": {
-      "comment": "Create-bridge dialog title for a participation mid-card",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add participation"
-          }
-        }
-      }
-    },
-    "evidenceGraph.create.relationshipTitle": {
-      "comment": "Create-bridge dialog title for a relationship mid-card",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add relationship"
-          }
-        }
-      }
-    },
-    "evidenceGraph.empty.message": {
-      "comment": "Empty Evidence graph body guiding the researcher to arm a palette tool",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pick a tool above, then click the grid to place the first person, event or place from this source."
-          }
-        }
-      }
-    },
-    "evidenceGraph.empty.title": {
-      "comment": "Empty Evidence graph title before any Person/Event/Place cards exist",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No subjects yet"
-          }
-        }
-      }
-    },
-    "evidenceGraph.palette.connect": {
-      "comment": "Evidence graph palette tool to link two primary subjects with a bridge",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connect"
-          }
-        }
-      }
-    },
-    "evidenceGraph.palette.person": {
-      "comment": "Evidence graph palette tool to place a Person subject",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add person"
-          }
-        }
-      }
-    },
-    "evidenceGraph.palette.event": {
-      "comment": "Evidence graph palette tool to place an Event subject",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add event"
-          }
-        }
-      }
-    },
-    "evidenceGraph.palette.place": {
-      "comment": "Evidence graph palette tool to place a Place subject",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add place"
-          }
-        }
-      }
-    },
-    "evidenceGraph.palette.toolRole": {
-      "comment": "VoiceOver middle token for a palette toggle (Add person, tool, off)",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "tool"
-          }
-        }
-      }
-    },
-    "evidenceGraph.palette.toolOn": {
-      "comment": "VoiceOver state when a palette tool is armed",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "on"
-          }
-        }
-      }
-    },
-    "evidenceGraph.palette.toolOff": {
-      "comment": "VoiceOver state when a palette tool is idle",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "off"
-          }
-        }
-      }
-    },
-    "evidenceGraph.armed.hintPerson": {
-      "comment": "Banner when Add person is armed",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Click the grid to place a person"
-          }
-        }
-      }
-    },
-    "evidenceGraph.armed.hintEvent": {
-      "comment": "Banner when Add event is armed",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Click the grid to place an event"
-          }
-        }
-      }
-    },
-    "evidenceGraph.armed.hintPlace": {
-      "comment": "Banner when Add place is armed",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Click the grid to place a place"
-          }
-        }
-      }
-    },
-    "evidenceGraph.armed.escHint": {
-      "comment": "Secondary hint beside the armed placement banner",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "esc to cancel"
-          }
-        }
-      }
-    },
-    "evidenceGraph.create.personTitle": {
-      "comment": "Create-subject dialog title when placing a Person",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add person"
-          }
-        }
-      }
-    },
-    "evidenceGraph.create.eventTitle": {
-      "comment": "Create-subject dialog title when placing an Event",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add event"
-          }
-        }
-      }
-    },
-    "evidenceGraph.create.placeTitle": {
-      "comment": "Create-subject dialog title when placing a Place",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add place"
-          }
-        }
-      }
-    },
-    "evidenceGraph.create.confirm": {
-      "comment": "Confirm button on the Evidence graph create-subject dialog",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add"
-          }
-        }
-      }
-    },
-    "evidenceGraph.create.cancel": {
-      "comment": "Cancel button on the Evidence graph create-subject dialog",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cancel"
-          }
-        }
-      }
-    },
-    "evidenceGraph.create.labelField": {
-      "comment": "Label field title on the create-subject dialog",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Label"
-          }
-        }
-      }
-    },
-    "evidenceGraph.create.descriptionField": {
-      "comment": "Description field title on the create-subject dialog",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Description"
-          }
-        }
-      }
-    },
-    "evidenceGraph.create.labelRequired": {
-      "comment": "Validation when create-subject label is blank",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enter a working label"
-          }
-        }
-      }
-    },
-    "evidenceGraph.create.typesUnavailable": {
-      "comment": "Error when seeded Person/Event/Place types could not be loaded",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Subject types are not available for this project"
-          }
-        }
-      }
-    },
-    "evidenceGraph.create.defaultLabelPerson": {
-      "comment": "Prefill label when creating a Person from the palette",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "New person"
-          }
-        }
-      }
-    },
-    "evidenceGraph.create.defaultLabelEvent": {
-      "comment": "Prefill label when creating an Event from the palette",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "New event"
-          }
-        }
-      }
-    },
-    "evidenceGraph.create.defaultLabelPlace": {
-      "comment": "Prefill label when creating a Place from the palette",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "New place"
-          }
-        }
-      }
-    },
-    "evidenceGraph.position.persistFailedTitle": {
-      "comment": "Toast title when setSubjectPosition fails after drag or arrow move",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Couldn't save position"
-          }
-        }
-      }
-    },
-    "evidenceGraph.header.subjectCountOne": {
-      "comment": "Evidence graph header count when exactly one placed primary is on the canvas",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 subject"
-          }
-        }
-      }
-    },
-    "evidenceGraph.header.subjectCountOther": {
-      "comment": "Evidence graph header count; argument is how many placed primaries are on the canvas",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld subjects"
-          }
-        }
-      }
-    },
-    "evidenceGraph.rotor.links": {
-      "comment": "VoiceOver rotor name for jumping between Evidence graph bridge cards",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Links"
-          }
-        }
-      }
-    },
-    "evidenceGraph.rotor.subjects": {
-      "comment": "VoiceOver rotor name for jumping between Evidence graph subject cards",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Subjects"
-          }
-        }
-      }
-    },
-    "evidenceGraph.subject.citedAccessibility": {
-      "comment": "VoiceOver fragment when a primary subject card has at least one Observation",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cited"
-          }
-        }
-      }
-    },
-    "evidenceGraph.subject.uncitedAccessibility": {
-      "comment": "VoiceOver fragment when a primary subject card has no Observations",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Uncited — no citations attached yet"
           }
         }
       }
@@ -1701,30 +1238,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Invalid date value."
-          }
-        }
-      }
-    },
-    "error.locator.invalid": {
-      "comment": "FFI error locator.invalid",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "That citation locator isn’t valid."
-          }
-        }
-      }
-    },
-    "error.observations.invalid": {
-      "comment": "FFI error observations.invalid",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "That observation isn’t valid."
           }
         }
       }
@@ -2257,6 +1770,30 @@
         }
       }
     },
+    "error.locator.invalid": {
+      "comment": "FFI error locator.invalid",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That citation locator isn’t valid."
+          }
+        }
+      }
+    },
+    "error.observations.invalid": {
+      "comment": "FFI error observations.invalid",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That observation isn’t valid."
+          }
+        }
+      }
+    },
     "error.onboarding.blank_name": {
       "comment": "FFI error onboarding.blank_name",
       "extractionState": "manual",
@@ -2313,6 +1850,90 @@
           "stringUnit": {
             "state": "translated",
             "value": "Project metadata missing."
+          }
+        }
+      }
+    },
+    "error.properties.duplicate_key": {
+      "comment": "FFI error properties.duplicate_key; argument is the colliding key",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You already have a property with the key %@. Give this one a different label."
+          }
+        }
+      }
+    },
+    "error.properties.in_use": {
+      "comment": "FFI error properties.in_use",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That property is still bound to one or more subject types."
+          }
+        }
+      }
+    },
+    "error.properties.invalid": {
+      "comment": "FFI error properties.invalid",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid property."
+          }
+        }
+      }
+    },
+    "error.propertyterms.duplicate_key": {
+      "comment": "FFI error propertyterms.duplicate_key; argument is the colliding key",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You already have a term with the key %@. Give this one a different label."
+          }
+        }
+      }
+    },
+    "error.propertyterms.in_use": {
+      "comment": "FFI error propertyterms.in_use",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That term is still used by one or more observations."
+          }
+        }
+      }
+    },
+    "error.propertyterms.invalid": {
+      "comment": "FFI error propertyterms.invalid",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid property term."
+          }
+        }
+      }
+    },
+    "error.propertyterms.locked": {
+      "comment": "FFI error propertyterms.locked",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That term is locked by the product vocabulary and cannot be changed."
           }
         }
       }
@@ -2437,114 +2058,6 @@
         }
       }
     },
-    "error.properties.invalid": {
-      "comment": "FFI error properties.invalid",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Invalid property."
-          }
-        }
-      }
-    },
-    "error.properties.duplicate_key": {
-      "comment": "FFI error properties.duplicate_key; argument is the colliding key",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "You already have a property with the key %@. Give this one a different label."
-          }
-        }
-      }
-    },
-    "error.properties.in_use": {
-      "comment": "FFI error properties.in_use",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "That property is still bound to one or more subject types."
-          }
-        }
-      }
-    },
-    "error.propertyterms.invalid": {
-      "comment": "FFI error propertyterms.invalid",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Invalid property term."
-          }
-        }
-      }
-    },
-    "error.propertyterms.duplicate_key": {
-      "comment": "FFI error propertyterms.duplicate_key; argument is the colliding key",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "You already have a term with the key %@. Give this one a different label."
-          }
-        }
-      }
-    },
-    "error.propertyterms.locked": {
-      "comment": "FFI error propertyterms.locked",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "That term is locked by the product vocabulary and cannot be changed."
-          }
-        }
-      }
-    },
-    "error.propertyterms.in_use": {
-      "comment": "FFI error propertyterms.in_use",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "That term is still used by one or more observations."
-          }
-        }
-      }
-    },
-    "error.subjectvocab.invalid": {
-      "comment": "FFI error subjectvocab.invalid",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Invalid subject vocabulary."
-          }
-        }
-      }
-    },
-    "error.subjectvocab.locked": {
-      "comment": "FFI error subjectvocab.locked",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "That binding is locked by the product vocabulary and cannot be removed."
-          }
-        }
-      }
-    },
     "error.subjectpositions.invalid": {
       "comment": "FFI error subjectpositions.invalid",
       "extractionState": "manual",
@@ -2593,6 +2106,30 @@
         }
       }
     },
+    "error.subjectvocab.invalid": {
+      "comment": "FFI error subjectvocab.invalid",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid subject vocabulary."
+          }
+        }
+      }
+    },
+    "error.subjectvocab.locked": {
+      "comment": "FFI error subjectvocab.locked",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That binding is locked by the product vocabulary and cannot be removed."
+          }
+        }
+      }
+    },
     "error.users.invalid": {
       "comment": "FFI error users.invalid",
       "extractionState": "manual",
@@ -2601,6 +2138,546 @@
           "stringUnit": {
             "state": "translated",
             "value": "Invalid user ID, display name, or ref."
+          }
+        }
+      }
+    },
+    "evidenceGraph.armed.escHint": {
+      "comment": "Secondary hint beside the armed placement banner",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "esc to cancel"
+          }
+        }
+      }
+    },
+    "evidenceGraph.armed.hintConnect": {
+      "comment": "Banner when Connect is armed and no origin is chosen yet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select the first subject"
+          }
+        }
+      }
+    },
+    "evidenceGraph.armed.hintConnectPickB": {
+      "comment": "Banner when Connect has origin A and is waiting for B",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select the second subject"
+          }
+        }
+      }
+    },
+    "evidenceGraph.armed.hintEvent": {
+      "comment": "Banner when Add event is armed",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click the grid to place an event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.armed.hintPerson": {
+      "comment": "Banner when Add person is armed",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click the grid to place a person"
+          }
+        }
+      }
+    },
+    "evidenceGraph.armed.hintPlace": {
+      "comment": "Banner when Add place is armed",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click the grid to place a place"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.honestyAccessibility": {
+      "comment": "VoiceOver fragment for bridge honesty",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prototype link, not cited evidence"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.honestyBody": {
+      "comment": "Permanent honesty copy on S6-04 bridge cards",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prototype link — not cited evidence"
+          }
+        }
+      }
+    },
+    "evidenceGraph.connect.connectingFrom": {
+      "comment": "Mono status line on primary card A while Connect waits for B",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "connecting from"
+          }
+        }
+      }
+    },
+    "evidenceGraph.connect.invalidPairBody": {
+      "comment": "Toast body explaining which primary pairs Connect accepts",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try person↔event, person↔place, event↔place, or two people."
+          }
+        }
+      }
+    },
+    "evidenceGraph.connect.invalidPairTitle": {
+      "comment": "Toast title when Connect picks an unsupported primary pair",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't connect those"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.cancel": {
+      "comment": "Cancel button on the Evidence graph create-subject dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.confirm": {
+      "comment": "Confirm button on the Evidence graph create-subject dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.defaultLabelEvent": {
+      "comment": "Prefill label when creating an Event from the palette",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.defaultLabelLocation": {
+      "comment": "Prefill label when creating a location bridge",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New location"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.defaultLabelParticipation": {
+      "comment": "Prefill label when creating a participation bridge",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New participation"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.defaultLabelPerson": {
+      "comment": "Prefill label when creating a Person from the palette",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New person"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.defaultLabelPlace": {
+      "comment": "Prefill label when creating a Place from the palette",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New place"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.defaultLabelRelationship": {
+      "comment": "Prefill label when creating a relationship bridge",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New relationship"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.descriptionField": {
+      "comment": "Description field title on the create-subject dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Description"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.eventTitle": {
+      "comment": "Create-subject dialog title when placing an Event",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.labelField": {
+      "comment": "Label field title on the create-subject dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Label"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.labelRequired": {
+      "comment": "Validation when create-subject label is blank",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a working label"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.locationTitle": {
+      "comment": "Create-bridge dialog title for a location mid-card",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add location"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.participationTitle": {
+      "comment": "Create-bridge dialog title for a participation mid-card",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add participation"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.personTitle": {
+      "comment": "Create-subject dialog title when placing a Person",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add person"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.placeTitle": {
+      "comment": "Create-subject dialog title when placing a Place",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add place"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.relationshipTitle": {
+      "comment": "Create-bridge dialog title for a relationship mid-card",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add relationship"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.typesUnavailable": {
+      "comment": "Error when seeded Person/Event/Place types could not be loaded",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subject types are not available for this project"
+          }
+        }
+      }
+    },
+    "evidenceGraph.empty.message": {
+      "comment": "Empty Evidence graph body guiding the researcher to arm a palette tool",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pick a tool above, then click the grid to place the first person, event or place from this source."
+          }
+        }
+      }
+    },
+    "evidenceGraph.empty.title": {
+      "comment": "Empty Evidence graph title before any Person/Event/Place cards exist",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No subjects yet"
+          }
+        }
+      }
+    },
+    "evidenceGraph.header.subjectCountOne": {
+      "comment": "Evidence graph header count when exactly one placed primary is on the canvas",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 subject"
+          }
+        }
+      }
+    },
+    "evidenceGraph.header.subjectCountOther": {
+      "comment": "Evidence graph header count; argument is how many placed primaries are on the canvas",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld subjects"
+          }
+        }
+      }
+    },
+    "evidenceGraph.palette.connect": {
+      "comment": "Evidence graph palette tool to link two primary subjects with a bridge",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect"
+          }
+        }
+      }
+    },
+    "evidenceGraph.palette.event": {
+      "comment": "Evidence graph palette tool to place an Event subject",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.palette.person": {
+      "comment": "Evidence graph palette tool to place a Person subject",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add person"
+          }
+        }
+      }
+    },
+    "evidenceGraph.palette.place": {
+      "comment": "Evidence graph palette tool to place a Place subject",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add place"
+          }
+        }
+      }
+    },
+    "evidenceGraph.palette.toolOff": {
+      "comment": "VoiceOver state when a palette tool is idle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "off"
+          }
+        }
+      }
+    },
+    "evidenceGraph.palette.toolOn": {
+      "comment": "VoiceOver state when a palette tool is armed",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "on"
+          }
+        }
+      }
+    },
+    "evidenceGraph.palette.toolRole": {
+      "comment": "VoiceOver middle token for a palette toggle (Add person, tool, off)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tool"
+          }
+        }
+      }
+    },
+    "evidenceGraph.position.persistFailedTitle": {
+      "comment": "Toast title when setSubjectPosition fails after drag or arrow move",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't save position"
+          }
+        }
+      }
+    },
+    "evidenceGraph.rotor.links": {
+      "comment": "VoiceOver rotor name for jumping between Evidence graph bridge cards",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Links"
+          }
+        }
+      }
+    },
+    "evidenceGraph.rotor.subjects": {
+      "comment": "VoiceOver rotor name for jumping between Evidence graph subject cards",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subjects"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.citedAccessibility": {
+      "comment": "VoiceOver fragment when a primary subject card has at least one Observation",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cited"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.uncitedAccessibility": {
+      "comment": "VoiceOver fragment when a primary subject card has no Observations",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uncited — no citations attached yet"
           }
         }
       }
@@ -3745,6 +3822,954 @@
         }
       }
     },
+    "sourceTypes.delete.action": {
+      "comment": "Delete button in the Source types detail pane, and the confirm dialog's destructive button",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete type"
+          }
+        }
+      }
+    },
+    "sourceTypes.delete.confirmMessage": {
+      "comment": "Message of the delete-type confirmation sheet: what does and does not cascade",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No source in this project is classified as this type, so no citation loses its class. The field suggestions attached to it go with it; the fields themselves stay in the vocabulary."
+          }
+        }
+      }
+    },
+    "sourceTypes.delete.confirmTitle": {
+      "comment": "Title of the delete-type confirmation dialog; argument is the type label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete %@?"
+          }
+        }
+      }
+    },
+    "sourceTypes.delete.inUseOne": {
+      "comment": "Tooltip on the disabled delete button when exactly one source is classified as the type",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In use on 1 source"
+          }
+        }
+      }
+    },
+    "sourceTypes.delete.inUseOther": {
+      "comment": "Tooltip on the disabled delete button; argument is how many sources are classified as the type",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In use on %lld sources"
+          }
+        }
+      }
+    },
+    "sourceTypes.delete.keep": {
+      "comment": "Button that closes the delete-type confirmation without deleting",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep type"
+          }
+        }
+      }
+    },
+    "sourceTypes.delete.keyReleased": {
+      "comment": "Micro-caps label beside the key a type delete releases, in the confirmation sheet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Key released"
+          }
+        }
+      }
+    },
+    "sourceTypes.delete.ownedByPlugin": {
+      "comment": "Tooltip on the disabled delete button when the selected type comes from a plugin",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Owned by the plugin"
+          }
+        }
+      }
+    },
+    "sourceTypes.detail.descriptionEmptyPlaceholder": {
+      "comment": "Shown in place of a locked type's description when it has none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        }
+      }
+    },
+    "sourceTypes.detail.descriptionSectionLabel": {
+      "comment": "Section label above the read-only description on a locked type's detail",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Description"
+          }
+        }
+      }
+    },
+    "sourceTypes.detail.eyebrowNewType": {
+      "comment": "Eyebrow label above the add-type panel",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New type"
+          }
+        }
+      }
+    },
+    "sourceTypes.detail.eyebrowType": {
+      "comment": "Eyebrow label above an existing type's detail panel",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source type"
+          }
+        }
+      }
+    },
+    "sourceTypes.detail.keyHintAdd": {
+      "comment": "Hint under the live key preview while adding a type",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Provenencia mints the key from the label when the type is added"
+          }
+        }
+      }
+    },
+    "sourceTypes.detail.keyHintEdit": {
+      "comment": "Hint under the key on an existing type's detail panel",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The key is minted once from the label and never changes — renaming the type keeps existing sources attached"
+          }
+        }
+      }
+    },
+    "sourceTypes.detail.lockedNotePlugin": {
+      "comment": "Callout explaining why a plugin-origin type can't be edited; argument is the plugin id",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supplied by the %@ plugin. The plugin owns this type, its description and the fields it suggests — Provenencia will not edit or delete them."
+          }
+        }
+      }
+    },
+    "sourceTypes.detail.panelEmptyBody": {
+      "comment": "Body of the empty state shown in the detail panel before any type is selected",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select a type to read its description and the fields it suggests. Types seeded by Provenencia are yours to edit; only plugin-owned types are fixed."
+          }
+        }
+      }
+    },
+    "sourceTypes.detail.panelEmptyTitle": {
+      "comment": "Title of the empty state shown in the detail panel before any type is selected",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No type selected"
+          }
+        }
+      }
+    },
+    "sourceTypes.detail.usageNone": {
+      "comment": "Line under a type's title when no source is classified as it",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "no sources yet"
+          }
+        }
+      }
+    },
+    "sourceTypes.detail.usageOne": {
+      "comment": "Line under a type's title when exactly one source is classified as it",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "in use on 1 source"
+          }
+        }
+      }
+    },
+    "sourceTypes.detail.usageOther": {
+      "comment": "Line under a type's title; argument is how many sources are classified as it",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "in use on %lld sources"
+          }
+        }
+      }
+    },
+    "sourceTypes.emptyProject.body": {
+      "comment": "Body of the empty state when the project has zero source types",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This project has no record classes to cite against. Add the kinds of record you actually hold — a parish register, a scrapbook, a headstone photograph."
+          }
+        }
+      }
+    },
+    "sourceTypes.emptyProject.title": {
+      "comment": "Title of the empty state when the project has zero source types",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No source types yet"
+          }
+        }
+      }
+    },
+    "sourceTypes.form.addSuggestionsNote": {
+      "comment": "Callout in the add-type form explaining that associations come later",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggested fields are assigned after the type is saved."
+          }
+        }
+      }
+    },
+    "sourceTypes.form.cancel": {
+      "comment": "Secondary button label that dismisses the add-type form",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        }
+      }
+    },
+    "sourceTypes.form.description": {
+      "comment": "Add/edit form field: description",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Description"
+          }
+        }
+      }
+    },
+    "sourceTypes.form.descriptionHint": {
+      "comment": "Hint under the description field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What kind of record belongs to this type, in your own words"
+          }
+        }
+      }
+    },
+    "sourceTypes.form.descriptionPlaceholder": {
+      "comment": "Placeholder text for the add-type description input",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A bound register of baptisms, marriages or burials kept by a parish"
+          }
+        }
+      }
+    },
+    "sourceTypes.form.errorLabelRequired": {
+      "comment": "Inline validation error when the label is blank",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A label is required — it is how the type reads on a source."
+          }
+        }
+      }
+    },
+    "sourceTypes.form.errorUnslugifiable": {
+      "comment": "Inline validation error when the label has no letters or digits to slug",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That label cannot be turned into a key. Use at least one letter or number."
+          }
+        }
+      }
+    },
+    "sourceTypes.form.icon": {
+      "comment": "Add/edit form field: evidence icon for this type",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Icon"
+          }
+        }
+      }
+    },
+    "sourceTypes.form.iconChange": {
+      "comment": "Link-styled control that opens the icon picker dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change"
+          }
+        }
+      }
+    },
+    "sourceTypes.form.iconChangeAccessibility": {
+      "comment": "Accessibility label for the icon field button; argument is the current mark name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Icon: %@ — choose a different one"
+          }
+        }
+      }
+    },
+    "sourceTypes.form.iconHint": {
+      "comment": "Hint under the source-type icon field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The mark that stands for this type wherever a source of it is listed"
+          }
+        }
+      }
+    },
+    "sourceTypes.form.label": {
+      "comment": "Add/edit form field: label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Label"
+          }
+        }
+      }
+    },
+    "sourceTypes.form.labelPlaceholder": {
+      "comment": "Placeholder text for the add-type label input",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parish register"
+          }
+        }
+      }
+    },
+    "sourceTypes.form.revert": {
+      "comment": "Secondary button label that discards unsaved edits to an existing type",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revert"
+          }
+        }
+      }
+    },
+    "sourceTypes.form.saveChanges": {
+      "comment": "Primary button label for committing an edit to an existing type",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save changes"
+          }
+        }
+      }
+    },
+    "sourceTypes.form.saveSaving": {
+      "comment": "Primary button label while a Source type add/edit is in flight",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saving"
+          }
+        }
+      }
+    },
+    "sourceTypes.iconPicker.cancel": {
+      "comment": "Dismisses the Source-type icon picker without changing the draft icon",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep current"
+          }
+        }
+      }
+    },
+    "sourceTypes.iconPicker.confirm": {
+      "comment": "Commits the selected icon in the Source-type icon picker form dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use icon"
+          }
+        }
+      }
+    },
+    "sourceTypes.iconPicker.group": {
+      "comment": "Accessibility label for the icon picker radio group",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Icon for this source type"
+          }
+        }
+      }
+    },
+    "sourceTypes.iconPicker.subtitle": {
+      "comment": "Subtitle of the Source-type icon picker dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The mark that stands for this type wherever a source of it is listed. Twenty-one marks name a kind of record, not a file format."
+          }
+        }
+      }
+    },
+    "sourceTypes.iconPicker.title": {
+      "comment": "Title of the Source-type icon picker dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose an icon"
+          }
+        }
+      }
+    },
+    "sourceTypes.list.addType": {
+      "comment": "Button: add a new Source type (toolbar, empty state, and add-form submit)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add type"
+          }
+        }
+      }
+    },
+    "sourceTypes.list.columnFields": {
+      "comment": "Source types list column header: how many metadata fields the type suggests",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Associated fields"
+          }
+        }
+      }
+    },
+    "sourceTypes.list.columnKey": {
+      "comment": "Source types list column header: key",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Key"
+          }
+        }
+      }
+    },
+    "sourceTypes.list.columnLabel": {
+      "comment": "Source types list column header: label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Label"
+          }
+        }
+      }
+    },
+    "sourceTypes.list.countLine": {
+      "comment": "Source types count summary; arguments are total, seeded (provenencia), and user type counts",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld types · %lld seeded · %lld yours"
+          }
+        }
+      }
+    },
+    "sourceTypes.list.countLineWithPlugin": {
+      "comment": "Source types count summary including plugin-origin types; arguments are total, seeded, user, and plugin type counts",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld types · %lld seeded · %lld yours · %lld plugin"
+          }
+        }
+      }
+    },
+    "sourceTypes.list.description": {
+      "comment": "Explanatory copy under the Source types page title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The kinds of record this project cites, and the fields each kind usually carries. The fields are suggestions — a source of this type may leave any of them blank."
+          }
+        }
+      }
+    },
+    "sourceTypes.list.fieldCountNone": {
+      "comment": "Shown in the associated-fields column when a type suggests no fields",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        }
+      }
+    },
+    "sourceTypes.list.resultLineAll": {
+      "comment": "Footer result count when no search narrows the Source types list; argument is the total",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld types"
+          }
+        }
+      }
+    },
+    "sourceTypes.suggested.assignField": {
+      "comment": "Button that attaches the picked field to the selected type",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Assign field"
+          }
+        }
+      }
+    },
+    "sourceTypes.suggested.assignFieldLabel": {
+      "comment": "Accessibility label for the assign-field combo box",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source field to assign"
+          }
+        }
+      }
+    },
+    "sourceTypes.suggested.assignFieldNamed": {
+      "comment": "Spoken label for the assign button; arguments are the picked field label then the type label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Assign field %1$@ to %2$@"
+          }
+        }
+      }
+    },
+    "sourceTypes.suggested.assignNoMatch": {
+      "comment": "Shown inside the assign-field combo box list when the typed query matches no field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No field in the vocabulary matches that — add it in Source fields first"
+          }
+        }
+      }
+    },
+    "sourceTypes.suggested.assignPlaceholder": {
+      "comment": "Placeholder in the assign-field combo box, naming both things it searches",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Field label or key"
+          }
+        }
+      }
+    },
+    "sourceTypes.suggested.assignTipChoose": {
+      "comment": "Tooltip on the disabled assign button before a field is picked",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a field to assign"
+          }
+        }
+      }
+    },
+    "sourceTypes.suggested.assignTipField": {
+      "comment": "Tooltip on the enabled assign button; argument is the picked field label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Assign %@ to this type"
+          }
+        }
+      }
+    },
+    "sourceTypes.suggested.assignTipPoolEmpty": {
+      "comment": "Tooltip on the disabled assign button when the type already suggests the whole vocabulary",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Every field is already assigned"
+          }
+        }
+      }
+    },
+    "sourceTypes.suggested.countOne": {
+      "comment": "Count beside the suggested fields section label when the type suggests exactly one field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 field"
+          }
+        }
+      }
+    },
+    "sourceTypes.suggested.countOther": {
+      "comment": "Count beside the suggested fields section label; argument is how many fields the type suggests",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld fields"
+          }
+        }
+      }
+    },
+    "sourceTypes.suggested.hint": {
+      "comment": "Hint under the suggested fields section label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggestions, not a schema — a source of this type may leave any of them blank"
+          }
+        }
+      }
+    },
+    "sourceTypes.suggested.noneBody": {
+      "comment": "Body of the panel shown when a type suggests no fields yet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No suggested fields yet — a source of this type will offer nothing but the standard citation. Assign the fields these records usually carry."
+          }
+        }
+      }
+    },
+    "sourceTypes.suggested.poolHint": {
+      "comment": "Hint under the assign-field picker naming where the pool comes from",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The pool is the Source fields vocabulary — add a new field there first if it is missing"
+          }
+        }
+      }
+    },
+    "sourceTypes.suggested.poolHintEmpty": {
+      "comment": "Hint under the assign-field picker when nothing is left to assign",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Every field in the vocabulary is already suggested for this type"
+          }
+        }
+      }
+    },
+    "sourceTypes.suggested.remove": {
+      "comment": "Accessibility label and tooltip on the control that detaches one suggested field; argument is the field label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove %@ from this type"
+          }
+        }
+      }
+    },
+    "sourceTypes.suggested.sectionLabel": {
+      "comment": "Section label above the fields a type suggests",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggested fields"
+          }
+        }
+      }
+    },
+    "sourceTypes.toast.addedBody": {
+      "comment": "Success toast body after creating a Source type; arguments are label then minted key",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ is in this project’s vocabulary as %2$@. Assign the fields it should suggest."
+          }
+        }
+      }
+    },
+    "sourceTypes.toast.addedTitle": {
+      "comment": "Success toast title after creating a Source type",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type added"
+          }
+        }
+      }
+    },
+    "sourceTypes.toast.assignedBody": {
+      "comment": "Toast body after attaching a field to a type; arguments are the field label then the type label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ is now suggested for %2$@."
+          }
+        }
+      }
+    },
+    "sourceTypes.toast.assignedTitle": {
+      "comment": "Toast title after attaching a field to a type",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Field assigned"
+          }
+        }
+      }
+    },
+    "sourceTypes.toast.deletedBody": {
+      "comment": "Toast body after a source type is deleted; argument is the type label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ is no longer in this project’s vocabulary. Its field suggestions went with it; the fields did not."
+          }
+        }
+      }
+    },
+    "sourceTypes.toast.deletedTitle": {
+      "comment": "Toast title after a source type is deleted",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type deleted"
+          }
+        }
+      }
+    },
+    "sourceTypes.toast.removedBodyNoValues": {
+      "comment": "Toast body after detaching a field no source carries a value for; arguments are the field label then the type label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ is no longer suggested for %2$@. The field stays in this project’s vocabulary."
+          }
+        }
+      }
+    },
+    "sourceTypes.toast.removedBodyWithValues": {
+      "comment": "Toast body after detaching a field sources still carry values for; arguments are the field label, the type label, then how many sources hold a value",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ is no longer suggested for %2$@. The field stays in this project’s vocabulary, and the %3$lld sources already carrying a value keep it."
+          }
+        }
+      }
+    },
+    "sourceTypes.toast.removedTitle": {
+      "comment": "Toast title after detaching a field from a type",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggestion removed"
+          }
+        }
+      }
+    },
+    "sourceTypes.toast.updatedBody": {
+      "comment": "Success toast body after editing a Source type; arguments are label then key",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ — the key stays %2$@."
+          }
+        }
+      }
+    },
+    "sourceTypes.toast.updatedTitle": {
+      "comment": "Success toast title after editing a Source type",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type updated"
+          }
+        }
+      }
+    },
     "sources.add.cancel": {
       "comment": "Cancel button on the Add Source dialog",
       "extractionState": "manual",
@@ -4177,18 +5202,6 @@
         }
       }
     },
-    "sources.list.sortedBy": {
-      "comment": "Sources sort control label; argument is the active sort option in lowercase",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sorted by %@"
-          }
-        }
-      }
-    },
     "sources.list.sortMenu": {
       "comment": "Accessibility label for the Sources sort control",
       "extractionState": "manual",
@@ -4197,6 +5210,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sort sources"
+          }
+        }
+      }
+    },
+    "sources.list.sortedBy": {
+      "comment": "Sources sort control label; argument is the active sort option in lowercase",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sorted by %@"
           }
         }
       }
@@ -5305,18 +6330,6 @@
         }
       }
     },
-    "sources.page.filelessHint": {
-      "comment": "Callout when an Artifact has no primary File",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Physical only — you have recorded the item without a scan. Attach a file when one exists; the artifact keeps its reference either way."
-          }
-        }
-      }
-    },
     "sources.page.fileOpenMissing": {
       "comment": "Error when Open cannot find the object on disk",
       "extractionState": "manual",
@@ -5349,6 +6362,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Choose"
+          }
+        }
+      }
+    },
+    "sources.page.filelessHint": {
+      "comment": "Callout when an Artifact has no primary File",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Physical only — you have recorded the item without a scan. Attach a file when one exists; the artifact keeps its reference either way."
           }
         }
       }
@@ -5581,6 +6606,18 @@
         }
       }
     },
+    "sources.page.noUnsavedChanges": {
+      "comment": "Status under artifact fields when drafts match saved values",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No unsaved changes"
+          }
+        }
+      }
+    },
     "sources.page.noteBodyRequired": {
       "comment": "Validation when saving an empty Source note body",
       "extractionState": "manual",
@@ -5649,18 +6686,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Notes"
-          }
-        }
-      }
-    },
-    "sources.page.noUnsavedChanges": {
-      "comment": "Status under artifact fields when drafts match saved values",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No unsaved changes"
           }
         }
       }
@@ -5977,284 +7002,20 @@
         }
       }
     },
-    "sourceTypes.delete.action": {
-      "comment": "Delete button in the Source types detail pane, and the confirm dialog's destructive button",
+    "subjectFields.create.bindSection": {
+      "comment": "Create property sheet: bind checklist section",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Delete type"
+            "value": "Bind to subject types"
           }
         }
       }
     },
-    "sourceTypes.delete.confirmMessage": {
-      "comment": "Message of the delete-type confirmation sheet: what does and does not cascade",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No source in this project is classified as this type, so no citation loses its class. The field suggestions attached to it go with it; the fields themselves stay in the vocabulary."
-          }
-        }
-      }
-    },
-    "sourceTypes.delete.confirmTitle": {
-      "comment": "Title of the delete-type confirmation dialog; argument is the type label",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete %@?"
-          }
-        }
-      }
-    },
-    "sourceTypes.delete.inUseOne": {
-      "comment": "Tooltip on the disabled delete button when exactly one source is classified as the type",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In use on 1 source"
-          }
-        }
-      }
-    },
-    "sourceTypes.delete.inUseOther": {
-      "comment": "Tooltip on the disabled delete button; argument is how many sources are classified as the type",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In use on %lld sources"
-          }
-        }
-      }
-    },
-    "sourceTypes.delete.keep": {
-      "comment": "Button that closes the delete-type confirmation without deleting",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keep type"
-          }
-        }
-      }
-    },
-    "sourceTypes.delete.keyReleased": {
-      "comment": "Micro-caps label beside the key a type delete releases, in the confirmation sheet",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Key released"
-          }
-        }
-      }
-    },
-    "sourceTypes.delete.ownedByPlugin": {
-      "comment": "Tooltip on the disabled delete button when the selected type comes from a plugin",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Owned by the plugin"
-          }
-        }
-      }
-    },
-    "sourceTypes.detail.descriptionEmptyPlaceholder": {
-      "comment": "Shown in place of a locked type's description when it has none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "—"
-          }
-        }
-      }
-    },
-    "sourceTypes.detail.descriptionSectionLabel": {
-      "comment": "Section label above the read-only description on a locked type's detail",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Description"
-          }
-        }
-      }
-    },
-    "sourceTypes.detail.eyebrowNewType": {
-      "comment": "Eyebrow label above the add-type panel",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "New type"
-          }
-        }
-      }
-    },
-    "sourceTypes.detail.eyebrowType": {
-      "comment": "Eyebrow label above an existing type's detail panel",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Source type"
-          }
-        }
-      }
-    },
-    "sourceTypes.detail.keyHintAdd": {
-      "comment": "Hint under the live key preview while adding a type",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Provenencia mints the key from the label when the type is added"
-          }
-        }
-      }
-    },
-    "sourceTypes.detail.keyHintEdit": {
-      "comment": "Hint under the key on an existing type's detail panel",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The key is minted once from the label and never changes — renaming the type keeps existing sources attached"
-          }
-        }
-      }
-    },
-    "sourceTypes.detail.lockedNotePlugin": {
-      "comment": "Callout explaining why a plugin-origin type can't be edited; argument is the plugin id",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Supplied by the %@ plugin. The plugin owns this type, its description and the fields it suggests — Provenencia will not edit or delete them."
-          }
-        }
-      }
-    },
-    "sourceTypes.detail.panelEmptyBody": {
-      "comment": "Body of the empty state shown in the detail panel before any type is selected",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Select a type to read its description and the fields it suggests. Types seeded by Provenencia are yours to edit; only plugin-owned types are fixed."
-          }
-        }
-      }
-    },
-    "sourceTypes.detail.panelEmptyTitle": {
-      "comment": "Title of the empty state shown in the detail panel before any type is selected",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No type selected"
-          }
-        }
-      }
-    },
-    "sourceTypes.detail.usageNone": {
-      "comment": "Line under a type's title when no source is classified as it",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "no sources yet"
-          }
-        }
-      }
-    },
-    "sourceTypes.detail.usageOne": {
-      "comment": "Line under a type's title when exactly one source is classified as it",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "in use on 1 source"
-          }
-        }
-      }
-    },
-    "sourceTypes.detail.usageOther": {
-      "comment": "Line under a type's title; argument is how many sources are classified as it",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "in use on %lld sources"
-          }
-        }
-      }
-    },
-    "sourceTypes.emptyProject.body": {
-      "comment": "Body of the empty state when the project has zero source types",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This project has no record classes to cite against. Add the kinds of record you actually hold — a parish register, a scrapbook, a headstone photograph."
-          }
-        }
-      }
-    },
-    "sourceTypes.emptyProject.title": {
-      "comment": "Title of the empty state when the project has zero source types",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No source types yet"
-          }
-        }
-      }
-    },
-    "sourceTypes.form.addSuggestionsNote": {
-      "comment": "Callout in the add-type form explaining that associations come later",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Suggested fields are assigned after the type is saved."
-          }
-        }
-      }
-    },
-    "sourceTypes.form.cancel": {
-      "comment": "Secondary button label that dismisses the add-type form",
+    "subjectFields.create.cancel": {
+      "comment": "Create property sheet cancel",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -6265,8 +7026,8 @@
         }
       }
     },
-    "sourceTypes.form.description": {
-      "comment": "Add/edit form field: description",
+    "subjectFields.create.description": {
+      "comment": "Create property form: description",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -6277,248 +7038,44 @@
         }
       }
     },
-    "sourceTypes.form.descriptionHint": {
-      "comment": "Hint under the description field",
+    "subjectFields.create.descriptionPlaceholder": {
+      "comment": "Placeholder for create property description",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "What kind of record belongs to this type, in your own words"
+            "value": "How the value should be read from the record"
           }
         }
       }
     },
-    "sourceTypes.form.descriptionPlaceholder": {
-      "comment": "Placeholder text for the add-type description input",
+    "subjectFields.create.errorLabelRequired": {
+      "comment": "Validation when create label is empty",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "A bound register of baptisms, marriages or burials kept by a parish"
+            "value": "Enter a label for this property."
           }
         }
       }
     },
-    "sourceTypes.form.errorLabelRequired": {
-      "comment": "Inline validation error when the label is blank",
+    "subjectFields.create.errorValueType": {
+      "comment": "Validation when create value type is invalid",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "A label is required — it is how the type reads on a source."
+            "value": "Choose a researcher value type. Term properties are product vocabulary only."
           }
         }
       }
     },
-    "sourceTypes.form.errorUnslugifiable": {
-      "comment": "Inline validation error when the label has no letters or digits to slug",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "That label cannot be turned into a key. Use at least one letter or number."
-          }
-        }
-      }
-    },
-    "sourceTypes.form.icon": {
-      "comment": "Add/edit form field: evidence icon for this type",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Icon"
-          }
-        }
-      }
-    },
-    "sourceTypes.form.iconChange": {
-      "comment": "Link-styled control that opens the icon picker dialog",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Change"
-          }
-        }
-      }
-    },
-    "sourceTypes.form.iconChangeAccessibility": {
-      "comment": "Accessibility label for the icon field button; argument is the current mark name",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Icon: %@ — choose a different one"
-          }
-        }
-      }
-    },
-    "sourceTypes.form.iconHint": {
-      "comment": "Hint under the source-type icon field",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The mark that stands for this type wherever a source of it is listed"
-          }
-        }
-      }
-    },
-    "sourceTypes.form.label": {
-      "comment": "Add/edit form field: label",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Label"
-          }
-        }
-      }
-    },
-    "sourceTypes.form.labelPlaceholder": {
-      "comment": "Placeholder text for the add-type label input",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Parish register"
-          }
-        }
-      }
-    },
-    "sourceTypes.form.revert": {
-      "comment": "Secondary button label that discards unsaved edits to an existing type",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Revert"
-          }
-        }
-      }
-    },
-    "sourceTypes.form.saveChanges": {
-      "comment": "Primary button label for committing an edit to an existing type",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save changes"
-          }
-        }
-      }
-    },
-    "sourceTypes.form.saveSaving": {
-      "comment": "Primary button label while a Source type add/edit is in flight",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Saving"
-          }
-        }
-      }
-    },
-    "sourceTypes.iconPicker.cancel": {
-      "comment": "Dismisses the Source-type icon picker without changing the draft icon",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keep current"
-          }
-        }
-      }
-    },
-    "sourceTypes.iconPicker.confirm": {
-      "comment": "Commits the selected icon in the Source-type icon picker form dialog",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Use icon"
-          }
-        }
-      }
-    },
-    "sourceTypes.iconPicker.group": {
-      "comment": "Accessibility label for the icon picker radio group",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Icon for this source type"
-          }
-        }
-      }
-    },
-    "sourceTypes.iconPicker.subtitle": {
-      "comment": "Subtitle of the Source-type icon picker dialog",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The mark that stands for this type wherever a source of it is listed. Twenty-one marks name a kind of record, not a file format."
-          }
-        }
-      }
-    },
-    "sourceTypes.iconPicker.title": {
-      "comment": "Title of the Source-type icon picker dialog",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choose an icon"
-          }
-        }
-      }
-    },
-    "sourceTypes.list.addType": {
-      "comment": "Button: add a new Source type (toolbar, empty state, and add-form submit)",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add type"
-          }
-        }
-      }
-    },
-    "sourceTypes.list.columnFields": {
-      "comment": "Source types list column header: how many metadata fields the type suggests",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Associated fields"
-          }
-        }
-      }
-    },
-    "sourceTypes.list.columnKey": {
-      "comment": "Source types list column header: key",
+    "subjectFields.create.key": {
+      "comment": "Create property form: machine key field",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -6529,8 +7086,32 @@
         }
       }
     },
-    "sourceTypes.list.columnLabel": {
-      "comment": "Source types list column header: label",
+    "subjectFields.create.keyHint": {
+      "comment": "Hint under create property key; key is minted server-side from label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generated from the label"
+          }
+        }
+      }
+    },
+    "subjectFields.create.keyPlaceholder": {
+      "comment": "Placeholder for create property key preview",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "burial-ground"
+          }
+        }
+      }
+    },
+    "subjectFields.create.label": {
+      "comment": "Create property form: label field",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -6541,176 +7122,452 @@
         }
       }
     },
-    "sourceTypes.list.countLine": {
-      "comment": "Source types count summary; arguments are total, seeded (provenencia), and user type counts",
+    "subjectFields.create.labelHint": {
+      "comment": "Hint under create property label",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld types · %lld seeded · %lld yours"
+            "value": "What a researcher sees on the subject"
           }
         }
       }
     },
-    "sourceTypes.list.countLineWithPlugin": {
-      "comment": "Source types count summary including plugin-origin types; arguments are total, seeded, user, and plugin type counts",
+    "subjectFields.create.labelPlaceholder": {
+      "comment": "Placeholder for create property label field",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld types · %lld seeded · %lld yours · %lld plugin"
+            "value": "Burial ground"
           }
         }
       }
     },
-    "sourceTypes.list.description": {
-      "comment": "Explanatory copy under the Source types page title",
+    "subjectFields.create.originNote": {
+      "comment": "Create property sheet note about origin",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The kinds of record this project cites, and the fields each kind usually carries. The fields are suggestions — a source of this type may leave any of them blank."
+            "value": "Origin is recorded as user — seeded properties come from Provenencia"
           }
         }
       }
     },
-    "sourceTypes.list.fieldCountNone": {
-      "comment": "Shown in the associated-fields column when a type suggests no fields",
+    "subjectFields.create.submit": {
+      "comment": "Create property sheet primary action",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "—"
+            "value": "Create property"
           }
         }
       }
     },
-    "sourceTypes.list.resultLineAll": {
-      "comment": "Footer result count when no search narrows the Source types list; argument is the total",
+    "subjectFields.create.title": {
+      "comment": "Create property sheet title",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld types"
+            "value": "New property"
           }
         }
       }
     },
-    "sourceTypes.suggested.assignField": {
-      "comment": "Button that attaches the picked field to the selected type",
+    "subjectFields.create.valueType": {
+      "comment": "Create property form: value type picker",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Assign field"
+            "value": "Value type"
           }
         }
       }
     },
-    "sourceTypes.suggested.assignFieldLabel": {
-      "comment": "Accessibility label for the assign-field combo box",
+    "subjectFields.create.valueTypeHint": {
+      "comment": "Hint under create property value type chips",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Source field to assign"
+            "value": "Cannot be changed once the property exists"
           }
         }
       }
     },
-    "sourceTypes.suggested.assignFieldNamed": {
-      "comment": "Spoken label for the assign button; arguments are the picked field label then the type label",
+    "subjectFields.delete.confirmMessage": {
+      "comment": "Confirm sheet message for deleting a user property",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Assign field %1$@ to %2$@"
+            "value": "This removes the property definition. It cannot be undone."
           }
         }
       }
     },
-    "sourceTypes.suggested.assignNoMatch": {
-      "comment": "Shown inside the assign-field combo box list when the typed query matches no field",
+    "subjectFields.delete.confirmTitle": {
+      "comment": "Confirm sheet title for deleting a user property",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No field in the vocabulary matches that — add it in Source fields first"
+            "value": "Delete this property?"
           }
         }
       }
     },
-    "sourceTypes.suggested.assignPlaceholder": {
-      "comment": "Placeholder in the assign-field combo box, naming both things it searches",
+    "subjectFields.delete.keep": {
+      "comment": "Confirm sheet cancel for delete property",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Field label or key"
+            "value": "Keep"
           }
         }
       }
     },
-    "sourceTypes.suggested.assignTipChoose": {
-      "comment": "Tooltip on the disabled assign button before a field is picked",
+    "subjectFields.inspector.accessibility": {
+      "comment": "Accessibility label for the property inspector card",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choose a field to assign"
+            "value": "Property inspector"
           }
         }
       }
     },
-    "sourceTypes.suggested.assignTipField": {
-      "comment": "Tooltip on the enabled assign button; argument is the picked field label",
+    "subjectFields.inspector.bindCount": {
+      "comment": "Inspector bound-type count beside Bound to; bound, then total types",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Assign %@ to this type"
+            "value": "%lld of %lld"
           }
         }
       }
     },
-    "sourceTypes.suggested.assignTipPoolEmpty": {
-      "comment": "Tooltip on the disabled assign button when the type already suggests the whole vocabulary",
+    "subjectFields.inspector.bindingBound": {
+      "comment": "Accessibility label for an active unbound-able binding",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Every field is already assigned"
+            "value": "Bound"
           }
         }
       }
     },
-    "sourceTypes.suggested.countOne": {
-      "comment": "Count beside the suggested fields section label when the type suggests exactly one field",
+    "subjectFields.inspector.bindingLocked": {
+      "comment": "Accessibility / badge for a locked subject-type binding",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "1 field"
+            "value": "Locked"
           }
         }
       }
     },
-    "sourceTypes.suggested.countOther": {
-      "comment": "Count beside the suggested fields section label; argument is how many fields the type suggests",
+    "subjectFields.inspector.bindingNotBound": {
+      "comment": "Accessibility label for an inactive binding checkbox",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "not bound"
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.bindingRegistry": {
+      "comment": "Micro-label beside a locked Bound-to row (registry-held)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "registry"
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.bindings": {
+      "comment": "Inspector section label for bindings list",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bound to"
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.bindingsAccessibility": {
+      "comment": "Accessibility label for the Bound-to checkbox list",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subject type bindings"
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.delete": {
+      "comment": "Delete button in property inspector",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete property"
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.deleteInUse": {
+      "comment": "Why delete is disabled when usedBy > 0",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This property is still bound to one or more subject types."
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.deleteSeeded": {
+      "comment": "Why delete is disabled for provenencia-origin properties",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seeded properties cannot be deleted."
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.deleteUnused": {
+      "comment": "Inspector note when a user property can be deleted",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not in use. Deleting removes it from every type it is bound to."
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.empty": {
+      "comment": "Inspector empty state",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select a property to see its description and bindings."
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.lockedBinding": {
+      "comment": "Callout when activating a locked binding; argument is subject type label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Interpretation subject registry requires this property on %@. The binding cannot be removed."
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.origin": {
+      "comment": "Inspector meta label: origin",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Origin"
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.originSeeded": {
+      "comment": "Inspector origin line for product-seeded properties",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seeded by Provenencia"
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.originUser": {
+      "comment": "Inspector origin line for researcher-created properties",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "User — you created this"
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.termNote": {
+      "comment": "Inspector note for term-typed seeded properties",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Values come from the product vocabulary. You choose one when citing this property."
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.valueType": {
+      "comment": "Inspector meta label: value type",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Value type"
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.valueTypeImmutable": {
+      "comment": "Accessibility label for the lock beside value type in the inspector",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Immutable after create"
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.valuesRecorded": {
+      "comment": "Inspector meta label: use / binding count from engine",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Values recorded"
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.valuesRecordedCount": {
+      "comment": "Inspector values-recorded count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        }
+      }
+    },
+    "subjectFields.list.description": {
+      "comment": "Explanatory copy under the Subject fields page title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The properties a subject can carry, and which of the seven subject types carry them."
+          }
+        }
+      }
+    },
+    "subjectFields.search.placeholder": {
+      "comment": "Search field placeholder on Subject fields",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search properties"
+          }
+        }
+      }
+    },
+    "subjectFields.strip.accessibility": {
+      "comment": "Accessibility label for the type strip pressed-button group",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subject types"
+          }
+        }
+      }
+    },
+    "subjectFields.strip.all": {
+      "comment": "Type strip card that clears the subject-type filter",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All properties"
+          }
+        }
+      }
+    },
+    "subjectFields.strip.bridge": {
+      "comment": "Micro-label on bridge subject-type strip cards; rendered uppercase (BRIDGE)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bridge"
+          }
+        }
+      }
+    },
+    "subjectFields.strip.fieldCount": {
+      "comment": "Type strip count under a subject type; argument is binding count",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -6721,206 +7578,302 @@
         }
       }
     },
-    "sourceTypes.suggested.hint": {
-      "comment": "Hint under the suggested fields section label",
+    "subjectFields.table.boundOverflow": {
+      "comment": "Overflow when more than three Bound-to chips; argument is remaining count",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Suggestions, not a schema — a source of this type may leave any of them blank"
+            "value": "+%lld"
           }
         }
       }
     },
-    "sourceTypes.suggested.noneBody": {
-      "comment": "Body of the panel shown when a type suggests no fields yet",
+    "subjectFields.table.columnBoundTo": {
+      "comment": "Subject fields table column: bound subject types",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No suggested fields yet — a source of this type will offer nothing but the standard citation. Assign the fields these records usually carry."
+            "value": "Bound to"
           }
         }
       }
     },
-    "sourceTypes.suggested.poolHint": {
-      "comment": "Hint under the assign-field picker naming where the pool comes from",
+    "subjectFields.table.columnOn": {
+      "comment": "Subject fields table column: binding toggle for the focused type",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The pool is the Source fields vocabulary — add a new field there first if it is missing"
+            "value": "On"
           }
         }
       }
     },
-    "sourceTypes.suggested.poolHintEmpty": {
-      "comment": "Hint under the assign-field picker when nothing is left to assign",
+    "subjectFields.table.columnOrigin": {
+      "comment": "Subject fields table column: origin",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Every field in the vocabulary is already suggested for this type"
+            "value": "Origin"
           }
         }
       }
     },
-    "sourceTypes.suggested.remove": {
-      "comment": "Accessibility label and tooltip on the control that detaches one suggested field; argument is the field label",
+    "subjectFields.table.columnProperty": {
+      "comment": "Subject fields table column: property label",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Remove %@ from this type"
+            "value": "Property"
           }
         }
       }
     },
-    "sourceTypes.suggested.sectionLabel": {
-      "comment": "Section label above the fields a type suggests",
+    "subjectFields.table.columnValueType": {
+      "comment": "Subject fields table column: value type",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Suggested fields"
+            "value": "Value type"
           }
         }
       }
     },
-    "sourceTypes.toast.addedBody": {
-      "comment": "Success toast body after creating a Source type; arguments are label then minted key",
+    "subjectFields.table.emptySearch": {
+      "comment": "Empty state when search/filter matches no properties",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ is in this project’s vocabulary as %2$@. Assign the fields it should suggest."
+            "value": "Clear the search, or create it as a user property"
           }
         }
       }
     },
-    "sourceTypes.toast.addedTitle": {
-      "comment": "Success toast title after creating a Source type",
+    "subjectFields.table.emptySearchTitle": {
+      "comment": "Empty table title when no properties are visible",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Type added"
+            "value": "No properties match"
           }
         }
       }
     },
-    "sourceTypes.toast.assignedBody": {
-      "comment": "Toast body after attaching a field to a type; arguments are the field label then the type label",
+    "subjectFields.table.emptySearchTitleQuery": {
+      "comment": "Empty table title when search matches nothing; argument is the query",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ is now suggested for %2$@."
+            "value": "No property matches “%@”"
           }
         }
       }
     },
-    "sourceTypes.toast.assignedTitle": {
-      "comment": "Toast title after attaching a field to a type",
+    "subjectFields.table.originSeeded": {
+      "comment": "Table origin column for Provenencia-seeded properties",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Field assigned"
+            "value": "seeded"
           }
         }
       }
     },
-    "sourceTypes.toast.deletedBody": {
-      "comment": "Toast body after a source type is deleted; argument is the type label",
+    "subjectFields.table.originUser": {
+      "comment": "Table origin column for researcher-created properties",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ is no longer in this project’s vocabulary. Its field suggestions went with it; the fields did not."
+            "value": "user"
           }
         }
       }
     },
-    "sourceTypes.toast.deletedTitle": {
-      "comment": "Toast title after a source type is deleted",
+    "subjectFields.table.rowBoundAnnouncement": {
+      "comment": "VoiceOver fragment for how many types a property is bound to",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Type deleted"
+            "value": "bound to %lld types"
           }
         }
       }
     },
-    "sourceTypes.toast.removedBodyNoValues": {
-      "comment": "Toast body after detaching a field no source carries a value for; arguments are the field label then the type label",
+    "subjectFields.toast.createdBody": {
+      "comment": "Success toast body after creating a property; argument is label",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ is no longer suggested for %2$@. The field stays in this project’s vocabulary."
+            "value": "%@ is ready to bind."
           }
         }
       }
     },
-    "sourceTypes.toast.removedBodyWithValues": {
-      "comment": "Toast body after detaching a field sources still carry values for; arguments are the field label, the type label, then how many sources hold a value",
+    "subjectFields.toast.createdTitle": {
+      "comment": "Success toast title after creating a property",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ is no longer suggested for %2$@. The field stays in this project’s vocabulary, and the %3$lld sources already carrying a value keep it."
+            "value": "Property created"
           }
         }
       }
     },
-    "sourceTypes.toast.removedTitle": {
-      "comment": "Toast title after detaching a field from a type",
+    "subjectFields.toast.deletedBody": {
+      "comment": "Success toast body after deleting a property; argument is label",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Suggestion removed"
+            "value": "%@ was removed from this project."
           }
         }
       }
     },
-    "sourceTypes.toast.updatedBody": {
-      "comment": "Success toast body after editing a Source type; arguments are label then key",
+    "subjectFields.toast.deletedTitle": {
+      "comment": "Success toast title after deleting a property",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ — the key stays %2$@."
+            "value": "Property deleted"
           }
         }
       }
     },
-    "sourceTypes.toast.updatedTitle": {
-      "comment": "Success toast title after editing a Source type",
+    "subjectFields.toolbar.addPropertyEmpty": {
+      "comment": "ComboBox empty state when binding an existing property to the focused type",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Type updated"
+            "value": "No unbound property matches that name"
+          }
+        }
+      }
+    },
+    "subjectFields.toolbar.addPropertyPlaceholder": {
+      "comment": "ComboBox placeholder when a subject type is focused; argument is type label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add a property to %@"
+          }
+        }
+      }
+    },
+    "subjectFields.toolbar.newProperty": {
+      "comment": "Toolbar button to open create Property sheet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New property"
+          }
+        }
+      }
+    },
+    "subjectFields.valueType.date": {
+      "comment": "Property value type label: date",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date"
+          }
+        }
+      }
+    },
+    "subjectFields.valueType.integer": {
+      "comment": "Property value type label: integer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Integer"
+          }
+        }
+      }
+    },
+    "subjectFields.valueType.name": {
+      "comment": "Property value type label: name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name"
+          }
+        }
+      }
+    },
+    "subjectFields.valueType.subject": {
+      "comment": "Property value type label: subject",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subject"
+          }
+        }
+      }
+    },
+    "subjectFields.valueType.term": {
+      "comment": "Property value type label: term (registry-only)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Term"
+          }
+        }
+      }
+    },
+    "subjectFields.valueType.text": {
+      "comment": "Property value type label: text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text"
           }
         }
       }
@@ -7225,18 +8178,6 @@
         }
       }
     },
-    "workspace.section.sources.title": {
-      "comment": "Workspace sidebar destination and page title: Sources",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sources"
-          }
-        }
-      }
-    },
     "workspace.section.sourceTypes.title": {
       "comment": "Workspace sidebar destination and page title: Source types",
       "extractionState": "manual",
@@ -7245,6 +8186,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Source types"
+          }
+        }
+      }
+    },
+    "workspace.section.sources.title": {
+      "comment": "Workspace sidebar destination and page title: Sources",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sources"
           }
         }
       }
@@ -7305,882 +8258,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Interpret subjects on this source — canvas coming soon."
-          }
-        }
-      }
-    },
-    "subjectFields.list.description": {
-      "comment": "Explanatory copy under the Subject fields page title",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The properties a subject can carry, and which of the seven subject types carry them."
-          }
-        }
-      }
-    },
-    "subjectFields.strip.all": {
-      "comment": "Type strip card that clears the subject-type filter",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "All properties"
-          }
-        }
-      }
-    },
-    "subjectFields.strip.fieldCount": {
-      "comment": "Type strip count under a subject type; argument is binding count",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld fields"
-          }
-        }
-      }
-    },
-    "subjectFields.search.placeholder": {
-      "comment": "Search field placeholder on Subject fields",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Search properties"
-          }
-        }
-      }
-    },
-    "subjectFields.valueType.text": {
-      "comment": "Property value type label: text",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Text"
-          }
-        }
-      }
-    },
-    "subjectFields.valueType.integer": {
-      "comment": "Property value type label: integer",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Integer"
-          }
-        }
-      }
-    },
-    "subjectFields.valueType.date": {
-      "comment": "Property value type label: date",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Date"
-          }
-        }
-      }
-    },
-    "subjectFields.valueType.name": {
-      "comment": "Property value type label: name",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Name"
-          }
-        }
-      }
-    },
-    "subjectFields.valueType.subject": {
-      "comment": "Property value type label: subject",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Subject"
-          }
-        }
-      }
-    },
-    "subjectFields.valueType.term": {
-      "comment": "Property value type label: term (registry-only)",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Term"
-          }
-        }
-      }
-    },
-    "subjectFields.table.columnProperty": {
-      "comment": "Subject fields table column: property label",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Property"
-          }
-        }
-      }
-    },
-    "subjectFields.table.columnValueType": {
-      "comment": "Subject fields table column: value type",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Value type"
-          }
-        }
-      }
-    },
-    "subjectFields.table.columnOrigin": {
-      "comment": "Subject fields table column: origin",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Origin"
-          }
-        }
-      }
-    },
-    "subjectFields.table.columnBoundTo": {
-      "comment": "Subject fields table column: bound subject types",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bound to"
-          }
-        }
-      }
-    },
-    "subjectFields.table.emptySearch": {
-      "comment": "Empty state when search/filter matches no properties",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Clear the search, or create it as a user property"
-          }
-        }
-      }
-    },
-    "subjectFields.toolbar.newProperty": {
-      "comment": "Toolbar button to open create Property sheet",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "New property"
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.empty": {
-      "comment": "Inspector empty state",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Select a property to see its description and bindings."
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.bindings": {
-      "comment": "Inspector section label for bindings list",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bound to"
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.termNote": {
-      "comment": "Inspector note for term-typed seeded properties",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Values come from the product vocabulary. You choose one when citing this property."
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.delete": {
-      "comment": "Delete button in property inspector",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete property"
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.deleteInUse": {
-      "comment": "Why delete is disabled when usedBy > 0",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This property is still bound to one or more subject types."
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.deleteSeeded": {
-      "comment": "Why delete is disabled for provenencia-origin properties",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seeded properties cannot be deleted."
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.lockedBinding": {
-      "comment": "Callout when activating a locked binding; argument is subject type label",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The Interpretation subject registry requires this property on %@. The binding cannot be removed."
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.bindingLocked": {
-      "comment": "Accessibility / badge for a locked subject-type binding",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Locked"
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.bindingBound": {
-      "comment": "Accessibility label for an active unbound-able binding",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bound"
-          }
-        }
-      }
-    },
-    "subjectFields.create.title": {
-      "comment": "Create property sheet title",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "New property"
-          }
-        }
-      }
-    },
-    "subjectFields.create.label": {
-      "comment": "Create property form: label field",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Label"
-          }
-        }
-      }
-    },
-    "subjectFields.create.labelHint": {
-      "comment": "Hint under create property label",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "What a researcher sees on the subject"
-          }
-        }
-      }
-    },
-    "subjectFields.create.valueType": {
-      "comment": "Create property form: value type picker",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Value type"
-          }
-        }
-      }
-    },
-    "subjectFields.create.description": {
-      "comment": "Create property form: description",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Description"
-          }
-        }
-      }
-    },
-    "subjectFields.create.cancel": {
-      "comment": "Create property sheet cancel",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cancel"
-          }
-        }
-      }
-    },
-    "subjectFields.create.submit": {
-      "comment": "Create property sheet primary action",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Create property"
-          }
-        }
-      }
-    },
-    "subjectFields.create.errorLabelRequired": {
-      "comment": "Validation when create label is empty",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enter a label for this property."
-          }
-        }
-      }
-    },
-    "subjectFields.create.errorValueType": {
-      "comment": "Validation when create value type is invalid",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choose a researcher value type. Term properties are product vocabulary only."
-          }
-        }
-      }
-    },
-    "subjectFields.toast.createdTitle": {
-      "comment": "Success toast title after creating a property",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Property created"
-          }
-        }
-      }
-    },
-    "subjectFields.toast.createdBody": {
-      "comment": "Success toast body after creating a property; argument is label",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ is ready to bind."
-          }
-        }
-      }
-    },
-    "subjectFields.toast.deletedTitle": {
-      "comment": "Success toast title after deleting a property",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Property deleted"
-          }
-        }
-      }
-    },
-    "subjectFields.toast.deletedBody": {
-      "comment": "Success toast body after deleting a property; argument is label",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ was removed from this project."
-          }
-        }
-      }
-    },
-    "subjectFields.delete.confirmTitle": {
-      "comment": "Confirm sheet title for deleting a user property",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete this property?"
-          }
-        }
-      }
-    },
-    "subjectFields.delete.confirmMessage": {
-      "comment": "Confirm sheet message for deleting a user property",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This removes the property definition. It cannot be undone."
-          }
-        }
-      }
-    },
-    "subjectFields.delete.keep": {
-      "comment": "Confirm sheet cancel for delete property",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keep"
-          }
-        }
-      }
-    },
-    "subjectFields.strip.bridge": {
-      "comment": "Micro-label on bridge subject-type strip cards; rendered uppercase (BRIDGE)",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "bridge"
-          }
-        }
-      }
-    },
-    "subjectFields.strip.accessibility": {
-      "comment": "Accessibility label for the type strip pressed-button group",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Subject types"
-          }
-        }
-      }
-    },
-    "subjectFields.table.originUser": {
-      "comment": "Table origin column for researcher-created properties",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "user"
-          }
-        }
-      }
-    },
-    "subjectFields.table.columnOn": {
-      "comment": "Subject fields table column: binding toggle for the focused type",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "On"
-          }
-        }
-      }
-    },
-    "subjectFields.table.boundOverflow": {
-      "comment": "Overflow when more than three Bound-to chips; argument is remaining count",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "+%lld"
-          }
-        }
-      }
-    },
-    "subjectFields.table.rowBoundAnnouncement": {
-      "comment": "VoiceOver fragment for how many types a property is bound to",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "bound to %lld types"
-          }
-        }
-      }
-    },
-    "subjectFields.table.emptySearchTitle": {
-      "comment": "Empty table title when no properties are visible",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No properties match"
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.valueType": {
-      "comment": "Inspector meta label: value type",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Value type"
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.origin": {
-      "comment": "Inspector meta label: origin",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Origin"
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.valuesRecorded": {
-      "comment": "Inspector meta label: use / binding count from engine",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Values recorded"
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.valuesRecordedCount": {
-      "comment": "Inspector values-recorded count",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld"
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.bindCount": {
-      "comment": "Inspector bound-type count beside Bound to; bound, then total types",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld of %lld"
-          }
-        }
-      }
-    },
-    "subjectFields.create.originNote": {
-      "comment": "Create property sheet note about origin",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Origin is recorded as user — seeded properties come from Provenencia"
-          }
-        }
-      }
-    },
-    "subjectFields.create.bindSection": {
-      "comment": "Create property sheet: bind checklist section",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bind to subject types"
-          }
-        }
-      }
-    },
-    "subjectFields.table.originSeeded": {
-      "comment": "Table origin column for Provenencia-seeded properties",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "seeded"
-          }
-        }
-      }
-    },
-    "subjectFields.table.emptySearchTitleQuery": {
-      "comment": "Empty table title when search matches nothing; argument is the query",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No property matches “%@”"
-          }
-        }
-      }
-    },
-    "subjectFields.toolbar.addPropertyPlaceholder": {
-      "comment": "ComboBox placeholder when a subject type is focused; argument is type label",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add a property to %@"
-          }
-        }
-      }
-    },
-    "subjectFields.toolbar.addPropertyEmpty": {
-      "comment": "ComboBox empty state when binding an existing property to the focused type",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No unbound property matches that name"
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.accessibility": {
-      "comment": "Accessibility label for the property inspector card",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Property inspector"
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.valueTypeImmutable": {
-      "comment": "Accessibility label for the lock beside value type in the inspector",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Immutable after create"
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.originUser": {
-      "comment": "Inspector origin line for researcher-created properties",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "User — you created this"
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.originSeeded": {
-      "comment": "Inspector origin line for product-seeded properties",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seeded by Provenencia"
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.bindingsAccessibility": {
-      "comment": "Accessibility label for the Bound-to checkbox list",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Subject type bindings"
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.deleteUnused": {
-      "comment": "Inspector note when a user property can be deleted",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not in use. Deleting removes it from every type it is bound to."
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.bindingNotBound": {
-      "comment": "Accessibility label for an inactive binding checkbox",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "not bound"
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.bindingRegistry": {
-      "comment": "Micro-label beside a locked Bound-to row (registry-held)",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "registry"
-          }
-        }
-      }
-    },
-    "subjectFields.create.labelPlaceholder": {
-      "comment": "Placeholder for create property label field",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Burial ground"
-          }
-        }
-      }
-    },
-    "subjectFields.create.key": {
-      "comment": "Create property form: machine key field",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Key"
-          }
-        }
-      }
-    },
-    "subjectFields.create.keyHint": {
-      "comment": "Hint under create property key; key is minted server-side from label",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Generated from the label"
-          }
-        }
-      }
-    },
-    "subjectFields.create.keyPlaceholder": {
-      "comment": "Placeholder for create property key preview",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "burial-ground"
-          }
-        }
-      }
-    },
-    "subjectFields.create.valueTypeHint": {
-      "comment": "Hint under create property value type chips",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cannot be changed once the property exists"
-          }
-        }
-      }
-    },
-    "subjectFields.create.descriptionPlaceholder": {
-      "comment": "Placeholder for create property description",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "How the value should be read from the record"
           }
         }
       }

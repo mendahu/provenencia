@@ -68,361 +68,390 @@ enum L10n {
             comment: "Accessibility label for a PVThumbnail in the loading state"
         )
 
-        static let evidenceIconFilePDF = LocalizedStringResource(
-            "designSystem.evidenceIcon.filePdf",
+        static let markFilePDF = LocalizedStringResource(
+            "designSystem.mark.filePdf",
             defaultValue: "PDF file",
             comment: "Accessibility name for the file_pdf evidence glyph"
         )
-        static let evidenceIconFileDoc = LocalizedStringResource(
-            "designSystem.evidenceIcon.fileDoc",
+        static let markFileDoc = LocalizedStringResource(
+            "designSystem.mark.fileDoc",
             defaultValue: "Word-processed file",
             comment: "Accessibility name for the file_doc evidence glyph"
         )
-        static let evidenceIconFileTxt = LocalizedStringResource(
-            "designSystem.evidenceIcon.fileTxt",
+        static let markFileTxt = LocalizedStringResource(
+            "designSystem.mark.fileTxt",
             defaultValue: "Plain text file",
             comment: "Accessibility name for the file_txt evidence glyph"
         )
-        static let evidenceIconFileSheet = LocalizedStringResource(
-            "designSystem.evidenceIcon.fileSheet",
+        static let markFileSheet = LocalizedStringResource(
+            "designSystem.mark.fileSheet",
             defaultValue: "Spreadsheet file",
             comment: "Accessibility name for the file_sheet evidence glyph"
         )
-        static let evidenceIconFileSlides = LocalizedStringResource(
-            "designSystem.evidenceIcon.fileSlides",
+        static let markFileSlides = LocalizedStringResource(
+            "designSystem.mark.fileSlides",
             defaultValue: "Presentation file",
             comment: "Accessibility name for the file_slides evidence glyph"
         )
-        static let evidenceIconFileVideo = LocalizedStringResource(
-            "designSystem.evidenceIcon.fileVideo",
+        static let markFileVideo = LocalizedStringResource(
+            "designSystem.mark.fileVideo",
             defaultValue: "Video file",
             comment: "Accessibility name for the file_video evidence glyph"
         )
-        static let evidenceIconFileAudio = LocalizedStringResource(
-            "designSystem.evidenceIcon.fileAudio",
+        static let markFileAudio = LocalizedStringResource(
+            "designSystem.mark.fileAudio",
             defaultValue: "Audio file",
             comment: "Accessibility name for the file_audio evidence glyph"
         )
-        static let evidenceIconFileImageMissing = LocalizedStringResource(
-            "designSystem.evidenceIcon.fileImageMissing",
+        static let markFileImageMissing = LocalizedStringResource(
+            "designSystem.mark.fileImageMissing",
             defaultValue: "Image file, preview unavailable",
             comment: "Accessibility name for the file_image_missing evidence glyph"
         )
-        static let evidenceIconFileGeneric = LocalizedStringResource(
-            "designSystem.evidenceIcon.fileGeneric",
+        static let markFileGeneric = LocalizedStringResource(
+            "designSystem.mark.fileGeneric",
             defaultValue: "File of unknown type",
             comment: "Accessibility name for the file_generic evidence glyph"
         )
-        static let evidenceIconTypeCertificate = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeCertificate",
+        static let markTypeCertificate = LocalizedStringResource(
+            "designSystem.mark.typeCertificate",
             defaultValue: "Certificate source type",
             comment: "Accessibility name for the type_certificate evidence glyph"
         )
-        static let evidenceIconTypeBook = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeBook",
+        static let markTypeBook = LocalizedStringResource(
+            "designSystem.mark.typeBook",
             defaultValue: "Book source type",
             comment: "Accessibility name for the type_book evidence glyph"
         )
-        static let evidenceIconTypeDocument = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeDocument",
+        static let markTypeDocument = LocalizedStringResource(
+            "designSystem.mark.typeDocument",
             defaultValue: "Document source type",
             comment: "Accessibility name for the type_document evidence glyph"
         )
-        static let evidenceIconTypeScroll = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeScroll",
+        static let markTypeScroll = LocalizedStringResource(
+            "designSystem.mark.typeScroll",
             defaultValue: "Register source type",
             comment: "Accessibility name for the type_scroll evidence glyph"
         )
-        static let evidenceIconTypePhotograph = LocalizedStringResource(
-            "designSystem.evidenceIcon.typePhotograph",
+        static let markTypePhotograph = LocalizedStringResource(
+            "designSystem.mark.typePhotograph",
             defaultValue: "Photograph source type",
             comment: "Accessibility name for the type_photograph evidence glyph"
         )
-        static let evidenceIconTypeNewspaper = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeNewspaper",
+        static let markTypeNewspaper = LocalizedStringResource(
+            "designSystem.mark.typeNewspaper",
             defaultValue: "Newspaper source type",
             comment: "Accessibility name for the type_newspaper evidence glyph"
         )
-        static let evidenceIconTypeMap = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeMap",
+        static let markTypeMap = LocalizedStringResource(
+            "designSystem.mark.typeMap",
             defaultValue: "Map source type",
             comment: "Accessibility name for the type_map evidence glyph"
         )
-        static let evidenceIconTypeMicrofilm = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeMicrofilm",
+        static let markTypeMicrofilm = LocalizedStringResource(
+            "designSystem.mark.typeMicrofilm",
             defaultValue: "Microfilm source type",
             comment: "Accessibility name for the type_microfilm evidence glyph"
         )
-        static let evidenceIconTypeCassette = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeCassette",
+        static let markTypeCassette = LocalizedStringResource(
+            "designSystem.mark.typeCassette",
             defaultValue: "Magnetic tape source type",
             comment: "Accessibility name for the type_cassette evidence glyph"
         )
-        static let evidenceIconTypeOralHistory = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeOralHistory",
+        static let markTypeOralHistory = LocalizedStringResource(
+            "designSystem.mark.typeOralHistory",
             defaultValue: "Oral history source type",
             comment: "Accessibility name for the type_oral_history evidence glyph"
         )
-        static let evidenceIconTypeVideo = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeVideo",
+        static let markTypeVideo = LocalizedStringResource(
+            "designSystem.mark.typeVideo",
             defaultValue: "Moving image source type",
             comment: "Accessibility name for the type_video evidence glyph"
         )
-        static let evidenceIconTypeWebsite = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeWebsite",
+        static let markTypeWebsite = LocalizedStringResource(
+            "designSystem.mark.typeWebsite",
             defaultValue: "Website source type",
             comment: "Accessibility name for the type_website evidence glyph"
         )
-        static let evidenceIconTypeCensus = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeCensus",
+        static let markTypeCensus = LocalizedStringResource(
+            "designSystem.mark.typeCensus",
             defaultValue: "Census source type",
             comment: "Accessibility name for the type_census evidence glyph"
         )
-        static let evidenceIconTypeDNA = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeDna",
+        static let markTypeDNA = LocalizedStringResource(
+            "designSystem.mark.typeDna",
             defaultValue: "DNA match source type",
             comment: "Accessibility name for the type_dna evidence glyph"
         )
-        static let evidenceIconTypeGEDCOM = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeGedcom",
+        static let markTypeGEDCOM = LocalizedStringResource(
+            "designSystem.mark.typeGedcom",
             defaultValue: "GEDCOM source type",
             comment: "Accessibility name for the type_gedcom evidence glyph"
         )
-        static let evidenceIconTypeGrave = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeGrave",
+        static let markTypeGrave = LocalizedStringResource(
+            "designSystem.mark.typeGrave",
             defaultValue: "Memorial source type",
             comment: "Accessibility name for the type_grave evidence glyph"
         )
-        static let evidenceIconTypeScrapbook = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeScrapbook",
+        static let markTypeScrapbook = LocalizedStringResource(
+            "designSystem.mark.typeScrapbook",
             defaultValue: "Scrapbook source type",
             comment: "Accessibility name for the type_scrapbook evidence glyph"
         )
-        static let evidenceIconTypeEvidence = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeEvidence",
+        static let markTypeEvidence = LocalizedStringResource(
+            "designSystem.mark.typeEvidence",
             defaultValue: "Evidence source type",
             comment: "Accessibility name for the type_evidence evidence glyph"
         )
-        static let evidenceIconTypeFolderArchive = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeFolderArchive",
+        static let markTypeFolderArchive = LocalizedStringResource(
+            "designSystem.mark.typeFolderArchive",
             defaultValue: "Archival container source type",
             comment: "Accessibility name for the type_folder_archive evidence glyph"
         )
-        static let evidenceIconTypeEmail = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeEmail",
+        static let markTypeEmail = LocalizedStringResource(
+            "designSystem.mark.typeEmail",
             defaultValue: "Correspondence source type",
             comment: "Accessibility name for the type_email evidence glyph"
         )
-        static let evidenceIconTypePostcard = LocalizedStringResource(
-            "designSystem.evidenceIcon.typePostcard",
+        static let markTypePostcard = LocalizedStringResource(
+            "designSystem.mark.typePostcard",
             defaultValue: "Postcard source type",
             comment: "Accessibility name for the type_postcard evidence glyph"
         )
-        static let evidenceIconTypePassport = LocalizedStringResource(
-            "designSystem.evidenceIcon.typePassport",
+        static let markTypePassport = LocalizedStringResource(
+            "designSystem.mark.typePassport",
             defaultValue: "Passport source type",
             comment: "Accessibility name for the type_passport evidence glyph"
         )
 
         // Short titles for the Source-type icon picker (design pack names).
-        static let evidenceIconTypeCertificateTitle = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeCertificate.title", defaultValue: "Certificate",
+        static let markTypeCertificateTitle = LocalizedStringResource(
+            "designSystem.mark.typeCertificate.title", defaultValue: "Certificate",
             comment: "Short title for type_certificate in the icon picker"
         )
-        static let evidenceIconTypeBookTitle = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeBook.title", defaultValue: "Book",
+        static let markTypeBookTitle = LocalizedStringResource(
+            "designSystem.mark.typeBook.title", defaultValue: "Book",
             comment: "Short title for type_book in the icon picker"
         )
-        static let evidenceIconTypeDocumentTitle = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeDocument.title", defaultValue: "Document",
+        static let markTypeDocumentTitle = LocalizedStringResource(
+            "designSystem.mark.typeDocument.title", defaultValue: "Document",
             comment: "Short title for type_document in the icon picker"
         )
-        static let evidenceIconTypeScrollTitle = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeScroll.title", defaultValue: "Register",
+        static let markTypeScrollTitle = LocalizedStringResource(
+            "designSystem.mark.typeScroll.title", defaultValue: "Register",
             comment: "Short title for type_scroll in the icon picker"
         )
-        static let evidenceIconTypePhotographTitle = LocalizedStringResource(
-            "designSystem.evidenceIcon.typePhotograph.title", defaultValue: "Photograph",
+        static let markTypePhotographTitle = LocalizedStringResource(
+            "designSystem.mark.typePhotograph.title", defaultValue: "Photograph",
             comment: "Short title for type_photograph in the icon picker"
         )
-        static let evidenceIconTypeNewspaperTitle = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeNewspaper.title", defaultValue: "Newspaper",
+        static let markTypeNewspaperTitle = LocalizedStringResource(
+            "designSystem.mark.typeNewspaper.title", defaultValue: "Newspaper",
             comment: "Short title for type_newspaper in the icon picker"
         )
-        static let evidenceIconTypeMapTitle = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeMap.title", defaultValue: "Map",
+        static let markTypeMapTitle = LocalizedStringResource(
+            "designSystem.mark.typeMap.title", defaultValue: "Map",
             comment: "Short title for type_map in the icon picker"
         )
-        static let evidenceIconTypeMicrofilmTitle = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeMicrofilm.title", defaultValue: "Microfilm",
+        static let markTypeMicrofilmTitle = LocalizedStringResource(
+            "designSystem.mark.typeMicrofilm.title", defaultValue: "Microfilm",
             comment: "Short title for type_microfilm in the icon picker"
         )
-        static let evidenceIconTypeCassetteTitle = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeCassette.title", defaultValue: "Magnetic tape",
+        static let markTypeCassetteTitle = LocalizedStringResource(
+            "designSystem.mark.typeCassette.title", defaultValue: "Magnetic tape",
             comment: "Short title for type_cassette in the icon picker"
         )
-        static let evidenceIconTypeOralHistoryTitle = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeOralHistory.title", defaultValue: "Oral history",
+        static let markTypeOralHistoryTitle = LocalizedStringResource(
+            "designSystem.mark.typeOralHistory.title", defaultValue: "Oral history",
             comment: "Short title for type_oral_history in the icon picker"
         )
-        static let evidenceIconTypeVideoTitle = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeVideo.title", defaultValue: "Moving image",
+        static let markTypeVideoTitle = LocalizedStringResource(
+            "designSystem.mark.typeVideo.title", defaultValue: "Moving image",
             comment: "Short title for type_video in the icon picker"
         )
-        static let evidenceIconTypeWebsiteTitle = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeWebsite.title", defaultValue: "Website",
+        static let markTypeWebsiteTitle = LocalizedStringResource(
+            "designSystem.mark.typeWebsite.title", defaultValue: "Website",
             comment: "Short title for type_website in the icon picker"
         )
-        static let evidenceIconTypeCensusTitle = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeCensus.title", defaultValue: "Census",
+        static let markTypeCensusTitle = LocalizedStringResource(
+            "designSystem.mark.typeCensus.title", defaultValue: "Census",
             comment: "Short title for type_census in the icon picker"
         )
-        static let evidenceIconTypeDNATitle = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeDNA.title", defaultValue: "DNA match",
+        static let markTypeDNATitle = LocalizedStringResource(
+            "designSystem.mark.typeDNA.title", defaultValue: "DNA match",
             comment: "Short title for type_dna in the icon picker"
         )
-        static let evidenceIconTypeGEDCOMTitle = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeGEDCOM.title", defaultValue: "GEDCOM",
+        static let markTypeGEDCOMTitle = LocalizedStringResource(
+            "designSystem.mark.typeGEDCOM.title", defaultValue: "GEDCOM",
             comment: "Short title for type_gedcom in the icon picker"
         )
-        static let evidenceIconTypeGraveTitle = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeGrave.title", defaultValue: "Memorial",
+        static let markTypeGraveTitle = LocalizedStringResource(
+            "designSystem.mark.typeGrave.title", defaultValue: "Memorial",
             comment: "Short title for type_grave in the icon picker"
         )
-        static let evidenceIconTypeScrapbookTitle = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeScrapbook.title", defaultValue: "Scrapbook",
+        static let markTypeScrapbookTitle = LocalizedStringResource(
+            "designSystem.mark.typeScrapbook.title", defaultValue: "Scrapbook",
             comment: "Short title for type_scrapbook in the icon picker"
         )
-        static let evidenceIconTypeEvidenceTitle = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeEvidence.title", defaultValue: "Evidence",
+        static let markTypeEvidenceTitle = LocalizedStringResource(
+            "designSystem.mark.typeEvidence.title", defaultValue: "Evidence",
             comment: "Short title for type_evidence in the icon picker"
         )
-        static let evidenceIconTypeFolderArchiveTitle = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeFolderArchive.title", defaultValue: "Archival container",
+        static let markTypeFolderArchiveTitle = LocalizedStringResource(
+            "designSystem.mark.typeFolderArchive.title", defaultValue: "Archival container",
             comment: "Short title for type_folder_archive in the icon picker"
         )
-        static let evidenceIconTypeEmailTitle = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeEmail.title", defaultValue: "Correspondence",
+        static let markTypeEmailTitle = LocalizedStringResource(
+            "designSystem.mark.typeEmail.title", defaultValue: "Correspondence",
             comment: "Short title for type_email in the icon picker"
         )
-        static let evidenceIconTypePostcardTitle = LocalizedStringResource(
-            "designSystem.evidenceIcon.typePostcard.title", defaultValue: "Postcard",
+        static let markTypePostcardTitle = LocalizedStringResource(
+            "designSystem.mark.typePostcard.title", defaultValue: "Postcard",
             comment: "Short title for type_postcard in the icon picker"
         )
-        static let evidenceIconTypePassportTitle = LocalizedStringResource(
-            "designSystem.evidenceIcon.typePassport.title", defaultValue: "Passport",
+        static let markTypePassportTitle = LocalizedStringResource(
+            "designSystem.mark.typePassport.title", defaultValue: "Passport",
             comment: "Short title for type_passport in the icon picker"
         )
 
-        static let evidenceIconTypeCertificateMetaphor = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeCertificate.metaphor",
+        static let markTypeCertificateMetaphor = LocalizedStringResource(
+            "designSystem.mark.typeCertificate.metaphor",
             defaultValue: "Ruled formal record under an impressed seal",
             comment: "Metaphor for type_certificate in the icon picker footer"
         )
-        static let evidenceIconTypeBookMetaphor = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeBook.metaphor",
+        static let markTypeBookMetaphor = LocalizedStringResource(
+            "designSystem.mark.typeBook.metaphor",
             defaultValue: "Bound volume seen spine-on",
             comment: "Metaphor for type_book in the icon picker footer"
         )
-        static let evidenceIconTypeDocumentMetaphor = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeDocument.metaphor",
+        static let markTypeDocumentMetaphor = LocalizedStringResource(
+            "designSystem.mark.typeDocument.metaphor",
             defaultValue: "Loose sheet with a turned corner — a letter, a note, a form",
             comment: "Metaphor for type_document in the icon picker footer"
         )
-        static let evidenceIconTypeScrollMetaphor = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeScroll.metaphor",
+        static let markTypeScrollMetaphor = LocalizedStringResource(
+            "designSystem.mark.typeScroll.metaphor",
             defaultValue: "Parchment rolled at both ends — parish register, roll, cartulary",
             comment: "Metaphor for type_scroll in the icon picker footer"
         )
-        static let evidenceIconTypePhotographMetaphor = LocalizedStringResource(
-            "designSystem.evidenceIcon.typePhotograph.metaphor",
+        static let markTypePhotographMetaphor = LocalizedStringResource(
+            "designSystem.mark.typePhotograph.metaphor",
             defaultValue: "A print with its white margin below the image",
             comment: "Metaphor for type_photograph in the icon picker footer"
         )
-        static let evidenceIconTypeNewspaperMetaphor = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeNewspaper.metaphor",
+        static let markTypeNewspaperMetaphor = LocalizedStringResource(
+            "designSystem.mark.typeNewspaper.metaphor",
             defaultValue: "Masthead over a photo block and columns",
             comment: "Metaphor for type_newspaper in the icon picker footer"
         )
-        static let evidenceIconTypeMapMetaphor = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeMap.metaphor",
+        static let markTypeMapMetaphor = LocalizedStringResource(
+            "designSystem.mark.typeMap.metaphor",
             defaultValue: "Sheet folded into panels",
             comment: "Metaphor for type_map in the icon picker footer"
         )
-        static let evidenceIconTypeMicrofilmMetaphor = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeMicrofilm.metaphor",
+        static let markTypeMicrofilmMetaphor = LocalizedStringResource(
+            "designSystem.mark.typeMicrofilm.metaphor",
             defaultValue: "Reel on its hub — film or fiche as delivered by an archive",
             comment: "Metaphor for type_microfilm in the icon picker footer"
         )
-        static let evidenceIconTypeCassetteMetaphor = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeCassette.metaphor",
+        static let markTypeCassetteMetaphor = LocalizedStringResource(
+            "designSystem.mark.typeCassette.metaphor",
             defaultValue: "Shell with two hubs — the physical medium, not the recording",
             comment: "Metaphor for type_cassette in the icon picker footer"
         )
-        static let evidenceIconTypeOralHistoryMetaphor = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeOralHistory.metaphor",
+        static let markTypeOralHistoryMetaphor = LocalizedStringResource(
+            "designSystem.mark.typeOralHistory.metaphor",
             defaultValue: "A person speaking outward — testimony, not equipment",
             comment: "Metaphor for type_oral_history in the icon picker footer"
         )
-        static let evidenceIconTypeVideoMetaphor = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeVideo.metaphor",
+        static let markTypeVideoMetaphor = LocalizedStringResource(
+            "designSystem.mark.typeVideo.metaphor",
             defaultValue: "Sprocketed strip with a frame to play",
             comment: "Metaphor for type_video in the icon picker footer"
         )
-        static let evidenceIconTypeWebsiteMetaphor = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeWebsite.metaphor",
+        static let markTypeWebsiteMetaphor = LocalizedStringResource(
+            "designSystem.mark.typeWebsite.metaphor",
             defaultValue: "Captured page — window chrome around a globe",
             comment: "Metaphor for type_website in the icon picker footer"
         )
-        static let evidenceIconTypeCensusMetaphor = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeCensus.metaphor",
+        static let markTypeCensusMetaphor = LocalizedStringResource(
+            "designSystem.mark.typeCensus.metaphor",
             defaultValue: "Enumeration schedule — ruled both ways, no prose",
             comment: "Metaphor for type_census in the icon picker footer"
         )
-        static let evidenceIconTypeDNAMetaphor = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeDNA.metaphor",
+        static let markTypeDNAMetaphor = LocalizedStringResource(
+            "designSystem.mark.typeDNA.metaphor",
             defaultValue: "Two strands crossing on three rungs — scientific, not decorative",
             comment: "Metaphor for type_dna in the icon picker footer"
         )
-        static let evidenceIconTypeGEDCOMMetaphor = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeGEDCOM.metaphor",
+        static let markTypeGEDCOMMetaphor = LocalizedStringResource(
+            "designSystem.mark.typeGEDCOM.metaphor",
             defaultValue: "Structured genealogy data — a pedigree bracket inside a file",
             comment: "Metaphor for type_gedcom in the icon picker footer"
         )
-        static let evidenceIconTypeGraveMetaphor = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeGrave.metaphor",
+        static let markTypeGraveMetaphor = LocalizedStringResource(
+            "designSystem.mark.typeGrave.metaphor",
             defaultValue: "Inscribed stone on its plinth — a cemetery record",
             comment: "Metaphor for type_grave in the icon picker footer"
         )
-        static let evidenceIconTypeScrapbookMetaphor = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeScrapbook.metaphor",
+        static let markTypeScrapbookMetaphor = LocalizedStringResource(
+            "designSystem.mark.typeScrapbook.metaphor",
             defaultValue: "Album leaf with clippings pasted at an angle",
             comment: "Metaphor for type_scrapbook in the icon picker footer"
         )
-        static let evidenceIconTypeEvidenceMetaphor = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeEvidence.metaphor",
+        static let markTypeEvidenceMetaphor = LocalizedStringResource(
+            "designSystem.mark.typeEvidence.metaphor",
             defaultValue: "A catalogued tag — the fallback for any custom type",
             comment: "Metaphor for type_evidence in the icon picker footer"
         )
-        static let evidenceIconTypeFolderArchiveMetaphor = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeFolderArchive.metaphor",
+        static let markTypeFolderArchiveMetaphor = LocalizedStringResource(
+            "designSystem.mark.typeFolderArchive.metaphor",
             defaultValue: "Lidded box with a written label — a box, folder or bundle",
             comment: "Metaphor for type_folder_archive in the icon picker footer"
         )
-        static let evidenceIconTypeEmailMetaphor = LocalizedStringResource(
-            "designSystem.evidenceIcon.typeEmail.metaphor",
+        static let markTypeEmailMetaphor = LocalizedStringResource(
+            "designSystem.mark.typeEmail.metaphor",
             defaultValue: "Digital letter — correspondence that was never on paper",
             comment: "Metaphor for type_email in the icon picker footer"
         )
-        static let evidenceIconTypePostcardMetaphor = LocalizedStringResource(
-            "designSystem.evidenceIcon.typePostcard.metaphor",
+        static let markTypePostcardMetaphor = LocalizedStringResource(
+            "designSystem.mark.typePostcard.metaphor",
             defaultValue: "Divided back — message, stamp, address",
             comment: "Metaphor for type_postcard in the icon picker footer"
         )
-        static let evidenceIconTypePassportMetaphor = LocalizedStringResource(
-            "designSystem.evidenceIcon.typePassport.metaphor",
+        static let markTypePassportMetaphor = LocalizedStringResource(
+            "designSystem.mark.typePassport.metaphor",
             defaultValue: "Travel booklet — cover emblem over the title line",
             comment: "Metaphor for type_passport in the icon picker footer"
+        )
+
+        static let markSubjectPerson = LocalizedStringResource(
+            "designSystem.mark.subjectPerson",
+            defaultValue: "Person subject"
+        )
+        static let markSubjectEvent = LocalizedStringResource(
+            "designSystem.mark.subjectEvent",
+            defaultValue: "Event subject"
+        )
+        static let markSubjectPlace = LocalizedStringResource(
+            "designSystem.mark.subjectPlace",
+            defaultValue: "Place subject"
+        )
+        static let markSubjectRelationship = LocalizedStringResource(
+            "designSystem.mark.subjectRelationship",
+            defaultValue: "Relationship bridge"
+        )
+        static let markSubjectParticipation = LocalizedStringResource(
+            "designSystem.mark.subjectParticipation",
+            defaultValue: "Participation bridge"
+        )
+        static let markSubjectLocation = LocalizedStringResource(
+            "designSystem.mark.subjectLocation",
+            defaultValue: "Location bridge"
+        )
+        static let markSubjectSource = LocalizedStringResource(
+            "designSystem.mark.subjectSource",
+            defaultValue: "Source subject"
         )
     }
 

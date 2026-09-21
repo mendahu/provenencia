@@ -14,6 +14,8 @@ IDs stay stable (`S7-NN`, `S7-DN`). Do not renumber when moving steps here.
 | [S7-05](#s7-05--pr-subject-fields-ui) | PR | Subject fields destination: strip + table + inspector |
 | [S7-02](#s7-02--pr-namevalue-schema--go) | PR | `name_values` / `name_value_parts` + `namevalues` Insert/Lookup |
 | [S7-03](#s7-03--pr-citations--observations--locator) | PR | Citations + Observations + locator validate + FFI + graph `isCited` |
+| [S7-D6](#s7-d6--design-curated-marks) | Design | Marks pack brief; gates S7-12 |
+| [S7-12](#s7-12--pr-curated-marks-consolidation) | PR | `Recipes/Marks/` + asset pack; retire EvidenceIcon/SubjectIcon |
 
 ## Steps
 
@@ -126,4 +128,37 @@ CGO_ENABLED=1 go test -tags fts5 ./core/database/namevalues/... ./core/database/
 ```bash
 CGO_ENABLED=1 go test -tags fts5 ./core/locator/... ./core/database/citations/... ./core/database/observations/... ./core/database/... ./api/ffi/...
 python3 scripts/check-localizable-xcstrings.py
+```
+
+### S7-D6 — Design: Curated marks
+
+| | |
+| --- | --- |
+| **Kind** | Design (Claude Design handoff / Design System pack) |
+| **Depends on** | Shipped EvidenceIcon + SubjectIcon; Subject fields type strip (S7-05); S7-01 registry presentation |
+| **Deliverables** | Done. Brief + asset pack for unified **Marks** recipe: `file_*` / `type_*` / `subject_*` (seven kinds incl. **source** folio from Subject fields). Tint = template assets + call-site `.foregroundStyle`. UI building-block inventory (New/Extend Marks; Retire EvidenceIcon/SubjectIcon). Brief archived: [`design/archive/S7-D6-curated-marks.md`](design/archive/S7-D6-curated-marks.md). |
+| **Dogfood** | Design only — implements in **S7-12**. |
+| **Out** | Card / Add-property chrome (**S7-09**); researcher subject-icon picker; new metaphors beyond seven kinds. |
+
+**Landed:** contract for `Recipes/Marks/` consolidation before graph chrome thickens.
+
+### S7-12 — PR: Curated Marks consolidation
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | **S7-D6**; schedule after S7-03, before S7-09 |
+| **Deliverables** | Done. `DesignSystem/Recipes/Marks/` (`PVMark` / `PVMarkKey` / `PVMarkFamily` / `PVMarkSize` + `PVFileTypeGlyph`) with `Assets.xcassets/Marks/` (9 file + 22 type + 7 subject template SVGs). Colocated [`MARKS.md`](../../../macos/App/DesignSystem/Recipes/Marks/MARKS.md). All former `PVEvidenceIcon` / `PVSubjectIcon` call sites rewritten to `PVMark` (graph cards/palette/bridges, Subject fields strip, Sources/types/thumbs/omnibar). Registry `IconSymbol` → curated `subject_*` keys. L10n `designSystem.mark.*` (renamed from `evidenceIcon`). Retired `Recipes/EvidenceIcon/` + `Recipes/SubjectIcon/` + `EvidenceIcons` catalog. DesignSystem README + layers docs updated. |
+| **Tests** | Done. Go: `subjectvocab` IconSymbol assert; Swift: SourceTypes / PVFileTypeGlyph tests on `PVMarkKey`. |
+| **Dogfood** | Sources type icons still tint; Subject fields strip shows all seven kinds incl. source; Evidence graph cards/palette/bridges show subject marks at zoom; no Canvas leftover. |
+| **Out** | Card Add-property / cited-row UX (**S7-09**); Subject fields IA; researcher-editable subject icons; merging with SF Symbols `PVIcon`. |
+
+**Landed:** one asset-backed Marks pack for file, Source-type, and subject glyphs — clean cut, no shims.
+
+**Verify:**
+
+```bash
+CGO_ENABLED=1 go test -tags fts5 ./core/database/subjectvocab/... ./api/ffi/...
+python3 scripts/check-localizable-xcstrings.py
+rg -n 'PVEvidenceIcon|PVSubjectIcon|EvidenceIcons|evidenceIcon|Recipes/EvidenceIcon|Recipes/SubjectIcon' macos
 ```

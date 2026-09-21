@@ -5,28 +5,28 @@ import SwiftUI
 /// `PVThumbnail` extraction). Sources list rows use it now; Artifacts and
 /// Files reuse it later.
 ///
-/// States: **image**, **evidence glyph** (`file_*`), **SF glyph**, **empty**
-/// (em dash), **loading** (skeleton bar). A missing image is the empty
+/// States: **image**, **mark** (`file_*` / `type_*` / `subject_*`), **SF glyph**,
+/// **empty** (em dash), **loading** (skeleton bar). A missing image is the empty
 /// placeholder or a typed MIME stand-in — never an error UI.
 struct PVThumbnail: View {
     /// How a list row asks for a thumbnail — the list owns framing; the
     /// feature decides which state each row needs.
     struct Content {
         var image: Image?
-        var evidenceIcon: PVEvidenceIconKey?
+        var mark: PVMarkKey?
         var icon: PVSymbol?
         var loading: Bool
         var label: LocalizedStringResource?
 
         init(
             image: Image? = nil,
-            evidenceIcon: PVEvidenceIconKey? = nil,
+            mark: PVMarkKey? = nil,
             icon: PVSymbol? = nil,
             loading: Bool = false,
             label: LocalizedStringResource? = nil
         ) {
             self.image = image
-            self.evidenceIcon = evidenceIcon
+            self.mark = mark
             self.icon = icon
             self.loading = loading
             self.label = label
@@ -37,7 +37,7 @@ struct PVThumbnail: View {
 
     private enum State {
         case image
-        case evidenceGlyph
+        case markGlyph
         case glyph
         case empty
         case loading
@@ -60,13 +60,13 @@ struct PVThumbnail: View {
     private var state: State {
         if content.loading { return .loading }
         if content.image != nil { return .image }
-        if content.evidenceIcon != nil { return .evidenceGlyph }
+        if content.mark != nil { return .markGlyph }
         if content.icon != nil { return .glyph }
         return .empty
     }
 
     private var isFilled: Bool {
-        state == .image || state == .evidenceGlyph || state == .glyph
+        state == .image || state == .markGlyph || state == .glyph
     }
 
     var body: some View {
@@ -80,9 +80,9 @@ struct PVThumbnail: View {
                         .frame(width: size, height: size)
                         .clipped()
                 }
-            case .evidenceGlyph:
-                if let key = content.evidenceIcon {
-                    PVEvidenceIcon(key, size: size * 0.82, decorative: content.label == nil)
+            case .markGlyph:
+                if let key = content.mark {
+                    PVMark(key, size: size * 0.82, decorative: content.label == nil)
                         .foregroundStyle(PVColor.textSecondary)
                 }
             case .glyph:
@@ -119,12 +119,12 @@ struct PVThumbnail: View {
 
     private var accessibilityLabel: LocalizedStringResource {
         if let label = content.label { return label }
-        if let key = content.evidenceIcon, state == .evidenceGlyph {
+        if let key = content.mark, state == .markGlyph {
             return key.accessibilityName
         }
         switch state {
         case .loading: return L10n.DesignSystem.thumbnailLoading
-        case .empty, .glyph, .image, .evidenceGlyph: return L10n.DesignSystem.thumbnailEmpty
+        case .empty, .glyph, .image, .markGlyph: return L10n.DesignSystem.thumbnailEmpty
         }
     }
 }
@@ -133,7 +133,7 @@ struct PVThumbnail: View {
     HStack(spacing: PVSpacing.space6) {
         PVThumbnail(.empty)
         PVThumbnail(PVThumbnail.Content(icon: .photo))
-        PVThumbnail(PVThumbnail.Content(evidenceIcon: .filePDF))
+        PVThumbnail(PVThumbnail.Content(mark: .filePDF))
         PVThumbnail(PVThumbnail.Content(loading: true))
     }
     .padding(PVSpacing.space9)

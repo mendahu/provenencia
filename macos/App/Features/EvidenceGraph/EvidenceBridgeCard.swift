@@ -148,7 +148,7 @@ private struct EvidenceBridgeCardChrome: View {
                 .fill(PVColor.surfacePage)
             RoundedRectangle(cornerRadius: 4, style: .continuous)
                 .strokeBorder(PVColor.borderSubtle, lineWidth: 1)
-            PVSubjectIcon(kind: placed.kind.subjectIconKind, size: 12)
+            PVMark(placed.kind.markKey, size: 12)
                 .foregroundStyle(PVColor.textMuted)
         }
         .frame(width: 22, height: 22)

@@ -123,8 +123,8 @@ struct VocabularyPanelHeader: View {
                                 RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
                                     .stroke(PVColor.borderSubtle, lineWidth: 1)
                             )
-                        PVEvidenceIcon(
-                            PVEvidenceIconKey(catalogKey: iconKey),
+                        PVMark(
+                            PVMarkKey(catalogKey: iconKey),
                             size: 22,
                             decorative: true
                         )

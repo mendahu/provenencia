@@ -361,8 +361,8 @@ private struct SourcesListContent: View {
     private func sourceTypeComboRow(option: PVComboBoxOption, query: String) -> some View {
         HStack(spacing: PVSpacing.space3) {
             if let type = model.types.first(where: { $0.id == option.value }) {
-                PVEvidenceIcon(
-                    PVEvidenceIconKey(catalogKey: type.iconKey),
+                PVMark(
+                    PVMarkKey(catalogKey: type.iconKey),
                     size: .row,
                     decorative: true
                 )

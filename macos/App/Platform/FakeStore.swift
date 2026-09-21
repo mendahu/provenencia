@@ -620,7 +620,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             )
         }
         let resolvedIcon = iconKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            ? PVEvidenceIconKey.defaultTypeIcon.rawValue
+            ? PVMarkKey.defaultTypeMark.rawValue
             : iconKey
         let type = CatalogSourceType(
             id: UUID().uuidString.lowercased(),
@@ -652,7 +652,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         list[idx].label = label
         list[idx].description = description
         let trimmed = iconKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        list[idx].iconKey = trimmed.isEmpty ? PVEvidenceIconKey.defaultTypeIcon.rawValue : trimmed
+        list[idx].iconKey = trimmed.isEmpty ? PVMarkKey.defaultTypeMark.rawValue : trimmed
         sourceTypesByProject[projectDir] = list
         return withSuggestedFieldCount(list[idx])
     }

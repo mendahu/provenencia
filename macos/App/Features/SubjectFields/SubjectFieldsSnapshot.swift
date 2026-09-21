@@ -56,27 +56,31 @@ enum SubjectFieldsTypeChrome {
         }
     }
 
-    /// Board: Relationship / Participation / Location share the bridge mark; Source is its own folio.
-    static func stripIconKind(typeKey: String) -> PVSubjectIconKind? {
+    /// One curated mark per Subject type key (including distinct bridge marks).
+    static func stripMarkKey(typeKey: String) -> PVMarkKey? {
         switch typeKey {
-        case "person": return .person
-        case "event": return .event
-        case "place": return .place
-        case "relationship", "participation", "location": return .relationship
-        case "source": return .source
-        default: return PVSubjectIconKind(rawValue: typeKey)
+        case "person": return .subjectPerson
+        case "event": return .subjectEvent
+        case "place": return .subjectPlace
+        case "relationship": return .subjectRelationship
+        case "participation": return .subjectParticipation
+        case "location": return .subjectLocation
+        case "source": return .subjectSource
+        default: return nil
         }
     }
 
-    /// Board TYPES mark Relationship / Participation / Location / Source with the bridge micro-label.
+    /// Micro-label “BRIDGE” on Relationship / Participation / Location strip cards.
+    /// Source is a reification, not a bridge — do not label it as one.
     static func showsBridgeLabel(typeKey: String) -> Bool {
         switch typeKey {
-        case "relationship", "participation", "location", "source": return true
+        case "relationship", "participation", "location": return true
         default: return false
         }
     }
 
     static func ink(typeKey: String, presentation: CatalogSubjectTypePresentation?) -> Color {
+        // Bridges stay muted; source (reification) and roots follow presentation / kind ink.
         if showsBridgeLabel(typeKey: typeKey) { return PVColor.textMuted }
         switch presentation?.inkToken ?? "" {
         case "subjectPersonInk": return PVColor.subjectPersonInk

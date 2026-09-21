@@ -43,8 +43,8 @@ struct SourceTypesListPane: View {
                 sortable: true
             ) { type in
                 HStack(spacing: PVSpacing.space2) {
-                    PVEvidenceIcon(
-                        PVEvidenceIconKey(catalogKey: type.iconKey),
+                    PVMark(
+                        PVMarkKey(catalogKey: type.iconKey),
                         size: .inline,
                         decorative: true
                     )

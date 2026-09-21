@@ -11,7 +11,7 @@ final class SourceTypesModel {
     struct Draft: Equatable {
         var label: String
         var description: String
-        var iconKey: String = PVEvidenceIconKey.defaultTypeIcon.rawValue
+        var iconKey: String = PVMarkKey.defaultTypeMark.rawValue
     }
 
     enum SortColumn: String {
@@ -296,7 +296,7 @@ final class SourceTypesModel {
         suggestionError = nil
         assignPick = ""
         mode = .adding(resumeID: resumeID)
-        draft = Draft(label: "", description: "", iconKey: PVEvidenceIconKey.defaultTypeIcon.rawValue)
+        draft = Draft(label: "", description: "", iconKey: PVMarkKey.defaultTypeMark.rawValue)
     }
 
     func cancelAdd() {

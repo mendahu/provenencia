@@ -153,7 +153,7 @@ func TestSubjectVocab(t *testing.T) {
 					t.Fatalf("%+v", placeable)
 				}
 				pres, ok := PresentationFor("person")
-				if !ok || pres.InkToken != "subjectPersonInk" || pres.IconSymbol != "person" {
+				if !ok || pres.InkToken != "subjectPersonInk" || pres.IconSymbol != "subject_person" {
 					t.Fatalf("%+v ok=%v", pres, ok)
 				}
 				for _, info := range AllTypes() {

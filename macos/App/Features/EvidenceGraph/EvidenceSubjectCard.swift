@@ -187,7 +187,7 @@ private struct EvidenceSubjectCardChrome: View {
                         dash: placed.isCited ? [] : [3, 2]
                     )
                 )
-            PVSubjectIcon(kind: placed.kind.subjectIconKind, size: 15)
+            PVMark(placed.kind.markKey, size: 15)
                 .foregroundStyle(style.ink)
         }
         .frame(width: 28, height: 28)
