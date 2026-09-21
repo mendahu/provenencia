@@ -2915,7 +2915,7 @@ public nonisolated struct Provenencia_Engine_V1_ConnectRule: Sendable {
 
   public var edgePropertyKeys: [String] = []
 
-  /// none | role | relationship_type | person_person_choice
+  /// none | role | relationship_type
   public var disambiguation: String = String()
 
   public var refuse: Bool = false

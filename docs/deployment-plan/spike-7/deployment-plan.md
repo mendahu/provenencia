@@ -135,7 +135,7 @@ subjectvocab/   (name flexible — may absorb today’s subjecttypes.Install)
 | `FromTypeKey`, `ToTypeKey` | Ordered pair (or undirected flag if needed) |
 | `BridgeTypeKey` | e.g. `participation`, `relationship`, `location` |
 | `EdgePropertyKeys[]` | Observations to pre-fill (usually two) |
-| `Disambiguation` | e.g. `none` \| `role` \| `relationship_type` \| `person_person_choice` (shared-event vs relationship) |
+| `Disambiguation` | e.g. `none` \| `role` \| `relationship_type` (person→person is always relationship — no shared-event fork) |
 | `Refuse` | If true, pair is explicitly illegal (optional; omit row = refuse by default) |
 
 **Lookup API (package + FFI as needed):** `PlaceableTypes()`, `Presentation(key)`, `BindingsForType(key)`, `LockedBinding(type, property)`, `Connect(from, to)`. Graph / Subject fields / connect call these — never re-list the three primaries in Swift.
@@ -177,21 +177,23 @@ Sources › {Source title} › Evidence graph › Connect › Cite
 
 Pinning a Citation across successive graph edits is **out** (one Citation + N Observations per submit).
 
-## Design track (five briefs)
+## Design track (briefs)
 
-**All UI is designed in Claude Design before the matching UI PR** (S7-D6 may be a light handoff rather than a full surface board). Briefs: [`design/`](design/).
+**All UI is designed in Claude Design before the matching UI PR** (S7-D6 / S7-D7 / S7-D8 may be light handoffs rather than full surface boards). Briefs: [`design/`](design/).
 
 | Step | Brief | Covers | Gates |
 | --- | --- | --- | --- |
 | **S7-D2** | Subject fields | Properties + bindings; create Property offers **five** types (**not** `term`); **few types (7) / many Properties** — creative IA, not Source fields; explore type cards etc. **No** Event types / Roles admin destinations | S7-05 |
 | **S7-D6** | Curated marks | Unify into `Recipes/Marks/` (move evidence + add subject, incl. **source** from Subject fields); tint / size API; migrate graph **and** Subject fields | S7-12 |
-| **S7-D3** | Evidence graph updates | Add-property; cited-data rows; Artifact gate; connect disambiguation → composer handoff; bridge honesty once cited | S7-09, S7-10 |
+| **S7-D8** | PVCallout actions | Optional actions slot on Callout (recovery CTA); no graph gate wiring | S7-14 |
+| **S7-D3** | Evidence graph updates | Add-property; cited-data rows; subject refs; bridge edge summaries; Artifact gate; connect disambiguation → composer handoff | S7-09, S7-10 |
 | **S7-D4** | Citation composer place | Full-window viewer\|form; Artifact pick; locators; observation list; DateValue reuse; breadcrumbs; composer-only a11y — **hosts** NameValue modal, does not design it | S7-08 |
 | **S7-D5** | NameValue editor | Reusable NameValue modal (DateValue twin); form + optional parts | S7-02b |
+| **S7-D7** | Card component | Claude Design **Card** reference from shipped `PVCard`; tones / border / elevation; not graph snowflake cards | S7-13 |
 
 ~~**S7-D1** Subject types editor~~ — **descoped** (see [Descoped](#descoped) below).
 
-**Scheduling:** **S7-D2** early (unblocks S7-05). **S7-D6** before mark consolidation (**S7-12**), which lands before Add-property / card UI (**S7-09**). **S7-D3** before **S7-09**. **S7-D4** before thin composer (**S7-08**). **S7-D5** before NameValue Swift (**S7-02b**), late in the composer fill-in. Prefer **D6 → 12 → D3 → 09** so the graph thickens on one icon pipeline.
+**Scheduling:** **S7-D2** early (unblocks S7-05). **S7-D6** before mark consolidation (**S7-12**). **S7-D8** → **S7-14** after **S7-12**, before Add-property (**S7-09**). **S7-D3** before **S7-09**. **S7-D4** before thin composer (**S7-08**). **S7-D5** before NameValue Swift (**S7-02b**), late in the composer fill-in. Prefer **D6 → 12 → D8 → 14 → D3 → 09** so kit Callout actions exist before the graph message center. **S7-D7 → S7-13** late (after **S7-10**, before dogfood close).
 
 ## Incremental UI dogfood (back half)
 
@@ -202,18 +204,22 @@ Do **not** stack viewers → locators → NameValue → composer → Add propert
 ```text
 S7-12  → Recipes/Marks/ (move evidence + subject_*; tint API; graph + Subject fields)
          dogfood: cards / palette / fields strip at zoom; source mark present; type_* hosts still work
+S7-14  PVCallout actions slot (kit Extend)
+         dogfood: preview / any demo callout with a button; existing callouts unchanged
 S7-09  Add property on cards → navigate to composer place (stub/shell OK)
-         dogfood: button, place, breadcrumbs, Back
+         dogfood: button, place, breadcrumbs, Back; No-Artifact callout can use actions
 S7-08  Thin composer: Artifact pick + citation + text Observations + submit
          dogfood: cite a line of text, card grows (no fancy viewer yet)
 S7-06  Image + PDF viewers in the composer
 S7-07  Locator tools (page + region)
 S7-02b NameValue editor hosted in composer
 S7-10  Durable connect macros
+S7-D7  Card component (design-system reference from shipped PVCard)
+S7-13  Migrate manual card cousins → PVCard
 S7-11  Full dogfood bar / close
 ```
 
-Each step is independently testable in the running app against **S7-03** (and S7-01 / S7-01b / S7-02 / **S7-12** as needed).
+Each step is independently testable in the running app against **S7-03** (and S7-01 / S7-01b / S7-02 / **S7-12** / **S7-14** as needed).
 
 ## PR sequence
 
@@ -243,6 +249,11 @@ S7-D6 Curated marks                 │
                                     │      (move EvidenceIcon + subject_*;
                                     │       graph + Subject fields migrated)
                                     │
+S7-D8 PVCallout actions             │
+  │                                 ▼
+  └────── D8 gates ───────────────▶ S7-14  PVCallout actions slot
+                                    │      (kit Extend; no graph gate yet)
+                                    │
 S7-D3 Graph updates                 │
   │                                 ▼
   └────── D3 gates ───────────────▶ S7-09  Add property + composer navigation
@@ -269,6 +280,11 @@ S7-D5 NameValue editor              │
                                     ▼
                                   S7-10  Durable connect macros
                                     │
+S7-D7 Card component                │
+  │                                 ▼
+  └────── D7 gates ───────────────▶ S7-13  PVCard call-site cleanup
+                                    │      (four manual cousins → PVCard)
+                                    │
                                     ▼
                                   S7-11  Dogfood close / docs
 ```
@@ -278,10 +294,12 @@ S7-D5 NameValue editor              │
 - **S7-01b** → **S7-01**. Lands **before** S7-05 and **before** S7-03; introduces kind/edge Properties as `term` (they are not seeded as text in S7-01).
 - **S7-05** → **S7-01** + **S7-01b** + **S7-D2** only (no NameValue UI).
 - **S7-12** → **S7-D6** only (design-system consolidation). **Not** related to Citations/Observations work. Schedule after schema/Go (**S7-03**) and **before** S7-09 so graph chrome thickens on one mark pipeline.
-- **S7-09** → **S7-03** (graph payload can show Observations) + **S7-12** + **S7-D3**. Registers composer `WorkspaceLocation`; destination may stub until S7-08.
+- **S7-14** → **S7-D8**. Kit-only Callout **Extend** (actions slot). After **S7-12**, **before** **S7-09** so the No-Artifact message center can compose a recovery CTA without a hand-rolled banner.
+- **S7-09** → **S7-03** (graph payload can show Observations) + **S7-12** + **S7-14** + **S7-D3**. Registers composer `WorkspaceLocation`; destination may stub until S7-08.
 - **S7-08** → **S7-09** + **S7-D4** + **S7-03**. **Does not** require S7-06/07/02b — text/term Observations and a placeholder viewer are enough to dogfood submit + card growth.
 - **S7-06 / S7-07 / S7-02b** fill the composer in place; each is dogfoodable on top of S7-08.
 - **S7-10** → working composer submit (S7-08+) + **S7-D3**.
+- **S7-13** → **S7-D7**. Late hygiene after connect; **before** S7-11. Does **not** rewrite Evidence graph snowflake cards.
 
 Schema/Go (01–03, 01b) may start before design finishes; **UI PRs gate on the matching brief.**
 
@@ -300,12 +318,16 @@ Schema/Go (01–03, 01b) may start before design finishes; **UI PRs gate on the 
 - [x] S7-03 — Citations + Observations + locator validation + FFI → [`completed.md`](completed.md)
 - [x] S7-D6 — Design: Curated marks (subject → evidence icon pack) → [`completed.md`](completed.md)
 - [x] S7-12 — `Recipes/Marks/` consolidation + graph / Subject fields migration → [`completed.md`](completed.md)
+- [ ] S7-D8 — Design: PVCallout actions slot → [`completed.md`](completed.md)
+- [ ] S7-14 — `PVCallout` actions slot (kit Extend) → [`completed.md`](completed.md)
 - [ ] S7-09 — Add property + composer navigation (stub OK) → [`completed.md`](completed.md)
 - [ ] S7-08 — Thin composer (submit + card growth; viewer placeholder OK) → [`completed.md`](completed.md)
 - [ ] S7-06 — Image + PDF viewers in composer → [`completed.md`](completed.md)
 - [ ] S7-07 — Locator tools (page + region) → [`completed.md`](completed.md)
 - [ ] S7-02b — NameValue Swift editor → [`completed.md`](completed.md)
 - [ ] S7-10 — Durable connect macros → [`completed.md`](completed.md)
+- [ ] S7-D7 — Design: Card component (design-system reference) → [`completed.md`](completed.md)
+- [ ] S7-13 — `PVCard` call-site cleanup (manual cousins) → [`completed.md`](completed.md)
 - [ ] S7-11 — Dogfood close / docs → [`completed.md`](completed.md)
 
 ## Descoped
@@ -330,7 +352,7 @@ Handoff / light board for the unified **Marks** recipe (`DesignSystem/Recipes/Ma
 
 ## S7-D3 — Design: Evidence graph updates
 
-Claude Design board for Add property, cited rows, connect disambiguation handoff. Brief: [`design/S7-D3-evidence-graph-updates.md`](design/S7-D3-evidence-graph-updates.md). Gates **S7-09**, **S7-10**. Does **not** design the composer place (S7-D4). Prefer **S7-12** already landed. **Implement S7-09 before the thick composer** so Add property is dogfoodable early.
+Claude Design board for Add property, cited rows, subject refs, bridge edge summaries, connect disambiguation handoff. Brief: [`design/S7-D3-evidence-graph-updates.md`](design/S7-D3-evidence-graph-updates.md). Gates **S7-09**, **S7-10**. Does **not** design the composer place (S7-D4). Prefer **S7-12** and **S7-14** (`PVCallout` actions) already landed. **Implement S7-09 before the thick composer** so Add property is dogfoodable early.
 
 ---
 
@@ -343,6 +365,18 @@ Claude Design board for the navigable composer. Brief: [`design/S7-D4-citation-c
 ## S7-D5 — Design: NameValue editor
 
 Claude Design board for the reusable NameValue modal (DateValue twin). Brief: [`design/S7-D5-name-value-editor.md`](design/S7-D5-name-value-editor.md). Gates **S7-02b**. Schedule late — after thin composer works.
+
+---
+
+## S7-D8 — Design: PVCallout actions
+
+Light Claude Design board / kit handoff for an optional **actions** slot on Callout. Brief: [`design/S7-D8-pvcallout-actions.md`](design/S7-D8-pvcallout-actions.md). Gates **S7-14**. Unblocks the Evidence graph No-Artifact message center recovery CTA without a parallel banner. Schedule after **S7-12**, before **S7-09**. Does **not** wire the graph gate (that’s **S7-D3** / **S7-09**).
+
+---
+
+## S7-D7 — Design: Card component
+
+Claude Design **Card** kit page / board, referenced from the already-shipped macOS [`PVCard`](../../../macos/App/DesignSystem/Components/Card/PVCard.swift). Brief: [`design/S7-D7-card-component.md`](design/S7-D7-card-component.md). Gates **S7-13**. Document tones, solid/dashed border, elevation, and radius; use implemented Artifacts / Subject fields / metadata cards as the visual source of truth. Does **not** redesign Evidence graph subject/bridge cards (those stay snowflakes under **S7-D3**). Schedule after **S7-10**, before dogfood close.
 
 ---
 
@@ -430,7 +464,20 @@ Move subject type marks (`PVSubjectIcon` Canvas paths) **and** today’s evidenc
 | **In** | `Recipes/Marks/` (+ asset catalog); seven `subject_*` glyphs incl. **source**; key enum / View API; tint + size docs (`MARKS.md`); graph **+ Subject fields** + existing evidence-icon call-site migration; retire `EvidenceIcon` / `SubjectIcon`; DesignSystem README update. |
 | **Out** | Card Add-property / cited-row UX (**S7-09**); Subject fields IA changes; researcher-editable subject icons; new mark metaphors beyond today’s seven kinds; keeping a permanent `EvidenceIcon` folder. |
 | **Testable** | Palette + cards show subject marks at zoom; Subject fields type strip still shows all kinds incl. source; Sources/type icons still tint; `rg` clean of old recipe paths (or only deprecated shim). |
-| **Depends on** | **S7-D6**. Schedule after **S7-03**, before **S7-09** — not gated on Citations/Observations code. |
+| **Depends on** | **S7-D6**. Schedule after **S7-03**, before **S7-14** / **S7-09** — not gated on Citations/Observations code. |
+
+---
+
+## S7-14 — PVCallout actions slot
+
+Extend [`PVCallout`](../../../macos/App/DesignSystem/Components/Callout/PVCallout.swift) with an optional actions slot (match **S7-D8** / web Callout `actions`). Existing text-only call sites must keep compiling and looking the same.
+
+| | |
+| --- | --- |
+| **In** | Optional `@ViewBuilder` (or equivalent) actions on `PVCallout`; preview with button(s); DesignSystem README Callout row; follow `add-ui-component` Extend rules. |
+| **Out** | Evidence graph No-Artifact gate / disable-controls (**S7-09**); new banner/message-center component; dismiss/`detail`/`plain` unless D8 locked them. |
+| **Testable** | Preview shows callout + action; an existing call site (e.g. Subject fields locked note) unchanged; SwiftUI build green. |
+| **Depends on** | **S7-D8**. Schedule after **S7-12**, before **S7-09**. |
 
 ---
 
@@ -449,16 +496,16 @@ Properties + `subject_type_fields` bindings; researcher create offers **five** v
 
 ## S7-09 — Add property + composer navigation
 
-Grow `EvidenceSubjectCardChrome`; Add property → `go(to: composer)`; cited-row **slots** / growth chrome; uncited → cited shell when Observations exist; edge layout heights; registry-driven palette/presentation migration; graph a11y for new controls.
+Grow `EvidenceSubjectCardChrome`; Add property → `go(to: composer)`; cited-row **slots** / growth chrome; subject **refs**; uncited → cited shell when Observations exist; edge layout heights; registry-driven palette/presentation migration; graph a11y for new controls.
 
 **Composer destination may be a stub** (“form next”) as long as navigation, breadcrumbs, and Back work. Real submit lands in S7-08.
 
 | | |
 | --- | --- |
-| **In** | Add property control; composer `WorkspaceLocation`; card chrome for cited rows; Artifact gate messaging; registry presentation for kinds (icons via **S7-12** pack). |
-| **Out** | Full composer form (S7-08); connect (S7-10). |
-| **Testable** | Select a Person → Add property → land on composer place → Back to graph. No submit required yet. |
-| **Depends on** | S7-03 (optional empty cited rows), **S7-12**, **S7-D3**. |
+| **In** | Add property control; composer `WorkspaceLocation`; card chrome for cited rows + **refs**; Artifact gate messaging (graph-wide `PVCallout` **with actions** from **S7-14**); slight card widen if D3 locks it; registry presentation for kinds (icons via **S7-12** pack). |
+| **Out** | Full composer form (S7-08); connect (S7-10); durable bridge edge-summary phrases (S7-10). |
+| **Testable** | Select a Person → Add property → land on composer place → Back to graph. Ref visible on card. No submit required yet. |
+| **Depends on** | S7-03 (optional empty cited rows), **S7-12**, **S7-14**, **S7-D3**. |
 
 ---
 
@@ -520,14 +567,36 @@ Swift `NameValueDraft` / editor modal under `Features/Names/` (mirror `Features/
 
 ## S7-10 — Durable connect macros
 
-Disambiguation sheet on graph (§3.2 matrix); navigate to composer with pre-filled edge Observations; replace provisional Spike 6 links.
+Disambiguation sheet on graph (§3.2 matrix); navigate to composer with pre-filled edge Observations; replace provisional Spike 6 links; bridge cards show **edge summary** phrases (S7-D3 §3.1).
 
 | | |
 | --- | --- |
-| **In** | person→event role; person→person relationship vs shared-event choice; event→place clean; refuse unsupported; atomic bridge + Citation + edges — **driven by the S7-01 registry connect matrix**. |
-| **Out** | Pinning; full conflicted/negated chrome; inventing connect rules outside the registry. |
-| **Testable** | Connect two people → disambiguate → cite (thin or thick composer) → bridge persists; relaunch keeps edges. |
+| **In** | person→event `role`; person→person always `relationship` + `relationship_type` (no shared-event fork — shared events = Event bubble + person→event lines); event→place clean; refuse unsupported; atomic bridge + Citation + edges — **driven by the S7-01 registry connect matrix**; bridge body summaries (“is the {type} of”, “took place in”, role-aware participation); **L10n** for product property terms + phrase templates (DB `label` is English seed / fallback only). |
+| **Out** | Pinning; full conflicted/negated chrome; inventing connect rules outside the registry; translating user-minted term labels. |
+| **Testable** | Connect two people → disambiguate → cite (thin or thick composer) → bridge persists with readable **localized** summary; relaunch keeps edges. |
 | **Depends on** | S7-08 (submit path), S7-09, **S7-D3**, S7-01 registry. |
+
+---
+
+## S7-13 — PVCard call-site cleanup
+
+After **S7-D7**, migrate the remaining **manual card cousins** onto shared `PVCard` so fill + clip + hairline (+ dashed / sunken / elevation where needed) stop drifting.
+
+**In scope (four call sites):**
+
+| Call site | Today | Target |
+| --- | --- | --- |
+| [`OnboardingIdentifyView`](../../../macos/App/Features/Onboarding/OnboardingIdentifyView.swift) | Hand-built `surfaceCard` + `md` + `borderSubtle` | `PVCard` |
+| [`OnboardingProjectMetaLines`](../../../macos/App/Features/Onboarding/OnboardingProjectMetaLines.swift) | Same pattern | `PVCard` |
+| [`SourceTypesDetailPane`](../../../macos/App/Features/SourceTypes/SourceTypesDetailPane.swift) (icon / tile chrome ~line 411) | Same with `sm` radius | `PVCard(cornerRadius: .sm)` (or equivalent) |
+| [`OnboardingOpenPicker`](../../../macos/App/Features/Onboarding/OnboardingOpenPicker.swift) (empty-folder block) | Sunken + dashed | `PVCard(tone: .sunken, border: .dashed)` |
+
+| | |
+| --- | --- |
+| **In** | Those four migrations; any small `PVCard` API tweak required by **S7-D7**; keep DesignSystem README Card row accurate. |
+| **Out** | Evidence graph subject/bridge/palette chrome; Subject fields type-strip tiles; file-choice / icon-picker selected cells; full-bleed pane fills; omnibar `overlay` elevation (unless D7 explicitly unifies it). |
+| **Testable** | Onboarding identify + open-picker + project meta, and Source types detail tile, still look correct; `rg` for the old hand-built patterns at those sites is gone. |
+| **Depends on** | **S7-D7**. Schedule after **S7-10**, before **S7-11**. |
 
 ---
 

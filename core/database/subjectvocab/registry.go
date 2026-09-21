@@ -14,10 +14,9 @@ const (
 	RoleBridge       = "bridge"
 	RoleReification  = "reification"
 
-	DisambiguationNone               = "none"
-	DisambiguationRole               = "role"
-	DisambiguationRelationshipType   = "relationship_type"
-	DisambiguationPersonPersonChoice = "person_person_choice"
+	DisambiguationNone             = "none"
+	DisambiguationRole             = "role"
+	DisambiguationRelationshipType = "relationship_type"
 )
 
 type presentation struct {
@@ -244,7 +243,7 @@ var seedConnect = []seedConnectRule{
 		FromTypeKey: "person", ToTypeKey: "person",
 		BridgeTypeKey: "relationship",
 		EdgePropertyKeys: []string{"person", "related_to"},
-		Disambiguation: DisambiguationPersonPersonChoice,
+		Disambiguation: DisambiguationRelationshipType,
 	},
 	{
 		FromTypeKey: "event", ToTypeKey: "place",
