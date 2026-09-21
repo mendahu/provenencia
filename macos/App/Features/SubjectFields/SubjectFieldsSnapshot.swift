@@ -70,15 +70,17 @@ enum SubjectFieldsTypeChrome {
         }
     }
 
-    /// Board TYPES mark Relationship / Participation / Location / Source with the bridge micro-label.
+    /// Micro-label “BRIDGE” on Relationship / Participation / Location strip cards.
+    /// Source is a reification, not a bridge — do not label it as one.
     static func showsBridgeLabel(typeKey: String) -> Bool {
         switch typeKey {
-        case "relationship", "participation", "location", "source": return true
+        case "relationship", "participation", "location": return true
         default: return false
         }
     }
 
     static func ink(typeKey: String, presentation: CatalogSubjectTypePresentation?) -> Color {
+        // Bridges stay muted; source (reification) and roots follow presentation / kind ink.
         if showsBridgeLabel(typeKey: typeKey) { return PVColor.textMuted }
         switch presentation?.inkToken ?? "" {
         case "subjectPersonInk": return PVColor.subjectPersonInk
