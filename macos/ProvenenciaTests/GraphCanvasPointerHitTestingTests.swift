@@ -41,4 +41,24 @@ struct GraphCanvasPointerHitTestingTests {
         #expect(GraphCanvasPointerHitTesting.isDrag(from: start, to: CGPoint(x: 4, y: 0)))
         #expect(GraphCanvasPointerHitTesting.isDrag(from: start, to: CGPoint(x: 0, y: 5)))
     }
+
+    @Test func actionPrefersNestedFrameInsideTarget() {
+        let target = GraphCanvasHitTarget(
+            id: "card",
+            frame: CGRect(x: 0, y: 0, width: 200, height: 100),
+            acceptsConnect: true,
+            actions: [
+                GraphCanvasActionTarget(
+                    id: "edit",
+                    frame: CGRect(x: 160, y: 8, width: 28, height: 28)
+                ),
+            ]
+        )
+        let hit = GraphCanvasPointerHitTesting.action(
+            at: CGPoint(x: 170, y: 20),
+            in: target
+        )
+        #expect(hit?.id == "edit")
+        #expect(GraphCanvasPointerHitTesting.action(at: CGPoint(x: 20, y: 20), in: target) == nil)
+    }
 }

@@ -18,6 +18,8 @@ IDs stay stable (`S7-NN`, `S7-DN`). Do not renumber when moving steps here.
 | [S7-12](#s7-12--pr-curated-marks-consolidation) | PR | `Recipes/Marks/` + asset pack; retire EvidenceIcon/SubjectIcon |
 | [S7-D8](#s7-d8--design-pvcallout-actions) | Design | Callout actions slot; gates S7-14 |
 | [S7-14](#s7-14--pr-pvcallout-actions-slot) | PR | Optional `@ViewBuilder` actions on `PVCallout` |
+| [S7-D3](#s7-d3--design-evidence-graph-updates) | Design | Card chrome + No-Artifact; gates S7-09 / S7-10 |
+| [S7-09](#s7-09--pr-add-property--composer-navigation) | PR | Evidence graph card updates + composer stub place |
 
 ## Steps
 
@@ -195,4 +197,36 @@ rg -n 'PVEvidenceIcon|PVSubjectIcon|EvidenceIcons|evidenceIcon|Recipes/EvidenceI
 ```bash
 # Existing PVCallout(…) call sites compile; preview actions under body.
 rg -n 'struct PVCallout' macos/App/DesignSystem/Components/Callout/PVCallout.swift
+```
+
+### S7-D3 — Design: Evidence graph updates
+
+| | |
+| --- | --- |
+| **Kind** | Design (Claude Design board) |
+| **Depends on** | Spike 6 cards; prefer S7-12 / S7-14 |
+| **Deliverables** | Done. Board for Add property, cited rows, refs, No-Artifact message center, connect handoff (S7-10). Brief archived: [`design/archive/S7-D3-evidence-graph-updates.md`](design/archive/S7-D3-evidence-graph-updates.md). |
+| **Dogfood** | Design only — implements in **S7-09** / **S7-10**. |
+| **Out** | Composer layout (S7-D4); durable edge summaries (S7-10). |
+
+**Landed:** binding inventory for graph chrome before Add property ships.
+
+### S7-09 — PR: Add property + composer navigation
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S7-03, S7-12, S7-14, **S7-D3** |
+| **Deliverables** | Done. Primary cards **264pt** with type·ref line, cited Observation rows, quiet **Add property**, Edit pencil. Edit label/description reuses create `PVFormDialog` + `updateSubject` (**shipped delta** vs board “create-only” sheet). No-Artifact graph-wide `PVCallout` (warning + Add an Artifact → Source page) disables palette / Connect / Add property from `canCite`. Composer `WorkspaceLocation` (`sourceSurface: .citationComposer` + `subjectId`) with stub destination. Bridge cards show ref (honesty body until S7-10). Registry presentation tokens drive card/palette ink/tint/chip/line where exposed. L10n + hit-target action zones for AppKit pointer ownership. |
+| **Tests** | Navigation / destination host / pointer action hit tests; EvidenceGraphModel edit + No-Artifact; xcstrings check. |
+| **Dogfood** | Place subject → Edit → ref visible → Add property → stub composer → Back; open graph with zero Artifacts → callout + disabled tools. |
+| **Out** | Real composer form (S7-08); connect disambiguation / edge summaries (S7-10). |
+
+**Landed:** Add property navigates; cards grow with cited rows; Artifact gate is honest.
+
+**Verify:**
+
+```bash
+python3 scripts/check-localizable-xcstrings.py
+# xcodebuild test — EvidenceGraphModel / WorkspaceNavigation / GraphCanvasPointerHitTesting
 ```

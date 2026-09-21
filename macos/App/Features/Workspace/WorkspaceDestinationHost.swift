@@ -38,6 +38,17 @@ struct WorkspaceDestinationHost: View {
                     userID: userID
                 )
             }
+        case .sourceCitationComposer:
+            if let sourceID = navigation.currentLocation.sourceId,
+               let subjectID = navigation.currentLocation.subjectId
+            {
+                CitationComposerStubView(
+                    sourceID: sourceID,
+                    subjectID: subjectID,
+                    session: session,
+                    store: store
+                )
+            }
         case .sourceFields:
             SourceFieldsView(
                 session: session,
@@ -75,7 +86,7 @@ struct WorkspaceDestinationHost: View {
     /// Mirrors the host `switch` for unit tests (which view family mounts).
     static func destinationKind(for presentation: WorkspacePresentationID) -> WorkspaceDestinationKind {
         switch presentation {
-        case .sourcesList, .sourcePage, .sourceGraph:
+        case .sourcesList, .sourcePage, .sourceGraph, .sourceCitationComposer:
             return .sources
         case .sourceFields:
             return .sourceFields

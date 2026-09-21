@@ -56,10 +56,26 @@ struct GraphCanvasEdgeGeometryTests {
     }
 
     @Test func primaryEdgeFrameSharesLayoutTop() {
-        let frame = EvidenceSubjectCard.edgeFrame(gridX: 2, gridY: 3)
+        let placed = SourceGraphPlacedSubject(
+            subject: CatalogSubject(
+                id: "s1",
+                ref: "CPR-1",
+                sourceID: "src",
+                subjectTypeID: "t",
+                label: "A",
+                description: ""
+            ),
+            kind: .person,
+            typeLabel: "Person",
+            gridX: 2,
+            gridY: 3,
+            isCited: false
+        )
+        let frame = EvidenceSubjectCard.edgeFrame(for: placed)
         let offset = EvidenceSubjectCard.topLeadingOffset(gridX: 2, gridY: 3)
         #expect(abs(frame.minX - offset.width) < 0.01)
         #expect(abs(frame.minY - offset.height) < 0.01)
-        #expect(frame.height == EvidenceSubjectCard.edgeLayoutHeight)
+        #expect(frame.height >= EvidenceSubjectCard.edgeLayoutHeight)
+        #expect(frame.width == EvidenceSubjectCard.width)
     }
 }

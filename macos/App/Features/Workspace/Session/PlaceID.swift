@@ -5,6 +5,7 @@ enum PlaceID: Hashable, Sendable, CaseIterable {
     case sourcesList
     case sourceDetail
     case sourceGraph
+    case sourceCitationComposer
     case sourceFields
     case sourceTypes
     case sourceTypesDetail

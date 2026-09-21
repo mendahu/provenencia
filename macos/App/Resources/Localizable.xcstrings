@@ -8261,6 +8261,186 @@
           }
         }
       }
+    },
+    "evidenceGraph.edit.personTitle": {
+      "comment": "Edit-subject dialog title for a Person",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit person"
+          }
+        }
+      }
+    },
+    "evidenceGraph.edit.eventTitle": {
+      "comment": "Edit-subject dialog title for an Event",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.edit.placeTitle": {
+      "comment": "Edit-subject dialog title for a Place",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit place"
+          }
+        }
+      }
+    },
+    "evidenceGraph.edit.relationshipTitle": {
+      "comment": "Edit-subject dialog title for a relationship bridge",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit relationship"
+          }
+        }
+      }
+    },
+    "evidenceGraph.edit.participationTitle": {
+      "comment": "Edit-subject dialog title for a participation bridge",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit participation"
+          }
+        }
+      }
+    },
+    "evidenceGraph.edit.locationTitle": {
+      "comment": "Edit-subject dialog title for a location bridge",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit location"
+          }
+        }
+      }
+    },
+    "evidenceGraph.edit.confirm": {
+      "comment": "Confirm button on the Evidence graph edit-subject dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.editAccessibility": {
+      "comment": "VoiceOver action / tooltip for the subject card edit pencil",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit label and description"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.addProperty": {
+      "comment": "Quiet footer control on primary cards that opens the citation composer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add property"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.citedValueUnavailable": {
+      "comment": "Placeholder when a cited Observation has no displayable value summary yet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        }
+      }
+    },
+    "evidenceGraph.noArtifact.title": {
+      "comment": "Title on the graph-wide No-Artifact warning callout",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Artifacts on this source"
+          }
+        }
+      }
+    },
+    "evidenceGraph.noArtifact.message": {
+      "comment": "Body on the graph-wide No-Artifact warning callout",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Citing needs an Artifact. Place tools, Connect, and Add property stay disabled until you attach one."
+          }
+        }
+      }
+    },
+    "evidenceGraph.noArtifact.action": {
+      "comment": "Callout action that navigates to the Source page to attach an Artifact",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add an Artifact"
+          }
+        }
+      }
+    },
+    "evidenceGraph.composer.stubTitle": {
+      "comment": "Citation composer stub place title until S7-08 ships the real form",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add property"
+          }
+        }
+      }
+    },
+    "evidenceGraph.composer.stubMessage": {
+      "comment": "Citation composer stub body explaining the place is temporary",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The citation composer form ships next. Use Back to return to the Evidence graph."
+          }
+        }
+      }
     }
   },
   "version": "1.1"

@@ -26,11 +26,15 @@ struct EvidenceGraphPalette: View {
                 )
                 .shadow(color: Color.black.opacity(0.08), radius: 8, y: 2)
         )
+        .opacity(model.canCite ? 1 : 0.55)
     }
 
     private func toolButton(_ kind: EvidencePrimaryKind) -> some View {
         let armed = model.armedKind == kind
-        let style = EvidenceSubjectKindStyle.forKind(kind)
+        let style = EvidenceSubjectKindStyle.resolve(
+            typeKey: kind.rawValue,
+            presentation: model.presentation(for: kind.rawValue)
+        )
         return Button {
             model.toggleArm(kind)
         } label: {
@@ -42,7 +46,11 @@ struct EvidenceGraphPalette: View {
             }
             .padding(.horizontal, 11)
             .padding(.vertical, 6)
-            .foregroundStyle(armed ? PVColor.accentForeground : PVColor.textSecondary)
+            .foregroundStyle(
+                armed
+                    ? PVColor.accentForeground
+                    : (model.canCite ? PVColor.textSecondary : PVColor.textFaint)
+            )
             .background(
                 RoundedRectangle(cornerRadius: 4, style: .continuous)
                     .fill(armed ? PVColor.accent : Color.clear)
@@ -57,6 +65,7 @@ struct EvidenceGraphPalette: View {
             .pvFocusRing(focus.wrappedValue == .tool(kind), cornerRadius: 4)
         }
         .buttonStyle(.plain)
+        .disabled(!model.canCite)
         .focused(focus, equals: .tool(kind))
         .onKeyPress(.escape) {
             model.disarm()
@@ -81,7 +90,11 @@ struct EvidenceGraphPalette: View {
             }
             .padding(.horizontal, 11)
             .padding(.vertical, 6)
-            .foregroundStyle(armed ? PVColor.accentForeground : PVColor.textSecondary)
+            .foregroundStyle(
+                armed
+                    ? PVColor.accentForeground
+                    : (model.canCite ? PVColor.textSecondary : PVColor.textFaint)
+            )
             .background(
                 RoundedRectangle(cornerRadius: 4, style: .continuous)
                     .fill(armed ? PVColor.accent : Color.clear)
@@ -96,6 +109,7 @@ struct EvidenceGraphPalette: View {
             .pvFocusRing(focus.wrappedValue == .toolConnect, cornerRadius: 4)
         }
         .buttonStyle(.plain)
+        .disabled(!model.canCite)
         .focused(focus, equals: .toolConnect)
         .onKeyPress(.escape) {
             model.disarm()

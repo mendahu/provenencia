@@ -101,11 +101,7 @@ struct EvidenceGraphEdgeLayer: View {
     }
 
     private func primaryFrame(_ placed: SourceGraphPlacedSubject, offset: CGSize) -> CGRect {
-        EvidenceSubjectCard.edgeFrame(
-            gridX: placed.gridX,
-            gridY: placed.gridY,
-            dragOffset: offset
-        )
+        EvidenceSubjectCard.edgeFrame(for: placed, dragOffset: offset)
     }
 
     private func bridgeFrame(_ placed: SourceGraphPlacedBridge, offset: CGSize) -> CGRect {
@@ -139,7 +135,7 @@ struct EvidenceGraphConnectRubberBand: View {
 
     var body: some View {
         Canvas { context, _ in
-            let fromRect = EvidenceSubjectCard.edgeFrame(gridX: origin.gridX, gridY: origin.gridY)
+            let fromRect = EvidenceSubjectCard.edgeFrame(for: origin)
             let edgeStart = GraphCanvasEdgeGeometry.attachmentPoint(fromRect: fromRect, toward: cursor)
             let start = GraphCanvasEdgeGeometry.tuckInside(edgeStart, rect: fromRect)
             let path = GraphCanvasEdgeGeometry.cubicPath(from: start, to: cursor)

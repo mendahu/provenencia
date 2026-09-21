@@ -133,6 +133,16 @@ struct PlaceRegistryTests {
                 [.sourceGraph(project: project, sourceId: "s1")]
             ),
             (
+                WorkspaceLocation(
+                    section: .sources,
+                    sourceId: "s1",
+                    subjectId: "sub-1",
+                    sourceSurface: .citationComposer
+                ),
+                .sourceCitationComposer,
+                [.sourceGraph(project: project, sourceId: "s1")]
+            ),
+            (
                 .sectionRoot(.sourceFields),
                 .sourceFields,
                 [.metadataFieldsList(project: project)]
@@ -173,6 +183,13 @@ struct PlaceRegistryTests {
             case .sourcesList: .sectionRoot(.sources)
             case .sourceDetail: WorkspaceLocation(section: .sources, sourceId: "s1", sourceSurface: .page)
             case .sourceGraph: WorkspaceLocation(section: .sources, sourceId: "s1", sourceSurface: .graph)
+            case .sourceCitationComposer:
+                WorkspaceLocation(
+                    section: .sources,
+                    sourceId: "s1",
+                    subjectId: "sub-1",
+                    sourceSurface: .citationComposer
+                )
             case .sourceFields: .sectionRoot(.sourceFields)
             case .sourceTypes: .sectionRoot(.sourceTypes)
             case .sourceTypesDetail: WorkspaceLocation(section: .sourceTypes, typeId: "t1")

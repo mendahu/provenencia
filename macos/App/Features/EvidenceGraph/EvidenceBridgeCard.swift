@@ -1,14 +1,16 @@
 import SwiftUI
 
-/// Subordinate bridge / relationship card on the Evidence graph (S6-04).
+/// Subordinate bridge / relationship card on the Evidence graph (S6-04 / S7-09).
 ///
 /// Paint-only: same AppKit pointer ownership as ``EvidenceSubjectCard``.
 struct EvidenceBridgeCard: View {
-    static let width: CGFloat = 188
+    static let width: CGFloat = 212
     static let approximateHalfHeight: CGFloat = 40
     /// Edge hit-testing height from the same top as layout — near a one-line
     /// honesty body so bottoms are not stranded below the fill.
-    static let edgeLayoutHeight: CGFloat = 88
+    static let edgeLayoutHeight: CGFloat = 96
+
+    static let editActionID = "edit"
 
     let placed: SourceGraphPlacedBridge
     var isSelected: Bool
@@ -58,11 +60,33 @@ struct EvidenceBridgeCard: View {
         )
     }
 
+    static func actionTargets(
+        for placed: SourceGraphPlacedBridge,
+        dragOffset: CGSize = .zero
+    ) -> [GraphCanvasActionTarget] {
+        let frame = contentFrame(gridX: placed.gridX, gridY: placed.gridY, dragOffset: dragOffset)
+        return [
+            GraphCanvasActionTarget(
+                id: editActionID,
+                frame: CGRect(
+                    x: frame.maxX - 40,
+                    y: frame.minY + 8,
+                    width: 28,
+                    height: 28
+                )
+            ),
+        ]
+    }
+
     static func accessibilityLabel(for placed: SourceGraphPlacedBridge) -> String {
         let trimmed = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
         let name = trimmed.isEmpty ? placed.typeLabel : trimmed
         let honesty = String(localized: L10n.EvidenceGraph.bridgeHonestyAccessibility)
-        return "\(placed.typeLabel), \(name), \(honesty)"
+        let ref = placed.subject.ref.trimmingCharacters(in: .whitespacesAndNewlines)
+        if ref.isEmpty {
+            return "\(placed.typeLabel), \(name), \(honesty)"
+        }
+        return "\(placed.typeLabel), \(ref), \(name), \(honesty)"
     }
 }
 
@@ -86,13 +110,18 @@ private struct EvidenceBridgeCardChrome: View {
                         .foregroundStyle(PVColor.textSecondary)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
-                    Text(verbatim: placed.typeLabel)
+                    Text(verbatim: typeLine)
                         .font(PVFont.mono(size: 10, weight: PVFontWeight.medium))
                         .tracking(1)
                         .textCase(.uppercase)
                         .foregroundStyle(PVColor.textMuted)
+                        .lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "pencil")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(PVColor.textMuted)
+                    .accessibilityHidden(true)
             }
             Text(L10n.EvidenceGraph.bridgeHonestyBody)
                 .font(PVFont.body(size: PVTypeScale.caption))
@@ -123,6 +152,12 @@ private struct EvidenceBridgeCardChrome: View {
     private var displayLabel: String {
         let trimmed = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? placed.typeLabel : trimmed
+    }
+
+    private var typeLine: String {
+        let ref = placed.subject.ref.trimmingCharacters(in: .whitespacesAndNewlines)
+        if ref.isEmpty { return placed.typeLabel }
+        return "\(placed.typeLabel) · \(ref)"
     }
 
     private var cardBorder: some View {
