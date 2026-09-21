@@ -1,11 +1,13 @@
 import Foundation
 
-/// Distinguishes Source detail vs Evidence graph under the same `sourceId`.
+/// Distinguishes Source detail vs Evidence graph vs citation composer under the same `sourceId`.
 /// Sidebar selection still uses `WorkspaceSection.sources` for both; this field
 /// is for place identity / history / host routing only.
 enum SourceSurface: String, Codable, Sendable, Equatable {
     case page
     case graph
+    /// Citation composer place (Add property / connect handoff). Stub until S7-08.
+    case citationComposer
 }
 
 /// Result of reconciling a destination model to a navigation `WorkspaceLocation`.
@@ -27,7 +29,9 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     var sourceId: String?
     var fieldId: String?
     var typeId: String?
-    /// Page vs Evidence graph when `section == .sources` and `sourceId` is set.
+    /// Subject scoped into the citation composer when `sourceSurface == .citationComposer`.
+    var subjectId: String?
+    /// Page vs Evidence graph vs composer when `section == .sources` and `sourceId` is set.
     /// Legacy history without this key decodes as `.page`.
     var sourceSurface: SourceSurface
     /// Denormalized jump-menu cache; ignored for navigation identity.
@@ -36,7 +40,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     var title: String?
 
     enum CodingKeys: String, CodingKey {
-        case section, sourceId, fieldId, typeId, sourceSurface, ref, title
+        case section, sourceId, fieldId, typeId, subjectId, sourceSurface, ref, title
     }
 
     init(
@@ -44,6 +48,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         sourceId: String? = nil,
         fieldId: String? = nil,
         typeId: String? = nil,
+        subjectId: String? = nil,
         sourceSurface: SourceSurface = .page,
         ref: String? = nil,
         title: String? = nil
@@ -52,6 +57,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         self.sourceId = Self.nilIfEmpty(sourceId)
         self.fieldId = Self.nilIfEmpty(fieldId)
         self.typeId = Self.nilIfEmpty(typeId)
+        self.subjectId = Self.nilIfEmpty(subjectId)
         self.sourceSurface = sourceSurface
         self.ref = Self.nilIfEmpty(ref)
         self.title = Self.nilIfEmpty(title)
@@ -63,6 +69,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         sourceId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .sourceId))
         fieldId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .fieldId))
         typeId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .typeId))
+        subjectId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .subjectId))
         sourceSurface = try container.decodeIfPresent(SourceSurface.self, forKey: .sourceSurface) ?? .page
         ref = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .ref))
         title = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .title))
@@ -79,6 +86,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
             && lhs.sourceId == rhs.sourceId
             && lhs.fieldId == rhs.fieldId
             && lhs.typeId == rhs.typeId
+            && lhs.subjectId == rhs.subjectId
             && lhs.sourceSurface == rhs.sourceSurface
     }
 

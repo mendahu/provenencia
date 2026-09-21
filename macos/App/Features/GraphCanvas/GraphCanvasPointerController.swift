@@ -25,6 +25,8 @@ final class GraphCanvasPointerController {
     var onDragEnded: ((String, CGSize) -> Void)?
     var onPlace: ((CGPoint) -> Void)?
     var onConnectPick: ((String) -> Void)?
+    /// Idle click on a nested card action (edit / Add property); `(targetID, actionID)`.
+    var onCardAction: ((String, String) -> Void)?
     /// Document point while hovering in place/connect; `nil` when pointer leaves.
     var onHover: ((CGPoint?) -> Void)?
 
@@ -141,7 +143,18 @@ final class GraphCanvasPointerController {
                 }
             case .idle:
                 if let targetID {
-                    onSelect?(targetID)
+                    let target = hitTargets.first(where: { $0.id == targetID })
+                    if let target,
+                       let action = GraphCanvasPointerHitTesting.action(
+                        at: documentPoint,
+                        in: target
+                       )
+                    {
+                        onSelect?(targetID)
+                        onCardAction?(targetID, action.id)
+                    } else {
+                        onSelect?(targetID)
+                    }
                 } else {
                     onDeselect?()
                 }

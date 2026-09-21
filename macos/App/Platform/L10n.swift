@@ -1059,6 +1059,96 @@ enum L10n {
             comment: "Cancel button on the Evidence graph create-subject dialog"
         )
 
+        static let editPersonTitle = LocalizedStringResource(
+            "evidenceGraph.edit.personTitle",
+            defaultValue: "Edit person",
+            comment: "Edit-subject dialog title for a Person"
+        )
+
+        static let editEventTitle = LocalizedStringResource(
+            "evidenceGraph.edit.eventTitle",
+            defaultValue: "Edit event",
+            comment: "Edit-subject dialog title for an Event"
+        )
+
+        static let editPlaceTitle = LocalizedStringResource(
+            "evidenceGraph.edit.placeTitle",
+            defaultValue: "Edit place",
+            comment: "Edit-subject dialog title for a Place"
+        )
+
+        static let editRelationshipTitle = LocalizedStringResource(
+            "evidenceGraph.edit.relationshipTitle",
+            defaultValue: "Edit relationship",
+            comment: "Edit-subject dialog title for a relationship bridge"
+        )
+
+        static let editParticipationTitle = LocalizedStringResource(
+            "evidenceGraph.edit.participationTitle",
+            defaultValue: "Edit participation",
+            comment: "Edit-subject dialog title for a participation bridge"
+        )
+
+        static let editLocationTitle = LocalizedStringResource(
+            "evidenceGraph.edit.locationTitle",
+            defaultValue: "Edit location",
+            comment: "Edit-subject dialog title for a location bridge"
+        )
+
+        static let editConfirm = LocalizedStringResource(
+            "evidenceGraph.edit.confirm",
+            defaultValue: "Save",
+            comment: "Confirm button on the Evidence graph edit-subject dialog"
+        )
+
+        static let editAccessibility = LocalizedStringResource(
+            "evidenceGraph.subject.editAccessibility",
+            defaultValue: "Edit label and description",
+            comment: "VoiceOver action / tooltip for the subject card edit pencil"
+        )
+
+        static let addProperty = LocalizedStringResource(
+            "evidenceGraph.subject.addProperty",
+            defaultValue: "Add property",
+            comment: "Quiet footer control on primary cards that opens the citation composer"
+        )
+
+        static let citedValueUnavailable = LocalizedStringResource(
+            "evidenceGraph.subject.citedValueUnavailable",
+            defaultValue: "—",
+            comment: "Placeholder when a cited Observation has no displayable value summary yet"
+        )
+
+        static let noArtifactTitle = LocalizedStringResource(
+            "evidenceGraph.noArtifact.title",
+            defaultValue: "No Artifacts on this source",
+            comment: "Title on the graph-wide No-Artifact warning callout"
+        )
+
+        static let noArtifactMessage = LocalizedStringResource(
+            "evidenceGraph.noArtifact.message",
+            defaultValue: "Citing needs an Artifact. Place tools, Connect, and Add property stay disabled until you attach one.",
+            comment: "Body on the graph-wide No-Artifact warning callout"
+        )
+
+        static let noArtifactAction = LocalizedStringResource(
+            "evidenceGraph.noArtifact.action",
+            defaultValue: "Add an Artifact",
+            comment: "Callout action that navigates to the Source page to attach an Artifact"
+        )
+
+        static let composerStubTitle = LocalizedStringResource(
+            "evidenceGraph.composer.stubTitle",
+            defaultValue: "Add property",
+            comment: "Citation composer stub place title until S7-08 ships the real form"
+        )
+
+        static let composerStubMessage = LocalizedStringResource(
+            "evidenceGraph.composer.stubMessage",
+            defaultValue: "The citation composer form ships next. Use Back to return to the Evidence graph.",
+            comment: "Citation composer stub body explaining the place is temporary"
+        )
+
         static let labelField = LocalizedStringResource(
             "evidenceGraph.create.labelField",
             defaultValue: "Label",

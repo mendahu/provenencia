@@ -1,6 +1,12 @@
 import CoreGraphics
 import Foundation
 
+/// Nested clickable region inside a card hit target (edit pencil, Add property).
+struct GraphCanvasActionTarget: Equatable, Sendable, Identifiable {
+    var id: String
+    var frame: CGRect
+}
+
 /// Document-space hit rect for AppKit pointer routing (product-agnostic).
 ///
 /// Array order is bottom → top; the last matching frame wins.
@@ -9,6 +15,8 @@ struct GraphCanvasHitTarget: Equatable, Sendable, Identifiable {
     var frame: CGRect
     /// When `false`, connecting mode ignores this target (e.g. bridge cards).
     var acceptsConnect: Bool
+    /// Document-space action zones; idle clicks prefer these over select.
+    var actions: [GraphCanvasActionTarget] = []
 }
 
 /// Tool mode for ``GraphCanvasPointerController`` (product maps its own modes here).
@@ -31,6 +39,19 @@ enum GraphCanvasPointerHitTesting {
         for target in targets.reversed() {
             if target.frame.contains(point) {
                 return target
+            }
+        }
+        return nil
+    }
+
+    /// First action whose frame contains `point` (topmost action wins).
+    static func action(
+        at point: CGPoint,
+        in target: GraphCanvasHitTarget
+    ) -> GraphCanvasActionTarget? {
+        for action in target.actions.reversed() {
+            if action.frame.contains(point) {
+                return action
             }
         }
         return nil

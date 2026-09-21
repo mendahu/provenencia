@@ -179,6 +179,25 @@ struct WorkspaceNavigationTests {
         #expect(navigation.currentLocation.sourceId == "src-1")
     }
 
+    @Test func goToCitationComposerRestoresSubjectId() throws {
+        let (navigation, _) = try attachedNavigation()
+        navigation.go(to: WorkspaceLocation(section: .sources, sourceId: "src-1", sourceSurface: .graph))
+        navigation.go(
+            to: WorkspaceLocation(
+                section: .sources,
+                sourceId: "src-1",
+                subjectId: "sub-9",
+                sourceSurface: .citationComposer,
+                title: "Margt."
+            )
+        )
+        #expect(navigation.currentLocation.sourceSurface == .citationComposer)
+        #expect(navigation.currentLocation.subjectId == "sub-9")
+        navigation.goBack()
+        #expect(navigation.currentLocation.sourceSurface == .graph)
+        #expect(navigation.currentLocation.subjectId == nil)
+    }
+
     @Test func navigationFileNameStripsDashesAndBraces() {
         #expect(
             InstallPaths.navigationFileName(projectUuid: "{00000000-0000-7000-8000-0000000000AA}")

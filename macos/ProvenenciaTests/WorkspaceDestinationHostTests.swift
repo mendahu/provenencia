@@ -29,6 +29,19 @@ struct WorkspaceDestinationHostTests {
         )
     }
 
+    @Test func presentationCitationComposer() {
+        #expect(
+            presentation(
+                for: WorkspaceLocation(
+                    section: .sources,
+                    sourceId: "src-1",
+                    subjectId: "sub-1",
+                    sourceSurface: .citationComposer
+                )
+            ) == .sourceCitationComposer
+        )
+    }
+
     @Test func presentationSourceFieldsRootAndRow() {
         #expect(presentation(for: .sectionRoot(.sourceFields)) == .sourceFields)
         #expect(
@@ -53,6 +66,7 @@ struct WorkspaceDestinationHostTests {
         #expect(WorkspaceDestinationHost.destinationKind(for: .sourcesList) == .sources)
         #expect(WorkspaceDestinationHost.destinationKind(for: .sourcePage) == .sources)
         #expect(WorkspaceDestinationHost.destinationKind(for: .sourceGraph) == .sources)
+        #expect(WorkspaceDestinationHost.destinationKind(for: .sourceCitationComposer) == .sources)
     }
 
     @Test func subjectFieldsPresentationHasOwnKind() {
@@ -66,6 +80,12 @@ struct WorkspaceDestinationHostTests {
             .sectionRoot(.sources),
             WorkspaceLocation(section: .sources, sourceId: "s1"),
             WorkspaceLocation(section: .sources, sourceId: "s1", sourceSurface: .graph),
+            WorkspaceLocation(
+                section: .sources,
+                sourceId: "s1",
+                subjectId: "sub-1",
+                sourceSurface: .citationComposer
+            ),
             .sectionRoot(.sourceFields),
             WorkspaceLocation(section: .sourceFields, fieldId: "f1"),
             .sectionRoot(.sourceTypes),
@@ -80,6 +100,6 @@ struct WorkspaceDestinationHostTests {
             }
             #expect(known.contains(place.presentation))
         }
-        #expect(known.count == 6)
+        #expect(known.count == 7)
     }
 }

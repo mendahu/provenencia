@@ -432,4 +432,65 @@ struct EvidenceGraphModelTests {
         #expect(model.connectOriginID == "e1")
         #expect(model.toast?.tone == .danger)
     }
+
+    @Test func confirmEditUpdatesSubjectAndClosesSheet() async throws {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.prepare()
+        let person = CatalogSubject(
+            id: "p1",
+            ref: "CPR-1",
+            sourceID: sourceID,
+            subjectTypeID: personTypeID,
+            label: "Old",
+            description: "Was"
+        )
+        store.subjectsBySource[sourceID] = [person]
+        store.subjectPositionsBySubject["p1"] = CatalogSubjectPosition(
+            subjectID: "p1", gridX: 1, gridY: 2
+        )
+        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        model.session.setQueryValue(
+            key,
+            value: SourceGraphSnapshot.build(
+                sourceId: sourceID,
+                subjects: [person],
+                positions: [CatalogSubjectPosition(subjectID: "p1", gridX: 1, gridY: 2)],
+                types: store.subjectTypesByProject[projectDir] ?? []
+            )
+        )
+
+        model.beginEdit(subjectID: "p1")
+        #expect(model.editingSubjectID == "p1")
+        #expect(model.draft.label == "Old")
+        model.draft.label = "New name"
+        model.draft.description = "Updated"
+        let id = await model.confirmEdit()
+        #expect(id == "p1")
+        #expect(model.editingSubjectID == nil)
+        #expect(store.subjectsBySource[sourceID]?.first?.label == "New name")
+        #expect(store.subjectsBySource[sourceID]?.first?.description == "Updated")
+    }
+
+    @Test func noArtifactDisablesArmingAndComposerLocation() async {
+        let store = makeStore()
+        store.sourcesByProject[projectDir] = [
+            CatalogSource(
+                id: sourceID,
+                ref: "SRC-1",
+                sourceTypeID: "type-book",
+                title: "Bare",
+                description: "",
+                hasArtifact: false
+            ),
+        ]
+        let model = makeModel(store: store)
+        let listKey = CatalogQueryKey.sourcesList(project: model.session.projectKey)
+        model.session.setQueryValue(listKey, value: store.sourcesByProject[projectDir] ?? [])
+        await model.prepare()
+        #expect(model.canCite == false)
+        model.toggleArm(.person)
+        #expect(model.armedKind == nil)
+        #expect(model.composerLocation(for: "p1") == nil)
+    }
 }

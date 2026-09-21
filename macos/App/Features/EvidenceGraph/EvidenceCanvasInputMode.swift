@@ -8,9 +8,9 @@ enum EvidenceCanvasInputMode: Equatable {
 }
 
 extension EvidenceGraphModel {
-    /// Idle when no tool is armed (or while the create dialog is open).
+    /// Idle when no tool is armed (or while a create/edit dialog is open).
     var inputMode: EvidenceCanvasInputMode {
-        guard !isCreating else { return .idle }
+        guard !isSheetPresented else { return .idle }
         if armedConnect { return .connecting }
         guard let kind = armedKind else { return .idle }
         return .placing(kind)

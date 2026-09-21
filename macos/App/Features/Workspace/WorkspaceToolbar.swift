@@ -199,7 +199,9 @@ struct WorkspaceToolbar: View {
             ]
         }
         let leaf: String
-        if location.sourceSurface == .graph, location.sourceId != nil {
+        if location.sourceSurface == .citationComposer, location.sourceId != nil {
+            leaf = String(localized: L10n.EvidenceGraph.composerStubTitle)
+        } else if location.sourceSurface == .graph, location.sourceId != nil {
             leaf = String(localized: L10n.Workspace.evidenceGraphTitle)
         } else {
             leaf = location.ref.flatMap { $0.nilIfEmpty }

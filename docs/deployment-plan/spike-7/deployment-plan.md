@@ -308,7 +308,7 @@ Schema/Go (01–03, 01b) may start before design finishes; **UI PRs gate on the 
 ## Checklist
 
 - [x] S7-D2 — Design: Subject fields → [`completed.md`](completed.md)
-- [ ] S7-D3 — Design: Evidence graph updates → [`completed.md`](completed.md)
+- [x] S7-D3 — Design: Evidence graph updates → [`completed.md`](completed.md)
 - [ ] S7-D4 — Design: Citation composer place → [`completed.md`](completed.md)
 - [ ] S7-D5 — Design: NameValue editor → [`completed.md`](completed.md)
 - [x] S7-01 — `properties` + `subject_type_fields` + **central Interpretation subject registry** + Go/FFI → [`completed.md`](completed.md)
@@ -320,7 +320,7 @@ Schema/Go (01–03, 01b) may start before design finishes; **UI PRs gate on the 
 - [x] S7-12 — `Recipes/Marks/` consolidation + graph / Subject fields migration → [`completed.md`](completed.md)
 - [x] S7-D8 — Design: PVCallout actions slot → [`completed.md`](completed.md)
 - [x] S7-14 — `PVCallout` actions slot (kit Extend) → [`completed.md`](completed.md)
-- [ ] S7-09 — Add property + composer navigation (stub OK) → [`completed.md`](completed.md)
+- [x] S7-09 — Add property + composer navigation (stub OK) → [`completed.md`](completed.md)
 - [ ] S7-08 — Thin composer (submit + card growth; viewer placeholder OK) → [`completed.md`](completed.md)
 - [ ] S7-06 — Image + PDF viewers in composer → [`completed.md`](completed.md)
 - [ ] S7-07 — Locator tools (page + region) → [`completed.md`](completed.md)
@@ -352,7 +352,7 @@ Handoff / light board for the unified **Marks** recipe (`DesignSystem/Recipes/Ma
 
 ## S7-D3 — Design: Evidence graph updates
 
-Claude Design board for Add property, cited rows, subject refs, bridge edge summaries, connect disambiguation handoff. Brief: [`design/S7-D3-evidence-graph-updates.md`](design/S7-D3-evidence-graph-updates.md). Gates **S7-09**, **S7-10**. Does **not** design the composer place (S7-D4). Prefer **S7-12** and **S7-14** (`PVCallout` actions) already landed. **Implement S7-09 before the thick composer** so Add property is dogfoodable early.
+Claude Design board for Add property, cited rows, subject refs, bridge edge summaries, connect disambiguation handoff. Brief archived: [`design/archive/S7-D3-evidence-graph-updates.md`](design/archive/S7-D3-evidence-graph-updates.md). Gates **S7-09**, **S7-10**. Does **not** design the composer place (S7-D4). Prefer **S7-12** and **S7-14** (`PVCallout` actions) already landed. **Implement S7-09 before the thick composer** so Add property is dogfoodable early.
 
 ---
 

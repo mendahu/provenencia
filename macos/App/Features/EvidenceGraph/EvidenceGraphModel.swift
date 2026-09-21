@@ -27,6 +27,11 @@ final class EvidenceGraphModel {
     var pendingEndpointBID: String?
 
     var isCreating = false
+    /// Edit label/description sheet open for this subject (mutually exclusive with create).
+    var editingSubjectID: String?
+    /// Kind used for edit dialog title when editing a primary; nil when editing a bridge.
+    var editingPrimaryKind: EvidencePrimaryKind?
+    var editingBridgeKind: EvidenceBridgeKind?
     var pendingGridX: Int64 = 0
     var pendingGridY: Int64 = 0
     var draft = CreateDraft()
@@ -46,6 +51,14 @@ final class EvidenceGraphModel {
     /// Seeded type ids keyed by primary or bridge kind rawValue.
     private(set) var typeIDByKind: [String: String] = [:]
     private(set) var typeLabelByKind: [String: String] = [:]
+    /// Registry presentation tokens keyed by type key (S7-09).
+    private(set) var presentationByKind: [String: CatalogSubjectTypePresentation] = [:]
+    /// False when the Source has zero Artifacts — disables cite controls (S7-09).
+    private(set) var canCite = true
+
+    var isSheetPresented: Bool {
+        isCreating || editingSubjectID != nil
+    }
 
     private var graphKey: CatalogQueryKey {
         CatalogQueryKey.sourceGraph(project: session.projectKey, sourceId: sourceID)
@@ -97,9 +110,55 @@ final class EvidenceGraphModel {
             typeIDByKind = [:]
             typeLabelByKind = [:]
         }
+
+        var presentations: [String: CatalogSubjectTypePresentation] = [:]
+        if let placeable = try? await store.listPlaceableSubjectTypes() {
+            for item in placeable {
+                presentations[item.typeKey] = item
+            }
+        }
+        let keys = EvidencePrimaryKind.allCases.map(\.rawValue)
+            + EvidenceBridgeKind.allCases.map(\.rawValue)
+        for key in keys where presentations[key] == nil {
+            if let presentation = try? await store.getSubjectTypePresentation(typeKey: key) {
+                presentations[key] = presentation
+            }
+        }
+        presentationByKind = presentations
+
+        await refreshCanCite()
+    }
+
+    func refreshCanCite() async {
+        let listKey = CatalogQueryKey.sourcesList(project: session.projectKey)
+        let sources: [CatalogSource]?
+        if let handle: QueryHandle<[CatalogSource]> = session.queryHandle(listKey) {
+            sources = handle.value
+        } else {
+            let handle: QueryHandle<[CatalogSource]> = session.query(listKey)
+            var waited = 0
+            while handle.value == nil && waited < 40 {
+                try? await Task.sleep(nanoseconds: 25_000_000)
+                waited += 1
+            }
+            sources = handle.value
+        }
+        guard let match = sources?.first(where: { $0.id == sourceID }) else {
+            // Keep previous / default until the Sources list includes this id.
+            return
+        }
+        canCite = match.hasArtifact
+        if !match.hasArtifact {
+            disarm()
+        }
+    }
+
+    func presentation(for typeKey: String) -> CatalogSubjectTypePresentation? {
+        presentationByKind[typeKey]
     }
 
     func toggleArm(_ kind: EvidencePrimaryKind) {
+        guard canCite else { return }
         if armedKind == kind {
             disarm()
         } else {
@@ -111,6 +170,7 @@ final class EvidenceGraphModel {
     }
 
     func toggleConnect() {
+        guard canCite else { return }
         if armedConnect {
             disarm()
         } else {
@@ -158,7 +218,7 @@ final class EvidenceGraphModel {
 
     /// Pointer / keyboard pick while Connect is armed.
     func handleConnectPick(subjectID: String, kind: EvidencePrimaryKind, label: String) {
-        guard armedConnect, !isCreating, !isSaving else { return }
+        guard canCite, armedConnect, !isCreating, !isSaving, editingSubjectID == nil else { return }
         if connectOriginID == nil {
             connectOriginID = subjectID
             selectSubject(id: subjectID)
@@ -196,7 +256,7 @@ final class EvidenceGraphModel {
 
     /// Opens the create dialog at the snapped cell (tool must be armed).
     func beginCreate(at contentPoint: CGPoint) {
-        guard let kind = armedKind, !isCreating, !isSaving else { return }
+        guard canCite, let kind = armedKind, !isCreating, !isSaving, editingSubjectID == nil else { return }
         let cell = GraphCanvasGridMapping.gridCell(contentPoint: contentPoint)
         pendingGridX = cell.gridX
         pendingGridY = cell.gridY
@@ -212,12 +272,42 @@ final class EvidenceGraphModel {
         clearHover()
     }
 
+    /// Opens the shared create/edit sheet prefilled for an existing subject.
+    func beginEdit(subjectID: String) {
+        guard !isCreating, !isSaving, editingSubjectID == nil else { return }
+        let snapshot = currentSnapshot()
+        if let primary = primary(in: snapshot, id: subjectID) {
+            editingSubjectID = subjectID
+            editingPrimaryKind = primary.kind
+            editingBridgeKind = nil
+            draft = CreateDraft(
+                label: primary.subject.label,
+                description: primary.subject.description
+            )
+        } else if let bridge = snapshot?.bridges.first(where: { $0.id == subjectID }) {
+            editingSubjectID = subjectID
+            editingPrimaryKind = nil
+            editingBridgeKind = bridge.kind
+            draft = CreateDraft(
+                label: bridge.subject.label,
+                description: bridge.subject.description
+            )
+        } else {
+            return
+        }
+        selectSubject(id: subjectID)
+        labelError = nil
+        createError = nil
+        disarm()
+    }
+
     private func beginBridgeCreate(
         originID: String,
         targetID: String,
         targetKind: EvidencePrimaryKind,
         targetLabel: String
     ) {
+        guard canCite else { return }
         guard let origin = primary(in: currentSnapshot(), id: originID) else { return }
         guard let bridgeKind = EvidenceBridgeKindInference.kind(origin.kind, targetKind) else {
             toast = VocabularyToast(
@@ -244,6 +334,23 @@ final class EvidenceGraphModel {
         _ = targetLabel
     }
 
+    func cancelSheet() {
+        if editingSubjectID != nil {
+            cancelEdit()
+        } else {
+            cancelCreate()
+        }
+    }
+
+    func cancelEdit() {
+        guard !isSaving else { return }
+        editingSubjectID = nil
+        editingPrimaryKind = nil
+        editingBridgeKind = nil
+        labelError = nil
+        createError = nil
+    }
+
     func cancelCreate() {
         guard !isSaving else { return }
         let wasBridge = pendingBridgeKind != nil
@@ -266,6 +373,77 @@ final class EvidenceGraphModel {
             return await confirmBridgeCreate()
         }
         return await confirmPrimaryCreate()
+    }
+
+    @discardableResult
+    func confirmEdit() async -> String? {
+        guard let subjectID = editingSubjectID, !isSaving else { return nil }
+        let trimmed = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            labelError = String(localized: L10n.EvidenceGraph.labelRequired)
+            return nil
+        }
+
+        isSaving = true
+        defer { isSaving = false }
+        labelError = nil
+        createError = nil
+        do {
+            _ = try await store.updateSubject(
+                projectDir: session.projectKey.projectDir,
+                userID: userID,
+                subjectID: subjectID,
+                label: trimmed,
+                description: draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
+            )
+            session.apply(.createdSubject(sourceId: sourceID))
+            let _: QueryHandle<SourceGraphSnapshot> = session.query(graphKey)
+            editingSubjectID = nil
+            editingPrimaryKind = nil
+            editingBridgeKind = nil
+            selectSubject(id: subjectID)
+            return subjectID
+        } catch {
+            createError = L10n.Errors.message(for: error)
+            return nil
+        }
+    }
+
+    /// Citation composer place for Add property (stub destination until S7-08).
+    func composerLocation(for subjectID: String) -> WorkspaceLocation? {
+        guard canCite else { return nil }
+        let snapshot = currentSnapshot()
+        let title: String?
+        let ref: String?
+        if let primary = primary(in: snapshot, id: subjectID) {
+            title = primary.subject.label
+            ref = primary.subject.ref
+        } else if let bridge = snapshot?.bridges.first(where: { $0.id == subjectID }) {
+            title = bridge.subject.label
+            ref = bridge.subject.ref
+        } else {
+            title = nil
+            ref = nil
+        }
+        return WorkspaceLocation(
+            section: .sources,
+            sourceId: sourceID,
+            subjectId: subjectID,
+            sourceSurface: .citationComposer,
+            ref: ref,
+            title: title
+        )
+    }
+
+    /// Source page recovery target when the graph has no Artifacts.
+    func sourcePageLocation(title: String, ref: String?) -> WorkspaceLocation {
+        WorkspaceLocation(
+            section: .sources,
+            sourceId: sourceID,
+            sourceSurface: .page,
+            ref: ref,
+            title: title
+        )
     }
 
     @discardableResult
@@ -447,6 +625,9 @@ final class EvidenceGraphModel {
     }
 
     func createDialogTitle() -> LocalizedStringResource {
+        if editingSubjectID != nil {
+            return editDialogTitle()
+        }
         if let bridgeKind = pendingBridgeKind {
             return bridgeCreateTitle(for: bridgeKind)
         }
@@ -456,6 +637,30 @@ final class EvidenceGraphModel {
         case .place: return L10n.EvidenceGraph.addPlaceTitle
         case .none: return L10n.EvidenceGraph.addPersonTitle
         }
+    }
+
+    func editDialogTitle() -> LocalizedStringResource {
+        if let kind = editingPrimaryKind {
+            switch kind {
+            case .person: return L10n.EvidenceGraph.editPersonTitle
+            case .event: return L10n.EvidenceGraph.editEventTitle
+            case .place: return L10n.EvidenceGraph.editPlaceTitle
+            }
+        }
+        if let kind = editingBridgeKind {
+            switch kind {
+            case .relationship: return L10n.EvidenceGraph.editRelationshipTitle
+            case .participation: return L10n.EvidenceGraph.editParticipationTitle
+            case .location: return L10n.EvidenceGraph.editLocationTitle
+            }
+        }
+        return L10n.EvidenceGraph.editPersonTitle
+    }
+
+    func sheetConfirmLabel() -> LocalizedStringResource {
+        editingSubjectID != nil
+            ? L10n.EvidenceGraph.editConfirm
+            : L10n.EvidenceGraph.createConfirm
     }
 
     func createDialogTitle(for kind: EvidencePrimaryKind) -> LocalizedStringResource {
