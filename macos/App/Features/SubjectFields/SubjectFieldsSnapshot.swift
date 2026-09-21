@@ -56,13 +56,15 @@ enum SubjectFieldsTypeChrome {
         }
     }
 
-    /// Board: Relationship / Participation / Location share the bridge mark; Source is its own folio.
+    /// One curated mark per Subject type key (including distinct bridge marks).
     static func stripMarkKey(typeKey: String) -> PVMarkKey? {
         switch typeKey {
         case "person": return .subjectPerson
         case "event": return .subjectEvent
         case "place": return .subjectPlace
-        case "relationship", "participation", "location": return .subjectRelationship
+        case "relationship": return .subjectRelationship
+        case "participation": return .subjectParticipation
+        case "location": return .subjectLocation
         case "source": return .subjectSource
         default: return nil
         }
