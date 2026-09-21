@@ -226,7 +226,7 @@ private struct OmnibarHitRowView: View {
             } else {
                 PVThumbnail(
                     PVThumbnail.Content(
-                        evidenceIcon: PVEvidenceIconKey(catalogKey: hit.iconKey),
+                        mark: PVMarkKey(catalogKey: hit.iconKey),
                         label: OmnibarHitPresentation.kindLabel(for: hit.kind)
                     ),
                     size: 40

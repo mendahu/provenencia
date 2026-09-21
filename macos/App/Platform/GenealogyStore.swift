@@ -233,7 +233,7 @@ struct CatalogSourceType: Sendable, Equatable, Identifiable {
     var label: String
     var description: String
     /// Closed design-system `type_*` key for evidence representation.
-    var iconKey: String = PVEvidenceIconKey.defaultTypeIcon.rawValue
+    var iconKey: String = PVMarkKey.defaultTypeMark.rawValue
     /// How many sources classify as this type. Deleting is only allowed at
     /// 0 — the engine refuses otherwise (`sourcetypes.in_use`). Only
     /// `listSourceTypes` and `updateSourceType` populate it.

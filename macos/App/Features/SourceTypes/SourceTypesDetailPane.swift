@@ -9,7 +9,7 @@ struct SourceTypesDetailPane: View {
     @Bindable var model: SourceTypesModel
     @State private var iconPickerOpen = false
     /// Pending selection while the form dialog is open — draft updates only on confirm.
-    @State private var pendingIconKey = PVEvidenceIconKey.defaultTypeIcon.rawValue
+    @State private var pendingIconKey = PVMarkKey.defaultTypeMark.rawValue
 
     var body: some View {
         ScrollView {
@@ -217,7 +217,7 @@ struct SourceTypesDetailPane: View {
     }
 
     private func iconFieldButton(selection: Binding<String>) -> some View {
-        let key = PVEvidenceIconKey(catalogKey: selection.wrappedValue)
+        let key = PVMarkKey(catalogKey: selection.wrappedValue)
         return Button {
             pendingIconKey = selection.wrappedValue
             iconPickerOpen = true
@@ -230,7 +230,7 @@ struct SourceTypesDetailPane: View {
                             RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
                                 .stroke(PVColor.borderSubtle, lineWidth: 1)
                         )
-                    PVEvidenceIcon(key, size: 28, decorative: true)
+                    PVMark(key, size: 28, decorative: true)
                 }
                 .frame(width: 44, height: 44)
                 VStack(alignment: .leading, spacing: 1) {
@@ -501,7 +501,7 @@ private struct SourceTypeIconPickerForm: View {
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space7) {
             LazyVGrid(columns: columns, spacing: PVSpacing.space4) {
-                ForEach(PVEvidenceIconKey.typeKeys, id: \.rawValue) { key in
+                ForEach(PVMarkKey.typeKeys, id: \.rawValue) { key in
                     iconCell(key)
                 }
             }
@@ -517,17 +517,17 @@ private struct SourceTypeIconPickerForm: View {
         }
     }
 
-    private var selectedKey: PVEvidenceIconKey {
-        PVEvidenceIconKey(catalogKey: selection)
+    private var selectedKey: PVMarkKey {
+        PVMarkKey(catalogKey: selection)
     }
 
-    private func iconCell(_ key: PVEvidenceIconKey) -> some View {
+    private func iconCell(_ key: PVMarkKey) -> some View {
         let selected = selection == key.rawValue
         return Button {
             selection = key.rawValue
         } label: {
             VStack(spacing: PVSpacing.space4) {
-                PVEvidenceIcon(key, size: 40, decorative: true)
+                PVMark(key, size: 40, decorative: true)
                 Text(key.typePickerTitle)
                     .font(PVFont.body(size: PVTypeScale.micro))
                     .multilineTextAlignment(.center)

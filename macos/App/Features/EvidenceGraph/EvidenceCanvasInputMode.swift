@@ -18,21 +18,21 @@ extension EvidenceGraphModel {
 }
 
 extension EvidencePrimaryKind {
-    var subjectIconKind: PVSubjectIconKind {
+    var markKey: PVMarkKey {
         switch self {
-        case .person: .person
-        case .event: .event
-        case .place: .place
+        case .person: .subjectPerson
+        case .event: .subjectEvent
+        case .place: .subjectPlace
         }
     }
 }
 
 extension EvidenceBridgeKind {
-    var subjectIconKind: PVSubjectIconKind {
+    var markKey: PVMarkKey {
         switch self {
-        case .relationship: .relationship
-        case .participation: .participation
-        case .location: .location
+        case .relationship: .subjectRelationship
+        case .participation: .subjectParticipation
+        case .location: .subjectLocation
         }
     }
 }

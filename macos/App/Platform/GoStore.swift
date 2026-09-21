@@ -1175,7 +1175,7 @@ struct GoStore: GenealogyStore {
             origin: t.origin,
             label: t.label,
             description: t.description_p,
-            iconKey: t.iconKey.isEmpty ? PVEvidenceIconKey.defaultTypeIcon.rawValue : t.iconKey,
+            iconKey: t.iconKey.isEmpty ? PVMarkKey.defaultTypeMark.rawValue : t.iconKey,
             usedBy: Int(t.usedBy),
             suggestedFieldCount: Int(t.suggestedFieldCount)
         )

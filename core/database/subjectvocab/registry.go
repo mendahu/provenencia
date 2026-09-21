@@ -69,7 +69,7 @@ var seedTypes = []seedType{
 		RefPrefix:   "PER", CandidateRefPrefix: "CPR",
 		Role: RoleRoot, Placeable: true, PaletteSort: 0,
 		Presentation: presentation{
-			L10nKey: "subjectType.person", IconSymbol: "person",
+			L10nKey: "subjectType.person", IconSymbol: "subject_person",
 			InkToken: "subjectPersonInk", TintToken: "subjectPersonTint",
 			ChipToken: "subjectPersonChip", LineToken: "subjectPersonLine",
 		},
@@ -80,7 +80,7 @@ var seedTypes = []seedType{
 		RefPrefix:   "EVT", CandidateRefPrefix: "CEV",
 		Role: RoleRoot, Placeable: true, PaletteSort: 1,
 		Presentation: presentation{
-			L10nKey: "subjectType.event", IconSymbol: "event",
+			L10nKey: "subjectType.event", IconSymbol: "subject_event",
 			InkToken: "subjectEventInk", TintToken: "subjectEventTint",
 			ChipToken: "subjectEventChip", LineToken: "subjectEventLine",
 		},
@@ -91,7 +91,7 @@ var seedTypes = []seedType{
 		RefPrefix:   "PLC", CandidateRefPrefix: "CPL",
 		Role: RoleRoot, Placeable: true, PaletteSort: 2,
 		Presentation: presentation{
-			L10nKey: "subjectType.place", IconSymbol: "place",
+			L10nKey: "subjectType.place", IconSymbol: "subject_place",
 			InkToken: "subjectPlaceInk", TintToken: "subjectPlaceTint",
 			ChipToken: "subjectPlaceChip", LineToken: "subjectPlaceLine",
 		},
@@ -102,7 +102,7 @@ var seedTypes = []seedType{
 		RefPrefix:   "REL", CandidateRefPrefix: "CRL",
 		Role: RoleBridge, RequiresCitationAtCreate: true,
 		Presentation: presentation{
-			L10nKey: "subjectType.relationship", IconSymbol: "relationship",
+			L10nKey: "subjectType.relationship", IconSymbol: "subject_relationship",
 			InkToken: "subjectPersonInk", TintToken: "subjectPersonTint",
 			ChipToken: "subjectPersonChip", LineToken: "subjectPersonLine",
 		},
@@ -113,7 +113,7 @@ var seedTypes = []seedType{
 		RefPrefix:   "PTN", CandidateRefPrefix: "CPA",
 		Role: RoleBridge, RequiresCitationAtCreate: true,
 		Presentation: presentation{
-			L10nKey: "subjectType.participation", IconSymbol: "participation",
+			L10nKey: "subjectType.participation", IconSymbol: "subject_participation",
 			InkToken: "subjectEventInk", TintToken: "subjectEventTint",
 			ChipToken: "subjectEventChip", LineToken: "subjectEventLine",
 		},
@@ -124,7 +124,7 @@ var seedTypes = []seedType{
 		RefPrefix:   "LOC", CandidateRefPrefix: "CLO",
 		Role: RoleBridge, RequiresCitationAtCreate: true,
 		Presentation: presentation{
-			L10nKey: "subjectType.location", IconSymbol: "location",
+			L10nKey: "subjectType.location", IconSymbol: "subject_location",
 			InkToken: "subjectPlaceInk", TintToken: "subjectPlaceTint",
 			ChipToken: "subjectPlaceChip", LineToken: "subjectPlaceLine",
 		},
@@ -135,7 +135,7 @@ var seedTypes = []seedType{
 		RefPrefix:   "SRN", CandidateRefPrefix: "CSR",
 		Role: RoleReification,
 		Presentation: presentation{
-			L10nKey: "subjectType.source", IconSymbol: "source",
+			L10nKey: "subjectType.source", IconSymbol: "subject_source",
 			InkToken: "subjectPersonInk", TintToken: "subjectPersonTint",
 			ChipToken: "subjectPersonChip", LineToken: "subjectPersonLine",
 		},

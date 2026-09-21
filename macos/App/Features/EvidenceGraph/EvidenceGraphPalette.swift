@@ -35,7 +35,7 @@ struct EvidenceGraphPalette: View {
             model.toggleArm(kind)
         } label: {
             HStack(spacing: 8) {
-                PVSubjectIcon(kind: kind.subjectIconKind, size: 17)
+                PVMark(kind.markKey, size: 17)
                     .foregroundStyle(armed ? PVColor.accentForeground : style.ink)
                 Text(model.toolName(for: kind))
                     .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))

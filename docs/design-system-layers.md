@@ -45,11 +45,11 @@ DesignSystem/
       PVConfirm.swift
     …
   Recipes/                        # product recipes
-    EvidenceIcon/
-      PVEvidenceIcon.swift
-      # optional: EVIDENCE-ICONS.md, asset notes
-    SubjectIcon/
-      PVSubjectIcon.swift
+    Marks/
+      PVMark.swift
+      MARKS.md
+    OmnibarHitRow/
+      PVOmnibarHitRow.swift
     …
   Snowflakes/                     # named kit-side one-offs (rare)
     <Name>/
@@ -64,14 +64,14 @@ Features/<Feature>/               # screens; private snowflake helpers OK here t
 | `DesignSystem/Snowflakes/<Name>/` | Snowflakes | One folder per named kit-side one-off |
 | `Features/<Feature>/` | Snowflakes (typical) | Feature views + `private` helpers |
 
-**Folder naming:** PascalCase **without** the `PV` prefix (`Button`, `EvidenceIcon`). The **Swift type** inside still uses the `PV` prefix — see [PV type prefix](#pv-type-prefix) below.
+**Folder naming:** PascalCase **without** the `PV` prefix (`Button`, `Marks`). The **Swift type** inside still uses the `PV` prefix — see [PV type prefix](#pv-type-prefix) below.
 
 **Colocate** in the component folder: the main view, private backing types, small helpers, and component-specific docs. Do **not** dump unrelated controls into the same folder. Shared cross-cutting tokens stay in `Tokens/`.
 
 Prefer **`Features/<Feature>/`** for snowflakes glued to one screen. Use **`DesignSystem/Snowflakes/<Name>/`** only when a named type should live next to the kit but is not a recipe or component.
 
-**Incorrect:** `Components/Forms/PVInput.swift`, `Components/PVInput.swift` (loose file at layer root), `Components/Research/PVEvidenceIcon.swift`.  
-**Correct:** `Components/Input/PVInput.swift`, `Recipes/EvidenceIcon/PVEvidenceIcon.swift`.
+**Incorrect:** `Components/Forms/PVInput.swift`, `Components/PVInput.swift` (loose file at layer root), `Components/Research/PVMark.swift`.  
+**Correct:** `Components/Input/PVInput.swift`, `Recipes/Marks/PVMark.swift`.
 
 ### Claude Design / web kit (parity)
 
@@ -82,7 +82,7 @@ components/
   Input/
   …
 recipes/
-  EvidenceIcon/
+  Marks/
   …
 snowflakes/
   <Name>/
@@ -105,7 +105,7 @@ No `components/forms/` category nesting. Each control is `components/<Name>/`.
 | Location | Public type / primary file naming |
 |---|---|
 | `DesignSystem/Components/<Name>/` | **Must** use the `PV` prefix: type `PVButton`, file typically `PVButton.swift` |
-| `DesignSystem/Recipes/<Name>/` | **Must** use the `PV` prefix on the public recipe type (e.g. `PVEvidenceIcon`) — same collision and ownership reasons |
+| `DesignSystem/Recipes/<Name>/` | **Must** use the `PV` prefix on the public recipe type (e.g. `PVMark`) — same collision and ownership reasons |
 | `DesignSystem/Tokens/` | Existing `PV*` token types (`PVColor`, `PVSpacing`, …) keep the prefix |
 | `DesignSystem/Snowflakes/<Name>/` | Prefer `PV` if the name would collide with SwiftUI/AppKit; otherwise a clear product name is OK |
 | `Features/<Feature>/` snowflakes | **Do not** require `PV` — use feature/product names |
@@ -143,7 +143,7 @@ Product-specific compositions used **consistently across more than one place**. 
 - Thin wrappers preferred — do not reimplement badge / chip / row chrome.
 - Live under `DesignSystem/Recipes/<Name>/`.
 
-**Examples:** `PVEvidenceIcon`, `PVSubjectIcon`, evidence-grade / source-type badge families; a shared “delete vocabulary row” confirm shell *if* several screens share the same wiring.
+**Examples:** `PVMark`, evidence-grade / source-type badge families; a shared “delete vocabulary row” confirm shell *if* several screens share the same wiring.
 
 ## 3. Snowflakes
 

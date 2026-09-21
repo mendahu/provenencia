@@ -194,7 +194,7 @@ private struct SubjectFieldsContent: View {
                 selected: model.selectedTypeKey == nil,
                 bridge: false,
                 ink: PVColor.textPrimary,
-                icon: nil
+                mark: nil
             )
             ForEach(model.types) { type in
                 let presentation = model.snapshot.presentation(for: type)
@@ -205,7 +205,7 @@ private struct SubjectFieldsContent: View {
                     selected: model.selectedTypeKey == type.key,
                     bridge: SubjectFieldsTypeChrome.showsBridgeLabel(typeKey: type.key),
                     ink: SubjectFieldsTypeChrome.ink(typeKey: type.key, presentation: presentation),
-                    icon: SubjectFieldsTypeChrome.stripIconKind(typeKey: type.key)
+                    mark: SubjectFieldsTypeChrome.stripMarkKey(typeKey: type.key)
                 )
             }
         }
@@ -221,15 +221,15 @@ private struct SubjectFieldsContent: View {
         selected: Bool,
         bridge: Bool,
         ink: Color,
-        icon: PVSubjectIconKind?
+        mark: PVMarkKey?
     ) -> some View {
         Button {
             model.selectType(key)
         } label: {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .top) {
-                    if let icon {
-                        PVSubjectIcon(kind: icon, size: 16)
+                    if let mark {
+                        PVMark(mark, size: 16)
                             .foregroundStyle(ink)
                     } else {
                         Image(systemName: "square.grid.2x2")
@@ -580,8 +580,8 @@ private struct SubjectFieldsContent: View {
         } label: {
             HStack(spacing: PVSpacing.space5) {
                 SubjectFieldsBindBox(on: bound, locked: locked)
-                if let kind = SubjectFieldsTypeChrome.stripIconKind(typeKey: type.key) {
-                    PVSubjectIcon(kind: kind, size: 14)
+                if let mark = SubjectFieldsTypeChrome.stripMarkKey(typeKey: type.key) {
+                    PVMark(mark, size: 14)
                         .foregroundStyle(ink)
                 }
                 Text(verbatim: type.label)
@@ -738,8 +738,8 @@ private struct SubjectFieldsContent: View {
         } label: {
             HStack(spacing: PVSpacing.space5) {
                 SubjectFieldsBindBox(on: on, locked: false)
-                if let kind = SubjectFieldsTypeChrome.stripIconKind(typeKey: type.key) {
-                    PVSubjectIcon(kind: kind, size: 14)
+                if let mark = SubjectFieldsTypeChrome.stripMarkKey(typeKey: type.key) {
+                    PVMark(mark, size: 14)
                         .foregroundStyle(ink)
                 }
                 Text(verbatim: type.label)

@@ -11,8 +11,8 @@ struct CatalogSourceTypePill: View {
     var body: some View {
         HStack(spacing: PVSpacing.space2) {
             if let iconKey, !iconKey.isEmpty {
-                PVEvidenceIcon(
-                    PVEvidenceIconKey(catalogKey: iconKey),
+                PVMark(
+                    PVMarkKey(catalogKey: iconKey),
                     size: .inline,
                     decorative: true
                 )

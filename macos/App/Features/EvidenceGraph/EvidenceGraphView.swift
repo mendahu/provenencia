@@ -284,7 +284,7 @@ private struct EvidenceGraphContent: View {
                     ZStack {
                         RoundedRectangle(cornerRadius: 4, style: .continuous)
                             .fill(PVColor.surfacePage)
-                        PVSubjectIcon(kind: bridgeKind.subjectIconKind, size: 15)
+                        PVMark(bridgeKind.markKey, size: 15)
                             .foregroundStyle(PVColor.textMuted)
                     }
                     .frame(width: 28, height: 28)
@@ -307,7 +307,7 @@ private struct EvidenceGraphContent: View {
                     ZStack {
                         RoundedRectangle(cornerRadius: 4, style: .continuous)
                             .fill(style.chip)
-                        PVSubjectIcon(kind: kind.subjectIconKind, size: 15)
+                        PVMark(kind.markKey, size: 15)
                             .foregroundStyle(style.ink)
                     }
                     .frame(width: 28, height: 28)

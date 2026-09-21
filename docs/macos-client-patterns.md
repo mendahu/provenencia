@@ -13,7 +13,7 @@ Audience: someone comfortable with JavaScript and Go, new to Apple platforms.
 | `App/` | Process entry: scenes, menus. Stay thin. | `ProvenenciaApp.swift` |
 | `Platform/` | Reused for the whole Mac client: store protocol, FFI, fakes, `L10n`. Not a screen. | `GenealogyStore`, `GoStore`, `CoreInvoke`, `L10n` |
 | `Platform/Generated/` | `protoc` output. Do not edit by hand. | `engine.pb.swift` |
-| `DesignSystem/` | Layer roots `Components/` / `Recipes/` / optional `Snowflakes/` — **one folder per control** (e.g. `Components/Button/PVButton.swift`); plus `Tokens/`. See [`DesignSystem/README.md`](../macos/App/DesignSystem/README.md) and [`design-system-layers.md`](design-system-layers.md). No `Core`/`Forms`/`Research` nesting; no loose `.swift` at a layer root. | `Components/Button/`, `Recipes/EvidenceIcon/` |
+| `DesignSystem/` | Layer roots `Components/` / `Recipes/` / optional `Snowflakes/` — **one folder per control** (e.g. `Components/Button/PVButton.swift`); plus `Tokens/`. See [`DesignSystem/README.md`](../macos/App/DesignSystem/README.md) and [`design-system-layers.md`](design-system-layers.md). No `Core`/`Forms`/`Research` nesting; no loose `.swift` at a layer root. | `Components/Button/`, `Recipes/Marks/` |
 | `Features/<Name>/` | One product flow (view + model). Typical home for snowflake helpers (`private`). | `Onboarding`, `Workspace`, `SourceFields` |
 | `Features/Catalog/` | Catalog-wide markers and session counts — not a screen. Prefer a product concept over a `Shared/` dump. | `CatalogCounts`, `OriginMarkers`, `MetadataFieldBadges` |
 | `Features/CatalogVocabulary/` | Reusable vocabulary-browser shell (list + detail chrome) for Fields, Types, and later vocab destinations. | `VocabularyListPane`, `VocabularyChrome` |

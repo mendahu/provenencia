@@ -57,14 +57,14 @@ enum SubjectFieldsTypeChrome {
     }
 
     /// Board: Relationship / Participation / Location share the bridge mark; Source is its own folio.
-    static func stripIconKind(typeKey: String) -> PVSubjectIconKind? {
+    static func stripMarkKey(typeKey: String) -> PVMarkKey? {
         switch typeKey {
-        case "person": return .person
-        case "event": return .event
-        case "place": return .place
-        case "relationship", "participation", "location": return .relationship
-        case "source": return .source
-        default: return PVSubjectIconKind(rawValue: typeKey)
+        case "person": return .subjectPerson
+        case "event": return .subjectEvent
+        case "place": return .subjectPlace
+        case "relationship", "participation", "location": return .subjectRelationship
+        case "source": return .subjectSource
+        default: return nil
         }
     }
 

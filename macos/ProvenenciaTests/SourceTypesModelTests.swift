@@ -251,7 +251,7 @@ struct SourceTypesModelTests {
         #expect(!model.isAdding)
         #expect(model.selectedType?.key == "parish-register")
         #expect(model.selectedType?.origin == "user")
-        #expect(model.selectedType?.iconKey == PVEvidenceIconKey.defaultTypeIcon.rawValue)
+        #expect(model.selectedType?.iconKey == PVMarkKey.defaultTypeMark.rawValue)
         #expect(model.suggestions.isEmpty)
         #expect(model.toast?.title == String(localized: L10n.SourceTypes.toastAddedTitle))
         #expect(counts.sourceTypes?.total == 2)
@@ -339,7 +339,7 @@ struct SourceTypesModelTests {
         let (model, session) = makeModel(types: [userType()])
         await warm(model, session: session)
         model.select("t2")
-        #expect(model.draft?.iconKey == PVEvidenceIconKey.defaultTypeIcon.rawValue)
+        #expect(model.draft?.iconKey == PVMarkKey.defaultTypeMark.rawValue)
 
         model.draft?.iconKey = "type_scrapbook"
         #expect(model.isDirty)
@@ -354,7 +354,7 @@ struct SourceTypesModelTests {
         await warm(model, session: session)
         model.select("t2")
         let before = model.draft?.iconKey
-        #expect(before == PVEvidenceIconKey.defaultTypeIcon.rawValue)
+        #expect(before == PVMarkKey.defaultTypeMark.rawValue)
 
         model.applyDraftIconKey("type_photograph")
         #expect(model.draft?.iconKey == "type_photograph")

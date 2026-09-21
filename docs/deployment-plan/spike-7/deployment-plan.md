@@ -298,8 +298,8 @@ Schema/Go (01–03, 01b) may start before design finishes; **UI PRs gate on the 
 - [x] S7-05 — Subject fields UI → [`completed.md`](completed.md)
 - [x] S7-02 — NameValue schema + Go → [`completed.md`](completed.md)
 - [x] S7-03 — Citations + Observations + locator validation + FFI → [`completed.md`](completed.md)
-- [ ] S7-D6 — Design: Curated marks (subject → evidence icon pack) → [`completed.md`](completed.md)
-- [ ] S7-12 — `Recipes/Marks/` consolidation + graph / Subject fields migration → [`completed.md`](completed.md)
+- [x] S7-D6 — Design: Curated marks (subject → evidence icon pack) → [`completed.md`](completed.md)
+- [x] S7-12 — `Recipes/Marks/` consolidation + graph / Subject fields migration → [`completed.md`](completed.md)
 - [ ] S7-09 — Add property + composer navigation (stub OK) → [`completed.md`](completed.md)
 - [ ] S7-08 — Thin composer (submit + card growth; viewer placeholder OK) → [`completed.md`](completed.md)
 - [ ] S7-06 — Image + PDF viewers in composer → [`completed.md`](completed.md)
@@ -324,7 +324,7 @@ Claude Design board for Subject fields. Brief archived: [`design/archive/S7-D2-s
 
 ## S7-D6 — Design: Curated marks
 
-Handoff / light board for the unified **Marks** recipe (`DesignSystem/Recipes/Marks/` — move evidence icons + add subject marks). Brief: [`design/S7-D6-curated-marks.md`](design/S7-D6-curated-marks.md) (Claude Design board links for Evidence graph + Subject fields artwork). Gates **S7-12**. Pulls the **source** folio from Subject fields (S7-D2) into the same set as S6 graph marks. Locks tint/size API (template assets + call-site `.foregroundStyle`). Includes **UI building-block inventory** (§7: New/Extend **Marks**, Extend graph + Subject fields call sites, Retire `EvidenceIcon` + `SubjectIcon`). Does **not** redesign graph cards (**S7-D3**) or Subject fields IA.
+Handoff / light board for the unified **Marks** recipe (`DesignSystem/Recipes/Marks/` — move evidence icons + add subject marks). Brief: [`design/archive/S7-D6-curated-marks.md`](design/archive/S7-D6-curated-marks.md) (Claude Design board links for Evidence graph + Subject fields artwork). Gates **S7-12**. Pulls the **source** folio from Subject fields (S7-D2) into the same set as S6 graph marks. Locks tint/size API (template assets + call-site `.foregroundStyle`). Includes **UI building-block inventory** (§7: New/Extend **Marks**, Extend graph + Subject fields call sites, Retire `EvidenceIcon` + `SubjectIcon`). Does **not** redesign graph cards (**S7-D3**) or Subject fields IA.
 
 ---
 
@@ -421,7 +421,7 @@ Lives on the **Observations branch**, not the Subject fields branch. Needed so *
 
 Move subject type marks (`PVSubjectIcon` Canvas paths) **and** today’s evidence icons into one asset-backed recipe: **`DesignSystem/Recipes/Marks/`** (`file_*` + `type_*` + `subject_*`). Rename/move `Recipes/EvidenceIcon/` + `Assets.xcassets/EvidenceIcons/` into Marks in the same PR. Template-rendered SVGs; document tint API (call-site `.foregroundStyle` / ambient foreground — colors not baked into assets).
 
-**Artwork:** export S6 graph marks **and** the **source** folio from Subject fields (S7-D2 / `SourceMark`) — board links in [`design/S7-D6-curated-marks.md`](design/S7-D6-curated-marks.md).
+**Artwork:** export S6 graph marks **and** the **source** folio from Subject fields (S7-D2 / `SourceMark`) — board links in [`design/archive/S7-D6-curated-marks.md`](design/archive/S7-D6-curated-marks.md).
 
 **Call sites:** migrate **every** `PVSubjectIcon` / `PVSubjectIconKind` use — Evidence graph (cards, palette, bridges) **and** Subject fields type strip / binding chrome — onto Marks; update existing `PVEvidenceIcon` hosts to the new home; then retire `EvidenceIcon` + `SubjectIcon`. Align registry presentation icon tokens with curated mark keys so **S7-09** does not invent a second icon channel.
 
