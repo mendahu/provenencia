@@ -210,15 +210,23 @@ struct WorkspaceToolbar: View {
             let scope = location.title.flatMap { $0.nilIfEmpty }
                 ?? location.ref.flatMap { $0.nilIfEmpty }
                 ?? "…"
+            let graphLabel: String
+            if let sourceTitle = location.sourceTitle.flatMap({ $0.nilIfEmpty }) {
+                graphLabel = L10n.Workspace.evidenceGraphFor(sourceTitle: sourceTitle)
+            } else {
+                graphLabel = String(localized: L10n.Workspace.evidenceGraphTitle)
+            }
             items.append(
                 PVBreadcrumbItem(
                     id: "graph-\(sourceID)",
-                    label: String(localized: L10n.Workspace.evidenceGraphTitle),
+                    label: graphLabel,
                     action: {
                         goTo(WorkspaceLocation(
                             section: .sources,
                             sourceId: sourceID,
-                            sourceSurface: .graph
+                            sourceSurface: .graph,
+                            ref: nil,
+                            title: location.sourceTitle
                         ))
                     }
                 )

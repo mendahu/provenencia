@@ -766,6 +766,15 @@ enum L10n {
             comment: "Evidence graph deep place title (toolbar breadcrumb and stub)"
         )
 
+        static func evidenceGraphFor(sourceTitle: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "workspace.section.evidenceGraph.forSource",
+                defaultValue: "Evidence graph for %@",
+                comment: "Composer breadcrumb segment; argument is the Source title"
+            ))
+            return String(format: format, locale: .current, sourceTitle)
+        }
+
         static let evidenceGraphStubBody = LocalizedStringResource(
             "workspace.stub.evidenceGraph.body",
             defaultValue: "Interpret subjects on this source — canvas coming soon.",
@@ -1327,6 +1336,12 @@ enum L10n {
             "citationComposer.continuePick",
             defaultValue: "Continue",
             comment: "Confirms Artifact selection on the multi-Artifact picker"
+        )
+
+        static let citationSection = LocalizedStringResource(
+            "citationComposer.citationSection",
+            defaultValue: "Citation",
+            comment: "Form pane title above transcription and citation metadata"
         )
 
         static let transcriptionLabel = LocalizedStringResource(

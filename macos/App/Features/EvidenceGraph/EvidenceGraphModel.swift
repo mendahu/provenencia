@@ -431,8 +431,18 @@ final class EvidenceGraphModel {
             subjectId: subjectID,
             sourceSurface: .citationComposer,
             ref: ref,
-            title: title
+            title: title,
+            sourceTitle: resolvedSourceTitle()
         )
+    }
+
+    private func resolvedSourceTitle() -> String? {
+        let listKey = CatalogQueryKey.sourcesList(project: session.projectKey)
+        guard let handle: QueryHandle<[CatalogSource]> = session.queryHandle(listKey),
+              let sources = handle.value,
+              let match = sources.first(where: { $0.id == sourceID })
+        else { return nil }
+        return match.title
     }
 
     /// Source page recovery target when the graph has no Artifacts.

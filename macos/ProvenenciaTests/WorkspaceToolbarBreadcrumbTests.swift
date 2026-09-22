@@ -70,13 +70,17 @@ struct WorkspaceToolbarBreadcrumbTests {
                 sourceId: "src-1",
                 subjectId: "sub-1",
                 sourceSurface: .citationComposer,
-                title: "Margt. Alderwick"
+                title: "Margt. Alderwick",
+                sourceTitle: "Alderwick family bible"
             ),
             goTo: { wentTo = $0 }
         )
         #expect(items.count == 3)
         #expect(items[0].label == String(localized: L10n.Workspace.sourcesTitle))
-        #expect(items[1].label == String(localized: L10n.Workspace.evidenceGraphTitle))
+        #expect(
+            items[1].label
+                == L10n.Workspace.evidenceGraphFor(sourceTitle: "Alderwick family bible")
+        )
         #expect(items[1].action != nil)
         #expect(
             items[2].label
@@ -86,5 +90,6 @@ struct WorkspaceToolbarBreadcrumbTests {
         items[1].action?()
         #expect(wentTo?.sourceId == "src-1")
         #expect(wentTo?.sourceSurface == .graph)
+        #expect(wentTo?.title == "Alderwick family bible")
     }
 }

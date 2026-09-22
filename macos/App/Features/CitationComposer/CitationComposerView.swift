@@ -225,22 +225,30 @@ struct CitationComposerView: View {
                 Spacer(minLength: 0)
             }
             .padding(PVSpacing.space7)
-            .frame(minWidth: 280, idealWidth: 420, maxWidth: 560, maxHeight: .infinity, alignment: .topLeading)
-            PVDivider()
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(PVColor.surfaceSunken)
+            PVDivider(axis: .vertical, color: PVColor.borderDefault)
             formPane(inert: true)
-                .frame(maxWidth: .infinity)
+                .frame(width: formSidebarWidth)
+                .frame(maxHeight: .infinity)
+                .background(PVColor.surfaceCard)
         }
     }
 
     // MARK: - Compose split
 
+    private var formSidebarWidth: CGFloat { 400 }
+
     private var composeSplit: some View {
         HStack(alignment: .top, spacing: 0) {
             viewerPane
-                .frame(minWidth: 280, idealWidth: 440, maxWidth: 580)
-            PVDivider()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(PVColor.surfaceSunken)
+            PVDivider(axis: .vertical, color: PVColor.borderDefault)
             formPane(inert: false)
-                .frame(maxWidth: .infinity)
+                .frame(width: formSidebarWidth)
+                .frame(maxHeight: .infinity)
+                .background(PVColor.surfaceCard)
         }
     }
 
@@ -255,8 +263,11 @@ struct CitationComposerView: View {
             } else if model.hasLocator {
                 locatorCrumb
             }
-            viewerCanvas
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            ZStack {
+                viewerCanvas
+                    .frame(maxWidth: 520, maxHeight: .infinity)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .padding(PVSpacing.space7)
     }
@@ -417,6 +428,9 @@ struct CitationComposerView: View {
         VStack(alignment: .leading, spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: PVSpacing.space8) {
+                    Text(L10n.CitationComposer.citationSection)
+                        .font(PVFont.display(size: PVTypeScale.h2, weight: PVFontWeight.medium))
+                        .foregroundStyle(PVColor.textDisplay)
                     citationFields(inert: inert)
                     observationsSection(inert: inert)
                 }
@@ -424,7 +438,7 @@ struct CitationComposerView: View {
             }
             .disabled(inert)
             .opacity(inert ? 0.55 : 1)
-            PVDivider()
+            PVDivider(color: PVColor.borderDefault)
             footer(inert: inert)
         }
     }
@@ -468,9 +482,17 @@ struct CitationComposerView: View {
 
     private func observationsSection(inert: Bool) -> some View {
         VStack(alignment: .leading, spacing: PVSpacing.space5) {
-            Text(L10n.CitationComposer.observationsSection)
-                .font(PVFont.body(size: PVTypeScale.body, weight: PVFontWeight.semibold))
-                .foregroundStyle(PVColor.textDisplay)
+            HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space3) {
+                Text(L10n.CitationComposer.observationsSection)
+                    .font(PVFont.body(size: PVTypeScale.body, weight: PVFontWeight.semibold))
+                    .foregroundStyle(PVColor.textDisplay)
+                if !model.observations.isEmpty {
+                    Text(verbatim: "\(model.observations.count)")
+                        .font(PVFont.mono(size: PVTypeScale.caption))
+                        .foregroundStyle(PVColor.textMuted)
+                }
+                Spacer(minLength: 0)
+            }
 
             if model.observations.isEmpty {
                 PVCallout(

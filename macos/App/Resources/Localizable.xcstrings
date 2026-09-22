@@ -9233,6 +9233,30 @@
           }
         }
       }
+    },
+    "workspace.section.evidenceGraph.forSource": {
+      "comment": "Composer breadcrumb segment; argument is the Source title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidence graph for %@"
+          }
+        }
+      }
+    },
+    "citationComposer.citationSection": {
+      "comment": "Form pane title above transcription and citation metadata",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Citation"
+          }
+        }
+      }
     }
   },
   "version": "1.1"
