@@ -8,7 +8,6 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 
 | Step | Brief | Feeds | Notes |
 | --- | --- | --- | --- |
-| S7-D4 | [`S7-D4-citation-composer.md`](S7-D4-citation-composer.md) | PR S7-08 | Thin composer first (form + text); viewers/locators later |
 | S7-D5 | [`S7-D5-name-value-editor.md`](S7-D5-name-value-editor.md) | PR S7-02b | NameValue modal — late fill-in after thin composer; not on path to S7-05 |
 | S7-D7 | [`S7-D7-card-component.md`](S7-D7-card-component.md) | PR S7-13 | Card kit page from shipped `PVCard`; after **S7-10**, before dogfood close |
 
@@ -24,6 +23,7 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 | --- | --- | --- | --- |
 | S7-D2 | [`archive/S7-D2-subject-fields.md`](archive/S7-D2-subject-fields.md) · [addendum](archive/S7-D2-subject-fields-addendum-property-terms.md) | PR S7-05 | Type strip over property table + inspector; five create value_types (**not** `term`); locked bindings as lock boxes |
 | S7-D3 | [`archive/S7-D3-evidence-graph-updates.md`](archive/S7-D3-evidence-graph-updates.md) | PRs S7-09, S7-10 | Card chrome + No-Artifact callout + Add property handoff; **S7-09** shipped edit via create `PVFormDialog` (board said create-only) |
+| S7-D4 | [`archive/S7-D4-citation-composer.md`](archive/S7-D4-citation-composer.md) | PR S7-08 | Thin composer place (viewer placeholder \| form); Artifact pick; text/term/integer/date; connect-edge Properties excluded |
 | S7-D6 | [`archive/S7-D6-curated-marks.md`](archive/S7-D6-curated-marks.md) | PR S7-12 | → `Recipes/Marks/` (`file_*` / `type_*` / `subject_*` incl. source); tint API; before **S7-09** |
 | S7-D8 | [`archive/S7-D8-pvcallout-actions.md`](archive/S7-D8-pvcallout-actions.md) | PR S7-14 | Callout optional actions slot; before **S7-09** message center |
 

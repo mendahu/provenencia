@@ -1307,6 +1307,24 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 throw StoreBoom.boom
             }
             let property = propertiesByProject[projectDir]?.first(where: { $0.id == draft.propertyID })
+            var displayText = draft.valueText
+            if displayText.isEmpty, !draft.valueTermID.isEmpty {
+                displayText = propertyTermsByProperty[draft.propertyID]?
+                    .first(where: { $0.id == draft.valueTermID })?
+                    .label ?? ""
+            }
+            if displayText.isEmpty, !draft.nameForm.isEmpty {
+                displayText = draft.nameForm
+            }
+            if displayText.isEmpty, let date = draft.date {
+                displayText = DateValueDisplay.string(for: date)
+            }
+            if displayText.isEmpty, !draft.valueSubjectID.isEmpty {
+                displayText = subjectsBySource.values
+                    .flatMap { $0 }
+                    .first(where: { $0.id == draft.valueSubjectID })?
+                    .label ?? ""
+            }
             let obs = CatalogObservation(
                 id: UUID().uuidString.lowercased(),
                 ref: "OBS-FAKE1",
@@ -1314,10 +1332,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 subjectID: draft.subjectID,
                 propertyID: draft.propertyID,
                 polarity: draft.polarity.isEmpty ? "positive" : draft.polarity,
-                valueText: draft.valueText,
+                valueText: displayText,
                 valueInteger: draft.valueInteger,
                 valueDateID: draft.valueDateID,
+                date: draft.date,
                 valueNameID: draft.valueNameID,
+                nameForm: draft.nameForm,
                 valueSubjectID: draft.valueSubjectID,
                 valueTermID: draft.valueTermID,
                 propertyKey: property?.key ?? "",

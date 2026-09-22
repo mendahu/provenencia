@@ -306,7 +306,7 @@ Schema/Go (01–03, 01b) may start before design finishes; **UI PRs gate on the 
 
 - [x] S7-D2 — Design: Subject fields → [`completed.md`](completed.md)
 - [x] S7-D3 — Design: Evidence graph updates → [`completed.md`](completed.md)
-- [ ] S7-D4 — Design: Citation composer place → [`completed.md`](completed.md)
+- [x] S7-D4 — Design: Citation composer place → [`completed.md`](completed.md)
 - [ ] S7-D5 — Design: NameValue editor → [`completed.md`](completed.md)
 - [x] S7-01 — `properties` + `subject_type_fields` + **central Interpretation subject registry** + Go/FFI → [`completed.md`](completed.md)
 - [x] S7-01b — Property terms (`property_terms`, `value_type=term`, kind/edge seed) → [`completed.md`](completed.md)
@@ -318,7 +318,7 @@ Schema/Go (01–03, 01b) may start before design finishes; **UI PRs gate on the 
 - [x] S7-D8 — Design: PVCallout actions slot → [`completed.md`](completed.md)
 - [x] S7-14 — `PVCallout` actions slot (kit Extend) → [`completed.md`](completed.md)
 - [x] S7-09 — Add property + composer navigation (stub OK) → [`completed.md`](completed.md)
-- [ ] S7-08 — Thin composer (submit + card growth; viewer placeholder OK) → [`completed.md`](completed.md)
+- [x] S7-08 — Thin composer (submit + card growth; viewer placeholder OK) → [`completed.md`](completed.md)
 - [ ] S7-06 — Image + PDF viewers in composer → [`completed.md`](completed.md)
 - [ ] S7-07 — Locator tools (page + region) → [`completed.md`](completed.md)
 - [ ] S7-02b — NameValue Swift editor → [`completed.md`](completed.md)
@@ -355,7 +355,7 @@ Claude Design board for Add property, cited rows, subject refs, bridge edge summ
 
 ## S7-D4 — Design: Citation composer place
 
-Claude Design board for the navigable composer. Brief: [`design/S7-D4-citation-composer.md`](design/S7-D4-citation-composer.md). Gates **S7-08**. Confirms breadcrumbs and history policy. **Phase the board:** shell + form first (text Observations); viewer/locator/NameValue as later fill-ins. Does **not** design the NameValue editor (S7-D5).
+Claude Design board for the navigable composer. Brief archived: [`design/archive/S7-D4-citation-composer.md`](design/archive/S7-D4-citation-composer.md). Gates **S7-08**. Confirms breadcrumbs and history policy. **Phase the board:** shell + form first (text Observations); viewer/locator/NameValue as later fill-ins. Does **not** design the NameValue editor (S7-D5).
 
 ---
 

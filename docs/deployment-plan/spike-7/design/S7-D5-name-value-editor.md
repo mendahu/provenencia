@@ -4,7 +4,7 @@
 **Spike:** Provenencia Spike 7 (Citations / Observations / composer)  
 **Implements later as:** PR **S7-02b** only (schema + Go are **S7-02**, ungated)  
 **Depends on:** [`structured-name-model.md`](../../../../structured-name-model.md) §1–3; shipped DateValue editor as the twin pattern (`Features/Dates/`); thin composer (**S7-08**) already dogfoodable  
-**Related briefs:** [`S7-D4`](S7-D4-citation-composer.md) — composer hosts this modal for `value_type = name`; [`S7-D2`](S7-D2-subject-fields.md) — Property `name` exists in vocabulary 
+**Related briefs:** [`S7-D4`](archive/S7-D4-citation-composer.md) — composer hosts this modal for `value_type = name`; [`S7-D2`](archive/S7-D2-subject-fields.md) — Property `name` exists in vocabulary 
 **Schedule:** Late — after Add property + thin composer work; not on the path to S7-05 or first cite dogfood.
 
 Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](README.md) first.

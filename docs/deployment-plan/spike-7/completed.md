@@ -230,3 +230,35 @@ rg -n 'struct PVCallout' macos/App/DesignSystem/Components/Callout/PVCallout.swi
 python3 scripts/check-localizable-xcstrings.py
 # xcodebuild test — EvidenceGraphModel / WorkspaceNavigation / GraphCanvasPointerHitTesting
 ```
+
+### S7-D4 — Design: Citation composer place
+
+| | |
+| --- | --- |
+| **Kind** | Design (Claude Design board) |
+| **Depends on** | S7-D3 navigation handoff; S7-03 writers |
+| **Deliverables** | Done. Board for navigable viewer\|form place, Artifact pick, citation fields, Observation list (text/term/integer/date), connect-edge Property exclusion, breadcrumbs (`Citation for {scope}`), history keep-composer-entry. Brief archived: [`design/archive/S7-D4-citation-composer.md`](design/archive/S7-D4-citation-composer.md). |
+| **Dogfood** | Design only — thin implement in **S7-08**; viewers/locators/NameValue later. |
+| **Out** | Image/PDF viewers (S7-06); locator tools (S7-07); NameValue host (S7-D5 / S7-02b); Connect prefill (S7-10). |
+
+**Landed:** Option B composer place contract before thin submit ships.
+
+### S7-08 — PR: Thin citation composer
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S7-09, S7-03, **S7-D4** |
+| **Deliverables** | Done. Replaced composer stub with `Features/CitationComposer/` (`CitationComposerView` + `@Observable CitationComposerModel`), then **realigned to Citation Composer board** Frames 1–8 / 11–13: left viewer chrome (source · Artifact N of M · Change; page/zoom/Draw region/Clear locator stubs; locator crumb + errors); right form with summary Observation rows; **Add observation** `PVFormDialog` (text/term/integer/date); Frame 7 Choose artifact Cancel/Continue; Frame 8 no-Artifact gate → Source page + inert form; locator required for Save (page selector; no silent inject). Submit → `createCitationWithObservations` → `CatalogMutation.createdCitation` → Evidence graph; breadcrumb **Citation for {scope}**. |
+| **Tests** | `CitationComposerModelTests` (picker Continue, dialog commit, locator + observation gates, edge-property exclude, no-Artifact inert, subject missing); breadcrumb / PlaceRegistry; `check-localizable-xcstrings.py`. |
+| **Dogfood** | Add property on Person → composer → (pick Artifact if needed) → Draw region / page locator → Add observation dialog → Save → graph cited row → Back/Forward as normal places. |
+| **Out** | Real PDF/image viewers (S7-06); polygon region drawing (S7-07); NameValue (S7-02b); Connect prefilled endpoints (S7-10); edit existing Citations. |
+
+**Landed:** Board-aligned thin cite path grows cards; viewers and Connect fill in later.
+
+**Verify:**
+
+```bash
+python3 scripts/check-localizable-xcstrings.py
+# xcodebuild test — CitationComposerModelTests / WorkspaceToolbarBreadcrumbTests / PlaceRegistryTests
+```

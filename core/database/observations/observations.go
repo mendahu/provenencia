@@ -37,20 +37,34 @@ const (
 	sqlPropertyGet    = `SELECT id, key, origin, label, COALESCE(description, ''), value_type
 		FROM properties WHERE id = ?`
 
-	sqlListBySource = `SELECT o.id, o.ref, o.citation_id, o.subject_id, o.property_id, o.polarity,
+	// List SELECTs denormalize structured value display into value_text (term
+	// label, name form, subject label, compact date) so graph cards / clients
+	// that only read value_text stay correct for every Property value_type.
+	sqlListSelect = `SELECT o.id, o.ref, o.citation_id, o.subject_id, o.property_id, o.polarity,
 		o.value_text, o.value_integer, o.value_date_id, o.value_name_id, o.value_subject_id, o.value_term_id,
-		p.key, p.label, p.value_type
+		p.key, p.label, p.value_type,
+		COALESCE(pt.label, ''),
+		COALESCE(nv.form, ''),
+		COALESCE(vs.label, ''),
+		dv.kind, dv.qualifier, dv.calendar,
+		dv.start_year, dv.start_month, dv.start_day,
+		dv.start_hour, dv.start_minute, dv.start_second, dv.start_millisecond, dv.start_tz,
+		dv.end_year, dv.end_month, dv.end_day,
+		dv.end_hour, dv.end_minute, dv.end_second, dv.end_millisecond, dv.end_tz,
+		dv.phrase
 		FROM observations o
-		JOIN subjects s ON s.id = o.subject_id
 		JOIN properties p ON p.id = o.property_id
+		LEFT JOIN property_terms pt ON pt.id = o.value_term_id
+		LEFT JOIN name_values nv ON nv.id = o.value_name_id
+		LEFT JOIN subjects vs ON vs.id = o.value_subject_id
+		LEFT JOIN date_values dv ON dv.id = o.value_date_id`
+
+	sqlListBySource = sqlListSelect + `
+		JOIN subjects s ON s.id = o.subject_id
 		WHERE s.source_id = ?
 		ORDER BY o.ref COLLATE NOCASE`
 
-	sqlListBySubject = `SELECT o.id, o.ref, o.citation_id, o.subject_id, o.property_id, o.polarity,
-		o.value_text, o.value_integer, o.value_date_id, o.value_name_id, o.value_subject_id, o.value_term_id,
-		p.key, p.label, p.value_type
-		FROM observations o
-		JOIN properties p ON p.id = o.property_id
+	sqlListBySubject = sqlListSelect + `
 		WHERE o.subject_id = ?
 		ORDER BY o.ref COLLATE NOCASE`
 
@@ -81,6 +95,14 @@ type Listed struct {
 	PropertyKey       string
 	PropertyLabel     string
 	PropertyValueType string
+	// ValueTermLabel is the property_terms.label for value_term_id (empty when unset).
+	ValueTermLabel string
+	// ValueNameForm is name_values.form for value_name_id (empty when unset).
+	ValueNameForm string
+	// ValueSubjectLabel is subjects.label for value_subject_id (empty when unset).
+	ValueSubjectLabel string
+	// Date is the joined date_values row when value_date_id is set.
+	Date *datevalues.Value
 }
 
 // Input is one Observation draft for insert (create or append).
@@ -430,11 +452,22 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 			valueText                                                  sql.NullString
 			valueInt                                                   sql.NullInt64
 			dateID, nameID, subjectID, termID                          []byte
+			termLabel, nameForm, subjectLabel                          string
+			kind, qual, cal, phrase, startTZ, endTZ                    sql.NullString
+			startY, startM, startD, startH, startMin, startS, startMs  sql.NullInt64
+			endY, endM, endD, endH, endMin, endS, endMs                sql.NullInt64
 		)
 		if err := rows.Scan(
 			&l.ID, &l.Ref, &l.CitationID, &l.SubjectID, &l.PropertyID, &l.Polarity,
 			&valueText, &valueInt, &dateID, &nameID, &subjectID, &termID,
 			&l.PropertyKey, &l.PropertyLabel, &l.PropertyValueType,
+			&termLabel, &nameForm, &subjectLabel,
+			&kind, &qual, &cal,
+			&startY, &startM, &startD,
+			&startH, &startMin, &startS, &startMs, &startTZ,
+			&endY, &endM, &endD,
+			&endH, &endMin, &endS, &endMs, &endTZ,
+			&phrase,
 		); err != nil {
 			return nil, err
 		}
@@ -450,9 +483,70 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 		l.ValueNameID = append([]byte(nil), nameID...)
 		l.ValueSubjectID = append([]byte(nil), subjectID...)
 		l.ValueTermID = append([]byte(nil), termID...)
+		l.ValueTermLabel = termLabel
+		l.ValueNameForm = nameForm
+		l.ValueSubjectLabel = subjectLabel
+		if kind.Valid && kind.String != "" {
+			dv := datevalues.Value{
+				ID:               append([]byte(nil), dateID...),
+				Kind:             kind.String,
+				Qualifier:        qual.String,
+				Calendar:         cal.String,
+				StartYear:        nullIntPtr(startY),
+				StartMonth:       nullIntPtr(startM),
+				StartDay:         nullIntPtr(startD),
+				StartHour:        nullIntPtr(startH),
+				StartMinute:      nullIntPtr(startMin),
+				StartSecond:      nullIntPtr(startS),
+				StartMillisecond: nullIntPtr(startMs),
+				StartTZ:          startTZ.String,
+				EndYear:          nullIntPtr(endY),
+				EndMonth:         nullIntPtr(endM),
+				EndDay:           nullIntPtr(endD),
+				EndHour:          nullIntPtr(endH),
+				EndMinute:        nullIntPtr(endMin),
+				EndSecond:        nullIntPtr(endS),
+				EndMillisecond:   nullIntPtr(endMs),
+				EndTZ:            endTZ.String,
+				Phrase:           phrase.String,
+			}
+			l.Date = &dv
+		}
+		fillListedDisplayText(&l)
 		out = append(out, l)
 	}
 	return out, rows.Err()
+}
+
+// fillListedDisplayText denormalizes structured value types into ValueText so
+// card rows that only read value_text work for term / name / date / subject.
+func fillListedDisplayText(l *Listed) {
+	if l.HasText {
+		return
+	}
+	switch {
+	case l.ValueTermLabel != "":
+		l.ValueText = l.ValueTermLabel
+	case l.ValueNameForm != "":
+		l.ValueText = l.ValueNameForm
+	case l.ValueSubjectLabel != "":
+		l.ValueText = l.ValueSubjectLabel
+	case l.Date != nil:
+		l.ValueText = datevalues.CompactDisplay(*l.Date)
+	default:
+		return
+	}
+	if l.ValueText != "" {
+		l.HasText = true
+	}
+}
+
+func nullIntPtr(n sql.NullInt64) *int {
+	if !n.Valid {
+		return nil
+	}
+	v := int(n.Int64)
+	return &v
 }
 
 func getPropertyTx(tx *sql.Tx, id []byte) (properties.Property, error) {

@@ -57,6 +57,12 @@ Referencing tables use `date_value_id BLOB REFERENCES date_values(id)`. Prefer k
 
 DateValues are value objects (UUID for persistence only). Concluded/refined zones or dates later should usually be **new** DateValue rows (or later-layer assertions), not silent mutation of Source evidence.
 
+## Display (macOS)
+
+User-visible DateValue strings (list rows, composer summaries, previews) go through **`DateValueDisplay`** in [`macos/App/Features/Dates/DateValueDisplay.swift`](../../../macos/App/Features/Dates/DateValueDisplay.swift). Do not ad-hoc interpolate `y-m-d` or hard-code English ABT/BEF/AFT/between wrappers — call `DateValueDisplay.string(for:locale:)` (accepts `DateValueDraft` or `CatalogDateValueInput`). Qualifier/range templates live under `L10n.Dates`. Invalid drafts return `""`; call sites that need a placeholder keep their own L10n (e.g. composer “No date set”).
+
+Evidence graph cited rows use **`ObservationValueDisplay`**, which prefers structured `CatalogObservation.date` → `DateValueDisplay`, then denormalized `valueText` / `nameForm` / integer. List RPCs fill `value_text` for term/name/date/subject so other clients stay correct without type-specific UI.
+
 ## Extending helpers
 
 1. Prefer extending validation + constants in `datevalues` over ad-hoc SQL elsewhere.

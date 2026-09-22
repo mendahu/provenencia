@@ -37,10 +37,14 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     /// Denormalized jump-menu cache; ignored for navigation identity.
     var ref: String?
     /// Denormalized jump-menu cache; ignored for navigation identity.
+    /// For the citation composer this is the **subject scope** (card label), not the Source title.
     var title: String?
+    /// Denormalized Source title for composer breadcrumbs (`Evidence graph for {source}`);
+    /// ignored for navigation identity. Empty/legacy history falls back to the bare graph title.
+    var sourceTitle: String?
 
     enum CodingKeys: String, CodingKey {
-        case section, sourceId, fieldId, typeId, subjectId, sourceSurface, ref, title
+        case section, sourceId, fieldId, typeId, subjectId, sourceSurface, ref, title, sourceTitle
     }
 
     init(
@@ -51,7 +55,8 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         subjectId: String? = nil,
         sourceSurface: SourceSurface = .page,
         ref: String? = nil,
-        title: String? = nil
+        title: String? = nil,
+        sourceTitle: String? = nil
     ) {
         self.section = section
         self.sourceId = Self.nilIfEmpty(sourceId)
@@ -61,6 +66,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         self.sourceSurface = sourceSurface
         self.ref = Self.nilIfEmpty(ref)
         self.title = Self.nilIfEmpty(title)
+        self.sourceTitle = Self.nilIfEmpty(sourceTitle)
     }
 
     init(from decoder: Decoder) throws {
@@ -73,6 +79,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         sourceSurface = try container.decodeIfPresent(SourceSurface.self, forKey: .sourceSurface) ?? .page
         ref = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .ref))
         title = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .title))
+        sourceTitle = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .sourceTitle))
     }
 
     /// Section list root (no deep id).

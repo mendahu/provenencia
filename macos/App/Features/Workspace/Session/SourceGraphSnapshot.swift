@@ -85,7 +85,8 @@ struct SourceGraphSnapshot: Sendable, Equatable {
             else { continue }
 
             if let kind = EvidencePrimaryKind(rawValue: type.key) {
-                let subjectObservations = observationsBySubject[subject.id] ?? []
+                let subjectObservations = (observationsBySubject[subject.id] ?? [])
+                    .sorted(by: Self.observationDisplayOrder)
                 placed.append(
                     SourceGraphPlacedSubject(
                         subject: subject,
@@ -124,6 +125,18 @@ struct SourceGraphSnapshot: Sendable, Equatable {
             return lhs.subject.ref.localizedStandardCompare(rhs.subject.ref) == .orderedAscending
         }
         return SourceGraphSnapshot(sourceId: sourceId, subjects: placed, bridges: placedBridges)
+    }
+
+    /// Card row order: property label A→Z, then key, then Observation ref.
+    private static func observationDisplayOrder(
+        _ lhs: CatalogObservation,
+        _ rhs: CatalogObservation
+    ) -> Bool {
+        let labelCompare = lhs.propertyLabel.localizedStandardCompare(rhs.propertyLabel)
+        if labelCompare != .orderedSame { return labelCompare == .orderedAscending }
+        let keyCompare = lhs.propertyKey.localizedStandardCompare(rhs.propertyKey)
+        if keyCompare != .orderedSame { return keyCompare == .orderedAscending }
+        return lhs.ref.localizedStandardCompare(rhs.ref) == .orderedAscending
     }
 
     /// Returns a copy with provisional endpoint ids applied to matching bridges.

@@ -27,8 +27,10 @@ struct PlaceRegistry: Sendable {
             },
             queryKeys: { project, location in
                 guard let sourceId = location.sourceId else { return [] }
-                // Composer stub does not load Observations yet; keep graph warm for Back.
-                return [.sourceGraph(project: project, sourceId: sourceId)]
+                return [
+                    .sourceGraph(project: project, sourceId: sourceId),
+                    .sourceWorkspace(project: project, sourceId: sourceId),
+                ]
             },
             deepId: { $0.subjectId }
         ),
