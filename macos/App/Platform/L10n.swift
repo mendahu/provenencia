@@ -1137,18 +1137,6 @@ enum L10n {
             comment: "Callout action that navigates to the Source page to attach an Artifact"
         )
 
-        static let composerStubTitle = LocalizedStringResource(
-            "evidenceGraph.composer.stubTitle",
-            defaultValue: "Add property",
-            comment: "Citation composer stub place title until S7-08 ships the real form"
-        )
-
-        static let composerStubMessage = LocalizedStringResource(
-            "evidenceGraph.composer.stubMessage",
-            defaultValue: "The citation composer form ships next. Use Back to return to the Evidence graph.",
-            comment: "Citation composer stub body explaining the place is temporary"
-        )
-
         static let labelField = LocalizedStringResource(
             "evidenceGraph.create.labelField",
             defaultValue: "Label",
@@ -1306,8 +1294,288 @@ enum L10n {
         }
     }
 
-    /// The **Source fields** workspace destination (S2-15): browse, search,
-    /// and create/edit the project's `source_metadata_fields` vocabulary.
+    /// Citation composer place (S7-08 thin submit path).
+    enum CitationComposer {
+        static func breadcrumbCitationFor(scope: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "citationComposer.breadcrumb.citationFor",
+                defaultValue: "Citation for %@",
+                comment: "Composer breadcrumb leaf; argument is subject label or bridge edge sentence"
+            ))
+            return String(format: format, locale: .current, scope)
+        }
+
+        static let accessibilityTitle = LocalizedStringResource(
+            "citationComposer.accessibilityTitle",
+            defaultValue: "Citation composer",
+            comment: "VoiceOver name for the citation composer workspace place"
+        )
+
+        static let save = LocalizedStringResource(
+            "citationComposer.save",
+            defaultValue: "Save citation",
+            comment: "Primary submit button on the citation composer"
+        )
+
+        static let cancel = LocalizedStringResource(
+            "citationComposer.cancel",
+            defaultValue: "Cancel",
+            comment: "Cancel button that returns to the Evidence graph without writing"
+        )
+
+        static let backToGraph = LocalizedStringResource(
+            "citationComposer.backToGraph",
+            defaultValue: "Back to Evidence graph",
+            comment: "Recovery button when the composer cannot proceed"
+        )
+
+        static let citationSection = LocalizedStringResource(
+            "citationComposer.citationSection",
+            defaultValue: "Citation",
+            comment: "Section title above transcription and citation metadata fields"
+        )
+
+        static let transcriptionLabel = LocalizedStringResource(
+            "citationComposer.transcriptionLabel",
+            defaultValue: "Transcription",
+            comment: "Label for the Citation transcription field"
+        )
+
+        static let uncertainLabel = LocalizedStringResource(
+            "citationComposer.uncertainLabel",
+            defaultValue: "Transcription is uncertain",
+            comment: "Checkbox when the researcher is unsure of the transcription"
+        )
+
+        static let uncertainNoteLabel = LocalizedStringResource(
+            "citationComposer.uncertainNoteLabel",
+            defaultValue: "Why it is uncertain",
+            comment: "Note field shown when transcription uncertain is checked"
+        )
+
+        static let descriptionLabel = LocalizedStringResource(
+            "citationComposer.descriptionLabel",
+            defaultValue: "Description",
+            comment: "Optional Citation description field"
+        )
+
+        static let observationsSection = LocalizedStringResource(
+            "citationComposer.observationsSection",
+            defaultValue: "Observations",
+            comment: "Section header for the Observations list"
+        )
+
+        static let addObservation = LocalizedStringResource(
+            "citationComposer.addObservation",
+            defaultValue: "Add observation",
+            comment: "Button that appends an Observation row"
+        )
+
+        static let removeObservation = LocalizedStringResource(
+            "citationComposer.removeObservation",
+            defaultValue: "Remove",
+            comment: "Removes one Observation draft row"
+        )
+
+        static let propertyLabel = LocalizedStringResource(
+            "citationComposer.propertyLabel",
+            defaultValue: "Property",
+            comment: "ComboBox label for choosing which Property an Observation asserts"
+        )
+
+        static let propertyPlaceholder = LocalizedStringResource(
+            "citationComposer.propertyPlaceholder",
+            defaultValue: "Search properties",
+            comment: "Placeholder in the Property picker ComboBox"
+        )
+
+        static let propertyEmpty = LocalizedStringResource(
+            "citationComposer.propertyEmpty",
+            defaultValue: "No matching properties",
+            comment: "Empty state when Property search has no hits"
+        )
+
+        static let polarityLabel = LocalizedStringResource(
+            "citationComposer.polarityLabel",
+            defaultValue: "Polarity",
+            comment: "Label above Asserts / Negates chips"
+        )
+
+        static let polarityAsserts = LocalizedStringResource(
+            "citationComposer.polarityAsserts",
+            defaultValue: "Asserts",
+            comment: "Positive Observation polarity chip"
+        )
+
+        static let polarityNegates = LocalizedStringResource(
+            "citationComposer.polarityNegates",
+            defaultValue: "Negates",
+            comment: "Negative Observation polarity chip"
+        )
+
+        static let valueLabel = LocalizedStringResource(
+            "citationComposer.valueLabel",
+            defaultValue: "Value",
+            comment: "Label for a text Observation value"
+        )
+
+        static let integerLabel = LocalizedStringResource(
+            "citationComposer.integerLabel",
+            defaultValue: "Integer",
+            comment: "Label for an integer Observation value"
+        )
+
+        static let termLabel = LocalizedStringResource(
+            "citationComposer.termLabel",
+            defaultValue: "Term",
+            comment: "ComboBox label for a term Observation value"
+        )
+
+        static let termPlaceholder = LocalizedStringResource(
+            "citationComposer.termPlaceholder",
+            defaultValue: "Search terms",
+            comment: "Placeholder in the term picker"
+        )
+
+        static let termEmpty = LocalizedStringResource(
+            "citationComposer.termEmpty",
+            defaultValue: "No matching terms",
+            comment: "Empty state when term search has no hits"
+        )
+
+        static let addCustomTerm = LocalizedStringResource(
+            "citationComposer.addCustomTerm",
+            defaultValue: "Add custom…",
+            comment: "Opens dialog to mint a user Property term"
+        )
+
+        static let addTermTitle = LocalizedStringResource(
+            "citationComposer.addTermTitle",
+            defaultValue: "Add custom term",
+            comment: "Dialog title for creating a user Property term"
+        )
+
+        static let addTermConfirm = LocalizedStringResource(
+            "citationComposer.addTermConfirm",
+            defaultValue: "Add",
+            comment: "Confirm creating a user Property term"
+        )
+
+        static let addTermLabel = LocalizedStringResource(
+            "citationComposer.addTermLabel",
+            defaultValue: "Label",
+            comment: "Label field when minting a custom Property term"
+        )
+
+        static let editDate = LocalizedStringResource(
+            "citationComposer.editDate",
+            defaultValue: "Edit date",
+            comment: "Opens the DateValue editor for a date Observation"
+        )
+
+        static let dateDialogTitle = LocalizedStringResource(
+            "citationComposer.dateDialogTitle",
+            defaultValue: "Date",
+            comment: "Title of the DateValue dialog hosted in the composer"
+        )
+
+        static let dateDialogConfirm = LocalizedStringResource(
+            "citationComposer.dateDialogConfirm",
+            defaultValue: "Done",
+            comment: "Confirm button on the DateValue dialog"
+        )
+
+        static let dateUnset = LocalizedStringResource(
+            "citationComposer.dateUnset",
+            defaultValue: "No date set",
+            comment: "Summary when a date Observation has no valid DateValue yet"
+        )
+
+        static let pickArtifactTitle = LocalizedStringResource(
+            "citationComposer.pickArtifactTitle",
+            defaultValue: "Choose an Artifact",
+            comment: "Title when the Source has multiple Artifacts to cite"
+        )
+
+        static let pickArtifactMessage = LocalizedStringResource(
+            "citationComposer.pickArtifactMessage",
+            defaultValue: "Pick which Artifact this citation comes from.",
+            comment: "Body under the multi-Artifact picker title"
+        )
+
+        static let changeArtifact = LocalizedStringResource(
+            "citationComposer.changeArtifact",
+            defaultValue: "Change Artifact",
+            comment: "Returns to the Artifact picker from the compose shell"
+        )
+
+        static let viewerPlaceholderTitle = LocalizedStringResource(
+            "citationComposer.viewerPlaceholderTitle",
+            defaultValue: "Artifact viewer",
+            comment: "Title in the left-pane placeholder until S7-06 ships viewers"
+        )
+
+        static let viewerPlaceholderMessage = LocalizedStringResource(
+            "citationComposer.viewerPlaceholderMessage",
+            defaultValue: "Image and PDF viewers arrive in a later update. You can still save the citation.",
+            comment: "Explains the thin-composer viewer placeholder"
+        )
+
+        static let noArtifactsTitle = LocalizedStringResource(
+            "citationComposer.noArtifactsTitle",
+            defaultValue: "No Artifacts on this source",
+            comment: "Title when composer opens without any Artifact"
+        )
+
+        static let noArtifactsMessage = LocalizedStringResource(
+            "citationComposer.noArtifactsMessage",
+            defaultValue: "Attach an Artifact on the Source page before citing.",
+            comment: "Body when composer cannot cite for lack of Artifacts"
+        )
+
+        static let needArtifact = LocalizedStringResource(
+            "citationComposer.needArtifact",
+            defaultValue: "Choose an Artifact before saving.",
+            comment: "Validation when Save is pressed without an Artifact"
+        )
+
+        static let noObservationsError = LocalizedStringResource(
+            "citationComposer.noObservationsError",
+            defaultValue: "No observations yet — a citation has to record at least one thing the record says.",
+            comment: "Validation when Save is pressed with an empty Observations list"
+        )
+
+        static let missingPropertyError = LocalizedStringResource(
+            "citationComposer.missingPropertyError",
+            defaultValue: "Each observation needs a Property.",
+            comment: "Validation when an Observation row has no Property selected"
+        )
+
+        static let missingValueError = LocalizedStringResource(
+            "citationComposer.missingValueError",
+            defaultValue: "Each observation needs a value.",
+            comment: "Validation when an Observation row is missing its typed value"
+        )
+
+        static let invalidIntegerError = LocalizedStringResource(
+            "citationComposer.invalidIntegerError",
+            defaultValue: "Enter a whole number for the integer value.",
+            comment: "Validation when integer Observation text is not Int64"
+        )
+
+        static let invalidDateError = LocalizedStringResource(
+            "citationComposer.invalidDateError",
+            defaultValue: "Enter a valid date for each date observation.",
+            comment: "Validation when a date Observation DateValue draft is incomplete"
+        )
+
+        static let unsupportedValueTypeError = LocalizedStringResource(
+            "citationComposer.unsupportedValueTypeError",
+            defaultValue: "This Property type is not editable here yet.",
+            comment: "Shown for name/subject rows deferred past the thin composer"
+        )
+    }
+
     /// Origin markers shared by every catalog vocabulary destination —
     /// `OriginBadge` on a detail panel, `OriginPill` inline in a list.
     enum Origin {

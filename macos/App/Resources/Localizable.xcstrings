@@ -8418,26 +8418,554 @@
         }
       }
     },
-    "evidenceGraph.composer.stubTitle": {
-      "comment": "Citation composer stub place title until S7-08 ships the real form",
+    "citationComposer.breadcrumb.citationFor": {
+      "comment": "Composer breadcrumb leaf; argument is subject label or bridge edge sentence",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Add property"
+            "value": "Citation for %@"
           }
         }
       }
     },
-    "evidenceGraph.composer.stubMessage": {
-      "comment": "Citation composer stub body explaining the place is temporary",
+    "citationComposer.accessibilityTitle": {
+      "comment": "VoiceOver name for the citation composer workspace place",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The citation composer form ships next. Use Back to return to the Evidence graph."
+            "value": "Citation composer"
+          }
+        }
+      }
+    },
+    "citationComposer.save": {
+      "comment": "Primary submit button on the citation composer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save citation"
+          }
+        }
+      }
+    },
+    "citationComposer.cancel": {
+      "comment": "Cancel button that returns to the Evidence graph without writing",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        }
+      }
+    },
+    "citationComposer.backToGraph": {
+      "comment": "Recovery button when the composer cannot proceed",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to Evidence graph"
+          }
+        }
+      }
+    },
+    "citationComposer.citationSection": {
+      "comment": "Section title above transcription and citation metadata fields",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Citation"
+          }
+        }
+      }
+    },
+    "citationComposer.transcriptionLabel": {
+      "comment": "Label for the Citation transcription field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcription"
+          }
+        }
+      }
+    },
+    "citationComposer.uncertainLabel": {
+      "comment": "Checkbox when the researcher is unsure of the transcription",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcription is uncertain"
+          }
+        }
+      }
+    },
+    "citationComposer.uncertainNoteLabel": {
+      "comment": "Note field shown when transcription uncertain is checked",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Why it is uncertain"
+          }
+        }
+      }
+    },
+    "citationComposer.descriptionLabel": {
+      "comment": "Optional Citation description field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Description"
+          }
+        }
+      }
+    },
+    "citationComposer.observationsSection": {
+      "comment": "Section header for the Observations list",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Observations"
+          }
+        }
+      }
+    },
+    "citationComposer.addObservation": {
+      "comment": "Button that appends an Observation row",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add observation"
+          }
+        }
+      }
+    },
+    "citationComposer.removeObservation": {
+      "comment": "Removes one Observation draft row",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove"
+          }
+        }
+      }
+    },
+    "citationComposer.propertyLabel": {
+      "comment": "ComboBox label for choosing which Property an Observation asserts",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Property"
+          }
+        }
+      }
+    },
+    "citationComposer.propertyPlaceholder": {
+      "comment": "Placeholder in the Property picker ComboBox",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search properties"
+          }
+        }
+      }
+    },
+    "citationComposer.propertyEmpty": {
+      "comment": "Empty state when Property search has no hits",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No matching properties"
+          }
+        }
+      }
+    },
+    "citationComposer.polarityLabel": {
+      "comment": "Label above Asserts / Negates chips",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polarity"
+          }
+        }
+      }
+    },
+    "citationComposer.polarityAsserts": {
+      "comment": "Positive Observation polarity chip",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Asserts"
+          }
+        }
+      }
+    },
+    "citationComposer.polarityNegates": {
+      "comment": "Negative Observation polarity chip",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Negates"
+          }
+        }
+      }
+    },
+    "citationComposer.valueLabel": {
+      "comment": "Label for a text Observation value",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Value"
+          }
+        }
+      }
+    },
+    "citationComposer.integerLabel": {
+      "comment": "Label for an integer Observation value",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Integer"
+          }
+        }
+      }
+    },
+    "citationComposer.termLabel": {
+      "comment": "ComboBox label for a term Observation value",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Term"
+          }
+        }
+      }
+    },
+    "citationComposer.termPlaceholder": {
+      "comment": "Placeholder in the term picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search terms"
+          }
+        }
+      }
+    },
+    "citationComposer.termEmpty": {
+      "comment": "Empty state when term search has no hits",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No matching terms"
+          }
+        }
+      }
+    },
+    "citationComposer.addCustomTerm": {
+      "comment": "Opens dialog to mint a user Property term",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add custom…"
+          }
+        }
+      }
+    },
+    "citationComposer.addTermTitle": {
+      "comment": "Dialog title for creating a user Property term",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add custom term"
+          }
+        }
+      }
+    },
+    "citationComposer.addTermConfirm": {
+      "comment": "Confirm creating a user Property term",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add"
+          }
+        }
+      }
+    },
+    "citationComposer.addTermLabel": {
+      "comment": "Label field when minting a custom Property term",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Label"
+          }
+        }
+      }
+    },
+    "citationComposer.editDate": {
+      "comment": "Opens the DateValue editor for a date Observation",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit date"
+          }
+        }
+      }
+    },
+    "citationComposer.dateDialogTitle": {
+      "comment": "Title of the DateValue dialog hosted in the composer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date"
+          }
+        }
+      }
+    },
+    "citationComposer.dateDialogConfirm": {
+      "comment": "Confirm button on the DateValue dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        }
+      }
+    },
+    "citationComposer.dateUnset": {
+      "comment": "Summary when a date Observation has no valid DateValue yet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No date set"
+          }
+        }
+      }
+    },
+    "citationComposer.pickArtifactTitle": {
+      "comment": "Title when the Source has multiple Artifacts to cite",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose an Artifact"
+          }
+        }
+      }
+    },
+    "citationComposer.pickArtifactMessage": {
+      "comment": "Body under the multi-Artifact picker title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pick which Artifact this citation comes from."
+          }
+        }
+      }
+    },
+    "citationComposer.changeArtifact": {
+      "comment": "Returns to the Artifact picker from the compose shell",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change Artifact"
+          }
+        }
+      }
+    },
+    "citationComposer.viewerPlaceholderTitle": {
+      "comment": "Title in the left-pane placeholder until S7-06 ships viewers",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artifact viewer"
+          }
+        }
+      }
+    },
+    "citationComposer.viewerPlaceholderMessage": {
+      "comment": "Explains the thin-composer viewer placeholder",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Image and PDF viewers arrive in a later update. You can still save the citation."
+          }
+        }
+      }
+    },
+    "citationComposer.noArtifactsTitle": {
+      "comment": "Title when composer opens without any Artifact",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Artifacts on this source"
+          }
+        }
+      }
+    },
+    "citationComposer.noArtifactsMessage": {
+      "comment": "Body when composer cannot cite for lack of Artifacts",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attach an Artifact on the Source page before citing."
+          }
+        }
+      }
+    },
+    "citationComposer.needArtifact": {
+      "comment": "Validation when Save is pressed without an Artifact",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose an Artifact before saving."
+          }
+        }
+      }
+    },
+    "citationComposer.noObservationsError": {
+      "comment": "Validation when Save is pressed with an empty Observations list",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No observations yet — a citation has to record at least one thing the record says."
+          }
+        }
+      }
+    },
+    "citationComposer.missingPropertyError": {
+      "comment": "Validation when an Observation row has no Property selected",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each observation needs a Property."
+          }
+        }
+      }
+    },
+    "citationComposer.missingValueError": {
+      "comment": "Validation when an Observation row is missing its typed value",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each observation needs a value."
+          }
+        }
+      }
+    },
+    "citationComposer.invalidIntegerError": {
+      "comment": "Validation when integer Observation text is not Int64",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a whole number for the integer value."
+          }
+        }
+      }
+    },
+    "citationComposer.invalidDateError": {
+      "comment": "Validation when a date Observation DateValue draft is incomplete",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a valid date for each date observation."
+          }
+        }
+      }
+    },
+    "citationComposer.unsupportedValueTypeError": {
+      "comment": "Shown for name/subject rows deferred past the thin composer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Property type is not editable here yet."
           }
         }
       }

@@ -409,7 +409,7 @@ final class EvidenceGraphModel {
         }
     }
 
-    /// Citation composer place for Add property (stub destination until S7-08).
+    /// Citation composer place for Add property.
     func composerLocation(for subjectID: String) -> WorkspaceLocation? {
         guard canCite else { return nil }
         let snapshot = currentSnapshot()

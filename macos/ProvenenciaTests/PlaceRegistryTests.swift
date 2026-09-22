@@ -140,7 +140,10 @@ struct PlaceRegistryTests {
                     sourceSurface: .citationComposer
                 ),
                 .sourceCitationComposer,
-                [.sourceGraph(project: project, sourceId: "s1")]
+                [
+                    .sourceGraph(project: project, sourceId: "s1"),
+                    .sourceWorkspace(project: project, sourceId: "s1"),
+                ]
             ),
             (
                 .sectionRoot(.sourceFields),

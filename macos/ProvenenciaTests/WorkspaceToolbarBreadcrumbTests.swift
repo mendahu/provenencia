@@ -61,4 +61,22 @@ struct WorkspaceToolbarBreadcrumbTests {
         #expect(items.count == 2)
         #expect(items[1].label == String(localized: L10n.Workspace.evidenceGraphTitle))
     }
+
+    @Test func citationComposerLeafUsesCitationForScope() {
+        let items = WorkspaceToolbar.breadcrumbItems(
+            for: WorkspaceLocation(
+                section: .sources,
+                sourceId: "src-1",
+                subjectId: "sub-1",
+                sourceSurface: .citationComposer,
+                title: "Margt. Alderwick"
+            ),
+            goToSectionRoot: { _ in }
+        )
+        #expect(items.count == 2)
+        #expect(
+            items[1].label
+                == L10n.CitationComposer.breadcrumbCitationFor(scope: "Margt. Alderwick")
+        )
+    }
 }

@@ -200,7 +200,10 @@ struct WorkspaceToolbar: View {
         }
         let leaf: String
         if location.sourceSurface == .citationComposer, location.sourceId != nil {
-            leaf = String(localized: L10n.EvidenceGraph.composerStubTitle)
+            let scope = location.title.flatMap { $0.nilIfEmpty }
+                ?? location.ref.flatMap { $0.nilIfEmpty }
+                ?? "…"
+            leaf = L10n.CitationComposer.breadcrumbCitationFor(scope: scope)
         } else if location.sourceSurface == .graph, location.sourceId != nil {
             leaf = String(localized: L10n.Workspace.evidenceGraphTitle)
         } else {

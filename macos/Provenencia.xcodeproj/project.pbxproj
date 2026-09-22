@@ -38,6 +38,9 @@
 		AA0000000000000000000379 /* PVSectionHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000378 /* PVSectionHeader.swift */; };
 		AA0000000000000000000331 /* DateValueDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000330 /* DateValueDraft.swift */; };
 		AA0000000000000000000335 /* DateValueEditorForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000336 /* DateValueEditorForm.swift */; };
+		A70800000000000000000002 /* CitationComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70800000000000000000001 /* CitationComposerView.swift */; };
+		A70800000000000000000004 /* CitationComposerModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70800000000000000000003 /* CitationComposerModel.swift */; };
+		A70800000000000000000006 /* CitationComposerModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70800000000000000000005 /* CitationComposerModelTests.swift */; };
 		AA000000000000000000031B /* ProjectFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000031C /* ProjectFiles.swift */; };
 		AA00000000000000000003D1 /* IngestMediaPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003D0 /* IngestMediaPolicy.swift */; };
 		AA00000000000000000003D3 /* IngestFileDropRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003D2 /* IngestFileDropRow.swift */; };
@@ -87,7 +90,6 @@
 		AA0000000000000000000497 /* EvidenceCanvasInputMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000496 /* EvidenceCanvasInputMode.swift */; };
 		AA00000000000000000004A1 /* EvidenceProvisionalLinkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004A0 /* EvidenceProvisionalLinkStore.swift */; };
 		AA00000000000000000004A3 /* EvidenceBridgeCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004A2 /* EvidenceBridgeCard.swift */; };
-		AA00000000000000000004B1 /* CitationComposerStubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004B0 /* CitationComposerStubView.swift */; };
 		AA00000000000000000004A5 /* EvidenceGraphEdgeLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004A4 /* EvidenceGraphEdgeLayer.swift */; };
 		AA00000000000000000004A7 /* GraphCanvasEdgeGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004A6 /* GraphCanvasEdgeGeometry.swift */; };
 		AA00000000000000000004A9 /* GraphCanvasEdgeGeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004A8 /* GraphCanvasEdgeGeometryTests.swift */; };
@@ -271,6 +273,9 @@
 		AA0000000000000000000378 /* PVSectionHeader.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSectionHeader.swift; sourceTree = "<group>"; };
 		AA0000000000000000000330 /* DateValueDraft.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueDraft.swift; sourceTree = "<group>"; };
 		AA0000000000000000000336 /* DateValueEditorForm.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueEditorForm.swift; sourceTree = "<group>"; };
+		A70800000000000000000001 /* CitationComposerView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerView.swift; sourceTree = "<group>"; };
+		A70800000000000000000003 /* CitationComposerModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerModel.swift; sourceTree = "<group>"; };
+		A70800000000000000000005 /* CitationComposerModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerModelTests.swift; sourceTree = "<group>"; };
 		AA000000000000000000031C /* ProjectFiles.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProjectFiles.swift; sourceTree = "<group>"; };
 		AA00000000000000000003D0 /* IngestMediaPolicy.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IngestMediaPolicy.swift; sourceTree = "<group>"; };
 		AA00000000000000000003D2 /* IngestFileDropRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IngestFileDropRow.swift; sourceTree = "<group>"; };
@@ -331,7 +336,6 @@
 		AA0000000000000000000496 /* EvidenceCanvasInputMode.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceCanvasInputMode.swift; sourceTree = "<group>"; };
 		AA00000000000000000004A0 /* EvidenceProvisionalLinkStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceProvisionalLinkStore.swift; sourceTree = "<group>"; };
 		AA00000000000000000004A2 /* EvidenceBridgeCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceBridgeCard.swift; sourceTree = "<group>"; };
-		AA00000000000000000004B0 /* CitationComposerStubView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerStubView.swift; sourceTree = "<group>"; };
 		AA00000000000000000004A4 /* EvidenceGraphEdgeLayer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphEdgeLayer.swift; sourceTree = "<group>"; };
 		AA00000000000000000004A6 /* GraphCanvasEdgeGeometry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasEdgeGeometry.swift; sourceTree = "<group>"; };
 		AA00000000000000000004A8 /* GraphCanvasEdgeGeometryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasEdgeGeometryTests.swift; sourceTree = "<group>"; };
@@ -722,6 +726,7 @@
 				8D76A01BF603CC419C35EEBD /* Workspace */,
 				AA0000000000000000000316 /* Sources */,
 				AA0000000000000000000334 /* Dates */,
+				A70800000000000000000007 /* CitationComposer */,
 				AA000000000000000000047C /* GraphCanvas */,
 				AA000000000000000000047D /* EvidenceGraph */,
 				423C55925CCDB8118E02BF19 /* SourceFields */,
@@ -756,7 +761,6 @@
 				AA0000000000000000000496 /* EvidenceCanvasInputMode.swift */,
 				AA0000000000000000000480 /* EvidenceSubjectCard.swift */,
 				AA00000000000000000004A2 /* EvidenceBridgeCard.swift */,
-				AA00000000000000000004B0 /* CitationComposerStubView.swift */,
 				AA00000000000000000004A4 /* EvidenceGraphEdgeLayer.swift */,
 				AA0000000000000000000490 /* EvidenceGraphModel.swift */,
 				AA0000000000000000000492 /* EvidenceGraphPalette.swift */,
@@ -773,6 +777,15 @@
 				AA0000000000000000000336 /* DateValueEditorForm.swift */,
 			);
 			path = Dates;
+			sourceTree = "<group>";
+		};
+		A70800000000000000000007 /* CitationComposer */ = {
+			isa = PBXGroup;
+			children = (
+				A70800000000000000000003 /* CitationComposerModel.swift */,
+				A70800000000000000000001 /* CitationComposerView.swift */,
+			);
+			path = CitationComposer;
 			sourceTree = "<group>";
 		};
 		AA0000000000000000000048 /* Onboarding */ = {
@@ -842,6 +855,7 @@
 				AA0000000000000000000486 /* GraphCanvasGridMappingTests.swift */,
 				AA0000000000000000000488 /* SourceGraphSnapshotTests.swift */,
 				AA0000000000000000000494 /* EvidenceGraphModelTests.swift */,
+				A70800000000000000000005 /* CitationComposerModelTests.swift */,
 				AA00000000000000000004A8 /* GraphCanvasEdgeGeometryTests.swift */,
 				AA00000000000000000004C6 /* GraphCanvasPointerHitTestingTests.swift */,
 				AA00000000000000000004AA /* EvidenceProvisionalLinkStoreTests.swift */,
@@ -1391,7 +1405,6 @@
 				AA0000000000000000000497 /* EvidenceCanvasInputMode.swift in Sources */,
 				AA00000000000000000004A1 /* EvidenceProvisionalLinkStore.swift in Sources */,
 				AA00000000000000000004A3 /* EvidenceBridgeCard.swift in Sources */,
-				AA00000000000000000004B1 /* CitationComposerStubView.swift in Sources */,
 				AA00000000000000000004A5 /* EvidenceGraphEdgeLayer.swift in Sources */,
 				AA00000000000000000004A7 /* GraphCanvasEdgeGeometry.swift in Sources */,
 				AA00000000000000000004C1 /* GraphCanvasHitTarget.swift in Sources */,
@@ -1462,6 +1475,8 @@
 				AA000000000000000000036D /* SourcePageNotesView.swift in Sources */,
 				AA0000000000000000000331 /* DateValueDraft.swift in Sources */,
 				AA0000000000000000000335 /* DateValueEditorForm.swift in Sources */,
+				A70800000000000000000002 /* CitationComposerView.swift in Sources */,
+				A70800000000000000000004 /* CitationComposerModel.swift in Sources */,
 				AA000000000000000000031B /* ProjectFiles.swift in Sources */,
 				AA00000000000000000003D1 /* IngestMediaPolicy.swift in Sources */,
 				AA00000000000000000003D3 /* IngestFileDropRow.swift in Sources */,
@@ -1514,6 +1529,7 @@
 				AA0000000000000000000487 /* GraphCanvasGridMappingTests.swift in Sources */,
 				AA0000000000000000000489 /* SourceGraphSnapshotTests.swift in Sources */,
 				AA0000000000000000000495 /* EvidenceGraphModelTests.swift in Sources */,
+				A70800000000000000000006 /* CitationComposerModelTests.swift in Sources */,
 				AA00000000000000000004A9 /* GraphCanvasEdgeGeometryTests.swift in Sources */,
 				AA00000000000000000004C7 /* GraphCanvasPointerHitTestingTests.swift in Sources */,
 				AA00000000000000000004AB /* EvidenceProvisionalLinkStoreTests.swift in Sources */,

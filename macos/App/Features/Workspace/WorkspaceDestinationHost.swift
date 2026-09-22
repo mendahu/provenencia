@@ -42,11 +42,12 @@ struct WorkspaceDestinationHost: View {
             if let sourceID = navigation.currentLocation.sourceId,
                let subjectID = navigation.currentLocation.subjectId
             {
-                CitationComposerStubView(
+                CitationComposerView(
                     sourceID: sourceID,
                     subjectID: subjectID,
                     session: session,
-                    store: store
+                    store: store,
+                    userID: userID
                 )
             }
         case .sourceFields:

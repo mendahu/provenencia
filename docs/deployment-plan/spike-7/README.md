@@ -2,7 +2,7 @@
 
 ## Status
 
-**Open.** Checklist and PR sequence: [`deployment-plan.md`](deployment-plan.md). Finished steps: [`completed.md`](completed.md) (none yet).
+**Open.** Checklist and PR sequence: [`deployment-plan.md`](deployment-plan.md). Finished steps: [`completed.md`](completed.md).
 
 Stand up the Interpretation **Citation → Observation** pipeline on the Evidence graph: **Subject fields** editor, NameValue, image/PDF citation composer as a **navigable place**, cited property rows on cards, and durable connect macros. Authoritative design: [`interpretation-graph-ui.md`](../../ideas/interpretation-graph-ui.md) §4–§6 / slices 3–7. Canvas inherits from [Spike 6](../archive/spike-6/) (Go).
 
@@ -20,7 +20,7 @@ Stand up the Interpretation **Citation → Observation** pipeline on the Evidenc
 | --- | --- |
 | [**Deployment plan**](deployment-plan.md) | PR sequence, design gates, dogfood bar, scope |
 | [**Completed**](completed.md) | Finished steps (empty until landings) |
-| [Design briefs](design/) | Claude Design — open S7-D4, S7-D5, S7-D7 (S7-D1 descoped; S7-D2 / S7-D3 / S7-D6 / S7-D8 archived) |
+| [Design briefs](design/) | Claude Design — open S7-D5, S7-D7 (S7-D1 descoped; S7-D2 / S7-D3 / S7-D4 / S7-D6 / S7-D8 archived) |
 
 ## Relationship to Spike 5 / 6 / later
 
