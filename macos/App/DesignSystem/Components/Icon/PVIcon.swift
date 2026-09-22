@@ -44,6 +44,7 @@ enum PVSymbol: String {
     case fileUp = "doc.badge.plus"
     case penLine = "pencil.line"
     case imageUp = "square.and.arrow.up"
+    case circleDashed = "circle.dashed"
 }
 
 /// Renders a design-system icon via SF Symbols.

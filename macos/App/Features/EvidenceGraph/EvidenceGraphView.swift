@@ -195,12 +195,42 @@ private struct EvidenceGraphContent: View {
                     if model.editingSubjectID != nil {
                         _ = await model.confirmEdit()
                     } else if let id = await model.confirmCreate() {
-                        model.selectSubject(id: id)
+                        if let location = model.consumeComposerHandoff() {
+                            navigation.go(to: location)
+                        } else {
+                            model.selectSubject(id: id)
+                        }
                     }
                 }
             }
         ) {
             createForm
+        }
+        .pvConfirm(
+            item: Binding(
+                get: { model.pendingDelete },
+                set: { model.pendingDelete = $0 }
+            ),
+            copy: { pending in
+                PVConfirmCopy(
+                    title: String(localized: L10n.EvidenceGraph.deleteConfirmTitle),
+                    message: L10n.EvidenceGraph.deleteConfirmMessage(
+                        label: pending.label,
+                        ref: pending.ref
+                    ),
+                    confirm: L10n.EvidenceGraph.deleteConfirm,
+                    cancel: L10n.EvidenceGraph.deleteCancel
+                )
+            },
+            isRunning: model.isDeleting,
+            accessibilityIdentifierPrefix: "evidenceGraph.delete",
+            onConfirm: {
+                Task { _ = await model.confirmDeleteSubject() }
+            }
+        ) { _ in
+            if let deleteError = model.deleteError {
+                PVCallout(tone: .danger, message: deleteError)
+            }
         }
     }
     private var accessibilityGraphLabel: Text {
@@ -637,12 +667,18 @@ private struct EvidenceGraphDocumentBody: View {
             switch actionID {
             case EvidenceSubjectCard.editActionID, EvidenceBridgeCard.editActionID:
                 model.beginEdit(subjectID: id)
+            case EvidenceSubjectCard.deleteActionID, EvidenceBridgeCard.deleteActionID:
+                model.beginDelete(subjectID: id)
             case EvidenceSubjectCard.addPropertyActionID:
                 if let location = model.composerLocation(for: id) {
                     navigation.go(to: location)
                 }
             default:
-                break
+                if let observationID = EvidenceSubjectCard.observationID(fromEditPropertyAction: actionID),
+                   let location = model.composerLocation(forObservationID: observationID, subjectID: id)
+                {
+                    navigation.go(to: location)
+                }
             }
         }
         pointer.onHover = { point in
@@ -723,13 +759,29 @@ private struct EvidenceGraphDocumentBody: View {
             isActivated: model.activatedSubjectID == placed.id,
             isConnectingFrom: model.connectOriginID == placed.id,
             canCite: model.canCite,
-            dragOffset: drag
+            dragOffset: drag,
+            hoveredActionID: pointer.hoveredCardAction?.cardID == placed.id
+                ? pointer.hoveredCardAction?.actionID
+                : nil
         )
         .accessibilityAction(named: Text(L10n.EvidenceGraph.editAccessibility)) {
             model.beginEdit(subjectID: placed.id)
         }
         .accessibilityAction(named: Text(L10n.EvidenceGraph.addProperty)) {
             if let location = model.composerLocation(for: placed.id) {
+                navigation.go(to: location)
+            }
+        }
+        .accessibilityAction(named: Text(L10n.EvidenceGraph.deleteAccessibility)) {
+            model.beginDelete(subjectID: placed.id)
+        }
+        .accessibilityAction(named: Text(L10n.EvidenceGraph.editPropertyAccessibility)) {
+            if let observation = placed.observations.first,
+               let location = model.composerLocation(
+                   forObservationID: observation.id,
+                   subjectID: placed.id
+               )
+            {
                 navigation.go(to: location)
             }
         }
@@ -744,10 +796,16 @@ private struct EvidenceGraphDocumentBody: View {
             placed: placed,
             isSelected: model.selectedSubjectID == placed.id,
             isActivated: model.activatedSubjectID == placed.id,
-            dragOffset: drag
+            dragOffset: drag,
+            hoveredActionID: pointer.hoveredCardAction?.cardID == placed.id
+                ? pointer.hoveredCardAction?.actionID
+                : nil
         )
         .accessibilityAction(named: Text(L10n.EvidenceGraph.editAccessibility)) {
             model.beginEdit(subjectID: placed.id)
+        }
+        .accessibilityAction(named: Text(L10n.EvidenceGraph.deleteAccessibility)) {
+            model.beginDelete(subjectID: placed.id)
         }
         .offset(x: layout.width, y: layout.height)
     }

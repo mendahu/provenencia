@@ -621,6 +621,25 @@ protocol GenealogyStore: Sendable {
         observations: [CatalogObservationDraft]
     ) async throws -> (CatalogCitation, [CatalogObservation])
 
+    func getCitation(
+        projectDir: String,
+        citationID: String
+    ) async throws -> (CatalogCitation, [String], [CatalogObservation])
+
+    func updateCitationWithObservations(
+        projectDir: String,
+        userID: String,
+        citationID: String,
+        artifactID: String,
+        locatorJSON: String,
+        transcription: String,
+        description: String,
+        transcriptionUncertain: Bool,
+        transcriptionNote: String,
+        citationNotes: [String],
+        observations: [CatalogObservationDraft]
+    ) async throws -> (CatalogCitation, [CatalogObservation])
+
     func addObservationsToCitation(
         projectDir: String,
         userID: String,

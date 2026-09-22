@@ -78,6 +78,8 @@ const (
 	MethodCreateCitationWithObservations      = int32(engine.Method_METHOD_CREATE_CITATION_WITH_OBSERVATIONS)
 	MethodAddObservationsToCitation           = int32(engine.Method_METHOD_ADD_OBSERVATIONS_TO_CITATION)
 	MethodListObservationsBySource            = int32(engine.Method_METHOD_LIST_OBSERVATIONS_BY_SOURCE)
+	MethodGetCitation                         = int32(engine.Method_METHOD_GET_CITATION)
+	MethodUpdateCitationWithObservations      = int32(engine.Method_METHOD_UPDATE_CITATION_WITH_OBSERVATIONS)
 )
 
 // Call routes one coarse FFI operation to api/ffi/handlers.
@@ -219,6 +221,10 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.AddObservationsToCitation(in)
 	case MethodListObservationsBySource:
 		return handlers.ListObservationsBySource(in)
+	case MethodGetCitation:
+		return handlers.GetCitation(in)
+	case MethodUpdateCitationWithObservations:
+		return handlers.UpdateCitationWithObservations(in)
 	default:
 		return nil, apperr.New(apperr.CodeInternalUnknownMethod, apperr.KindInternal, strconv.Itoa(int(method)))
 	}

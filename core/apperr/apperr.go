@@ -55,6 +55,7 @@ const (
 	CodeSubjectVocabLocked           = "subjectvocab.locked"
 	CodeSourcesInvalid               = "sources.invalid"
 	CodeSubjectsInvalid              = "subjects.invalid"
+	CodeSubjectsInUse                = "subjects.in_use"
 	CodeSubjectPositionsInvalid      = "subjectpositions.invalid"
 	CodeFilesInvalid                 = "files.invalid"
 	CodeArtifactsInvalid             = "artifacts.invalid"

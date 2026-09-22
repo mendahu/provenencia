@@ -78,4 +78,101 @@ struct GraphCanvasEdgeGeometryTests {
         #expect(frame.height >= EvidenceSubjectCard.edgeLayoutHeight)
         #expect(frame.width == EvidenceSubjectCard.width)
     }
+
+    @Test func uncitedCardExposesDeleteTargetWithoutPropertyEdit() {
+        let placed = SourceGraphPlacedSubject(
+            subject: CatalogSubject(
+                id: "s1",
+                ref: "CPR-1",
+                sourceID: "src",
+                subjectTypeID: "t",
+                label: "A",
+                description: ""
+            ),
+            kind: .person,
+            typeLabel: "Person",
+            gridX: 0,
+            gridY: 0,
+            isCited: false
+        )
+        let actions = EvidenceSubjectCard.actionTargets(for: placed, canCite: true)
+        #expect(actions.contains(where: { $0.id == EvidenceSubjectCard.deleteActionID }))
+        #expect(actions.contains(where: { $0.id == EvidenceSubjectCard.editActionID }))
+        #expect(!actions.contains(where: { $0.id.hasPrefix("editProperty.") }))
+    }
+
+    @Test func citedCardExposesPropertyEditAndHidesDelete() {
+        let observation = CatalogObservation(
+            id: "obs-1",
+            ref: "OBS-1",
+            citationID: "cit-1",
+            subjectID: "s1",
+            propertyID: "p1",
+            polarity: "positive",
+            valueText: "Farmer",
+            valueInteger: nil,
+            valueDateID: "",
+            valueNameID: "",
+            valueSubjectID: "",
+            valueTermID: "",
+            propertyKey: "occupation",
+            propertyLabel: "Occupation",
+            propertyValueType: "text"
+        )
+        let placed = SourceGraphPlacedSubject(
+            subject: CatalogSubject(
+                id: "s1",
+                ref: "CPR-1",
+                sourceID: "src",
+                subjectTypeID: "t",
+                label: "A",
+                description: ""
+            ),
+            kind: .person,
+            typeLabel: "Person",
+            gridX: 0,
+            gridY: 0,
+            isCited: true,
+            observations: [observation]
+        )
+        let actions = EvidenceSubjectCard.actionTargets(for: placed, canCite: true)
+        #expect(!actions.contains(where: { $0.id == EvidenceSubjectCard.deleteActionID }))
+        #expect(actions.contains(where: {
+            $0.id == EvidenceSubjectCard.editPropertyActionID(observationID: "obs-1")
+        }))
+        #expect(EvidenceSubjectCard.width == 264)
+        #expect(EvidenceSubjectCard.contentHeight(for: placed) > EvidenceSubjectCard.edgeLayoutHeight)
+    }
+
+    @Test func headerActionHitsCenterOnTrailingIcons() throws {
+        let placed = SourceGraphPlacedSubject(
+            subject: CatalogSubject(
+                id: "s1",
+                ref: "CPR-1",
+                sourceID: "src",
+                subjectTypeID: "t",
+                label: "A",
+                description: ""
+            ),
+            kind: .person,
+            typeLabel: "Person",
+            gridX: 0,
+            gridY: 0,
+            isCited: false
+        )
+        let frame = EvidenceSubjectCard.edgeFrame(for: placed)
+        let actions = EvidenceSubjectCard.actionTargets(for: placed, canCite: true)
+        let edit = try #require(actions.first { $0.id == EvidenceSubjectCard.editActionID })
+        let delete = try #require(actions.first { $0.id == EvidenceSubjectCard.deleteActionID })
+
+        let trailing = frame.maxX - EvidenceSubjectCard.shellPaddingX
+        let iconSize = EvidenceCardHeaderActionHits.iconSize
+        let spacing = EvidenceCardHeaderActionHits.iconSpacing
+        let deleteIconMidX = trailing - iconSize / 2
+        let editIconMidX = trailing - iconSize - spacing - iconSize / 2
+
+        #expect(abs(delete.frame.midX - deleteIconMidX) < 0.5)
+        #expect(abs(edit.frame.midX - editIconMidX) < 0.5)
+        #expect(delete.frame.maxX > edit.frame.maxX)
+    }
 }

@@ -68,6 +68,15 @@ const (
 		WHERE o.subject_id = ?
 		ORDER BY o.ref COLLATE NOCASE`
 
+	sqlListByCitation = sqlListSelect + `
+		WHERE o.citation_id = ?
+		ORDER BY o.ref COLLATE NOCASE`
+
+	sqlDeleteByCitation = `DELETE FROM observations WHERE citation_id = ?`
+
+	sqlCountBySubjectOrValue = `SELECT COUNT(*) FROM observations
+		WHERE subject_id = ? OR value_subject_id = ?`
+
 	maxRefRetries = 8
 )
 
@@ -442,6 +451,48 @@ func ListBySubject(c *database.Catalog, subjectID []byte) ([]Listed, error) {
 	}
 	defer rows.Close()
 	return scanListed(rows)
+}
+
+// ListByCitation returns Observations for one citation.
+func ListByCitation(c *database.Catalog, citationID []byte) ([]Listed, error) {
+	db, err := c.DB()
+	if err != nil {
+		return nil, err
+	}
+	if len(citationID) != 16 {
+		return nil, ErrInvalid
+	}
+	rows, err := db.Query(sqlListByCitation, citationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanListed(rows)
+}
+
+// DeleteByCitationTx removes all Observations for a citation (notes CASCADE).
+func DeleteByCitationTx(tx *sql.Tx, citationID []byte) error {
+	if len(citationID) != 16 {
+		return ErrInvalid
+	}
+	_, err := tx.Exec(sqlDeleteByCitation, citationID)
+	return err
+}
+
+// CountReferencingSubject returns Observations that cite subjectID as subject or value.
+func CountReferencingSubject(c *database.Catalog, subjectID []byte) (int, error) {
+	db, err := c.DB()
+	if err != nil {
+		return 0, err
+	}
+	if len(subjectID) != 16 {
+		return 0, ErrInvalid
+	}
+	var n int
+	if err := db.QueryRow(sqlCountBySubjectOrValue, subjectID, subjectID).Scan(&n); err != nil {
+		return 0, err
+	}
+	return n, nil
 }
 
 func scanListed(rows *sql.Rows) ([]Listed, error) {

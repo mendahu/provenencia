@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/database/subjects"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -238,6 +239,32 @@ func TestDeleteSubject(t *testing.T) {
 					t.Fatalf("want empty after delete, got %+v", list.Subjects)
 				}
 			},
+		},
+		{
+			name: "refuses when observations reference subject",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _, artifactID, placeID, propID := citationFixture(t)
+				if _, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
+					ProjectDir:  dir,
+					UserId:      userID,
+					ArtifactId:  artifactID,
+					LocatorJson: validLocatorJSON,
+					Observations: []*engine.ObservationDraft{{
+						SubjectId:  placeID,
+						PropertyId: propID,
+						ValueText:  "Boston",
+					}},
+				})); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.DeleteSubjectRequest{
+					ProjectDir: dir,
+					UserId:     userID,
+					SubjectId:  placeID,
+				}
+			},
+			wantErr:   true,
+			wantErrIs: subjects.ErrInUse,
 		},
 	})
 }

@@ -27,6 +27,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var subjectTypePresentations: [String: CatalogSubjectTypePresentation] = [:]
     var connectRules: [CatalogConnectRule] = []
     var observationsBySource: [String: [CatalogObservation]] = [:]
+    var citationsByID: [String: CatalogCitation] = [:]
+    var citationNotesByID: [String: [String]] = [:]
     var metadataBySource: [String: [CatalogMetadataEntry]] = [:]
     /// Project dir for which a catalog RPC has “held” a session (tests only).
     var heldCatalogProjectDir: String?
@@ -987,6 +989,18 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     func deleteSubject(projectDir: String, userID _: String, subjectID: String) async throws {
         markCatalogSessionHeld(projectDir)
+        for list in observationsBySource.values {
+            if list.contains(where: {
+                $0.subjectID == subjectID || $0.valueSubjectID == subjectID
+            }) {
+                throw CoreInvokeError.coded(
+                    status: 1,
+                    code: "subjects.in_use",
+                    kind: .conflict,
+                    params: []
+                )
+            }
+        }
         for (sourceID, var list) in subjectsBySource {
             guard let idx = list.firstIndex(where: { $0.id == subjectID }) else { continue }
             list.remove(at: idx)
@@ -1253,7 +1267,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         description: String,
         transcriptionUncertain: Bool,
         transcriptionNote: String,
-        citationNotes _: [String],
+        citationNotes: [String],
         observations drafts: [CatalogObservationDraft]
     ) async throws -> (CatalogCitation, [CatalogObservation]) {
         markCatalogSessionHeld(projectDir)
@@ -1267,9 +1281,62 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             transcriptionUncertain: transcriptionUncertain,
             transcriptionNote: transcriptionNote
         )
+        citationsByID[citation.id] = citation
+        citationNotesByID[citation.id] = citationNotes
         let created = try appendFakeObservations(
             projectDir: projectDir,
             citationID: citation.id,
+            drafts: drafts
+        )
+        return (citation, created)
+    }
+
+    func getCitation(
+        projectDir: String,
+        citationID: String
+    ) async throws -> (CatalogCitation, [String], [CatalogObservation]) {
+        markCatalogSessionHeld(projectDir)
+        guard let citation = citationsByID[citationID] else { throw StoreBoom.boom }
+        let notes = citationNotesByID[citationID] ?? []
+        let observations = observationsBySource.values
+            .flatMap { $0 }
+            .filter { $0.citationID == citationID }
+        return (citation, notes, observations)
+    }
+
+    func updateCitationWithObservations(
+        projectDir: String,
+        userID _: String,
+        citationID: String,
+        artifactID: String,
+        locatorJSON: String,
+        transcription: String,
+        description: String,
+        transcriptionUncertain: Bool,
+        transcriptionNote: String,
+        citationNotes: [String],
+        observations drafts: [CatalogObservationDraft]
+    ) async throws -> (CatalogCitation, [CatalogObservation]) {
+        markCatalogSessionHeld(projectDir)
+        guard citationsByID[citationID] != nil else { throw StoreBoom.boom }
+        let citation = CatalogCitation(
+            id: citationID,
+            ref: citationsByID[citationID]?.ref ?? "CIT-FAKE1",
+            artifactID: artifactID,
+            locatorJSON: locatorJSON,
+            transcription: transcription,
+            description: description,
+            transcriptionUncertain: transcriptionUncertain,
+            transcriptionNote: transcriptionNote
+        )
+        citationsByID[citationID] = citation
+        citationNotesByID[citationID] = citationNotes
+        for (sourceID, list) in observationsBySource {
+            observationsBySource[sourceID] = list.filter { $0.citationID != citationID }
+        }
+        let created = try appendFakeObservations(
+            projectDir: projectDir,
+            citationID: citationID,
             drafts: drafts
         )
         return (citation, created)

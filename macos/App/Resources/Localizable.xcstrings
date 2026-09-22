@@ -2082,6 +2082,18 @@
         }
       }
     },
+    "error.subjects.in_use": {
+      "comment": "FFI error subjects.in_use when Observations still reference the subject",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This subject still has citations or is used as a property value."
+          }
+        }
+      }
+    },
     "error.subjecttypes.duplicate_prefix": {
       "comment": "FFI error subjecttypes.duplicate_prefix",
       "extractionState": "manual",
@@ -2222,6 +2234,126 @@
           "stringUnit": {
             "state": "translated",
             "value": "Prototype link, not cited evidence"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.summary.location": {
+      "comment": "Location edge summary; arguments are event label then place label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ took place in %@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.summary.locationBare": {
+      "comment": "Location edge summary when event/place endpoint labels are missing",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Took place in"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.summary.relationship": {
+      "comment": "Relationship edge summary; arguments are person, relationship_type, related_to",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ is the %@ of %@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.summary.relationshipFallback": {
+      "comment": "Relationship edge summary without relationship_type; person then related_to",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ is related to %@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.summary.relationshipTypeOnly": {
+      "comment": "Relationship edge summary when endpoint labels are missing; argument is type",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Is the %@ of"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.summary.relationshipBare": {
+      "comment": "Relationship edge summary when type and endpoint labels are missing",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Is related to"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.summary.participation": {
+      "comment": "Participation edge summary; arguments are person, role, event",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ participated as %@ at %@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.summary.participationFallback": {
+      "comment": "Participation edge summary without role; arguments are person then event",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ participated in %@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.summary.participationRoleOnly": {
+      "comment": "Participation edge summary when endpoint labels are missing; argument is role",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Participated as %@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.summary.participationBare": {
+      "comment": "Participation edge summary when role and endpoint labels are missing",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Participated in"
           }
         }
       }
@@ -8358,6 +8490,90 @@
         }
       }
     },
+    "evidenceGraph.subject.editPropertyAccessibility": {
+      "comment": "VoiceOver action for a cited property row pencil that opens the citation composer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit citation"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.deleteAccessibility": {
+      "comment": "VoiceOver action / tooltip for trash on an uncited subject card",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete subject"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.deleteConfirmTitle": {
+      "comment": "Title on the PVConfirm sheet when deleting an uncited Evidence graph subject",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Do you want to delete this?"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.deleteConfirmMessage": {
+      "comment": "Delete-confirm body; arguments are subject label then catalog ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (%@) and its description are removed from this graph. It has no citations, so no evidence is lost."
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.deleteConfirmMessageNoRef": {
+      "comment": "Delete-confirm body when the subject has no ref; argument is the label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ and its description are removed from this graph. It has no citations, so no evidence is lost."
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.deleteConfirm": {
+      "comment": "Confirm button on the Evidence graph delete-subject sheet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.deleteCancel": {
+      "comment": "Cancel button on the Evidence graph delete-subject sheet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep"
+          }
+        }
+      }
+    },
     "evidenceGraph.subject.addProperty": {
       "comment": "Quiet footer control on primary cards that opens the citation composer",
       "extractionState": "manual",
@@ -8582,6 +8798,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Edit observation"
+          }
+        }
+      }
+    },
+    "citationComposer.connectSystemBadge": {
+      "comment": "Badge on fixed connect-edge Observation rows prefilled from Connect (Frame 10)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System · Connect"
           }
         }
       }

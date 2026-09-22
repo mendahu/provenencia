@@ -1116,6 +1116,56 @@ enum L10n {
             comment: "VoiceOver action / tooltip for the subject card edit pencil"
         )
 
+        static let editPropertyAccessibility = LocalizedStringResource(
+            "evidenceGraph.subject.editPropertyAccessibility",
+            defaultValue: "Edit citation",
+            comment: "VoiceOver action for a cited property row pencil that opens the citation composer"
+        )
+
+        static let deleteAccessibility = LocalizedStringResource(
+            "evidenceGraph.subject.deleteAccessibility",
+            defaultValue: "Delete subject",
+            comment: "VoiceOver action / tooltip for trash on an uncited subject card"
+        )
+
+        /// Board `PVConfirm` title for uncited subject delete.
+        static let deleteConfirmTitle = LocalizedStringResource(
+            "evidenceGraph.subject.deleteConfirmTitle",
+            defaultValue: "Do you want to delete this?",
+            comment: "Title on the PVConfirm sheet when deleting an uncited Evidence graph subject"
+        )
+
+        /// Board message: name (+ ref) and description removed; no citations so no evidence lost.
+        static func deleteConfirmMessage(label: String, ref: String) -> String {
+            let trimmedRef = ref.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmedRef.isEmpty {
+                let format = String(localized: LocalizedStringResource(
+                    "evidenceGraph.subject.deleteConfirmMessageNoRef",
+                    defaultValue: "%@ and its description are removed from this graph. It has no citations, so no evidence is lost.",
+                    comment: "Delete-confirm body when the subject has no ref; argument is the label"
+                ))
+                return String(format: format, locale: .current, label)
+            }
+            let format = String(localized: LocalizedStringResource(
+                "evidenceGraph.subject.deleteConfirmMessage",
+                defaultValue: "%@ (%@) and its description are removed from this graph. It has no citations, so no evidence is lost.",
+                comment: "Delete-confirm body; arguments are subject label then catalog ref"
+            ))
+            return String(format: format, locale: .current, label, trimmedRef)
+        }
+
+        static let deleteConfirm = LocalizedStringResource(
+            "evidenceGraph.subject.deleteConfirm",
+            defaultValue: "Delete",
+            comment: "Confirm button on the Evidence graph delete-subject sheet"
+        )
+
+        static let deleteCancel = LocalizedStringResource(
+            "evidenceGraph.subject.deleteCancel",
+            defaultValue: "Keep",
+            comment: "Cancel button on the Evidence graph delete-subject sheet"
+        )
+
         static let addProperty = LocalizedStringResource(
             "evidenceGraph.subject.addProperty",
             defaultValue: "Add property",
@@ -1264,6 +1314,95 @@ enum L10n {
             "evidenceGraph.bridge.honestyAccessibility",
             defaultValue: "Prototype link, not cited evidence",
             comment: "VoiceOver fragment for bridge honesty"
+        )
+
+        /// Location: "{event} took place in {place}".
+        static func bridgeSummaryLocation(event: String, place: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "evidenceGraph.bridge.summary.location",
+                defaultValue: "%@ took place in %@",
+                comment: "Location edge summary; arguments are event label then place label"
+            ))
+            return String(format: format, locale: .current, event, place)
+        }
+
+        /// Location mid-phrase when endpoint labels are incomplete.
+        static let bridgeSummaryLocationBare = LocalizedStringResource(
+            "evidenceGraph.bridge.summary.locationBare",
+            defaultValue: "Took place in",
+            comment: "Location edge summary when event/place endpoint labels are missing"
+        )
+
+        /// Relationship: "{person} is the {type} of {related_to}".
+        static func bridgeSummaryRelationship(person: String, type: String, related: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "evidenceGraph.bridge.summary.relationship",
+                defaultValue: "%@ is the %@ of %@",
+                comment: "Relationship edge summary; arguments are person, relationship_type, related_to"
+            ))
+            return String(format: format, locale: .current, person, type, related)
+        }
+
+        /// Relationship without type: "{person} is related to {related_to}".
+        static func bridgeSummaryRelationshipFallback(person: String, related: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "evidenceGraph.bridge.summary.relationshipFallback",
+                defaultValue: "%@ is related to %@",
+                comment: "Relationship edge summary without relationship_type; person then related_to"
+            ))
+            return String(format: format, locale: .current, person, related)
+        }
+
+        /// Relationship mid-phrase when only the type term is known.
+        static func bridgeSummaryRelationshipTypeOnly(type: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "evidenceGraph.bridge.summary.relationshipTypeOnly",
+                defaultValue: "Is the %@ of",
+                comment: "Relationship edge summary when endpoint labels are missing; argument is type"
+            ))
+            return String(format: format, locale: .current, type)
+        }
+
+        static let bridgeSummaryRelationshipBare = LocalizedStringResource(
+            "evidenceGraph.bridge.summary.relationshipBare",
+            defaultValue: "Is related to",
+            comment: "Relationship edge summary when type and endpoint labels are missing"
+        )
+
+        /// Participation with role: "{person} participated as {role} at {event}".
+        static func bridgeSummaryParticipation(person: String, role: String, event: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "evidenceGraph.bridge.summary.participation",
+                defaultValue: "%@ participated as %@ at %@",
+                comment: "Participation edge summary; arguments are person, role, event"
+            ))
+            return String(format: format, locale: .current, person, role, event)
+        }
+
+        /// Participation without role: "{person} participated in {event}".
+        static func bridgeSummaryParticipationFallback(person: String, event: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "evidenceGraph.bridge.summary.participationFallback",
+                defaultValue: "%@ participated in %@",
+                comment: "Participation edge summary without role; arguments are person then event"
+            ))
+            return String(format: format, locale: .current, person, event)
+        }
+
+        /// Participation mid-phrase when only the role term is known.
+        static func bridgeSummaryParticipationRoleOnly(role: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "evidenceGraph.bridge.summary.participationRoleOnly",
+                defaultValue: "Participated as %@",
+                comment: "Participation edge summary when endpoint labels are missing; argument is role"
+            ))
+            return String(format: format, locale: .current, role)
+        }
+
+        static let bridgeSummaryParticipationBare = LocalizedStringResource(
+            "evidenceGraph.bridge.summary.participationBare",
+            defaultValue: "Participated in",
+            comment: "Participation edge summary when role and endpoint labels are missing"
         )
 
         static let linksRotor = LocalizedStringResource(
@@ -1439,6 +1578,12 @@ enum L10n {
             "citationComposer.editObservation",
             defaultValue: "Edit observation",
             comment: "Icon button that reopens the observation dialog for a row"
+        )
+
+        static let connectSystemBadge = LocalizedStringResource(
+            "citationComposer.connectSystemBadge",
+            defaultValue: "System · Connect",
+            comment: "Badge on fixed connect-edge Observation rows prefilled from Connect (Frame 10)"
         )
 
         static let removeObservation = LocalizedStringResource(
@@ -4382,6 +4527,11 @@ enum L10n {
             defaultValue: "Invalid subject.",
             comment: "FFI error subjects.invalid"
         )
+        static let subjectsInUse = LocalizedStringResource(
+            "error.subjects.in_use",
+            defaultValue: "This subject still has citations or is used as a property value.",
+            comment: "FFI error subjects.in_use when Observations still reference the subject"
+        )
         static let subjectPositionsInvalid = LocalizedStringResource(
             "error.subjectpositions.invalid",
             defaultValue: "Invalid subject position.",
@@ -4878,6 +5028,8 @@ enum L10n {
                 return String(localized: sourcesInvalid)
             case "subjects.invalid":
                 return String(localized: subjectsInvalid)
+            case "subjects.in_use":
+                return String(localized: subjectsInUse)
             case "subjectpositions.invalid":
                 return String(localized: subjectPositionsInvalid)
             case "subjecttypes.invalid":

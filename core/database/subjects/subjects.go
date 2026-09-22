@@ -14,7 +14,10 @@ import (
 	"github.com/mendahu/provenencia/core/ref"
 )
 
-var ErrInvalid = apperr.New(apperr.CodeSubjectsInvalid, apperr.KindUser)
+var (
+	ErrInvalid = apperr.New(apperr.CodeSubjectsInvalid, apperr.KindUser)
+	ErrInUse   = apperr.New(apperr.CodeSubjectsInUse, apperr.KindConflict)
+)
 
 const (
 	sqlInsert = `INSERT INTO subjects (id, ref, source_id, subject_type_id, label, description)
@@ -30,6 +33,7 @@ const (
 		ORDER BY label COLLATE NOCASE, ref COLLATE NOCASE`
 	sqlSourceExists = `SELECT 1 FROM sources WHERE id = ?`
 	sqlTypePrefix   = `SELECT candidate_ref_prefix FROM subject_types WHERE id = ?`
+	sqlObsRefs      = `SELECT COUNT(*) FROM observations WHERE subject_id = ? OR value_subject_id = ?`
 	maxRefRetries   = 8
 )
 
@@ -227,6 +231,13 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	}
 	if err != nil {
 		return err
+	}
+	var obsCount int
+	if err := tx.QueryRow(sqlObsRefs, id, id).Scan(&obsCount); err != nil {
+		return err
+	}
+	if obsCount > 0 {
+		return ErrInUse
 	}
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
 		return err
