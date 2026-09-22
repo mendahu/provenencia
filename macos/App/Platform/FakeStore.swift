@@ -1307,6 +1307,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 throw StoreBoom.boom
             }
             let property = propertiesByProject[projectDir]?.first(where: { $0.id == draft.propertyID })
+            var displayText = draft.valueText
+            if displayText.isEmpty, !draft.valueTermID.isEmpty {
+                displayText = propertyTermsByProperty[draft.propertyID]?
+                    .first(where: { $0.id == draft.valueTermID })?
+                    .label ?? ""
+            }
             let obs = CatalogObservation(
                 id: UUID().uuidString.lowercased(),
                 ref: "OBS-FAKE1",
@@ -1314,7 +1320,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 subjectID: draft.subjectID,
                 propertyID: draft.propertyID,
                 polarity: draft.polarity.isEmpty ? "positive" : draft.polarity,
-                valueText: draft.valueText,
+                valueText: displayText,
                 valueInteger: draft.valueInteger,
                 valueDateID: draft.valueDateID,
                 valueNameID: draft.valueNameID,

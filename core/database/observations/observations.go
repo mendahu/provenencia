@@ -39,18 +39,20 @@ const (
 
 	sqlListBySource = `SELECT o.id, o.ref, o.citation_id, o.subject_id, o.property_id, o.polarity,
 		o.value_text, o.value_integer, o.value_date_id, o.value_name_id, o.value_subject_id, o.value_term_id,
-		p.key, p.label, p.value_type
+		p.key, p.label, p.value_type, COALESCE(pt.label, '')
 		FROM observations o
 		JOIN subjects s ON s.id = o.subject_id
 		JOIN properties p ON p.id = o.property_id
+		LEFT JOIN property_terms pt ON pt.id = o.value_term_id
 		WHERE s.source_id = ?
 		ORDER BY o.ref COLLATE NOCASE`
 
 	sqlListBySubject = `SELECT o.id, o.ref, o.citation_id, o.subject_id, o.property_id, o.polarity,
 		o.value_text, o.value_integer, o.value_date_id, o.value_name_id, o.value_subject_id, o.value_term_id,
-		p.key, p.label, p.value_type
+		p.key, p.label, p.value_type, COALESCE(pt.label, '')
 		FROM observations o
 		JOIN properties p ON p.id = o.property_id
+		LEFT JOIN property_terms pt ON pt.id = o.value_term_id
 		WHERE o.subject_id = ?
 		ORDER BY o.ref COLLATE NOCASE`
 
@@ -81,6 +83,8 @@ type Listed struct {
 	PropertyKey       string
 	PropertyLabel     string
 	PropertyValueType string
+	// ValueTermLabel is the property_terms.label for value_term_id (empty when unset).
+	ValueTermLabel string
 }
 
 // Input is one Observation draft for insert (create or append).
@@ -430,11 +434,12 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 			valueText                                                  sql.NullString
 			valueInt                                                   sql.NullInt64
 			dateID, nameID, subjectID, termID                          []byte
+			termLabel                                                  string
 		)
 		if err := rows.Scan(
 			&l.ID, &l.Ref, &l.CitationID, &l.SubjectID, &l.PropertyID, &l.Polarity,
 			&valueText, &valueInt, &dateID, &nameID, &subjectID, &termID,
-			&l.PropertyKey, &l.PropertyLabel, &l.PropertyValueType,
+			&l.PropertyKey, &l.PropertyLabel, &l.PropertyValueType, &termLabel,
 		); err != nil {
 			return nil, err
 		}
@@ -450,6 +455,12 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 		l.ValueNameID = append([]byte(nil), nameID...)
 		l.ValueSubjectID = append([]byte(nil), subjectID...)
 		l.ValueTermID = append([]byte(nil), termID...)
+		l.ValueTermLabel = termLabel
+		// Card rows read value_text; term Observations store the label on the term row.
+		if !l.HasText && termLabel != "" {
+			l.ValueText = termLabel
+			l.HasText = true
+		}
 		out = append(out, l)
 	}
 	return out, rows.Err()

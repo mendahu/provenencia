@@ -216,6 +216,9 @@ func TestObservations(t *testing.T) {
 						sawText = true
 					}
 					if row.PropertyKey == "sex_at_birth" && len(row.ValueTermID) == 16 {
+						if row.ValueTermLabel == "" || row.ValueText != row.ValueTermLabel {
+							t.Fatalf("term display: label=%q text=%q", row.ValueTermLabel, row.ValueText)
+						}
 						sawTerm = true
 					}
 				}

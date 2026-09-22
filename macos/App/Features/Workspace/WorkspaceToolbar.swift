@@ -152,12 +152,9 @@ struct WorkspaceToolbar: View {
     private var breadcrumbs: some View {
         PVBreadcrumbs(items: Self.breadcrumbItems(
             for: navigation.currentLocation,
-            goToSectionRoot: { section in
-                // Guarded here rather than in `PVBreadcrumbs`: the toolbar is
-                // the only place crumbs sit on a window-drag surface, and the
-                // design system has no business knowing about window chrome.
+            goTo: { location in
                 WindowDrag.unlessDragging {
-                    navigation.go(to: .sectionRoot(section))
+                    navigation.go(to: location)
                 }
             }
         ))
@@ -186,10 +183,12 @@ struct WorkspaceToolbar: View {
         .accessibilityIdentifier("workspace.toolbar.omnibar")
     }
 
-    /// Builds toolbar crumbs: section root alone, or section (navigable) + leaf.
+    /// Builds toolbar crumbs.
+    /// Composer (S7-D4): `Sources › Evidence graph › Citation for {scope}` with a
+    /// tappable Evidence graph segment back to the Source’s graph place.
     static func breadcrumbItems(
         for location: WorkspaceLocation,
-        goToSectionRoot: @escaping (WorkspaceSection) -> Void
+        goTo: @escaping (WorkspaceLocation) -> Void
     ) -> [PVBreadcrumbItem] {
         let sectionLabel = String(localized: location.section.label)
         let isDeep = location.sourceId != nil || location.fieldId != nil || location.typeId != nil
@@ -198,27 +197,54 @@ struct WorkspaceToolbar: View {
                 PVBreadcrumbItem(id: "section-\(location.section.rawValue)", label: sectionLabel, action: nil),
             ]
         }
-        let leaf: String
-        if location.sourceSurface == .citationComposer, location.sourceId != nil {
+
+        var items: [PVBreadcrumbItem] = [
+            PVBreadcrumbItem(
+                id: "section-\(location.section.rawValue)",
+                label: sectionLabel,
+                action: { goTo(.sectionRoot(location.section)) }
+            ),
+        ]
+
+        if location.sourceSurface == .citationComposer, let sourceID = location.sourceId {
             let scope = location.title.flatMap { $0.nilIfEmpty }
                 ?? location.ref.flatMap { $0.nilIfEmpty }
                 ?? "…"
-            leaf = L10n.CitationComposer.breadcrumbCitationFor(scope: scope)
-        } else if location.sourceSurface == .graph, location.sourceId != nil {
+            items.append(
+                PVBreadcrumbItem(
+                    id: "graph-\(sourceID)",
+                    label: String(localized: L10n.Workspace.evidenceGraphTitle),
+                    action: {
+                        goTo(WorkspaceLocation(
+                            section: .sources,
+                            sourceId: sourceID,
+                            sourceSurface: .graph
+                        ))
+                    }
+                )
+            )
+            items.append(
+                PVBreadcrumbItem(
+                    id: "composer-\(sourceID)",
+                    label: L10n.CitationComposer.breadcrumbCitationFor(scope: scope),
+                    action: nil
+                )
+            )
+            return items
+        }
+
+        let leaf: String
+        if location.sourceSurface == .graph, location.sourceId != nil {
             leaf = String(localized: L10n.Workspace.evidenceGraphTitle)
         } else {
             leaf = location.ref.flatMap { $0.nilIfEmpty }
                 ?? location.title.flatMap { $0.nilIfEmpty }
                 ?? "…"
         }
-        return [
-            PVBreadcrumbItem(
-                id: "section-\(location.section.rawValue)",
-                label: sectionLabel,
-                action: { goToSectionRoot(location.section) }
-            ),
-            PVBreadcrumbItem(id: "leaf-\(location.section.rawValue)", label: leaf, action: nil),
-        ]
+        items.append(
+            PVBreadcrumbItem(id: "leaf-\(location.section.rawValue)", label: leaf, action: nil)
+        )
+        return items
     }
 }
 
