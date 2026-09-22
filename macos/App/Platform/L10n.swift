@@ -1621,6 +1621,21 @@ enum L10n {
             comment: "Caption under an Artifact tile for image media"
         )
 
+        static let mediaCaptionNoFile = LocalizedStringResource(
+            "citationComposer.mediaCaptionNoFile",
+            defaultValue: "No file",
+            comment: "Caption under a fileless Artifact tile in the picker"
+        )
+
+        static func mediaCaptionNoFileDetail(detail: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "citationComposer.mediaCaptionNoFileDetail",
+                defaultValue: "No file · %@",
+                comment: "Caption under a fileless Artifact tile; argument is the Artifact description"
+            ))
+            return String(format: format, locale: .current, detail)
+        }
+
         static let previousPage = LocalizedStringResource(
             "citationComposer.previousPage",
             defaultValue: "Previous page",

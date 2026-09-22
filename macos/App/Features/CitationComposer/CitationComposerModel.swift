@@ -75,6 +75,8 @@ final class CitationComposerModel {
     private(set) var subjectTypeKey: String = ""
     private(set) var subjectTypeID: String = ""
     private(set) var sourceTitle: String = ""
+    /// Source-type `icon_key` for fileless Artifact picker thumbs (Frame 8).
+    private(set) var sourceTypeIconKey: String = ""
     private(set) var artifacts: [CatalogArtifact] = []
     private(set) var selectedArtifactID: String?
     /// Frame 7 selection before Continue.
@@ -266,6 +268,7 @@ final class CitationComposerModel {
             )
             async let rulesLoad = store.listConnectRules()
             async let typesLoad = store.listSubjectTypes(projectDir: projectDir)
+            async let sourceTypesLoad = store.listSourceTypes(projectDir: projectDir)
             async let observationsLoad = store.listObservationsBySource(
                 projectDir: projectDir,
                 sourceID: sourceID
@@ -282,6 +285,7 @@ final class CitationComposerModel {
             )
             let workspace = try await workspaceLoad
             let rules = try await rulesLoad
+            let sourceTypes = try await sourceTypesLoad
 
             guard let resolved = Self.resolveSubject(
                 id: subjectID,
@@ -297,6 +301,9 @@ final class CitationComposerModel {
             subjectTypeKey = resolved.typeKey
             subjectTypeID = resolved.typeID
             sourceTitle = workspace.source.title
+            sourceTypeIconKey = sourceTypes
+                .first { $0.id == workspace.source.sourceTypeID }?
+                .iconKey ?? ""
             artifacts = workspace.artifacts
 
             let fields = try await store.listSubjectTypeFields(
