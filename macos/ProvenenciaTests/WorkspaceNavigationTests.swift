@@ -187,15 +187,31 @@ struct WorkspaceNavigationTests {
                 section: .sources,
                 sourceId: "src-1",
                 subjectId: "sub-9",
+                citationId: "cit-1",
                 sourceSurface: .citationComposer,
                 title: "Margt."
             )
         )
         #expect(navigation.currentLocation.sourceSurface == .citationComposer)
         #expect(navigation.currentLocation.subjectId == "sub-9")
+        #expect(navigation.currentLocation.citationId == "cit-1")
         navigation.goBack()
         #expect(navigation.currentLocation.sourceSurface == .graph)
         #expect(navigation.currentLocation.subjectId == nil)
+        #expect(
+            WorkspaceLocation(
+                section: .sources,
+                sourceId: "src-1",
+                subjectId: "sub-9",
+                sourceSurface: .citationComposer
+            ) != WorkspaceLocation(
+                section: .sources,
+                sourceId: "src-1",
+                subjectId: "sub-9",
+                citationId: "cit-1",
+                sourceSurface: .citationComposer
+            )
+        )
     }
 
     @Test func navigationFileNameStripsDashesAndBraces() {

@@ -31,6 +31,15 @@ const (
 		transcription_uncertain, COALESCE(transcription_note, '')
 		FROM citations WHERE id = ?`
 
+	sqlUpdate = `UPDATE citations SET
+		artifact_id = ?, locator_json = ?, transcription = ?, description = ?,
+		transcription_uncertain = ?, transcription_note = ?
+		WHERE id = ?`
+
+	sqlListNotes = `SELECT body FROM citation_notes WHERE citation_id = ? ORDER BY rowid`
+
+	sqlDeleteNotes = `DELETE FROM citation_notes WHERE citation_id = ?`
+
 	sqlListByArtifact = `SELECT id, ref, artifact_id, locator_json,
 		COALESCE(transcription, ''), COALESCE(description, ''),
 		transcription_uncertain, COALESCE(transcription_note, '')
@@ -207,6 +216,168 @@ func CreateWithObservations(
 		},
 		Observations: obsOut,
 	}, nil
+}
+
+// UpdateWithObservations replaces Citation fields and all Observations for one citation.
+func UpdateWithObservations(
+	c *database.Catalog,
+	userID, citationID []byte,
+	in CreateInput,
+	obsInputs []observations.Input,
+) (CreateResult, error) {
+	db, err := c.DB()
+	if err != nil {
+		return CreateResult{}, err
+	}
+	in.LocatorJSON = strings.TrimSpace(in.LocatorJSON)
+	in.Transcription = strings.TrimSpace(in.Transcription)
+	in.Description = strings.TrimSpace(in.Description)
+	in.TranscriptionNote = strings.TrimSpace(in.TranscriptionNote)
+	if len(citationID) != 16 || len(in.ArtifactID) != 16 || len(obsInputs) == 0 {
+		return CreateResult{}, ErrInvalid
+	}
+	if err := locator.Validate(in.LocatorJSON); err != nil {
+		return CreateResult{}, err
+	}
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
+		return CreateResult{}, err
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return CreateResult{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	prev, err := scanOne(tx.QueryRow(sqlGet, citationID))
+	if err == sql.ErrNoRows {
+		return CreateResult{}, ErrInvalid
+	}
+	if err != nil {
+		return CreateResult{}, err
+	}
+
+	var one int
+	if err := tx.QueryRow(sqlArtifactExists, in.ArtifactID).Scan(&one); err != nil {
+		if err == sql.ErrNoRows {
+			return CreateResult{}, ErrInvalid
+		}
+		return CreateResult{}, err
+	}
+
+	uncertain := 0
+	if in.TranscriptionUncertain {
+		uncertain = 1
+	}
+	if _, err := tx.Exec(
+		sqlUpdate,
+		in.ArtifactID,
+		in.LocatorJSON,
+		nullIfEmpty(in.Transcription),
+		nullIfEmpty(in.Description),
+		uncertain,
+		nullIfEmpty(in.TranscriptionNote),
+		citationID,
+	); err != nil {
+		return CreateResult{}, err
+	}
+
+	if _, err := tx.Exec(sqlDeleteNotes, citationID); err != nil {
+		return CreateResult{}, err
+	}
+	for _, body := range in.Notes {
+		body = strings.TrimSpace(body)
+		if body == "" {
+			continue
+		}
+		noteID, err := uuid.NewV7()
+		if err != nil {
+			return CreateResult{}, err
+		}
+		if _, err := tx.Exec(sqlInsertNote, noteID[:], citationID, body); err != nil {
+			return CreateResult{}, err
+		}
+	}
+
+	if err := observations.DeleteByCitationTx(tx, citationID); err != nil {
+		return CreateResult{}, err
+	}
+	obsOut, obsChanges, err := observations.InsertManyTx(tx, citationID, obsInputs)
+	if err != nil {
+		return CreateResult{}, err
+	}
+
+	citFields := map[string]audit.FieldDiff{
+		"id": {Old: uuidString(citationID), New: uuidString(citationID)},
+	}
+	if string(prev.ArtifactID) != string(in.ArtifactID) {
+		citFields["artifact_id"] = audit.FieldDiff{
+			Old: uuidString(prev.ArtifactID),
+			New: uuidString(in.ArtifactID),
+		}
+	}
+	if prev.LocatorJSON != in.LocatorJSON {
+		citFields["locator_json"] = audit.FieldDiff{Old: prev.LocatorJSON, New: in.LocatorJSON}
+	}
+	changes := make([]audit.Change, 0, 1+len(obsChanges))
+	changes = append(changes, audit.Change{
+		EntityType: "citation",
+		EntityID:   citationID,
+		Action:     audit.ActionUpdate,
+		Fields:     citFields,
+	})
+	changes = append(changes, obsChanges...)
+
+	if _, err := audit.Record(tx, audit.Revision{
+		UserID:     userID,
+		ActionType: "update_citation_with_observations",
+		CreatedAt:  project.NowUTC(),
+		Changes:    changes,
+	}); err != nil {
+		return CreateResult{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return CreateResult{}, err
+	}
+
+	return CreateResult{
+		Citation: Citation{
+			ID:                     append([]byte(nil), citationID...),
+			Ref:                    prev.Ref,
+			ArtifactID:             append([]byte(nil), in.ArtifactID...),
+			LocatorJSON:            in.LocatorJSON,
+			Transcription:          in.Transcription,
+			Description:            in.Description,
+			TranscriptionUncertain: in.TranscriptionUncertain,
+			TranscriptionNote:      in.TranscriptionNote,
+		},
+		Observations: obsOut,
+	}, nil
+}
+
+// ListNotes returns citation_notes bodies for a citation.
+func ListNotes(c *database.Catalog, citationID []byte) ([]string, error) {
+	db, err := c.DB()
+	if err != nil {
+		return nil, err
+	}
+	if len(citationID) != 16 {
+		return nil, ErrInvalid
+	}
+	rows, err := db.Query(sqlListNotes, citationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var body string
+		if err := rows.Scan(&body); err != nil {
+			return nil, err
+		}
+		out = append(out, body)
+	}
+	return out, rows.Err()
 }
 
 // Get returns a Citation by id.

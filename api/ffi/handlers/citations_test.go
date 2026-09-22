@@ -237,3 +237,125 @@ func TestListObservationsBySource(t *testing.T) {
 		},
 	})
 }
+
+func TestGetCitation(t *testing.T) {
+	runRPC(t, GetCitation, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "loads citation with observations",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _, artifactID, placeID, propID := citationFixture(t)
+				createOut, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
+					ProjectDir:    dir,
+					UserId:        userID,
+					ArtifactId:    artifactID,
+					LocatorJson:   validLocatorJSON,
+					Transcription: "Boston",
+					CitationNotes: []string{"note A"},
+					Observations: []*engine.ObservationDraft{{
+						SubjectId:  placeID,
+						PropertyId: propID,
+						ValueText:  "Boston",
+					}},
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var created engine.CreateCitationWithObservationsResponse
+				if err := proto.Unmarshal(createOut, &created); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.GetCitationRequest{
+					ProjectDir: dir,
+					CitationId: created.Citation.GetId(),
+				}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var got engine.GetCitationResponse
+				if err := proto.Unmarshal(out, &got); err != nil {
+					t.Fatal(err)
+				}
+				if got.Citation.GetTranscription() != "Boston" {
+					t.Fatalf("citation %+v", got.Citation)
+				}
+				if len(got.Notes) != 1 || got.Notes[0] != "note A" {
+					t.Fatalf("notes %+v", got.Notes)
+				}
+				if len(got.Observations) != 1 || got.Observations[0].GetValueText() != "Boston" {
+					t.Fatalf("observations %+v", got.Observations)
+				}
+			},
+		},
+	})
+}
+
+func TestUpdateCitationWithObservations(t *testing.T) {
+	runRPC(t, UpdateCitationWithObservations, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "replaces fields and observations",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _, artifactID, placeID, propID := citationFixture(t)
+				createOut, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
+					ProjectDir:  dir,
+					UserId:      userID,
+					ArtifactId:  artifactID,
+					LocatorJson: validLocatorJSON,
+					Observations: []*engine.ObservationDraft{{
+						SubjectId:  placeID,
+						PropertyId: propID,
+						ValueText:  "Boston",
+					}},
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var created engine.CreateCitationWithObservationsResponse
+				if err := proto.Unmarshal(createOut, &created); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.UpdateCitationWithObservationsRequest{
+					ProjectDir:    dir,
+					UserId:        userID,
+					CitationId:    created.Citation.GetId(),
+					ArtifactId:    artifactID,
+					LocatorJson:   validLocatorJSON,
+					Transcription: "Salem",
+					Observations: []*engine.ObservationDraft{{
+						SubjectId:  placeID,
+						PropertyId: propID,
+						ValueText:  "Salem",
+					}},
+				}
+			},
+			after: func(t *testing.T, out []byte, req proto.Message) {
+				var updated engine.UpdateCitationWithObservationsResponse
+				if err := proto.Unmarshal(out, &updated); err != nil {
+					t.Fatal(err)
+				}
+				if updated.Citation.GetTranscription() != "Salem" {
+					t.Fatalf("citation %+v", updated.Citation)
+				}
+				if len(updated.Observations) != 1 || updated.Observations[0].GetValueText() != "Salem" {
+					t.Fatalf("observations %+v", updated.Observations)
+				}
+				ur := req.(*engine.UpdateCitationWithObservationsRequest)
+				assertLatestAuditAction(t, ur.ProjectDir, "update_citation_with_observations")
+				getOut, err := GetCitation(marshalProto(t, &engine.GetCitationRequest{
+					ProjectDir: ur.ProjectDir,
+					CitationId: ur.CitationId,
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var got engine.GetCitationResponse
+				if err := proto.Unmarshal(getOut, &got); err != nil {
+					t.Fatal(err)
+				}
+				if len(got.Observations) != 1 || got.Observations[0].GetValueText() != "Salem" {
+					t.Fatalf("persisted %+v", got.Observations)
+				}
+			},
+		},
+	})
+}

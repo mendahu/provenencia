@@ -2082,6 +2082,18 @@
         }
       }
     },
+    "error.subjects.in_use": {
+      "comment": "FFI error subjects.in_use when Observations still reference the subject",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This subject still has citations or is used as a property value."
+          }
+        }
+      }
+    },
     "error.subjecttypes.duplicate_prefix": {
       "comment": "FFI error subjecttypes.duplicate_prefix",
       "extractionState": "manual",
@@ -8354,6 +8366,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "Edit label and description"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.editPropertyAccessibility": {
+      "comment": "VoiceOver action for a cited property row pencil that opens the citation composer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit citation"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.deleteAccessibility": {
+      "comment": "VoiceOver action / tooltip for trash on an uncited subject card",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete subject"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.deleteConfirmTitle": {
+      "comment": "Title on the confirm sheet when deleting an uncited Evidence graph subject",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this subject?"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.deleteConfirmMessage": {
+      "comment": "Body on the confirm sheet when deleting an uncited Evidence graph subject",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This removes the card from the Evidence graph. You can only delete subjects that have no citations yet."
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.deleteConfirm": {
+      "comment": "Confirm button on the Evidence graph delete-subject sheet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.deleteCancel": {
+      "comment": "Cancel button on the Evidence graph delete-subject sheet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep"
           }
         }
       }

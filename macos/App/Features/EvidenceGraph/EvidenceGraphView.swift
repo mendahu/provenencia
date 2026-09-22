@@ -202,6 +202,32 @@ private struct EvidenceGraphContent: View {
         ) {
             createForm
         }
+        .pvConfirm(
+            item: Binding(
+                get: { model.pendingDelete },
+                set: { model.pendingDelete = $0 }
+            ),
+            copy: { _ in
+                PVConfirmCopy(
+                    title: String(localized: L10n.EvidenceGraph.deleteConfirmTitle),
+                    message: String(localized: L10n.EvidenceGraph.deleteConfirmMessage),
+                    confirm: L10n.EvidenceGraph.deleteConfirm,
+                    cancel: L10n.EvidenceGraph.deleteCancel
+                )
+            },
+            isRunning: model.isDeleting,
+            accessibilityIdentifierPrefix: "evidenceGraph.delete",
+            onConfirm: {
+                Task { _ = await model.confirmDeleteSubject() }
+            }
+        ) { pending in
+            if let deleteError = model.deleteError {
+                PVCallout(tone: .danger, message: deleteError)
+            }
+            Text(verbatim: pending.label)
+                .font(PVFont.body())
+                .foregroundStyle(PVColor.textPrimary)
+        }
     }
     private var accessibilityGraphLabel: Text {
         if model.armedConnect {
@@ -637,12 +663,18 @@ private struct EvidenceGraphDocumentBody: View {
             switch actionID {
             case EvidenceSubjectCard.editActionID, EvidenceBridgeCard.editActionID:
                 model.beginEdit(subjectID: id)
+            case EvidenceSubjectCard.deleteActionID:
+                model.beginDelete(subjectID: id)
             case EvidenceSubjectCard.addPropertyActionID:
                 if let location = model.composerLocation(for: id) {
                     navigation.go(to: location)
                 }
             default:
-                break
+                if let observationID = EvidenceSubjectCard.observationID(fromEditPropertyAction: actionID),
+                   let location = model.composerLocation(forObservationID: observationID, subjectID: id)
+                {
+                    navigation.go(to: location)
+                }
             }
         }
         pointer.onHover = { point in
@@ -730,6 +762,19 @@ private struct EvidenceGraphDocumentBody: View {
         }
         .accessibilityAction(named: Text(L10n.EvidenceGraph.addProperty)) {
             if let location = model.composerLocation(for: placed.id) {
+                navigation.go(to: location)
+            }
+        }
+        .accessibilityAction(named: Text(L10n.EvidenceGraph.deleteAccessibility)) {
+            model.beginDelete(subjectID: placed.id)
+        }
+        .accessibilityAction(named: Text(L10n.EvidenceGraph.editPropertyAccessibility)) {
+            if let observation = placed.observations.first,
+               let location = model.composerLocation(
+                   forObservationID: observation.id,
+                   subjectID: placed.id
+               )
+            {
                 navigation.go(to: location)
             }
         }

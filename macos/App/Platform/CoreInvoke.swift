@@ -104,6 +104,8 @@ enum CoreMethod {
     static let createCitationWithObservations = Int32(Provenencia_Engine_V1_Method.createCitationWithObservations.rawValue)
     static let addObservationsToCitation = Int32(Provenencia_Engine_V1_Method.addObservationsToCitation.rawValue)
     static let listObservationsBySource = Int32(Provenencia_Engine_V1_Method.listObservationsBySource.rawValue)
+    static let getCitation = Int32(Provenencia_Engine_V1_Method.getCitation.rawValue)
+    static let updateCitationWithObservations = Int32(Provenencia_Engine_V1_Method.updateCitationWithObservations.rawValue)
 }
 
 func provenenciaInvoke(method: Int32, request: Data) throws -> Data {

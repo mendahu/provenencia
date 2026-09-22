@@ -45,10 +45,12 @@ struct WorkspaceDestinationHost: View {
                 CitationComposerView(
                     sourceID: sourceID,
                     subjectID: subjectID,
+                    citationID: navigation.currentLocation.citationId,
                     session: session,
                     store: store,
                     userID: userID
                 )
+                .id("\(sourceID)-\(subjectID)-\(navigation.currentLocation.citationId ?? "")")
             }
         case .sourceFields:
             SourceFieldsView(

@@ -6,7 +6,7 @@ import Foundation
 enum SourceSurface: String, Codable, Sendable, Equatable {
     case page
     case graph
-    /// Citation composer place (Add property / connect handoff). Stub until S7-08.
+    /// Citation composer place (Add property / connect handoff / edit citation).
     case citationComposer
 }
 
@@ -31,6 +31,8 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     var typeId: String?
     /// Subject scoped into the citation composer when `sourceSurface == .citationComposer`.
     var subjectId: String?
+    /// Existing Citation when editing from a property row; nil for create.
+    var citationId: String?
     /// Page vs Evidence graph vs composer when `section == .sources` and `sourceId` is set.
     /// Legacy history without this key decodes as `.page`.
     var sourceSurface: SourceSurface
@@ -44,7 +46,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     var sourceTitle: String?
 
     enum CodingKeys: String, CodingKey {
-        case section, sourceId, fieldId, typeId, subjectId, sourceSurface, ref, title, sourceTitle
+        case section, sourceId, fieldId, typeId, subjectId, citationId, sourceSurface, ref, title, sourceTitle
     }
 
     init(
@@ -53,6 +55,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         fieldId: String? = nil,
         typeId: String? = nil,
         subjectId: String? = nil,
+        citationId: String? = nil,
         sourceSurface: SourceSurface = .page,
         ref: String? = nil,
         title: String? = nil,
@@ -63,6 +66,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         self.fieldId = Self.nilIfEmpty(fieldId)
         self.typeId = Self.nilIfEmpty(typeId)
         self.subjectId = Self.nilIfEmpty(subjectId)
+        self.citationId = Self.nilIfEmpty(citationId)
         self.sourceSurface = sourceSurface
         self.ref = Self.nilIfEmpty(ref)
         self.title = Self.nilIfEmpty(title)
@@ -76,6 +80,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         fieldId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .fieldId))
         typeId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .typeId))
         subjectId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .subjectId))
+        citationId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .citationId))
         sourceSurface = try container.decodeIfPresent(SourceSurface.self, forKey: .sourceSurface) ?? .page
         ref = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .ref))
         title = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .title))
@@ -94,12 +99,12 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
             && lhs.fieldId == rhs.fieldId
             && lhs.typeId == rhs.typeId
             && lhs.subjectId == rhs.subjectId
+            && lhs.citationId == rhs.citationId
             && lhs.sourceSurface == rhs.sourceSurface
     }
 
     private static func nilIfEmpty(_ value: String?) -> String? {
-        guard let value else { return nil }
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
+        guard let value, !value.isEmpty else { return nil }
+        return value
     }
 }

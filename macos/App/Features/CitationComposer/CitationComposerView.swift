@@ -4,6 +4,7 @@ import SwiftUI
 struct CitationComposerView: View {
     let sourceID: String
     let subjectID: String
+    let citationID: String?
     let session: WorkspaceSession
     let store: any GenealogyStore
     let userID: String
@@ -16,12 +17,14 @@ struct CitationComposerView: View {
     init(
         sourceID: String,
         subjectID: String,
+        citationID: String? = nil,
         session: WorkspaceSession,
         store: any GenealogyStore,
         userID: String
     ) {
         self.sourceID = sourceID
         self.subjectID = subjectID
+        self.citationID = citationID
         self.session = session
         self.store = store
         self.userID = userID
@@ -29,6 +32,7 @@ struct CitationComposerView: View {
             initialValue: CitationComposerModel(
                 sourceID: sourceID,
                 subjectID: subjectID,
+                citationID: citationID,
                 session: session,
                 store: store,
                 userID: userID
@@ -62,7 +66,7 @@ struct CitationComposerView: View {
         .accessibilityIdentifier("workspace.destination.citationComposer")
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(L10n.CitationComposer.accessibilityTitle))
-        .task(id: "\(sourceID)-\(subjectID)") {
+        .task(id: "\(sourceID)-\(subjectID)-\(citationID ?? "")") {
             await model.prepare()
             if model.shouldFallbackToGraph {
                 navigation.go(to: model.graphLocation())

@@ -1,9 +1,10 @@
 import SwiftUI
 
-/// Primary subject card on the Evidence graph (S6-02 / S7-09).
+/// Primary subject card on the Evidence graph (S6-02 / S7-09 / card chrome refresh).
 ///
 /// Paint-only: AppKit ``GraphCanvasPointerController`` owns select / drag /
-/// nested action hits (edit, Add property). Accessibility remains the keyboard path.
+/// nested action hits (edit, delete, property edit, Add property).
+/// Accessibility remains the keyboard path.
 struct EvidenceSubjectCard: View {
     /// Must match the name on the Evidence graph document `ZStack`.
     static let documentCoordinateSpace = "evidenceGraphDocument"
@@ -16,7 +17,19 @@ struct EvidenceSubjectCard: View {
     static let edgeLayoutHeight: CGFloat = 88
 
     static let editActionID = "edit"
+    static let deleteActionID = "delete"
     static let addPropertyActionID = "addProperty"
+
+    static func editPropertyActionID(observationID: String) -> String {
+        "editProperty.\(observationID)"
+    }
+
+    static func observationID(fromEditPropertyAction actionID: String) -> String? {
+        let prefix = "editProperty."
+        guard actionID.hasPrefix(prefix) else { return nil }
+        let id = String(actionID.dropFirst(prefix.count))
+        return id.isEmpty ? nil : id
+    }
 
     /// Document-space frame used for edge attachment and AppKit hit targets.
     static func edgeFrame(
@@ -44,13 +57,43 @@ struct EvidenceSubjectCard: View {
             GraphCanvasActionTarget(
                 id: editActionID,
                 frame: CGRect(
-                    x: frame.maxX - 52,
+                    x: frame.maxX - (placed.isCited ? 40 : 68),
                     y: frame.minY + 8,
-                    width: 40,
+                    width: 28,
                     height: 28
                 )
             ),
         ]
+        if !placed.isCited {
+            actions.append(
+                GraphCanvasActionTarget(
+                    id: deleteActionID,
+                    frame: CGRect(
+                        x: frame.maxX - 36,
+                        y: frame.minY + 8,
+                        width: 28,
+                        height: 28
+                    )
+                )
+            )
+        }
+        if placed.isCited {
+            let rowTop = frame.minY + 24 + 28 + 10 // padding + header + divider gap
+            for (index, observation) in placed.observations.enumerated() {
+                let y = rowTop + CGFloat(index) * 34
+                actions.append(
+                    GraphCanvasActionTarget(
+                        id: editPropertyActionID(observationID: observation.id),
+                        frame: CGRect(
+                            x: frame.maxX - 36,
+                            y: y,
+                            width: 28,
+                            height: 28
+                        )
+                    )
+                )
+            }
+        }
         if canCite {
             actions.append(
                 GraphCanvasActionTarget(
@@ -219,7 +262,7 @@ private struct EvidenceSubjectCardChrome: View {
         .shadow(
             color: showsSelectionChrome && !isSelected
                 ? Color.black.opacity(0.1)
-                : .clear,
+                : (placed.isCited ? Color.black.opacity(0.06) : .clear),
             radius: isDragging ? 10 : 6,
             y: isDragging ? 4 : 2
         )
@@ -244,19 +287,19 @@ private struct EvidenceSubjectCardChrome: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             HStack(spacing: 6) {
-                Image(systemName: "pencil")
-                    .font(.system(size: 11, weight: .medium))
+                PVIcon(.penLine, size: 12)
                     .foregroundStyle(PVColor.textMuted)
-                    .accessibilityHidden(true)
-                citationMark
+                if !placed.isCited {
+                    PVIcon(.trash, size: 12)
+                        .foregroundStyle(PVColor.textMuted)
+                }
             }
         }
     }
 
     private var addPropertyRow: some View {
         HStack(spacing: 6) {
-            Image(systemName: "plus")
-                .font(.system(size: 11, weight: .medium))
+            PVIcon(.plus, size: 12)
             Text(L10n.EvidenceGraph.addProperty)
                 .font(PVFont.body(size: 12))
         }
@@ -283,7 +326,7 @@ private struct EvidenceSubjectCardChrome: View {
     }
 
     private var iconChip: some View {
-        ZStack {
+        ZStack(alignment: .bottomLeading) {
             RoundedRectangle(cornerRadius: 4, style: .continuous)
                 .fill(style.chip)
             RoundedRectangle(cornerRadius: 4, style: .continuous)
@@ -296,23 +339,31 @@ private struct EvidenceSubjectCardChrome: View {
                 )
             PVMark(placed.kind.markKey, size: 15)
                 .foregroundStyle(style.ink)
+            citationBadge
+                .offset(x: -5, y: 5)
         }
         .frame(width: 28, height: 28)
     }
 
-    @ViewBuilder
-    private var citationMark: some View {
-        if placed.isCited {
-            Image(systemName: "checkmark")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(style.ink)
-                .accessibilityHidden(true)
-        } else {
-            Image(systemName: "circle.dashed")
-                .font(.system(size: 13, weight: .regular))
-                .foregroundStyle(PVColor.evidenceUndocumented)
-                .accessibilityHidden(true)
+    private var citationBadge: some View {
+        ZStack {
+            Circle()
+                .fill(placed.isCited ? style.ink : PVColor.surfaceCard)
+            Circle()
+                .strokeBorder(
+                    placed.isCited ? style.tint : style.tint,
+                    lineWidth: 1.5
+                )
+            if placed.isCited {
+                PVIcon(.check, size: 9)
+                    .foregroundStyle(style.chip)
+            } else {
+                PVIcon(.circleDashed, size: 12)
+                    .foregroundStyle(PVColor.evidenceUndocumented)
+            }
         }
+        .frame(width: 14, height: 14)
+        .accessibilityHidden(true)
     }
 
     private var cardBackground: some View {
@@ -320,7 +371,7 @@ private struct EvidenceSubjectCardChrome: View {
             .fill(PVColor.surfaceCard)
             .overlay(
                 RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
-                    .fill(style.tint.opacity(placed.isCited ? 0.45 : 0.38))
+                    .fill(style.tint.opacity(placed.isCited ? 0.45 : 0.22))
             )
     }
 
@@ -355,18 +406,25 @@ private struct EvidenceCitedPropertyRow: View {
     let observation: CatalogObservation
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(verbatim: propertyLabel)
-                .font(PVFont.mono(size: 9, weight: PVFontWeight.medium))
-                .tracking(0.7)
-                .textCase(.uppercase)
+        HStack(alignment: .top, spacing: 6) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(verbatim: propertyLabel)
+                    .font(PVFont.mono(size: 9, weight: PVFontWeight.medium))
+                    .tracking(0.7)
+                    .textCase(.uppercase)
+                    .foregroundStyle(PVColor.textMuted)
+                    .lineLimit(1)
+                Text(verbatim: valueSummary)
+                    .font(PVFont.body(size: 13))
+                    .italic(isNegative)
+                    .foregroundStyle(isNegative ? PVColor.danger : PVColor.textPrimary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            PVIcon(.penLine, size: 12)
                 .foregroundStyle(PVColor.textMuted)
-                .lineLimit(1)
-            Text(verbatim: valueSummary)
-                .font(PVFont.body(size: 13))
-                .foregroundStyle(isNegative ? PVColor.textMuted : PVColor.textPrimary)
-                .lineLimit(2)
-                .multilineTextAlignment(.leading)
+                .padding(.top, 2)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)

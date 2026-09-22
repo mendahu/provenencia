@@ -10,6 +10,11 @@ final class EvidenceGraphModel {
         var description: String = ""
     }
 
+    struct PendingDelete: Identifiable, Equatable {
+        var id: String
+        var label: String
+    }
+
     let sourceID: String
     let session: WorkspaceSession
     let store: any GenealogyStore
@@ -32,6 +37,10 @@ final class EvidenceGraphModel {
     /// Kind used for edit dialog title when editing a primary; nil when editing a bridge.
     var editingPrimaryKind: EvidencePrimaryKind?
     var editingBridgeKind: EvidenceBridgeKind?
+    /// Uncited subject pending delete confirm.
+    var pendingDelete: PendingDelete?
+    var isDeleting = false
+    var deleteError: String?
     var pendingGridX: Int64 = 0
     var pendingGridY: Int64 = 0
     var draft = CreateDraft()
@@ -411,6 +420,11 @@ final class EvidenceGraphModel {
 
     /// Citation composer place for Add property.
     func composerLocation(for subjectID: String) -> WorkspaceLocation? {
+        composerLocation(for: subjectID, citationID: nil)
+    }
+
+    /// Citation composer place for editing an existing citation (property row pencil).
+    func composerLocation(for subjectID: String, citationID: String?) -> WorkspaceLocation? {
         guard canCite else { return nil }
         let snapshot = currentSnapshot()
         let title: String?
@@ -429,11 +443,53 @@ final class EvidenceGraphModel {
             section: .sources,
             sourceId: sourceID,
             subjectId: subjectID,
+            citationId: citationID,
             sourceSurface: .citationComposer,
             ref: ref,
             title: title,
             sourceTitle: resolvedSourceTitle()
         )
+    }
+
+    /// Opens the citation composer for the Observation's citation (shared across rows).
+    func composerLocation(forObservationID observationID: String, subjectID: String) -> WorkspaceLocation? {
+        let snapshot = currentSnapshot()
+        guard let primary = primary(in: snapshot, id: subjectID),
+              let observation = primary.observations.first(where: { $0.id == observationID })
+        else { return nil }
+        return composerLocation(for: subjectID, citationID: observation.citationID)
+    }
+
+    /// Queues delete confirm for an uncited subject card.
+    func beginDelete(subjectID: String) {
+        let snapshot = currentSnapshot()
+        guard let primary = primary(in: snapshot, id: subjectID), !primary.isCited else { return }
+        deleteError = nil
+        pendingDelete = PendingDelete(id: subjectID, label: primary.subject.label)
+    }
+
+    @discardableResult
+    func confirmDeleteSubject() async -> Bool {
+        guard let pending = pendingDelete, !isDeleting else { return false }
+        isDeleting = true
+        deleteError = nil
+        defer { isDeleting = false }
+        do {
+            try await store.deleteSubject(
+                projectDir: session.projectKey.projectDir,
+                userID: userID,
+                subjectID: pending.id
+            )
+            session.apply(.createdSubject(sourceId: sourceID))
+            if selectedSubjectID == pending.id {
+                selectSubject(id: nil)
+            }
+            pendingDelete = nil
+            return true
+        } catch {
+            deleteError = L10n.Errors.message(for: error)
+            return false
+        }
     }
 
     private func resolvedSourceTitle() -> String? {

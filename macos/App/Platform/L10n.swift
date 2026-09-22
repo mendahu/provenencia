@@ -1116,6 +1116,42 @@ enum L10n {
             comment: "VoiceOver action / tooltip for the subject card edit pencil"
         )
 
+        static let editPropertyAccessibility = LocalizedStringResource(
+            "evidenceGraph.subject.editPropertyAccessibility",
+            defaultValue: "Edit citation",
+            comment: "VoiceOver action for a cited property row pencil that opens the citation composer"
+        )
+
+        static let deleteAccessibility = LocalizedStringResource(
+            "evidenceGraph.subject.deleteAccessibility",
+            defaultValue: "Delete subject",
+            comment: "VoiceOver action / tooltip for trash on an uncited subject card"
+        )
+
+        static let deleteConfirmTitle = LocalizedStringResource(
+            "evidenceGraph.subject.deleteConfirmTitle",
+            defaultValue: "Delete this subject?",
+            comment: "Title on the confirm sheet when deleting an uncited Evidence graph subject"
+        )
+
+        static let deleteConfirmMessage = LocalizedStringResource(
+            "evidenceGraph.subject.deleteConfirmMessage",
+            defaultValue: "This removes the card from the Evidence graph. You can only delete subjects that have no citations yet.",
+            comment: "Body on the confirm sheet when deleting an uncited Evidence graph subject"
+        )
+
+        static let deleteConfirm = LocalizedStringResource(
+            "evidenceGraph.subject.deleteConfirm",
+            defaultValue: "Delete",
+            comment: "Confirm button on the Evidence graph delete-subject sheet"
+        )
+
+        static let deleteCancel = LocalizedStringResource(
+            "evidenceGraph.subject.deleteCancel",
+            defaultValue: "Keep",
+            comment: "Cancel button on the Evidence graph delete-subject sheet"
+        )
+
         static let addProperty = LocalizedStringResource(
             "evidenceGraph.subject.addProperty",
             defaultValue: "Add property",
@@ -4382,6 +4418,11 @@ enum L10n {
             defaultValue: "Invalid subject.",
             comment: "FFI error subjects.invalid"
         )
+        static let subjectsInUse = LocalizedStringResource(
+            "error.subjects.in_use",
+            defaultValue: "This subject still has citations or is used as a property value.",
+            comment: "FFI error subjects.in_use when Observations still reference the subject"
+        )
         static let subjectPositionsInvalid = LocalizedStringResource(
             "error.subjectpositions.invalid",
             defaultValue: "Invalid subject position.",
@@ -4878,6 +4919,8 @@ enum L10n {
                 return String(localized: sourcesInvalid)
             case "subjects.invalid":
                 return String(localized: subjectsInvalid)
+            case "subjects.in_use":
+                return String(localized: subjectsInUse)
             case "subjectpositions.invalid":
                 return String(localized: subjectPositionsInvalid)
             case "subjecttypes.invalid":

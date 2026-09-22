@@ -252,7 +252,9 @@ python3 scripts/check-localizable-xcstrings.py
 | **Deliverables** | Done. Replaced composer stub with `Features/CitationComposer/` (`CitationComposerView` + `@Observable CitationComposerModel`), then **realigned to Citation Composer board** Frames 1–8 / 11–13: left viewer chrome (source · Artifact N of M · Change; page/zoom/Draw region/Clear locator stubs; locator crumb + errors); right form with summary Observation rows; **Add observation** `PVFormDialog` (text/term/integer/date); Frame 7 Choose artifact Cancel/Continue; Frame 8 no-Artifact gate → Source page + inert form; locator required for Save (page selector; no silent inject). Submit → `createCitationWithObservations` → `CatalogMutation.createdCitation` → Evidence graph; breadcrumb **Citation for {scope}**. |
 | **Tests** | `CitationComposerModelTests` (picker Continue, dialog commit, locator + observation gates, edge-property exclude, no-Artifact inert, subject missing); breadcrumb / PlaceRegistry; `check-localizable-xcstrings.py`. |
 | **Dogfood** | Add property on Person → composer → (pick Artifact if needed) → Draw region / page locator → Add observation dialog → Save → graph cited row → Back/Forward as normal places. |
-| **Out** | Real PDF/image viewers (S7-06); polygon region drawing (S7-07); NameValue (S7-02b); Connect prefilled endpoints (S7-10); edit existing Citations. |
+| **Out** | Real PDF/image viewers (S7-06); polygon region drawing (S7-07); NameValue (S7-02b); Connect prefilled endpoints (S7-10). |
+
+**Follow-on (same Spike 7 line):** Evidence graph primary-card chrome refresh (cite badge on mark, per-row edit pencil, uncited trash), `GetCitation` / `UpdateCitationWithObservations`, and composer edit mode via `WorkspaceLocation.citationId`.
 
 **Landed:** Board-aligned thin cite path grows cards; viewers and Connect fill in later.
 

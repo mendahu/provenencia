@@ -169,7 +169,11 @@ struct CitationComposerModelTests {
         }
     }
 
-    private func makeModel(store: FakeStore, subjectID: String? = nil) -> CitationComposerModel {
+    private func makeModel(
+        store: FakeStore,
+        subjectID: String? = nil,
+        citationID: String? = nil
+    ) -> CitationComposerModel {
         let session = WorkspaceSession(
             projectKey: ProjectKey(projectDir: projectDir),
             store: store
@@ -177,6 +181,7 @@ struct CitationComposerModelTests {
         return CitationComposerModel(
             sourceID: sourceID,
             subjectID: subjectID ?? self.subjectID,
+            citationID: citationID,
             session: session,
             store: store,
             userID: "user-1"
@@ -337,5 +342,103 @@ struct CitationComposerModelTests {
         await model.prepare()
         #expect(model.phase == .subjectMissing)
         #expect(model.shouldFallbackToGraph)
+    }
+
+    @Test func prepareLoadsExistingCitationForEdit() async throws {
+        let store = makeStore()
+        seedArtifact(store)
+        let citation = CatalogCitation(
+            id: "cit-edit",
+            ref: "CIT-1",
+            artifactID: "art-0",
+            locatorJSON: #"{"version":1,"selectors":[{"type":"page","artifact_page":3}]}"#,
+            transcription: "Farmer",
+            description: "Note",
+            transcriptionUncertain: true,
+            transcriptionNote: "blurry"
+        )
+        store.citationsByID[citation.id] = citation
+        store.observationsBySource[sourceID] = [
+            CatalogObservation(
+                id: "obs-1",
+                ref: "OBS-1",
+                citationID: citation.id,
+                subjectID: subjectID,
+                propertyID: occupationPropertyID,
+                polarity: "positive",
+                valueText: "Farmer",
+                valueInteger: nil,
+                valueDateID: "",
+                valueNameID: "",
+                valueSubjectID: "",
+                valueTermID: "",
+                propertyKey: "occupation",
+                propertyLabel: "Occupation",
+                propertyValueType: "text"
+            ),
+        ]
+        let model = makeModel(store: store, citationID: citation.id)
+        await model.prepare()
+        #expect(model.phase == .compose)
+        #expect(model.isEditingExisting)
+        #expect(model.selectedArtifactID == "art-0")
+        #expect(model.transcription == "Farmer")
+        #expect(model.transcriptionUncertain)
+        #expect(model.locatorPage == 3)
+        #expect(model.observations.count == 1)
+        #expect(model.observations[0].valueText == "Farmer")
+    }
+
+    @Test func submitUpdatesExistingCitation() async throws {
+        let store = makeStore()
+        seedArtifact(store)
+        let citation = CatalogCitation(
+            id: "cit-edit",
+            ref: "CIT-1",
+            artifactID: "art-0",
+            locatorJSON: #"{"version":1,"selectors":[{"type":"page","artifact_page":1}]}"#,
+            transcription: "Old",
+            description: "",
+            transcriptionUncertain: false,
+            transcriptionNote: ""
+        )
+        store.citationsByID[citation.id] = citation
+        store.observationsBySource[sourceID] = [
+            CatalogObservation(
+                id: "obs-1",
+                ref: "OBS-1",
+                citationID: citation.id,
+                subjectID: subjectID,
+                propertyID: occupationPropertyID,
+                polarity: "positive",
+                valueText: "Old",
+                valueInteger: nil,
+                valueDateID: "",
+                valueNameID: "",
+                valueSubjectID: "",
+                valueTermID: "",
+                propertyKey: "occupation",
+                propertyLabel: "Occupation",
+                propertyValueType: "text"
+            ),
+        ]
+        let model = makeModel(store: store, citationID: citation.id)
+        await model.prepare()
+        model.transcription = "New"
+        let row = model.observations[0]
+        model.beginEditObservation(row)
+        var draft = model.observationDialog!
+        draft.valueText = "Miller"
+        model.updateObservationDialog(draft)
+        model.confirmObservationDialog()
+        let location = await model.submit()
+        #expect(location?.sourceSurface == .graph)
+        let (_, _, listed) = try await store.getCitation(
+            projectDir: projectDir,
+            citationID: citation.id
+        )
+        #expect(store.citationsByID[citation.id]?.transcription == "New")
+        #expect(listed.count == 1)
+        #expect(listed[0].valueText == "Miller")
     }
 }

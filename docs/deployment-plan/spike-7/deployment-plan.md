@@ -521,6 +521,8 @@ New workspace place + location discriminant; breadcrumb per S7-D4; Artifact pick
 | **Testable** | Add property → composer → pick Artifact → add text Observation → submit → Back → card shows cited row. |
 | **Depends on** | S7-09, S7-03, **S7-D4**. |
 
+**Follow-on (landed):** edit-existing Citations (`GetCitation` / `UpdateCitationWithObservations` + `WorkspaceLocation.citationId`); Evidence primary-card chrome (cite badge on mark, per-row edit, uncited delete).
+
 ---
 
 ## S7-06 — Artifact viewers (image + PDF)

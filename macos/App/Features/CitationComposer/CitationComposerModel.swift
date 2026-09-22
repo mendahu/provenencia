@@ -66,6 +66,8 @@ final class CitationComposerModel {
 
     let sourceID: String
     let subjectID: String
+    /// When set, prepare/save load and update this Citation instead of creating.
+    let citationID: String?
     private let userID: String
     private let store: any GenealogyStore
     let session: WorkspaceSession
@@ -107,15 +109,19 @@ final class CitationComposerModel {
     /// When true, host should `go(to:)` the Evidence graph (subject gone).
     private(set) var shouldFallbackToGraph = false
 
+    var isEditingExisting: Bool { citationID != nil }
+
     init(
         sourceID: String,
         subjectID: String,
+        citationID: String? = nil,
         session: WorkspaceSession,
         store: any GenealogyStore,
         userID: String
     ) {
         self.sourceID = sourceID
         self.subjectID = subjectID
+        self.citationID = citationID
         self.session = session
         self.store = store
         self.userID = userID
@@ -326,6 +332,22 @@ final class CitationComposerModel {
                 )
             }
 
+            if let citationID {
+                let (citation, _, citationObservations) = try await store.getCitation(
+                    projectDir: projectDir,
+                    citationID: citationID
+                )
+                applyLoadedCitation(citation, observations: citationObservations)
+                if artifacts.isEmpty {
+                    selectedArtifactID = nil
+                    pendingArtifactID = nil
+                    phase = .compose
+                    return
+                }
+                phase = .compose
+                return
+            }
+
             if artifacts.isEmpty {
                 selectedArtifactID = nil
                 pendingArtifactID = nil
@@ -507,18 +529,34 @@ final class CitationComposerModel {
         isSubmitting = true
         defer { isSubmitting = false }
         do {
-            _ = try await store.createCitationWithObservations(
-                projectDir: session.projectKey.projectDir,
-                userID: userID,
-                artifactID: artifactID,
-                locatorJSON: locatorJSON,
-                transcription: transcription,
-                description: citationDescription,
-                transcriptionUncertain: transcriptionUncertain,
-                transcriptionNote: transcriptionNote,
-                citationNotes: [],
-                observations: drafts
-            )
+            if let citationID {
+                _ = try await store.updateCitationWithObservations(
+                    projectDir: session.projectKey.projectDir,
+                    userID: userID,
+                    citationID: citationID,
+                    artifactID: artifactID,
+                    locatorJSON: locatorJSON,
+                    transcription: transcription,
+                    description: citationDescription,
+                    transcriptionUncertain: transcriptionUncertain,
+                    transcriptionNote: transcriptionNote,
+                    citationNotes: [],
+                    observations: drafts
+                )
+            } else {
+                _ = try await store.createCitationWithObservations(
+                    projectDir: session.projectKey.projectDir,
+                    userID: userID,
+                    artifactID: artifactID,
+                    locatorJSON: locatorJSON,
+                    transcription: transcription,
+                    description: citationDescription,
+                    transcriptionUncertain: transcriptionUncertain,
+                    transcriptionNote: transcriptionNote,
+                    citationNotes: [],
+                    observations: drafts
+                )
+            }
             session.apply(.createdCitation(sourceId: sourceID))
             didSubmit = true
             return graphLocation()
@@ -545,6 +583,22 @@ final class CitationComposerModel {
     }
 
     // MARK: - Private
+
+    private func applyLoadedCitation(_ citation: CatalogCitation, observations listed: [CatalogObservation]) {
+        selectedArtifactID = citation.artifactID
+        pendingArtifactID = citation.artifactID
+        transcription = citation.transcription
+        transcriptionUncertain = citation.transcriptionUncertain
+        transcriptionNote = citation.transcriptionNote
+        citationDescription = citation.description
+        if let page = Self.pageFromLocatorJSON(citation.locatorJSON) {
+            locatorPage = page
+            viewerPage = page
+        }
+        observations = listed
+            .filter { $0.subjectID == subjectID }
+            .compactMap { Self.observationRow(from: $0, availableProperties: availableProperties) }
+    }
 
     private func applySelectedArtifact(_ id: String) {
         selectedArtifactID = id
@@ -620,6 +674,50 @@ final class CitationComposerModel {
     static func locatorJSON(page: Int) -> String? {
         guard page >= 1 else { return nil }
         return #"{"version":1,"selectors":[{"type":"page","artifact_page":\#(page)}]}"#
+    }
+
+    static func pageFromLocatorJSON(_ json: String) -> Int? {
+        struct LocatorDoc: Decodable {
+            struct Selector: Decodable {
+                var type: String
+                var artifact_page: Int?
+            }
+            var selectors: [Selector]?
+        }
+        guard let data = json.data(using: .utf8),
+              let doc = try? JSONDecoder().decode(LocatorDoc.self, from: data),
+              let page = doc.selectors?.first(where: { $0.type == "page" })?.artifact_page,
+              page >= 1
+        else { return nil }
+        return page
+    }
+
+    private static func observationRow(
+        from observation: CatalogObservation,
+        availableProperties: [CatalogProperty]
+    ) -> ObservationRow? {
+        guard availableProperties.contains(where: { $0.id == observation.propertyID }) else {
+            return nil
+        }
+        var integerText = ""
+        if let value = observation.valueInteger {
+            integerText = String(value)
+        }
+        let dateDraft: DateValueDraft
+        if let date = observation.date {
+            dateDraft = DateValueDraft(from: date)
+        } else {
+            dateDraft = .empty()
+        }
+        return ObservationRow(
+            id: UUID(),
+            propertyID: observation.propertyID,
+            polarity: observation.polarity.isEmpty ? "positive" : observation.polarity,
+            valueText: observation.valueText,
+            valueIntegerText: integerText,
+            valueTermID: observation.valueTermID,
+            dateDraft: dateDraft
+        )
     }
 
     static func dateSummary(_ draft: DateValueDraft) -> String {

@@ -1003,6 +1003,56 @@ struct GoStore: GenealogyStore {
         return (Self.mapCitation(resp.citation), resp.observations.map(Self.mapObservation))
     }
 
+    func getCitation(
+        projectDir: String,
+        citationID: String
+    ) async throws -> (CatalogCitation, [String], [CatalogObservation]) {
+        var req = Provenencia_Engine_V1_GetCitationRequest()
+        req.projectDir = projectDir
+        req.citationID = citationID
+        let resp: Provenencia_Engine_V1_GetCitationResponse = try await provenenciaCall(
+            method: CoreMethod.getCitation,
+            request: req
+        )
+        return (
+            Self.mapCitation(resp.citation),
+            resp.notes,
+            resp.observations.map(Self.mapObservation)
+        )
+    }
+
+    func updateCitationWithObservations(
+        projectDir: String,
+        userID: String,
+        citationID: String,
+        artifactID: String,
+        locatorJSON: String,
+        transcription: String,
+        description: String,
+        transcriptionUncertain: Bool,
+        transcriptionNote: String,
+        citationNotes: [String],
+        observations: [CatalogObservationDraft]
+    ) async throws -> (CatalogCitation, [CatalogObservation]) {
+        var req = Provenencia_Engine_V1_UpdateCitationWithObservationsRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.citationID = citationID
+        req.artifactID = artifactID
+        req.locatorJson = locatorJSON
+        req.transcription = transcription
+        req.description_p = description
+        req.transcriptionUncertain = transcriptionUncertain
+        req.transcriptionNote = transcriptionNote
+        req.citationNotes = citationNotes
+        req.observations = observations.map(Self.mapObservationDraft)
+        let resp: Provenencia_Engine_V1_UpdateCitationWithObservationsResponse = try await provenenciaCall(
+            method: CoreMethod.updateCitationWithObservations,
+            request: req
+        )
+        return (Self.mapCitation(resp.citation), resp.observations.map(Self.mapObservation))
+    }
+
     func addObservationsToCitation(
         projectDir: String,
         userID: String,
