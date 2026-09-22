@@ -460,12 +460,17 @@ final class EvidenceGraphModel {
         return composerLocation(for: subjectID, citationID: observation.citationID)
     }
 
-    /// Queues delete confirm for an uncited subject card.
+    /// Queues delete confirm for an uncited subject or bridge card.
     func beginDelete(subjectID: String) {
         let snapshot = currentSnapshot()
-        guard let primary = primary(in: snapshot, id: subjectID), !primary.isCited else { return }
         deleteError = nil
-        pendingDelete = PendingDelete(id: subjectID, label: primary.subject.label)
+        if let primary = primary(in: snapshot, id: subjectID), !primary.isCited {
+            pendingDelete = PendingDelete(id: subjectID, label: primary.subject.label)
+            return
+        }
+        if let bridge = snapshot?.bridges.first(where: { $0.id == subjectID }), !bridge.isCited {
+            pendingDelete = PendingDelete(id: subjectID, label: bridge.subject.label)
+        }
     }
 
     @discardableResult

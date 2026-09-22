@@ -36,6 +36,8 @@ struct SourceGraphPlacedBridge: Identifiable, Sendable, Equatable {
     var typeLabel: String
     var gridX: Int64
     var gridY: Int64
+    /// True when the bridge subject has at least one Observation on this Source.
+    var isCited: Bool = false
     /// Provisional A/B endpoint subject ids (app-local until Citations exist).
     var endpointAID: String?
     var endpointBID: String?
@@ -100,6 +102,7 @@ struct SourceGraphSnapshot: Sendable, Equatable {
                 )
             } else if let kind = EvidenceBridgeKind(rawValue: type.key) {
                 let link = linkByBridge[subject.id]
+                let subjectObservations = observationsBySubject[subject.id] ?? []
                 placedBridges.append(
                     SourceGraphPlacedBridge(
                         subject: subject,
@@ -107,6 +110,7 @@ struct SourceGraphSnapshot: Sendable, Equatable {
                         typeLabel: type.label,
                         gridX: position.gridX,
                         gridY: position.gridY,
+                        isCited: !subjectObservations.isEmpty,
                         endpointAID: link?.endpointAID,
                         endpointBID: link?.endpointBID
                     )

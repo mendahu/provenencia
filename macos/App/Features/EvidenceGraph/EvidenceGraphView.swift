@@ -663,7 +663,7 @@ private struct EvidenceGraphDocumentBody: View {
             switch actionID {
             case EvidenceSubjectCard.editActionID, EvidenceBridgeCard.editActionID:
                 model.beginEdit(subjectID: id)
-            case EvidenceSubjectCard.deleteActionID:
+            case EvidenceSubjectCard.deleteActionID, EvidenceBridgeCard.deleteActionID:
                 model.beginDelete(subjectID: id)
             case EvidenceSubjectCard.addPropertyActionID:
                 if let location = model.composerLocation(for: id) {
@@ -792,10 +792,16 @@ private struct EvidenceGraphDocumentBody: View {
             placed: placed,
             isSelected: model.selectedSubjectID == placed.id,
             isActivated: model.activatedSubjectID == placed.id,
-            dragOffset: drag
+            dragOffset: drag,
+            hoveredActionID: pointer.hoveredCardAction?.cardID == placed.id
+                ? pointer.hoveredCardAction?.actionID
+                : nil
         )
         .accessibilityAction(named: Text(L10n.EvidenceGraph.editAccessibility)) {
             model.beginEdit(subjectID: placed.id)
+        }
+        .accessibilityAction(named: Text(L10n.EvidenceGraph.deleteAccessibility)) {
+            model.beginDelete(subjectID: placed.id)
         }
         .offset(x: layout.width, y: layout.height)
     }

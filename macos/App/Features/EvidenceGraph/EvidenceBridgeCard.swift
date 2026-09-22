@@ -11,12 +11,15 @@ struct EvidenceBridgeCard: View {
     static let edgeLayoutHeight: CGFloat = 96
 
     static let editActionID = "edit"
+    static let deleteActionID = "delete"
 
     let placed: SourceGraphPlacedBridge
     var isSelected: Bool
     var isActivated: Bool
     /// Live document-space drag offset from AppKit pointer ownership.
     var dragOffset: CGSize = .zero
+    /// Nested action id under the pointer (idle hover), if any.
+    var hoveredActionID: String? = nil
 
     private var isDragging: Bool {
         dragOffset != .zero
@@ -27,7 +30,8 @@ struct EvidenceBridgeCard: View {
             placed: placed,
             isSelected: isSelected,
             isActivated: isActivated,
-            isDragging: isDragging
+            isDragging: isDragging,
+            hoveredActionID: hoveredActionID
         )
         .offset(dragOffset)
         .zIndex(isDragging || isActivated ? 1 : 0)
@@ -65,17 +69,31 @@ struct EvidenceBridgeCard: View {
         dragOffset: CGSize = .zero
     ) -> [GraphCanvasActionTarget] {
         let frame = contentFrame(gridX: placed.gridX, gridY: placed.gridY, dragOffset: dragOffset)
-        return [
+        var actions: [GraphCanvasActionTarget] = [
             GraphCanvasActionTarget(
                 id: editActionID,
                 frame: CGRect(
-                    x: frame.maxX - 40,
+                    x: frame.maxX - (placed.isCited ? 40 : 68),
                     y: frame.minY + 8,
                     width: 28,
                     height: 28
                 )
             ),
         ]
+        if !placed.isCited {
+            actions.append(
+                GraphCanvasActionTarget(
+                    id: deleteActionID,
+                    frame: CGRect(
+                        x: frame.maxX - 36,
+                        y: frame.minY + 8,
+                        width: 28,
+                        height: 28
+                    )
+                )
+            )
+        }
+        return actions
     }
 
     static func accessibilityLabel(for placed: SourceGraphPlacedBridge) -> String {
@@ -95,6 +113,7 @@ private struct EvidenceBridgeCardChrome: View {
     var isSelected: Bool
     var isActivated: Bool
     var isDragging: Bool
+    var hoveredActionID: String?
 
     private var showsSelectionChrome: Bool {
         isSelected || isActivated || isDragging
@@ -118,10 +137,18 @@ private struct EvidenceBridgeCardChrome: View {
                         .lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                Image(systemName: "pencil")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(PVColor.textMuted)
-                    .accessibilityHidden(true)
+                HStack(spacing: 6) {
+                    PVIcon(.penLine, size: 12)
+                        .foregroundStyle(PVColor.textMuted)
+                    if !placed.isCited {
+                        PVIcon(.trash, size: 12)
+                            .foregroundStyle(
+                                hoveredActionID == EvidenceBridgeCard.deleteActionID
+                                    ? PVColor.danger
+                                    : PVColor.textMuted
+                            )
+                    }
+                }
             }
             Text(L10n.EvidenceGraph.bridgeHonestyBody)
                 .font(PVFont.body(size: PVTypeScale.caption))

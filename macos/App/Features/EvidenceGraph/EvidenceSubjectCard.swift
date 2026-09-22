@@ -95,14 +95,15 @@ struct EvidenceSubjectCard: View {
                 let y = stackTop
                     + stackHairline
                     + CGFloat(index) * (propertyRowHeight + stackHairline)
+                // Full-row hit so hover/edit match the board (not pencil-only).
                 actions.append(
                     GraphCanvasActionTarget(
                         id: editPropertyActionID(observationID: observation.id),
                         frame: CGRect(
-                            x: frame.maxX - 36,
-                            y: y + 8,
-                            width: 28,
-                            height: 28
+                            x: frame.minX,
+                            y: y,
+                            width: frame.width,
+                            height: propertyRowHeight
                         )
                     )
                 )
@@ -429,7 +430,7 @@ private struct EvidenceSubjectCardChrome: View {
     }
 
     private var iconChip: some View {
-        ZStack(alignment: .bottomLeading) {
+        ZStack {
             RoundedRectangle(cornerRadius: 4, style: .continuous)
                 .fill(style.chip)
             RoundedRectangle(cornerRadius: 4, style: .continuous)
@@ -442,28 +443,29 @@ private struct EvidenceSubjectCardChrome: View {
                 )
             PVMark(placed.kind.markKey, size: 15)
                 .foregroundStyle(style.ink)
+        }
+        .frame(width: 28, height: 28)
+        // Badge overlays the chip; do not use ZStack alignment or the mark shifts.
+        .overlay(alignment: .bottomLeading) {
             citationBadge
                 .offset(x: -5, y: 5)
         }
-        .frame(width: 28, height: 28)
     }
 
-    /// Board prose: filled kind-ink check when cited; dashed undocumented circle when not.
-    /// Not a circular status disc around the check — the check itself is the badge.
+    /// Board: 14pt circular notification-dot on the mark corner.
+    /// Cited = kind-ink fill + chip check; uncited = surface fill + circle-dashed.
     private var citationBadge: some View {
-        Group {
+        ZStack {
+            Circle()
+                .fill(placed.isCited ? style.ink : PVColor.surfaceCard)
+            Circle()
+                .strokeBorder(style.tint, lineWidth: 1.5)
             if placed.isCited {
-                PVIcon(.check, size: 11)
-                    .foregroundStyle(style.ink)
-                    .shadow(color: style.chip.opacity(0.95), radius: 0.6, y: 0)
+                PVIcon(.check, size: 9)
+                    .foregroundStyle(style.chip)
             } else {
                 PVIcon(.circleDashed, size: 12)
                     .foregroundStyle(PVColor.evidenceUndocumented)
-                    .background(
-                        Circle()
-                            .fill(PVColor.surfaceCard)
-                            .frame(width: 11, height: 11)
-                    )
             }
         }
         .frame(width: 14, height: 14)
