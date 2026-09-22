@@ -20,7 +20,10 @@ final class CitationComposerModel {
         var valueText: String
         var valueIntegerText: String
         var valueTermID: String
+        var valueSubjectID: String
         var dateDraft: DateValueDraft
+        /// Connect-edge endpoint rows (Frame 10) — system-owned, not editable/removable.
+        var isConnectFixed: Bool
     }
 
     /// Draft for the Add / Edit observation `PVFormDialog` (Frames 3–6, 13).
@@ -71,6 +74,7 @@ final class CitationComposerModel {
     private let userID: String
     private let store: any GenealogyStore
     let session: WorkspaceSession
+    private let linkStore: any EvidenceProvisionalLinkStoring
 
     private(set) var phase: Phase = .loading
     private(set) var subjectLabel: String = ""
@@ -84,6 +88,8 @@ final class CitationComposerModel {
     /// Frame 7 selection before Continue.
     var pendingArtifactID: String?
     private(set) var availableProperties: [CatalogProperty] = []
+    /// Connect-edge Properties (excluded from Add observation) keyed by id.
+    private(set) var connectEdgePropertiesByID: [String: CatalogProperty] = [:]
     private(set) var termsByPropertyID: [String: [CatalogPropertyTerm]] = [:]
     private(set) var isSubmitting = false
     private(set) var didSubmit = false
@@ -117,7 +123,8 @@ final class CitationComposerModel {
         citationID: String? = nil,
         session: WorkspaceSession,
         store: any GenealogyStore,
-        userID: String
+        userID: String,
+        linkStore: (any EvidenceProvisionalLinkStoring)? = nil
     ) {
         self.sourceID = sourceID
         self.subjectID = subjectID
@@ -125,6 +132,15 @@ final class CitationComposerModel {
         self.session = session
         self.store = store
         self.userID = userID
+        if let linkStore {
+            self.linkStore = linkStore
+        } else if let live = try? EvidenceProvisionalLinkStore(
+            projectDir: session.projectKey.projectDir
+        ) {
+            self.linkStore = live
+        } else {
+            self.linkStore = InMemoryEvidenceProvisionalLinkStore()
+        }
     }
 
     var graphKey: CatalogQueryKey {
@@ -197,7 +213,10 @@ final class CitationComposerModel {
     }
 
     func catalogProperty(id: String) -> CatalogProperty? {
-        availableProperties.first { $0.id == id }
+        if let match = availableProperties.first(where: { $0.id == id }) {
+            return match
+        }
+        return connectEdgePropertiesByID[id]
     }
 
     func termOptions(for propertyID: String) -> [PVComboBoxOption] {
@@ -221,6 +240,9 @@ final class CitationComposerModel {
             return termLabel(for: row.valueTermID, propertyID: property.id) ?? row.valueTermID
         case "date":
             return Self.dateSummary(row.dateDraft)
+        case "subject":
+            let trimmed = row.valueText.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? row.valueSubjectID : trimmed
         default:
             return ""
         }
@@ -236,6 +258,63 @@ final class CitationComposerModel {
                 .filter { $0.bridgeTypeKey == typeKey && !$0.refuse }
                 .flatMap(\.edgePropertyKeys)
         )
+    }
+
+    /// Ordered edge Property keys for the first matching connect rule.
+    static func edgePropertyKeys(
+        typeKey: String,
+        rules: [CatalogConnectRule]
+    ) -> [String] {
+        rules
+            .first { $0.bridgeTypeKey == typeKey && !$0.refuse }?
+            .edgePropertyKeys ?? []
+    }
+
+    /// Maps a connect-edge Property key to the endpoint Subject type it binds.
+    static func endpointTypeKey(forEdgePropertyKey key: String) -> String? {
+        switch key {
+        case "person", "related_to": return "person"
+        case "event": return "event"
+        case "place": return "place"
+        default: return nil
+        }
+    }
+
+    /// Builds Frame-10 fixed rows from provisional endpoints + the connect matrix.
+    static func connectEdgePrefillRows(
+        bridgeTypeKey: String,
+        rules: [CatalogConnectRule],
+        properties: [CatalogProperty],
+        endpointA: (id: String, label: String, typeKey: String),
+        endpointB: (id: String, label: String, typeKey: String)
+    ) -> [ObservationRow] {
+        let keys = edgePropertyKeys(typeKey: bridgeTypeKey, rules: rules)
+        guard !keys.isEmpty else { return [] }
+        let propertyByKey = Dictionary(uniqueKeysWithValues: properties.map { ($0.key, $0) })
+        var remaining = [endpointA, endpointB]
+        var rows: [ObservationRow] = []
+        rows.reserveCapacity(keys.count)
+        for key in keys {
+            guard let property = propertyByKey[key],
+                  let wantedType = endpointTypeKey(forEdgePropertyKey: key),
+                  let index = remaining.firstIndex(where: { $0.typeKey == wantedType })
+            else { continue }
+            let endpoint = remaining.remove(at: index)
+            rows.append(
+                ObservationRow(
+                    id: UUID(),
+                    propertyID: property.id,
+                    polarity: "positive",
+                    valueText: endpoint.label,
+                    valueIntegerText: "",
+                    valueTermID: "",
+                    valueSubjectID: endpoint.id,
+                    dateDraft: .empty(),
+                    isConnectFixed: true
+                )
+            )
+        }
+        return rows
     }
 
     static func isPDF(_ artifact: CatalogArtifact?) -> Bool {
@@ -317,8 +396,13 @@ final class CitationComposerModel {
                 typeKey: resolved.typeKey,
                 rules: rules
             )
-            availableProperties = fields
-                .map(\.property)
+            let allProperties = fields.map(\.property)
+            connectEdgePropertiesByID = Dictionary(
+                uniqueKeysWithValues: allProperties
+                    .filter { excluded.contains($0.key) }
+                    .map { ($0.id, $0) }
+            )
+            availableProperties = allProperties
                 .filter {
                     Self.supportedValueTypes.contains($0.valueType)
                         && !excluded.contains($0.key)
@@ -332,12 +416,27 @@ final class CitationComposerModel {
                 )
             }
 
+            let subjectLabelsByID = Dictionary(
+                uniqueKeysWithValues: subjects.map { ($0.id, $0.label) }
+            )
+            let typeKeyBySubjectID = Dictionary(
+                uniqueKeysWithValues: subjects.compactMap { subject -> (String, String)? in
+                    guard let type = types.first(where: { $0.id == subject.subjectTypeID })
+                    else { return nil }
+                    return (subject.id, type.key)
+                }
+            )
+
             if let citationID {
                 let (citation, _, citationObservations) = try await store.getCitation(
                     projectDir: projectDir,
                     citationID: citationID
                 )
-                applyLoadedCitation(citation, observations: citationObservations)
+                applyLoadedCitation(
+                    citation,
+                    observations: citationObservations,
+                    subjectLabelsByID: subjectLabelsByID
+                )
                 if artifacts.isEmpty {
                     selectedArtifactID = nil
                     pendingArtifactID = nil
@@ -346,6 +445,30 @@ final class CitationComposerModel {
                 }
                 phase = .compose
                 return
+            }
+
+            observations = []
+            if EvidenceBridgeKind(rawValue: resolved.typeKey) != nil,
+               let link = linkStore.links(for: sourceID)
+                .first(where: { $0.bridgeSubjectID == subjectID }),
+               let typeA = typeKeyBySubjectID[link.endpointAID],
+               let typeB = typeKeyBySubjectID[link.endpointBID]
+            {
+                observations = Self.connectEdgePrefillRows(
+                    bridgeTypeKey: resolved.typeKey,
+                    rules: rules,
+                    properties: allProperties,
+                    endpointA: (
+                        id: link.endpointAID,
+                        label: subjectLabelsByID[link.endpointAID] ?? link.endpointAID,
+                        typeKey: typeA
+                    ),
+                    endpointB: (
+                        id: link.endpointBID,
+                        label: subjectLabelsByID[link.endpointBID] ?? link.endpointBID,
+                        typeKey: typeB
+                    )
+                )
             }
 
             if artifacts.isEmpty {
@@ -424,6 +547,7 @@ final class CitationComposerModel {
     }
 
     func beginEditObservation(_ row: ObservationRow) {
+        guard !row.isConnectFixed else { return }
         observationDialog = .editing(row)
     }
 
@@ -461,7 +585,9 @@ final class CitationComposerModel {
             valueText: draft.valueText.trimmingCharacters(in: .whitespacesAndNewlines),
             valueIntegerText: draft.valueIntegerText.trimmingCharacters(in: .whitespacesAndNewlines),
             valueTermID: draft.valueTermID,
-            dateDraft: draft.dateDraft
+            valueSubjectID: "",
+            dateDraft: draft.dateDraft,
+            isConnectFixed: false
         )
         if let editingID = draft.editingID,
            let index = observations.firstIndex(where: { $0.id == editingID })
@@ -475,7 +601,7 @@ final class CitationComposerModel {
     }
 
     func removeObservation(id: UUID) {
-        observations.removeAll { $0.id == id }
+        observations.removeAll { $0.id == id && !$0.isConnectFixed }
         formError = nil
     }
 
@@ -584,7 +710,11 @@ final class CitationComposerModel {
 
     // MARK: - Private
 
-    private func applyLoadedCitation(_ citation: CatalogCitation, observations listed: [CatalogObservation]) {
+    private func applyLoadedCitation(
+        _ citation: CatalogCitation,
+        observations listed: [CatalogObservation],
+        subjectLabelsByID: [String: String]
+    ) {
         selectedArtifactID = citation.artifactID
         pendingArtifactID = citation.artifactID
         transcription = citation.transcription
@@ -595,9 +725,20 @@ final class CitationComposerModel {
             locatorPage = page
             viewerPage = page
         }
+        let fixedIDs = Set(connectEdgePropertiesByID.keys)
         observations = listed
             .filter { $0.subjectID == subjectID }
-            .compactMap { Self.observationRow(from: $0, availableProperties: availableProperties) }
+            .compactMap {
+                Self.observationRow(
+                    from: $0,
+                    propertiesByID: Dictionary(
+                        uniqueKeysWithValues: (availableProperties + Array(connectEdgePropertiesByID.values))
+                            .map { ($0.id, $0) }
+                    ),
+                    fixedPropertyIDs: fixedIDs,
+                    subjectLabelsByID: subjectLabelsByID
+                )
+            }
     }
 
     private func applySelectedArtifact(_ id: String) {
@@ -643,6 +784,12 @@ final class CitationComposerModel {
                     return nil
                 }
                 draft.date = row.dateDraft.toInput()
+            case "subject":
+                guard !row.valueSubjectID.isEmpty else {
+                    formError = String(localized: L10n.CitationComposer.unsupportedValueTypeError)
+                    return nil
+                }
+                draft.valueSubjectID = row.valueSubjectID
             default:
                 formError = String(localized: L10n.CitationComposer.unsupportedValueTypeError)
                 return nil
@@ -694,9 +841,11 @@ final class CitationComposerModel {
 
     private static func observationRow(
         from observation: CatalogObservation,
-        availableProperties: [CatalogProperty]
+        propertiesByID: [String: CatalogProperty],
+        fixedPropertyIDs: Set<String>,
+        subjectLabelsByID: [String: String]
     ) -> ObservationRow? {
-        guard availableProperties.contains(where: { $0.id == observation.propertyID }) else {
+        guard propertiesByID[observation.propertyID] != nil else {
             return nil
         }
         var integerText = ""
@@ -709,14 +858,26 @@ final class CitationComposerModel {
         } else {
             dateDraft = .empty()
         }
+        let isFixed = fixedPropertyIDs.contains(observation.propertyID)
+        let subjectLabel = subjectLabelsByID[observation.valueSubjectID] ?? ""
+        let valueText: String
+        if !observation.valueText.isEmpty {
+            valueText = observation.valueText
+        } else if !subjectLabel.isEmpty {
+            valueText = subjectLabel
+        } else {
+            valueText = ""
+        }
         return ObservationRow(
             id: UUID(),
             propertyID: observation.propertyID,
             polarity: observation.polarity.isEmpty ? "positive" : observation.polarity,
-            valueText: observation.valueText,
+            valueText: valueText,
             valueIntegerText: integerText,
             valueTermID: observation.valueTermID,
-            dateDraft: dateDraft
+            valueSubjectID: observation.valueSubjectID,
+            dateDraft: dateDraft,
+            isConnectFixed: isFixed
         )
     }
 

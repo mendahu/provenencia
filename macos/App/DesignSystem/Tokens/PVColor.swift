@@ -125,21 +125,23 @@ enum PVColor {
     static let lineMaternal = Color.pvDynamic(light: PVPalette.plum500, dark: PVPalette.hex("#C08FB2"))
     static let lineInferred = Color.pvDynamic(light: PVPalette.paper400, dark: PVPalette.paper600)
 
-    // MARK: Evidence graph subject kinds (S6-D1 / S6-02)
-    // Person = iron, Event = copper, Place = verdigris — card tinge wash.
+    // MARK: Evidence graph subject kinds (S6-D1 / S6-02 / S7 board)
+    // Person = iron, Event = copper, Place = verdigris.
+    // Fill/border are board hexes (OKLab blends of family steps). Ink = 700 light /
+    // 300 dark; chip unchanged.
     static let subjectPersonInk = Color.pvDynamic(light: PVPalette.iron700, dark: PVPalette.iron300)
-    static let subjectPersonTint = Color.pvDynamic(light: PVPalette.iron100, dark: PVPalette.hex("#1A252C"))
-    static let subjectPersonLine = Color.pvDynamic(light: PVPalette.iron300, dark: PVPalette.hex("#2E4450"))
+    static let subjectPersonTint = Color.pvDynamic(light: PVPalette.hex("#CFDDE3"), dark: PVPalette.hex("#1D2A32"))
+    static let subjectPersonLine = Color.pvDynamic(light: PVPalette.hex("#8AADBC"), dark: PVPalette.hex("#2F4754"))
     static let subjectPersonChip = Color.pvDynamic(light: PVPalette.hex("#FFFDF9"), dark: PVPalette.hex("#141B20"))
 
     static let subjectEventInk = Color.pvDynamic(light: PVPalette.copper700, dark: PVPalette.copper300)
-    static let subjectEventTint = Color.pvDynamic(light: PVPalette.copper100, dark: PVPalette.hex("#271A11"))
-    static let subjectEventLine = Color.pvDynamic(light: PVPalette.copper300, dark: PVPalette.hex("#48301D"))
+    static let subjectEventTint = Color.pvDynamic(light: PVPalette.hex("#F6D9C8"), dark: PVPalette.hex("#322014"))
+    static let subjectEventLine = Color.pvDynamic(light: PVPalette.hex("#E6AA81"), dark: PVPalette.hex("#51341F"))
     static let subjectEventChip = Color.pvDynamic(light: PVPalette.hex("#FFFDF9"), dark: PVPalette.hex("#1D1510"))
 
     static let subjectPlaceInk = Color.pvDynamic(light: PVPalette.verdigris700, dark: PVPalette.verdigris300)
-    static let subjectPlaceTint = Color.pvDynamic(light: PVPalette.verdigris100, dark: PVPalette.hex("#13221C"))
-    static let subjectPlaceLine = Color.pvDynamic(light: PVPalette.verdigris300, dark: PVPalette.hex("#234135"))
+    static let subjectPlaceTint = Color.pvDynamic(light: PVPalette.hex("#CDE3D8"), dark: PVPalette.hex("#162A22"))
+    static let subjectPlaceLine = Color.pvDynamic(light: PVPalette.hex("#88BEA8"), dark: PVPalette.hex("#254739"))
     static let subjectPlaceChip = Color.pvDynamic(light: PVPalette.hex("#FFFDF9"), dark: PVPalette.hex("#101914"))
 
     /// Selection halo behind an Evidence graph card (`--graph-ring`).

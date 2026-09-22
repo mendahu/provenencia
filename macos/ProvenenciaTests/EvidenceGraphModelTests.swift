@@ -320,6 +320,11 @@ struct EvidenceGraphModelTests {
         #expect(model.armedConnect == false)
         #expect(links.links(for: sourceID).first?.endpointAID == "p1")
         #expect(links.links(for: sourceID).first?.endpointBID == "e1")
+        #expect(model.pendingComposerHandoff?.subjectID == bridgeID)
+        let handoff = model.consumeComposerHandoff()
+        #expect(handoff?.subjectId == bridgeID)
+        #expect(handoff?.sourceSurface == .citationComposer)
+        #expect(model.pendingComposerHandoff == nil)
 
         let subjects = try await store.listSubjects(projectDir: projectDir, sourceID: sourceID)
         #expect(subjects.contains(where: { $0.label == "Witness" }))
@@ -542,10 +547,101 @@ struct EvidenceGraphModelTests {
         )
         model.beginDelete(subjectID: "s-uncited")
         #expect(model.pendingDelete?.id == "s-uncited")
+        #expect(model.pendingDelete?.label == "Alice")
+        #expect(model.pendingDelete?.ref == "CPR-1")
         let ok = await model.confirmDeleteSubject()
         #expect(ok)
         #expect(model.pendingDelete == nil)
         #expect(store.subjectsBySource[sourceID]?.isEmpty == true)
+        // Allow the invalidated sourceGraph query to finish reloading.
+        try await Task.sleep(for: .milliseconds(50))
+        let handle: QueryHandle<SourceGraphSnapshot>? = model.session.queryHandle(
+            CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        )
+        #expect(handle?.value?.subjects.isEmpty == true)
+    }
+
+    @Test func deleteUncitedBridgeRemovesCardAndProvisionalLink() async throws {
+        let store = makeStore()
+        store.sourcesByProject[projectDir] = [
+            CatalogSource(
+                id: sourceID,
+                ref: "SRC-1",
+                sourceTypeID: "type-book",
+                title: "Census",
+                description: "",
+                hasArtifact: true
+            ),
+        ]
+        let person = CatalogSubject(
+            id: "p1",
+            ref: "CPR-1",
+            sourceID: sourceID,
+            subjectTypeID: personTypeID,
+            label: "Alice",
+            description: ""
+        )
+        let event = CatalogSubject(
+            id: "e1",
+            ref: "CEV-1",
+            sourceID: sourceID,
+            subjectTypeID: "type-event",
+            label: "Birth",
+            description: ""
+        )
+        let bridge = CatalogSubject(
+            id: "b1",
+            ref: "CPA-1",
+            sourceID: sourceID,
+            subjectTypeID: "type-participation",
+            label: "Witness",
+            description: ""
+        )
+        store.subjectsBySource[sourceID] = [person, event, bridge]
+        store.subjectPositionsBySubject["p1"] = CatalogSubjectPosition(
+            subjectID: "p1", gridX: 0, gridY: 0
+        )
+        store.subjectPositionsBySubject["e1"] = CatalogSubjectPosition(
+            subjectID: "e1", gridX: 4, gridY: 0
+        )
+        store.subjectPositionsBySubject["b1"] = CatalogSubjectPosition(
+            subjectID: "b1", gridX: 2, gridY: 0
+        )
+        let links = InMemoryEvidenceProvisionalLinkStore()
+        links.upsert(
+            EvidenceProvisionalLink(
+                bridgeSubjectID: "b1",
+                endpointAID: "p1",
+                endpointBID: "e1"
+            ),
+            sourceID: sourceID
+        )
+        let model = makeModel(store: store, linkStore: links)
+        await model.prepare()
+        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        model.session.setQueryValue(
+            key,
+            value: SourceGraphSnapshot.build(
+                sourceId: sourceID,
+                subjects: [person, event, bridge],
+                positions: [
+                    CatalogSubjectPosition(subjectID: "p1", gridX: 0, gridY: 0),
+                    CatalogSubjectPosition(subjectID: "e1", gridX: 4, gridY: 0),
+                    CatalogSubjectPosition(subjectID: "b1", gridX: 2, gridY: 0),
+                ],
+                types: store.subjectTypesByProject[projectDir] ?? [],
+                provisionalLinks: links.links(for: sourceID)
+            )
+        )
+        model.beginDelete(subjectID: "b1")
+        #expect(model.pendingDelete?.id == "b1")
+        let ok = await model.confirmDeleteSubject()
+        #expect(ok)
+        #expect(links.links(for: sourceID).isEmpty)
+        try await Task.sleep(for: .milliseconds(50))
+        let handle: QueryHandle<SourceGraphSnapshot>? = model.session.queryHandle(key)
+        #expect(handle?.value?.bridges.isEmpty == true)
+        #expect(handle?.value?.subjects.count == 2)
     }
 
     @Test func beginDeleteIgnoresCitedSubject() async {

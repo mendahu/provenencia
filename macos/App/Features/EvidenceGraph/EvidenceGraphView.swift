@@ -195,7 +195,11 @@ private struct EvidenceGraphContent: View {
                     if model.editingSubjectID != nil {
                         _ = await model.confirmEdit()
                     } else if let id = await model.confirmCreate() {
-                        model.selectSubject(id: id)
+                        if let location = model.consumeComposerHandoff() {
+                            navigation.go(to: location)
+                        } else {
+                            model.selectSubject(id: id)
+                        }
                     }
                 }
             }
@@ -207,10 +211,13 @@ private struct EvidenceGraphContent: View {
                 get: { model.pendingDelete },
                 set: { model.pendingDelete = $0 }
             ),
-            copy: { _ in
+            copy: { pending in
                 PVConfirmCopy(
                     title: String(localized: L10n.EvidenceGraph.deleteConfirmTitle),
-                    message: String(localized: L10n.EvidenceGraph.deleteConfirmMessage),
+                    message: L10n.EvidenceGraph.deleteConfirmMessage(
+                        label: pending.label,
+                        ref: pending.ref
+                    ),
                     confirm: L10n.EvidenceGraph.deleteConfirm,
                     cancel: L10n.EvidenceGraph.deleteCancel
                 )
@@ -220,13 +227,10 @@ private struct EvidenceGraphContent: View {
             onConfirm: {
                 Task { _ = await model.confirmDeleteSubject() }
             }
-        ) { pending in
+        ) { _ in
             if let deleteError = model.deleteError {
                 PVCallout(tone: .danger, message: deleteError)
             }
-            Text(verbatim: pending.label)
-                .font(PVFont.body())
-                .foregroundStyle(PVColor.textPrimary)
         }
     }
     private var accessibilityGraphLabel: Text {

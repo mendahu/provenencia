@@ -172,7 +172,8 @@ struct CitationComposerModelTests {
     private func makeModel(
         store: FakeStore,
         subjectID: String? = nil,
-        citationID: String? = nil
+        citationID: String? = nil,
+        linkStore: (any EvidenceProvisionalLinkStoring)? = nil
     ) -> CitationComposerModel {
         let session = WorkspaceSession(
             projectKey: ProjectKey(projectDir: projectDir),
@@ -184,7 +185,8 @@ struct CitationComposerModelTests {
             citationID: citationID,
             session: session,
             store: store,
-            userID: "user-1"
+            userID: "user-1",
+            linkStore: linkStore
         )
     }
 
@@ -266,6 +268,119 @@ struct CitationComposerModelTests {
         #expect(model.phase == .compose)
         #expect(model.availableProperties.map(\.key) == ["occupation"])
         #expect(!model.availableProperties.contains(where: { $0.key == "person" }))
+        #expect(model.observations.isEmpty)
+    }
+
+    @Test func preparePrefillsFixedConnectEdgeRowsFromProvisionalLink() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let eventTypeID = "type-event"
+        store.subjectTypesByProject[projectDir]?.append(
+            CatalogSubjectType(
+                id: eventTypeID,
+                key: "event",
+                origin: "provenencia",
+                label: "Event",
+                description: "",
+                refPrefix: "EVT",
+                candidateRefPrefix: "CEV"
+            )
+        )
+        let eventID = "sub-event-1"
+        let bridgeID = "sub-bridge-1"
+        store.subjectsBySource[sourceID] = [
+            CatalogSubject(
+                id: subjectID,
+                ref: "CPR-1",
+                sourceID: sourceID,
+                subjectTypeID: personTypeID,
+                label: "Margt.",
+                description: ""
+            ),
+            CatalogSubject(
+                id: eventID,
+                ref: "CEV-1",
+                sourceID: sourceID,
+                subjectTypeID: eventTypeID,
+                label: "Enumeration, 1871",
+                description: ""
+            ),
+            CatalogSubject(
+                id: bridgeID,
+                ref: "CPA-1",
+                sourceID: sourceID,
+                subjectTypeID: participationTypeID,
+                label: "Witness",
+                description: ""
+            ),
+        ]
+        store.subjectPositionsBySubject[eventID] = CatalogSubjectPosition(
+            subjectID: eventID, gridX: 2, gridY: 0
+        )
+        store.subjectPositionsBySubject[bridgeID] = CatalogSubjectPosition(
+            subjectID: bridgeID, gridX: 1, gridY: 0
+        )
+        let links = InMemoryEvidenceProvisionalLinkStore()
+        links.upsert(
+            EvidenceProvisionalLink(
+                bridgeSubjectID: bridgeID,
+                endpointAID: subjectID,
+                endpointBID: eventID
+            ),
+            sourceID: sourceID
+        )
+        let model = makeModel(store: store, subjectID: bridgeID, linkStore: links)
+        await model.prepare()
+        #expect(model.phase == .compose)
+        #expect(model.observations.count == 2)
+        #expect(model.observations.allSatisfy { $0.isConnectFixed })
+        #expect(model.observations.map(\.valueSubjectID).sorted() == [eventID, subjectID].sorted())
+        #expect(Set(model.observations.map(\.valueText)) == Set(["Margt.", "Enumeration, 1871"]))
+        model.removeObservation(id: model.observations[0].id)
+        #expect(model.observations.count == 2)
+    }
+
+    @Test func connectEdgePrefillRowsAssignEndpointsByPropertyKey() {
+        let rows = CitationComposerModel.connectEdgePrefillRows(
+            bridgeTypeKey: "participation",
+            rules: [
+                CatalogConnectRule(
+                    fromTypeKey: "person",
+                    toTypeKey: "event",
+                    bridgeTypeKey: "participation",
+                    edgePropertyKeys: ["person", "event"],
+                    disambiguation: "role",
+                    refuse: false
+                ),
+            ],
+            properties: [
+                CatalogProperty(
+                    id: personEdgePropertyID,
+                    key: "person",
+                    origin: "provenencia",
+                    label: "Person",
+                    description: "",
+                    valueType: "subject"
+                ),
+                CatalogProperty(
+                    id: eventEdgePropertyID,
+                    key: "event",
+                    origin: "provenencia",
+                    label: "Event",
+                    description: "",
+                    valueType: "subject"
+                ),
+            ],
+            endpointA: (id: "p1", label: "Alice", typeKey: "person"),
+            endpointB: (id: "e1", label: "Birth", typeKey: "event")
+        )
+        #expect(rows.count == 2)
+        #expect(rows[0].propertyID == personEdgePropertyID)
+        #expect(rows[0].valueSubjectID == "p1")
+        #expect(rows[0].valueText == "Alice")
+        #expect(rows[0].isConnectFixed)
+        #expect(rows[1].propertyID == eventEdgePropertyID)
+        #expect(rows[1].valueSubjectID == "e1")
     }
 
     @Test func observationDialogCommitsRow() async {

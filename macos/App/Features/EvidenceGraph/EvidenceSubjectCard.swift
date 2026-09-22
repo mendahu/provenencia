@@ -64,29 +64,18 @@ struct EvidenceSubjectCard: View {
         dragOffset: CGSize = .zero
     ) -> [GraphCanvasActionTarget] {
         let frame = edgeFrame(for: placed, dragOffset: dragOffset)
+        let headerHits = EvidenceCardHeaderActionHits.frames(
+            cardFrame: frame,
+            paddingX: shellPaddingX,
+            paddingTop: shellPaddingTop,
+            hitHeight: headerHeight,
+            showDelete: !placed.isCited
+        )
         var actions: [GraphCanvasActionTarget] = [
-            GraphCanvasActionTarget(
-                id: editActionID,
-                frame: CGRect(
-                    x: frame.maxX - (placed.isCited ? 40 : 68),
-                    y: frame.minY + shellPaddingTop,
-                    width: 28,
-                    height: headerHeight
-                )
-            ),
+            GraphCanvasActionTarget(id: editActionID, frame: headerHits.edit),
         ]
-        if !placed.isCited {
-            actions.append(
-                GraphCanvasActionTarget(
-                    id: deleteActionID,
-                    frame: CGRect(
-                        x: frame.maxX - 36,
-                        y: frame.minY + shellPaddingTop,
-                        width: 28,
-                        height: headerHeight
-                    )
-                )
-            )
+        if let deleteFrame = headerHits.delete {
+            actions.append(GraphCanvasActionTarget(id: deleteActionID, frame: deleteFrame))
         }
 
         let stackTop = stackOriginY(for: placed, frame: frame)
@@ -568,5 +557,60 @@ private struct EvidenceCitedPropertyRow: View {
 
     private var isNegative: Bool {
         observation.polarity.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "negative"
+    }
+}
+
+/// Document-space hit frames for the trailing edit / delete icons on graph cards.
+///
+/// Paint places 12pt ``PVIcon``s in an `HStack(spacing: 6)` flush to the card’s
+/// trailing shell padding. Older hard-coded `maxX - N` offsets sat left of those
+/// icons after the card widened — keep hits centered on the painted icons.
+enum EvidenceCardHeaderActionHits {
+    static let iconSize: CGFloat = 12
+    static let iconSpacing: CGFloat = 6
+    static let hitSize: CGFloat = 28
+
+    static func frames(
+        cardFrame: CGRect,
+        paddingX: CGFloat,
+        paddingTop: CGFloat,
+        hitHeight: CGFloat,
+        showDelete: Bool
+    ) -> (edit: CGRect, delete: CGRect?) {
+        var iconTrailingX = cardFrame.maxX - paddingX
+        let deleteFrame: CGRect?
+        if showDelete {
+            deleteFrame = hitFrame(
+                iconTrailingX: iconTrailingX,
+                cardFrame: cardFrame,
+                paddingTop: paddingTop,
+                hitHeight: hitHeight
+            )
+            iconTrailingX -= iconSize + iconSpacing
+        } else {
+            deleteFrame = nil
+        }
+        let editFrame = hitFrame(
+            iconTrailingX: iconTrailingX,
+            cardFrame: cardFrame,
+            paddingTop: paddingTop,
+            hitHeight: hitHeight
+        )
+        return (editFrame, deleteFrame)
+    }
+
+    private static func hitFrame(
+        iconTrailingX: CGFloat,
+        cardFrame: CGRect,
+        paddingTop: CGFloat,
+        hitHeight: CGFloat
+    ) -> CGRect {
+        let iconMidX = iconTrailingX - iconSize / 2
+        return CGRect(
+            x: iconMidX - hitSize / 2,
+            y: cardFrame.minY + paddingTop,
+            width: hitSize,
+            height: hitHeight
+        )
     }
 }

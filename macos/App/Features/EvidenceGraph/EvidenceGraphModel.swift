@@ -13,6 +13,7 @@ final class EvidenceGraphModel {
     struct PendingDelete: Identifiable, Equatable {
         var id: String
         var label: String
+        var ref: String
     }
 
     let sourceID: String
@@ -37,6 +38,14 @@ final class EvidenceGraphModel {
     /// Kind used for edit dialog title when editing a primary; nil when editing a bridge.
     var editingPrimaryKind: EvidencePrimaryKind?
     var editingBridgeKind: EvidenceBridgeKind?
+    /// After a successful bridge create, consumed once to open the composer.
+    private(set) var pendingComposerHandoff: PendingComposerHandoff?
+
+    struct PendingComposerHandoff: Equatable {
+        var subjectID: String
+        var title: String
+        var ref: String
+    }
     /// Uncited subject pending delete confirm.
     var pendingDelete: PendingDelete?
     var isDeleting = false
@@ -423,6 +432,22 @@ final class EvidenceGraphModel {
         composerLocation(for: subjectID, citationID: nil)
     }
 
+    /// Consumes a post-create bridge handoff into the citation composer.
+    func consumeComposerHandoff() -> WorkspaceLocation? {
+        guard canCite, let handoff = pendingComposerHandoff else { return nil }
+        pendingComposerHandoff = nil
+        return WorkspaceLocation(
+            section: .sources,
+            sourceId: sourceID,
+            subjectId: handoff.subjectID,
+            citationId: nil,
+            sourceSurface: .citationComposer,
+            ref: handoff.ref,
+            title: handoff.title,
+            sourceTitle: resolvedSourceTitle()
+        )
+    }
+
     /// Citation composer place for editing an existing citation (property row pencil).
     func composerLocation(for subjectID: String, citationID: String?) -> WorkspaceLocation? {
         guard canCite else { return nil }
@@ -465,11 +490,19 @@ final class EvidenceGraphModel {
         let snapshot = currentSnapshot()
         deleteError = nil
         if let primary = primary(in: snapshot, id: subjectID), !primary.isCited {
-            pendingDelete = PendingDelete(id: subjectID, label: primary.subject.label)
+            pendingDelete = PendingDelete(
+                id: subjectID,
+                label: primary.subject.label,
+                ref: primary.subject.ref
+            )
             return
         }
         if let bridge = snapshot?.bridges.first(where: { $0.id == subjectID }), !bridge.isCited {
-            pendingDelete = PendingDelete(id: subjectID, label: bridge.subject.label)
+            pendingDelete = PendingDelete(
+                id: subjectID,
+                label: bridge.subject.label,
+                ref: bridge.subject.ref
+            )
         }
     }
 
@@ -485,9 +518,14 @@ final class EvidenceGraphModel {
                 userID: userID,
                 subjectID: pending.id
             )
+            linkStore.remove(bridgeSubjectID: pending.id, sourceID: sourceID)
             session.apply(.createdSubject(sourceId: sourceID))
+            let _: QueryHandle<SourceGraphSnapshot> = session.query(graphKey)
             if selectedSubjectID == pending.id {
                 selectSubject(id: nil)
+            }
+            if activatedSubjectID == pending.id {
+                activatedSubjectID = nil
             }
             pendingDelete = nil
             return true
@@ -613,6 +651,11 @@ final class EvidenceGraphModel {
             connectOriginID = nil
             connectHoverPoint = nil
             armedConnect = false
+            pendingComposerHandoff = PendingComposerHandoff(
+                subjectID: created.id,
+                title: created.label,
+                ref: created.ref
+            )
             return created.id
         } catch {
             createError = L10n.Errors.message(for: error)
