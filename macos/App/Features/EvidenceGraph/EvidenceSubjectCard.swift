@@ -380,15 +380,11 @@ private struct EvidenceCitedPropertyRow: View {
     }
 
     private var valueSummary: String {
-        let text = observation.valueText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !text.isEmpty {
-            return isNegative ? "¬ \(text)" : text
+        let rendered = ObservationValueDisplay.string(for: observation)
+        if rendered.isEmpty {
+            return String(localized: L10n.EvidenceGraph.citedValueUnavailable)
         }
-        if let value = observation.valueInteger {
-            let rendered = "\(value)"
-            return isNegative ? "¬ \(rendered)" : rendered
-        }
-        return String(localized: L10n.EvidenceGraph.citedValueUnavailable)
+        return isNegative ? "¬ \(rendered)" : rendered
     }
 
     private var isNegative: Bool {

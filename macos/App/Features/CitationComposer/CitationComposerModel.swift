@@ -619,21 +619,11 @@ final class CitationComposerModel {
     }
 
     static func dateSummary(_ draft: DateValueDraft) -> String {
-        if !draft.isValid {
+        let formatted = DateValueDisplay.string(for: draft)
+        if formatted.isEmpty {
             return String(localized: L10n.CitationComposer.dateUnset)
         }
-        let phrase = draft.phrase.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !phrase.isEmpty { return phrase }
-        if let y = draft.startYear {
-            if let m = draft.startMonth, let d = draft.startDay {
-                return "\(y)-\(m)-\(d)"
-            }
-            if let m = draft.startMonth {
-                return "\(y)-\(m)"
-            }
-            return "\(y)"
-        }
-        return String(localized: L10n.CitationComposer.dateUnset)
+        return formatted
     }
 
     private struct ResolvedSubject {

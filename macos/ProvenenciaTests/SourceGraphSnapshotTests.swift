@@ -71,6 +71,59 @@ struct SourceGraphSnapshotTests {
         #expect(snapshot.subjects[0].observations[0].valueText == "Boston")
     }
 
+    @Test func buildSortsObservationsByPropertyLabel() {
+        let alice = CatalogSubject(
+            id: "s-alice",
+            ref: "CPR-A",
+            sourceID: "src-1",
+            subjectTypeID: personType.id,
+            label: "Alice",
+            description: ""
+        )
+        let sex = CatalogObservation(
+            id: "obs-sex",
+            ref: "OBS-Z",
+            citationID: "cit-1",
+            subjectID: alice.id,
+            propertyID: "prop-sex",
+            polarity: "positive",
+            valueText: "Female",
+            valueInteger: nil,
+            valueDateID: "",
+            valueNameID: "",
+            valueSubjectID: "",
+            valueTermID: "",
+            propertyKey: "sex_at_birth",
+            propertyLabel: "Sex at Birth",
+            propertyValueType: "term"
+        )
+        let name = CatalogObservation(
+            id: "obs-name",
+            ref: "OBS-A",
+            citationID: "cit-1",
+            subjectID: alice.id,
+            propertyID: "prop-name",
+            polarity: "positive",
+            valueText: "Ada",
+            valueInteger: nil,
+            valueDateID: "",
+            valueNameID: "",
+            valueSubjectID: "",
+            valueTermID: "",
+            propertyKey: "name",
+            propertyLabel: "Name",
+            propertyValueType: "name"
+        )
+        let snapshot = SourceGraphSnapshot.build(
+            sourceId: "src-1",
+            subjects: [alice],
+            positions: [CatalogSubjectPosition(subjectID: alice.id, gridX: 0, gridY: 0)],
+            types: [personType],
+            observations: [sex, name]
+        )
+        #expect(snapshot.subjects[0].observations.map(\.propertyLabel) == ["Name", "Sex at Birth"])
+    }
+
     @Test func buildKeepsPlacedPrimariesAndBridgesWithLinks() {
         let alice = CatalogSubject(
             id: "s-alice",

@@ -1313,6 +1313,18 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     .first(where: { $0.id == draft.valueTermID })?
                     .label ?? ""
             }
+            if displayText.isEmpty, !draft.nameForm.isEmpty {
+                displayText = draft.nameForm
+            }
+            if displayText.isEmpty, let date = draft.date {
+                displayText = DateValueDisplay.string(for: date)
+            }
+            if displayText.isEmpty, !draft.valueSubjectID.isEmpty {
+                displayText = subjectsBySource.values
+                    .flatMap { $0 }
+                    .first(where: { $0.id == draft.valueSubjectID })?
+                    .label ?? ""
+            }
             let obs = CatalogObservation(
                 id: UUID().uuidString.lowercased(),
                 ref: "OBS-FAKE1",
@@ -1323,7 +1335,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 valueText: displayText,
                 valueInteger: draft.valueInteger,
                 valueDateID: draft.valueDateID,
+                date: draft.date,
                 valueNameID: draft.valueNameID,
+                nameForm: draft.nameForm,
                 valueSubjectID: draft.valueSubjectID,
                 valueTermID: draft.valueTermID,
                 propertyKey: property?.key ?? "",

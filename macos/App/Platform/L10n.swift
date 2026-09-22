@@ -1303,6 +1303,49 @@ enum L10n {
         }
     }
 
+    /// Shared genealogical DateValue display (list rows, previews). Not Source-page-owned.
+    enum Dates {
+        static func displayAbout(_ date: String, locale: Locale = .autoupdatingCurrent) -> String {
+            var resource = LocalizedStringResource(
+                "dates.display.about",
+                defaultValue: "About %@",
+                comment: "DateValue summary prefix for ABT; argument is the formatted point date"
+            )
+            resource.locale = locale
+            return String(format: String(localized: resource), locale: locale, date)
+        }
+
+        static func displayBefore(_ date: String, locale: Locale = .autoupdatingCurrent) -> String {
+            var resource = LocalizedStringResource(
+                "dates.display.before",
+                defaultValue: "Before %@",
+                comment: "DateValue summary prefix for BEF; argument is the formatted point date"
+            )
+            resource.locale = locale
+            return String(format: String(localized: resource), locale: locale, date)
+        }
+
+        static func displayAfter(_ date: String, locale: Locale = .autoupdatingCurrent) -> String {
+            var resource = LocalizedStringResource(
+                "dates.display.after",
+                defaultValue: "After %@",
+                comment: "DateValue summary prefix for AFT; argument is the formatted point date"
+            )
+            resource.locale = locale
+            return String(format: String(localized: resource), locale: locale, date)
+        }
+
+        static func displayBetween(start: String, end: String, locale: Locale = .autoupdatingCurrent) -> String {
+            var resource = LocalizedStringResource(
+                "dates.display.between",
+                defaultValue: "Between %@ and %@",
+                comment: "DateValue summary for a range; arguments are formatted start then end"
+            )
+            resource.locale = locale
+            return String(format: String(localized: resource), locale: locale, start, end)
+        }
+    }
+
     /// Citation composer place (S7-08 thin submit path; board-aligned shell).
     enum CitationComposer {
         static func breadcrumbCitationFor(scope: String) -> String {

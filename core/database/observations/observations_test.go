@@ -7,6 +7,8 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -29,8 +31,11 @@ func TestObservations(t *testing.T) {
 		artifact    artifacts.Artifact
 		person      subjects.Subject
 		place       subjects.Subject
+		event       subjects.Subject
 		toponymProp properties.Property
 		sexProp     properties.Property
+		nameProp    properties.Property
+		dateProp    properties.Property
 		femaleTerm  propertyterms.Term
 		maleTerm    propertyterms.Term
 	}
@@ -80,6 +85,10 @@ func TestObservations(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		eventType, err := subjecttypes.Lookup(c, "event", subjecttypes.OriginProvenencia)
+		if err != nil {
+			t.Fatal(err)
+		}
 		person, err := subjects.Create(c, userID, subjects.CreateInput{
 			SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Bob",
 		})
@@ -92,11 +101,25 @@ func TestObservations(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		event, err := subjects.Create(c, userID, subjects.CreateInput{
+			SourceID: src.ID, SubjectTypeID: eventType.ID, Label: "Birth",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
 		toponymProp, err := properties.Lookup(c, "toponym", properties.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
 		sexProp, err := properties.Lookup(c, "sex_at_birth", properties.OriginProvenencia)
+		if err != nil {
+			t.Fatal(err)
+		}
+		nameProp, err := properties.Lookup(c, "name", properties.OriginProvenencia)
+		if err != nil {
+			t.Fatal(err)
+		}
+		dateProp, err := properties.Lookup(c, "date", properties.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -109,8 +132,8 @@ func TestObservations(t *testing.T) {
 			t.Fatal(err)
 		}
 		return c, seed{
-			source: src, artifact: art, person: person, place: place,
-			toponymProp: toponymProp, sexProp: sexProp,
+			source: src, artifact: art, person: person, place: place, event: event,
+			toponymProp: toponymProp, sexProp: sexProp, nameProp: nameProp, dateProp: dateProp,
 			femaleTerm: femaleTerm, maleTerm: maleTerm,
 		}
 	}
@@ -224,6 +247,48 @@ func TestObservations(t *testing.T) {
 				}
 				if !sawText || !sawTerm {
 					t.Fatalf("text=%v term=%v rows=%+v", sawText, sawTerm, list)
+				}
+			},
+		},
+		{
+			name: "list denormalizes name and date for card display",
+			run: func(t *testing.T) {
+				c, s := mustSeed(t)
+				y, m := 1882, 4
+				mustCitation(t, c, s,
+					observations.Input{
+						SubjectID: s.person.ID, PropertyID: s.nameProp.ID,
+						Name: &namevalues.Value{Form: "Ada Lovelace"},
+					},
+					observations.Input{
+						SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
+						Date: &datevalues.Value{
+							Kind: datevalues.KindPoint, Qualifier: datevalues.QualifierABT,
+							Calendar: "gregorian", StartYear: &y, StartMonth: &m,
+						},
+					},
+				)
+				list, err := observations.ListBySource(c, s.source.ID)
+				if err != nil || len(list) != 2 {
+					t.Fatalf("%v len=%d", err, len(list))
+				}
+				var sawName, sawDate bool
+				for _, row := range list {
+					if row.PropertyKey == "name" {
+						if row.ValueNameForm != "Ada Lovelace" || row.ValueText != "Ada Lovelace" {
+							t.Fatalf("name display form=%q text=%q", row.ValueNameForm, row.ValueText)
+						}
+						sawName = true
+					}
+					if row.PropertyKey == "date" {
+						if row.Date == nil || row.ValueText != "About 1882-04" {
+							t.Fatalf("date display text=%q date=%v", row.ValueText, row.Date)
+						}
+						sawDate = true
+					}
+				}
+				if !sawName || !sawDate {
+					t.Fatalf("name=%v date=%v rows=%+v", sawName, sawDate, list)
 				}
 			},
 		},

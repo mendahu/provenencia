@@ -175,6 +175,12 @@ func listedObservationProto(l observations.Listed) *engine.Observation {
 	o.PropertyKey = l.PropertyKey
 	o.PropertyLabel = l.PropertyLabel
 	o.PropertyValueType = l.PropertyValueType
+	if l.Date != nil {
+		o.Date = dateValueProto(*l.Date)
+	}
+	if l.ValueNameForm != "" {
+		o.Name = &engine.NameValueInput{Form: l.ValueNameForm}
+	}
 	return o
 }
 

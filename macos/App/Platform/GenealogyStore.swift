@@ -152,7 +152,11 @@ struct CatalogObservation: Sendable, Equatable, Identifiable {
     var valueText: String
     var valueInteger: Int64?
     var valueDateID: String
+    /// Structured DateValue when listed from the catalog (locale-aware display).
+    var date: CatalogDateValueInput? = nil
     var valueNameID: String
+    /// name_values.form when listed (denormalized into valueText as well).
+    var nameForm: String = ""
     var valueSubjectID: String
     var valueTermID: String
     var propertyKey: String

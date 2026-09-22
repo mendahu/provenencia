@@ -37,9 +37,16 @@
 		AA0000000000000000000377 /* PVCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000376 /* PVCard.swift */; };
 		AA0000000000000000000379 /* PVSectionHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000378 /* PVSectionHeader.swift */; };
 		AA0000000000000000000331 /* DateValueDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000330 /* DateValueDraft.swift */; };
+		A70900000000000000000002 /* DateValueDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70900000000000000000001 /* DateValueDisplay.swift */; };
+		A70900000000000000000004 /* DateValueDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70900000000000000000003 /* DateValueDisplayTests.swift */; };
 		AA0000000000000000000335 /* DateValueEditorForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000336 /* DateValueEditorForm.swift */; };
 		A70800000000000000000002 /* CitationComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70800000000000000000001 /* CitationComposerView.swift */; };
 		A70800000000000000000004 /* CitationComposerModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70800000000000000000003 /* CitationComposerModel.swift */; };
+		A70A00000000000000000002 /* CitationComposerArtifactPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70A00000000000000000001 /* CitationComposerArtifactPicker.swift */; };
+		A70A00000000000000000004 /* CitationComposerViewerPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70A00000000000000000003 /* CitationComposerViewerPane.swift */; };
+		A70A00000000000000000006 /* CitationComposerFormPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70A00000000000000000005 /* CitationComposerFormPane.swift */; };
+		A70A00000000000000000008 /* CitationComposerObservationRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70A00000000000000000007 /* CitationComposerObservationRow.swift */; };
+		A70A0000000000000000000A /* CitationComposerObservationDialogForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70A00000000000000000009 /* CitationComposerObservationDialogForm.swift */; };
 		A70800000000000000000006 /* CitationComposerModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70800000000000000000005 /* CitationComposerModelTests.swift */; };
 		AA000000000000000000031B /* ProjectFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000031C /* ProjectFiles.swift */; };
 		AA00000000000000000003D1 /* IngestMediaPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003D0 /* IngestMediaPolicy.swift */; };
@@ -84,6 +91,8 @@
 		AA0000000000000000000479 /* EvidenceGraphView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000478 /* EvidenceGraphView.swift */; };
 		AA000000000000000000047F /* GraphCanvasGridMapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000047E /* GraphCanvasGridMapping.swift */; };
 		AA0000000000000000000481 /* EvidenceSubjectCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000480 /* EvidenceSubjectCard.swift */; };
+		A70900000000000000000006 /* ObservationValueDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70900000000000000000005 /* ObservationValueDisplay.swift */; };
+		A70900000000000000000008 /* ObservationValueDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70900000000000000000007 /* ObservationValueDisplayTests.swift */; };
 		AA0000000000000000000491 /* EvidenceGraphModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000490 /* EvidenceGraphModel.swift */; };
 		AA0000000000000000000493 /* EvidenceGraphPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000492 /* EvidenceGraphPalette.swift */; };
 		AA0000000000000000000495 /* EvidenceGraphModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000494 /* EvidenceGraphModelTests.swift */; };
@@ -272,9 +281,16 @@
 		AA0000000000000000000376 /* PVCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVCard.swift; sourceTree = "<group>"; };
 		AA0000000000000000000378 /* PVSectionHeader.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSectionHeader.swift; sourceTree = "<group>"; };
 		AA0000000000000000000330 /* DateValueDraft.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueDraft.swift; sourceTree = "<group>"; };
+		A70900000000000000000001 /* DateValueDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueDisplay.swift; sourceTree = "<group>"; };
+		A70900000000000000000003 /* DateValueDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueDisplayTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000336 /* DateValueEditorForm.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueEditorForm.swift; sourceTree = "<group>"; };
 		A70800000000000000000001 /* CitationComposerView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerView.swift; sourceTree = "<group>"; };
 		A70800000000000000000003 /* CitationComposerModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerModel.swift; sourceTree = "<group>"; };
+		A70A00000000000000000001 /* CitationComposerArtifactPicker.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerArtifactPicker.swift; sourceTree = "<group>"; };
+		A70A00000000000000000003 /* CitationComposerViewerPane.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerViewerPane.swift; sourceTree = "<group>"; };
+		A70A00000000000000000005 /* CitationComposerFormPane.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerFormPane.swift; sourceTree = "<group>"; };
+		A70A00000000000000000007 /* CitationComposerObservationRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerObservationRow.swift; sourceTree = "<group>"; };
+		A70A00000000000000000009 /* CitationComposerObservationDialogForm.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerObservationDialogForm.swift; sourceTree = "<group>"; };
 		A70800000000000000000005 /* CitationComposerModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerModelTests.swift; sourceTree = "<group>"; };
 		AA000000000000000000031C /* ProjectFiles.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProjectFiles.swift; sourceTree = "<group>"; };
 		AA00000000000000000003D0 /* IngestMediaPolicy.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IngestMediaPolicy.swift; sourceTree = "<group>"; };
@@ -330,6 +346,8 @@
 		AA000000000000000000047A /* GraphCanvasCoordinatesTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasCoordinatesTests.swift; sourceTree = "<group>"; };
 		AA000000000000000000047E /* GraphCanvasGridMapping.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasGridMapping.swift; sourceTree = "<group>"; };
 		AA0000000000000000000480 /* EvidenceSubjectCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceSubjectCard.swift; sourceTree = "<group>"; };
+		A70900000000000000000005 /* ObservationValueDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ObservationValueDisplay.swift; sourceTree = "<group>"; };
+		A70900000000000000000007 /* ObservationValueDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ObservationValueDisplayTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000490 /* EvidenceGraphModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphModel.swift; sourceTree = "<group>"; };
 		AA0000000000000000000492 /* EvidenceGraphPalette.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphPalette.swift; sourceTree = "<group>"; };
 		AA0000000000000000000494 /* EvidenceGraphModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphModelTests.swift; sourceTree = "<group>"; };
@@ -760,6 +778,7 @@
 				AA0000000000000000000478 /* EvidenceGraphView.swift */,
 				AA0000000000000000000496 /* EvidenceCanvasInputMode.swift */,
 				AA0000000000000000000480 /* EvidenceSubjectCard.swift */,
+				A70900000000000000000005 /* ObservationValueDisplay.swift */,
 				AA00000000000000000004A2 /* EvidenceBridgeCard.swift */,
 				AA00000000000000000004A4 /* EvidenceGraphEdgeLayer.swift */,
 				AA0000000000000000000490 /* EvidenceGraphModel.swift */,
@@ -774,6 +793,7 @@
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000330 /* DateValueDraft.swift */,
+				A70900000000000000000001 /* DateValueDisplay.swift */,
 				AA0000000000000000000336 /* DateValueEditorForm.swift */,
 			);
 			path = Dates;
@@ -784,6 +804,11 @@
 			children = (
 				A70800000000000000000003 /* CitationComposerModel.swift */,
 				A70800000000000000000001 /* CitationComposerView.swift */,
+				A70A00000000000000000001 /* CitationComposerArtifactPicker.swift */,
+				A70A00000000000000000003 /* CitationComposerViewerPane.swift */,
+				A70A00000000000000000005 /* CitationComposerFormPane.swift */,
+				A70A00000000000000000007 /* CitationComposerObservationRow.swift */,
+				A70A00000000000000000009 /* CitationComposerObservationDialogForm.swift */,
 			);
 			path = CitationComposer;
 			sourceTree = "<group>";
@@ -864,6 +889,8 @@
 				AA0000000000000000000394 /* ThumbnailCacheTests.swift */,
 				AA00000000000000000003B2 /* PVFileTypeGlyphTests.swift */,
 				AA0000000000000000000332 /* DateValueDraftTests.swift */,
+				A70900000000000000000003 /* DateValueDisplayTests.swift */,
+				A70900000000000000000007 /* ObservationValueDisplayTests.swift */,
 				AA0000000000000000000232 /* PVComboBoxTests.swift */,
 			);
 			path = ProvenenciaTests;
@@ -1412,6 +1439,7 @@
 				AA00000000000000000004C5 /* GraphCanvasDocumentView.swift in Sources */,
 				AA000000000000000000047F /* GraphCanvasGridMapping.swift in Sources */,
 				AA0000000000000000000481 /* EvidenceSubjectCard.swift in Sources */,
+				A70900000000000000000006 /* ObservationValueDisplay.swift in Sources */,
 				AA0000000000000000000491 /* EvidenceGraphModel.swift in Sources */,
 				AA0000000000000000000493 /* EvidenceGraphPalette.swift in Sources */,
 				AA0000000000000000000483 /* EvidenceSubjectKindStyle.swift in Sources */,
@@ -1474,9 +1502,15 @@
 				AA000000000000000000036B /* SourcePageArtifactsView.swift in Sources */,
 				AA000000000000000000036D /* SourcePageNotesView.swift in Sources */,
 				AA0000000000000000000331 /* DateValueDraft.swift in Sources */,
+				A70900000000000000000002 /* DateValueDisplay.swift in Sources */,
 				AA0000000000000000000335 /* DateValueEditorForm.swift in Sources */,
 				A70800000000000000000002 /* CitationComposerView.swift in Sources */,
 				A70800000000000000000004 /* CitationComposerModel.swift in Sources */,
+				A70A00000000000000000002 /* CitationComposerArtifactPicker.swift in Sources */,
+				A70A00000000000000000004 /* CitationComposerViewerPane.swift in Sources */,
+				A70A00000000000000000006 /* CitationComposerFormPane.swift in Sources */,
+				A70A00000000000000000008 /* CitationComposerObservationRow.swift in Sources */,
+				A70A0000000000000000000A /* CitationComposerObservationDialogForm.swift in Sources */,
 				AA000000000000000000031B /* ProjectFiles.swift in Sources */,
 				AA00000000000000000003D1 /* IngestMediaPolicy.swift in Sources */,
 				AA00000000000000000003D3 /* IngestFileDropRow.swift in Sources */,
@@ -1538,6 +1572,8 @@
 				AA0000000000000000000395 /* ThumbnailCacheTests.swift in Sources */,
 				AA00000000000000000003B3 /* PVFileTypeGlyphTests.swift in Sources */,
 				AA0000000000000000000333 /* DateValueDraftTests.swift in Sources */,
+				A70900000000000000000004 /* DateValueDisplayTests.swift in Sources */,
+				A70900000000000000000008 /* ObservationValueDisplayTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
