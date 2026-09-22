@@ -26,7 +26,7 @@ Items marked **TBD** are expected seeds whose exact set is still being refined.
 2. This file may stay ahead of the product. Keeping a larger catalog here is documentation, not a commitment to pre-make unused pickers, metadata fields, or event types.
 3. Seeds are data inserted into a project database, not SQL enums.
 4. Shipped keys are not structurally privileged subclasses; they are convenient defaults with optional first-class UX. Their privilege is **origin**, not a separate table or enum.
-5. **Property terms** (`event_type`, `role`, `relationship_type`, and similar kind/edge vocabularies) are vocabulary-definition rows with `origin` (§1.1), not free-text Observation strings. **Term-typed Properties are Install/registry only** (product or plugin) — researchers do not create Properties with `value_type = term`. Product/plugin Install seeds large term sets; researchers may add `origin=user` **term rows** under those Properties without a dedicated Event types / Roles admin destination. True prose Properties (`remark`, `toponym`) stay `value_type = text`. Name part `type` on NameValue remains a separate open part vocabulary.
+5. **Property terms** (`event_type`, `role`, `relationship_type`, and similar kind/edge vocabularies) are vocabulary-definition rows with `origin` (§1.1), not free-text Observation strings. **Term-typed Properties are Install/registry only** (product or plugin) — researchers do not create Properties with `value_type = term`. Product/plugin Install seeds large term sets; researchers may add `origin=user` **term rows** under those Properties without a dedicated Event types / Roles admin destination. True prose Properties (`remark`, `toponym`) stay `value_type = text`. Name part `type` on NameValue is a **compiled product registry** (not `property_terms`); user-minted part types are TBD.
 6. Do not seed a fine-grained source-quality ontology (`is_authentic`, defect codes, and similar) on Source catalog rows or as Observation defect codes unless a concrete workflow requires it. First-class **Source credibility** uses the three-point assessment vocabulary in §3.0 and [`research-judgment-model.md`](research-judgment-model.md), not ad hoc Source metadata.
 7. Expanding this catalog does not require a schema migration when the underlying tables already use open keys.
 8. Source credibility grades and Claim confidence grades share a three-point *shape* but **must not share keys or labels** — they answer different questions.
@@ -44,7 +44,7 @@ Applies to (authoritative schemas in the linked docs):
 | `claim_confidence_grades` | [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md), [`research-judgment-model.md`](research-judgment-model.md) |
 | `name_format_profiles` | [`structured-name-model.md`](structured-name-model.md) |
 
-Does **not** apply to join/suggestion tables (`source_type_metadata_fields`, `subject_type_fields`, `name_format_profile_parts`), domain instance rows, or NameValue part `type` strings (open part vocabulary, not `property_terms`).
+Does **not** apply to join/suggestion tables (`source_type_metadata_fields`, `subject_type_fields`, `name_format_profile_parts`), domain instance rows, or NameValue part `type` keys (compiled product registry, not `property_terms`).
 
 ### Reserved `origin` values
 
@@ -435,9 +435,11 @@ Use `intersex` when the source indicates intersex / DSD variation; `indeterminat
 
 Schema: [`structured-name-model.md`](structured-name-model.md).
 
-## 4.1 Name part `type` starter set
+## 4.1 Name part `type` product set
 
-GEDCOM-aligned open vocabulary:
+GEDCOM-aligned **product keys** (compiled registry in `core/database/namevalues`, not catalog rows). UI picks from this set with localized labels. Empty type on a part remains allowed (untyped). Unknown non-empty keys are refused on Insert.
+
+User-minted part types (DB vocabulary, Property-terms-shaped) are **TBD** — do not invent free-text types in the editor.
 
 ```text
 prefix              -- NPFX

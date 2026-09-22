@@ -185,7 +185,7 @@ Pinning a Citation across successive graph edits is **out** (one Citation + N Ob
 | **S7-D8** | PVCallout actions | Optional actions slot on Callout (recovery CTA); no graph gate wiring | S7-14 |
 | **S7-D3** | Evidence graph updates | Add-property; cited-data rows; subject refs; bridge edge summaries; Artifact gate; connect disambiguation → composer handoff | S7-09, S7-10 |
 | **S7-D4** | Citation composer place | Full-window viewer\|form; Artifact pick; locators; observation list; DateValue reuse; breadcrumbs; composer-only a11y — **hosts** NameValue modal, does not design it | S7-08 |
-| **S7-D5** | NameValue editor | Reusable NameValue modal (DateValue twin); form + optional parts | S7-02b |
+| **S7-D5** | NameValue editor | Reusable NameValue modal (DateValue twin); form + optional parts; **product part-type picker** (localized; no free text) | S7-02b |
 | **S7-D7** | Card component | Claude Design **Card** reference from shipped `PVCard`; tones / border / elevation; not graph snowflake cards | S7-13 |
 
 ~~**S7-D1** Subject types editor~~ — **descoped** (see [Descoped](#descoped) below).
@@ -361,7 +361,7 @@ Claude Design board for the navigable composer. Brief archived: [`design/archive
 
 ## S7-D5 — Design: NameValue editor
 
-Claude Design board for the reusable NameValue modal (DateValue twin). Brief: [`design/S7-D5-name-value-editor.md`](design/S7-D5-name-value-editor.md). Gates **S7-02b**. Schedule late — after thin composer works.
+Claude Design board for the reusable NameValue modal (DateValue twin). Brief: [`design/S7-D5-name-value-editor.md`](design/S7-D5-name-value-editor.md). Gates **S7-02b**. Schedule late — after thin composer works. Part types: **product registry picker + L10n labels** (not free text; not user vocab admin).
 
 ---
 
@@ -426,11 +426,13 @@ Authoritative schema notes: [`interpretation-layer-data-model.md`](../../interpr
 
 Lives on the **Observations branch**, not the Subject fields branch. Needed so **S7-03** can FK `value_name_id`. Does **not** block **S7-05**.
 
+**Part types:** product keys are a **compiled registry** (`PartTypes` / `KnownPartType`); Insert rejects unknown non-empty types; empty type = untyped segment. Column stays TEXT (no CHECK enum). User-minted part-type catalog rows are **out** (later extensibility).
+
 | | |
 | --- | --- |
-| **In** | Schema, Go package, tests. |
-| **Out** | Swift editor (S7-02b); composer wiring (S7-08); name_format profiles; Subject fields UI. |
-| **Testable** | Go round-trip create/read parts. |
+| **In** | Schema, Go package (incl. part-type registry + Insert validation), tests. |
+| **Out** | Swift editor (S7-02b); composer wiring (S7-08); name_format profiles; Subject fields UI; user part-type vocabulary table. |
+| **Testable** | Go round-trip create/read parts; reject unknown part type. |
 | **Depends on** | — (parallel with S7-05 after S7-01). **Not** gated on S7-D5. |
 
 ---
@@ -553,12 +555,14 @@ Swift `NameValueDraft` / editor modal under `Features/Names/` (mirror `Features/
 
 **Late fill-in** after thin composer works. Not required for S7-05 or S7-08/09.
 
+Part types: expose the Go product registry (keys + `L10nKey`) as a Swift picker with localized labels. Do **not** ship free-text type entry or a user part-type admin table.
+
 | | |
 | --- | --- |
-| **In** | Reusable modal UI per S7-D5; unit tests for draft validation; wire into S7-08 observation rows. |
-| **Out** | Schema (S7-02); name_format profiles. |
-| **Testable** | In composer, add a name Observation → edit NameValue → submit. |
-| **Depends on** | S7-02, S7-08, **S7-D5**. |
+| **In** | Reusable modal UI per S7-D5; part-type picker from product registry + L10n; unit tests for draft validation; wire into S7-08 observation rows. |
+| **Out** | Schema DDL (S7-02); name_format profiles; user-minted `name_part_types` catalog. |
+| **Testable** | In composer, add a name Observation → edit NameValue (typed parts via picker) → submit. |
+| **Depends on** | S7-02 (registry), S7-08, **S7-D5**. |
 
 ---
 

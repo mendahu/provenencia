@@ -229,7 +229,7 @@ The reason bridges differ: if we persisted a bridge subject and the researcher t
 
 ## 4.4 The hidden dependency: NameValue
 
-`name` is the single most common Observation a genealogist will ever record, and **the structured NameValue model does not exist in any layer** — no migration, no `core/database/namevalues`, no Swift editor. [`structured-name-model.md`](../structured-name-model.md) specifies it (a required full `form` plus optional ordered parts with an open part-type vocabulary), but nothing is built.
+`name` is the single most common Observation a genealogist will ever record. Shared NameValue persistence lives in [`core/database/namevalues`](../../core/database/namevalues) (migration + Go). The Swift editor is Spike 7 **S7-02b**. [`structured-name-model.md`](../structured-name-model.md) specifies a required full `form` plus optional ordered parts with a **product part-type registry** (not free text; user-minted types deferred).
 
 DateValue is in much better shape, which makes it easy to assume names are too. They are not. Building NameValue end to end is its own chunk of work sitting directly on the critical path of "record a person's name," and it should be planned explicitly rather than discovered in the middle of a slice.
 

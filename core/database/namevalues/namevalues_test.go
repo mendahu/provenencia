@@ -136,6 +136,18 @@ func TestInsertLookup(t *testing.T) {
 			},
 		},
 		{
+			name: "rejects unknown part type",
+			run: func(t *testing.T, c *database.Catalog) {
+				_, err := Insert(c, Value{
+					Form:  "James",
+					Parts: []Part{{Idx: 0, Value: "James", Type: "first_name"}},
+				})
+				if !errors.Is(err, ErrInvalid) {
+					t.Fatalf("got %v", err)
+				}
+			},
+		},
+		{
 			name: "rejects blank form",
 			run: func(t *testing.T, c *database.Catalog) {
 				_, err := Insert(c, Value{Form: "   "})

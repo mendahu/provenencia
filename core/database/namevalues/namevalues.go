@@ -1,8 +1,10 @@
 // Package namevalues stores shared genealogical NameValue rows.
 //
 // A NameValue always has a full-form normalized reading (`form`). Ordered
-// parts are optional; part `type` is an open vocabulary (starter keys below
-// are for callers only — Insert does not close the set).
+// parts are optional. Part `type` is a product-known key from the compiled
+// registry (see registry.go) when set; empty type means an untyped segment.
+// Insert rejects unknown non-empty types. User-minted part-type vocabulary
+// (DB rows) is deferred — keep DDL as open TEXT.
 //
 // NameValues are value objects (UUID for persistence only). Mutation is not
 // supported; consumers attach new rows when a name assertion changes.
@@ -20,7 +22,7 @@ import (
 
 var ErrInvalid = apperr.New(apperr.CodeNameValuesInvalid, apperr.KindUser)
 
-// Starter part types from seeded-vocabulary §4.1 (open vocabulary — not enforced).
+// Product part-type keys (seeded-vocabulary §4.1). Same strings as PartTypes().
 const (
 	PartTypePrefix        = "prefix"
 	PartTypeGiven         = "given"
@@ -47,7 +49,7 @@ type Part struct {
 	ID    []byte
 	Idx   int
 	Value string
-	Type  string // open vocabulary; empty → SQL NULL
+	Type  string // empty or a KnownPartType key
 }
 
 // Value is one name_values row plus optional ordered parts.
@@ -172,6 +174,9 @@ func validate(form string, parts []Part) error {
 			return ErrInvalid
 		}
 		if p.Value == "" {
+			return ErrInvalid
+		}
+		if p.Type != "" && !KnownPartType(p.Type) {
 			return ErrInvalid
 		}
 		if _, dup := seen[p.Idx]; dup {

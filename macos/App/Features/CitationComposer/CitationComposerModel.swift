@@ -75,6 +75,8 @@ final class CitationComposerModel {
     private(set) var subjectTypeKey: String = ""
     private(set) var subjectTypeID: String = ""
     private(set) var sourceTitle: String = ""
+    /// Source-type `icon_key` for fileless Artifact picker thumbs (Frame 8).
+    private(set) var sourceTypeIconKey: String = ""
     private(set) var artifacts: [CatalogArtifact] = []
     private(set) var selectedArtifactID: String?
     /// Frame 7 selection before Continue.
@@ -260,19 +262,20 @@ final class CitationComposerModel {
                 projectDir: projectDir,
                 sourceID: sourceID
             )
-            async let workspaceLoad = store.getSourceWorkspace(
+            // Sequential FakeStore access: bags are not synchronized, and
+            // concurrent `async let` here has aborted CI under suite fan-out.
+            let workspace = try await store.getSourceWorkspace(
                 projectDir: projectDir,
                 sourceID: sourceID
             )
-            async let rulesLoad = store.listConnectRules()
-            async let typesLoad = store.listSubjectTypes(projectDir: projectDir)
-            async let observationsLoad = store.listObservationsBySource(
+            let rules = try await store.listConnectRules()
+            let types = try await store.listSubjectTypes(projectDir: projectDir)
+            let listedObservations = try await store.listObservationsBySource(
                 projectDir: projectDir,
                 sourceID: sourceID
             )
+            let sourceTypes = try await store.listSourceTypes(projectDir: projectDir)
 
-            let types = try await typesLoad
-            let listedObservations = try await observationsLoad
             let snapshot = SourceGraphSnapshot.build(
                 sourceId: sourceID,
                 subjects: subjects,
@@ -280,8 +283,6 @@ final class CitationComposerModel {
                 types: types,
                 observations: listedObservations
             )
-            let workspace = try await workspaceLoad
-            let rules = try await rulesLoad
 
             guard let resolved = Self.resolveSubject(
                 id: subjectID,
@@ -297,6 +298,9 @@ final class CitationComposerModel {
             subjectTypeKey = resolved.typeKey
             subjectTypeID = resolved.typeID
             sourceTitle = workspace.source.title
+            sourceTypeIconKey = sourceTypes
+                .first { $0.id == workspace.source.sourceTypeID }?
+                .iconKey ?? ""
             artifacts = workspace.artifacts
 
             let fields = try await store.listSubjectTypeFields(

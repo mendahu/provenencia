@@ -8982,6 +8982,30 @@
         }
       }
     },
+    "citationComposer.mediaCaptionNoFile": {
+      "comment": "Caption under a fileless Artifact tile in the picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No file"
+          }
+        }
+      }
+    },
+    "citationComposer.mediaCaptionNoFileDetail": {
+      "comment": "Caption under a fileless Artifact tile; argument is the Artifact description",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No file · %@"
+          }
+        }
+      }
+    },
     "citationComposer.previousPage": {
       "comment": "Viewer tool: go to previous PDF page",
       "extractionState": "manual",

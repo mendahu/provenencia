@@ -101,10 +101,10 @@ xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destin
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | — (parallel after S7-01; not gated on S7-D5) |
-| **Deliverables** | Done. Migration [`000025.sql`](../../../core/database/migrations/000025.sql) adds `name_values` + `name_value_parts` per structured-name-model §§2–3. Package [`core/database/namevalues/`](../../../core/database/namevalues/) with DateValue-shaped `Insert` / `Lookup` (write-once value object; transactional parent + parts). `apperr.CodeNameValuesInvalid`. Starter part-type consts (open vocabulary, not enforced). Skill [`add-name-value`](../../../.cursor/skills/add-name-value/SKILL.md) + rule `name-values.mdc`. |
-| **Tests** | Done. Go: `namevalues` table-driven Insert/Lookup (form-only, parts, rejects, schema/`user_version`). |
+| **Deliverables** | Done. Migration [`000025.sql`](../../../core/database/migrations/000025.sql) adds `name_values` + `name_value_parts` per structured-name-model §§2–3. Package [`core/database/namevalues/`](../../../core/database/namevalues/) with DateValue-shaped `Insert` / `Lookup` (write-once value object; transactional parent + parts). `apperr.CodeNameValuesInvalid`. Product part-type **compiled registry** (`PartTypes` / `KnownPartType`); Insert rejects unknown non-empty types; empty type = untyped. Skill [`add-name-value`](../../../.cursor/skills/add-name-value/SKILL.md) + rule `name-values.mdc`. |
+| **Tests** | Done. Go: `namevalues` table-driven Insert/Lookup (form-only, parts, rejects unknown type, schema/`user_version`); registry coverage. |
 | **Dogfood** | Schema/Go only — no app UI yet. Consumers: Observations `value_name_id` (**S7-03**); Swift editor (**S7-02b**). |
-| **Out** | Swift NameValue editor (**S7-02b**); Observation FK / composer (**S7-03** / **S7-08**); `name_format_profiles` / project defaults; FFI. |
+| **Out** | Swift NameValue editor (**S7-02b**); Observation FK / composer (**S7-03** / **S7-08**); `name_format_profiles` / project defaults; FFI; user-minted part-type catalog. |
 
 **Landed:** shared NameValue persistence so later Observations can reference structured names.
 

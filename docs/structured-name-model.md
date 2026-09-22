@@ -63,9 +63,9 @@ CREATE TABLE name_value_parts (
 ) STRICT;
 ```
 
-Parts are ordered by `idx` within a NameValue. `type` is an open vocabulary rather than a database enum. The GEDCOM-aligned starter set (`prefix`, `given`, `surname`, and similar) is catalogued in [`seeded-vocabulary.md`](seeded-vocabulary.md).
+Parts are ordered by `idx` within a NameValue. `type` is stored as TEXT (nullable). **Product-known keys** live in the compiled `namevalues` registry (`PartTypes()`); Insert rejects unknown non-empty types. Empty type means an untyped segment. The GEDCOM-aligned key set is catalogued in [`seeded-vocabulary.md`](seeded-vocabulary.md) §4.1. UI shows **localized labels** for those keys (S7-02b) — not free-text type entry. User-minted part types (catalog rows, like `property_terms`) are deferred.
 
-Applications may recognize well-known part types for search and reconciliation while still accepting project-specific or undetermined types. Absence of parts is valid. Culture-specific *display order* is handled by name format profiles rather than by closing the part-type list.
+Applications use the same keys for search, reconcile, and format profiles. Absence of parts is valid. Culture-specific *display order* is handled by name format profiles rather than by closing the column in DDL.
 
 Example:
 
@@ -193,7 +193,7 @@ Canonical entity `label` is a researcher working identifier, not a genealogical 
 1. `name_values` and `name_value_parts` are shared cross-layer infrastructure, not part of the Source layer.
 2. Personal names are not reduced to a single undifferentiated string when structure is known and useful.
 3. A full-form `form` is always required; parts are optional.
-4. Part `type` is an open vocabulary, not a closed cultural schema.
+4. Part `type` is a product registry key (or empty for untyped), not free text and not a culture-specific closed schema; user-minted types are deferred.
 5. Name format profiles define cultural display/entry ordering; they are seeded rows with `origin` namespaces, not enums.
 6. Projects have a default name format; each Person may override it via a `name_format` Reconciliation Claim.
 7. One cited name assertion is one NameValue, not one Observation per token.
