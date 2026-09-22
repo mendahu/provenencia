@@ -262,20 +262,20 @@ final class CitationComposerModel {
                 projectDir: projectDir,
                 sourceID: sourceID
             )
-            async let workspaceLoad = store.getSourceWorkspace(
+            // Sequential FakeStore access: bags are not synchronized, and
+            // concurrent `async let` here has aborted CI under suite fan-out.
+            let workspace = try await store.getSourceWorkspace(
                 projectDir: projectDir,
                 sourceID: sourceID
             )
-            async let rulesLoad = store.listConnectRules()
-            async let typesLoad = store.listSubjectTypes(projectDir: projectDir)
-            async let sourceTypesLoad = store.listSourceTypes(projectDir: projectDir)
-            async let observationsLoad = store.listObservationsBySource(
+            let rules = try await store.listConnectRules()
+            let types = try await store.listSubjectTypes(projectDir: projectDir)
+            let listedObservations = try await store.listObservationsBySource(
                 projectDir: projectDir,
                 sourceID: sourceID
             )
+            let sourceTypes = try await store.listSourceTypes(projectDir: projectDir)
 
-            let types = try await typesLoad
-            let listedObservations = try await observationsLoad
             let snapshot = SourceGraphSnapshot.build(
                 sourceId: sourceID,
                 subjects: subjects,
@@ -283,9 +283,6 @@ final class CitationComposerModel {
                 types: types,
                 observations: listedObservations
             )
-            let workspace = try await workspaceLoad
-            let rules = try await rulesLoad
-            let sourceTypes = try await sourceTypesLoad
 
             guard let resolved = Self.resolveSubject(
                 id: subjectID,
