@@ -17,6 +17,8 @@ final class GraphCanvasPointerController {
     private(set) var offsets: [String: CGSize] = [:]
     /// Pointer is inside the document (hover for place/connect).
     private(set) var pointerInside = false
+    /// Idle hover over a nested card action (`cardID`, `actionID`), for paint.
+    private(set) var hoveredCardAction: (cardID: String, actionID: String)?
 
     weak var viewport: GraphCanvasViewportController?
 
@@ -56,6 +58,7 @@ final class GraphCanvasPointerController {
     func setPointerInside(_ inside: Bool) {
         pointerInside = inside
         if !inside {
+            hoveredCardAction = nil
             onHover?(nil)
         }
     }
@@ -177,9 +180,10 @@ final class GraphCanvasPointerController {
     func mouseMoved(documentPoint: CGPoint) {
         switch mode {
         case .placing, .connecting:
+            hoveredCardAction = nil
             onHover?(documentPoint)
         case .idle:
-            break
+            updateHoveredAction(at: documentPoint)
         }
     }
 
@@ -189,6 +193,24 @@ final class GraphCanvasPointerController {
 
     func mouseEntered() {
         setPointerInside(true)
+    }
+
+    private func updateHoveredAction(at documentPoint: CGPoint) {
+        guard let target = GraphCanvasPointerHitTesting.topmostTarget(
+            at: documentPoint,
+            in: hitTargets
+        ),
+            let action = GraphCanvasPointerHitTesting.action(at: documentPoint, in: target)
+        else {
+            if hoveredCardAction != nil {
+                hoveredCardAction = nil
+            }
+            return
+        }
+        let next = (cardID: target.id, actionID: action.id)
+        if hoveredCardAction?.cardID != next.cardID || hoveredCardAction?.actionID != next.actionID {
+            hoveredCardAction = next
+        }
     }
 
     private func pushPanCursor() {

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Primary subject card on the Evidence graph (S6-02 / S7-09 / card chrome refresh).
+/// Primary subject card on the Evidence graph (S6-02 / S7-09 / board chrome).
 ///
 /// Paint-only: AppKit ``GraphCanvasPointerController`` owns select / drag /
 /// nested action hits (edit, delete, property edit, Add property).
@@ -15,6 +15,17 @@ struct EvidenceSubjectCard: View {
     static let approximateHalfHeight: CGFloat = 36
     /// Minimum edge hit-testing height for a header-only shell.
     static let edgeLayoutHeight: CGFloat = 88
+
+    /// Horizontal / top padding on the card shell (matches board).
+    static let shellPaddingX: CGFloat = 13
+    static let shellPaddingTop: CGFloat = 11
+    static let shellPaddingBottom: CGFloat = 12
+    static let headerHeight: CGFloat = 28
+    static let headerToBodyGap: CGFloat = 9
+    /// Ruled property / Add-property stack (board: 1px kind-line hairlines).
+    static let propertyRowHeight: CGFloat = 46
+    static let addPropertyInStackHeight: CGFloat = 32
+    static let stackHairline: CGFloat = 1
 
     static let editActionID = "edit"
     static let deleteActionID = "delete"
@@ -58,9 +69,9 @@ struct EvidenceSubjectCard: View {
                 id: editActionID,
                 frame: CGRect(
                     x: frame.maxX - (placed.isCited ? 40 : 68),
-                    y: frame.minY + 8,
+                    y: frame.minY + shellPaddingTop,
                     width: 28,
-                    height: 28
+                    height: headerHeight
                 )
             ),
         ]
@@ -70,23 +81,26 @@ struct EvidenceSubjectCard: View {
                     id: deleteActionID,
                     frame: CGRect(
                         x: frame.maxX - 36,
-                        y: frame.minY + 8,
+                        y: frame.minY + shellPaddingTop,
                         width: 28,
-                        height: 28
+                        height: headerHeight
                     )
                 )
             )
         }
+
+        let stackTop = stackOriginY(for: placed, frame: frame)
         if placed.isCited {
-            let rowTop = frame.minY + 24 + 28 + 10 // padding + header + divider gap
             for (index, observation) in placed.observations.enumerated() {
-                let y = rowTop + CGFloat(index) * 34
+                let y = stackTop
+                    + stackHairline
+                    + CGFloat(index) * (propertyRowHeight + stackHairline)
                 actions.append(
                     GraphCanvasActionTarget(
                         id: editPropertyActionID(observationID: observation.id),
                         frame: CGRect(
                             x: frame.maxX - 36,
-                            y: y,
+                            y: y + 8,
                             width: 28,
                             height: 28
                         )
@@ -94,15 +108,25 @@ struct EvidenceSubjectCard: View {
                 )
             }
         }
+
         if canCite {
+            let addY: CGFloat
+            if placed.isCited {
+                let rows = CGFloat(placed.observations.count)
+                addY = stackTop
+                    + stackHairline
+                    + rows * (propertyRowHeight + stackHairline)
+            } else {
+                addY = frame.maxY - addPropertyInStackHeight - 4
+            }
             actions.append(
                 GraphCanvasActionTarget(
                     id: addPropertyActionID,
                     frame: CGRect(
                         x: frame.minX,
-                        y: frame.maxY - 34,
+                        y: addY,
                         width: frame.width,
-                        height: 30
+                        height: placed.isCited ? addPropertyInStackHeight : 30
                     )
                 )
             )
@@ -112,15 +136,36 @@ struct EvidenceSubjectCard: View {
 
     /// Approximate painted height so edges / hits track cited-row growth.
     static func contentHeight(for placed: SourceGraphPlacedSubject) -> CGFloat {
-        var height: CGFloat = 24 + 28 // vertical padding + header
-        if placed.isCited {
-            height += 10 // divider spacing
-            height += CGFloat(max(placed.observations.count, 1)) * 34
-        } else if !placed.subject.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            height += 10 + 40
+        var height = shellPaddingTop + headerHeight
+        let hasDescription = !placed.subject.description
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .isEmpty
+        if hasDescription {
+            height += headerToBodyGap + 18
         }
-        height += 10 + 26 // Add property row
+        if placed.isCited {
+            height += headerToBodyGap
+            let rows = CGFloat(max(placed.observations.count, 0))
+            // Top hairline + N property rows with inter-hairlines + Add property.
+            height += stackHairline
+                + rows * (propertyRowHeight + stackHairline)
+                + addPropertyInStackHeight
+        } else {
+            height += headerToBodyGap + 26 // quiet Add property under body
+            height += shellPaddingBottom
+        }
         return max(edgeLayoutHeight, height)
+    }
+
+    private static func stackOriginY(for placed: SourceGraphPlacedSubject, frame: CGRect) -> CGFloat {
+        var y = frame.minY + shellPaddingTop + headerHeight + headerToBodyGap
+        let hasDescription = !placed.subject.description
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .isEmpty
+        if hasDescription {
+            y += 18 + headerToBodyGap
+        }
+        return y
     }
 
     let placed: SourceGraphPlacedSubject
@@ -136,6 +181,8 @@ struct EvidenceSubjectCard: View {
     var canCite: Bool = true
     /// Live document-space drag offset from AppKit pointer ownership.
     var dragOffset: CGSize = .zero
+    /// Nested action id currently under the pointer (idle hover), if any.
+    var hoveredActionID: String? = nil
 
     private var isDragging: Bool {
         dragOffset != .zero
@@ -149,7 +196,8 @@ struct EvidenceSubjectCard: View {
             isActivated: isActivated,
             isDragging: isDragging,
             isConnectingFrom: isConnectingFrom,
-            canCite: canCite
+            canCite: canCite,
+            hoveredActionID: hoveredActionID
         )
         .opacity(ghostOpacity)
         .offset(dragOffset)
@@ -172,7 +220,8 @@ struct EvidenceSubjectCard: View {
             isActivated: false,
             isDragging: false,
             isConnectingFrom: false,
-            canCite: true
+            canCite: true,
+            hoveredActionID: nil
         )
         .opacity(0.62)
         .accessibilityHidden(true)
@@ -221,6 +270,7 @@ private struct EvidenceSubjectCardChrome: View {
     var isDragging: Bool
     var isConnectingFrom: Bool
     var canCite: Bool
+    var hoveredActionID: String?
 
     private var style: EvidenceSubjectKindStyle {
         EvidenceSubjectKindStyle.resolve(typeKey: placed.kind.rawValue, presentation: presentation)
@@ -231,36 +281,35 @@ private struct EvidenceSubjectCardChrome: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 9) {
+        VStack(alignment: .leading, spacing: EvidenceSubjectCard.headerToBodyGap) {
             headerRow
             if isConnectingFrom {
                 Text(L10n.EvidenceGraph.connectingFrom)
                     .font(PVFont.mono(size: 11))
                     .foregroundStyle(PVColor.accent)
-            } else if placed.isCited {
-                Rectangle()
-                    .fill(style.line.opacity(0.55))
-                    .frame(height: 1)
-                ForEach(placed.observations) { observation in
-                    EvidenceCitedPropertyRow(observation: observation)
-                }
             } else if let description = nonEmptyDescription {
                 Text(verbatim: description)
-                    .font(PVFont.body(size: PVTypeScale.bodySmall))
-                    .foregroundStyle(PVColor.textMuted)
+                    .font(PVFont.body(size: 12.5))
+                    .italic()
+                    .foregroundStyle(PVColor.textSecondary)
                     .lineLimit(3)
                     .multilineTextAlignment(.leading)
             }
-            addPropertyRow
+            if placed.isCited {
+                citedPropertyStack
+            } else {
+                addPropertyQuietRow
+            }
         }
-        .padding(.horizontal, 13)
-        .padding(.vertical, 12)
+        .padding(.horizontal, EvidenceSubjectCard.shellPaddingX)
+        .padding(.top, EvidenceSubjectCard.shellPaddingTop)
+        .padding(.bottom, placed.isCited ? 0 : EvidenceSubjectCard.shellPaddingBottom)
         .frame(width: EvidenceSubjectCard.width, alignment: .leading)
         .background(cardBackground)
         .overlay(cardBorder)
         .clipShape(RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous))
         .shadow(
-            color: showsSelectionChrome && !isSelected
+            color: showsSelectionChrome
                 ? Color.black.opacity(0.1)
                 : (placed.isCited ? Color.black.opacity(0.06) : .clear),
             radius: isDragging ? 10 : 6,
@@ -270,17 +319,17 @@ private struct EvidenceSubjectCardChrome: View {
     }
 
     private var headerRow: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .center, spacing: 10) {
             iconChip
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: displayLabel)
                     .font(PVFont.display(size: 16, weight: PVFontWeight.medium))
-                    .foregroundStyle(placed.isCited ? PVColor.textDisplay : PVColor.textSecondary)
+                    .foregroundStyle(placed.isCited ? PVColor.textPrimary : PVColor.textSecondary)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
                 Text(verbatim: typeLine)
-                    .font(PVFont.mono(size: 10, weight: PVFontWeight.medium))
-                    .tracking(1)
+                    .font(PVFont.mono(size: 10))
+                    .tracking(0.6)
                     .textCase(.uppercase)
                     .foregroundStyle(style.ink)
                     .lineLimit(1)
@@ -291,21 +340,75 @@ private struct EvidenceSubjectCardChrome: View {
                     .foregroundStyle(PVColor.textMuted)
                 if !placed.isCited {
                     PVIcon(.trash, size: 12)
-                        .foregroundStyle(PVColor.textMuted)
+                        .foregroundStyle(
+                            hoveredActionID == EvidenceSubjectCard.deleteActionID
+                                ? PVColor.danger
+                                : PVColor.textMuted
+                        )
                 }
             }
+            .frame(height: EvidenceSubjectCard.headerHeight, alignment: .top)
         }
     }
 
-    private var addPropertyRow: some View {
-        HStack(spacing: 6) {
+    /// Full-bleed ruled stack: kind-line hairlines between tint rows (board).
+    private var citedPropertyStack: some View {
+        VStack(spacing: EvidenceSubjectCard.stackHairline) {
+            ForEach(placed.observations) { observation in
+                EvidenceCitedPropertyRow(
+                    observation: observation,
+                    style: style,
+                    isHovered: hoveredActionID
+                        == EvidenceSubjectCard.editPropertyActionID(observationID: observation.id)
+                )
+            }
+            addPropertyStackRow
+        }
+        .padding(.top, EvidenceSubjectCard.stackHairline)
+        .background(style.line)
+        .clipShape(
+            UnevenRoundedRectangle(
+                bottomLeadingRadius: PVRadius.md,
+                bottomTrailingRadius: PVRadius.md,
+                style: .continuous
+            )
+        )
+        .padding(.horizontal, -EvidenceSubjectCard.shellPaddingX)
+    }
+
+    private var addPropertyStackRow: some View {
+        let hovered = hoveredActionID == EvidenceSubjectCard.addPropertyActionID
+        return HStack(spacing: 6) {
             PVIcon(.plus, size: 12)
             Text(L10n.EvidenceGraph.addProperty)
                 .font(PVFont.body(size: 12))
         }
-        .foregroundStyle(canCite ? PVColor.textMuted : PVColor.textFaint)
+        .foregroundStyle(
+            canCite
+                ? (hovered ? PVColor.textPrimary : PVColor.textMuted)
+                : PVColor.textFaint
+        )
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.top, 2)
+        .padding(.horizontal, EvidenceSubjectCard.shellPaddingX)
+        .padding(.top, 9)
+        .padding(.bottom, 11)
+        .background(hovered && canCite ? style.chip : style.tint)
+        .accessibilityHidden(true)
+    }
+
+    private var addPropertyQuietRow: some View {
+        let hovered = hoveredActionID == EvidenceSubjectCard.addPropertyActionID
+        return HStack(spacing: 6) {
+            PVIcon(.plus, size: 12)
+            Text(L10n.EvidenceGraph.addProperty)
+                .font(PVFont.body(size: 12))
+        }
+        .foregroundStyle(
+            canCite
+                ? (hovered ? PVColor.textPrimary : PVColor.textMuted)
+                : PVColor.textFaint
+        )
+        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityHidden(true)
     }
 
@@ -345,21 +448,22 @@ private struct EvidenceSubjectCardChrome: View {
         .frame(width: 28, height: 28)
     }
 
+    /// Board prose: filled kind-ink check when cited; dashed undocumented circle when not.
+    /// Not a circular status disc around the check — the check itself is the badge.
     private var citationBadge: some View {
-        ZStack {
-            Circle()
-                .fill(placed.isCited ? style.ink : PVColor.surfaceCard)
-            Circle()
-                .strokeBorder(
-                    placed.isCited ? style.tint : style.tint,
-                    lineWidth: 1.5
-                )
+        Group {
             if placed.isCited {
-                PVIcon(.check, size: 9)
-                    .foregroundStyle(style.chip)
+                PVIcon(.check, size: 11)
+                    .foregroundStyle(style.ink)
+                    .shadow(color: style.chip.opacity(0.95), radius: 0.6, y: 0)
             } else {
                 PVIcon(.circleDashed, size: 12)
                     .foregroundStyle(PVColor.evidenceUndocumented)
+                    .background(
+                        Circle()
+                            .fill(PVColor.surfaceCard)
+                            .frame(width: 11, height: 11)
+                    )
             }
         }
         .frame(width: 14, height: 14)
@@ -368,11 +472,13 @@ private struct EvidenceSubjectCardChrome: View {
 
     private var cardBackground: some View {
         RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
-            .fill(PVColor.surfaceCard)
-            .overlay(
-                RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
-                    .fill(style.tint.opacity(placed.isCited ? 0.45 : 0.22))
-            )
+            .fill(placed.isCited ? style.tint : PVColor.surfaceCard)
+            .overlay {
+                if !placed.isCited {
+                    RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
+                        .fill(style.tint.opacity(0.38))
+                }
+            }
     }
 
     private var cardBorder: some View {
@@ -402,14 +508,18 @@ private struct EvidenceSubjectCardChrome: View {
 }
 
 /// Compact Observation summary row on a cited primary card (feature snowflake).
+///
+/// Board: ruled tint row; hover lifts to chip + 2px kind-ink inset at the leading edge.
 private struct EvidenceCitedPropertyRow: View {
     let observation: CatalogObservation
+    let style: EvidenceSubjectKindStyle
+    var isHovered: Bool = false
 
     var body: some View {
-        HStack(alignment: .top, spacing: 6) {
-            VStack(alignment: .leading, spacing: 1) {
+        HStack(alignment: .center, spacing: 8) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(verbatim: propertyLabel)
-                    .font(PVFont.mono(size: 9, weight: PVFontWeight.medium))
+                    .font(PVFont.mono(size: 9))
                     .tracking(0.7)
                     .textCase(.uppercase)
                     .foregroundStyle(PVColor.textMuted)
@@ -423,10 +533,19 @@ private struct EvidenceCitedPropertyRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             PVIcon(.penLine, size: 12)
-                .foregroundStyle(PVColor.textMuted)
-                .padding(.top, 2)
+                .foregroundStyle(PVColor.textFaint)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, EvidenceSubjectCard.shellPaddingX)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, minHeight: EvidenceSubjectCard.propertyRowHeight, alignment: .leading)
+        .background(isHovered ? style.chip : style.tint)
+        .overlay(alignment: .leading) {
+            if isHovered {
+                Rectangle()
+                    .fill(style.ink)
+                    .frame(width: 2)
+            }
+        }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(verbatim: "\(propertyLabel), \(valueSummary)"))
     }
@@ -442,7 +561,7 @@ private struct EvidenceCitedPropertyRow: View {
         if rendered.isEmpty {
             return String(localized: L10n.EvidenceGraph.citedValueUnavailable)
         }
-        return isNegative ? "¬ \(rendered)" : rendered
+        return rendered
     }
 
     private var isNegative: Bool {

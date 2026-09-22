@@ -755,7 +755,10 @@ private struct EvidenceGraphDocumentBody: View {
             isActivated: model.activatedSubjectID == placed.id,
             isConnectingFrom: model.connectOriginID == placed.id,
             canCite: model.canCite,
-            dragOffset: drag
+            dragOffset: drag,
+            hoveredActionID: pointer.hoveredCardAction?.cardID == placed.id
+                ? pointer.hoveredCardAction?.actionID
+                : nil
         )
         .accessibilityAction(named: Text(L10n.EvidenceGraph.editAccessibility)) {
             model.beginEdit(subjectID: placed.id)
