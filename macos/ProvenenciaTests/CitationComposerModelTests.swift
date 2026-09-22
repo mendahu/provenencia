@@ -149,7 +149,7 @@ struct CitationComposerModelTests {
         return store
     }
 
-    private func seedArtifact(_ store: FakeStore, count: Int = 1) {
+    private func seedArtifact(_ store: FakeStore, count: Int = 1, pdf: Bool = true) {
         store.artifactsBySource[sourceID] = (0..<count).map { i in
             CatalogArtifact(
                 id: "art-\(i)",
@@ -162,7 +162,7 @@ struct CitationComposerModelTests {
                     id: "file-\(i)",
                     relPath: "objects/file-\(i).pdf",
                     originalFilename: "scan\(i).pdf",
-                    mediaType: "application/pdf",
+                    mediaType: pdf ? "application/pdf" : "image/jpeg",
                     byteSize: 10
                 )
             )
@@ -207,19 +207,34 @@ struct CitationComposerModelTests {
         await model.prepare()
         #expect(model.phase == .compose)
         #expect(model.selectedArtifactID == "art-0")
+        #expect(model.observations.isEmpty)
         #expect(model.availableProperties.map(\.id).sorted() == ["prop-age", occupationPropertyID].sorted())
         #expect(!model.availableProperties.contains(where: { $0.valueType == "name" }))
     }
 
-    @Test func prepareShowsPickerWhenMultipleArtifacts() async {
+    @Test func prepareShowsPickerUntilContinue() async {
         let store = makeStore()
         seedArtifact(store, count: 2)
         let model = makeModel(store: store)
         await model.prepare()
         #expect(model.phase == .pickArtifact)
-        model.selectArtifact("art-1")
+        #expect(model.selectedArtifactID == nil)
+        model.selectPendingArtifact("art-1")
+        #expect(model.phase == .pickArtifact)
+        model.confirmArtifactSelection()
         #expect(model.phase == .compose)
         #expect(model.selectedArtifactID == "art-1")
+        #expect(model.observations.isEmpty)
+    }
+
+    @Test func prepareNoArtifactsOpensInertCompose() async {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.prepare()
+        #expect(model.phase == .compose)
+        #expect(model.hasNoArtifacts)
+        #expect(model.sourcePageLocation().sourceSurface == .page)
+        #expect(model.sourcePageLocation().sourceId == sourceID)
     }
 
     @Test func prepareExcludesConnectEdgePropertiesOnBridge() async {
@@ -248,21 +263,46 @@ struct CitationComposerModelTests {
         #expect(!model.availableProperties.contains(where: { $0.key == "person" }))
     }
 
-    @Test func submitRequiresObservationValueThenWrites() async throws {
+    @Test func observationDialogCommitsRow() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.beginAddObservation()
+        var draft = model.observationDialog!
+        draft.propertyID = occupationPropertyID
+        draft.valueText = "Farmer"
+        model.updateObservationDialog(draft)
+        model.confirmObservationDialog()
+        #expect(model.observationDialog == nil)
+        #expect(model.observations.count == 1)
+        #expect(model.observations[0].valueText == "Farmer")
+    }
+
+    @Test func submitRequiresLocatorAndObservationThenWrites() async throws {
         let store = makeStore()
         seedArtifact(store)
         let model = makeModel(store: store)
         await model.prepare()
         #expect(model.phase == .compose)
 
-        let empty = await model.submit()
-        #expect(empty == nil)
+        let noObs = await model.submit()
+        #expect(noObs == nil)
+        #expect(model.locatorError != nil || model.formError != nil)
+
+        model.markWholeImageLocator()
+        #expect(model.hasLocator)
+
+        let stillEmpty = await model.submit()
+        #expect(stillEmpty == nil)
         #expect(model.formError != nil)
 
-        var row = model.observations[0]
-        row.propertyID = occupationPropertyID
-        row.valueText = "Farmer"
-        model.updateObservation(row)
+        model.beginAddObservation()
+        var draft = model.observationDialog!
+        draft.propertyID = occupationPropertyID
+        draft.valueText = "Farmer"
+        model.updateObservationDialog(draft)
+        model.confirmObservationDialog()
 
         let location = await model.submit()
         #expect(location?.sourceSurface == .graph)
@@ -275,6 +315,19 @@ struct CitationComposerModelTests {
         #expect(listed[0].valueText == "Farmer")
         #expect(listed[0].propertyID == occupationPropertyID)
         #expect(listed[0].subjectID == subjectID)
+    }
+
+    @Test func pdfPageNavCommitsLocator() async {
+        let store = makeStore()
+        seedArtifact(store, count: 1, pdf: true)
+        let model = makeModel(store: store)
+        await model.prepare()
+        #expect(!model.hasLocator)
+        // Stub page count is 1, so next is a no-op — Draw region commits page for PDF.
+        model.markWholeImageLocator()
+        #expect(model.locatorPage == 1)
+        model.clearLocator()
+        #expect(!model.hasLocator)
     }
 
     @Test func missingSubjectFallsBack() async {

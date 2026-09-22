@@ -249,12 +249,12 @@ python3 scripts/check-localizable-xcstrings.py
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | S7-09, S7-03, **S7-D4** |
-| **Deliverables** | Done. Replaced composer stub with `Features/CitationComposer/` (`CitationComposerView` + `@Observable CitationComposerModel`). Full-window viewer placeholder \| form; Artifact auto-select / picker; citation transcription / uncertain / description; Observation rows for **text**, **term** (search + Add custom), **integer**, **date** (`Features/Dates/`); Property picker filters connect-edge keys via `listConnectRules().edgePropertyKeys`; placeholder `locator_json` page selector until S7-07; submit → `createCitationWithObservations` → `CatalogMutation.createdCitation` → Evidence graph; breadcrumb **Citation for {scope}**; missing subject → graph fallback; L10n + composer a11y. |
-| **Tests** | `CitationComposerModelTests` (artifact pick, edge-property exclude, submit path, subject missing); breadcrumb / PlaceRegistry; `check-localizable-xcstrings.py`. |
-| **Dogfood** | Add property on Person → composer → (pick Artifact if needed) → text Observation → Save → graph cited row → Back/Forward as normal places. |
-| **Out** | Image/PDF viewers (S7-06); locator draw UI (S7-07); NameValue (S7-02b); Connect prefilled endpoints (S7-10); edit existing Citations. |
+| **Deliverables** | Done. Replaced composer stub with `Features/CitationComposer/` (`CitationComposerView` + `@Observable CitationComposerModel`), then **realigned to Citation Composer board** Frames 1–8 / 11–13: left viewer chrome (source · Artifact N of M · Change; page/zoom/Draw region/Clear locator stubs; locator crumb + errors); right form with summary Observation rows; **Add observation** `PVFormDialog` (text/term/integer/date); Frame 7 Choose artifact Cancel/Continue; Frame 8 no-Artifact gate → Source page + inert form; locator required for Save (page selector; no silent inject). Submit → `createCitationWithObservations` → `CatalogMutation.createdCitation` → Evidence graph; breadcrumb **Citation for {scope}**. |
+| **Tests** | `CitationComposerModelTests` (picker Continue, dialog commit, locator + observation gates, edge-property exclude, no-Artifact inert, subject missing); breadcrumb / PlaceRegistry; `check-localizable-xcstrings.py`. |
+| **Dogfood** | Add property on Person → composer → (pick Artifact if needed) → Draw region / page locator → Add observation dialog → Save → graph cited row → Back/Forward as normal places. |
+| **Out** | Real PDF/image viewers (S7-06); polygon region drawing (S7-07); NameValue (S7-02b); Connect prefilled endpoints (S7-10); edit existing Citations. |
 
-**Landed:** Thin cite path grows cards; viewers and Connect fill in later.
+**Landed:** Board-aligned thin cite path grows cards; viewers and Connect fill in later.
 
 **Verify:**
 

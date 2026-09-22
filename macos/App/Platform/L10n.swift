@@ -1294,7 +1294,7 @@ enum L10n {
         }
     }
 
-    /// Citation composer place (S7-08 thin submit path).
+    /// Citation composer place (S7-08 thin submit path; board-aligned shell).
     enum CitationComposer {
         static func breadcrumbCitationFor(scope: String) -> String {
             let format = String(localized: LocalizedStringResource(
@@ -1323,16 +1323,10 @@ enum L10n {
             comment: "Cancel button that returns to the Evidence graph without writing"
         )
 
-        static let backToGraph = LocalizedStringResource(
-            "citationComposer.backToGraph",
-            defaultValue: "Back to Evidence graph",
-            comment: "Recovery button when the composer cannot proceed"
-        )
-
-        static let citationSection = LocalizedStringResource(
-            "citationComposer.citationSection",
-            defaultValue: "Citation",
-            comment: "Section title above transcription and citation metadata fields"
+        static let continuePick = LocalizedStringResource(
+            "citationComposer.continuePick",
+            defaultValue: "Continue",
+            comment: "Confirms Artifact selection on the multi-Artifact picker"
         )
 
         static let transcriptionLabel = LocalizedStringResource(
@@ -1343,13 +1337,13 @@ enum L10n {
 
         static let uncertainLabel = LocalizedStringResource(
             "citationComposer.uncertainLabel",
-            defaultValue: "Transcription is uncertain",
+            defaultValue: "Uncertain reading",
             comment: "Checkbox when the researcher is unsure of the transcription"
         )
 
         static let uncertainNoteLabel = LocalizedStringResource(
             "citationComposer.uncertainNoteLabel",
-            defaultValue: "Why it is uncertain",
+            defaultValue: "Why the transcription is uncertain",
             comment: "Note field shown when transcription uncertain is checked"
         )
 
@@ -1368,13 +1362,31 @@ enum L10n {
         static let addObservation = LocalizedStringResource(
             "citationComposer.addObservation",
             defaultValue: "Add observation",
-            comment: "Button that appends an Observation row"
+            comment: "Button / dialog confirm that commits an Observation"
+        )
+
+        static let addObservationTitle = LocalizedStringResource(
+            "citationComposer.addObservationTitle",
+            defaultValue: "Add observation",
+            comment: "Title of the Add observation form dialog"
+        )
+
+        static let addObservationSubtitle = LocalizedStringResource(
+            "citationComposer.addObservationSubtitle",
+            defaultValue: "Pick a Property, then its value.",
+            comment: "Subtitle under the Add observation dialog title"
+        )
+
+        static let editObservation = LocalizedStringResource(
+            "citationComposer.editObservation",
+            defaultValue: "Edit observation",
+            comment: "Icon button that reopens the observation dialog for a row"
         )
 
         static let removeObservation = LocalizedStringResource(
             "citationComposer.removeObservation",
-            defaultValue: "Remove",
-            comment: "Removes one Observation draft row"
+            defaultValue: "Remove observation",
+            comment: "Icon button that deletes one Observation row"
         )
 
         static let propertyLabel = LocalizedStringResource(
@@ -1416,13 +1428,31 @@ enum L10n {
         static let valueLabel = LocalizedStringResource(
             "citationComposer.valueLabel",
             defaultValue: "Value",
-            comment: "Label for a text Observation value"
+            comment: "Generic value label before a Property type is chosen"
         )
 
-        static let integerLabel = LocalizedStringResource(
-            "citationComposer.integerLabel",
-            defaultValue: "Integer",
-            comment: "Label for an integer Observation value"
+        static let valueLabelText = LocalizedStringResource(
+            "citationComposer.valueLabelText",
+            defaultValue: "Value — text",
+            comment: "Value slot label for a text Property"
+        )
+
+        static let valueLabelTerm = LocalizedStringResource(
+            "citationComposer.valueLabelTerm",
+            defaultValue: "Value — term",
+            comment: "Value slot label for a term Property"
+        )
+
+        static let valueLabelDate = LocalizedStringResource(
+            "citationComposer.valueLabelDate",
+            defaultValue: "Value — date",
+            comment: "Value slot label for a date Property"
+        )
+
+        static let valueLabelInteger = LocalizedStringResource(
+            "citationComposer.valueLabelInteger",
+            defaultValue: "Value — whole number",
+            comment: "Value slot label for an integer Property"
         )
 
         static let termLabel = LocalizedStringResource(
@@ -1467,24 +1497,6 @@ enum L10n {
             comment: "Label field when minting a custom Property term"
         )
 
-        static let editDate = LocalizedStringResource(
-            "citationComposer.editDate",
-            defaultValue: "Edit date",
-            comment: "Opens the DateValue editor for a date Observation"
-        )
-
-        static let dateDialogTitle = LocalizedStringResource(
-            "citationComposer.dateDialogTitle",
-            defaultValue: "Date",
-            comment: "Title of the DateValue dialog hosted in the composer"
-        )
-
-        static let dateDialogConfirm = LocalizedStringResource(
-            "citationComposer.dateDialogConfirm",
-            defaultValue: "Done",
-            comment: "Confirm button on the DateValue dialog"
-        )
-
         static let dateUnset = LocalizedStringResource(
             "citationComposer.dateUnset",
             defaultValue: "No date set",
@@ -1493,44 +1505,158 @@ enum L10n {
 
         static let pickArtifactTitle = LocalizedStringResource(
             "citationComposer.pickArtifactTitle",
-            defaultValue: "Choose an Artifact",
+            defaultValue: "Choose an artifact",
             comment: "Title when the Source has multiple Artifacts to cite"
         )
 
-        static let pickArtifactMessage = LocalizedStringResource(
-            "citationComposer.pickArtifactMessage",
-            defaultValue: "Pick which Artifact this citation comes from.",
-            comment: "Body under the multi-Artifact picker title"
-        )
+        static func pickArtifactCount(title: String, count: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "citationComposer.pickArtifactCount",
+                defaultValue: "%@ has %lld artifacts attached.",
+                comment: "Caption under Choose an artifact; arguments are Source title and artifact count"
+            ))
+            return String(format: format, locale: .current, title, count)
+        }
 
         static let changeArtifact = LocalizedStringResource(
             "citationComposer.changeArtifact",
-            defaultValue: "Change Artifact",
+            defaultValue: "Change artifact",
             comment: "Returns to the Artifact picker from the compose shell"
+        )
+
+        static func artifactIndexOf(index: Int, total: Int, kind: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "citationComposer.artifactIndexOf",
+                defaultValue: "Artifact %lld of %lld · %@",
+                comment: "Viewer header index; arguments are 1-based index, total, and media kind"
+            ))
+            return String(format: format, locale: .current, index, total, kind)
+        }
+
+        static let artifactKindPDF = LocalizedStringResource(
+            "citationComposer.artifactKindPDF",
+            defaultValue: "PDF",
+            comment: "Media kind label for a PDF Artifact"
+        )
+
+        static let artifactKindImage = LocalizedStringResource(
+            "citationComposer.artifactKindImage",
+            defaultValue: "Image",
+            comment: "Media kind label for an image Artifact"
+        )
+
+        static let artifactKindUnknown = LocalizedStringResource(
+            "citationComposer.artifactKindUnknown",
+            defaultValue: "File",
+            comment: "Media kind fallback when type is neither image nor PDF"
+        )
+
+        static let mediaCaptionPDF = LocalizedStringResource(
+            "citationComposer.mediaCaptionPDF",
+            defaultValue: "PDF",
+            comment: "Caption under an Artifact tile for PDF media"
+        )
+
+        static let mediaCaptionImage = LocalizedStringResource(
+            "citationComposer.mediaCaptionImage",
+            defaultValue: "Image · 1 page",
+            comment: "Caption under an Artifact tile for image media"
+        )
+
+        static let previousPage = LocalizedStringResource(
+            "citationComposer.previousPage",
+            defaultValue: "Previous page",
+            comment: "Viewer tool: go to previous PDF page"
+        )
+
+        static let nextPage = LocalizedStringResource(
+            "citationComposer.nextPage",
+            defaultValue: "Next page",
+            comment: "Viewer tool: go to next PDF page"
+        )
+
+        static func pageOf(total: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "citationComposer.pageOf",
+                defaultValue: "of %lld",
+                comment: "Viewer page count suffix; argument is total pages"
+            ))
+            return String(format: format, locale: .current, total)
+        }
+
+        static let drawRegion = LocalizedStringResource(
+            "citationComposer.drawRegion",
+            defaultValue: "Draw region",
+            comment: "Viewer tool that commits a locator (thin: page/whole-image)"
+        )
+
+        static let clearLocator = LocalizedStringResource(
+            "citationComposer.clearLocator",
+            defaultValue: "Clear locator",
+            comment: "Clears the committed locator on the Artifact"
+        )
+
+        static func locatorPage(_ page: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "citationComposer.locatorPage",
+                defaultValue: "Page %lld",
+                comment: "Locator crumb when a PDF page is selected; argument is page number"
+            ))
+            return String(format: format, locale: .current, page)
+        }
+
+        static let locatorWholeImage = LocalizedStringResource(
+            "citationComposer.locatorWholeImage",
+            defaultValue: "Whole image",
+            comment: "Locator crumb when thin Draw region marked the full image"
+        )
+
+        static let locatorUnsetError = LocalizedStringResource(
+            "citationComposer.locatorUnsetError",
+            defaultValue: "No locator set — page through to the right page, or draw the region the evidence sits in.",
+            comment: "Callout on the locator strip when Save is refused for missing locator"
+        )
+
+        static let locatorSaveError = LocalizedStringResource(
+            "citationComposer.locatorSaveError",
+            defaultValue: "Set a locator on the artifact before saving.",
+            comment: "Footer error when Save is refused for missing locator"
+        )
+
+        static let canvasNothingSelected = LocalizedStringResource(
+            "citationComposer.canvasNothingSelected",
+            defaultValue: "Nothing selected on this artifact yet",
+            comment: "Viewer canvas caption when no locator is committed"
         )
 
         static let viewerPlaceholderTitle = LocalizedStringResource(
             "citationComposer.viewerPlaceholderTitle",
             defaultValue: "Artifact viewer",
-            comment: "Title in the left-pane placeholder until S7-06 ships viewers"
+            comment: "Fallback canvas title until S7-06 ships viewers"
         )
 
         static let viewerPlaceholderMessage = LocalizedStringResource(
             "citationComposer.viewerPlaceholderMessage",
-            defaultValue: "Image and PDF viewers arrive in a later update. You can still save the citation.",
+            defaultValue: "Image and PDF viewers arrive in a later update. You can still set a locator and save the citation.",
             comment: "Explains the thin-composer viewer placeholder"
         )
 
-        static let noArtifactsTitle = LocalizedStringResource(
-            "citationComposer.noArtifactsTitle",
-            defaultValue: "No Artifacts on this source",
-            comment: "Title when composer opens without any Artifact"
+        static let noArtifactsCallout = LocalizedStringResource(
+            "citationComposer.noArtifactsCallout",
+            defaultValue: "Every citation needs an artifact to point at. Attach one from the Source page, then return here.",
+            comment: "Left-pane callout when the Source has no Artifacts"
         )
 
-        static let noArtifactsMessage = LocalizedStringResource(
-            "citationComposer.noArtifactsMessage",
-            defaultValue: "Attach an Artifact on the Source page before citing.",
-            comment: "Body when composer cannot cite for lack of Artifacts"
+        static let goToSourcePage = LocalizedStringResource(
+            "citationComposer.goToSourcePage",
+            defaultValue: "Go to Source page",
+            comment: "Recovery action from the no-Artifact cite gate"
+        )
+
+        static let fieldsDisabledHint = LocalizedStringResource(
+            "citationComposer.fieldsDisabledHint",
+            defaultValue: "Fields disabled until an artifact is attached",
+            comment: "Hint on the inert form pane when no Artifact exists"
         )
 
         static let needArtifact = LocalizedStringResource(
@@ -1542,19 +1668,37 @@ enum L10n {
         static let noObservationsError = LocalizedStringResource(
             "citationComposer.noObservationsError",
             defaultValue: "No observations yet — a citation has to record at least one thing the record says.",
-            comment: "Validation when Save is pressed with an empty Observations list"
+            comment: "Empty Observations section callout"
+        )
+
+        static let saveNeedsObservationError = LocalizedStringResource(
+            "citationComposer.saveNeedsObservationError",
+            defaultValue: "Add at least one observation before saving.",
+            comment: "Footer error when Save is refused for empty Observations"
+        )
+
+        static let dialogPropertyRequired = LocalizedStringResource(
+            "citationComposer.dialogPropertyRequired",
+            defaultValue: "Pick the Property this observation is about.",
+            comment: "Inline error under Property in the Add observation dialog"
+        )
+
+        static let dialogValueRequired = LocalizedStringResource(
+            "citationComposer.dialogValueRequired",
+            defaultValue: "A value is required.",
+            comment: "Inline error under Value in the Add observation dialog"
+        )
+
+        static let dialogValuePickPropertyFirst = LocalizedStringResource(
+            "citationComposer.dialogValuePickPropertyFirst",
+            defaultValue: "Pick a Property first — the editor follows its type",
+            comment: "Placeholder in the value slot before a Property is chosen"
         )
 
         static let missingPropertyError = LocalizedStringResource(
             "citationComposer.missingPropertyError",
             defaultValue: "Each observation needs a Property.",
-            comment: "Validation when an Observation row has no Property selected"
-        )
-
-        static let missingValueError = LocalizedStringResource(
-            "citationComposer.missingValueError",
-            defaultValue: "Each observation needs a value.",
-            comment: "Validation when an Observation row is missing its typed value"
+            comment: "Validation when a committed Observation has no Property"
         )
 
         static let invalidIntegerError = LocalizedStringResource(

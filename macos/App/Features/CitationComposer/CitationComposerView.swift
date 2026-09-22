@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Citation composer place (S7-08 thin): viewer placeholder | form, Artifact pick, submit.
+/// Citation composer place (S7-08): board-aligned viewer | form + observation dialog.
 struct CitationComposerView: View {
     let sourceID: String
     let subjectID: String
@@ -10,9 +10,8 @@ struct CitationComposerView: View {
 
     @Environment(WorkspaceNavigation.self) private var navigation
     @State private var model: CitationComposerModel
-    @State private var dateEditorRowID: UUID?
-    @State private var customTermPropertyID: String?
     @State private var customTermLabel = ""
+    @State private var showCustomTermDialog = false
 
     init(
         sourceID: String,
@@ -46,12 +45,14 @@ struct CitationComposerView: View {
             case .subjectMissing:
                 Color.clear
                     .onAppear { navigation.go(to: model.graphLocation()) }
-            case .noArtifacts:
-                noArtifactsState
             case .pickArtifact:
                 artifactPicker
             case .compose:
-                composeSplit
+                if model.hasNoArtifacts {
+                    noArtifactGate
+                } else {
+                    composeSplit
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -66,28 +67,22 @@ struct CitationComposerView: View {
             }
         }
         .pvFormDialog(
-            isPresented: dateEditorBinding,
+            isPresented: observationDialogBinding,
             copy: PVFormDialogCopy(
-                title: L10n.CitationComposer.dateDialogTitle,
-                confirm: L10n.CitationComposer.dateDialogConfirm,
+                title: L10n.CitationComposer.addObservationTitle,
+                subtitle: L10n.CitationComposer.addObservationSubtitle,
+                confirm: L10n.CitationComposer.addObservation,
                 cancel: L10n.CitationComposer.cancel
             ),
             isRunning: false,
-            confirmDisabled: !dateDraftIsValid,
-            accessibilityIdentifierPrefix: "citationComposer.date",
-            onConfirm: { dateEditorRowID = nil }
+            confirmDisabled: !model.canConfirmObservation,
+            accessibilityIdentifierPrefix: "citationComposer.observation",
+            onConfirm: { model.confirmObservationDialog() }
         ) {
-            if let id = dateEditorRowID,
-               let index = model.observations.firstIndex(where: { $0.id == id })
-            {
-                DateValueEditorForm(
-                    draft: dateDraftBinding(at: index),
-                    accessibilityIdentifierPrefix: "citationComposer.date"
-                )
-            }
+            observationDialogForm
         }
         .pvFormDialog(
-            isPresented: customTermBinding,
+            isPresented: $showCustomTermDialog,
             copy: PVFormDialogCopy(
                 title: L10n.CitationComposer.addTermTitle,
                 confirm: L10n.CitationComposer.addTermConfirm,
@@ -98,21 +93,18 @@ struct CitationComposerView: View {
             accessibilityIdentifierPrefix: "citationComposer.term",
             onConfirm: {
                 Task {
-                    guard let propertyID = customTermPropertyID else { return }
+                    guard let propertyID = model.observationDialog?.propertyID else { return }
                     if let term = await model.createCustomTerm(
                         propertyID: propertyID,
                         label: customTermLabel
                     ),
-                       let index = model.observations.firstIndex(where: {
-                           $0.propertyID == propertyID
-                       })
+                       var draft = model.observationDialog
                     {
-                        var row = model.observations[index]
-                        row.valueTermID = term.id
-                        model.updateObservation(row)
+                        draft.valueTermID = term.id
+                        model.updateObservationDialog(draft)
                     }
-                    customTermPropertyID = nil
                     customTermLabel = ""
+                    showCustomTermDialog = false
                 }
             }
         ) {
@@ -123,219 +115,421 @@ struct CitationComposerView: View {
         }
     }
 
-    // MARK: - States
-
-    private var noArtifactsState: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space7) {
-            Text(L10n.CitationComposer.noArtifactsTitle)
-                .font(PVFont.display(size: PVTypeScale.h2, weight: PVFontWeight.medium))
-                .foregroundStyle(PVColor.textDisplay)
-            Text(L10n.CitationComposer.noArtifactsMessage)
-                .font(PVFont.body(size: PVTypeScale.body))
-                .foregroundStyle(PVColor.textSecondary)
-            PVButton(L10n.CitationComposer.backToGraph, variant: .secondary) {
-                navigation.go(to: model.graphLocation())
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(PVSpacing.space9)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
+    // MARK: - Frame 7 picker
 
     private var artifactPicker: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space7) {
-            Text(L10n.CitationComposer.pickArtifactTitle)
-                .font(PVFont.display(size: PVTypeScale.h2, weight: PVFontWeight.medium))
-                .foregroundStyle(PVColor.textDisplay)
-            Text(L10n.CitationComposer.pickArtifactMessage)
-                .font(PVFont.body(size: PVTypeScale.body))
-                .foregroundStyle(PVColor.textSecondary)
-            LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 180), spacing: PVSpacing.space5)],
-                spacing: PVSpacing.space5
-            ) {
-                ForEach(model.artifacts, id: \.id) { artifact in
-                    artifactTile(artifact)
+        VStack(spacing: 0) {
+            Spacer(minLength: PVSpacing.space9)
+            VStack(alignment: .leading, spacing: PVSpacing.space7) {
+                VStack(alignment: .leading, spacing: PVSpacing.space3) {
+                    Text(L10n.CitationComposer.pickArtifactTitle)
+                        .font(PVFont.display(size: PVTypeScale.h2, weight: PVFontWeight.medium))
+                        .foregroundStyle(PVColor.textDisplay)
+                    Text(verbatim: pickArtifactCaption)
+                        .font(PVFont.body(size: PVTypeScale.body))
+                        .foregroundStyle(PVColor.textSecondary)
+                }
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 160), spacing: PVSpacing.space5)],
+                    spacing: PVSpacing.space5
+                ) {
+                    ForEach(model.artifacts, id: \.id) { artifact in
+                        artifactPickCard(artifact)
+                    }
                 }
             }
-            Spacer(minLength: 0)
+            .padding(PVSpacing.space9)
+            .frame(maxWidth: 720)
+            .background(
+                RoundedRectangle(cornerRadius: PVRadius.lg, style: .continuous)
+                    .fill(PVColor.surfaceRaised)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: PVRadius.lg, style: .continuous)
+                    .strokeBorder(PVColor.borderSubtle, lineWidth: 1)
+            )
+            Spacer(minLength: PVSpacing.space9)
+            HStack {
+                PVButton(L10n.CitationComposer.cancel, variant: .secondary) {
+                    navigation.go(to: model.graphLocation())
+                }
+                Spacer()
+                PVButton(L10n.CitationComposer.continuePick, variant: .primary) {
+                    model.confirmArtifactSelection()
+                }
+                .disabled(model.pendingArtifactID == nil)
+                .accessibilityIdentifier("citationComposer.pick.continue")
+            }
+            .padding(PVSpacing.space7)
+            .frame(maxWidth: 720)
         }
-        .padding(PVSpacing.space9)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, PVSpacing.space9)
     }
 
-    private func artifactTile(_ artifact: CatalogArtifact) -> some View {
-        let selected = model.selectedArtifactID == artifact.id
+    private var pickArtifactCaption: String {
+        let title = model.sourceTitle.isEmpty ? "—" : model.sourceTitle
+        return L10n.CitationComposer.pickArtifactCount(title: title, count: model.artifacts.count)
+    }
+
+    private func artifactPickCard(_ artifact: CatalogArtifact) -> some View {
+        let selected = model.pendingArtifactID == artifact.id
         return Button {
-            model.selectArtifact(artifact.id)
+            model.selectPendingArtifact(artifact.id)
         } label: {
             VStack(alignment: .leading, spacing: PVSpacing.space3) {
                 RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                    .strokeBorder(
-                        selected ? PVColor.accent : PVColor.borderDefault,
-                        lineWidth: selected ? 2 : 1
-                    )
-                    .background(
-                        RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                            .fill(PVColor.surfaceSunken)
-                    )
-                    .frame(height: 120)
+                    .fill(PVColor.surfaceSunken)
+                    .frame(height: 100)
                     .overlay {
-                        Text(verbatim: artifactMediaLabel(artifact))
+                        Text(verbatim: artifactDisplayName(artifact))
                             .font(PVFont.body(size: PVTypeScale.caption))
                             .foregroundStyle(PVColor.textMuted)
                             .multilineTextAlignment(.center)
                             .padding(PVSpacing.space4)
                     }
+                    .overlay(
+                        RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                            .strokeBorder(
+                                selected ? PVColor.accent : PVColor.borderDefault,
+                                lineWidth: selected ? 2 : 1
+                            )
+                    )
                 Text(verbatim: artifactDisplayName(artifact))
                     .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
                     .foregroundStyle(PVColor.textPrimary)
                     .lineLimit(2)
+                Text(verbatim: artifactMediaCaption(artifact))
+                    .font(PVFont.body(size: PVTypeScale.micro))
+                    .foregroundStyle(PVColor.textMuted)
             }
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text(verbatim: artifactDisplayName(artifact)))
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
-    private var composeSplit: some View {
+    // MARK: - Frame 8 no-artifact gate
+
+    private var noArtifactGate: some View {
         HStack(alignment: .top, spacing: 0) {
-            viewerPane
-                .frame(minWidth: 280, idealWidth: 420, maxWidth: 560)
+            VStack(alignment: .leading, spacing: PVSpacing.space7) {
+                PVCallout(
+                    tone: .warning,
+                    message: String(localized: L10n.CitationComposer.noArtifactsCallout)
+                ) {
+                    PVButton(L10n.CitationComposer.goToSourcePage, variant: .secondary, size: .sm) {
+                        navigation.go(to: model.sourcePageLocation())
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(PVSpacing.space7)
+            .frame(minWidth: 280, idealWidth: 420, maxWidth: 560, maxHeight: .infinity, alignment: .topLeading)
             PVDivider()
-            formPane
+            formPane(inert: true)
                 .frame(maxWidth: .infinity)
         }
     }
 
+    // MARK: - Compose split
+
+    private var composeSplit: some View {
+        HStack(alignment: .top, spacing: 0) {
+            viewerPane
+                .frame(minWidth: 280, idealWidth: 440, maxWidth: 580)
+            PVDivider()
+            formPane(inert: false)
+                .frame(maxWidth: .infinity)
+        }
+    }
+
+    // MARK: - Viewer pane (Frames 1 / 2 / 12)
+
     private var viewerPane: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space5) {
-            HStack {
-                if let artifact = model.selectedArtifact {
-                    Text(verbatim: artifactDisplayName(artifact))
-                        .font(PVFont.body(size: PVTypeScale.body, weight: PVFontWeight.medium))
-                        .foregroundStyle(PVColor.textDisplay)
-                }
-                Spacer()
-                if model.artifacts.count > 1 {
-                    PVButton(L10n.CitationComposer.changeArtifact, variant: .ghost, size: .sm) {
-                        model.changeArtifact()
-                    }
-                }
+            viewerHeader
+            viewerToolStrip
+            if let locatorError = model.locatorError, model.submitAttempted {
+                PVCallout(tone: .danger, message: locatorError, compact: true)
+            } else if model.hasLocator {
+                locatorCrumb
             }
-            RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
-                .strokeBorder(PVColor.borderDefault, style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
-                .background(
-                    RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
-                        .fill(PVColor.surfaceSunken)
-                )
-                .overlay {
-                    VStack(spacing: PVSpacing.space3) {
-                        Text(L10n.CitationComposer.viewerPlaceholderTitle)
-                            .font(PVFont.body(size: PVTypeScale.body, weight: PVFontWeight.medium))
-                            .foregroundStyle(PVColor.textMuted)
-                        Text(L10n.CitationComposer.viewerPlaceholderMessage)
-                            .font(PVFont.body(size: PVTypeScale.caption))
-                            .foregroundStyle(PVColor.textFaint)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding(PVSpacing.space7)
-                }
+            viewerCanvas
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .padding(PVSpacing.space7)
     }
 
-    private var formPane: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: PVSpacing.space8) {
-                    citationFields
-                    observationsSection
-                    if let formError = model.formError {
-                        PVCallout(tone: .danger, message: formError)
-                    }
+    private var viewerHeader: some View {
+        HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space3) {
+            Text(verbatim: model.sourceTitle.isEmpty ? "—" : model.sourceTitle)
+                .font(PVFont.body(size: PVTypeScale.body, weight: PVFontWeight.medium))
+                .foregroundStyle(PVColor.textDisplay)
+                .lineLimit(1)
+            Text(verbatim: "·")
+                .foregroundStyle(PVColor.textMuted)
+            Text(verbatim: artifactIndexCaption)
+                .font(PVFont.body(size: PVTypeScale.caption))
+                .foregroundStyle(PVColor.textSecondary)
+                .lineLimit(1)
+            Spacer(minLength: PVSpacing.space3)
+            if model.artifacts.count > 1 {
+                Button {
+                    model.changeArtifact()
+                } label: {
+                    Text(L10n.CitationComposer.changeArtifact)
+                        .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
+                        .foregroundStyle(PVColor.accent)
                 }
-                .padding(PVSpacing.space7)
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("citationComposer.changeArtifact")
             }
-            PVDivider()
-            footer
         }
     }
 
-    private var citationFields: some View {
+    private var artifactIndexCaption: String {
+        guard let index = model.selectedArtifactIndex else {
+            return String(localized: L10n.CitationComposer.artifactKindUnknown)
+        }
+        let kind = model.isPDFArtifact
+            ? String(localized: L10n.CitationComposer.artifactKindPDF)
+            : (model.isImageArtifact
+                ? String(localized: L10n.CitationComposer.artifactKindImage)
+                : String(localized: L10n.CitationComposer.artifactKindUnknown))
+        return L10n.CitationComposer.artifactIndexOf(
+            index: index + 1,
+            total: model.artifacts.count,
+            kind: kind
+        )
+    }
+
+    private var viewerToolStrip: some View {
+        HStack(spacing: PVSpacing.space4) {
+            if model.isPDFArtifact {
+                HStack(spacing: PVSpacing.space2) {
+                    PVIconButton(.chevronBack, label: L10n.CitationComposer.previousPage, size: .sm) {
+                        model.goToPreviousPage()
+                    }
+                    .disabled(model.viewerPage <= 1)
+                    Text(verbatim: "\(model.viewerPage)")
+                        .font(PVFont.mono(size: PVTypeScale.caption, weight: PVFontWeight.medium))
+                        .foregroundStyle(PVColor.textPrimary)
+                        .frame(minWidth: 20)
+                    Text(verbatim: pageOfCaption)
+                        .font(PVFont.body(size: PVTypeScale.caption))
+                        .foregroundStyle(PVColor.textMuted)
+                    PVIconButton(.chevronForward, label: L10n.CitationComposer.nextPage, size: .sm) {
+                        model.goToNextPage()
+                    }
+                    .disabled(model.viewerPage >= model.viewerPageCount)
+                }
+                toolSep
+            }
+
+            HStack(spacing: PVSpacing.space2) {
+                Text(verbatim: "100%")
+                    .font(PVFont.body(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textMuted)
+            }
+            toolSep
+
+            PVButton(L10n.CitationComposer.drawRegion, variant: .secondary, size: .sm) {
+                model.markWholeImageLocator()
+            }
+            .accessibilityIdentifier("citationComposer.drawRegion")
+
+            Spacer(minLength: 0)
+
+            if model.hasLocator {
+                Button {
+                    model.clearLocator()
+                } label: {
+                    Text(L10n.CitationComposer.clearLocator)
+                        .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
+                        .foregroundStyle(PVColor.accent)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("citationComposer.clearLocator")
+            }
+        }
+    }
+
+    private var toolSep: some View {
+        Rectangle()
+            .fill(PVColor.borderSubtle)
+            .frame(width: 1, height: 16)
+    }
+
+    private var pageOfCaption: String {
+        L10n.CitationComposer.pageOf(total: model.viewerPageCount)
+    }
+
+    private var locatorCrumb: some View {
+        HStack(spacing: PVSpacing.space2) {
+            if model.locatorIsWholeImage {
+                Text(L10n.CitationComposer.locatorWholeImage)
+                    .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
+                    .foregroundStyle(PVColor.textSecondary)
+            } else if let page = model.locatorPage {
+                Text(verbatim: L10n.CitationComposer.locatorPage(page))
+                    .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
+                    .foregroundStyle(PVColor.textSecondary)
+            }
+        }
+    }
+
+    private var viewerCanvas: some View {
+        RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
+            .strokeBorder(PVColor.borderDefault, style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
+            .background(
+                RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
+                    .fill(PVColor.surfaceSunken)
+            )
+            .overlay {
+                VStack(spacing: PVSpacing.space3) {
+                    Text(verbatim: canvasCaption)
+                        .font(PVFont.body(size: PVTypeScale.body, weight: PVFontWeight.medium))
+                        .foregroundStyle(PVColor.textMuted)
+                        .multilineTextAlignment(.center)
+                    Text(L10n.CitationComposer.viewerPlaceholderMessage)
+                        .font(PVFont.body(size: PVTypeScale.caption))
+                        .foregroundStyle(PVColor.textFaint)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(PVSpacing.space7)
+            }
+    }
+
+    private var canvasCaption: String {
+        if !model.hasLocator {
+            return String(localized: L10n.CitationComposer.canvasNothingSelected)
+        }
+        if let artifact = model.selectedArtifact {
+            return artifactDisplayName(artifact)
+        }
+        return String(localized: L10n.CitationComposer.viewerPlaceholderTitle)
+    }
+
+    // MARK: - Form pane
+
+    private func formPane(inert: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: PVSpacing.space8) {
+                    citationFields(inert: inert)
+                    observationsSection(inert: inert)
+                }
+                .padding(PVSpacing.space7)
+            }
+            .disabled(inert)
+            .opacity(inert ? 0.55 : 1)
+            PVDivider()
+            footer(inert: inert)
+        }
+    }
+
+    private func citationFields(inert: Bool) -> some View {
         VStack(alignment: .leading, spacing: PVSpacing.space5) {
-            Text(L10n.CitationComposer.citationSection)
-                .font(PVFont.body(size: PVTypeScale.body, weight: PVFontWeight.semibold))
-                .foregroundStyle(PVColor.textDisplay)
             PVField(label: L10n.CitationComposer.transcriptionLabel) {
-                PVTextArea(text: Bindable(model).transcription, lineLimit: 2...6)
-                    .accessibilityIdentifier("citationComposer.transcription")
+                HStack(spacing: PVSpacing.space4) {
+                    Toggle(isOn: Bindable(model).transcriptionUncertain) {
+                        Text(L10n.CitationComposer.uncertainLabel)
+                            .font(PVFont.body(size: PVTypeScale.caption))
+                    }
+                    .toggleStyle(.checkbox)
+                    .disabled(inert)
+                    .accessibilityIdentifier("citationComposer.uncertain")
+                    Spacer(minLength: 0)
+                }
             }
-            Toggle(isOn: Bindable(model).transcriptionUncertain) {
-                Text(L10n.CitationComposer.uncertainLabel)
-                    .font(PVFont.body(size: PVTypeScale.body))
-            }
-            .toggleStyle(.checkbox)
-            .accessibilityIdentifier("citationComposer.uncertain")
+            PVTextArea(text: Bindable(model).transcription, lineLimit: 2...6)
+                .disabled(inert)
+                .accessibilityIdentifier("citationComposer.transcription")
             if model.transcriptionUncertain {
                 PVField(label: L10n.CitationComposer.uncertainNoteLabel) {
                     PVTextArea(text: Bindable(model).transcriptionNote, lineLimit: 1...3)
+                        .disabled(inert)
                         .accessibilityIdentifier("citationComposer.uncertainNote")
                 }
             }
             PVField(label: L10n.CitationComposer.descriptionLabel) {
                 PVTextArea(text: Bindable(model).citationDescription, lineLimit: 1...4)
+                    .disabled(inert)
                     .accessibilityIdentifier("citationComposer.description")
+            }
+            if inert {
+                Text(L10n.CitationComposer.fieldsDisabledHint)
+                    .font(PVFont.body(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textMuted)
             }
         }
     }
 
-    private var observationsSection: some View {
+    private func observationsSection(inert: Bool) -> some View {
         VStack(alignment: .leading, spacing: PVSpacing.space5) {
-            PVSectionHeader(
-                title: L10n.CitationComposer.observationsSection,
-                meta: "\(model.observations.count)"
-            ) {
-                EmptyView()
-            } actions: {
+            Text(L10n.CitationComposer.observationsSection)
+                .font(PVFont.body(size: PVTypeScale.body, weight: PVFontWeight.semibold))
+                .foregroundStyle(PVColor.textDisplay)
+
+            if model.observations.isEmpty {
+                PVCallout(
+                    tone: .info,
+                    message: String(localized: L10n.CitationComposer.noObservationsError),
+                    compact: true
+                )
+            }
+
+            ForEach(model.observations) { row in
+                observationRow(row, inert: inert)
+            }
+
+            if !inert {
                 PVButton(L10n.CitationComposer.addObservation, variant: .secondary, size: .sm) {
-                    model.addObservation()
+                    model.beginAddObservation()
                 }
                 .accessibilityIdentifier("citationComposer.addObservation")
             }
-            if model.observations.isEmpty, model.submitAttempted {
-                PVCallout(
-                    tone: .danger,
-                    message: String(localized: L10n.CitationComposer.noObservationsError)
-                )
-            }
-            ForEach(model.observations) { row in
-                observationCard(row)
-            }
         }
     }
 
-    private func observationCard(_ row: CitationComposerModel.ObservationRow) -> some View {
+    private func observationRow(_ row: CitationComposerModel.ObservationRow, inert: Bool) -> some View {
         let property = model.catalogProperty(id: row.propertyID)
-        return VStack(alignment: .leading, spacing: PVSpacing.space4) {
-            HStack(alignment: .top) {
-                PVComboBox(
-                    selection: propertyIDBinding(row.id),
-                    options: model.propertyOptions,
-                    size: .sm,
-                    placeholder: L10n.CitationComposer.propertyPlaceholder,
-                    emptyLabel: L10n.CitationComposer.propertyEmpty,
-                    label: L10n.CitationComposer.propertyLabel,
-                    accessibilityIdentifierPrefix: "citationComposer.property.\(row.id.uuidString)"
-                )
-                .frame(maxWidth: .infinity)
-                PVButton(L10n.CitationComposer.removeObservation, variant: .ghost, size: .sm) {
-                    model.removeObservation(id: row.id)
-                }
+        return HStack(alignment: .top, spacing: PVSpacing.space4) {
+            VStack(alignment: .leading, spacing: PVSpacing.space1) {
+                Text(verbatim: property?.label ?? "—")
+                    .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
+                    .foregroundStyle(PVColor.textSecondary)
+                Text(verbatim: model.observationSummary(for: row))
+                    .font(PVFont.body(size: PVTypeScale.body))
+                    .foregroundStyle(PVColor.textPrimary)
             }
-            polarityChips(row)
-            if let property {
-                valueEditor(row: row, property: property)
+            Spacer(minLength: 0)
+            HStack(spacing: PVSpacing.space2) {
+                if row.polarity == "negative" {
+                    Text(L10n.CitationComposer.polarityNegates)
+                        .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.medium))
+                        .foregroundStyle(PVColor.textSecondary)
+                        .padding(.horizontal, PVSpacing.space3)
+                        .padding(.vertical, PVSpacing.space1)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(PVColor.surfaceSunken)
+                        )
+                }
+                if !inert {
+                    PVIconButton(.penLine, label: L10n.CitationComposer.editObservation, size: .sm) {
+                        model.beginEditObservation(row)
+                    }
+                    PVIconButton(
+                        .trash,
+                        label: L10n.CitationComposer.removeObservation,
+                        size: .sm,
+                        tone: .danger
+                    ) {
+                        model.removeObservation(id: row.id)
+                    }
+                }
             }
         }
         .padding(PVSpacing.space5)
@@ -349,220 +543,242 @@ struct CitationComposerView: View {
         )
     }
 
-    private func polarityChips(_ row: CitationComposerModel.ObservationRow) -> some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space2) {
-            Text(L10n.CitationComposer.polarityLabel)
-                .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
-                .foregroundStyle(PVColor.textSecondary)
-            PVChipGroup(style: .segmented) {
-                PVChip(
-                    L10n.CitationComposer.polarityAsserts,
-                    isSelected: row.polarity != "negative",
-                    expands: true,
-                    selectionLift: true,
-                    action: {
-                        var next = row
-                        next.polarity = "positive"
-                        model.updateObservation(next)
+    private func footer(inert: Bool) -> some View {
+        VStack(alignment: .leading, spacing: PVSpacing.space4) {
+            if let formError = model.formError, model.submitAttempted {
+                PVCallout(tone: .danger, message: formError, compact: true)
+            }
+            HStack {
+                PVButton(L10n.CitationComposer.cancel, variant: .secondary) {
+                    navigation.go(to: model.graphLocation())
+                }
+                .disabled(model.isSubmitting)
+                Spacer()
+                PVButton(
+                    L10n.CitationComposer.save,
+                    variant: .primary,
+                    loading: model.isSubmitting
+                ) {
+                    Task {
+                        if let location = await model.submit() {
+                            navigation.go(to: location)
+                        }
                     }
-                )
-                PVChip(
-                    L10n.CitationComposer.polarityNegates,
-                    isSelected: row.polarity == "negative",
-                    expands: true,
-                    selectionLift: true,
-                    action: {
-                        var next = row
-                        next.polarity = "negative"
-                        model.updateObservation(next)
+                }
+                .disabled(model.isSubmitting || inert)
+                .accessibilityIdentifier("citationComposer.save")
+            }
+        }
+        .padding(PVSpacing.space7)
+    }
+
+    // MARK: - Observation dialog (Frames 3–6, 13)
+
+    @ViewBuilder
+    private var observationDialogForm: some View {
+        if let draft = model.observationDialog {
+            VStack(alignment: .leading, spacing: PVSpacing.space6) {
+                VStack(alignment: .leading, spacing: PVSpacing.space2) {
+                    PVComboBox(
+                        selection: dialogPropertyBinding,
+                        options: model.propertyOptions,
+                        size: .sm,
+                        placeholder: L10n.CitationComposer.propertyPlaceholder,
+                        emptyLabel: L10n.CitationComposer.propertyEmpty,
+                        label: L10n.CitationComposer.propertyLabel,
+                        accessibilityIdentifierPrefix: "citationComposer.dialog.property"
+                    )
+                    if let error = model.dialogPropertyError {
+                        Text(verbatim: error)
+                            .font(PVFont.body(size: PVTypeScale.caption))
+                            .foregroundStyle(PVColor.danger)
                     }
-                )
+                }
+
+                VStack(alignment: .leading, spacing: PVSpacing.space2) {
+                    Text(L10n.CitationComposer.polarityLabel)
+                        .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
+                        .foregroundStyle(PVColor.textSecondary)
+                    PVChipGroup(style: .segmented) {
+                        PVChip(
+                            L10n.CitationComposer.polarityAsserts,
+                            isSelected: draft.polarity != "negative",
+                            expands: true,
+                            selectionLift: true,
+                            action: {
+                                var next = draft
+                                next.polarity = "positive"
+                                model.updateObservationDialog(next)
+                            }
+                        )
+                        PVChip(
+                            L10n.CitationComposer.polarityNegates,
+                            isSelected: draft.polarity == "negative",
+                            expands: true,
+                            selectionLift: true,
+                            action: {
+                                var next = draft
+                                next.polarity = "negative"
+                                model.updateObservationDialog(next)
+                            }
+                        )
+                    }
+                }
+
+                dialogValueEditor(draft)
             }
         }
     }
 
     @ViewBuilder
-    private func valueEditor(
-        row: CitationComposerModel.ObservationRow,
-        property: CatalogProperty
-    ) -> some View {
-        switch property.valueType {
-        case "text":
-            PVField(label: L10n.CitationComposer.valueLabel) {
-                PVTextArea(text: textBinding(row.id), lineLimit: 1...4)
-                    .accessibilityIdentifier("citationComposer.value.\(row.id.uuidString)")
-            }
-        case "integer":
-            PVField(label: L10n.CitationComposer.integerLabel) {
-                PVInput(text: integerBinding(row.id), size: .sm)
-                    .accessibilityIdentifier("citationComposer.integer.\(row.id.uuidString)")
-            }
-        case "term":
-            VStack(alignment: .leading, spacing: PVSpacing.space3) {
-                PVComboBox(
-                    selection: termBinding(row.id),
-                    options: model.termOptions(for: property.id),
-                    size: .sm,
-                    placeholder: L10n.CitationComposer.termPlaceholder,
-                    emptyLabel: L10n.CitationComposer.termEmpty,
-                    label: L10n.CitationComposer.termLabel,
-                    accessibilityIdentifierPrefix: "citationComposer.term.\(row.id.uuidString)"
-                )
-                PVButton(L10n.CitationComposer.addCustomTerm, variant: .ghost, size: .sm) {
-                    customTermPropertyID = property.id
-                    customTermLabel = ""
+    private func dialogValueEditor(_ draft: CitationComposerModel.ObservationDialogState) -> some View {
+        let property = model.catalogProperty(id: draft.propertyID)
+        VStack(alignment: .leading, spacing: PVSpacing.space2) {
+            Text(valueTypeLabel(property?.valueType))
+                .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
+                .foregroundStyle(PVColor.textSecondary)
+
+            if let property {
+                switch property.valueType {
+                case "text":
+                    PVTextArea(text: dialogTextBinding, lineLimit: 1...4)
+                        .accessibilityIdentifier("citationComposer.dialog.valueText")
+                case "integer":
+                    PVInput(text: dialogIntegerBinding, size: .sm)
+                        .accessibilityIdentifier("citationComposer.dialog.valueInteger")
+                case "term":
+                    VStack(alignment: .leading, spacing: PVSpacing.space3) {
+                        PVComboBox(
+                            selection: dialogTermBinding,
+                            options: model.termOptions(for: property.id),
+                            size: .sm,
+                            placeholder: L10n.CitationComposer.termPlaceholder,
+                            emptyLabel: L10n.CitationComposer.termEmpty,
+                            label: L10n.CitationComposer.termLabel,
+                            accessibilityIdentifierPrefix: "citationComposer.dialog.term"
+                        )
+                        PVButton(L10n.CitationComposer.addCustomTerm, variant: .ghost, size: .sm) {
+                            customTermLabel = ""
+                            showCustomTermDialog = true
+                        }
+                    }
+                case "date":
+                    DateValueEditorForm(
+                        draft: dialogDateBinding,
+                        accessibilityIdentifierPrefix: "citationComposer.dialog.date"
+                    )
+                default:
+                    Text(L10n.CitationComposer.unsupportedValueTypeError)
+                        .font(PVFont.body(size: PVTypeScale.caption))
+                        .foregroundStyle(PVColor.textMuted)
                 }
-            }
-        case "date":
-            HStack {
-                Text(verbatim: dateSummary(row.dateDraft))
+            } else {
+                Text(L10n.CitationComposer.dialogValuePickPropertyFirst)
                     .font(PVFont.body(size: PVTypeScale.body))
-                    .foregroundStyle(PVColor.textPrimary)
-                Spacer()
-                PVButton(L10n.CitationComposer.editDate, variant: .secondary, size: .sm) {
-                    dateEditorRowID = row.id
-                }
+                    .foregroundStyle(PVColor.textMuted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(PVSpacing.space5)
+                    .background(
+                        RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                            .fill(PVColor.surfaceSunken)
+                    )
             }
-        default:
-            Text(L10n.CitationComposer.unsupportedValueTypeError)
-                .font(PVFont.body(size: PVTypeScale.caption))
-                .foregroundStyle(PVColor.textMuted)
+
+            if let error = model.dialogValueError {
+                Text(verbatim: error)
+                    .font(PVFont.body(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.danger)
+            }
         }
     }
 
-    private var footer: some View {
-        HStack {
-            PVButton(L10n.CitationComposer.cancel, variant: .secondary) {
-                navigation.go(to: model.graphLocation())
-            }
-            .disabled(model.isSubmitting)
-            Spacer()
-            PVButton(
-                L10n.CitationComposer.save,
-                variant: .primary,
-                loading: model.isSubmitting
-            ) {
-                Task {
-                    if let location = await model.submit() {
-                        navigation.go(to: location)
-                    }
-                }
-            }
-            .disabled(model.isSubmitting)
-            .accessibilityIdentifier("citationComposer.save")
+    private func valueTypeLabel(_ type: String?) -> LocalizedStringResource {
+        switch type {
+        case "text": return L10n.CitationComposer.valueLabelText
+        case "integer": return L10n.CitationComposer.valueLabelInteger
+        case "term": return L10n.CitationComposer.valueLabelTerm
+        case "date": return L10n.CitationComposer.valueLabelDate
+        default: return L10n.CitationComposer.valueLabel
         }
-        .padding(PVSpacing.space7)
     }
 
     // MARK: - Bindings
 
-    private var dateEditorBinding: Binding<Bool> {
+    private var observationDialogBinding: Binding<Bool> {
         Binding(
-            get: { dateEditorRowID != nil },
-            set: { if !$0 { dateEditorRowID = nil } }
+            get: { model.observationDialog != nil },
+            set: { if !$0 { model.cancelObservationDialog() } }
         )
     }
 
-    private var customTermBinding: Binding<Bool> {
+    private var dialogPropertyBinding: Binding<String> {
         Binding(
-            get: { customTermPropertyID != nil },
+            get: { model.observationDialog?.propertyID ?? "" },
             set: {
-                if !$0 {
-                    customTermPropertyID = nil
-                    customTermLabel = ""
-                }
+                guard var draft = model.observationDialog else { return }
+                draft.propertyID = $0
+                model.updateObservationDialog(draft)
             }
         )
     }
 
-    private var dateDraftIsValid: Bool {
-        guard let id = dateEditorRowID,
-              let row = model.observations.first(where: { $0.id == id })
-        else { return false }
-        return row.dateDraft.isValid
-    }
-
-    private func dateDraftBinding(at index: Int) -> Binding<DateValueDraft> {
+    private var dialogTextBinding: Binding<String> {
         Binding(
-            get: { model.observations[index].dateDraft },
+            get: { model.observationDialog?.valueText ?? "" },
             set: {
-                var row = model.observations[index]
-                row.dateDraft = $0
-                model.updateObservation(row)
+                guard var draft = model.observationDialog else { return }
+                draft.valueText = $0
+                model.updateObservationDialog(draft)
             }
         )
     }
 
-    private func propertyIDBinding(_ id: UUID) -> Binding<String> {
+    private var dialogIntegerBinding: Binding<String> {
         Binding(
-            get: { model.observations.first(where: { $0.id == id })?.propertyID ?? "" },
+            get: { model.observationDialog?.valueIntegerText ?? "" },
             set: {
-                guard var row = model.observations.first(where: { $0.id == id }) else { return }
-                row.propertyID = $0
-                model.updateObservation(row)
+                guard var draft = model.observationDialog else { return }
+                draft.valueIntegerText = $0
+                model.updateObservationDialog(draft)
             }
         )
     }
 
-    private func textBinding(_ id: UUID) -> Binding<String> {
+    private var dialogTermBinding: Binding<String> {
         Binding(
-            get: { model.observations.first(where: { $0.id == id })?.valueText ?? "" },
+            get: { model.observationDialog?.valueTermID ?? "" },
             set: {
-                guard var row = model.observations.first(where: { $0.id == id }) else { return }
-                row.valueText = $0
-                model.updateObservation(row)
+                guard var draft = model.observationDialog else { return }
+                draft.valueTermID = $0
+                model.updateObservationDialog(draft)
             }
         )
     }
 
-    private func integerBinding(_ id: UUID) -> Binding<String> {
+    private var dialogDateBinding: Binding<DateValueDraft> {
         Binding(
-            get: { model.observations.first(where: { $0.id == id })?.valueIntegerText ?? "" },
+            get: { model.observationDialog?.dateDraft ?? .empty() },
             set: {
-                guard var row = model.observations.first(where: { $0.id == id }) else { return }
-                row.valueIntegerText = $0
-                model.updateObservation(row)
+                guard var draft = model.observationDialog else { return }
+                draft.dateDraft = $0
+                model.updateObservationDialog(draft)
             }
         )
     }
 
-    private func termBinding(_ id: UUID) -> Binding<String> {
-        Binding(
-            get: { model.observations.first(where: { $0.id == id })?.valueTermID ?? "" },
-            set: {
-                guard var row = model.observations.first(where: { $0.id == id }) else { return }
-                row.valueTermID = $0
-                model.updateObservation(row)
-            }
-        )
-    }
+    // MARK: - Helpers
 
     private func artifactDisplayName(_ artifact: CatalogArtifact) -> String {
         artifact.label.isEmpty ? artifact.ref : artifact.label
     }
 
-    private func artifactMediaLabel(_ artifact: CatalogArtifact) -> String {
-        let media = artifact.file?.mediaType ?? ""
-        if media.contains("pdf") { return "PDF" }
-        if media.hasPrefix("image/") { return "Image" }
+    private func artifactMediaCaption(_ artifact: CatalogArtifact) -> String {
+        if CitationComposerModel.isPDF(artifact) {
+            return String(localized: L10n.CitationComposer.mediaCaptionPDF)
+        }
+        if CitationComposerModel.isImage(artifact) {
+            return String(localized: L10n.CitationComposer.mediaCaptionImage)
+        }
         return artifact.ref
-    }
-
-    private func dateSummary(_ draft: DateValueDraft) -> String {
-        if !draft.isValid {
-            return String(localized: L10n.CitationComposer.dateUnset)
-        }
-        let phrase = draft.phrase.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !phrase.isEmpty { return phrase }
-        if let y = draft.startYear {
-            if let m = draft.startMonth, let d = draft.startDay {
-                return "\(y)-\(m)-\(d)"
-            }
-            if let m = draft.startMonth {
-                return "\(y)-\(m)"
-            }
-            return "\(y)"
-        }
-        return String(localized: L10n.CitationComposer.dateUnset)
     }
 }
