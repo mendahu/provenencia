@@ -9,6 +9,7 @@ alwaysApply: false
 Follow the project skill `.cursor/skills/add-name-value/SKILL.md`. Design notes: `docs/structured-name-model.md`.
 
 - Use `namevalues.Insert` / `Lookup`; required `form`; optional ordered parts.
-- Part `type` is an open vocabulary (starter consts only); do not close it in DDL.
+- Part `type` empty or a product registry key (`PartTypes` / `KnownPartType`); Insert rejects unknown keys. No free-text types in UI.
+- Do not close `type` in DDL; user-minted part-type tables are a later PR.
 - Schema changes go through catalog migrations; do not invent a parallel name store.
 - Format profiles (`name_format_*`) are separate — not this package.

@@ -566,7 +566,7 @@ The semantic vocabulary is open, but the primitive value system is intentionally
 
 `value_type = 'date'` always means the shared structured DateValue model in [`structured-date-model.md`](structured-date-model.md), not a SQL date or free-text date string.
 
-`value_type = 'name'` always means the shared structured NameValue model in [`structured-name-model.md`](structured-name-model.md), not a single undifferentiated text string. A NameValue always has a full-form `form` and may optionally include ordered parts with an open part-type vocabulary for search and reconciliation.
+`value_type = 'name'` always means the shared structured NameValue model in [`structured-name-model.md`](structured-name-model.md), not a single undifferentiated text string. A NameValue always has a full-form `form` and may optionally include ordered parts with product-registry part types for search and reconciliation.
 
 `name_format` is primarily a Conclusion Property (Reconciliation Claim on a person entity). It need not appear in `subject_type_fields` for Interpretation unless a Source itself asserts a naming convention.
 
