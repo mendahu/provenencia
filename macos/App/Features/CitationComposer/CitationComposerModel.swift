@@ -94,13 +94,17 @@ final class CitationComposerModel {
     private(set) var isSubmitting = false
     private(set) var didSubmit = false
 
-    /// Viewer page index (1-based). Stub count until S7-06.
-    private(set) var viewerPage: Int = 1
-    private(set) var viewerPageCount: Int = 1
+    /// Isolated document viewer (S7-06). Composer syncs page ↔ locator only.
+    let artifactViewer = ArtifactViewerModel()
+
     /// Committed locator page; nil until the researcher sets one (Frame 12).
     private(set) var locatorPage: Int?
     /// Thin image path used Draw region to commit a whole-image page selector.
     private(set) var locatorIsWholeImage = false
+
+    /// 1-based page from the Artifact viewer (PDF).
+    var viewerPage: Int { artifactViewer.page }
+    var viewerPageCount: Int { artifactViewer.pageCount }
 
     var transcription = ""
     var transcriptionUncertain = false
@@ -444,6 +448,7 @@ final class CitationComposerModel {
                     return
                 }
                 phase = .compose
+                await reloadArtifactViewer(preferredPage: locatorPage)
                 return
             }
 
@@ -478,7 +483,7 @@ final class CitationComposerModel {
                 return
             }
             if artifacts.count == 1 {
-                applySelectedArtifact(artifacts[0].id)
+                await applySelectedArtifact(artifacts[0].id)
                 phase = .compose
                 return
             }
@@ -497,11 +502,14 @@ final class CitationComposerModel {
 
     func confirmArtifactSelection() {
         guard let id = pendingArtifactID, artifacts.contains(where: { $0.id == id }) else { return }
-        applySelectedArtifact(id)
+        selectedArtifactID = id
+        pendingArtifactID = id
+        clearLocator()
         phase = .compose
         formError = nil
         locatorError = nil
         submitAttempted = false
+        Task { await reloadArtifactViewer(preferredPage: nil) }
     }
 
     func changeArtifact() {
@@ -514,22 +522,28 @@ final class CitationComposerModel {
     }
 
     func goToPreviousPage() {
-        guard isPDFArtifact, viewerPage > 1 else { return }
-        viewerPage -= 1
-        commitLocatorPage(viewerPage)
+        guard artifactViewer.supportsPages else { return }
+        artifactViewer.goToPreviousPage()
+        syncLocatorFromViewerPage()
     }
 
     func goToNextPage() {
-        guard isPDFArtifact, viewerPage < viewerPageCount else { return }
-        viewerPage += 1
-        commitLocatorPage(viewerPage)
+        guard artifactViewer.supportsPages else { return }
+        artifactViewer.goToNextPage()
+        syncLocatorFromViewerPage()
+    }
+
+    /// Called when the Artifact viewer page changes (chevrons / page field).
+    func syncLocatorFromViewerPage() {
+        guard artifactViewer.supportsPages else { return }
+        commitLocatorPage(artifactViewer.page)
     }
 
     /// Thin stand-in for Draw region (no polygon UI until S7-07).
     func markWholeImageLocator() {
         if isPDFArtifact {
             locatorIsWholeImage = false
-            commitLocatorPage(viewerPage)
+            commitLocatorPage(artifactViewer.page)
             return
         }
         locatorIsWholeImage = true
@@ -723,7 +737,6 @@ final class CitationComposerModel {
         citationDescription = citation.description
         if let page = Self.pageFromLocatorJSON(citation.locatorJSON) {
             locatorPage = page
-            viewerPage = page
         }
         let fixedIDs = Set(connectEdgePropertiesByID.keys)
         observations = listed
@@ -741,12 +754,41 @@ final class CitationComposerModel {
             }
     }
 
-    private func applySelectedArtifact(_ id: String) {
+    private func applySelectedArtifact(_ id: String) async {
         selectedArtifactID = id
         pendingArtifactID = id
-        viewerPage = 1
-        viewerPageCount = 1
         clearLocator()
+        await reloadArtifactViewer(preferredPage: nil)
+    }
+
+    private func reloadArtifactViewer(preferredPage: Int?) async {
+        guard let artifact = selectedArtifact else {
+            artifactViewer.unload()
+            return
+        }
+        let relPath = (artifact.file?.relPath ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let mediaType = artifact.file?.mediaType ?? ""
+        guard !relPath.isEmpty else {
+            await artifactViewer.load(
+                ArtifactViewerSource(
+                    projectDir: session.projectKey.projectDir,
+                    relPath: "",
+                    mediaType: mediaType.isEmpty ? "application/octet-stream" : mediaType
+                )
+            )
+            return
+        }
+        await artifactViewer.load(
+            ArtifactViewerSource(
+                projectDir: session.projectKey.projectDir,
+                relPath: relPath,
+                mediaType: mediaType
+            )
+        )
+        if let preferredPage, artifactViewer.supportsPages {
+            artifactViewer.setPage(preferredPage)
+        }
     }
 
     private func commitLocatorPage(_ page: Int) {

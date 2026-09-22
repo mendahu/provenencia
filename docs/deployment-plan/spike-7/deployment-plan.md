@@ -319,7 +319,7 @@ Schema/Go (01–03, 01b) may start before design finishes; **UI PRs gate on the 
 - [x] S7-14 — `PVCallout` actions slot (kit Extend) → [`completed.md`](completed.md)
 - [x] S7-09 — Add property + composer navigation (stub OK) → [`completed.md`](completed.md)
 - [x] S7-08 — Thin composer (submit + card growth; viewer placeholder OK) → [`completed.md`](completed.md)
-- [ ] S7-06 — Image + PDF viewers in composer → [`completed.md`](completed.md)
+- [x] S7-06 — Image + PDF viewers in composer → [`completed.md`](completed.md)
 - [ ] S7-07 — Locator tools (page + region) → [`completed.md`](completed.md)
 - [ ] S7-02b — NameValue Swift editor → [`completed.md`](completed.md)
 - [ ] S7-10 — Durable connect macros → [`completed.md`](completed.md)
