@@ -8,7 +8,8 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 
 | Step | Brief | Feeds | Notes |
 | --- | --- | --- | --- |
-| S7-D7 | [`S7-D7-card-component.md`](S7-D7-card-component.md) | PR S7-13 | Card kit page from shipped `PVCard`; after **S7-10**, before dogfood close |
+| S7-D7 | [`S7-D7-card-component.md`](S7-D7-card-component.md) | PR S7-13 | Card kit page from shipped `PVCard`; paste on the **main** design system only |
+| S7-D7B | [`S7-D7B-card-view-remount.md`](S7-D7B-card-view-remount.md) | PR S7-13 | Child-board slip: cache clear + refetch + remount Card; paste **one view at a time** |
 
 ## Descoped
 
