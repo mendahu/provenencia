@@ -176,6 +176,15 @@ struct CitationComposerModelTests {
         }
     }
 
+    private func stripAttachedFile(_ store: FakeStore, artifactID: String) {
+        guard var artifacts = store.artifactsBySource[sourceID],
+              let index = artifacts.firstIndex(where: { $0.id == artifactID })
+        else { return }
+        artifacts[index].fileID = ""
+        artifacts[index].file = nil
+        store.artifactsBySource[sourceID] = artifacts
+    }
+
     private func sampleRectangle() -> ArtifactRegionDraft {
         ArtifactRegionDraft(
             kind: .rectangle,
@@ -251,12 +260,34 @@ struct CitationComposerModelTests {
         await model.prepare()
         #expect(model.phase == .pickArtifact)
         #expect(model.selectedArtifactID == nil)
+        #expect(model.pendingArtifactID == "art-0")
         model.selectPendingArtifact("art-1")
         #expect(model.phase == .pickArtifact)
         await model.confirmArtifactSelectionAndLoad()
         #expect(model.phase == .compose)
         #expect(model.selectedArtifactID == "art-1")
         #expect(model.observations.isEmpty)
+    }
+
+    @Test func preparePickerDefaultsToFirstArtifactWithFile() async {
+        let store = makeStore()
+        seedArtifact(store, count: 3)
+        stripAttachedFile(store, artifactID: "art-0")
+        let model = makeModel(store: store)
+        await model.prepare()
+        #expect(model.phase == .pickArtifact)
+        #expect(model.pendingArtifactID == "art-1")
+    }
+
+    @Test func preparePickerFallsBackToFirstWhenNoneHaveFiles() async {
+        let store = makeStore()
+        seedArtifact(store, count: 2)
+        stripAttachedFile(store, artifactID: "art-0")
+        stripAttachedFile(store, artifactID: "art-1")
+        let model = makeModel(store: store)
+        await model.prepare()
+        #expect(model.phase == .pickArtifact)
+        #expect(model.pendingArtifactID == "art-0")
     }
 
     @Test func prepareNoArtifactsOpensInertCompose() async {

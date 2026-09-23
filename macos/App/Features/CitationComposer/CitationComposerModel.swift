@@ -371,6 +371,10 @@ final class CitationComposerModel {
         (artifact?.file?.mediaType ?? "").hasPrefix("image/")
     }
 
+    static func hasAttachedFile(_ artifact: CatalogArtifact) -> Bool {
+        artifact.file != nil && !artifact.fileID.isEmpty
+    }
+
     var sourceTypesKey: CatalogQueryKey {
         .sourceTypesList(project: session.projectKey)
     }
@@ -559,7 +563,9 @@ final class CitationComposerModel {
                 phase = .compose
                 return
             }
-            pendingArtifactID = selectedArtifactID ?? artifacts.first?.id
+            pendingArtifactID = selectedArtifactID
+                ?? artifacts.first(where: Self.hasAttachedFile)?.id
+                ?? artifacts.first?.id
             phase = .pickArtifact
         } catch {
             loadError = L10n.Errors.message(for: error)
