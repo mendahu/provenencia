@@ -20,15 +20,16 @@ final class EvidenceGraphModel {
     let session: WorkspaceSession
     let store: any GenealogyStore
     let userID: String
-    let linkStore: any EvidenceProvisionalLinkStoring
 
     var armedKind: EvidencePrimaryKind?
     /// Connect tool armed (mutually exclusive with `armedKind`).
     var armedConnect = false
     /// First primary chosen while connecting.
     var connectOriginID: String?
-    /// Connect-matrix rows from `listConnectRules` (product fallback).
-    private(set) var connectRules: [CatalogConnectRule] = CatalogConnectRule.productMatrix
+    /// Connect-matrix rows from `listConnectRules`. Empty until that read succeeds.
+    private(set) var connectRules: [CatalogConnectRule] = []
+    /// Set when `listConnectRules` fails. Connect stays disarmed.
+    private(set) var connectRulesError: String?
     /// Role / relationship_type sheet (not a history entry; writes nothing).
     var pendingDisambiguation: PendingDisambiguation?
 
@@ -116,25 +117,15 @@ final class EvidenceGraphModel {
         sourceID: String,
         session: WorkspaceSession,
         store: any GenealogyStore,
-        userID: String,
-        linkStore: (any EvidenceProvisionalLinkStoring)? = nil
+        userID: String
     ) {
         self.sourceID = sourceID
         self.session = session
         self.store = store
         self.userID = userID
-        if let linkStore {
-            self.linkStore = linkStore
-        } else if let live = try? EvidenceProvisionalLinkStore(
-            projectDir: session.projectKey.projectDir
-        ) {
-            self.linkStore = live
-        } else {
-            self.linkStore = InMemoryEvidenceProvisionalLinkStore()
-        }
     }
 
-    /// Snapshot as loaded; leftover uncited JSON links do not draw lines.
+    /// Snapshot as loaded. Edges come from cited observations.
     func displaySnapshot(from raw: SourceGraphSnapshot?) -> SourceGraphSnapshot {
         raw ?? SourceGraphSnapshot(sourceId: sourceID)
     }
@@ -173,10 +164,18 @@ final class EvidenceGraphModel {
         }
         presentationByKind = presentations
 
-        if let rules = try? await store.listConnectRules() {
-            connectRules = rules
-        } else {
-            connectRules = CatalogConnectRule.productMatrix
+        do {
+            connectRules = try await store.listConnectRules()
+            connectRulesError = nil
+        } catch {
+            connectRules = []
+            let message = L10n.Errors.message(for: error)
+            connectRulesError = message
+            toast = VocabularyToast(
+                title: String(localized: L10n.EvidenceGraph.connectRulesUnavailableTitle),
+                body: message,
+                tone: .danger
+            )
         }
 
         await refreshCanCite()
@@ -224,6 +223,14 @@ final class EvidenceGraphModel {
 
     func toggleConnect() {
         guard canCite else { return }
+        if let connectRulesError {
+            toast = VocabularyToast(
+                title: String(localized: L10n.EvidenceGraph.connectRulesUnavailableTitle),
+                body: connectRulesError,
+                tone: .danger
+            )
+            return
+        }
         if armedConnect {
             disarm()
         } else {
@@ -265,6 +272,103 @@ final class EvidenceGraphModel {
 
     func deactivateSubject() {
         activatedSubjectID = nil
+    }
+
+    enum Key: Equatable {
+        case escape
+        case `return`
+        case space
+        case arrow(dx: Int64, dy: Int64)
+    }
+
+    struct KeyEffect: Equatable {
+        var handled = false
+        var clearFocus = false
+        var moveSubjectID: String?
+        var moveFromX: Int64 = 0
+        var moveFromY: Int64 = 0
+        var moveDeltaX: Int64 = 0
+        var moveDeltaY: Int64 = 0
+    }
+
+    /// Keyboard policy for the graph. The view forwards `KeyPress` and applies focus.
+    func handleKey(_ key: Key, hasFocus: Bool) -> KeyEffect {
+        if isSheetPresented { return KeyEffect() }
+        switch key {
+        case .escape:
+            if armedConnect || armedKind != nil {
+                disarm()
+                return KeyEffect(handled: true)
+            }
+            if activatedSubjectID != nil {
+                deactivateSubject()
+                return KeyEffect(handled: true)
+            }
+            if selectedSubjectID != nil || hasFocus {
+                selectSubject(id: nil)
+                return KeyEffect(handled: true, clearFocus: true)
+            }
+            return KeyEffect()
+        case .return, .space:
+            guard inputMode == .idle, let selectedID = selectedSubjectID else {
+                return KeyEffect()
+            }
+            if key == .return {
+                beginEdit(subjectID: selectedID)
+            } else {
+                activateSubject(id: selectedID)
+            }
+            return KeyEffect(handled: true)
+        case .arrow(let dx, let dy):
+            guard inputMode == .idle, let selectedID = selectedSubjectID,
+                  let cell = gridCell(for: selectedID)
+            else { return KeyEffect() }
+            return KeyEffect(
+                handled: true,
+                moveSubjectID: selectedID,
+                moveFromX: cell.x,
+                moveFromY: cell.y,
+                moveDeltaX: dx,
+                moveDeltaY: dy
+            )
+        }
+    }
+
+    /// Card action id from the pointer layer. Returns a composer place when the action navigates.
+    func performCardAction(subjectID: String, actionID: String) -> WorkspaceLocation? {
+        switch actionID {
+        case EvidenceSubjectCard.editActionID, EvidenceBridgeCard.editActionID:
+            beginEdit(subjectID: subjectID)
+            return nil
+        case EvidenceBridgeCard.editCitationActionID:
+            return composerLocationForBridgeCitation(subjectID: subjectID)
+        case EvidenceSubjectCard.deleteActionID, EvidenceBridgeCard.deleteActionID:
+            beginDelete(subjectID: subjectID)
+            return nil
+        case EvidenceSubjectCard.addPropertyActionID:
+            return composerLocation(for: subjectID)
+        default:
+            guard let observationID = EvidenceSubjectCard.observationID(fromEditPropertyAction: actionID)
+            else { return nil }
+            return composerLocation(forObservationID: observationID, subjectID: subjectID)
+        }
+    }
+
+    func gridCell(for subjectID: String) -> (x: Int64, y: Int64)? {
+        let snapshot = currentSnapshot()
+        if let placed = snapshot?.subjects.first(where: { $0.id == subjectID }) {
+            return (placed.gridX, placed.gridY)
+        }
+        if let bridge = snapshot?.bridges.first(where: { $0.id == subjectID }) {
+            return (bridge.gridX, bridge.gridY)
+        }
+        return nil
+    }
+
+    /// Connect pick resolved from the current snapshot (primaries only).
+    func handleConnectPick(subjectID: String) async {
+        guard let placed = currentSnapshot()?.subjects.first(where: { $0.id == subjectID }) else { return }
+        await handleConnectPick(subjectID: placed.id, kind: placed.kind, label: placed.subject.label)
     }
 
     /// Pointer / keyboard pick while Connect is armed.
@@ -634,7 +738,6 @@ final class EvidenceGraphModel {
                 userID: userID,
                 subjectID: pending.id
             )
-            linkStore.remove(bridgeSubjectID: pending.id, sourceID: sourceID)
             session.apply(.createdSubject(sourceId: sourceID))
             let _: QueryHandle<SourceGraphSnapshot> = session.query(graphKey)
             if selectedSubjectID == pending.id {

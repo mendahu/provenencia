@@ -19,8 +19,8 @@ Stand up the Interpretation **Citation → Observation** pipeline on the Evidenc
 | Doc | Role |
 | --- | --- |
 | [**Deployment plan**](deployment-plan.md) | PR sequence, design gates, dogfood bar, scope |
-| [**Completed**](completed.md) | Finished steps (empty until landings) |
-| [Design briefs](design/) | Claude Design — open S7-D7 (S7-D1 descoped; S7-D2 / S7-D3 / S7-D4 / S7-D5 / S7-D6 / S7-D8 / **S7-D9** archived) |
+| [**Completed**](completed.md) | Finished steps |
+| [Design briefs](design/) | Claude Design — S7-D2 through S7-D9 are finished (see [completed.md](completed.md)); S7-D1 descoped |
 
 ## Relationship to Spike 5 / 6 / later
 

@@ -1423,6 +1423,12 @@ enum L10n {
             comment: "Toast title when Connect picks an unsupported primary pair"
         )
 
+        static let connectRulesUnavailableTitle = LocalizedStringResource(
+            "evidenceGraph.connect.rulesUnavailableTitle",
+            defaultValue: "Connect is unavailable",
+            comment: "Toast title when the connect-rules catalog read fails"
+        )
+
         static let connectInvalidPairBody = LocalizedStringResource(
             "evidenceGraph.connect.invalidPairBody",
             defaultValue: "Try person↔event, event↔place, or two people. Person and place cannot be linked directly.",
@@ -2498,6 +2504,12 @@ enum L10n {
             "citationComposer.goToSourcePage",
             defaultValue: "Go to Source page",
             comment: "Recovery action from the no-Artifact cite gate"
+        )
+
+        static let loadFailedBack = LocalizedStringResource(
+            "citationComposer.loadFailedBack",
+            defaultValue: "Back to evidence graph",
+            comment: "Leaves the citation composer after catalog data failed to load"
         )
 
         static let fieldsDisabledHint = LocalizedStringResource(

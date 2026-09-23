@@ -69,6 +69,8 @@ struct CitationComposerView: View {
             case .subjectMissing:
                 Color.clear
                     .onAppear { navigation.go(to: model.graphLocation()) }
+            case .loadFailed:
+                loadFailedGate
             case .pickArtifact:
                 CitationComposerArtifactPicker(model: model) {
                     navigation.go(to: model.graphLocation())
@@ -107,6 +109,7 @@ struct CitationComposerView: View {
             onConfirm: { model.confirmObservationDialog() }
         ) {
             CitationComposerObservationDialogForm(model: model) {
+                model.termError = nil
                 customTermLabel = ""
                 showCustomTermDialog = true
             }
@@ -124,25 +127,48 @@ struct CitationComposerView: View {
             onConfirm: {
                 Task {
                     guard let propertyID = model.observationDialog?.propertyID else { return }
-                    if let term = await model.createCustomTerm(
+                    guard let term = await model.createCustomTerm(
                         propertyID: propertyID,
                         label: customTermLabel
                     ),
-                       var draft = model.observationDialog
-                    {
-                        draft.valueTermID = term.id
-                        model.updateObservationDialog(draft)
-                    }
+                          var draft = model.observationDialog
+                    else { return }
+                    draft.valueTermID = term.id
+                    model.updateObservationDialog(draft)
                     customTermLabel = ""
                     showCustomTermDialog = false
                 }
             }
         ) {
-            PVField(label: L10n.CitationComposer.addTermLabel) {
-                PVInput(text: $customTermLabel, size: .sm)
-                    .accessibilityIdentifier("citationComposer.term.label")
+            VStack(alignment: .leading, spacing: PVSpacing.space4) {
+                PVField(label: L10n.CitationComposer.addTermLabel) {
+                    PVInput(text: $customTermLabel, size: .sm)
+                        .accessibilityIdentifier("citationComposer.term.label")
+                }
+                if let termError = model.termError {
+                    Text(verbatim: termError)
+                        .font(PVFont.body(size: PVTypeScale.caption))
+                        .foregroundStyle(PVColor.danger)
+                        .accessibilityIdentifier("citationComposer.term.error")
+                }
             }
         }
+    }
+
+    private var loadFailedGate: some View {
+        VStack(alignment: .leading, spacing: PVSpacing.space6) {
+            if let loadError = model.loadError {
+                PVCallout(tone: .danger, message: loadError)
+                    .accessibilityIdentifier("citationComposer.loadFailed")
+            }
+            PVButton(L10n.CitationComposer.loadFailedBack, variant: .secondary) {
+                navigation.go(to: model.graphLocation())
+            }
+            .accessibilityIdentifier("citationComposer.loadFailed.back")
+            Spacer(minLength: 0)
+        }
+        .padding(PVSpacing.space7)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     // MARK: - Frame 8 / compose layout

@@ -750,6 +750,12 @@ struct CitationComposerModelTests {
                 description: ""
             ),
         ]
+        store.subjectPositionsBySubject[subjectID] = CatalogSubjectPosition(
+            subjectID: subjectID, gridX: 0, gridY: 0
+        )
+        store.subjectPositionsBySubject[eventID] = CatalogSubjectPosition(
+            subjectID: eventID, gridX: 2, gridY: 0
+        )
         let before = (store.subjectsBySource[sourceID] ?? []).count
         let model = makeModel(
             store: store,
@@ -829,5 +835,36 @@ struct CitationComposerModelTests {
         } catch {
             Issue.record("expected CoreInvokeError")
         }
+    }
+
+    @Test func prepareFailureIsNotTheEmptyArtifactGate() async {
+        let store = makeStore()
+        store.listSubjectsError = CoreInvokeError.failed(status: 1)
+        let model = makeModel(store: store)
+        await model.prepare()
+        #expect(model.phase == .loadFailed)
+        #expect(model.loadError != nil)
+        #expect(model.hasNoArtifacts == false)
+    }
+
+    @Test func customTermFailureStaysOnTheTermDialog() async {
+        let store = makeStore()
+        store.createPropertyTermError = CoreInvokeError.failed(status: 1)
+        let model = makeModel(store: store)
+        let term = await model.createCustomTerm(propertyID: occupationPropertyID, label: "Farmer")
+        #expect(term == nil)
+        #expect(model.termError != nil)
+        #expect(model.formError == nil)
+    }
+
+    @Test func observationIntegerDraftRejectsWords() {
+        var draft = CatalogObservationDraft(subjectID: "s", propertyID: "p")
+        let failure = CitationObservationValue.apply(
+            valueType: "integer",
+            fields: CitationObservationValue.Fields(valueIntegerText: "nope"),
+            to: &draft
+        )
+        #expect(failure == .invalidInteger)
+        #expect(draft.valueInteger == nil)
     }
 }

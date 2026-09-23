@@ -210,7 +210,7 @@ struct GraphCanvasEdgeGeometryTests {
             isCited: true,
             observations: [observation]
         )
-        let frame = EvidenceBridgeCard.contentFrame(gridX: placed.gridX, gridY: placed.gridY)
+        let frame = EvidenceBridgeCard.contentFrame(for: placed)
         let actions = EvidenceBridgeCard.actionTargets(for: placed, canCite: true)
         let edit = try #require(actions.first { $0.id == EvidenceBridgeCard.editActionID })
         let citation = try #require(actions.first { $0.id == EvidenceBridgeCard.editCitationActionID })
@@ -218,6 +218,52 @@ struct GraphCanvasEdgeGeometryTests {
 
         #expect(abs(citation.frame.midX - edit.frame.midX) < 0.5)
         #expect(citation.frame.minY > edit.frame.maxY)
+    }
+
+    @Test func wrappedBridgePhraseGrowsTheHitFrame() {
+        func placed(text: String) -> SourceGraphPlacedBridge {
+            SourceGraphPlacedBridge(
+                subject: CatalogSubject(
+                    id: "b1",
+                    ref: "CPA-1",
+                    sourceID: "src",
+                    subjectTypeID: "t",
+                    label: "Working",
+                    description: ""
+                ),
+                kind: .participation,
+                typeLabel: "Participation",
+                gridX: 0,
+                gridY: 0,
+                isCited: true,
+                observations: [
+                    CatalogObservation(
+                        id: "obs-role",
+                        ref: "OBS-R",
+                        citationID: "cit-1",
+                        subjectID: "b1",
+                        propertyID: "p-role",
+                        polarity: "positive",
+                        valueText: text,
+                        valueInteger: nil,
+                        valueDateID: "",
+                        valueNameID: "",
+                        valueSubjectID: "",
+                        valueTermID: "",
+                        propertyKey: "role",
+                        propertyLabel: "Role",
+                        propertyValueType: "text"
+                    ),
+                ]
+            )
+        }
+        let short = EvidenceBridgeCard.contentHeight(for: placed(text: "Witness"))
+        let long = EvidenceBridgeCard.contentHeight(
+            for: placed(text: String(repeating: "great-grandparent ", count: 24))
+        )
+        #expect(long > short)
+        #expect(long > EvidenceBridgeCard.edgeLayoutHeight)
+        #expect(EvidenceBridgeCard.contentFrame(for: placed(text: String(repeating: "great-grandparent ", count: 24))).height == long)
     }
 
     @Test func bridgeOmitsCitationEditWhenCannotCite() {

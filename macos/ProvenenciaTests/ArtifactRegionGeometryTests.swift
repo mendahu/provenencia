@@ -145,4 +145,14 @@ struct ArtifactRegionGeometryTests {
         )
         #expect(moved[2] == CGPoint(x: 1, y: 0))
     }
+
+    @Test func bowtieIsNotAValidPolygon() {
+        let bowtie = [
+            CGPoint(x: 0.1, y: 0.1),
+            CGPoint(x: 0.9, y: 0.9),
+            CGPoint(x: 0.1, y: 0.9),
+            CGPoint(x: 0.9, y: 0.1),
+        ]
+        #expect(ArtifactRegionGeometry.isValidPolygon(bowtie) == false)
+    }
 }

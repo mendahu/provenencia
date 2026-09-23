@@ -55,43 +55,6 @@ enum EvidenceBridgeEdgeSummary {
         }
     }
 
-    /// Composer-draft overload: rows + property keys, not persisted Observations.
-    static func sentence(
-        bridgeTypeKey: String,
-        observations: [CitationComposerModel.ObservationRow],
-        properties: [CatalogProperty],
-        subjectLabelsByID: [String: String],
-        termLabel: (String, String) -> String?
-    ) -> String {
-        guard let kind = EvidenceBridgeKind(rawValue: bridgeTypeKey) else { return "" }
-        let propertyByID = Dictionary(uniqueKeysWithValues: properties.map { ($0.id, $0) })
-        func subject(for key: String) -> String? {
-            guard let row = observations.first(where: { propertyByID[$0.propertyID]?.key == key })
-            else { return nil }
-            let labeled = subjectLabelsByID[row.valueSubjectID]
-                ?? row.valueText.trimmingCharacters(in: .whitespacesAndNewlines)
-            return labeled.isEmpty ? nil : labeled
-        }
-        func term(for key: String) -> String? {
-            guard let row = observations.first(where: { propertyByID[$0.propertyID]?.key == key }),
-                  !row.valueTermID.isEmpty
-            else { return nil }
-            if let resolved = termLabel(row.valueTermID, row.propertyID), !resolved.isEmpty {
-                return resolved
-            }
-            let fallback = row.valueText.trimmingCharacters(in: .whitespacesAndNewlines)
-            return fallback.isEmpty ? nil : fallback
-        }
-        return sentence(
-            kind: kind,
-            person: subject(for: "person"),
-            related: subject(for: "related_to"),
-            event: subject(for: "event"),
-            place: subject(for: "place"),
-            term: term(for: kind == .relationship ? "relationship_type" : "role")
-        )
-    }
-
     private static func locationSentence(event: String?, place: String?) -> String {
         if let event, let place {
             return L10n.EvidenceGraph.bridgeSummaryLocation(event: event, place: place)

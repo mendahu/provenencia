@@ -105,11 +105,7 @@ struct EvidenceGraphEdgeLayer: View {
     }
 
     private func bridgeFrame(_ placed: SourceGraphPlacedBridge, offset: CGSize) -> CGRect {
-        EvidenceBridgeCard.contentFrame(
-            gridX: placed.gridX,
-            gridY: placed.gridY,
-            dragOffset: offset
-        )
+        EvidenceBridgeCard.contentFrame(for: placed, dragOffset: offset)
     }
 }
 

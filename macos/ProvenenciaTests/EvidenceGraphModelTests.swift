@@ -108,10 +108,7 @@ struct EvidenceGraphModelTests {
         return store
     }
 
-    private func makeModel(
-        store: FakeStore,
-        linkStore: (any EvidenceProvisionalLinkStoring)? = nil
-    ) -> EvidenceGraphModel {
+    private func makeModel(store: FakeStore) -> EvidenceGraphModel {
         let session = WorkspaceSession(
             projectKey: ProjectKey(projectDir: projectDir),
             store: store
@@ -120,8 +117,7 @@ struct EvidenceGraphModelTests {
             sourceID: sourceID,
             session: session,
             store: store,
-            userID: "user-1",
-            linkStore: linkStore ?? InMemoryEvidenceProvisionalLinkStore()
+            userID: "user-1"
         )
     }
 
@@ -306,8 +302,7 @@ struct EvidenceGraphModelTests {
 
     @Test func connectExcludesPlacingAndPickCreatesBridge() async throws {
         let store = makeStore()
-        let links = InMemoryEvidenceProvisionalLinkStore()
-        let model = makeModel(store: store, linkStore: links)
+        let model = makeModel(store: store)
         await model.prepare()
 
         let person = CatalogSubject(
@@ -374,7 +369,6 @@ struct EvidenceGraphModelTests {
         #expect(handoff?.connectDisambiguationTermId == "term-witness")
         #expect(handoff?.sourceSurface == .citationComposer)
         #expect(model.pendingDisambiguation == nil)
-        #expect(links.links(for: sourceID).isEmpty)
 
         let subjects = try await store.listSubjects(projectDir: projectDir, sourceID: sourceID)
         #expect(subjects.count == 2)
@@ -736,16 +730,7 @@ struct EvidenceGraphModelTests {
         store.subjectPositionsBySubject["b1"] = CatalogSubjectPosition(
             subjectID: "b1", gridX: 2, gridY: 0
         )
-        let links = InMemoryEvidenceProvisionalLinkStore()
-        links.upsert(
-            EvidenceProvisionalLink(
-                bridgeSubjectID: "b1",
-                endpointAID: "p1",
-                endpointBID: "e1"
-            ),
-            sourceID: sourceID
-        )
-        let model = makeModel(store: store, linkStore: links)
+        let model = makeModel(store: store)
         await model.prepare()
         let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
         model.session.setQueryValue(
@@ -758,15 +743,13 @@ struct EvidenceGraphModelTests {
                     CatalogSubjectPosition(subjectID: "e1", gridX: 4, gridY: 0),
                     CatalogSubjectPosition(subjectID: "b1", gridX: 2, gridY: 0),
                 ],
-                types: store.subjectTypesByProject[projectDir] ?? [],
-                provisionalLinks: links.links(for: sourceID)
+                types: store.subjectTypesByProject[projectDir] ?? []
             )
         )
         model.beginDelete(subjectID: "b1")
         #expect(model.pendingDelete?.id == "b1")
         let ok = await model.confirmDeleteSubject()
         #expect(ok)
-        #expect(links.links(for: sourceID).isEmpty)
         try await Task.sleep(for: .milliseconds(50))
         let handle: QueryHandle<SourceGraphSnapshot>? = model.session.queryHandle(key)
         #expect(handle?.value?.bridges.isEmpty == true)
@@ -1008,5 +991,87 @@ struct EvidenceGraphModelTests {
             model.composerLocation(forObservationID: "obs-edge", subjectID: "b1")?.citationId
                 == "cit-bridge"
         )
+    }
+
+    @Test func connectRulesFailureDisablesConnect() async {
+        let store = makeStore()
+        store.listConnectRulesError = CoreInvokeError.failed(status: 1)
+        let model = makeModel(store: store)
+        await model.prepare()
+        #expect(model.connectRules.isEmpty)
+        #expect(model.connectRulesError != nil)
+        model.toggleConnect()
+        #expect(model.armedConnect == false)
+        #expect(model.toast?.tone == .danger)
+    }
+
+    @Test func escapeDisarmsConnect() async {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.toggleConnect()
+        #expect(model.armedConnect)
+        let effect = model.handleKey(.escape, hasFocus: false)
+        #expect(effect.handled)
+        #expect(model.armedConnect == false)
+    }
+
+    @Test func arrowRequestsMoveOfSelectedSubject() {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        let person = CatalogSubject(
+            id: "p1",
+            ref: "CPR-1",
+            sourceID: sourceID,
+            subjectTypeID: personTypeID,
+            label: "Alice",
+            description: ""
+        )
+        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        model.session.setQueryValue(
+            key,
+            value: SourceGraphSnapshot.build(
+                sourceId: sourceID,
+                subjects: [person],
+                positions: [CatalogSubjectPosition(subjectID: "p1", gridX: 2, gridY: 3)],
+                types: store.subjectTypesByProject[projectDir] ?? []
+            )
+        )
+        model.selectSubject(id: "p1")
+        let effect = model.handleKey(.arrow(dx: 1, dy: 0), hasFocus: false)
+        #expect(effect.handled)
+        #expect(effect.moveSubjectID == "p1")
+        #expect(effect.moveFromX == 2)
+        #expect(effect.moveFromY == 3)
+        #expect(effect.moveDeltaX == 1)
+    }
+
+    @Test func cardActionRoutesEdit() {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        let person = CatalogSubject(
+            id: "p1",
+            ref: "CPR-1",
+            sourceID: sourceID,
+            subjectTypeID: personTypeID,
+            label: "Alice",
+            description: ""
+        )
+        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        model.session.setQueryValue(
+            key,
+            value: SourceGraphSnapshot.build(
+                sourceId: sourceID,
+                subjects: [person],
+                positions: [CatalogSubjectPosition(subjectID: "p1", gridX: 0, gridY: 0)],
+                types: store.subjectTypesByProject[projectDir] ?? []
+            )
+        )
+        let location = model.performCardAction(
+            subjectID: "p1",
+            actionID: EvidenceSubjectCard.editActionID
+        )
+        #expect(location == nil)
+        #expect(model.editingSubjectID == "p1")
     }
 }

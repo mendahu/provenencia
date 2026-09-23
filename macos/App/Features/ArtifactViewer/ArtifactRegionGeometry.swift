@@ -420,7 +420,43 @@ enum ArtifactRegionGeometry {
                 return false
             }
         }
-        return polygonArea(points) >= minimumPolygonArea
+        guard polygonArea(points) >= minimumPolygonArea else { return false }
+        return !selfIntersects(points)
+    }
+
+    /// True when non-adjacent edges of the closed polygon cross.
+    /// Matches `locator.validateRegion` in Go.
+    private static func selfIntersects(_ points: [CGPoint]) -> Bool {
+        let count = points.count
+        guard count >= 4 else { return false }
+        for i in 0..<count {
+            let a1 = points[i]
+            let a2 = points[(i + 1) % count]
+            for j in (i + 1)..<count {
+                if j == i || (j + 1) % count == i || (i + 1) % count == j {
+                    continue
+                }
+                let b1 = points[j]
+                let b2 = points[(j + 1) % count]
+                if segmentsIntersect(a1, a2, b1, b2) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
+    private static func segmentsIntersect(_ a1: CGPoint, _ a2: CGPoint, _ b1: CGPoint, _ b2: CGPoint) -> Bool {
+        let d1 = cross(a2.x - a1.x, a2.y - a1.y, b1.x - a1.x, b1.y - a1.y)
+        let d2 = cross(a2.x - a1.x, a2.y - a1.y, b2.x - a1.x, b2.y - a1.y)
+        let d3 = cross(b2.x - b1.x, b2.y - b1.y, a1.x - b1.x, a1.y - b1.y)
+        let d4 = cross(b2.x - b1.x, b2.y - b1.y, a2.x - b1.x, a2.y - b1.y)
+        return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0))
+            && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))
+    }
+
+    private static func cross(_ ax: CGFloat, _ ay: CGFloat, _ bx: CGFloat, _ by: CGFloat) -> CGFloat {
+        ax * by - ay * bx
     }
 
     static func nearlyEqual(_ a: CGPoint, _ b: CGPoint, epsilon: CGFloat = 1e-12) -> Bool {

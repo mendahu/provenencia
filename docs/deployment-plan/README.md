@@ -25,7 +25,7 @@ Spike 7 (open):
 
 - [`spike-7/README.md`](spike-7/README.md) — spike overview
 - [`spike-7/deployment-plan.md`](spike-7/deployment-plan.md) — PR sequence, design gates, dogfood bar
-- [`spike-7/completed.md`](spike-7/completed.md) — finished steps (none yet)
+- [`spike-7/completed.md`](spike-7/completed.md) — finished steps
 - [`spike-7/design/`](spike-7/design/) — Claude Design briefs S7-D2…S7-D5 (S7-D1 descoped)
 
 Spike 6 archive:

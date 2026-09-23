@@ -218,35 +218,6 @@ struct SourceGraphSnapshotTests {
         #expect(snapshot.bridges[0].endpointBID == alice.id)
     }
 
-    @Test func attachingLinksFillsBridgeEndpoints() {
-        let bridge = SourceGraphPlacedBridge(
-            subject: CatalogSubject(
-                id: "s-loc",
-                ref: "CLO-L",
-                sourceID: "src-1",
-                subjectTypeID: locationType.id,
-                label: "At home",
-                description: ""
-            ),
-            kind: .location,
-            typeLabel: "Location",
-            gridX: 5,
-            gridY: 6,
-            endpointAID: nil,
-            endpointBID: nil
-        )
-        let snapshot = SourceGraphSnapshot(sourceId: "src-1", bridges: [bridge])
-        let next = snapshot.attaching(links: [
-            EvidenceProvisionalLink(
-                bridgeSubjectID: bridge.id,
-                endpointAID: "a",
-                endpointBID: "b"
-            ),
-        ])
-        #expect(next.bridges[0].endpointAID == "a")
-        #expect(next.bridges[0].endpointBID == "b")
-    }
-
     @Test func connectRulesRefusePersonPlace() {
         let rules = CatalogConnectRule.productMatrix
         #expect(CatalogConnectRule.match(from: "person", to: "event", in: rules).bridgeTypeKey == "participation")

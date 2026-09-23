@@ -2394,6 +2394,18 @@
         }
       }
     },
+    "evidenceGraph.connect.rulesUnavailableTitle": {
+      "comment": "Toast title when the connect-rules catalog read fails",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect is unavailable"
+          }
+        }
+      }
+    },
     "evidenceGraph.connect.invalidPairTitle": {
       "comment": "Toast title when Connect picks an unsupported primary pair",
       "extractionState": "manual",
@@ -9482,6 +9494,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Every citation needs an artifact to point at. Attach one from the Source page, then return here."
+          }
+        }
+      }
+    },
+    "citationComposer.loadFailedBack": {
+      "comment": "Leaves the citation composer after catalog data failed to load",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to evidence graph"
           }
         }
       }
