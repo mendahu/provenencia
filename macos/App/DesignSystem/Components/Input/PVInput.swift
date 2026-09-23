@@ -66,7 +66,9 @@ struct PVInputChrome: ViewModifier {
 }
 
 /// Convenience field with optional leading icon, trailing suffix, read-only
-/// rendering, and owned or externally driven focus state.
+/// rendering, and owned or externally driven focus state. `activateOnAppear`
+/// focuses the field on the next turn so an inserting action (and its Space
+/// key) can finish before the caret moves.
 struct PVInput: View {
     @Binding private var text: String
     private let size: PVControlSize
@@ -76,6 +78,7 @@ struct PVInput: View {
     private let icon: PVSymbol?
     private let suffix: String?
     private let isInvalid: Bool
+    private let activateOnAppear: Bool
     private let externalFocus: FocusState<Bool>.Binding?
 
     @FocusState private var ownedFocus: Bool
@@ -89,7 +92,8 @@ struct PVInput: View {
         icon: PVSymbol? = nil,
         suffix: String? = nil,
         isInvalid: Bool = false,
-        focused: FocusState<Bool>.Binding? = nil
+        focused: FocusState<Bool>.Binding? = nil,
+        activateOnAppear: Bool = false
     ) {
         self._text = text
         self.size = size
@@ -99,6 +103,7 @@ struct PVInput: View {
         self.icon = icon
         self.suffix = Self.nilIfEmpty(suffix)
         self.isInvalid = isInvalid
+        self.activateOnAppear = activateOnAppear
         self.externalFocus = focused
     }
 
@@ -140,6 +145,19 @@ struct PVInput: View {
                     .padding(.trailing, PVInputChrome.horizontalInset)
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
+            }
+        }
+        .onAppear {
+            guard activateOnAppear, !isReadOnly else { return }
+            // Same-cycle focus is dropped while the field is inserted; the
+            // next turn also lets a Space-activated control finish so the
+            // key is not typed into the new value.
+            DispatchQueue.main.async {
+                if let externalFocus {
+                    externalFocus.wrappedValue = true
+                } else {
+                    ownedFocus = true
+                }
             }
         }
     }

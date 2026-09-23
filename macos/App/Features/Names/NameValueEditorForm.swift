@@ -7,6 +7,7 @@ struct NameValueEditorForm: View {
     @Binding var draft: NameValueDraft
     var accessibilityIdentifierPrefix: String = "nameValue"
     var showStoredAs: Bool = true
+    @State private var partValueToFocus: UUID?
 
     private var typeOptions: [PVSelectOption] {
         [PVSelectOption(value: "", label: String(localized: L10n.NameValue.partTypeNone))]
@@ -102,7 +103,7 @@ struct NameValueEditorForm: View {
                     size: .sm,
                     icon: .plus
                 ) {
-                    draft.addPart()
+                    partValueToFocus = draft.addPart()
                 }
                 .accessibilityIdentifier("\(accessibilityIdentifierPrefix).parts.add")
                 Text(L10n.NameValue.partsHint)
@@ -149,7 +150,8 @@ struct NameValueEditorForm: View {
                 PVInput(
                     text: partValueBinding(index),
                     size: .sm,
-                    isInvalid: draft.partValueError(at: index) != nil
+                    isInvalid: draft.partValueError(at: index) != nil,
+                    activateOnAppear: part.id == partValueToFocus
                 )
                 .accessibilityIdentifier("\(accessibilityIdentifierPrefix).part.\(index).value")
                 PVSelect(
