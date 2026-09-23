@@ -9953,6 +9953,522 @@
           }
         }
       }
+    },
+    "nameValue.title.add": {
+      "comment": "NameValue editor dialog title when creating",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add name"
+          }
+        }
+      }
+    },
+    "nameValue.title.edit": {
+      "comment": "NameValue editor dialog title when editing",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit name"
+          }
+        }
+      }
+    },
+    "nameValue.confirm.add": {
+      "comment": "NameValue editor confirm verb when creating",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add name"
+          }
+        }
+      }
+    },
+    "nameValue.confirm.save": {
+      "comment": "NameValue editor confirm verb when editing",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save name"
+          }
+        }
+      }
+    },
+    "nameValue.cancel": {
+      "comment": "NameValue editor cancel button",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        }
+      }
+    },
+    "nameValue.form.label": {
+      "comment": "Required NameValue form field label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Full form"
+          }
+        }
+      }
+    },
+    "nameValue.form.required": {
+      "comment": "Required badge next to the NameValue form label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "required"
+          }
+        }
+      }
+    },
+    "nameValue.form.hint": {
+      "comment": "Hint under the NameValue form field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The name as you read it, in normalized spelling — the source's own wording stays on the citation"
+          }
+        }
+      }
+    },
+    "nameValue.form.placeholder": {
+      "comment": "Placeholder in the NameValue full-form field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "John William Alderwick"
+          }
+        }
+      }
+    },
+    "nameValue.form.error.missing": {
+      "comment": "Validation error when NameValue form is empty",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter the name as one full form. Parts are optional; the form is not."
+          }
+        }
+      }
+    },
+    "nameValue.parts.heading": {
+      "comment": "Heading above the optional NameValue parts list",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parts · optional"
+          }
+        }
+      }
+    },
+    "nameValue.parts.empty": {
+      "comment": "Empty-state title when NameValue has no parts",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No parts — the form stands alone."
+          }
+        }
+      }
+    },
+    "nameValue.parts.empty.hint": {
+      "comment": "Empty-state hint when NameValue has no parts",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add parts only when the name segments cleanly and the segments matter to your research"
+          }
+        }
+      }
+    },
+    "nameValue.parts.add": {
+      "comment": "Button that appends a NameValue part row",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add part"
+          }
+        }
+      }
+    },
+    "nameValue.parts.count.none": {
+      "comment": "Parts heading count when the NameValue has no parts",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "none"
+          }
+        }
+      }
+    },
+    "nameValue.parts.count.one": {
+      "comment": "Parts heading count for a single NameValue part",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 part"
+          }
+        }
+      }
+    },
+    "nameValue.parts.count.other": {
+      "comment": "Parts heading count; argument is the part count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld parts"
+          }
+        }
+      }
+    },
+    "nameValue.parts.hint": {
+      "comment": "Hint under the NameValue parts list",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Order is the order you enter. Leave a part untyped when no type fits"
+          }
+        }
+      }
+    },
+    "nameValue.part.value.label": {
+      "comment": "Label for a NameValue part value field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Value"
+          }
+        }
+      }
+    },
+    "nameValue.part.type.label": {
+      "comment": "Label for a NameValue part type picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type"
+          }
+        }
+      }
+    },
+    "nameValue.part.type.none": {
+      "comment": "Picker option for an untyped NameValue part",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No type"
+          }
+        }
+      }
+    },
+    "nameValue.part.type.prefix": {
+      "comment": "NameValue part type: prefix",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prefix"
+          }
+        }
+      }
+    },
+    "nameValue.part.type.given": {
+      "comment": "NameValue part type: given",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Given name"
+          }
+        }
+      }
+    },
+    "nameValue.part.type.initial": {
+      "comment": "NameValue part type: initial",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Initial"
+          }
+        }
+      }
+    },
+    "nameValue.part.type.nick": {
+      "comment": "NameValue part type: nick",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nickname"
+          }
+        }
+      }
+    },
+    "nameValue.part.type.surname_prefix": {
+      "comment": "NameValue part type: surname_prefix",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Surname prefix"
+          }
+        }
+      }
+    },
+    "nameValue.part.type.surname": {
+      "comment": "NameValue part type: surname",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Surname"
+          }
+        }
+      }
+    },
+    "nameValue.part.type.suffix": {
+      "comment": "NameValue part type: suffix",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suffix"
+          }
+        }
+      }
+    },
+    "nameValue.part.type.undetermined": {
+      "comment": "NameValue part type: undetermined",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undetermined"
+          }
+        }
+      }
+    },
+    "nameValue.storedAs": {
+      "comment": "Heading for the NameValue draft readout",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stored as"
+          }
+        }
+      }
+    },
+    "nameValue.summary.add": {
+      "comment": "Host control that opens the NameValue editor when empty",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add name…"
+          }
+        }
+      }
+    },
+    "nameValue.summary.edit": {
+      "comment": "Host control that reopens the NameValue editor when set",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit name…"
+          }
+        }
+      }
+    },
+    "nameValue.summary.notNormalized": {
+      "comment": "Host preview when no NameValue form has been saved",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not normalized yet"
+          }
+        }
+      }
+    },
+    "nameValue.part.moveUp": {
+      "comment": "Tooltip for moving a NameValue part up",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move up"
+          }
+        }
+      }
+    },
+    "nameValue.part.moveDown": {
+      "comment": "Tooltip for moving a NameValue part down",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move down"
+          }
+        }
+      }
+    },
+    "nameValue.part.remove": {
+      "comment": "Tooltip for removing a NameValue part",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove part"
+          }
+        }
+      }
+    },
+    "nameValue.part.error.emptyValue": {
+      "comment": "Validation when a NameValue part value is blank; argument is 1-based index",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Part %lld cannot be empty — remove it instead."
+          }
+        }
+      }
+    },
+    "a11y.nameValue.part": {
+      "comment": "VoiceOver name for a NameValue part row; arguments are index, count, type label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Part %1$lld of %2$lld, %3$@"
+          }
+        }
+      }
+    },
+    "a11y.nameValue.part.moveUp": {
+      "comment": "VoiceOver for move-up; argument is 1-based part index",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move part %lld up"
+          }
+        }
+      }
+    },
+    "a11y.nameValue.part.moveDown": {
+      "comment": "VoiceOver for move-down; argument is 1-based part index",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move part %lld down"
+          }
+        }
+      }
+    },
+    "a11y.nameValue.part.remove": {
+      "comment": "VoiceOver for remove; argument is 1-based part index",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove part %lld"
+          }
+        }
+      }
+    },
+    "a11y.nameValue.part.moved": {
+      "comment": "Announcement after Option-arrow reorder; arguments are new index and count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Part moved to position %1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "citationComposer.valueLabelName": {
+      "comment": "Value slot label for a name Property",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Value — name"
+          }
+        }
+      }
     }
   },
   "version": "1.1"

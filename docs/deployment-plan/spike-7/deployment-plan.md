@@ -312,7 +312,7 @@ Schema/Go (01–03, 01b) may start before design finishes; **UI PRs gate on the 
 - [x] S7-D2 — Design: Subject fields → [`completed.md`](completed.md)
 - [x] S7-D3 — Design: Evidence graph updates → [`completed.md`](completed.md)
 - [x] S7-D4 — Design: Citation composer place → [`completed.md`](completed.md)
-- [ ] S7-D5 — Design: NameValue editor → [`completed.md`](completed.md)
+- [x] S7-D5 — Design: NameValue editor → [`completed.md`](completed.md)
 - [x] S7-01 — `properties` + `subject_type_fields` + **central Interpretation subject registry** + Go/FFI → [`completed.md`](completed.md)
 - [x] S7-01b — Property terms (`property_terms`, `value_type=term`, kind/edge seed) → [`completed.md`](completed.md)
 - [x] S7-05 — Subject fields UI → [`completed.md`](completed.md)
@@ -327,7 +327,7 @@ Schema/Go (01–03, 01b) may start before design finishes; **UI PRs gate on the 
 - [x] S7-06 — Image + PDF viewers in composer → [`completed.md`](completed.md)
 - [x] S7-D9 — Design: Locator region chrome → [`completed.md`](completed.md)
 - [x] S7-07 — Locator tools (page + region + artifact) → [`completed.md`](completed.md)
-- [ ] S7-02b — NameValue Swift editor → [`completed.md`](completed.md)
+- [x] S7-02b — NameValue Swift editor → [`completed.md`](completed.md)
 - [ ] S7-10 — Durable connect macros → [`completed.md`](completed.md)
 - [ ] S7-D7 — Design: Card component (design-system reference) → [`completed.md`](completed.md)
 - [ ] S7-13 — `PVCard` call-site cleanup (manual cousins) → [`completed.md`](completed.md)
@@ -367,7 +367,7 @@ Claude Design board for the navigable composer. Brief archived: [`design/archive
 
 ## S7-D5 — Design: NameValue editor
 
-Claude Design board for the reusable NameValue modal (DateValue twin). Brief: [`design/S7-D5-name-value-editor.md`](design/S7-D5-name-value-editor.md). Gates **S7-02b**. Schedule late — after thin composer works. Part types: **product registry picker + L10n labels** (not free text; not user vocab admin).
+Claude Design board for the reusable NameValue modal (DateValue twin). Brief archived: [`design/archive/S7-D5-name-value-editor.md`](design/archive/S7-D5-name-value-editor.md). Gates **S7-02b**. Schedule late — after thin composer works. Part types: **product registry picker + L10n labels** (not free text; not user vocab admin).
 
 ---
 

@@ -141,6 +141,12 @@ struct CatalogCitation: Sendable, Equatable, Identifiable {
     var transcriptionNote: String
 }
 
+/// One ordered NameValue part as stored on an Observation.
+struct CatalogNameValuePart: Sendable, Equatable {
+    var value: String
+    var type: String
+}
+
 /// One Observation row with Property summary (graph / card payloads).
 struct CatalogObservation: Sendable, Equatable, Identifiable {
     var id: String
@@ -157,6 +163,8 @@ struct CatalogObservation: Sendable, Equatable, Identifiable {
     var valueNameID: String
     /// name_values.form when listed (denormalized into valueText as well).
     var nameForm: String = ""
+    /// Ordered name_value_parts when listed (empty when form-only).
+    var nameParts: [CatalogNameValuePart] = []
     var valueSubjectID: String
     var valueTermID: String
     var propertyKey: String
@@ -660,7 +668,7 @@ struct CatalogObservationDraft: Sendable {
     var date: CatalogDateValueInput?
     var valueDateID: String = ""
     var nameForm: String = ""
-    var nameParts: [(value: String, type: String)] = []
+    var nameParts: [CatalogNameValuePart] = []
     var valueNameID: String = ""
     var valueSubjectID: String = ""
     var valueTermID: String = ""

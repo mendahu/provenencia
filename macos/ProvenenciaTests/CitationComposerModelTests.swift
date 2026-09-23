@@ -226,7 +226,7 @@ struct CitationComposerModelTests {
         #expect(keys == Set(["person", "event"]))
     }
 
-    @Test func prepareAutoSelectsSingleArtifactAndFiltersNameType() async {
+    @Test func prepareAutoSelectsSingleArtifactAndIncludesNameType() async {
         let store = makeStore()
         seedArtifact(store, count: 1)
         let model = makeModel(store: store)
@@ -234,8 +234,8 @@ struct CitationComposerModelTests {
         #expect(model.phase == .compose)
         #expect(model.selectedArtifactID == "art-0")
         #expect(model.observations.isEmpty)
-        #expect(model.availableProperties.map(\.id).sorted() == ["prop-age", occupationPropertyID].sorted())
-        #expect(!model.availableProperties.contains(where: { $0.valueType == "name" }))
+        #expect(model.availableProperties.map(\.id).sorted() == ["prop-age", namePropertyID, occupationPropertyID].sorted())
+        #expect(model.availableProperties.contains(where: { $0.valueType == "name" }))
     }
 
     @Test func prepareShowsPickerUntilContinue() async {
@@ -416,6 +416,40 @@ struct CitationComposerModelTests {
         #expect(model.observationDialog == nil)
         #expect(model.observations.count == 1)
         #expect(model.observations[0].valueText == "Farmer")
+    }
+
+    @Test func observationDialogCommitsNameValueParts() async throws {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.beginAddObservation()
+        var draft = model.observationDialog!
+        draft.propertyID = namePropertyID
+        draft.nameDraft = NameValueDraft(
+            form: "John W. Alderwick",
+            parts: [
+                CatalogNameValuePart(value: "John", type: "given"),
+                CatalogNameValuePart(value: "W.", type: "initial"),
+                CatalogNameValuePart(value: "Alderwick", type: "surname"),
+            ]
+        )
+        model.updateObservationDialog(draft)
+        #expect(model.canConfirmObservation)
+        model.confirmObservationDialog()
+        #expect(model.observations.count == 1)
+        #expect(NameValueDisplay.string(for: model.observations[0].nameDraft) == "John W. Alderwick")
+
+        let location = await model.submit()
+        #expect(location?.sourceSurface == .graph)
+        let listed = try await store.listObservationsBySource(
+            projectDir: projectDir,
+            sourceID: sourceID
+        )
+        #expect(listed.count == 1)
+        #expect(listed[0].nameForm == "John W. Alderwick")
+        #expect(listed[0].nameParts.map(\.type) == ["given", "initial", "surname"])
+        #expect(listed[0].nameParts.map(\.value) == ["John", "W.", "Alderwick"])
     }
 
     @Test func submitRequiresObservationAndWritesArtifactLocator() async throws {

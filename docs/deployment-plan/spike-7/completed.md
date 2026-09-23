@@ -24,6 +24,8 @@ IDs stay stable (`S7-NN`, `S7-DN`). Do not renumber when moving steps here.
 | [S7-06](#s7-06--pr-artifact-viewers-image--pdf) | PR | Isolated `ArtifactViewer` module; image + PDF in composer |
 | [S7-D9](#s7-d9--design-locator-region-chrome) | Design | Default artifact + Set Page + region tools + summary list |
 | [S7-07](#s7-07--pr-locator-tools) | PR | Layered artifact/page/region locators + overlay tools |
+| [S7-D5](#s7-d5--design-namevalue-editor) | Design | Reusable NameValue modal (DateValue twin); product part-type picker |
+| [S7-02b](#s7-02b--pr-namevalue-swift-editor) | PR | Shared `Features/Names/` editor hosted in the composer |
 
 ## Steps
 
@@ -322,4 +324,37 @@ python3 scripts/check-localizable-xcstrings.py
 python3 scripts/check-localizable-xcstrings.py
 # xcodebuild test — CitationComposerModelTests / ArtifactRegionGeometryTests / ArtifactViewerModelTests
 go test ./core/locator
+```
+
+### S7-D5 — Design: NameValue editor
+
+| | |
+| --- | --- |
+| **Kind** | Design (Claude Design board) |
+| **Depends on** | structured-name-model; DateValue editor; S7-02 registry; thin composer (S7-08) |
+| **Deliverables** | Done. Board for reusable NameValue modal: required form, optional ordered parts, product part-type picker (no free text), host summary control, DateValue-shared chrome. Brief archived: [`design/archive/S7-D5-name-value-editor.md`](design/archive/S7-D5-name-value-editor.md). |
+| **Dogfood** | Design only — implement in **S7-02b**. |
+| **Out** | User-minted `name_part_types`; `name_format` profiles; composer layout. |
+
+**Landed:** NameValue editor contract before S7-02b.
+
+### S7-02b — PR: NameValue Swift editor
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S7-02 (registry), S7-08, **S7-D5** |
+| **Deliverables** | Done. Shared `Features/Names/` module (`NameValueDraft`, `NameValueEditorForm`, `.nameValueFormDialog`, `NameValueHostControl`) mirroring `Features/Dates/`. Composer unblocks `value_type = name` and hosts the editor as a nested form dialog. Part-type picker from the product registry + L10n. Listed observations hydrate NameValue parts via `namevalues.Lookup`. |
+| **Tests** | `NameValueDraftTests`; `CitationComposerModelTests` (name Property available; persist form + typed parts); `core/database/observations` name-part hydrate; `check-localizable-xcstrings.py`. |
+| **Dogfood** | In composer, add a name Observation → edit NameValue (typed parts via picker) → submit. |
+| **Out** | Schema DDL; name_format profiles; user-minted `name_part_types`; subject-typed Observations. |
+
+**Landed:** person names can be asserted as structured NameValues instead of being excluded from the composer.
+
+**Verify:**
+
+```bash
+python3 scripts/check-localizable-xcstrings.py
+# xcodebuild test — NameValueDraftTests / CitationComposerModelTests
+go test ./core/database/observations/ ./core/database/namevalues/
 ```

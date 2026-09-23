@@ -178,7 +178,9 @@ func listedObservationProto(l observations.Listed) *engine.Observation {
 	if l.Date != nil {
 		o.Date = dateValueProto(*l.Date)
 	}
-	if l.ValueNameForm != "" {
+	if l.Name != nil {
+		o.Name = nameValueProto(*l.Name)
+	} else if l.ValueNameForm != "" {
 		o.Name = &engine.NameValueInput{Form: l.ValueNameForm}
 	}
 	return o

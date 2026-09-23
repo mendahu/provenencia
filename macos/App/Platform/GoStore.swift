@@ -1348,6 +1348,7 @@ struct GoStore: GenealogyStore {
             date: o.hasDate ? Self.mapDateValue(o.date) : nil,
             valueNameID: o.valueNameID,
             nameForm: o.hasName ? o.name.form : "",
+            nameParts: o.hasName ? o.name.parts.map { CatalogNameValuePart(value: $0.value, type: $0.type) } : [],
             valueSubjectID: o.valueSubjectID,
             valueTermID: o.valueTermID,
             propertyKey: o.propertyKey,

@@ -108,6 +108,8 @@ type Listed struct {
 	ValueTermLabel string
 	// ValueNameForm is name_values.form for value_name_id (empty when unset).
 	ValueNameForm string
+	// Name is the joined name_values row plus parts when value_name_id is set.
+	Name *namevalues.Value
 	// ValueSubjectLabel is subjects.label for value_subject_id (empty when unset).
 	ValueSubjectLabel string
 	// Date is the joined date_values row when value_date_id is set.
@@ -433,7 +435,11 @@ func ListBySource(c *database.Catalog, sourceID []byte) ([]Listed, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	return scanListed(rows)
+	listed, err := scanListed(rows)
+	if err != nil {
+		return nil, err
+	}
+	return hydrateNameValues(c, listed)
 }
 
 // ListBySubject returns Observations for one subject.
@@ -450,7 +456,11 @@ func ListBySubject(c *database.Catalog, subjectID []byte) ([]Listed, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	return scanListed(rows)
+	listed, err := scanListed(rows)
+	if err != nil {
+		return nil, err
+	}
+	return hydrateNameValues(c, listed)
 }
 
 // ListByCitation returns Observations for one citation.
@@ -467,7 +477,11 @@ func ListByCitation(c *database.Catalog, citationID []byte) ([]Listed, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	return scanListed(rows)
+	listed, err := scanListed(rows)
+	if err != nil {
+		return nil, err
+	}
+	return hydrateNameValues(c, listed)
 }
 
 // DeleteByCitationTx removes all Observations for a citation (notes CASCADE).
@@ -567,6 +581,24 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 		out = append(out, l)
 	}
 	return out, rows.Err()
+}
+
+func hydrateNameValues(c *database.Catalog, listed []Listed) ([]Listed, error) {
+	for i := range listed {
+		if len(listed[i].ValueNameID) != 16 {
+			continue
+		}
+		v, err := namevalues.Lookup(c, listed[i].ValueNameID)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				continue
+			}
+			return nil, err
+		}
+		listed[i].Name = &v
+		listed[i].ValueNameForm = v.Form
+	}
+	return listed, nil
 }
 
 // fillListedDisplayText denormalizes structured value types into ValueText so

@@ -80,6 +80,7 @@ struct CitationComposerView: View {
                 confirm: L10n.CitationComposer.addObservation,
                 cancel: L10n.CitationComposer.cancel
             ),
+            width: observationDialogWidth,
             isRunning: false,
             confirmDisabled: !model.canConfirmObservation,
             accessibilityIdentifierPrefix: "citationComposer.observation",
@@ -168,5 +169,11 @@ struct CitationComposerView: View {
             get: { model.observationDialog != nil },
             set: { if !$0 { model.cancelObservationDialog() } }
         )
+    }
+
+    /// S7-D5 NameValue body is 560pt; other value types keep the default sheet.
+    private var observationDialogWidth: CGFloat {
+        let type = model.observationDialog.flatMap { model.catalogProperty(id: $0.propertyID)?.valueType }
+        return type == "name" ? 560 : 480
     }
 }
