@@ -5,8 +5,9 @@ description: >-
   Provenencia (Go core, FFI, macOS SwiftUI) against a fixed checklist: code
   cleanliness, security, performance, project structure, separation of concerns,
   idiomatic patterns, test coverage, error UX, internationalization, docs/skills/rules
-  drift, accessibility, and UI component organization (orphans, near-duplicates,
-  generic vs domain-specific). Use when the user asks for an app health review,
+  drift, accessibility, UI component organization (orphans, near-duplicates,
+  generic vs domain-specific), and state management (tree ownership, sibling
+  sync, session caches). Use when the user asks for an app health review,
   tech-debt review, maintainability audit, bloat check, architecture hygiene
   pass, or to periodically review the application for debt creep—especially
   after AI-assisted development.
@@ -52,6 +53,7 @@ App health review:
 - [ ] 10. Docs / skills / rules drift
 - [ ] 11. Accessibility
 - [ ] 12. UI component organization
+- [ ] 13. State management
 - [ ] Report delivered
 ```
 
@@ -71,6 +73,7 @@ App health review:
 | Docs / skills drift | Spot-check `.cursor/skills/`, `.cursor/rules/`, and key `docs/*.md` against the live tree; flag broken paths and contradicted “blessed” patterns |
 | Accessibility | Grep `.accessibilityIdentifier` / labels; sample interactive controls (esp. icon-only); compare to `docs/macos-client-patterns.md` §5 |
 | Component reuse | Sample `DesignSystem/Components/**` + hot feature chrome; flag orphans/near-duplicates. Deep dive on one named type → [`evaluate-ui-component`](../evaluate-ui-component/SKILL.md) (do not expand §12 into full per-type plans here) |
+| State ownership | Map `@State` / `@Observable` models / `QueryHandle`s in 2–3 hot trees (composer, graph, source page, onboarding). Flag sibling-to-sibling sync, shadow caches, and mutation paths that bypass `WorkspaceSession` |
 
 Keep commands read-only unless the user asked to fix. Prefer sampling deeply in hot paths over exhaustively listing every file.
 
@@ -90,6 +93,7 @@ Read [`criteria.md`](criteria.md) for the full rubric. In short:
 10. **Docs/skills/rules drift** — authoritative guidance still matches code; no orphan skills, stale rules, or contradicted docs that would mis-train the next agent.
 11. **Accessibility** — VoiceOver/keyboard-ready controls; stable dotted `accessibilityIdentifier`s; labels on icon-only actions; no UI-testing by localized title.
 12. **UI component organization** — orphans, near-duplicates, and wrong Frost layer (DS vs recipe vs snowflake); sample and flag; for a pointed deep-dive + compose plan use [`evaluate-ui-component`](../evaluate-ui-component/SKILL.md); for new chrome use [`add-ui-component`](../add-ui-component/SKILL.md).
+13. **State management** — who owns which state in the SwiftUI tree; sibling ping-pong that should hoist into a parent machine; `WorkspaceSession` / `QueryHandle` caches vs local shadow copies.
 
 ## Provenencia invariants (flag violations)
 
@@ -102,6 +106,7 @@ Read [`criteria.md`](criteria.md) for the full rubric. In short:
 - Skills/rules/docs that agents follow must stay truthful; fix or archive drift, don’t leave lying guidance.
 - Interactive Mac controls that matter for tests or AT get stable `.accessibilityIdentifier("dotted.name")`; don’t query by localized title.
 - DesignSystem uses **Components / Recipes / Snowflakes** with **one folder per control** (no category nesting, no loose layer-root `.swift`); recipes are product-specific reused maps onto components; typical snowflakes stay feature-private—not a second copy of the same floating menu / list / chip / dialog chrome.
+- Catalog **read** cache lives on `WorkspaceSession` / `QueryHandle` (one key owns each list). Feature models own **workflow** state (a parent `Phase` / draft machine)—not a second copy of cached catalog rows, and not sibling `@State` kept in sync with notifications or `onChange` ping-pong.
 
 ## Output format
 
@@ -160,6 +165,7 @@ Each action item **must** include:
 | Docs / skills / rules drift | … | … |
 | Accessibility | … | … |
 | UI component organization | … | … |
+| State management | … | … |
 ```
 
 Omit an empty priority section rather than writing “None.”
@@ -183,4 +189,4 @@ Rules for action items:
 - L10n fixes: `add-localized-string`
 - Catalog session: `use-catalog-session`
 - Tests: `add-swift-test`; Go tests per `.cursor/rules/go-tests.mdc`
-- Structure/nav: `add-workspace-location`, `add-ffi-handler`, `add-catalog-query`
+- Structure/nav: `add-workspace-location`, `add-workspace-place`, `add-ffi-handler`, `add-catalog-query`

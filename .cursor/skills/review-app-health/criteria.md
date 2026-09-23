@@ -99,6 +99,7 @@ Prefer renaming toward a **product concept** (see existing `Features/Catalog/` o
 - Business rules in SwiftUI `View` / `body`
 - Duplicated discrete functionality that should be a reusable utility **once** there are ≥2 real call sites and a clear name
 - UI chrome duplication (menus, lists, panels) — review under **§12 UI component organization**; still flag here when a feature module depends sideways on another feature’s private control instead of a shared primitive
+- Split / sibling UI state and session-cache ownership — review under **§13 State management**; still flag here when a feature module reaches sideways into another feature’s model to stay in sync
 
 **Principle** — Modules compose elegantly; boundaries are deliberate; shared code moves **up**, not sideways via spaghetti.
 
@@ -251,6 +252,108 @@ Catch LLM- and rush-driven UI debt against Frost layers (**design system / recip
 
 ---
 
+## 13. State management
+
+How **workflow and UI state** sit in the SwiftUI tree, and how that tree talks to
+the **catalog read cache**. Goal: one owner per concern; a parent machine instead
+of sibling ping-pong; caches that stay the single source of truth.
+
+Notes: [`docs/macos-client-patterns.md`](../../../docs/macos-client-patterns.md) § Workspace session;
+`.cursor/skills/add-workspace-place`; `macos/App/Features/Workspace/Session/`.
+
+**Look for**
+
+- **Sibling-owned state that must interact.** Two peer views each hold `@State` /
+  a private `@Observable` slice (selected id, draft, “is editing”, locator, dialog
+  open) and then sync via `onChange`, `NotificationCenter`, PreferenceKey tunnels,
+  environment writes, or “did the other one finish?” flags. That is a band-aid:
+  hoist to the nearest parent model and express transitions as an enum machine
+  (`loading` / `pick` / `compose` / `missing` — see `CitationComposerModel.Phase`).
+- **Split brains.** The same fact lives in two places (view `@State` *and* the
+  model; list pane *and* detail pane; feature model *and* `QueryHandle`). Ask
+  which write wins after a race, a Back navigation, or a failed save.
+- **Callback / binding spaghetti.** Parent passes a Binding down so a child can
+  mutate a sibling’s field, or two children hold each other’s callbacks. Prefer
+  one model API (`select`, `beginEdit`, `cancel`) that children call.
+- **State in the wrong layer.** Business/workflow rules in `body` or in a
+  snowflake row; chrome-only flags (sidebar collapse) stuffed onto a catalog
+  model; navigation place duplicated as `selectedSection` beside
+  `WorkspaceNavigation` (history is a different owner—see
+  `add-workspace-location`).
+- **Ad-hoc machines.** Boolean piles (`isLoading && !isPicking && hasDraft`) that
+  encode phases implicitly and admit impossible combinations. Collapse into an
+  enum whose associated values carry the data that phase needs.
+
+**Caches (pay special attention)**
+
+`WorkspaceSession` + `QueryHandle` is the project-scoped catalog read cache
+(get-or-load, in-flight dedupe, patch vs invalidate, stale-while-revalidate).
+It is easy to grow a second, quieter cache next to it.
+
+- **Shadow copies.** Feature model or view keeps `[CatalogSource]`, a graph
+  snapshot, or vocabulary rows that already live on a `QueryHandle`. The handle
+  updates; the shadow does not (or the reverse). Read `handle.value`; don’t clone
+  it into `@State` “for convenience.”
+- **Duplicate keys / folded payloads.** One list owned by two `CatalogQueryKey`s,
+  or a workspace payload that embeds another key’s rows so a write on page A
+  cannot stale page B. One cache owns each list
+  (`macos-client-patterns` § “One cache owns each list”).
+- **Wrong update tool.** `setQueryValue` used as if it were a write-through store
+  (it no-ops when the key was never warmed). Invalidate skipped after create/delete.
+  Stale-while-revalidate used to hide an **edit** that should have patched
+  synchronously. Two siblings both patching/invalidating the same key after one
+  mutation.
+- **Bypass.** Destination still `.task { load() }` into local state while
+  `session.apply(location:)` already warms the place. `session.query()` called
+  from `body` or from a computed property `body` reads every frame (starves
+  MainActor, breaks observation).
+- **Cache vs workflow confusion.** Treating `QueryHandle.status` as the feature’s
+  wizard phase, or stuffing draft/dirty form state onto the session. Handles are
+  **read cache**; composer/graph/onboarding drafts belong on the feature model.
+- **Looming invalidation bugs.** Mutation map in `CatalogQueryRegistry` missing a
+  key the UI now reads; patch updates list but not detail (or the reverse);
+  derived joins (`sourceWorkspace` metadata, suggestion-embedded fields, counts)
+  patched as if they were a single row. Flag consolidation: one invalidate tag,
+  one owner, fewer ad-hoc `setQueryValue` call sites.
+
+**How to sample**
+
+1. Pick 2–3 hot trees: Citation Composer, Evidence graph, Source page,
+   onboarding, a vocabulary list/detail.
+2. Inventory owners: `@State` in views, `@Observable` feature models,
+   `WorkspaceSession` / `QueryHandle`, `WorkspaceNavigation`, environment
+   objects. Sketch who writes and who reads.
+3. Grep `NotificationCenter`, cross-view `onChange`, `setQueryValue`,
+   `session.invalidate`, and local `var rows` / `var snapshot` that mirror a
+   handle.
+4. Ask: if these two siblings must stay in sync, should a parent machine own
+   both? If this array already has a `CatalogQueryKey`, delete the copy.
+
+**Provenencia notes**
+
+- Target: view → feature model (`Phase` + drafts) → `GenealogyStore` / session
+  mutations → `QueryHandle` for display data. `WorkspaceModel` is sidebar chrome
+  only.
+- Blessed cache path: warm in `.task` / `apply(location:)`; observe
+  `@Bindable QueryHandle` in a child; patch when the save response is enough;
+  invalidate on create/delete/ambiguous busts
+  (`.cursor/skills/add-workspace-place`).
+- Do not demand a formal state-machine library. A small `enum Phase` on the
+  parent model is the project grain (composer already does this).
+- Go catalog session (`catalogsession`) is a different lock—review under §3 / §5,
+  not as a SwiftUI tree issue.
+
+**Good finding shape** — “List and detail each keep `selectedID` and ping via
+`onChange` at X/Y—hoist onto `FooModel` as `enum Phase` with one `select`.”
+Or: “`BarModel` copies `handle.value` into `cachedRows`; a field-list invalidate
+never refreshes the copy—read the handle and drop the shadow.”
+
+**Allow** — Ephemeral view-only chrome (hover, focus, scroll position,
+one-shot animation flags). Preview fixtures. `QueryHandle` itself (that *is*
+the cache). Deliberate stale-while-revalidate on **navigation** reads.
+
+---
+
 ## Priority guide
 
 Action items land in one of three groups (see skill Output format). When unsure,
@@ -258,9 +361,9 @@ prefer **medium** over **high**. An empty high-priority section is a fine outcom
 
 | Priority | Use when |
 | --- | --- |
-| **High** | Security risk, data loss/corruption risk, severe UX breakage, clear layering violation actively causing bugs, guidance that would cause unsafe/wrong agent edits on a critical path, primary flows hard or impossible for AT |
-| **Medium** | Meaningful debt, perf likely to hurt dogfood, structural smell that will multiply under AI edits, docs/skills that systematically mis-train agents, missing coverage on important boundaries, orphaned or near-duplicate UI primitives that encourage copy-paste |
-| **Low** | Nits, naming polish, optional cleanup, speculative perf, missing identifiers on low-traffic controls, minor doc stale phrasing |
+| **High** | Security risk, data loss/corruption risk, severe UX breakage, clear layering violation actively causing bugs, guidance that would cause unsafe/wrong agent edits on a critical path, primary flows hard or impossible for AT, cache/state split-brain that can show or persist the wrong catalog row |
+| **Medium** | Meaningful debt, perf likely to hurt dogfood, structural smell that will multiply under AI edits, docs/skills that systematically mis-train agents, missing coverage on important boundaries, orphaned or near-duplicate UI primitives that encourage copy-paste, sibling-state band-aids or shadow caches that will keep growing |
+| **Low** | Nits, naming polish, optional cleanup, speculative perf, missing identifiers on low-traffic controls, minor doc stale phrasing, tidy-but-working local `@State` on a quiet screen |
 
 ### Sizing action items
 
