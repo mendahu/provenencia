@@ -25,7 +25,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var subjectTypeFieldsByType: [String: [CatalogSubjectTypeField]] = [:]
     var placeableSubjectTypes: [CatalogSubjectTypePresentation] = []
     var subjectTypePresentations: [String: CatalogSubjectTypePresentation] = [:]
-    var connectRules: [CatalogConnectRule] = []
+    var connectRules: [CatalogConnectRule] = CatalogConnectRule.productMatrix
     var observationsBySource: [String: [CatalogObservation]] = [:]
     var citationsByID: [String: CatalogCitation] = [:]
     var citationNotesByID: [String: [String]] = [:]
@@ -1258,6 +1258,75 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         connectRules
     }
 
+    func createCitedBridge(
+        projectDir: String,
+        userID: String,
+        sourceID: String,
+        fromSubjectID: String,
+        toSubjectID: String,
+        bridgeTypeKey: String,
+        label: String,
+        description: String,
+        gridX: Int64,
+        gridY: Int64,
+        artifactID: String,
+        locatorJSON: String,
+        transcription: String,
+        citationDescription: String,
+        transcriptionUncertain: Bool,
+        transcriptionNote: String,
+        citationNotes: [String],
+        observations drafts: [CatalogObservationDraft]
+    ) async throws -> (CatalogSubject, CatalogCitation, [CatalogObservation]) {
+        markCatalogSessionHeld(projectDir)
+        let from = subjectsBySource[sourceID]?.first(where: { $0.id == fromSubjectID })
+        let to = subjectsBySource[sourceID]?.first(where: { $0.id == toSubjectID })
+        guard let from, let to else { throw StoreBoom.boom }
+        let fromKey = subjectTypesByProject[projectDir]?.first(where: { $0.id == from.subjectTypeID })?.key ?? ""
+        let toKey = subjectTypesByProject[projectDir]?.first(where: { $0.id == to.subjectTypeID })?.key ?? ""
+        let rule = CatalogConnectRule.match(from: fromKey, to: toKey, in: connectRules)
+        if rule.refuse {
+            throw CoreInvokeError.coded(status: 1, code: "connect.refused", kind: .user, params: [])
+        }
+        if !bridgeTypeKey.isEmpty, bridgeTypeKey != rule.bridgeTypeKey {
+            throw CoreInvokeError.coded(status: 1, code: "connect.invalid", kind: .user, params: [])
+        }
+        guard let type = subjectTypesByProject[projectDir]?.first(where: { $0.key == rule.bridgeTypeKey }) else {
+            throw StoreBoom.boom
+        }
+        let subject = try await createSubject(
+            projectDir: projectDir,
+            userID: userID,
+            sourceID: sourceID,
+            subjectTypeID: type.id,
+            label: label,
+            description: description
+        )
+        _ = try await setSubjectPosition(
+            projectDir: projectDir,
+            subjectID: subject.id,
+            gridX: gridX,
+            gridY: gridY
+        )
+        var stamped = drafts
+        for index in stamped.indices where stamped[index].subjectID.isEmpty {
+            stamped[index].subjectID = subject.id
+        }
+        let (citation, observations) = try await createCitationWithObservations(
+            projectDir: projectDir,
+            userID: userID,
+            artifactID: artifactID,
+            locatorJSON: locatorJSON,
+            transcription: transcription,
+            description: citationDescription,
+            transcriptionUncertain: transcriptionUncertain,
+            transcriptionNote: transcriptionNote,
+            citationNotes: citationNotes,
+            observations: stamped
+        )
+        return (subject, citation, observations)
+    }
+
     func createCitationWithObservations(
         projectDir: String,
         userID _: String,
@@ -1410,7 +1479,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 valueTermID: draft.valueTermID,
                 propertyKey: property?.key ?? "",
                 propertyLabel: property?.label ?? "",
-                propertyValueType: property?.valueType ?? ""
+                propertyValueType: property?.valueType ?? "",
+                valueTermKey: propertyTermsByProperty[draft.propertyID]?
+                    .first(where: { $0.id == draft.valueTermID })?
+                    .key ?? ""
             )
             observationsBySource[subject.sourceID, default: []].append(obs)
             created.append(obs)

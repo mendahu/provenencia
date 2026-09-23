@@ -42,6 +42,21 @@ struct WorkspaceDestinationHostTests {
         )
     }
 
+    @Test func presentationConnectPrefillComposer() {
+        #expect(
+            presentation(
+                for: WorkspaceLocation(
+                    section: .sources,
+                    sourceId: "src-1",
+                    connectFromSubjectId: "p1",
+                    connectToSubjectId: "e1",
+                    connectBridgeTypeKey: "participation",
+                    sourceSurface: .citationComposer
+                )
+            ) == .sourceCitationComposer
+        )
+    }
+
     @Test func presentationSourceFieldsRootAndRow() {
         #expect(presentation(for: .sectionRoot(.sourceFields)) == .sourceFields)
         #expect(

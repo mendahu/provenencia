@@ -27,10 +27,10 @@ final class EvidenceGraphModel {
     var armedConnect = false
     /// First primary chosen while connecting.
     var connectOriginID: String?
-    /// Inferred bridge kind while the create sheet is open for a connect.
-    var pendingBridgeKind: EvidenceBridgeKind?
-    /// Endpoint B id while creating a bridge (A is `connectOriginID`).
-    var pendingEndpointBID: String?
+    /// Connect-matrix rows from `listConnectRules` (product fallback).
+    private(set) var connectRules: [CatalogConnectRule] = CatalogConnectRule.productMatrix
+    /// Role / relationship_type sheet (not a history entry; writes nothing).
+    var pendingDisambiguation: PendingDisambiguation?
 
     var isCreating = false
     /// Edit label/description sheet open for this subject (mutually exclusive with create).
@@ -38,13 +38,23 @@ final class EvidenceGraphModel {
     /// Kind used for edit dialog title when editing a primary; nil when editing a bridge.
     var editingPrimaryKind: EvidencePrimaryKind?
     var editingBridgeKind: EvidenceBridgeKind?
-    /// After a successful bridge create, consumed once to open the composer.
-    private(set) var pendingComposerHandoff: PendingComposerHandoff?
+    /// After a valid pair (or disambiguation confirm), consumed once to open the composer.
+    private(set) var pendingComposerHandoff: WorkspaceLocation?
 
-    struct PendingComposerHandoff: Equatable {
-        var subjectID: String
-        var title: String
-        var ref: String
+    struct PendingDisambiguation: Equatable {
+        var fromID: String
+        var toID: String
+        var fromKind: EvidencePrimaryKind
+        var toKind: EvidencePrimaryKind
+        var fromLabel: String
+        var toLabel: String
+        var rule: CatalogConnectRule
+        var gridX: Int64
+        var gridY: Int64
+        var propertyID: String
+        var propertyKey: String
+        var terms: [CatalogPropertyTerm]
+        var selectedTermID: String
     }
     /// Uncited subject pending delete confirm.
     var pendingDelete: PendingDelete?
@@ -78,6 +88,26 @@ final class EvidenceGraphModel {
         isCreating || editingSubjectID != nil
     }
 
+    var isDisambiguating: Bool {
+        pendingDisambiguation != nil
+    }
+
+    var canConfirmDisambiguation: Bool {
+        guard let pending = pendingDisambiguation else { return false }
+        return !pending.selectedTermID.isEmpty
+    }
+
+    var disambiguationTermOptions: [PVComboBoxOption] {
+        guard let pending = pendingDisambiguation else { return [] }
+        return pending.terms.map { term in
+            PVComboBoxOption(
+                value: term.id,
+                label: PropertyTermDisplay.name(term: term, propertyKey: pending.propertyKey),
+                subtext: term.key
+            )
+        }
+    }
+
     private var graphKey: CatalogQueryKey {
         CatalogQueryKey.sourceGraph(project: session.projectKey, sourceId: sourceID)
     }
@@ -104,10 +134,9 @@ final class EvidenceGraphModel {
         }
     }
 
-    /// Snapshot with provisional endpoints attached for drawing.
+    /// Snapshot as loaded; leftover uncited JSON links do not draw lines.
     func displaySnapshot(from raw: SourceGraphSnapshot?) -> SourceGraphSnapshot {
-        let base = raw ?? SourceGraphSnapshot(sourceId: sourceID)
-        return base.attaching(links: linkStore.links(for: sourceID))
+        raw ?? SourceGraphSnapshot(sourceId: sourceID)
     }
 
     func prepare() async {
@@ -143,6 +172,12 @@ final class EvidenceGraphModel {
             }
         }
         presentationByKind = presentations
+
+        if let rules = try? await store.listConnectRules() {
+            connectRules = rules
+        } else {
+            connectRules = CatalogConnectRule.productMatrix
+        }
 
         await refreshCanCite()
     }
@@ -198,8 +233,7 @@ final class EvidenceGraphModel {
             armedConnect = true
             connectOriginID = nil
             connectHoverPoint = nil
-            pendingBridgeKind = nil
-            pendingEndpointBID = nil
+            pendingDisambiguation = nil
         }
     }
 
@@ -214,8 +248,7 @@ final class EvidenceGraphModel {
         armedConnect = false
         connectOriginID = nil
         connectHoverPoint = nil
-        pendingBridgeKind = nil
-        pendingEndpointBID = nil
+        pendingDisambiguation = nil
     }
 
     func selectSubject(id: String?) {
@@ -235,15 +268,17 @@ final class EvidenceGraphModel {
     }
 
     /// Pointer / keyboard pick while Connect is armed.
-    func handleConnectPick(subjectID: String, kind: EvidencePrimaryKind, label: String) {
-        guard canCite, armedConnect, !isCreating, !isSaving, editingSubjectID == nil else { return }
+    func handleConnectPick(subjectID: String, kind: EvidencePrimaryKind, label: String) async {
+        guard canCite, armedConnect, !isCreating, !isSaving, editingSubjectID == nil,
+              pendingDisambiguation == nil
+        else { return }
         if connectOriginID == nil {
             connectOriginID = subjectID
             selectSubject(id: subjectID)
             return
         }
         guard let originID = connectOriginID, originID != subjectID else { return }
-        beginBridgeCreate(
+        await completeConnectPair(
             originID: originID,
             targetID: subjectID,
             targetKind: kind,
@@ -278,8 +313,6 @@ final class EvidenceGraphModel {
         let cell = GraphCanvasGridMapping.gridCell(contentPoint: contentPoint)
         pendingGridX = cell.gridX
         pendingGridY = cell.gridY
-        pendingBridgeKind = nil
-        pendingEndpointBID = nil
         draft = CreateDraft(
             label: defaultLabel(for: kind),
             description: ""
@@ -319,15 +352,20 @@ final class EvidenceGraphModel {
         disarm()
     }
 
-    private func beginBridgeCreate(
+    func completeConnectPair(
         originID: String,
         targetID: String,
         targetKind: EvidencePrimaryKind,
         targetLabel: String
-    ) {
+    ) async {
         guard canCite else { return }
         guard let origin = primary(in: currentSnapshot(), id: originID) else { return }
-        guard let bridgeKind = EvidenceBridgeKindInference.kind(origin.kind, targetKind) else {
+        let rule = CatalogConnectRule.match(
+            from: origin.kind.rawValue,
+            to: targetKind.rawValue,
+            in: connectRules
+        )
+        if rule.refuse || rule.bridgeTypeKey.isEmpty {
             toast = VocabularyToast(
                 title: String(localized: L10n.EvidenceGraph.connectInvalidPairTitle),
                 body: String(localized: L10n.EvidenceGraph.connectInvalidPairBody),
@@ -337,19 +375,63 @@ final class EvidenceGraphModel {
         }
 
         let mid = midpointCell(origin: origin, targetID: targetID)
+        connectHoverPoint = nil
         pendingGridX = mid.gridX
         pendingGridY = mid.gridY
-        pendingBridgeKind = bridgeKind
-        pendingEndpointBID = targetID
-        draft = CreateDraft(
-            label: defaultBridgeLabel(for: bridgeKind),
-            description: ""
-        )
-        labelError = nil
-        createError = nil
-        isCreating = true
-        connectHoverPoint = nil
-        _ = targetLabel
+
+        if rule.disambiguation == "none" || rule.disambiguation.isEmpty {
+            pendingComposerHandoff = connectComposerLocation(
+                fromID: originID,
+                toID: targetID,
+                fromKind: origin.kind,
+                toKind: targetKind,
+                fromLabel: origin.subject.label,
+                toLabel: targetLabel,
+                rule: rule,
+                termID: nil,
+                termLabel: nil,
+                gridX: mid.gridX,
+                gridY: mid.gridY
+            )
+            return
+        }
+
+        do {
+            let properties = try await store.listProperties(projectDir: session.projectKey.projectDir)
+            guard let property = properties.first(where: { $0.key == rule.disambiguation }) else {
+                toast = VocabularyToast(
+                    title: String(localized: L10n.EvidenceGraph.connectInvalidPairTitle),
+                    body: String(localized: L10n.EvidenceGraph.typesUnavailable),
+                    tone: .danger
+                )
+                return
+            }
+            let terms = try await store.listPropertyTerms(
+                projectDir: session.projectKey.projectDir,
+                propertyID: property.id
+            )
+            pendingDisambiguation = PendingDisambiguation(
+                fromID: originID,
+                toID: targetID,
+                fromKind: origin.kind,
+                toKind: targetKind,
+                fromLabel: origin.subject.label,
+                toLabel: targetLabel,
+                rule: rule,
+                gridX: mid.gridX,
+                gridY: mid.gridY,
+                propertyID: property.id,
+                propertyKey: property.key,
+                terms: terms,
+                selectedTermID: ""
+            )
+        } catch {
+            toast = VocabularyToast(
+                title: String(localized: L10n.EvidenceGraph.connectInvalidPairTitle),
+                body: L10n.Errors.message(for: error),
+                tone: .danger
+            )
+        }
     }
 
     func cancelSheet() {
@@ -371,26 +453,53 @@ final class EvidenceGraphModel {
 
     func cancelCreate() {
         guard !isSaving else { return }
-        let wasBridge = pendingBridgeKind != nil
         isCreating = false
         labelError = nil
         createError = nil
-        pendingBridgeKind = nil
-        pendingEndpointBID = nil
-        if wasBridge {
-            // Keep Connect armed with A held (S6-D2).
-            return
-        }
         disarm()
     }
 
-    /// Creates a primary subject + position, or a bridge + provisional link.
+    func cancelDisambiguation() {
+        pendingDisambiguation = nil
+        connectHoverPoint = nil
+        // Keep Connect armed with A held.
+    }
+
+    func selectDisambiguationTerm(_ termID: String) {
+        pendingDisambiguation?.selectedTermID = termID
+    }
+
+    /// Confirm the term sheet and hand off to the composer. Writes nothing.
+    func confirmDisambiguation() -> WorkspaceLocation? {
+        guard let pending = pendingDisambiguation,
+              !pending.selectedTermID.isEmpty
+        else { return nil }
+        let term = pending.terms.first(where: { $0.id == pending.selectedTermID })
+        let termLabel = term.map {
+            PropertyTermDisplay.name(term: $0, propertyKey: pending.propertyKey)
+        }
+        let location = connectComposerLocation(
+            fromID: pending.fromID,
+            toID: pending.toID,
+            fromKind: pending.fromKind,
+            toKind: pending.toKind,
+            fromLabel: pending.fromLabel,
+            toLabel: pending.toLabel,
+            rule: pending.rule,
+            termID: pending.selectedTermID,
+            termLabel: termLabel,
+            gridX: pending.gridX,
+            gridY: pending.gridY
+        )
+        pendingDisambiguation = nil
+        pendingComposerHandoff = location
+        return location
+    }
+
+    /// Creates a primary subject + position.
     @discardableResult
     func confirmCreate() async -> String? {
-        if pendingBridgeKind != nil {
-            return await confirmBridgeCreate()
-        }
-        return await confirmPrimaryCreate()
+        await confirmPrimaryCreate()
     }
 
     @discardableResult
@@ -432,20 +541,11 @@ final class EvidenceGraphModel {
         composerLocation(for: subjectID, citationID: nil)
     }
 
-    /// Consumes a post-create bridge handoff into the citation composer.
+    /// Consumes a Connect handoff into the citation composer (subjectId is nil).
     func consumeComposerHandoff() -> WorkspaceLocation? {
         guard canCite, let handoff = pendingComposerHandoff else { return nil }
         pendingComposerHandoff = nil
-        return WorkspaceLocation(
-            section: .sources,
-            sourceId: sourceID,
-            subjectId: handoff.subjectID,
-            citationId: nil,
-            sourceSurface: .citationComposer,
-            ref: handoff.ref,
-            title: handoff.title,
-            sourceTitle: resolvedSourceTitle()
-        )
+        return handoff
     }
 
     /// Citation composer place for editing an existing citation (property row pencil).
@@ -614,69 +714,63 @@ final class EvidenceGraphModel {
         }
     }
 
-    @discardableResult
-    private func confirmBridgeCreate() async -> String? {
-        guard let bridgeKind = pendingBridgeKind,
-              let originID = connectOriginID,
-              let endpointBID = pendingEndpointBID,
-              !isSaving
-        else { return nil }
-
-        let trimmed = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty {
-            labelError = String(localized: L10n.EvidenceGraph.labelRequired)
-            return nil
+    private func connectComposerLocation(
+        fromID: String,
+        toID: String,
+        fromKind: EvidencePrimaryKind,
+        toKind: EvidencePrimaryKind,
+        fromLabel: String,
+        toLabel: String,
+        rule: CatalogConnectRule,
+        termID: String?,
+        termLabel: String?,
+        gridX: Int64,
+        gridY: Int64
+    ) -> WorkspaceLocation {
+        let kind = EvidenceBridgeKind(rawValue: rule.bridgeTypeKey) ?? .participation
+        let person: String?
+        let related: String?
+        let event: String?
+        let place: String?
+        switch kind {
+        case .participation:
+            person = fromKind == .person ? fromLabel : toLabel
+            event = fromKind == .event ? fromLabel : toLabel
+            related = nil
+            place = nil
+        case .relationship:
+            person = fromLabel
+            related = toLabel
+            event = nil
+            place = nil
+        case .location:
+            event = fromKind == .event ? fromLabel : toLabel
+            place = fromKind == .place ? fromLabel : toLabel
+            person = nil
+            related = nil
         }
-        guard let typeID = typeIDByKind[bridgeKind.rawValue] else {
-            createError = String(localized: L10n.EvidenceGraph.typesUnavailable)
-            return nil
-        }
-
-        isSaving = true
-        defer { isSaving = false }
-        labelError = nil
-        createError = nil
-        do {
-            let created = try await store.createSubject(
-                projectDir: session.projectKey.projectDir,
-                userID: userID,
-                sourceID: sourceID,
-                subjectTypeID: typeID,
-                label: trimmed,
-                description: draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
-            )
-            _ = try await store.setSubjectPosition(
-                projectDir: session.projectKey.projectDir,
-                subjectID: created.id,
-                gridX: pendingGridX,
-                gridY: pendingGridY
-            )
-            linkStore.upsert(
-                EvidenceProvisionalLink(
-                    bridgeSubjectID: created.id,
-                    endpointAID: originID,
-                    endpointBID: endpointBID
-                ),
-                sourceID: sourceID
-            )
-            session.apply(.createdSubject(sourceId: sourceID))
-            let _: QueryHandle<SourceGraphSnapshot> = session.query(graphKey)
-            isCreating = false
-            pendingBridgeKind = nil
-            pendingEndpointBID = nil
-            connectOriginID = nil
-            connectHoverPoint = nil
-            armedConnect = false
-            pendingComposerHandoff = PendingComposerHandoff(
-                subjectID: created.id,
-                title: created.label,
-                ref: created.ref
-            )
-            return created.id
-        } catch {
-            createError = L10n.Errors.message(for: error)
-            return nil
-        }
+        let sentence = EvidenceBridgeEdgeSummary.sentence(
+            kind: kind,
+            person: person,
+            related: related,
+            event: event,
+            place: place,
+            term: termLabel
+        )
+        return WorkspaceLocation(
+            section: .sources,
+            sourceId: sourceID,
+            subjectId: nil,
+            connectFromSubjectId: fromID,
+            connectToSubjectId: toID,
+            connectBridgeTypeKey: rule.bridgeTypeKey,
+            connectDisambiguationTermId: termID,
+            connectGridX: gridX,
+            connectGridY: gridY,
+            sourceSurface: .citationComposer,
+            title: sentence,
+            sourceTitle: resolvedSourceTitle()
+        )
     }
 
     /// Snaps a completed card drag. Patches the session cache **synchronously**
@@ -758,9 +852,6 @@ final class EvidenceGraphModel {
         if editingSubjectID != nil {
             return editDialogTitle()
         }
-        if let bridgeKind = pendingBridgeKind {
-            return bridgeCreateTitle(for: bridgeKind)
-        }
         switch armedKind {
         case .person: return L10n.EvidenceGraph.addPersonTitle
         case .event: return L10n.EvidenceGraph.addEventTitle
@@ -809,16 +900,21 @@ final class EvidenceGraphModel {
         }
     }
 
-    /// Mono endpoint line under the bridge create title.
-    func bridgeEndpointLine() -> String? {
-        guard pendingBridgeKind != nil,
-              let originID = connectOriginID,
-              let endpointBID = pendingEndpointBID,
-              let snapshot = currentSnapshot()
-        else { return nil }
-        let a = displayLabel(forPrimaryID: originID, in: snapshot)
-        let b = displayLabel(forPrimaryID: endpointBID, in: snapshot)
-        return "\(a) → \(b)"
+    func disambiguationTitle() -> LocalizedStringResource {
+        switch pendingDisambiguation?.propertyKey {
+        case "relationship_type":
+            return L10n.EvidenceGraph.connectDisambiguationRelationshipTitle
+        default:
+            return L10n.EvidenceGraph.connectDisambiguationRoleTitle
+        }
+    }
+
+    func disambiguationSubtitle() -> String? {
+        guard let pending = pendingDisambiguation else { return nil }
+        return L10n.EvidenceGraph.connectDisambiguationSubtitle(
+            from: pending.fromLabel,
+            to: pending.toLabel
+        )
     }
 
     func toolAccessibilityLabel(for kind: EvidencePrimaryKind, armed: Bool) -> String {
@@ -865,14 +961,6 @@ final class EvidenceGraphModel {
         case .person: String(localized: L10n.EvidenceGraph.defaultLabelPerson)
         case .event: String(localized: L10n.EvidenceGraph.defaultLabelEvent)
         case .place: String(localized: L10n.EvidenceGraph.defaultLabelPlace)
-        }
-    }
-
-    private func defaultBridgeLabel(for kind: EvidenceBridgeKind) -> String {
-        switch kind {
-        case .relationship: String(localized: L10n.EvidenceGraph.defaultLabelRelationship)
-        case .participation: String(localized: L10n.EvidenceGraph.defaultLabelParticipation)
-        case .location: String(localized: L10n.EvidenceGraph.defaultLabelLocation)
         }
     }
 

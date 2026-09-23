@@ -23,7 +23,7 @@ struct PlaceRegistry: Sendable {
                 $0.section == .sources
                     && $0.sourceId != nil
                     && $0.sourceSurface == .citationComposer
-                    && $0.subjectId != nil
+                    && ($0.subjectId != nil || $0.isConnectPrefill)
             },
             queryKeys: { project, location in
                 guard let sourceId = location.sourceId else { return [] }

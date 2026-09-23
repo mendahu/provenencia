@@ -50,14 +50,16 @@ struct EvidenceBridgeEdgeSummaryTests {
         )
     }
 
-    @Test func locationJoinsEventAndPlace() {
-        let phrase = EvidenceBridgeEdgeSummary.phrase(
-            for: bridge(kind: .location, observations: [
-                observation(propertyKey: "event", valueText: "Marriage", valueType: "subject"),
-                observation(propertyKey: "place", valueText: "Leeds", valueType: "subject"),
-            ])
+    @Test func locationPhraseIsRelationalOnly() {
+        let placed = bridge(kind: .location, observations: [
+            observation(propertyKey: "event", valueText: "Marriage", valueType: "subject"),
+            observation(propertyKey: "place", valueText: "Leeds", valueType: "subject"),
+        ])
+        #expect(EvidenceBridgeEdgeSummary.phrase(for: placed) == String(localized: L10n.EvidenceGraph.bridgeSummaryLocationBare))
+        #expect(
+            EvidenceBridgeEdgeSummary.sentence(for: placed)
+                == L10n.EvidenceGraph.bridgeSummaryLocation(event: "Marriage", place: "Leeds")
         )
-        #expect(phrase == L10n.EvidenceGraph.bridgeSummaryLocation(event: "Marriage", place: "Leeds"))
     }
 
     @Test func locationFallsBackWithoutEndpoints() {
@@ -69,67 +71,79 @@ struct EvidenceBridgeEdgeSummaryTests {
         #expect(phrase == String(localized: L10n.EvidenceGraph.bridgeSummaryLocationBare))
     }
 
-    @Test func relationshipJoinsPersonTypeAndRelated() {
-        let phrase = EvidenceBridgeEdgeSummary.phrase(
-            for: bridge(kind: .relationship, observations: [
-                observation(propertyKey: "person", valueText: "John", valueType: "subject"),
-                observation(propertyKey: "related_to", valueText: "Mary", valueType: "subject"),
-                observation(propertyKey: "relationship_type", valueText: "father"),
-            ])
+    @Test func relationshipPhraseUsesTypeOnly() {
+        let placed = bridge(kind: .relationship, observations: [
+            observation(propertyKey: "person", valueText: "John", valueType: "subject"),
+            observation(propertyKey: "related_to", valueText: "Mary", valueType: "subject"),
+            observation(propertyKey: "relationship_type", valueText: "father"),
+        ])
+        #expect(
+            EvidenceBridgeEdgeSummary.phrase(for: placed)
+                == L10n.EvidenceGraph.bridgeSummaryRelationshipTypeOnly(type: "father")
         )
         #expect(
-            phrase == L10n.EvidenceGraph.bridgeSummaryRelationship(
-                person: "John",
-                type: "father",
-                related: "Mary"
-            )
+            EvidenceBridgeEdgeSummary.sentence(for: placed)
+                == L10n.EvidenceGraph.bridgeSummaryRelationship(
+                    person: "John",
+                    type: "father",
+                    related: "Mary"
+                )
         )
     }
 
     @Test func relationshipFallsBackWithoutType() {
-        let phrase = EvidenceBridgeEdgeSummary.phrase(
-            for: bridge(kind: .relationship, observations: [
-                observation(propertyKey: "person", valueText: "Alice", valueType: "subject"),
-                observation(propertyKey: "related_to", valueText: "Bob", valueType: "subject"),
-            ])
+        let placed = bridge(kind: .relationship, observations: [
+            observation(propertyKey: "person", valueText: "Alice", valueType: "subject"),
+            observation(propertyKey: "related_to", valueText: "Bob", valueType: "subject"),
+        ])
+        #expect(
+            EvidenceBridgeEdgeSummary.phrase(for: placed)
+                == String(localized: L10n.EvidenceGraph.bridgeSummaryRelationshipBare)
         )
         #expect(
-            phrase == L10n.EvidenceGraph.bridgeSummaryRelationshipFallback(
-                person: "Alice",
-                related: "Bob"
-            )
+            EvidenceBridgeEdgeSummary.sentence(for: placed)
+                == L10n.EvidenceGraph.bridgeSummaryRelationshipFallback(
+                    person: "Alice",
+                    related: "Bob"
+                )
         )
     }
 
-    @Test func participationJoinsPersonRoleAndEvent() {
-        let phrase = EvidenceBridgeEdgeSummary.phrase(
-            for: bridge(kind: .participation, observations: [
-                observation(propertyKey: "person", valueText: "Margt.", valueType: "subject"),
-                observation(propertyKey: "event", valueText: "1851 census", valueType: "subject"),
-                observation(propertyKey: "role", valueText: "head of household"),
-            ])
+    @Test func participationPhraseUsesRoleOnly() {
+        let placed = bridge(kind: .participation, observations: [
+            observation(propertyKey: "person", valueText: "Margt.", valueType: "subject"),
+            observation(propertyKey: "event", valueText: "1851 census", valueType: "subject"),
+            observation(propertyKey: "role", valueText: "head of household"),
+        ])
+        #expect(
+            EvidenceBridgeEdgeSummary.phrase(for: placed)
+                == L10n.EvidenceGraph.bridgeSummaryParticipationRoleOnly(role: "head of household")
         )
         #expect(
-            phrase == L10n.EvidenceGraph.bridgeSummaryParticipation(
-                person: "Margt.",
-                role: "head of household",
-                event: "1851 census"
-            )
+            EvidenceBridgeEdgeSummary.sentence(for: placed)
+                == L10n.EvidenceGraph.bridgeSummaryParticipation(
+                    person: "Margt.",
+                    role: "head of household",
+                    event: "1851 census"
+                )
         )
     }
 
     @Test func participationFallsBackWithoutRole() {
-        let phrase = EvidenceBridgeEdgeSummary.phrase(
-            for: bridge(kind: .participation, observations: [
-                observation(propertyKey: "person", valueText: "Alice", valueType: "subject"),
-                observation(propertyKey: "event", valueText: "Birth", valueType: "subject"),
-            ])
+        let placed = bridge(kind: .participation, observations: [
+            observation(propertyKey: "person", valueText: "Alice", valueType: "subject"),
+            observation(propertyKey: "event", valueText: "Birth", valueType: "subject"),
+        ])
+        #expect(
+            EvidenceBridgeEdgeSummary.phrase(for: placed)
+                == String(localized: L10n.EvidenceGraph.bridgeSummaryParticipationBare)
         )
         #expect(
-            phrase == L10n.EvidenceGraph.bridgeSummaryParticipationFallback(
-                person: "Alice",
-                event: "Birth"
-            )
+            EvidenceBridgeEdgeSummary.sentence(for: placed)
+                == L10n.EvidenceGraph.bridgeSummaryParticipationFallback(
+                    person: "Alice",
+                    event: "Birth"
+                )
         )
     }
 

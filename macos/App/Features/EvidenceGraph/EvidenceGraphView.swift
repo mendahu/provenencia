@@ -145,6 +145,15 @@ private struct EvidenceGraphContent: View {
         )
     }
 
+    private var disambiguationPresented: Binding<Bool> {
+        Binding(
+            get: { model.pendingDisambiguation != nil },
+            set: { newValue in
+                if !newValue { model.cancelDisambiguation() }
+            }
+        )
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             header
@@ -178,6 +187,25 @@ private struct EvidenceGraphContent: View {
             }
         }
         .vocabularyToastOverlay($model.toast, identifier: "evidenceGraph.toast")
+        .pvFormDialog(
+            isPresented: disambiguationPresented,
+            copy: PVFormDialogCopy(
+                title: model.disambiguationTitle(),
+                subtitle: L10n.EvidenceGraph.connectDisambiguationSubtitleBare,
+                confirm: L10n.EvidenceGraph.connectDisambiguationConfirm,
+                cancel: L10n.EvidenceGraph.createCancel
+            ),
+            isRunning: false,
+            confirmDisabled: !model.canConfirmDisambiguation,
+            accessibilityIdentifierPrefix: "evidenceGraph.connect.disambiguation",
+            onConfirm: {
+                if let location = model.confirmDisambiguation() {
+                    navigation.go(to: location)
+                }
+            }
+        ) {
+            EvidenceConnectDisambiguationForm(model: model)
+        }
         .pvFormDialog(
             isPresented: sheetPresented,
             copy: PVFormDialogCopy(
@@ -337,29 +365,7 @@ private struct EvidenceGraphContent: View {
     @ViewBuilder
     private var createForm: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space6) {
-            if model.editingSubjectID == nil, let bridgeKind = model.pendingBridgeKind {
-                HStack(spacing: 8) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(PVColor.surfacePage)
-                        PVMark(bridgeKind.markKey, size: 15)
-                            .foregroundStyle(PVColor.textMuted)
-                    }
-                    .frame(width: 28, height: 28)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(verbatim: model.typeLabelByKind[bridgeKind.rawValue] ?? bridgeKind.rawValue)
-                            .font(PVFont.mono(size: 10, weight: PVFontWeight.medium))
-                            .tracking(1)
-                            .textCase(.uppercase)
-                            .foregroundStyle(PVColor.textMuted)
-                        if let line = model.bridgeEndpointLine() {
-                            Text(verbatim: line)
-                                .font(PVFont.mono(size: 11))
-                                .foregroundStyle(PVColor.textFaint)
-                        }
-                    }
-                }
-            } else if model.editingSubjectID == nil, let kind = model.armedKind {
+            if model.editingSubjectID == nil, let kind = model.armedKind {
                 let style = EvidenceSubjectKindStyle.resolve(
                     typeKey: kind.rawValue,
                     presentation: model.presentation(for: kind.rawValue)
@@ -657,11 +663,16 @@ private struct EvidenceGraphDocumentBody: View {
         pointer.onConnectPick = { id in
             let snap = model.displaySnapshot(from: handle.value)
             guard let placed = snap.subjects.first(where: { $0.id == id }) else { return }
-            model.handleConnectPick(
-                subjectID: placed.id,
-                kind: placed.kind,
-                label: placed.subject.label
-            )
+            Task {
+                await model.handleConnectPick(
+                    subjectID: placed.id,
+                    kind: placed.kind,
+                    label: placed.subject.label
+                )
+                if let location = model.consumeComposerHandoff() {
+                    navigation.go(to: location)
+                }
+            }
         }
         pointer.onCardAction = { id, actionID in
             switch actionID {

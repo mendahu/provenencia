@@ -87,13 +87,39 @@ func observationDraftsToInputs(drafts []*engine.ObservationDraft) ([]observation
 	return out, nil
 }
 
+func observationDraftsToInputsAllowEmptySubject(drafts []*engine.ObservationDraft) ([]observations.Input, error) {
+	if len(drafts) == 0 {
+		return nil, observations.ErrInvalid
+	}
+	out := make([]observations.Input, 0, len(drafts))
+	for _, d := range drafts {
+		in, err := observationDraftToInputAllowEmptySubject(d)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, in)
+	}
+	return out, nil
+}
+
 func observationDraftToInput(d *engine.ObservationDraft) (observations.Input, error) {
+	if d == nil || strings.TrimSpace(d.GetSubjectId()) == "" {
+		return observations.Input{}, observations.ErrInvalid
+	}
+	return observationDraftToInputAllowEmptySubject(d)
+}
+
+func observationDraftToInputAllowEmptySubject(d *engine.ObservationDraft) (observations.Input, error) {
 	if d == nil {
 		return observations.Input{}, observations.ErrInvalid
 	}
-	subjectID, err := parseID(d.GetSubjectId())
-	if err != nil {
-		return observations.Input{}, err
+	var subjectID []byte
+	if strings.TrimSpace(d.GetSubjectId()) != "" {
+		parsed, err := parseID(d.GetSubjectId())
+		if err != nil {
+			return observations.Input{}, err
+		}
+		subjectID = parsed
 	}
 	propertyID, err := parseID(d.GetPropertyId())
 	if err != nil {

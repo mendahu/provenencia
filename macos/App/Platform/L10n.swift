@@ -1425,8 +1425,59 @@ enum L10n {
 
         static let connectInvalidPairBody = LocalizedStringResource(
             "evidenceGraph.connect.invalidPairBody",
-            defaultValue: "Try person↔event, person↔place, event↔place, or two people.",
-            comment: "Toast body explaining which primary pairs Connect accepts"
+            defaultValue: "Try person↔event, event↔place, or two people. Person and place cannot be linked directly.",
+            comment: "Toast body explaining which primary pairs Connect accepts; person↔place is refused"
+        )
+
+        static let connectDisambiguationRoleTitle = LocalizedStringResource(
+            "evidenceGraph.connect.disambiguationRoleTitle",
+            defaultValue: "What role?",
+            comment: "Title of the Connect disambiguation sheet for person↔event"
+        )
+
+        static let connectDisambiguationRelationshipTitle = LocalizedStringResource(
+            "evidenceGraph.connect.disambiguationRelationshipTitle",
+            defaultValue: "What relationship?",
+            comment: "Title of the Connect disambiguation sheet for person↔person"
+        )
+
+        static let connectDisambiguationSubtitleBare = LocalizedStringResource(
+            "evidenceGraph.connect.disambiguationSubtitleBare",
+            defaultValue: "Choose a term, then cite the connection.",
+            comment: "Subtitle on the Connect disambiguation sheet"
+        )
+
+        static func connectDisambiguationSubtitle(from: String, to: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "evidenceGraph.connect.disambiguationSubtitle",
+                defaultValue: "%@ → %@",
+                comment: "Connect disambiguation pair line; arguments are endpoint A then B labels"
+            ))
+            return String(format: format, locale: .current, from, to)
+        }
+
+        static let connectDisambiguationConfirm = LocalizedStringResource(
+            "evidenceGraph.connect.disambiguationConfirm",
+            defaultValue: "Continue",
+            comment: "Confirm button on the Connect disambiguation sheet"
+        )
+
+        static let connectDisambiguationPlaceholder = LocalizedStringResource(
+            "evidenceGraph.connect.disambiguationPlaceholder",
+            defaultValue: "Choose a term",
+            comment: "Placeholder for the Connect disambiguation ComboBox"
+        )
+
+        static let connectDisambiguationEmpty = LocalizedStringResource(
+            "evidenceGraph.connect.disambiguationEmpty",
+            defaultValue: "No terms",
+            comment: "Empty label when the Connect disambiguation ComboBox has no terms"
+        )
+
+        static let connectDisambiguationTermLabel = LocalizedStringResource(
+            "evidenceGraph.connect.disambiguationTermLabel",
+            defaultValue: "Term",
+            comment: "Accessibility label for the Connect disambiguation ComboBox"
         )
 
         static func subjectCount(count: Int) -> LocalizedStringResource {
@@ -1446,6 +1497,124 @@ enum L10n {
                 comment: "Evidence graph header count; argument is how many placed primaries are on the canvas"
             )
         }
+    }
+
+    /// Product Property-term display names (`propertyTerm.<propertyKey>.<termKey>`).
+    enum PropertyTerm {
+        static func resource(propertyKey: String, termKey: String) -> LocalizedStringResource? {
+            switch (propertyKey, termKey) {
+            case ("role", "subject"): return roleSubject
+            case ("role", "father"): return roleFather
+            case ("role", "mother"): return roleMother
+            case ("role", "spouse"): return roleSpouse
+            case ("role", "child"): return roleChild
+            case ("role", "witness"): return roleWitness
+            case ("role", "informant"): return roleInformant
+            case ("relationship_type", "spouse"): return relationshipSpouse
+            case ("relationship_type", "sibling"): return relationshipSibling
+            case ("relationship_type", "cousin"): return relationshipCousin
+            case ("relationship_type", "parent"): return relationshipParent
+            case ("relationship_type", "child"): return relationshipChild
+            case ("relationship_type", "grandparent"): return relationshipGrandparent
+            case ("relationship_type", "grandchild"): return relationshipGrandchild
+            case ("relationship_type", "pibling"): return relationshipPibling
+            case ("relationship_type", "nibling"): return relationshipNibling
+            case ("relationship_type", "guardian"): return relationshipGuardian
+            case ("relationship_type", "ward"): return relationshipWard
+            default: return nil
+            }
+        }
+
+        static let roleSubject = LocalizedStringResource(
+            "propertyTerm.role.subject",
+            defaultValue: "Subject",
+            comment: "Product role term: subject"
+        )
+        static let roleFather = LocalizedStringResource(
+            "propertyTerm.role.father",
+            defaultValue: "Father",
+            comment: "Product role term: father"
+        )
+        static let roleMother = LocalizedStringResource(
+            "propertyTerm.role.mother",
+            defaultValue: "Mother",
+            comment: "Product role term: mother"
+        )
+        static let roleSpouse = LocalizedStringResource(
+            "propertyTerm.role.spouse",
+            defaultValue: "Spouse",
+            comment: "Product role term: spouse"
+        )
+        static let roleChild = LocalizedStringResource(
+            "propertyTerm.role.child",
+            defaultValue: "Child",
+            comment: "Product role term: child"
+        )
+        static let roleWitness = LocalizedStringResource(
+            "propertyTerm.role.witness",
+            defaultValue: "Witness",
+            comment: "Product role term: witness"
+        )
+        static let roleInformant = LocalizedStringResource(
+            "propertyTerm.role.informant",
+            defaultValue: "Informant",
+            comment: "Product role term: informant"
+        )
+        static let relationshipSpouse = LocalizedStringResource(
+            "propertyTerm.relationship_type.spouse",
+            defaultValue: "Spouse",
+            comment: "Product relationship_type term: spouse"
+        )
+        static let relationshipSibling = LocalizedStringResource(
+            "propertyTerm.relationship_type.sibling",
+            defaultValue: "Sibling",
+            comment: "Product relationship_type term: sibling"
+        )
+        static let relationshipCousin = LocalizedStringResource(
+            "propertyTerm.relationship_type.cousin",
+            defaultValue: "Cousin",
+            comment: "Product relationship_type term: cousin"
+        )
+        static let relationshipParent = LocalizedStringResource(
+            "propertyTerm.relationship_type.parent",
+            defaultValue: "Parent",
+            comment: "Product relationship_type term: parent"
+        )
+        static let relationshipChild = LocalizedStringResource(
+            "propertyTerm.relationship_type.child",
+            defaultValue: "Child",
+            comment: "Product relationship_type term: child"
+        )
+        static let relationshipGrandparent = LocalizedStringResource(
+            "propertyTerm.relationship_type.grandparent",
+            defaultValue: "Grandparent",
+            comment: "Product relationship_type term: grandparent"
+        )
+        static let relationshipGrandchild = LocalizedStringResource(
+            "propertyTerm.relationship_type.grandchild",
+            defaultValue: "Grandchild",
+            comment: "Product relationship_type term: grandchild"
+        )
+        static let relationshipPibling = LocalizedStringResource(
+            "propertyTerm.relationship_type.pibling",
+            defaultValue: "Aunt / uncle",
+            comment: "Product relationship_type term: pibling"
+        )
+        static let relationshipNibling = LocalizedStringResource(
+            "propertyTerm.relationship_type.nibling",
+            defaultValue: "Niece / nephew",
+            comment: "Product relationship_type term: nibling"
+        )
+        static let relationshipGuardian = LocalizedStringResource(
+            "propertyTerm.relationship_type.guardian",
+            defaultValue: "Guardian",
+            comment: "Product relationship_type term: guardian"
+        )
+        static let relationshipWard = LocalizedStringResource(
+            "propertyTerm.relationship_type.ward",
+            defaultValue: "Ward",
+            comment: "Product relationship_type term: ward"
+        )
     }
 
     /// Shared genealogical DateValue display (list rows, previews). Not Source-page-owned.
@@ -5388,6 +5557,16 @@ enum L10n {
             defaultValue: "That binding is locked by the product vocabulary and cannot be removed.",
             comment: "FFI error subjectvocab.locked"
         )
+        static let connectInvalid = LocalizedStringResource(
+            "error.connect.invalid",
+            defaultValue: "That connection isn’t valid.",
+            comment: "FFI error connect.invalid"
+        )
+        static let connectRefused = LocalizedStringResource(
+            "error.connect.refused",
+            defaultValue: "Those subjects can’t be connected.",
+            comment: "FFI error connect.refused"
+        )
         static let locatorInvalid = LocalizedStringResource(
             "error.locator.invalid",
             defaultValue: "That citation locator isn’t valid.",
@@ -5562,6 +5741,10 @@ enum L10n {
                 return String(localized: subjectVocabInvalid)
             case "subjectvocab.locked":
                 return String(localized: subjectVocabLocked)
+            case "connect.invalid":
+                return String(localized: connectInvalid)
+            case "connect.refused":
+                return String(localized: connectRefused)
             case "locator.invalid":
                 return String(localized: locatorInvalid)
             case "citations.invalid":
