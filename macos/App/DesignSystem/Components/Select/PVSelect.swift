@@ -480,8 +480,10 @@ private final class PVSelectPressView: NSView {
     var onDrag: ((CGPoint) -> Void)?
     var onRelease: ((CGPoint) -> Void)?
     var onClickAway: (() -> Void)?
-    private var clickAwayMonitor: Any?
-    private var trackMonitor: Any?
+    /// Opaque `NSEvent` tokens. `deinit` is nonisolated, so these stay
+    /// `nonisolated(unsafe)` the same way other kit caches do.
+    nonisolated(unsafe) private var clickAwayMonitor: Any?
+    nonisolated(unsafe) private var trackMonitor: Any?
     private var isTracking = false
 
     override var acceptsFirstResponder: Bool { false }
