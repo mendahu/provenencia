@@ -10050,6 +10050,18 @@
         }
       }
     },
+    "nameValue.form.placeholder": {
+      "comment": "Placeholder in the NameValue full-form field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "John William Alderwick"
+          }
+        }
+      }
+    },
     "nameValue.form.error.missing": {
       "comment": "Validation error when NameValue form is empty",
       "extractionState": "manual",
@@ -10106,6 +10118,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Add part"
+          }
+        }
+      }
+    },
+    "nameValue.parts.count.none": {
+      "comment": "Parts heading count when the NameValue has no parts",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "none"
+          }
+        }
+      }
+    },
+    "nameValue.parts.count.one": {
+      "comment": "Parts heading count for a single NameValue part",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 part"
+          }
+        }
+      }
+    },
+    "nameValue.parts.count.other": {
+      "comment": "Parts heading count; argument is the part count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld parts"
           }
         }
       }

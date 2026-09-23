@@ -13,8 +13,6 @@ struct CitationComposerView: View {
     @State private var model: CitationComposerModel
     @State private var customTermLabel = ""
     @State private var showCustomTermDialog = false
-    @State private var showNameValueDialog = false
-    @State private var nameValueDraft = NameValueDraft.empty()
 
     init(
         sourceID: String,
@@ -82,6 +80,7 @@ struct CitationComposerView: View {
                 confirm: L10n.CitationComposer.addObservation,
                 cancel: L10n.CitationComposer.cancel
             ),
+            width: observationDialogWidth,
             isRunning: false,
             confirmDisabled: !model.canConfirmObservation,
             accessibilityIdentifierPrefix: "citationComposer.observation",
@@ -90,23 +89,8 @@ struct CitationComposerView: View {
             CitationComposerObservationDialogForm(model: model) {
                 customTermLabel = ""
                 showCustomTermDialog = true
-            } onEditName: {
-                nameValueDraft = model.observationDialog?.nameDraft ?? .empty()
-                showNameValueDialog = true
             }
         }
-        .nameValueFormDialog(
-            isPresented: $showNameValueDialog,
-            draft: $nameValueDraft,
-            mode: nameValueDraft.trimmedForm.isEmpty ? .add : .edit,
-            accessibilityIdentifierPrefix: "citationComposer.nameValue",
-            onConfirm: {
-                guard var draft = model.observationDialog else { return }
-                draft.nameDraft = nameValueDraft
-                model.updateObservationDialog(draft)
-                showNameValueDialog = false
-            }
-        )
         .pvFormDialog(
             isPresented: $showCustomTermDialog,
             copy: PVFormDialogCopy(
@@ -185,5 +169,11 @@ struct CitationComposerView: View {
             get: { model.observationDialog != nil },
             set: { if !$0 { model.cancelObservationDialog() } }
         )
+    }
+
+    /// S7-D5 NameValue body is 560pt; other value types keep the default sheet.
+    private var observationDialogWidth: CGFloat {
+        let type = model.observationDialog.flatMap { model.catalogProperty(id: $0.propertyID)?.valueType }
+        return type == "name" ? 560 : 480
     }
 }

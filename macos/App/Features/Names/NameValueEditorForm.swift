@@ -1,74 +1,131 @@
 import AppKit
 import SwiftUI
 
-/// Shared NameValue create/edit form body (full form + optional ordered parts).
+/// Shared NameValue create/edit form body (S7-D5 board). Hosts embed this
+/// on a sheet or inline — the body is the same either way.
 struct NameValueEditorForm: View {
     @Binding var draft: NameValueDraft
     var accessibilityIdentifierPrefix: String = "nameValue"
     var showStoredAs: Bool = true
 
+    private var typeOptions: [PVSelectOption] {
+        [PVSelectOption(value: "", label: String(localized: L10n.NameValue.partTypeNone))]
+            + NamePartType.allCases.map {
+                PVSelectOption(value: $0.rawValue, label: String(localized: $0.label))
+            }
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space7) {
+        VStack(alignment: .leading, spacing: 18) {
             formSection
             PVDivider()
             partsSection
             if showStoredAs {
-                PVDivider()
                 storedAsSection
             }
         }
     }
 
     private var formSection: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space2) {
-            PVField(
-                label: L10n.NameValue.formLabel,
-                hint: draft.formError == nil ? L10n.NameValue.formHint : nil,
-                error: draft.formError,
-                required: true
-            ) {
-                PVInput(text: formBinding, size: .sm, isInvalid: draft.formError != nil)
-                    .accessibilityIdentifier("\(accessibilityIdentifierPrefix).form")
-                    .accessibilityHint(draft.formError.map { Text(verbatim: $0) } ?? Text(L10n.NameValue.formHint))
+        VStack(alignment: .leading, spacing: PVSpacing.space3) {
+            HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space3) {
+                Text(L10n.NameValue.formLabel)
+                    .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
+                    .foregroundStyle(PVColor.textSecondary)
+                Text(L10n.NameValue.formRequired)
+                    .font(PVFont.body(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textFaint)
             }
+            PVInput(
+                text: formBinding,
+                size: .md,
+                prompt: L10n.NameValue.formPlaceholder,
+                isInvalid: draft.formError != nil
+            )
+            .accessibilityIdentifier("\(accessibilityIdentifierPrefix).form")
+            .accessibilityHint(draft.formError.map { Text(verbatim: $0) } ?? Text(L10n.NameValue.formHint))
+            if let error = draft.formError {
+                Text(verbatim: error)
+                    .font(PVFont.body(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.danger)
+            }
+            Text(L10n.NameValue.formHint)
+                .font(PVFont.body(size: PVTypeScale.caption, italic: true))
+                .foregroundStyle(PVColor.textMuted)
         }
     }
 
     private var partsSection: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space4) {
-            Text(L10n.NameValue.partsHeading)
-                .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
-                .tracking(PVTypeScale.micro * PVTracking.caps)
-                .textCase(.uppercase)
-                .foregroundStyle(PVColor.textMuted)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(L10n.NameValue.partsHeading)
+                    .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
+                    .tracking(PVTypeScale.micro * PVTracking.caps)
+                    .textCase(.uppercase)
+                    .foregroundStyle(PVColor.textMuted)
+                Spacer()
+                Text(verbatim: L10n.NameValue.partsCount(draft.parts.count))
+                    .font(PVFont.mono(size: PVTypeScale.micro))
+                    .foregroundStyle(PVColor.textFaint)
+            }
 
             if draft.parts.isEmpty {
                 VStack(alignment: .leading, spacing: PVSpacing.space2) {
                     Text(L10n.NameValue.partsEmpty)
-                        .font(PVFont.body(size: PVTypeScale.body))
+                        .font(PVFont.body(size: PVTypeScale.caption))
                         .foregroundStyle(PVColor.textSecondary)
                     Text(L10n.NameValue.partsEmptyHint)
-                        .font(PVFont.body(size: PVTypeScale.micro, italic: true))
+                        .font(PVFont.body(size: PVTypeScale.caption, italic: true))
                         .foregroundStyle(PVColor.textMuted)
                 }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .overlay(
+                    RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                        .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                        .foregroundStyle(PVColor.borderDefault)
+                )
             } else {
-                PVReorderableList(items: draft.parts, onMove: { source, destination in
-                    draft.movePart(from: source, to: destination)
-                }) { part in
-                    if let index = draft.parts.firstIndex(where: { $0.id == part.id }) {
+                VStack(alignment: .leading, spacing: PVSpacing.space3) {
+                    partHeader
+                    ForEach(Array(draft.parts.enumerated()), id: \.element.id) { index, _ in
                         partRow(at: index)
                     }
                 }
                 .accessibilityIdentifier("\(accessibilityIdentifierPrefix).parts")
-                Text(L10n.NameValue.partsHint)
-                    .font(PVFont.body(size: PVTypeScale.micro, italic: true))
-                    .foregroundStyle(PVColor.textMuted)
             }
 
-            PVButton(L10n.NameValue.partsAdd, variant: .ghost, size: .sm) {
-                draft.addPart()
+            HStack(alignment: .center, spacing: PVSpacing.space5) {
+                PVButton(
+                    L10n.NameValue.partsAdd,
+                    variant: .ghost,
+                    size: .sm,
+                    icon: .plus
+                ) {
+                    draft.addPart()
+                }
+                .accessibilityIdentifier("\(accessibilityIdentifierPrefix).parts.add")
+                Text(L10n.NameValue.partsHint)
+                    .font(PVFont.body(size: PVTypeScale.caption, italic: true))
+                    .foregroundStyle(PVColor.textFaint)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
             }
-            .accessibilityIdentifier("\(accessibilityIdentifierPrefix).parts.add")
+        }
+    }
+
+    private var partHeader: some View {
+        HStack(spacing: PVSpacing.space4) {
+            Color.clear.frame(width: 28)
+            Color.clear.frame(width: 22)
+            Text(L10n.NameValue.partValueLabel)
+                .font(PVFont.body(size: PVTypeScale.caption))
+                .foregroundStyle(PVColor.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text(L10n.NameValue.partTypeLabel)
+                .font(PVFont.body(size: PVTypeScale.caption))
+                .foregroundStyle(PVColor.textSecondary)
+                .frame(width: 170, alignment: .leading)
+            Color.clear.frame(width: 88)
         }
     }
 
@@ -82,36 +139,30 @@ struct NameValueEditorForm: View {
             typeLabel: typeLabel
         )
         return VStack(alignment: .leading, spacing: PVSpacing.space2) {
-            HStack(alignment: .bottom, spacing: PVSpacing.space3) {
+            HStack(spacing: PVSpacing.space4) {
                 PVReorderHandle()
-                VStack(alignment: .leading, spacing: PVSpacing.space2) {
-                    Text(L10n.NameValue.partValueLabel)
-                        .font(PVFont.body(size: PVTypeScale.micro))
-                        .foregroundStyle(draft.partValueError(at: index) == nil ? PVColor.textSecondary : PVColor.danger)
-                    PVInput(
-                        text: partValueBinding(index),
-                        size: .sm,
-                        isInvalid: draft.partValueError(at: index) != nil
-                    )
-                    .accessibilityIdentifier("\(accessibilityIdentifierPrefix).part.\(index).value")
-                }
-                VStack(alignment: .leading, spacing: PVSpacing.space2) {
-                    Text(L10n.NameValue.partTypeLabel)
-                        .font(PVFont.body(size: PVTypeScale.micro))
-                        .foregroundStyle(PVColor.textSecondary)
-                    Picker(selection: partTypeBinding(index)) {
-                        Text(L10n.NameValue.partTypeNone).tag("")
-                        ForEach(NamePartType.allCases, id: \.rawValue) { type in
-                            Text(type.label).tag(type.rawValue)
-                        }
-                    } label: {
-                        EmptyView()
-                    }
-                    .labelsHidden()
-                    .frame(width: 168)
-                    .accessibilityIdentifier("\(accessibilityIdentifierPrefix).part.\(index).type")
-                }
-                HStack(spacing: PVSpacing.space1) {
+                    .frame(width: 28)
+                Text(verbatim: "\(index + 1)")
+                    .font(PVFont.mono(size: PVTypeScale.micro))
+                    .foregroundStyle(PVColor.textFaint)
+                    .frame(width: 22, alignment: .trailing)
+                PVInput(
+                    text: partValueBinding(index),
+                    size: .sm,
+                    isInvalid: draft.partValueError(at: index) != nil
+                )
+                .accessibilityIdentifier("\(accessibilityIdentifierPrefix).part.\(index).value")
+                PVSelect(
+                    selection: partTypeBinding(index),
+                    options: typeOptions,
+                    size: .sm,
+                    menuWidth: 190,
+                    fillsWidth: false,
+                    accessibilityLabel: L10n.NameValue.partTypeLabel,
+                    accessibilityIdentifier: "\(accessibilityIdentifierPrefix).part.\(index).type"
+                )
+                .frame(width: 170)
+                HStack(spacing: 2) {
                     PVIconButton(
                         .sortAscending,
                         label: L10n.NameValue.partMoveUpLabel,
@@ -133,66 +184,61 @@ struct NameValueEditorForm: View {
                     .disabled(index == count - 1)
                     .accessibilityIdentifier("\(accessibilityIdentifierPrefix).part.\(index).moveDown")
                     PVIconButton(
-                        .trash,
+                        .dismiss,
                         label: L10n.NameValue.partRemoveLabel,
                         accessibilityLabel: L10n.NameValue.partRemove(position: index + 1),
                         size: .sm,
-                        tone: .danger,
                         action: { draft.removePart(id: part.id) }
                     )
                     .accessibilityIdentifier("\(accessibilityIdentifierPrefix).part.\(index).remove")
                 }
+                .frame(width: 88)
             }
             if let error = draft.partValueError(at: index) {
                 Text(verbatim: error)
-                    .font(PVFont.body(size: PVTypeScale.micro))
+                    .font(PVFont.body(size: PVTypeScale.caption))
                     .foregroundStyle(PVColor.danger)
+                    .padding(.leading, 66)
                     .accessibilityIdentifier("\(accessibilityIdentifierPrefix).part.\(index).error")
             }
         }
-        .padding(.vertical, PVSpacing.space2)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(verbatim: groupLabel))
     }
 
     private var storedAsSection: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space2) {
+        HStack(alignment: .top, spacing: 14) {
             Text(L10n.NameValue.storedAs)
                 .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
                 .tracking(PVTypeScale.micro * PVTracking.caps)
                 .textCase(.uppercase)
                 .foregroundStyle(PVColor.textMuted)
-            VStack(alignment: .leading, spacing: PVSpacing.space1) {
-                storedLine(label: "form", value: draft.trimmedForm)
-                storedLine(label: "parts", value: draft.storedPartsLine)
+            VStack(alignment: .leading, spacing: PVSpacing.space3) {
+                storedLine(label: "form", value: draft.storedFormLine, emphasis: true)
+                storedLine(label: "parts", value: draft.storedPartsLine, emphasis: false)
             }
-            .padding(PVSpacing.space5)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(PVColor.surfaceSunken)
-            .clipShape(RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                    .stroke(PVColor.borderSubtle, lineWidth: 1)
-            )
-            .accessibilityIdentifier("\(accessibilityIdentifierPrefix).storedAs")
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(PVColor.surfaceSunken)
+        .clipShape(RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                .stroke(PVColor.borderSubtle, lineWidth: 1)
+        )
+        .accessibilityIdentifier("\(accessibilityIdentifierPrefix).storedAs")
     }
 
-    private func storedLine(label: String, value: String) -> some View {
+    private func storedLine(label: String, value: String, emphasis: Bool) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space3) {
             Text(verbatim: label)
-                .font(PVFont.mono(size: PVTypeScale.micro))
-                .foregroundStyle(PVColor.textMuted)
-                .frame(width: 40, alignment: .leading)
-            if value.isEmpty {
-                Text(verbatim: "—")
-                    .font(PVFont.mono(size: PVTypeScale.caption))
-                    .foregroundStyle(PVColor.textFaint)
-            } else {
-                Text(verbatim: value)
-                    .font(PVFont.mono(size: PVTypeScale.caption))
-                    .foregroundStyle(PVColor.textSecondary)
-            }
+                .font(PVFont.mono(size: PVTypeScale.caption))
+                .foregroundStyle(emphasis ? PVColor.textPrimary : PVColor.textMuted)
+            Text(verbatim: value)
+                .font(PVFont.mono(size: PVTypeScale.caption))
+                .foregroundStyle(emphasis ? PVColor.textPrimary : PVColor.textMuted)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 

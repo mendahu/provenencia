@@ -15,7 +15,7 @@ struct NameValueHostControl: View {
                     Text(verbatim: draft.trimmedForm)
                         .font(PVFont.body(size: PVTypeScale.body))
                         .foregroundStyle(PVColor.textPrimary)
-                    if !draft.storedPartsLine.isEmpty {
+                    if !draft.parts.isEmpty {
                         Text(verbatim: draft.storedPartsLine)
                             .font(PVFont.mono(size: PVTypeScale.micro))
                             .foregroundStyle(PVColor.textMuted)

@@ -79,17 +79,21 @@ struct NameValueDraft: Equatable, Sendable {
         )
     }
 
-    /// Compact stored-as line of typed parts (keys as persisted).
+    /// Board “Stored as” form line (`“Ada Lovelace”` or `—`).
+    var storedFormLine: String {
+        trimmedForm.isEmpty ? "—" : "“\(trimmedForm)”"
+    }
+
+    /// Board “Stored as” parts line (`1 given:Ada · 2 surname:Lovelace` or `[ ]`).
     var storedPartsLine: String {
-        let items = parts.map { part -> String in
+        guard !parts.isEmpty else { return "[ ]" }
+        return parts.enumerated().map { index, part in
             let value = part.value.trimmingCharacters(in: .whitespacesAndNewlines)
             let type = part.type.trimmingCharacters(in: .whitespacesAndNewlines)
-            if type.isEmpty {
-                return value
-            }
-            return "\(type) \(value)"
-        }
-        return items.joined(separator: " · ")
+            let typeToken = type.isEmpty ? "\"\"" : type
+            let valueToken = value.isEmpty ? "…" : value
+            return "\(index + 1) \(typeToken):\(valueToken)"
+        }.joined(separator: " · ")
     }
 }
 

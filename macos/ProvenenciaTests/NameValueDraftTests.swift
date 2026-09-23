@@ -88,4 +88,19 @@ struct NameValueDraftTests {
         #expect(NamePartType.isAllowed("surname_prefix"))
         #expect(!NamePartType.isAllowed("maiden"))
     }
+
+    @Test func storedAsMatchesBoard() {
+        var draft = NameValueDraft.empty()
+        #expect(draft.storedFormLine == "—")
+        #expect(draft.storedPartsLine == "[ ]")
+
+        draft.form = "John W. Alderwick"
+        draft.parts = [
+            .init(id: UUID(), value: "John", type: "given"),
+            .init(id: UUID(), value: "W.", type: "initial"),
+            .init(id: UUID(), value: "", type: ""),
+        ]
+        #expect(draft.storedFormLine == "“John W. Alderwick”")
+        #expect(draft.storedPartsLine == "1 given:John · 2 initial:W. · 3 \"\":…")
+    }
 }

@@ -1533,6 +1533,11 @@ enum L10n {
             defaultValue: "The name as you read it, in normalized spelling — the source's own wording stays on the citation",
             comment: "Hint under the NameValue form field"
         )
+        static let formPlaceholder = LocalizedStringResource(
+            "nameValue.form.placeholder",
+            defaultValue: "John William Alderwick",
+            comment: "Placeholder in the NameValue full-form field"
+        )
         static let formErrorMissing = LocalizedStringResource(
             "nameValue.form.error.missing",
             defaultValue: "Enter the name as one full form. Parts are optional; the form is not.",
@@ -1558,6 +1563,29 @@ enum L10n {
             defaultValue: "Add part",
             comment: "Button that appends a NameValue part row"
         )
+
+        static func partsCount(_ count: Int) -> String {
+            if count == 0 {
+                return String(localized: LocalizedStringResource(
+                    "nameValue.parts.count.none",
+                    defaultValue: "none",
+                    comment: "Parts heading count when the NameValue has no parts"
+                ))
+            }
+            if count == 1 {
+                return String(localized: LocalizedStringResource(
+                    "nameValue.parts.count.one",
+                    defaultValue: "1 part",
+                    comment: "Parts heading count for a single NameValue part"
+                ))
+            }
+            let format = String(localized: LocalizedStringResource(
+                "nameValue.parts.count.other",
+                defaultValue: "%lld parts",
+                comment: "Parts heading count; argument is the part count"
+            ))
+            return String(format: format, locale: .current, count)
+        }
         static let partsHint = LocalizedStringResource(
             "nameValue.parts.hint",
             defaultValue: "Order is the order you enter. Leave a part untyped when no type fits",
