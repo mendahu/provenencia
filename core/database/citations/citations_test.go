@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -249,6 +250,61 @@ func TestCitations(t *testing.T) {
 				}
 				if list[0].Ref[:4] != "CIT-" {
 					t.Fatalf("ref %q", list[0].Ref)
+				}
+			},
+		},
+		{
+			name: "count by source",
+			run: func(t *testing.T) {
+				c, s := mustSeed(t)
+				art2, err := artifacts.Create(c, userID, artifacts.CreateInput{
+					SourceID: s.artifact.SourceID,
+					Label:    "Scan 2",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateWithObservations(c, userID, CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, []observations.Input{{
+					SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
+					ValueTermID: s.femaleTerm.ID,
+				}}); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateWithObservations(c, userID, CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, []observations.Input{{
+					SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
+					ValueTermID: s.femaleTerm.ID,
+				}}); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateWithObservations(c, userID, CreateInput{
+					ArtifactID: art2.ID, LocatorJSON: validLocator,
+				}, []observations.Input{{
+					SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
+					ValueTermID: s.femaleTerm.ID,
+				}}); err != nil {
+					t.Fatal(err)
+				}
+				counts, err := CountBySource(c, s.artifact.SourceID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				id1 := uuid.Must(uuid.FromBytes(s.artifact.ID)).String()
+				id2 := uuid.Must(uuid.FromBytes(art2.ID)).String()
+				if counts[id1] != 2 || counts[id2] != 1 {
+					t.Fatalf("counts=%v want %s=2 %s=1", counts, id1, id2)
+				}
+			},
+		},
+		{
+			name: "count by source rejects short id",
+			run: func(t *testing.T) {
+				c, _ := mustSeed(t)
+				if _, err := CountBySource(c, []byte{1}); !errors.Is(err, ErrInvalid) {
+					t.Fatalf("got %v want ErrInvalid", err)
 				}
 			},
 		},

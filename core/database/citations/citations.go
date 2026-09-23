@@ -46,6 +46,12 @@ const (
 		FROM citations WHERE artifact_id = ?
 		ORDER BY ref COLLATE NOCASE`
 
+	sqlCountBySource = `SELECT c.artifact_id, COUNT(*)
+		FROM citations c
+		INNER JOIN artifacts a ON a.id = c.artifact_id
+		WHERE a.source_id = ?
+		GROUP BY c.artifact_id`
+
 	sqlArtifactExists = `SELECT 1 FROM artifacts WHERE id = ?`
 
 	maxRefRetries = 8
@@ -441,6 +447,36 @@ func ListByArtifact(c *database.Catalog, artifactID []byte) ([]Citation, error) 
 			return nil, err
 		}
 		out = append(out, cit)
+	}
+	return out, rows.Err()
+}
+
+// CountBySource returns citation counts keyed by artifact UUID string.
+func CountBySource(c *database.Catalog, sourceID []byte) (map[string]int32, error) {
+	db, err := c.DB()
+	if err != nil {
+		return nil, err
+	}
+	if len(sourceID) != 16 {
+		return nil, ErrInvalid
+	}
+	rows, err := db.Query(sqlCountBySource, sourceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]int32{}
+	for rows.Next() {
+		var artifactID []byte
+		var n int32
+		if err := rows.Scan(&artifactID, &n); err != nil {
+			return nil, err
+		}
+		u, err := uuid.FromBytes(artifactID)
+		if err != nil {
+			return nil, err
+		}
+		out[u.String()] = n
 	}
 	return out, rows.Err()
 }

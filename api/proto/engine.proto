@@ -81,6 +81,7 @@ enum Method {
   METHOD_GET_CITATION = 70;
   METHOD_UPDATE_CITATION_WITH_OBSERVATIONS = 71;
   METHOD_CREATE_CITED_BRIDGE = 72;
+  METHOD_CITATION_COUNTS_BY_SOURCE = 73;
 }
 
 message PingRequest {
@@ -1149,6 +1150,20 @@ message ListObservationsBySourceRequest {
 
 message ListObservationsBySourceResponse {
   repeated Observation observations = 1;
+}
+
+message CitationCountsBySourceRequest {
+  string project_dir = 1;
+  string source_id = 2;
+}
+
+message ArtifactCitationCount {
+  string artifact_id = 1;
+  int32 count = 2;
+}
+
+message CitationCountsBySourceResponse {
+  repeated ArtifactCitationCount counts = 1;
 }
 
 message GetCitationRequest {

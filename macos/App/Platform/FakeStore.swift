@@ -1442,6 +1442,16 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         return observationsBySource[sourceID] ?? []
     }
 
+    func citationCountsBySource(projectDir: String, sourceID: String) async throws -> [String: Int] {
+        markCatalogSessionHeld(projectDir)
+        let artifactIDs = Set((artifactsBySource[sourceID] ?? []).map(\.id))
+        var counts: [String: Int] = [:]
+        for citation in citationsByID.values where artifactIDs.contains(citation.artifactID) {
+            counts[citation.artifactID, default: 0] += 1
+        }
+        return counts
+    }
+
     private func appendFakeObservations(
         projectDir: String,
         citationID: String,

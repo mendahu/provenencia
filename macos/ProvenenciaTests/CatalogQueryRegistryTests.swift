@@ -86,6 +86,56 @@ struct CatalogQueryRegistryTests {
         #expect(suggestionsHandle.value?.count == 1)
     }
 
+    @Test func citationCountsLoadBySource() async {
+        let store = FakeStore()
+        seedStore(store)
+        store.artifactsBySource["s1"] = [
+            CatalogArtifact(
+                id: "art-0",
+                ref: "ART-0",
+                sourceID: "s1",
+                fileID: "file-0",
+                label: "Scan 1",
+                description: ""
+            ),
+            CatalogArtifact(
+                id: "art-1",
+                ref: "ART-1",
+                sourceID: "s1",
+                fileID: "file-1",
+                label: "Scan 2",
+                description: ""
+            ),
+        ]
+        store.citationsByID["cit-1"] = CatalogCitation(
+            id: "cit-1",
+            ref: "CIT-1",
+            artifactID: "art-0",
+            locatorJSON: "{}",
+            transcription: "",
+            description: "",
+            transcriptionUncertain: false,
+            transcriptionNote: ""
+        )
+        store.citationsByID["cit-2"] = CatalogCitation(
+            id: "cit-2",
+            ref: "CIT-2",
+            artifactID: "art-0",
+            locatorJSON: "{}",
+            transcription: "",
+            description: "",
+            transcriptionUncertain: false,
+            transcriptionNote: ""
+        )
+        let session = makeSession(store: store)
+        let handle: QueryHandle<[String: Int]> = session.query(
+            CatalogQueryKey.citationCounts(project: session.projectKey, sourceId: "s1")
+        )
+        await waitForFetchComplete(handle)
+        #expect(handle.value?["art-0"] == 2)
+        #expect(handle.value?["art-1"] == nil)
+    }
+
     @Test func sourceGraphLoadsPlacedPrimaries() async {
         let store = FakeStore()
         seedStore(store)
@@ -398,6 +448,7 @@ struct CatalogQueryRegistryTests {
         ])
         #expect(registry.invalidations(by: .createdCitation(sourceId: "s1"), project: project) == [
             .key(.sourceGraph(project: project, sourceId: "s1")),
+            .key(.citationCounts(project: project, sourceId: "s1")),
         ])
         #expect(registry.invalidations(by: .addedObservations(sourceId: "s1"), project: project) == [
             .key(.sourceGraph(project: project, sourceId: "s1")),

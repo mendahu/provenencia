@@ -53,6 +53,36 @@ func CreateCitationWithObservations(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
+func CitationCountsBySource(in []byte) ([]byte, error) {
+	var req engine.CitationCountsBySourceRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("citation_counts_by_source", err)
+	}
+	sourceID, err := parseID(req.GetSourceId())
+	if err != nil {
+		return nil, err
+	}
+	var out *engine.CitationCountsBySourceResponse
+	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		counts, err := citations.CountBySource(c, sourceID)
+		if err != nil {
+			return err
+		}
+		out = &engine.CitationCountsBySourceResponse{}
+		for artifactID, n := range counts {
+			out.Counts = append(out.Counts, &engine.ArtifactCitationCount{
+				ArtifactId: artifactID,
+				Count:      n,
+			})
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
+}
+
 func GetCitation(in []byte) ([]byte, error) {
 	var req engine.GetCitationRequest
 	if err := proto.Unmarshal(in, &req); err != nil {

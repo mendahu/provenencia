@@ -176,6 +176,40 @@ struct CitationComposerModelTests {
         }
     }
 
+    private func stripAttachedFile(_ store: FakeStore, artifactID: String) {
+        guard var artifacts = store.artifactsBySource[sourceID],
+              let index = artifacts.firstIndex(where: { $0.id == artifactID })
+        else { return }
+        artifacts[index].fileID = ""
+        artifacts[index].file = nil
+        store.artifactsBySource[sourceID] = artifacts
+    }
+
+    private func seedCitations(_ store: FakeStore, artifactID: String, count: Int) {
+        for i in 0..<count {
+            let id = "cit-\(artifactID)-\(i)"
+            store.citationsByID[id] = CatalogCitation(
+                id: id,
+                ref: "CIT-\(i)",
+                artifactID: artifactID,
+                locatorJSON: #"{"version":1,"selectors":[{"type":"artifact"}]}"#,
+                transcription: "",
+                description: "",
+                transcriptionUncertain: false,
+                transcriptionNote: ""
+            )
+        }
+    }
+
+    private func setSourceThumbnail(_ store: FakeStore, artifactID: String) {
+        guard var sources = store.sourcesByProject[projectDir],
+              let index = sources.firstIndex(where: { $0.id == sourceID })
+        else { return }
+        sources[index].coverMode = "artifact"
+        sources[index].primaryArtifactID = artifactID
+        store.sourcesByProject[projectDir] = sources
+    }
+
     private func sampleRectangle() -> ArtifactRegionDraft {
         ArtifactRegionDraft(
             kind: .rectangle,
@@ -251,12 +285,134 @@ struct CitationComposerModelTests {
         await model.prepare()
         #expect(model.phase == .pickArtifact)
         #expect(model.selectedArtifactID == nil)
+        #expect(model.pendingArtifactID == "art-0")
         model.selectPendingArtifact("art-1")
         #expect(model.phase == .pickArtifact)
         await model.confirmArtifactSelectionAndLoad()
         #expect(model.phase == .compose)
         #expect(model.selectedArtifactID == "art-1")
         #expect(model.observations.isEmpty)
+    }
+
+    @Test func preparePickerDefaultsToFirstArtifactWithFile() async {
+        let store = makeStore()
+        seedArtifact(store, count: 3)
+        stripAttachedFile(store, artifactID: "art-0")
+        let model = makeModel(store: store)
+        await model.prepare()
+        #expect(model.phase == .pickArtifact)
+        #expect(model.pendingArtifactID == "art-1")
+    }
+
+    @Test func preparePickerFallsBackToFirstWhenNoneHaveFiles() async {
+        let store = makeStore()
+        seedArtifact(store, count: 2)
+        stripAttachedFile(store, artifactID: "art-0")
+        stripAttachedFile(store, artifactID: "art-1")
+        let model = makeModel(store: store)
+        await model.prepare()
+        #expect(model.phase == .pickArtifact)
+        #expect(model.pendingArtifactID == "art-0")
+    }
+
+    @Test func preparePickerDefaultsToMostCitedArtifact() async {
+        let store = makeStore()
+        seedArtifact(store, count: 3)
+        seedCitations(store, artifactID: "art-0", count: 1)
+        seedCitations(store, artifactID: "art-2", count: 3)
+        let model = makeModel(store: store)
+        await model.prepare()
+        #expect(model.phase == .pickArtifact)
+        #expect(model.pendingArtifactID == "art-2")
+    }
+
+    @Test func preparePickerCitationTiePrefersThumbnail() async {
+        let store = makeStore()
+        seedArtifact(store, count: 3)
+        seedCitations(store, artifactID: "art-0", count: 2)
+        seedCitations(store, artifactID: "art-2", count: 2)
+        setSourceThumbnail(store, artifactID: "art-2")
+        let model = makeModel(store: store)
+        await model.prepare()
+        #expect(model.phase == .pickArtifact)
+        #expect(model.pendingArtifactID == "art-2")
+    }
+
+    @Test func defaultPendingArtifactIDLayers() {
+        func artifact(_ id: String, file: Bool = true) -> CatalogArtifact {
+            CatalogArtifact(
+                id: id,
+                ref: id,
+                sourceID: sourceID,
+                fileID: file ? "file-\(id)" : "",
+                label: id,
+                description: "",
+                file: file
+                    ? CatalogFileRef(
+                        id: "file-\(id)",
+                        relPath: "objects/\(id).pdf",
+                        originalFilename: "\(id).pdf",
+                        mediaType: "application/pdf",
+                        byteSize: 10
+                    )
+                    : nil
+            )
+        }
+
+        #expect(
+            CitationComposerModel.defaultPendingArtifactID(
+                artifacts: [artifact("art-0"), artifact("art-1"), artifact("art-2")],
+                citationCounts: ["art-0": 1, "art-1": 4, "art-2": 2],
+                selectedID: nil,
+                coverMode: "type_icon",
+                primaryArtifactID: ""
+            ) == "art-1"
+        )
+        #expect(
+            CitationComposerModel.defaultPendingArtifactID(
+                artifacts: [artifact("art-0"), artifact("art-1")],
+                citationCounts: ["art-0": 2, "art-1": 2],
+                selectedID: nil,
+                coverMode: "artifact",
+                primaryArtifactID: "art-1"
+            ) == "art-1"
+        )
+        #expect(
+            CitationComposerModel.defaultPendingArtifactID(
+                artifacts: [artifact("art-0"), artifact("art-1")],
+                citationCounts: [:],
+                selectedID: nil,
+                coverMode: "artifact",
+                primaryArtifactID: "art-1"
+            ) == "art-1"
+        )
+        #expect(
+            CitationComposerModel.defaultPendingArtifactID(
+                artifacts: [artifact("art-0", file: false), artifact("art-1"), artifact("art-2")],
+                citationCounts: [:],
+                selectedID: nil,
+                coverMode: "type_icon",
+                primaryArtifactID: ""
+            ) == "art-1"
+        )
+        #expect(
+            CitationComposerModel.defaultPendingArtifactID(
+                artifacts: [artifact("art-0", file: false), artifact("art-1", file: false)],
+                citationCounts: [:],
+                selectedID: nil,
+                coverMode: "type_icon",
+                primaryArtifactID: ""
+            ) == "art-0"
+        )
+        #expect(
+            CitationComposerModel.defaultPendingArtifactID(
+                artifacts: [artifact("art-0"), artifact("art-1")],
+                citationCounts: ["art-0": 1, "art-1": 3],
+                selectedID: "art-0",
+                coverMode: "type_icon",
+                primaryArtifactID: ""
+            ) == "art-0"
+        )
     }
 
     @Test func prepareNoArtifactsOpensInertCompose() async {

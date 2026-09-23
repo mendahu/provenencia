@@ -30,6 +30,7 @@ struct PlaceRegistry: Sendable {
                 return [
                     .sourceGraph(project: project, sourceId: sourceId),
                     .sourceWorkspace(project: project, sourceId: sourceId),
+                    .citationCounts(project: project, sourceId: sourceId),
                 ]
             },
             deepId: { $0.subjectId }

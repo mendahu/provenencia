@@ -180,6 +180,10 @@ final class CitationComposerModel {
         .sourceWorkspace(project: session.projectKey, sourceId: sourceID)
     }
 
+    var citationCountsKey: CatalogQueryKey {
+        .citationCounts(project: session.projectKey, sourceId: sourceID)
+    }
+
     var selectedArtifact: CatalogArtifact? {
         guard let id = selectedArtifactID else { return nil }
         return artifacts.first { $0.id == id }
@@ -371,6 +375,41 @@ final class CitationComposerModel {
         (artifact?.file?.mediaType ?? "").hasPrefix("image/")
     }
 
+    static func hasAttachedFile(_ artifact: CatalogArtifact) -> Bool {
+        artifact.file != nil && !artifact.fileID.isEmpty
+    }
+
+    /// Picker default for a multi-artifact Source.
+    /// 1. Unique most-cited artifact; citation ties prefer the Source thumbnail.
+    /// 2. First artifact with a file when the cover is the type-icon fallback
+    ///    (or the thumbnail is not among the citation leaders).
+    /// 3. First remaining artifact in list order.
+    static func defaultPendingArtifactID(
+        artifacts: [CatalogArtifact],
+        citationCounts: [String: Int],
+        selectedID: String?,
+        coverMode: String,
+        primaryArtifactID: String
+    ) -> String? {
+        if let selectedID, artifacts.contains(where: { $0.id == selectedID }) {
+            return selectedID
+        }
+        guard !artifacts.isEmpty else { return nil }
+
+        let maxCount = artifacts.map { citationCounts[$0.id, default: 0] }.max() ?? 0
+        let leaders = artifacts.filter { citationCounts[$0.id, default: 0] == maxCount }
+        let thumbnailID = (coverMode == "artifact" && !primaryArtifactID.isEmpty)
+            ? primaryArtifactID : nil
+
+        if leaders.count == 1 {
+            return leaders[0].id
+        }
+        if let thumbnailID, leaders.contains(where: { $0.id == thumbnailID }) {
+            return thumbnailID
+        }
+        return leaders.first(where: hasAttachedFile)?.id ?? leaders.first?.id
+    }
+
     var sourceTypesKey: CatalogQueryKey {
         .sourceTypesList(project: session.projectKey)
     }
@@ -559,7 +598,19 @@ final class CitationComposerModel {
                 phase = .compose
                 return
             }
-            pendingArtifactID = selectedArtifactID ?? artifacts.first?.id
+            let counts = try await cached(citationCountsKey) {
+                try await self.store.citationCountsBySource(
+                    projectDir: projectDir,
+                    sourceID: self.sourceID
+                )
+            }
+            pendingArtifactID = Self.defaultPendingArtifactID(
+                artifacts: artifacts,
+                citationCounts: counts,
+                selectedID: selectedArtifactID,
+                coverMode: workspace.source.coverMode,
+                primaryArtifactID: workspace.source.primaryArtifactID
+            )
             phase = .pickArtifact
         } catch {
             loadError = L10n.Errors.message(for: error)
