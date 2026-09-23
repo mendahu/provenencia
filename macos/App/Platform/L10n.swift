@@ -1122,6 +1122,12 @@ enum L10n {
             comment: "VoiceOver action for a cited property row pencil that opens the citation composer"
         )
 
+        static let editCitationAccessibility = LocalizedStringResource(
+            "evidenceGraph.bridge.editCitationAccessibility",
+            defaultValue: "Edit citation",
+            comment: "VoiceOver action for the pencil beside a bridge card’s relationship sentence"
+        )
+
         static let deleteAccessibility = LocalizedStringResource(
             "evidenceGraph.subject.deleteAccessibility",
             defaultValue: "Delete subject",
@@ -2001,8 +2007,17 @@ enum L10n {
         static let locatorAlwaysIncluded = LocalizedStringResource(
             "citationComposer.locatorAlwaysIncluded",
             defaultValue: "Always included",
-            comment: "Note under Entire artifact that the floor cannot be removed"
+            comment: "Trailing lock label on the Entire artifact locator row"
         )
+
+        static func locatorPoints(_ count: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "citationComposer.locatorPoints",
+                defaultValue: "%lld points",
+                comment: "Locator list helper for a region; argument is vertex count"
+            ))
+            return String(format: format, locale: .current, count)
+        }
 
         static let locatorRectangle = LocalizedStringResource(
             "citationComposer.locatorRectangle",

@@ -8502,6 +8502,18 @@
         }
       }
     },
+    "evidenceGraph.bridge.editCitationAccessibility": {
+      "comment": "VoiceOver action for the pencil beside a bridge card’s relationship sentence",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit citation"
+          }
+        }
+      }
+    },
     "evidenceGraph.subject.deleteAccessibility": {
       "comment": "VoiceOver action / tooltip for trash on an uncited subject card",
       "extractionState": "manual",
@@ -9823,13 +9835,25 @@
       }
     },
     "citationComposer.locatorAlwaysIncluded": {
-      "comment": "Note under Entire artifact that the floor cannot be removed",
+      "comment": "Trailing lock label on the Entire artifact locator row",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Always included"
+          }
+        }
+      }
+    },
+    "citationComposer.locatorPoints": {
+      "comment": "Locator list helper for a region; argument is vertex count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld points"
           }
         }
       }

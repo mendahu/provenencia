@@ -14,12 +14,18 @@ struct EvidenceBridgeCard: View {
     static let edgeLayoutHeight: CGFloat = 88
 
     static let editActionID = "edit"
+    static let editCitationActionID = "editCitation"
     static let deleteActionID = "delete"
 
     /// Horizontal / top padding on the bridge shell (matches chrome).
     static let shellPaddingX: CGFloat = 11
     static let shellPaddingTop: CGFloat = 9
     static let headerActionHitHeight: CGFloat = 28
+    /// Painted header row (type·ref / working label) before the body sentence.
+    static let headerContentHeightCited: CGFloat = 22
+    static let headerContentHeightUncited: CGFloat = 26
+    static let headerToBodySpacing: CGFloat = 7
+    static let bodyActionHitHeight: CGFloat = 28
 
     let placed: SourceGraphPlacedBridge
     var isSelected: Bool
@@ -28,6 +34,8 @@ struct EvidenceBridgeCard: View {
     var dragOffset: CGSize = .zero
     /// Nested action id under the pointer (idle hover), if any.
     var hoveredActionID: String? = nil
+    /// When false (no Artifact), the citation pencil is omitted.
+    var canCite: Bool = false
 
     private var isDragging: Bool {
         dragOffset != .zero
@@ -39,7 +47,8 @@ struct EvidenceBridgeCard: View {
             isSelected: isSelected,
             isActivated: isActivated,
             isDragging: isDragging,
-            hoveredActionID: hoveredActionID
+            hoveredActionID: hoveredActionID,
+            canCite: canCite
         )
         .offset(dragOffset)
         .zIndex(isDragging || isActivated ? 1 : 0)
@@ -73,6 +82,7 @@ struct EvidenceBridgeCard: View {
 
     static func actionTargets(
         for placed: SourceGraphPlacedBridge,
+        canCite: Bool,
         dragOffset: CGSize = .zero
     ) -> [GraphCanvasActionTarget] {
         let frame = contentFrame(gridX: placed.gridX, gridY: placed.gridY, dragOffset: dragOffset)
@@ -86,6 +96,21 @@ struct EvidenceBridgeCard: View {
         var actions: [GraphCanvasActionTarget] = [
             GraphCanvasActionTarget(id: editActionID, frame: headerHits.edit),
         ]
+        if canCite {
+            let headerHeight = placed.isCited ? headerContentHeightCited : headerContentHeightUncited
+            let bodyTop = frame.minY + shellPaddingTop + headerHeight + headerToBodySpacing
+            actions.append(
+                GraphCanvasActionTarget(
+                    id: editCitationActionID,
+                    frame: CGRect(
+                        x: headerHits.edit.minX,
+                        y: bodyTop,
+                        width: headerHits.edit.width,
+                        height: bodyActionHitHeight
+                    )
+                )
+            )
+        }
         if let deleteFrame = headerHits.delete {
             actions.append(GraphCanvasActionTarget(id: deleteActionID, frame: deleteFrame))
         }
@@ -117,6 +142,7 @@ private struct EvidenceBridgeCardChrome: View {
     var isActivated: Bool
     var isDragging: Bool
     var hoveredActionID: String?
+    var canCite: Bool
 
     private var showsSelectionChrome: Bool {
         isSelected || isActivated || isDragging
@@ -134,22 +160,9 @@ private struct EvidenceBridgeCardChrome: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: EvidenceBridgeCard.headerToBodySpacing) {
             headerRow
-            if placed.isCited {
-                Text(verbatim: EvidenceBridgeEdgeSummary.phrase(for: placed))
-                    .font(PVFont.display(size: 14.5, weight: PVFontWeight.medium))
-                    .foregroundStyle(PVColor.textPrimary)
-                    .lineLimit(3)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else {
-                Text(L10n.EvidenceGraph.bridgeHonestyBody)
-                    .font(PVFont.body(size: 11.5, italic: true))
-                    .foregroundStyle(PVColor.textMuted)
-                    .lineLimit(3)
-                    .multilineTextAlignment(.leading)
-            }
+            bodyRow
         }
         .padding(.horizontal, EvidenceBridgeCard.shellPaddingX)
         .padding(.vertical, EvidenceBridgeCard.shellPaddingTop)
@@ -197,7 +210,11 @@ private struct EvidenceBridgeCardChrome: View {
             }
             HStack(spacing: 6) {
                 PVIcon(.penLine, size: 12)
-                    .foregroundStyle(PVColor.textMuted)
+                    .foregroundStyle(
+                        hoveredActionID == EvidenceBridgeCard.editActionID
+                            ? PVColor.textSecondary
+                            : PVColor.textMuted
+                    )
                 if !placed.isCited {
                     PVIcon(.trash, size: 12)
                         .foregroundStyle(
@@ -208,6 +225,40 @@ private struct EvidenceBridgeCardChrome: View {
                 }
             }
             .alignmentGuide(.top) { d in d[.top] }
+        }
+    }
+
+    private var bodyRow: some View {
+        HStack(alignment: .top, spacing: 8) {
+            if placed.isCited {
+                Text(verbatim: EvidenceBridgeEdgeSummary.phrase(for: placed))
+                    .font(PVFont.display(size: 14.5, weight: PVFontWeight.medium))
+                    .foregroundStyle(PVColor.textPrimary)
+                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text(L10n.EvidenceGraph.bridgeHonestyBody)
+                    .font(PVFont.body(size: 11.5, italic: true))
+                    .foregroundStyle(PVColor.textMuted)
+                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
+            }
+            Spacer(minLength: 0)
+            HStack(spacing: 6) {
+                if canCite {
+                    PVIcon(.penLine, size: 12)
+                        .foregroundStyle(
+                            hoveredActionID == EvidenceBridgeCard.editCitationActionID
+                                ? PVColor.accent
+                                : PVColor.textMuted
+                        )
+                        .padding(.top, 2)
+                }
+                if !placed.isCited {
+                    Color.clear.frame(width: 12, height: 12)
+                }
+            }
         }
     }
 

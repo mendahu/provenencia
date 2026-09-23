@@ -122,27 +122,108 @@ enum ArtifactRegionGeometry {
         return raw.map(clampNormalized)
     }
 
-    static func circleRing(center: CGPoint, radius: CGFloat) -> [CGPoint] {
-        let c = clampNormalized(center)
-        let maxR = min(c.x, 1 - c.x, c.y, 1 - c.y)
-        let r = min(max(radius, 0), maxR)
+    static func lShapePoints(kind: ArtifactRegionKind, params: LParams) -> [CGPoint] {
+        var p = params
+        p.clamp()
+        return rebuiltL(kind: kind, params: p)
+    }
+
+    private static func rebuiltL(kind: ArtifactRegionKind, params p: LParams) -> [CGPoint] {
+        let raw: [CGPoint]
+        switch kind {
+        case .lOpenTopRight:
+            raw = [
+                CGPoint(x: p.minX, y: p.minY),
+                CGPoint(x: p.midX, y: p.minY),
+                CGPoint(x: p.midX, y: p.midY),
+                CGPoint(x: p.maxX, y: p.midY),
+                CGPoint(x: p.maxX, y: p.maxY),
+                CGPoint(x: p.minX, y: p.maxY),
+            ]
+        case .lOpenTopLeft:
+            raw = [
+                CGPoint(x: p.midX, y: p.minY),
+                CGPoint(x: p.maxX, y: p.minY),
+                CGPoint(x: p.maxX, y: p.maxY),
+                CGPoint(x: p.minX, y: p.maxY),
+                CGPoint(x: p.minX, y: p.midY),
+                CGPoint(x: p.midX, y: p.midY),
+            ]
+        case .lOpenBottomRight:
+            raw = [
+                CGPoint(x: p.minX, y: p.minY),
+                CGPoint(x: p.maxX, y: p.minY),
+                CGPoint(x: p.maxX, y: p.midY),
+                CGPoint(x: p.midX, y: p.midY),
+                CGPoint(x: p.midX, y: p.maxY),
+                CGPoint(x: p.minX, y: p.maxY),
+            ]
+        case .lOpenBottomLeft:
+            raw = [
+                CGPoint(x: p.minX, y: p.minY),
+                CGPoint(x: p.maxX, y: p.minY),
+                CGPoint(x: p.maxX, y: p.maxY),
+                CGPoint(x: p.midX, y: p.maxY),
+                CGPoint(x: p.midX, y: p.midY),
+                CGPoint(x: p.minX, y: p.midY),
+            ]
+        default:
+            return rectanglePoints(
+                from: CGPoint(x: p.minX, y: p.minY),
+                to: CGPoint(x: p.maxX, y: p.maxY)
+            )
+        }
+        return raw.map(clampNormalized)
+    }
+
+    /// Circle in **image pixels** (isotropic), then normalized. A unit-square
+    /// ring would stretch into an oval on a non-square Artifact.
+    static func circleRing(
+        centerNormalized: CGPoint,
+        throughNormalized: CGPoint,
+        imageRect: CGRect
+    ) -> [CGPoint] {
+        let media = usableImageRect(imageRect)
+        let centerDoc = documentPoint(normalized: centerNormalized, imageRect: media)
+        let edgeDoc = documentPoint(normalized: throughNormalized, imageRect: media)
+        let radius = hypot(edgeDoc.x - centerDoc.x, edgeDoc.y - centerDoc.y)
+        return circleRing(centerDocument: centerDoc, radiusDocument: radius, imageRect: media)
+    }
+
+    static func circleRing(
+        centerDocument: CGPoint,
+        radiusDocument: CGFloat,
+        imageRect: CGRect
+    ) -> [CGPoint] {
+        let media = usableImageRect(imageRect)
+        let maxR = min(
+            centerDocument.x - media.minX,
+            media.maxX - centerDocument.x,
+            centerDocument.y - media.minY,
+            media.maxY - centerDocument.y
+        )
+        let r = min(max(radiusDocument, 0), max(maxR, 0))
         guard r > 0 else { return [] }
         return (0..<circleRingCount).map { index in
             let angle = CGFloat(index) / CGFloat(circleRingCount) * 2 * .pi
-            return clampNormalized(
-                CGPoint(
-                    x: c.x + r * cos(angle),
-                    y: c.y + r * sin(angle)
-                )
+            return normalize(
+                documentPoint: CGPoint(
+                    x: centerDocument.x + r * cos(angle),
+                    y: centerDocument.y + r * sin(angle)
+                ),
+                imageRect: media
             )
         }
     }
 
-    static func circleRing(from a: CGPoint, to b: CGPoint) -> [CGPoint] {
-        let dx = b.x - a.x
-        let dy = b.y - a.y
-        let radius = sqrt(dx * dx + dy * dy)
-        return circleRing(center: a, radius: radius)
+    /// Unit-square helper for tests (square image). Prefer the image-rect overload in the overlay.
+    static func circleRing(center: CGPoint, radius: CGFloat) -> [CGPoint] {
+        let media = CGRect(x: 0, y: 0, width: 1, height: 1)
+        return circleRing(
+            centerDocument: documentPoint(normalized: center, imageRect: media),
+            radiusDocument: radius,
+            imageRect: media
+        )
     }
 
     // MARK: Constrained edit
@@ -194,44 +275,46 @@ enum ArtifactRegionGeometry {
         handle: Int,
         to location: CGPoint
     ) -> [CGPoint] {
-        guard points.count == 6, kind.isLShape else { return points }
-        let p = clampNormalized(location)
-        var minX = points.map(\.x).min() ?? 0
-        var maxX = points.map(\.x).max() ?? 1
-        var minY = points.map(\.y).min() ?? 0
-        var maxY = points.map(\.y).max() ?? 1
-        // Outer-box handles 0…3 (corners of the bounding rect).
-        switch handle {
-        case 0:
-            minX = p.x
-            minY = p.y
-        case 1:
-            maxX = p.x
-            minY = p.y
-        case 2:
-            maxX = p.x
-            maxY = p.y
-        case 3:
-            minX = p.x
-            maxY = p.y
-        default:
-            break
+        guard points.count == 6, kind.isLShape, var params = lParams(kind: kind, points: points) else {
+            return points
         }
-        if minX > maxX { swap(&minX, &maxX) }
-        if minY > maxY { swap(&minY, &maxY) }
-        return lShapePoints(
-            kind: kind,
-            from: CGPoint(x: minX, y: minY),
-            to: CGPoint(x: maxX, y: maxY)
+        let p = clampNormalized(location)
+        applyLVertex(&params, kind: kind, handle: handle, to: p)
+        return lShapePoints(kind: kind, params: params)
+    }
+
+    static func moveCircleRadius(
+        points: [CGPoint],
+        to location: CGPoint,
+        imageRect: CGRect
+    ) -> [CGPoint] {
+        let media = usableImageRect(imageRect)
+        guard let center = circleCenter(points) else { return points }
+        return circleRing(
+            centerNormalized: center,
+            throughNormalized: clampNormalized(location),
+            imageRect: media
         )
     }
 
     static func moveCircleRadius(points: [CGPoint], to location: CGPoint) -> [CGPoint] {
-        guard let center = circleCenter(points) else { return points }
-        let p = clampNormalized(location)
-        let dx = p.x - center.x
-        let dy = p.y - center.y
-        return circleRing(center: center, radius: sqrt(dx * dx + dy * dy))
+        moveCircleRadius(
+            points: points,
+            to: location,
+            imageRect: CGRect(x: 0, y: 0, width: 1, height: 1)
+        )
+    }
+
+    /// Translate every vertex, clamping so the polygon stays inside the unit square.
+    static func translate(_ points: [CGPoint], by delta: CGPoint) -> [CGPoint] {
+        guard !points.isEmpty else { return points }
+        let minX = points.map(\.x).min() ?? 0
+        let maxX = points.map(\.x).max() ?? 1
+        let minY = points.map(\.y).min() ?? 0
+        let maxY = points.map(\.y).max() ?? 1
+        let dx = min(max(delta.x, -minX), 1 - maxX)
+        let dy = min(max(delta.y, -minY), 1 - maxY)
+        return points.map { clampNormalized(CGPoint(x: $0.x + dx, y: $0.y + dy)) }
     }
 
     static func moveFreeformVertex(points: [CGPoint], index: Int, to location: CGPoint) -> [CGPoint] {
@@ -260,12 +343,7 @@ enum ArtifactRegionGeometry {
     }
 
     static func looksLikeCircleRing(_ points: [CGPoint]) -> Bool {
-        guard points.count == circleRingCount, let center = circleCenter(points) else {
-            return false
-        }
-        let radii = points.map { hypot($0.x - center.x, $0.y - center.y) }
-        guard let first = radii.first, first > 0 else { return false }
-        return radii.allSatisfy { abs($0 - first) < 0.04 }
+        points.count == circleRingCount && circleCenter(points) != nil
     }
 
     static func circleCenter(_ points: [CGPoint]) -> CGPoint? {
@@ -355,7 +433,8 @@ enum ArtifactRegionGeometry {
 
     // MARK: Handles (normalized)
 
-    static func handlePoints(for draft: ArtifactRegionDraft) -> [CGPoint] {
+    /// Resize handles only (not the move anchor). L uses the six real vertices.
+    static func handlePoints(for draft: ArtifactRegionDraft, imageRect: CGRect = .unitSquare) -> [CGPoint] {
         switch draft.kind {
         case .rectangle:
             guard draft.points.count == 4 else { return draft.points }
@@ -371,24 +450,139 @@ enum ArtifactRegionGeometry {
                 CGPoint(x: bl.x, y: (tl.y + bl.y) / 2),
             ]
         case .lOpenTopRight, .lOpenTopLeft, .lOpenBottomRight, .lOpenBottomLeft:
-            let box = boundingRect(of: draft.points)
-            return [
-                CGPoint(x: box.minX, y: box.minY),
-                CGPoint(x: box.maxX, y: box.minY),
-                CGPoint(x: box.maxX, y: box.maxY),
-                CGPoint(x: box.minX, y: box.maxY),
-            ]
+            return draft.points
         case .circle:
-            guard let center = circleCenter(draft.points),
-                  let radius = circleRadius(draft.points)
-            else { return [] }
-            return [CGPoint(x: center.x + radius, y: center.y)]
+            let media = usableImageRect(imageRect)
+            guard let center = circleCenter(draft.points) else { return [] }
+            let centerDoc = documentPoint(normalized: center, imageRect: media)
+            let radiusDoc = circleRadiusDocument(draft.points, imageRect: media) ?? 0
+            guard radiusDoc > 0 else { return [] }
+            return [
+                normalize(
+                    documentPoint: CGPoint(x: centerDoc.x + radiusDoc, y: centerDoc.y),
+                    imageRect: media
+                )
+            ]
         case .freeform:
             return draft.points
         }
     }
 
+    static func moveAnchor(for draft: ArtifactRegionDraft) -> CGPoint? {
+        circleCenter(draft.points)
+    }
+
+    /// Eight-way resize cursor. Overlay y increases downward (flipped).
+    static func resizeCursorKind(handle: CGPoint, centroid: CGPoint) -> ArtifactResizeCursorKind {
+        let dx = handle.x - centroid.x
+        let dy = handle.y - centroid.y
+        guard abs(dx) > 1e-6 || abs(dy) > 1e-6 else { return .east }
+        var degrees = atan2(dy, dx) * 180 / .pi
+        if degrees < 0 { degrees += 360 }
+        switch Int((degrees + 22.5) / 45) % 8 {
+        case 0: return .east
+        case 1: return .southEast
+        case 2: return .south
+        case 3: return .southWest
+        case 4: return .west
+        case 5: return .northWest
+        case 6: return .north
+        default: return .northEast
+        }
+    }
+
+    static func missingLCorner(kind: ArtifactRegionKind, points: [CGPoint]) -> CGPoint? {
+        let box = boundingRect(of: points)
+        switch kind {
+        case .lOpenTopRight: return CGPoint(x: box.maxX, y: box.minY)
+        case .lOpenTopLeft: return CGPoint(x: box.minX, y: box.minY)
+        case .lOpenBottomRight: return CGPoint(x: box.maxX, y: box.maxY)
+        case .lOpenBottomLeft: return CGPoint(x: box.minX, y: box.maxY)
+        default: return nil
+        }
+    }
+
     // MARK: - Private
+
+    private static func usableImageRect(_ rect: CGRect) -> CGRect {
+        (rect.width > 0 && rect.height > 0) ? rect : .unitSquare
+    }
+
+    static func circleRadiusDocument(_ points: [CGPoint], imageRect: CGRect) -> CGFloat? {
+        let media = usableImageRect(imageRect)
+        guard let center = circleCenter(points), let first = points.first else { return nil }
+        let c = documentPoint(normalized: center, imageRect: media)
+        let p = documentPoint(normalized: first, imageRect: media)
+        return hypot(p.x - c.x, p.y - c.y)
+    }
+
+    static func lParams(kind: ArtifactRegionKind, points: [CGPoint]) -> LParams? {
+        guard points.count == 6 else { return nil }
+        switch kind {
+        case .lOpenTopRight:
+            return LParams(
+                minX: points[0].x, maxX: points[4].x,
+                minY: points[0].y, maxY: points[4].y,
+                midX: points[2].x, midY: points[2].y
+            )
+        case .lOpenTopLeft:
+            return LParams(
+                minX: points[3].x, maxX: points[1].x,
+                minY: points[0].y, maxY: points[2].y,
+                midX: points[5].x, midY: points[5].y
+            )
+        case .lOpenBottomRight:
+            return LParams(
+                minX: points[0].x, maxX: points[1].x,
+                minY: points[0].y, maxY: points[5].y,
+                midX: points[3].x, midY: points[3].y
+            )
+        case .lOpenBottomLeft:
+            return LParams(
+                minX: points[0].x, maxX: points[1].x,
+                minY: points[0].y, maxY: points[2].y,
+                midX: points[4].x, midY: points[4].y
+            )
+        default:
+            return nil
+        }
+    }
+
+    private static func applyLVertex(
+        _ params: inout LParams,
+        kind: ArtifactRegionKind,
+        handle: Int,
+        to p: CGPoint
+    ) {
+        switch (kind, handle) {
+        case (.lOpenTopRight, 0): params.minX = p.x; params.minY = p.y
+        case (.lOpenTopRight, 1): params.midX = p.x
+        case (.lOpenTopRight, 2): params.midX = p.x; params.midY = p.y
+        case (.lOpenTopRight, 3): params.midY = p.y
+        case (.lOpenTopRight, 4): params.maxX = p.x; params.maxY = p.y
+        case (.lOpenTopRight, 5): params.minX = p.x; params.maxY = p.y
+        case (.lOpenTopLeft, 0): params.midX = p.x; params.minY = p.y
+        case (.lOpenTopLeft, 1): params.maxX = p.x; params.minY = p.y
+        case (.lOpenTopLeft, 2): params.maxX = p.x; params.maxY = p.y
+        case (.lOpenTopLeft, 3): params.minX = p.x; params.maxY = p.y
+        case (.lOpenTopLeft, 4): params.minX = p.x; params.midY = p.y
+        case (.lOpenTopLeft, 5): params.midX = p.x; params.midY = p.y
+        case (.lOpenBottomRight, 0): params.minX = p.x; params.minY = p.y
+        case (.lOpenBottomRight, 1): params.maxX = p.x; params.minY = p.y
+        case (.lOpenBottomRight, 2): params.maxX = p.x; params.midY = p.y
+        case (.lOpenBottomRight, 3): params.midX = p.x; params.midY = p.y
+        case (.lOpenBottomRight, 4): params.midX = p.x; params.maxY = p.y
+        case (.lOpenBottomRight, 5): params.minX = p.x; params.maxY = p.y
+        case (.lOpenBottomLeft, 0): params.minX = p.x; params.minY = p.y
+        case (.lOpenBottomLeft, 1): params.maxX = p.x; params.minY = p.y
+        case (.lOpenBottomLeft, 2): params.maxX = p.x; params.maxY = p.y
+        case (.lOpenBottomLeft, 3): params.midX = p.x; params.maxY = p.y
+        case (.lOpenBottomLeft, 4): params.midX = p.x; params.midY = p.y
+        case (.lOpenBottomLeft, 5): params.minX = p.x; params.midY = p.y
+        default: break
+        }
+        params.clamp()
+    }
 
     private static func rounded(_ value: CGFloat) -> Int {
         Int((value * 10_000).rounded())
@@ -398,4 +592,29 @@ enum ArtifactRegionGeometry {
         guard a.count == b.count else { return .greatestFiniteMagnitude }
         return zip(a, b).reduce(0) { $0 + hypot($1.0.x - $1.1.x, $1.0.y - $1.1.y) }
     }
+}
+
+enum ArtifactResizeCursorKind: Equatable {
+    case east, southEast, south, southWest, west, northWest, north, northEast
+}
+
+struct LParams: Equatable {
+    var minX: CGFloat
+    var maxX: CGFloat
+    var minY: CGFloat
+    var maxY: CGFloat
+    var midX: CGFloat
+    var midY: CGFloat
+
+    mutating func clamp() {
+        if minX > maxX { swap(&minX, &maxX) }
+        if minY > maxY { swap(&minY, &maxY) }
+        let gap: CGFloat = 0.02
+        midX = min(max(midX, minX + gap), maxX - gap)
+        midY = min(max(midY, minY + gap), maxY - gap)
+    }
+}
+
+extension CGRect {
+    static let unitSquare = CGRect(x: 0, y: 0, width: 1, height: 1)
 }
