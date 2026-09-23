@@ -149,7 +149,14 @@ struct CitationComposerModelTests {
         return store
     }
 
-    private func seedArtifact(_ store: FakeStore, count: Int = 1, pdf: Bool = true) {
+    private func seedArtifact(
+        _ store: FakeStore,
+        count: Int = 1,
+        pdf: Bool = true,
+        mediaType: String? = nil
+    ) {
+        let type = mediaType ?? (pdf ? "application/pdf" : "image/jpeg")
+        let ext = type.contains("pdf") ? "pdf" : (type.hasPrefix("image/") ? "jpg" : "bin")
         store.artifactsBySource[sourceID] = (0..<count).map { i in
             CatalogArtifact(
                 id: "art-\(i)",
@@ -160,13 +167,25 @@ struct CitationComposerModelTests {
                 description: "",
                 file: CatalogFileRef(
                     id: "file-\(i)",
-                    relPath: "objects/file-\(i).pdf",
-                    originalFilename: "scan\(i).pdf",
-                    mediaType: pdf ? "application/pdf" : "image/jpeg",
+                    relPath: "objects/file-\(i).\(ext)",
+                    originalFilename: "scan\(i).\(ext)",
+                    mediaType: type,
                     byteSize: 10
                 )
             )
         }
+    }
+
+    private func sampleRectangle() -> ArtifactRegionDraft {
+        ArtifactRegionDraft(
+            kind: .rectangle,
+            points: [
+                CGPoint(x: 0.1, y: 0.1),
+                CGPoint(x: 0.4, y: 0.1),
+                CGPoint(x: 0.4, y: 0.3),
+                CGPoint(x: 0.1, y: 0.3),
+            ]
+        )
     }
 
     private func makeModel(
@@ -228,7 +247,7 @@ struct CitationComposerModelTests {
         #expect(model.selectedArtifactID == nil)
         model.selectPendingArtifact("art-1")
         #expect(model.phase == .pickArtifact)
-        model.confirmArtifactSelection()
+        await model.confirmArtifactSelectionAndLoad()
         #expect(model.phase == .compose)
         #expect(model.selectedArtifactID == "art-1")
         #expect(model.observations.isEmpty)
@@ -399,18 +418,13 @@ struct CitationComposerModelTests {
         #expect(model.observations[0].valueText == "Farmer")
     }
 
-    @Test func submitRequiresLocatorAndObservationThenWrites() async throws {
+    @Test func submitRequiresObservationAndWritesArtifactLocator() async throws {
         let store = makeStore()
         seedArtifact(store)
         let model = makeModel(store: store)
         await model.prepare()
         #expect(model.phase == .compose)
-
-        let noObs = await model.submit()
-        #expect(noObs == nil)
-        #expect(model.locatorError != nil || model.formError != nil)
-
-        model.markWholeImageLocator()
+        #expect(model.locator.isArtifactOnly)
         #expect(model.hasLocator)
 
         let stillEmpty = await model.submit()
@@ -435,19 +449,97 @@ struct CitationComposerModelTests {
         #expect(listed[0].valueText == "Farmer")
         #expect(listed[0].propertyID == occupationPropertyID)
         #expect(listed[0].subjectID == subjectID)
+        let json = store.citationsByID.values.first?.locatorJSON ?? ""
+        #expect(json.contains("\"artifact\""))
+        #expect(!json.contains("\"page\""))
     }
 
-    @Test func pdfPageNavCommitsLocator() async {
+    @Test func setPageDoesNotFollowBrowse() async {
         let store = makeStore()
         seedArtifact(store, count: 1, pdf: true)
         let model = makeModel(store: store)
         await model.prepare()
-        #expect(!model.hasLocator)
-        // Stub page count is 1, so next is a no-op — Draw region commits page for PDF.
-        model.markWholeImageLocator()
-        #expect(model.locatorPage == 1)
-        model.clearLocator()
-        #expect(!model.hasLocator)
+        #expect(model.locator.isArtifactOnly)
+        model.goToNextPage()
+        #expect(model.locator.page == nil)
+        #expect(model.setPageFromViewer())
+        #expect(model.locator.page == model.artifactViewer.page)
+        #expect(model.isLocatorPageSetOnViewer)
+        model.resetToEntireArtifact()
+        #expect(model.locator.isArtifactOnly)
+    }
+
+    @Test func pdfRegionAutoInsertsCurrentPage() async {
+        let store = makeStore()
+        seedArtifact(store, count: 1, pdf: true)
+        let model = makeModel(store: store)
+        await model.prepare()
+        #expect(model.setRegion(sampleRectangle()))
+        #expect(model.locator.page == model.artifactViewer.page)
+        #expect(model.locator.region?.kind == .rectangle)
+        #expect(model.locator.encodeJSON().contains("\"page\""))
+        #expect(model.locator.encodeJSON().contains("\"region\""))
+    }
+
+    @Test func imageRegionHasNoPage() async {
+        let store = makeStore()
+        seedArtifact(store, pdf: false)
+        let model = makeModel(store: store)
+        await model.prepare()
+        #expect(!model.setPageFromViewer())
+        #expect(model.setRegion(sampleRectangle()))
+        #expect(model.locator.page == nil)
+        #expect(model.locator.region != nil)
+        #expect(!model.locator.encodeJSON().contains("\"page\""))
+    }
+
+    @Test func audioRefusesPageAndRegion() async {
+        let store = makeStore()
+        seedArtifact(store, mediaType: "audio/mpeg")
+        let model = makeModel(store: store)
+        await model.prepare()
+        #expect(model.artifactViewer.kind == .audio)
+        #expect(!model.setPage(2))
+        #expect(!model.setRegion(sampleRectangle()))
+        #expect(model.locator.isArtifactOnly)
+        #expect(model.locator.encodeJSON().contains("\"artifact\""))
+    }
+
+    @Test func switchingKindPeelsIllegalLayers() async {
+        let store = makeStore()
+        seedArtifact(store, count: 2, pdf: true)
+        if var artifacts = store.artifactsBySource[sourceID], artifacts.indices.contains(1) {
+            artifacts[1].file?.mediaType = "image/jpeg"
+            store.artifactsBySource[sourceID] = artifacts
+        }
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.selectPendingArtifact("art-0")
+        await model.confirmArtifactSelectionAndLoad()
+        #expect(model.setPage(2))
+        #expect(model.setRegion(sampleRectangle()))
+        #expect(model.locator.page == 2)
+        #expect(model.locator.region != nil)
+
+        model.selectPendingArtifact("art-1")
+        await model.confirmArtifactSelectionAndLoad()
+        #expect(model.locator.isArtifactOnly)
+
+        var draft = CitationLocatorDraft.artifactOnly()
+        let setPage = draft.setPage(3, capabilities: ArtifactViewerKind.pdf.locatorCapabilities)
+        let setRegion = draft.setRegion(
+            sampleRectangle(),
+            capabilities: ArtifactViewerKind.pdf.locatorCapabilities,
+            autoPage: 3
+        )
+        #expect(setPage)
+        #expect(setRegion)
+        draft.peelIllegalLayers(capabilities: ArtifactViewerKind.image.locatorCapabilities)
+        #expect(draft.page == nil)
+        #expect(draft.region != nil)
+        draft.peelIllegalLayers(capabilities: ArtifactViewerKind.audio.locatorCapabilities)
+        #expect(draft.page == nil)
+        #expect(draft.region == nil)
     }
 
     @Test func missingSubjectFallsBack() async {
@@ -500,6 +592,8 @@ struct CitationComposerModelTests {
         #expect(model.transcription == "Farmer")
         #expect(model.transcriptionUncertain)
         #expect(model.locatorPage == 3)
+        #expect(model.locator.encodeJSON().contains("\"artifact\""))
+        #expect(model.locator.encodeJSON().contains("\"page\""))
         #expect(model.observations.count == 1)
         #expect(model.observations[0].valueText == "Farmer")
     }
@@ -553,6 +647,7 @@ struct CitationComposerModelTests {
             citationID: citation.id
         )
         #expect(store.citationsByID[citation.id]?.transcription == "New")
+        #expect(store.citationsByID[citation.id]?.locatorJSON.contains("\"artifact\"") == true)
         #expect(listed.count == 1)
         #expect(listed[0].valueText == "Miller")
     }

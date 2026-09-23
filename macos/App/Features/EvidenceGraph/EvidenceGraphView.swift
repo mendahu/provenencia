@@ -667,6 +667,10 @@ private struct EvidenceGraphDocumentBody: View {
             switch actionID {
             case EvidenceSubjectCard.editActionID, EvidenceBridgeCard.editActionID:
                 model.beginEdit(subjectID: id)
+            case EvidenceBridgeCard.editCitationActionID:
+                if let location = model.composerLocationForBridgeCitation(subjectID: id) {
+                    navigation.go(to: location)
+                }
             case EvidenceSubjectCard.deleteActionID, EvidenceBridgeCard.deleteActionID:
                 model.beginDelete(subjectID: id)
             case EvidenceSubjectCard.addPropertyActionID:
@@ -726,7 +730,11 @@ private struct EvidenceGraphDocumentBody: View {
                         dragOffset: offset
                     ),
                     acceptsConnect: false,
-                    actions: EvidenceBridgeCard.actionTargets(for: placed, dragOffset: offset)
+                    actions: EvidenceBridgeCard.actionTargets(
+                        for: placed,
+                        canCite: model.canCite,
+                        dragOffset: offset
+                    )
                 )
             )
         }
@@ -799,10 +807,16 @@ private struct EvidenceGraphDocumentBody: View {
             dragOffset: drag,
             hoveredActionID: pointer.hoveredCardAction?.cardID == placed.id
                 ? pointer.hoveredCardAction?.actionID
-                : nil
+                : nil,
+            canCite: model.canCite
         )
         .accessibilityAction(named: Text(L10n.EvidenceGraph.editAccessibility)) {
             model.beginEdit(subjectID: placed.id)
+        }
+        .accessibilityAction(named: Text(L10n.EvidenceGraph.editCitationAccessibility)) {
+            if let location = model.composerLocationForBridgeCitation(subjectID: placed.id) {
+                navigation.go(to: location)
+            }
         }
         .accessibilityAction(named: Text(L10n.EvidenceGraph.deleteAccessibility)) {
             model.beginDelete(subjectID: placed.id)

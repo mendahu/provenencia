@@ -11,6 +11,10 @@ enum PVSymbol: String {
     case chevronForward = "chevron.right"
     case photo = "photo"
     case scrollText = "doc.text"
+    /// Lucide `file` — locator floor (entire artifact).
+    case file = "doc"
+    /// Lucide `bookmark` — locator page row.
+    case bookmark = "bookmark"
     case sort = "arrow.up.arrow.down"
     case success = "checkmark.circle.fill"
     case warning = "exclamationmark.triangle.fill"
@@ -47,9 +51,31 @@ enum PVSymbol: String {
     case penLine = "pencil.line"
     case imageUp = "square.and.arrow.up"
     case circleDashed = "circle.dashed"
+    case regionRectangle = "rectangle"
+    /// Custom six-sided L glyphs — not SF Symbols (see ``PVIcon``).
+    case regionLTopRight = "pv.region.l.topRight"
+    case regionLTopLeft = "pv.region.l.topLeft"
+    case regionLBottomRight = "pv.region.l.bottomRight"
+    case regionLBottomLeft = "pv.region.l.bottomLeft"
+    case regionCircle = "circle"
+    case regionFreeform = "lasso"
+
+    fileprivate var regionLOpen: PVLOpenCorner? {
+        switch self {
+        case .regionLTopRight: .topRight
+        case .regionLTopLeft: .topLeft
+        case .regionLBottomRight: .bottomRight
+        case .regionLBottomLeft: .bottomLeft
+        default: nil
+        }
+    }
 }
 
-/// Renders a design-system icon via SF Symbols.
+fileprivate enum PVLOpenCorner {
+    case topRight, topLeft, bottomRight, bottomLeft
+}
+
+/// Renders a design-system icon via SF Symbols, or a stroked L hexagon.
 struct PVIcon: View {
     private let symbol: PVSymbol
     private let size: CGFloat
@@ -60,21 +86,89 @@ struct PVIcon: View {
     }
 
     var body: some View {
-        Image(systemName: symbol.rawValue)
-            .resizable()
-            .scaledToFit()
-            .frame(width: size, height: size)
-            .accessibilityHidden(true)
+        Group {
+            if let open = symbol.regionLOpen {
+                PVRegionLShape(open: open)
+                    .stroke(style: StrokeStyle(lineWidth: max(1.15, size * 0.09), lineJoin: .miter))
+            } else {
+                Image(systemName: symbol.rawValue)
+                    .resizable()
+                    .scaledToFit()
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+}
+
+/// Six-sided L polygon in a unit square (inset so the stroke is not clipped).
+private struct PVRegionLShape: Shape {
+    var open: PVLOpenCorner
+
+    func path(in rect: CGRect) -> Path {
+        let inset = min(rect.width, rect.height) * 0.14
+        let box = rect.insetBy(dx: inset, dy: inset)
+        let midX = box.midX
+        let midY = box.midY
+        let points: [CGPoint]
+        switch open {
+        case .topRight:
+            points = [
+                CGPoint(x: box.minX, y: box.minY),
+                CGPoint(x: midX, y: box.minY),
+                CGPoint(x: midX, y: midY),
+                CGPoint(x: box.maxX, y: midY),
+                CGPoint(x: box.maxX, y: box.maxY),
+                CGPoint(x: box.minX, y: box.maxY),
+            ]
+        case .topLeft:
+            points = [
+                CGPoint(x: midX, y: box.minY),
+                CGPoint(x: box.maxX, y: box.minY),
+                CGPoint(x: box.maxX, y: box.maxY),
+                CGPoint(x: box.minX, y: box.maxY),
+                CGPoint(x: box.minX, y: midY),
+                CGPoint(x: midX, y: midY),
+            ]
+        case .bottomRight:
+            points = [
+                CGPoint(x: box.minX, y: box.minY),
+                CGPoint(x: box.maxX, y: box.minY),
+                CGPoint(x: box.maxX, y: midY),
+                CGPoint(x: midX, y: midY),
+                CGPoint(x: midX, y: box.maxY),
+                CGPoint(x: box.minX, y: box.maxY),
+            ]
+        case .bottomLeft:
+            points = [
+                CGPoint(x: box.minX, y: box.minY),
+                CGPoint(x: box.maxX, y: box.minY),
+                CGPoint(x: box.maxX, y: box.maxY),
+                CGPoint(x: midX, y: box.maxY),
+                CGPoint(x: midX, y: midY),
+                CGPoint(x: box.minX, y: midY),
+            ]
+        }
+        var path = Path()
+        path.move(to: points[0])
+        for point in points.dropFirst() {
+            path.addLine(to: point)
+        }
+        path.closeSubpath()
+        return path
     }
 }
 
 #Preview {
     HStack(spacing: PVSpacing.space6) {
         PVIcon(.folderPlus)
-        PVIcon(.folderOpen)
-        PVIcon(.check)
-        PVIcon(.info)
-        PVIcon(.chevronDown)
+        PVIcon(.regionRectangle)
+        PVIcon(.regionLTopRight)
+        PVIcon(.regionLTopLeft)
+        PVIcon(.regionLBottomRight)
+        PVIcon(.regionLBottomLeft)
+        PVIcon(.regionCircle)
+        PVIcon(.regionFreeform)
     }
     .foregroundStyle(PVColor.accent)
     .padding(PVSpacing.space9)

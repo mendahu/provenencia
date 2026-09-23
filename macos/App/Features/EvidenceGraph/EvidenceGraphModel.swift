@@ -479,10 +479,26 @@ final class EvidenceGraphModel {
     /// Opens the citation composer for the Observation's citation (shared across rows).
     func composerLocation(forObservationID observationID: String, subjectID: String) -> WorkspaceLocation? {
         let snapshot = currentSnapshot()
-        guard let primary = primary(in: snapshot, id: subjectID),
-              let observation = primary.observations.first(where: { $0.id == observationID })
-        else { return nil }
-        return composerLocation(for: subjectID, citationID: observation.citationID)
+        if let primary = primary(in: snapshot, id: subjectID),
+           let observation = primary.observations.first(where: { $0.id == observationID })
+        {
+            return composerLocation(for: subjectID, citationID: observation.citationID)
+        }
+        if let bridge = snapshot?.bridges.first(where: { $0.id == subjectID }),
+           let observation = bridge.observations.first(where: { $0.id == observationID })
+        {
+            return composerLocation(for: subjectID, citationID: observation.citationID)
+        }
+        return nil
+    }
+
+    /// Opens the citation that cites this bridge's edge Observations (or a new cite).
+    func composerLocationForBridgeCitation(subjectID: String) -> WorkspaceLocation? {
+        let snapshot = currentSnapshot()
+        guard let bridge = snapshot?.bridges.first(where: { $0.id == subjectID }) else {
+            return nil
+        }
+        return composerLocation(for: subjectID, citationID: bridge.observations.first?.citationID)
     }
 
     /// Queues delete confirm for an uncited subject or bridge card.

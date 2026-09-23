@@ -48,6 +48,11 @@
 		A70B00000000000000000008 /* ArtifactMediaViewport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000007 /* ArtifactMediaViewport.swift */; };
 		A70B0000000000000000000A /* ArtifactViewer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000009 /* ArtifactViewer.swift */; };
 		A70B0000000000000000000C /* ArtifactViewerModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B0000000000000000000B /* ArtifactViewerModelTests.swift */; };
+		A70B0000000000000000000F /* ArtifactRegionTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B0000000000000000000E /* ArtifactRegionTool.swift */; };
+		A70B00000000000000000011 /* ArtifactRegionGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000010 /* ArtifactRegionGeometry.swift */; };
+		A70B00000000000000000013 /* ArtifactRegionOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000012 /* ArtifactRegionOverlay.swift */; };
+		A70B00000000000000000015 /* CitationLocatorDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000014 /* CitationLocatorDraft.swift */; };
+		A70B00000000000000000017 /* ArtifactRegionGeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000016 /* ArtifactRegionGeometryTests.swift */; };
 		A70800000000000000000004 /* CitationComposerModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70800000000000000000003 /* CitationComposerModel.swift */; };
 		A70A00000000000000000002 /* CitationComposerArtifactPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70A00000000000000000001 /* CitationComposerArtifactPicker.swift */; };
 		A70A00000000000000000004 /* CitationComposerViewerPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70A00000000000000000003 /* CitationComposerViewerPane.swift */; };
@@ -301,6 +306,11 @@
 		A70B00000000000000000007 /* ArtifactMediaViewport.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactMediaViewport.swift; sourceTree = "<group>"; };
 		A70B00000000000000000009 /* ArtifactViewer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactViewer.swift; sourceTree = "<group>"; };
 		A70B0000000000000000000B /* ArtifactViewerModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactViewerModelTests.swift; sourceTree = "<group>"; };
+		A70B0000000000000000000E /* ArtifactRegionTool.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactRegionTool.swift; sourceTree = "<group>"; };
+		A70B00000000000000000010 /* ArtifactRegionGeometry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactRegionGeometry.swift; sourceTree = "<group>"; };
+		A70B00000000000000000012 /* ArtifactRegionOverlay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactRegionOverlay.swift; sourceTree = "<group>"; };
+		A70B00000000000000000014 /* CitationLocatorDraft.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationLocatorDraft.swift; sourceTree = "<group>"; };
+		A70B00000000000000000016 /* ArtifactRegionGeometryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactRegionGeometryTests.swift; sourceTree = "<group>"; };
 		A70800000000000000000003 /* CitationComposerModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerModel.swift; sourceTree = "<group>"; };
 		A70A00000000000000000001 /* CitationComposerArtifactPicker.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerArtifactPicker.swift; sourceTree = "<group>"; };
 		A70A00000000000000000003 /* CitationComposerViewerPane.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerViewerPane.swift; sourceTree = "<group>"; };
@@ -827,6 +837,9 @@
 				A70B00000000000000000005 /* ArtifactViewerModel.swift */,
 				A70B00000000000000000007 /* ArtifactMediaViewport.swift */,
 				A70B00000000000000000009 /* ArtifactViewer.swift */,
+				A70B0000000000000000000E /* ArtifactRegionTool.swift */,
+				A70B00000000000000000010 /* ArtifactRegionGeometry.swift */,
+				A70B00000000000000000012 /* ArtifactRegionOverlay.swift */,
 			);
 			path = ArtifactViewer;
 			sourceTree = "<group>";
@@ -835,6 +848,7 @@
 			isa = PBXGroup;
 			children = (
 				A70800000000000000000003 /* CitationComposerModel.swift */,
+				A70B00000000000000000014 /* CitationLocatorDraft.swift */,
 				A70800000000000000000001 /* CitationComposerView.swift */,
 				A70A00000000000000000001 /* CitationComposerArtifactPicker.swift */,
 				A70A00000000000000000003 /* CitationComposerViewerPane.swift */,
@@ -914,6 +928,7 @@
 				AA0000000000000000000494 /* EvidenceGraphModelTests.swift */,
 				A70800000000000000000005 /* CitationComposerModelTests.swift */,
 				A70B0000000000000000000B /* ArtifactViewerModelTests.swift */,
+				A70B00000000000000000016 /* ArtifactRegionGeometryTests.swift */,
 				AA00000000000000000004A8 /* GraphCanvasEdgeGeometryTests.swift */,
 				AA00000000000000000004C6 /* GraphCanvasPointerHitTestingTests.swift */,
 				AA00000000000000000004AA /* EvidenceProvisionalLinkStoreTests.swift */,
@@ -1544,8 +1559,12 @@
 				A70B00000000000000000006 /* ArtifactViewerModel.swift in Sources */,
 				A70B00000000000000000008 /* ArtifactMediaViewport.swift in Sources */,
 				A70B0000000000000000000A /* ArtifactViewer.swift in Sources */,
+				A70B0000000000000000000F /* ArtifactRegionTool.swift in Sources */,
+				A70B00000000000000000011 /* ArtifactRegionGeometry.swift in Sources */,
+				A70B00000000000000000013 /* ArtifactRegionOverlay.swift in Sources */,
 				A70800000000000000000002 /* CitationComposerView.swift in Sources */,
 				A70800000000000000000004 /* CitationComposerModel.swift in Sources */,
+				A70B00000000000000000015 /* CitationLocatorDraft.swift in Sources */,
 				A70A00000000000000000002 /* CitationComposerArtifactPicker.swift in Sources */,
 				A70A00000000000000000004 /* CitationComposerViewerPane.swift in Sources */,
 				A70A00000000000000000006 /* CitationComposerFormPane.swift in Sources */,
@@ -1605,6 +1624,7 @@
 				AA0000000000000000000495 /* EvidenceGraphModelTests.swift in Sources */,
 				A70800000000000000000006 /* CitationComposerModelTests.swift in Sources */,
 				A70B0000000000000000000C /* ArtifactViewerModelTests.swift in Sources */,
+				A70B00000000000000000017 /* ArtifactRegionGeometryTests.swift in Sources */,
 				AA00000000000000000004A9 /* GraphCanvasEdgeGeometryTests.swift in Sources */,
 				AA00000000000000000004C7 /* GraphCanvasPointerHitTestingTests.swift in Sources */,
 				AA00000000000000000004AB /* EvidenceProvisionalLinkStoreTests.swift in Sources */,

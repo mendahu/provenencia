@@ -22,6 +22,8 @@ IDs stay stable (`S7-NN`, `S7-DN`). Do not renumber when moving steps here.
 | [S7-09](#s7-09--pr-add-property--composer-navigation) | PR | Evidence graph card updates + composer stub place |
 | [S7-08](#s7-08--pr-thin-citation-composer) | PR | Thin citation composer place (viewer placeholder OK) |
 | [S7-06](#s7-06--pr-artifact-viewers-image--pdf) | PR | Isolated `ArtifactViewer` module; image + PDF in composer |
+| [S7-D9](#s7-d9--design-locator-region-chrome) | Design | Default artifact + Set Page + region tools + summary list |
+| [S7-07](#s7-07--pr-locator-tools) | PR | Layered artifact/page/region locators + overlay tools |
 
 ## Steps
 
@@ -285,4 +287,39 @@ python3 scripts/check-localizable-xcstrings.py
 ```bash
 python3 scripts/check-localizable-xcstrings.py
 # xcodebuild test — ArtifactViewerModelTests / CitationComposerModelTests
+```
+
+### S7-D9 — Design: Locator region chrome
+
+| | |
+| --- | --- |
+| **Kind** | Design (Claude Design board) |
+| **Depends on** | S7-08, S7-06, S7-03 |
+| **Deliverables** | Done. Board for default **`artifact`** floor (UI **Entire artifact**), **Set Page**, seven region tools, dim-outside overlay, locator summary list. Brief archived: [`design/archive/S7-D9-locator-region-chrome.md`](design/archive/S7-D9-locator-region-chrome.md). Schema floor renamed from draft `document` to `artifact`. |
+| **Dogfood** | Design only — implement in **S7-07**. |
+| **Out** | PDF Find; multiple regions; Observation-dialog redesign. |
+
+**Landed:** locator chrome contract before S7-07.
+
+### S7-07 — PR: Locator tools
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S7-06, S7-03, **S7-D9** |
+| **Deliverables** | Done. Default entire-artifact cite (`type: artifact`) plus optional page / one region. `ArtifactViewerKind` locator capabilities gate Set page, region radios, and overlay (hosts do not branch on MIME). Composer layered `CitationLocatorDraft` encode/decode (hydrate page-only JSON; peel illegal layers on kind change). Board tool strip + Clear menu + locator list. AppKit overlay in document space (dim-outside, handles, freeform). Go `TypeArtifact` must be first when present. |
+| **Tests** | `core/locator` artifact chain; `CitationComposerModelTests` (default / Set page vs browse / PDF auto-page / image region / peel / hydrate / Save artifact-only / refuse audio); `ArtifactRegionGeometryTests`; `ArtifactViewerModelTests` capabilities; `check-localizable-xcstrings.py`. |
+| **Dogfood** | PDF Set page; draw region before Set page (page auto-layers); image region; list remove; Save artifact-only with an Observation. |
+| **Out** | NameValue (S7-02b); Connect prefill (S7-10); PDF Find; PDF text selection (raster viewer — follow-on); multiple regions; time-range UI. |
+
+**Follow-on:** PDF text selection for transcription paste (S7-07 In-list) waits on a text-aware PDF path; current viewer is a page raster. See [`ideas/pdf-text-find.md`](../../ideas/pdf-text-find.md).
+
+**Landed:** default entire-artifact cite + real region locators replace the Draw-region stub.
+
+**Verify:**
+
+```bash
+python3 scripts/check-localizable-xcstrings.py
+# xcodebuild test — CitationComposerModelTests / ArtifactRegionGeometryTests / ArtifactViewerModelTests
+go test ./core/locator
 ```

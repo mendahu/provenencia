@@ -1,7 +1,7 @@
 // Package locator validates Citation locator_json documents.
 //
 // Version 1 locators are an ordered selector chain. Known types validated in
-// Spike 7: page, region, text_quote. Unknown selector types are preserved
+// Spike 7: artifact, page, region, text_quote. Unknown selector types are preserved
 // losslessly (Validate does not fail solely for an unrecognized type).
 package locator
 
@@ -16,6 +16,7 @@ import (
 var ErrInvalid = apperr.New(apperr.CodeLocatorInvalid, apperr.KindUser)
 
 const (
+	TypeArtifact  = "artifact"
 	TypePage      = "page"
 	TypeRegion    = "region"
 	TypeTextQuote = "text_quote"
@@ -58,8 +59,12 @@ func Validate(locatorJSON string) error {
 	if doc.Version != 1 || len(doc.Selectors) == 0 {
 		return ErrInvalid
 	}
-	for _, sel := range doc.Selectors {
+	for i, sel := range doc.Selectors {
 		switch strings.TrimSpace(sel.Type) {
+		case TypeArtifact:
+			if i != 0 {
+				return ErrInvalid
+			}
 		case TypePage:
 			if err := validatePage(sel); err != nil {
 				return err

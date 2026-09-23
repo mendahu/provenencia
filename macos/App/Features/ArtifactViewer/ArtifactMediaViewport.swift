@@ -15,6 +15,11 @@ struct ArtifactMediaViewport: NSViewRepresentable {
     var zoom: CGFloat
     var contentID: AnyHashable
     var onZoomChange: (CGFloat) -> Void
+    var overlayEnabled: Bool = false
+    var overlayInput: ArtifactRegionOverlayInput?
+    var onCommitRegion: ((ArtifactRegionDraft) -> Void)?
+    var onDisarmRegionTool: (() -> Void)?
+    var freeformDeleteTooltip: String = ""
 
     func makeCoordinator() -> Coordinator {
         Coordinator(onZoomChange: onZoomChange)
@@ -43,6 +48,7 @@ struct ArtifactMediaViewport: NSViewRepresentable {
         context.coordinator.installedImage = image
 
         document.image = image
+        configureOverlay(document, context: context)
         scrollView.layoutDocumentCentered(resetScroll: true)
         scrollView.startObservingClipBounds()
 
@@ -63,6 +69,9 @@ struct ArtifactMediaViewport: NSViewRepresentable {
 
         if imageChanged {
             coordinator.documentView?.image = image
+        }
+        if let document = coordinator.documentView {
+            configureOverlay(document, context: context)
         }
 
         let target = ArtifactViewerModel.clampZoom(zoom)
@@ -102,9 +111,30 @@ struct ArtifactMediaViewport: NSViewRepresentable {
         var onZoomChange: (CGFloat) -> Void
         var suppressZoomCallback = false
 
+        var onCommitRegion: ((ArtifactRegionDraft) -> Void)?
+        var onDisarmRegionTool: (() -> Void)?
+
         init(onZoomChange: @escaping (CGFloat) -> Void) {
             self.onZoomChange = onZoomChange
         }
+    }
+
+    private func configureOverlay(_ document: ArtifactMediaDocumentView, context: Context) {
+        let coordinator = context.coordinator
+        coordinator.onCommitRegion = onCommitRegion
+        coordinator.onDisarmRegionTool = onDisarmRegionTool
+        document.overlayView.isHidden = !overlayEnabled
+        document.overlayView.imageSize = image?.size ?? .zero
+        document.overlayView.armedTool = overlayInput?.armedTool
+        document.overlayView.committed = overlayInput?.committed
+        document.overlayView.toolTip = freeformDeleteTooltip
+        document.overlayView.onCommit = { [weak coordinator] draft in
+            coordinator?.onCommitRegion?(draft)
+        }
+        document.overlayView.onDisarm = { [weak coordinator] in
+            coordinator?.onDisarmRegionTool?()
+        }
+        document.layoutOverlay()
     }
 }
 
@@ -114,9 +144,34 @@ struct ArtifactMediaViewport: NSViewRepresentable {
 /// small image can sit centered; grows with the image when content overflows.
 final class ArtifactMediaDocumentView: NSView {
     weak var scrollView: ArtifactMediaNSScrollView?
+    let overlayView = ArtifactRegionOverlayView(frame: .zero)
 
     var image: NSImage? {
-        didSet { needsDisplay = true }
+        didSet {
+            needsDisplay = true
+            overlayView.imageSize = image?.size ?? .zero
+        }
+    }
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        overlayView.autoresizingMask = [.width, .height]
+        addSubview(overlayView)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func layoutOverlay() {
+        overlayView.frame = bounds
+        overlayView.needsDisplay = true
+    }
+
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        layoutOverlay()
     }
 
     override var isFlipped: Bool { true }
@@ -137,6 +192,7 @@ final class ArtifactMediaDocumentView: NSView {
             respectFlipped: true,
             hints: [.interpolation: NSImageInterpolation.high]
         )
+        layoutOverlay()
     }
 
     override func resetCursorRects() {

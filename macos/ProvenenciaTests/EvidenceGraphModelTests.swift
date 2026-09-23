@@ -800,4 +800,84 @@ struct EvidenceGraphModelTests {
         #expect(locA?.subjectId == "s1")
         #expect(model.composerLocation(for: "s1")?.citationId == nil)
     }
+
+    @Test func bridgeCitationEditOpensExistingCitation() async {
+        let store = makeStore()
+        store.sourcesByProject[projectDir] = [
+            CatalogSource(
+                id: sourceID,
+                ref: "SRC-1",
+                sourceTypeID: "type-book",
+                title: "Census",
+                description: "",
+                hasArtifact: true
+            ),
+        ]
+        store.artifactsBySource[sourceID] = [
+            CatalogArtifact(
+                id: "art-0",
+                ref: "ART-0",
+                sourceID: sourceID,
+                fileID: "file-0",
+                label: "Scan",
+                description: "",
+                file: nil
+            ),
+        ]
+        let bridgeSubject = CatalogSubject(
+            id: "b1",
+            ref: "CPA-1",
+            sourceID: sourceID,
+            subjectTypeID: "type-participation",
+            label: "Working",
+            description: ""
+        )
+        let observation = CatalogObservation(
+            id: "obs-edge",
+            ref: "OBS-1",
+            citationID: "cit-bridge",
+            subjectID: "b1",
+            propertyID: "p-person",
+            polarity: "positive",
+            valueText: "Alice",
+            valueInteger: nil,
+            valueDateID: "",
+            valueNameID: "",
+            valueSubjectID: "s1",
+            valueTermID: "",
+            propertyKey: "person",
+            propertyLabel: "Person",
+            propertyValueType: "subject"
+        )
+        let model = makeModel(store: store)
+        await model.prepare()
+        #expect(model.canCite)
+        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        model.session.setQueryValue(
+            key,
+            value: SourceGraphSnapshot(
+                sourceId: sourceID,
+                subjects: [],
+                bridges: [
+                    SourceGraphPlacedBridge(
+                        subject: bridgeSubject,
+                        kind: .participation,
+                        typeLabel: "Participation",
+                        gridX: 0,
+                        gridY: 0,
+                        isCited: true,
+                        observations: [observation]
+                    ),
+                ]
+            )
+        )
+        let location = model.composerLocationForBridgeCitation(subjectID: "b1")
+        #expect(location?.citationId == "cit-bridge")
+        #expect(location?.subjectId == "b1")
+        #expect(model.composerLocation(for: "b1")?.citationId == nil)
+        #expect(
+            model.composerLocation(forObservationID: "obs-edge", subjectID: "b1")?.citationId
+                == "cit-bridge"
+        )
+    }
 }

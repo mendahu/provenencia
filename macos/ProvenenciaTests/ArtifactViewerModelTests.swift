@@ -19,12 +19,33 @@ struct ArtifactViewerModelTests {
     }
 
     @Test func capabilitiesMatchKind() {
-        #expect(ArtifactViewerKind.image.supportsSpatialZoom)
-        #expect(!ArtifactViewerKind.image.supportsPages)
-        #expect(ArtifactViewerKind.pdf.supportsPages)
-        #expect(ArtifactViewerKind.pdf.supportsSpatialZoom)
-        #expect(!ArtifactViewerKind.audio.supportsPages)
-        #expect(!ArtifactViewerKind.audio.supportsSpatialZoom)
+        let image = ArtifactViewerKind.image.locatorCapabilities
+        #expect(!image.supportsPageLocator)
+        #expect(image.supportsRegionLocator)
+        #expect(image.supportsSpatialZoom)
+        #expect(!image.supportsTimeRangeLocator)
+
+        let pdf = ArtifactViewerKind.pdf.locatorCapabilities
+        #expect(pdf.supportsPageLocator)
+        #expect(pdf.supportsRegionLocator)
+        #expect(pdf.supportsSpatialZoom)
+        #expect(!pdf.supportsTimeRangeLocator)
+
+        let audio = ArtifactViewerKind.audio.locatorCapabilities
+        #expect(!audio.supportsPageLocator)
+        #expect(!audio.supportsRegionLocator)
+        #expect(!audio.supportsSpatialZoom)
+        #expect(audio.supportsTimeRangeLocator)
+
+        let video = ArtifactViewerKind.video.locatorCapabilities
+        #expect(!video.supportsPageLocator)
+        #expect(!video.supportsRegionLocator)
+        #expect(video.supportsTimeRangeLocator)
+
+        let unsupported = ArtifactViewerKind.unsupported.locatorCapabilities
+        #expect(!unsupported.supportsPageLocator)
+        #expect(!unsupported.supportsRegionLocator)
+        #expect(!unsupported.supportsTimeRangeLocator)
         #expect(!ArtifactViewerKind.video.isRenderableInS706)
     }
 
