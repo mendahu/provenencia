@@ -4,6 +4,7 @@ import SwiftUI
 struct CitationComposerObservationDialogForm: View {
     @Bindable var model: CitationComposerModel
     var onAddCustomTerm: () -> Void
+    var onEditName: () -> Void
 
     var body: some View {
         if let draft = model.observationDialog {
@@ -99,6 +100,12 @@ struct CitationComposerObservationDialogForm: View {
                         draft: dateBinding,
                         accessibilityIdentifierPrefix: "citationComposer.dialog.date"
                     )
+                case "name":
+                    NameValueHostControl(
+                        draft: draft.nameDraft,
+                        accessibilityIdentifierPrefix: "citationComposer.dialog.name",
+                        onEdit: onEditName
+                    )
                 default:
                     Text(L10n.CitationComposer.unsupportedValueTypeError)
                         .font(PVFont.body(size: PVTypeScale.caption))
@@ -130,6 +137,7 @@ struct CitationComposerObservationDialogForm: View {
         case "integer": return L10n.CitationComposer.valueLabelInteger
         case "term": return L10n.CitationComposer.valueLabelTerm
         case "date": return L10n.CitationComposer.valueLabelDate
+        case "name": return L10n.CitationComposer.valueLabelName
         default: return L10n.CitationComposer.valueLabel
         }
     }

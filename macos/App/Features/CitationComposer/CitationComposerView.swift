@@ -13,6 +13,8 @@ struct CitationComposerView: View {
     @State private var model: CitationComposerModel
     @State private var customTermLabel = ""
     @State private var showCustomTermDialog = false
+    @State private var showNameValueDialog = false
+    @State private var nameValueDraft = NameValueDraft.empty()
 
     init(
         sourceID: String,
@@ -88,8 +90,23 @@ struct CitationComposerView: View {
             CitationComposerObservationDialogForm(model: model) {
                 customTermLabel = ""
                 showCustomTermDialog = true
+            } onEditName: {
+                nameValueDraft = model.observationDialog?.nameDraft ?? .empty()
+                showNameValueDialog = true
             }
         }
+        .nameValueFormDialog(
+            isPresented: $showNameValueDialog,
+            draft: $nameValueDraft,
+            mode: nameValueDraft.trimmedForm.isEmpty ? .add : .edit,
+            accessibilityIdentifierPrefix: "citationComposer.nameValue",
+            onConfirm: {
+                guard var draft = model.observationDialog else { return }
+                draft.nameDraft = nameValueDraft
+                model.updateObservationDialog(draft)
+                showNameValueDialog = false
+            }
+        )
         .pvFormDialog(
             isPresented: $showCustomTermDialog,
             copy: PVFormDialogCopy(

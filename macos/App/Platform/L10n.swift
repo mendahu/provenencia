@@ -1491,6 +1491,221 @@ enum L10n {
         }
     }
 
+    /// Shared genealogical NameValue editor (S7-02b / S7-D5). Not composer-owned.
+    enum NameValue {
+        static let titleAdd = LocalizedStringResource(
+            "nameValue.title.add",
+            defaultValue: "Add name",
+            comment: "NameValue editor dialog title when creating"
+        )
+        static let titleEdit = LocalizedStringResource(
+            "nameValue.title.edit",
+            defaultValue: "Edit name",
+            comment: "NameValue editor dialog title when editing"
+        )
+        static let confirmAdd = LocalizedStringResource(
+            "nameValue.confirm.add",
+            defaultValue: "Add name",
+            comment: "NameValue editor confirm verb when creating"
+        )
+        static let confirmSave = LocalizedStringResource(
+            "nameValue.confirm.save",
+            defaultValue: "Save name",
+            comment: "NameValue editor confirm verb when editing"
+        )
+        static let cancel = LocalizedStringResource(
+            "nameValue.cancel",
+            defaultValue: "Cancel",
+            comment: "NameValue editor cancel button"
+        )
+        static let formLabel = LocalizedStringResource(
+            "nameValue.form.label",
+            defaultValue: "Full form",
+            comment: "Required NameValue form field label"
+        )
+        static let formRequired = LocalizedStringResource(
+            "nameValue.form.required",
+            defaultValue: "required",
+            comment: "Required badge next to the NameValue form label"
+        )
+        static let formHint = LocalizedStringResource(
+            "nameValue.form.hint",
+            defaultValue: "The name as you read it, in normalized spelling — the source's own wording stays on the citation",
+            comment: "Hint under the NameValue form field"
+        )
+        static let formErrorMissing = LocalizedStringResource(
+            "nameValue.form.error.missing",
+            defaultValue: "Enter the name as one full form. Parts are optional; the form is not.",
+            comment: "Validation error when NameValue form is empty"
+        )
+        static let partsHeading = LocalizedStringResource(
+            "nameValue.parts.heading",
+            defaultValue: "Parts · optional",
+            comment: "Heading above the optional NameValue parts list"
+        )
+        static let partsEmpty = LocalizedStringResource(
+            "nameValue.parts.empty",
+            defaultValue: "No parts — the form stands alone.",
+            comment: "Empty-state title when NameValue has no parts"
+        )
+        static let partsEmptyHint = LocalizedStringResource(
+            "nameValue.parts.empty.hint",
+            defaultValue: "Add parts only when the name segments cleanly and the segments matter to your research",
+            comment: "Empty-state hint when NameValue has no parts"
+        )
+        static let partsAdd = LocalizedStringResource(
+            "nameValue.parts.add",
+            defaultValue: "Add part",
+            comment: "Button that appends a NameValue part row"
+        )
+        static let partsHint = LocalizedStringResource(
+            "nameValue.parts.hint",
+            defaultValue: "Order is the order you enter. Leave a part untyped when no type fits",
+            comment: "Hint under the NameValue parts list"
+        )
+        static let partValueLabel = LocalizedStringResource(
+            "nameValue.part.value.label",
+            defaultValue: "Value",
+            comment: "Label for a NameValue part value field"
+        )
+        static let partTypeLabel = LocalizedStringResource(
+            "nameValue.part.type.label",
+            defaultValue: "Type",
+            comment: "Label for a NameValue part type picker"
+        )
+        static let partTypeNone = LocalizedStringResource(
+            "nameValue.part.type.none",
+            defaultValue: "No type",
+            comment: "Picker option for an untyped NameValue part"
+        )
+        static let partTypePrefix = LocalizedStringResource(
+            "nameValue.part.type.prefix",
+            defaultValue: "Prefix",
+            comment: "NameValue part type: prefix"
+        )
+        static let partTypeGiven = LocalizedStringResource(
+            "nameValue.part.type.given",
+            defaultValue: "Given name",
+            comment: "NameValue part type: given"
+        )
+        static let partTypeInitial = LocalizedStringResource(
+            "nameValue.part.type.initial",
+            defaultValue: "Initial",
+            comment: "NameValue part type: initial"
+        )
+        static let partTypeNick = LocalizedStringResource(
+            "nameValue.part.type.nick",
+            defaultValue: "Nickname",
+            comment: "NameValue part type: nick"
+        )
+        static let partTypeSurnamePrefix = LocalizedStringResource(
+            "nameValue.part.type.surname_prefix",
+            defaultValue: "Surname prefix",
+            comment: "NameValue part type: surname_prefix"
+        )
+        static let partTypeSurname = LocalizedStringResource(
+            "nameValue.part.type.surname",
+            defaultValue: "Surname",
+            comment: "NameValue part type: surname"
+        )
+        static let partTypeSuffix = LocalizedStringResource(
+            "nameValue.part.type.suffix",
+            defaultValue: "Suffix",
+            comment: "NameValue part type: suffix"
+        )
+        static let partTypeUndetermined = LocalizedStringResource(
+            "nameValue.part.type.undetermined",
+            defaultValue: "Undetermined",
+            comment: "NameValue part type: undetermined"
+        )
+        static let storedAs = LocalizedStringResource(
+            "nameValue.storedAs",
+            defaultValue: "Stored as",
+            comment: "Heading for the NameValue draft readout"
+        )
+        static let summaryAdd = LocalizedStringResource(
+            "nameValue.summary.add",
+            defaultValue: "Add name…",
+            comment: "Host control that opens the NameValue editor when empty"
+        )
+        static let summaryEdit = LocalizedStringResource(
+            "nameValue.summary.edit",
+            defaultValue: "Edit name…",
+            comment: "Host control that reopens the NameValue editor when set"
+        )
+        static let summaryNotNormalized = LocalizedStringResource(
+            "nameValue.summary.notNormalized",
+            defaultValue: "Not normalized yet",
+            comment: "Host preview when no NameValue form has been saved"
+        )
+        static let partMoveUpLabel = LocalizedStringResource(
+            "nameValue.part.moveUp",
+            defaultValue: "Move up",
+            comment: "Tooltip for moving a NameValue part up"
+        )
+        static let partMoveDownLabel = LocalizedStringResource(
+            "nameValue.part.moveDown",
+            defaultValue: "Move down",
+            comment: "Tooltip for moving a NameValue part down"
+        )
+        static let partRemoveLabel = LocalizedStringResource(
+            "nameValue.part.remove",
+            defaultValue: "Remove part",
+            comment: "Tooltip for removing a NameValue part"
+        )
+
+        static func partEmptyValue(position: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "nameValue.part.error.emptyValue",
+                defaultValue: "Part %lld cannot be empty — remove it instead.",
+                comment: "Validation when a NameValue part value is blank; argument is 1-based index"
+            ))
+            return String(format: format, locale: .current, position)
+        }
+
+        static func partAccessibility(position: Int, of count: Int, typeLabel: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "a11y.nameValue.part",
+                defaultValue: "Part %1$lld of %2$lld, %3$@",
+                comment: "VoiceOver name for a NameValue part row; arguments are index, count, type label"
+            ))
+            return String(format: format, locale: .current, position, count, typeLabel)
+        }
+
+        static func partMoveUp(position: Int) -> LocalizedStringResource {
+            LocalizedStringResource(
+                "a11y.nameValue.part.moveUp",
+                defaultValue: "Move part \(position) up",
+                comment: "VoiceOver for move-up; argument is 1-based part index"
+            )
+        }
+
+        static func partMoveDown(position: Int) -> LocalizedStringResource {
+            LocalizedStringResource(
+                "a11y.nameValue.part.moveDown",
+                defaultValue: "Move part \(position) down",
+                comment: "VoiceOver for move-down; argument is 1-based part index"
+            )
+        }
+
+        static func partRemove(position: Int) -> LocalizedStringResource {
+            LocalizedStringResource(
+                "a11y.nameValue.part.remove",
+                defaultValue: "Remove part \(position)",
+                comment: "VoiceOver for remove; argument is 1-based part index"
+            )
+        }
+
+        static func partMoved(position: Int, of count: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "a11y.nameValue.part.moved",
+                defaultValue: "Part moved to position %1$lld of %2$lld",
+                comment: "Announcement after Option-arrow reorder; arguments are new index and count"
+            ))
+            return String(format: format, locale: .current, position, count)
+        }
+    }
+
     /// Artifact document viewer (S7-06) — image/PDF now; audio/video kinds reserved.
     enum ArtifactViewer {
         static let previousPage = LocalizedStringResource(
@@ -1834,6 +2049,12 @@ enum L10n {
             "citationComposer.valueLabelInteger",
             defaultValue: "Value — whole number",
             comment: "Value slot label for an integer Property"
+        )
+
+        static let valueLabelName = LocalizedStringResource(
+            "citationComposer.valueLabelName",
+            defaultValue: "Value — name",
+            comment: "Value slot label for a name Property"
         )
 
         static let termLabel = LocalizedStringResource(

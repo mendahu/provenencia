@@ -1405,6 +1405,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 date: draft.date,
                 valueNameID: draft.valueNameID,
                 nameForm: draft.nameForm,
+                nameParts: draft.nameParts,
                 valueSubjectID: draft.valueSubjectID,
                 valueTermID: draft.valueTermID,
                 propertyKey: property?.key ?? "",

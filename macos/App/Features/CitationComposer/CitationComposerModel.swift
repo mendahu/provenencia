@@ -22,6 +22,7 @@ final class CitationComposerModel {
         var valueTermID: String
         var valueSubjectID: String
         var dateDraft: DateValueDraft
+        var nameDraft: NameValueDraft = .empty()
         /// Connect-edge endpoint rows (Frame 10) — system-owned, not editable/removable.
         var isConnectFixed: Bool
     }
@@ -35,6 +36,7 @@ final class CitationComposerModel {
         var valueIntegerText: String
         var valueTermID: String
         var dateDraft: DateValueDraft
+        var nameDraft: NameValueDraft = .empty()
         var showValidation: Bool
 
         static func fresh() -> ObservationDialogState {
@@ -46,6 +48,7 @@ final class CitationComposerModel {
                 valueIntegerText: "",
                 valueTermID: "",
                 dateDraft: .empty(),
+                nameDraft: .empty(),
                 showValidation: false
             )
         }
@@ -59,13 +62,14 @@ final class CitationComposerModel {
                 valueIntegerText: row.valueIntegerText,
                 valueTermID: row.valueTermID,
                 dateDraft: row.dateDraft,
+                nameDraft: row.nameDraft,
                 showValidation: false
             )
         }
     }
 
-    /// Value types the thin composer can edit (name / subject wait for later PRs).
-    static let supportedValueTypes: Set<String> = ["text", "integer", "date", "term"]
+    /// Value types the composer can edit (subject waits for a later PR).
+    static let supportedValueTypes: Set<String> = ["text", "integer", "date", "term", "name"]
 
     let sourceID: String
     let subjectID: String
@@ -258,6 +262,8 @@ final class CitationComposerModel {
             return termLabel(for: row.valueTermID, propertyID: property.id) ?? row.valueTermID
         case "date":
             return Self.dateSummary(row.dateDraft)
+        case "name":
+            return NameValueDisplay.string(for: row.nameDraft)
         case "subject":
             let trimmed = row.valueText.trimmingCharacters(in: .whitespacesAndNewlines)
             return trimmed.isEmpty ? row.valueSubjectID : trimmed
@@ -628,6 +634,7 @@ final class CitationComposerModel {
                 next.valueIntegerText = ""
                 next.valueTermID = ""
                 next.dateDraft = .empty()
+                next.nameDraft = .empty()
             }
         }
         observationDialog = next
@@ -650,6 +657,7 @@ final class CitationComposerModel {
             valueTermID: draft.valueTermID,
             valueSubjectID: "",
             dateDraft: draft.dateDraft,
+            nameDraft: draft.nameDraft,
             isConnectFixed: false
         )
         if let editingID = draft.editingID,
@@ -872,6 +880,14 @@ final class CitationComposerModel {
                     return nil
                 }
                 draft.date = row.dateDraft.toInput()
+            case "name":
+                guard row.nameDraft.isValid else {
+                    formError = String(localized: L10n.CitationComposer.unsupportedValueTypeError)
+                    return nil
+                }
+                let input = row.nameDraft.toInput()
+                draft.nameForm = input.form
+                draft.nameParts = input.parts
             case "subject":
                 guard !row.valueSubjectID.isEmpty else {
                     formError = String(localized: L10n.CitationComposer.unsupportedValueTypeError)
@@ -901,6 +917,8 @@ final class CitationComposerModel {
             return !draft.valueTermID.isEmpty
         case "date":
             return draft.dateDraft.isValid
+        case "name":
+            return draft.nameDraft.isValid
         default:
             return false
         }
@@ -956,6 +974,7 @@ final class CitationComposerModel {
             valueTermID: observation.valueTermID,
             valueSubjectID: observation.valueSubjectID,
             dateDraft: dateDraft,
+            nameDraft: NameValueDraft(from: observation),
             isConnectFixed: isFixed
         )
     }

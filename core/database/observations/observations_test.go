@@ -258,7 +258,13 @@ func TestObservations(t *testing.T) {
 				mustCitation(t, c, s,
 					observations.Input{
 						SubjectID: s.person.ID, PropertyID: s.nameProp.ID,
-						Name: &namevalues.Value{Form: "Ada Lovelace"},
+						Name: &namevalues.Value{
+							Form: "Ada Lovelace",
+							Parts: []namevalues.Part{
+								{Idx: 0, Value: "Ada", Type: "given"},
+								{Idx: 1, Value: "Lovelace", Type: "surname"},
+							},
+						},
 					},
 					observations.Input{
 						SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
@@ -277,6 +283,9 @@ func TestObservations(t *testing.T) {
 					if row.PropertyKey == "name" {
 						if row.ValueNameForm != "Ada Lovelace" || row.ValueText != "Ada Lovelace" {
 							t.Fatalf("name display form=%q text=%q", row.ValueNameForm, row.ValueText)
+						}
+						if row.Name == nil || len(row.Name.Parts) != 2 || row.Name.Parts[0].Type != "given" {
+							t.Fatalf("name parts=%v", row.Name)
 						}
 						sawName = true
 					}

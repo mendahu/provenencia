@@ -8,7 +8,6 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 
 | Step | Brief | Feeds | Notes |
 | --- | --- | --- | --- |
-| S7-D5 | [`S7-D5-name-value-editor.md`](S7-D5-name-value-editor.md) | PR S7-02b | NameValue modal — late fill-in after thin composer; not on path to S7-05 |
 | S7-D7 | [`S7-D7-card-component.md`](S7-D7-card-component.md) | PR S7-13 | Card kit page from shipped `PVCard`; after **S7-10**, before dogfood close |
 
 ## Descoped
@@ -27,6 +26,7 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 | S7-D6 | [`archive/S7-D6-curated-marks.md`](archive/S7-D6-curated-marks.md) | PR S7-12 | → `Recipes/Marks/` (`file_*` / `type_*` / `subject_*` incl. source); tint API; before **S7-09** |
 | S7-D8 | [`archive/S7-D8-pvcallout-actions.md`](archive/S7-D8-pvcallout-actions.md) | PR S7-14 | Callout optional actions slot; before **S7-09** message center |
 | S7-D9 | [`archive/S7-D9-locator-region-chrome.md`](archive/S7-D9-locator-region-chrome.md) | PR S7-07 | Default artifact + Set Page + region tools + summary list |
+| S7-D5 | [`archive/S7-D5-name-value-editor.md`](archive/S7-D5-name-value-editor.md) | PR S7-02b | NameValue modal — late fill-in after thin composer; not on path to S7-05 |
 
 ## How to use
 
@@ -46,7 +46,7 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 - Candidate refs: `CPR-…` etc. vs concluded `PER-…`.
 - **Citation composer is a navigable place** (Option B): leave the graph, full-window viewer\|form, Back returns. Not a sheet over the canvas.
 - Value types in this spike: **text**, **integer**, **date**, **name**, **subject**, **`term`** (schema). Kind/edge Properties use `term` via **registry only** — Subject fields create UI does **not** offer `term`.
-- **NameValue** has its own brief (**S7-D5**) — not designed inside the composer board.
+- **NameValue** has its own brief (**S7-D5**, archived) — not designed inside the composer board. Implemented as **S7-02b**.
 - **Term picker** (search product terms + Add custom / rename / delete user *term rows*) belongs in the composer board (**S7-D4**), not as a Subject fields CatalogVocabulary.
 - Media in composer: **image** and **PDF** only (audio/video later). Locator chrome (default `artifact`, Set Page, region tools, summary list) is **S7-D9** (archived) / **S7-07**.
 - Extend: Subject fields stub (S5-D3), Evidence graph cards (S6-D1/D2), DateValue editor (`Features/Dates/`). Source types/fields are **contrast** for Subject fields — do not copy that chrome for S7-D2.
