@@ -18,8 +18,9 @@ struct PVSelectOption: Identifiable {
 }
 
 /// A styled dropdown select built on the floating `PVContextMenu` kit
-/// (shared panel chrome + ↑/↓/⏎/Esc). Replaces SwiftUI `Menu` / `Picker`
-/// so label chrome and keyboard policy stay on `PV*` tokens.
+/// (shared panel chrome + ↑/↓/⏎/Esc + type-to-select). Replaces SwiftUI
+/// `Menu` / `Picker` so label chrome and keyboard policy stay on `PV*`
+/// tokens. A focused trigger opens on ↑/↓; letters jump to matching options.
 ///
 /// - **Field** (default): full-width control matching `PVInput` rest border.
 /// - **Chip** (`icon:` set, `fillsWidth: false`): compact toolbar select
@@ -37,6 +38,7 @@ struct PVSelect: View {
 
     @State private var menuState = PVContextMenuState()
     @State private var keyboard = PVContextMenuKeyboard.inactive
+    @FocusState private var isFocused: Bool
 
     init(
         selection: Binding<String>,
@@ -67,21 +69,16 @@ struct PVSelect: View {
 
     var body: some View {
         Button {
-            if menuState.isPresented {
-                menuState.dismiss()
-            } else {
-                let selectedIndex = options.firstIndex(where: { $0.id == selection }) ?? -1
-                keyboard = PVContextMenuKeyboard(
-                    itemCount: options.count,
-                    activeIndex: selectedIndex
-                )
-                menuState.present(at: CGPoint(x: 0, y: triggerHeight + PVSpacing.space2))
-            }
+            toggleMenu()
         } label: {
             trigger
         }
         .buttonStyle(.plain)
+        .focused($isFocused)
+        .onMoveCommand(perform: handleMoveCommand)
+        .onKeyPress(action: handleTriggerKey)
         .accessibilityLabel(accessibilityLabelText)
+        .accessibilityValue(Text(verbatim: triggerLabel))
         .accessibilityAddIdentifiers(accessibilityIdentifier)
         .pvContextMenu($menuState, keyboard: options.isEmpty ? nil : $keyboard) {
             PVContextMenuPanel(
@@ -99,6 +96,68 @@ struct PVSelect: View {
                     }
                 }
             }
+        }
+    }
+
+    private var selectedIndex: Int {
+        options.firstIndex(where: { $0.id == selection }) ?? -1
+    }
+
+    private func toggleMenu() {
+        if menuState.isPresented {
+            menuState.dismiss()
+        } else {
+            openMenu(highlight: selectedIndex)
+        }
+    }
+
+    private func openMenu(highlight: Int) {
+        guard !options.isEmpty else { return }
+        keyboard = PVContextMenuKeyboard(
+            itemCount: options.count,
+            activeIndex: highlight,
+            itemTitles: options.map(\.label)
+        )
+        menuState.present(at: CGPoint(x: 0, y: triggerHeight + PVSpacing.space2))
+    }
+
+    private func handleMoveCommand(_ direction: MoveCommandDirection) {
+        guard !menuState.isPresented, !options.isEmpty else { return }
+        switch direction {
+        case .down:
+            openMenu(highlight: selectedIndex >= 0 ? selectedIndex : 0)
+        case .up:
+            openMenu(highlight: selectedIndex >= 0 ? selectedIndex : options.count - 1)
+        default:
+            break
+        }
+    }
+
+    private func handleTriggerKey(_ press: KeyPress) -> KeyPress.Result {
+        guard !options.isEmpty, !menuState.isPresented else { return .ignored }
+        switch press.key {
+        case .downArrow:
+            openMenu(highlight: selectedIndex >= 0 ? selectedIndex : 0)
+            return .handled
+        case .upArrow:
+            openMenu(highlight: selectedIndex >= 0 ? selectedIndex : options.count - 1)
+            return .handled
+        default:
+            guard press.characters.count == 1,
+                  let character = press.characters.first,
+                  character.isLetter || character.isNumber,
+                  !press.modifiers.contains(.command),
+                  !press.modifiers.contains(.control)
+            else { return .ignored }
+            if !menuState.isPresented {
+                openMenu(highlight: selectedIndex)
+            }
+            if keyboard.applyTypeSelect(character),
+               options.indices.contains(keyboard.activeIndex)
+            {
+                selection = options[keyboard.activeIndex].id
+            }
+            return .handled
         }
     }
 
@@ -142,9 +201,10 @@ struct PVSelect: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                .stroke(PVColor.borderDefault, lineWidth: 1)
+                .stroke(isFocused ? PVColor.borderFocus : PVColor.borderDefault, lineWidth: 1)
         )
-        .pvInsetShadow(cornerRadius: PVRadius.sm)
+        .pvInsetShadow(cornerRadius: PVRadius.sm, visible: !isFocused)
+        .pvFocusRing(isFocused, cornerRadius: PVRadius.sm)
     }
 
     private var chipTrigger: some View {
@@ -166,8 +226,9 @@ struct PVSelect: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                .stroke(PVColor.borderDefault, lineWidth: 1)
+                .stroke(isFocused ? PVColor.borderFocus : PVColor.borderDefault, lineWidth: 1)
         )
+        .pvFocusRing(isFocused, cornerRadius: PVRadius.sm)
     }
 }
 

@@ -211,7 +211,7 @@ Mac client AT and UI-test hygiene. Notes: [`docs/macos-client-patterns.md`](../.
 - Images/icons: decorative vs informative—missing labels on meaningful imagery; noisy labels on pure decoration
 - Focus / keyboard: custom controls that trap focus, omit actions available only via hidden gesture, or break standard Mac key loops without cause
 - Omnibar, sidebar, source page, and onboarding—high-traffic surfaces—sampled for VoiceOver-readable names and traits
-- Contrast / hit-target nits only when clearly broken in DesignSystem usage (don’t turn this into a full visual QA pass)
+- Contrast / hit-target nits only when clearly broken in DesignSystem usage (don’t turn this into a full visual QA pass). If custom chrome dropped a contract the kit already solved (label, traits, usable target), flag the rewrite under §12.
 
 **Allow** — Identifiers as stable dotted tokens (not localized). Decorative assets intentionally hidden from AT.
 
@@ -226,18 +226,21 @@ Catch LLM- and rush-driven UI debt against Frost layers (**design system / recip
 **Look for**
 
 - **Orphans** — `PV*` types with zero production call sites under `Features/` / `Platform/` (previews/tests alone don’t count).
-- **Near-duplicates** — panels, menus, chips, list shells, empty states, or dialogs that share chrome but diverge only in open gesture or payload.
-- **Snowflake reimplementing DS** — feature-private control that redraws an existing `PV*` (dialog footer, menu host, chip) instead of composing it.
+- **Near-duplicates** — controls that share an **interaction** (open a menu, commit a field, arm a tool, confirm destroy, pick a chip) but diverge only in name, open gesture, or payload.
+- **Snowflake reimplementing DS** — feature-private control that redraws an existing `PV*` instead of composing it.
+- **Behavior forks** — the same interaction contract as a kit type, built by hand. Judge by what the user can do and what the control must guarantee (hover, press, selected, disabled, hit area, tooltip, AT traits)—not by whether it is called `*Button` / `*Panel` / `*Row`. A `private func` still counts. Named-type inventory alone will miss these.
 - **Recipe trapped as snowflake** — reusable product mapping living under `Features/<OneDomain>/` that a second surface already copied (promote to a recipe).
 - **Wrong layer** — catalog/store/feature meaning inside `DesignSystem/`; or a one-off promoted to `PV*` with a single call site; or a preemptive recipe with one caller.
 - **Wrapper sprawl** — separate panel stacks for open-policy differences instead of one panel + composable open policies.
 
 **How to sample**
 
-1. Inventory `macos/App/DesignSystem/Components/**` (`PV*` types).
+1. Inventory `macos/App/DesignSystem/Components/**` by **behavior**: for each `PV*`, write one line for the interaction it owns (not just the type name).
 2. Grep `Features` / `Platform` for call sites—flag zero-use orphans.
 3. Spot-check high-churn UI for private `*Panel` / `*Sheet` / `*Row`; diff against nearest `PV*`.
-4. Ask: design system, recipe, or snowflake? If a third screen needed this tomorrow, compose or promote—don’t copy. For a single hot type, prefer [`.cursor/skills/evaluate-ui-component`](../evaluate-ui-component/SKILL.md) over expanding this whole-app pass.
+4. **Walk interactive chrome on sampled surfaces** (do this even when the named-type pass looks clean). For each control ask: which kit type already owns this interaction? If the code is a raw `Button` / `TextField` / overlay / `private func` that re-solves that contract, flag it—even when a sibling on the same strip already composes the kit.
+5. When the user named a host feature, open chrome it **embeds**, not only files under that feature folder.
+6. Ask: design system, recipe, or snowflake? If a third screen needed this tomorrow, compose or promote—don’t copy. For a single hot type, prefer [`.cursor/skills/evaluate-ui-component`](../evaluate-ui-component/SKILL.md) over expanding this whole-app pass.
 
 **Provenencia notes**
 
@@ -247,6 +250,7 @@ Catch LLM- and rush-driven UI debt against Frost layers (**design system / recip
 - Do not invent new DesignSystem types for a single unproven call site; hoist snowflake → recipe (or into DS if agnostic) at ≥2 real surfaces.
 
 **Good finding shape** — “New overlay menu reimplements card chrome instead of `PVContextMenuPanel`; wire it through the shared kit with a custom row payload.”
+Or: “This control does X (same interaction as `PV*`) but is a local rebuild; compose the kit type so the contract stays in one place.”
 
 **Allow** — Deliberate snowflakes with no second consumer yet; AppKit escape hatches wrapped once; Generated / preview-only fixtures.
 

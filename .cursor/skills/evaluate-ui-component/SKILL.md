@@ -68,8 +68,12 @@ State clearly: **today’s layer** vs **ideal layer** (may already be correct).
 
 ### 3. Near-duplicates / cousins
 
-Search for siblings that share chrome but diverge in payload or open gesture:
+Search for siblings that share an **interaction contract** or chrome, even when
+the type name is different or the fork is a `private func`:
 
+- Same *behavior*: icon action, selected toggle, field commit, chip pick, menu,
+  confirm, empty state — match against the kit type that already owns that
+  interaction, not only against `*Sheet` / `*Row` names.
 - Same visual band: sunken footer, `PVDivider`, title `h3` + subtitle, card/shadow,
   dismiss monitor, hover row, chip/badge shell.
 - Name patterns: `*Sheet`, `*Dialog`, `*Panel`, `*Menu`, `*Chip`, `*Badge`, `*Row`.

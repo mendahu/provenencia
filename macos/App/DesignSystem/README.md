@@ -146,11 +146,11 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 | Icon | `Components/Icon/PVIcon.swift` |
 | Field | `Components/Field/PVField.swift` |
 | Input | `Components/Input/PVInput.swift` |
-| Select | `Components/Select/PVSelect.swift` (floating `PVContextMenu` kit — field + optional chip/icon style; not SwiftUI `Menu`) |
+| Select | `Components/Select/PVSelect.swift` (floating `PVContextMenu` kit — field + optional chip/icon style; not SwiftUI `Menu`; focused trigger opens on ↑/↓ and type-selects by prefix) |
 | Toast | `Components/Toast/PVToast.swift` |
 | LogoMark | `Components/LogoMark/PVLogoMark.swift` |
 | SidebarNav | `Components/SidebarNav/PVSidebarNav.swift` (added for the S2-01 workspace chrome; ports that board's revised `collapsed`-capable `SidebarNav.jsx`) |
-| IconButton | `Components/IconButton/PVIconButton.swift` (added for the workspace sidebar's collapse toggle, which needed real hover feedback; `label` is required per `IconButton.jsx` and doubles as the `.help` tooltip; pass `accessibilityLabel` when the spoken label has to name a target the tooltip can leave implicit; `tone: .danger` tints a destructive action) |
+| IconButton | `Components/IconButton/PVIconButton.swift` (added for the workspace sidebar's collapse toggle, which needed real hover feedback; `label` is required per `IconButton.jsx` and doubles as the `.help` tooltip; pass `accessibilityLabel` when the spoken label has to name a target the tooltip can leave implicit; `tone: .danger` tints a destructive action; `isSelected` is the armed/radio fill used by Artifact region tools) |
 | Badge | `Components/Badge/PVBadge.swift` (added for S2-02's data-type/origin badges; a glyph-only variant carries the S2-22 seeded pill) |
 | Divider | `Components/Divider/PVDivider.swift` (1pt hairline; horizontal/vertical) |
 | EmptyState | `Components/EmptyState/PVEmptyState.swift` (added for S2-02's empty/no-match states; the web spec's `action` slot isn't ported — see the file's header comment) |

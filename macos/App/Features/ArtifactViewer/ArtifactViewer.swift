@@ -110,20 +110,14 @@ struct ArtifactViewerToolChrome: View {
 
     private func regionRadio(_ tool: ArtifactRegionTool, selection: Binding<ArtifactRegionTool?>) -> some View {
         let selected = selection.wrappedValue == tool
-        return Button {
+        return PVIconButton(
+            tool.symbol,
+            label: label(for: tool),
+            size: .sm,
+            isSelected: selected
+        ) {
             selection.wrappedValue = selected ? nil : tool
-        } label: {
-            PVIcon(tool.symbol, size: 13)
-                .foregroundStyle(selected ? PVColor.accentSoftForeground : PVColor.textSecondary)
-                .frame(width: 24, height: 24)
-                .background(
-                    RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                        .fill(selected ? PVColor.accentSoft : Color.clear)
-                )
         }
-        .buttonStyle(.plain)
-        .help(Text(label(for: tool)))
-        .accessibilityLabel(Text(label(for: tool)))
         .accessibilityIdentifier("artifactViewer.regionTool.\(tool.rawValue)")
     }
 
