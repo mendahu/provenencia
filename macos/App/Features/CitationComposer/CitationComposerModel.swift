@@ -94,17 +94,20 @@ final class CitationComposerModel {
     private(set) var isSubmitting = false
     private(set) var didSubmit = false
 
-    /// Isolated document viewer (S7-06). Composer syncs page ↔ locator only.
+    /// Isolated document viewer (S7-06). Composer owns locator JSON layers.
     let artifactViewer = ArtifactViewerModel()
 
-    /// Committed locator page; nil until the researcher sets one (Frame 12).
-    private(set) var locatorPage: Int?
-    /// Thin image path used Draw region to commit a whole-image page selector.
-    private(set) var locatorIsWholeImage = false
+    /// Always includes the `artifact` floor after compose starts.
+    private(set) var locator = CitationLocatorDraft.artifactOnly()
+    /// Armed region radio; overlay commits then this returns to nil.
+    var armedRegionTool: ArtifactRegionTool?
 
     /// 1-based page from the Artifact viewer (PDF).
     var viewerPage: Int { artifactViewer.page }
     var viewerPageCount: Int { artifactViewer.pageCount }
+    var locatorCapabilities: ArtifactLocatorCapabilities {
+        artifactViewer.locatorCapabilities
+    }
 
     var transcription = ""
     var transcriptionUncertain = false
@@ -174,16 +177,27 @@ final class CitationComposerModel {
     }
 
     var isPDFArtifact: Bool {
-        Self.isPDF(selectedArtifact)
+        artifactViewer.kind == .pdf
     }
 
     var isImageArtifact: Bool {
-        Self.isImage(selectedArtifact)
+        artifactViewer.kind == .image
     }
 
     var hasLocator: Bool {
-        locatorPage != nil
+        selectedArtifactID != nil
     }
+
+    var isLocatorArtifactOnly: Bool {
+        locator.isArtifactOnly
+    }
+
+    var isLocatorPageSetOnViewer: Bool {
+        guard let page = locator.page else { return false }
+        return page == artifactViewer.page
+    }
+
+    var locatorPage: Int? { locator.page }
 
     var propertyOptions: [PVComboBoxOption] {
         availableProperties.map {
@@ -448,7 +462,7 @@ final class CitationComposerModel {
                     return
                 }
                 phase = .compose
-                await reloadArtifactViewer(preferredPage: locatorPage)
+                await reloadArtifactViewer(preferredPage: locator.page)
                 return
             }
 
@@ -501,15 +515,19 @@ final class CitationComposerModel {
     }
 
     func confirmArtifactSelection() {
+        Task { await confirmArtifactSelectionAndLoad() }
+    }
+
+    func confirmArtifactSelectionAndLoad() async {
         guard let id = pendingArtifactID, artifacts.contains(where: { $0.id == id }) else { return }
         selectedArtifactID = id
         pendingArtifactID = id
-        clearLocator()
+        resetToEntireArtifact()
         phase = .compose
         formError = nil
         locatorError = nil
         submitAttempted = false
-        Task { await reloadArtifactViewer(preferredPage: nil) }
+        await reloadArtifactViewer(preferredPage: nil)
     }
 
     func changeArtifact() {
@@ -524,36 +542,67 @@ final class CitationComposerModel {
     func goToPreviousPage() {
         guard artifactViewer.supportsPages else { return }
         artifactViewer.goToPreviousPage()
-        syncLocatorFromViewerPage()
     }
 
     func goToNextPage() {
         guard artifactViewer.supportsPages else { return }
         artifactViewer.goToNextPage()
-        syncLocatorFromViewerPage()
     }
 
-    /// Called when the Artifact viewer page changes (chevrons / page field).
-    func syncLocatorFromViewerPage() {
-        guard artifactViewer.supportsPages else { return }
-        commitLocatorPage(artifactViewer.page)
+    /// Set Page — writes the current viewer page; browsing chevrons do not.
+    @discardableResult
+    func setPageFromViewer() -> Bool {
+        setPage(artifactViewer.page)
     }
 
-    /// Thin stand-in for Draw region (no polygon UI until S7-07).
-    func markWholeImageLocator() {
-        if isPDFArtifact {
-            locatorIsWholeImage = false
-            commitLocatorPage(artifactViewer.page)
-            return
+    @discardableResult
+    func setPage(_ page: Int) -> Bool {
+        let ok = locator.setPage(page, capabilities: locatorCapabilities)
+        if ok { locatorError = nil }
+        return ok
+    }
+
+    @discardableResult
+    func setRegion(_ draft: ArtifactRegionDraft) -> Bool {
+        let ok = locator.setRegion(
+            draft,
+            capabilities: locatorCapabilities,
+            autoPage: artifactViewer.page
+        )
+        if ok {
+            armedRegionTool = nil
+            locatorError = nil
         }
-        locatorIsWholeImage = true
-        commitLocatorPage(1)
+        return ok
+    }
+
+    func clearRegion() {
+        locator.clearRegion()
+        locatorError = nil
+    }
+
+    func resetToEntireArtifact() {
+        locator.resetToEntireArtifact()
+        armedRegionTool = nil
+        locatorError = nil
+    }
+
+    func removePage() {
+        locator.removePage()
+        locatorError = nil
+    }
+
+    func removeRegion() {
+        locator.clearRegion()
+        locatorError = nil
+    }
+
+    func disarmRegionTool() {
+        armedRegionTool = nil
     }
 
     func clearLocator() {
-        locatorPage = nil
-        locatorIsWholeImage = false
-        locatorError = nil
+        resetToEntireArtifact()
     }
 
     func beginAddObservation() {
@@ -655,11 +704,7 @@ final class CitationComposerModel {
             formError = String(localized: L10n.CitationComposer.needArtifact)
             return nil
         }
-        guard let page = locatorPage, let locatorJSON = Self.locatorJSON(page: page) else {
-            locatorError = String(localized: L10n.CitationComposer.locatorUnsetError)
-            formError = String(localized: L10n.CitationComposer.locatorSaveError)
-            return nil
-        }
+        let locatorJSON = locator.encodeJSON()
         guard !observations.isEmpty else {
             formError = String(localized: L10n.CitationComposer.saveNeedsObservationError)
             return nil
@@ -735,9 +780,7 @@ final class CitationComposerModel {
         transcriptionUncertain = citation.transcriptionUncertain
         transcriptionNote = citation.transcriptionNote
         citationDescription = citation.description
-        if let page = Self.pageFromLocatorJSON(citation.locatorJSON) {
-            locatorPage = page
-        }
+        locator = CitationLocatorDraft.decode(citation.locatorJSON)
         let fixedIDs = Set(connectEdgePropertiesByID.keys)
         observations = listed
             .filter { $0.subjectID == subjectID }
@@ -789,11 +832,14 @@ final class CitationComposerModel {
         if let preferredPage, artifactViewer.supportsPages {
             artifactViewer.setPage(preferredPage)
         }
+        peelIllegalLocatorLayers()
     }
 
-    private func commitLocatorPage(_ page: Int) {
-        locatorPage = max(1, page)
-        locatorError = nil
+    private func peelIllegalLocatorLayers() {
+        locator.peelIllegalLayers(capabilities: locatorCapabilities)
+        if !locatorCapabilities.supportsRegionLocator {
+            armedRegionTool = nil
+        }
     }
 
     private func buildObservationDrafts() -> [CatalogObservationDraft]? {
@@ -861,24 +907,15 @@ final class CitationComposerModel {
     }
 
     static func locatorJSON(page: Int) -> String? {
-        guard page >= 1 else { return nil }
-        return #"{"version":1,"selectors":[{"type":"page","artifact_page":\#(page)}]}"#
+        var draft = CitationLocatorDraft.artifactOnly()
+        guard draft.setPage(page, capabilities: ArtifactViewerKind.pdf.locatorCapabilities) else {
+            return nil
+        }
+        return draft.encodeJSON()
     }
 
     static func pageFromLocatorJSON(_ json: String) -> Int? {
-        struct LocatorDoc: Decodable {
-            struct Selector: Decodable {
-                var type: String
-                var artifact_page: Int?
-            }
-            var selectors: [Selector]?
-        }
-        guard let data = json.data(using: .utf8),
-              let doc = try? JSONDecoder().decode(LocatorDoc.self, from: data),
-              let page = doc.selectors?.first(where: { $0.type == "page" })?.artifact_page,
-              page >= 1
-        else { return nil }
-        return page
+        CitationLocatorDraft.decode(json).page
     }
 
     private static func observationRow(

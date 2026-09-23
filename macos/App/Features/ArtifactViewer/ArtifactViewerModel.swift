@@ -26,6 +26,7 @@ final class ArtifactViewerModel {
 
     var supportsPages: Bool { kind.supportsPages }
     var supportsSpatialZoom: Bool { kind.supportsSpatialZoom }
+    var locatorCapabilities: ArtifactLocatorCapabilities { kind.locatorCapabilities }
 
     var zoomPercentLabel: String {
         let pct = Int((zoom * 100).rounded())

@@ -187,7 +187,7 @@ Pinning a Citation across successive graph edits is **out** (one Citation + N Ob
 | **S7-D4** | Citation composer place | Full-window viewer\|form; Artifact pick; locators; observation list; DateValue reuse; breadcrumbs; composer-only a11y — **hosts** NameValue modal, does not design it | S7-08 |
 | **S7-D5** | NameValue editor | Reusable NameValue modal (DateValue twin); form + optional parts; **product part-type picker** (localized; no free text) | S7-02b |
 | **S7-D7** | Card component | Claude Design **Card** reference from shipped `PVCard`; tones / border / elevation; not graph snowflake cards | S7-13 |
-| **S7-D9** | Locator chrome | Default `document` + Set Page + region tools + summary list + dim-outside | S7-07 |
+| **S7-D9** | Locator chrome | Default `artifact` + Set Page + region tools + summary list + dim-outside | S7-07 |
 
 ~~**S7-D1** Subject types editor~~ — **descoped** (see [Descoped](#descoped) below).
 
@@ -210,7 +210,7 @@ S7-08  Thin composer: Artifact pick + citation + text Observations + submit
          dogfood: cite a line of text, card grows (no fancy viewer yet)
 S7-06  Image + PDF viewers in the composer
 S7-D9  Locator region chrome (polygon look / draw states)
-S7-07  Locator tools (page + region + PDF text selection)
+S7-07  Locator tools (page + region + artifact)
 S7-02b NameValue editor hosted in composer
 S7-10  Durable connect macros
 S7-D7  Card component (design-system reference from shipped PVCard)
@@ -272,7 +272,7 @@ S7-D4 Composer place                │
 S7-D9 Locator region chrome         │
   │                                 ▼
   └────── D9 gates ───────────────▶ S7-07  Locator tools (page + region
-                                    │      + PDF text selection for paste)
+                                    │      + artifact)
                                     │
 S7-D5 NameValue editor              │
   │                                 ▼
@@ -299,7 +299,7 @@ S7-D7 Card component                │
 - **S7-09** → **S7-03** (graph payload can show Observations) + **S7-12** + **S7-14** + **S7-D3**. Registers composer `WorkspaceLocation`; destination may stub until S7-08.
 - **S7-08** → **S7-09** + **S7-D4** + **S7-03**. **Does not** require S7-06/07/02b — text/term Observations and a placeholder viewer are enough to dogfood submit + card growth.
 - **S7-06 / S7-07 / S7-02b** fill the composer in place; each is dogfoodable on top of S7-08.
-- **S7-07** → **S7-06** + **S7-03** validation + **S7-D9** (region chrome). Includes PDF text selection for transcription paste; not full Find UI.
+- **S7-07** → **S7-06** + **S7-03** validation + **S7-D9** (region chrome). PDF text selection for paste is a follow-on (raster viewer).
 - **S7-10** → working composer submit (S7-08+) + **S7-D3**.
 - **S7-13** → **S7-D7**. Late hygiene after connect; **before** S7-11. Does **not** rewrite Evidence graph snowflake cards.
 
@@ -325,8 +325,8 @@ Schema/Go (01–03, 01b) may start before design finishes; **UI PRs gate on the 
 - [x] S7-09 — Add property + composer navigation (stub OK) → [`completed.md`](completed.md)
 - [x] S7-08 — Thin composer (submit + card growth; viewer placeholder OK) → [`completed.md`](completed.md)
 - [x] S7-06 — Image + PDF viewers in composer → [`completed.md`](completed.md)
-- [ ] S7-D9 — Design: Locator region chrome → [`completed.md`](completed.md)
-- [ ] S7-07 — Locator tools (page + region + document) → [`completed.md`](completed.md)
+- [x] S7-D9 — Design: Locator region chrome → [`completed.md`](completed.md)
+- [x] S7-07 — Locator tools (page + region + artifact) → [`completed.md`](completed.md)
 - [ ] S7-02b — NameValue Swift editor → [`completed.md`](completed.md)
 - [ ] S7-10 — Durable connect macros → [`completed.md`](completed.md)
 - [ ] S7-D7 — Design: Card component (design-system reference) → [`completed.md`](completed.md)
@@ -385,7 +385,7 @@ Claude Design **Card** kit page / board, referenced from the already-shipped mac
 
 ## S7-D9 — Design: Locator region chrome
 
-Claude Design board for **locator chrome**: default `document` layer, **Set Page**, region tools, dim-outside, summary list. Brief: [`design/S7-D9-locator-region-chrome.md`](design/S7-D9-locator-region-chrome.md). Gates **S7-07**. Does **not** redesign the composer shell (**S7-D4**) or ship PDF Find (ideas parking lot).
+Claude Design board for **locator chrome**: default `artifact` layer, **Set Page**, region tools, dim-outside, summary list. Brief archived: [`design/archive/S7-D9-locator-region-chrome.md`](design/archive/S7-D9-locator-region-chrome.md). Gates **S7-07**. Does **not** redesign the composer shell (**S7-D4**) or ship PDF Find (ideas parking lot).
 
 ---
 
@@ -550,20 +550,20 @@ PDFKit + image overlay; resolve files via `ProjectFiles`; no QuickLook for compo
 
 ---
 
-## S7-07 — Locator tools (page + region + document)
+## S7-07 — Locator tools (page + region + artifact)
 
 Interactive tools feeding nested selectors; Go is source of truth for invariants (≥3 points, non-self-intersecting, etc.). **Design first:** full locator chrome via **S7-D9**.
 
-**Whole Artifact:** validated `document` selector (see [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) §3.4). UI **prepopulates** `document` on every cite; researchers layer **Set Page** (PDF) and/or one region on top. Locator **summary list** shows each layer with remove (document is the non-removable floor). No whole-document checkbox.
+**Whole Artifact:** validated `artifact` selector (see [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) §3.4). UI **prepopulates** `artifact` on every cite; researchers layer **Set Page** (PDF) and/or one region on top. Locator **summary list** shows each layer with remove (artifact is the non-removable floor). No entire-artifact checkbox.
 
-For **PDFs**, the viewer must support **text selection** (copy) so researchers can paste into Citation transcription / Observation text without retyping. That is viewer affordance for paste — not a required `text_quote` locator in this PR. Full in-document Find UI stays an [ideas](../../ideas/pdf-text-find.md) item.
+PDF **text selection** for transcription paste is a follow-on (the current viewer is a page raster). Full in-document Find UI stays an [ideas](../../ideas/pdf-text-find.md) item.
 
 | | |
 | --- | --- |
-| **In** | Default `document` locator; **Set Page** toolbar control (PDF); region tool strip (rectangle, L×4, circle, freeform) + Clear per **S7-D9**; PDF region auto-layers current page if page unset; one region with dim-outside; constrained edit; **locator summary list**; produce layered `locator_json`; PDF text selection → paste. |
-| **Out** | Empty / null locator; whole-document checkbox; PDF region without page; `time_range`; required `text_quote`; PDF Find; multiple regions; audio/video. |
-| **Testable** | Save with document-only; Set Page → submit; draw region without Set Page on PDF → page auto-added; draw each shape → edit → list remove → reset to document; select PDF text → paste. |
-| **Depends on** | S7-06, S7-03 validation (extend for `document` + layered chains), **S7-D9**. |
+| **In** | Default `artifact` locator; **Set Page** toolbar control (PDF); region tool strip (rectangle, L×4, circle, freeform) + Clear per **S7-D9**; PDF region auto-layers current page if page unset; one region with dim-outside; constrained edit; **locator summary list**; produce layered `locator_json`. |
+| **Out** | Empty / null locator; entire-artifact checkbox; PDF region without page; `time_range`; required `text_quote`; PDF Find; PDF text selection; multiple regions; audio/video playback. |
+| **Testable** | Save with artifact-only; Set Page → submit; draw region without Set Page on PDF → page auto-added; draw each shape → edit → list remove → reset to artifact. |
+| **Depends on** | S7-06, S7-03 validation (extend for `artifact` + layered chains), **S7-D9**. |
 
 ---
 

@@ -12,6 +12,20 @@ func TestValidate(t *testing.T) {
 		wantErr bool
 	}{
 		{
+			name: "artifact only",
+			json: `{"version":1,"selectors":[{"type":"artifact"}]}`,
+		},
+		{
+			name: "artifact then page then region",
+			json: `{"version":1,"selectors":[
+				{"type":"artifact"},
+				{"type":"page","artifact_page":2},
+				{"type":"region","unit":"normalized","points":[
+					{"x":0.1,"y":0.1},{"x":0.4,"y":0.1},{"x":0.4,"y":0.3},{"x":0.1,"y":0.3}
+				]}
+			]}`,
+		},
+		{
 			name: "page only",
 			json: `{"version":1,"selectors":[{"type":"page","artifact_page":37,"page_label":"23"}]}`,
 		},
@@ -56,6 +70,11 @@ func TestValidate(t *testing.T) {
 		{
 			name:    "no selectors",
 			json:    `{"version":1,"selectors":[]}`,
+			wantErr: true,
+		},
+		{
+			name:    "artifact not first",
+			json:    `{"version":1,"selectors":[{"type":"page","artifact_page":1},{"type":"artifact"}]}`,
 			wantErr: true,
 		},
 		{

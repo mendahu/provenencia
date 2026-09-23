@@ -1599,6 +1599,62 @@ enum L10n {
             defaultValue: "The file exists but couldn't be read as an image or PDF.",
             comment: "Body when decode fails"
         )
+
+        static let setPage = LocalizedStringResource(
+            "artifactViewer.setPage",
+            defaultValue: "Set page",
+            comment: "Commits the current viewer page into the citation locator"
+        )
+
+        static func pageSet(page: Int) -> LocalizedStringResource {
+            LocalizedStringResource(
+                "artifactViewer.pageSet",
+                defaultValue: "Page \(page) set",
+                comment: "Set page button after the locator page matches the viewer; argument is page number"
+            )
+        }
+
+        static let regionRectangle = LocalizedStringResource(
+            "artifactViewer.regionRectangle",
+            defaultValue: "Rectangle",
+            comment: "Region tool: axis-aligned rectangle"
+        )
+
+        static let regionLOpenTopRight = LocalizedStringResource(
+            "artifactViewer.regionLOpenTopRight",
+            defaultValue: "L open top-right",
+            comment: "Region tool: L-shape with the missing quarter at top-right"
+        )
+
+        static let regionLOpenTopLeft = LocalizedStringResource(
+            "artifactViewer.regionLOpenTopLeft",
+            defaultValue: "L open top-left",
+            comment: "Region tool: L-shape with the missing quarter at top-left"
+        )
+
+        static let regionLOpenBottomRight = LocalizedStringResource(
+            "artifactViewer.regionLOpenBottomRight",
+            defaultValue: "L open bottom-right",
+            comment: "Region tool: L-shape with the missing quarter at bottom-right"
+        )
+
+        static let regionLOpenBottomLeft = LocalizedStringResource(
+            "artifactViewer.regionLOpenBottomLeft",
+            defaultValue: "L open bottom-left",
+            comment: "Region tool: L-shape with the missing quarter at bottom-left"
+        )
+
+        static let regionCircle = LocalizedStringResource(
+            "artifactViewer.regionCircle",
+            defaultValue: "Circle",
+            comment: "Region tool: circle stored as a 32-point ring"
+        )
+
+        static let regionFreeform = LocalizedStringResource(
+            "artifactViewer.regionFreeform",
+            defaultValue: "Freeform",
+            comment: "Region tool: click-to-place polygon vertices"
+        )
     }
 
     /// Citation composer place (S7-08 thin submit path; board-aligned shell).
@@ -1897,82 +1953,106 @@ enum L10n {
             return String(format: format, locale: .current, detail)
         }
 
-        static let previousPage = LocalizedStringResource(
-            "citationComposer.previousPage",
-            defaultValue: "Previous page",
-            comment: "Viewer tool: go to previous PDF page"
-        )
-
-        static let nextPage = LocalizedStringResource(
-            "citationComposer.nextPage",
-            defaultValue: "Next page",
-            comment: "Viewer tool: go to next PDF page"
-        )
-
-        static func pageOf(total: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
-                "citationComposer.pageOf",
-                defaultValue: "of %lld",
-                comment: "Viewer page count suffix; argument is total pages"
-            ))
-            return String(format: format, locale: .current, total)
-        }
-
-        static let drawRegion = LocalizedStringResource(
-            "citationComposer.drawRegion",
-            defaultValue: "Draw region",
-            comment: "Viewer tool that commits a locator (thin: page/whole-image)"
-        )
-
-        static let clearLocator = LocalizedStringResource(
-            "citationComposer.clearLocator",
-            defaultValue: "Clear locator",
-            comment: "Clears the committed locator on the Artifact"
-        )
-
         static func locatorPage(_ page: Int) -> String {
             let format = String(localized: LocalizedStringResource(
                 "citationComposer.locatorPage",
                 defaultValue: "Page %lld",
-                comment: "Locator crumb when a PDF page is selected; argument is page number"
+                comment: "Locator list row for a committed page; argument is page number"
             ))
             return String(format: format, locale: .current, page)
         }
 
-        static let locatorWholeImage = LocalizedStringResource(
-            "citationComposer.locatorWholeImage",
-            defaultValue: "Whole image",
-            comment: "Locator crumb when thin Draw region marked the full image"
+        static let clearMenu = LocalizedStringResource(
+            "citationComposer.clearMenu",
+            defaultValue: "Clear",
+            comment: "Opens the Clear region / Reset to entire artifact menu"
         )
 
-        static let locatorUnsetError = LocalizedStringResource(
-            "citationComposer.locatorUnsetError",
-            defaultValue: "No locator set — page through to the right page, or draw the region the evidence sits in.",
-            comment: "Callout on the locator strip when Save is refused for missing locator"
+        static let clearRegion = LocalizedStringResource(
+            "citationComposer.clearRegion",
+            defaultValue: "Clear region",
+            comment: "Menu item that drops the region locator layer only"
         )
 
-        static let locatorSaveError = LocalizedStringResource(
-            "citationComposer.locatorSaveError",
-            defaultValue: "Set a locator on the artifact before saving.",
-            comment: "Footer error when Save is refused for missing locator"
+        static let resetToEntireArtifact = LocalizedStringResource(
+            "citationComposer.resetToEntireArtifact",
+            defaultValue: "Reset to entire artifact",
+            comment: "Menu item that drops page and region, leaving the artifact floor"
         )
 
-        static let canvasNothingSelected = LocalizedStringResource(
-            "citationComposer.canvasNothingSelected",
-            defaultValue: "Nothing selected on this artifact yet",
-            comment: "Viewer canvas caption when no locator is committed"
+        static let locatorSection = LocalizedStringResource(
+            "citationComposer.locatorSection",
+            defaultValue: "Locator",
+            comment: "Header above the layered locator summary list"
         )
 
-        static let viewerPlaceholderTitle = LocalizedStringResource(
-            "citationComposer.viewerPlaceholderTitle",
-            defaultValue: "Artifact viewer",
-            comment: "Fallback canvas title until S7-06 ships viewers"
+        static let locatorOuterToInner = LocalizedStringResource(
+            "citationComposer.locatorOuterToInner",
+            defaultValue: "Outer to inner",
+            comment: "Caption explaining locator list order"
         )
 
-        static let viewerPlaceholderMessage = LocalizedStringResource(
-            "citationComposer.viewerPlaceholderMessage",
-            defaultValue: "Image and PDF viewers arrive in a later update. You can still set a locator and save the citation.",
-            comment: "Explains the thin-composer viewer placeholder"
+        static let locatorEntireArtifact = LocalizedStringResource(
+            "citationComposer.locatorEntireArtifact",
+            defaultValue: "Entire artifact",
+            comment: "Floor locator row — always present, not removable"
+        )
+
+        static let locatorAlwaysIncluded = LocalizedStringResource(
+            "citationComposer.locatorAlwaysIncluded",
+            defaultValue: "Always included",
+            comment: "Note under Entire artifact that the floor cannot be removed"
+        )
+
+        static let locatorRectangle = LocalizedStringResource(
+            "citationComposer.locatorRectangle",
+            defaultValue: "Rectangle",
+            comment: "Locator list noun for a rectangle region"
+        )
+
+        static let locatorLShape = LocalizedStringResource(
+            "citationComposer.locatorLShape",
+            defaultValue: "L-shape",
+            comment: "Locator list noun for an L-shaped region"
+        )
+
+        static let locatorCircle = LocalizedStringResource(
+            "citationComposer.locatorCircle",
+            defaultValue: "Circle",
+            comment: "Locator list noun for a circle region"
+        )
+
+        static let locatorPolygon = LocalizedStringResource(
+            "citationComposer.locatorPolygon",
+            defaultValue: "Polygon",
+            comment: "Locator list noun for a freeform region"
+        )
+
+        static func removePage(_ page: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "citationComposer.removePage",
+                defaultValue: "Remove page %lld",
+                comment: "Accessibility name to remove a page locator; argument is page number"
+            ))
+            return String(format: format, locale: .current, page)
+        }
+
+        static let removeRegion = LocalizedStringResource(
+            "citationComposer.removeRegion",
+            defaultValue: "Remove region",
+            comment: "Accessibility name to remove the region locator layer"
+        )
+
+        static let removeLocatorLayer = LocalizedStringResource(
+            "citationComposer.removeLocatorLayer",
+            defaultValue: "Remove",
+            comment: "Tooltip on the locator list remove control"
+        )
+
+        static let freeformDeleteVertex = LocalizedStringResource(
+            "citationComposer.freeformDeleteVertex",
+            defaultValue: "Right-click a vertex to delete it. At least three points remain.",
+            comment: "Tooltip while a freeform region is committed"
         )
 
         static let noArtifactsCallout = LocalizedStringResource(

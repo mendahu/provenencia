@@ -25,15 +25,10 @@ enum ArtifactViewerKind: String, Equatable, Sendable, CaseIterable {
     }
 
     /// Page chevrons + page field (board Frame 1).
-    var supportsPages: Bool { self == .pdf }
+    var supportsPages: Bool { locatorCapabilities.supportsPageLocator }
 
     /// Spatial pan/zoom viewport (board Frames 1–2).
-    var supportsSpatialZoom: Bool {
-        switch self {
-        case .image, .pdf: return true
-        case .audio, .video, .unsupported: return false
-        }
-    }
+    var supportsSpatialZoom: Bool { locatorCapabilities.supportsSpatialZoom }
 
     /// S7-06 implements image + PDF paint; A/V uses the empty state until players ship.
     var isRenderableInS706: Bool {
@@ -42,4 +37,47 @@ enum ArtifactViewerKind: String, Equatable, Sendable, CaseIterable {
         case .audio, .video, .unsupported: return false
         }
     }
+
+    /// Kind-gated locator / chrome flags. Hosts must not branch on MIME strings.
+    var locatorCapabilities: ArtifactLocatorCapabilities {
+        switch self {
+        case .image:
+            return ArtifactLocatorCapabilities(
+                supportsPageLocator: false,
+                supportsRegionLocator: true,
+                supportsSpatialZoom: true,
+                supportsTimeRangeLocator: false
+            )
+        case .pdf:
+            return ArtifactLocatorCapabilities(
+                supportsPageLocator: true,
+                supportsRegionLocator: true,
+                supportsSpatialZoom: true,
+                supportsTimeRangeLocator: false
+            )
+        case .audio, .video:
+            return ArtifactLocatorCapabilities(
+                supportsPageLocator: false,
+                supportsRegionLocator: false,
+                supportsSpatialZoom: false,
+                supportsTimeRangeLocator: true
+            )
+        case .unsupported:
+            return ArtifactLocatorCapabilities(
+                supportsPageLocator: false,
+                supportsRegionLocator: false,
+                supportsSpatialZoom: false,
+                supportsTimeRangeLocator: false
+            )
+        }
+    }
+}
+
+/// Locator / viewer chrome a kind may offer. `artifact` floor is always legal.
+struct ArtifactLocatorCapabilities: Equatable, Sendable {
+    var supportsPageLocator: Bool
+    var supportsRegionLocator: Bool
+    var supportsSpatialZoom: Bool
+    /// Reserved: A/V players later. S7-07 does not implement time-range UI.
+    var supportsTimeRangeLocator: Bool
 }

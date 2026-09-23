@@ -8634,7 +8634,6 @@
         }
       }
     },
-
     "artifactViewer.previousPage": {
       "comment": "Artifact viewer: go to previous PDF page",
       "extractionState": "manual",
@@ -9451,146 +9450,14 @@
         }
       }
     },
-    "citationComposer.previousPage": {
-      "comment": "Viewer tool: go to previous PDF page",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Previous page"
-          }
-        }
-      }
-    },
-    "citationComposer.nextPage": {
-      "comment": "Viewer tool: go to next PDF page",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Next page"
-          }
-        }
-      }
-    },
-    "citationComposer.pageOf": {
-      "comment": "Viewer page count suffix; argument is total pages",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "of %lld"
-          }
-        }
-      }
-    },
-    "citationComposer.drawRegion": {
-      "comment": "Viewer tool that commits a locator (thin: page/whole-image)",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Draw region"
-          }
-        }
-      }
-    },
-    "citationComposer.clearLocator": {
-      "comment": "Clears the committed locator on the Artifact",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Clear locator"
-          }
-        }
-      }
-    },
     "citationComposer.locatorPage": {
-      "comment": "Locator crumb when a PDF page is selected; argument is page number",
+      "comment": "Locator list row for a committed page; argument is page number",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Page %lld"
-          }
-        }
-      }
-    },
-    "citationComposer.locatorWholeImage": {
-      "comment": "Locator crumb when thin Draw region marked the full image",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Whole image"
-          }
-        }
-      }
-    },
-    "citationComposer.locatorUnsetError": {
-      "comment": "Callout on the locator strip when Save is refused for missing locator",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No locator set — page through to the right page, or draw the region the evidence sits in."
-          }
-        }
-      }
-    },
-    "citationComposer.locatorSaveError": {
-      "comment": "Footer error when Save is refused for missing locator",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Set a locator on the artifact before saving."
-          }
-        }
-      }
-    },
-    "citationComposer.canvasNothingSelected": {
-      "comment": "Viewer canvas caption when no locator is committed",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nothing selected on this artifact yet"
-          }
-        }
-      }
-    },
-    "citationComposer.viewerPlaceholderTitle": {
-      "comment": "Fallback canvas title until S7-06 ships viewers",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Artifact viewer"
-          }
-        }
-      }
-    },
-    "citationComposer.viewerPlaceholderMessage": {
-      "comment": "Explains the thin-composer viewer placeholder",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Image and PDF viewers arrive in a later update. You can still set a locator and save the citation."
           }
         }
       }
@@ -9771,6 +9638,294 @@
           "stringUnit": {
             "state": "translated",
             "value": "Citation"
+          }
+        }
+      }
+    },
+    "artifactViewer.setPage": {
+      "comment": "Commits the current viewer page into the citation locator",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set page"
+          }
+        }
+      }
+    },
+    "artifactViewer.pageSet": {
+      "comment": "Set page button after the locator page matches the viewer; argument is page number",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Page %lld set"
+          }
+        }
+      }
+    },
+    "artifactViewer.regionRectangle": {
+      "comment": "Region tool: axis-aligned rectangle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rectangle"
+          }
+        }
+      }
+    },
+    "artifactViewer.regionLOpenTopRight": {
+      "comment": "Region tool: L-shape with the missing quarter at top-right",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L open top-right"
+          }
+        }
+      }
+    },
+    "artifactViewer.regionLOpenTopLeft": {
+      "comment": "Region tool: L-shape with the missing quarter at top-left",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L open top-left"
+          }
+        }
+      }
+    },
+    "artifactViewer.regionLOpenBottomRight": {
+      "comment": "Region tool: L-shape with the missing quarter at bottom-right",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L open bottom-right"
+          }
+        }
+      }
+    },
+    "artifactViewer.regionLOpenBottomLeft": {
+      "comment": "Region tool: L-shape with the missing quarter at bottom-left",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L open bottom-left"
+          }
+        }
+      }
+    },
+    "artifactViewer.regionCircle": {
+      "comment": "Region tool: circle stored as a 32-point ring",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Circle"
+          }
+        }
+      }
+    },
+    "artifactViewer.regionFreeform": {
+      "comment": "Region tool: click-to-place polygon vertices",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Freeform"
+          }
+        }
+      }
+    },
+    "citationComposer.clearMenu": {
+      "comment": "Opens the Clear region / Reset to entire artifact menu",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear"
+          }
+        }
+      }
+    },
+    "citationComposer.clearRegion": {
+      "comment": "Menu item that drops the region locator layer only",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear region"
+          }
+        }
+      }
+    },
+    "citationComposer.resetToEntireArtifact": {
+      "comment": "Menu item that drops page and region, leaving the artifact floor",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset to entire artifact"
+          }
+        }
+      }
+    },
+    "citationComposer.locatorSection": {
+      "comment": "Header above the layered locator summary list",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Locator"
+          }
+        }
+      }
+    },
+    "citationComposer.locatorOuterToInner": {
+      "comment": "Caption explaining locator list order",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Outer to inner"
+          }
+        }
+      }
+    },
+    "citationComposer.locatorEntireArtifact": {
+      "comment": "Floor locator row — always present, not removable",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entire artifact"
+          }
+        }
+      }
+    },
+    "citationComposer.locatorAlwaysIncluded": {
+      "comment": "Note under Entire artifact that the floor cannot be removed",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Always included"
+          }
+        }
+      }
+    },
+    "citationComposer.locatorRectangle": {
+      "comment": "Locator list noun for a rectangle region",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rectangle"
+          }
+        }
+      }
+    },
+    "citationComposer.locatorLShape": {
+      "comment": "Locator list noun for an L-shaped region",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L-shape"
+          }
+        }
+      }
+    },
+    "citationComposer.locatorCircle": {
+      "comment": "Locator list noun for a circle region",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Circle"
+          }
+        }
+      }
+    },
+    "citationComposer.locatorPolygon": {
+      "comment": "Locator list noun for a freeform region",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polygon"
+          }
+        }
+      }
+    },
+    "citationComposer.removePage": {
+      "comment": "Accessibility name to remove a page locator; argument is page number",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove page %lld"
+          }
+        }
+      }
+    },
+    "citationComposer.removeRegion": {
+      "comment": "Accessibility name to remove the region locator layer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove region"
+          }
+        }
+      }
+    },
+    "citationComposer.removeLocatorLayer": {
+      "comment": "Tooltip on the locator list remove control",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove"
+          }
+        }
+      }
+    },
+    "citationComposer.freeformDeleteVertex": {
+      "comment": "Tooltip while a freeform region is committed",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Right-click a vertex to delete it. At least three points remain."
           }
         }
       }

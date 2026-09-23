@@ -40,7 +40,7 @@ struct CitationComposerArtifactPicker: View {
             HStack(spacing: PVSpacing.space5) {
                 PVButton(L10n.CitationComposer.cancel, variant: .ghost, size: .sm, action: onCancel)
                 PVButton(L10n.CitationComposer.continuePick, variant: .primary, size: .sm) {
-                    model.confirmArtifactSelection()
+                    Task { await model.confirmArtifactSelectionAndLoad() }
                 }
                 .disabled(model.pendingArtifactID == nil)
                 .accessibilityIdentifier("citationComposer.pick.continue")

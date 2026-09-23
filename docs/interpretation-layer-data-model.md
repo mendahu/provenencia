@@ -312,38 +312,38 @@ A crop within a PDF is represented compositionally:
 
 The same `region` selector works directly against a standalone image without a preceding `page` selector.
 
-## 3.4 `document` selector
+## 3.4 `artifact` selector
 
-Names the **digital Artifact as a whole** as the starting context for the locator chain. Citations always bind an `artifact_id`; `document` makes “no further narrowing” an explicit, valid locator (and the UI default) instead of an empty `locator_json`.
+Names the **digital Artifact as a whole** as the starting context for the locator chain. Citations always bind an `artifact_id`; `artifact` makes “no further narrowing” an explicit, valid locator (and the UI default) instead of an empty `locator_json`. Not `document` (paper-biased) and not `source` (a Source can have several Artifacts).
 
 ```json
 {
-  "type": "document"
+  "type": "artifact"
 }
 ```
 
 Schema:
 
 ```text
-DocumentSelector {
-    type: "document"
+ArtifactSelector {
+    type: "artifact"
 }
 ```
 
 Rules:
 
-1. When present, `document` is the **first** selector in the chain (outermost context).
+1. When present, `artifact` is the **first** selector in the chain (outermost context).
 2. It may stand alone (cite the entire Artifact) or be followed by narrowing selectors such as `page` and/or `region`.
-3. Prefer a `document`-only chain over an empty locator. Citations require a locator; empty JSON is invalid.
-4. Product UI prepopulates `[{ "type": "document" }]` and layers **Set Page** / region on top; there is no separate “cite whole document” checkbox.
-5. On paginated Artifacts (PDF), a `region` selector must be preceded by a `page` selector. If the UI creates a region while no page is set, it must insert `page` for the current viewer page before (or with) the region. Standalone images may use `document` → `region` with no `page`.
+3. Prefer an `artifact`-only chain over an empty locator. Citations require a locator; empty JSON is invalid.
+4. Product UI prepopulates `[{ "type": "artifact" }]` and layers **Set Page** / region on top; there is no separate “cite entire artifact” checkbox.
+5. On paginated Artifacts (PDF), a `region` selector must be preceded by a `page` selector. If the UI creates a region while no page is set, it must insert `page` for the current viewer page before (or with) the region. Standalone images may use `artifact` → `region` with no `page`.
 
 Example — whole Artifact:
 
 ```json
 {
   "version": 1,
-  "selectors": [{ "type": "document" }]
+  "selectors": [{ "type": "artifact" }]
 }
 ```
 
@@ -353,7 +353,7 @@ Example — page then region on that Artifact:
 {
   "version": 1,
   "selectors": [
-    { "type": "document" },
+    { "type": "artifact" },
     { "type": "page", "artifact_page": 2 },
     {
       "type": "region",
@@ -498,7 +498,7 @@ For locator version 1:
 10. For paginated digital Artifacts, the Artifact page position is authoritative for navigation.
 11. Printed or marked source pagination is supplementary descriptive data and does not replace the Artifact page position.
 12. Locator JSON identifies where the evidence is; transcription, description, and interpretation remain separate concerns.
-13. A `document` selector, when present, is the first (outermost) selector and may stand alone or be followed by narrowing selectors (`page`, `region`, …).
+13. An `artifact` selector, when present, is the first (outermost) selector and may stand alone or be followed by narrowing selectors (`page`, `region`, …).
 14. On paginated Artifacts, `region` must follow `page` (a polygon is always relative to a chosen Artifact page).
 
 Conceptually:

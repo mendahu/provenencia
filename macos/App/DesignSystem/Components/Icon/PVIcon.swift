@@ -47,6 +47,13 @@ enum PVSymbol: String {
     case penLine = "pencil.line"
     case imageUp = "square.and.arrow.up"
     case circleDashed = "circle.dashed"
+    case regionRectangle = "rectangle"
+    case regionLTopRight = "arrow.up.right"
+    case regionLTopLeft = "arrow.up.left"
+    case regionLBottomRight = "arrow.down.right"
+    case regionLBottomLeft = "arrow.down.left"
+    case regionCircle = "circle"
+    case regionFreeform = "lasso"
 }
 
 /// Renders a design-system icon via SF Symbols.
