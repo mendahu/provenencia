@@ -27,6 +27,8 @@ IDs stay stable (`S7-NN`, `S7-DN`). Do not renumber when moving steps here.
 | [S7-D5](#s7-d5--design-namevalue-editor) | Design | Reusable NameValue modal (DateValue twin); product part-type picker |
 | [S7-02b](#s7-02b--pr-namevalue-swift-editor) | PR | Shared `Features/Names/` editor hosted in the composer |
 | [S7-10](#s7-10--pr-durable-connect-macros) | PR | Registry-driven Connect; atomic cited bridge; person↔place refused |
+| [S7-D7](#s7-d7--design-card-component) | Design | Card kit page from shipped `PVCard`; gates S7-13 |
+| [S7-13](#s7-13--pr-pvcard-call-site-cleanup) | PR | Manual card cousins → `PVCard` |
 
 ## Steps
 
@@ -379,4 +381,36 @@ go test ./core/database/observations/ ./core/database/namevalues/
 CGO_ENABLED=1 go test -tags fts5 ./core/database/connect/ ./api/ffi/handlers/
 python3 scripts/check-localizable-xcstrings.py
 # xcodebuild test — EvidenceGraphModelTests / CitationComposerModelTests / SourceGraphSnapshotTests
+```
+
+### S7-D7 — Design: Card component
+
+| | |
+| --- | --- |
+| **Kind** | Design (Claude Design kit page) |
+| **Depends on** | Shipped `PVCard`; after S7-10 |
+| **Deliverables** | Done. Card kit contract: tones card/raised/sunken, solid/dashed, `md`/`sm`, optional elevation + padding; no header/footer slots. View remount list + child-board slip [`S7-D7B`](design/archive/S7-D7B-card-view-remount.md) (cache clear, refetch, delete local chrome). Briefs archived: [`design/archive/S7-D7-card-component.md`](design/archive/S7-D7-card-component.md). |
+| **Dogfood** | Design only — implements in **S7-13**. |
+| **Out** | Evidence graph snowflake cards; type-strip / file-choice / icon-picker cells; web header/footer/`hoverable`. |
+
+**Landed:** Claude Design Card matches shipped `PVCard`; child views remount via D7B.
+
+### S7-13 — PR: PVCard call-site cleanup
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | **S7-D7** |
+| **Deliverables** | Done. Four planned cousins wrap `PVCard`: Identify contributor list; project meta; Source types suggested-fields stack (`sm`); open-picker empty-folder (sunken + dashed). Scan wraps: composer locked Connect rows (`tone: .sunken`, `sm`); Source types empty-suggestions (sunken + dashed + `sm`). Existing Source page / Subject fields / composer raised rows unchanged. Web header/footer/`hoverable` not ported. |
+| **Tests** | `rg` for leftover fill/clip/stroke at migrated sites; `OnboardingModelTests` + Source types / composer suites still compile. |
+| **Dogfood** | Identify contributor list; open-picker empty + project meta; Source types suggested stack and empty; Connect-locked composer rows. |
+| **Out** | Evidence graph subject/bridge/palette; type-strip tiles; file-choice / icon-picker cells; pane fills; Card slot API. |
+
+**Landed:** remaining card-shaped chrome uses kit `PVCard` instead of local rectangles.
+
+**Verify:**
+
+```bash
+rg -n 'surfaceCard|surfaceSunken' macos/App/Features/Onboarding/OnboardingIdentifyView.swift macos/App/Features/Onboarding/OnboardingProjectMetaLines.swift macos/App/Features/Onboarding/OnboardingOpenPicker.swift macos/App/Features/SourceTypes/SourceTypesDetailPane.swift macos/App/Features/CitationComposer/CitationComposerObservationRow.swift
+# xcodebuild test — OnboardingModelTests / CitationComposerModelTests
 ```

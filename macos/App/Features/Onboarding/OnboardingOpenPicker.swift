@@ -21,25 +21,18 @@ struct OnboardingOpenPicker: View {
                 .pvMicroCaps()
                 .foregroundStyle(PVColor.textMuted)
             if model.availableProjects.isEmpty {
-                HStack(alignment: .center, spacing: PVSpacing.space5) {
-                    Text(L10n.Onboarding.noProjectsInDocuments)
-                        .font(PVFont.body(size: PVTypeScale.bodySmall))
-                        .foregroundStyle(PVColor.textMuted)
-                    Spacer(minLength: 0)
-                    PVButton(L10n.Onboarding.chooseFolder, variant: .secondary, size: .sm) {
-                        model.chooseFolder()
+                PVCard(tone: .sunken, border: .dashed, padding: PVSpacing.space5) {
+                    HStack(alignment: .center, spacing: PVSpacing.space5) {
+                        Text(L10n.Onboarding.noProjectsInDocuments)
+                            .font(PVFont.body(size: PVTypeScale.bodySmall))
+                            .foregroundStyle(PVColor.textMuted)
+                        Spacer(minLength: 0)
+                        PVButton(L10n.Onboarding.chooseFolder, variant: .secondary, size: .sm) {
+                            model.chooseFolder()
+                        }
+                        .accessibilityIdentifier("onboarding.chooseFolder")
                     }
-                    .accessibilityIdentifier("onboarding.chooseFolder")
                 }
-                .padding(PVSpacing.space5)
-                .background(
-                    RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
-                        .fill(PVColor.surfaceSunken)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
-                        .strokeBorder(PVColor.borderDefault, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
-                )
             } else {
                 HStack(alignment: .center, spacing: PVSpacing.space5) {
                     PVSelect(selection: selectedProjectPath, options: projectOptions)

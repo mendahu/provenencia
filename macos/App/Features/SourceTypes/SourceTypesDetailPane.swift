@@ -348,72 +348,66 @@ struct SourceTypesDetailPane: View {
                 .frame(maxWidth: .infinity)
                 .padding(PVSpacing.space7)
         } else {
-            Text(L10n.SourceTypes.noAssignedBody)
-                .font(PVFont.body(size: PVTypeScale.bodySmall))
-                .foregroundStyle(PVColor.textSecondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(PVSpacing.space6)
-                .background(
-                    RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                        .fill(PVColor.surfaceSunken)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                        .strokeBorder(PVColor.borderDefault, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
-                )
-                .accessibilityIdentifier("sourceTypes.suggested.empty")
+            PVCard(
+                tone: .sunken,
+                border: .dashed,
+                cornerRadius: PVRadius.sm,
+                padding: PVSpacing.space6
+            ) {
+                Text(L10n.SourceTypes.noAssignedBody)
+                    .font(PVFont.body(size: PVTypeScale.bodySmall))
+                    .foregroundStyle(PVColor.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .accessibilityIdentifier("sourceTypes.suggested.empty")
         }
     }
 
     /// The ordinal column makes `sort_order` legible without adding a
     /// reorder control the board deliberately left out.
     private func suggestionRows(isLocked: Bool) -> some View {
-        VStack(spacing: 0) {
-            ForEach(Array(model.suggestions.enumerated()), id: \.element.id) { index, suggestion in
-                HStack(spacing: PVSpacing.space5) {
-                    Text(verbatim: "\(index + 1)")
-                        .font(PVFont.mono(size: PVTypeScale.micro))
-                        .foregroundStyle(PVColor.textFaint)
-                        .frame(width: 18, alignment: .leading)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(suggestion.field.label)
-                            .font(PVFont.body(size: PVTypeScale.bodySmall))
-                            .foregroundStyle(PVColor.textPrimary)
-                            .lineLimit(1)
-                        Text(suggestion.field.key)
+        PVCard(cornerRadius: PVRadius.sm) {
+            VStack(spacing: 0) {
+                ForEach(Array(model.suggestions.enumerated()), id: \.element.id) { index, suggestion in
+                    HStack(spacing: PVSpacing.space5) {
+                        Text(verbatim: "\(index + 1)")
                             .font(PVFont.mono(size: PVTypeScale.micro))
                             .foregroundStyle(PVColor.textFaint)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    CatalogFieldDataTypeBadge(dataType: suggestion.field.dataType)
-                    if !isLocked {
-                        PVIconButton(
-                            .dismiss,
-                            label: L10n.SourceTypes.removeSuggestion(label: suggestion.field.label),
-                            size: .sm
-                        ) {
-                            Task { await model.removeSuggestion(fieldID: suggestion.field.id) }
+                            .frame(width: 18, alignment: .leading)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(suggestion.field.label)
+                                .font(PVFont.body(size: PVTypeScale.bodySmall))
+                                .foregroundStyle(PVColor.textPrimary)
+                                .lineLimit(1)
+                            Text(suggestion.field.key)
+                                .font(PVFont.mono(size: PVTypeScale.micro))
+                                .foregroundStyle(PVColor.textFaint)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
                         }
-                        .disabled(model.removingFieldID != nil)
-                        .accessibilityIdentifier("sourceTypes.suggested.remove.\(suggestion.field.id)")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        CatalogFieldDataTypeBadge(dataType: suggestion.field.dataType)
+                        if !isLocked {
+                            PVIconButton(
+                                .dismiss,
+                                label: L10n.SourceTypes.removeSuggestion(label: suggestion.field.label),
+                                size: .sm
+                            ) {
+                                Task { await model.removeSuggestion(fieldID: suggestion.field.id) }
+                            }
+                            .disabled(model.removingFieldID != nil)
+                            .accessibilityIdentifier("sourceTypes.suggested.remove.\(suggestion.field.id)")
+                        }
                     }
-                }
-                .padding(.horizontal, PVSpacing.space5)
-                .padding(.vertical, PVSpacing.space4)
-                .accessibilityElement(children: .combine)
-                if index < model.suggestions.count - 1 {
-                    PVDivider()
+                    .padding(.horizontal, PVSpacing.space5)
+                    .padding(.vertical, PVSpacing.space4)
+                    .accessibilityElement(children: .combine)
+                    if index < model.suggestions.count - 1 {
+                        PVDivider()
+                    }
                 }
             }
         }
-        .background(PVColor.surfaceCard)
-        .overlay(
-            RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                .strokeBorder(PVColor.borderSubtle, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous))
     }
 
     /// The pool is the Source fields vocabulary and nothing else — no inline

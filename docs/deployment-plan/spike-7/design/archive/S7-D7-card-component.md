@@ -3,9 +3,11 @@
 **Kind:** Claude Design board / design-system component  
 **Spike:** Provenencia Spike 7  
 **Implements later as:** PR **S7-13**  
-**Depends on:** Shipped macOS [`PVCard`](../../../../macos/App/DesignSystem/Components/Card/PVCard.swift) (already in the app kit — this brief **documents and references** it in Claude Design, not a greenfield invent)  
+**Depends on:** Shipped macOS [`PVCard`](../../../../../macos/App/DesignSystem/Components/Card/PVCard.swift) (already in the app kit — this brief **documents and references** it in Claude Design, not a greenfield invent)  
 **Related:** Evidence graph subject/bridge cards stay **snowflakes** (**S7-D3** / **S7-09**) — out of scope here  
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
+
+> **Shipped delta (S7-13):** Four planned cousins plus locked Connect observation rows and Source types empty-suggestions are `PVCard`. Web kit header/footer/`hoverable` slots were **not** ported — titles stay composed outside.
 
 Paste this document into Claude Design as the requirements for a **Card** kit board on the **main** design system only. Child view boards cannot see this file — remount them with [`S7-D7B-card-view-remount.md`](S7-D7B-card-view-remount.md), one board at a time.
 
@@ -61,15 +63,15 @@ Claude Design frequently serves an old design-system pack. After Card lands on t
 
 | View | File | Chrome today |
 | --- | --- | --- |
-| Source page | [`SourcePageArtifactsView`](../../../../macos/App/Features/Sources/SourcePageArtifactsView.swift) | `PVCard(elevated: true)` — Artifacts list |
+| Source page | [`SourcePageArtifactsView`](../../../../../macos/App/Features/Sources/SourcePageArtifactsView.swift) | `PVCard(elevated: true)` — Artifacts list |
 | Source page | same file, primary-file column | `PVCard(cornerRadius: .sm)` — File tile in accordion expand |
-| Source page | [`SourcePageMetadataView`](../../../../macos/App/Features/Sources/SourcePageMetadataView.swift) | `PVCard(border: .dashed, cornerRadius: .sm)` — type-suggested metadata row |
-| Subject fields | [`SubjectFieldsView`](../../../../macos/App/Features/SubjectFields/SubjectFieldsView.swift) `listCard` / `inspectorCard` | Default `PVCard` |
-| Citation composer | [`CitationComposerObservationRow`](../../../../macos/App/Features/CitationComposer/CitationComposerObservationRow.swift) | `PVCard(tone: .raised)` — editable Observation rows |
-| Source types | [`SourceTypesDetailPane`](../../../../macos/App/Features/SourceTypes/SourceTypesDetailPane.swift) (~suggested-fields stack) | Hand-built `surfaceCard` + `sm` + `borderSubtle` |
-| Onboarding | [`OnboardingIdentifyView`](../../../../macos/App/Features/Onboarding/OnboardingIdentifyView.swift) | Hand-built `surfaceCard` + `md` + `borderSubtle` — contributor list |
-| Onboarding | [`OnboardingOpenPicker`](../../../../macos/App/Features/Onboarding/OnboardingOpenPicker.swift) | Sunken + dashed — empty Documents folder |
-| Onboarding | [`OnboardingProjectMetaLines`](../../../../macos/App/Features/Onboarding/OnboardingProjectMetaLines.swift) | Hand-built `surfaceCard` + `md` — project bookkeeping under the open picker |
+| Source page | [`SourcePageMetadataView`](../../../../../macos/App/Features/Sources/SourcePageMetadataView.swift) | `PVCard(border: .dashed, cornerRadius: .sm)` — type-suggested metadata row |
+| Subject fields | [`SubjectFieldsView`](../../../../../macos/App/Features/SubjectFields/SubjectFieldsView.swift) `listCard` / `inspectorCard` | Default `PVCard` |
+| Citation composer | [`CitationComposerObservationRow`](../../../../../macos/App/Features/CitationComposer/CitationComposerObservationRow.swift) | `PVCard(tone: .raised)` — editable Observation rows |
+| Source types | [`SourceTypesDetailPane`](../../../../../macos/App/Features/SourceTypes/SourceTypesDetailPane.swift) (~suggested-fields stack) | Hand-built `surfaceCard` + `sm` + `borderSubtle` |
+| Onboarding | [`OnboardingIdentifyView`](../../../../../macos/App/Features/Onboarding/OnboardingIdentifyView.swift) | Hand-built `surfaceCard` + `md` + `borderSubtle` — contributor list |
+| Onboarding | [`OnboardingOpenPicker`](../../../../../macos/App/Features/Onboarding/OnboardingOpenPicker.swift) | Sunken + dashed — empty Documents folder |
+| Onboarding | [`OnboardingProjectMetaLines`](../../../../../macos/App/Features/Onboarding/OnboardingProjectMetaLines.swift) | Hand-built `surfaceCard` + `md` — project bookkeeping under the open picker |
 
 ---
 
@@ -109,5 +111,5 @@ Claude Design frequently serves an old design-system pack. After Card lands on t
 1. Publish Card on the main design system. Clear cache and rebundle that system (CD-6).
 2. Paste [`S7-D7B`](S7-D7B-card-view-remount.md) into **one** §2 board at a time (child boards cannot read this file). Each board clears its cache, refetches, remounts Card, and deletes local card chrome (CD-5).
 3. Archive this brief under `archive/` when the board is agreed.
-4. Record in [`../completed.md`](../completed.md).
+4. Record in [`../../completed.md`](../../completed.md).
 5. Implement **S7-13** against the board + existing `PVCard` API.

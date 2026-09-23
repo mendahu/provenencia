@@ -44,35 +44,31 @@ struct OnboardingIdentifyView: View {
                             ?? String(localized: L10n.Onboarding.thisProject)
                     )
                 )
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(model.catalogUsers.enumerated()), id: \.element.userID) { index, user in
-                        OnboardingContributorRow(
-                            title: user.displayName,
-                            subtitle: user.ref.isEmpty ? nil : user.ref,
-                            selected: model.selectedContributorID == user.userID,
-                            divider: index == 0 ? .none : .solid
-                        ) {
-                            model.selectedContributorID = user.userID
+                PVCard {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(model.catalogUsers.enumerated()), id: \.element.userID) { index, user in
+                            OnboardingContributorRow(
+                                title: user.displayName,
+                                subtitle: user.ref.isEmpty ? nil : user.ref,
+                                selected: model.selectedContributorID == user.userID,
+                                divider: index == 0 ? .none : .solid
+                            ) {
+                                model.selectedContributorID = user.userID
+                            }
+                            .accessibilityLabel(L10n.Onboarding.contributorOption(
+                                displayName: user.displayName,
+                                ref: user.ref
+                            ))
                         }
-                        .accessibilityLabel(L10n.Onboarding.contributorOption(
-                            displayName: user.displayName,
-                            ref: user.ref
-                        ))
-                    }
-                    OnboardingContributorRow(
-                        title: String(localized: L10n.Onboarding.notListed),
-                        selected: model.selectedContributorID == OnboardingModel.newContributorID,
-                        divider: .dashed
-                    ) {
-                        model.selectedContributorID = OnboardingModel.newContributorID
+                        OnboardingContributorRow(
+                            title: String(localized: L10n.Onboarding.notListed),
+                            selected: model.selectedContributorID == OnboardingModel.newContributorID,
+                            divider: .dashed
+                        ) {
+                            model.selectedContributorID = OnboardingModel.newContributorID
+                        }
                     }
                 }
-                .background(PVColor.surfaceCard)
-                .clipShape(RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
-                        .strokeBorder(PVColor.borderSubtle, lineWidth: 1)
-                )
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("onboarding.contributor")
                 if model.selectedContributorID == OnboardingModel.newContributorID {

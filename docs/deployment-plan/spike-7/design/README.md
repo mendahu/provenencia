@@ -6,10 +6,7 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 
 ## Open
 
-| Step | Brief | Feeds | Notes |
-| --- | --- | --- | --- |
-| S7-D7 | [`S7-D7-card-component.md`](S7-D7-card-component.md) | PR S7-13 | Card kit page from shipped `PVCard`; paste on the **main** design system only |
-| S7-D7B | [`S7-D7B-card-view-remount.md`](S7-D7B-card-view-remount.md) | PR S7-13 | Child-board slip: cache clear + refetch + remount Card; paste **one view at a time** |
+_None._ Remaining Spike 7 work is dogfood close (**S7-11**), not a design brief.
 
 ## Descoped
 
@@ -28,6 +25,7 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 | S7-D8 | [`archive/S7-D8-pvcallout-actions.md`](archive/S7-D8-pvcallout-actions.md) | PR S7-14 | Callout optional actions slot; before **S7-09** message center |
 | S7-D9 | [`archive/S7-D9-locator-region-chrome.md`](archive/S7-D9-locator-region-chrome.md) | PR S7-07 | Default artifact + Set Page + region tools + summary list |
 | S7-D5 | [`archive/S7-D5-name-value-editor.md`](archive/S7-D5-name-value-editor.md) | PR S7-02b | NameValue modal — late fill-in after thin composer; not on path to S7-05 |
+| S7-D7 | [`archive/S7-D7-card-component.md`](archive/S7-D7-card-component.md) · [D7B](archive/S7-D7B-card-view-remount.md) | PR S7-13 | Card kit page from shipped `PVCard`; child-board remount slip; web header/footer not ported |
 
 ## How to use
 

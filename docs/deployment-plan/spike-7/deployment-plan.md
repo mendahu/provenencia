@@ -329,8 +329,8 @@ Schema/Go (01–03, 01b) may start before design finishes; **UI PRs gate on the 
 - [x] S7-07 — Locator tools (page + region + artifact) → [`completed.md`](completed.md)
 - [x] S7-02b — NameValue Swift editor → [`completed.md`](completed.md)
 - [x] S7-10 — Durable connect macros → [`completed.md`](completed.md)
-- [ ] S7-D7 — Design: Card component (design-system reference) → [`completed.md`](completed.md)
-- [ ] S7-13 — `PVCard` call-site cleanup (manual cousins) → [`completed.md`](completed.md)
+- [x] S7-D7 — Design: Card component (design-system reference) → [`completed.md`](completed.md)
+- [x] S7-13 — `PVCard` call-site cleanup (manual cousins) → [`completed.md`](completed.md)
 - [ ] S7-11 — Dogfood close / docs → [`completed.md`](completed.md)
 
 ## Descoped
@@ -379,7 +379,7 @@ Light Claude Design board / kit handoff for an optional **actions** slot on Call
 
 ## S7-D7 — Design: Card component
 
-Claude Design **Card** kit page / board, referenced from the already-shipped macOS [`PVCard`](../../../macos/App/DesignSystem/Components/Card/PVCard.swift). Brief: [`design/S7-D7-card-component.md`](design/S7-D7-card-component.md). Child views cannot see that file — remount them with [`design/S7-D7B-card-view-remount.md`](design/S7-D7B-card-view-remount.md) (one board at a time: cache clear, refetch, point at Card). Gates **S7-13**. Document tones, solid/dashed border, elevation, and radius; use implemented Artifacts / Subject fields / metadata cards as the visual source of truth. Does **not** redesign Evidence graph subject/bridge cards (those stay snowflakes under **S7-D3**). Schedule after **S7-10**, before dogfood close.
+Claude Design **Card** kit page / board, referenced from the already-shipped macOS [`PVCard`](../../../macos/App/DesignSystem/Components/Card/PVCard.swift). Brief archived: [`design/archive/S7-D7-card-component.md`](design/archive/S7-D7-card-component.md). Child remount slip: [`design/archive/S7-D7B-card-view-remount.md`](design/archive/S7-D7B-card-view-remount.md). Gates **S7-13**. Document tones, solid/dashed border, elevation, and radius; use implemented Artifacts / Subject fields / metadata cards as the visual source of truth. Does **not** redesign Evidence graph subject/bridge cards (those stay snowflakes under **S7-D3**). Schedule after **S7-10**, before dogfood close.
 
 ---
 
