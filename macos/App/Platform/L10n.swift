@@ -1485,6 +1485,122 @@ enum L10n {
         }
     }
 
+    /// Artifact document viewer (S7-06) — image/PDF now; audio/video kinds reserved.
+    enum ArtifactViewer {
+        static let previousPage = LocalizedStringResource(
+            "artifactViewer.previousPage",
+            defaultValue: "Previous page",
+            comment: "Artifact viewer: go to previous PDF page"
+        )
+
+        static let nextPage = LocalizedStringResource(
+            "artifactViewer.nextPage",
+            defaultValue: "Next page",
+            comment: "Artifact viewer: go to next PDF page"
+        )
+
+        static let pageField = LocalizedStringResource(
+            "artifactViewer.pageField",
+            defaultValue: "Page number",
+            comment: "Accessibility label for the editable PDF page field"
+        )
+
+        static func pageOf(total: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "artifactViewer.pageOf",
+                defaultValue: "of %lld",
+                comment: "Artifact viewer page count suffix; argument is total pages"
+            ))
+            return String(format: format, locale: .current, total)
+        }
+
+        static let zoomOut = LocalizedStringResource(
+            "artifactViewer.zoomOut",
+            defaultValue: "Zoom out",
+            comment: "Artifact viewer: decrease magnification"
+        )
+
+        static let zoomIn = LocalizedStringResource(
+            "artifactViewer.zoomIn",
+            defaultValue: "Zoom in",
+            comment: "Artifact viewer: increase magnification"
+        )
+
+        static func zoomPercent(percent: Int) -> LocalizedStringResource {
+            LocalizedStringResource(
+                "artifactViewer.zoomPercent",
+                defaultValue: "Zoom \(percent) percent",
+                comment: "VoiceOver label for the live zoom percentage"
+            )
+        }
+
+        static let canvasAccessibility = LocalizedStringResource(
+            "artifactViewer.canvasAccessibility",
+            defaultValue: "Artifact document",
+            comment: "VoiceOver name for the pan/zoom document canvas"
+        )
+
+        static let emptyIdleTitle = LocalizedStringResource(
+            "artifactViewer.emptyIdleTitle",
+            defaultValue: "No Artifact selected",
+            comment: "Empty canvas title before a document is loaded"
+        )
+
+        static let emptyIdleMessage = LocalizedStringResource(
+            "artifactViewer.emptyIdleMessage",
+            defaultValue: "Choose an Artifact to view it here.",
+            comment: "Empty canvas body before a document is loaded"
+        )
+
+        static let unsupportedTitle = LocalizedStringResource(
+            "artifactViewer.unsupportedTitle",
+            defaultValue: "Can't preview this file",
+            comment: "Title when mediaType is not a supported viewer kind"
+        )
+
+        static let unsupportedMessage = LocalizedStringResource(
+            "artifactViewer.unsupportedMessage",
+            defaultValue: "This Artifact type isn't supported in the viewer yet.",
+            comment: "Body when mediaType is unsupported"
+        )
+
+        static let mediaComingSoonTitle = LocalizedStringResource(
+            "artifactViewer.mediaComingSoonTitle",
+            defaultValue: "Audio and video coming later",
+            comment: "Title when kind is audio/video (players not shipped)"
+        )
+
+        static let mediaComingSoonMessage = LocalizedStringResource(
+            "artifactViewer.mediaComingSoonMessage",
+            defaultValue: "You can still cite this Artifact; in-app playback isn't available yet.",
+            comment: "Body when kind is audio/video"
+        )
+
+        static let missingFileTitle = LocalizedStringResource(
+            "artifactViewer.missingFileTitle",
+            defaultValue: "File missing",
+            comment: "Title when ProjectFiles cannot resolve or find the object"
+        )
+
+        static let missingFileMessage = LocalizedStringResource(
+            "artifactViewer.missingFileMessage",
+            defaultValue: "The stored file could not be found in this project.",
+            comment: "Body when the object file is missing"
+        )
+
+        static let loadFailedTitle = LocalizedStringResource(
+            "artifactViewer.loadFailedTitle",
+            defaultValue: "Couldn't open file",
+            comment: "Title when image/PDF decode fails"
+        )
+
+        static let loadFailedMessage = LocalizedStringResource(
+            "artifactViewer.loadFailedMessage",
+            defaultValue: "The file exists but couldn't be read as an image or PDF.",
+            comment: "Body when decode fails"
+        )
+    }
+
     /// Citation composer place (S7-08 thin submit path; board-aligned shell).
     enum CitationComposer {
         static func breadcrumbCitationFor(scope: String) -> String {

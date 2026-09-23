@@ -41,6 +41,13 @@
 		A70900000000000000000004 /* DateValueDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70900000000000000000003 /* DateValueDisplayTests.swift */; };
 		AA0000000000000000000335 /* DateValueEditorForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000336 /* DateValueEditorForm.swift */; };
 		A70800000000000000000002 /* CitationComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70800000000000000000001 /* CitationComposerView.swift */; };
+
+		A70B00000000000000000002 /* ArtifactViewerKind.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000001 /* ArtifactViewerKind.swift */; };
+		A70B00000000000000000004 /* ArtifactViewerContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000003 /* ArtifactViewerContent.swift */; };
+		A70B00000000000000000006 /* ArtifactViewerModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000005 /* ArtifactViewerModel.swift */; };
+		A70B00000000000000000008 /* ArtifactMediaViewport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000007 /* ArtifactMediaViewport.swift */; };
+		A70B0000000000000000000A /* ArtifactViewer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000009 /* ArtifactViewer.swift */; };
+		A70B0000000000000000000C /* ArtifactViewerModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B0000000000000000000B /* ArtifactViewerModelTests.swift */; };
 		A70800000000000000000004 /* CitationComposerModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70800000000000000000003 /* CitationComposerModel.swift */; };
 		A70A00000000000000000002 /* CitationComposerArtifactPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70A00000000000000000001 /* CitationComposerArtifactPicker.swift */; };
 		A70A00000000000000000004 /* CitationComposerViewerPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70A00000000000000000003 /* CitationComposerViewerPane.swift */; };
@@ -287,6 +294,13 @@
 		A70900000000000000000003 /* DateValueDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueDisplayTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000336 /* DateValueEditorForm.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueEditorForm.swift; sourceTree = "<group>"; };
 		A70800000000000000000001 /* CitationComposerView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerView.swift; sourceTree = "<group>"; };
+
+		A70B00000000000000000001 /* ArtifactViewerKind.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactViewerKind.swift; sourceTree = "<group>"; };
+		A70B00000000000000000003 /* ArtifactViewerContent.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactViewerContent.swift; sourceTree = "<group>"; };
+		A70B00000000000000000005 /* ArtifactViewerModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactViewerModel.swift; sourceTree = "<group>"; };
+		A70B00000000000000000007 /* ArtifactMediaViewport.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactMediaViewport.swift; sourceTree = "<group>"; };
+		A70B00000000000000000009 /* ArtifactViewer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactViewer.swift; sourceTree = "<group>"; };
+		A70B0000000000000000000B /* ArtifactViewerModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactViewerModelTests.swift; sourceTree = "<group>"; };
 		A70800000000000000000003 /* CitationComposerModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerModel.swift; sourceTree = "<group>"; };
 		A70A00000000000000000001 /* CitationComposerArtifactPicker.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerArtifactPicker.swift; sourceTree = "<group>"; };
 		A70A00000000000000000003 /* CitationComposerViewerPane.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerViewerPane.swift; sourceTree = "<group>"; };
@@ -748,6 +762,7 @@
 				8D76A01BF603CC419C35EEBD /* Workspace */,
 				AA0000000000000000000316 /* Sources */,
 				AA0000000000000000000334 /* Dates */,
+				A70B0000000000000000000D /* ArtifactViewer */,
 				A70800000000000000000007 /* CitationComposer */,
 				AA000000000000000000047C /* GraphCanvas */,
 				AA000000000000000000047D /* EvidenceGraph */,
@@ -802,6 +817,18 @@
 				AA0000000000000000000336 /* DateValueEditorForm.swift */,
 			);
 			path = Dates;
+			sourceTree = "<group>";
+		};
+		A70B0000000000000000000D /* ArtifactViewer */ = {
+			isa = PBXGroup;
+			children = (
+				A70B00000000000000000001 /* ArtifactViewerKind.swift */,
+				A70B00000000000000000003 /* ArtifactViewerContent.swift */,
+				A70B00000000000000000005 /* ArtifactViewerModel.swift */,
+				A70B00000000000000000007 /* ArtifactMediaViewport.swift */,
+				A70B00000000000000000009 /* ArtifactViewer.swift */,
+			);
+			path = ArtifactViewer;
 			sourceTree = "<group>";
 		};
 		A70800000000000000000007 /* CitationComposer */ = {
@@ -886,6 +913,7 @@
 				AA0000000000000000000488 /* SourceGraphSnapshotTests.swift */,
 				AA0000000000000000000494 /* EvidenceGraphModelTests.swift */,
 				A70800000000000000000005 /* CitationComposerModelTests.swift */,
+				A70B0000000000000000000B /* ArtifactViewerModelTests.swift */,
 				AA00000000000000000004A8 /* GraphCanvasEdgeGeometryTests.swift */,
 				AA00000000000000000004C6 /* GraphCanvasPointerHitTestingTests.swift */,
 				AA00000000000000000004AA /* EvidenceProvisionalLinkStoreTests.swift */,
@@ -1511,6 +1539,11 @@
 				AA0000000000000000000331 /* DateValueDraft.swift in Sources */,
 				A70900000000000000000002 /* DateValueDisplay.swift in Sources */,
 				AA0000000000000000000335 /* DateValueEditorForm.swift in Sources */,
+				A70B00000000000000000002 /* ArtifactViewerKind.swift in Sources */,
+				A70B00000000000000000004 /* ArtifactViewerContent.swift in Sources */,
+				A70B00000000000000000006 /* ArtifactViewerModel.swift in Sources */,
+				A70B00000000000000000008 /* ArtifactMediaViewport.swift in Sources */,
+				A70B0000000000000000000A /* ArtifactViewer.swift in Sources */,
 				A70800000000000000000002 /* CitationComposerView.swift in Sources */,
 				A70800000000000000000004 /* CitationComposerModel.swift in Sources */,
 				A70A00000000000000000002 /* CitationComposerArtifactPicker.swift in Sources */,
@@ -1571,6 +1604,7 @@
 				AA0000000000000000000489 /* SourceGraphSnapshotTests.swift in Sources */,
 				AA0000000000000000000495 /* EvidenceGraphModelTests.swift in Sources */,
 				A70800000000000000000006 /* CitationComposerModelTests.swift in Sources */,
+				A70B0000000000000000000C /* ArtifactViewerModelTests.swift in Sources */,
 				AA00000000000000000004A9 /* GraphCanvasEdgeGeometryTests.swift in Sources */,
 				AA00000000000000000004C7 /* GraphCanvasPointerHitTestingTests.swift in Sources */,
 				AA00000000000000000004AB /* EvidenceProvisionalLinkStoreTests.swift in Sources */,

@@ -20,6 +20,8 @@ IDs stay stable (`S7-NN`, `S7-DN`). Do not renumber when moving steps here.
 | [S7-14](#s7-14--pr-pvcallout-actions-slot) | PR | Optional `@ViewBuilder` actions on `PVCallout` |
 | [S7-D3](#s7-d3--design-evidence-graph-updates) | Design | Card chrome + No-Artifact; gates S7-09 / S7-10 |
 | [S7-09](#s7-09--pr-add-property--composer-navigation) | PR | Evidence graph card updates + composer stub place |
+| [S7-08](#s7-08--pr-thin-citation-composer) | PR | Thin citation composer place (viewer placeholder OK) |
+| [S7-06](#s7-06--pr-artifact-viewers-image--pdf) | PR | Isolated `ArtifactViewer` module; image + PDF in composer |
 
 ## Steps
 
@@ -263,4 +265,24 @@ python3 scripts/check-localizable-xcstrings.py
 ```bash
 python3 scripts/check-localizable-xcstrings.py
 # xcodebuild test — CitationComposerModelTests / WorkspaceToolbarBreadcrumbTests / PlaceRegistryTests
+```
+
+### S7-06 — PR: Artifact viewers (image + PDF)
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S7-08 |
+| **Deliverables** | Done. New isolated [`Features/ArtifactViewer/`](../../../macos/App/Features/ArtifactViewer/): `ArtifactViewerSource` + `ArtifactViewerKind` (image/pdf/audio/video/unsupported), `ArtifactViewerModel` (`load` via shared [`ProjectFiles.objectURL`](../../../macos/App/Platform/ProjectFiles.swift) only), `ArtifactMediaViewport` (document zoom 0.5…4), `ArtifactViewer` / `ArtifactViewerToolChrome` (board Frame 1/2 page + zoom). Composer hosts the module: one tool strip = viewer chrome + Draw region / Clear stubs; canvas replaces the S7-08 placeholder. Real PDF `pageCount` + page field; audio/video kinds show coming-soon empty state (no players). |
+| **Tests** | `ArtifactViewerModelTests` (kind classify, zoom/page clamp, ProjectFiles PNG/PDF load, missing file, audio empty); `CitationComposerModelTests` still green; `check-localizable-xcstrings.py`. |
+| **Dogfood** | Open composer on an image or PDF Artifact → see document; PDF page flip + zoom; Save still works. |
+| **Out** | Polygon / region locators (**S7-07**); audio/video **playback**; QuickLook. |
+
+**Landed:** reusable Artifact viewer slotted into the citation composer; format kinds reserved for A/V.
+
+**Verify:**
+
+```bash
+python3 scripts/check-localizable-xcstrings.py
+# xcodebuild test — ArtifactViewerModelTests / CitationComposerModelTests
 ```

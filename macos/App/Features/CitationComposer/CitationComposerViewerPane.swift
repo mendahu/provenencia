@@ -1,25 +1,37 @@
 import SwiftUI
 
-/// Left pane: Artifact viewer chrome + locator stub (Frames 1 / 2 / 12).
+/// Left pane: Artifact header + board tool strip (page/zoom + Draw region) + canvas.
 struct CitationComposerViewerPane: View {
     @Bindable var model: CitationComposerModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space5) {
+        VStack(alignment: .leading, spacing: 0) {
             header
+                .padding(.horizontal, PVSpacing.space7)
+                .padding(.top, PVSpacing.space7)
+                .padding(.bottom, PVSpacing.space3)
+
             toolStrip
+
             if let locatorError = model.locatorError, model.submitAttempted {
                 PVCallout(tone: .danger, message: locatorError, compact: true)
+                    .padding(.horizontal, PVSpacing.space7)
+                    .padding(.top, PVSpacing.space3)
             } else if model.hasLocator {
                 locatorCrumb
+                    .padding(.horizontal, PVSpacing.space7)
+                    .padding(.top, PVSpacing.space3)
             }
-            ZStack {
-                canvas
-                    .frame(maxWidth: 520, maxHeight: .infinity)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            ArtifactViewer(model: model.artifactViewer, showsToolStrip: false)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(PVSpacing.space7)
+                .onChange(of: model.artifactViewer.page) { _, _ in
+                    if model.artifactViewer.supportsPages {
+                        model.syncLocatorFromViewerPage()
+                    }
+                }
         }
-        .padding(PVSpacing.space7)
     }
 
     private var header: some View {
@@ -65,35 +77,13 @@ struct CitationComposerViewerPane: View {
         )
     }
 
+    /// Board Frame 1/2: page + zoom (module) then Draw region / Clear (host stub).
     private var toolStrip: some View {
-        HStack(spacing: PVSpacing.space4) {
-            if model.isPDFArtifact {
-                HStack(spacing: PVSpacing.space2) {
-                    PVIconButton(.chevronBack, label: L10n.CitationComposer.previousPage, size: .sm) {
-                        model.goToPreviousPage()
-                    }
-                    .disabled(model.viewerPage <= 1)
-                    Text(verbatim: "\(model.viewerPage)")
-                        .font(PVFont.mono(size: PVTypeScale.caption, weight: PVFontWeight.medium))
-                        .foregroundStyle(PVColor.textPrimary)
-                        .frame(minWidth: 20)
-                    Text(verbatim: L10n.CitationComposer.pageOf(total: model.viewerPageCount))
-                        .font(PVFont.body(size: PVTypeScale.caption))
-                        .foregroundStyle(PVColor.textMuted)
-                    PVIconButton(.chevronForward, label: L10n.CitationComposer.nextPage, size: .sm) {
-                        model.goToNextPage()
-                    }
-                    .disabled(model.viewerPage >= model.viewerPageCount)
-                }
+        HStack(spacing: 12) {
+            if model.artifactViewer.supportsPages || model.artifactViewer.supportsSpatialZoom {
+                ArtifactViewerToolChrome(model: model.artifactViewer)
                 toolSep
             }
-
-            HStack(spacing: PVSpacing.space2) {
-                Text(verbatim: "100%")
-                    .font(PVFont.body(size: PVTypeScale.caption))
-                    .foregroundStyle(PVColor.textMuted)
-            }
-            toolSep
 
             PVButton(L10n.CitationComposer.drawRegion, variant: .secondary, size: .sm) {
                 model.markWholeImageLocator()
@@ -114,12 +104,20 @@ struct CitationComposerViewerPane: View {
                 .accessibilityIdentifier("citationComposer.clearLocator")
             }
         }
+        .frame(height: 44)
+        .padding(.horizontal, 16)
+        .background(PVColor.surfaceCard)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(PVColor.borderSubtle)
+                .frame(height: 1)
+        }
     }
 
     private var toolSep: some View {
         Rectangle()
             .fill(PVColor.borderSubtle)
-            .frame(width: 1, height: 16)
+            .frame(width: 1, height: 18)
     }
 
     private var locatorCrumb: some View {
@@ -134,37 +132,5 @@ struct CitationComposerViewerPane: View {
                     .foregroundStyle(PVColor.textSecondary)
             }
         }
-    }
-
-    private var canvas: some View {
-        RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
-            .strokeBorder(PVColor.borderDefault, style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
-            .background(
-                RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
-                    .fill(PVColor.surfaceSunken)
-            )
-            .overlay {
-                VStack(spacing: PVSpacing.space3) {
-                    Text(verbatim: canvasCaption)
-                        .font(PVFont.body(size: PVTypeScale.body, weight: PVFontWeight.medium))
-                        .foregroundStyle(PVColor.textMuted)
-                        .multilineTextAlignment(.center)
-                    Text(L10n.CitationComposer.viewerPlaceholderMessage)
-                        .font(PVFont.body(size: PVTypeScale.caption))
-                        .foregroundStyle(PVColor.textFaint)
-                        .multilineTextAlignment(.center)
-                }
-                .padding(PVSpacing.space7)
-            }
-    }
-
-    private var canvasCaption: String {
-        if !model.hasLocator {
-            return String(localized: L10n.CitationComposer.canvasNothingSelected)
-        }
-        if let artifact = model.selectedArtifact {
-            return artifact.label.isEmpty ? artifact.ref : artifact.label
-        }
-        return String(localized: L10n.CitationComposer.viewerPlaceholderTitle)
     }
 }

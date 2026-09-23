@@ -8634,6 +8634,223 @@
         }
       }
     },
+
+    "artifactViewer.previousPage": {
+      "comment": "Artifact viewer: go to previous PDF page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous page"
+          }
+        }
+      }
+    },
+    "artifactViewer.nextPage": {
+      "comment": "Artifact viewer: go to next PDF page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next page"
+          }
+        }
+      }
+    },
+    "artifactViewer.pageField": {
+      "comment": "Accessibility label for the editable PDF page field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Page number"
+          }
+        }
+      }
+    },
+    "artifactViewer.pageOf": {
+      "comment": "Artifact viewer page count suffix; argument is total pages",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "of %lld"
+          }
+        }
+      }
+    },
+    "artifactViewer.zoomOut": {
+      "comment": "Artifact viewer: decrease magnification",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom out"
+          }
+        }
+      }
+    },
+    "artifactViewer.zoomIn": {
+      "comment": "Artifact viewer: increase magnification",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom in"
+          }
+        }
+      }
+    },
+    "artifactViewer.zoomPercent": {
+      "comment": "VoiceOver label for the live zoom percentage",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom %lld percent"
+          }
+        }
+      }
+    },
+    "artifactViewer.canvasAccessibility": {
+      "comment": "VoiceOver name for the pan/zoom document canvas",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artifact document"
+          }
+        }
+      }
+    },
+    "artifactViewer.emptyIdleTitle": {
+      "comment": "Empty canvas title before a document is loaded",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Artifact selected"
+          }
+        }
+      }
+    },
+    "artifactViewer.emptyIdleMessage": {
+      "comment": "Empty canvas body before a document is loaded",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose an Artifact to view it here."
+          }
+        }
+      }
+    },
+    "artifactViewer.unsupportedTitle": {
+      "comment": "Title when mediaType is not a supported viewer kind",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't preview this file"
+          }
+        }
+      }
+    },
+    "artifactViewer.unsupportedMessage": {
+      "comment": "Body when mediaType is unsupported",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Artifact type isn't supported in the viewer yet."
+          }
+        }
+      }
+    },
+    "artifactViewer.mediaComingSoonTitle": {
+      "comment": "Title when kind is audio/video (players not shipped)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio and video coming later"
+          }
+        }
+      }
+    },
+    "artifactViewer.mediaComingSoonMessage": {
+      "comment": "Body when kind is audio/video",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can still cite this Artifact; in-app playback isn't available yet."
+          }
+        }
+      }
+    },
+    "artifactViewer.missingFileTitle": {
+      "comment": "Title when ProjectFiles cannot resolve or find the object",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File missing"
+          }
+        }
+      }
+    },
+    "artifactViewer.missingFileMessage": {
+      "comment": "Body when the object file is missing",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The stored file could not be found in this project."
+          }
+        }
+      }
+    },
+    "artifactViewer.loadFailedTitle": {
+      "comment": "Title when image/PDF decode fails",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't open file"
+          }
+        }
+      }
+    },
+    "artifactViewer.loadFailedMessage": {
+      "comment": "Body when decode fails",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file exists but couldn't be read as an image or PDF."
+          }
+        }
+      }
+    },
     "citationComposer.breadcrumb.citationFor": {
       "comment": "Composer breadcrumb leaf; argument is subject label or bridge edge sentence",
       "extractionState": "manual",

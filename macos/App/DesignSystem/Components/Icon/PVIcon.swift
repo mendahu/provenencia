@@ -27,6 +27,8 @@ enum PVSymbol: String {
     case sidebarToggle = "sidebar.left"
     case search = "magnifyingglass"
     case searchEmpty = "text.magnifyingglass"
+    case zoomOut = "minus.magnifyingglass"
+    case zoomIn = "plus.magnifyingglass"
     case plus = "plus"
     case sortAscending = "arrow.up"
     case sortDescending = "arrow.down"

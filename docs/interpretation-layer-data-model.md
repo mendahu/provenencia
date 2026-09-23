@@ -312,7 +312,64 @@ A crop within a PDF is represented compositionally:
 
 The same `region` selector works directly against a standalone image without a preceding `page` selector.
 
-## 3.4 `time_range` selector
+## 3.4 `document` selector
+
+Names the **digital Artifact as a whole** as the starting context for the locator chain. Citations always bind an `artifact_id`; `document` makes “no further narrowing” an explicit, valid locator (and the UI default) instead of an empty `locator_json`.
+
+```json
+{
+  "type": "document"
+}
+```
+
+Schema:
+
+```text
+DocumentSelector {
+    type: "document"
+}
+```
+
+Rules:
+
+1. When present, `document` is the **first** selector in the chain (outermost context).
+2. It may stand alone (cite the entire Artifact) or be followed by narrowing selectors such as `page` and/or `region`.
+3. Prefer a `document`-only chain over an empty locator. Citations require a locator; empty JSON is invalid.
+4. Product UI prepopulates `[{ "type": "document" }]` and layers **Set Page** / region on top; there is no separate “cite whole document” checkbox.
+5. On paginated Artifacts (PDF), a `region` selector must be preceded by a `page` selector. If the UI creates a region while no page is set, it must insert `page` for the current viewer page before (or with) the region. Standalone images may use `document` → `region` with no `page`.
+
+Example — whole Artifact:
+
+```json
+{
+  "version": 1,
+  "selectors": [{ "type": "document" }]
+}
+```
+
+Example — page then region on that Artifact:
+
+```json
+{
+  "version": 1,
+  "selectors": [
+    { "type": "document" },
+    { "type": "page", "artifact_page": 2 },
+    {
+      "type": "region",
+      "unit": "normalized",
+      "points": [
+        { "x": 0.1, "y": 0.1 },
+        { "x": 0.4, "y": 0.1 },
+        { "x": 0.4, "y": 0.3 },
+        { "x": 0.1, "y": 0.3 }
+      ]
+    }
+  ]
+}
+```
+
+## 3.5 `time_range` selector
 
 Selects an interval from time-based media such as audio or video.
 
@@ -361,7 +418,7 @@ Selectors may be composed. For example, a Citation could identify a polygonal re
 }
 ```
 
-## 3.5 `text_quote` selector
+## 3.6 `text_quote` selector
 
 Selects textual content by its text rather than by unstable paragraph numbering or rendered coordinates.
 
@@ -408,7 +465,7 @@ For a PDF with a text layer, a page plus text quote can identify a paragraph or 
 }
 ```
 
-## 3.6 Future selectors
+## 3.7 Future selectors
 
 The selector system is intentionally open to additional addressable media and structured data. Possible future selectors include:
 
@@ -425,7 +482,7 @@ These are not part of the version 1 supported vocabulary until a concrete workfl
 
 Adding a selector type does not require changing the `citations` table. It requires defining that selector's JSON shape, validation rules, and application behavior.
 
-## 3.7 Locator invariants
+## 3.8 Locator invariants
 
 For locator version 1:
 
@@ -441,6 +498,8 @@ For locator version 1:
 10. For paginated digital Artifacts, the Artifact page position is authoritative for navigation.
 11. Printed or marked source pagination is supplementary descriptive data and does not replace the Artifact page position.
 12. Locator JSON identifies where the evidence is; transcription, description, and interpretation remain separate concerns.
+13. A `document` selector, when present, is the first (outermost) selector and may stand alone or be followed by narrowing selectors (`page`, `region`, …).
+14. On paginated Artifacts, `region` must follow `page` (a polygon is always relative to a chosen Artifact page).
 
 Conceptually:
 
