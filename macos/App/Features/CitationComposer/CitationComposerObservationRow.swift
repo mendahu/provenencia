@@ -46,6 +46,7 @@ struct CitationComposerObservationRow: View {
                     }
                     if !inert {
                         PVIconButton(.penLine, label: L10n.CitationComposer.editObservation, size: .sm, action: onEdit)
+                            .accessibilityIdentifier("citationComposer.observation.edit.\(row.id.uuidString)")
                         PVIconButton(
                             .trash,
                             label: L10n.CitationComposer.removeObservation,
@@ -53,10 +54,12 @@ struct CitationComposerObservationRow: View {
                             tone: .danger,
                             action: onRemove
                         )
+                        .accessibilityIdentifier("citationComposer.observation.remove.\(row.id.uuidString)")
                     }
                 }
             }
         }
+        .accessibilityIdentifier("citationComposer.observation.row.\(row.id.uuidString)")
     }
 
     private var fixedRow: some View {

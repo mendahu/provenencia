@@ -64,19 +64,17 @@ struct SourceGraphSnapshot: Sendable, Equatable {
     /// Joins catalog rows into placed primaries and bridges. Unplaced subjects
     /// and `source` types are omitted. Endpoint ids come from cited
     /// `value_subject_id` on edge Properties (`person` / `event` / `place` /
-    /// `related_to`). Leftover uncited JSON links do not draw lines.
+    /// `related_to`).
     static func build(
         sourceId: String,
         subjects: [CatalogSubject],
         positions: [CatalogSubjectPosition],
         types: [CatalogSubjectType],
-        provisionalLinks: [EvidenceProvisionalLink] = [],
         observations: [CatalogObservation] = []
     ) -> SourceGraphSnapshot {
         let typeByID = Dictionary(uniqueKeysWithValues: types.map { ($0.id, $0) })
         let positionBySubject = Dictionary(uniqueKeysWithValues: positions.map { ($0.subjectID, $0) })
         let observationsBySubject = Dictionary(grouping: observations, by: \.subjectID)
-        _ = provisionalLinks
 
         var placed: [SourceGraphPlacedSubject] = []
         var placedBridges: [SourceGraphPlacedBridge] = []
@@ -165,20 +163,6 @@ struct SourceGraphSnapshot: Sendable, Equatable {
         let keyCompare = lhs.propertyKey.localizedStandardCompare(rhs.propertyKey)
         if keyCompare != .orderedSame { return keyCompare == .orderedAscending }
         return lhs.ref.localizedStandardCompare(rhs.ref) == .orderedAscending
-    }
-
-    /// Returns a copy with provisional endpoint ids applied to matching bridges.
-    func attaching(links: [EvidenceProvisionalLink]) -> SourceGraphSnapshot {
-        guard !bridges.isEmpty else { return self }
-        let byBridge = Dictionary(uniqueKeysWithValues: links.map { ($0.bridgeSubjectID, $0) })
-        let next = bridges.map { bridge -> SourceGraphPlacedBridge in
-            guard let link = byBridge[bridge.id] else { return bridge }
-            var copy = bridge
-            copy.endpointAID = link.endpointAID
-            copy.endpointBID = link.endpointBID
-            return copy
-        }
-        return SourceGraphSnapshot(sourceId: sourceId, subjects: subjects, bridges: next)
     }
 
     /// Returns a copy with one subject's or bridge's grid cell updated.

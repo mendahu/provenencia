@@ -176,7 +176,7 @@ Pinning a Citation across successive graph edits is **out** (one Citation + N Ob
 
 ## Design track (briefs)
 
-**All UI is designed in Claude Design before the matching UI PR** (S7-D6 / S7-D7 / S7-D8 may be light handoffs rather than full surface boards). Briefs: [`design/`](design/).
+**All UI is designed in Claude Design before the matching UI PR** (S7-D6 / S7-D7 / S7-D8 / **S7-D10** may be light handoffs rather than full surface boards). Briefs: [`design/`](design/).
 
 | Step | Brief | Covers | Gates |
 | --- | --- | --- | --- |
@@ -188,10 +188,11 @@ Pinning a Citation across successive graph edits is **out** (one Citation + N Ob
 | **S7-D5** | NameValue editor | Reusable NameValue modal (DateValue twin); form + optional parts; **product part-type picker** (localized; no free text) | S7-02b |
 | **S7-D7** | Card component | Claude Design **Card** reference from shipped `PVCard`; tones / border / elevation; not graph snowflake cards | S7-13 |
 | **S7-D9** | Locator chrome | Default `artifact` + Set Page + region tools + summary list + dim-outside | S7-07 |
+| **S7-D10** | PVSelect native popup + remount | Kit Select page (native-popup contract); remount DateValue / table filter cousins; existing `PVSelect` hosts stay | S7-15 |
 
 ~~**S7-D1** Subject types editor~~ — **descoped** (see [Descoped](#descoped) below).
 
-**Scheduling:** **S7-D2** early (unblocks S7-05). **S7-D6** before mark consolidation (**S7-12**). **S7-D8** → **S7-14** after **S7-12**, before Add-property (**S7-09**). **S7-D3** before **S7-09**. **S7-D4** before thin composer (**S7-08**). **S7-D5** before NameValue Swift (**S7-02b**), late in the composer fill-in. Prefer **D6 → 12 → D8 → 14 → D3 → 09** so kit Callout actions exist before the graph message center. **S7-D9** before locator tools (**S7-07**). **S7-D7 → S7-13** late (after **S7-10**, before dogfood close).
+**Scheduling:** **S7-D2** early (unblocks S7-05). **S7-D6** before mark consolidation (**S7-12**). **S7-D8** → **S7-14** after **S7-12**, before Add-property (**S7-09**). **S7-D3** before **S7-09**. **S7-D4** before thin composer (**S7-08**). **S7-D5** before NameValue Swift (**S7-02b**), late in the composer fill-in. Prefer **D6 → 12 → D8 → 14 → D3 → 09** so kit Callout actions exist before the graph message center. **S7-D9** before locator tools (**S7-07**). **S7-D7 → S7-13** late (after **S7-10**). **S7-D10 → S7-15** after **S7-13**, before dogfood close (**S7-11**).
 
 ## Incremental UI dogfood (back half)
 
@@ -215,6 +216,8 @@ S7-02b NameValue editor hosted in composer
 S7-10  Durable connect macros
 S7-D7  Card component (design-system reference from shipped PVCard)
 S7-13  Migrate manual card cousins → PVCard
+S7-D10 Select kit page + remount (native-popup contract)
+S7-15  PVSelect native-popup parity + unify cousins
 S7-11  Full dogfood bar / close
 ```
 
@@ -286,6 +289,11 @@ S7-D7 Card component                │
   └────── D7 gates ───────────────▶ S7-13  PVCard call-site cleanup
                                     │      (four manual cousins → PVCard)
                                     │
+S7-D10 Select native popup          │
+  │                                 ▼
+  └────── D10 gates ──────────────▶ S7-15  PVSelect native-popup parity
+                                    │      + DateValue / table-filter unify
+                                    │
                                     ▼
                                   S7-11  Dogfood close / docs
 ```
@@ -301,7 +309,8 @@ S7-D7 Card component                │
 - **S7-06 / S7-07 / S7-02b** fill the composer in place; each is dogfoodable on top of S7-08.
 - **S7-07** → **S7-06** + **S7-03** validation + **S7-D9** (region chrome). PDF text selection for paste is a follow-on (raster viewer).
 - **S7-10** → working composer submit (S7-08+) + **S7-D3**.
-- **S7-13** → **S7-D7**. Late hygiene after connect; **before** S7-11. Does **not** rewrite Evidence graph snowflake cards.
+- **S7-13** → **S7-D7**. Late hygiene after connect; **before** S7-15. Does **not** rewrite Evidence graph snowflake cards.
+- **S7-15** → **S7-D10** + shipped `PVSelect`. After **S7-13**, **before** **S7-11**. Native-popup parity **and** migrate remaining `Picker` / `Menu` dropdown cousins onto `PVSelect`.
 
 Schema/Go (01–03, 01b) may start before design finishes; **UI PRs gate on the matching brief.**
 
@@ -331,6 +340,8 @@ Schema/Go (01–03, 01b) may start before design finishes; **UI PRs gate on the 
 - [x] S7-10 — Durable connect macros → [`completed.md`](completed.md)
 - [x] S7-D7 — Design: Card component (design-system reference) → [`completed.md`](completed.md)
 - [x] S7-13 — `PVCard` call-site cleanup (manual cousins) → [`completed.md`](completed.md)
+- [ ] S7-D10 — Design: PVSelect native popup + remount → [`design/S7-D10-pvselect-native-parity.md`](design/S7-D10-pvselect-native-parity.md)
+- [ ] S7-15 — `PVSelect` native-popup parity + unify cousins → [`completed.md`](completed.md)
 - [ ] S7-11 — Dogfood close / docs → [`completed.md`](completed.md)
 
 ## Descoped
@@ -386,6 +397,12 @@ Claude Design **Card** kit page / board, referenced from the already-shipped mac
 ## S7-D9 — Design: Locator region chrome
 
 Claude Design board for **locator chrome**: default `artifact` layer, **Set Page**, region tools, dim-outside, summary list. Brief archived: [`design/archive/S7-D9-locator-region-chrome.md`](design/archive/S7-D9-locator-region-chrome.md). Gates **S7-07**. Does **not** redesign the composer shell (**S7-D4**) or ship PDF Find (ideas parking lot).
+
+---
+
+## S7-D10 — Design: PVSelect native popup + remount
+
+Claude Design **Select** kit page from the already-shipped macOS [`PVSelect`](../../../macos/App/DesignSystem/Components/Select/PVSelect.swift), plus remount of leftover system popups. Brief: [`design/S7-D10-pvselect-native-parity.md`](design/S7-D10-pvselect-native-parity.md). Child remount slip: [`design/S7-D10B-select-view-remount.md`](design/S7-D10B-select-view-remount.md). Gates **S7-15**. The kit page **must document the full native-popup contract** (closed vs open table, state frames, keys, press-drag-release, placement, a11y) — chrome-only is incomplete. Points DateValue calendar/month and `PVTable` column filter at Select; existing `PVSelect` hosts stay. Does **not** absorb `PVComboBox`, action menus, or segmented chips. Schedule after **S7-13**, before dogfood close.
 
 ---
 
@@ -615,7 +632,53 @@ After **S7-D7**, migrate the remaining **manual card cousins** onto shared `PVCa
 | **In** | Those four migrations; any small `PVCard` API tweak required by **S7-D7**; keep DesignSystem README Card row accurate. |
 | **Out** | Evidence graph subject/bridge/palette chrome; Subject fields type-strip tiles; file-choice / icon-picker selected cells; full-bleed pane fills; omnibar `overlay` elevation (unless D7 explicitly unifies it). |
 | **Testable** | Onboarding identify + open-picker + project meta, and Source types detail tile, still look correct; `rg` for the old hand-built patterns at those sites is gone. |
-| **Depends on** | **S7-D7**. Schedule after **S7-10**, before **S7-11**. |
+| **Depends on** | **S7-D7**. Schedule after **S7-10**, before **S7-15**. |
+
+---
+
+## S7-15 — PVSelect native-popup parity + unify cousins
+
+Keep custom Frost chrome (field + chip). Do **not** swap in SwiftUI `Picker` / `Menu` or AppKit `NSPopUpButton`. Reach **interaction and accessibility parity** with a native macOS popup button — same product decision as [`PVTable`](../../../macos/App/DesignSystem/Components/Table/PVTable.swift) (custom look, native contract) — **and** delete the remaining dropdown forks so every pick-one menu is `PVSelect`.
+
+**Evaluate-ui-component (S7-D10 inventory):** five production hosts already compose `PVSelect` (NameValue part type, Source fields data type, onboarding project, Sources filter + sort). Two DateValue `Picker`s and `PVTable.filterMenu` (`Menu` + inline `Picker`) reimplement the same exclusive-choice contract. `PVComboBox`, `PVContextMenu` action menus, and segmented `PVChip` groups are different interactions — leave them.
+
+Keyboard was started (↑/↓ opens, type-select jumps) but the closed-field contract, press-drag-release, placement, selected-vs-highlight, and VoiceOver role are still short of `NSPopUpButton`. Land the contract and the cousin migrations before dogfood close.
+
+**Product decisions (do not reopen in the PR):**
+
+| Choice | Decision |
+| --- | --- |
+| Native `Picker` / `NSPopUpButton` | **No** — field/chip chrome stays on `PV*` tokens. |
+| Custom `PVSelect` on `PVContextMenu` | **Yes** — extend the kit; do not fork a second select. |
+| Claude Design board | **Yes** — **S7-D10** kit page + remount; lock the contract here and in `DesignSystem/README.md`. |
+| Unify | Every exclusive dropdown becomes `PVSelect`. Icon-only chip slot only if the table filter needs a label-hidden trigger. |
+
+**Interaction contract** (mirror `NSPopUpButton`; document in the DesignSystem README like the `PVTable` table):
+
+| Input | Closed (focused trigger) | Open (menu showing) |
+| --- | --- | --- |
+| Click | Open | Choose the row under the pointer |
+| Press–drag–release | Open on press; highlight follows the pointer; release on a row commits | Same tracking loop |
+| Space / Return | Open | Commit the highlighted row |
+| ↑ / ↓ | **Change the value** (do not open). Clamp at the ends — do not wrap. | Move highlight. Clamp. Enter commits. |
+| a–z, 0–9 | Type-to-select: commit the matching option **without opening**. Same 800ms buffer as `PVTypeSelectMatcher`; a single keystroke cycles the next prefix match. | Jump highlight to the match; Enter commits. Escape does **not** keep a type-select that was not committed. |
+| Escape | No-op | Dismiss; restore the value from when the menu opened |
+| Home / End | First / last option (commit, stay closed) | First / last highlight |
+| Click away | — | Dismiss without commit (same as Escape) |
+
+**Also required:**
+
+- **Selected vs highlight** — committed row keeps a distinct mark (checkmark / selected trait). Keyboard and hover highlight are a separate fill. Two rows must not look equally selected.
+- **Placement** — open below the trigger when there is room; flip above when the list would clip the screen. Width follows the trigger (or `menuWidth` as a minimum). Long lists scroll; they do not grow off-screen.
+- **Accessibility** — VoiceOver role is a popup button; announce the current value; announce expanded/collapsed when the menu opens and closes. Keep dotted `accessibilityIdentifier`s.
+- **Focus** — keep the existing focus ring; tab order is one stop on the trigger (the menu is not a second tab stop).
+
+| | |
+| --- | --- |
+| **In** | `PVSelect` native-popup contract (press-drag-release; closed-field arrows + type-select; selected-vs-highlight; flip/scroll/width; Home/End; popup-button a11y); DesignSystem README contract; unit tests for movement, type-select, and placement. Migrate [`DateValueEditorForm`](../../../macos/App/Features/Dates/DateValueEditorForm.swift) calendar + month `Picker`s and [`PVTable.filterMenu`](../../../macos/App/DesignSystem/Components/Table/PVTable.swift) onto `PVSelect` (add icon-only chip only if the filter needs it). Existing hosts keep compiling. `rg` clean of feature `Picker(` / table `Menu {` dropdowns. |
+| **Out** | Replacing `PVSelect` with SwiftUI `Picker`; `PVComboBox` rewrite; `PVContextMenu` action menus; segmented `PVChip` groups; option sections / separators / disabled rows; visual restyle of field or chip chrome; new product call sites. |
+| **Testable** | NameValue part-type: tab to the select, ↑/↓ changes the type without a menu; type `s` lands Surname while closed; Space opens; press-drag-release chooses; Esc restores; VoiceOver reads a popup button with a value. DateValue month + calendar are `PVSelect` and follow the same keys. Table filter (when shown) is `PVSelect`, not `Menu`+`Picker`. A select near the bottom of the window opens upward. |
+| **Depends on** | **S7-D10**. Shipped [`PVSelect`](../../../macos/App/DesignSystem/Components/Select/PVSelect.swift). After **S7-13**, before **S7-11**. |
 
 ---
 

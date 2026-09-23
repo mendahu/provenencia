@@ -54,7 +54,11 @@ Kind/edge Properties (`event_type`, `role`, `relationship_type`) use `term` + `p
 **`value_type = term` Properties are Install/registry only** (`origin=provenencia` or `plugin:<id>`). Researcher Create Property must refuse `term`.
 Researchers may still add `origin=user` **term rows** under those Properties via the composer picker.
 Capabilities, presentation tokens, locked bindings, and the connect matrix stay
-in the compiled `subjectvocab` registry (not SQL columns). Term capabilities
+in the compiled `subjectvocab` registry (not SQL columns). `seedConnect` is the
+only product matrix. `CatalogConnectRule.productMatrix` in
+`macos/App/Platform/GenealogyStore.swift` is the FakeStore / unit-test double —
+update it in the same change as `seedConnect`. Live Mac connect reads
+`listConnectRules` and does not fall back to that table. Term capabilities
 (birthday facets, tree-edge roles, …) are deferred until a later PR.
 
 Uniqueness is **`UNIQUE (key, origin)`**. Lookup is always `(key, origin)`, never bare key. Domain FKs store vocabulary **`id`**, not key.

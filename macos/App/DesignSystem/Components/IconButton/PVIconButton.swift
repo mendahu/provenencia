@@ -46,6 +46,7 @@ struct PVIconButton: View {
     private let accessibilityLabel: LocalizedStringResource?
     private let size: PVControlSize
     private let tone: PVIconButtonTone
+    private let isSelected: Bool
     private let action: () -> Void
 
     /// `label` is both the tooltip and, by default, what VoiceOver reads.
@@ -58,6 +59,7 @@ struct PVIconButton: View {
         accessibilityLabel: LocalizedStringResource? = nil,
         size: PVControlSize = .md,
         tone: PVIconButtonTone = .neutral,
+        isSelected: Bool = false,
         action: @escaping () -> Void
     ) {
         self.icon = icon
@@ -65,6 +67,7 @@ struct PVIconButton: View {
         self.accessibilityLabel = accessibilityLabel
         self.size = size
         self.tone = tone
+        self.isSelected = isSelected
         self.action = action
     }
 
@@ -72,8 +75,9 @@ struct PVIconButton: View {
         Button(action: action) {
             PVIcon(icon, size: size.iconGlyphSize)
         }
-        .buttonStyle(PVIconButtonStyle(size: size, tone: tone))
+        .buttonStyle(PVIconButtonStyle(size: size, tone: tone, isSelected: isSelected))
         .accessibilityLabel(Text(accessibilityLabel ?? label))
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
         // `.help` on the button itself stops firing once it is disabled, and
         // the disabled tooltip is exactly where the reason lives — so the
         // hit area carries it instead.
@@ -85,9 +89,15 @@ struct PVIconButton: View {
 private struct PVIconButtonStyle: ButtonStyle {
     var size: PVControlSize = .md
     var tone: PVIconButtonTone = .neutral
+    var isSelected: Bool = false
 
     func makeBody(configuration: Configuration) -> some View {
-        PVIconButtonBody(configuration: configuration, size: size, tone: tone)
+        PVIconButtonBody(
+            configuration: configuration,
+            size: size,
+            tone: tone,
+            isSelected: isSelected
+        )
     }
 }
 
@@ -95,23 +105,30 @@ private struct PVIconButtonBody: View {
     let configuration: ButtonStyleConfiguration
     let size: PVControlSize
     let tone: PVIconButtonTone
+    let isSelected: Bool
 
     var body: some View {
         PVHoverEffect(isPressed: configuration.isPressed) { showHover in
             configuration.label
-                .foregroundStyle(tone.foreground)
+                .foregroundStyle(isSelected ? PVColor.accentSoftForeground : tone.foreground)
                 .frame(width: size.height, height: size.height)
                 .background(
                     RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                        .fill(showHover ? tone.hoverFill : tone.restingFill)
+                        .fill(fill(showHover: showHover))
                 )
         }
+    }
+
+    private func fill(showHover: Bool) -> Color {
+        if isSelected { return PVColor.accentSoft }
+        return showHover ? tone.hoverFill : tone.restingFill
     }
 }
 
 #Preview {
     HStack(spacing: PVSpacing.space5) {
         PVIconButton(.sidebarToggle, label: "Collapse sidebar") {}
+        PVIconButton(.regionRectangle, label: "Rectangle", size: .sm, isSelected: true) {}
         PVIconButton(.dismiss, label: "Dismiss", size: .sm) {}
         PVIconButton(.check, label: "Save value", size: .sm, tone: .accent) {}
         PVIconButton(.account, label: "Account", size: .lg) {}

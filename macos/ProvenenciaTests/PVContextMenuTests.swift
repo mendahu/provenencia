@@ -34,6 +34,59 @@ struct PVContextMenuKeyboardTests {
     @Test func inactiveHasNoRowsOrHighlight() {
         #expect(PVContextMenuKeyboard.inactive.itemCount == 0)
         #expect(PVContextMenuKeyboard.inactive.activeIndex == -1)
+        #expect(PVContextMenuKeyboard.inactive.itemTitles.isEmpty)
+    }
+
+    @Test func typeSelectJumpsToMatchingTitle() {
+        var nav = PVContextMenuKeyboard(
+            itemCount: 4,
+            activeIndex: 0,
+            itemTitles: ["(none)", "Given name", "Surname", "Suffix"]
+        )
+        let moved = nav.applyTypeSelect("s")
+        #expect(moved)
+        #expect(nav.activeIndex == 2)
+    }
+
+    @Test func typeSelectCyclesRepeatedSingleLetters() {
+        var nav = PVContextMenuKeyboard(
+            itemCount: 3,
+            activeIndex: 0,
+            itemTitles: ["Prefix", "Suffix", "Surname"]
+        )
+        let start = Date()
+        let first = nav.applyTypeSelect("s", now: start)
+        #expect(first)
+        #expect(nav.activeIndex == 1)
+        let next = start.addingTimeInterval(PVTypeSelectMatcher.resetInterval + 0.01)
+        let second = nav.applyTypeSelect("s", now: next)
+        #expect(second)
+        #expect(nav.activeIndex == 2)
+    }
+
+    @Test func typeSelectAccumulatesAPrefix() {
+        var nav = PVContextMenuKeyboard(
+            itemCount: 3,
+            activeIndex: 0,
+            itemTitles: ["Given name", "Suffix", "Surname"]
+        )
+        let start = Date()
+        let first = nav.applyTypeSelect("s", now: start)
+        #expect(first)
+        #expect(nav.activeIndex == 1)
+        let second = nav.applyTypeSelect("u", now: start.addingTimeInterval(0.1))
+        #expect(second)
+        #expect(nav.activeIndex == 1)
+        let third = nav.applyTypeSelect("r", now: start.addingTimeInterval(0.2))
+        #expect(third)
+        #expect(nav.activeIndex == 2)
+    }
+
+    @Test func typeSelectIsANoOpWithoutTitles() {
+        var nav = PVContextMenuKeyboard(itemCount: 2, activeIndex: 0)
+        let moved = nav.applyTypeSelect("s")
+        #expect(!moved)
+        #expect(nav.activeIndex == 0)
     }
 }
 

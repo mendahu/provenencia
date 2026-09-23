@@ -117,6 +117,7 @@ struct CitationComposerFormPane: View {
                     navigation.go(to: model.graphLocation())
                 }
                 .disabled(model.isSubmitting)
+                .accessibilityIdentifier("citationComposer.form.cancel")
                 Spacer()
                 PVButton(
                     L10n.CitationComposer.save,

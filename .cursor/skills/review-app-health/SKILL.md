@@ -72,7 +72,7 @@ App health review:
 | Perf hotspots | Catalog session misuse, N+1 queries, SwiftUI `body` work, sync FFI on UI path, image/derivative work, search/FTS |
 | Docs / skills drift | Spot-check `.cursor/skills/`, `.cursor/rules/`, and key `docs/*.md` against the live tree; flag broken paths and contradicted “blessed” patterns |
 | Accessibility | Grep `.accessibilityIdentifier` / labels; sample interactive controls (esp. icon-only); compare to `docs/macos-client-patterns.md` §5 |
-| Component reuse | Sample `DesignSystem/Components/**` + hot feature chrome; flag orphans/near-duplicates. Deep dive on one named type → [`evaluate-ui-component`](../evaluate-ui-component/SKILL.md) (do not expand §12 into full per-type plans here) |
+| Component reuse | Inventory `DesignSystem/Components/**` by **what each control does** (icon action, selected toggle, field, chip, menu, confirm, …), then sample hot feature chrome the same way. Flag a rewrite when a surface implements that interaction by hand—named type or `private func`—instead of composing the kit type that already owns it. Follow chrome a host **embeds**, not only files under the feature folder. Deep dive on one named type → [`evaluate-ui-component`](../evaluate-ui-component/SKILL.md) (do not expand §12 into full per-type plans here) |
 | State ownership | Map `@State` / `@Observable` models / `QueryHandle`s in 2–3 hot trees (composer, graph, source page, onboarding). Flag sibling-to-sibling sync, shadow caches, and mutation paths that bypass `WorkspaceSession` |
 
 Keep commands read-only unless the user asked to fix. Prefer sampling deeply in hot paths over exhaustively listing every file.
@@ -92,7 +92,7 @@ Read [`criteria.md`](criteria.md) for the full rubric. In short:
 9. **i18n** — no hard-coded user-facing strings; `L10n` + catalogs; FFI codes mapped under `L10n.Errors`.
 10. **Docs/skills/rules drift** — authoritative guidance still matches code; no orphan skills, stale rules, or contradicted docs that would mis-train the next agent.
 11. **Accessibility** — VoiceOver/keyboard-ready controls; stable dotted `accessibilityIdentifier`s; labels on icon-only actions; no UI-testing by localized title.
-12. **UI component organization** — orphans, near-duplicates, and wrong Frost layer (DS vs recipe vs snowflake); sample and flag; for a pointed deep-dive + compose plan use [`evaluate-ui-component`](../evaluate-ui-component/SKILL.md); for new chrome use [`add-ui-component`](../add-ui-component/SKILL.md).
+12. **UI component organization** — orphans, near-duplicates, and wrong Frost layer (DS vs recipe vs snowflake); judge by **interaction contract** (what the control does), not type name; sample and flag; for a pointed deep-dive + compose plan use [`evaluate-ui-component`](../evaluate-ui-component/SKILL.md); for new chrome use [`add-ui-component`](../add-ui-component/SKILL.md).
 13. **State management** — who owns which state in the SwiftUI tree; sibling ping-pong that should hoist into a parent machine; `WorkspaceSession` / `QueryHandle` caches vs local shadow copies.
 
 ## Provenencia invariants (flag violations)

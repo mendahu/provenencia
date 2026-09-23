@@ -18,12 +18,27 @@ struct PVContextMenuState: Equatable {
     }
 }
 
-/// Optional ↑/↓/⏎ navigation for an open overlay menu.
+/// Optional ↑/↓/⏎ navigation (and type-to-select) for an open overlay menu.
 struct PVContextMenuKeyboard: Equatable {
     var itemCount: Int
     var activeIndex: Int
+    /// Row titles for type-to-select. Empty disables letter jumping.
+    var itemTitles: [String] = []
+    var typeSelect = PVTypeSelectMatcher()
 
     static let inactive = PVContextMenuKeyboard(itemCount: 0, activeIndex: -1)
+
+    /// Advances the highlight to the next title matching the type-select buffer.
+    /// Returns `true` when the highlight moved.
+    mutating func applyTypeSelect(_ character: Character, now: Date = Date()) -> Bool {
+        guard !itemTitles.isEmpty else { return false }
+        let buffer = typeSelect.append(character, now: now)
+        let from = buffer.count == 1 ? activeIndex + 1 : max(0, activeIndex)
+        let hit = PVTypeSelectMatcher.index(in: itemTitles, prefix: buffer, fromIndex: from)
+        guard hit >= 0 else { return false }
+        activeIndex = hit
+        return true
+    }
 }
 
 /// Screen-space frame for the child `NSPanel`.
@@ -361,7 +376,20 @@ private struct PVContextMenuPresenter<MenuContent: View>: ViewModifier {
             }
             return nil
         default:
-            return event
+            guard let characters = event.charactersIgnoringModifiers,
+                  characters.count == 1,
+                  let character = characters.first,
+                  character.isLetter || character.isNumber,
+                  !event.modifierFlags.contains(.command),
+                  !event.modifierFlags.contains(.control),
+                  !nav.itemTitles.isEmpty
+            else { return event }
+            DispatchQueue.main.async {
+                guard var next = keyboard?.wrappedValue else { return }
+                _ = next.applyTypeSelect(character)
+                keyboard?.wrappedValue = next
+            }
+            return nil
         }
     }
 

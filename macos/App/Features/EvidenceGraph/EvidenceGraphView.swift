@@ -438,71 +438,34 @@ private struct EvidenceGraphContent: View {
     }
 
     private func handleKey(_ press: KeyPress) -> KeyPress.Result {
-        if model.isSheetPresented { return .ignored }
-
-        if press.key == .escape {
-            if model.armedConnect || model.armedKind != nil {
-                model.disarm()
-                return .handled
-            }
-            if model.activatedSubjectID != nil {
-                model.deactivateSubject()
-                return .handled
-            }
-            if model.selectedSubjectID != nil || focus != nil {
-                model.selectSubject(id: nil)
-                focus = nil
-                return .handled
-            }
-            return .ignored
-        }
-
-        if press.key == .return || press.key == .space {
-            guard model.inputMode == .idle,
-                  let selectedID = model.selectedSubjectID
-            else { return .ignored }
-            if press.key == .return {
-                model.beginEdit(subjectID: selectedID)
-            } else {
-                model.activateSubject(id: selectedID)
-            }
-            return .handled
-        }
-
-        guard model.inputMode == .idle,
-              let selectedID = model.selectedSubjectID
-        else { return .ignored }
-
-        let grid: (Int64, Int64)?
-        if let placed = subjects.first(where: { $0.id == selectedID }) {
-            grid = (placed.gridX, placed.gridY)
-        } else if let bridge = bridges.first(where: { $0.id == selectedID }) {
-            grid = (bridge.gridX, bridge.gridY)
-        } else {
-            grid = nil
-        }
-        guard let (fromX, fromY) = grid else { return .ignored }
-
-        let delta: (Int64, Int64)?
+        let command: EvidenceGraphModel.Key?
         switch press.key {
-        case .leftArrow: delta = (-1, 0)
-        case .rightArrow: delta = (1, 0)
-        case .upArrow: delta = (0, -1)
-        case .downArrow: delta = (0, 1)
-        default: delta = nil
+        case .escape: command = .escape
+        case .return: command = .return
+        case .space: command = .space
+        case .leftArrow: command = .arrow(dx: -1, dy: 0)
+        case .rightArrow: command = .arrow(dx: 1, dy: 0)
+        case .upArrow: command = .arrow(dx: 0, dy: -1)
+        case .downArrow: command = .arrow(dx: 0, dy: 1)
+        default: command = nil
         }
-        guard let (dx, dy) = delta else { return .ignored }
-
-        Task {
-            _ = await model.moveSubject(
-                subjectID: selectedID,
-                fromGridX: fromX,
-                fromGridY: fromY,
-                deltaX: dx,
-                deltaY: dy
-            )
+        guard let command else { return .ignored }
+        let effect = model.handleKey(command, hasFocus: focus != nil)
+        if effect.clearFocus {
+            focus = nil
         }
-        return .handled
+        if let subjectID = effect.moveSubjectID {
+            Task {
+                _ = await model.moveSubject(
+                    subjectID: subjectID,
+                    fromGridX: effect.moveFromX,
+                    fromGridY: effect.moveFromY,
+                    deltaX: effect.moveDeltaX,
+                    deltaY: effect.moveDeltaY
+                )
+            }
+        }
+        return effect.handled ? .handled : .ignored
     }
 }
 
@@ -622,7 +585,7 @@ private struct EvidenceGraphDocumentBody: View {
         .onChange(of: subjects.map { "\($0.id):\($0.gridX),\($0.gridY):\($0.observations.count)" }) { _, _ in
             publishHitTargets()
         }
-        .onChange(of: bridges.map { "\($0.id):\($0.gridX),\($0.gridY)" }) { _, _ in
+        .onChange(of: bridges.map { "\($0.id):\($0.gridX),\($0.gridY):\($0.observations.count)" }) { _, _ in
             publishHitTargets()
         }
     }
@@ -631,7 +594,6 @@ private struct EvidenceGraphDocumentBody: View {
         syncPointerMode()
         publishHitTargets()
         let model = model
-        let handle = handle
         let navigation = navigation
         pointer.onSelect = { id in
             model.selectSubject(id: id)
@@ -640,20 +602,11 @@ private struct EvidenceGraphDocumentBody: View {
             model.selectSubject(id: nil)
         }
         pointer.onDragEnded = { id, delta in
-            let snap = model.displaySnapshot(from: handle.value)
-            let grid: (Int64, Int64)?
-            if let placed = snap.subjects.first(where: { $0.id == id }) {
-                grid = (placed.gridX, placed.gridY)
-            } else if let bridge = snap.bridges.first(where: { $0.id == id }) {
-                grid = (bridge.gridX, bridge.gridY)
-            } else {
-                grid = nil
-            }
-            guard let (ox, oy) = grid else { return }
+            guard let cell = model.gridCell(for: id) else { return }
             _ = model.commitDrag(
                 subjectID: id,
-                originGridX: ox,
-                originGridY: oy,
+                originGridX: cell.x,
+                originGridY: cell.y,
                 documentDelta: delta
             )
         }
@@ -661,39 +614,16 @@ private struct EvidenceGraphDocumentBody: View {
             model.beginCreate(at: point)
         }
         pointer.onConnectPick = { id in
-            let snap = model.displaySnapshot(from: handle.value)
-            guard let placed = snap.subjects.first(where: { $0.id == id }) else { return }
             Task {
-                await model.handleConnectPick(
-                    subjectID: placed.id,
-                    kind: placed.kind,
-                    label: placed.subject.label
-                )
+                await model.handleConnectPick(subjectID: id)
                 if let location = model.consumeComposerHandoff() {
                     navigation.go(to: location)
                 }
             }
         }
         pointer.onCardAction = { id, actionID in
-            switch actionID {
-            case EvidenceSubjectCard.editActionID, EvidenceBridgeCard.editActionID:
-                model.beginEdit(subjectID: id)
-            case EvidenceBridgeCard.editCitationActionID:
-                if let location = model.composerLocationForBridgeCitation(subjectID: id) {
-                    navigation.go(to: location)
-                }
-            case EvidenceSubjectCard.deleteActionID, EvidenceBridgeCard.deleteActionID:
-                model.beginDelete(subjectID: id)
-            case EvidenceSubjectCard.addPropertyActionID:
-                if let location = model.composerLocation(for: id) {
-                    navigation.go(to: location)
-                }
-            default:
-                if let observationID = EvidenceSubjectCard.observationID(fromEditPropertyAction: actionID),
-                   let location = model.composerLocation(forObservationID: observationID, subjectID: id)
-                {
-                    navigation.go(to: location)
-                }
+            if let location = model.performCardAction(subjectID: id, actionID: actionID) {
+                navigation.go(to: location)
             }
         }
         pointer.onHover = { point in
@@ -735,11 +665,7 @@ private struct EvidenceGraphDocumentBody: View {
             targets.append(
                 GraphCanvasHitTarget(
                     id: placed.id,
-                    frame: EvidenceBridgeCard.contentFrame(
-                        gridX: placed.gridX,
-                        gridY: placed.gridY,
-                        dragOffset: offset
-                    ),
+                    frame: EvidenceBridgeCard.contentFrame(for: placed, dragOffset: offset),
                     acceptsConnect: false,
                     actions: EvidenceBridgeCard.actionTargets(
                         for: placed,

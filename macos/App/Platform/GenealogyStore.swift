@@ -230,7 +230,8 @@ struct CatalogConnectRule: Sendable, Equatable {
     var disambiguation: String
     var refuse: Bool
 
-    /// Compiled product matrix (same rows as `subjectvocab.seedConnect`).
+    /// FakeStore and unit-test double of `subjectvocab.seedConnect`.
+    /// Live connect reads `listConnectRules` only. When the Go registry changes, update this table in the same change.
     static let productMatrix: [CatalogConnectRule] = [
         CatalogConnectRule(
             fromTypeKey: "person", toTypeKey: "event",

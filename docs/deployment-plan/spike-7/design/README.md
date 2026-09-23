@@ -6,7 +6,9 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 
 ## Open
 
-_None._ Remaining Spike 7 work is dogfood close (**S7-11**), not a design brief.
+| Step | Brief | Feeds | Notes |
+| --- | --- | --- | --- |
+| S7-D10 | [`S7-D10-pvselect-native-parity.md`](S7-D10-pvselect-native-parity.md) · [D10B](S7-D10B-select-view-remount.md) | PR S7-15 | Select kit page must document the full native-popup contract on-canvas; remount DateValue / table-filter cousins; ComboBox and action menus stay |
 
 ## Descoped
 

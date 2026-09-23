@@ -48,6 +48,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var reorderSourceMetadataError: Error?
     /// When set, `setSubjectPosition` throws (Evidence graph drag should revert).
     var setSubjectPositionError: Error?
+    var listSubjectsError: Error?
+    var listConnectRulesError: Error?
+    var createPropertyTermError: Error?
     /// When set, `addSourceNote` throws (`pageError` surfacing).
     var addSourceNoteError: Error?
     /// When set, `ingestArtifactFile` throws before mutating artifacts.
@@ -1013,6 +1016,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     func listSubjects(projectDir: String, sourceID: String) async throws -> [CatalogSubject] {
         markCatalogSessionHeld(projectDir)
+        if let listSubjectsError {
+            throw listSubjectsError
+        }
         return subjectsBySource[sourceID] ?? []
     }
 
@@ -1115,6 +1121,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         description: String
     ) async throws -> CatalogPropertyTerm {
         markCatalogSessionHeld(projectDir)
+        if let createPropertyTermError {
+            throw createPropertyTermError
+        }
         let key = label
             .lowercased()
             .replacingOccurrences(of: " ", with: "-")
@@ -1255,7 +1264,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     func listConnectRules() async throws -> [CatalogConnectRule] {
-        connectRules
+        if let listConnectRulesError {
+            throw listConnectRulesError
+        }
+        return connectRules
     }
 
     func createCitedBridge(

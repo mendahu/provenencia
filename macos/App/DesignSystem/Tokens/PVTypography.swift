@@ -72,33 +72,42 @@ enum PVTracking {
 /// never crashes.
 enum PVFont {
     static func display(size: CGFloat = PVTypeScale.h2, weight: CGFloat = PVFontWeight.semibold) -> Font {
-        resolved(family: PVFontFamily.display, size: size, weight: weight, italic: false, fallbackDesign: .serif)
+        Font(nsDisplay(size: size, weight: weight))
     }
 
     static func body(size: CGFloat = PVTypeScale.body, weight: CGFloat = PVFontWeight.regular, italic: Bool = false) -> Font {
-        resolved(family: PVFontFamily.body, size: size, weight: weight, italic: italic, fallbackDesign: .serif)
+        Font(nsBody(size: size, weight: weight, italic: italic))
     }
 
     static func mono(size: CGFloat = PVTypeScale.caption, weight: CGFloat = PVFontWeight.regular) -> Font {
-        resolved(family: PVFontFamily.mono, size: size, weight: weight, italic: false, fallbackDesign: .monospaced)
+        Font(nsResolved(family: PVFontFamily.mono, size: size, weight: weight, italic: false))
     }
 
-    private static func resolved(
+    /// AppKit face used by display text, so measured card heights match paint.
+    static func nsDisplay(size: CGFloat, weight: CGFloat = PVFontWeight.semibold) -> NSFont {
+        nsResolved(family: PVFontFamily.display, size: size, weight: weight, italic: false)
+    }
+
+    /// AppKit face used by body text, so measured card heights match paint.
+    static func nsBody(size: CGFloat, weight: CGFloat = PVFontWeight.regular, italic: Bool = false) -> NSFont {
+        nsResolved(family: PVFontFamily.body, size: size, weight: weight, italic: italic)
+    }
+
+    private static func nsResolved(
         family: String,
         size: CGFloat,
         weight: CGFloat,
-        italic: Bool,
-        fallbackDesign: Font.Design
-    ) -> Font {
+        italic: Bool
+    ) -> NSFont {
         var traits: [NSFontDescriptor.TraitKey: Any] = [.weight: nsWeight(for: weight)]
         if italic {
             traits[.symbolic] = NSFontDescriptor.SymbolicTraits.italic.rawValue
         }
         let descriptor = NSFontDescriptor(fontAttributes: [.family: family, .traits: traits])
         if let nsFont = NSFont(descriptor: descriptor, size: size) {
-            return Font(nsFont)
+            return nsFont
         }
-        return .system(size: size, weight: systemWeight(for: weight), design: fallbackDesign)
+        return NSFont.systemFont(ofSize: size, weight: systemNSWeight(for: weight))
     }
 
     /// CSS numeric weight (300-700) -> the roughly-equivalent `NSFont.Weight`
@@ -114,7 +123,7 @@ enum PVFont {
         }
     }
 
-    private static func systemWeight(for weight: CGFloat) -> Font.Weight {
+    private static func systemNSWeight(for weight: CGFloat) -> NSFont.Weight {
         switch weight {
         case ..<PVFontWeight.regular: return .light
         case PVFontWeight.regular..<PVFontWeight.medium: return .regular

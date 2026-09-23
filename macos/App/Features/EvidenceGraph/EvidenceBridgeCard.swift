@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// Subordinate bridge / relationship card on the Evidence graph (S6-04 / S7-09).
@@ -70,14 +71,54 @@ struct EvidenceBridgeCard: View {
     }
 
     /// Document-space frame used for edge attachment and AppKit hit targets.
-    static func contentFrame(gridX: Int64, gridY: Int64, dragOffset: CGSize = .zero) -> CGRect {
-        let center = contentCenter(gridX: gridX, gridY: gridY)
+    /// Height follows the wrapped body so lines and hits stay on the painted card.
+    static func contentFrame(for placed: SourceGraphPlacedBridge, dragOffset: CGSize = .zero) -> CGRect {
+        let center = contentCenter(gridX: placed.gridX, gridY: placed.gridY)
         return CGRect(
             x: center.x - width / 2 + dragOffset.width,
             y: center.y - approximateHalfHeight + dragOffset.height,
             width: width,
-            height: edgeLayoutHeight
+            height: contentHeight(for: placed)
         )
+    }
+
+    /// Painted height: header plus up to three wrapped body lines, at least ``edgeLayoutHeight``.
+    static func contentHeight(for placed: SourceGraphPlacedBridge) -> CGFloat {
+        let header = placed.isCited ? headerContentHeightCited : headerContentHeightUncited
+        let text = placed.isCited
+            ? EvidenceBridgeEdgeSummary.phrase(for: placed)
+            : String(localized: L10n.EvidenceGraph.bridgeHonestyBody)
+        let font = placed.isCited
+            ? PVFont.nsDisplay(size: 14.5, weight: PVFontWeight.medium)
+            : PVFont.nsBody(size: 11.5, weight: PVFontWeight.regular, italic: true)
+        let body = wrappedTextHeight(text, width: bodyTextWidth, font: font, maxLines: 3)
+        let height = shellPaddingTop + header + headerToBodySpacing + body + shellPaddingTop
+        return max(edgeLayoutHeight, height)
+    }
+
+    /// Body copy width inside the shell, leaving room for the trailing icon column.
+    private static var bodyTextWidth: CGFloat {
+        width - shellPaddingX * 2 - 8 - 12
+    }
+
+    private static func wrappedTextHeight(
+        _ text: String,
+        width: CGFloat,
+        font: NSFont,
+        maxLines: Int
+    ) -> CGFloat {
+        let style = NSMutableParagraphStyle()
+        style.lineBreakMode = .byWordWrapping
+        let rect = (text as NSString).boundingRect(
+            with: CGSize(width: max(width, 1), height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            attributes: [
+                .font: font,
+                .paragraphStyle: style,
+            ]
+        )
+        let line = max(font.boundingRectForFont.height, 1)
+        return min(ceil(rect.height), ceil(line) * CGFloat(maxLines))
     }
 
     static func actionTargets(
@@ -85,7 +126,7 @@ struct EvidenceBridgeCard: View {
         canCite: Bool,
         dragOffset: CGSize = .zero
     ) -> [GraphCanvasActionTarget] {
-        let frame = contentFrame(gridX: placed.gridX, gridY: placed.gridY, dragOffset: dragOffset)
+        let frame = contentFrame(for: placed, dragOffset: dragOffset)
         let headerHits = EvidenceCardHeaderActionHits.frames(
             cardFrame: frame,
             paddingX: shellPaddingX,

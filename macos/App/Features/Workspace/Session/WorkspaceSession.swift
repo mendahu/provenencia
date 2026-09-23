@@ -30,6 +30,15 @@ final class WorkspaceSession {
         handles[key] as? QueryHandle<Value>
     }
 
+    /// Waits out an in-flight load, then returns the cached value.
+    /// Does not start a load. Nil when the key was never warmed or the load failed.
+    func readyValue<Value>(_ key: CatalogQueryKey) async -> Value? {
+        while let task = inFlight[key] {
+            await task.value
+        }
+        return queryHandle(key)?.value
+    }
+
     /// Registry-backed get-or-load.
     @discardableResult
     func query<Value>(_ key: CatalogQueryKey) -> QueryHandle<Value> {

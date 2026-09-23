@@ -10,6 +10,7 @@ final class CitationComposerModel {
         case pickArtifact
         case compose
         case subjectMissing
+        case loadFailed
     }
 
     /// Committed Observation summary row (edited via dialog, not inline).
@@ -125,7 +126,10 @@ final class CitationComposerModel {
     private(set) var observations: [ObservationRow] = []
     var observationDialog: ObservationDialogState?
     var formError: String?
-    var locatorError: String?
+    /// Catalog read failed before the form could open.
+    private(set) var loadError: String?
+    /// Custom-term dialog failure. Shown on that dialog, not the form footer.
+    var termError: String?
     var submitAttempted = false
 
     /// When true, host should `go(to:)` the Evidence graph (subject gone).
@@ -225,7 +229,11 @@ final class CitationComposerModel {
 
     var canConfirmObservation: Bool {
         guard let draft = observationDialog else { return false }
-        return Self.observationValueIsValid(draft: draft, property: catalogProperty(id: draft.propertyID))
+        guard let property = catalogProperty(id: draft.propertyID) else { return false }
+        return CitationObservationValue.isDialogValid(
+            valueType: property.valueType,
+            fields: CitationObservationValue.fields(from: draft)
+        )
     }
 
     var dialogPropertyError: String? {
@@ -244,7 +252,10 @@ final class CitationComposerModel {
         guard let property = catalogProperty(id: draft.propertyID) else {
             return String(localized: L10n.CitationComposer.dialogValueRequired)
         }
-        if Self.observationValueIsValid(draft: draft, property: property) { return nil }
+        if CitationObservationValue.isDialogValid(
+            valueType: property.valueType,
+            fields: CitationObservationValue.fields(from: draft)
+        ) { return nil }
         return String(localized: L10n.CitationComposer.dialogValueRequired)
     }
 
@@ -276,23 +287,11 @@ final class CitationComposerModel {
 
     func observationSummary(for row: ObservationRow) -> String {
         guard let property = catalogProperty(id: row.propertyID) else { return "" }
-        switch property.valueType {
-        case "text":
-            return row.valueText
-        case "integer":
-            return row.valueIntegerText
-        case "term":
-            return termLabel(for: row.valueTermID, propertyID: property.id) ?? row.valueTermID
-        case "date":
-            return Self.dateSummary(row.dateDraft)
-        case "name":
-            return NameValueDisplay.string(for: row.nameDraft)
-        case "subject":
-            let trimmed = row.valueText.trimmingCharacters(in: .whitespacesAndNewlines)
-            return trimmed.isEmpty ? row.valueSubjectID : trimmed
-        default:
-            return ""
-        }
+        return CitationObservationValue.summary(
+            valueType: property.valueType,
+            fields: CitationObservationValue.fields(from: row),
+            termLabel: termLabel(for: row.valueTermID, propertyID: property.id)
+        )
     }
 
     /// Connect-edge Property keys for a bridge type (S7-D4 §2.3).
@@ -372,56 +371,61 @@ final class CitationComposerModel {
         (artifact?.file?.mediaType ?? "").hasPrefix("image/")
     }
 
-    func warmQueries() {
-        let _: QueryHandle<SourceGraphSnapshot> = session.query(graphKey)
-        let _: QueryHandle<CatalogSourceWorkspace> = session.query(workspaceKey)
+    var sourceTypesKey: CatalogQueryKey {
+        .sourceTypesList(project: session.projectKey)
     }
 
     func prepare() async {
         phase = .loading
         formError = nil
-        locatorError = nil
+        loadError = nil
+        termError = nil
         shouldFallbackToGraph = false
-        warmQueries()
 
         do {
             let projectDir = session.projectKey.projectDir
-            let subjects = try await store.listSubjects(
-                projectDir: projectDir,
-                sourceID: sourceID
-            )
-            let positions = try await store.listSubjectPositions(
-                projectDir: projectDir,
-                sourceID: sourceID
-            )
-            // Sequential FakeStore access: bags are not synchronized, and
-            // concurrent `async let` here has aborted CI under suite fan-out.
-            let workspace = try await store.getSourceWorkspace(
-                projectDir: projectDir,
-                sourceID: sourceID
-            )
+            // Prefer handles PlaceRegistry already warmed. Cold opens fill the
+            // same keys sequentially — FakeStore bags are not safe to hit concurrently.
+            let snapshot = try await cached(graphKey) {
+                let subjects = try await self.store.listSubjects(
+                    projectDir: projectDir,
+                    sourceID: self.sourceID
+                )
+                let positions = try await self.store.listSubjectPositions(
+                    projectDir: projectDir,
+                    sourceID: self.sourceID
+                )
+                let types = try await self.store.listSubjectTypes(projectDir: projectDir)
+                let observations = try await self.store.listObservationsBySource(
+                    projectDir: projectDir,
+                    sourceID: self.sourceID
+                )
+                return SourceGraphSnapshot.build(
+                    sourceId: self.sourceID,
+                    subjects: subjects,
+                    positions: positions,
+                    types: types,
+                    observations: observations
+                )
+            }
+            let workspace = try await cached(workspaceKey) {
+                try await self.store.getSourceWorkspace(
+                    projectDir: projectDir,
+                    sourceID: self.sourceID
+                )
+            }
+            let sourceTypes = try await cached(sourceTypesKey) {
+                try await self.store.listSourceTypes(projectDir: projectDir)
+            }
             let rules = try await store.listConnectRules()
             let types = try await store.listSubjectTypes(projectDir: projectDir)
-            let listedObservations = try await store.listObservationsBySource(
-                projectDir: projectDir,
-                sourceID: sourceID
-            )
-            let sourceTypes = try await store.listSourceTypes(projectDir: projectDir)
-
-            let snapshot = SourceGraphSnapshot.build(
-                sourceId: sourceID,
-                subjects: subjects,
-                positions: positions,
-                types: types,
-                observations: listedObservations
-            )
 
             let resolved: ResolvedSubject
             if isConnectPrefill, let bridgeKey = connectBridgeTypeKey,
                let type = types.first(where: { $0.key == bridgeKey })
             {
                 resolved = ResolvedSubject(label: "", typeKey: bridgeKey, typeID: type.id)
-            } else if let existing = Self.resolveSubject(id: subjectID, in: snapshot, types: types) {
+            } else if let existing = Self.resolveSubject(id: subjectID, in: snapshot) {
                 resolved = existing
             } else {
                 phase = .subjectMissing
@@ -466,16 +470,8 @@ final class CitationComposerModel {
                 )
             }
 
-            let subjectLabelsByID = Dictionary(
-                uniqueKeysWithValues: subjects.map { ($0.id, $0.label) }
-            )
-            let typeKeyBySubjectID = Dictionary(
-                uniqueKeysWithValues: subjects.compactMap { subject -> (String, String)? in
-                    guard let type = types.first(where: { $0.id == subject.subjectTypeID })
-                    else { return nil }
-                    return (subject.id, type.key)
-                }
-            )
+            let subjectLabelsByID = Self.subjectLabels(in: snapshot)
+            let typeKeyBySubjectID = Self.typeKeyBySubjectID(in: snapshot)
 
             if let citationID {
                 let (citation, _, citationObservations) = try await store.getCitation(
@@ -544,17 +540,11 @@ final class CitationComposerModel {
                         )
                     )
                 }
-                subjectLabel = EvidenceBridgeEdgeSummary.sentence(
-                    bridgeTypeKey: resolved.typeKey,
+                subjectLabel = bridgeSentence(
+                    typeKey: resolved.typeKey,
                     observations: observations,
                     properties: allProperties,
-                    subjectLabelsByID: subjectLabelsByID,
-                    termLabel: { [termsByPropertyID] termID, propertyID in
-                        guard let term = termsByPropertyID[propertyID]?.first(where: { $0.id == termID })
-                        else { return nil }
-                        let key = allProperties.first(where: { $0.id == propertyID })?.key ?? ""
-                        return PropertyTermDisplay.name(term: term, propertyKey: key)
-                    }
+                    subjectLabelsByID: subjectLabelsByID
                 )
             }
 
@@ -572,10 +562,24 @@ final class CitationComposerModel {
             pendingArtifactID = selectedArtifactID ?? artifacts.first?.id
             phase = .pickArtifact
         } catch {
-            formError = L10n.Errors.message(for: error)
+            loadError = L10n.Errors.message(for: error)
             artifacts = []
-            phase = .compose
+            phase = .loadFailed
         }
+    }
+
+    /// Uses a warmed session value when one exists. Otherwise loads sequentially
+    /// and publishes into the same key so the cache stays the owner.
+    private func cached<Value>(
+        _ key: CatalogQueryKey,
+        load: () async throws -> Value
+    ) async throws -> Value {
+        if let ready: Value = await session.readyValue(key) {
+            return ready
+        }
+        let value = try await load()
+        session.setQueryValue(key, value: value)
+        return value
     }
 
     func selectPendingArtifact(_ id: String) {
@@ -593,7 +597,6 @@ final class CitationComposerModel {
         resetToEntireArtifact()
         phase = .compose
         formError = nil
-        locatorError = nil
         submitAttempted = false
         await reloadArtifactViewer(preferredPage: nil)
     }
@@ -603,7 +606,6 @@ final class CitationComposerModel {
         pendingArtifactID = selectedArtifactID
         phase = .pickArtifact
         formError = nil
-        locatorError = nil
         submitAttempted = false
     }
 
@@ -625,9 +627,7 @@ final class CitationComposerModel {
 
     @discardableResult
     func setPage(_ page: Int) -> Bool {
-        let ok = locator.setPage(page, capabilities: locatorCapabilities)
-        if ok { locatorError = nil }
-        return ok
+        locator.setPage(page, capabilities: locatorCapabilities)
     }
 
     @discardableResult
@@ -639,30 +639,25 @@ final class CitationComposerModel {
         )
         if ok {
             armedRegionTool = nil
-            locatorError = nil
         }
         return ok
     }
 
     func clearRegion() {
         locator.clearRegion()
-        locatorError = nil
     }
 
     func resetToEntireArtifact() {
         locator.resetToEntireArtifact()
         armedRegionTool = nil
-        locatorError = nil
     }
 
     func removePage() {
         locator.removePage()
-        locatorError = nil
     }
 
     func removeRegion() {
         locator.clearRegion()
-        locatorError = nil
     }
 
     func disarmRegionTool() {
@@ -707,7 +702,10 @@ final class CitationComposerModel {
         draft.showValidation = true
         observationDialog = draft
         guard let property = catalogProperty(id: draft.propertyID),
-              Self.observationValueIsValid(draft: draft, property: property)
+              CitationObservationValue.isDialogValid(
+                valueType: property.valueType,
+                fields: CitationObservationValue.fields(from: draft)
+              )
         else { return }
 
         let row = ObservationRow(
@@ -753,9 +751,10 @@ final class CitationComposerModel {
             list.append(term)
             list.sort { $0.label.localizedCaseInsensitiveCompare($1.label) == .orderedAscending }
             termsByPropertyID[propertyID] = list
+            termError = nil
             return term
         } catch {
-            formError = L10n.Errors.message(for: error)
+            termError = L10n.Errors.message(for: error)
             return nil
         }
     }
@@ -764,8 +763,6 @@ final class CitationComposerModel {
     func submit() async -> WorkspaceLocation? {
         submitAttempted = true
         formError = nil
-        locatorError = nil
-
         if hasNoArtifacts {
             formError = String(localized: L10n.CitationComposer.needArtifact)
             return nil
@@ -950,65 +947,17 @@ final class CitationComposerModel {
                 propertyID: property.id,
                 polarity: row.polarity == "negative" ? "negative" : "positive"
             )
-            switch property.valueType {
-            case "text":
-                draft.valueText = row.valueText
-            case "integer":
-                guard let value = Int64(row.valueIntegerText) else {
-                    formError = String(localized: L10n.CitationComposer.invalidIntegerError)
-                    return nil
-                }
-                draft.valueInteger = value
-            case "term":
-                draft.valueTermID = row.valueTermID
-            case "date":
-                guard row.dateDraft.isValid else {
-                    formError = String(localized: L10n.CitationComposer.invalidDateError)
-                    return nil
-                }
-                draft.date = row.dateDraft.toInput()
-            case "name":
-                guard row.nameDraft.isValid else {
-                    formError = String(localized: L10n.CitationComposer.unsupportedValueTypeError)
-                    return nil
-                }
-                let input = row.nameDraft.toInput()
-                draft.nameForm = input.form
-                draft.nameParts = input.parts
-            case "subject":
-                guard !row.valueSubjectID.isEmpty else {
-                    formError = String(localized: L10n.CitationComposer.unsupportedValueTypeError)
-                    return nil
-                }
-                draft.valueSubjectID = row.valueSubjectID
-            default:
-                formError = String(localized: L10n.CitationComposer.unsupportedValueTypeError)
+            if let failure = CitationObservationValue.apply(
+                valueType: property.valueType,
+                fields: CitationObservationValue.fields(from: row),
+                to: &draft
+            ) {
+                formError = CitationObservationValue.message(for: failure)
                 return nil
             }
             drafts.append(draft)
         }
         return drafts
-    }
-
-    private static func observationValueIsValid(
-        draft: ObservationDialogState,
-        property: CatalogProperty?
-    ) -> Bool {
-        guard let property else { return false }
-        switch property.valueType {
-        case "text":
-            return !draft.valueText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        case "integer":
-            return Int64(draft.valueIntegerText.trimmingCharacters(in: .whitespacesAndNewlines)) != nil
-        case "term":
-            return !draft.valueTermID.isEmpty
-        case "date":
-            return draft.dateDraft.isValid
-        case "name":
-            return draft.nameDraft.isValid
-        default:
-            return false
-        }
     }
 
     static func locatorJSON(page: Int) -> String? {
@@ -1066,14 +1015,6 @@ final class CitationComposerModel {
         )
     }
 
-    static func dateSummary(_ draft: DateValueDraft) -> String {
-        let formatted = DateValueDisplay.string(for: draft)
-        if formatted.isEmpty {
-            return String(localized: L10n.CitationComposer.dateUnset)
-        }
-        return formatted
-    }
-
     private struct ResolvedSubject {
         var label: String
         var typeKey: String
@@ -1082,8 +1023,7 @@ final class CitationComposerModel {
 
     private static func resolveSubject(
         id: String,
-        in snapshot: SourceGraphSnapshot,
-        types: [CatalogSubjectType]
+        in snapshot: SourceGraphSnapshot
     ) -> ResolvedSubject? {
         if let primary = snapshot.subjects.first(where: { $0.id == id }) {
             return ResolvedSubject(
@@ -1099,7 +1039,65 @@ final class CitationComposerModel {
                 typeID: bridge.subject.subjectTypeID
             )
         }
-        _ = types
         return nil
+    }
+
+    private static func subjectLabels(in snapshot: SourceGraphSnapshot) -> [String: String] {
+        var labels: [String: String] = [:]
+        for placed in snapshot.subjects {
+            labels[placed.id] = placed.subject.label
+        }
+        for bridge in snapshot.bridges {
+            labels[bridge.id] = bridge.subject.label
+        }
+        return labels
+    }
+
+    private static func typeKeyBySubjectID(in snapshot: SourceGraphSnapshot) -> [String: String] {
+        var keys: [String: String] = [:]
+        for placed in snapshot.subjects {
+            keys[placed.id] = placed.kind.rawValue
+        }
+        for bridge in snapshot.bridges {
+            keys[bridge.id] = bridge.kind.rawValue
+        }
+        return keys
+    }
+
+    /// Maps draft rows onto the graph's string sentence. The graph type does not
+    /// know about composer rows.
+    private func bridgeSentence(
+        typeKey: String,
+        observations: [ObservationRow],
+        properties: [CatalogProperty],
+        subjectLabelsByID: [String: String]
+    ) -> String {
+        guard let kind = EvidenceBridgeKind(rawValue: typeKey) else { return "" }
+        let propertyByID = Dictionary(uniqueKeysWithValues: properties.map { ($0.id, $0) })
+        func subject(for key: String) -> String? {
+            guard let row = observations.first(where: { propertyByID[$0.propertyID]?.key == key })
+            else { return nil }
+            let labeled = subjectLabelsByID[row.valueSubjectID]
+                ?? row.valueText.trimmingCharacters(in: .whitespacesAndNewlines)
+            return labeled.isEmpty ? nil : labeled
+        }
+        func term(for key: String) -> String? {
+            guard let row = observations.first(where: { propertyByID[$0.propertyID]?.key == key }),
+                  !row.valueTermID.isEmpty
+            else { return nil }
+            if let resolved = termLabel(for: row.valueTermID, propertyID: row.propertyID), !resolved.isEmpty {
+                return resolved
+            }
+            let fallback = row.valueText.trimmingCharacters(in: .whitespacesAndNewlines)
+            return fallback.isEmpty ? nil : fallback
+        }
+        return EvidenceBridgeEdgeSummary.sentence(
+            kind: kind,
+            person: subject(for: "person"),
+            related: subject(for: "related_to"),
+            event: subject(for: "event"),
+            place: subject(for: "place"),
+            term: term(for: kind == .relationship ? "relationship_type" : "role")
+        )
     }
 }
