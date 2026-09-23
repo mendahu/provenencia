@@ -185,9 +185,15 @@ final class ArtifactViewerModel {
         else { return nil }
         let bounds = page.bounds(for: .mediaBox)
         guard bounds.width > 0, bounds.height > 0 else { return nil }
-        let scale: CGFloat = 2
-        let size = CGSize(width: bounds.width * scale, height: bounds.height * scale)
-        return page.thumbnail(of: size, for: .mediaBox)
+        // Raster at backing scale for sharpness, but report media-box *points* as
+        // `NSImage.size` so ArtifactMediaViewport pan/center uses real page layout
+        // (same shell as images). A fixed 2× point size made pages look twice as
+        // large and almost never fit/center in the composer pane.
+        let scale = max(NSScreen.main?.backingScaleFactor ?? 2, 2)
+        let pixelSize = CGSize(width: bounds.width * scale, height: bounds.height * scale)
+        let image = page.thumbnail(of: pixelSize, for: .mediaBox)
+        image.size = bounds.size
+        return image
     }
 }
 

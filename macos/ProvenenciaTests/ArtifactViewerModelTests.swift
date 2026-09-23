@@ -113,6 +113,9 @@ struct ArtifactViewerModelTests {
         #expect(model.pageCount == 3)
         #expect(model.page == 1)
         #expect(model.displayImage != nil)
+        // Layout size is media-box points (not the backing-scale pixel raster).
+        #expect(model.displayImage?.size.width == 612)
+        #expect(model.displayImage?.size.height == 792)
 
         model.goToNextPage()
         #expect(model.page == 2)

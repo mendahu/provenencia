@@ -3,7 +3,10 @@ import Foundation
 import PDFKit
 
 /// Loaded document payload. Extend with `.audio` / `.video` without changing `load(source:)`.
-enum ArtifactViewerContent: Equatable {
+///
+/// `@unchecked Sendable`: `NSImage` / `PDFDocument` are not Sendable, but we only
+/// hand the value from a one-shot load task onto the main actor.
+enum ArtifactViewerContent: Equatable, @unchecked Sendable {
     case image(NSImage)
     case pdf(PDFDocument)
 
