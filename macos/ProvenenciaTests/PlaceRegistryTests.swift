@@ -143,6 +143,7 @@ struct PlaceRegistryTests {
                 [
                     .sourceGraph(project: project, sourceId: "s1"),
                     .sourceWorkspace(project: project, sourceId: "s1"),
+                    .citationCounts(project: project, sourceId: "s1"),
                 ]
             ),
             (

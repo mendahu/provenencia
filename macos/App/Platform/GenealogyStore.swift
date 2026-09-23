@@ -737,6 +737,8 @@ protocol GenealogyStore: Sendable {
     ) async throws -> [CatalogObservation]
 
     func listObservationsBySource(projectDir: String, sourceID: String) async throws -> [CatalogObservation]
+
+    func citationCountsBySource(projectDir: String, sourceID: String) async throws -> [String: Int]
 }
 
 /// Draft payload for one Observation insert (FFI ObservationDraft).

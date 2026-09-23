@@ -81,6 +81,7 @@ const (
 	MethodGetCitation                         = int32(engine.Method_METHOD_GET_CITATION)
 	MethodUpdateCitationWithObservations      = int32(engine.Method_METHOD_UPDATE_CITATION_WITH_OBSERVATIONS)
 	MethodCreateCitedBridge                   = int32(engine.Method_METHOD_CREATE_CITED_BRIDGE)
+	MethodCitationCountsBySource              = int32(engine.Method_METHOD_CITATION_COUNTS_BY_SOURCE)
 )
 
 // Call routes one coarse FFI operation to api/ffi/handlers.
@@ -228,6 +229,8 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.UpdateCitationWithObservations(in)
 	case MethodCreateCitedBridge:
 		return handlers.CreateCitedBridge(in)
+	case MethodCitationCountsBySource:
+		return handlers.CitationCountsBySource(in)
 	default:
 		return nil, apperr.New(apperr.CodeInternalUnknownMethod, apperr.KindInternal, strconv.Itoa(int(method)))
 	}

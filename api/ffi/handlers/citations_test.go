@@ -238,6 +238,57 @@ func TestListObservationsBySource(t *testing.T) {
 	})
 }
 
+func TestCitationCountsBySource(t *testing.T) {
+	runRPC(t, CitationCountsBySource, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "counts citations per artifact",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, sourceID, artifactID, placeID, propID := citationFixture(t)
+				if _, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
+					ProjectDir:  dir,
+					UserId:      userID,
+					ArtifactId:  artifactID,
+					LocatorJson: validLocatorJSON,
+					Observations: []*engine.ObservationDraft{{
+						SubjectId:  placeID,
+						PropertyId: propID,
+						ValueText:  "Boston",
+					}},
+				})); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
+					ProjectDir:  dir,
+					UserId:      userID,
+					ArtifactId:  artifactID,
+					LocatorJson: validLocatorJSON,
+					Observations: []*engine.ObservationDraft{{
+						SubjectId:  placeID,
+						PropertyId: propID,
+						ValueText:  "Boston again",
+					}},
+				})); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.CitationCountsBySourceRequest{
+					ProjectDir: dir,
+					SourceId:   sourceID,
+				}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var list engine.CitationCountsBySourceResponse
+				if err := proto.Unmarshal(out, &list); err != nil {
+					t.Fatal(err)
+				}
+				if len(list.Counts) != 1 || list.Counts[0].GetCount() != 2 {
+					t.Fatalf("%+v", list.Counts)
+				}
+			},
+		},
+	})
+}
+
 func TestGetCitation(t *testing.T) {
 	runRPC(t, GetCitation, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},

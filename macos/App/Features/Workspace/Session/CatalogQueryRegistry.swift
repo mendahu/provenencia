@@ -83,6 +83,11 @@ struct CatalogQueryRegistry: Sendable {
             invalidateOn: [.createdSubject, .createdCitation, .addedObservations]
         ),
         Spec(
+            kind: .citationCounts,
+            stalePolicy: .sessionFresh,
+            invalidateOn: [.createdCitation]
+        ),
+        Spec(
             kind: .subjectFieldsWorkspace,
             stalePolicy: .sessionFresh,
             invalidateOn: [
@@ -110,6 +115,11 @@ struct CatalogQueryRegistry: Sendable {
             return try await store.getSourceWorkspace(projectDir: project.projectDir, sourceID: sourceId)
         case .typeSuggestions(let project, let typeId):
             return try await store.listTypeSuggestions(projectDir: project.projectDir, typeID: typeId)
+        case .citationCounts(let project, let sourceId):
+            return try await store.citationCountsBySource(
+                projectDir: project.projectDir,
+                sourceID: sourceId
+            )
         case .sourceGraph(let project, let sourceId):
             async let subjects = store.listSubjects(
                 projectDir: project.projectDir,
@@ -202,6 +212,13 @@ private extension CatalogQueryKey.Kind {
                 return .key(.sourceGraph(project: project, sourceId: sourceId))
             default:
                 return .allCached(.sourceGraph)
+            }
+        case .citationCounts:
+            switch mutation {
+            case .createdCitation(let sourceId):
+                return .key(.citationCounts(project: project, sourceId: sourceId))
+            default:
+                return .allCached(.citationCounts)
             }
         case .subjectFieldsWorkspace:
             return .key(.subjectFieldsWorkspace(project: project))
