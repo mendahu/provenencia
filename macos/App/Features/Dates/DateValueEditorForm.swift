@@ -6,13 +6,6 @@ struct DateValueEditorForm: View {
     /// Prefix for control identifiers (default matches the Source page date dialog).
     var accessibilityIdentifierPrefix: String = "sources.page.date"
 
-    private let months: [(String, String)] = [
-        ("", "—"),
-        ("1", "January"), ("2", "February"), ("3", "March"), ("4", "April"),
-        ("5", "May"), ("6", "June"), ("7", "July"), ("8", "August"),
-        ("9", "September"), ("10", "October"), ("11", "November"), ("12", "December"),
-    ]
-
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space7) {
             kindSection
@@ -130,7 +123,7 @@ struct DateValueEditorForm: View {
                     isInvalid: draft.isFieldInvalid(.year, start: start),
                     accessibilityIdentifier: "\(accessibilityIdentifierPrefix).\(start ? "start" : "end").year"
                 )
-                monthPicker(start: start)
+                monthSelect(start: start)
                 cascadeField(
                     L10n.Sources.dateDay,
                     text: dayBinding(start),
@@ -252,17 +245,15 @@ struct DateValueEditorForm: View {
                 Text(L10n.Sources.dateCalendar)
                     .font(PVFont.body(size: PVTypeScale.micro))
                     .foregroundStyle(PVColor.textSecondary)
-                Picker(selection: $draft.calendar) {
-                    Text(L10n.Sources.dateCalendarGregorian).tag("gregorian")
-                    Text(L10n.Sources.dateCalendarJulian).tag("julian")
-                    Text(L10n.Sources.dateCalendarFrenchRepublican).tag("french-republican")
-                    Text(L10n.Sources.dateCalendarHebrew).tag("hebrew")
-                } label: {
-                    EmptyView()
-                }
-                .labelsHidden()
+                PVSelect(
+                    selection: $draft.calendar,
+                    options: DateValueSelectOptions.calendars,
+                    menuWidth: 220,
+                    fillsWidth: false,
+                    accessibilityLabel: L10n.Sources.dateCalendar,
+                    accessibilityIdentifier: "\(accessibilityIdentifierPrefix).calendar"
+                )
                 .frame(width: 220)
-                .accessibilityIdentifier("\(accessibilityIdentifierPrefix).calendar")
             }
             VStack(alignment: .leading, spacing: PVSpacing.space2) {
                 Text(L10n.Sources.datePhrase)
@@ -299,23 +290,23 @@ struct DateValueEditorForm: View {
         .frame(maxWidth: width == nil ? .infinity : nil, alignment: .leading)
     }
 
-    private func monthPicker(start: Bool) -> some View {
+    private func monthSelect(start: Bool) -> some View {
         VStack(alignment: .leading, spacing: PVSpacing.space2) {
             Text(L10n.Sources.dateMonth)
                 .font(PVFont.body(size: PVTypeScale.micro))
                 .foregroundStyle(PVColor.textSecondary)
-            Picker(selection: monthBinding(start)) {
-                ForEach(months, id: \.0) { value, label in
-                    Text(verbatim: label).tag(value)
-                }
-            } label: {
-                EmptyView()
-            }
-            .labelsHidden()
-            .disabled(yearBinding(start).wrappedValue.isEmpty)
-            .opacity(yearBinding(start).wrappedValue.isEmpty ? 0.42 : 1)
+            PVSelect(
+                selection: monthBinding(start),
+                options: DateValueSelectOptions.months,
+                menuWidth: 136,
+                fillsWidth: false,
+                isDisabled: DateValueSelectOptions.isMonthDisabled(
+                    yearIsEmpty: yearBinding(start).wrappedValue.isEmpty
+                ),
+                accessibilityLabel: L10n.Sources.dateMonth,
+                accessibilityIdentifier: "\(accessibilityIdentifierPrefix).\(start ? "start" : "end").month"
+            )
             .frame(width: 136)
-            .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(start ? "start" : "end").month")
         }
     }
 
@@ -447,6 +438,43 @@ struct DateValueEditorForm: View {
                 }
             }
         )
+    }
+}
+
+/// Calendar and month option lists for DateValue `PVSelect` remounts.
+enum DateValueSelectOptions {
+    static var calendars: [PVSelectOption] {
+        [
+            PVSelectOption(value: "gregorian", label: String(localized: L10n.Sources.dateCalendarGregorian)),
+            PVSelectOption(value: "julian", label: String(localized: L10n.Sources.dateCalendarJulian)),
+            PVSelectOption(
+                value: "french-republican",
+                label: String(localized: L10n.Sources.dateCalendarFrenchRepublican)
+            ),
+            PVSelectOption(value: "hebrew", label: String(localized: L10n.Sources.dateCalendarHebrew)),
+        ]
+    }
+
+    static var months: [PVSelectOption] {
+        [
+            ("", L10n.Sources.dateMonthNone),
+            ("1", L10n.Sources.dateMonthJanuary),
+            ("2", L10n.Sources.dateMonthFebruary),
+            ("3", L10n.Sources.dateMonthMarch),
+            ("4", L10n.Sources.dateMonthApril),
+            ("5", L10n.Sources.dateMonthMay),
+            ("6", L10n.Sources.dateMonthJune),
+            ("7", L10n.Sources.dateMonthJuly),
+            ("8", L10n.Sources.dateMonthAugust),
+            ("9", L10n.Sources.dateMonthSeptember),
+            ("10", L10n.Sources.dateMonthOctober),
+            ("11", L10n.Sources.dateMonthNovember),
+            ("12", L10n.Sources.dateMonthDecember),
+        ].map { PVSelectOption(value: $0.0, label: String(localized: $0.1)) }
+    }
+
+    static func isMonthDisabled(yearIsEmpty: Bool) -> Bool {
+        yearIsEmpty
     }
 }
 

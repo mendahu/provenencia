@@ -85,3 +85,36 @@ struct PVTableTypeSelectMatcherTests {
         #expect(matcher.append("u", now: start.addingTimeInterval(0.1)) == "u")
     }
 }
+
+@Suite
+struct PVTableFilterSelectTests {
+    @Test func selectOptionsMapLabelsAndCounts() {
+        var received: String?
+        let filter = PVTableColumnFilter(
+            value: "text",
+            active: true,
+            options: [
+                .init(value: "", label: LocalizedStringResource(stringLiteral: "All data types")),
+                .init(value: "text", label: LocalizedStringResource(stringLiteral: "Text"), count: 3),
+            ],
+            onChange: { received = $0 }
+        )
+        let options = filter.selectOptions()
+        #expect(options.map(\.id) == ["", "text"])
+        #expect(options[0].label == "All data types")
+        #expect(options[1].label == L10n.DesignSystem.tableFilterOptionCount(label: "Text", count: 3))
+        filter.onChange("text")
+        #expect(received == "text")
+    }
+
+    @Test func filterColumnLabelNamesTheAxis() {
+        #expect(
+            L10n.DesignSystem.tableFilterColumn(column: "Data type")
+                == String(format: String(localized: LocalizedStringResource(
+                    "designSystem.table.filterColumn",
+                    defaultValue: "Filter %@",
+                    comment: "Accessibility label for a PVTable column's filter menu; argument is the column title"
+                )), locale: .current, "Data type")
+        )
+    }
+}

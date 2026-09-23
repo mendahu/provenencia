@@ -29,6 +29,8 @@ IDs stay stable (`S7-NN`, `S7-DN`). Do not renumber when moving steps here.
 | [S7-10](#s7-10--pr-durable-connect-macros) | PR | Registry-driven Connect; atomic cited bridge; person↔place refused |
 | [S7-D7](#s7-d7--design-card-component) | Design | Card kit page from shipped `PVCard`; gates S7-13 |
 | [S7-13](#s7-13--pr-pvcard-call-site-cleanup) | PR | Manual card cousins → `PVCard` |
+| [S7-D10](#s7-d10--design-pvselect-native-popup--remount) | Design | Native-popup Select kit page; gates S7-15 |
+| [S7-15](#s7-15--pr-pvselect-native-popup-parity) | PR | `PVSelect` native-popup contract + DateValue / table-filter remount |
 
 ## Steps
 
@@ -413,4 +415,39 @@ python3 scripts/check-localizable-xcstrings.py
 ```bash
 rg -n 'surfaceCard|surfaceSunken' macos/App/Features/Onboarding/OnboardingIdentifyView.swift macos/App/Features/Onboarding/OnboardingProjectMetaLines.swift macos/App/Features/Onboarding/OnboardingOpenPicker.swift macos/App/Features/SourceTypes/SourceTypesDetailPane.swift macos/App/Features/CitationComposer/CitationComposerObservationRow.swift
 # xcodebuild test — OnboardingModelTests / CitationComposerModelTests
+```
+
+### S7-D10 — Design: PVSelect native popup + remount
+
+| | |
+| --- | --- |
+| **Kind** | Design (Claude Design kit page) |
+| **Depends on** | Shipped `PVSelect`; after S7-13 |
+| **Deliverables** | Done. Select kit contract: native popup-button behavior on custom Frost chrome (closed-field keys, press-drag-release, snapshot Escape, selected vs highlight, flip/scroll placement, VoiceOver on the trigger). View remount list + child-board slip [`S7-D10B`](design/archive/S7-D10B-select-view-remount.md) (DateValue calendar/month, `PVTable.filterMenu`). Briefs archived: [`design/archive/S7-D10-pvselect-native-parity.md`](design/archive/S7-D10-pvselect-native-parity.md). |
+| **Dogfood** | Design only — implements in **S7-15**. |
+| **Out** | `PVComboBox`; `PVContextMenu` action menus; segmented chips; option sections / separators / disabled rows. |
+
+**Landed:** Claude Design Select documents the full native-popup contract; child views remount via D10B.
+
+### S7-15 — PR: PVSelect native-popup parity
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | **S7-D10** |
+| **Deliverables** | Done. `PVSelectSession` / `PVSelectPlacement` / `PVSelectPointerTracking` are the view's only behavior path. Closed-field ↑/↓ / Home / End / type-select commit without opening; Space / Return / press open; Escape restores the snapshot. Checkmark vs highlight fill on `PVContextMenuItem`. Select-only press-drag (`stealKeys` / `dismissOnMouseUp` false). DateValue calendar + month and `PVTable.filterMenu` remount on `PVSelect`. Month names and Select spoken state/position go through `L10n`. DesignSystem README documents the contract and the honest SwiftUI popup-role limit. |
+| **Tests** | `PVSelectSessionTests` (closed/open contract + board try-it), `PVSelectPlacementTests`, `PVSelectPointerTrackingTests`, `DateValueSelectTests`, `PVTableFilterSelectTests`; existing `PVContextMenuTests` / `DateValueDraftTests` stay green. |
+| **Dogfood** | NameValue part type; DateValue month near the bottom of the window (flip); Sources filter chip; VoiceOver adjustable + expanded custom content (role will say button, not pop-up button). |
+| **Out** | ComboBox rewrite; action menus; segmented chips; option sections / separators / disabled rows; field/chip restyle; hidden `Picker` representation; new product call sites. |
+
+**Landed:** one exclusive-choice kit; leftover `Picker` / `Menu` dropdown cousins use `PVSelect`.
+
+**Verify:**
+
+```bash
+python3 scripts/check-localizable-xcstrings.py
+# xcodebuild test — PVSelectSessionTests / PVSelectPlacementTests /
+#   PVSelectPointerTrackingTests / PVContextMenuTests / PVTableTests / DateValueDraftTests
+rg -n 'Picker\(' macos/App/Features/Dates/DateValueEditorForm.swift
+rg -n 'Menu \{|Picker\(' macos/App/DesignSystem/Components/Table/PVTable.swift
 ```

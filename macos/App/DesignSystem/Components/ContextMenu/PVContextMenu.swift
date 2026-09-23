@@ -18,6 +18,13 @@ struct PVContextMenuState: Equatable {
     }
 }
 
+/// Action-menu defaults. `PVSelect` opts out so it can own press-drag and
+/// closed-field keys; overflow / right-click menus stay click-to-open.
+enum PVContextMenuInteraction {
+    static let defaultStealKeys = true
+    static let defaultDismissOnMouseUp = true
+}
+
 /// Optional ↑/↓/⏎ navigation (and type-to-select) for an open overlay menu.
 struct PVContextMenuKeyboard: Equatable {
     var itemCount: Int
@@ -68,6 +75,7 @@ enum PVContextMenuPlacement {
 struct PVContextMenuPanel<Content: View>: View {
     var title: LocalizedStringResource?
     var width: CGFloat = 180
+    var maxHeight: CGFloat?
     var accessibilityIdentifier: String?
     @ViewBuilder var content: () -> Content
 
@@ -87,6 +95,7 @@ struct PVContextMenuPanel<Content: View>: View {
         }
         .padding(PVSpacing.space2)
         .frame(width: width, alignment: .leading)
+        .frame(maxHeight: maxHeight, alignment: .top)
         .background(PVColor.surfaceCard)
         .overlay(
             RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
@@ -110,6 +119,10 @@ struct PVContextMenuItem: View {
     var index: Int?
     var isEnabled: Bool = true
     var isSelected: Bool = false
+    /// When true, a leading checkmark gutter marks the committed row. Fill
+    /// follows keyboard/hover highlight only — the two must not look equally
+    /// selected (`PVSelect`).
+    var showsSelectionMark: Bool = false
     var accessibilityIdentifier: String?
     var action: () -> Void
 
@@ -118,6 +131,7 @@ struct PVContextMenuItem: View {
         index: Int? = nil,
         isEnabled: Bool = true,
         isSelected: Bool = false,
+        showsSelectionMark: Bool = false,
         accessibilityIdentifier: String? = nil,
         action: @escaping () -> Void = {}
     ) {
@@ -126,6 +140,7 @@ struct PVContextMenuItem: View {
         self.index = index
         self.isEnabled = isEnabled
         self.isSelected = isSelected
+        self.showsSelectionMark = showsSelectionMark
         self.accessibilityIdentifier = accessibilityIdentifier
         self.action = action
     }
@@ -136,6 +151,7 @@ struct PVContextMenuItem: View {
         index: Int? = nil,
         isEnabled: Bool = true,
         isSelected: Bool = false,
+        showsSelectionMark: Bool = false,
         accessibilityIdentifier: String? = nil,
         action: @escaping () -> Void = {}
     ) {
@@ -144,6 +160,7 @@ struct PVContextMenuItem: View {
         self.index = index
         self.isEnabled = isEnabled
         self.isSelected = isSelected
+        self.showsSelectionMark = showsSelectionMark
         self.accessibilityIdentifier = accessibilityIdentifier
         self.action = action
     }
@@ -154,7 +171,11 @@ struct PVContextMenuItem: View {
     }
 
     var body: some View {
-        let highlighted = isSelected || isKeyboardActive
+        let chrome = PVSelectRowChrome.appearance(
+            committed: isSelected,
+            highlighted: isKeyboardActive
+        )
+        let fillHighlight = showsSelectionMark ? chrome.fillsHighlight : (isSelected || isKeyboardActive)
         // Register during body evaluation (not only onAppear) so Enter always
         // hits the live registry after open/arrow-key re-renders.
         if isEnabled, let index {
@@ -166,25 +187,33 @@ struct PVContextMenuItem: View {
                     dismiss()
                     action()
                 } label: {
-                    label(foreground: PVColor.textPrimary)
+                    label(foreground: PVColor.textPrimary, showsCheck: showsSelectionMark && chrome.showsCheckmark)
                 }
-                .buttonStyle(PVContextMenuItemButtonStyle(isSelected: highlighted))
+                .buttonStyle(PVContextMenuItemButtonStyle(isSelected: fillHighlight))
                 .accessibilityAddIdentifiers(accessibilityIdentifier)
-                .accessibilityAddTraits(highlighted ? .isSelected : [])
+                .accessibilityAddTraits(chrome.isSelectedTrait ? .isSelected : [])
             } else {
-                label(foreground: PVColor.textFaint)
+                label(foreground: PVColor.textFaint, showsCheck: showsSelectionMark && chrome.showsCheckmark)
                     .accessibilityAddIdentifiers(accessibilityIdentifier)
                     .accessibilityRemoveTraits(.isButton)
             }
         }
     }
 
-    private func label(foreground: Color) -> some View {
-        Group {
-            if let titleResource {
-                Text(titleResource)
-            } else if let titleString {
-                Text(titleString)
+    private func label(foreground: Color, showsCheck: Bool) -> some View {
+        HStack(spacing: PVSpacing.space3) {
+            if showsSelectionMark {
+                PVIcon(.check, size: 13)
+                    .foregroundStyle(PVColor.accent)
+                    .opacity(showsCheck ? 1 : 0)
+                    .frame(width: 22)
+            }
+            Group {
+                if let titleResource {
+                    Text(titleResource)
+                } else if let titleString {
+                    Text(titleString)
+                }
             }
         }
         .font(PVFont.body(size: PVTypeScale.bodySmall))
@@ -220,9 +249,17 @@ extension View {
     func pvContextMenu<Content: View>(
         _ state: Binding<PVContextMenuState>,
         keyboard: Binding<PVContextMenuKeyboard>? = nil,
+        stealKeys: Bool = PVContextMenuInteraction.defaultStealKeys,
+        dismissOnMouseUp: Bool = PVContextMenuInteraction.defaultDismissOnMouseUp,
         @ViewBuilder content: @escaping () -> Content
     ) -> some View {
-        modifier(PVContextMenuPresenter(state: state, keyboard: keyboard, content: content))
+        modifier(PVContextMenuPresenter(
+            state: state,
+            keyboard: keyboard,
+            stealKeys: stealKeys,
+            dismissOnMouseUp: dismissOnMouseUp,
+            content: content
+        ))
     }
 }
 
@@ -277,6 +314,8 @@ extension EnvironmentValues {
 private struct PVContextMenuPresenter<MenuContent: View>: ViewModifier {
     @Binding var state: PVContextMenuState
     var keyboard: Binding<PVContextMenuKeyboard>?
+    var stealKeys: Bool = true
+    var dismissOnMouseUp: Bool = true
     @ViewBuilder var content: () -> MenuContent
     @State private var dismissMonitor: Any?
     @State private var actionRegistry = PVContextMenuActionRegistry()
@@ -330,9 +369,17 @@ private struct PVContextMenuPresenter<MenuContent: View>: ViewModifier {
         removeDismissMonitor()
         // Dismiss on mouse*Up* (not Down): Button actions fire on mouseUp, and
         // tearing the panel down on mouseDown prevents the item from running.
-        dismissMonitor = NSEvent.addLocalMonitorForEvents(
-            matching: [.leftMouseUp, .rightMouseDown, .otherMouseDown, .keyDown]
-        ) { event in
+        // Select owns its own press-drag loop (`dismissOnMouseUp` false) and
+        // its own keys (`stealKeys` false) so this default stays action-menu
+        // click-to-open.
+        var matching: NSEvent.EventTypeMask = [.rightMouseDown, .otherMouseDown]
+        if dismissOnMouseUp {
+            matching.insert(.leftMouseUp)
+        }
+        if stealKeys {
+            matching.insert(.keyDown)
+        }
+        dismissMonitor = NSEvent.addLocalMonitorForEvents(matching: matching) { event in
             if event.type == .keyDown {
                 return handleKeyDown(event)
             }
@@ -363,6 +410,18 @@ private struct PVContextMenuPresenter<MenuContent: View>: ViewModifier {
                 nav.activeIndex = PVFloatingMenuSelection.moveIndex(
                     from: nav.activeIndex, delta: -1, count: nav.itemCount
                 )
+                keyboard?.wrappedValue = nav
+            }
+            return nil
+        case 115: // Home
+            DispatchQueue.main.async {
+                nav.activeIndex = nav.itemCount > 0 ? 0 : -1
+                keyboard?.wrappedValue = nav
+            }
+            return nil
+        case 119: // End
+            DispatchQueue.main.async {
+                nav.activeIndex = nav.itemCount > 0 ? nav.itemCount - 1 : -1
                 keyboard?.wrappedValue = nav
             }
             return nil

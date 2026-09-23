@@ -27,6 +27,11 @@ struct PVContextMenuStateTests {
         #expect(!state.isPresented)
         #expect(state.origin == CGPoint(x: 4, y: 5))
     }
+
+    @Test func actionMenusKeepClickToOpenDefaults() {
+        #expect(PVContextMenuInteraction.defaultStealKeys)
+        #expect(PVContextMenuInteraction.defaultDismissOnMouseUp)
+    }
 }
 
 @Suite

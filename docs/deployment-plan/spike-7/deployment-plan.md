@@ -340,8 +340,8 @@ Schema/Go (01–03, 01b) may start before design finishes; **UI PRs gate on the 
 - [x] S7-10 — Durable connect macros → [`completed.md`](completed.md)
 - [x] S7-D7 — Design: Card component (design-system reference) → [`completed.md`](completed.md)
 - [x] S7-13 — `PVCard` call-site cleanup (manual cousins) → [`completed.md`](completed.md)
-- [ ] S7-D10 — Design: PVSelect native popup + remount → [`design/S7-D10-pvselect-native-parity.md`](design/S7-D10-pvselect-native-parity.md)
-- [ ] S7-15 — `PVSelect` native-popup parity + unify cousins → [`completed.md`](completed.md)
+- [x] S7-D10 — Design: PVSelect native popup + remount → [`completed.md`](completed.md)
+- [x] S7-15 — `PVSelect` native-popup parity + unify cousins → [`completed.md`](completed.md)
 - [ ] S7-11 — Dogfood close / docs → [`completed.md`](completed.md)
 
 ## Descoped
@@ -402,7 +402,7 @@ Claude Design board for **locator chrome**: default `artifact` layer, **Set Page
 
 ## S7-D10 — Design: PVSelect native popup + remount
 
-Claude Design **Select** kit page from the already-shipped macOS [`PVSelect`](../../../macos/App/DesignSystem/Components/Select/PVSelect.swift), plus remount of leftover system popups. Brief: [`design/S7-D10-pvselect-native-parity.md`](design/S7-D10-pvselect-native-parity.md). Child remount slip: [`design/S7-D10B-select-view-remount.md`](design/S7-D10B-select-view-remount.md). Gates **S7-15**. The kit page **must document the full native-popup contract** (closed vs open table, state frames, keys, press-drag-release, placement, a11y) — chrome-only is incomplete. Points DateValue calendar/month and `PVTable` column filter at Select; existing `PVSelect` hosts stay. Does **not** absorb `PVComboBox`, action menus, or segmented chips. Schedule after **S7-13**, before dogfood close.
+Claude Design **Select** kit page from the already-shipped macOS [`PVSelect`](../../../macos/App/DesignSystem/Components/Select/PVSelect.swift), plus remount of leftover system popups. Brief archived: [`design/archive/S7-D10-pvselect-native-parity.md`](design/archive/S7-D10-pvselect-native-parity.md). Child remount slip: [`design/archive/S7-D10B-select-view-remount.md`](design/archive/S7-D10B-select-view-remount.md). Gates **S7-15**. The kit page **must document the full native-popup contract** (closed vs open table, state frames, keys, press-drag-release, placement, a11y) — chrome-only is incomplete. Points DateValue calendar/month and `PVTable` column filter at Select; existing `PVSelect` hosts stay. Does **not** absorb `PVComboBox`, action menus, or segmented chips. Schedule after **S7-13**, before dogfood close.
 
 ---
 
