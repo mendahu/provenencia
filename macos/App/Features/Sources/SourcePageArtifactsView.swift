@@ -270,8 +270,6 @@ struct SourcePageArtifactsView: View {
                         .accessibilityIdentifier("sources.page.artifact.\(art.id).open")
                     }
                 }
-                .contentShape(Rectangle())
-                .onTapGesture { model.artifacts.open(art) }
             } else {
                 PVCallout(
                     tone: .neutral,
