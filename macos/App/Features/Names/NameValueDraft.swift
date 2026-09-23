@@ -49,8 +49,11 @@ struct NameValueDraft: Equatable, Sendable {
         return L10n.NameValue.partEmptyValue(position: index + 1)
     }
 
-    mutating func addPart() {
-        parts.append(.empty())
+    @discardableResult
+    mutating func addPart() -> UUID {
+        let part = Part.empty()
+        parts.append(part)
+        return part.id
     }
 
     mutating func removePart(id: UUID) {

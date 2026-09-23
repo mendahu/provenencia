@@ -65,6 +65,15 @@ struct NameValueDraftTests {
         #expect(NameValueDisplay.string(for: draft) == "John W. Alderwick")
     }
 
+    @Test func addPartAppendsEmptyRow() {
+        var draft = NameValueDraft.empty()
+        let id = draft.addPart()
+        #expect(draft.parts.count == 1)
+        #expect(draft.parts[0].id == id)
+        #expect(draft.parts[0].value.isEmpty)
+        #expect(draft.parts[0].type.isEmpty)
+    }
+
     @Test func movePartSwapsNeighbors() {
         var draft = NameValueDraft.empty()
         draft.form = "Wang Xiuying"
