@@ -5,6 +5,10 @@ struct CitationComposerView: View {
     let sourceID: String
     let subjectID: String
     let citationID: String?
+    let connectFromSubjectID: String?
+    let connectToSubjectID: String?
+    let connectBridgeTypeKey: String?
+    let connectDisambiguationTermID: String?
     let session: WorkspaceSession
     let store: any GenealogyStore
     let userID: String
@@ -18,6 +22,12 @@ struct CitationComposerView: View {
         sourceID: String,
         subjectID: String,
         citationID: String? = nil,
+        connectFromSubjectID: String? = nil,
+        connectToSubjectID: String? = nil,
+        connectBridgeTypeKey: String? = nil,
+        connectDisambiguationTermID: String? = nil,
+        connectGridX: Int64 = 0,
+        connectGridY: Int64 = 0,
         session: WorkspaceSession,
         store: any GenealogyStore,
         userID: String
@@ -25,6 +35,10 @@ struct CitationComposerView: View {
         self.sourceID = sourceID
         self.subjectID = subjectID
         self.citationID = citationID
+        self.connectFromSubjectID = connectFromSubjectID
+        self.connectToSubjectID = connectToSubjectID
+        self.connectBridgeTypeKey = connectBridgeTypeKey
+        self.connectDisambiguationTermID = connectDisambiguationTermID
         self.session = session
         self.store = store
         self.userID = userID
@@ -33,6 +47,12 @@ struct CitationComposerView: View {
                 sourceID: sourceID,
                 subjectID: subjectID,
                 citationID: citationID,
+                connectFromSubjectID: connectFromSubjectID,
+                connectToSubjectID: connectToSubjectID,
+                connectBridgeTypeKey: connectBridgeTypeKey,
+                connectDisambiguationTermID: connectDisambiguationTermID,
+                connectGridX: connectGridX,
+                connectGridY: connectGridY,
                 session: session,
                 store: store,
                 userID: userID
@@ -66,7 +86,7 @@ struct CitationComposerView: View {
         .accessibilityIdentifier("workspace.destination.citationComposer")
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(L10n.CitationComposer.accessibilityTitle))
-        .task(id: "\(sourceID)-\(subjectID)-\(citationID ?? "")") {
+        .task(id: "\(sourceID)-\(subjectID)-\(citationID ?? "")-\(connectFromSubjectID ?? "")-\(connectToSubjectID ?? "")") {
             await model.prepare()
             if model.shouldFallbackToGraph {
                 navigation.go(to: model.graphLocation())

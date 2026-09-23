@@ -2383,13 +2383,13 @@
       }
     },
     "evidenceGraph.connect.invalidPairBody": {
-      "comment": "Toast body explaining which primary pairs Connect accepts",
+      "comment": "Toast body explaining which primary pairs Connect accepts; person↔place is refused",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Try person↔event, person↔place, event↔place, or two people."
+            "value": "Try person↔event, event↔place, or two people. Person and place cannot be linked directly."
           }
         }
       }
@@ -10466,6 +10466,342 @@
           "stringUnit": {
             "state": "translated",
             "value": "Value — name"
+          }
+        }
+      }
+    },
+    "evidenceGraph.connect.disambiguationRoleTitle": {
+      "comment": "Title of the Connect disambiguation sheet for person↔event",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What role?"
+          }
+        }
+      }
+    },
+    "evidenceGraph.connect.disambiguationRelationshipTitle": {
+      "comment": "Title of the Connect disambiguation sheet for person↔person",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What relationship?"
+          }
+        }
+      }
+    },
+    "evidenceGraph.connect.disambiguationSubtitleBare": {
+      "comment": "Subtitle on the Connect disambiguation sheet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a term, then cite the connection."
+          }
+        }
+      }
+    },
+    "evidenceGraph.connect.disambiguationSubtitle": {
+      "comment": "Connect disambiguation pair line; arguments are endpoint A then B labels",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ → %@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.connect.disambiguationConfirm": {
+      "comment": "Confirm button on the Connect disambiguation sheet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue"
+          }
+        }
+      }
+    },
+    "evidenceGraph.connect.disambiguationPlaceholder": {
+      "comment": "Placeholder for the Connect disambiguation ComboBox",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a term"
+          }
+        }
+      }
+    },
+    "evidenceGraph.connect.disambiguationEmpty": {
+      "comment": "Empty label when the Connect disambiguation ComboBox has no terms",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No terms"
+          }
+        }
+      }
+    },
+    "evidenceGraph.connect.disambiguationTermLabel": {
+      "comment": "Accessibility label for the Connect disambiguation ComboBox",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Term"
+          }
+        }
+      }
+    },
+    "propertyTerm.role.subject": {
+      "comment": "Product role term: subject",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subject"
+          }
+        }
+      }
+    },
+    "propertyTerm.role.father": {
+      "comment": "Product role term: father",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Father"
+          }
+        }
+      }
+    },
+    "propertyTerm.role.mother": {
+      "comment": "Product role term: mother",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mother"
+          }
+        }
+      }
+    },
+    "propertyTerm.role.spouse": {
+      "comment": "Product role term: spouse",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spouse"
+          }
+        }
+      }
+    },
+    "propertyTerm.role.child": {
+      "comment": "Product role term: child",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Child"
+          }
+        }
+      }
+    },
+    "propertyTerm.role.witness": {
+      "comment": "Product role term: witness",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Witness"
+          }
+        }
+      }
+    },
+    "propertyTerm.role.informant": {
+      "comment": "Product role term: informant",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Informant"
+          }
+        }
+      }
+    },
+    "propertyTerm.relationship_type.spouse": {
+      "comment": "Product relationship_type term: spouse",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spouse"
+          }
+        }
+      }
+    },
+    "propertyTerm.relationship_type.sibling": {
+      "comment": "Product relationship_type term: sibling",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sibling"
+          }
+        }
+      }
+    },
+    "propertyTerm.relationship_type.cousin": {
+      "comment": "Product relationship_type term: cousin",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cousin"
+          }
+        }
+      }
+    },
+    "propertyTerm.relationship_type.parent": {
+      "comment": "Product relationship_type term: parent",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parent"
+          }
+        }
+      }
+    },
+    "propertyTerm.relationship_type.child": {
+      "comment": "Product relationship_type term: child",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Child"
+          }
+        }
+      }
+    },
+    "propertyTerm.relationship_type.grandparent": {
+      "comment": "Product relationship_type term: grandparent",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grandparent"
+          }
+        }
+      }
+    },
+    "propertyTerm.relationship_type.grandchild": {
+      "comment": "Product relationship_type term: grandchild",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grandchild"
+          }
+        }
+      }
+    },
+    "propertyTerm.relationship_type.pibling": {
+      "comment": "Product relationship_type term: pibling",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aunt / uncle"
+          }
+        }
+      }
+    },
+    "propertyTerm.relationship_type.nibling": {
+      "comment": "Product relationship_type term: nibling",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niece / nephew"
+          }
+        }
+      }
+    },
+    "propertyTerm.relationship_type.guardian": {
+      "comment": "Product relationship_type term: guardian",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guardian"
+          }
+        }
+      }
+    },
+    "propertyTerm.relationship_type.ward": {
+      "comment": "Product relationship_type term: ward",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ward"
+          }
+        }
+      }
+    },
+    "error.connect.invalid": {
+      "comment": "FFI error connect.invalid",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That connection isn’t valid."
+          }
+        }
+      }
+    },
+    "error.connect.refused": {
+      "comment": "FFI error connect.refused",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Those subjects can’t be connected."
           }
         }
       }

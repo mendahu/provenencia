@@ -53,6 +53,8 @@ const (
 	CodePropertyTermsInUse           = "propertyterms.in_use"
 	CodeSubjectVocabInvalid          = "subjectvocab.invalid"
 	CodeSubjectVocabLocked           = "subjectvocab.locked"
+	CodeConnectInvalid               = "connect.invalid"
+	CodeConnectRefused               = "connect.refused"
 	CodeSourcesInvalid               = "sources.invalid"
 	CodeSubjectsInvalid              = "subjects.invalid"
 	CodeSubjectsInUse                = "subjects.in_use"

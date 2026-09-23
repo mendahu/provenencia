@@ -57,6 +57,53 @@ struct EvidenceGraphModelTests {
                 refPrefix: "REL",
                 candidateRefPrefix: "CRL"
             ),
+            CatalogSubjectType(
+                id: "type-place",
+                key: "place",
+                origin: "provenencia",
+                label: "Place",
+                description: "",
+                refPrefix: "PLC",
+                candidateRefPrefix: "CPL"
+            ),
+        ]
+        store.propertiesByProject[projectDir] = [
+            CatalogProperty(
+                id: "prop-role",
+                key: "role",
+                origin: "provenencia",
+                label: "Role",
+                description: "",
+                valueType: "term"
+            ),
+            CatalogProperty(
+                id: "prop-rel-type",
+                key: "relationship_type",
+                origin: "provenencia",
+                label: "Relationship type",
+                description: "",
+                valueType: "term"
+            ),
+        ]
+        store.propertyTermsByProperty["prop-role"] = [
+            CatalogPropertyTerm(
+                id: "term-witness",
+                propertyID: "prop-role",
+                key: "witness",
+                origin: "provenencia",
+                label: "Witness",
+                description: ""
+            ),
+        ]
+        store.propertyTermsByProperty["prop-rel-type"] = [
+            CatalogPropertyTerm(
+                id: "term-spouse",
+                propertyID: "prop-rel-type",
+                key: "spouse",
+                origin: "provenencia",
+                label: "Spouse",
+                description: ""
+            ),
         ]
         return store
     }
@@ -308,44 +355,125 @@ struct EvidenceGraphModelTests {
         #expect(model.inputMode == .placing(.person))
 
         model.toggleConnect()
-        model.handleConnectPick(subjectID: "p1", kind: .person, label: "Alice")
+        await model.handleConnectPick(subjectID: "p1", kind: .person, label: "Alice")
         #expect(model.connectOriginID == "p1")
-        model.handleConnectPick(subjectID: "e1", kind: .event, label: "Birth")
-        #expect(model.isCreating)
-        #expect(model.pendingBridgeKind == .participation)
+        await model.handleConnectPick(subjectID: "e1", kind: .event, label: "Birth")
+        #expect(model.isCreating == false)
+        #expect(model.pendingDisambiguation != nil)
+        #expect(model.canConfirmDisambiguation == false)
+        #expect((store.subjectsBySource[sourceID] ?? []).count == 2)
 
-        model.draft.label = "Witness"
-        let bridgeID = await model.confirmCreate()
-        #expect(bridgeID != nil)
-        #expect(model.armedConnect == false)
-        #expect(links.links(for: sourceID).first?.endpointAID == "p1")
-        #expect(links.links(for: sourceID).first?.endpointBID == "e1")
-        #expect(model.pendingComposerHandoff?.subjectID == bridgeID)
-        let handoff = model.consumeComposerHandoff()
-        #expect(handoff?.subjectId == bridgeID)
+        model.selectDisambiguationTerm("term-witness")
+        #expect(model.canConfirmDisambiguation)
+        let handoff = model.confirmDisambiguation()
+        #expect(handoff?.isConnectPrefill == true)
+        #expect(handoff?.subjectId == nil)
+        #expect(handoff?.connectFromSubjectId == "p1")
+        #expect(handoff?.connectToSubjectId == "e1")
+        #expect(handoff?.connectBridgeTypeKey == "participation")
+        #expect(handoff?.connectDisambiguationTermId == "term-witness")
         #expect(handoff?.sourceSurface == .citationComposer)
-        #expect(model.pendingComposerHandoff == nil)
+        #expect(model.pendingDisambiguation == nil)
+        #expect(links.links(for: sourceID).isEmpty)
 
         let subjects = try await store.listSubjects(projectDir: projectDir, sourceID: sourceID)
-        #expect(subjects.contains(where: { $0.label == "Witness" }))
+        #expect(subjects.count == 2)
     }
 
-    @Test func cancelBridgeCreateKeepsOriginHeld() async {
+    @Test func eventPlaceConnectSkipsSheetAndHandsOffComposer() async {
         let store = makeStore()
         let model = makeModel(store: store)
         await model.prepare()
-
-        store.subjectTypesByProject[projectDir]?.append(
-            CatalogSubjectType(
-                id: "type-place",
-                key: "place",
-                origin: "provenencia",
-                label: "Place",
-                description: "",
-                refPrefix: "PLC",
-                candidateRefPrefix: "CPL"
+        let event = CatalogSubject(
+            id: "e1",
+            ref: "CEV-1",
+            sourceID: sourceID,
+            subjectTypeID: "type-event",
+            label: "Birth",
+            description: ""
+        )
+        let place = CatalogSubject(
+            id: "pl1",
+            ref: "CPL-1",
+            sourceID: sourceID,
+            subjectTypeID: "type-place",
+            label: "Leeds",
+            description: ""
+        )
+        store.subjectsBySource[sourceID] = [event, place]
+        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        model.session.setQueryValue(
+            key,
+            value: SourceGraphSnapshot.build(
+                sourceId: sourceID,
+                subjects: [event, place],
+                positions: [
+                    CatalogSubjectPosition(subjectID: "e1", gridX: 0, gridY: 0),
+                    CatalogSubjectPosition(subjectID: "pl1", gridX: 4, gridY: 0),
+                ],
+                types: store.subjectTypesByProject[projectDir] ?? []
             )
         )
+        model.toggleConnect()
+        await model.handleConnectPick(subjectID: "e1", kind: .event, label: "Birth")
+        await model.handleConnectPick(subjectID: "pl1", kind: .place, label: "Leeds")
+        #expect(model.pendingDisambiguation == nil)
+        #expect(model.isCreating == false)
+        let handoff = model.consumeComposerHandoff()
+        #expect(handoff?.isConnectPrefill == true)
+        #expect(handoff?.connectBridgeTypeKey == "location")
+        #expect(handoff?.connectDisambiguationTermId == nil)
+        #expect(handoff?.subjectId == nil)
+    }
+
+    @Test func cancelDisambiguationWritesNothingAndKeepsOrigin() async {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.prepare()
+        let person = CatalogSubject(
+            id: "p1",
+            ref: "CPR-1",
+            sourceID: sourceID,
+            subjectTypeID: personTypeID,
+            label: "Alice",
+            description: ""
+        )
+        let event = CatalogSubject(
+            id: "e1",
+            ref: "CEV-1",
+            sourceID: sourceID,
+            subjectTypeID: "type-event",
+            label: "Birth",
+            description: ""
+        )
+        store.subjectsBySource[sourceID] = [person, event]
+        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        model.session.setQueryValue(
+            key,
+            value: SourceGraphSnapshot.build(
+                sourceId: sourceID,
+                subjects: [person, event],
+                positions: [
+                    CatalogSubjectPosition(subjectID: "p1", gridX: 0, gridY: 0),
+                    CatalogSubjectPosition(subjectID: "e1", gridX: 4, gridY: 0),
+                ],
+                types: store.subjectTypesByProject[projectDir] ?? []
+            )
+        )
+        model.toggleConnect()
+        await model.handleConnectPick(subjectID: "p1", kind: .person, label: "Alice")
+        await model.handleConnectPick(subjectID: "e1", kind: .event, label: "Birth")
+        #expect(model.pendingDisambiguation != nil)
+        model.cancelDisambiguation()
+        #expect(model.pendingDisambiguation == nil)
+        #expect(model.armedConnect)
+        #expect(model.connectOriginID == "p1")
+        #expect((store.subjectsBySource[sourceID] ?? []).count == 2)
+    }
+
+    @Test func personPlaceConnectToastsAndKeepsOrigin() async {
+        let store = makeStore()
+        let model = makeModel(store: store)
         await model.prepare()
 
         let person = CatalogSubject(
@@ -380,13 +508,14 @@ struct EvidenceGraphModelTests {
         )
 
         model.toggleConnect()
-        model.handleConnectPick(subjectID: "p1", kind: .person, label: "Alice")
-        model.handleConnectPick(subjectID: "pl1", kind: .place, label: "Town")
-        #expect(model.pendingBridgeKind == .location)
-        model.cancelCreate()
+        await model.handleConnectPick(subjectID: "p1", kind: .person, label: "Alice")
+        await model.handleConnectPick(subjectID: "pl1", kind: .place, label: "Town")
+        #expect(model.pendingDisambiguation == nil)
         #expect(model.isCreating == false)
         #expect(model.armedConnect == true)
         #expect(model.connectOriginID == "p1")
+        #expect(model.toast?.tone == .danger)
+        #expect(String(localized: L10n.EvidenceGraph.connectInvalidPairBody).contains("Person and place"))
     }
 
     @Test func invalidConnectPairToastsAndKeepsOrigin() async {
@@ -431,8 +560,8 @@ struct EvidenceGraphModelTests {
         )
 
         model.toggleConnect()
-        model.handleConnectPick(subjectID: "e1", kind: .event, label: "A")
-        model.handleConnectPick(subjectID: "e2", kind: .event, label: "B")
+        await model.handleConnectPick(subjectID: "e1", kind: .event, label: "A")
+        await model.handleConnectPick(subjectID: "e2", kind: .event, label: "B")
         #expect(model.isCreating == false)
         #expect(model.connectOriginID == "e1")
         #expect(model.toast?.tone == .danger)

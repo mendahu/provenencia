@@ -167,11 +167,40 @@ struct SourceGraphSnapshotTests {
                 CatalogSubjectPosition(subjectID: bridge.id, gridX: 5, gridY: 6),
             ],
             types: [personType, eventType, locationType],
-            provisionalLinks: [
-                EvidenceProvisionalLink(
-                    bridgeSubjectID: bridge.id,
-                    endpointAID: alice.id,
-                    endpointBID: birth.id
+            observations: [
+                CatalogObservation(
+                    id: "obs-event",
+                    ref: "OBS-E",
+                    citationID: "cit-1",
+                    subjectID: bridge.id,
+                    propertyID: "prop-event",
+                    polarity: "positive",
+                    valueText: "Birth",
+                    valueInteger: nil,
+                    valueDateID: "",
+                    valueNameID: "",
+                    valueSubjectID: birth.id,
+                    valueTermID: "",
+                    propertyKey: "event",
+                    propertyLabel: "Event",
+                    propertyValueType: "subject"
+                ),
+                CatalogObservation(
+                    id: "obs-place",
+                    ref: "OBS-P",
+                    citationID: "cit-1",
+                    subjectID: bridge.id,
+                    propertyID: "prop-place",
+                    polarity: "positive",
+                    valueText: "Alice",
+                    valueInteger: nil,
+                    valueDateID: "",
+                    valueNameID: "",
+                    valueSubjectID: alice.id,
+                    valueTermID: "",
+                    propertyKey: "place",
+                    propertyLabel: "Place",
+                    propertyValueType: "subject"
                 ),
             ]
         )
@@ -185,8 +214,8 @@ struct SourceGraphSnapshotTests {
         #expect(snapshot.bridges.count == 1)
         #expect(snapshot.bridges[0].id == bridge.id)
         #expect(snapshot.bridges[0].kind == .location)
-        #expect(snapshot.bridges[0].endpointAID == alice.id)
-        #expect(snapshot.bridges[0].endpointBID == birth.id)
+        #expect(snapshot.bridges[0].endpointAID == birth.id)
+        #expect(snapshot.bridges[0].endpointBID == alice.id)
     }
 
     @Test func attachingLinksFillsBridgeEndpoints() {
@@ -218,14 +247,16 @@ struct SourceGraphSnapshotTests {
         #expect(next.bridges[0].endpointBID == "b")
     }
 
-    @Test func bridgeKindInferenceTable() {
-        #expect(EvidenceBridgeKindInference.kind(.person, .event) == .participation)
-        #expect(EvidenceBridgeKindInference.kind(.event, .person) == .participation)
-        #expect(EvidenceBridgeKindInference.kind(.person, .place) == .location)
-        #expect(EvidenceBridgeKindInference.kind(.event, .place) == .location)
-        #expect(EvidenceBridgeKindInference.kind(.person, .person) == .relationship)
-        #expect(EvidenceBridgeKindInference.kind(.event, .event) == nil)
-        #expect(EvidenceBridgeKindInference.kind(.place, .place) == nil)
+    @Test func connectRulesRefusePersonPlace() {
+        let rules = CatalogConnectRule.productMatrix
+        #expect(CatalogConnectRule.match(from: "person", to: "event", in: rules).bridgeTypeKey == "participation")
+        #expect(CatalogConnectRule.match(from: "event", to: "person", in: rules).bridgeTypeKey == "participation")
+        #expect(CatalogConnectRule.match(from: "person", to: "place", in: rules).refuse)
+        #expect(CatalogConnectRule.match(from: "place", to: "person", in: rules).refuse)
+        #expect(CatalogConnectRule.match(from: "event", to: "place", in: rules).bridgeTypeKey == "location")
+        #expect(CatalogConnectRule.match(from: "person", to: "person", in: rules).bridgeTypeKey == "relationship")
+        #expect(CatalogConnectRule.match(from: "event", to: "event", in: rules).refuse)
+        #expect(CatalogConnectRule.match(from: "place", to: "place", in: rules).refuse)
     }
 
     @Test func updatingPositionChangesOnlyMatchingSubject() {

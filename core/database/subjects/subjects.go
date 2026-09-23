@@ -76,6 +76,26 @@ func Create(c *database.Catalog, userID []byte, in CreateInput) (Subject, error)
 	}
 	defer func() { _ = tx.Rollback() }()
 
+	s, err := InsertTx(tx, userID, in)
+	if err != nil {
+		return Subject{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return Subject{}, err
+	}
+	return s, nil
+}
+
+// InsertTx inserts a Subject on an open transaction (no commit).
+func InsertTx(tx *sql.Tx, userID []byte, in CreateInput) (Subject, error) {
+	in.Label = strings.TrimSpace(in.Label)
+	in.Description = strings.TrimSpace(in.Description)
+	if len(in.SourceID) != 16 || len(in.SubjectTypeID) != 16 {
+		return Subject{}, ErrInvalid
+	}
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
+		return Subject{}, err
+	}
 	if err := requireSource(tx, in.SourceID); err != nil {
 		return Subject{}, err
 	}
@@ -131,9 +151,6 @@ func Create(c *database.Catalog, userID []byte, in CreateInput) (Subject, error)
 			Fields:     fields,
 		}},
 	}); err != nil {
-		return Subject{}, err
-	}
-	if err := tx.Commit(); err != nil {
 		return Subject{}, err
 	}
 	return Subject{

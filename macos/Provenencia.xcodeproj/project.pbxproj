@@ -114,6 +114,9 @@
 		A70900000000000000000008 /* ObservationValueDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70900000000000000000007 /* ObservationValueDisplayTests.swift */; };
 		A7090000000000000000000A /* EvidenceBridgeEdgeSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70900000000000000000009 /* EvidenceBridgeEdgeSummary.swift */; };
 		A7090000000000000000000C /* EvidenceBridgeEdgeSummaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7090000000000000000000B /* EvidenceBridgeEdgeSummaryTests.swift */; };
+		A71000000000000000000002 /* PropertyTermDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71000000000000000000001 /* PropertyTermDisplay.swift */; };
+		A71000000000000000000004 /* EvidenceConnectDisambiguationForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71000000000000000000003 /* EvidenceConnectDisambiguationForm.swift */; };
+		A71000000000000000000006 /* PropertyTermDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71000000000000000000005 /* PropertyTermDisplayTests.swift */; };
 		AA0000000000000000000491 /* EvidenceGraphModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000490 /* EvidenceGraphModel.swift */; };
 		AA0000000000000000000493 /* EvidenceGraphPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000492 /* EvidenceGraphPalette.swift */; };
 		AA0000000000000000000495 /* EvidenceGraphModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000494 /* EvidenceGraphModelTests.swift */; };
@@ -390,6 +393,9 @@
 		A70900000000000000000007 /* ObservationValueDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ObservationValueDisplayTests.swift; sourceTree = "<group>"; };
 		A70900000000000000000009 /* EvidenceBridgeEdgeSummary.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceBridgeEdgeSummary.swift; sourceTree = "<group>"; };
 		A7090000000000000000000B /* EvidenceBridgeEdgeSummaryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceBridgeEdgeSummaryTests.swift; sourceTree = "<group>"; };
+		A71000000000000000000001 /* PropertyTermDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PropertyTermDisplay.swift; sourceTree = "<group>"; };
+		A71000000000000000000003 /* EvidenceConnectDisambiguationForm.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceConnectDisambiguationForm.swift; sourceTree = "<group>"; };
+		A71000000000000000000005 /* PropertyTermDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PropertyTermDisplayTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000490 /* EvidenceGraphModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphModel.swift; sourceTree = "<group>"; };
 		AA0000000000000000000492 /* EvidenceGraphPalette.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphPalette.swift; sourceTree = "<group>"; };
 		AA0000000000000000000494 /* EvidenceGraphModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphModelTests.swift; sourceTree = "<group>"; };
@@ -765,6 +771,7 @@
 				AA0000000000000000000350 /* TimestampFormat.swift */,
 				AA000000000000000000001D /* InstallPaths.swift */,
 				AA00000000000000000000F0 /* ProjectSlug.swift */,
+				A71000000000000000000001 /* PropertyTermDisplay.swift */,
 				AA00000000000000000000E2 /* L10n.swift */,
 				AA0000000000000000000044 /* Generated */,
 				F56B617548A3EF65699270F8 /* SignOutCoordinator.swift */,
@@ -824,6 +831,7 @@
 				AA0000000000000000000480 /* EvidenceSubjectCard.swift */,
 				A70900000000000000000005 /* ObservationValueDisplay.swift */,
 				A70900000000000000000009 /* EvidenceBridgeEdgeSummary.swift */,
+				A71000000000000000000003 /* EvidenceConnectDisambiguationForm.swift */,
 				AA00000000000000000004A2 /* EvidenceBridgeCard.swift */,
 				AA00000000000000000004A4 /* EvidenceGraphEdgeLayer.swift */,
 				AA0000000000000000000490 /* EvidenceGraphModel.swift */,
@@ -969,6 +977,7 @@
 				A70900000000000000000003 /* DateValueDisplayTests.swift */,
 				A70900000000000000000007 /* ObservationValueDisplayTests.swift */,
 				A7090000000000000000000B /* EvidenceBridgeEdgeSummaryTests.swift */,
+				A71000000000000000000005 /* PropertyTermDisplayTests.swift */,
 				AA0000000000000000000232 /* PVComboBoxTests.swift */,
 			);
 			path = ProvenenciaTests;
@@ -1449,6 +1458,7 @@
 				AA000000000000000000000D /* InstallPaths.swift in Sources */,
 				AA00000000000000000000F1 /* ProjectSlug.swift in Sources */,
 				AA00000000000000000000E5 /* L10n.swift in Sources */,
+				A71000000000000000000002 /* PropertyTermDisplay.swift in Sources */,
 				AA0000000000000000000005 /* GenealogyStore.swift in Sources */,
 				AA0000000000000000000006 /* FakeStore.swift in Sources */,
 				AA0000000000000000000007 /* GoStore.swift in Sources */,
@@ -1511,6 +1521,7 @@
 				AA00000000000000000004A1 /* EvidenceProvisionalLinkStore.swift in Sources */,
 				AA00000000000000000004A3 /* EvidenceBridgeCard.swift in Sources */,
 				A7090000000000000000000A /* EvidenceBridgeEdgeSummary.swift in Sources */,
+				A71000000000000000000004 /* EvidenceConnectDisambiguationForm.swift in Sources */,
 				AA00000000000000000004A5 /* EvidenceGraphEdgeLayer.swift in Sources */,
 				AA00000000000000000004A7 /* GraphCanvasEdgeGeometry.swift in Sources */,
 				AA00000000000000000004C1 /* GraphCanvasHitTarget.swift in Sources */,
@@ -1672,6 +1683,7 @@
 				A70900000000000000000004 /* DateValueDisplayTests.swift in Sources */,
 				A70900000000000000000008 /* ObservationValueDisplayTests.swift in Sources */,
 				A7090000000000000000000C /* EvidenceBridgeEdgeSummaryTests.swift in Sources */,
+				A71000000000000000000006 /* PropertyTermDisplayTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -170,6 +170,8 @@ struct CatalogObservation: Sendable, Equatable, Identifiable {
     var propertyKey: String
     var propertyLabel: String
     var propertyValueType: String
+    /// Product/user term key when `valueTermID` is set (empty when unknown).
+    var valueTermKey: String = ""
 }
 
 struct CatalogProperty: Sendable, Equatable, Identifiable {
@@ -227,6 +229,63 @@ struct CatalogConnectRule: Sendable, Equatable {
     var edgePropertyKeys: [String]
     var disambiguation: String
     var refuse: Bool
+
+    /// Compiled product matrix (same rows as `subjectvocab.seedConnect`).
+    static let productMatrix: [CatalogConnectRule] = [
+        CatalogConnectRule(
+            fromTypeKey: "person", toTypeKey: "event",
+            bridgeTypeKey: "participation", edgePropertyKeys: ["person", "event"],
+            disambiguation: "role", refuse: false
+        ),
+        CatalogConnectRule(
+            fromTypeKey: "event", toTypeKey: "person",
+            bridgeTypeKey: "participation", edgePropertyKeys: ["person", "event"],
+            disambiguation: "role", refuse: false
+        ),
+        CatalogConnectRule(
+            fromTypeKey: "person", toTypeKey: "person",
+            bridgeTypeKey: "relationship", edgePropertyKeys: ["person", "related_to"],
+            disambiguation: "relationship_type", refuse: false
+        ),
+        CatalogConnectRule(
+            fromTypeKey: "event", toTypeKey: "place",
+            bridgeTypeKey: "location", edgePropertyKeys: ["event", "place"],
+            disambiguation: "none", refuse: false
+        ),
+        CatalogConnectRule(
+            fromTypeKey: "place", toTypeKey: "event",
+            bridgeTypeKey: "location", edgePropertyKeys: ["event", "place"],
+            disambiguation: "none", refuse: false
+        ),
+        CatalogConnectRule(
+            fromTypeKey: "person", toTypeKey: "place",
+            bridgeTypeKey: "", edgePropertyKeys: [], disambiguation: "", refuse: true
+        ),
+        CatalogConnectRule(
+            fromTypeKey: "place", toTypeKey: "person",
+            bridgeTypeKey: "", edgePropertyKeys: [], disambiguation: "", refuse: true
+        ),
+        CatalogConnectRule(
+            fromTypeKey: "event", toTypeKey: "event",
+            bridgeTypeKey: "", edgePropertyKeys: [], disambiguation: "", refuse: true
+        ),
+        CatalogConnectRule(
+            fromTypeKey: "place", toTypeKey: "place",
+            bridgeTypeKey: "", edgePropertyKeys: [], disambiguation: "", refuse: true
+        ),
+    ]
+
+    static func match(from fromTypeKey: String, to toTypeKey: String, in rules: [CatalogConnectRule]) -> CatalogConnectRule {
+        rules.first(where: { $0.fromTypeKey == fromTypeKey && $0.toTypeKey == toTypeKey })
+            ?? CatalogConnectRule(
+                fromTypeKey: fromTypeKey,
+                toTypeKey: toTypeKey,
+                bridgeTypeKey: "",
+                edgePropertyKeys: [],
+                disambiguation: "",
+                refuse: true
+            )
+    }
 }
 
 struct CatalogCredibilityAssessment: Sendable, Equatable {
@@ -615,6 +674,27 @@ protocol GenealogyStore: Sendable {
     func listPlaceableSubjectTypes() async throws -> [CatalogSubjectTypePresentation]
     func getSubjectTypePresentation(typeKey: String) async throws -> CatalogSubjectTypePresentation
     func listConnectRules() async throws -> [CatalogConnectRule]
+
+    func createCitedBridge(
+        projectDir: String,
+        userID: String,
+        sourceID: String,
+        fromSubjectID: String,
+        toSubjectID: String,
+        bridgeTypeKey: String,
+        label: String,
+        description: String,
+        gridX: Int64,
+        gridY: Int64,
+        artifactID: String,
+        locatorJSON: String,
+        transcription: String,
+        citationDescription: String,
+        transcriptionUncertain: Bool,
+        transcriptionNote: String,
+        citationNotes: [String],
+        observations: [CatalogObservationDraft]
+    ) async throws -> (CatalogSubject, CatalogCitation, [CatalogObservation])
 
     func createCitationWithObservations(
         projectDir: String,

@@ -111,6 +111,37 @@ func CreateWithObservations(
 	}
 	defer func() { _ = tx.Rollback() }()
 
+	res, err := InsertWithObservationsTx(tx, userID, in, obsInputs)
+	if err != nil {
+		return CreateResult{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return CreateResult{}, err
+	}
+	return res, nil
+}
+
+// InsertWithObservationsTx writes a Citation + Observations on an open transaction.
+func InsertWithObservationsTx(
+	tx *sql.Tx,
+	userID []byte,
+	in CreateInput,
+	obsInputs []observations.Input,
+) (CreateResult, error) {
+	in.LocatorJSON = strings.TrimSpace(in.LocatorJSON)
+	in.Transcription = strings.TrimSpace(in.Transcription)
+	in.Description = strings.TrimSpace(in.Description)
+	in.TranscriptionNote = strings.TrimSpace(in.TranscriptionNote)
+	if len(in.ArtifactID) != 16 || len(obsInputs) == 0 {
+		return CreateResult{}, ErrInvalid
+	}
+	if err := locator.Validate(in.LocatorJSON); err != nil {
+		return CreateResult{}, err
+	}
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
+		return CreateResult{}, err
+	}
+
 	var one int
 	if err := tx.QueryRow(sqlArtifactExists, in.ArtifactID).Scan(&one); err != nil {
 		if err == sql.ErrNoRows {
@@ -197,9 +228,6 @@ func CreateWithObservations(
 		CreatedAt:  project.NowUTC(),
 		Changes:    changes,
 	}); err != nil {
-		return CreateResult{}, err
-	}
-	if err := tx.Commit(); err != nil {
 		return CreateResult{}, err
 	}
 

@@ -26,6 +26,7 @@ IDs stay stable (`S7-NN`, `S7-DN`). Do not renumber when moving steps here.
 | [S7-07](#s7-07--pr-locator-tools) | PR | Layered artifact/page/region locators + overlay tools |
 | [S7-D5](#s7-d5--design-namevalue-editor) | Design | Reusable NameValue modal (DateValue twin); product part-type picker |
 | [S7-02b](#s7-02b--pr-namevalue-swift-editor) | PR | Shared `Features/Names/` editor hosted in the composer |
+| [S7-10](#s7-10--pr-durable-connect-macros) | PR | Registry-driven Connect; atomic cited bridge; person↔place refused |
 
 ## Steps
 
@@ -357,4 +358,25 @@ go test ./core/locator
 python3 scripts/check-localizable-xcstrings.py
 # xcodebuild test — NameValueDraftTests / CitationComposerModelTests
 go test ./core/database/observations/ ./core/database/namevalues/
+```
+
+### S7-10 — PR: Durable connect macros
+
+| | |
+| --- | --- |
+| **Kind** | PR |
+| **Depends on** | S7-08 (submit path), S7-09, **S7-D3**, S7-01 registry |
+| **Deliverables** | Done. Connect reads `listConnectRules()` only (no Swift pair `if`). Person↔event → participation + role sheet; person↔person → relationship + relationship_type sheet; event↔place → composer immediately. Person↔place and omitted pairs toast. Nothing is written until composer Submit. `CreateCitedBridge` FFI creates the bridge Subject, canvas position, Citation, and edge Observations in one TX. `WorkspaceLocation` connect payload reconstructs the composer (pending connect has `subjectId == nil`). Graph endpoints come from cited `value_subject_id`. Bridge cards use the relational **phrase**; composer crumb uses the full **sentence**. Product term names resolve L10n then catalog `label`. |
+| **Tests** | Go: `core/database/connect`, FFI `handlers` CreateCitedBridge. Swift: `EvidenceGraphModelTests` (rules, refuse, disambiguation enablement); `CitationComposerModelTests` (location prefill + atomic submit); `SourceGraphSnapshotTests` (endpoints + person↔place refuse); `PlaceRegistryTests` / `WorkspaceDestinationHostTests` (connect reconstruct); `EvidenceBridgeEdgeSummaryTests` (phrase vs sentence); `PropertyTermDisplayTests`; `check-localizable-xcstrings.py`. |
+| **Dogfood** | Connect two people → type ComboBox → composer shows two locked edge rows + term → Submit → Back → relationship card phrase + lines; relaunch keeps edges. Event↔place skips the sheet. Person↔place toasts. Back from composer writes nothing. |
+| **Out** | Provisional JSON writes (leftover uncited JSON bridges keep honesty, no lines). |
+
+**Landed:** durable Connect: registry matrix, disambiguation sheet, reconstructible composer payload, atomic cited bridge.
+
+**Verify:**
+
+```bash
+CGO_ENABLED=1 go test -tags fts5 ./core/database/connect/ ./api/ffi/handlers/
+python3 scripts/check-localizable-xcstrings.py
+# xcodebuild test — EvidenceGraphModelTests / CitationComposerModelTests / SourceGraphSnapshotTests
 ```

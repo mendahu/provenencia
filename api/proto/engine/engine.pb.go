@@ -97,6 +97,7 @@ const (
 	Method_METHOD_LIST_OBSERVATIONS_BY_SOURCE          Method = 69
 	Method_METHOD_GET_CITATION                         Method = 70
 	Method_METHOD_UPDATE_CITATION_WITH_OBSERVATIONS    Method = 71
+	Method_METHOD_CREATE_CITED_BRIDGE                  Method = 72
 )
 
 // Enum value maps for Method.
@@ -173,6 +174,7 @@ var (
 		69: "METHOD_LIST_OBSERVATIONS_BY_SOURCE",
 		70: "METHOD_GET_CITATION",
 		71: "METHOD_UPDATE_CITATION_WITH_OBSERVATIONS",
+		72: "METHOD_CREATE_CITED_BRIDGE",
 	}
 	Method_value = map[string]int32{
 		"METHOD_UNSPECIFIED":                          0,
@@ -246,6 +248,7 @@ var (
 		"METHOD_LIST_OBSERVATIONS_BY_SOURCE":          69,
 		"METHOD_GET_CITATION":                         70,
 		"METHOD_UPDATE_CITATION_WITH_OBSERVATIONS":    71,
+		"METHOD_CREATE_CITED_BRIDGE":                  72,
 	}
 )
 
@@ -10641,6 +10644,246 @@ func (x *UpdateCitationWithObservationsResponse) GetObservations() []*Observatio
 	return nil
 }
 
+type CreateCitedBridgeRequest struct {
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir             string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	UserId                 string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	SourceId               string                 `protobuf:"bytes,3,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	FromSubjectId          string                 `protobuf:"bytes,4,opt,name=from_subject_id,json=fromSubjectId,proto3" json:"from_subject_id,omitempty"`
+	ToSubjectId            string                 `protobuf:"bytes,5,opt,name=to_subject_id,json=toSubjectId,proto3" json:"to_subject_id,omitempty"`
+	BridgeTypeKey          string                 `protobuf:"bytes,6,opt,name=bridge_type_key,json=bridgeTypeKey,proto3" json:"bridge_type_key,omitempty"`
+	Label                  string                 `protobuf:"bytes,7,opt,name=label,proto3" json:"label,omitempty"`
+	Description            string                 `protobuf:"bytes,8,opt,name=description,proto3" json:"description,omitempty"`
+	GridX                  int64                  `protobuf:"varint,9,opt,name=grid_x,json=gridX,proto3" json:"grid_x,omitempty"`
+	GridY                  int64                  `protobuf:"varint,10,opt,name=grid_y,json=gridY,proto3" json:"grid_y,omitempty"`
+	ArtifactId             string                 `protobuf:"bytes,11,opt,name=artifact_id,json=artifactId,proto3" json:"artifact_id,omitempty"`
+	LocatorJson            string                 `protobuf:"bytes,12,opt,name=locator_json,json=locatorJson,proto3" json:"locator_json,omitempty"`
+	Transcription          string                 `protobuf:"bytes,13,opt,name=transcription,proto3" json:"transcription,omitempty"`
+	CitationDescription    string                 `protobuf:"bytes,14,opt,name=citation_description,json=citationDescription,proto3" json:"citation_description,omitempty"`
+	TranscriptionUncertain bool                   `protobuf:"varint,15,opt,name=transcription_uncertain,json=transcriptionUncertain,proto3" json:"transcription_uncertain,omitempty"`
+	TranscriptionNote      string                 `protobuf:"bytes,16,opt,name=transcription_note,json=transcriptionNote,proto3" json:"transcription_note,omitempty"`
+	CitationNotes          []string               `protobuf:"bytes,17,rep,name=citation_notes,json=citationNotes,proto3" json:"citation_notes,omitempty"`
+	Observations           []*ObservationDraft    `protobuf:"bytes,18,rep,name=observations,proto3" json:"observations,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *CreateCitedBridgeRequest) Reset() {
+	*x = CreateCitedBridgeRequest{}
+	mi := &file_engine_proto_msgTypes[169]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateCitedBridgeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateCitedBridgeRequest) ProtoMessage() {}
+
+func (x *CreateCitedBridgeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[169]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateCitedBridgeRequest.ProtoReflect.Descriptor instead.
+func (*CreateCitedBridgeRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{169}
+}
+
+func (x *CreateCitedBridgeRequest) GetProjectDir() string {
+	if x != nil {
+		return x.ProjectDir
+	}
+	return ""
+}
+
+func (x *CreateCitedBridgeRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *CreateCitedBridgeRequest) GetSourceId() string {
+	if x != nil {
+		return x.SourceId
+	}
+	return ""
+}
+
+func (x *CreateCitedBridgeRequest) GetFromSubjectId() string {
+	if x != nil {
+		return x.FromSubjectId
+	}
+	return ""
+}
+
+func (x *CreateCitedBridgeRequest) GetToSubjectId() string {
+	if x != nil {
+		return x.ToSubjectId
+	}
+	return ""
+}
+
+func (x *CreateCitedBridgeRequest) GetBridgeTypeKey() string {
+	if x != nil {
+		return x.BridgeTypeKey
+	}
+	return ""
+}
+
+func (x *CreateCitedBridgeRequest) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *CreateCitedBridgeRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *CreateCitedBridgeRequest) GetGridX() int64 {
+	if x != nil {
+		return x.GridX
+	}
+	return 0
+}
+
+func (x *CreateCitedBridgeRequest) GetGridY() int64 {
+	if x != nil {
+		return x.GridY
+	}
+	return 0
+}
+
+func (x *CreateCitedBridgeRequest) GetArtifactId() string {
+	if x != nil {
+		return x.ArtifactId
+	}
+	return ""
+}
+
+func (x *CreateCitedBridgeRequest) GetLocatorJson() string {
+	if x != nil {
+		return x.LocatorJson
+	}
+	return ""
+}
+
+func (x *CreateCitedBridgeRequest) GetTranscription() string {
+	if x != nil {
+		return x.Transcription
+	}
+	return ""
+}
+
+func (x *CreateCitedBridgeRequest) GetCitationDescription() string {
+	if x != nil {
+		return x.CitationDescription
+	}
+	return ""
+}
+
+func (x *CreateCitedBridgeRequest) GetTranscriptionUncertain() bool {
+	if x != nil {
+		return x.TranscriptionUncertain
+	}
+	return false
+}
+
+func (x *CreateCitedBridgeRequest) GetTranscriptionNote() string {
+	if x != nil {
+		return x.TranscriptionNote
+	}
+	return ""
+}
+
+func (x *CreateCitedBridgeRequest) GetCitationNotes() []string {
+	if x != nil {
+		return x.CitationNotes
+	}
+	return nil
+}
+
+func (x *CreateCitedBridgeRequest) GetObservations() []*ObservationDraft {
+	if x != nil {
+		return x.Observations
+	}
+	return nil
+}
+
+type CreateCitedBridgeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Subject       *Subject               `protobuf:"bytes,1,opt,name=subject,proto3" json:"subject,omitempty"`
+	Citation      *Citation              `protobuf:"bytes,2,opt,name=citation,proto3" json:"citation,omitempty"`
+	Observations  []*Observation         `protobuf:"bytes,3,rep,name=observations,proto3" json:"observations,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateCitedBridgeResponse) Reset() {
+	*x = CreateCitedBridgeResponse{}
+	mi := &file_engine_proto_msgTypes[170]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateCitedBridgeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateCitedBridgeResponse) ProtoMessage() {}
+
+func (x *CreateCitedBridgeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[170]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateCitedBridgeResponse.ProtoReflect.Descriptor instead.
+func (*CreateCitedBridgeResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{170}
+}
+
+func (x *CreateCitedBridgeResponse) GetSubject() *Subject {
+	if x != nil {
+		return x.Subject
+	}
+	return nil
+}
+
+func (x *CreateCitedBridgeResponse) GetCitation() *Citation {
+	if x != nil {
+		return x.Citation
+	}
+	return nil
+}
+
+func (x *CreateCitedBridgeResponse) GetObservations() []*Observation {
+	if x != nil {
+		return x.Observations
+	}
+	return nil
+}
+
 // Error is the protobuf payload on provenencia_call status 1 (failure).
 // Success payloads remain method-specific response messages.
 type Error struct {
@@ -10654,7 +10897,7 @@ type Error struct {
 
 func (x *Error) Reset() {
 	*x = Error{}
-	mi := &file_engine_proto_msgTypes[169]
+	mi := &file_engine_proto_msgTypes[171]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10666,7 +10909,7 @@ func (x *Error) String() string {
 func (*Error) ProtoMessage() {}
 
 func (x *Error) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[169]
+	mi := &file_engine_proto_msgTypes[171]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10679,7 +10922,7 @@ func (x *Error) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Error.ProtoReflect.Descriptor instead.
 func (*Error) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{169}
+	return file_engine_proto_rawDescGZIP(), []int{171}
 }
 
 func (x *Error) GetCode() string {
@@ -11547,11 +11790,37 @@ const file_engine_proto_rawDesc = "" +
 	"\fobservations\x18\v \x03(\v2'.provenencia.engine.v1.ObservationDraftR\fobservations\"\xad\x01\n" +
 	"&UpdateCitationWithObservationsResponse\x12;\n" +
 	"\bcitation\x18\x01 \x01(\v2\x1f.provenencia.engine.v1.CitationR\bcitation\x12F\n" +
-	"\fobservations\x18\x02 \x03(\v2\".provenencia.engine.v1.ObservationR\fobservations\"i\n" +
+	"\fobservations\x18\x02 \x03(\v2\".provenencia.engine.v1.ObservationR\fobservations\"\xc4\x05\n" +
+	"\x18CreateCitedBridgeRequest\x12\x1f\n" +
+	"\vproject_dir\x18\x01 \x01(\tR\n" +
+	"projectDir\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1b\n" +
+	"\tsource_id\x18\x03 \x01(\tR\bsourceId\x12&\n" +
+	"\x0ffrom_subject_id\x18\x04 \x01(\tR\rfromSubjectId\x12\"\n" +
+	"\rto_subject_id\x18\x05 \x01(\tR\vtoSubjectId\x12&\n" +
+	"\x0fbridge_type_key\x18\x06 \x01(\tR\rbridgeTypeKey\x12\x14\n" +
+	"\x05label\x18\a \x01(\tR\x05label\x12 \n" +
+	"\vdescription\x18\b \x01(\tR\vdescription\x12\x15\n" +
+	"\x06grid_x\x18\t \x01(\x03R\x05gridX\x12\x15\n" +
+	"\x06grid_y\x18\n" +
+	" \x01(\x03R\x05gridY\x12\x1f\n" +
+	"\vartifact_id\x18\v \x01(\tR\n" +
+	"artifactId\x12!\n" +
+	"\flocator_json\x18\f \x01(\tR\vlocatorJson\x12$\n" +
+	"\rtranscription\x18\r \x01(\tR\rtranscription\x121\n" +
+	"\x14citation_description\x18\x0e \x01(\tR\x13citationDescription\x127\n" +
+	"\x17transcription_uncertain\x18\x0f \x01(\bR\x16transcriptionUncertain\x12-\n" +
+	"\x12transcription_note\x18\x10 \x01(\tR\x11transcriptionNote\x12%\n" +
+	"\x0ecitation_notes\x18\x11 \x03(\tR\rcitationNotes\x12K\n" +
+	"\fobservations\x18\x12 \x03(\v2'.provenencia.engine.v1.ObservationDraftR\fobservations\"\xda\x01\n" +
+	"\x19CreateCitedBridgeResponse\x128\n" +
+	"\asubject\x18\x01 \x01(\v2\x1e.provenencia.engine.v1.SubjectR\asubject\x12;\n" +
+	"\bcitation\x18\x02 \x01(\v2\x1f.provenencia.engine.v1.CitationR\bcitation\x12F\n" +
+	"\fobservations\x18\x03 \x03(\v2\".provenencia.engine.v1.ObservationR\fobservations\"i\n" +
 	"\x05Error\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x124\n" +
 	"\x04kind\x18\x02 \x01(\x0e2 .provenencia.engine.v1.ErrorKindR\x04kind\x12\x16\n" +
-	"\x06params\x18\x03 \x03(\tR\x06params*\x93\x12\n" +
+	"\x06params\x18\x03 \x03(\tR\x06params*\xb3\x12\n" +
 	"\x06Method\x12\x16\n" +
 	"\x12METHOD_UNSPECIFIED\x10\x00\x12\x0f\n" +
 	"\vMETHOD_PING\x10\x01\x12\x16\n" +
@@ -11624,7 +11893,8 @@ const file_engine_proto_rawDesc = "" +
 	"#METHOD_ADD_OBSERVATIONS_TO_CITATION\x10D\x12&\n" +
 	"\"METHOD_LIST_OBSERVATIONS_BY_SOURCE\x10E\x12\x17\n" +
 	"\x13METHOD_GET_CITATION\x10F\x12,\n" +
-	"(METHOD_UPDATE_CITATION_WITH_OBSERVATIONS\x10G\"\x04\b\x1b\x10\x1b*\x12METHOD_COUNT_FILES*\x88\x01\n" +
+	"(METHOD_UPDATE_CITATION_WITH_OBSERVATIONS\x10G\x12\x1e\n" +
+	"\x1aMETHOD_CREATE_CITED_BRIDGE\x10H\"\x04\b\x1b\x10\x1b*\x12METHOD_COUNT_FILES*\x88\x01\n" +
 	"\tErrorKind\x12\x1a\n" +
 	"\x16ERROR_KIND_UNSPECIFIED\x10\x00\x12\x13\n" +
 	"\x0fERROR_KIND_USER\x10\x01\x12\x17\n" +
@@ -11645,7 +11915,7 @@ func file_engine_proto_rawDescGZIP() []byte {
 }
 
 var file_engine_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 170)
+var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 172)
 var file_engine_proto_goTypes = []any{
 	(Method)(0),                                       // 0: provenencia.engine.v1.Method
 	(ErrorKind)(0),                                    // 1: provenencia.engine.v1.ErrorKind
@@ -11818,7 +12088,9 @@ var file_engine_proto_goTypes = []any{
 	(*GetCitationResponse)(nil),                       // 168: provenencia.engine.v1.GetCitationResponse
 	(*UpdateCitationWithObservationsRequest)(nil),     // 169: provenencia.engine.v1.UpdateCitationWithObservationsRequest
 	(*UpdateCitationWithObservationsResponse)(nil),    // 170: provenencia.engine.v1.UpdateCitationWithObservationsResponse
-	(*Error)(nil),                                     // 171: provenencia.engine.v1.Error
+	(*CreateCitedBridgeRequest)(nil),                  // 171: provenencia.engine.v1.CreateCitedBridgeRequest
+	(*CreateCitedBridgeResponse)(nil),                 // 172: provenencia.engine.v1.CreateCitedBridgeResponse
+	(*Error)(nil),                                     // 173: provenencia.engine.v1.Error
 }
 var file_engine_proto_depIdxs = []int32{
 	24,  // 0: provenencia.engine.v1.CompleteOnboardingResponse.project:type_name -> provenencia.engine.v1.ProjectInfo
@@ -11897,12 +12169,16 @@ var file_engine_proto_depIdxs = []int32{
 	160, // 73: provenencia.engine.v1.UpdateCitationWithObservationsRequest.observations:type_name -> provenencia.engine.v1.ObservationDraft
 	158, // 74: provenencia.engine.v1.UpdateCitationWithObservationsResponse.citation:type_name -> provenencia.engine.v1.Citation
 	159, // 75: provenencia.engine.v1.UpdateCitationWithObservationsResponse.observations:type_name -> provenencia.engine.v1.Observation
-	1,   // 76: provenencia.engine.v1.Error.kind:type_name -> provenencia.engine.v1.ErrorKind
-	77,  // [77:77] is the sub-list for method output_type
-	77,  // [77:77] is the sub-list for method input_type
-	77,  // [77:77] is the sub-list for extension type_name
-	77,  // [77:77] is the sub-list for extension extendee
-	0,   // [0:77] is the sub-list for field type_name
+	160, // 76: provenencia.engine.v1.CreateCitedBridgeRequest.observations:type_name -> provenencia.engine.v1.ObservationDraft
+	105, // 77: provenencia.engine.v1.CreateCitedBridgeResponse.subject:type_name -> provenencia.engine.v1.Subject
+	158, // 78: provenencia.engine.v1.CreateCitedBridgeResponse.citation:type_name -> provenencia.engine.v1.Citation
+	159, // 79: provenencia.engine.v1.CreateCitedBridgeResponse.observations:type_name -> provenencia.engine.v1.Observation
+	1,   // 80: provenencia.engine.v1.Error.kind:type_name -> provenencia.engine.v1.ErrorKind
+	81,  // [81:81] is the sub-list for method output_type
+	81,  // [81:81] is the sub-list for method input_type
+	81,  // [81:81] is the sub-list for extension type_name
+	81,  // [81:81] is the sub-list for extension extendee
+	0,   // [0:81] is the sub-list for field type_name
 }
 
 func init() { file_engine_proto_init() }
@@ -11919,7 +12195,7 @@ func file_engine_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_engine_proto_rawDesc), len(file_engine_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   170,
+			NumMessages:   172,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

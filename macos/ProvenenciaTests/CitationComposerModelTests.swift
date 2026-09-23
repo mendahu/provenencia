@@ -192,7 +192,10 @@ struct CitationComposerModelTests {
         store: FakeStore,
         subjectID: String? = nil,
         citationID: String? = nil,
-        linkStore: (any EvidenceProvisionalLinkStoring)? = nil
+        connectFromSubjectID: String? = nil,
+        connectToSubjectID: String? = nil,
+        connectBridgeTypeKey: String? = nil,
+        connectDisambiguationTermID: String? = nil
     ) -> CitationComposerModel {
         let session = WorkspaceSession(
             projectKey: ProjectKey(projectDir: projectDir),
@@ -202,10 +205,13 @@ struct CitationComposerModelTests {
             sourceID: sourceID,
             subjectID: subjectID ?? self.subjectID,
             citationID: citationID,
+            connectFromSubjectID: connectFromSubjectID,
+            connectToSubjectID: connectToSubjectID,
+            connectBridgeTypeKey: connectBridgeTypeKey,
+            connectDisambiguationTermID: connectDisambiguationTermID,
             session: session,
             store: store,
-            userID: "user-1",
-            linkStore: linkStore
+            userID: "user-1"
         )
     }
 
@@ -290,7 +296,7 @@ struct CitationComposerModelTests {
         #expect(model.observations.isEmpty)
     }
 
-    @Test func preparePrefillsFixedConnectEdgeRowsFromProvisionalLink() async {
+    @Test func preparePrefillsFixedConnectEdgeRowsFromLocationPayload() async {
         let store = makeStore()
         seedArtifact(store)
         let eventTypeID = "type-event"
@@ -305,8 +311,34 @@ struct CitationComposerModelTests {
                 candidateRefPrefix: "CEV"
             )
         )
+        store.propertiesByProject[projectDir]?.append(
+            CatalogProperty(
+                id: "prop-role",
+                key: "role",
+                origin: "provenencia",
+                label: "Role",
+                description: "",
+                valueType: "term"
+            )
+        )
+        store.subjectTypeFieldsByType[participationTypeID]?.append(
+            CatalogSubjectTypeField(
+                property: store.propertiesByProject[projectDir]!.last!,
+                sortOrder: 3,
+                locked: false
+            )
+        )
+        store.propertyTermsByProperty["prop-role"] = [
+            CatalogPropertyTerm(
+                id: "term-witness",
+                propertyID: "prop-role",
+                key: "witness",
+                origin: "provenencia",
+                label: "Witness",
+                description: ""
+            ),
+        ]
         let eventID = "sub-event-1"
-        let bridgeID = "sub-bridge-1"
         store.subjectsBySource[sourceID] = [
             CatalogSubject(
                 id: subjectID,
@@ -324,39 +356,37 @@ struct CitationComposerModelTests {
                 label: "Enumeration, 1871",
                 description: ""
             ),
-            CatalogSubject(
-                id: bridgeID,
-                ref: "CPA-1",
-                sourceID: sourceID,
-                subjectTypeID: participationTypeID,
-                label: "Witness",
-                description: ""
-            ),
         ]
         store.subjectPositionsBySubject[eventID] = CatalogSubjectPosition(
             subjectID: eventID, gridX: 2, gridY: 0
         )
-        store.subjectPositionsBySubject[bridgeID] = CatalogSubjectPosition(
-            subjectID: bridgeID, gridX: 1, gridY: 0
+        let model = makeModel(
+            store: store,
+            subjectID: "",
+            connectFromSubjectID: subjectID,
+            connectToSubjectID: eventID,
+            connectBridgeTypeKey: "participation",
+            connectDisambiguationTermID: "term-witness"
         )
-        let links = InMemoryEvidenceProvisionalLinkStore()
-        links.upsert(
-            EvidenceProvisionalLink(
-                bridgeSubjectID: bridgeID,
-                endpointAID: subjectID,
-                endpointBID: eventID
-            ),
-            sourceID: sourceID
-        )
-        let model = makeModel(store: store, subjectID: bridgeID, linkStore: links)
         await model.prepare()
         #expect(model.phase == .compose)
-        #expect(model.observations.count == 2)
-        #expect(model.observations.allSatisfy { $0.isConnectFixed })
-        #expect(model.observations.map(\.valueSubjectID).sorted() == [eventID, subjectID].sorted())
-        #expect(Set(model.observations.map(\.valueText)) == Set(["Margt.", "Enumeration, 1871"]))
+        #expect(model.isConnectPrefill)
+        #expect(model.observations.count == 3)
+        #expect(model.observations.filter(\.isConnectFixed).count == 2)
+        #expect(model.observations.filter(\.isConnectFixed).map(\.valueSubjectID).sorted() == [eventID, subjectID].sorted())
+        #expect(model.observations.contains(where: { $0.valueTermID == "term-witness" && !$0.isConnectFixed }))
+        #expect(
+            model.subjectLabel == EvidenceBridgeEdgeSummary.sentence(
+                kind: .participation,
+                person: "Margt.",
+                related: nil,
+                event: "Enumeration, 1871",
+                place: nil,
+                term: String(localized: L10n.PropertyTerm.roleWitness)
+            )
+        )
         model.removeObservation(id: model.observations[0].id)
-        #expect(model.observations.count == 2)
+        #expect(model.observations.filter(\.isConnectFixed).count == 2)
     }
 
     @Test func connectEdgePrefillRowsAssignEndpointsByPropertyKey() {
@@ -684,5 +714,120 @@ struct CitationComposerModelTests {
         #expect(store.citationsByID[citation.id]?.locatorJSON.contains("\"artifact\"") == true)
         #expect(listed.count == 1)
         #expect(listed[0].valueText == "Miller")
+    }
+
+    @Test func submitConnectPrefillCreatesCitedBridge() async throws {
+        let store = makeStore()
+        seedArtifact(store)
+        let eventTypeID = "type-event"
+        store.subjectTypesByProject[projectDir]?.append(
+            CatalogSubjectType(
+                id: eventTypeID,
+                key: "event",
+                origin: "provenencia",
+                label: "Event",
+                description: "",
+                refPrefix: "EVT",
+                candidateRefPrefix: "CEV"
+            )
+        )
+        let eventID = "sub-event-1"
+        store.subjectsBySource[sourceID] = [
+            CatalogSubject(
+                id: subjectID,
+                ref: "CPR-1",
+                sourceID: sourceID,
+                subjectTypeID: personTypeID,
+                label: "Margt.",
+                description: ""
+            ),
+            CatalogSubject(
+                id: eventID,
+                ref: "CEV-1",
+                sourceID: sourceID,
+                subjectTypeID: eventTypeID,
+                label: "Birth",
+                description: ""
+            ),
+        ]
+        let before = (store.subjectsBySource[sourceID] ?? []).count
+        let model = makeModel(
+            store: store,
+            subjectID: "",
+            connectFromSubjectID: subjectID,
+            connectToSubjectID: eventID,
+            connectBridgeTypeKey: "participation"
+        )
+        await model.prepare()
+        let location = await model.submit()
+        #expect(location?.sourceSurface == .graph)
+        let after = store.subjectsBySource[sourceID] ?? []
+        #expect(after.count == before + 1)
+        #expect(after.contains(where: { $0.subjectTypeID == participationTypeID }))
+        #expect(!store.citationsByID.isEmpty)
+    }
+
+    @Test func fakeStoreRefusesPersonPlaceCitedBridge() async {
+        let store = makeStore()
+        store.subjectTypesByProject[projectDir]?.append(
+            CatalogSubjectType(
+                id: "type-place",
+                key: "place",
+                origin: "provenencia",
+                label: "Place",
+                description: "",
+                refPrefix: "PLC",
+                candidateRefPrefix: "CPL"
+            )
+        )
+        store.subjectsBySource[sourceID] = [
+            CatalogSubject(
+                id: subjectID,
+                ref: "CPR-1",
+                sourceID: sourceID,
+                subjectTypeID: personTypeID,
+                label: "Alice",
+                description: ""
+            ),
+            CatalogSubject(
+                id: "pl1",
+                ref: "CPL-1",
+                sourceID: sourceID,
+                subjectTypeID: "type-place",
+                label: "Leeds",
+                description: ""
+            ),
+        ]
+        do {
+            _ = try await store.createCitedBridge(
+                projectDir: projectDir,
+                userID: "user-1",
+                sourceID: sourceID,
+                fromSubjectID: subjectID,
+                toSubjectID: "pl1",
+                bridgeTypeKey: "",
+                label: "Nope",
+                description: "",
+                gridX: 0,
+                gridY: 0,
+                artifactID: "art-0",
+                locatorJSON: "{}",
+                transcription: "",
+                citationDescription: "",
+                transcriptionUncertain: false,
+                transcriptionNote: "",
+                citationNotes: [],
+                observations: []
+            )
+            Issue.record("expected refuse")
+        } catch let error as CoreInvokeError {
+            guard case .coded(_, let code, _, _) = error else {
+                Issue.record("expected coded error")
+                return
+            }
+            #expect(code == "connect.refused")
+        } catch {
+            Issue.record("expected CoreInvokeError")
+        }
     }
 }

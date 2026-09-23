@@ -75,10 +75,15 @@ final class CitationComposerModel {
     let subjectID: String
     /// When set, prepare/save load and update this Citation instead of creating.
     let citationID: String?
+    let connectFromSubjectID: String?
+    let connectToSubjectID: String?
+    let connectBridgeTypeKey: String?
+    let connectDisambiguationTermID: String?
+    let connectGridX: Int64
+    let connectGridY: Int64
     private let userID: String
     private let store: any GenealogyStore
     let session: WorkspaceSession
-    private let linkStore: any EvidenceProvisionalLinkStoring
 
     private(set) var phase: Phase = .loading
     private(set) var subjectLabel: String = ""
@@ -128,30 +133,39 @@ final class CitationComposerModel {
 
     var isEditingExisting: Bool { citationID != nil }
 
+    var isConnectPrefill: Bool {
+        subjectID.isEmpty
+            && connectFromSubjectID != nil
+            && connectToSubjectID != nil
+            && connectBridgeTypeKey != nil
+    }
+
     init(
         sourceID: String,
         subjectID: String,
         citationID: String? = nil,
+        connectFromSubjectID: String? = nil,
+        connectToSubjectID: String? = nil,
+        connectBridgeTypeKey: String? = nil,
+        connectDisambiguationTermID: String? = nil,
+        connectGridX: Int64 = 0,
+        connectGridY: Int64 = 0,
         session: WorkspaceSession,
         store: any GenealogyStore,
-        userID: String,
-        linkStore: (any EvidenceProvisionalLinkStoring)? = nil
+        userID: String
     ) {
         self.sourceID = sourceID
         self.subjectID = subjectID
         self.citationID = citationID
+        self.connectFromSubjectID = connectFromSubjectID
+        self.connectToSubjectID = connectToSubjectID
+        self.connectBridgeTypeKey = connectBridgeTypeKey
+        self.connectDisambiguationTermID = connectDisambiguationTermID
+        self.connectGridX = connectGridX
+        self.connectGridY = connectGridY
         self.session = session
         self.store = store
         self.userID = userID
-        if let linkStore {
-            self.linkStore = linkStore
-        } else if let live = try? EvidenceProvisionalLinkStore(
-            projectDir: session.projectKey.projectDir
-        ) {
-            self.linkStore = live
-        } else {
-            self.linkStore = InMemoryEvidenceProvisionalLinkStore()
-        }
     }
 
     var graphKey: CatalogQueryKey {
@@ -242,13 +256,22 @@ final class CitationComposerModel {
     }
 
     func termOptions(for propertyID: String) -> [PVComboBoxOption] {
-        (termsByPropertyID[propertyID] ?? []).map {
-            PVComboBoxOption(value: $0.id, label: $0.label, subtext: $0.key)
+        let propertyKey = catalogProperty(id: propertyID)?.key ?? ""
+        return (termsByPropertyID[propertyID] ?? []).map { term in
+            PVComboBoxOption(
+                value: term.id,
+                label: PropertyTermDisplay.name(term: term, propertyKey: propertyKey),
+                subtext: term.key
+            )
         }
     }
 
     func termLabel(for termID: String, propertyID: String) -> String? {
-        termsByPropertyID[propertyID]?.first(where: { $0.id == termID })?.label
+        guard let term = termsByPropertyID[propertyID]?.first(where: { $0.id == termID }) else {
+            return nil
+        }
+        let propertyKey = catalogProperty(id: propertyID)?.key ?? ""
+        return PropertyTermDisplay.name(term: term, propertyKey: propertyKey)
     }
 
     func observationSummary(for row: ObservationRow) -> String {
@@ -393,11 +416,14 @@ final class CitationComposerModel {
                 observations: listedObservations
             )
 
-            guard let resolved = Self.resolveSubject(
-                id: subjectID,
-                in: snapshot,
-                types: types
-            ) else {
+            let resolved: ResolvedSubject
+            if isConnectPrefill, let bridgeKey = connectBridgeTypeKey,
+               let type = types.first(where: { $0.key == bridgeKey })
+            {
+                resolved = ResolvedSubject(label: "", typeKey: bridgeKey, typeID: type.id)
+            } else if let existing = Self.resolveSubject(id: subjectID, in: snapshot, types: types) {
+                resolved = existing
+            } else {
                 phase = .subjectMissing
                 shouldFallbackToGraph = true
                 return
@@ -473,26 +499,62 @@ final class CitationComposerModel {
             }
 
             observations = []
-            if EvidenceBridgeKind(rawValue: resolved.typeKey) != nil,
-               let link = linkStore.links(for: sourceID)
-                .first(where: { $0.bridgeSubjectID == subjectID }),
-               let typeA = typeKeyBySubjectID[link.endpointAID],
-               let typeB = typeKeyBySubjectID[link.endpointBID]
+            if isConnectPrefill,
+               let fromID = connectFromSubjectID,
+               let toID = connectToSubjectID,
+               let typeA = typeKeyBySubjectID[fromID],
+               let typeB = typeKeyBySubjectID[toID]
             {
                 observations = Self.connectEdgePrefillRows(
                     bridgeTypeKey: resolved.typeKey,
                     rules: rules,
                     properties: allProperties,
                     endpointA: (
-                        id: link.endpointAID,
-                        label: subjectLabelsByID[link.endpointAID] ?? link.endpointAID,
+                        id: fromID,
+                        label: subjectLabelsByID[fromID] ?? fromID,
                         typeKey: typeA
                     ),
                     endpointB: (
-                        id: link.endpointBID,
-                        label: subjectLabelsByID[link.endpointBID] ?? link.endpointBID,
+                        id: toID,
+                        label: subjectLabelsByID[toID] ?? toID,
                         typeKey: typeB
                     )
+                )
+                if let termID = connectDisambiguationTermID, !termID.isEmpty,
+                   let termProperty = allProperties.first(where: { $0.key == rules
+                       .first(where: { $0.bridgeTypeKey == resolved.typeKey && !$0.refuse })?
+                       .disambiguation })
+                {
+                    let terms = try await store.listPropertyTerms(
+                        projectDir: projectDir,
+                        propertyID: termProperty.id
+                    )
+                    termsByPropertyID[termProperty.id] = terms
+                    observations.append(
+                        ObservationRow(
+                            id: UUID(),
+                            propertyID: termProperty.id,
+                            polarity: "positive",
+                            valueText: terms.first(where: { $0.id == termID })?.label ?? "",
+                            valueIntegerText: "",
+                            valueTermID: termID,
+                            valueSubjectID: "",
+                            dateDraft: .empty(),
+                            isConnectFixed: false
+                        )
+                    )
+                }
+                subjectLabel = EvidenceBridgeEdgeSummary.sentence(
+                    bridgeTypeKey: resolved.typeKey,
+                    observations: observations,
+                    properties: allProperties,
+                    subjectLabelsByID: subjectLabelsByID,
+                    termLabel: { [termsByPropertyID] termID, propertyID in
+                        guard let term = termsByPropertyID[propertyID]?.first(where: { $0.id == termID })
+                        else { return nil }
+                        let key = allProperties.first(where: { $0.id == propertyID })?.key ?? ""
+                        return PropertyTermDisplay.name(term: term, propertyKey: key)
+                    }
                 )
             }
 
@@ -731,6 +793,31 @@ final class CitationComposerModel {
                     locatorJSON: locatorJSON,
                     transcription: transcription,
                     description: citationDescription,
+                    transcriptionUncertain: transcriptionUncertain,
+                    transcriptionNote: transcriptionNote,
+                    citationNotes: [],
+                    observations: drafts
+                )
+            } else if isConnectPrefill,
+                      let fromID = connectFromSubjectID,
+                      let toID = connectToSubjectID,
+                      let bridgeKey = connectBridgeTypeKey
+            {
+                _ = try await store.createCitedBridge(
+                    projectDir: session.projectKey.projectDir,
+                    userID: userID,
+                    sourceID: sourceID,
+                    fromSubjectID: fromID,
+                    toSubjectID: toID,
+                    bridgeTypeKey: bridgeKey,
+                    label: subjectLabel,
+                    description: "",
+                    gridX: connectGridX,
+                    gridY: connectGridY,
+                    artifactID: artifactID,
+                    locatorJSON: locatorJSON,
+                    transcription: transcription,
+                    citationDescription: citationDescription,
                     transcriptionUncertain: transcriptionUncertain,
                     transcriptionNote: transcriptionNote,
                     citationNotes: [],

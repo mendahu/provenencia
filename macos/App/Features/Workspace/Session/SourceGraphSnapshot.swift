@@ -62,7 +62,9 @@ struct SourceGraphSnapshot: Sendable, Equatable {
     }
 
     /// Joins catalog rows into placed primaries and bridges. Unplaced subjects
-    /// and `source` types are omitted. Endpoint ids come from `provisionalLinks`.
+    /// and `source` types are omitted. Endpoint ids come from cited
+    /// `value_subject_id` on edge Properties (`person` / `event` / `place` /
+    /// `related_to`). Leftover uncited JSON links do not draw lines.
     static func build(
         sourceId: String,
         subjects: [CatalogSubject],
@@ -74,9 +76,7 @@ struct SourceGraphSnapshot: Sendable, Equatable {
         let typeByID = Dictionary(uniqueKeysWithValues: types.map { ($0.id, $0) })
         let positionBySubject = Dictionary(uniqueKeysWithValues: positions.map { ($0.subjectID, $0) })
         let observationsBySubject = Dictionary(grouping: observations, by: \.subjectID)
-        let linkByBridge = Dictionary(uniqueKeysWithValues: provisionalLinks.map {
-            ($0.bridgeSubjectID, $0)
-        })
+        _ = provisionalLinks
 
         var placed: [SourceGraphPlacedSubject] = []
         var placedBridges: [SourceGraphPlacedBridge] = []
@@ -103,9 +103,9 @@ struct SourceGraphSnapshot: Sendable, Equatable {
                     )
                 )
             } else if let kind = EvidenceBridgeKind(rawValue: type.key) {
-                let link = linkByBridge[subject.id]
                 let subjectObservations = (observationsBySubject[subject.id] ?? [])
                     .sorted(by: Self.observationDisplayOrder)
+                let ends = Self.citedEndpoints(kind: kind, observations: subjectObservations)
                 placedBridges.append(
                     SourceGraphPlacedBridge(
                         subject: subject,
@@ -115,8 +115,8 @@ struct SourceGraphSnapshot: Sendable, Equatable {
                         gridY: position.gridY,
                         isCited: !subjectObservations.isEmpty,
                         observations: subjectObservations,
-                        endpointAID: link?.endpointAID,
-                        endpointBID: link?.endpointBID
+                        endpointAID: ends.a,
+                        endpointBID: ends.b
                     )
                 )
             }
@@ -133,6 +133,26 @@ struct SourceGraphSnapshot: Sendable, Equatable {
             return lhs.subject.ref.localizedStandardCompare(rhs.subject.ref) == .orderedAscending
         }
         return SourceGraphSnapshot(sourceId: sourceId, subjects: placed, bridges: placedBridges)
+    }
+
+    /// Cited A/B endpoints from edge `value_subject_id` (S7-10).
+    static func citedEndpoints(
+        kind: EvidenceBridgeKind,
+        observations: [CatalogObservation]
+    ) -> (a: String?, b: String?) {
+        func subjectID(for key: String) -> String? {
+            let id = observations.first(where: { $0.propertyKey == key })?.valueSubjectID
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return id.isEmpty ? nil : id
+        }
+        switch kind {
+        case .participation:
+            return (subjectID(for: "person"), subjectID(for: "event"))
+        case .relationship:
+            return (subjectID(for: "person"), subjectID(for: "related_to"))
+        case .location:
+            return (subjectID(for: "event"), subjectID(for: "place"))
+        }
     }
 
     /// Card row order: property label A→Z, then key, then Observation ref.
@@ -179,16 +199,3 @@ struct SourceGraphSnapshot: Sendable, Equatable {
     }
 }
 
-/// Infers the bridge kind for a primary pair (S6-04). Returns nil for invalid pairs.
-enum EvidenceBridgeKindInference {
-    static func kind(
-        _ a: EvidencePrimaryKind,
-        _ b: EvidencePrimaryKind
-    ) -> EvidenceBridgeKind? {
-        let pair = Set([a, b])
-        if pair == [.person, .event] { return .participation }
-        if pair == [.person, .place] || pair == [.event, .place] { return .location }
-        if a == .person, b == .person { return .relationship }
-        return nil
-    }
-}

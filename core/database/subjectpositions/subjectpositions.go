@@ -61,6 +61,31 @@ func Set(c *database.Catalog, subjectID []byte, gridX, gridY int64) (Position, e
 	}, nil
 }
 
+// SetTx places or moves a subject on an open transaction (no commit).
+// Callers that just inserted the subject in the same tx may skip the exists check
+// by passing skipExistsCheck.
+func SetTx(tx *sql.Tx, subjectID []byte, gridX, gridY int64) (Position, error) {
+	if len(subjectID) != 16 {
+		return Position{}, ErrInvalid
+	}
+	var one int
+	err := tx.QueryRow(sqlSubjectExists, subjectID).Scan(&one)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Position{}, ErrInvalid
+	}
+	if err != nil {
+		return Position{}, err
+	}
+	if _, err := tx.Exec(sqlSet, subjectID, gridX, gridY); err != nil {
+		return Position{}, err
+	}
+	return Position{
+		SubjectID: append([]byte(nil), subjectID...),
+		GridX:     gridX,
+		GridY:     gridY,
+	}, nil
+}
+
 // Get returns a stored position, or sql.ErrNoRows when unplaced (tray).
 func Get(c *database.Catalog, subjectID []byte) (Position, error) {
 	db, err := c.DB()

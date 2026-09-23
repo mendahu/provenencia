@@ -9,6 +9,8 @@
 **Dogfood order:** Design and ship **S7-09** before thick composer work so Add property is clickable early.
 
 > **Shipped delta (S7-09):** Edit label/description reuses the create `PVFormDialog` (board copy said create-only).
+>
+> **Shipped delta (S7-10):** Durable connect implemented; person↔place refused per the subjectvocab registry (not a location pair).
 
 Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](../README.md) first. When implementing, treat **§9 UI building-block inventory** as binding: compose existing kit pieces; only invent what the table marks **New**.
 

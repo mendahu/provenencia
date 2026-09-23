@@ -328,7 +328,7 @@ Schema/Go (01–03, 01b) may start before design finishes; **UI PRs gate on the 
 - [x] S7-D9 — Design: Locator region chrome → [`completed.md`](completed.md)
 - [x] S7-07 — Locator tools (page + region + artifact) → [`completed.md`](completed.md)
 - [x] S7-02b — NameValue Swift editor → [`completed.md`](completed.md)
-- [ ] S7-10 — Durable connect macros → [`completed.md`](completed.md)
+- [x] S7-10 — Durable connect macros → [`completed.md`](completed.md)
 - [ ] S7-D7 — Design: Card component (design-system reference) → [`completed.md`](completed.md)
 - [ ] S7-13 — `PVCard` call-site cleanup (manual cousins) → [`completed.md`](completed.md)
 - [ ] S7-11 — Dogfood close / docs → [`completed.md`](completed.md)

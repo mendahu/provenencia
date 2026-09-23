@@ -80,6 +80,7 @@ enum Method {
   METHOD_LIST_OBSERVATIONS_BY_SOURCE = 69;
   METHOD_GET_CITATION = 70;
   METHOD_UPDATE_CITATION_WITH_OBSERVATIONS = 71;
+  METHOD_CREATE_CITED_BRIDGE = 72;
 }
 
 message PingRequest {
@@ -1178,6 +1179,33 @@ message UpdateCitationWithObservationsRequest {
 message UpdateCitationWithObservationsResponse {
   Citation citation = 1;
   repeated Observation observations = 2;
+}
+
+message CreateCitedBridgeRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string source_id = 3;
+  string from_subject_id = 4;
+  string to_subject_id = 5;
+  string bridge_type_key = 6;
+  string label = 7;
+  string description = 8;
+  int64 grid_x = 9;
+  int64 grid_y = 10;
+  string artifact_id = 11;
+  string locator_json = 12;
+  string transcription = 13;
+  string citation_description = 14;
+  bool transcription_uncertain = 15;
+  string transcription_note = 16;
+  repeated string citation_notes = 17;
+  repeated ObservationDraft observations = 18;
+}
+
+message CreateCitedBridgeResponse {
+  Subject subject = 1;
+  Citation citation = 2;
+  repeated Observation observations = 3;
 }
 
 // ErrorKind classifies a failure for client UX (tone, retry hints). Copy still

@@ -203,4 +203,31 @@ struct PlaceRegistryTests {
             #expect(place != nil)
         }
     }
+
+    @Test func connectPrefillResolvesComposerWithoutSubjectId() {
+        let location = WorkspaceLocation(
+            section: .sources,
+            sourceId: "s1",
+            connectFromSubjectId: "p1",
+            connectToSubjectId: "e1",
+            connectBridgeTypeKey: "participation",
+            connectDisambiguationTermId: "term-1",
+            connectGridX: 2,
+            connectGridY: 3,
+            sourceSurface: .citationComposer,
+            title: "Margt. participated as Witness at Birth"
+        )
+        #expect(location.isConnectPrefill)
+        let place = resolve(location)
+        #expect(place?.placeID == .sourceCitationComposer)
+        #expect(place?.presentation == .sourceCitationComposer)
+
+        let decoded = try? JSONDecoder().decode(
+            WorkspaceLocation.self,
+            from: JSONEncoder().encode(location)
+        )
+        #expect(decoded == location)
+        #expect(decoded?.connectFromSubjectId == "p1")
+        #expect(decoded?.connectGridX == 2)
+    }
 }
