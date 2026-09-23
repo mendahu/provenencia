@@ -89,7 +89,7 @@ struct PVIcon: View {
         Group {
             if let open = symbol.regionLOpen {
                 PVRegionLShape(open: open)
-                    .fill()
+                    .stroke(style: StrokeStyle(lineWidth: max(1.15, size * 0.09), lineJoin: .miter))
             } else {
                 Image(systemName: symbol.rawValue)
                     .resizable()
