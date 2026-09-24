@@ -573,7 +573,7 @@ Interactive tools feeding nested selectors; Go is source of truth for invariants
 
 **Whole Artifact:** validated `artifact` selector (see [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md) §3.4). UI **prepopulates** `artifact` on every cite; researchers layer **Set Page** (PDF) and/or one region on top. Locator **summary list** shows each layer with remove (artifact is the non-removable floor). No entire-artifact checkbox.
 
-PDF **text selection** for transcription paste is a follow-on (the current viewer is a page raster). Full in-document Find UI stays an [ideas](../../../ideas/pdf-text-find.md) item.
+PDF **text selection** for transcription paste is a follow-on (the current viewer is a page raster). Find + select + paste moved to [Spike 8](../../spike-8/pdf-text-find.md).
 
 | | |
 | --- | --- |

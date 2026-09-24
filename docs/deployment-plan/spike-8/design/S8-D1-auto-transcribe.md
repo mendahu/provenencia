@@ -16,7 +16,7 @@ Paste this entire document into Claude Design as the requirements for one board/
 
 Add **Auto Transcribe** next to the citation **transcription** field. On click, OCR the **image Artifact**, or the **region polygon** when one is on the locator, and dump the text into the textarea. The researcher edits as today and Save still writes the Citation.
 
-**Image types only.** PDF, audio, and video do not run OCR in this MVP. PDF researchers paste into the field (a later story can do text-layer select/copy). Image-only PDF scans are not Vision’d here.
+**Image types only.** PDF, audio, and video do not run OCR in this MVP. PDF Find / select / paste is **S8-D2** (not this button). Image-only PDF scans are not Vision’d here.
 
 Also design:
 
@@ -47,12 +47,12 @@ Placement is a board finding: trailing slot on `PVField` (beside Uncertain), a c
 | Locator is layered | Image + region → OCR that crop. Image, no region → whole image (warn if huge). PDF → no OCR. |
 | Vision has no “too many words” error | We warn from **our** checks (no region / huge pixels / dense-page heuristic). Vision usually succeeds slowly or with junk. |
 | Crop is in-memory | No “saving a clip” progress. Spinner is “Reading text…”. |
-| Images only for OCR | PDF / audio / video / missing file: disabled + short reason (PDF: paste; not “could not read”). |
+| Images only for OCR | PDF / audio / video / missing file: disabled + short reason. PDF paste-from-selection is **S8-D2** / **S8-05**, not this button. |
 | Researcher owns the reading | OCR is a draft in the field. Uncertain stays a manual checkbox unless a later story says otherwise. |
 
 ### 2.1 What this board is not
 
-- Not PDF OCR, PDF Find, or text-layer extract ([`ideas/pdf-text-find.md`](../../../ideas/pdf-text-find.md)).
+- Not PDF OCR, PDF Find, or text-layer select/paste ([**S8-D2**](S8-D2-pdf-text-find.md)).
 - Not Foundation Models / Apple Intelligence / draft graph cards.
 - Not auto Observations, NameValue, or connect macros.
 - Not a new kit **Transcribe** component unless a second call site is already known (it is not).
@@ -91,7 +91,7 @@ Placement is a board finding: trailing slot on `PVField` (beside Uncertain), a c
 
 1. Idle — empty transcription, image Artifact, no region.
 2. Idle — image + rectangle region (button implies crop).
-2b. Idle — PDF Artifact: Auto Transcribe disabled; hint to paste.
+2b. Idle — PDF Artifact: Auto Transcribe disabled (Find / paste are **S8-D2**).
 3. Replace confirm — field already has text.
 4. Large-page warning — artifact-only newspaper page; Proceed / Cancel.
 5. Running.
@@ -132,7 +132,7 @@ Provenencia UI is layered as **components / recipes / snowflakes** ([`docs/desig
 
 - Writing Observations or subjects
 - Foundation Models / PCC
-- PDF OCR, PDF text-layer extract, and Find
+- PDF OCR, PDF Find, and text-layer select/paste (**S8-D2**)
 - Persisting OCR text before Save
 - Multiple regions
 - Changing locator tools

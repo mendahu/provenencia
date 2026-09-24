@@ -12,18 +12,21 @@ Pause-and-refine: make **Source → Evidence graph** data entry cheaper. Stories
 
 Grow this list as stories land. **By spike close**, every checked story below must be true in the app.
 
-1. **Auto Transcribe** — in the citation composer, on an **image** Artifact, a control fills **transcription** from Vision OCR of the image (or the region polygon when one is set). The researcher can edit and Save as today. Full-image / oversized jobs warn and can still proceed. No Observation writes. **PDF:** button disabled / honest empty — do not OCR PDFs in this slice (copy/paste or a later text-layer story).
+1. **Auto Transcribe** — in the citation composer, on an **image** Artifact, a control fills **transcription** from Vision OCR of the image (or the region polygon when one is set). The researcher can edit and Save as today. Full-image / oversized jobs warn and can still proceed. No Observation writes. **PDF:** this button stays disabled (text-layer path is bar items 3–4).
 2. **PDF Artifact thumbnails** — PDF Artifacts show a **first-page raster** on Artifact rows (glyph only if render skips). A PDF with a raster can be pinned as Source cover. Notes: [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md).
+3. **PDF Find** — on a PDF in the composer, a Find field on the viewer tool strip jumps to a keyword hit with a highlight. Image-only PDFs (no text layer) fail honestly. Notes: [`pdf-text-find.md`](pdf-text-find.md).
+4. **PDF select + paste transcription** — default PDF pointer is text select (pan is explicit). **Paste transcription from selection** fills the transcription field. No Vision on PDF pages.
 
 Further bar items: TBD (additional data-entry stories).
 
 ## Design track
 
-**Composer chrome for Auto Transcribe is designed in Claude Design before that PR.** PDF thumbs reuse shipped `PVThumbnail` — no board. Briefs: [`design/`](design/).
+**Composer chrome is designed in Claude Design before the matching UI PRs.** PDF thumbs reuse shipped `PVThumbnail` — no board. Briefs: [`design/`](design/).
 
 | Step | Brief | Covers | Gates |
 | --- | --- | --- | --- |
 | **S8-D1** | Auto Transcribe in the composer | Button, progress, replace confirm, large-page warning + proceed, failure copy | **S8-01** |
+| **S8-D2** | PDF Find + select + paste | Tool-strip Find; I-beam vs pan; paste-from-selection vs Auto Transcribe row | **S8-03**, **S8-04**, **S8-05** |
 
 ## PR sequence
 
@@ -34,13 +37,28 @@ Further bar items: TBD (additional data-entry stories).
 S8-D1  Auto Transcribe UI
   │
   └────── gates ──────────▶ S8-01  Vision + crop + fill transcription
-                              │
-S8-02  PDF first-page thumbs ──┘   (no design gate; parallel with S8-01)
-                              │
-                            (more PRs as stories are added)
+                              │     (images only; parallel with S8-02)
+
+S8-02  PDF first-page thumbs ──     (no design gate; does not unblock viewer)
+
+S8-D2  PDF Find / select / paste
+  │
+  └────── gates ──────────▶ S8-03  PDFKit live page + I-beam default + pan mode
+                              │     (MUST precede Find and paste)
+                              ├──────▶ S8-04  Find field + highlight + page jump
+                              └──────▶ S8-05  Paste transcription from selection
+                                              (after S8-03; prefer after S8-01
+                                               so one transcription action row)
                               │
                             S8-99  Dogfood close / docs
 ```
+
+**Order notes**
+
+- **S8-03** remounts PDF from raster → PDFKit. Find and paste cannot ship on `ArtifactMediaViewport` bitmaps.
+- **S8-04** and **S8-05** are parallel after **S8-03**.
+- **S8-01** / **S8-02** do not block **S8-D2**. **S8-05** should follow **S8-01** when both touch the transcription `PVField`.
+- **S8-02** uses PDFKit only to write a thumbnail derivative — not the composer viewport.
 
 ---
 
@@ -49,6 +67,10 @@ S8-02  PDF first-page thumbs ──┘   (no design gate; parallel with S8-01)
 - [ ] S8-D1 — Design: Auto Transcribe in the citation composer → [`completed.md`](completed.md)
 - [ ] S8-01 — Vision OCR + Auto Transcribe button → [`completed.md`](completed.md)
 - [ ] S8-02 — PDF first-page Artifact thumbnails → [`completed.md`](completed.md)
+- [ ] S8-D2 — Design: PDF Find, text selection, paste transcription → [`completed.md`](completed.md)
+- [ ] S8-03 — PDFKit live viewer + I-beam default → [`completed.md`](completed.md)
+- [ ] S8-04 — PDF Find in the tool strip → [`completed.md`](completed.md)
+- [ ] S8-05 — Paste transcription from PDF selection → [`completed.md`](completed.md)
 - [ ] S8-99 — Dogfood close / docs (after later stories, or when we choose to close)
 
 ---
@@ -57,7 +79,7 @@ S8-02  PDF first-page thumbs ──┘   (no design gate; parallel with S8-01)
 
 Claude Design board for the **transcription** field: Auto Transcribe control, in-progress state, replace confirm, large-page / slow-job warning that can still proceed, and failure/empty states. Brief: [`design/S8-D1-auto-transcribe.md`](design/S8-D1-auto-transcribe.md). Gates **S8-01**.
 
-Does **not** design Observation auto-fill, LLM extract, PDF OCR, or PDF Find.
+Does **not** design Observation auto-fill, LLM extract, PDF OCR, or PDF Find (**S8-D2**).
 
 ---
 
@@ -68,7 +90,7 @@ On-device Vision (`VNRecognizeTextRequest`) fills the composer **transcription**
 | | |
 | --- | --- |
 | **In** | Protocol-shaped OCR seam (tests do not call Vision); `CGImage` from the already-loaded **image**; bounding-box crop (optional mask later); Auto Transcribe control per **S8-D1**; replace confirm if transcription is non-empty; preflight warn on artifact-only / huge bitmap / dense-image heuristics, with proceed; L10n; skip PDF / audio / video / no image. |
-| **Out** | PDF OCR; PDF page raster → Vision; PDFKit text-layer extract / copy-paste (later story); Foundation Models; writing Observations; persisted crop objects; `RecognizeDocumentsRequest` (macOS 26); raising the deployment target. |
+| **Out** | PDF OCR; PDF page raster → Vision; PDF Find / select / paste (**S8-03…S8-05**); Foundation Models; writing Observations; persisted crop objects; `RecognizeDocumentsRequest` (macOS 26); raising the deployment target. |
 | **Testable** | Fake recognizer fills / fails / empty; crop uses region vs full page; preflight flags large page; replace does not overwrite without confirm; button disabled while running. |
 | **Depends on** | **S8-D1**. Shipped composer + locators (S7-08 / S7-06 / S7-07). |
 
@@ -89,6 +111,55 @@ Notes: [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md).
 
 ---
 
+## S8-D2 — Design: PDF Find, text selection, paste transcription
+
+Claude Design board for the PDF **tool strip** (Find), **cursors** (I-beam default vs pan), and transcription **Paste from selection**. Brief: [`design/S8-D2-pdf-text-find.md`](design/S8-D2-pdf-text-find.md). Gates **S8-03**, **S8-04**, **S8-05**.
+
+Does **not** design image OCR, PDF thumbnails, or `text_quote` locators.
+
+---
+
+## S8-03 — PR: PDFKit live page + I-beam default
+
+Replace the composer PDF **raster** (`displayImage` / `ArtifactMediaViewport`) with a **PDFKit-backed** page so `PDFSelection` exists. Default drag **selects text**. Pan is an explicit hand tool and/or modifier (per **S8-D2**). Region overlay (S7-07) still draws in page space. Image viewer unchanged.
+
+| | |
+| --- | --- |
+| **In** | Live `PDFDocument` / `PDFView` (or equivalent) for PDF Artifacts; I-beam default; pan mode; cursors; region tools exclusive with select; zoom/page chrome still work; no-text-layer is paintable (select does nothing useful). |
+| **Out** | Find UI (**S8-04**); paste button (**S8-05**); Vision; changing image pan; Source-page viewer. |
+| **Testable** | PDF path no longer depends on `displayImage` for hit-testing text; image path unchanged; region draft still normalizes; pan mode still moves the page; selecting text does not pan. |
+| **Depends on** | **S8-D2**. Shipped S7-06 / S7-07. **Not** S8-01 / S8-02. |
+
+This is the load-bearing remount. Do not start S8-04 / S8-05 until it lands.
+
+---
+
+## S8-04 — PR: PDF Find
+
+Find field on `ArtifactViewerToolChrome` (PDF only). `PDFDocument.findString` → highlight + page jump + next/previous.
+
+| | |
+| --- | --- |
+| **In** | Keyword field; Find / next / prev; current-hit highlight; sync `model.page`; no-match and no-text-layer copy; L10n; disable while a region tool is drawing if the board says so (Find itself may stay). |
+| **Out** | Source-page Find; `text_quote` locators; OCR fallback; image Find. |
+| **Testable** | Fake/document fixture: hit changes page; wrap/stop per board; empty query / no hits; hidden on image Artifacts. |
+| **Depends on** | **S8-D2**, **S8-03**. |
+
+---
+
+## S8-05 — PR: Paste transcription from PDF selection
+
+Transcription-row control for PDF: copy current `PDFSelection` string into `transcription`. Replace confirm if the field is non-empty (same as **S8-01**).
+
+| | |
+| --- | --- |
+| **In** | Button/label per **S8-D2**; disabled with no selection / no text layer / `inert`; replace confirm; does not write Observations; image row stays Auto Transcribe. |
+| **Out** | Vision on PDF; auto-running paste; locator writes. |
+| **Testable** | Selection string fills the field; empty selection disabled; replace does not overwrite without confirm; image Artifact does not show an enabled Paste. |
+| **Depends on** | **S8-D2**, **S8-03**. **Prefer after S8-01** so the transcription `PVField` action row is designed once. |
+
+---
+
 ## S8-99 — Dogfood close / docs
 
 Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enough (or we stop adding stories). Record in [`completed.md`](completed.md); archive the spike. SemVer only if cutting a product release.
@@ -103,7 +174,8 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 | Vision on **image** Artifacts | PDF OCR; audio / video OCR |
 | In-memory crop from locator | Object-store crop files |
 | Warn + proceed on large images | Hard reject / Apple “too many words” (does not exist) |
-| PDF **page-1 thumbnail** via PDFKit | PDF OCR; Go PDF decoder; user-picked thumb page |
+| PDF **page-1 thumbnail** via PDFKit | Go PDF decoder; user-picked thumb page |
+| PDF **Find** + **select** + **paste transcription** | PDF Vision / OCR; `text_quote` locators; Source-page Find |
 | More data-entry stories as added | Spike 7 leftover honesty/polish (conflicted, tray, pinning) unless pulled in |
 
 ---
@@ -115,10 +187,12 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 3. **Locator y-down vs Vision ROI y-up** — crop in image pixels from [`ArtifactRegionGeometry`](../../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift); do not pass a polygon into `regionOfInterest` (rect only).
 4. **Crop the source raster**, not the zoomed viewport bitmap.
 5. **No file middleman** — `ProjectFiles.objectURL` → image `NSImage` → `CGImage` → crop → `VNImageRequestHandler`.
-6. **PDF is not an OCR input in S8-01** — disable Auto Transcribe; researchers paste. Image-only PDF scans wait for a later story (text layer or raster OCR).
+6. **PDF is not an OCR input** — S8-01 disables Auto Transcribe. S8-05 pastes a PDFKit selection. Image-only PDFs get neither Vision nor fake text.
 7. **Hide Vision behind a protocol** — `FakeStore` / unit tests inject a recognizer.
 8. **More stories do not wait on S8-01** unless they share the composer transcription chrome.
 9. **S8-02 is macOS PDFKit → catalog derivative**, not `core/derivatives` learning to parse PDF. Windows keeps the glyph until a later engine renderer.
+10. **S8-03 before Find/paste** — raster `displayImage` has no `PDFSelection`. Region overlay must remount with the live page or locators break.
+11. **Pan vs select** — today’s unnamed click-drag pan will fight I-beam. S8-D2 must name the pan escape (hand and/or modifier) before S8-03.
 
 ---
 

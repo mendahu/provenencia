@@ -320,7 +320,7 @@ python3 scripts/check-localizable-xcstrings.py
 | **Dogfood** | PDF Set page; draw region before Set page (page auto-layers); image region; list remove; Save artifact-only with an Observation. |
 | **Out** | NameValue (S7-02b); Connect prefill (S7-10); PDF Find; PDF text selection (raster viewer — follow-on); multiple regions; time-range UI. |
 
-**Follow-on:** PDF text selection for transcription paste (S7-07 In-list) waits on a text-aware PDF path; current viewer is a page raster. See [`ideas/pdf-text-find.md`](../../../ideas/pdf-text-find.md).
+**Follow-on:** PDF text selection for transcription paste (S7-07 In-list) waits on a text-aware PDF path; current viewer is a page raster. See [Spike 8 `pdf-text-find.md`](../../spike-8/pdf-text-find.md).
 
 **Landed:** default entire-artifact cite + real region locators replace the Draw-region stub.
 
@@ -470,7 +470,7 @@ Manual / landed-PR pass after S7-15. Cited bridge copy in this close step.
 | --- | --- | --- |
 | 1 | Subject fields editor (not a Source fields clone); types stay stub | **Pass** — S7-05 type strip + table + inspector; types remain seeded |
 | 2 | Add property → citation composer place | **Pass** — S7-09 navigates; S7-08 is the place |
-| 3 | Image + PDF viewers (zoom/pan + region; PDF page + text selection) | **Pass with follow-on** — S7-06 / S7-07 image + PDF page/region. PDF text-selection paste is still a raster-viewer follow-on ([`ideas/pdf-text-find.md`](../../../ideas/pdf-text-find.md)) |
+| 3 | Image + PDF viewers (zoom/pan + region; PDF page + text selection) | **Pass with follow-on** — S7-06 / S7-07 image + PDF page/region. PDF text-selection paste is still a raster-viewer follow-on ([Spike 8](../../spike-8/pdf-text-find.md)) |
 | 4 | One submit writes Citation + N Observations; Back; card grows | **Pass** — S7-08; text path shipped before viewers |
 | 5 | NameValue end-to-end (schema → Go → DateValue-shaped editor) | **Pass** — S7-02 / S7-02b |
 | 6 | Durable Connect (disambiguation → composer → cited bridge) | **Pass** — S7-10. Leftover uncited JSON bridges keep honesty labels and have no lines |
