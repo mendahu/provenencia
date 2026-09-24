@@ -15,7 +15,7 @@ Authoritative schema for everything described here is [`interpretation-layer-dat
 | 3 | Draft status needs **no schema flag** — "uncited" is a query for Subjects with no Observations; `subjects.label` is the free working handle | §4.2 |
 | 4 | Citation → Observation stays **one-to-many**, with one-to-one as the default *behavior* and pinning opt-in | §4.5 |
 | 5 | Cross-source Observations stay legal in the model (removing them costs a trigger), but the canvas scopes to `source_id = ?` | §4.6 |
-| 6 | **`source` subjects never render on the canvas.** Source-to-source commentary lives on the Source page. UI decision, no schema change | §4.6 |
+| 6 | **`source` subjects never render on the canvas.** Source-to-source commentary lives on the Source page. UI decision, no schema change. **Implementation parked:** [`source-to-source-relationships.md`](source-to-source-relationships.md) | §4.6 |
 | 7 | Layout is **one unaudited table** keyed by `subject_id` with integer grid cells; positions travel with the project, camera does not | §5.1, §5.2 |
 | 8 | No auto-layout engine — unplaced subjects go in a **tray** | §5 |
 | 9 | Pan/zoom needs **AppKit `NSScrollView`** regardless of deployment target; raising past macOS 14 is a separate decision on support-matrix grounds | §7.2, §7.3 |
@@ -78,7 +78,7 @@ Because the graph is Source-scoped, it is reached from the **Sources** list (ope
 Two supporting destinations sit in the **same Sources family** in the sidebar:
 
 - **Subject types** and **Subject fields** — the product names for `subject_types`, `properties`, and `subject_type_fields` bindings. Direct mirror of Source types / Source fields; reuse [`Features/CatalogVocabulary/`](../../macos/App/Features/CatalogVocabulary/). Not needed for the first slice (§11.2);
-- a **"what other Sources say about this one"** section on the Source page, which is where source-to-source commentary lives instead of on the canvas (§4.6).
+- a **"what other Sources say about this one"** section on the Source page, which is where source-to-source commentary lives instead of on the canvas (§4.6). **Not built** — parked in [`source-to-source-relationships.md`](source-to-source-relationships.md).
 
 ## 1.3 One surface, not two
 
@@ -326,7 +326,7 @@ It is not a silly idea. The reasons not to take it: it puts a type-specific colu
 
 `subjects.source_id` is `NOT NULL REFERENCES sources(id)`, so a `source` subject must point at a Source that exists in the catalog. That means "this book mentions a marriage certificate I have never seen" forces a placeholder `sources` row for a document you do not hold.
 
-That is arguably fine and even useful — an unheld Source is a legitimate research to-do, and the Source layer already permits Sources with no Artifacts. But it has a consequence: if two Sources each mention what might be the same unheld document, resolving that means **merging Sources**, which is a Source-layer operation that does not exist. Not a blocker for the graph slices, but it belongs on the list before `mentions` ships.
+That is arguably fine and even useful — an unheld Source is a legitimate research to-do, and the Source layer already permits Sources with no Artifacts. But it has a consequence: if two Sources each mention what might be the same unheld document, resolving that means **merging Sources**, which is a Source-layer operation that does not exist. Not a blocker for the graph slices. Placeholder create + merge live in [`source-to-source-relationships.md`](source-to-source-relationships.md) and must exist before `mentions` ships.
 
 ### Keep Sources off the canvas — but as a UI decision, not a schema change
 
@@ -707,8 +707,8 @@ Still open:
 
 - Does the canvas *create* root subjects only, or also adopt Subjects created elsewhere (imports)? Cross-Source adoption is answered in §4.6: no.
 - Can one graph span Sources (a "case view")? Source scope should be hard for editing; a read-only multi-Source view is a different feature and would need the Conclusion layer to be meaningful.
-- What does the Source-page commentary surface actually look like? `mentions` and `remark` Observations stay in the data model (§4.6) but now need a home that is not the canvas, and it is unspecified.
-- Before `mentions` ships: does mentioning an unheld document create a placeholder Source, and what resolves two placeholders that turn out to be the same document? Source merge does not exist (§4.6).
+- ~~What does the Source-page commentary surface actually look like?~~ **Parked:** [`source-to-source-relationships.md`](source-to-source-relationships.md) — `mentions` / `remark` stay in the data model (§4.6); the Source-page home, placeholder Sources, and Source merge are that idea, not leftover graph UI.
+- ~~Before `mentions` ships: placeholder Source + merge?~~ **Parked:** same note. Source merge does not exist (§4.6).
 - ~~Does the person → person disambiguation (§3.2) earn its complexity?~~ **Answered:** person→person always means `relationship`; shared events go through the Event bubble (§3.2).
 - Is a Citation with zero Observations a legal, useful state — "I transcribed this line, I have not interpreted it yet" — or should the composer refuse to save a Citation that asserts nothing? This is the one real loose end left by keeping one-to-many (§4.5), and it is a UI policy question rather than a schema one.
 - How does Conclusion-layer work ([`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md)) surface here later — same canvas with a layer toggle, or a separate reconciliation view? "Not now" is fine; "never" would be a mistake.

@@ -44,7 +44,7 @@ Exact placement (identity header vs page toolbar), label, and no-Artifact disabl
 ### 2.1 What this board is not
 
 - Not graph chrome (**S8-D3**).
-- Not Source-page commentary (`mentions` / `remark`).
+- Not Source-page commentary (`mentions` / `remark`) — parked in [`source-to-source-relationships.md`](../../../ideas/source-to-source-relationships.md).
 - Not composer rethink / pinning (dogfood).
 - Not PDF Find on this page.
 - Not Sources-list counts (“12 subjects”).
@@ -105,7 +105,7 @@ If more bundle items land after the board is first drawn, **amend this brief** a
 | --- | --- |
 | Page-local Back that bypasses history | Toolbar Back / `go(to:)` only. |
 | Graph-specific counts on the page | Deferred leftover; not this item. |
-| `mentions` / `remark` commentary | Different leftover. |
+| `mentions` / `remark` commentary | Parked: [`source-to-source-relationships.md`](../../../ideas/source-to-source-relationships.md). |
 
 ---
 
@@ -114,7 +114,7 @@ If more bundle items land after the board is first drawn, **amend this brief** a
 - Redesigning filing (metadata, notes, artifacts ingest)
 - Composer / graph card chrome
 - Source-page Find
-- Commentary (“what other Sources say about this one”)
+- Commentary (“what other Sources say about this one”) — [`source-to-source-relationships.md`](../../../ideas/source-to-source-relationships.md)
 
 ---
 

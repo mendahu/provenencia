@@ -205,7 +205,7 @@ One Evidence graph chrome pass against **S8-D3**. Competing Observations stay as
 
 Claude Design board for a **bundled** Source-page chrome pass. First item: **Open Evidence graph** for this Source (disabled with no Artifact). More page items join this brief (and **S8-07**) as they are scoped. Brief: [`design/S8-D4-source-page.md`](design/S8-D4-source-page.md). Gates **S8-07**.
 
-Does **not** design graph chrome, commentary, composer rethink, or Sources-list counts.
+Does **not** design graph chrome, source-to-source commentary ([`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)), composer rethink, or Sources-list counts.
 
 ---
 
@@ -216,7 +216,7 @@ One Source-page chrome pass against **S8-D4**. Add a control that opens this Sou
 | | |
 | --- | --- |
 | **In** | Jump control per **S8-D4**; reuse `SourcesListNavigation.graphLocation` (or equivalent); disabled + reason when no Artifact; `go(to:)`; L10n + VoiceOver; any other SP items frozen on the brief. Prefer `PVButton`. |
-| **Out** | Graph chrome (**S8-06**); opening the graph with zero Artifacts; commentary; composer rethink; list redesign. |
+| **Out** | Graph chrome (**S8-06**); opening the graph with zero Artifacts; source-to-source commentary ([`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)); composer rethink; list redesign. |
 | **Testable** | Source with an Artifact → location is `.graph` for the same `sourceId`; Back returns to `.page`; no Artifact → control disabled and does not navigate. |
 | **Depends on** | **S8-D4**. Shipped Source page + `sourceSurface`. **Not** S8-01…S8-06. |
 
@@ -239,7 +239,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 | PDF **page-1 thumbnail** via PDFKit | Go PDF decoder; user-picked thumb page |
 | PDF **Find** + **select** + **paste transcription** | PDF Vision / OCR; `text_quote` locators; Source-page Find |
 | Graph **conflict** + **negated** badges; Source-page jump; richer bridge sentences; **Add property** on bridges | Denied-line drawing; composer rethink / pinning (dogfood); merge/resolve; **descoped** leftovers (incomplete bridges, collapse/expand, filters, undo, tray, minimap) |
-| Source page **Open Evidence graph** (more page items via **S8-D4**) | Commentary (`mentions` / `remark`); Sources-list counts |
+| Source page **Open Evidence graph** (more page items via **S8-D4**) | Source-to-source commentary (`mentions` / `remark`, placeholder + merge — [`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)); Sources-list counts |
 | More data-entry stories as added | Remaining Spike 7 leftovers unless pulled in |
 
 ---
