@@ -583,7 +583,7 @@ Name and encoding are an implementation choice (`sourceSurface`, `sourceView`, �
 
 Fallback when a Source is deleted while its graph is in history: `fallbackToSectionRoot()` → Sources list. No separate Interpretation root.
 
-**Defer graph-specific columns on the Sources list.** "12 subjects, 3 uncited" needs derived counts and would stale the list when the canvas writes — out of scope for the first slices.
+**Graph-progress columns on the Sources list** were deferred from the first slices (“12 subjects, 3 uncited” would stale `sourcesList` if folded into `CatalogSource`). Pulled into Spike 8 as **S8-D5** / **S8-08**: counts on their own cache keys so a canvas write invalidates one Source. Brief: [`../deployment-plan/spike-8/design/S8-D5-sources-list.md`](../deployment-plan/spike-8/design/S8-D5-sources-list.md).
 
 **No-Artifact Sources** stay in the list; the Evidence graph action is disabled and a shortcut opens the Source page to add an Artifact (Citations require an Artifact).
 

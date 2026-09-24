@@ -47,7 +47,7 @@ Exact placement (identity header vs page toolbar), label, and no-Artifact disabl
 - Not Source-page commentary (`mentions` / `remark`) — parked in [`source-to-source-relationships.md`](../../../ideas/source-to-source-relationships.md).
 - Not composer rethink / pinning (dogfood).
 - Not PDF Find on this page.
-- Not Sources-list counts (“12 subjects”).
+- Not Sources-list counts (“12 subjects”) — **S8-D5** / **S8-08**.
 
 ---
 
@@ -104,7 +104,7 @@ If more bundle items land after the board is first drawn, **amend this brief** a
 | Do not add | Why |
 | --- | --- |
 | Page-local Back that bypasses history | Toolbar Back / `go(to:)` only. |
-| Graph-specific counts on the page | Deferred leftover; not this item. |
+| Graph-specific counts on the page | List counts are **S8-D5**; not this page. |
 | `mentions` / `remark` commentary | Parked: [`source-to-source-relationships.md`](../../../ideas/source-to-source-relationships.md). |
 
 ---

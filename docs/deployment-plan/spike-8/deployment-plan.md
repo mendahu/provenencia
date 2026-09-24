@@ -18,12 +18,13 @@ Grow this list as stories land. **By spike close**, every checked story below mu
 4. **PDF select + paste transcription** — default PDF pointer is text select (pan is explicit). **Paste transcription from selection** fills the transcription field. No Vision on PDF pages.
 5. **Graph visual enhancements** — conflict + negated row badges; always-on **jump to the Source page**; cited **bridge sentences** prefer endpoint `name` / `event_type` / `toponym`, then working label; **Add property** on bridge cards (extra non-edge rows). More items may join **S8-D3** / **S8-06**.
 6. **Source page enhancements** — the Source detail page has an **Open Evidence graph** control for the same Source (disabled with no Artifact). More items may join **S8-D4** / **S8-07**.
+7. **Sources list refresh** — the Sources list shows **subject** and **observation** counts per Source so a worked Evidence graph is obvious next to an empty one. Counts live on their own cache keys (one Source invalidates; the list payload does not). More items may join **S8-D5** / **S8-08**.
 
 Further bar items: TBD (additional data-entry stories).
 
 ## Design track
 
-**Composer, graph, and Source-page chrome is designed in Claude Design before the matching UI PRs.** PDF thumbs reuse shipped `PVThumbnail` — no board. Briefs: [`design/`](design/).
+**Composer, graph, Source-page, and Sources-list chrome is designed in Claude Design before the matching UI PRs.** PDF thumbs reuse shipped `PVThumbnail` — no board. Briefs: [`design/`](design/).
 
 | Step | Brief | Covers | Gates |
 | --- | --- | --- | --- |
@@ -31,6 +32,7 @@ Further bar items: TBD (additional data-entry stories).
 | **S8-D2** | PDF Find + select + paste | Tool-strip Find; I-beam vs pan; paste-from-selection vs Auto Transcribe row | **S8-03**, **S8-04**, **S8-05** |
 | **S8-D3** | Evidence graph visual enhancements | Conflict + negated; Source-page jump; richer bridge sentences; Add property on bridges | **S8-06** |
 | **S8-D4** | Source page enhancements | Jump to Evidence graph; more page items join this brief | **S8-07** |
+| **S8-D5** | Sources list design refresh | Subject + observation counts; more list items join this brief | **S8-08** |
 
 ## PR sequence
 
@@ -63,6 +65,11 @@ S8-D4  Source page enhancements
   │
   └────── gates ──────────▶ S8-07  Open Evidence graph from the Source page
                               │     (parallel; pair with S8-06 graph → page)
+
+S8-D5  Sources list refresh
+  │
+  └────── gates ──────────▶ S8-08  List chrome + per-Source graph-progress counts
+                              │     (parallel; do not fold counts into sourcesList)
                               │
                             S8-99  Dogfood close / docs
 ```
@@ -75,6 +82,7 @@ S8-D4  Source page enhancements
 - **S8-02** uses PDFKit only to write a thumbnail derivative — not the composer viewport.
 - **S8-D3** / **S8-06** are independent of OCR and PDF remount. Freeze the **S8-06** bundle on the brief before that PR starts.
 - **S8-D4** / **S8-07** are independent of OCR, PDF remount, and **S8-06**. Freeze the **S8-07** bundle on the brief before that PR starts. The two jumps (graph ⇄ page) should use the same location helpers and product name.
+- **S8-D5** / **S8-08** are independent of OCR, PDF remount, and the jump pair. Freeze the **S8-08** bundle on the brief before that PR starts. Counts must not ride `sourcesList`.
 
 ---
 
@@ -91,6 +99,8 @@ S8-D4  Source page enhancements
 - [ ] S8-06 — Graph visual enhancements (badges, Source jump, bridge copy + Add property) → [`completed.md`](completed.md)
 - [ ] S8-D4 — Design: Source page enhancements → [`completed.md`](completed.md)
 - [ ] S8-07 — Source page enhancements (Evidence graph jump + brief bundle) → [`completed.md`](completed.md)
+- [ ] S8-D5 — Design: Sources list refresh → [`completed.md`](completed.md)
+- [ ] S8-08 — Sources list refresh (graph-progress counts + brief bundle) → [`completed.md`](completed.md)
 - [ ] S8-99 — Dogfood close / docs (after later stories, or when we choose to close)
 
 ---
@@ -205,7 +215,7 @@ One Evidence graph chrome pass against **S8-D3**. Competing Observations stay as
 
 Claude Design board for a **bundled** Source-page chrome pass. First item: **Open Evidence graph** for this Source (disabled with no Artifact). More page items join this brief (and **S8-07**) as they are scoped. Brief: [`design/S8-D4-source-page.md`](design/S8-D4-source-page.md). Gates **S8-07**.
 
-Does **not** design graph chrome, source-to-source commentary ([`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)), composer rethink, or Sources-list counts.
+Does **not** design graph chrome, source-to-source commentary ([`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)), composer rethink, or Sources-list counts (**S8-D5**).
 
 ---
 
@@ -216,9 +226,30 @@ One Source-page chrome pass against **S8-D4**. Add a control that opens this Sou
 | | |
 | --- | --- |
 | **In** | Jump control per **S8-D4**; reuse `SourcesListNavigation.graphLocation` (or equivalent); disabled + reason when no Artifact; `go(to:)`; L10n + VoiceOver; any other SP items frozen on the brief. Prefer `PVButton`. |
-| **Out** | Graph chrome (**S8-06**); opening the graph with zero Artifacts; source-to-source commentary ([`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)); composer rethink; list redesign. |
+| **Out** | Graph chrome (**S8-06**); opening the graph with zero Artifacts; source-to-source commentary ([`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)); composer rethink; list counts / refresh (**S8-08**). |
 | **Testable** | Source with an Artifact → location is `.graph` for the same `sourceId`; Back returns to `.page`; no Artifact → control disabled and does not navigate. |
-| **Depends on** | **S8-D4**. Shipped Source page + `sourceSurface`. **Not** S8-01…S8-06. |
+| **Depends on** | **S8-D4**. Shipped Source page + `sourceSurface`. **Not** S8-01…S8-06 / **S8-08**. |
+
+---
+
+## S8-D5 — Design: Sources list refresh
+
+Claude Design board for a **bundled** Sources-list chrome pass. First item: **subject** + **observation** counts per Source (optional uncited). More list items join this brief (and **S8-08**) as they are scoped. Brief: [`design/S8-D5-sources-list.md`](design/S8-D5-sources-list.md). Gates **S8-08**.
+
+Does **not** design graph or Source-page chrome, commentary, or folding counts into `CatalogSource`.
+
+---
+
+## S8-08 — PR: Sources list refresh
+
+One Sources-list chrome pass against **S8-D5**. Show graph-progress counts so a worked Evidence graph is obvious next to an empty one. Counts live on their **own** session cache identity (per `sourceId` or a patchable map — follow `.citationCounts`). A canvas write invalidates **that Source’s** numbers only. Further items listed on the brief at PR start ship here.
+
+| | |
+| --- | --- |
+| **In** | List chrome per **S8-D5**; Go aggregates (subjects on this Source, minus `source` type; Observations that mean “filled out”); new `CatalogQueryKey` + registry `invalidateOn` for `.createdSubject` / `.createdCitation` / `.addedObservations` (and delete if a mutation tag exists); warm with the Sources place; L10n + VoiceOver; any other SL items frozen on the brief. |
+| **Out** | Counts on `GetSources` / `CatalogSource`; invalidating `sourcesList` on graph writes; a Subjects list destination; commentary; graph / Source-page chrome. |
+| **Testable** | Worked Source shows non-zero subjects + observations; empty Source shows honest zero; no-Artifact row stays blocked; creating a subject or Observation updates **only** that Source’s count key; `sourcesList` handle does not refetch from the canvas write. |
+| **Depends on** | **S8-D5**. Shipped split-row list + session cache. **Not** S8-01…S8-07. |
 
 ---
 
@@ -239,7 +270,8 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 | PDF **page-1 thumbnail** via PDFKit | Go PDF decoder; user-picked thumb page |
 | PDF **Find** + **select** + **paste transcription** | PDF Vision / OCR; `text_quote` locators; Source-page Find |
 | Graph **conflict** + **negated** badges; Source-page jump; richer bridge sentences; **Add property** on bridges | Denied-line drawing; composer rethink / pinning (dogfood); merge/resolve; **descoped** leftovers (incomplete bridges, collapse/expand, filters, undo, tray, minimap) |
-| Source page **Open Evidence graph** (more page items via **S8-D4**) | Source-to-source commentary (`mentions` / `remark`, placeholder + merge — [`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)); Sources-list counts |
+| Source page **Open Evidence graph** (more page items via **S8-D4**) | Source-to-source commentary (`mentions` / `remark`, placeholder + merge — [`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)) |
+| Sources list **graph-progress counts** (more list items via **S8-D5**) | Folding counts into `sourcesList`; a Subjects list destination |
 | More data-entry stories as added | Remaining Spike 7 leftovers unless pulled in |
 
 ---
@@ -266,6 +298,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 18. **Bridge Add property is a new Citation** — `composerLocation(for: bridgeID)`, not `composerLocationForBridgeCitation` (that edits the connect Citation). Extra rows omit edge keys already in the sentence.
 19. **Unplaced tray is descoped** — canvas create and Connect always write a position. The snapshot **omits** subjects with no row. No UI path produces a tray candidate until imports exist.
 20. **Filters / undo / minimap are descoped** — density stays a dogfood note; undo can return if ⌘Z becomes a real pain; minimap was scope-creep.
+21. **List counts are their own cache** — do not hang subject/observation numbers on `CatalogSource`. Invalidate the one `sourceId` (same pattern as `.citationCounts`). Canvas writes already name `sourceId`.
 
 ---
 
