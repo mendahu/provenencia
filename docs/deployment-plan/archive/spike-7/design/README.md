@@ -2,7 +2,7 @@
 
 **All UI in this spike is designed in Claude Design before it is implemented.** Hand open briefs over **one at a time**.
 
-PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike overview: [`../README.md`](../README.md). Design rationale: [`interpretation-graph-ui.md`](../../../../ideas/interpretation-graph-ui.md).
+PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike overview: [`../README.md`](../README.md). Design rationale: [`interpretation-graph-ui.md`](../../../../ideas/archive/interpretation-graph-ui.md).
 
 ## Open
 

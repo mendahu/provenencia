@@ -1,6 +1,6 @@
 # Deployment Plan — Spike 6
 
-Evidence graph **canvas prototype**: pan/zoom, place and drag bubbles, draw relationship lines, and do it accessibly. Authoritative design: [`interpretation-graph-ui.md`](../../../ideas/interpretation-graph-ui.md) §7 / §11.3 / §13. Foundation: [Spike 5 archive](../spike-5/).
+Evidence graph **canvas prototype**: pan/zoom, place and drag bubbles, draw relationship lines, and do it accessibly. Authoritative design: [`interpretation-graph-ui.md`](../../../ideas/archive/interpretation-graph-ui.md) §7 / §11.3 / §13. Foundation: [Spike 5 archive](../spike-5/).
 
 ## Status
 

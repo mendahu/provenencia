@@ -4,7 +4,7 @@
 
 **Done.** Spike archived after S7-01…S7-15 / S7-11. Open work: none. Finished steps: [`completed.md`](completed.md).
 
-Stand up the Interpretation **Citation → Observation** pipeline on the Evidence graph: **Subject fields** editor, NameValue, image/PDF citation composer as a **navigable place**, cited property rows on cards, and durable connect macros. Authoritative design: [`interpretation-graph-ui.md`](../../../ideas/interpretation-graph-ui.md) §4–§6 / slices 3–7. Canvas inherits from [Spike 6](../spike-6/) (Go).
+Stand up the Interpretation **Citation → Observation** pipeline on the Evidence graph: **Subject fields** editor, NameValue, image/PDF citation composer as a **navigable place**, cited property rows on cards, and durable connect macros. Authoritative design: [`interpretation-graph-ui.md`](../../../ideas/archive/interpretation-graph-ui.md) §4–§6 / slices 3–7. Canvas inherits from [Spike 6](../spike-6/) (Go).
 
 > **UI dogfood is inverted:** Add property + card chrome first, then a **thin** composer (text cite → card grows), then viewers / locators / NameValue. See [`deployment-plan.md`](deployment-plan.md) § Incremental UI dogfood.
 

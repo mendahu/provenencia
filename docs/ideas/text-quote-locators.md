@@ -1,6 +1,6 @@
 # Text-quote locators
 
-**Status:** idea only — not roadmapped. Parked here from [`interpretation-graph-ui.md`](interpretation-graph-ui.md) leftover **15**. Not in Spike 8.
+**Status:** idea only — not roadmapped. Parked here from [`interpretation-graph-ui.md`](archive/interpretation-graph-ui.md) leftover **15**. Not in Spike 8.
 
 The locator vocabulary already includes `text_quote`. Go validates it. The client never writes it. This note is the home for *when* a Citation should pin words instead of (or as well as) a polygon.
 
@@ -65,6 +65,6 @@ They are not exclusive. A locator can already be `page` + `text_quote`, or quote
 ## Related docs
 
 - [`interpretation-layer-data-model.md`](../interpretation-layer-data-model.md) §3.6
-- [`interpretation-graph-ui.md`](interpretation-graph-ui.md) §6
+- [`interpretation-graph-ui.md`](archive/interpretation-graph-ui.md) §6
 - [`core/locator`](../../core/locator/)
 - Spike 8 Find (not this): [`../deployment-plan/spike-8/pdf-text-find.md`](../deployment-plan/spike-8/pdf-text-find.md)

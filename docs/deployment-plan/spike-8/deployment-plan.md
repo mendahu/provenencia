@@ -310,7 +310,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 
 ## Gotchas
 
-1. **Transcription ≠ Observation** — OCR dumps into the citation reading only ([`interpretation-graph-ui.md`](../../ideas/interpretation-graph-ui.md) §4).
+1. **Transcription ≠ Observation** — OCR dumps into the citation reading only ([`interpretation-graph-ui.md`](../../ideas/archive/interpretation-graph-ui.md) §4).
 2. **Vision does not refuse a newspaper page** — it usually succeeds slowly or with junk. Large-page honesty is **our** preflight (pixels / no region / post-pass observation density), not a `VNError`.
 3. **Locator y-down vs Vision ROI y-up** — crop in image pixels from [`ArtifactRegionGeometry`](../../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift); do not pass a polygon into `regionOfInterest` (rect only).
 4. **Crop the source raster**, not the zoomed viewport bitmap.

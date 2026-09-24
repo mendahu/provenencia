@@ -1,6 +1,6 @@
 # Deployment Plan — Spike 7
 
-Citations, Observations, NameValue, Subject **fields** editor, citation composer place, and durable connect macros. Authoritative design: [`interpretation-graph-ui.md`](../../../ideas/interpretation-graph-ui.md) §4–§6 / slices 3–7. Schema: [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md), [`structured-name-model.md`](../../../structured-name-model.md). Canvas: [Spike 6 archive](../spike-6/). Navigation skills: [`add-workspace-location`](../../../../.cursor/skills/add-workspace-location/SKILL.md), [`add-workspace-place`](../../../../.cursor/skills/add-workspace-place/SKILL.md).
+Citations, Observations, NameValue, Subject **fields** editor, citation composer place, and durable connect macros. Authoritative design: [`interpretation-graph-ui.md`](../../../ideas/archive/interpretation-graph-ui.md) §4–§6 / slices 3–7. Schema: [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md), [`structured-name-model.md`](../../../structured-name-model.md). Canvas: [Spike 6 archive](../spike-6/). Navigation skills: [`add-workspace-location`](../../../../.cursor/skills/add-workspace-location/SKILL.md), [`add-workspace-place`](../../../../.cursor/skills/add-workspace-place/SKILL.md).
 
 ## Status
 
@@ -438,7 +438,7 @@ Land **immediately after S7-01**, before Subject fields UI and before Observatio
 
 **Model:** New `value_type = term` + `property_terms` table (origin-namespaced vocabulary rows). Observations (S7-03) store `value_term_id`. **Introduce** kind/edge Properties (`event_type`, `role`, `relationship_type`) here as `term` — they are **not** seeded as `text` in S7-01. Install seeds those Properties + bindings + **large** product term sets ([`seeded-vocabulary.md`](../../../seeded-vocabulary.md) §3.4–3.6). Term capabilities (birthday, tree-edge, …) are **deferred** to a later discussion/PR. **`term` Properties are registry-only** — Create Property for `origin=user` refuses `value_type = term` (Subject fields offers the other five types only). Researchers may mint `origin=user` **term rows** under those registry Properties via composer picker **Add custom…** (rename/delete when unused) — **no** Event types / Roles CatalogVocabulary destinations. Plugins that add bridge or kind subjects contribute term-typed Properties + term sets through the same `subjectvocab` registry shape.
 
-Authoritative schema notes: [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md) §5.1.1. Design decision: [`interpretation-graph-ui.md`](../../../ideas/interpretation-graph-ui.md) #23.
+Authoritative schema notes: [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md) §5.1.1. Design decision: [`interpretation-graph-ui.md`](../../../ideas/archive/interpretation-graph-ui.md) #23.
 
 | | |
 | --- | --- |

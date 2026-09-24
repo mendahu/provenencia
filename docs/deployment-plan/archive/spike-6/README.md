@@ -4,7 +4,7 @@
 
 **Done / Go.** Spike archived after S6-D1…S6-05. Finished steps: [`completed.md`](completed.md). Canvas prototype passed the dogfood bar; geometry reuse contract lives in [`GraphCanvas/README.md`](../../../../macos/App/Features/GraphCanvas/README.md).
 
-Stand up a Source-scoped Evidence graph **prototype** and decide whether the spatial canvas is buildable and pleasant on this stack. Authoritative design: [`interpretation-graph-ui.md`](../../../../ideas/interpretation-graph-ui.md) §7 / §11.3 / §13. Foundation inherited from [Spike 5](../spike-5/).
+Stand up a Source-scoped Evidence graph **prototype** and decide whether the spatial canvas is buildable and pleasant on this stack. Authoritative design: [`interpretation-graph-ui.md`](../../../../ideas/archive/interpretation-graph-ui.md) §7 / §11.3 / §13. Foundation inherited from [Spike 5](../spike-5/).
 
 > **No schema work.** Spike 5 already shipped subjects, positions, FFI, and the graph place stub. This spike replaced the stub with canvas UI.
 

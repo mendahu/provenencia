@@ -1,6 +1,6 @@
 # Audio and video Sources
 
-**Status:** idea only — not roadmapped. Parked here from [`interpretation-graph-ui.md`](interpretation-graph-ui.md) leftover **16**. Not in Spike 8.
+**Status:** idea only — not roadmapped. Parked here from [`interpretation-graph-ui.md`](archive/interpretation-graph-ui.md) leftover **16**. Not in Spike 8.
 
 Oral history, recorded interviews, home movies, and digitized tapes are real Sources. The catalog already accepts those Files. The app does not play them, cite a moment in them, or show more than a type glyph. This note is the whole media cluster — not only a locator type.
 
@@ -58,7 +58,7 @@ Image Vision and PDF Find do not apply. Speech-to-text, if we ever want it, is a
 ## Related docs
 
 - [`interpretation-layer-data-model.md`](../interpretation-layer-data-model.md) §3.5
-- [`interpretation-graph-ui.md`](interpretation-graph-ui.md) §6
+- [`interpretation-graph-ui.md`](archive/interpretation-graph-ui.md) §6
 - [`source-layer-data-model.md`](../source-layer-data-model.md) (audio/video as Artifact representations)
 - [`research-judgment-model.md`](../research-judgment-model.md) (`transcription_uncertain` for garbled audio / muddy video)
 - Spike 7 composer: image/PDF only; A/V empty state shipped

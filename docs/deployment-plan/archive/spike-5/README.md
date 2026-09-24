@@ -4,7 +4,7 @@
 
 **Done.** Spike archived after S5-01…S5-10. Finished steps: [`completed.md`](completed.md). Product foundation closed in S5-09; floating-menu unify landed in S5-10.
 
-Interpretation foundation: candidate refs, subject vocabulary, Subjects, layout storage, FFI, and Sources-family entry into a graph stub. Authoritative design: [`interpretation-graph-ui.md`](../../../ideas/interpretation-graph-ui.md) §11.1 / §1.4. Authoritative schema: [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md) §4.
+Interpretation foundation: candidate refs, subject vocabulary, Subjects, layout storage, FFI, and Sources-family entry into a graph stub. Authoritative design: [`interpretation-graph-ui.md`](../../../ideas/archive/interpretation-graph-ui.md) §11.1 / §1.4. Authoritative schema: [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md) §4.
 
 > **This spike ships no Subject UI.** The graph is the only surface for Subjects, Citations, and Observations (design note §1.3), and the graph is Spike 6. Product nav keeps **one Sources family** — no Interpretation sidebar section (§1.4).
 

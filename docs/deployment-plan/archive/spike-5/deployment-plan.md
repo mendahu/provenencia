@@ -1,6 +1,6 @@
 # Deployment Plan — Spike 5
 
-Interpretation foundation: candidate refs, subject vocabulary, Subjects, layout storage, FFI, and Sources-family entry into a graph stub. Authoritative design: [`interpretation-graph-ui.md`](../../../ideas/interpretation-graph-ui.md) §11.1 / §1.4. Authoritative schema: [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md) §4.
+Interpretation foundation: candidate refs, subject vocabulary, Subjects, layout storage, FFI, and Sources-family entry into a graph stub. Authoritative design: [`interpretation-graph-ui.md`](../../../ideas/archive/interpretation-graph-ui.md) §11.1 / §1.4. Authoritative schema: [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md) §4.
 
 ## Status
 

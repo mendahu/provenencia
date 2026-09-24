@@ -33,7 +33,7 @@ This is config only — not the citation composer, not Observation entry, not a 
 
 ## 2. Domain facts the UI must reflect
 
-Authoritative schema: interpretation-layer Properties / `subject_type_fields` / **`property_terms`**; seeds: [`seeded-vocabulary.md`](../../../../../seeded-vocabulary.md) §3.2–3.6. Direction: [`interpretation-graph-ui.md`](../../../../../ideas/interpretation-graph-ui.md) decision **23**.
+Authoritative schema: interpretation-layer Properties / `subject_type_fields` / **`property_terms`**; seeds: [`seeded-vocabulary.md`](../../../../../seeded-vocabulary.md) §3.2–3.6. Direction: [`interpretation-graph-ui.md`](../../../../../ideas/archive/interpretation-graph-ui.md) decision **23**.
 
 | Fact | UI implication |
 | --- | --- |

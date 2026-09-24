@@ -1,6 +1,6 @@
 # Source-to-source relationships
 
-**Status:** idea only — not roadmapped. Parked here from [`interpretation-graph-ui.md`](interpretation-graph-ui.md) leftovers **12** (Source-page `mentions` / `remark`) and **13** (placeholder Source + merge), plus the descoped **source cards on the Evidence graph**.
+**Status:** idea only — not roadmapped. Parked here from [`interpretation-graph-ui.md`](archive/interpretation-graph-ui.md) leftovers **12** (Source-page `mentions` / `remark`) and **13** (placeholder Source + merge), plus the descoped **source cards on the Evidence graph**.
 
 The Interpretation model already knows how one Source talks about another. The app does not. This note is the home for that domain until a spike pulls it.
 
@@ -20,7 +20,7 @@ An earlier graph-brainstorm draft also considered **drawing `source` subjects as
 
 ## Settled (do not reopen)
 
-Authoritative reasoning is [`interpretation-graph-ui.md`](interpretation-graph-ui.md) §4.6 and [`interpretation-layer-data-model.md`](../interpretation-layer-data-model.md) §4 / §5. Do not invent a parallel assertion table.
+Authoritative reasoning is [`interpretation-graph-ui.md`](archive/interpretation-graph-ui.md) §4.6 and [`interpretation-layer-data-model.md`](../interpretation-layer-data-model.md) §4 / §5. Do not invent a parallel assertion table.
 
 | Call | Why |
 | --- | --- |
@@ -70,7 +70,7 @@ The graph slices therefore query `source_id = ?` and omit `source`-type subjects
 
 ## Related docs
 
-- [`interpretation-graph-ui.md`](interpretation-graph-ui.md) §4.6, §14
+- [`interpretation-graph-ui.md`](archive/interpretation-graph-ui.md) §4.6, §14
 - [`interpretation-layer-data-model.md`](../interpretation-layer-data-model.md) (source subjects, `mentions` / `remark`)
 - [`seeded-vocabulary.md`](../seeded-vocabulary.md) §3.2–3.3
 - [`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md) (exhibit pins; no canonical rows for source subjects)

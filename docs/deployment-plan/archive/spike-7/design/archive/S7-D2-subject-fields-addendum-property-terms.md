@@ -4,7 +4,7 @@
 **Spike:** Provenencia Spike 7  
 **Parent brief:** [`S7-D2-subject-fields.md`](S7-D2-subject-fields.md)  
 **Implements with:** PR **S7-05** (schema/seed for terms: **S7-01b**)  
-**Full rationale:** [`interpretation-graph-ui.md`](../../../../../ideas/interpretation-graph-ui.md) decision **23**; plan step **S7-01b**
+**Full rationale:** [`interpretation-graph-ui.md`](../../../../../ideas/archive/interpretation-graph-ui.md) decision **23**; plan step **S7-01b**
 
 > Use this if the S7-D2 board was already started from an earlier brief that assumed five value types and free-text kind/edge Properties (`event_type`, `role`, `relationship_type`). Apply these deltas; do **not** restart the board or redesign the whole IA unless a frame now contradicts these rules.
 

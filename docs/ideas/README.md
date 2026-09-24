@@ -16,10 +16,12 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 
 ## Current ideas
 
-- [`interpretation-graph-ui.md`](interpretation-graph-ui.md) — leftover work re-homed or descoped; not a live backlog
 - [`source-to-source-relationships.md`](source-to-source-relationships.md)
 - [`text-quote-locators.md`](text-quote-locators.md)
 - [`audio-video-sources.md`](audio-video-sources.md)
 - [`share-packages.md`](share-packages.md)
 
-Layering for macOS UI (design system / recipes / snowflakes) graduated to [`docs/design-system-layers.md`](../design-system-layers.md); draft archived under [`archive/design-system-hardening.md`](archive/design-system-hardening.md).
+## Archived
+
+- [`archive/interpretation-graph-ui.md`](archive/interpretation-graph-ui.md) — Evidence graph brainstorm; leftovers re-homed or descoped
+- Layering for macOS UI (design system / recipes / snowflakes) graduated to [`docs/design-system-layers.md`](../design-system-layers.md); draft under [`archive/design-system-hardening.md`](archive/design-system-hardening.md).

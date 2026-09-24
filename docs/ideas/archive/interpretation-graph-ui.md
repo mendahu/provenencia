@@ -1,10 +1,18 @@
+# Interpretation graph (archived)
+
+**Status:** archived — leftover work re-homed or descoped. Not a live backlog.
+
+Shipped as [Spike 5](../../deployment-plan/archive/spike-5/), [Spike 6](../../deployment-plan/archive/spike-6/), and [Spike 7](../../deployment-plan/archive/spike-7/). Remaining items live in Spike 8, [`docs/dogfood/ux.md`](../../dogfood/ux.md), or other files under [`docs/ideas/`](../).
+
+---
+
 # Interpretation graph (brainstorm)
 
 ## Status
 
-**Brainstorm, with working decisions — canvas prototype complete (Go); Citations / Observations complete.** Not a UI spec, but no longer open-ended: the design questions below were worked through and settled; slice 1 shipped as [Spike 5](../deployment-plan/archive/spike-5/); slice 2 (canvas UI risk) shipped as [Spike 6](../deployment-plan/archive/spike-6/) with a **Go** dogfood verdict; slices 3–7 shipped as [Spike 7](../deployment-plan/archive/spike-7/) (Subject vocabulary, NameValue, citation composer **place**, durable connect). Leftover unimplemented items from this note have been **re-homed or descoped** (Spike 8, dogfood, or other idea files) — this file is no longer a backlog.
+**Brainstorm, with working decisions — canvas prototype complete (Go); Citations / Observations complete.** Not a UI spec, but no longer open-ended: the design questions below were worked through and settled; slice 1 shipped as [Spike 5](../../deployment-plan/archive/spike-5/); slice 2 (canvas UI risk) shipped as [Spike 6](../../deployment-plan/archive/spike-6/) with a **Go** dogfood verdict; slices 3–7 shipped as [Spike 7](../../deployment-plan/archive/spike-7/) (Subject vocabulary, NameValue, citation composer **place**, durable connect). Leftover unimplemented items from this note have been **re-homed or descoped** (Spike 8, dogfood, or other idea files) — this file is no longer a backlog.
 
-Authoritative schema for everything described here is [`interpretation-layer-data-model.md`](../interpretation-layer-data-model.md). Client rules are [`macos-client-patterns.md`](../macos-client-patterns.md). Nothing in this file overrides those — where this note reaches a conclusion that would change a model doc, that edit has to be made there deliberately.
+Authoritative schema for everything described here is [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md). Client rules are [`macos-client-patterns.md`](../../macos-client-patterns.md). Nothing in this file overrides those — where this note reaches a conclusion that would change a model doc, that edit has to be made there deliberately.
 
 ## Decisions so far
 
@@ -15,7 +23,7 @@ Authoritative schema for everything described here is [`interpretation-layer-dat
 | 3 | Draft status needs **no schema flag** — "uncited" is a query for Subjects with no Observations; `subjects.label` is the free working handle | §4.2 |
 | 4 | Citation → Observation stays **one-to-many**, with one-to-one as the default *behavior* and pinning opt-in | §4.5 |
 | 5 | Cross-source Observations stay legal in the model (removing them costs a trigger), but the canvas scopes to `source_id = ?` | §4.6 |
-| 6 | **`source` subjects never render on the canvas.** Source-to-source commentary lives on the Source page. UI decision, no schema change. **Implementation parked:** [`source-to-source-relationships.md`](source-to-source-relationships.md) | §4.6 |
+| 6 | **`source` subjects never render on the canvas.** Source-to-source commentary lives on the Source page. UI decision, no schema change. **Implementation parked:** [`source-to-source-relationships.md`](../source-to-source-relationships.md) | §4.6 |
 | 7 | Layout is **one unaudited table** keyed by `subject_id` with integer grid cells; positions travel with the project, camera does not | §5.1, §5.2 |
 | 8 | No auto-layout engine — unplaced subjects go in a **tray** | §5 |
 | 9 | Pan/zoom needs **AppKit `NSScrollView`** regardless of deployment target; raising past macOS 14 is a separate decision on support-matrix grounds | §7.2, §7.3 |
@@ -24,15 +32,15 @@ Authoritative schema for everything described here is [`interpretation-layer-dat
 | 12 | Entry is from the **Sources** list (dual action: open Source page *or* open Evidence graph) and later from the Source page. There is **no** Interpretation sidebar section — filing and the source-scoped graph are one product layer | §1.4, §11.1.2 |
 | 13 | The foundation is its **own spike** (Spike 5) so the canvas spike opens with no schema work. Spike 5 ships **no Subject UI at all** — the data path is proven by Go tests, and the first visible subject is a bubble | §11.4 |
 | 14 | The canvas is expected to be reused for a family tree, so **geometry goes in a neutral module** — but the position table stays concrete per layer rather than polymorphic | §13 |
-| 15 | **One ref format, two prefixes.** Candidate subjects get their own three-letter prefix (`CPR-7KD45`) rather than a marker segment, so `subject_types` carries both `ref_prefix` and `candidate_ref_prefix`. Costs a second vocabulary column; saves a parallel mint/validate/search path everywhere else | [`catalog-refs.md`](../catalog-refs.md) §2 |
+| 15 | **One ref format, two prefixes.** Candidate subjects get their own three-letter prefix (`CPR-7KD45`) rather than a marker segment, so `subject_types` carries both `ref_prefix` and `candidate_ref_prefix`. Costs a second vocabulary column; saves a parallel mint/validate/search path everywhere else | [`catalog-refs.md`](../../catalog-refs.md) §2 |
 | 16 | **The graph is the only surface** for Subjects, Citations, and Observations — no co-equal list view, no view toggle, no subject list destination. Accessibility is met by the canvas's own accessibility representation, built from slice 2 rather than deferred to polish | §1.3, §7.4 |
 | 17 | Product vocabulary for the graph's config mirrors Source types / Source fields: **Subject types** (`subject_types`) and **Subject fields** (`properties` + bindings). Avoid "claim" — Conclusion already owns that word | §1.4 |
 | 18 | Sidebar: **Sources** is the primary work item; Source types / Source fields / Subject types / Subject fields are **nested config** under it (de-emphasized), not peer destinations | §1.4 |
 | 19 | **Schema rename: Node → Subject.** Catalog tables are `subjects`, `subject_types`, `subject_positions`, `subject_type_fields`; product and engine share one word. Bridge rows are subjects too. Do not use "claim." | §1.4, interpretation model §4 |
-| 20 | **Citation composer is a navigable place** (not a sheet over the graph, not a companion window). Leave the Evidence graph → full-window viewer\|form → Back returns. Keeps composer a11y off the canvas. | §6.1, [Spike 7](../deployment-plan/archive/spike-7/) |
+| 20 | **Citation composer is a navigable place** (not a sheet over the graph, not a companion window). Leave the Evidence graph → full-window viewer\|form → Back returns. Keeps composer a11y off the canvas. | §6.1, [Spike 7](../../deployment-plan/archive/spike-7/) |
 | 21 | **Observation value types for v1 product:** `text`, `integer`, `date`, `name`, `subject`, **`term`** — not `real` / `boolean`. Kind/edge Properties use `term` (Property terms), not free text. | Spike 7; interpretation model §5.1 / §5.1.1 |
-| 22 | **Subject types are product-seeded + first-class only** — not a user-extensible CatalogVocabulary. Researchers do not create Subject types; person / event / place / bridges / source ship with app plumbing. **Subject fields** (`properties`) remain the extensible config surface. **Capabilities, locked bindings, and connect rules live in one Interpretation subject registry** (seed + app SoT; future plugins extend that registry). | §1.4, [Spike 7](../deployment-plan/archive/spike-7/) (S7-D1/S7-04 descoped; S7-01 registry) |
-| 23 | **Property terms** — categorical Property values (`event_type`, `role`, `relationship_type`, …) are origin-namespaced `property_terms` rows; Observations store `value_term_id`. **`value_type = term` Properties are registry-driven only** (product/plugin Install) — Subject fields create UI does not offer `term`. Large product/plugin term sets; researcher **Add custom…** in the picker adds term *rows* under those Properties (rename/delete when unused) — **no** Event types / Roles admin destinations. `subjects.label` stays graph-only working identity. | §11.2, interpretation model §5.1.1, [Spike 7 S7-01b](../deployment-plan/archive/spike-7/deployment-plan.md) |
+| 22 | **Subject types are product-seeded + first-class only** — not a user-extensible CatalogVocabulary. Researchers do not create Subject types; person / event / place / bridges / source ship with app plumbing. **Subject fields** (`properties`) remain the extensible config surface. **Capabilities, locked bindings, and connect rules live in one Interpretation subject registry** (seed + app SoT; future plugins extend that registry). | §1.4, [Spike 7](../../deployment-plan/archive/spike-7/) (S7-D1/S7-04 descoped; S7-01 registry) |
+| 23 | **Property terms** — categorical Property values (`event_type`, `role`, `relationship_type`, …) are origin-namespaced `property_terms` rows; Observations store `value_term_id`. **`value_type = term` Properties are registry-driven only** (product/plugin Install) — Subject fields create UI does not offer `term`. Large product/plugin term sets; researcher **Add custom…** in the picker adds term *rows* under those Properties (rename/delete when unused) — **no** Event types / Roles admin destinations. `subjects.label` stays graph-only working identity. | §11.2, interpretation model §5.1.1, [Spike 7 S7-01b](../../deployment-plan/archive/spike-7/deployment-plan.md) |
 
 Two items found along the way that were on nobody's list: **candidate ref support** did not exist in `core/ref` (§11.1, resolved in S5-01), and **NameValue does not exist in either language** (§4.4) — scheduled in Spike 7.
 
@@ -77,8 +85,8 @@ Because the graph is Source-scoped, it is reached from the **Sources** list (ope
 
 Two supporting destinations sit in the **same Sources family** in the sidebar:
 
-- **Subject types** and **Subject fields** — the product names for `subject_types`, `properties`, and `subject_type_fields` bindings. Direct mirror of Source types / Source fields; reuse [`Features/CatalogVocabulary/`](../../macos/App/Features/CatalogVocabulary/). Not needed for the first slice (§11.2);
-- a **"what other Sources say about this one"** section on the Source page, which is where source-to-source commentary lives instead of on the canvas (§4.6). **Not built** — parked in [`source-to-source-relationships.md`](source-to-source-relationships.md).
+- **Subject types** and **Subject fields** — the product names for `subject_types`, `properties`, and `subject_type_fields` bindings. Direct mirror of Source types / Source fields; reuse [`Features/CatalogVocabulary/`](../../../macos/App/Features/CatalogVocabulary/). Not needed for the first slice (§11.2);
+- a **"what other Sources say about this one"** section on the Source page, which is where source-to-source commentary lives instead of on the canvas (§4.6). **Not built** — parked in [`source-to-source-relationships.md`](../source-to-source-relationships.md).
 
 ## 1.3 One surface, not two
 
@@ -123,10 +131,10 @@ The codebase has **no prior art for either half of this**. Worth stating plainly
 | Piece | Current state |
 | --- | --- |
 | Spatial canvas, drag, connect, pan/zoom | Nothing. No `Canvas`, no custom gesture surface. `PVReorderableList` drag is the most complex gesture shipped. |
-| Artifact rendering | Nothing. No PDFKit, no QuickLook, no AVKit. Files/Artifacts have thumbnails ([`core/derivatives`](../../core/derivatives/)) and a list row; nobody has ever *opened* an Artifact in the app. |
+| Artifact rendering | Nothing. No PDFKit, no QuickLook, no AVKit. Files/Artifacts have thumbnails ([`core/derivatives`](../../../core/derivatives/)) and a list row; nobody has ever *opened* an Artifact in the app. |
 | Locator capture | Nothing. The selector vocabulary (`page`, `region`, `text_quote`, `time_range`) is fully specified and entirely unimplemented. |
 | Structured NameValue | **Nothing, in either language.** `name_values` has no migration, no Go package, and no Swift editor — see §4.4. |
-| Structured DateValue | **Done.** [`core/database/datevalues`](../../core/database/datevalues/) plus `DateValueDraft` / `DateValueEditorForm` in [`Features/Dates/`](../../macos/App/Features/Dates/), already wired into `SourcePageMetadataView`. The template for NameValue. |
+| Structured DateValue | **Done.** [`core/database/datevalues`](../../../core/database/datevalues/) plus `DateValueDraft` / `DateValueEditorForm` in [`Features/Dates/`](../../../macos/App/Features/Dates/), already wired into `SourcePageMetadataView`. The template for NameValue. |
 | Typed value dispatch | Nothing. Source metadata is `value_text` + optional `date_value_id`; no `value_type` enum exists in the product — see §11.2. |
 | Interpretation / Subject vocabulary UI | Reusable shell exists (`CatalogVocabulary`, `PVTable`, origin markers). Product names: Subject types / Subject fields (§1.4). |
 | Candidate refs (`CPR-…`) | **Done** (S5-01), and smaller than expected. Candidates use their own prefix, so `ref.Mint` already produces them; S5-01 reduced to `ValidatePrefix` plus the reserved-prefix guard. |
@@ -223,13 +231,13 @@ The reason bridges differ: if we persisted a bridge subject and the researcher t
 
 ## 4.3 The real traps
 
-1. **`subject_type_id` is immutable after insert.** Dropped a Person and meant an Event? There is no UPDATE and **no Change type UI.** Correcting a type is delete + place a new subject (new `ref`). The palette already picks the type before placing. Spike 8 **S8-D6** / **S8-09** owns the delete half. Refs are cheap to burn: [`core/ref`](../../core/ref/) mints random Crockford tokens from `crypto/rand`, not a sequence, so a discarded ref leaves no visible gap.
-2. **Deletion is blocked by the database, and foreign keys are enforced.** [`core/database/catalog.go`](../../core/database/catalog.go) opens with `_foreign_keys=1`, and the spec'd `observations` → `subjects` and `observations` → `citations` references carry no `ON DELETE` clause — so the default `NO ACTION` makes deleting a referenced subject *fail*. Worse, a subject can be referenced as the **subject** (`subject_id`) or as the **object** of an edge (`value_subject_id`), so "what dies with this subject" is two queries, not one. The canvas needs an app-side cascade in a transaction plus a confirmation that counts the damage ("removes 7 Observations across 3 Citations"). **Implementation:** Spike 8 **S8-D6** / **S8-09** (refine the matrix before the PR). Do not add silent SQL `CASCADE` on evidence.
+1. **`subject_type_id` is immutable after insert.** Dropped a Person and meant an Event? There is no UPDATE and **no Change type UI.** Correcting a type is delete + place a new subject (new `ref`). The palette already picks the type before placing. Spike 8 **S8-D6** / **S8-09** owns the delete half. Refs are cheap to burn: [`core/ref`](../../../core/ref/) mints random Crockford tokens from `crypto/rand`, not a sequence, so a discarded ref leaves no visible gap.
+2. **Deletion is blocked by the database, and foreign keys are enforced.** [`core/database/catalog.go`](../../../core/database/catalog.go) opens with `_foreign_keys=1`, and the spec'd `observations` → `subjects` and `observations` → `citations` references carry no `ON DELETE` clause — so the default `NO ACTION` makes deleting a referenced subject *fail*. Worse, a subject can be referenced as the **subject** (`subject_id`) or as the **object** of an edge (`value_subject_id`), so "what dies with this subject" is two queries, not one. The canvas needs an app-side cascade in a transaction plus a confirmation that counts the damage ("removes 7 Observations across 3 Citations"). **Implementation:** Spike 8 **S8-D6** / **S8-09** (refine the matrix before the PR). Do not add silent SQL `CASCADE` on evidence.
 3. **Every Property value type needs an editor.** `subject_type_fields` drives the Add-Property list, and the value editor depends on `properties.value_type`: `text`, `integer`, `real`, `boolean`, `date`, `name`, `node`. That is seven editors, and `node` means a subject picker scoped to the graph.
 
 ## 4.4 The hidden dependency: NameValue
 
-`name` is the single most common Observation a genealogist will ever record. Shared NameValue persistence lives in [`core/database/namevalues`](../../core/database/namevalues) (migration + Go). The Swift editor is Spike 7 **S7-02b**. [`structured-name-model.md`](../structured-name-model.md) specifies a required full `form` plus optional ordered parts with a **product part-type registry** (not free text). **User-minted part types are descoped** (leftover **22**) — the compiled registry is enough.
+`name` is the single most common Observation a genealogist will ever record. Shared NameValue persistence lives in [`core/database/namevalues`](../../../core/database/namevalues) (migration + Go). The Swift editor is Spike 7 **S7-02b**. [`structured-name-model.md`](../../structured-name-model.md) specifies a required full `form` plus optional ordered parts with a **product part-type registry** (not free text). **User-minted part types are descoped** (leftover **22**) — the compiled registry is enough.
 
 DateValue is in much better shape, which makes it easy to assume names are too. They are not. Building NameValue end to end is its own chunk of work sitting directly on the critical path of "record a person's name," and it should be planned explicitly rather than discovered in the middle of a slice.
 
@@ -251,7 +259,7 @@ The proposal: enforce one Citation per Observation, rather than letting one Cita
 
 **Cases already written into the model docs that 1:1 cannot express without duplication:**
 
-- [`interpretation-layer-data-model.md`](../interpretation-layer-data-model.md) §7 — one Citation `C1` supporting `name`, `occupation`, and `birth_date` on one person.
+- [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) §7 — one Citation `C1` supporting `name`, `occupation`, and `birth_date` on one person.
 - §6 — one letter Citation `L1` supporting a `remark` about a **source** subject *and* a positive/negative `birth_date` pair about a **person** subject. That is one reading yielding four Observations across two different subject Subjects, where the positive/negative pair is only meaningful *as a pair*.
 - A census household block: one region selector, six person Subjects.
 
@@ -275,7 +283,7 @@ So "removing it" does not mean deleting code. It means **adding** enforcement �
 
 ### Consolidating a person across Sources is *not* the reason
 
-This is the guess worth killing. If two Sources describe the same man, the architected answer is **one subject per Source plus a Sameness Claim** — not one shared subject. Both worked examples in [`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md) do exactly that:
+This is the guess worth killing. If two Sources describe the same man, the architected answer is **one subject per Source plus a Sameness Claim** — not one shared subject. Both worked examples in [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) do exactly that:
 
 ```text
 §12.1   subject N1 (home = photograph), subject N2 (home = testimony)
@@ -308,7 +316,7 @@ Note the shape: in `mentions` the foreign subject is in the **object** position 
 The rule looks arbitrary next to person Subjects, where duplicates are not only allowed but expected. The difference is that **duplicates are only safe where there is a mechanism to resolve them, and for `source` subjects there deliberately is not.**
 
 1. **Source identity is already machine-known.** A person subject is a *candidate* — that is what the `CPR` prefix in `CPR-7KD45` means — whose real identity is uncertain and source-local. A `source` subject reifies a row in your own catalog. There is nothing uncertain to resolve: `sources.id` is the answer, and the Source already has its own canonical `SRC-…` ref.
-2. **So `source` subjects get no canonical rows.** [`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md) §6 states it directly: "Reification `source` subjects are not typically given canonical rows." That is the crux. Duplicate person Subjects are fine because `canonical_entities` + `sameness_claims` + `reconciliation_claims` exist to unify them. That entire apparatus is intentionally out of play here.
+2. **So `source` subjects get no canonical rows.** [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §6 states it directly: "Reification `source` subjects are not typically given canonical rows." That is the crux. Duplicate person Subjects are fine because `canonical_entities` + `sameness_claims` + `reconciliation_claims` exist to unify them. That entire apparatus is intentionally out of play here.
 3. **Which leaves duplicates unresolvable.** You *could* write `sameness_claims` between two `source` subjects — both endpoints share a Subject type, which the composite foreign key requires, and `source` is a Subject type. But membership closure runs from an `identity_anchor_id` on a canonical entity (§2.2), so with no canonical row the cluster has no handle and the unification is inert. You would be asserting, by hand, something the database already knows from `source_id` — and getting nothing back for it.
 4. **And duplicates would buy nothing.** Subjects carry no evidentiary content; a `source` subject has only `label` and `description`. Each citing Source's independent view of the certificate already lives in *its own* Observations under *its own* Citations. Sharing the subject does not merge those testimonies, so splitting it does not protect them.
 
@@ -326,7 +334,7 @@ It is not a silly idea. The reasons not to take it: it puts a type-specific colu
 
 `subjects.source_id` is `NOT NULL REFERENCES sources(id)`, so a `source` subject must point at a Source that exists in the catalog. That means "this book mentions a marriage certificate I have never seen" forces a placeholder `sources` row for a document you do not hold.
 
-That is arguably fine and even useful — an unheld Source is a legitimate research to-do, and the Source layer already permits Sources with no Artifacts. But it has a consequence: if two Sources each mention what might be the same unheld document, resolving that means **merging Sources**, which is a Source-layer operation that does not exist. Not a blocker for the graph slices. Placeholder create + merge live in [`source-to-source-relationships.md`](source-to-source-relationships.md) and must exist before `mentions` ships.
+That is arguably fine and even useful — an unheld Source is a legitimate research to-do, and the Source layer already permits Sources with no Artifacts. But it has a consequence: if two Sources each mention what might be the same unheld document, resolving that means **merging Sources**, which is a Source-layer operation that does not exist. Not a blocker for the graph slices. Placeholder create + merge live in [`source-to-source-relationships.md`](../source-to-source-relationships.md) and must exist before `mentions` ships.
 
 ### Keep Sources off the canvas — but as a UI decision, not a schema change
 
@@ -374,7 +382,7 @@ The honest cost of this posture: a researcher working twenty census years on one
 
 # 5. Layout state
 
-The Interpretation schema has no `x`/`y` and should not get them — position is not evidence. But it is not throwaway either: twenty minutes arranging a census household is real intellectual work that must survive relaunch and ideally project sharing ([`ideas/share-packages.md`](share-packages.md)).
+The Interpretation schema has no `x`/`y` and should not get them — position is not evidence. But it is not throwaway either: twenty minutes arranging a census household is real intellectual work that must survive relaunch and ideally project sharing ([`ideas/share-packages.md`](../share-packages.md)).
 
 A separate catalog table, explicitly excluded from audit, is the leaning: it travels with the project, shares, and syncs, at the cost of one migration and some UI state in the catalog.
 
@@ -416,13 +424,13 @@ Selection is likewise transient. Neither camera nor selection belongs in navigat
 
 ## 5.3 Cache shape
 
-This fits the existing session model cleanly. One key — something like `.sourceGraph(project:sourceId:)` alongside the cases in `CatalogQueryKey` — owns **both** the subjects and their positions for one Source, because nothing else owns positions and the subject set is genuinely Source-scoped. That satisfies the "one cache owns each list" rule in [`macos-client-patterns.md`](../macos-client-patterns.md) §1 without duplicating another key's data.
+This fits the existing session model cleanly. One key — something like `.sourceGraph(project:sourceId:)` alongside the cases in `CatalogQueryKey` — owns **both** the subjects and their positions for one Source, because nothing else owns positions and the subject set is genuinely Source-scoped. That satisfies the "one cache owns each list" rule in [`macos-client-patterns.md`](../../macos-client-patterns.md) §1 without duplicating another key's data.
 
 Drag is then a **patch, not an invalidation**: the move response names exactly the one row that changed, which is the case `setQueryValue` exists for. Creating or deleting a bubble invalidates the key.
 
 One caveat for later: *if* foreign Subjects are ever displayed, the same subject would appear in two graph payloads and renaming its label would have to invalidate both — the duplicated-versus-derived hazard from the same doc section. Keeping the canvas Source-scoped (§4.6) means this never arises in the planned slices, and `source` subjects never raise it at all because they are never drawn.
 
-Dragging must not write per frame. Positions batch and debounce, flushing on gesture end; the catalog session serializes FFI ([`use-catalog-session`](../../.cursor/skills/use-catalog-session/SKILL.md)), so a chatty canvas would queue behind badge refreshes and list loads.
+Dragging must not write per frame. Positions batch and debounce, flushing on gesture end; the catalog session serializes FFI ([`use-catalog-session`](../../../.cursor/skills/use-catalog-session/SKILL.md)), so a chatty canvas would queue behind badge refreshes and list loads.
 
 ---
 
@@ -444,9 +452,9 @@ description
 
 macOS building blocks, per media type:
 
-- **PDF** — `PDFKit.PDFView` wrapped in `NSViewRepresentable`. Gives page navigation (feeding `artifact_page`), and `PDFSelection` gives selected text plus surrounding context, which is exactly `text_quote.exact` / `prefix` / `suffix`. `PDFPage` coordinate conversion supports normalized region points. **Client write of `text_quote` is parked:** [`text-quote-locators.md`](text-quote-locators.md) (Spike 8 Find/paste fills transcription only).
+- **PDF** — `PDFKit.PDFView` wrapped in `NSViewRepresentable`. Gives page navigation (feeding `artifact_page`), and `PDFSelection` gives selected text plus surrounding context, which is exactly `text_quote.exact` / `prefix` / `suffix`. `PDFPage` coordinate conversion supports normalized region points. **Client write of `text_quote` is parked:** [`text-quote-locators.md`](../text-quote-locators.md) (Spike 8 Find/paste fills transcription only).
 - **Image** — `NSImage` plus a custom overlay for polygon drawing.
-- **Audio/video** — AVKit `AVPlayer` with a time observer for `time_range`. **Not built** — parked in [`audio-video-sources.md`](audio-video-sources.md).
+- **Audio/video** — AVKit `AVPlayer` with a time observer for `time_range`. **Not built** — parked in [`audio-video-sources.md`](../audio-video-sources.md).
 - ~~**QuickLook** (`QLPreviewView`) as a read-only preview~~ **Descoped.** It has no selection or coordinate API, so it cannot host the composer. Image and PDF have real viewers; A/V will use AVKit when that idea ships. Do not add `QLPreviewView` as a product path.
 
 Region polygons need a custom drag overlay producing normalized points, and the invariants are strict (≥3 distinct points, non-self-intersecting, non-zero area, in-bounds). **Validate locator JSON in Go**, so a future Windows client inherits it and `locator_json` can never be written malformed.
@@ -469,7 +477,7 @@ The standard pattern is a hybrid: SwiftUI `Canvas` for the grid and edges (immed
 
 ## 7.2 Pan and zoom needs AppKit regardless of target
 
-Checked, because it drives the target question: **SwiftUI's `ScrollView` has no zoom on any current version.** Apple's own documentation states it "does not provide zooming functionality," and macOS 15's `ScrollPosition` adds programmatic scrolling to a view id, offset, or edge — *not* magnification. So the answer is `NSScrollView` via `NSViewRepresentable`, using `allowsMagnification`, `magnification`, `minMagnification` / `maxMagnification`, `setMagnification(_:centeredAt:)`, and `magnify(toFit:)`. That is also the more Mac-native result (elastic bounds, native scroll momentum) and is squarely the "escape hatch, not the default" case in [`macos-client-patterns.md`](../macos-client-patterns.md) §4.
+Checked, because it drives the target question: **SwiftUI's `ScrollView` has no zoom on any current version.** Apple's own documentation states it "does not provide zooming functionality," and macOS 15's `ScrollPosition` adds programmatic scrolling to a view id, offset, or edge — *not* magnification. So the answer is `NSScrollView` via `NSViewRepresentable`, using `allowsMagnification`, `magnification`, `minMagnification` / `maxMagnification`, `setMagnification(_:centeredAt:)`, and `magnify(toFit:)`. That is also the more Mac-native result (elastic bounds, native scroll momentum) and is squarely the "escape hatch, not the default" case in [`macos-client-patterns.md`](../../macos-client-patterns.md) §4.
 
 **Concrete gotcha to plan for:** a magnified `NSScrollView` does not correctly translate points into the coordinate space of its SwiftUI children. So hit-testing and drag-to-connect cannot naively trust SwiftUI gesture locations — coordinates need resolving in the scroll view's content space. Build **one** coordinate-conversion seam, keep it a pure function over value types, and unit-test it. Getting this wrong produces bugs that feel like "the canvas is haunted."
 
@@ -477,7 +485,7 @@ Checked, because it drives the target question: **SwiftUI's `ScrollView` has no 
 
 Current state: local Xcode 26.6 on macOS 26.6; deployment target 14.0 in both configurations; CI runs the `macos-15` runner. Raising to 15 is cheap and CI-compatible today.
 
-But **do not justify it with the canvas.** Pan/zoom needs AppKit either way (§7.2), which was the main hoped-for win. What raising to 15 actually buys is modest and general: `ScrollPosition` for "scroll to this subject," `onScrollGeometryChange` for viewport tracking or a future minimap, the `@Entry` macro, and possibly `LocalizedStringResource` inits that would retire the `String(localized:)` boilerplate documented in [`macos-client-patterns.md`](../macos-client-patterns.md) §6.
+But **do not justify it with the canvas.** Pan/zoom needs AppKit either way (§7.2), which was the main hoped-for win. What raising to 15 actually buys is modest and general: `ScrollPosition` for "scroll to this subject," `onScrollGeometryChange` for viewport tracking or a future minimap, the `@Entry` macro, and possibly `LocalizedStringResource` inits that would retire the `String(localized:)` boilerplate documented in [`macos-client-patterns.md`](../../macos-client-patterns.md) §6.
 
 macOS 26 adds rich-text `TextEditor` bound to `AttributedString`. That is deliberately **not** wanted for `transcription`, which must stay faithful plain text — formatting in evidence text is a liability, not a feature. Rich-text notes (leftover **26**) are **descoped**; `citation_notes.body` / `observation_notes.body` stay `TEXT`.
 
@@ -532,8 +540,8 @@ A free-form spatial canvas is genuinely hostile to VoiceOver and keyboard-only u
 9. **Coordinate conversion** under magnification (§7.2) — one seam, unit-tested.
 10. **Cross-source subjects** — scoped out of the canvas entirely: `source` subjects never render, and foreign person/event/place Subjects are deferred. See §4.6 for why they exist and why the canvas must never offer person reuse across Sources.
 11. **Cache strategy** for a large, constantly mutated graph payload — shape proposed in §5.3 (one `sourceGraph` key, patch on drag, invalidate on create/delete).
-12. **Navigation history** — the graph is a place ([`add-workspace-location`](../../.cursor/skills/add-workspace-location/SKILL.md)); camera and selection are not (§5.2). `WorkspaceLocation` needs **no** new field — a new section case plus the existing `sourceId` is already a distinct identity (§11.1.2).
-13. **Undo** — one connect gesture writes several rows and people will hit ⌘Z. The audit model already says undo is a forward revision, not a deletion ([`audit-revision-history.md`](../audit-revision-history.md) §9), so undo is a Go concern, not an `UndoManager` concern.
+12. **Navigation history** — the graph is a place ([`add-workspace-location`](../../../.cursor/skills/add-workspace-location/SKILL.md)); camera and selection are not (§5.2). `WorkspaceLocation` needs **no** new field — a new section case plus the existing `sourceId` is already a distinct identity (§11.1.2).
+13. **Undo** — one connect gesture writes several rows and people will hit ⌘Z. The audit model already says undo is a forward revision, not a deletion ([`audit-revision-history.md`](../../audit-revision-history.md) §9), so undo is a Go concern, not an `UndoManager` concern.
 14. **Density and filtering** — a census page yields dozens of Subjects and hundreds of Observations; needs layers/filters before it is usable on a real source.
 15. **Design system** — canvas chrome, bubbles, edges, and selection from existing tokens, not a parallel visual language.
 16. **Localization** — fewer strings than a form-heavy screen, but bubbles, macro menus, and every warning state still go through `L10n`.
@@ -550,8 +558,8 @@ The test is narrow: **what does the first `subjects` INSERT actually require?** 
 
 | Item | Why it is load-bearing | Size |
 | --- | --- | --- |
-| **Candidate ref support in `core/ref`** | ~~`subjects.ref` needs a form `Mint` could not produce.~~ **Resolved in S5-01**, and mostly by deleting the problem: giving candidates their own `candidate_ref_prefix` means `ref.Mint` already works, leaving only `ValidatePrefix` and the reserved-prefix guard to add. Rationale in [`catalog-refs.md`](../catalog-refs.md) §2. | Small |
-| **`subject_types` table + seeds** | `subject_types` is the other FK. Needs the table, plus rows via the existing idempotent `Install` registry pattern (`sourcecredibilitygrades` is the closest template, `add-seeded-vocabulary` the skill), plus `ref_prefix` values. **Table and seed only — not the browser UI.** Seed all seven types from [`seeded-vocabulary.md`](../seeded-vocabulary.md) §3.1; only three are placeable, and they cost the same as one (§11.1.1). | Small |
+| **Candidate ref support in `core/ref`** | ~~`subjects.ref` needs a form `Mint` could not produce.~~ **Resolved in S5-01**, and mostly by deleting the problem: giving candidates their own `candidate_ref_prefix` means `ref.Mint` already works, leaving only `ValidatePrefix` and the reserved-prefix guard to add. Rationale in [`catalog-refs.md`](../../catalog-refs.md) §2. | Small |
+| **`subject_types` table + seeds** | `subject_types` is the other FK. Needs the table, plus rows via the existing idempotent `Install` registry pattern (`sourcecredibilitygrades` is the closest template, `add-seeded-vocabulary` the skill), plus `ref_prefix` values. **Table and seed only — not the browser UI.** Seed all seven types from [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.1; only three are placeable, and they cost the same as one (§11.1.1). | Small |
 | **`subjects` table + `core/database/subjects`** | Create, list, rename, delete — **with audit wiring.** Every domain write in this product goes through `audit.Record(tx, …)` (see `sources/notes.go`); that is not optional, and it is the bulk of the work here. | Medium |
 | **Layout table** | Integer grid cells, unaudited (§5). Persistence across relaunch is part of what the canvas validates, so it cannot be held in memory — and it ships in slice 1 so the canvas slice opens with no schema work in front of it. | Small |
 | **FFI handlers** | `add-ffi-handler` skill. | Small |
@@ -583,7 +591,7 @@ Name and encoding are an implementation choice (`sourceSurface`, `sourceView`, �
 
 Fallback when a Source is deleted while its graph is in history: `fallbackToSectionRoot()` → Sources list. No separate Interpretation root.
 
-**Graph-progress columns on the Sources list** were deferred from the first slices (“12 subjects, 3 uncited” would stale `sourcesList` if folded into `CatalogSource`). Pulled into Spike 8 as **S8-D5** / **S8-08**: counts on their own cache keys so a canvas write invalidates one Source. Brief: [`../deployment-plan/spike-8/design/S8-D5-sources-list.md`](../deployment-plan/spike-8/design/S8-D5-sources-list.md).
+**Graph-progress columns on the Sources list** were deferred from the first slices (“12 subjects, 3 uncited” would stale `sourcesList` if folded into `CatalogSource`). Pulled into Spike 8 as **S8-D5** / **S8-08**: counts on their own cache keys so a canvas write invalidates one Source. Brief: [`../deployment-plan/spike-8/design/S8-D5-sources-list.md`](../../deployment-plan/spike-8/design/S8-D5-sources-list.md).
 
 **No-Artifact Sources** stay in the list; the Evidence graph action is disabled and a shortcut opens the Source page to add an Artifact (Citations require an Artifact).
 
@@ -594,11 +602,11 @@ The structural fact that shrinks the prework dramatically: **`subjects` has no f
 Deferred, blocking nothing:
 
 - `properties` and `subject_type_fields` — Observation concerns, not subject concerns.
-- The vocabulary browser UI — **Subject types / Subject fields** in the product (§1.4). Subject types get seeded directly from the registry in [`seeded-vocabulary.md`](../seeded-vocabulary.md) §3.1; browsing and user extension can wait. Seed all seven rather than only the three placeable ones: they are rows, not features, and a partial seed just means editing the registry again. **Sidebar stubs** for those destinations can still ship early so the Sources family looks complete.
+- The vocabulary browser UI — **Subject types / Subject fields** in the product (§1.4). Subject types get seeded directly from the registry in [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.1; browsing and user extension can wait. Seed all seven rather than only the three placeable ones: they are rows, not features, and a partial seed just means editing the registry again. **Sidebar stubs** for those destinations can still ship early so the Sources family looks complete.
 - `ref_prefix` user-facing validation (global uniqueness across origins, reserved `SRC` / `ART` / `CIT` / `OBS` / `C`) — only needed when *users* define Subject types, which is the browser UI.
-- NameValue, the typed value dispatch, and the value editors — all Observation concerns. Scope notes for when they land: Interpretation needs only `name_values` and `name_value_parts`, because interpretation model §5.1 puts `name_format` in the Conclusion layer — two tables, not the four in [`structured-name-model.md`](../structured-name-model.md) §4. `date` is already done and is the template. Product value types are `text` / `integer` / `date` / `name` / `subject` / **`term`** (six-way sparse-column dispatch including `value_term_id`).
+- NameValue, the typed value dispatch, and the value editors — all Observation concerns. Scope notes for when they land: Interpretation needs only `name_values` and `name_value_parts`, because interpretation model §5.1 puts `name_format` in the Conclusion layer — two tables, not the four in [`structured-name-model.md`](../../structured-name-model.md) §4. `date` is already done and is the template. Product value types are `text` / `integer` / `date` / `name` / `subject` / **`term`** (six-way sparse-column dispatch including `value_term_id`).
 - Citations, the artifact viewer, locator validation.
-- **Property terms** (`property_terms` + `value_type = term`) for kind/edge Properties (`event_type`, `role`, `relationship_type`). Settled as decision 23 / [Spike 7 **S7-01b**](../deployment-plan/archive/spike-7/deployment-plan.md) — land before Observations write those Properties as free text. **Term-typed Properties come only from the registry** (not researcher create). Composer uses a term picker (± Add custom for term *values*); no Event types / Roles CatalogVocabulary destinations.
+- **Property terms** (`property_terms` + `value_type = term`) for kind/edge Properties (`event_type`, `role`, `relationship_type`). Settled as decision 23 / [Spike 7 **S7-01b**](../../deployment-plan/archive/spike-7/deployment-plan.md) — land before Observations write those Properties as free text. **Term-typed Properties come only from the registry** (not researcher create). Composer uses a term picker (± Add custom for term *values*); no Event types / Roles CatalogVocabulary destinations.
 
 ## 11.3 What the canvas slice proves, and what it does not
 
@@ -610,14 +618,14 @@ Deferred, blocking nothing:
 
 1. **Foundation** (§11.1) — candidate refs, `subject_types` and its seed, audited `subjects` CRUD, the layout table, FFI, `WorkspaceLocation` discriminator for page vs graph, Sources-list dual action, Evidence graph stub, and nested Subject types / Subject fields **nav stubs** (§1.4). **No Subject UI**: Evidence graph opens a stub until the canvas exists.
 2. **Bubbles** — the canvas proper: `NSScrollView` bridge, persons / events / places, working labels, drag / snap / select / persist, the tray for unplaced subjects. Replaces the stub, and ships the accessibility representation and keyboard parity alongside the first bubbles (§7.4).
-3. **Subject vocabulary** — `properties`, `subject_type_fields`, the Subject **fields** editor (replacing that nav stub). Subject **types** stay product-seeded with first-class plumbing — no user types browser ([Spike 7](../deployment-plan/archive/spike-7/) decision 22). The leftover Subject **types** sidebar stub may stay; **removing it is descoped** (leftover **21**).
+3. **Subject vocabulary** — `properties`, `subject_type_fields`, the Subject **fields** editor (replacing that nav stub). Subject **types** stay product-seeded with first-class plumbing — no user types browser ([Spike 7](../../deployment-plan/archive/spike-7/) decision 22). The leftover Subject **types** sidebar stub may stay; **removing it is descoped** (leftover **21**).
 4. **Artifact viewer + Citations** — PDF and image; `page`, `region`, `text_quote`; Go-side locator validation.
 5. **First Observation** — Add Property on a bubble, `text` value type only. The whole vertical path proven end to end.
 6. **Remaining value types** — including NameValue end to end; reuse the existing DateValue editor.
 7. **Connect tool** — bridge macros, the disambiguation form, the pinned Citation (§6.1).
 8. **Honesty and polish** — negated / conflicted / uncited states, filtering, undo. Accessibility is *not* here; it moved to slice 2 (§7.4).
 
-**Spike boundary: slice 1 is [Spike 5](../deployment-plan/archive/spike-5/), slice 2 is [Spike 6](../deployment-plan/archive/spike-6/) (complete / Go), slices 3–7 are [Spike 7](../deployment-plan/archive/spike-7/) (complete).** Splitting foundation from canvas kept the canvas spike pure — Spike 6's first PR drew a bubble rather than writing a migration. Spike 6 also prototyped **connect lines** as UI risk (not Observation macros); Spike 7 replaces those with durable Citation-backed edges. Spike 7 collapses vocabulary editors, **Property terms**, NameValue, artifact viewer + Citations, Observations (six value types including `term`), and connect macros into one spike with a **navigable composer place**.
+**Spike boundary: slice 1 is [Spike 5](../../deployment-plan/archive/spike-5/), slice 2 is [Spike 6](../../deployment-plan/archive/spike-6/) (complete / Go), slices 3–7 are [Spike 7](../../deployment-plan/archive/spike-7/) (complete).** Splitting foundation from canvas kept the canvas spike pure — Spike 6's first PR drew a bubble rather than writing a migration. Spike 6 also prototyped **connect lines** as UI risk (not Observation macros); Spike 7 replaces those with durable Citation-backed edges. Spike 7 collapses vocabulary editors, **Property terms**, NameValue, artifact viewer + Citations, Observations (six value types including `term`), and connect macros into one spike with a **navigable composer place**.
 
 **The cost of the split is that slice 1 ships a layer with no visible capability, and that cost is now accepted rather than bought off.** An earlier draft of this note put a plain list of a Source's Subjects at the graph destination to prove the data path, justified as the structured non-canvas editing path §7.4 was committed to. Since the graph is now the only surface (§1.3), that list would be throwaway UI — built, designed, and then deleted by slice 2 — so it is dropped.
 
@@ -659,13 +667,13 @@ Considered and set aside for the canvas name:
 
 # 13. Reuse: the eventual family tree view
 
-A family tree is the same idea — subjects, edges, spatial layout, click a thing to see what supports it — so the canvas built here is very likely the canvas built there. **Product work waits on the Narrative layer** ([`narrative-layer-data-model.md`](../narrative-layer-data-model.md) §4–§6). That is worth planning for, but the reuse is not where it first appears to be, and one piece of it is a trap.
+A family tree is the same idea — subjects, edges, spatial layout, click a thing to see what supports it — so the canvas built here is very likely the canvas built there. **Product work waits on the Narrative layer** ([`narrative-layer-data-model.md`](../../narrative-layer-data-model.md) §4–§6). That is worth planning for, but the reuse is not where it first appears to be, and one piece of it is a trap.
 
 ## 13.1 What already shares a spine
 
 Two things are shared *by design* in the model docs, before any canvas exists:
 
-- **Subject type vocabulary.** `canonical_entities.subject_type_id REFERENCES subject_types(id)` ([`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md) §2.1) — the same seven rows Spike 5 seeds. A Person in the tree and a candidate person subject share one type row.
+- **Subject type vocabulary.** `canonical_entities.subject_type_id REFERENCES subject_types(id)` ([`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §2.1) — the same seven rows Spike 5 seeds. A Person in the tree and a candidate person subject share one type row.
 - **Ref prefixes.** `subject_types` is shared vocabulary for both layers (interpretation model §4.1), carrying `ref_prefix` for the canonical entity (`PER-7KD45`) and `candidate_ref_prefix` for the subject (`CPR-7KD45`). A family tree view reads canonical refs and an interpretation canvas reads candidate refs off the same type row, so `Mint` and the reserved-prefix guard already serve both.
 
 So the foundation spike is already doing family-tree work without trying to.
@@ -706,12 +714,12 @@ Answered during this brainstorm, recorded so they are not reopened by accident: 
 Leftover graph-UI work from this note has been re-homed or descoped (Spike 8 stories, dogfood, or other idea files). This section is not a backlog.
 
 - ~~Does the canvas *create* root subjects only, or also adopt Subjects created elsewhere (imports)?~~ **Descoped** with the unplaced tray. Cross-Source adoption is **no** (§4.6).
-- ~~Can one graph span Sources (a "case view")?~~ **Not leftover graph UI.** Covered by [`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md) when that layer is built. Source-scoped edit stays hard.
-- ~~What does the Source-page commentary surface actually look like?~~ **Parked:** [`source-to-source-relationships.md`](source-to-source-relationships.md).
+- ~~Can one graph span Sources (a "case view")?~~ **Not leftover graph UI.** Covered by [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) when that layer is built. Source-scoped edit stays hard.
+- ~~What does the Source-page commentary surface actually look like?~~ **Parked:** [`source-to-source-relationships.md`](../source-to-source-relationships.md).
 - ~~Before `mentions` ships: placeholder Source + merge?~~ **Parked:** same note.
 - ~~Does the person → person disambiguation (§3.2) earn its complexity?~~ **Answered:** person→person always means `relationship`.
-- ~~Is a Citation with zero Observations a legal, useful state?~~ **Parked** with the composer rethink in [`docs/dogfood/ux.md`](../dogfood/ux.md).
-- ~~How does Conclusion-layer work surface here later?~~ **Not leftover graph UI.** [`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md) already owns sameness, reconciliation, and how those views relate to Interpretation. Leftover **27** (pleasant Sameness workflow) waits on that layer.
+- ~~Is a Citation with zero Observations a legal, useful state?~~ **Parked** with the composer rethink in [`docs/dogfood/ux.md`](../../dogfood/ux.md).
+- ~~How does Conclusion-layer work surface here later?~~ **Not leftover graph UI.** [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) already owns sameness, reconciliation, and how those views relate to Interpretation. Leftover **27** (pleasant Sameness workflow) waits on that layer.
 - ~~Raise macOS 14?~~ **Descoped** as graph leftover. Support-matrix decision if we ever raise; not justified by the canvas (§7.3).
 - ~~Rich-text notes?~~ **Descoped.** `transcription` stays plain text. `citation_notes` / `observation_notes` stay `TEXT`.
-- ~~Family tree?~~ **Not leftover graph UI.** Narrative projection — [`narrative-layer-data-model.md`](../narrative-layer-data-model.md) §4–§6. Geometry reuse in §13 still stands when that layer is built.
+- ~~Family tree?~~ **Not leftover graph UI.** Narrative projection — [`narrative-layer-data-model.md`](../../narrative-layer-data-model.md) §4–§6. Geometry reuse in §13 still stands when that layer is built.
