@@ -10,9 +10,6 @@ enum DateValueDisplay {
 
         switch draft.kind {
         case "point":
-            if draft.startYear == nil {
-                return phrase
-            }
             guard let point = formatSide(
                 year: draft.startYear,
                 month: draft.startMonth,
@@ -22,7 +19,7 @@ enum DateValueDisplay {
                 second: draft.startSecond,
                 locale: locale
             ) else {
-                return ""
+                return phrase
             }
             let qualified = applyQualifier(draft.qualifier, to: point, locale: locale)
             return appendPhrase(phrase, to: qualified)
@@ -91,51 +88,69 @@ enum DateValueDisplay {
         second: Int32?,
         locale: Locale
     ) -> String? {
-        guard let year else { return nil }
+        if year == nil, month == nil, day == nil, hour == nil, minute == nil, second == nil {
+            return nil
+        }
 
         var calendar = Calendar(identifier: .gregorian)
         calendar.locale = locale
 
         var components = DateComponents()
-        components.year = Int(year)
+        components.year = year.map(Int.init) ?? 2000
+        components.month = month.map(Int.init) ?? 1
+        components.day = day.map(Int.init) ?? 1
 
-        let template: String
-        if let month {
-            components.month = Int(month)
-            if let day {
-                components.day = Int(day)
-                template = "yMMMd"
-            } else {
-                template = "yMMM"
+        var result = ""
+        if year != nil || month != nil || day != nil {
+            let template: String
+            switch (year != nil, month != nil, day != nil) {
+            case (true, true, true): template = "yMMMd"
+            case (true, true, false): template = "yMMM"
+            case (true, false, true): template = "yd"
+            case (true, false, false): template = "y"
+            case (false, true, true): template = "MMMMd"
+            case (false, true, false): template = "MMMM"
+            case (false, false, true): template = "d"
+            case (false, false, false): template = ""
             }
-        } else {
-            template = "y"
+            if let date = calendar.date(from: components),
+               let format = DateFormatter.dateFormat(fromTemplate: template, options: 0, locale: locale)
+            {
+                let dateFormatter = DateFormatter()
+                dateFormatter.locale = locale
+                dateFormatter.calendar = calendar
+                dateFormatter.dateFormat = format
+                result = dateFormatter.string(from: date)
+            }
         }
 
-        guard let date = calendar.date(from: components) else { return nil }
-        guard let format = DateFormatter.dateFormat(fromTemplate: template, options: 0, locale: locale)
-        else { return nil }
-
-        let dateFormatter = DateFormatter()
-        dateFormatter.locale = locale
-        dateFormatter.calendar = calendar
-        dateFormatter.dateFormat = format
-        var result = dateFormatter.string(from: date)
-
-        if let hour {
-            components.hour = Int(hour)
-            components.minute = Int(minute ?? 0)
-            components.second = Int(second ?? 0)
-            if let timeDate = calendar.date(from: components) {
+        if hour != nil || minute != nil || second != nil {
+            if let hour { components.hour = Int(hour) }
+            if let minute { components.minute = Int(minute) }
+            if let second { components.second = Int(second) }
+            let timeTemplate: String
+            switch (hour != nil, minute != nil, second != nil) {
+            case (true, true, true): timeTemplate = "jms"
+            case (true, true, false): timeTemplate = "jm"
+            case (true, false, true): timeTemplate = "js"
+            case (true, false, false): timeTemplate = "j"
+            case (false, true, true): timeTemplate = "ms"
+            case (false, true, false): timeTemplate = "m"
+            case (false, false, true): timeTemplate = "s"
+            case (false, false, false): timeTemplate = ""
+            }
+            if let timeDate = calendar.date(from: components),
+               let format = DateFormatter.dateFormat(fromTemplate: timeTemplate, options: 0, locale: locale)
+            {
                 let timeFormatter = DateFormatter()
                 timeFormatter.locale = locale
                 timeFormatter.calendar = calendar
-                timeFormatter.dateStyle = .none
-                timeFormatter.timeStyle = .short
-                result += " \(timeFormatter.string(from: timeDate))"
+                timeFormatter.dateFormat = format
+                let clock = timeFormatter.string(from: timeDate)
+                result = result.isEmpty ? clock : "\(result) \(clock)"
             }
         }
 
-        return result
+        return result.isEmpty ? nil : result
     }
 }

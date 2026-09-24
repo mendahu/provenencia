@@ -89,6 +89,14 @@ struct DateValueDisplayTests {
         )
     }
 
+    @Test func monthOnlyUsesLocaleMonthName() {
+        var d = DateValueDraft.empty()
+        d.startMonth = 4
+        let us = DateValueDisplay.string(for: d, locale: enUS)
+        #expect(us.contains("April") || us.contains("Apr"))
+        #expect(!us.contains("1882"))
+    }
+
     @Test func catalogInputOverload() {
         var d = DateValueDraft.empty()
         d.startYear = 1900

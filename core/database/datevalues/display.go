@@ -13,10 +13,10 @@ func CompactDisplay(v Value) string {
 	phrase := strings.TrimSpace(v.Phrase)
 	switch strings.TrimSpace(v.Kind) {
 	case KindPoint:
-		if v.StartYear == nil {
+		point := formatSide(v.StartYear, v.StartMonth, v.StartDay, v.StartHour, v.StartMinute, v.StartSecond)
+		if point == "" {
 			return phrase
 		}
-		point := formatSide(v.StartYear, v.StartMonth, v.StartDay, v.StartHour, v.StartMinute, v.StartSecond)
 		qualified := applyQualifier(v.Qualifier, point)
 		return appendPhrase(phrase, qualified)
 	case KindRange:
@@ -56,30 +56,48 @@ func applyQualifier(qual, point string) string {
 }
 
 func formatSide(year, month, day, hour, minute, second *int) string {
-	if year == nil {
-		return ""
+	var date string
+	switch {
+	case year != nil && month != nil && day != nil:
+		date = fmt.Sprintf("%d-%02d-%02d", *year, *month, *day)
+	case year != nil && month != nil:
+		date = fmt.Sprintf("%d-%02d", *year, *month)
+	case year != nil && day != nil:
+		date = fmt.Sprintf("%d--%02d", *year, *day)
+	case year != nil:
+		date = fmt.Sprintf("%d", *year)
+	case month != nil && day != nil:
+		date = fmt.Sprintf("--%02d-%02d", *month, *day)
+	case month != nil:
+		date = fmt.Sprintf("--%02d", *month)
+	case day != nil:
+		date = fmt.Sprintf("---%02d", *day)
 	}
-	var b strings.Builder
-	fmt.Fprintf(&b, "%d", *year)
-	if month == nil {
-		return b.String()
+
+	var clock string
+	switch {
+	case hour != nil && minute != nil && second != nil:
+		clock = fmt.Sprintf("%02d:%02d:%02d", *hour, *minute, *second)
+	case hour != nil && minute != nil:
+		clock = fmt.Sprintf("%02d:%02d", *hour, *minute)
+	case hour != nil && second != nil:
+		clock = fmt.Sprintf("%02d::%02d", *hour, *second)
+	case hour != nil:
+		clock = fmt.Sprintf("%02d", *hour)
+	case minute != nil && second != nil:
+		clock = fmt.Sprintf(":%02d:%02d", *minute, *second)
+	case minute != nil:
+		clock = fmt.Sprintf(":%02d", *minute)
+	case second != nil:
+		clock = fmt.Sprintf("::%02d", *second)
 	}
-	fmt.Fprintf(&b, "-%02d", *month)
-	if day == nil {
-		return b.String()
+
+	switch {
+	case date != "" && clock != "":
+		return date + " " + clock
+	case date != "":
+		return date
+	default:
+		return clock
 	}
-	fmt.Fprintf(&b, "-%02d", *day)
-	if hour == nil {
-		return b.String()
-	}
-	fmt.Fprintf(&b, " %02d", *hour)
-	if minute == nil {
-		return b.String()
-	}
-	fmt.Fprintf(&b, ":%02d", *minute)
-	if second == nil {
-		return b.String()
-	}
-	fmt.Fprintf(&b, ":%02d", *second)
-	return b.String()
 }

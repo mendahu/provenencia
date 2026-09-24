@@ -129,7 +129,6 @@ struct DateValueEditorForm: View {
                     text: dayBinding(start),
                     width: 76,
                     mono: true,
-                    disabled: monthBinding(start).wrappedValue.isEmpty,
                     isInvalid: draft.isFieldInvalid(.day, start: start),
                     accessibilityIdentifier: "\(accessibilityIdentifierPrefix).\(start ? "start" : "end").day"
                 )
@@ -144,27 +143,25 @@ struct DateValueEditorForm: View {
                     .font(PVFont.body(size: PVTypeScale.micro))
                     .foregroundStyle(PVColor.danger)
             }
-            if start ? draft.hasFullStartDay : draft.hasFullEndDay {
-                if start ? draft.showStartTime : draft.showEndTime {
-                    timeBlock(start: start)
-                }
-                Button {
-                    if start {
-                        draft.showStartTime.toggle()
-                    } else {
-                        draft.showEndTime.toggle()
-                    }
-                } label: {
-                    Text(start
-                        ? (draft.showStartTime ? L10n.Sources.dateHideTime : L10n.Sources.dateAddTime)
-                        : (draft.showEndTime ? L10n.Sources.dateHideTime : L10n.Sources.dateAddTime)
-                    )
-                    .font(PVFont.body(size: PVTypeScale.caption))
-                    .foregroundStyle(PVColor.textLink)
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(start ? "start" : "end").timeToggle")
+            if start ? draft.showStartTime : draft.showEndTime {
+                timeBlock(start: start)
             }
+            Button {
+                if start {
+                    draft.showStartTime.toggle()
+                } else {
+                    draft.showEndTime.toggle()
+                }
+            } label: {
+                Text(start
+                    ? (draft.showStartTime ? L10n.Sources.dateHideTime : L10n.Sources.dateAddTime)
+                    : (draft.showEndTime ? L10n.Sources.dateHideTime : L10n.Sources.dateAddTime)
+                )
+                .font(PVFont.body(size: PVTypeScale.caption))
+                .foregroundStyle(PVColor.textLink)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(start ? "start" : "end").timeToggle")
         }
     }
 
@@ -185,7 +182,6 @@ struct DateValueEditorForm: View {
                     text: minuteBinding(start),
                     width: 62,
                     mono: true,
-                    disabled: hourBinding(start).wrappedValue.isEmpty,
                     isInvalid: draft.isFieldInvalid(.minute, start: start),
                     accessibilityIdentifier: "\(accessibilityIdentifierPrefix).\(side).minute"
                 )
@@ -195,7 +191,6 @@ struct DateValueEditorForm: View {
                         text: secondBinding(start: true),
                         width: 62,
                         mono: true,
-                        disabled: draft.startMinute == nil,
                         isInvalid: draft.isFieldInvalid(.second, start: true),
                         accessibilityIdentifier: "\(accessibilityIdentifierPrefix).start.second"
                     )
@@ -204,7 +199,6 @@ struct DateValueEditorForm: View {
                         text: millisecondBinding(start: true),
                         width: 70,
                         mono: true,
-                        disabled: draft.startSecond == nil,
                         isInvalid: draft.isFieldInvalid(.millisecond, start: true),
                         accessibilityIdentifier: "\(accessibilityIdentifierPrefix).start.millisecond"
                     )
@@ -298,11 +292,7 @@ struct DateValueEditorForm: View {
             PVSelect(
                 selection: monthBinding(start),
                 options: DateValueSelectOptions.months,
-                menuWidth: 136,
                 fillsWidth: false,
-                isDisabled: DateValueSelectOptions.isMonthDisabled(
-                    yearIsEmpty: yearBinding(start).wrappedValue.isEmpty
-                ),
                 accessibilityLabel: L10n.Sources.dateMonth,
                 accessibilityIdentifier: "\(accessibilityIdentifierPrefix).\(start ? "start" : "end").month"
             )
@@ -471,10 +461,6 @@ enum DateValueSelectOptions {
             ("11", L10n.Sources.dateMonthNovember),
             ("12", L10n.Sources.dateMonthDecember),
         ].map { PVSelectOption(value: $0.0, label: String(localized: $0.1)) }
-    }
-
-    static func isMonthDisabled(yearIsEmpty: Bool) -> Bool {
-        yearIsEmpty
     }
 }
 

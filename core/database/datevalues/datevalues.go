@@ -2,16 +2,16 @@
 //
 // Kinds validated by Insert (DDL stays flexible for later kinds):
 //
-//   - kind "point": one date; precision = which start_* components are set
-//     (year→month→day→hour→minute→second→millisecond, no gaps); optional
-//     start_tz; qualifier "" / "ABT" / "BEF" / "AFT"; no end_* (including
-//     end_tz). Phrase-only points are allowed when no civil components are set.
-//   - kind "range": one date in a bounded uncertainty window (BET); start and
-//     end each cascading from year through optional time; optional start_tz /
-//     end_tz; start <= end; qualifier empty only
+//   - kind "point": one date; precision = whichever start_* components the
+//     evidence asserts (gaps allowed); optional start_tz; qualifier
+//     "" / "ABT" / "BEF" / "AFT"; no end_* (including end_tz). Phrase-only
+//     points are allowed when no civil components are set.
+//   - kind "range": one date in a bounded uncertainty window (BET); each side
+//     needs at least one civil component; optional start_tz / end_tz;
+//     start <= end when shared fields can be compared; qualifier empty only
 //
-// Finer components require all coarser ones (no gaps). Missing time means
-// unknown/not asserted, not midnight.
+// Missing fields mean unknown/not asserted, not midnight. Year is not
+// required when a month, day, or clock field is set.
 //
 // Qualifiers on point: ABT ≈ about; BEF = before / no later than;
 // AFT = after / no earlier than. The bound is the start_* civil components.
@@ -218,22 +218,23 @@ func validate(v Value) error {
 		if !end.empty() || v.EndTZ != "" {
 			return ErrInvalid
 		}
-		if start.empty() {
-			// Phrase-forward point: no civil components. Timezone alone is not enough.
-			if v.Phrase == "" || v.StartTZ != "" {
+		if !hasCivil(start) {
+			// Phrase-forward point: no year/month/day/time. Timezone or
+			// millisecond-only is not enough.
+			if v.Phrase == "" || v.StartTZ != "" || start.millisecond != nil {
 				return ErrInvalid
 			}
 			return nil
 		}
-		return validateCascade(start)
+		return validateComponentRanges(start)
 	case KindRange:
 		if qual != "" {
 			return ErrInvalid
 		}
-		if err := validateCascade(start); err != nil {
+		if err := validateComponentRanges(start); err != nil {
 			return err
 		}
-		if err := validateCascade(end); err != nil {
+		if err := validateComponentRanges(end); err != nil {
 			return err
 		}
 		if !sideLessOrEqual(start, end) {
@@ -254,22 +255,16 @@ func pointQualifierOK(qual string) bool {
 	}
 }
 
-// validateCascade requires year, optional finer fields with no gaps, and
-// valid component ranges.
-func validateCascade(s side) error {
-	levels := []*int{s.year, s.month, s.day, s.hour, s.minute, s.second, s.millisecond}
-	if levels[0] == nil {
+func hasCivil(s side) bool {
+	return s.year != nil || s.month != nil || s.day != nil ||
+		s.hour != nil || s.minute != nil || s.second != nil
+}
+
+// validateComponentRanges requires at least one civil field and in-range
+// values. Gaps (day without month, hour without year) are allowed.
+func validateComponentRanges(s side) error {
+	if !hasCivil(s) {
 		return ErrInvalid
-	}
-	seenNil := false
-	for _, p := range levels {
-		if p == nil {
-			seenNil = true
-			continue
-		}
-		if seenNil {
-			return ErrInvalid
-		}
 	}
 	if s.month != nil && !monthOK(*s.month) {
 		return ErrInvalid
