@@ -16,7 +16,7 @@ Grow this list as stories land. **By spike close**, every checked story below mu
 2. **PDF Artifact thumbnails** — PDF Artifacts show a **first-page raster** on Artifact rows (glyph only if render skips). A PDF with a raster can be pinned as Source cover. Notes: [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md).
 3. **PDF Find** — on a PDF in the composer, a Find field on the viewer tool strip jumps to a keyword hit with a highlight. Image-only PDFs (no text layer) fail honestly. Notes: [`pdf-text-find.md`](pdf-text-find.md).
 4. **PDF select + paste transcription** — default PDF pointer is text select (pan is explicit). **Paste transcription from selection** fills the transcription field. No Vision on PDF pages.
-5. **Graph visual enhancements** — cited subject-card rows show a **conflict badge** when a Property appears more than once, and a **negated badge** when `polarity = negative` (they may stack). More card-chrome items may join this bar as they are added to **S8-D3** / **S8-06**.
+5. **Graph visual enhancements** — conflict + negated row badges; always-on **jump to the Source page**; cited **bridge sentences** prefer endpoint `name` / `event_type` / `toponym`, then working label. More card-chrome items may join **S8-D3** / **S8-06**.
 
 Further bar items: TBD (additional data-entry stories).
 
@@ -28,7 +28,7 @@ Further bar items: TBD (additional data-entry stories).
 | --- | --- | --- | --- |
 | **S8-D1** | Auto Transcribe in the composer | Button, progress, replace confirm, large-page warning + proceed, failure copy | **S8-01** |
 | **S8-D2** | PDF Find + select + paste | Tool-strip Find; I-beam vs pan; paste-from-selection vs Auto Transcribe row | **S8-03**, **S8-04**, **S8-05** |
-| **S8-D3** | Evidence graph visual enhancements | Conflict badge; negated badge; more card items join this brief | **S8-06** |
+| **S8-D3** | Evidence graph visual enhancements | Conflict + negated badges; Source-page jump; richer bridge sentences | **S8-06** |
 
 ## PR sequence
 
@@ -54,7 +54,7 @@ S8-D2  PDF Find / select / paste
 
 S8-D3  Graph card visuals
   │
-  └────── gates ──────────▶ S8-06  Conflict + negated badges (+ more on this brief)
+  └────── gates ──────────▶ S8-06  Graph chrome (badges, Source jump, bridge copy)
                               │     (parallel; no composer / PDF dependency)
                               │
                             S8-99  Dogfood close / docs
@@ -80,7 +80,7 @@ S8-D3  Graph card visuals
 - [ ] S8-04 — PDF Find in the tool strip → [`completed.md`](completed.md)
 - [ ] S8-05 — Paste transcription from PDF selection → [`completed.md`](completed.md)
 - [ ] S8-D3 — Design: Evidence graph visual enhancements → [`completed.md`](completed.md)
-- [ ] S8-06 — Graph visual enhancements (conflict + negated + brief bundle) → [`completed.md`](completed.md)
+- [ ] S8-06 — Graph visual enhancements (badges, Source jump, bridge copy) → [`completed.md`](completed.md)
 - [ ] S8-99 — Dogfood close / docs (after later stories, or when we choose to close)
 
 ---
@@ -172,22 +172,22 @@ Transcription-row control for PDF: copy current `PDFSelection` string into `tran
 
 ## S8-D3 — Design: Evidence graph visual enhancements
 
-Claude Design board for a **bundled** graph-card chrome pass. Items so far: **conflict badge** on repeated Properties; **negated badge** on `polarity = negative` rows (may stack). More visual items join this brief (and **S8-06**) as they are scoped. Brief: [`design/S8-D3-graph-visuals.md`](design/S8-D3-graph-visuals.md). Gates **S8-06**.
+Claude Design board for a **bundled** graph-chrome pass. Items: **conflict** + **negated** row badges; always-on **Source-page jump**; **bridge sentences** that prefer endpoint identity Properties. Brief: [`design/S8-D3-graph-visuals.md`](design/S8-D3-graph-visuals.md). Gates **S8-06**.
 
-Does **not** design pinning, tray, composer, denied connect-lines, or leftover honesty (incomplete bridges, filters, undo).
+Does **not** design pinning, tray, composer restyle, denied-lines, Source-page → graph, or incomplete-bridge chrome (**descoped** — the UI cannot write that shape).
 
 ---
 
 ## S8-06 — PR: Graph visual enhancements
 
-One Evidence graph card pass against **S8-D3**. Competing Observations stay as separate rows (already shipped). When `propertyKey` occurs ≥ 2 times, badge **each** of those rows. When `polarity = negative`, show an explicit **negated** mark (today the row only italicizes). Marks may stack. Further items listed on the brief at PR start ship in this same PR.
+One Evidence graph chrome pass against **S8-D3**. Competing Observations stay as separate rows. Duplicate `propertyKey` → conflict badge on each row; `polarity = negative` → negated mark (may stack). Header (or equivalent) **opens the same Source’s detail page**. Cited bridge sentences prefer each endpoint’s identity Observation (`name` / `event_type` / `toponym`), then working label. Further items listed on the brief at PR start ship here.
 
 | | |
 | --- | --- |
-| **In** | Conflict badge per **S8-D3**; negated mark per `polarity`; stack when both apply; `propertyKey` count, not value equality; L10n + VoiceOver; card height / hit tests; any other GV items frozen on the brief. Prefer `PVBadge`. |
-| **Out** | Merge / resolve UI; schema or FFI; treating duplicates as invalid; denied-line drawing; incomplete bridges; tray; pinning; composer restyle. |
-| **Testable** | Two `name` Observations → both conflict; one `name` → no conflict; identical strings still conflict; negative singleton → negated only; negative + positive same key → both conflict, one negated; uncited card unchanged; height/a11y do not clip. |
-| **Depends on** | **S8-D3**. Shipped cards + snapshot. **Not** S8-01…S8-05. |
+| **In** | Conflict + negated per **S8-D3**; Source jump via existing `sourcePageLocation` + `go(to:)`; `EvidenceBridgeEdgeSummary` reads endpoint Observations from the snapshot; L10n + VoiceOver; card height / hit tests. Prefer `PVBadge`. |
+| **Out** | Merge / resolve; schema or FFI; denied-line drawing; incomplete-bridge chrome; Source-page → graph; tray; pinning; composer form restyle. |
+| **Testable** | Two `name`s → both conflict; negative singleton → negated only; jump location is `.page` for the same `sourceId` and Back returns to `.graph`; relationship sentence uses NameValue form when present and label when not; participation uses `event_type`; location uses `toponym`; height/a11y follow the new sentence. |
+| **Depends on** | **S8-D3**. Shipped cards + snapshot + `sourceSurface`. **Not** S8-01…S8-05. |
 
 ---
 
@@ -207,7 +207,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 | Warn + proceed on large images | Hard reject / Apple “too many words” (does not exist) |
 | PDF **page-1 thumbnail** via PDFKit | Go PDF decoder; user-picked thumb page |
 | PDF **Find** + **select** + **paste transcription** | PDF Vision / OCR; `text_quote` locators; Source-page Find |
-| Graph **conflict** + **negated** row marks (more card items via **S8-D3**) | Denied-line drawing; incomplete bridges; tray; pinning; merge/resolve |
+| Graph **conflict** + **negated** badges; Source-page jump; richer bridge sentences | Denied-line drawing; incomplete-bridge chrome (**descoped**); Source-page → graph; tray; pinning; merge/resolve |
 | More data-entry stories as added | Remaining Spike 7 leftovers unless pulled in |
 
 ---
@@ -227,6 +227,9 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 11. **Pan vs select** — today’s unnamed click-drag pan will fight I-beam. S8-D2 must name the pan escape (hand and/or modifier) before S8-03.
 12. **Conflict is a count, not a verdict** — badge when `propertyKey` appears ≥ 2 times on that card. Values may match. Do not write a schema flag or a resolve action.
 13. **Negated is polarity, not a missing line** — `polarity = negative` on the Observation. Italic-danger today is not enough; S8-D3 designs an explicit mark. Do not draw a ghost connect edge.
+14. **Incomplete bridges are descoped** — Connect is atomic and the UI cannot write person-without-event. Do not add half-line chrome.
+15. **Bridge nouns come from the endpoint card** — prefer that subject’s `name` / `event_type` / `toponym`, then `subjects.label`. Do not keep using only the edge row’s working-label display once a name exists.
+16. **Source jump is graph → page** — reuse `sourcePageLocation`. The reverse (page → graph) stays a leftover.
 
 ---
 

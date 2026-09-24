@@ -8,7 +8,7 @@ Authoritative domain and stack decisions remain in the sibling docs under [`docs
 
 | Spike | Goal |
 | --- | --- |
-| [Spike 8](spike-8/) | **Pause and refine** data entry. Stories: image **Auto Transcribe**; **PDF Artifact thumbnails**; PDF **Find** + **select** + **paste transcription**; graph **visual enhancements** (conflict + negated badges). More entry-flow stories will join. Dogfood: [`docs/dogfood/ux.md`](../dogfood/ux.md). Plan: [`spike-8/deployment-plan.md`](spike-8/deployment-plan.md). |
+| [Spike 8](spike-8/) | **Pause and refine** data entry. Stories: image **Auto Transcribe**; **PDF Artifact thumbnails**; PDF **Find** + **select** + **paste transcription**; graph **visual enhancements** (badges, Source jump, bridge copy). More entry-flow stories will join. Dogfood: [`docs/dogfood/ux.md`](../dogfood/ux.md). Plan: [`spike-8/deployment-plan.md`](spike-8/deployment-plan.md). |
 
 ## Completed
 
