@@ -10,9 +10,6 @@ import SwiftUI
 struct EvidenceBridgeCard: View {
     static let width: CGFloat = 236
     static let approximateHalfHeight: CGFloat = 36
-    /// Edge hit-testing height from the same top as layout — near a one-line
-    /// body so bottoms are not stranded below the fill.
-    static let edgeLayoutHeight: CGFloat = 88
 
     static let editActionID = "edit"
     static let editCitationActionID = "editCitation"
@@ -82,7 +79,12 @@ struct EvidenceBridgeCard: View {
         )
     }
 
-    /// Painted height: header plus up to three wrapped body lines, at least ``edgeLayoutHeight``.
+    /// Painted height: header plus up to three wrapped body lines.
+    ///
+    /// No minimum floor: bridge cards are shallower than primary cards, and a
+    /// frame taller than the fill strands bottom-approach edge terminals below
+    /// the card (the ``GraphCanvasEdgeGeometry/endpointTuck`` measures from
+    /// this frame's `maxY`).
     static func contentHeight(for placed: SourceGraphPlacedBridge) -> CGFloat {
         let header = placed.isCited ? headerContentHeightCited : headerContentHeightUncited
         let text = placed.isCited
@@ -92,8 +94,7 @@ struct EvidenceBridgeCard: View {
             ? PVFont.nsDisplay(size: 14.5, weight: PVFontWeight.medium)
             : PVFont.nsBody(size: 11.5, weight: PVFontWeight.regular, italic: true)
         let body = wrappedTextHeight(text, width: bodyTextWidth, font: font, maxLines: 3)
-        let height = shellPaddingTop + header + headerToBodySpacing + body + shellPaddingTop
-        return max(edgeLayoutHeight, height)
+        return shellPaddingTop + header + headerToBodySpacing + body + shellPaddingTop
     }
 
     /// Body copy width inside the shell, leaving room for the trailing icon column.
