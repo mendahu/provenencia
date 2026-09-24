@@ -23,6 +23,6 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 - Offline-first macOS genealogy app inside a local `*.provenencia` project. Deployment target **macOS 14**.
 - **Citation composer** is a navigable place (Option B): viewer \| form. Shipped in Spike 7. Do **not** redesign the shell, locators, or Observation list unless a brief says so.
 - **Transcription** is the Citation reading. Observations are separate. Auto Transcribe must not write Observations.
-- Media in composer: **image** and **PDF** only. Audio/video: honest disable.
+- Media in composer: **image** and **PDF** viewers. **Auto Transcribe (S8-D1) is image-only.** PDF: paste (later text-layer). Audio/video: honest disable.
 - Locator: default `artifact`, optional `page` (PDF), optional `region` polygon. One region max. Geometry: [`ArtifactRegionGeometry`](../../../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift).
 - Extend existing kit (`PVField`, `PVButton`, `PVTextArea`, `PVCallout`, `.pvConfirm`). Do not invent a second dialog stack.

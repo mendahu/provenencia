@@ -14,7 +14,9 @@ Paste this entire document into Claude Design as the requirements for one board/
 
 ## 1. Objective
 
-Add **Auto Transcribe** next to the citation **transcription** field. On click, OCR the **current page raster**, or the **region polygon** when one is on the locator, and dump the text into the textarea. The researcher edits as today and Save still writes the Citation.
+Add **Auto Transcribe** next to the citation **transcription** field. On click, OCR the **image Artifact**, or the **region polygon** when one is on the locator, and dump the text into the textarea. The researcher edits as today and Save still writes the Citation.
+
+**Image types only.** PDF, audio, and video do not run OCR in this MVP. PDF researchers paste into the field (a later story can do text-layer select/copy). Image-only PDF scans are not Vision’d here.
 
 Also design:
 
@@ -42,15 +44,15 @@ Placement is a board finding: trailing slot on `PVField` (beside Uncertain), a c
 | Fact | UI implication |
 | --- | --- |
 | Transcription ≠ Observation | Button only fills the transcription string. No Observation rows appear. |
-| Locator is layered | Region present → OCR that crop. Else → current image or current PDF page. |
+| Locator is layered | Image + region → OCR that crop. Image, no region → whole image (warn if huge). PDF → no OCR. |
 | Vision has no “too many words” error | We warn from **our** checks (no region / huge pixels / dense-page heuristic). Vision usually succeeds slowly or with junk. |
 | Crop is in-memory | No “saving a clip” progress. Spinner is “Reading text…”. |
-| Image + PDF only | Audio / video / missing file: disabled + short reason, not a crash. |
+| Images only for OCR | PDF / audio / video / missing file: disabled + short reason (PDF: paste; not “could not read”). |
 | Researcher owns the reading | OCR is a draft in the field. Uncertain stays a manual checkbox unless a later story says otherwise. |
 
 ### 2.1 What this board is not
 
-- Not PDF Find / text-layer extract ([`ideas/pdf-text-find.md`](../../../ideas/pdf-text-find.md)).
+- Not PDF OCR, PDF Find, or text-layer extract ([`ideas/pdf-text-find.md`](../../../ideas/pdf-text-find.md)).
 - Not Foundation Models / Apple Intelligence / draft graph cards.
 - Not auto Observations, NameValue, or connect macros.
 - Not a new kit **Transcribe** component unless a second call site is already known (it is not).
@@ -63,7 +65,7 @@ Placement is a board finding: trailing slot on `PVField` (beside Uncertain), a c
 | Ships in **S8-01** | Does **not** ship there |
 | --- | --- |
 | Auto Transcribe control + states on the transcription field | Observation / subject extract |
-| Vision on page raster; in-memory crop from region | PDFKit `string` / `findString`; persisted crop files |
+| Vision on **image** raster; in-memory crop from region | PDF Vision; PDFKit `string` / `findString`; persisted crop files |
 | Replace confirm; large-page warn + proceed; fail copy | Hard-block full page; Live Text overlay |
 | Protocol-shaped recognizer for tests | Calling real Vision from unit tests |
 
@@ -73,9 +75,9 @@ Placement is a board finding: trailing slot on `PVField` (beside Uncertain), a c
 
 | ID | Requirement |
 | --- | --- |
-| AT-1 | Board shows transcription **idle** (empty + with existing text), **running**, **success** (field filled), **failed**, and **unsupported** (no raster). |
-| AT-2 | Auto Transcribe is a `PVButton` (or `PVIconButton` + accessible name). Copy via L10n. Disabled while `inert`, while running, and when there is no OCR-able raster. |
-| AT-3 | Region on the locator → copy/tooltip can say the crop is the drawn region. Artifact-only / page-only → implies the visible page. |
+| AT-1 | Board shows transcription **idle** (empty + with existing text), **running**, **success** (field filled), **failed**, **PDF** (disabled + paste hint), and **unsupported** (audio / no file). |
+| AT-2 | Auto Transcribe is a `PVButton` (or `PVIconButton` + accessible name). Copy via L10n. Disabled while `inert`, while running, when the Artifact is not an image, and when there is no image raster. |
+| AT-3 | Region on an image locator → copy/tooltip can say the crop is the drawn region. Image, no region → whole image. |
 | AT-4 | Non-empty transcription → **confirm replace** (`.pvConfirm`, not a Bool sheet). Cancel leaves the field. |
 | AT-5 | Large-page / no-region / oversized-bitmap warning: `PVCallout` and/or `.pvConfirm` with **Proceed** and **Cancel**. Cancel does not start OCR. Proceed runs it. |
 | AT-6 | Running: button busy; field not silently editable mid-flight or clearly locked — board picks one. No fake determinate % unless Vision progress is actually shown. |
@@ -88,13 +90,14 @@ Placement is a board finding: trailing slot on `PVField` (beside Uncertain), a c
 ## 5. Suggested frames
 
 1. Idle — empty transcription, image Artifact, no region.
-2. Idle — PDF page + rectangle region (button implies crop).
+2. Idle — image + rectangle region (button implies crop).
+2b. Idle — PDF Artifact: Auto Transcribe disabled; hint to paste.
 3. Replace confirm — field already has text.
 4. Large-page warning — artifact-only newspaper page; Proceed / Cancel.
 5. Running.
 6. Success — textarea filled; researcher can edit.
 7. Fail — Vision error / empty result; prior text kept.
-8. Unsupported — audio Artifact or no file; button disabled + caption.
+8. Unsupported — audio Artifact or no file; button disabled + caption. PDF is frame 2b, not this.
 
 ---
 
@@ -129,7 +132,7 @@ Provenencia UI is layered as **components / recipes / snowflakes** ([`docs/desig
 
 - Writing Observations or subjects
 - Foundation Models / PCC
-- PDF text-layer extract and Find
+- PDF OCR, PDF text-layer extract, and Find
 - Persisting OCR text before Save
 - Multiple regions
 - Changing locator tools

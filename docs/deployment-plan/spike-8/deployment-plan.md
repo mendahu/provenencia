@@ -12,7 +12,7 @@ Pause-and-refine: make **Source → Evidence graph** data entry cheaper. Stories
 
 Grow this list as stories land. **By spike close**, every checked story below must be true in the app.
 
-1. **Auto Transcribe** — in the citation composer, a control fills **transcription** from Vision OCR of the current page (or the region polygon when one is set). The researcher can edit and Save as today. Full-page / oversized jobs warn and can still proceed. No Observation writes.
+1. **Auto Transcribe** — in the citation composer, on an **image** Artifact, a control fills **transcription** from Vision OCR of the image (or the region polygon when one is set). The researcher can edit and Save as today. Full-image / oversized jobs warn and can still proceed. No Observation writes. **PDF:** button disabled / honest empty — do not OCR PDFs in this slice (copy/paste or a later text-layer story).
 
 Further bar items: TBD (additional data-entry stories).
 
@@ -53,18 +53,18 @@ S8-D1  Auto Transcribe UI     (more stories TBD)
 
 Claude Design board for the **transcription** field: Auto Transcribe control, in-progress state, replace confirm, large-page / slow-job warning that can still proceed, and failure/empty states. Brief: [`design/S8-D1-auto-transcribe.md`](design/S8-D1-auto-transcribe.md). Gates **S8-01**.
 
-Does **not** design Observation auto-fill, LLM extract, or PDF Find.
+Does **not** design Observation auto-fill, LLM extract, PDF OCR, or PDF Find.
 
 ---
 
 ## S8-01 — PR: Vision OCR + Auto Transcribe
 
-On-device Vision (`VNRecognizeTextRequest`) fills the composer **transcription** textarea. Crop in memory from the current page raster and the region locator when present. No temp file, no catalog write until the researcher Saves.
+On-device Vision (`VNRecognizeTextRequest`) fills the composer **transcription** textarea for **image** Artifacts only. Crop in memory from the loaded `NSImage` and the region locator when present. No temp file, no catalog write until the researcher Saves. PDF / audio / video: do not run Vision.
 
 | | |
 | --- | --- |
-| **In** | Protocol-shaped OCR seam (tests do not call Vision); `CGImage` from the already-loaded image / PDF page raster; bounding-box crop (optional mask later); Auto Transcribe control per **S8-D1**; replace confirm if transcription is non-empty; preflight warn on artifact-only / huge bitmap / dense-page heuristics, with proceed; L10n; skip audio/video / no image. |
-| **Out** | PDFKit text-layer extract; Foundation Models; writing Observations; persisted crop objects; `RecognizeDocumentsRequest` (macOS 26); raising the deployment target. |
+| **In** | Protocol-shaped OCR seam (tests do not call Vision); `CGImage` from the already-loaded **image**; bounding-box crop (optional mask later); Auto Transcribe control per **S8-D1**; replace confirm if transcription is non-empty; preflight warn on artifact-only / huge bitmap / dense-image heuristics, with proceed; L10n; skip PDF / audio / video / no image. |
+| **Out** | PDF OCR; PDF page raster → Vision; PDFKit text-layer extract / copy-paste (later story); Foundation Models; writing Observations; persisted crop objects; `RecognizeDocumentsRequest` (macOS 26); raising the deployment target. |
 | **Testable** | Fake recognizer fills / fails / empty; crop uses region vs full page; preflight flags large page; replace does not overwrite without confirm; button disabled while running. |
 | **Depends on** | **S8-D1**. Shipped composer + locators (S7-08 / S7-06 / S7-07). |
 
@@ -81,7 +81,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 | In | Out |
 | --- | --- |
 | Composer transcription assist | Auto Observations / subjects / connect |
-| Vision on image + PDF page raster | Audio / video OCR |
+| Vision on **image** Artifacts | PDF OCR; audio / video OCR |
 | In-memory crop from locator | Object-store crop files |
 | Warn + proceed on large pages | Hard reject / Apple “too many words” (does not exist) |
 | More data-entry stories as added | Spike 7 leftover honesty/polish (conflicted, tray, pinning) unless pulled in |
@@ -94,9 +94,10 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 2. **Vision does not refuse a newspaper page** — it usually succeeds slowly or with junk. Large-page honesty is **our** preflight (pixels / no region / post-pass observation density), not a `VNError`.
 3. **Locator y-down vs Vision ROI y-up** — crop in image pixels from [`ArtifactRegionGeometry`](../../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift); do not pass a polygon into `regionOfInterest` (rect only).
 4. **Crop the source raster**, not the zoomed viewport bitmap.
-5. **No file middleman** — `ProjectFiles.objectURL` → `NSImage` / PDF page render → `CGImage` → crop → `VNImageRequestHandler`.
-6. **Hide Vision behind a protocol** — `FakeStore` / unit tests inject a recognizer.
-7. **More stories do not wait on S8-01** unless they share the composer transcription chrome.
+5. **No file middleman** — `ProjectFiles.objectURL` → image `NSImage` → `CGImage` → crop → `VNImageRequestHandler`.
+6. **PDF is not an OCR input in S8-01** — disable Auto Transcribe; researchers paste. Image-only PDF scans wait for a later story (text layer or raster OCR).
+7. **Hide Vision behind a protocol** — `FakeStore` / unit tests inject a recognizer.
+8. **More stories do not wait on S8-01** unless they share the composer transcription chrome.
 
 ---
 
