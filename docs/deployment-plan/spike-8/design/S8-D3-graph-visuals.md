@@ -4,7 +4,7 @@
 **Spike:** Provenencia Spike 8 (pause and refine / data entry)  
 **Implements later as:** PR **S8-06** (one graph-chrome pass; more items join this brief)  
 **Depends on:** Shipped Evidence graph ([`EvidenceGraphView`](../../../../macos/App/Features/EvidenceGraph/EvidenceGraphView.swift), [`EvidenceSubjectCard`](../../../../macos/App/Features/EvidenceGraph/EvidenceSubjectCard.swift), [`EvidenceBridgeCard`](../../../../macos/App/Features/EvidenceGraph/EvidenceBridgeCard.swift), [`EvidenceBridgeEdgeSummary`](../../../../macos/App/Features/EvidenceGraph/EvidenceBridgeEdgeSummary.swift)); snapshot already lists every Observation ([`SourceGraphSnapshot`](../../../../macos/App/Features/Workspace/Session/SourceGraphSnapshot.swift)); Source page vs graph already distinct (`sourceSurface`)  
-**Related:** leftover conflicted / negated honesty from [`interpretation-graph-ui.md`](../../../ideas/archive/interpretation-graph-ui.md) §3.3 — **row badges only**. Incomplete-bridge chrome and collapse/expand are **descoped**.  
+**Related:** leftover conflicted / negated honesty from [`interpretation-graph-ui.md`](../../../ideas/archive/interpretation-graph-ui.md) — **row badges only**. Incomplete-bridge chrome and collapse/expand are **descoped**.  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
 **Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
 

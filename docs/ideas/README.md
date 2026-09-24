@@ -23,5 +23,10 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 
 ## Archived
 
-- [`archive/interpretation-graph-ui.md`](archive/interpretation-graph-ui.md) — Evidence graph brainstorm; leftovers re-homed or descoped
-- Layering for macOS UI (design system / recipes / snowflakes) graduated to [`docs/design-system-layers.md`](../design-system-layers.md); draft under [`archive/design-system-hardening.md`](archive/design-system-hardening.md).
+Shipped ideas keep **decisions**, not PR order. Closed spikes: [`docs/deployment-plan/archive/`](../deployment-plan/archive/).
+
+- [`archive/interpretation-graph-ui.md`](archive/interpretation-graph-ui.md) — Evidence graph decisions; leftovers re-homed
+- [`archive/page-navigation-performance.md`](archive/page-navigation-performance.md) — session cache / place registry
+- [`archive/catalog-access-serialization.md`](archive/catalog-access-serialization.md) — held catalog session
+- [`archive/design-system-hardening.md`](archive/design-system-hardening.md) — graduated to [`docs/design-system-layers.md`](../design-system-layers.md)
+- Also archived: nav-count RPC, ingest MIME, thumbnails, image cache (same folder)

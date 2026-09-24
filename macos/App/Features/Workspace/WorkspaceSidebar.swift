@@ -1,9 +1,8 @@
 import SwiftUI
 
 /// The workspace's leading sidebar: brand mark, primary nav destinations,
-/// and a session-identity + collapse-toggle footer. Requirements W-1, W-2,
-/// W-4, W-5, W-5b, W-7, W-8, W-13, W-16, W-19, W-20 — see
-/// `docs/deployment-plan/archive/spike-2/design/archive/S2-01-workspace-chrome.md`.
+/// and a session-identity + collapse-toggle footer.
+/// Workspace chrome: `docs/deployment-plan/archive/spike-2/README.md`.
 ///
 /// The whole column (brand row, nav, footer) sits in one `ScrollView` so a
 /// short window scrolls the sidebar instead of clipping destinations or

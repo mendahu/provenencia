@@ -96,6 +96,8 @@ Match an open Spike 8 brief (`S8-D7` rethink, `S8-D1` enhancement):
 
 ## After the board
 
-- Archive the brief; write `completed.md`
+- Archive the brief under the **open** spike’s `design/archive/`; write `completed.md`
 - Implement against the board + inventory (kit first)
 - Later briefs on the same surface **extend the new frames**, not the discarded ones
+
+When a **spike closes**, distill that folder to a decisions README. Delete `completed.md`, `deployment-plan.md`, and design briefs. Git has the PR history. See [`docs/deployment-plan/archive/`](../../../docs/deployment-plan/archive/).

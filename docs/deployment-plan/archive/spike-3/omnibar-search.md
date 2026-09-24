@@ -1,10 +1,6 @@
 # Omnibar search
 
-**Status:** archived — Spike 3 complete. Requirements for catalog omnibar search. PR sequence: [`deployment-plan.md`](deployment-plan.md).
-
-Visual chrome for the **field** (placement + access): Claude Design **App Layout** board. Results dropdown: Claude Design **Omnibar Results** board (brief archived under [`design/archive/`](design/archive/); summary [`design/README.md`](design/README.md)). The [Display ideas](#display-problem) section below is historical; implement against the board.
-
-Engine / ranking architecture is **in scope** and first-class (not a client-side `LIKE` forever). Ship it in **successive PRs**; the end state below is the product bar.
+**Status:** live behavior contract (shipped in Spike 3). Spike note: [`README.md`](README.md). Skill: [`add-searchable-kind`](../../../../.cursor/skills/add-searchable-kind/SKILL.md).
 
 ## Problem
 
@@ -216,45 +212,9 @@ Swift does not re-implement ranking.
 
 Relationships without refs: poor primary hits — prefer related Person/Event entities until the model gives clearer identity.
 
-## Display problem
+## Results row
 
-Hits are **heterogeneous**. A Source wants title + type + thumbnail + `SRC-…`. A File wants filename + media type. A Person Node wants name / label + `PER-C-…`. A vocabulary field wants label + key + data type.
-
-**Results UI is locked** by the Claude Design Omnibar Results board: shared rich row skeleton + flat ranked list. The ideas below remain useful rationale; implement against the board / `PVOmnibarHitRow`.
-
-### Display ideas (board-aligned)
-
-**1. Shared skeleton, kind-specific slots** — shipped direction on the board.
-
-```text
-[icon / thumb]  primary title                 kind · secondary
-                tertiary / match context        REF-…
-```
-
-Same spacing and typography; only the slots change. Avoid per-kind card layouts inside the results list.
-
-**2. Grouped results** — optional exploration only; board default is flat.
-
-**3. Faceted omnibar** — later; not Spike 3 chrome.
-
-**4. Rank, then unify** — flat list ordered by engine score; kind chip disambiguates (**board default**).
-
-**5. Two densities** — not required by the board; denser rich rows are the v1.
-
-## Incremental delivery
-
-Break into successive PRs so each slice is dogfoodable. Sequenced as **S3-07…S3-11** in [`deployment-plan.md`](deployment-plan.md) (S3-07…S3-11 / S1–S5 done — [`completed.md`](completed.md)); intended order:
-
-| Slice | Delivers | Evaluate |
-| --- | --- | --- |
-| **S1 — Registry + RPC shell** | **Done (S3-07).** Searchable-kind registry; `SearchCatalog` protobuf/FFI; Hit DTO; FakeStore; context location on the request. Naïve scanner **behind the same API** as bridge. | RPC shape; location mapping; tests without UI. |
-| **S2 — FTS5 projection** | **Done (S3-08).** Migration + FTS documents for Sources / types / fields; incremental upkeep on writes; rebuild/heal; FTS retrieval + field weights; Source child text rolled into Source docs. | Latency; relevance on real dogfood catalogs; index correctness after edits. |
-| **S3 — Context ranking + ref fast path** | **Done (S3-09).** Section/kind boosts; exact/prefix ref promotion; tagged-body `match_reason`; multi-token OR + term coverage. | “I’m on Sources → Sources float” feels right; paste-ref UX. |
-| **S4 — Omnibar chrome + remove list search** | **Done (S3-10).** Toolbar field + ⌘K (S3-05 shell); results UI (`PVOmnibarHitRow` + jump-menu overlay); wire hits to `go(to:)`; **deleted** per-destination search. | End-to-end find; no dual search chrome. |
-| **S5 — Fuzzy / typo** | **Done (S3-11).** Trigram OR shortlist + Jaro–Winkler gate; `FuzzyWeights` tuning; never full-catalog fuzzy. | Typos recover without garbage. |
-| **S6+ — More kinds / depth** | Files, Artifacts projection; deeper note/metadata/transcription weight tuning; Interpretation when UI exists. | Noise vs recall; registry extensibility. |
-
-S4 can overlap S2/S3 if chrome is blocked on Design for the dropdown — field chrome can ship with a simple list against the Hit DTO before visual polish.
+Shared rich skeleton (`PVOmnibarHitRow`): icon/thumb, title, kind, ref. Flat list ordered by engine score. Not per-kind cards.
 
 ## Why it fits Provenencia
 
@@ -270,14 +230,14 @@ Local-first catalogs invite keyboard navigation. Short refs were designed to be 
 | Results dropdown visuals? | **Board locked** — Claude Design Omnibar Results; shared rich row + flat ranked list. |
 | Hit navigation? | **`go(to:)`** — same session history as sidebar / breadcrumbs. |
 | Engine? | **Go `SearchCatalog` + kind registry + FTS5 projection** in the catalog DB — not Swift-as-search-engine. |
-| Brute force forever? | **No.** Naïve scan was only a short bridge (S3-07); FTS5 projection is the engine (S3-08). |
+| Brute force forever? | **No.** FTS5 projection is the engine. |
 | Context-aware ranking? | **Yes** — boost by current workspace section / location. |
 | Multi-word queries? | **Yes** — tokenize; prefer higher **term coverage** + high-weight fields; allow partial matches at lower rank; context reorders kinds. |
 | Cross-root “associated with”? | **Later** — denormalize related labels and/or second-stage joins; not implied by multi-word FTS alone. |
 | Field weights? | **Yes** — declared per kind in the registry. |
 | Child tables (notes, metadata, files)? | **Roll into navigable root** (e.g. Source) — match returns the Source, not a note/metadata entity. |
 | Fuzzy / typo matching? | **Yes, in scope** (phased after FTS + weights + ref path). |
-| Delivery? | **Successive PRs** per incremental table above. |
+| More kinds | Register via `add-searchable-kind` (Interpretation, Files, …). |
 
 ## Deferred questions (not dogfood blockers)
 
@@ -299,14 +259,7 @@ Parked after Spike 3 dogfood closeout (S3-12). Ship defaults today: blank omniba
 
 ## Related docs
 
-- [`deployment-plan.md`](deployment-plan.md) — sequenced PRs
-- [`design/README.md`](design/README.md) — App Layout + Omnibar Results boards
-- [`navigation-history.md`](navigation-history.md) (Back/Forward after omnibar jumps; shared toolbar; `WorkspaceLocation`)
-- [`application-stack.md`](../../../application-stack.md) (FTS5; index rebuild task class)
-- [`catalog-refs.md`](../../../catalog-refs.md)
-- [`source-layer-data-model.md`](../../../source-layer-data-model.md)
-- [`artifact-file-storage.md`](../../../artifact-file-storage.md)
-- [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md)
-- [`conclusion-layer-data-model.md`](../../../conclusion-layer-data-model.md)
+- [`navigation-history.md`](navigation-history.md)
 - [`macos-client-patterns.md`](../../../macos-client-patterns.md)
-- Historical briefs that assumed local list search (superseded for find chrome): [`S2-04-sources-list.md`](../spike-2/design/archive/S2-04-sources-list.md); [`S2-20-files-list.md`](../spike-2/design/archive/S2-20-files-list.md)
+- [`catalog-refs.md`](../../../catalog-refs.md)
+- [`add-searchable-kind`](../../../../.cursor/skills/add-searchable-kind/SKILL.md)

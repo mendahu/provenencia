@@ -1,34 +1,18 @@
-# Spike 3 — Workspace layout (nav history + omnibar)
+# Spike 3 — Navigation history and omnibar
 
-## Status
+**Done.** First-class Back/Forward and project search. Behavior contracts (still live):
 
-**Done.** Navigation history + omnibar dogfood complete (S3-01…S3-12; S3-06 skipped). Finished steps: [`completed.md`](completed.md). Optional later kinds (S3-13+, not scheduled): [`deployment-plan.md`](deployment-plan.md). Design boards stay in Claude Design ([`design/README.md`](design/README.md)).
+- [`navigation-history.md`](navigation-history.md)
+- [`omnibar-search.md`](omnibar-search.md)
 
-Workspace layout (nav history + omnibar chrome) plus first-class infrastructure: **catalog `project.uuid`**, hand-rolled navigation history, and **Go/SQLite catalog search** (registry + FTS5 + ranking + typo shortlist).
+Client patterns: [`macos-client-patterns.md`](../../../macos-client-patterns.md).
 
-Authoritative stack / chrome context: [`macos-client-patterns.md`](../../../macos-client-patterns.md), [`application-stack.md`](../../../application-stack.md). Spike 2 chrome brief (historical): [`S2-01-workspace-chrome.md`](../spike-2/design/archive/S2-01-workspace-chrome.md).
+## Decisions
 
-**Design:** Claude Design App Layout (toolbar) + Omnibar Results boards — summary in [`design/README.md`](design/README.md) (boards not checked into git).
+- **One coordinator.** Every committed navigation goes through `go(to:)` / Back / Forward. No parallel `selectedSection` / `closeSource()` paths.
+- History is **persisted** per `project.uuid` (Application Support JSON) and restored on relaunch. Not SwiftUI `NavigationStack`.
+- A history entry is a **restorable place** (section + deep ids). Search query, scroll, focus, and dirty drafts are omitted.
+- **Omnibar** is engine-side catalog search (registry + FTS5 + ranking), not per-destination `LIKE`. Hits navigate via `go(to:)`.
+- Per-destination list search was removed in favor of the omnibar.
 
-## Goal
-
-First-class **Back/Forward** (persisted, coordinator-driven) and **project search** (toolbar omnibar + engine-side FTS/ranking), not band-aid chrome. Early-dev churn and broad file touch are acceptable; successive PRs should still be dogfoodable.
-
-See [`navigation-history.md`](navigation-history.md) § Implementation posture and [`omnibar-search.md`](omnibar-search.md) § Implementation posture / Incremental delivery.
-
-## Documents
-
-| Doc | Role |
-| --- | --- |
-| [**Deployment plan**](deployment-plan.md) | Dogfood status + optional S3-13+ |
-| [**Completed**](completed.md) | Finished Design/PR steps (S3-01…S3-12) |
-| [Navigation history](navigation-history.md) | Back/Forward behavior, persistence, `project.uuid` |
-| [Omnibar search](omnibar-search.md) | Registry + FTS5 + ranking; remove per-destination search |
-| [Design boards](design/README.md) | App Layout + Omnibar Results summaries |
-
-## Out of scope (for now)
-
-- Interpretation / Conclusion catalog work (search kinds optional later as S3-13+)
-- Files list destination (descoped in Spike 2)
-- Catalog access serialization / DB performance ([archived idea](../../../ideas/archive/catalog-access-serialization.md))
-- Short human project `ref` (unless a later spike needs one)
+Catalog session serialization is a separate decision: [`catalog-access-serialization.md`](../../../ideas/archive/catalog-access-serialization.md).

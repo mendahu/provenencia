@@ -4,7 +4,7 @@
 **Spike:** Provenencia Spike 8 (pause and refine / data entry)  
 **Implements later as:** PR **S8-10**  
 **Depends on:** Shipped Option B composer ([`CitationComposerView`](../../../../macos/App/Features/CitationComposer/CitationComposerView.swift), S7-D4 / S7-08); graph handoff (`composerLocation`); locators S7-07  
-**Related:** dogfood “one reading, many subjects” ([`docs/dogfood/ux.md`](../../../dogfood/ux.md)); archived [S7-D4](../../archive/spike-7/design/archive/S7-D4-citation-composer.md)  
+**Related:** dogfood “one reading, many subjects” ([`docs/dogfood/ux.md`](../../../dogfood/ux.md)); Spike 7 composer decisions ([`archive/spike-7`](../../archive/spike-7/))  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
 **Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md); location focus via [`add-workspace-location`](../../../../.cursor/skills/add-workspace-location/SKILL.md)
 
