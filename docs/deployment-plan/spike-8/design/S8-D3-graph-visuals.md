@@ -79,7 +79,7 @@ Exact badge, link chrome, sentence wrapping, and where Add property sits on the 
 ### 2.1 What this board is not
 
 - Not incomplete-bridge / denied-line language, or collapse/expand (descoped).
-- Not Source-page → graph (that leftover stays out).
+- Not Source-page → graph (**S8-D4**).
 - Not composer rethink / pinning / empty-Citation policy (dogfood).
 - Not density filters, undo, unplaced tray, or minimap (**descoped**).
 - Not Conclusion Reconciliation Claims.
@@ -172,7 +172,7 @@ If more bundle items land after the board is first drawn, **amend this brief** a
 | Incomplete / half-line chrome | UI cannot produce that graph. |
 | Collapse / expand | Descoped. |
 | Filters / undo / tray / minimap | Descoped. UI cannot write unplaced subjects; density lives in dogfood. |
-| Source-page → graph button | Different leftover. |
+| Source-page → graph button | **S8-D4**. |
 | New sentence catalog keys unless templates cannot take the new nouns | Reuse shipped `bridgeSummary*` strings. |
 
 ---
@@ -186,7 +186,7 @@ If more bundle items land after the board is first drawn, **amend this brief** a
 - Collapse / expand bridge cards (**descoped**)
 - Density filters, undo, unplaced tray, minimap (**descoped**)
 - Composer rethink / pinning / empty-Citation policy (dogfood)
-- Source-page Evidence graph entry
+- Source-page Evidence graph entry (**S8-D4**)
 
 ---
 

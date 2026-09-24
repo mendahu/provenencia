@@ -17,18 +17,20 @@ Grow this list as stories land. **By spike close**, every checked story below mu
 3. **PDF Find** — on a PDF in the composer, a Find field on the viewer tool strip jumps to a keyword hit with a highlight. Image-only PDFs (no text layer) fail honestly. Notes: [`pdf-text-find.md`](pdf-text-find.md).
 4. **PDF select + paste transcription** — default PDF pointer is text select (pan is explicit). **Paste transcription from selection** fills the transcription field. No Vision on PDF pages.
 5. **Graph visual enhancements** — conflict + negated row badges; always-on **jump to the Source page**; cited **bridge sentences** prefer endpoint `name` / `event_type` / `toponym`, then working label; **Add property** on bridge cards (extra non-edge rows). More items may join **S8-D3** / **S8-06**.
+6. **Source page enhancements** — the Source detail page has an **Open Evidence graph** control for the same Source (disabled with no Artifact). More items may join **S8-D4** / **S8-07**.
 
 Further bar items: TBD (additional data-entry stories).
 
 ## Design track
 
-**Composer and graph-card chrome is designed in Claude Design before the matching UI PRs.** PDF thumbs reuse shipped `PVThumbnail` — no board. Briefs: [`design/`](design/).
+**Composer, graph, and Source-page chrome is designed in Claude Design before the matching UI PRs.** PDF thumbs reuse shipped `PVThumbnail` — no board. Briefs: [`design/`](design/).
 
 | Step | Brief | Covers | Gates |
 | --- | --- | --- | --- |
 | **S8-D1** | Auto Transcribe in the composer | Button, progress, replace confirm, large-page warning + proceed, failure copy | **S8-01** |
 | **S8-D2** | PDF Find + select + paste | Tool-strip Find; I-beam vs pan; paste-from-selection vs Auto Transcribe row | **S8-03**, **S8-04**, **S8-05** |
 | **S8-D3** | Evidence graph visual enhancements | Conflict + negated; Source-page jump; richer bridge sentences; Add property on bridges | **S8-06** |
+| **S8-D4** | Source page enhancements | Jump to Evidence graph; more page items join this brief | **S8-07** |
 
 ## PR sequence
 
@@ -56,6 +58,11 @@ S8-D3  Graph card visuals
   │
   └────── gates ──────────▶ S8-06  Graph chrome (badges, Source jump, bridge copy + Add property)
                               │     (parallel; no composer / PDF dependency)
+
+S8-D4  Source page enhancements
+  │
+  └────── gates ──────────▶ S8-07  Open Evidence graph from the Source page
+                              │     (parallel; pair with S8-06 graph → page)
                               │
                             S8-99  Dogfood close / docs
 ```
@@ -67,6 +74,7 @@ S8-D3  Graph card visuals
 - **S8-01** / **S8-02** do not block **S8-D2**. **S8-05** should follow **S8-01** when both touch the transcription `PVField`.
 - **S8-02** uses PDFKit only to write a thumbnail derivative — not the composer viewport.
 - **S8-D3** / **S8-06** are independent of OCR and PDF remount. Freeze the **S8-06** bundle on the brief before that PR starts.
+- **S8-D4** / **S8-07** are independent of OCR, PDF remount, and **S8-06**. Freeze the **S8-07** bundle on the brief before that PR starts. The two jumps (graph ⇄ page) should use the same location helpers and product name.
 
 ---
 
@@ -81,6 +89,8 @@ S8-D3  Graph card visuals
 - [ ] S8-05 — Paste transcription from PDF selection → [`completed.md`](completed.md)
 - [ ] S8-D3 — Design: Evidence graph visual enhancements → [`completed.md`](completed.md)
 - [ ] S8-06 — Graph visual enhancements (badges, Source jump, bridge copy + Add property) → [`completed.md`](completed.md)
+- [ ] S8-D4 — Design: Source page enhancements → [`completed.md`](completed.md)
+- [ ] S8-07 — Source page enhancements (Evidence graph jump + brief bundle) → [`completed.md`](completed.md)
 - [ ] S8-99 — Dogfood close / docs (after later stories, or when we choose to close)
 
 ---
@@ -174,7 +184,7 @@ Transcription-row control for PDF: copy current `PDFSelection` string into `tran
 
 Claude Design board for a **bundled** graph-chrome pass. Items: **conflict** + **negated** row badges; always-on **Source-page jump**; **bridge sentences** that prefer endpoint identity Properties; **Add property** on bridge cards. Brief: [`design/S8-D3-graph-visuals.md`](design/S8-D3-graph-visuals.md). Gates **S8-06**.
 
-Does **not** design a composer rethink (pinning / empty Citation — dogfood), denied-lines, or Source-page → graph. **Descoped:** incomplete-bridge chrome, collapse/expand, density filters, undo, unplaced tray, minimap.
+Does **not** design a composer rethink (pinning / empty Citation — dogfood) or denied-lines. Source-page → graph is **S8-D4**. **Descoped:** incomplete-bridge chrome, collapse/expand, density filters, undo, unplaced tray, minimap.
 
 ---
 
@@ -185,9 +195,30 @@ One Evidence graph chrome pass against **S8-D3**. Competing Observations stay as
 | | |
 | --- | --- |
 | **In** | Conflict + negated per **S8-D3**; Source jump via existing `sourcePageLocation` + `go(to:)`; `EvidenceBridgeEdgeSummary` reads endpoint Observations from the snapshot; Add property + extra rows on bridges; L10n + VoiceOver; card height / hit tests. Prefer `PVBadge`. |
-| **Out** | Merge / resolve; schema or FFI; denied-line drawing; Source-page → graph; composer rethink (dogfood). Incomplete-bridge chrome, collapse/expand, filters, undo, tray, minimap are **descoped**. |
+| **Out** | Merge / resolve; schema or FFI; denied-line drawing; Source-page → graph (**S8-07**); composer rethink (dogfood). Incomplete-bridge chrome, collapse/expand, filters, undo, tray, minimap are **descoped**. |
 | **Testable** | Two `name`s → both conflict; negative singleton → negated only; jump location is `.page` for the same `sourceId` and Back returns to `.graph`; relationship sentence uses NameValue form when present and label when not; participation uses `event_type`; location uses `toponym`; bridge Add property opens composer for that bridge (not the connect Citation); extra non-edge row visible + editable; edge keys not duplicated as rows; height/a11y follow the new sentence. |
-| **Depends on** | **S8-D3**. Shipped cards + snapshot + `sourceSurface`. **Not** S8-01…S8-05. |
+| **Depends on** | **S8-D3**. Shipped cards + snapshot + `sourceSurface`. **Not** S8-01…S8-05 / **S8-07**. |
+
+---
+
+## S8-D4 — Design: Source page enhancements
+
+Claude Design board for a **bundled** Source-page chrome pass. First item: **Open Evidence graph** for this Source (disabled with no Artifact). More page items join this brief (and **S8-07**) as they are scoped. Brief: [`design/S8-D4-source-page.md`](design/S8-D4-source-page.md). Gates **S8-07**.
+
+Does **not** design graph chrome, commentary, composer rethink, or Sources-list counts.
+
+---
+
+## S8-07 — PR: Source page enhancements
+
+One Source-page chrome pass against **S8-D4**. Add a control that opens this Source’s Evidence graph (`sourceSurface: .graph`). Same `hasArtifact` rule as the list split-row. Further items listed on the brief at PR start ship here.
+
+| | |
+| --- | --- |
+| **In** | Jump control per **S8-D4**; reuse `SourcesListNavigation.graphLocation` (or equivalent); disabled + reason when no Artifact; `go(to:)`; L10n + VoiceOver; any other SP items frozen on the brief. Prefer `PVButton`. |
+| **Out** | Graph chrome (**S8-06**); opening the graph with zero Artifacts; commentary; composer rethink; list redesign. |
+| **Testable** | Source with an Artifact → location is `.graph` for the same `sourceId`; Back returns to `.page`; no Artifact → control disabled and does not navigate. |
+| **Depends on** | **S8-D4**. Shipped Source page + `sourceSurface`. **Not** S8-01…S8-06. |
 
 ---
 
@@ -207,7 +238,8 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 | Warn + proceed on large images | Hard reject / Apple “too many words” (does not exist) |
 | PDF **page-1 thumbnail** via PDFKit | Go PDF decoder; user-picked thumb page |
 | PDF **Find** + **select** + **paste transcription** | PDF Vision / OCR; `text_quote` locators; Source-page Find |
-| Graph **conflict** + **negated** badges; Source-page jump; richer bridge sentences; **Add property** on bridges | Denied-line drawing; Source-page → graph; composer rethink / pinning (dogfood); merge/resolve; **descoped** leftovers (incomplete bridges, collapse/expand, filters, undo, tray, minimap) |
+| Graph **conflict** + **negated** badges; Source-page jump; richer bridge sentences; **Add property** on bridges | Denied-line drawing; composer rethink / pinning (dogfood); merge/resolve; **descoped** leftovers (incomplete bridges, collapse/expand, filters, undo, tray, minimap) |
+| Source page **Open Evidence graph** (more page items via **S8-D4**) | Commentary (`mentions` / `remark`); Sources-list counts |
 | More data-entry stories as added | Remaining Spike 7 leftovers unless pulled in |
 
 ---
@@ -229,7 +261,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 13. **Negated is polarity, not a missing line** — `polarity = negative` on the Observation. Italic-danger today is not enough; S8-D3 designs an explicit mark. Do not draw a ghost connect edge.
 14. **Incomplete bridges are descoped** — Connect is atomic and the UI cannot write person-without-event. Do not add half-line chrome.
 15. **Bridge nouns come from the endpoint card** — prefer that subject’s `name` / `event_type` / `toponym`, then `subjects.label`. Do not keep using only the edge row’s working-label display once a name exists.
-16. **Source jump is graph → page** — reuse `sourcePageLocation`. The reverse (page → graph) stays a leftover.
+16. **Graph → page is S8-06; page → graph is S8-07** — reuse `sourcePageLocation` and `SourcesListNavigation.graphLocation`. Same `hasArtifact` gate as the list.
 17. **Collapse/expand is descoped** — do not hide the bridge sentence behind a disclosure.
 18. **Bridge Add property is a new Citation** — `composerLocation(for: bridgeID)`, not `composerLocationForBridgeCitation` (that edits the connect Citation). Extra rows omit edge keys already in the sentence.
 19. **Unplaced tray is descoped** — canvas create and Connect always write a position. The snapshot **omits** subjects with no row. No UI path produces a tray candidate until imports exist.
