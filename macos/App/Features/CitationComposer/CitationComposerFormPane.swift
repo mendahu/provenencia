@@ -8,8 +8,6 @@ struct CitationComposerFormPane: View {
     var onAddCustomTerm: (UUID) -> Void = { _ in }
 
     @Environment(WorkspaceNavigation.self) private var navigation
-    @State private var artifactMenu = PVContextMenuState()
-    @State private var citationMenu = PVContextMenuState()
 
     static let sidebarWidth: CGFloat = 520
 
@@ -22,12 +20,6 @@ struct CitationComposerFormPane: View {
             }
             PVDivider(color: PVColor.borderDefault)
             footer
-        }
-        .pvContextMenu($artifactMenu, dismissOnClickAway: true) {
-            artifactMenuPanel
-        }
-        .pvContextMenu($citationMenu, dismissOnClickAway: true) {
-            citationMenuPanel
         }
     }
 
@@ -68,110 +60,114 @@ struct CitationComposerFormPane: View {
     private var identityLine: some View {
         HStack(alignment: .center, spacing: PVSpacing.space3) {
             if model.showsArtifactSwitcher {
-                artifactTrigger
+                artifactSelect
             }
             Spacer(minLength: 0)
-            citationTrigger
+            citationSelect
         }
         .accessibilityElement(children: .contain)
     }
 
-    private var artifactTrigger: some View {
-        Button {
-            artifactMenu.present(at: .zero)
-        } label: {
-            HStack(spacing: 6) {
-                PVMark(artifactMarkKey, size: 16, decorative: true)
-                if let title = model.selectedArtifact?.label {
-                    Text(verbatim: title)
-                        .lineLimit(1)
-                }
-                PVIcon(.sortUnsorted, size: 12)
-            }
-        }
-        .buttonStyle(.pv(.ghost, size: .sm))
-        .disabled(inert)
-        .accessibilityLabel(Text(verbatim: L10n.CitationComposer.artifactMenuLabel(title: model.selectedArtifact?.label ?? "")))
-        .accessibilityIdentifier("citationComposer.artifact")
+    private var artifactSelect: some View {
+        PVSelect(
+            selection: artifactBinding,
+            options: artifactOptions,
+            size: .sm,
+            icon: .file,
+            displayLabel: model.selectedArtifact?.label,
+            menuWidth: 320,
+            fillsWidth: false,
+            isDisabled: inert,
+            accessibilitySpokenLabel: L10n.CitationComposer.artifactMenuLabel(
+                title: model.selectedArtifact?.label ?? ""
+            ),
+            accessibilityIdentifier: "citationComposer.artifact"
+        )
     }
 
-    private var citationTrigger: some View {
-        Button {
-            citationMenu.present(at: .zero)
-        } label: {
-            HStack(spacing: 6) {
-                if model.activeCitationRef.isEmpty {
-                    Text(L10n.CitationComposer.newCitation)
-                } else {
-                    Text(verbatim: model.activeCitationRef)
-                        .font(PVFont.mono(size: PVTypeScale.caption))
-                }
-                PVIcon(.chevronDown, size: 12)
-            }
-        }
-        .buttonStyle(.pv(.secondary, size: .sm))
-        .disabled(inert)
-        .accessibilityLabel(
-            Text(verbatim: model.activeCitationRef.isEmpty
+    private var citationSelect: some View {
+        PVSelect(
+            selection: citationBinding,
+            options: citationOptions,
+            size: .sm,
+            displayLabel: model.activeCitationRef.isEmpty
+                ? String(localized: L10n.CitationComposer.newCitation)
+                : model.activeCitationRef,
+            menuWidth: 400,
+            fillsWidth: false,
+            isDisabled: inert,
+            accessibilitySpokenLabel: model.activeCitationRef.isEmpty
                 ? String(localized: L10n.CitationComposer.citationMenuNew)
-                : L10n.CitationComposer.citationMenuRef(ref: model.activeCitationRef, count: model.observations.count))
-        )
-        .accessibilityIdentifier("citationComposer.citation")
-    }
-
-    private var artifactMarkKey: PVMarkKey {
-        PVFileTypeGlyph.key(
-            mediaType: model.selectedArtifact?.file?.mediaType,
-            originalFilename: model.selectedArtifact?.file?.originalFilename
+                : L10n.CitationComposer.citationMenuRef(
+                    ref: model.activeCitationRef,
+                    count: model.observations.count
+                ),
+            accessibilityIdentifier: "citationComposer.citation"
         )
     }
 
-    private var artifactMenuPanel: some View {
-        PVContextMenuPanel(
-            title: L10n.CitationComposer.artifactMenuTitle,
-            width: 320,
-            accessibilityIdentifier: "citationComposer.artifact.menu"
-        ) {
-            ForEach(Array(model.artifacts.enumerated()), id: \.element.id) { index, artifact in
-                CitationComposerArtifactMenuRow(
-                    artifact: artifact,
-                    citationCount: model.listedCount(for: artifact.id),
-                    isSelected: artifact.id == model.selectedArtifactID,
-                    sourceTypeIconKey: model.sourceTypeIconKey,
-                    index: index
-                ) {
-                    model.requestSelectArtifact(artifact.id)
-                }
-            }
+    private var artifactBinding: Binding<String> {
+        Binding(
+            get: { model.selectedArtifactID ?? "" },
+            set: { model.requestSelectArtifact($0) }
+        )
+    }
+
+    private var citationBinding: Binding<String> {
+        Binding(
+            get: { model.activeCitationID ?? "" },
+            set: { model.selectCitation($0.isEmpty ? nil : $0) }
+        )
+    }
+
+    private var artifactOptions: [PVSelectOption] {
+        model.artifacts.map { artifact in
+            let meta = L10n.CitationComposer.artifactMenuMeta(
+                kind: artifactKindLabel(artifact),
+                count: model.listedCount(for: artifact.id)
+            )
+            return PVSelectOption(
+                value: artifact.id,
+                label: "\(artifact.label) · \(meta)",
+                accessibilityIdentifier: "citationComposer.artifact.row.\(artifact.id)"
+            )
         }
     }
 
-    private var citationMenuPanel: some View {
-        PVContextMenuPanel(
-            title: L10n.CitationComposer.citationMenuTitle,
-            width: 400,
-            maxHeight: 380,
-            accessibilityIdentifier: "citationComposer.citation.menu"
-        ) {
-            PVContextMenuItem(
-                L10n.CitationComposer.newCitation,
-                index: 0,
-                isSelected: model.activeCitationID == nil,
-                showsSelectionMark: true,
-                accessibilityIdentifier: "citationComposer.citation.new"
-            ) {
-                model.selectCitation(nil)
-            }
-            ForEach(Array(model.listedCitations.enumerated()), id: \.element.id) { index, listed in
-                CitationComposerCitationMenuRow(
-                    listed: listed,
-                    isSelected: listed.id == model.activeCitationID,
-                    index: index + 1
-                ) {
-                    model.selectCitation(listed.id)
-                }
-            }
+    private var citationOptions: [PVSelectOption] {
+        [PVSelectOption(
+            value: "",
+            label: String(localized: L10n.CitationComposer.newCitation),
+            accessibilityIdentifier: "citationComposer.citation.new"
+        )] + model.listedCitations.map { listed in
+            PVSelectOption(
+                value: listed.id,
+                label: citationOptionLabel(listed),
+                accessibilityIdentifier: "citationComposer.citation.row.\(listed.id)"
+            )
         }
+    }
+
+    private func citationOptionLabel(_ listed: CatalogListedCitation) -> String {
+        let count = L10n.CitationComposer.citationMenuCount(count: listed.observationCount)
+        let snippet = listed.citation.transcription
+            .replacingOccurrences(of: "\n", with: " — ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if snippet.isEmpty {
+            return "\(listed.citation.ref) · \(count)"
+        }
+        return "\(listed.citation.ref) · \(count) — \(snippet)"
+    }
+
+    private func artifactKindLabel(_ artifact: CatalogArtifact) -> String {
+        let media = artifact.file?.mediaType ?? ""
+        if media.localizedCaseInsensitiveContains("pdf") {
+            return String(localized: L10n.CitationComposer.artifactKindPDF)
+        }
+        if media.hasPrefix("image/") {
+            return String(localized: L10n.CitationComposer.artifactKindImage)
+        }
+        return String(localized: L10n.CitationComposer.artifactKindUnknown)
     }
 
     private var readingFields: some View {
@@ -277,6 +273,6 @@ struct CitationComposerFormPane: View {
             }
         }
         .padding(.horizontal, PVSpacing.space7)
-        .padding(.vertical, 14)
+        .padding(.vertical, PVSpacing.space6)
     }
 }

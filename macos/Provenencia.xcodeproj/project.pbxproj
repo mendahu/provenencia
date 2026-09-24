@@ -62,7 +62,6 @@
 		A70B00000000000000000017 /* ArtifactRegionGeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000016 /* ArtifactRegionGeometryTests.swift */; };
 		A70800000000000000000004 /* CitationComposerModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70800000000000000000003 /* CitationComposerModel.swift */; };
 		A7080000000000000000001C /* CitationObservationValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7080000000000000000001B /* CitationObservationValue.swift */; };
-		A70A00000000000000000002 /* CitationComposerIdentityMenus.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70A00000000000000000001 /* CitationComposerIdentityMenus.swift */; };
 		A70A00000000000000000004 /* CitationComposerViewerPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70A00000000000000000003 /* CitationComposerViewerPane.swift */; };
 		A70A00000000000000000006 /* CitationComposerFormPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70A00000000000000000005 /* CitationComposerFormPane.swift */; };
 		A70A00000000000000000008 /* CitationComposerObservationRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70A00000000000000000007 /* CitationComposerObservationRow.swift */; };
@@ -335,7 +334,6 @@
 		A70B00000000000000000016 /* ArtifactRegionGeometryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactRegionGeometryTests.swift; sourceTree = "<group>"; };
 		A70800000000000000000003 /* CitationComposerModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerModel.swift; sourceTree = "<group>"; };
 		A7080000000000000000001B /* CitationObservationValue.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationObservationValue.swift; sourceTree = "<group>"; };
-		A70A00000000000000000001 /* CitationComposerIdentityMenus.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerIdentityMenus.swift; sourceTree = "<group>"; };
 		A70A00000000000000000003 /* CitationComposerViewerPane.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerViewerPane.swift; sourceTree = "<group>"; };
 		A70A00000000000000000005 /* CitationComposerFormPane.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerFormPane.swift; sourceTree = "<group>"; };
 		A70A00000000000000000007 /* CitationComposerObservationRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerObservationRow.swift; sourceTree = "<group>"; };
@@ -896,7 +894,6 @@
 				A7080000000000000000001B /* CitationObservationValue.swift */,
 				A70B00000000000000000014 /* CitationLocatorDraft.swift */,
 				A70800000000000000000001 /* CitationComposerView.swift */,
-				A70A00000000000000000001 /* CitationComposerIdentityMenus.swift */,
 				A70A00000000000000000003 /* CitationComposerViewerPane.swift */,
 				A70A00000000000000000005 /* CitationComposerFormPane.swift */,
 				A70A00000000000000000007 /* CitationComposerObservationRow.swift */,
@@ -1629,7 +1626,6 @@
 				A70800000000000000000004 /* CitationComposerModel.swift in Sources */,
 				A7080000000000000000001C /* CitationObservationValue.swift in Sources */,
 				A70B00000000000000000015 /* CitationLocatorDraft.swift in Sources */,
-				A70A00000000000000000002 /* CitationComposerIdentityMenus.swift in Sources */,
 				A70A00000000000000000004 /* CitationComposerViewerPane.swift in Sources */,
 				A70A00000000000000000006 /* CitationComposerFormPane.swift in Sources */,
 				A70A00000000000000000008 /* CitationComposerObservationRow.swift in Sources */,

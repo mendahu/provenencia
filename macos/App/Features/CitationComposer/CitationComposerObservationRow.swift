@@ -21,6 +21,7 @@ struct CitationComposerObservationRow: View {
     var onAddCustomTerm: () -> Void
 
     @State private var actionsMenu = PVContextMenuState()
+    @State private var actionsKeyboard = PVContextMenuKeyboard.inactive
 
     var body: some View {
         Group {
@@ -28,26 +29,6 @@ struct CitationComposerObservationRow: View {
                 fixedRow
             } else {
                 editableRow
-            }
-        }
-        .pvContextMenu($actionsMenu, dismissOnClickAway: true) {
-            PVContextMenuPanel(width: 180) {
-                PVContextMenuItem(
-                    row.polarity == "negative"
-                        ? L10n.CitationComposer.polarityAsserts
-                        : L10n.CitationComposer.polarityNegates,
-                    index: 0,
-                    accessibilityIdentifier: "citationComposer.observation.polarity.\(row.id.uuidString)"
-                ) {
-                    onTogglePolarity()
-                }
-                PVContextMenuItem(
-                    L10n.CitationComposer.removeObservation,
-                    index: 1,
-                    accessibilityIdentifier: "citationComposer.observation.remove.\(row.id.uuidString)"
-                ) {
-                    onRemove()
-                }
             }
         }
     }
@@ -81,14 +62,21 @@ struct CitationComposerObservationRow: View {
                             .ellipsis,
                             label: L10n.CitationComposer.observationActions,
                             size: .sm,
-                            action: { actionsMenu.present(at: .zero) }
+                            action: toggleActionsMenu
                         )
                         .accessibilityIdentifier("citationComposer.observation.actions.\(row.id.uuidString)")
+                        .pvContextMenu(
+                            $actionsMenu,
+                            keyboard: $actionsKeyboard,
+                            dismissOnClickAway: true
+                        ) {
+                            actionsMenuPanel
+                        }
                     }
                 }
                 valueEditor
             }
-            .padding(12)
+            .padding(PVSpacing.space5)
         }
         .overlay {
             if isFocused {
@@ -102,10 +90,10 @@ struct CitationComposerObservationRow: View {
 
     private var fixedRow: some View {
         PVCard(tone: .sunken, cornerRadius: PVRadius.sm) {
-            HStack(alignment: .center, spacing: 10) {
+            HStack(alignment: .center, spacing: PVSpacing.space5) {
                 PVIcon(.lock, size: 14)
                     .foregroundStyle(PVColor.textFaint)
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: PVSpacing.space1) {
                     Text(verbatim: property?.label ?? "—")
                         .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
                         .foregroundStyle(PVColor.textSecondary)
@@ -116,8 +104,8 @@ struct CitationComposerObservationRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 PVBadge(L10n.CitationComposer.connectSystemBadge, tone: .neutral)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .padding(.horizontal, PVSpacing.space5)
+            .padding(.vertical, PVSpacing.space5)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
@@ -172,6 +160,47 @@ struct CitationComposerObservationRow: View {
         default:
             EmptyView()
         }
+    }
+
+    private var polarityActionTitle: LocalizedStringResource {
+        row.polarity == "negative"
+            ? L10n.CitationComposer.polarityAsserts
+            : L10n.CitationComposer.polarityNegates
+    }
+
+    private var actionsMenuPanel: some View {
+        PVContextMenuPanel(width: 180) {
+            PVContextMenuItem(
+                polarityActionTitle,
+                index: 0,
+                accessibilityIdentifier: "citationComposer.observation.polarity.\(row.id.uuidString)"
+            ) {
+                onTogglePolarity()
+            }
+            PVContextMenuItem(
+                L10n.CitationComposer.removeObservation,
+                index: 1,
+                accessibilityIdentifier: "citationComposer.observation.remove.\(row.id.uuidString)"
+            ) {
+                onRemove()
+            }
+        }
+    }
+
+    private func toggleActionsMenu() {
+        if actionsMenu.isPresented {
+            actionsMenu.dismiss()
+            return
+        }
+        actionsKeyboard = PVContextMenuKeyboard(
+            itemCount: 2,
+            activeIndex: -1,
+            itemTitles: [
+                String(localized: polarityActionTitle),
+                String(localized: L10n.CitationComposer.removeObservation),
+            ]
+        )
+        actionsMenu.present(at: CGPoint(x: 0, y: PVSpacing.controlHeightSmall))
     }
 
     private var subjectBinding: Binding<String> {

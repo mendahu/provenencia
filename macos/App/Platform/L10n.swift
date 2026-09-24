@@ -2566,12 +2566,6 @@ enum L10n {
             comment: "Citation identity control when composing a new reading"
         )
 
-        static let artifactMenuTitle = LocalizedStringResource(
-            "citationComposer.artifactMenuTitle",
-            defaultValue: "Artifacts on this source",
-            comment: "Context menu title for the in-form Artifact switcher"
-        )
-
         static let subjectLabel = LocalizedStringResource(
             "citationComposer.subjectLabel",
             defaultValue: "Subject",
@@ -2679,12 +2673,6 @@ enum L10n {
             ))
             return String(format: format, locale: .current, kind, count)
         }
-
-        static let citationMenuTitle = LocalizedStringResource(
-            "citationComposer.citationMenuTitle",
-            defaultValue: "Citations on this artifact",
-            comment: "Context menu title for the Citation identity switcher"
-        )
 
         static func citationMenuCount(count: Int) -> String {
             let format = String(localized: LocalizedStringResource(

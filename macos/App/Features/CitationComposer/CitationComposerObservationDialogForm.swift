@@ -7,22 +7,19 @@ struct CitationComposerObservationDialogForm: View {
     var body: some View {
         if let draft = model.observationDialog {
             let property = model.catalogProperty(id: draft.propertyID)
-            VStack(alignment: .leading, spacing: PVSpacing.space6) {
-                if property?.valueType == "name" {
-                    NameValueEditorForm(
-                        draft: nameBinding,
-                        accessibilityIdentifierPrefix: "citationComposer.dialog.name"
-                    )
-                } else if property?.valueType == "date" {
-                    DateValueEditorForm(
-                        draft: dateBinding,
-                        accessibilityIdentifierPrefix: "citationComposer.dialog.date"
-                    )
-                }
-                if let error = model.dialogValueError {
-                    Text(verbatim: error)
-                        .font(PVFont.body(size: PVTypeScale.caption))
-                        .foregroundStyle(PVColor.danger)
+            PVField(error: model.dialogValueError) {
+                VStack(alignment: .leading, spacing: PVSpacing.space6) {
+                    if property?.valueType == "name" {
+                        NameValueEditorForm(
+                            draft: nameBinding,
+                            accessibilityIdentifierPrefix: "citationComposer.dialog.name"
+                        )
+                    } else if property?.valueType == "date" {
+                        DateValueEditorForm(
+                            draft: dateBinding,
+                            accessibilityIdentifierPrefix: "citationComposer.dialog.date"
+                        )
+                    }
                 }
             }
         }

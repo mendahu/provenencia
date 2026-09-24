@@ -71,27 +71,33 @@ struct CitationComposerViewerPane: View {
 
     /// Capability layout: viewer chrome (page / Set page / zoom / radios) + Clear.
     private var toolStrip: some View {
-        HStack(spacing: 12) {
-            ArtifactViewerToolChrome(
-                model: model.artifactViewer,
-                locatorPage: model.locator.page,
-                onSetPage: { model.setPageFromViewer() },
-                armedRegionTool: $model.armedRegionTool
-            )
+        VStack(spacing: 0) {
+            HStack(spacing: PVSpacing.space5) {
+                ArtifactViewerToolChrome(
+                    model: model.artifactViewer,
+                    locatorPage: model.locator.page,
+                    onSetPage: { model.setPageFromViewer() },
+                    armedRegionTool: $model.armedRegionTool
+                )
 
-            Spacer(minLength: 0)
+                Spacer(minLength: 0)
 
-            clearMenuButton
+                clearMenuButton
+            }
+            .frame(height: PVSpacing.hitMin)
+            .padding(.horizontal, PVSpacing.space6)
+            PVDivider()
         }
-        .frame(height: 44)
-        .padding(.horizontal, 16)
         .background(PVColor.surfaceCard)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(PVColor.borderSubtle)
-                .frame(height: 1)
+    }
+
+    private var clearMenuButton: some View {
+        PVButton(L10n.CitationComposer.clearMenu, variant: .link, size: .sm) {
+            toggleClearMenu()
         }
-        .pvContextMenu($clearMenu, keyboard: $clearKeyboard) {
+        .disabled(model.isLocatorArtifactOnly)
+        .accessibilityIdentifier("citationComposer.clearMenu")
+        .pvContextMenu($clearMenu, keyboard: $clearKeyboard, dismissOnClickAway: true) {
             PVContextMenuPanel(
                 accessibilityIdentifier: "citationComposer.clearMenu.menu"
             ) {
@@ -115,34 +121,29 @@ struct CitationComposerViewerPane: View {
         }
     }
 
-    private var clearMenuButton: some View {
-        Button {
-            if clearMenu.isPresented {
-                clearMenu.dismiss()
-            } else {
-                clearKeyboard = PVContextMenuKeyboard(itemCount: 2, activeIndex: -1)
-                clearMenu.present(at: CGPoint(x: 0, y: 28))
-            }
-        } label: {
-            Text(L10n.CitationComposer.clearMenu)
-                .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
-                .foregroundStyle(PVColor.accent)
+    private func toggleClearMenu() {
+        if clearMenu.isPresented {
+            clearMenu.dismiss()
+            return
         }
-        .buttonStyle(.plain)
-        .disabled(model.isLocatorArtifactOnly)
-        .accessibilityIdentifier("citationComposer.clearMenu")
+        clearKeyboard = PVContextMenuKeyboard(
+            itemCount: 2,
+            activeIndex: -1,
+            itemTitles: [
+                String(localized: L10n.CitationComposer.clearRegion),
+                String(localized: L10n.CitationComposer.resetToEntireArtifact),
+            ]
+        )
+        clearMenu.present(at: CGPoint(x: 0, y: PVSpacing.controlHeightSmall))
     }
 
     private var locatorList: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(L10n.CitationComposer.locatorSection)
-                    .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.semibold))
-                    .foregroundStyle(PVColor.textSecondary)
+        VStack(alignment: .leading, spacing: PVSpacing.space2) {
+            PVSectionHeader(title: L10n.CitationComposer.locatorSection, aside: {
                 Text(L10n.CitationComposer.locatorOuterToInner)
                     .font(PVFont.body(size: PVTypeScale.caption, italic: true))
                     .foregroundStyle(PVColor.textMuted)
-            }
+            })
 
             locatorRow(
                 icon: .file,
@@ -181,15 +182,13 @@ struct CitationComposerViewerPane: View {
                 )
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 10)
-        .padding(.bottom, 12)
+        .padding(.horizontal, PVSpacing.space6)
+        .padding(.top, PVSpacing.space5)
+        .padding(.bottom, PVSpacing.space5)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(PVColor.surfaceCard)
         .overlay(alignment: .top) {
-            Rectangle()
-                .fill(PVColor.borderSubtle)
-                .frame(height: 1)
+            PVDivider()
         }
         .accessibilityIdentifier("citationComposer.locatorList")
     }
@@ -235,7 +234,7 @@ struct CitationComposerViewerPane: View {
         accessibilityIdentifier: String,
         onRemove: (() -> Void)? = nil
     ) -> some View {
-        HStack(alignment: .center, spacing: 8) {
+        HStack(alignment: .center, spacing: PVSpacing.space4) {
             if depth > 0 {
                 LocatorHierarchyElbow()
             }

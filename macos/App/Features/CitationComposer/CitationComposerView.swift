@@ -137,17 +137,9 @@ struct CitationComposerView: View {
                 }
             }
         ) {
-            VStack(alignment: .leading, spacing: PVSpacing.space4) {
-                PVField(label: L10n.CitationComposer.addTermLabel) {
-                    PVInput(text: $customTermLabel, size: .sm)
-                        .accessibilityIdentifier("citationComposer.term.label")
-                }
-                if let termError = model.termError {
-                    Text(verbatim: termError)
-                        .font(PVFont.body(size: PVTypeScale.caption))
-                        .foregroundStyle(PVColor.danger)
-                        .accessibilityIdentifier("citationComposer.term.error")
-                }
+            PVField(label: L10n.CitationComposer.addTermLabel, error: model.termError) {
+                PVInput(text: $customTermLabel, size: .sm)
+                    .accessibilityIdentifier("citationComposer.term.label")
             }
         }
         .pvConfirm(

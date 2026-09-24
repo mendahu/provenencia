@@ -10962,18 +10962,6 @@
         }
       }
     },
-    "citationComposer.artifactMenuTitle": {
-      "comment": "Context menu title for the in-form Artifact switcher",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Artifacts on this source"
-          }
-        }
-      }
-    },
     "citationComposer.subjectLabel": {
       "comment": "ComboBox label for the Observation subject",
       "extractionState": "manual",
@@ -11174,18 +11162,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ · %lld citations"
-          }
-        }
-      }
-    },
-    "citationComposer.citationMenuTitle": {
-      "comment": "Context menu title for the Citation identity switcher",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Citations on this artifact"
           }
         }
       }
