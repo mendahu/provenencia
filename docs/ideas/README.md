@@ -16,7 +16,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 
 ## Current ideas
 
-- [`interpretation-graph-ui.md`](interpretation-graph-ui.md)
+- [`interpretation-graph-ui.md`](interpretation-graph-ui.md) — leftover work re-homed or descoped; not a live backlog
 - [`source-to-source-relationships.md`](source-to-source-relationships.md)
 - [`text-quote-locators.md`](text-quote-locators.md)
 - [`audio-video-sources.md`](audio-video-sources.md)

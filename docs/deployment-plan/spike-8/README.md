@@ -30,7 +30,7 @@ Spike 7 shipped the composer place, locators, and durable connect. Dogfood then 
 
 **Parked in dogfood (not standalone spike stories):** composer rethink — one reading × many subjects, Citation pinning, empty-Citation Save policy ([`docs/dogfood/ux.md`](../../dogfood/ux.md)).
 
-**Descoped (not later stories):** incomplete-bridge chrome, collapse/expand, density filters (also in dogfood), undo, unplaced tray, minimap, QuickLook, Change type UI (delete + place), adopt/import subjects, removing the Subject types sidebar stub, user-minted NameValue part types. The UI cannot write incomplete bridges or unplaced subjects; tray/minimap/adopt were import/scope-creep insurance.
+**Descoped (not later stories):** incomplete-bridge chrome, collapse/expand, density filters (also in dogfood), undo, unplaced tray, minimap, QuickLook, Change type UI (delete + place), adopt/import subjects, removing the Subject types sidebar stub, user-minted NameValue part types, raising macOS 14 for the canvas, rich-text notes. The UI cannot write incomplete bridges or unplaced subjects; tray/minimap/adopt were import/scope-creep insurance. Conclusion / Narrative leftovers (case view, Conclusion chrome, Sameness workflow, family tree) are those layers’ docs — not this spike.
 
 ## Out of scope (for this spike)
 

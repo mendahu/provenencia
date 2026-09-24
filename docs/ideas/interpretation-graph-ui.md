@@ -2,7 +2,7 @@
 
 ## Status
 
-**Brainstorm, with working decisions — canvas prototype complete (Go); Citations / Observations complete.** Not a UI spec, but no longer open-ended: the design questions below were worked through and settled; slice 1 shipped as [Spike 5](../deployment-plan/archive/spike-5/); slice 2 (canvas UI risk) shipped as [Spike 6](../deployment-plan/archive/spike-6/) with a **Go** dogfood verdict; slices 3–7 shipped as [Spike 7](../deployment-plan/archive/spike-7/) (Subject vocabulary, NameValue, citation composer **place**, durable connect).
+**Brainstorm, with working decisions — canvas prototype complete (Go); Citations / Observations complete.** Not a UI spec, but no longer open-ended: the design questions below were worked through and settled; slice 1 shipped as [Spike 5](../deployment-plan/archive/spike-5/); slice 2 (canvas UI risk) shipped as [Spike 6](../deployment-plan/archive/spike-6/) with a **Go** dogfood verdict; slices 3–7 shipped as [Spike 7](../deployment-plan/archive/spike-7/) (Subject vocabulary, NameValue, citation composer **place**, durable connect). Leftover unimplemented items from this note have been **re-homed or descoped** (Spike 8, dogfood, or other idea files) — this file is no longer a backlog.
 
 Authoritative schema for everything described here is [`interpretation-layer-data-model.md`](../interpretation-layer-data-model.md). Client rules are [`macos-client-patterns.md`](../macos-client-patterns.md). Nothing in this file overrides those — where this note reaches a conclusion that would change a model doc, that edit has to be made there deliberately.
 
@@ -479,9 +479,9 @@ Current state: local Xcode 26.6 on macOS 26.6; deployment target 14.0 in both co
 
 But **do not justify it with the canvas.** Pan/zoom needs AppKit either way (§7.2), which was the main hoped-for win. What raising to 15 actually buys is modest and general: `ScrollPosition` for "scroll to this subject," `onScrollGeometryChange` for viewport tracking or a future minimap, the `@Entry` macro, and possibly `LocalizedStringResource` inits that would retire the `String(localized:)` boilerplate documented in [`macos-client-patterns.md`](../macos-client-patterns.md) §6.
 
-macOS 26 adds rich-text `TextEditor` bound to `AttributedString`. That is deliberately **not** wanted for `transcription`, which must stay faithful plain text — formatting in evidence text is a liability, not a feature. It might be interesting for notes later, but `citation_notes.body` / `observation_notes.body` are `TEXT`, so it would need a serialization decision first.
+macOS 26 adds rich-text `TextEditor` bound to `AttributedString`. That is deliberately **not** wanted for `transcription`, which must stay faithful plain text — formatting in evidence text is a liability, not a feature. Rich-text notes (leftover **26**) are **descoped**; `citation_notes.body` / `observation_notes.body` stay `TEXT`.
 
-**Recommendation: decide this on support-matrix grounds, not capability grounds.** It is a defensible call — macOS 14 is two releases behind — but it should be its own decision, not a rider on this spike. If we do raise it, bump the CI runner and both Xcode configurations together.
+**Recommendation: decide a deployment-target raise on support-matrix grounds, not capability grounds.** Leftover **25** (raise macOS 14 for the canvas) is **descoped**. If we ever raise it, bump the CI runner and both Xcode configurations together.
 
 ## 7.4 Accessibility and testing
 
@@ -659,7 +659,7 @@ Considered and set aside for the canvas name:
 
 # 13. Reuse: the eventual family tree view
 
-A family tree is the same idea — subjects, edges, spatial layout, click a thing to see what supports it — so the canvas built here is very likely the canvas built there. That is worth planning for, but the reuse is not where it first appears to be, and one piece of it is a trap.
+A family tree is the same idea — subjects, edges, spatial layout, click a thing to see what supports it — so the canvas built here is very likely the canvas built there. **Product work waits on the Narrative layer** ([`narrative-layer-data-model.md`](../narrative-layer-data-model.md) §4–§6). That is worth planning for, but the reuse is not where it first appears to be, and one piece of it is a trap.
 
 ## 13.1 What already shares a spine
 
@@ -701,14 +701,17 @@ The pattern in both: what transfers is the **plumbing** — coordinates, gesture
 
 # 14. Open questions
 
-Answered during this brainstorm, recorded so they are not reopened by accident: whether the canvas shows `source` subjects (no, §4.6), whether Citation→Observation should be 1:1 (no, §4.5), whether layout lives in the catalog (yes, unaudited, §5.1), whether raising the deployment target unlocks the canvas (no, §7.2), and whether the property vocabulary blocks the canvas (no, §11.2).
+Answered during this brainstorm, recorded so they are not reopened by accident: whether the canvas shows `source` subjects (no, §4.6), whether Citation→Observation should be 1:1 (no, §4.5), whether layout lives in the catalog (yes, unaudited, §5.1), whether raising the deployment target unlocks the canvas (no, §7.2 / leftover **25** descoped), and whether the property vocabulary blocks the canvas (no, §11.2).
 
-Still open:
+Leftover graph-UI work from this note has been re-homed or descoped (Spike 8 stories, dogfood, or other idea files). This section is not a backlog.
 
-- ~~Does the canvas *create* root subjects only, or also adopt Subjects created elsewhere (imports)?~~ **Descoped** with the unplaced tray. Cross-Source adoption is **no** (§4.6). Same-Source adopt is not a product path until imports exist — and even then it is a later decision, not leftover graph UI.
-- Can one graph span Sources (a "case view")? Source scope should be hard for editing; a read-only multi-Source view is a different feature and would need the Conclusion layer to be meaningful.
-- ~~What does the Source-page commentary surface actually look like?~~ **Parked:** [`source-to-source-relationships.md`](source-to-source-relationships.md) — `mentions` / `remark` stay in the data model (§4.6); the Source-page home, placeholder Sources, and Source merge are that idea, not leftover graph UI.
-- ~~Before `mentions` ships: placeholder Source + merge?~~ **Parked:** same note. Source merge does not exist (§4.6).
-- ~~Does the person → person disambiguation (§3.2) earn its complexity?~~ **Answered:** person→person always means `relationship`; shared events go through the Event bubble (§3.2).
-- Is a Citation with zero Observations a legal, useful state — "I transcribed this line, I have not interpreted it yet" — or should the composer refuse to save a Citation that asserts nothing? This is the one real loose end left by keeping one-to-many (§4.5), and it is a UI policy question rather than a schema one.
-- How does Conclusion-layer work ([`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md)) surface here later — same canvas with a layer toggle, or a separate reconciliation view? "Not now" is fine; "never" would be a mistake.
+- ~~Does the canvas *create* root subjects only, or also adopt Subjects created elsewhere (imports)?~~ **Descoped** with the unplaced tray. Cross-Source adoption is **no** (§4.6).
+- ~~Can one graph span Sources (a "case view")?~~ **Not leftover graph UI.** Covered by [`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md) when that layer is built. Source-scoped edit stays hard.
+- ~~What does the Source-page commentary surface actually look like?~~ **Parked:** [`source-to-source-relationships.md`](source-to-source-relationships.md).
+- ~~Before `mentions` ships: placeholder Source + merge?~~ **Parked:** same note.
+- ~~Does the person → person disambiguation (§3.2) earn its complexity?~~ **Answered:** person→person always means `relationship`.
+- ~~Is a Citation with zero Observations a legal, useful state?~~ **Parked** with the composer rethink in [`docs/dogfood/ux.md`](../dogfood/ux.md).
+- ~~How does Conclusion-layer work surface here later?~~ **Not leftover graph UI.** [`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md) already owns sameness, reconciliation, and how those views relate to Interpretation. Leftover **27** (pleasant Sameness workflow) waits on that layer.
+- ~~Raise macOS 14?~~ **Descoped** as graph leftover. Support-matrix decision if we ever raise; not justified by the canvas (§7.3).
+- ~~Rich-text notes?~~ **Descoped.** `transcription` stays plain text. `citation_notes` / `observation_notes` stay `TEXT`.
+- ~~Family tree?~~ **Not leftover graph UI.** Narrative projection — [`narrative-layer-data-model.md`](../narrative-layer-data-model.md) §4–§6. Geometry reuse in §13 still stands when that layer is built.
