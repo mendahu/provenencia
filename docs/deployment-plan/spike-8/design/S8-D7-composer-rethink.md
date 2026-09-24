@@ -47,8 +47,7 @@ Target (focus):
 | One Artifact → many Citations | Need a **citation identity** control on this Artifact (new vs existing `CIT-…`). |
 | One Source → many Artifacts | Artifact identity belongs **in** the compose surface. **Replace** today’s full-window pre-screen (`CitationComposerArtifactPicker`). One Artifact still auto-selects. |
 | Switching Artifact on a **saved** Citation | Citations are `artifact_id` + `ON DELETE CASCADE`. You cannot move a reading. Changing Artifact is “abandon this Citation / start another,” not a field edit. Viewer + locator reset. Downstream citation + observation selection clears. |
-| Switching Citation | Observation list replaces. Focused row clears. Transcription / locator load with the Citation. |
-| Switching Observation focus | Editor loads that row. Citation chrome stays. |
+| Switching Citation | Observation list replaces. Transcription / locator load with the Citation. |
 | Retargeting `subject_id` | That Observation moves to another card. Nothing above it invalidates. |
 | Empty Citation is legal in the schema | Save with zero Observations (“I transcribed this; I have not interpreted it yet”). Today only **Swift** (and `CreateWithObservations` ≥1) refuse. |
 | Shared reading | Editing transcription while focused on Mary’s birth date also changes the quote on John’s name. Show the Citation ref and that other cards share this reading. |
@@ -68,12 +67,25 @@ You need an Artifact to have a Citation, and a Citation to have an Observation. 
 
 **Valuable lists (exactly two):**
 
-1. Citations on this Artifact (identity / reuse).
-2. Observations on this Citation (each row: subject + property + value summary).
+1. Citations on this Artifact (identity / reuse) — **ref + transcription**, not a label (Citations have none).
+2. Observations on this Citation — keep today’s **vertical stack**; subject + property + value on the row.
 
 Everything else is the **viewer** (Artifact) or the **graph** (Subjects + Connect).
 
-### 2.2 Entry points (initial state only)
+### 2.2 Expected cardinalities (this drives the chrome)
+
+Design the selectors for how often they change and how many items they hold. Do not give Artifact, Citation, and Observation the same control.
+
+| Layer | Typical N | How often switched | What identifies an item | Control implication |
+| --- | --- | --- | --- | --- |
+| **Artifact** | **1–3** (4+ is uncommon; 10–20 is rare) | **Least.** Most Sources never leave the first pick. | Title / thumb / media kind | Tiny. Compact menu or one-line switcher. Must not eat the form. 1 Artifact → no chrome, just the viewer. |
+| **Citation** | **3–10** | More than Artifact; this is “which reading.” | **No label.** `CIT-…` + **transcription** (locator / notes are secondary) | More robust than Artifact: a real picker that shows ref + a transcription snippet so you can see what you are citing. **New** is a first-class row. |
+| **Observation** | **2–3** per Citation | Not a document switch — a list on the form | Subject + property + value | Keep the stacked list. Inline simple values; modal only for heavy editors. N is small enough that a dialog-per-row is the thing to *lose*, not the list. |
+| **Subject** | Graph-sized (can be large) | Per row, not a layer | Working label / ref / type | Picker **on the row**. Not a fourth menu stack. |
+
+Census-scale (dozens of Observations on one reading) is an **edge**, not the default. Do not virtualize or group-by-subject unless a frame proves 2–3-row chrome breaks at 20.
+
+### 2.3 Entry points (initial state only)
 
 | Entry | Artifact | Citation | Observation focus | Subject |
 | --- | --- | --- | --- | --- |
@@ -87,28 +99,33 @@ Pencil **must not hide** other subjects’ rows. Load the whole Citation; focus 
 
 `WorkspaceLocation` already has `sourceId` + `subjectId` + `citationId`. Those are **focus, not locks**. `subjectId` may be nil. Observation focus is **ephemera** (do not add `observationId` to the location unless restore-into-that-row becomes a product requirement). Connect payload stays (`subjectId` nil + endpoint ids).
 
-### 2.3 Replace the artifact pre-screen
+### 2.4 Replace the artifact pre-screen
 
 Today, creating a Citation with 2+ Artifacts is a **separate phase** (picker, then compose). That is the missing identity control pretending to be a wizard step.
 
-Fold Artifact choice into the compose layout: thumb strip, popover, title menu — board finds the compact control. Changing it later is allowed (new Citation / abandon saved). Do not keep a full-page gate that hides transcription and observations.
+Fold Artifact choice into the compose layout as the **quietest** identity control: a small title/thumb menu is enough for 1–3 items. Do not use a thumb strip that competes with the viewer, and do not keep a full-page gate. Changing Artifact later is allowed (new Citation / abandon saved).
 
-### 2.4 Density — the board must be clever
+### 2.5 Density — size each control to its N, then collapse hops
 
-This will not work if every layer is a visible list plus a selector that reveals the next list.
+The cleverness is **not** inventing a file-browser. It is matching chrome to §2.2 and **inlining** the observation form so the researcher is not bouncing through a dialog for every text/integer.
 
-**Explore at least two (preferably three) layout ideas** before picking. Directions worth trying — not a mandate to ship all of them:
+**Explore at least two layout ideas** before picking. Directions that follow from the cardinalities:
 
-- **Citation identity is chrome, not a page.** Compact Artifact switcher + Citation switcher (`CIT-…` + transcription snippet). Observation list is the scroll. Keep the existing **observation dialog** for property/value so the list stays one-line rows (subject · property · summary).
-- **Sticky reading, expandable transcription.** One-line quote + Uncertain; expand to the full textarea. Locator stays with the viewer tools, not a second essay in the sidebar.
-- **Do not add a third full pane** (graph \| viewer \| form) unless a finding proves the graph hop is still too expensive *after* a subject picker on the row exists. Default remains: viewer \| form, toggle to graph via Back / existing jump.
-- **Reuse is a popover**, not a second column of every Citation on the Source. List is **this Artifact only**.
-- **Shared-reading hint** is a caption or chip (“also on 3 cards”), not a replica of the graph.
-- **Census-scale:** one household Citation may have dozens of rows. Virtualize / quiet grouping by subject if needed; do not open every value editor inline.
+- **Artifact is a whisper.** Smallest switcher. Least space. Rarely used.
+- **Citation is the real identity menu.** Popover (or equivalent) of `CIT-…` + transcription snippet on **this Artifact only**. Robust enough for ~10 rows. Not a second column.
+- **Observation list stays a vertical stack** (today’s shape). Typical 2–3 rows. Subject + property on the row.
+- **Inline vs modal by value type** — collapse screens:
+  - **Inline:** `text`, `integer` (type + value on the row).
+  - **Modal (button on the row):** `name`, `date` (NameValue / DateValue editors already exist).
+  - **Board finding:** `term` is type + picker — prefer a compact inline picker if it fits; do not force a dialog for a single term.
+  - Connect-edge rows stay **fixed** (subject values already chosen).
+- **Widen the form if needed.** Today’s sidebar is 400pt. A modest widen, or a quiet two-column form (identity + reading | observation stack), is on the table if inline editors need it. Do not steal the viewer down to a strip.
+- **Sticky / expandable transcription** is still useful so identity + observations stay on screen together.
+- **Do not add a third full pane** (graph \| viewer \| form) unless a finding proves the hop is still too expensive after a subject picker on the row. Default: viewer \| form, toggle to graph.
 
-**Reject on sight:** four simultaneous master–detail columns; a “subject composer” mode that hides the Citation; tabs that put transcription and observations on different pages so you cannot see the quote while placing.
+**Reject on sight:** four simultaneous master–detail columns; Artifact chrome as large as the Citation picker; a dialog for every Observation when the value is a string or number; tabs that hide the quote while placing.
 
-### 2.5 What this board is not
+### 2.6 What this board is not
 
 - Not Auto Transcribe (**S8-D1**) or PDF Find / I-beam / paste (**S8-D2**) — leave a home for those controls on the **new** transcription / viewer chrome.
 - Not minting Subjects from the composer (create stays on the graph).
@@ -127,7 +144,7 @@ This will not work if every layer is a visible list plus a selector that reveals
 | --- | --- |
 | In-form Artifact identity; **remove** the create-time pre-screen | OCR / Vision; PDFKit remount / Find / paste |
 | Citation identity: new vs existing on this Artifact | Project-wide Citation search |
-| Observation list = **all** rows on the Citation; subject control per row | Creating Subjects; subject-valued Properties except shipped Connect edges |
+| Observation list = **all** rows on the Citation; subject on the row; **inline** text/integer; **modal** name/date | Creating Subjects; subject-valued Properties except shipped Connect edges |
 | Save with **zero** Observations; reuse existing Citation from Add property | Pinning as a separate feature (reuse + last-used *is* pinning) |
 | Entry points only set focus; pencil does not filter other subjects | `WorkspaceLocation.observationId` unless the board proves restore needs it |
 | Connect-prefilled edge rows unchanged in meaning | Graph visual extras (**S8-06**); 3-pane graph+composer |
@@ -143,16 +160,17 @@ This will not work if every layer is a visible list plus a selector that reveals
 | --- | --- |
 | CR-1 | Board shows **one** compose surface (not a wizard) with Artifact identity, Citation identity, reading fields, and the Observation list. |
 | CR-2 | At least **two layout alternatives** for density, then a recommendation. Explain what was rejected (especially any 4-stack). |
-| CR-3 | Artifact pre-screen is **gone**. 1 Artifact → auto. 2+ → in-form picker. No Artifact → same honest empty as today (go to Source page). |
-| CR-4 | Citation switcher: **New** + existing on **this** Artifact (`ref` + short transcription / locator hint). Switching a saved Citation to another Artifact is abandon / new, with confirm if dirty. |
-| CR-5 | Observation rows show **which subject**; researcher can change it (graph subjects on this Source). Add observation asks for subject (pre-filled from entry when we have one). |
+| CR-3 | Artifact pre-screen is **gone**. 1 Artifact → auto (no switcher chrome). 2–3 → compact in-form control. Rare 4+ still works, but do not design the default around it. No Artifact → same honest empty as today (go to Source page). The control stays **small** — least-used identity. |
+| CR-4 | Citation switcher: **New** + existing on **this** Artifact. Each row is **`ref` + transcription snippet** (Citations have no label). Robust for ~3–10. Switching a saved Citation to another Artifact is abandon / new, with confirm if dirty. |
+| CR-5 | Observation list stays a **vertical stack**. Each row: subject (changeable; graph subjects on this Source) + property + value. Add observation asks for subject (pre-filled from entry when we have one). |
+| CR-5b | **Inline** editors for `text` and `integer`. **Button → existing modal** for `name` and `date`. Prefer inline `term` if it fits. Do not open a dialog to type a string. |
 | CR-6 | Pencil entry: load that Citation, **all** rows, focus the row. Do not hide other subjects. |
 | CR-7 | Add property entry: subject pre-selected; Citation **new** by default; **reuse** offered without leaving. |
 | CR-8 | Save with empty Observation list is allowed and does not look like an error. Today’s “need an observation” callout goes away as a blocker (empty list can still be a quiet hint). |
 | CR-9 | Connect entry still shows two **fixed** endpoint rows + optional term; Property picker still excludes edge keys. |
 | CR-10 | Shared-reading honesty: Citation `ref` visible; if other subjects have rows, that is obvious. |
 | CR-11 | Viewer \| form (or the chosen alternative) still has an a11y tree as its own place. Cancel / Back returns to the graph. After Save, go to the graph as today. |
-| CR-12 | Prefer existing `PV*` (`PVField`, `PVButton`, `PVThumbnail`, popover/menu, observation dialog). No new kit primitive unless a finding says the kit cannot do an identity switcher. |
+| CR-12 | Prefer existing `PV*` (`PVField`, `PVButton`, `PVThumbnail`, popover/menu, NameValue / DateValue dialogs). Form pane may **widen** past 400pt or use a two-column form if inline rows need it. No new kit primitive unless a finding says the kit cannot do an identity switcher. |
 | CR-13 | VoiceOver: Artifact, Citation, and focused Observation are named. Changing Artifact or Citation is announced as a document change. |
 | CR-14 | L10n for new chrome. `Text(verbatim:)` for refs / counts. |
 
@@ -161,13 +179,15 @@ This will not work if every layer is a visible list plus a selector that reveals
 ## 5. Suggested frames
 
 1. **Add property, one Artifact** — new Citation, subject pre-selected, empty observations (Save enabled).
-2. **Add property, many Artifacts** — identity on the form (no pre-screen); pick Artifact, then New vs existing Citation.
-3. **Reuse** — same card, pick an existing `CIT-…` on that Artifact; transcription fills; add a row for this subject.
+2. **Add property, 2–3 Artifacts** — compact identity on the form (no pre-screen); pick Artifact, then New vs existing Citation. Artifact chrome stays quiet.
+3. **Reuse** — same card, pick an existing `CIT-…` from a list that shows **ref + transcription**; transcription fills; add a row for this subject.
 4. **Pencil** — shared Citation with rows on two subjects; focus one row; other subject still listed.
 5. **Transcribe first** — reading filled, zero observations, Save, return; reopen from a Citation identity control.
 6. **Connect** — two fixed edge rows (regression; do not look broken).
 7. **Dirty Artifact change** — confirm abandon vs stay.
-8. **Census-ish list** — many observation rows on one Citation; still scannable.
+8. **Typical observations** — 2–3 rows; text/integer edit **on the row**; name/date open a modal from a button.
+8b. **Wide form** — if needed, slightly wider sidebar or two-column form; viewer still dominates.
+8c. **Edge: many observations** — still a stack; do not let this drive the default chrome.
 9. **No Artifact** — existing callout + go to Source page.
 10. *(Optional third layout exploration as a discarded frame.)*
 
@@ -180,8 +200,9 @@ This will not work if every layer is a visible list plus a selector that reveals
 | Composer place | Snowflake | **Rethink** | `Features/CitationComposer/` | Still Option B. Layout of form + identity is this brief. |
 | Artifact pre-screen | Snowflake | **Remove** | `CitationComposerArtifactPicker.swift` | Replace with in-form identity. |
 | Form pane | Snowflake | **Rethink** | `CitationComposerFormPane.swift` | Identity + reading + full observation list. |
-| Observation row | Snowflake | **Extend** | `CitationComposerObservationRow` | Subject on the row. |
-| Observation dialog | Snowflake | **Extend** | `CitationComposerObservationDialogForm` | Subject control; keep value editors here if density needs it. |
+| Observation row | Snowflake | **Extend** | `CitationComposerObservationRow` | Subject + **inline** text/integer; button for name/date. |
+| Observation dialog | Snowflake | **Keep / shrink** | `CitationComposerObservationDialogForm` | NameValue + DateValue (and term if not inlined). Not the default for text. |
+| Form pane width | Snowflake | **May change** | `CitationComposerFormPane.sidebarWidth` (400 today) | Widen or two-column if inline rows need it. |
 | Composer model | Snowflake | **Rethink** | `CitationComposerModel.swift` | Drop subject-lock filter; empty Save; list-by-artifact. |
 | Artifact viewer | Snowflake | **Keep** | `Features/ArtifactViewer/` | Slot may move; remount/Find is **S8-D2**. |
 | Graph cards / Add property / pencil | Snowflake | **Keep** | `Features/EvidenceGraph/` | Same entries; they only pre-select. |

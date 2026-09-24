@@ -30,7 +30,7 @@ Further bar items: TBD (additional data-entry stories).
 
 | Step | Brief | Covers | Gates |
 | --- | --- | --- | --- |
-| **S8-D7** | Citation composer rethink | Flexible Citation document; in-form Artifact + Citation identity; multi-subject observations; empty Save; density layout | **S8-10** |
+| **S8-D7** | Citation composer rethink | Flexible Citation document; compact Artifact vs robust Citation (ref + transcription); inline simple observations; empty Save | **S8-10** |
 | **S8-D1** | Auto Transcribe in the composer | Button, progress, replace confirm, large-page warning + proceed, failure copy | **S8-01** |
 | **S8-D2** | PDF Find + select + paste | Tool-strip Find; I-beam vs pan; paste-from-selection vs Auto Transcribe row | **S8-03**, **S8-04**, **S8-05** |
 | **S8-D3** | Evidence graph visual enhancements | Conflict + negated; Source-page jump; richer bridge sentences; Add property on bridges | **S8-06** |
