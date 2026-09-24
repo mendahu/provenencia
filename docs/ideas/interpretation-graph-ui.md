@@ -223,13 +223,13 @@ The reason bridges differ: if we persisted a bridge subject and the researcher t
 
 ## 4.3 The real traps
 
-1. **`subject_type_id` is immutable after insert.** Dropped a Person and meant an Event? There is no UPDATE — correcting a type means a new subject with a new `ref`. So either pick the type before placing (the tool palette already does this), or offer "change type" *only* while the subject has no Observations, implemented as delete-and-recreate. Refs are cheap to burn: [`core/ref`](../../core/ref/) mints random Crockford tokens from `crypto/rand`, not a sequence, so a discarded ref leaves no visible gap.
-2. **Deletion is blocked by the database, and foreign keys are enforced.** [`core/database/catalog.go`](../../core/database/catalog.go) opens with `_foreign_keys=1`, and the spec'd `observations` → `subjects` and `observations` → `citations` references carry no `ON DELETE` clause — so the default `NO ACTION` makes deleting a referenced subject *fail*. Worse, a subject can be referenced as the **subject** (`subject_id`) or as the **object** of an edge (`value_subject_id`), so "what dies with this subject" is two queries, not one. The canvas needs an app-side cascade in a transaction plus a confirmation that counts the damage ("removes 7 Observations across 3 Citations"). Whether to write explicit `RESTRICT` or `CASCADE` is a decision to make *at migration time*, not after the UI exists.
+1. **`subject_type_id` is immutable after insert.** Dropped a Person and meant an Event? There is no UPDATE and **no Change type UI.** Correcting a type is delete + place a new subject (new `ref`). The palette already picks the type before placing. Spike 8 **S8-D6** / **S8-09** owns the delete half. Refs are cheap to burn: [`core/ref`](../../core/ref/) mints random Crockford tokens from `crypto/rand`, not a sequence, so a discarded ref leaves no visible gap.
+2. **Deletion is blocked by the database, and foreign keys are enforced.** [`core/database/catalog.go`](../../core/database/catalog.go) opens with `_foreign_keys=1`, and the spec'd `observations` → `subjects` and `observations` → `citations` references carry no `ON DELETE` clause — so the default `NO ACTION` makes deleting a referenced subject *fail*. Worse, a subject can be referenced as the **subject** (`subject_id`) or as the **object** of an edge (`value_subject_id`), so "what dies with this subject" is two queries, not one. The canvas needs an app-side cascade in a transaction plus a confirmation that counts the damage ("removes 7 Observations across 3 Citations"). **Implementation:** Spike 8 **S8-D6** / **S8-09** (refine the matrix before the PR). Do not add silent SQL `CASCADE` on evidence.
 3. **Every Property value type needs an editor.** `subject_type_fields` drives the Add-Property list, and the value editor depends on `properties.value_type`: `text`, `integer`, `real`, `boolean`, `date`, `name`, `node`. That is seven editors, and `node` means a subject picker scoped to the graph.
 
 ## 4.4 The hidden dependency: NameValue
 
-`name` is the single most common Observation a genealogist will ever record. Shared NameValue persistence lives in [`core/database/namevalues`](../../core/database/namevalues) (migration + Go). The Swift editor is Spike 7 **S7-02b**. [`structured-name-model.md`](../structured-name-model.md) specifies a required full `form` plus optional ordered parts with a **product part-type registry** (not free text; user-minted types deferred).
+`name` is the single most common Observation a genealogist will ever record. Shared NameValue persistence lives in [`core/database/namevalues`](../../core/database/namevalues) (migration + Go). The Swift editor is Spike 7 **S7-02b**. [`structured-name-model.md`](../structured-name-model.md) specifies a required full `form` plus optional ordered parts with a **product part-type registry** (not free text). **User-minted part types are descoped** (leftover **22**) — the compiled registry is enough.
 
 DateValue is in much better shape, which makes it easy to assume names are too. They are not. Building NameValue end to end is its own chunk of work sitting directly on the critical path of "record a person's name," and it should be planned explicitly rather than discovered in the middle of a slice.
 
@@ -523,8 +523,8 @@ A free-form spatial canvas is genuinely hostile to VoiceOver and keyboard-only u
 
 1. **Edge macros** — the matrix in §3.2, including the refusals (person→person is always `relationship`).
 2. **Reverse rendering rules** — visual states for negated, conflicted, and incomplete; collapse/expand of bridge bubbles.
-3. **Deletion semantics** — `ON DELETE` choice at migration time; subject *and* object references; the confirmation that counts the damage.
-4. **Type correction** — delete-and-recreate, gated on having no Observations.
+3. **Deletion semantics** — Spike 8 **S8-D6** / **S8-09**. Subject *and* object references; confirm that counts the damage. No silent evidence CASCADE.
+4. **Type correction** — **no Change type.** Delete and place again (**S8-D6**).
 5. **Layout table** — the `subject_id` primary key shape in §5.1, unaudited, plus the unplaced tray and the positions-travel/camera-does-not split (§5.2).
 6. **Artifact gate** — the empty state when a Source has no Artifact.
 7. **NameValue end to end** (§4.4) — schema, Go, and editor, on the critical path.
@@ -610,7 +610,7 @@ Deferred, blocking nothing:
 
 1. **Foundation** (§11.1) — candidate refs, `subject_types` and its seed, audited `subjects` CRUD, the layout table, FFI, `WorkspaceLocation` discriminator for page vs graph, Sources-list dual action, Evidence graph stub, and nested Subject types / Subject fields **nav stubs** (§1.4). **No Subject UI**: Evidence graph opens a stub until the canvas exists.
 2. **Bubbles** — the canvas proper: `NSScrollView` bridge, persons / events / places, working labels, drag / snap / select / persist, the tray for unplaced subjects. Replaces the stub, and ships the accessibility representation and keyboard parity alongside the first bubbles (§7.4).
-3. **Subject vocabulary** — `properties`, `subject_type_fields`, the Subject **fields** editor (replacing that nav stub). Subject **types** stay product-seeded with first-class plumbing — no user types browser ([Spike 7](../deployment-plan/archive/spike-7/) decision 22).
+3. **Subject vocabulary** — `properties`, `subject_type_fields`, the Subject **fields** editor (replacing that nav stub). Subject **types** stay product-seeded with first-class plumbing — no user types browser ([Spike 7](../deployment-plan/archive/spike-7/) decision 22). The leftover Subject **types** sidebar stub may stay; **removing it is descoped** (leftover **21**).
 4. **Artifact viewer + Citations** — PDF and image; `page`, `region`, `text_quote`; Go-side locator validation.
 5. **First Observation** — Add Property on a bubble, `text` value type only. The whole vertical path proven end to end.
 6. **Remaining value types** — including NameValue end to end; reuse the existing DateValue editor.
@@ -705,7 +705,7 @@ Answered during this brainstorm, recorded so they are not reopened by accident: 
 
 Still open:
 
-- Does the canvas *create* root subjects only, or also adopt Subjects created elsewhere (imports)? Cross-Source adoption is answered in §4.6: no.
+- ~~Does the canvas *create* root subjects only, or also adopt Subjects created elsewhere (imports)?~~ **Descoped** with the unplaced tray. Cross-Source adoption is **no** (§4.6). Same-Source adopt is not a product path until imports exist — and even then it is a later decision, not leftover graph UI.
 - Can one graph span Sources (a "case view")? Source scope should be hard for editing; a read-only multi-Source view is a different feature and would need the Conclusion layer to be meaningful.
 - ~~What does the Source-page commentary surface actually look like?~~ **Parked:** [`source-to-source-relationships.md`](source-to-source-relationships.md) — `mentions` / `remark` stay in the data model (§4.6); the Source-page home, placeholder Sources, and Source merge are that idea, not leftover graph UI.
 - ~~Before `mentions` ships: placeholder Source + merge?~~ **Parked:** same note. Source merge does not exist (§4.6).

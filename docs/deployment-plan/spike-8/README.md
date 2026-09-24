@@ -4,9 +4,9 @@
 
 **Open.** Checklist and PR sequence: [`deployment-plan.md`](deployment-plan.md). Finished steps: [`completed.md`](completed.md).
 
-A pause after Spike 7: the evidence path works, but **entering Sources and filling an Evidence graph is tedious**. This spike amalgamates small, mostly unrelated improvements to that flow — not a new layer. Graph chrome in **S8-D3** / **S8-06**; Source-page chrome in **S8-D4** / **S8-07** (jump to Evidence graph); Sources-list chrome in **S8-D5** / **S8-08** (graph-progress counts). Pinning / empty-Citation policy live with the composer rethink in [`docs/dogfood/ux.md`](../../dogfood/ux.md), not as standalone stories.
+A pause after Spike 7: the evidence path works, but **entering Sources and filling an Evidence graph is tedious**. This spike amalgamates small, mostly unrelated improvements to that flow — not a new layer. Graph chrome in **S8-D3** / **S8-06**; Source-page chrome in **S8-D4** / **S8-07** (jump to Evidence graph); Sources-list chrome in **S8-D5** / **S8-08** (graph-progress counts); delete paths in **S8-D6** / **S8-09**. Pinning / empty-Citation policy live with the composer rethink in [`docs/dogfood/ux.md`](../../dogfood/ux.md), not as standalone stories.
 
-Stories land one at a time. **Auto Transcribe** (Vision on **images** only). **PDF Artifact thumbnails** (first-page raster so rows and Source covers can tell PDFs apart). **PDF Find + select + paste transcription** (live PDFKit page; I-beam default; no Vision on PDF). **Graph visual enhancements** (badges, Source jump, bridge copy + Add property). **Source page enhancements** (jump to Evidence graph). **Sources list refresh** (subject + observation counts on their own cache keys).
+Stories land one at a time. **Auto Transcribe** (Vision on **images** only). **PDF Artifact thumbnails** (first-page raster so rows and Source covers can tell PDFs apart). **PDF Find + select + paste transcription** (live PDFKit page; I-beam default; no Vision on PDF). **Graph visual enhancements** (badges, Source jump, bridge copy + Add property). **Source page enhancements** (jump to Evidence graph). **Sources list refresh** (subject + observation counts on their own cache keys). **Delete paths** (counted cascade or honest refuse; no Change type).
 
 > **Do not invent Observations.** Transcription is the reading. The researcher still edits and Save still writes the Citation.
 
@@ -18,7 +18,7 @@ Stories land one at a time. **Auto Transcribe** (Vision on **images** only). **P
 | --- | --- |
 | [**Deployment plan**](deployment-plan.md) | PR sequence, design gates, dogfood bar, scope |
 | [**Completed**](completed.md) | Finished steps |
-| [Design briefs](design/) | Claude Design — **S8-D1**…**S8-D5** open (**S8-02** has no board) |
+| [Design briefs](design/) | Claude Design — **S8-D1**…**S8-D6** open (**S8-02** has no board) |
 | [PDF thumbnails](artifact-pdf-thumbnails.md) | Scoped note for **S8-02** (promoted from ideas) |
 | [PDF Find](pdf-text-find.md) | Scoped note for **S8-D2** / **S8-03…S8-05** (promoted from ideas) |
 
@@ -30,7 +30,7 @@ Spike 7 shipped the composer place, locators, and durable connect. Dogfood then 
 
 **Parked in dogfood (not standalone spike stories):** composer rethink — one reading × many subjects, Citation pinning, empty-Citation Save policy ([`docs/dogfood/ux.md`](../../dogfood/ux.md)).
 
-**Descoped (not later stories):** incomplete-bridge chrome, collapse/expand, density filters (also in dogfood), undo, unplaced tray, minimap. The UI cannot write incomplete bridges or unplaced subjects; tray/minimap were import/scope-creep insurance.
+**Descoped (not later stories):** incomplete-bridge chrome, collapse/expand, density filters (also in dogfood), undo, unplaced tray, minimap, QuickLook, Change type UI (delete + place), adopt/import subjects, removing the Subject types sidebar stub, user-minted NameValue part types. The UI cannot write incomplete bridges or unplaced subjects; tray/minimap/adopt were import/scope-creep insurance.
 
 ## Out of scope (for this spike)
 

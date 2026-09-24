@@ -19,6 +19,7 @@ Grow this list as stories land. **By spike close**, every checked story below mu
 5. **Graph visual enhancements** — conflict + negated row badges; always-on **jump to the Source page**; cited **bridge sentences** prefer endpoint `name` / `event_type` / `toponym`, then working label; **Add property** on bridge cards (extra non-edge rows). More items may join **S8-D3** / **S8-06**.
 6. **Source page enhancements** — the Source detail page has an **Open Evidence graph** control for the same Source (disabled with no Artifact). More items may join **S8-D4** / **S8-07**.
 7. **Sources list refresh** — the Sources list shows **subject** and **observation** counts per Source so a worked Evidence graph is obvious next to an empty one. Counts live on their own cache keys (one Source invalidates; the list payload does not). More items may join **S8-D5** / **S8-08**.
+8. **Delete paths** — the researcher can remove a mistaken Interpretation entity when the refined matrix allows it, with a confirm that **counts the cascade** (or an honest refuse). Uncited subject delete stays. Cited subject / shared Citation / Observation paths are decided on **S8-D6** before **S8-09**. More items may join that brief.
 
 Further bar items: TBD (additional data-entry stories).
 
@@ -33,6 +34,7 @@ Further bar items: TBD (additional data-entry stories).
 | **S8-D3** | Evidence graph visual enhancements | Conflict + negated; Source-page jump; richer bridge sentences; Add property on bridges | **S8-06** |
 | **S8-D4** | Source page enhancements | Jump to Evidence graph; more page items join this brief | **S8-07** |
 | **S8-D5** | Sources list design refresh | Subject + observation counts; more list items join this brief | **S8-08** |
+| **S8-D6** | Interpretation delete paths | Delete matrix + damage-count confirms; refine before the PR | **S8-09** |
 
 ## PR sequence
 
@@ -70,6 +72,11 @@ S8-D5  Sources list refresh
   │
   └────── gates ──────────▶ S8-08  List chrome + per-Source graph-progress counts
                               │     (parallel; do not fold counts into sourcesList)
+
+S8-D6  Delete paths
+  │
+  └────── gates ──────────▶ S8-09  Allowed deletes + damage-count confirms
+                              │     (parallel; freeze the matrix on the brief first)
                               │
                             S8-99  Dogfood close / docs
 ```
@@ -83,6 +90,7 @@ S8-D5  Sources list refresh
 - **S8-D3** / **S8-06** are independent of OCR and PDF remount. Freeze the **S8-06** bundle on the brief before that PR starts.
 - **S8-D4** / **S8-07** are independent of OCR, PDF remount, and **S8-06**. Freeze the **S8-07** bundle on the brief before that PR starts. The two jumps (graph ⇄ page) should use the same location helpers and product name.
 - **S8-D5** / **S8-08** are independent of OCR, PDF remount, and the jump pair. Freeze the **S8-08** bundle on the brief before that PR starts. Counts must not ride `sourcesList`.
+- **S8-D6** / **S8-09** are independent of OCR and PDF remount. **Refine the delete matrix on the brief before S8-09.** Do not start engine cascade work until allow/refuse is frozen.
 
 ---
 
@@ -101,6 +109,8 @@ S8-D5  Sources list refresh
 - [ ] S8-07 — Source page enhancements (Evidence graph jump + brief bundle) → [`completed.md`](completed.md)
 - [ ] S8-D5 — Design: Sources list refresh → [`completed.md`](completed.md)
 - [ ] S8-08 — Sources list refresh (graph-progress counts + brief bundle) → [`completed.md`](completed.md)
+- [ ] S8-D6 — Design: Interpretation delete paths → [`completed.md`](completed.md)
+- [ ] S8-09 — Interpretation delete paths (matrix + damage-count confirms) → [`completed.md`](completed.md)
 - [ ] S8-99 — Dogfood close / docs (after later stories, or when we choose to close)
 
 ---
@@ -249,7 +259,28 @@ One Sources-list chrome pass against **S8-D5**. Show graph-progress counts so a 
 | **In** | List chrome per **S8-D5**; Go aggregates (subjects on this Source, minus `source` type; Observations that mean “filled out”); new `CatalogQueryKey` + registry `invalidateOn` for `.createdSubject` / `.createdCitation` / `.addedObservations` (and delete if a mutation tag exists); warm with the Sources place; L10n + VoiceOver; any other SL items frozen on the brief. |
 | **Out** | Counts on `GetSources` / `CatalogSource`; invalidating `sourcesList` on graph writes; a Subjects list destination; commentary; graph / Source-page chrome. |
 | **Testable** | Worked Source shows non-zero subjects + observations; empty Source shows honest zero; no-Artifact row stays blocked; creating a subject or Observation updates **only** that Source’s count key; `sourcesList` handle does not refetch from the canvas write. |
-| **Depends on** | **S8-D5**. Shipped split-row list + session cache. **Not** S8-01…S8-07. |
+| **Depends on** | **S8-D5**. Shipped split-row list + session cache. **Not** S8-01…S8-07 / **S8-09**. |
+
+---
+
+## S8-D6 — Design: Interpretation delete paths
+
+Claude Design board for a **bundled** delete-semantics pass. Walk every Interpretation delete path; refine allow / refuse / cascade **before** the PR. Cited-subject damage count is the seed; wrong type is **delete and place again** (no Change type UI). Brief: [`design/S8-D6-delete-paths.md`](design/S8-D6-delete-paths.md). Gates **S8-09**.
+
+Does **not** design undo, Change type, adopt/import, or silent SQL CASCADE on evidence.
+
+---
+
+## S8-09 — PR: Interpretation delete paths
+
+One delete-semantics pass against the **frozen S8-D6 matrix**. Uncited subject delete stays. Each in-scope path is allowed-with-counted-confirm or refused-with-reason. Allowed cascades run in **one** engine transaction. No in-place type change.
+
+| | |
+| --- | --- |
+| **In** | Matrix per **S8-D6**; damage-count query (subject *and* `value_subject_id`; shared Citations); confirm / refuse chrome; engine delete(s) in one tx where allowed; L10n + VoiceOver; any other DL items frozen on the brief. Prefer `.pvConfirm`. |
+| **Out** | `UPDATE subject_type_id`; Change type control; adopt/import tray (**20**); ⌘Z; silent `ON DELETE CASCADE` on Observations / Citations; Source-layer delete. |
+| **Testable** | Uncited delete still works; each allowed cited/shared path counts then removes the named rows or rolls back; each refused path leaves data and shows a reason; wrong-type correction is delete + new subject, not a type UPDATE. |
+| **Depends on** | **S8-D6**. Shipped graph delete + `subjects.Delete`. **Not** S8-01…S8-08. |
 
 ---
 
@@ -269,9 +300,10 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 | Warn + proceed on large images | Hard reject / Apple “too many words” (does not exist) |
 | PDF **page-1 thumbnail** via PDFKit | Go PDF decoder; user-picked thumb page |
 | PDF **Find** + **select** + **paste transcription** | PDF Vision / OCR; `text_quote` locators ([`text-quote-locators.md`](../../ideas/text-quote-locators.md)); Source-page Find |
-| Graph **conflict** + **negated** badges; Source-page jump; richer bridge sentences; **Add property** on bridges | Denied-line drawing; composer rethink / pinning (dogfood); merge/resolve; **descoped** leftovers (incomplete bridges, collapse/expand, filters, undo, tray, minimap) |
+| Graph **conflict** + **negated** badges; Source-page jump; richer bridge sentences; **Add property** on bridges | Denied-line drawing; composer rethink / pinning (dogfood); merge/resolve; **descoped** leftovers (incomplete bridges, collapse/expand, filters, undo, tray, minimap, Subject types stub, user-minted name parts) |
 | Source page **Open Evidence graph** (more page items via **S8-D4**) | Source-to-source commentary (`mentions` / `remark`, placeholder + merge — [`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)) |
 | Sources list **graph-progress counts** (more list items via **S8-D5**) | Folding counts into `sourcesList`; a Subjects list destination |
+| Interpretation **delete paths** (matrix via **S8-D6**) | Change type UI; adopt/import; undo; silent evidence CASCADE |
 | More data-entry stories as added | Remaining Spike 7 leftovers unless pulled in |
 
 ---
@@ -296,9 +328,10 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 16. **Graph → page is S8-06; page → graph is S8-07** — reuse `sourcePageLocation` and `SourcesListNavigation.graphLocation`. Same `hasArtifact` gate as the list.
 17. **Collapse/expand is descoped** — do not hide the bridge sentence behind a disclosure.
 18. **Bridge Add property is a new Citation** — `composerLocation(for: bridgeID)`, not `composerLocationForBridgeCitation` (that edits the connect Citation). Extra rows omit edge keys already in the sentence.
-19. **Unplaced tray is descoped** — canvas create and Connect always write a position. The snapshot **omits** subjects with no row. No UI path produces a tray candidate until imports exist.
+19. **Unplaced tray is descoped** — canvas create and Connect always write a position. The snapshot **omits** subjects with no row. Adopt/import (**20**) is descoped with the tray.
 20. **Filters / undo / minimap are descoped** — density stays a dogfood note; undo can return if ⌘Z becomes a real pain; minimap was scope-creep.
 21. **List counts are their own cache** — do not hang subject/observation numbers on `CatalogSource`. Invalidate the one `sourceId` (same pattern as `.citationCounts`). Canvas writes already name `sourceId`.
+22. **Delete is a counted cascade or a refuse** — do not hide cited trash and let the engine fail. Freeze **S8-D6** before writing tx deletes. No Change type; wrong type is delete + place.
 
 ---
 
