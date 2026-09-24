@@ -4,7 +4,7 @@
 **Spike:** Provenencia Spike 8 (pause and refine / data entry)  
 **Implements later as:** PR **S8-06** (one graph-chrome pass; more items join this brief)  
 **Depends on:** Shipped Evidence graph ([`EvidenceGraphView`](../../../../macos/App/Features/EvidenceGraph/EvidenceGraphView.swift), [`EvidenceSubjectCard`](../../../../macos/App/Features/EvidenceGraph/EvidenceSubjectCard.swift), [`EvidenceBridgeCard`](../../../../macos/App/Features/EvidenceGraph/EvidenceBridgeCard.swift), [`EvidenceBridgeEdgeSummary`](../../../../macos/App/Features/EvidenceGraph/EvidenceBridgeEdgeSummary.swift)); snapshot already lists every Observation ([`SourceGraphSnapshot`](../../../../macos/App/Features/Workspace/Session/SourceGraphSnapshot.swift)); Source page vs graph already distinct (`sourceSurface`)  
-**Related:** leftover conflicted / negated honesty from [`interpretation-graph-ui.md`](../../../ideas/interpretation-graph-ui.md) §3.3 — **row badges only**. Incomplete-bridge chrome is **descoped** (not reachable from the UI).  
+**Related:** leftover conflicted / negated honesty from [`interpretation-graph-ui.md`](../../../ideas/interpretation-graph-ui.md) §3.3 — **row badges only**. Incomplete-bridge chrome and collapse/expand are **descoped**.  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
 **Skill:** [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
 
@@ -25,8 +25,9 @@ A **visual-enhancements pass** on the Evidence graph. This board and **S8-06** a
    - person ↔ person: **name** as {relationship_type} of **name**
    - person → event: **name** participated as {role} at **event_type**
    - event → place: **event_type** took place in **toponym**
+5. **Add property on bridges.** Bridge subjects can take Observations (seeded edges plus any extra Subject-field bindings). Primary cards have **Add property**; cited bridges only have edit-citation on the first Citation. There is no control to add another Property. `composerLocation(for:)` already accepts a bridge id — the card just never calls it.
 
-Do **not** redesign the canvas, palette, connect gesture, or composer form. Do **not** invent a “denied edge” drawing.
+Do **not** redesign the canvas, palette, connect gesture, or composer form. Do **not** invent a “denied edge” drawing. **Collapse/expand** of bridge cards is descoped.
 
 ```text
 Evidence graph     1851 England Census          [ Open Source ]     12 subjects
@@ -45,9 +46,14 @@ Evidence graph     1851 England Census          [ Open Source ]     12 subjects
 
   (relationship)
   Wm Robins is the father of John Robins
+  ┌─────────────────────────────────────────────┐
+  │  NOTE                                       │
+  │  Named in the household block               │
+  │  + Add property                             │
+  └─────────────────────────────────────────────┘
 ```
 
-Exact badge, link chrome, and sentence wrapping are board findings. Prefer `PVBadge` and an existing `PVButton` / text-button for the Source jump.
+Exact badge, link chrome, sentence wrapping, and where Add property sits on the smaller bridge card are board findings. Prefer `PVBadge` and reuse the primary **Add property** pattern.
 
 ---
 
@@ -66,10 +72,13 @@ Exact badge, link chrome, and sentence wrapping are board findings. Prefer `PVBa
 | Two names on one person | Sentence still picks **one** (first positive, else first). Conflict badges stay on the person card. |
 | Connect-time crumb runs before names exist | Composer **prefill** title may still use working labels. Cited card (and post-save crumb if it already calls `sentence`) use identity Properties. |
 | Incomplete “person but no event” bridges | **Descoped.** Connect is atomic; the UI cannot write that shape. No half-line chrome. |
+| Collapse / expand bridge cards | **Descoped.** Sentence + extra rows stay visible. |
+| Bridges have no Add property | Composer already opens for a bridge `subjectId`. Wire the same action as primaries. |
+| Extra Observations on a bridge are invisible today | Show **non-edge** rows under the sentence (not `person` / `event` / `place` / `related_to` / `role` / `relationship_type` — those are the sentence). Conflict / negated apply to those rows. |
 
 ### 2.1 What this board is not
 
-- Not incomplete-bridge / denied-line language (descoped).
+- Not incomplete-bridge / denied-line language, or collapse/expand (descoped).
 - Not Source-page → graph (that leftover stays out).
 - Not Citation pinning, tray, filters, undo.
 - Not Conclusion Reconciliation Claims.
@@ -85,6 +94,7 @@ Exact badge, link chrome, and sentence wrapping are board findings. Prefer `PVBa
 | Negated badge on every `polarity = negative` row | Denied connect-line; flipping polarity |
 | Always-on jump to the same Source’s detail page | Source-page control that opens the graph |
 | Bridge sentence prefers endpoint `name` / `event_type` / `toponym`, then label | New L10n sentence *shapes* unless the board finds the shipped templates insufficient |
+| Add property on bridge cards; extra (non-edge) Observation rows | Collapse/expand; restyling the composer |
 | L10n + VoiceOver for new chrome | Schema / FFI; incomplete-bridge states |
 
 If more bundle items land after the board is first drawn, **amend this brief** and redraw those frames — still one **S8-06**.
@@ -112,6 +122,9 @@ If more bundle items land after the board is first drawn, **amend this brief** a
 | GV-16 | **Bridge sentence — location:** prefer event’s `event_type` then label; prefer place’s `toponym` then label. |
 | GV-17 | Identity pick: first **positive** Observation of that key on the endpoint, else first, else label, else today’s bare phrase. Do not concatenate competing names. |
 | GV-18 | Cited card height / a11y use the new sentence. Keep `EvidenceBridgeEdgeSummary` as the single helper (card + any crumb that already calls `sentence`). |
+| GV-19 | **Add property on bridges:** cited (and uncited-but-`canCite`) bridge cards show **Add property**. Same L10n as primaries. Opens `composerLocation(for: bridgeID)` (new Citation, not the connect Citation). Disabled when `!canCite`. |
+| GV-20 | Extra Observations on the bridge (not the edge keys used in the sentence) paint as cited rows under the sentence so they can be read, edited, and take conflict/negated badges. Edge keys stay in the sentence only — do not duplicate them as rows. |
+| GV-21 | Hit targets + VoiceOver for Add property / extra-row edit; `contentHeight` grows with extra rows. |
 | GV-10 | Further items get their own `GV-n` rows when scoped. |
 
 ---
@@ -129,7 +142,9 @@ If more bundle items land after the board is first drawn, **amend this brief** a
 9. Relationship card: one person has only a working label → that side falls back.
 10. Participation card: name + `event_type` (e.g. Census Enumeration).
 11. Location card: `event_type` + `toponym`.
-12. *(Add frames here as more bundle items are scoped.)*
+12. Cited relationship with **Add property** and one extra (non-edge) row.
+13. Bridge, no Artifact — Add property disabled (same as primaries).
+14. *(Add frames here as more bundle items are scoped.)*
 
 ---
 
@@ -137,11 +152,11 @@ If more bundle items land after the board is first drawn, **amend this brief** a
 
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
-| Evidence graph view / header | Snowflake | **Extend** | `Features/EvidenceGraph/EvidenceGraphView.swift` | Host Source jump; title is not a control today. |
-| Evidence graph model | Snowflake | **Extend** | `Features/EvidenceGraph/EvidenceGraphModel.swift` | Reuse `sourcePageLocation`. |
+| Evidence graph view / header | Snowflake | **Extend** | `Features/EvidenceGraph/EvidenceGraphView.swift` | Host Source jump; wire bridge Add property a11y like primaries. |
+| Evidence graph model | Snowflake | **Extend** | `Features/EvidenceGraph/EvidenceGraphModel.swift` | Reuse `sourcePageLocation` and `composerLocation(for:)`. |
 | Evidence subject card | Snowflake | **Extend** | `Features/EvidenceGraph/EvidenceSubjectCard.swift` | Conflict / negated on rows. |
 | Cited property row | Snowflake | **Extend** | same file (`EvidenceCitedPropertyRow`) | Host marks; keep hover / edit hit. |
-| Bridge card | Snowflake | **Extend** | `Features/EvidenceGraph/EvidenceBridgeCard.swift` | Height + a11y follow new sentence. |
+| Bridge card | Snowflake | **Extend** | `Features/EvidenceGraph/EvidenceBridgeCard.swift` | Sentence + extra rows + Add property; height/hits. |
 | Bridge edge summary | Snowflake | **Extend** | `Features/EvidenceGraph/EvidenceBridgeEdgeSummary.swift` | Resolve identity from snapshot primaries. |
 | Source graph snapshot | Session | Ship | `Features/Workspace/Session/SourceGraphSnapshot.swift` | Already has endpoint observations. |
 | Badge | Component | Ship | `DesignSystem/Components/Badge/PVBadge.swift` | Conflict + negated. |
@@ -154,6 +169,7 @@ If more bundle items land after the board is first drawn, **amend this brief** a
 | --- | --- |
 | `PVConflictBadge` / `PVNegatedBadge` | Compose `PVBadge`. |
 | Incomplete / half-line chrome | UI cannot produce that graph. |
+| Collapse / expand | Descoped. |
 | Source-page → graph button | Different leftover. |
 | New sentence catalog keys unless templates cannot take the new nouns | Reuse shipped `bridgeSummary*` strings. |
 
@@ -165,6 +181,7 @@ If more bundle items land after the board is first drawn, **amend this brief** a
 - Schema / FFI
 - Composer Observation-list restyle
 - Incomplete-bridge visual states (**descoped**)
+- Collapse / expand bridge cards (**descoped**)
 - Filters, undo, tray, pinning
 - Source-page Evidence graph entry
 
