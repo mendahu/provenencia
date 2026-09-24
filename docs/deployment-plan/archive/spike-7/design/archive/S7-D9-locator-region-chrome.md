@@ -4,7 +4,7 @@
 **Spike:** Provenencia Spike 7 (Citations / Observations / composer)  
 **Implements later as:** PR **S7-07** (locator tools — artifact + page + region)  
 **Depends on:** Shipped composer + Artifact viewers (**S7-08**, **S7-06**); locator validation in Go (**S7-03** / `core/locator` — extend in S7-07); citation composer board Frames ([`S7-D4-citation-composer.md`](S7-D4-citation-composer.md))  
-**Schema SoT:** [`interpretation-layer-data-model.md`](../../../../interpretation-layer-data-model.md) §3 (incl. **`artifact`** selector)  
+**Schema SoT:** [`interpretation-layer-data-model.md`](../../../../../interpretation-layer-data-model.md) §3 (incl. **`artifact`** selector)  
 **Related briefs:** [`S7-D4`](S7-D4-citation-composer.md) — tool strip + locator strip; do not redesign the whole composer place here  
 **Schedule:** Immediately before **S7-07**. Do not implement region drawing until this board locks the look.
 

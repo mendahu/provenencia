@@ -3,11 +3,11 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 7 (Citations / Observations / composer)  
 **Implements later as:** PR **S7-02b** only (schema + Go are **S7-02**, ungated; part-type registry hardened in Go alongside S7-02b)  
-**Depends on:** [`structured-name-model.md`](../../../../structured-name-model.md) §1–3; shipped DateValue editor as the twin pattern (`Features/Dates/`); thin composer (**S7-08**) already dogfoodable; product part-type registry in `core/database/namevalues`  
-**Related briefs:** [`S7-D4`](archive/S7-D4-citation-composer.md) — composer hosts this modal for `value_type = name`; [`S7-D2`](archive/S7-D2-subject-fields.md) — Property `name` exists in vocabulary 
+**Depends on:** [`structured-name-model.md`](../../../../../structured-name-model.md) §1–3; shipped DateValue editor as the twin pattern (`Features/Dates/`); thin composer (**S7-08**) already dogfoodable; product part-type registry in `core/database/namevalues`  
+**Related briefs:** [`S7-D4`](../archive/S7-D4-citation-composer.md) — composer hosts this modal for `value_type = name`; [`S7-D2`](../archive/S7-D2-subject-fields.md) — Property `name` exists in vocabulary 
 **Schedule:** Late — after Add property + thin composer work; not on the path to S7-05 or first cite dogfood.
 
-Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](README.md) first.
+Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](../README.md) first.
 
 ---
 
@@ -29,7 +29,7 @@ The composer (and any later host) opens this editor when an Observation’s Prop
 
 ## 2. Domain facts the UI must reflect
 
-Authoritative schema: [`structured-name-model.md`](../../../../structured-name-model.md). Product part types: [`seeded-vocabulary.md`](../../../../seeded-vocabulary.md) §4.1 + `namevalues.PartTypes()`.
+Authoritative schema: [`structured-name-model.md`](../../../../../structured-name-model.md). Product part types: [`seeded-vocabulary.md`](../../../../../seeded-vocabulary.md) §4.1 + `namevalues.PartTypes()`.
 
 | Fact | UI implication |
 | --- | --- |

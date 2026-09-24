@@ -29,6 +29,6 @@ Locators in Spike 7 focus on **page + region polygon**. Find is complementary na
 
 ## Related
 
-- Spike 7 viewers: [`deployment-plan/spike-7/deployment-plan.md`](../deployment-plan/spike-7/deployment-plan.md) **S7-06** / **S7-07**
+- Spike 7 viewers: [`deployment-plan/archive/spike-7/deployment-plan.md`](../deployment-plan/archive/spike-7/deployment-plan.md) **S7-06** / **S7-07**
 - PDFKit: `PDFDocument.findString(_:withOptions:)`
 - Parking lot cousin: transcription paste via **text selection** is in-scope for **S7-07**; full Find UI is not

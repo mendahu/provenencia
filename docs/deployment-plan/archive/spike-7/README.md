@@ -2,9 +2,9 @@
 
 ## Status
 
-**Open.** Checklist and PR sequence: [`deployment-plan.md`](deployment-plan.md). Finished steps: [`completed.md`](completed.md).
+**Done.** Spike archived after S7-01…S7-15 / S7-11. Open work: none. Finished steps: [`completed.md`](completed.md).
 
-Stand up the Interpretation **Citation → Observation** pipeline on the Evidence graph: **Subject fields** editor, NameValue, image/PDF citation composer as a **navigable place**, cited property rows on cards, and durable connect macros. Authoritative design: [`interpretation-graph-ui.md`](../../ideas/interpretation-graph-ui.md) §4–§6 / slices 3–7. Canvas inherits from [Spike 6](../archive/spike-6/) (Go).
+Stand up the Interpretation **Citation → Observation** pipeline on the Evidence graph: **Subject fields** editor, NameValue, image/PDF citation composer as a **navigable place**, cited property rows on cards, and durable connect macros. Authoritative design: [`interpretation-graph-ui.md`](../../../ideas/interpretation-graph-ui.md) §4–§6 / slices 3–7. Canvas inherits from [Spike 6](../spike-6/) (Go).
 
 > **UI dogfood is inverted:** Add property + card chrome first, then a **thin** composer (text cite → card grows), then viewers / locators / NameValue. See [`deployment-plan.md`](deployment-plan.md) § Incremental UI dogfood.
 
@@ -20,7 +20,7 @@ Stand up the Interpretation **Citation → Observation** pipeline on the Evidenc
 | --- | --- |
 | [**Deployment plan**](deployment-plan.md) | PR sequence, design gates, dogfood bar, scope |
 | [**Completed**](completed.md) | Finished steps |
-| [Design briefs](design/) | Claude Design — S7-D2 through S7-D10 are finished (see [completed.md](completed.md)); S7-D1 descoped. Open work: **S7-11**. |
+| [Design briefs](design/) | Claude Design — S7-D2 through S7-D10 archived (see [completed.md](completed.md)); S7-D1 descoped. |
 
 ## Relationship to Spike 5 / 6 / later
 

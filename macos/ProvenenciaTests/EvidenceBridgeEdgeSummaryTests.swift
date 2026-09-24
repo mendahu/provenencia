@@ -147,6 +147,26 @@ struct EvidenceBridgeEdgeSummaryTests {
         )
     }
 
+    @Test func citedCardSentenceKeepsEndpointNames() {
+        let placed = bridge(kind: .participation, observations: [
+            observation(propertyKey: "person", valueText: "Jerry", valueType: "subject"),
+            observation(propertyKey: "event", valueText: "Birth", valueType: "subject"),
+            observation(propertyKey: "role", valueText: "subject"),
+        ])
+        #expect(
+            EvidenceBridgeEdgeSummary.sentence(for: placed)
+                == L10n.EvidenceGraph.bridgeSummaryParticipation(
+                    person: "Jerry",
+                    role: "subject",
+                    event: "Birth"
+                )
+        )
+        #expect(
+            EvidenceBridgeCard.accessibilityLabel(for: placed)
+                == "Participation, CPA-1, \(EvidenceBridgeEdgeSummary.sentence(for: placed))"
+        )
+    }
+
     @Test func participationBareWithoutEndpoints() {
         let phrase = EvidenceBridgeEdgeSummary.phrase(
             for: bridge(kind: .participation, observations: [

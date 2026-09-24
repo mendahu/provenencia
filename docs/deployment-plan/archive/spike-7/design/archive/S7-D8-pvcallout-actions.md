@@ -3,12 +3,12 @@
 **Kind:** Claude Design board / design-system component (light handoff OK)  
 **Spike:** Provenencia Spike 7  
 **Implements later as:** PR **S7-14**  
-**Depends on:** Shipped macOS [`PVCallout`](../../../../macos/App/DesignSystem/Components/Callout/PVCallout.swift)  
+**Depends on:** Shipped macOS [`PVCallout`](../../../../../../macos/App/DesignSystem/Components/Callout/PVCallout.swift)  
 **Unblocks:** Evidence graph No-Artifact **message center** (**S7-D3** / **S7-09**) — recovery CTA without a hand-rolled banner  
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
-**Skill:** [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md) — **Extend** existing component; do not invent a parallel banner
+**Design system layers:** [`docs/design-system-layers.md`](../../../../../design-system-layers.md)  
+**Skill:** [`add-ui-component`](../../../../../../.cursor/skills/add-ui-component/SKILL.md) — **Extend** existing component; do not invent a parallel banner
 
-Paste this document into Claude Design as the requirements for a **Callout** kit update (or component page delta). Read shared product facts in [`README.md`](README.md) first.
+Paste this document into Claude Design as the requirements for a **Callout** kit update (or component page delta). Read shared product facts in [`README.md`](../README.md) first.
 
 ---
 
@@ -84,6 +84,6 @@ macOS already ships `PVCallout` without an actions slot — the Swift header not
 ## 7. Handoff
 
 1. Archive this brief under `archive/` when the board is agreed.
-2. Record in [`../completed.md`](../completed.md).
+2. Record in [`../completed.md`](../../completed.md).
 3. Implement **S7-14** against the board + existing `PVCallout` API.
 4. Then **S7-09** may host the No-Artifact message center with a recovery action.

@@ -2,11 +2,11 @@
 
 **All UI in this spike is designed in Claude Design before it is implemented.** Hand open briefs over **one at a time**.
 
-PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike overview: [`../README.md`](../README.md). Design rationale: [`interpretation-graph-ui.md`](../../../ideas/interpretation-graph-ui.md).
+PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike overview: [`../README.md`](../README.md). Design rationale: [`interpretation-graph-ui.md`](../../../../ideas/interpretation-graph-ui.md).
 
 ## Open
 
-None. Remaining spike work is dogfood close (**S7-11**).
+None.
 
 ## Descoped
 
@@ -33,7 +33,7 @@ None. Remaining spike work is dogfood close (**S7-11**).
 1. Open the Provenencia Claude Design project / design-system bundle (`macos/App/DesignSystem/README.md`).
 2. Paste **one** open brief as the prompt for a new board or flow.
 3. Keep the shipped visual language. Prefer existing `PV*` components; no new design-system primitives unless raised as a finding.
-4. Every open brief must include a **UI building-block inventory** (§ layered as components / recipes / snowflakes per [`docs/design-system-layers.md`](../../../design-system-layers.md)): each control lists layer, status (Ship / Extend / New / Retire), and repo home. **S7-D3** §9 is the template; **S7-D6** §7 is the design-system consolidation example.
+4. Every open brief must include a **UI building-block inventory** (§ layered as components / recipes / snowflakes per [`docs/design-system-layers.md`](../../../../design-system-layers.md)): each control lists layer, status (Ship / Extend / New / Retire), and repo home. **S7-D3** §9 is the template; **S7-D6** §7 is the design-system consolidation example.
 5. When the board is done, archive the brief under `archive/` and write up [`../completed.md`](../completed.md).
 
 ## Shared product facts (all briefs)
