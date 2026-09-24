@@ -30,6 +30,6 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 - **Source page** is filing (identity, metadata, artifacts, notes). The Sources list already opens the Evidence graph; **S8-D4** adds that jump on the page. No Artifact → graph stays blocked.
 - **Sources list** is the split-row file | graph destination. **S8-D5** adds graph-progress counts (subjects + observations) without folding them into the `sourcesList` payload.
 - **Transcription** is the Citation reading. Observations are separate. Auto Transcribe must not write Observations.
-- Media in composer: **image** and **PDF** viewers. **Auto Transcribe (S8-D1) is image-only.** PDF Find / select / paste is **S8-D2** (text layer, no Vision). Audio/video: honest disable.
+- Media in composer: **image** and **PDF** viewers. **Auto Transcribe (S8-D1) is image-only.** PDF Find / select / paste is **S8-D2** (text layer, no Vision). Audio/video: honest disable ([`audio-video-sources.md`](../../../ideas/audio-video-sources.md)).
 - Locator: default `artifact`, optional `page` (PDF), optional `region` polygon. One region max. Geometry: [`ArtifactRegionGeometry`](../../../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift).
 - Extend existing kit (`PVField`, `PVButton`, `PVTextArea`, `PVCallout`, `.pvConfirm`). Do not invent a second dialog stack.

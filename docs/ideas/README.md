@@ -19,6 +19,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`interpretation-graph-ui.md`](interpretation-graph-ui.md)
 - [`source-to-source-relationships.md`](source-to-source-relationships.md)
 - [`text-quote-locators.md`](text-quote-locators.md)
+- [`audio-video-sources.md`](audio-video-sources.md)
 - [`share-packages.md`](share-packages.md)
 
 Layering for macOS UI (design system / recipes / snowflakes) graduated to [`docs/design-system-layers.md`](../design-system-layers.md); draft archived under [`archive/design-system-hardening.md`](archive/design-system-hardening.md).

@@ -59,7 +59,7 @@ They are not exclusive. A locator can already be `page` + `text_quote`, or quote
 
 - Spike 8 **S8-D2** / **S8-03…S8-05** (Find, I-beam, paste into transcription only)
 - PDF OCR / Vision on page rasters
-- `time_range` (audio / video — leftover **16**)
+- `time_range` / audio / video — [`audio-video-sources.md`](audio-video-sources.md)
 - Changing the locator schema (already specified)
 
 ## Related docs
