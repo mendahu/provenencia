@@ -262,8 +262,95 @@ struct GraphCanvasEdgeGeometryTests {
             for: placed(text: String(repeating: "great-grandparent ", count: 24))
         )
         #expect(long > short)
-        #expect(long > EvidenceBridgeCard.edgeLayoutHeight)
         #expect(EvidenceBridgeCard.contentFrame(for: placed(text: String(repeating: "great-grandparent ", count: 24))).height == long)
+    }
+
+    /// Regression for #183: a frame floor taller than the painted bridge left
+    /// bottom-approach terminals visible below the card.
+    @Test func bridgeFrameTracksPaintedHeightWithoutFloor() {
+        func placed(person: String, event: String) -> SourceGraphPlacedBridge {
+            func observation(id: String, key: String, value: String) -> CatalogObservation {
+                CatalogObservation(
+                    id: id,
+                    ref: "OBS-\(id)",
+                    citationID: "cit-1",
+                    subjectID: "b1",
+                    propertyID: "p-\(key)",
+                    polarity: "positive",
+                    valueText: value,
+                    valueInteger: nil,
+                    valueDateID: "",
+                    valueNameID: "",
+                    valueSubjectID: "s-\(key)",
+                    valueTermID: "",
+                    propertyKey: key,
+                    propertyLabel: key,
+                    propertyValueType: "subject"
+                )
+            }
+            return SourceGraphPlacedBridge(
+                subject: CatalogSubject(
+                    id: "b1",
+                    ref: "CPA-1",
+                    sourceID: "src",
+                    subjectTypeID: "t",
+                    label: "Working",
+                    description: ""
+                ),
+                kind: .participation,
+                typeLabel: "Participation",
+                gridX: 0,
+                gridY: 0,
+                isCited: true,
+                observations: [
+                    observation(id: "person", key: "person", value: person),
+                    observation(id: "event", key: "event", value: event),
+                ]
+            )
+        }
+        let oneLine = EvidenceBridgeCard.contentHeight(for: placed(person: "Al", event: "X"))
+        let wrapped = EvidenceBridgeCard.contentHeight(
+            for: placed(person: "Bartholomew", event: "the Baptism")
+        )
+        let shell = EvidenceBridgeCard.shellPaddingTop * 2
+            + EvidenceBridgeCard.headerContentHeightCited
+            + EvidenceBridgeCard.headerToBodySpacing
+        // Shell plus a single body line — the old 88 pt floor pinned both cases to 88.
+        #expect(oneLine > shell)
+        #expect(oneLine < shell + 30)
+        #expect(wrapped > oneLine)
+    }
+
+    @Test func bottomApproachEndsUnderTheBridgeFill() {
+        let bridge = SourceGraphPlacedBridge(
+            subject: CatalogSubject(
+                id: "b1",
+                ref: "CPA-1",
+                sourceID: "src",
+                subjectTypeID: "t",
+                label: "Working",
+                description: ""
+            ),
+            kind: .location,
+            typeLabel: "Location",
+            gridX: 4,
+            gridY: 2,
+            isCited: true
+        )
+        let bridgeRect = EvidenceBridgeCard.contentFrame(for: bridge)
+        // Primary card directly below the bridge, so the edge climbs into its bottom.
+        let primaryRect = CGRect(
+            x: bridgeRect.midX - EvidenceSubjectCard.width / 2,
+            y: bridgeRect.maxY + 160,
+            width: EvidenceSubjectCard.width,
+            height: EvidenceSubjectCard.edgeLayoutHeight
+        )
+        let seg = GraphCanvasEdgeGeometry.segment(fromRect: primaryRect, toRect: bridgeRect)
+        let paintedBottom = bridgeRect.minY + EvidenceBridgeCard.contentHeight(for: bridge)
+        #expect(abs(bridgeRect.maxY - paintedBottom) < 0.01)
+        #expect(abs(seg.end.y - (paintedBottom - GraphCanvasEdgeGeometry.endpointTuck)) < 0.01)
+        #expect(seg.end.y > bridgeRect.midY)
+        #expect(bridgeRect.contains(seg.end))
     }
 
     @Test func bridgeOmitsCitationEditWhenCannotCite() {
@@ -364,6 +451,11 @@ struct GraphCanvasEdgeGeometryTests {
         ))
         #expect(EvidenceBridgeCard.accessibilityLabel(for: placed).contains("Jerry"))
         #expect(EvidenceBridgeCard.accessibilityLabel(for: placed).contains("Birth"))
-        #expect(EvidenceBridgeCard.contentHeight(for: placed) >= EvidenceBridgeCard.edgeLayoutHeight)
+        #expect(
+            EvidenceBridgeCard.contentHeight(for: placed)
+                > EvidenceBridgeCard.shellPaddingTop * 2
+                + EvidenceBridgeCard.headerContentHeightCited
+                + EvidenceBridgeCard.headerToBodySpacing
+        )
     }
 }
