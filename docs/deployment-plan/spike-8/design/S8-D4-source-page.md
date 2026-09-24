@@ -45,7 +45,7 @@ Exact placement (identity header vs page toolbar), label, and no-Artifact disabl
 
 - Not graph chrome (**S8-D3**).
 - Not Source-page commentary (`mentions` / `remark`) — parked in [`source-to-source-relationships.md`](../../../ideas/source-to-source-relationships.md).
-- Not composer rethink / pinning (dogfood).
+- Not composer rethink / pinning (**S8-D7**).
 - Not PDF Find on this page.
 - Not Sources-list counts (“12 subjects”) — **S8-D5** / **S8-08**.
 

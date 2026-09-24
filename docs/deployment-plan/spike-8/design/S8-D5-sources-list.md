@@ -69,7 +69,7 @@ The board does **not** invent the key enum. It must leave room for counts to arr
 
 - Not graph chrome (**S8-D3**) or Source-page jump (**S8-D4**).
 - Not source-to-source commentary ([`source-to-source-relationships.md`](../../../ideas/source-to-source-relationships.md)).
-- Not composer rethink (dogfood).
+- Not composer rethink (**S8-D7**).
 - Not a Subjects / Observations list destination.
 - Not putting counts on the Source **page** unless a later bundle item says so.
 

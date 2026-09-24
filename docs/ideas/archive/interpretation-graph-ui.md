@@ -718,7 +718,7 @@ Leftover graph-UI work from this note has been re-homed or descoped (Spike 8 sto
 - ~~What does the Source-page commentary surface actually look like?~~ **Parked:** [`source-to-source-relationships.md`](../source-to-source-relationships.md).
 - ~~Before `mentions` ships: placeholder Source + merge?~~ **Parked:** same note.
 - ~~Does the person → person disambiguation (§3.2) earn its complexity?~~ **Answered:** person→person always means `relationship`.
-- ~~Is a Citation with zero Observations a legal, useful state?~~ **Parked** with the composer rethink in [`docs/dogfood/ux.md`](../../dogfood/ux.md).
+- ~~Is a Citation with zero Observations a legal, useful state?~~ **Spike 8** [`S8-D7`](../../deployment-plan/spike-8/design/S8-D7-composer-rethink.md) / **S8-10**.
 - ~~How does Conclusion-layer work surface here later?~~ **Not leftover graph UI.** [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) already owns sameness, reconciliation, and how those views relate to Interpretation. Leftover **27** (pleasant Sameness workflow) waits on that layer.
 - ~~Raise macOS 14?~~ **Descoped** as graph leftover. Support-matrix decision if we ever raise; not justified by the canvas (§7.3).
 - ~~Rich-text notes?~~ **Descoped.** `transcription` stays plain text. `citation_notes` / `observation_notes` stay `TEXT`.

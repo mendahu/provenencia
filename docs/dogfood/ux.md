@@ -26,14 +26,6 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 - **Annoyance:** A real census page can put dozens of Subjects and hundreds of Observations on one canvas. Nothing is wrong with the model — it just gets hard to see the household you care about.
 - **Wanted:** Layers or filters when a Source actually hurts. Not scheduled. Parked here until dogfood proves we need it.
 
-### One reading, many subjects — composer is per-subject
-
-- **Date:** 2026-09-23
-- **Where:** Evidence graph / citation composer
-- **Annoyance:** A newspaper engagement notice is one reading (names, relationships, the engagement event) but the composer is tied to one subject. Observations that belong on other cards required a second Citation and a second trip through the composer. Filling the model meant typing the same names, roles, and event over and over.
-- **Wanted:** Keep the one-Citation-to-many-Observations model (including Observations on different subjects) and make a Source-reading session cheap: see the artifact while placing, reuse one Citation across the cards it actually supports, and stop re-keying the same facts to satisfy the graph. This may be a fairly large reimagining of the graph + composer together, not a small composer tweak. The schema already allows shared Citations; the shipped composer is one Citation × one subject per trip.
-- **Folded in:** **Citation pinning** across graph edits and **Citation with zero Observations** (“I transcribed this line; I have not interpreted it yet”). Today Save refuses an empty Observation list. Both are UI policy on a per-subject composer, not schema gaps. A more flexible composer absorbs them; do not schedule a standalone pinning or empty-Citation story.
-
 ### Automatic structure from the Artifact (beyond transcription)
 
 - **Date:** 2026-09-23
@@ -46,6 +38,7 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 ### Pulled into Spike 8 (2026-09-24)
 
+- **Composer rethink** — Citation as the document; multi-subject rows; reuse / pinning; empty Save ([`S8-D7`](../deployment-plan/spike-8/design/S8-D7-composer-rethink.md) / [`S8-10`](../deployment-plan/spike-8/deployment-plan.md))
 - Image **Auto Transcribe** (Vision → transcription)
 - PDF **Find** + **select** + **paste transcription**
 - Source page **Open Evidence graph** (was “graph starts blind”)

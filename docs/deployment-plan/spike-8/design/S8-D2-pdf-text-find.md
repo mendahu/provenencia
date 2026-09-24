@@ -3,7 +3,7 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 8 (pause and refine / data entry)  
 **Implements later as:** **S8-03** (PDFKit viewport + I-beam default), **S8-04** (Find), **S8-05** (paste from selection)  
-**Depends on:** Shipped composer viewer + tool strip ([`ArtifactViewerToolChrome`](../../../../macos/App/Features/ArtifactViewer/ArtifactViewer.swift)); locators S7-07; transcription field (**S8-D1** image Auto Transcribe — do not fight that row)  
+**Depends on:** **S8-D7** / **S8-10** (viewer slot on the new composer); tool strip ([`ArtifactViewerToolChrome`](../../../../macos/App/Features/ArtifactViewer/ArtifactViewer.swift)); locators S7-07; transcription field (**S8-D1** image Auto Transcribe — do not fight that row)  
 **Related:** [`../pdf-text-find.md`](../pdf-text-find.md); dogfood OCR notes  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
 **Skill:** [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)

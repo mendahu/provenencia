@@ -8,7 +8,8 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 
 | Step | Brief | Feeds | Notes |
 | --- | --- | --- | --- |
-| S8-D1 | [`S8-D1-auto-transcribe.md`](S8-D1-auto-transcribe.md) | PR **S8-01** | Auto Transcribe on citation transcription; warn + proceed on large page |
+| S8-D7 | [`S8-D7-composer-rethink.md`](S8-D7-composer-rethink.md) | PR **S8-10** | **First.** Flexible Citation document; density layout; replace artifact pre-screen |
+| S8-D1 | [`S8-D1-auto-transcribe.md`](S8-D1-auto-transcribe.md) | PR **S8-01** | Auto Transcribe on citation transcription; warn + proceed on large page. **After S8-D7.** |
 | S8-D2 | [`S8-D2-pdf-text-find.md`](S8-D2-pdf-text-find.md) | PRs **S8-03**, **S8-04**, **S8-05** | PDF Find on the tool strip; I-beam vs pan; paste transcription from selection |
 | S8-D3 | [`S8-D3-graph-visuals.md`](S8-D3-graph-visuals.md) | PR **S8-06** | Conflict + negated; Source-page jump; richer bridge sentences; Add property on bridges |
 | S8-D4 | [`S8-D4-source-page.md`](S8-D4-source-page.md) | PR **S8-07** | Source page enhancements; first item: jump to Evidence graph |
@@ -18,7 +19,7 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 ## How to use
 
 1. Open the Provenencia Claude Design project / design-system bundle (`macos/App/DesignSystem/README.md`).
-2. Paste **one** open brief as the prompt for a new board or flow.
+2. **Start with S8-D7.** Paste **one** open brief as the prompt for a new board or flow.
 3. Keep the shipped visual language. Prefer existing `PV*` components; no new design-system primitives unless raised as a finding.
 4. Every open brief must include a **UI building-block inventory** (components / recipes / snowflakes per [`docs/design-system-layers.md`](../../../design-system-layers.md)).
 5. When the board is done, archive the brief under `archive/` and write up [`../completed.md`](../completed.md).
@@ -26,7 +27,7 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 ## Shared product facts (all briefs)
 
 - Offline-first macOS genealogy app inside a local `*.provenencia` project. Deployment target **macOS 14**.
-- **Citation composer** is a navigable place (Option B): viewer \| form. Shipped in Spike 7. Do **not** redesign the shell, locators, or Observation list unless a brief says so.
+- **Citation composer** is a navigable place (Option B): viewer \| form. **S8-D7** rethinks identity + Observation list (Citation is the document; subjects are per row). After that board, other briefs **extend the new form** — do not restyle the Spike 7 subject-locked shell. Locators stay unless a brief says so.
 - **Evidence graph cards** already list every Observation as its own row. Competing values on one Property are legal. Negative polarity is a denial, not a missing line. **S8-D3** adds notice badges, a Source-page jump, and richer bridge sentences — not a resolve flow. Incomplete-bridge chrome is descoped.
 - **Source page** is filing (identity, metadata, artifacts, notes). The Sources list already opens the Evidence graph; **S8-D4** adds that jump on the page. No Artifact → graph stays blocked.
 - **Sources list** is the split-row file | graph destination. **S8-D5** adds graph-progress counts (subjects + observations) without folding them into the `sourcesList` payload.

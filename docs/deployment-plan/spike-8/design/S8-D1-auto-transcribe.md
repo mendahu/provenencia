@@ -3,7 +3,7 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 8 (pause and refine / data entry)  
 **Implements later as:** PR **S8-01**  
-**Depends on:** Shipped citation composer (S7-08 / S7-06 / S7-07); transcription `PVField` + `PVTextArea` in [`CitationComposerFormPane`](../../../../macos/App/Features/CitationComposer/CitationComposerFormPane.swift)  
+**Depends on:** **S8-D7** / **S8-10** (new composer form); locators S7-07; transcription `PVField` + `PVTextArea` in [`CitationComposerFormPane`](../../../../macos/App/Features/CitationComposer/CitationComposerFormPane.swift) (layout may move — place the control on the **rethink** chrome)  
 **Related:** [`docs/dogfood/ux.md`](../../../dogfood/ux.md) (OCR notes); locator chrome [S7-D9](../../archive/spike-7/design/archive/S7-D9-locator-region-chrome.md)  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
 **Skill:** [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md) — compose kit; snowflake wiring in `Features/CitationComposer/`

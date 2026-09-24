@@ -71,7 +71,7 @@ Fill allow / refuse / cascade when this story is refined. Rows may be added.
 ### 2.2 What this board is not
 
 - Not undo / ⌘Z (descoped).
-- Not composer pinning / empty-Citation policy (dogfood) except where a delete would *create* an empty Citation.
+- Not composer pinning / empty-Citation policy (**S8-D7**) except where a delete would *create* an empty Citation.
 - Not Source / Artifact / File delete (Source layer), unless a later item pulls a gate in.
 - Not a Change type action (delete + recreate only).
 - Not adopting imported / unplaced subjects (**20** — descoped with the tray).
@@ -147,7 +147,7 @@ Freeze the matrix on this brief before **S8-09** starts. If refinement adds path
 
 - ⌘Z / undo stack
 - Source-page commentary deletes
-- Composer rethink (pinning)
+- Composer rethink (**S8-D7**)
 - Redesigning cards except delete affordances
 - Change type UI; adopt/import tray
 

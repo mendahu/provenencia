@@ -80,7 +80,7 @@ Exact badge, link chrome, sentence wrapping, and where Add property sits on the 
 
 - Not incomplete-bridge / denied-line language, or collapse/expand (descoped).
 - Not Source-page → graph (**S8-D4**).
-- Not composer rethink / pinning / empty-Citation policy (dogfood).
+- Not composer rethink / pinning / empty-Citation policy (**S8-D7**).
 - Not density filters, undo, unplaced tray, or minimap (**descoped**).
 - Not Conclusion Reconciliation Claims.
 - Not PDF Find / OCR (**S8-D1** / **S8-D2**).
@@ -185,7 +185,7 @@ If more bundle items land after the board is first drawn, **amend this brief** a
 - Incomplete-bridge visual states (**descoped**)
 - Collapse / expand bridge cards (**descoped**)
 - Density filters, undo, unplaced tray, minimap (**descoped**)
-- Composer rethink / pinning / empty-Citation policy (dogfood)
+- Composer rethink / pinning / empty-Citation policy (**S8-D7**)
 - Source-page Evidence graph entry (**S8-D4**)
 
 ---

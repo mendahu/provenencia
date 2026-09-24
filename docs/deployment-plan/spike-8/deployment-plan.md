@@ -12,23 +12,25 @@ Pause-and-refine: make **Source → Evidence graph** data entry cheaper. Stories
 
 Grow this list as stories land. **By spike close**, every checked story below must be true in the app.
 
-1. **Auto Transcribe** — in the citation composer, on an **image** Artifact, a control fills **transcription** from Vision OCR of the image (or the region polygon when one is set). The researcher can edit and Save as today. Full-image / oversized jobs warn and can still proceed. No Observation writes. **PDF:** this button stays disabled (text-layer path is bar items 3–4).
-2. **PDF Artifact thumbnails** — PDF Artifacts show a **first-page raster** on Artifact rows (glyph only if render skips). A PDF with a raster can be pinned as Source cover. Notes: [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md).
-3. **PDF Find** — on a PDF in the composer, a Find field on the viewer tool strip jumps to a keyword hit with a highlight. Image-only PDFs (no text layer) fail honestly. Notes: [`pdf-text-find.md`](pdf-text-find.md).
-4. **PDF select + paste transcription** — default PDF pointer is text select (pan is explicit). **Paste transcription from selection** fills the transcription field. No Vision on PDF pages.
-5. **Graph visual enhancements** — conflict + negated row badges; always-on **jump to the Source page**; cited **bridge sentences** prefer endpoint `name` / `event_type` / `toponym`, then working label; **Add property** on bridge cards (extra non-edge rows). More items may join **S8-D3** / **S8-06**.
-6. **Source page enhancements** — the Source detail page has an **Open Evidence graph** control for the same Source (disabled with no Artifact). More items may join **S8-D4** / **S8-07**.
-7. **Sources list refresh** — the Sources list shows **subject** and **observation** counts per Source so a worked Evidence graph is obvious next to an empty one. Counts live on their own cache keys (one Source invalidates; the list payload does not). More items may join **S8-D5** / **S8-08**.
-8. **Delete paths** — the researcher can remove a mistaken Interpretation entity when the refined matrix allows it, with a confirm that **counts the cascade** (or an honest refuse). Uncited subject delete stays. Cited subject / shared Citation / Observation paths are decided on **S8-D6** before **S8-09**. More items may join that brief.
+1. **Composer rethink** — the citation composer is a **Citation document**: pick Artifact and Citation in-form (no create-time pre-screen); see **all** Observations on that Citation; each row names a **Subject**; Save with zero Observations is allowed; Add property can **reuse** an existing Citation. Graph stays a place. Entry points only pre-select. **This story ships before Auto Transcribe and PDF Find/paste.**
+2. **Auto Transcribe** — in the **new** composer, on an **image** Artifact, a control fills **transcription** from Vision OCR of the image (or the region polygon when one is set). The researcher can edit and Save as today. Full-image / oversized jobs warn and can still proceed. No Observation writes. **PDF:** this button stays disabled (text-layer path is bar items 4–5).
+3. **PDF Artifact thumbnails** — PDF Artifacts show a **first-page raster** on Artifact rows (glyph only if render skips). A PDF with a raster can be pinned as Source cover. Notes: [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md).
+4. **PDF Find** — on a PDF in the composer, a Find field on the viewer tool strip jumps to a keyword hit with a highlight. Image-only PDFs (no text layer) fail honestly. Notes: [`pdf-text-find.md`](pdf-text-find.md).
+5. **PDF select + paste transcription** — default PDF pointer is text select (pan is explicit). **Paste transcription from selection** fills the transcription field. No Vision on PDF pages.
+6. **Graph visual enhancements** — conflict + negated row badges; always-on **jump to the Source page**; cited **bridge sentences** prefer endpoint `name` / `event_type` / `toponym`, then working label; **Add property** on bridge cards (extra non-edge rows). More items may join **S8-D3** / **S8-06**.
+7. **Source page enhancements** — the Source detail page has an **Open Evidence graph** control for the same Source (disabled with no Artifact). More items may join **S8-D4** / **S8-07**.
+8. **Sources list refresh** — the Sources list shows **subject** and **observation** counts per Source so a worked Evidence graph is obvious next to an empty one. Counts live on their own cache keys (one Source invalidates; the list payload does not). More items may join **S8-D5** / **S8-08**.
+9. **Delete paths** — the researcher can remove a mistaken Interpretation entity when the refined matrix allows it, with a confirm that **counts the cascade** (or an honest refuse). Uncited subject delete stays. Cited subject / shared Citation / Observation paths are decided on **S8-D6** before **S8-09**. More items may join that brief.
 
 Further bar items: TBD (additional data-entry stories).
 
 ## Design track
 
-**Composer, graph, Source-page, and Sources-list chrome is designed in Claude Design before the matching UI PRs.** PDF thumbs reuse shipped `PVThumbnail` — no board. Briefs: [`design/`](design/).
+**Composer, graph, Source-page, and Sources-list chrome is designed in Claude Design before the matching UI PRs.** **S8-D7 first** — Auto Transcribe and PDF Find/paste design against the new form. PDF thumbs reuse shipped `PVThumbnail` — no board. Briefs: [`design/`](design/).
 
 | Step | Brief | Covers | Gates |
 | --- | --- | --- | --- |
+| **S8-D7** | Citation composer rethink | Flexible Citation document; in-form Artifact + Citation identity; multi-subject observations; empty Save; density layout | **S8-10** |
 | **S8-D1** | Auto Transcribe in the composer | Button, progress, replace confirm, large-page warning + proceed, failure copy | **S8-01** |
 | **S8-D2** | PDF Find + select + paste | Tool-strip Find; I-beam vs pan; paste-from-selection vs Auto Transcribe row | **S8-03**, **S8-04**, **S8-05** |
 | **S8-D3** | Evidence graph visual enhancements | Conflict + negated; Source-page jump; richer bridge sentences; Add property on bridges | **S8-06** |
@@ -42,17 +44,25 @@ Further bar items: TBD (additional data-entry stories).
    design                         build
 ─────────────               ──────────────────────────────────────────
 
+S8-D7  Composer rethink
+  │
+  └────── gates ──────────▶ S8-10  Flexible composer (identity + multi-subject
+                              │     rows + empty Save). FIRST composer PR.
+                              │
+                              ├──────▶ S8-D1 / S8-01  (design + build after S8-10)
+                              └──────▶ S8-D2 / S8-03…S8-05
+
 S8-D1  Auto Transcribe UI
   │
   └────── gates ──────────▶ S8-01  Vision + crop + fill transcription
-                              │     (images only; parallel with S8-02)
+                              │     (images only; after S8-10; parallel S8-02)
 
-S8-02  PDF first-page thumbs ──     (no design gate; does not unblock viewer)
+S8-02  PDF first-page thumbs ──     (no design gate; no composer dependency)
 
 S8-D2  PDF Find / select / paste
   │
   └────── gates ──────────▶ S8-03  PDFKit live page + I-beam default + pan mode
-                              │     (MUST precede Find and paste)
+                              │     (after S8-10; MUST precede Find and paste)
                               ├──────▶ S8-04  Find field + highlight + page jump
                               └──────▶ S8-05  Paste transcription from selection
                                               (after S8-03; prefer after S8-01
@@ -83,10 +93,11 @@ S8-D6  Delete paths
 
 **Order notes**
 
+- **S8-D7 / S8-10 first** among composer work. Do not implement **S8-01** or **S8-03…S8-05** on the old form. **S8-D1** / **S8-D2** boards wait until the rethink layout is agreed.
 - **S8-03** remounts PDF from raster → PDFKit. Find and paste cannot ship on `ArtifactMediaViewport` bitmaps.
 - **S8-04** and **S8-05** are parallel after **S8-03**.
 - **S8-01** / **S8-02** do not block **S8-D2**. **S8-05** should follow **S8-01** when both touch the transcription `PVField`.
-- **S8-02** uses PDFKit only to write a thumbnail derivative — not the composer viewport.
+- **S8-02** uses PDFKit only to write a thumbnail derivative — not the composer viewport. **S8-02** may run in parallel with **S8-10**.
 - **S8-D3** / **S8-06** are independent of OCR and PDF remount. Freeze the **S8-06** bundle on the brief before that PR starts.
 - **S8-D4** / **S8-07** are independent of OCR, PDF remount, and **S8-06**. Freeze the **S8-07** bundle on the brief before that PR starts. The two jumps (graph ⇄ page) should use the same location helpers and product name.
 - **S8-D5** / **S8-08** are independent of OCR, PDF remount, and the jump pair. Freeze the **S8-08** bundle on the brief before that PR starts. Counts must not ride `sourcesList`.
@@ -96,6 +107,8 @@ S8-D6  Delete paths
 
 ## Checklist
 
+- [ ] S8-D7 — Design: Citation composer rethink → [`completed.md`](completed.md)
+- [ ] S8-10 — Flexible citation composer (identity + multi-subject + empty Save) → [`completed.md`](completed.md)
 - [ ] S8-D1 — Design: Auto Transcribe in the citation composer → [`completed.md`](completed.md)
 - [ ] S8-01 — Vision OCR + Auto Transcribe button → [`completed.md`](completed.md)
 - [ ] S8-02 — PDF first-page Artifact thumbnails → [`completed.md`](completed.md)
@@ -112,6 +125,27 @@ S8-D6  Delete paths
 - [ ] S8-D6 — Design: Interpretation delete paths → [`completed.md`](completed.md)
 - [ ] S8-09 — Interpretation delete paths (matrix + damage-count confirms) → [`completed.md`](completed.md)
 - [ ] S8-99 — Dogfood close / docs (after later stories, or when we choose to close)
+
+---
+
+## S8-D7 — Design: Citation composer rethink
+
+Claude Design board for a **flexible Citation document**: in-form Artifact + Citation identity (replace the create-time pre-screen), Observation list across subjects, empty Save, reuse. **Density is the problem** — the board must explore layout ideas, not a four-list stack. Brief: [`design/S8-D7-composer-rethink.md`](design/S8-D7-composer-rethink.md). Gates **S8-10**. **Do this board first.**
+
+Does **not** design Auto Transcribe (**S8-D1**) or PDF Find/paste (**S8-D2**) — only leave homes on the new chrome.
+
+---
+
+## S8-10 — PR: Flexible citation composer
+
+Replace the subject-locked composer with one place whose document is the Citation. Entry points (Add property, pencil, Connect) only pre-select Artifact / Citation / focused row / subject. Remove the Artifact pre-screen. Show every Observation on the Citation; each row names a Subject. Save with zero Observations. Add property can reuse a Citation on that Artifact.
+
+| | |
+| --- | --- |
+| **In** | In-form Artifact + Citation identity per **S8-D7**; drop `CitationComposerArtifactPicker` as a phase; load **all** observations (stop filtering `$0.subjectID == subjectID`); subject control on add/edit row; empty Save; reuse from Add property; `ListByArtifact` on the client (FFI if needed); create-without-observations (relax `CreateWithObservations` or add `Create`); location `subjectId` / `citationId` as focus; Connect edge rows unchanged; L10n + VoiceOver; tests. |
+| **Out** | Vision / PDF remount / Find / paste; minting Subjects; project-wide Citation search; graph 3-pane; Foundation Models; `WorkspaceLocation.observationId` unless restore requires it. |
+| **Testable** | Two-subject Citation shows both rows; pencil does not hide the other subject; Add property can attach to an existing `CIT-…`; Save with empty observations persists; switching Artifact on a dirty saved Citation confirms abandon; one-Artifact source skips a wizard; Connect still submits two fixed edges; Back still returns to the graph. |
+| **Depends on** | **S8-D7**. Shipped composer + graph handoff. **Not** S8-01…S8-09. |
 
 ---
 
@@ -132,7 +166,7 @@ On-device Vision (`VNRecognizeTextRequest`) fills the composer **transcription**
 | **In** | Protocol-shaped OCR seam (tests do not call Vision); `CGImage` from the already-loaded **image**; bounding-box crop (optional mask later); Auto Transcribe control per **S8-D1**; replace confirm if transcription is non-empty; preflight warn on artifact-only / huge bitmap / dense-image heuristics, with proceed; L10n; skip PDF / audio / video / no image. |
 | **Out** | PDF OCR; PDF page raster → Vision; PDF Find / select / paste (**S8-03…S8-05**); Foundation Models; writing Observations; persisted crop objects; `RecognizeDocumentsRequest` (macOS 26); raising the deployment target. |
 | **Testable** | Fake recognizer fills / fails / empty; crop uses region vs full page; preflight flags large page; replace does not overwrite without confirm; button disabled while running. |
-| **Depends on** | **S8-D1**. Shipped composer + locators (S7-08 / S7-06 / S7-07). |
+| **Depends on** | **S8-D1**, **S8-10**. Locators (S7-06 / S7-07). Do not land on the pre-rethink form. |
 
 ---
 
@@ -168,7 +202,7 @@ Replace the composer PDF **raster** (`displayImage` / `ArtifactMediaViewport`) w
 | **In** | Live `PDFDocument` / `PDFView` (or equivalent) for PDF Artifacts; I-beam default; pan mode; cursors; region tools exclusive with select; zoom/page chrome still work; no-text-layer is paintable (select does nothing useful). |
 | **Out** | Find UI (**S8-04**); paste button (**S8-05**); Vision; changing image pan; Source-page viewer. |
 | **Testable** | PDF path no longer depends on `displayImage` for hit-testing text; image path unchanged; region draft still normalizes; pan mode still moves the page; selecting text does not pan. |
-| **Depends on** | **S8-D2**. Shipped S7-06 / S7-07. **Not** S8-01 / S8-02. |
+| **Depends on** | **S8-D2**, **S8-10**. Locators S7-07. **Not** S8-01 / S8-02. Do not remount the pre-rethink viewer slot. |
 
 This is the load-bearing remount. Do not start S8-04 / S8-05 until it lands.
 
@@ -204,7 +238,7 @@ Transcription-row control for PDF: copy current `PDFSelection` string into `tran
 
 Claude Design board for a **bundled** graph-chrome pass. Items: **conflict** + **negated** row badges; always-on **Source-page jump**; **bridge sentences** that prefer endpoint identity Properties; **Add property** on bridge cards. Brief: [`design/S8-D3-graph-visuals.md`](design/S8-D3-graph-visuals.md). Gates **S8-06**.
 
-Does **not** design a composer rethink (pinning / empty Citation — dogfood) or denied-lines. Source-page → graph is **S8-D4**. **Descoped:** incomplete-bridge chrome, collapse/expand, density filters, undo, unplaced tray, minimap.
+Does **not** design the composer rethink (**S8-D7**) or denied-lines. Source-page → graph is **S8-D4**. **Descoped:** incomplete-bridge chrome, collapse/expand, density filters, undo, unplaced tray, minimap.
 
 ---
 
@@ -215,7 +249,7 @@ One Evidence graph chrome pass against **S8-D3**. Competing Observations stay as
 | | |
 | --- | --- |
 | **In** | Conflict + negated per **S8-D3**; Source jump via existing `sourcePageLocation` + `go(to:)`; `EvidenceBridgeEdgeSummary` reads endpoint Observations from the snapshot; Add property + extra rows on bridges; L10n + VoiceOver; card height / hit tests. Prefer `PVBadge`. |
-| **Out** | Merge / resolve; schema or FFI; denied-line drawing; Source-page → graph (**S8-07**); composer rethink (dogfood). Incomplete-bridge chrome, collapse/expand, filters, undo, tray, minimap are **descoped**. |
+| **Out** | Merge / resolve; schema or FFI; denied-line drawing; Source-page → graph (**S8-07**); composer rethink (**S8-D7** / **S8-10**). Incomplete-bridge chrome, collapse/expand, filters, undo, tray, minimap are **descoped**. |
 | **Testable** | Two `name`s → both conflict; negative singleton → negated only; jump location is `.page` for the same `sourceId` and Back returns to `.graph`; relationship sentence uses NameValue form when present and label when not; participation uses `event_type`; location uses `toponym`; bridge Add property opens composer for that bridge (not the connect Citation); extra non-edge row visible + editable; edge keys not duplicated as rows; height/a11y follow the new sentence. |
 | **Depends on** | **S8-D3**. Shipped cards + snapshot + `sourceSurface`. **Not** S8-01…S8-05 / **S8-07**. |
 
@@ -225,7 +259,7 @@ One Evidence graph chrome pass against **S8-D3**. Competing Observations stay as
 
 Claude Design board for a **bundled** Source-page chrome pass. First item: **Open Evidence graph** for this Source (disabled with no Artifact). More page items join this brief (and **S8-07**) as they are scoped. Brief: [`design/S8-D4-source-page.md`](design/S8-D4-source-page.md). Gates **S8-07**.
 
-Does **not** design graph chrome, source-to-source commentary ([`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)), composer rethink, or Sources-list counts (**S8-D5**).
+Does **not** design graph chrome, source-to-source commentary ([`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)), composer rethink (**S8-D7**), or Sources-list counts (**S8-D5**).
 
 ---
 
@@ -236,7 +270,7 @@ One Source-page chrome pass against **S8-D4**. Add a control that opens this Sou
 | | |
 | --- | --- |
 | **In** | Jump control per **S8-D4**; reuse `SourcesListNavigation.graphLocation` (or equivalent); disabled + reason when no Artifact; `go(to:)`; L10n + VoiceOver; any other SP items frozen on the brief. Prefer `PVButton`. |
-| **Out** | Graph chrome (**S8-06**); opening the graph with zero Artifacts; source-to-source commentary ([`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)); composer rethink; list counts / refresh (**S8-08**). |
+| **Out** | Graph chrome (**S8-06**); opening the graph with zero Artifacts; source-to-source commentary ([`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)); composer rethink (**S8-10**); list counts / refresh (**S8-08**). |
 | **Testable** | Source with an Artifact → location is `.graph` for the same `sourceId`; Back returns to `.page`; no Artifact → control disabled and does not navigate. |
 | **Depends on** | **S8-D4**. Shipped Source page + `sourceSurface`. **Not** S8-01…S8-06 / **S8-08**. |
 
@@ -294,13 +328,14 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 
 | In | Out |
 | --- | --- |
-| Composer transcription assist | Auto Observations / subjects / connect |
+| **Composer rethink** (Citation document; multi-subject rows; reuse; empty Save) | Four-list file browser; minting Subjects from the composer; Option A overlay |
+| Composer transcription assist (after **S8-10**) | Auto Observations / subjects / connect |
 | Vision on **image** Artifacts | PDF OCR; audio / video OCR |
 | In-memory crop from locator | Object-store crop files |
 | Warn + proceed on large images | Hard reject / Apple “too many words” (does not exist) |
 | PDF **page-1 thumbnail** via PDFKit | Go PDF decoder; user-picked thumb page |
 | PDF **Find** + **select** + **paste transcription** | PDF Vision / OCR; `text_quote` locators ([`text-quote-locators.md`](../../ideas/text-quote-locators.md)); Source-page Find |
-| Graph **conflict** + **negated** badges; Source-page jump; richer bridge sentences; **Add property** on bridges | Denied-line drawing; composer rethink / pinning (dogfood); merge/resolve; **descoped** leftovers (incomplete bridges, collapse/expand, filters, undo, tray, minimap, Subject types stub, user-minted name parts) |
+| Graph **conflict** + **negated** badges; Source-page jump; richer bridge sentences; **Add property** on bridges | Denied-line drawing; merge/resolve; **descoped** leftovers (incomplete bridges, collapse/expand, filters, undo, tray, minimap, Subject types stub, user-minted name parts) |
 | Source page **Open Evidence graph** (more page items via **S8-D4**) | Source-to-source commentary (`mentions` / `remark`, placeholder + merge — [`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)) |
 | Sources list **graph-progress counts** (more list items via **S8-D5**) | Folding counts into `sourcesList`; a Subjects list destination |
 | Interpretation **delete paths** (matrix via **S8-D6**) | Change type UI; adopt/import; undo; silent evidence CASCADE |
@@ -317,7 +352,8 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 5. **No file middleman** — `ProjectFiles.objectURL` → image `NSImage` → `CGImage` → crop → `VNImageRequestHandler`.
 6. **PDF is not an OCR input** — S8-01 disables Auto Transcribe. S8-05 pastes a PDFKit selection. Image-only PDFs get neither Vision nor fake text.
 7. **Hide Vision behind a protocol** — `FakeStore` / unit tests inject a recognizer.
-8. **More stories do not wait on S8-01** unless they share the composer transcription chrome.
+8. **S8-10 before any other composer chrome** — Auto Transcribe and PDF Find/paste must not land on the subject-locked form. Graph / Source-page / list / delete / PDF thumbs do not wait on S8-10.
+8b. **More stories do not wait on S8-01** unless they share the composer transcription chrome.
 9. **S8-02 is macOS PDFKit → catalog derivative**, not `core/derivatives` learning to parse PDF. Windows keeps the glyph until a later engine renderer.
 10. **S8-03 before Find/paste** — raster `displayImage` has no `PDFSelection`. Region overlay must remount with the live page or locators break.
 11. **Pan vs select** — today’s unnamed click-drag pan will fight I-beam. S8-D2 must name the pan escape (hand and/or modifier) before S8-03.
@@ -332,6 +368,9 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 20. **Filters / undo / minimap are descoped** — density stays a dogfood note; undo can return if ⌘Z becomes a real pain; minimap was scope-creep.
 21. **List counts are their own cache** — do not hang subject/observation numbers on `CatalogSource`. Invalidate the one `sourceId` (same pattern as `.citationCounts`). Canvas writes already name `sourceId`.
 22. **Delete is a counted cascade or a refuse** — do not hide cited trash and let the engine fail. Freeze **S8-D6** before writing tx deletes. No Change type; wrong type is delete + place.
+23. **Composer document is the Citation** — `subjectId` / `citationId` on the location are focus, not locks. Do not filter observations to the entry subject. Do not keep the Artifact pre-screen.
+24. **Empty Citation is a policy change** — schema allows it; Swift Save and `CreateWithObservations` (≥1) do not. S8-10 must relax the engine path.
+25. **Two lists only** — Citations on this Artifact; Observations on this Citation. Subjects stay on the graph (plus a row-level picker).
 
 ---
 
