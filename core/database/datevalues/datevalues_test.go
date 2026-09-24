@@ -499,42 +499,82 @@ func TestInsertLookup(t *testing.T) {
 			},
 		},
 		{
-			name: "rejects minute without hour",
+			name: "accepts minute without hour",
 			run: func(t *testing.T, c *database.Catalog) {
-				_, err := Insert(c, Value{
+				id, err := Insert(c, Value{
 					Kind:        KindPoint,
 					StartYear:   intVal(2020),
 					StartMonth:  intVal(1),
 					StartDay:    intVal(1),
 					StartMinute: intVal(30),
 				})
-				if !errors.Is(err, ErrInvalid) {
-					t.Fatalf("got %v", err)
+				if err != nil {
+					t.Fatal(err)
+				}
+				got, err := Lookup(c, id)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got.StartMinute == nil || *got.StartMinute != 30 {
+					t.Fatalf("got %+v", got)
 				}
 			},
 		},
 		{
-			name: "rejects day without month",
+			name: "accepts day without month",
 			run: func(t *testing.T, c *database.Catalog) {
-				_, err := Insert(c, Value{
+				id, err := Insert(c, Value{
 					Kind:      KindPoint,
 					StartYear: intVal(1985),
 					StartDay:  intVal(14),
 				})
-				if !errors.Is(err, ErrInvalid) {
-					t.Fatalf("got %v", err)
+				if err != nil {
+					t.Fatal(err)
+				}
+				got, err := Lookup(c, id)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got.StartDay == nil || *got.StartDay != 14 || got.StartMonth != nil {
+					t.Fatalf("got %+v", got)
 				}
 			},
 		},
 		{
-			name: "rejects hour without year",
+			name: "accepts hour without year",
 			run: func(t *testing.T, c *database.Catalog) {
-				_, err := Insert(c, Value{
+				id, err := Insert(c, Value{
 					Kind:      KindPoint,
 					StartHour: intVal(12),
 				})
-				if !errors.Is(err, ErrInvalid) {
-					t.Fatalf("got %v", err)
+				if err != nil {
+					t.Fatal(err)
+				}
+				got, err := Lookup(c, id)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got.StartHour == nil || *got.StartHour != 12 || got.StartYear != nil {
+					t.Fatalf("got %+v", got)
+				}
+			},
+		},
+		{
+			name: "accepts month only",
+			run: func(t *testing.T, c *database.Catalog) {
+				id, err := Insert(c, Value{
+					Kind:       KindPoint,
+					StartMonth: intVal(5),
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				got, err := Lookup(c, id)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got.StartMonth == nil || *got.StartMonth != 5 {
+					t.Fatalf("got %+v", got)
 				}
 			},
 		},

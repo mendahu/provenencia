@@ -146,7 +146,7 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 | Icon | `Components/Icon/PVIcon.swift` |
 | Field | `Components/Field/PVField.swift` |
 | Input | `Components/Input/PVInput.swift` |
-| Select | `Components/Select/PVSelect.swift` (floating `PVContextMenu` kit — field + optional chip/icon style; not SwiftUI `Menu`; focused trigger opens on ↑/↓ and type-selects by prefix) |
+| Select | `Components/Select/PVSelect.swift` (native popup contract on `PVContextMenu`; see "The Select contract" below) |
 | Toast | `Components/Toast/PVToast.swift` |
 | LogoMark | `Components/LogoMark/PVLogoMark.swift` |
 | SidebarNav | `Components/SidebarNav/PVSidebarNav.swift` (added for the S2-01 workspace chrome; ports that board's revised `collapsed`-capable `SidebarNav.jsx`) |
@@ -289,6 +289,62 @@ be unit-tested without a view, the same split `PVTable` uses for its
 type-select matcher. `popupFrame` in particular is worth the test: the
 "never overlaps the field" and "never escapes the screen" properties are
 swept across anchor positions rather than spot-checked.
+
+## The Select contract
+
+`PVSelect` is custom Frost chrome on `PVContextMenu` that implements a
+**native macOS popup-button contract**, minus press-drag-release. It is
+**not** SwiftUI `Picker` / `Menu` and **not** `NSPopUpButton`.
+`PVSelectSession` owns open / commit / keys. `PVSelectPlacement` owns
+where the panel sits. The menu is a normal click-to-open list: click a
+row, or scroll and then click.
+
+**Interaction contract:**
+
+| Input | Closed (focused trigger) | Open (menu showing) |
+|---|---|---|
+| Click the field | Open | Close without commit (same as Escape) |
+| Click a row | — | Commit that row and close |
+| Scroll the list | — | Reveal more rows; click to commit |
+| Space / Return | Open | Commit the highlighted row |
+| ↑ / ↓ | Commit next/prev. Stay closed. Clamp — do **not** wrap. | Move highlight. Clamp. |
+| a–z, 0–9 | Commit the match. Stay closed. | Jump highlight only |
+| Home / End | Commit first/last. Stay closed. | First / last highlight |
+| Escape | No-op | Dismiss; restore the snapshot taken at open |
+| Click away | — | Dismiss without commit (same as Escape) |
+
+**Selected vs highlight.** The committed row keeps a leading checkmark and
+the `.isSelected` trait, with **no** fill. Keyboard highlight uses
+`surfaceSelected` fill. A committed+highlighted row shows both; two rows
+must not look equally selected.
+
+**Placement.** Width is `max(trigger, menuWidth)` then clamped to the
+screen. Gap 4 pt, left-aligned. Prefer below; flip above when the
+preferred height does not fit; scroll when neither side fits
+(`maxVisibleRows` × row height, default 10).
+
+**Empty / disabled.** Empty options cannot open. Disabled is opacity 0.45
+and ignores keys and pointer.
+
+**Accessibility.** The trigger is the VoiceOver surface (`aria-activedescendant`
+twin). Spoken value is the committed label when closed and the highlighted
+option when open. Expanded / collapsed is custom content, not stuffed into
+the value. Increment / decrement call the same session moves as ↑ / ↓
+(closed commit; open highlight). Open menus expose `N of M`. One tab stop
+on the trigger; the panel is not a second stop. Icon-only chips require a
+spoken label (`tableFilterColumn`). Decorative chevron, chip icon, and
+checkmark stay `accessibilityHidden`.
+
+**Honest accessibility limit.** A SwiftUI `Button` cannot claim AppKit's
+`NSAccessibilityPopUpButtonRole`. We will **not** wrap `NSPopUpButton` or
+hide a `Picker` as `accessibilityRepresentation` to fake that role.
+VoiceOver will likely say **button** (or “adjustable”) rather than
+“pop-up button”. Same honesty bar as `PVTable` not claiming a table grid.
+
+Not `PVComboBox` (filter-as-you-type), not `PVContextMenu` action menus
+(click-to-open overflow / right-click), and not segmented `PVChip` groups.
+Date-value calendar / month and `PVTable.filterMenu` remount on
+`PVSelect`. Do not add a second popup-select kit.
 
 ## The table tradeoff
 

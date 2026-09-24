@@ -35,6 +35,16 @@ func TestCompactDisplay(t *testing.T) {
 			want: "1882-04-03",
 		},
 		{
+			name: "month only",
+			v:    datevalues.Value{Kind: datevalues.KindPoint, StartMonth: &m},
+			want: "--04",
+		},
+		{
+			name: "day without month",
+			v:    datevalues.Value{Kind: datevalues.KindPoint, StartYear: &y, StartDay: &d},
+			want: "1882--03",
+		},
+		{
 			name: "phrase only",
 			v:    datevalues.Value{Kind: datevalues.KindPoint, Phrase: "Christmas"},
 			want: "Christmas",

@@ -1002,6 +1002,66 @@
         }
       }
     },
+    "designSystem.select.collapsed": {
+      "comment": "VoiceOver value when a PVSelect menu is closed",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collapsed"
+          }
+        }
+      }
+    },
+    "designSystem.select.expanded": {
+      "comment": "VoiceOver value when a PVSelect menu is open",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expanded"
+          }
+        }
+      }
+    },
+    "designSystem.select.optionPosition": {
+      "comment": "VoiceOver position of the highlighted PVSelect option; arguments are 1-based index and count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "designSystem.select.position": {
+      "comment": "VoiceOver custom-content key for the highlighted PVSelect option index",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Position"
+          }
+        }
+      }
+    },
+    "designSystem.select.state": {
+      "comment": "VoiceOver custom-content key for whether a PVSelect menu is open",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "State"
+          }
+        }
+      }
+    },
     "designSystem.table.filterColumn": {
       "comment": "Accessibility label for a PVTable column's filter menu; argument is the column title",
       "extractionState": "manual",
@@ -6074,6 +6134,162 @@
           "stringUnit": {
             "state": "translated",
             "value": "Month"
+          }
+        }
+      }
+    },
+    "sources.page.dateMonth.april": {
+      "comment": "DateValue April option",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "April"
+          }
+        }
+      }
+    },
+    "sources.page.dateMonth.august": {
+      "comment": "DateValue August option",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "August"
+          }
+        }
+      }
+    },
+    "sources.page.dateMonth.december": {
+      "comment": "DateValue December option",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "December"
+          }
+        }
+      }
+    },
+    "sources.page.dateMonth.february": {
+      "comment": "DateValue February option",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "February"
+          }
+        }
+      }
+    },
+    "sources.page.dateMonth.january": {
+      "comment": "DateValue January option",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "January"
+          }
+        }
+      }
+    },
+    "sources.page.dateMonth.july": {
+      "comment": "DateValue July option",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "July"
+          }
+        }
+      }
+    },
+    "sources.page.dateMonth.june": {
+      "comment": "DateValue June option",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "June"
+          }
+        }
+      }
+    },
+    "sources.page.dateMonth.march": {
+      "comment": "DateValue March option",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "March"
+          }
+        }
+      }
+    },
+    "sources.page.dateMonth.may": {
+      "comment": "DateValue May option",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "May"
+          }
+        }
+      }
+    },
+    "sources.page.dateMonth.none": {
+      "comment": "DateValue month option for no month",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        }
+      }
+    },
+    "sources.page.dateMonth.november": {
+      "comment": "DateValue November option",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "November"
+          }
+        }
+      }
+    },
+    "sources.page.dateMonth.october": {
+      "comment": "DateValue October option",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "October"
+          }
+        }
+      }
+    },
+    "sources.page.dateMonth.september": {
+      "comment": "DateValue September option",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "September"
           }
         }
       }

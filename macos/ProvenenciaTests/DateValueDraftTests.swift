@@ -48,11 +48,17 @@ struct DateValueDraftTests {
         #expect(d.endError != nil)
     }
 
-    @Test func cascadeGapInvalidates() {
+    @Test func cascadeGapIsValid() {
         var d = DateValueDraft.empty()
         d.startYear = 1900
         d.startDay = 5
-        #expect(!d.isValid)
+        #expect(d.isValid)
+    }
+
+    @Test func monthOnlyIsValid() {
+        var d = DateValueDraft.empty()
+        d.startMonth = 5
+        #expect(d.isValid)
     }
 
     @Test func setKindRangeClearsQualifier() {
@@ -78,16 +84,16 @@ struct DateValueDraftTests {
         #expect(input.endYear == nil)
     }
 
-    @Test func applyStartCascadeClearsFiner() {
+    @Test func applyStartCascadeDoesNotWipeIndependentFields() {
         var d = DateValueDraft.empty()
         d.startYear = 2000
         d.startMonth = 4
         d.startDay = 10
         d.startHour = 8
-        d.startMonth = nil
+        d.startDay = nil
         d.applyStartCascade()
-        #expect(d.startDay == nil)
-        #expect(d.startHour == nil)
+        #expect(d.startMonth == 4)
+        #expect(d.startHour == 8)
     }
 
     @Test func dayOutOfRangeShowsFieldError() {

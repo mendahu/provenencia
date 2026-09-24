@@ -43,13 +43,13 @@ Every DateValue is **one** genealogical date.
 
 ### Precision
 
-Cascade on each side: year → month → day → hour → minute → second → millisecond. No gaps. Stop at any level. Missing finer = **unknown**, not midnight. `point` forbids `end_*`. Domain `value_text` holds attachment fidelity; DateValue `phrase` is optional wording on the value itself.
+Any subset of year / month / day / hour / minute / second / millisecond may be set; **gaps are allowed**. At least one of year / month / day / hour / minute / second (or a `phrase`) is required. Missing fields = **unknown**, not midnight. `point` forbids `end_*`. Domain `value_text` holds attachment fidelity; DateValue `phrase` is optional wording on the value itself.
 
 ### Timezone
 
 `StartTZ` / `EndTZ` are **free text**. Empty = unspecified. Do **not** parse to UTC in this package.
 
-Phrase-only `point` values (no civil components) are valid when `Phrase` is set. `range` still requires a year on each side.
+Phrase-only `point` values (no civil components) are valid when `Phrase` is set. `range` needs at least one civil component on each side (year is not required).
 
 ## Cross-layer use
 

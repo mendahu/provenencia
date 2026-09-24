@@ -18,6 +18,16 @@ struct PVContextMenuState: Equatable {
     }
 }
 
+/// Action-menu defaults. `PVSelect` opts out of key-stealing and mouse-up
+/// dismiss so the field keeps closed-field keys and the opening click does
+/// not immediately close the menu.
+enum PVContextMenuInteraction {
+    static let defaultStealKeys = true
+    static let defaultDismissOnMouseUp = true
+    /// Select opts in so click-away can see the real panel window (ComboBox).
+    static let defaultDismissOnClickAway = false
+}
+
 /// Optional ↑/↓/⏎ navigation (and type-to-select) for an open overlay menu.
 struct PVContextMenuKeyboard: Equatable {
     var itemCount: Int
@@ -68,6 +78,7 @@ enum PVContextMenuPlacement {
 struct PVContextMenuPanel<Content: View>: View {
     var title: LocalizedStringResource?
     var width: CGFloat = 180
+    var maxHeight: CGFloat?
     var accessibilityIdentifier: String?
     @ViewBuilder var content: () -> Content
 
@@ -87,6 +98,7 @@ struct PVContextMenuPanel<Content: View>: View {
         }
         .padding(PVSpacing.space2)
         .frame(width: width, alignment: .leading)
+        .frame(maxHeight: maxHeight, alignment: .top)
         .background(PVColor.surfaceCard)
         .overlay(
             RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
@@ -110,6 +122,10 @@ struct PVContextMenuItem: View {
     var index: Int?
     var isEnabled: Bool = true
     var isSelected: Bool = false
+    /// When true, a leading checkmark gutter marks the committed row. Fill
+    /// follows keyboard/hover highlight only — the two must not look equally
+    /// selected (`PVSelect`).
+    var showsSelectionMark: Bool = false
     var accessibilityIdentifier: String?
     var action: () -> Void
 
@@ -118,6 +134,7 @@ struct PVContextMenuItem: View {
         index: Int? = nil,
         isEnabled: Bool = true,
         isSelected: Bool = false,
+        showsSelectionMark: Bool = false,
         accessibilityIdentifier: String? = nil,
         action: @escaping () -> Void = {}
     ) {
@@ -126,6 +143,7 @@ struct PVContextMenuItem: View {
         self.index = index
         self.isEnabled = isEnabled
         self.isSelected = isSelected
+        self.showsSelectionMark = showsSelectionMark
         self.accessibilityIdentifier = accessibilityIdentifier
         self.action = action
     }
@@ -136,6 +154,7 @@ struct PVContextMenuItem: View {
         index: Int? = nil,
         isEnabled: Bool = true,
         isSelected: Bool = false,
+        showsSelectionMark: Bool = false,
         accessibilityIdentifier: String? = nil,
         action: @escaping () -> Void = {}
     ) {
@@ -144,6 +163,7 @@ struct PVContextMenuItem: View {
         self.index = index
         self.isEnabled = isEnabled
         self.isSelected = isSelected
+        self.showsSelectionMark = showsSelectionMark
         self.accessibilityIdentifier = accessibilityIdentifier
         self.action = action
     }
@@ -154,7 +174,11 @@ struct PVContextMenuItem: View {
     }
 
     var body: some View {
-        let highlighted = isSelected || isKeyboardActive
+        let chrome = PVSelectRowChrome.appearance(
+            committed: isSelected,
+            highlighted: isKeyboardActive
+        )
+        let fillHighlight = showsSelectionMark ? chrome.fillsHighlight : (isSelected || isKeyboardActive)
         // Register during body evaluation (not only onAppear) so Enter always
         // hits the live registry after open/arrow-key re-renders.
         if isEnabled, let index {
@@ -166,26 +190,35 @@ struct PVContextMenuItem: View {
                     dismiss()
                     action()
                 } label: {
-                    label(foreground: PVColor.textPrimary)
+                    label(foreground: PVColor.textPrimary, showsCheck: showsSelectionMark && chrome.showsCheckmark)
                 }
-                .buttonStyle(PVContextMenuItemButtonStyle(isSelected: highlighted))
+                .buttonStyle(PVContextMenuItemButtonStyle(isSelected: fillHighlight))
                 .accessibilityAddIdentifiers(accessibilityIdentifier)
-                .accessibilityAddTraits(highlighted ? .isSelected : [])
+                .accessibilityAddTraits(chrome.isSelectedTrait ? .isSelected : [])
             } else {
-                label(foreground: PVColor.textFaint)
+                label(foreground: PVColor.textFaint, showsCheck: showsSelectionMark && chrome.showsCheckmark)
                     .accessibilityAddIdentifiers(accessibilityIdentifier)
                     .accessibilityRemoveTraits(.isButton)
             }
         }
     }
 
-    private func label(foreground: Color) -> some View {
-        Group {
-            if let titleResource {
-                Text(titleResource)
-            } else if let titleString {
-                Text(titleString)
+    private func label(foreground: Color, showsCheck: Bool) -> some View {
+        HStack(spacing: PVSpacing.space3) {
+            if showsSelectionMark {
+                PVIcon(.check, size: 13)
+                    .foregroundStyle(PVColor.accent)
+                    .opacity(showsCheck ? 1 : 0)
+                    .frame(width: 22)
             }
+            Group {
+                if let titleResource {
+                    Text(titleResource)
+                } else if let titleString {
+                    Text(verbatim: titleString)
+                }
+            }
+            .lineLimit(1)
         }
         .font(PVFont.body(size: PVTypeScale.bodySmall))
         .foregroundStyle(foreground)
@@ -220,9 +253,19 @@ extension View {
     func pvContextMenu<Content: View>(
         _ state: Binding<PVContextMenuState>,
         keyboard: Binding<PVContextMenuKeyboard>? = nil,
+        stealKeys: Bool = PVContextMenuInteraction.defaultStealKeys,
+        dismissOnMouseUp: Bool = PVContextMenuInteraction.defaultDismissOnMouseUp,
+        dismissOnClickAway: Bool = PVContextMenuInteraction.defaultDismissOnClickAway,
         @ViewBuilder content: @escaping () -> Content
     ) -> some View {
-        modifier(PVContextMenuPresenter(state: state, keyboard: keyboard, content: content))
+        modifier(PVContextMenuPresenter(
+            state: state,
+            keyboard: keyboard,
+            stealKeys: stealKeys,
+            dismissOnMouseUp: dismissOnMouseUp,
+            dismissOnClickAway: dismissOnClickAway,
+            content: content
+        ))
     }
 }
 
@@ -277,6 +320,9 @@ extension EnvironmentValues {
 private struct PVContextMenuPresenter<MenuContent: View>: ViewModifier {
     @Binding var state: PVContextMenuState
     var keyboard: Binding<PVContextMenuKeyboard>?
+    var stealKeys: Bool = true
+    var dismissOnMouseUp: Bool = true
+    var dismissOnClickAway: Bool = false
     @ViewBuilder var content: () -> MenuContent
     @State private var dismissMonitor: Any?
     @State private var actionRegistry = PVContextMenuActionRegistry()
@@ -287,6 +333,7 @@ private struct PVContextMenuPresenter<MenuContent: View>: ViewModifier {
                 PVContextMenuPopupWindow(
                     isPresented: state.isPresented,
                     origin: state.origin,
+                    dismissOnClickAway: dismissOnClickAway,
                     onDismiss: { state.dismiss() },
                     content: menuRoot
                 )
@@ -330,9 +377,17 @@ private struct PVContextMenuPresenter<MenuContent: View>: ViewModifier {
         removeDismissMonitor()
         // Dismiss on mouse*Up* (not Down): Button actions fire on mouseUp, and
         // tearing the panel down on mouseDown prevents the item from running.
-        dismissMonitor = NSEvent.addLocalMonitorForEvents(
-            matching: [.leftMouseUp, .rightMouseDown, .otherMouseDown, .keyDown]
-        ) { event in
+        // Select sets `dismissOnMouseUp` false so the opening click's mouse-up
+        // does not close the menu, and `stealKeys` false so closed-field keys
+        // stay on the trigger.
+        var matching: NSEvent.EventTypeMask = [.rightMouseDown, .otherMouseDown]
+        if dismissOnMouseUp {
+            matching.insert(.leftMouseUp)
+        }
+        if stealKeys {
+            matching.insert(.keyDown)
+        }
+        dismissMonitor = NSEvent.addLocalMonitorForEvents(matching: matching) { event in
             if event.type == .keyDown {
                 return handleKeyDown(event)
             }
@@ -363,6 +418,18 @@ private struct PVContextMenuPresenter<MenuContent: View>: ViewModifier {
                 nav.activeIndex = PVFloatingMenuSelection.moveIndex(
                     from: nav.activeIndex, delta: -1, count: nav.itemCount
                 )
+                keyboard?.wrappedValue = nav
+            }
+            return nil
+        case 115: // Home
+            DispatchQueue.main.async {
+                nav.activeIndex = nav.itemCount > 0 ? 0 : -1
+                keyboard?.wrappedValue = nav
+            }
+            return nil
+        case 119: // End
+            DispatchQueue.main.async {
+                nav.activeIndex = nav.itemCount > 0 ? nav.itemCount - 1 : -1
                 keyboard?.wrappedValue = nav
             }
             return nil
@@ -408,6 +475,7 @@ private struct PVContextMenuPresenter<MenuContent: View>: ViewModifier {
 private struct PVContextMenuPopupWindow<Content: View>: NSViewRepresentable {
     var isPresented: Bool
     var origin: CGPoint
+    var dismissOnClickAway: Bool = false
     var onDismiss: () -> Void
     var content: Content
 
@@ -421,6 +489,7 @@ private struct PVContextMenuPopupWindow<Content: View>: NSViewRepresentable {
         let coordinator = context.coordinator
         coordinator.onDismiss = onDismiss
         coordinator.origin = origin
+        coordinator.dismissOnClickAway = dismissOnClickAway
         coordinator.wantsPresented = isPresented
         coordinator.setContent(content)
         DispatchQueue.main.async {
@@ -441,12 +510,14 @@ private struct PVContextMenuPopupWindow<Content: View>: NSViewRepresentable {
         weak var anchor: NSView?
         var onDismiss: () -> Void = {}
         var origin: CGPoint = .zero
+        var dismissOnClickAway = false
         var wantsPresented = false
 
         private var panel: PVContextMenuNSPanel?
         private var hosting: PVContextMenuHostingView?
         private var content: AnyView = AnyView(EmptyView())
         private var observers: [NSObjectProtocol] = []
+        nonisolated(unsafe) private var clickAwayMonitor: Any?
         private var shownSize: CGSize?
 
         func setContent(_ content: some View) {
@@ -537,6 +608,14 @@ private struct PVContextMenuPopupWindow<Content: View>: NSViewRepresentable {
 
         private func startWatching(parent: NSWindow) {
             stopWatching()
+            if dismissOnClickAway {
+                clickAwayMonitor = NSEvent.addLocalMonitorForEvents(
+                    matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]
+                ) { [weak self] event in
+                    self?.handleClickAway(event)
+                    return event
+                }
+            }
             let center = NotificationCenter.default
             for name in [NSWindow.didMoveNotification, NSWindow.didResizeNotification] {
                 observers.append(center.addObserver(forName: name, object: parent, queue: .main) { [weak self] _ in
@@ -558,7 +637,23 @@ private struct PVContextMenuPopupWindow<Content: View>: NSViewRepresentable {
             }
         }
 
+        /// Same rule as `PVComboBox`: a down in the panel or on the trigger
+        /// is not "away." Everything else dismisses, using the real windows
+        /// instead of a guessed screen rect.
+        private func handleClickAway(_ event: NSEvent) {
+            if let panel, event.window === panel { return }
+            if let anchor, event.window === anchor.window {
+                let point = anchor.convert(event.locationInWindow, from: nil)
+                if anchor.bounds.contains(point) { return }
+            }
+            dismissFromAppKit()
+        }
+
         private func stopWatching() {
+            if let clickAwayMonitor {
+                NSEvent.removeMonitor(clickAwayMonitor)
+                self.clickAwayMonitor = nil
+            }
             observers.forEach(NotificationCenter.default.removeObserver)
             observers.removeAll()
         }

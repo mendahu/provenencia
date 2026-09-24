@@ -132,22 +132,22 @@ DDL does not CHECK `kind` / `qualifier` enums so vocabulary can evolve in applic
 
 ## 3.1 Component precision
 
-On each side (`start_*` / `end_*`), components cascade:
+On each side (`start_*` / `end_*`), any subset of civil components may be set. Sources are often fragmentary — “May”, “the 14th”, a clock time with no year — and the model must store what the evidence actually asserts.
 
 ```text
-year → month → day → hour → minute → second → millisecond
+year, month, day, hour, minute, second, millisecond
 ```
 
 Rules:
 
-1. A finer field must not be set unless all coarser fields on that side are set (no gaps).
-2. You may stop at any level: year only; year+month; full day; day+hour; and so on.
-3. Absent finer fields mean **unknown / not asserted**, not zero or midnight.
-4. If any civil component is set on a side, `year` is required on that side (hour-without-year is invalid).
+1. A DateValue is valid when **`phrase` is set** or **at least one** of year / month / day / hour / minute / second is set. Empty structure with no phrase is invalid. Timezone alone is not enough.
+2. **Gaps are allowed.** Day without month, month without year, hour without a civil date are all legal. Do not invent the missing fields.
+3. Absent fields mean **unknown / not asserted**, not zero or midnight.
+4. Present fields must be in range (month 1–12, day 1–31, hour 0–23, and so on).
 5. `point` uses only the start side (`end_*` including `end_tz` must be empty).
-6. `range` requires both sides (each with at least a year, unless a future rule allows phrase-only bounds); start ≤ end at the precision asserted.
+6. `range` requires both sides, each with at least one civil component; start ≤ end when shared fields can be compared.
 
-Timezone labels (`start_tz` / `end_tz`) are independent of the cascade: optional free text. Empty means unspecified. They are not parsed into UTC offsets at the storage layer. `point` uses `start_tz` only; `range` may set either or both.
+Timezone labels (`start_tz` / `end_tz`) are independent of the components: optional free text. Empty means unspecified. They are not parsed into UTC offsets at the storage layer. `point` uses `start_tz` only; `range` may set either or both.
 
 ## 3.2 `phrase`
 
@@ -190,7 +190,7 @@ Later layers reuse the same DateValue model for interpreted or concluded dates w
 1. `date_values` is shared cross-layer infrastructure, not part of the Source layer.
 2. Every DateValue is **one** genealogical date; `range` is a bounded uncertainty window for that date, not an event duration.
 3. Genealogical dates are not reduced to SQL `DATE` / `DATETIME` values.
-4. Precision is carried by optional cascading components, not by proliferating kinds (`point` vs `range` only).
+4. Precision is carried by whichever optional components the evidence asserts (gaps allowed), not by proliferating kinds (`point` vs `range` only).
 5. Approximation on a point is `qualifier` (`ABT` / `BEF` / `AFT` / empty); **between** is `kind = range`.
 6. Original textual wording for a domain attachment may be retained on the referencing object (`value_text`, etc.); `phrase` is optional wording on the DateValue itself.
 7. The DateValue persistence UUID does not imply genealogical entity identity.

@@ -6,9 +6,7 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 
 ## Open
 
-| Step | Brief | Feeds | Notes |
-| --- | --- | --- | --- |
-| S7-D10 | [`S7-D10-pvselect-native-parity.md`](S7-D10-pvselect-native-parity.md) · [D10B](S7-D10B-select-view-remount.md) | PR S7-15 | Select kit page must document the full native-popup contract on-canvas; remount DateValue / table-filter cousins; ComboBox and action menus stay |
+None. Remaining spike work is dogfood close (**S7-11**).
 
 ## Descoped
 
@@ -28,6 +26,7 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 | S7-D9 | [`archive/S7-D9-locator-region-chrome.md`](archive/S7-D9-locator-region-chrome.md) | PR S7-07 | Default artifact + Set Page + region tools + summary list |
 | S7-D5 | [`archive/S7-D5-name-value-editor.md`](archive/S7-D5-name-value-editor.md) | PR S7-02b | NameValue modal — late fill-in after thin composer; not on path to S7-05 |
 | S7-D7 | [`archive/S7-D7-card-component.md`](archive/S7-D7-card-component.md) · [D7B](archive/S7-D7B-card-view-remount.md) | PR S7-13 | Card kit page from shipped `PVCard`; child-board remount slip; web header/footer not ported |
+| S7-D10 | [`archive/S7-D10-pvselect-native-parity.md`](archive/S7-D10-pvselect-native-parity.md) · [D10B](archive/S7-D10B-select-view-remount.md) | PR S7-15 | Native-popup contract on `PVSelect`; remount DateValue / table-filter cousins; ComboBox and action menus stay |
 
 ## How to use
 

@@ -1,7 +1,7 @@
 import Foundation
 
 /// Editable draft of a genealogical DateValue for the shared Structure/Edit date modal.
-/// Validation mirrors `core/database/datevalues` cascade rules.
+/// Validation mirrors `core/database/datevalues` (gaps allowed; at least one civil field or a phrase).
 struct DateValueDraft: Equatable, Sendable {
     var kind: String
     var qualifier: String
@@ -84,100 +84,11 @@ struct DateValueDraft: Equatable, Sendable {
     /// Day is set on the end cascade — time fields may be revealed.
     var hasFullEndDay: Bool { endYear != nil && endMonth != nil && endDay != nil }
 
-    /// Clears finer start components when a coarser one is cleared or changed.
-    mutating func applyStartCascade() {
-        if startYear == nil {
-            startMonth = nil
-            startDay = nil
-            startHour = nil
-            startMinute = nil
-            startSecond = nil
-            startMillisecond = nil
-            startTZ = ""
-            showStartTime = false
-            return
-        }
-        if startMonth == nil {
-            startDay = nil
-            startHour = nil
-            startMinute = nil
-            startSecond = nil
-            startMillisecond = nil
-            startTZ = ""
-            showStartTime = false
-            return
-        }
-        if startDay == nil {
-            startHour = nil
-            startMinute = nil
-            startSecond = nil
-            startMillisecond = nil
-            startTZ = ""
-            showStartTime = false
-            return
-        }
-        if startHour == nil {
-            startMinute = nil
-            startSecond = nil
-            startMillisecond = nil
-            return
-        }
-        if startMinute == nil {
-            startSecond = nil
-            startMillisecond = nil
-            return
-        }
-        if startSecond == nil {
-            startMillisecond = nil
-        }
-    }
+    /// Bindings still call this after each edit; components are independent
+    /// so there is nothing to wipe.
+    mutating func applyStartCascade() {}
 
-    mutating func applyEndCascade() {
-        if endYear == nil {
-            endMonth = nil
-            endDay = nil
-            endHour = nil
-            endMinute = nil
-            endSecond = nil
-            endMillisecond = nil
-            endTZ = ""
-            showEndTime = false
-            return
-        }
-        if endMonth == nil {
-            endDay = nil
-            endHour = nil
-            endMinute = nil
-            endSecond = nil
-            endMillisecond = nil
-            endTZ = ""
-            showEndTime = false
-            return
-        }
-        if endDay == nil {
-            endHour = nil
-            endMinute = nil
-            endSecond = nil
-            endMillisecond = nil
-            endTZ = ""
-            showEndTime = false
-            return
-        }
-        if endHour == nil {
-            endMinute = nil
-            endSecond = nil
-            endMillisecond = nil
-            return
-        }
-        if endMinute == nil {
-            endSecond = nil
-            endMillisecond = nil
-            return
-        }
-        if endSecond == nil {
-            endMillisecond = nil
-        }
-    }
+    mutating func applyEndCascade() {}
 
     /// Switching to range clears qualifier (Between is the hedge). Switching to point clears end_*.
     mutating func setKind(_ newKind: String) {
@@ -265,15 +176,15 @@ struct DateValueDraft: Equatable, Sendable {
         case "point":
             guard Self.pointQualifierOK(q) else { return false }
             if !endSide.empty || !endTZTrim.isEmpty { return false }
-            if startSide.empty {
-                // Phrase-only point: no civil components; timezone alone is not enough.
-                return !p.isEmpty && startTZTrim.isEmpty
+            if !startSide.hasCivil {
+                // Phrase-only point: no year/month/day/time; timezone alone is not enough.
+                return !p.isEmpty && startTZTrim.isEmpty && startMillisecond == nil
             }
-            return Self.validateCascade(startSide)
+            return Self.validateComponentRanges(startSide)
         case "range":
             guard q.isEmpty else { return false }
-            guard Self.validateCascade(startSide) else { return false }
-            guard Self.validateCascade(endSide) else { return false }
+            guard Self.validateComponentRanges(startSide) else { return false }
+            guard Self.validateComponentRanges(endSide) else { return false }
             return Self.sideLessOrEqual(startSide, endSide)
         default:
             return false
@@ -343,6 +254,11 @@ struct DateValueDraft: Equatable, Sendable {
             year == nil && month == nil && day == nil
                 && hour == nil && minute == nil && second == nil && millisecond == nil
         }
+
+        var hasCivil: Bool {
+            year != nil || month != nil || day != nil
+                || hour != nil || minute != nil || second != nil
+        }
     }
 
     private static func pointQualifierOK(_ qual: String) -> Bool {
@@ -352,17 +268,8 @@ struct DateValueDraft: Equatable, Sendable {
         }
     }
 
-    private static func validateCascade(_ s: Side) -> Bool {
-        let levels: [Int?] = [s.year, s.month, s.day, s.hour, s.minute, s.second, s.millisecond]
-        guard levels[0] != nil else { return false }
-        var seenNil = false
-        for p in levels {
-            if p == nil {
-                seenNil = true
-                continue
-            }
-            if seenNil { return false }
-        }
+    private static func validateComponentRanges(_ s: Side) -> Bool {
+        guard s.hasCivil else { return false }
         if let m = s.month, !(1...12).contains(m) { return false }
         if let d = s.day, !(1...31).contains(d) { return false }
         if let y = s.year, !(1...9999).contains(y) { return false }

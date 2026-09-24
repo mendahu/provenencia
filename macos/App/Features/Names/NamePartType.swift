@@ -30,6 +30,13 @@ enum NamePartType: String, CaseIterable, Sendable {
         return key.isEmpty || NamePartType(rawValue: key) != nil
     }
 
+    static var selectOptions: [PVSelectOption] {
+        [PVSelectOption(value: "", label: String(localized: L10n.NameValue.partTypeNone))]
+            + NamePartType.allCases.map {
+                PVSelectOption(value: $0.rawValue, label: String(localized: $0.label))
+            }
+    }
+
     static func label(forRaw raw: String) -> LocalizedStringResource {
         let key = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         if key.isEmpty { return L10n.NameValue.partTypeNone }

@@ -179,6 +179,12 @@
 		D0E1F203948576A1B2C3D4E5 /* WorkspaceSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E1F203948576A1B2C3D4E3 /* WorkspaceSection.swift */; };
 		E1F203948576A1B2C3D4E5F6 /* WorkspaceNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F203948576A1B2C3D4E5F4 /* WorkspaceNavigation.swift */; };
 		504C4A2D17A9AC30A47D4E37 /* PVSelect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28FB7FB1DE947EE962F4BA83 /* PVSelect.swift */; };
+		AA0000000000000000000601 /* PVSelectSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000600 /* PVSelectSession.swift */; };
+		AA0000000000000000000603 /* PVSelectPlacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000602 /* PVSelectPlacement.swift */; };
+		AA0000000000000000000607 /* PVSelectAccessibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000606 /* PVSelectAccessibility.swift */; };
+		AA0000000000000000000611 /* PVSelectSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000610 /* PVSelectSessionTests.swift */; };
+		AA0000000000000000000613 /* PVSelectPlacementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000612 /* PVSelectPlacementTests.swift */; };
+		AA0000000000000000000617 /* DateValueSelectTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000616 /* DateValueSelectTests.swift */; };
 		537CBAF612C54F4F04ADA683 /* PVSpacing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BEB8D3B3D1A6C08B3733B13 /* PVSpacing.swift */; };
 		563FA9B6FA344585CE32B2A7 /* PVIconButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68425DFE8D1974D7A4AC5BF8 /* PVIconButton.swift */; };
 		56FF85A0EB2688B0B226A023 /* PVTypography.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2789221068BF64015C43CA5 /* PVTypography.swift */; };
@@ -361,6 +367,12 @@
 		16D4D3531F81FABFCDDE4F84 /* PVField.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVField.swift; sourceTree = "<group>"; };
 		1B183C69AA74C2C22006FC05 /* Fonts */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder; name = Fonts; path = Fonts; sourceTree = "<group>"; };
 		28FB7FB1DE947EE962F4BA83 /* PVSelect.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSelect.swift; sourceTree = "<group>"; };
+		AA0000000000000000000600 /* PVSelectSession.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSelectSession.swift; sourceTree = "<group>"; };
+		AA0000000000000000000602 /* PVSelectPlacement.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSelectPlacement.swift; sourceTree = "<group>"; };
+		AA0000000000000000000606 /* PVSelectAccessibility.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSelectAccessibility.swift; sourceTree = "<group>"; };
+		AA0000000000000000000610 /* PVSelectSessionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSelectSessionTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000612 /* PVSelectPlacementTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSelectPlacementTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000616 /* DateValueSelectTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueSelectTests.swift; sourceTree = "<group>"; };
 		2B7FCE6BAF87CC79B6907492 /* PVRadius.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVRadius.swift; sourceTree = "<group>"; };
 		3555554CD714B1FD24C2DB2F /* PVEmptyState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVEmptyState.swift; sourceTree = "<group>"; };
 		AA00000000000000000000C7 /* PVConfirm.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVConfirm.swift; sourceTree = "<group>"; };
@@ -947,6 +959,9 @@
 				B567080CA23230E18488F894 /* TrafficLightsTests.swift */,
 				8291342170CC4CB42EFA814C /* FieldSlugTests.swift */,
 				AA00000000000000000000C5 /* PVTableTests.swift */,
+				AA0000000000000000000610 /* PVSelectSessionTests.swift */,
+				AA0000000000000000000612 /* PVSelectPlacementTests.swift */,
+				AA0000000000000000000616 /* DateValueSelectTests.swift */,
 				4F0CB87F6EC5759DF8D0A7AF /* SourceFieldsModelTests.swift */,
 				A70500000000000000000004 /* SubjectFieldsModelTests.swift */,
 				AA0000000000000000000206 /* SourceTypesModelTests.swift */,
@@ -1140,6 +1155,9 @@
 			isa = PBXGroup;
 			children = (
 				28FB7FB1DE947EE962F4BA83 /* PVSelect.swift */,
+				AA0000000000000000000600 /* PVSelectSession.swift */,
+				AA0000000000000000000602 /* PVSelectPlacement.swift */,
+				AA0000000000000000000606 /* PVSelectAccessibility.swift */,
 			);
 			name = Select;
 			path = Select;
@@ -1477,6 +1495,9 @@
 				AA0000000000000000000377 /* PVCard.swift in Sources */,
 				AA0000000000000000000379 /* PVSectionHeader.swift in Sources */,
 				504C4A2D17A9AC30A47D4E37 /* PVSelect.swift in Sources */,
+				AA0000000000000000000601 /* PVSelectSession.swift in Sources */,
+				AA0000000000000000000603 /* PVSelectPlacement.swift in Sources */,
+				AA0000000000000000000607 /* PVSelectAccessibility.swift in Sources */,
 				854A784AE802C0EF7A484971 /* PVToast.swift in Sources */,
 				07D60E0FE9704E4723AE18DD /* PVLogoMark.swift in Sources */,
 				391CDC6A5D45C6C9E15EC251 /* SignOutCoordinator.swift in Sources */,
@@ -1651,6 +1672,9 @@
 				8B20E11A26E9E10EF915519C /* TrafficLightsTests.swift in Sources */,
 				E63D8CEC3F6AC5C7E90EBBFE /* FieldSlugTests.swift in Sources */,
 				AA00000000000000000000C4 /* PVTableTests.swift in Sources */,
+				AA0000000000000000000611 /* PVSelectSessionTests.swift in Sources */,
+				AA0000000000000000000613 /* PVSelectPlacementTests.swift in Sources */,
+				AA0000000000000000000617 /* DateValueSelectTests.swift in Sources */,
 				CE7E43F00CA602E2794E0ADA /* SourceFieldsModelTests.swift in Sources */,
 				A70500000000000000000008 /* SubjectFieldsModelTests.swift in Sources */,
 				AA0000000000000000000216 /* SourceTypesModelTests.swift in Sources */,

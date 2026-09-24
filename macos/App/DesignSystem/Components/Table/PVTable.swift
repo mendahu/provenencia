@@ -66,6 +66,21 @@ struct PVTableColumnFilter {
         self.options = options
         self.onChange = onChange
     }
+
+    func selectOptions() -> [PVSelectOption] {
+        options.map { option in
+            let label: String
+            if let count = option.count {
+                label = L10n.DesignSystem.tableFilterOptionCount(
+                    label: String(localized: option.label),
+                    count: count
+                )
+            } else {
+                label = String(localized: option.label)
+            }
+            return PVSelectOption(value: option.value, label: label)
+        }
+    }
 }
 
 /// One column. `width` is the single source of truth for that column's width
@@ -267,30 +282,18 @@ struct PVTable<Row: Identifiable, Content: View>: View {
     }
 
     private func filterMenu(_ column: PVTableColumn<Row>, _ filter: PVTableColumnFilter) -> some View {
-        Menu {
-            Picker(String(localized: column.title), selection: filterBinding(filter)) {
-                ForEach(filter.options) { option in
-                    if let count = option.count {
-                        Text(L10n.DesignSystem.tableFilterOptionCount(label: String(localized: option.label), count: count))
-                            .tag(option.value)
-                    } else {
-                        Text(option.label).tag(option.value)
-                    }
-                }
-            }
-            .pickerStyle(.inline)
-            .labelsHidden()
-        } label: {
-            PVIcon(filter.active ? .filter : .chevronDown, size: 11)
-                .foregroundStyle(filter.active ? PVColor.accent : PVColor.textFaint)
-                .frame(width: 22, height: 22)
-                .background(filter.active ? PVColor.surfaceSelected : Color.clear)
-                .clipShape(RoundedRectangle(cornerRadius: PVRadius.xs, style: .continuous))
-        }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
+        PVSelect(
+            selection: filterBinding(filter),
+            options: filter.selectOptions(),
+            icon: filter.active ? .filter : .chevronDown,
+            iconOnly: true,
+            menuWidth: 200,
+            fillsWidth: false,
+            accessibilitySpokenLabel: L10n.DesignSystem.tableFilterColumn(
+                column: String(localized: column.title)
+            )
+        )
         .fixedSize()
-        .accessibilityLabel(Text(L10n.DesignSystem.tableFilterColumn(column: String(localized: column.title))))
     }
 
     private func filterBinding(_ filter: PVTableColumnFilter) -> Binding<String> {

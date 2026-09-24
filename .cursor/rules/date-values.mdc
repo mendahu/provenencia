@@ -9,5 +9,5 @@ alwaysApply: false
 Follow the project skill `.cursor/skills/add-date-value/SKILL.md`. Design notes: `docs/structured-date-model.md`.
 
 - Use `datevalues.Insert` / `Lookup`; kinds `point` / `range`; point qualifiers `ABT` / `BEF` / `AFT`.
-- Cascading civil precision; free-text `start_tz` / `end_tz`; empty = unspecified (not UTC).
+- Optional civil components (gaps allowed); at least one of year/month/day/hour/minute/second or a phrase; free-text `start_tz` / `end_tz`; empty = unspecified (not UTC).
 - Schema changes go through catalog migrations; do not invent a parallel date store.

@@ -3,10 +3,12 @@
 **Kind:** Claude Design board / design-system component (kit page + view remount)  
 **Spike:** Provenencia Spike 7  
 **Implements later as:** PR **S7-15**  
-**Depends on:** Shipped macOS [`PVSelect`](../../../../macos/App/DesignSystem/Components/Select/PVSelect.swift) (already in the app kit — this brief **documents the native-popup contract** and remounts cousins; not a greenfield invent)  
-**Related:** [`S7-D7`](archive/S7-D7-card-component.md) remount pattern. Type-to-filter fields stay [`PVComboBox`](../../../../macos/App/DesignSystem/Components/ComboBox/PVComboBox.swift). Action menus stay `PVContextMenu`. Segmented `PVChip` groups are not Select.  
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
-**Skill:** [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md) — **Extend** `PVSelect`; compose it at call sites. Child remount slip: [`S7-D10B-select-view-remount.md`](S7-D10B-select-view-remount.md)
+**Depends on:** Shipped macOS [`PVSelect`](../../../../../macos/App/DesignSystem/Components/Select/PVSelect.swift) (already in the app kit — this brief **documents the native-popup contract** and remounts cousins; not a greenfield invent)  
+**Related:** [`S7-D7`](S7-D7-card-component.md) remount pattern. Type-to-filter fields stay [`PVComboBox`](../../../../../macos/App/DesignSystem/Components/ComboBox/PVComboBox.swift). Action menus stay `PVContextMenu`. Segmented `PVChip` groups are not Select.  
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)  
+**Skill:** [`add-ui-component`](../../../../../.cursor/skills/add-ui-component/SKILL.md) — **Extend** `PVSelect`; compose it at call sites. Child remount slip: [`S7-D10B-select-view-remount.md`](S7-D10B-select-view-remount.md)
+
+> **Shipped delta (S7-15):** `PVSelect` implements the native popup contract via `PVSelectSession` (closed-field keys, snapshot Escape, press-drag-release). DateValue calendar/month and `PVTable.filterMenu` remount on Select. VoiceOver stays on the trigger (adjustable + expanded custom content). SwiftUI cannot claim AppKit's popup-button role — documented in `DesignSystem/README.md`. ComboBox and action menus were **not** rewritten.
 
 Paste this document into Claude Design as the requirements for a **Select** kit page on the **main** design system only. Child view boards cannot see this file — remount them with **S7-D10B**, one board at a time.
 
@@ -38,7 +40,7 @@ These are the Claude Design **views** that must remount on Select once the kit p
 | **Source fields** (S2-02) | Locate **Source fields** in the Claude Design project | Already `PVSelect` | Create-field data-type dropdown |
 | **Sources list** (S2-04 / S5-D2) | Locate **Sources list** in the Claude Design project | Already `PVSelect` (chip) | Type filter + sort chips |
 | **NameValue** (S7-D5) | Locate the **NameValue** board | Already `PVSelect` | Part-type dropdown on each structured part |
-| **DateValue** (S2 template) | [`date-value-editor.dc.html`](../../../archive/spike-2/design/templates/date-value-editor.dc.html) / locate the DateValue board | **S7-15** migrate | Calendar + month — today SwiftUI `Picker` |
+| **DateValue** (S2 template) | [`date-value-editor.dc.html`](../../../../archive/spike-2/design/templates/date-value-editor.dc.html) / locate the DateValue board | **S7-15** migrate | Calendar + month — today SwiftUI `Picker` |
 | **Citation composer** (S7-D4) | [Citation composer](https://claude.ai/design/p/8b120853-4ba4-4c0d-8492-75e76b9f9b7a?via=share) | Hosts DateValue / NameValue | Confirm those nested editors use Select, not a local popup |
 | **Source page** (S2-23) | [Source detail](https://claude.ai/design/p/de1e1ccc-aa35-455f-9b9c-3ae269593dc7?via=share) | Hosts DateValue | Same — DateValue month/calendar become Select |
 | **Subject fields / Source fields tables** | [Subject fields](https://claude.ai/design/p/6dceb4b9-d08a-40ad-a46f-430651ea9b3c?via=share) + Source fields | Kit-internal | `PVTable` column filter is `Menu`+`Picker` — remount on Select (icon-only chip) even if no live filter is wired yet |
@@ -60,12 +62,12 @@ If a child board still cannot see Select after refetch, treat that as a stale-bu
 
 | View | File | Chrome today |
 | --- | --- | --- |
-| Onboarding | [`OnboardingOpenPicker`](../../../../macos/App/Features/Onboarding/OnboardingOpenPicker.swift) | `PVSelect` field — existing project |
-| Source fields | [`SourceFieldsDetailPane`](../../../../macos/App/Features/SourceFields/SourceFieldsDetailPane.swift) | `PVSelect` field — data type (create only) |
-| Sources list | [`SourcesListView`](../../../../macos/App/Features/Sources/SourcesListView.swift) | `PVSelect` chip — type filter + sort |
-| NameValue | [`NameValueEditorForm`](../../../../macos/App/Features/Names/NameValueEditorForm.swift) | `PVSelect` field — part type |
-| DateValue | [`DateValueEditorForm`](../../../../macos/App/Features/Dates/DateValueEditorForm.swift) | SwiftUI `Picker` — calendar (~255) and month (~307) |
-| Table kit | [`PVTable`](../../../../macos/App/DesignSystem/Components/Table/PVTable.swift) `filterMenu` | `Menu` + inline `Picker` — icon-only chevron/filter |
+| Onboarding | [`OnboardingOpenPicker`](../../../../../macos/App/Features/Onboarding/OnboardingOpenPicker.swift) | `PVSelect` field — existing project |
+| Source fields | [`SourceFieldsDetailPane`](../../../../../macos/App/Features/SourceFields/SourceFieldsDetailPane.swift) | `PVSelect` field — data type (create only) |
+| Sources list | [`SourcesListView`](../../../../../macos/App/Features/Sources/SourcesListView.swift) | `PVSelect` chip — type filter + sort |
+| NameValue | [`NameValueEditorForm`](../../../../../macos/App/Features/Names/NameValueEditorForm.swift) | `PVSelect` field — part type |
+| DateValue | [`DateValueEditorForm`](../../../../../macos/App/Features/Dates/DateValueEditorForm.swift) | `PVSelect` field — calendar and month |
+| Table kit | [`PVTable`](../../../../../macos/App/DesignSystem/Components/Table/PVTable.swift) `filterMenu` | Icon-only `PVSelect` chip |
 
 **Not Select** (do not remount):
 
@@ -153,5 +155,5 @@ Claude Design: put this on the **Select** kit page as documented product behavio
 1. Publish Select on the main design system **with the §3 contract on the kit page**. Clear cache and rebundle that system (SL-7). A page that only shows field/chip chrome is not done.
 2. Paste [`S7-D10B`](S7-D10B-select-view-remount.md) into **one** §2 board at a time. Each board clears its cache, refetches, remounts Select, and deletes local popups (SL-6).
 3. Archive this brief under `archive/` when the board is agreed.
-4. Record in [`../completed.md`](../completed.md).
+4. Record in [`../../completed.md`](../../completed.md).
 5. Implement **S7-15** against the **kit-page contract** (then keep `DesignSystem/README.md` in sync).

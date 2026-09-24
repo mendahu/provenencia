@@ -10,10 +10,7 @@ struct NameValueEditorForm: View {
     @State private var partValueToFocus: UUID?
 
     private var typeOptions: [PVSelectOption] {
-        [PVSelectOption(value: "", label: String(localized: L10n.NameValue.partTypeNone))]
-            + NamePartType.allCases.map {
-                PVSelectOption(value: $0.rawValue, label: String(localized: $0.label))
-            }
+        NamePartType.selectOptions
     }
 
     var body: some View {

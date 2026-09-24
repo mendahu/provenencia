@@ -47,6 +47,39 @@ enum L10n {
             return String(format: format, locale: .current, column)
         }
 
+        static let selectState = LocalizedStringResource(
+            "designSystem.select.state",
+            defaultValue: "State",
+            comment: "VoiceOver custom-content key for whether a PVSelect menu is open"
+        )
+
+        static let selectExpanded = LocalizedStringResource(
+            "designSystem.select.expanded",
+            defaultValue: "Expanded",
+            comment: "VoiceOver value when a PVSelect menu is open"
+        )
+
+        static let selectCollapsed = LocalizedStringResource(
+            "designSystem.select.collapsed",
+            defaultValue: "Collapsed",
+            comment: "VoiceOver value when a PVSelect menu is closed"
+        )
+
+        static let selectPosition = LocalizedStringResource(
+            "designSystem.select.position",
+            defaultValue: "Position",
+            comment: "VoiceOver custom-content key for the highlighted PVSelect option index"
+        )
+
+        static func selectOptionPosition(current: Int, count: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "designSystem.select.optionPosition",
+                defaultValue: "%1$lld of %2$lld",
+                comment: "VoiceOver position of the highlighted PVSelect option; arguments are 1-based index and count"
+            ))
+            return String(format: format, locale: .current, current, count)
+        }
+
         static func tableFilterOptionCount(label: String, count: Int) -> String {
             let format = String(localized: LocalizedStringResource(
                 "designSystem.table.filterOptionCount",
@@ -3107,6 +3140,73 @@ enum L10n {
             "sources.page.dateMonth",
             defaultValue: "Month",
             comment: "DateValue month field label"
+        )
+
+        static let dateMonthNone = LocalizedStringResource(
+            "sources.page.dateMonth.none",
+            defaultValue: "—",
+            comment: "DateValue month option for no month"
+        )
+
+        static let dateMonthJanuary = LocalizedStringResource(
+            "sources.page.dateMonth.january",
+            defaultValue: "January",
+            comment: "DateValue January option"
+        )
+        static let dateMonthFebruary = LocalizedStringResource(
+            "sources.page.dateMonth.february",
+            defaultValue: "February",
+            comment: "DateValue February option"
+        )
+        static let dateMonthMarch = LocalizedStringResource(
+            "sources.page.dateMonth.march",
+            defaultValue: "March",
+            comment: "DateValue March option"
+        )
+        static let dateMonthApril = LocalizedStringResource(
+            "sources.page.dateMonth.april",
+            defaultValue: "April",
+            comment: "DateValue April option"
+        )
+        static let dateMonthMay = LocalizedStringResource(
+            "sources.page.dateMonth.may",
+            defaultValue: "May",
+            comment: "DateValue May option"
+        )
+        static let dateMonthJune = LocalizedStringResource(
+            "sources.page.dateMonth.june",
+            defaultValue: "June",
+            comment: "DateValue June option"
+        )
+        static let dateMonthJuly = LocalizedStringResource(
+            "sources.page.dateMonth.july",
+            defaultValue: "July",
+            comment: "DateValue July option"
+        )
+        static let dateMonthAugust = LocalizedStringResource(
+            "sources.page.dateMonth.august",
+            defaultValue: "August",
+            comment: "DateValue August option"
+        )
+        static let dateMonthSeptember = LocalizedStringResource(
+            "sources.page.dateMonth.september",
+            defaultValue: "September",
+            comment: "DateValue September option"
+        )
+        static let dateMonthOctober = LocalizedStringResource(
+            "sources.page.dateMonth.october",
+            defaultValue: "October",
+            comment: "DateValue October option"
+        )
+        static let dateMonthNovember = LocalizedStringResource(
+            "sources.page.dateMonth.november",
+            defaultValue: "November",
+            comment: "DateValue November option"
+        )
+        static let dateMonthDecember = LocalizedStringResource(
+            "sources.page.dateMonth.december",
+            defaultValue: "December",
+            comment: "DateValue December option"
         )
 
         static let dateDay = LocalizedStringResource(
