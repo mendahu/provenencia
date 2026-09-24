@@ -16,17 +16,19 @@ Grow this list as stories land. **By spike close**, every checked story below mu
 2. **PDF Artifact thumbnails** — PDF Artifacts show a **first-page raster** on Artifact rows (glyph only if render skips). A PDF with a raster can be pinned as Source cover. Notes: [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md).
 3. **PDF Find** — on a PDF in the composer, a Find field on the viewer tool strip jumps to a keyword hit with a highlight. Image-only PDFs (no text layer) fail honestly. Notes: [`pdf-text-find.md`](pdf-text-find.md).
 4. **PDF select + paste transcription** — default PDF pointer is text select (pan is explicit). **Paste transcription from selection** fills the transcription field. No Vision on PDF pages.
+5. **Graph visual enhancements** — on a cited subject card, a Property that appears more than once (e.g. two names) shows a **conflict badge on each** of those rows. More card-chrome items may join this bar as they are added to **S8-D3** / **S8-06**.
 
 Further bar items: TBD (additional data-entry stories).
 
 ## Design track
 
-**Composer chrome is designed in Claude Design before the matching UI PRs.** PDF thumbs reuse shipped `PVThumbnail` — no board. Briefs: [`design/`](design/).
+**Composer and graph-card chrome is designed in Claude Design before the matching UI PRs.** PDF thumbs reuse shipped `PVThumbnail` — no board. Briefs: [`design/`](design/).
 
 | Step | Brief | Covers | Gates |
 | --- | --- | --- | --- |
 | **S8-D1** | Auto Transcribe in the composer | Button, progress, replace confirm, large-page warning + proceed, failure copy | **S8-01** |
 | **S8-D2** | PDF Find + select + paste | Tool-strip Find; I-beam vs pan; paste-from-selection vs Auto Transcribe row | **S8-03**, **S8-04**, **S8-05** |
+| **S8-D3** | Evidence graph visual enhancements | Conflict badge on repeated Properties; more card items join this brief | **S8-06** |
 
 ## PR sequence
 
@@ -49,6 +51,11 @@ S8-D2  PDF Find / select / paste
                               └──────▶ S8-05  Paste transcription from selection
                                               (after S8-03; prefer after S8-01
                                                so one transcription action row)
+
+S8-D3  Graph card visuals
+  │
+  └────── gates ──────────▶ S8-06  Conflict badge (+ more items on this brief)
+                              │     (parallel; no composer / PDF dependency)
                               │
                             S8-99  Dogfood close / docs
 ```
@@ -59,6 +66,7 @@ S8-D2  PDF Find / select / paste
 - **S8-04** and **S8-05** are parallel after **S8-03**.
 - **S8-01** / **S8-02** do not block **S8-D2**. **S8-05** should follow **S8-01** when both touch the transcription `PVField`.
 - **S8-02** uses PDFKit only to write a thumbnail derivative — not the composer viewport.
+- **S8-D3** / **S8-06** are independent of OCR and PDF remount. Freeze the **S8-06** bundle on the brief before that PR starts.
 
 ---
 
@@ -71,6 +79,8 @@ S8-D2  PDF Find / select / paste
 - [ ] S8-03 — PDFKit live viewer + I-beam default → [`completed.md`](completed.md)
 - [ ] S8-04 — PDF Find in the tool strip → [`completed.md`](completed.md)
 - [ ] S8-05 — Paste transcription from PDF selection → [`completed.md`](completed.md)
+- [ ] S8-D3 — Design: Evidence graph visual enhancements → [`completed.md`](completed.md)
+- [ ] S8-06 — Graph visual enhancements (conflict badge + brief bundle) → [`completed.md`](completed.md)
 - [ ] S8-99 — Dogfood close / docs (after later stories, or when we choose to close)
 
 ---
@@ -160,6 +170,27 @@ Transcription-row control for PDF: copy current `PDFSelection` string into `tran
 
 ---
 
+## S8-D3 — Design: Evidence graph visual enhancements
+
+Claude Design board for a **bundled** graph-card chrome pass. First item: **conflict badge** on every cited row whose Property appears more than once on that card. More visual items join this brief (and **S8-06**) as they are scoped. Brief: [`design/S8-D3-graph-visuals.md`](design/S8-D3-graph-visuals.md). Gates **S8-06**.
+
+Does **not** design pinning, tray, composer, or a full honesty language (incomplete bridges, filters, undo).
+
+---
+
+## S8-06 — PR: Graph visual enhancements
+
+One Evidence graph card pass against **S8-D3**. Competing Observations stay as separate rows (already shipped). When `propertyKey` occurs ≥ 2 times on a card, badge **each** of those rows. Further items listed on the brief at PR start ship in this same PR.
+
+| | |
+| --- | --- |
+| **In** | Conflict badge per **S8-D3** (both/all duplicate-key rows); `propertyKey` count, not value equality; L10n + VoiceOver; card height / hit tests; any other GV items frozen on the brief. Prefer `PVBadge`. |
+| **Out** | Merge / resolve UI; schema or FFI; treating duplicates as invalid; full negated/incomplete chrome; tray; pinning; composer. |
+| **Testable** | Two `name` Observations → both rows badged; one `name` → no badge; identical strings still badge; uncited card unchanged; height/a11y do not clip. |
+| **Depends on** | **S8-D3**. Shipped cards + snapshot. **Not** S8-01…S8-05. |
+
+---
+
 ## S8-99 — Dogfood close / docs
 
 Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enough (or we stop adding stories). Record in [`completed.md`](completed.md); archive the spike. SemVer only if cutting a product release.
@@ -176,7 +207,8 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 | Warn + proceed on large images | Hard reject / Apple “too many words” (does not exist) |
 | PDF **page-1 thumbnail** via PDFKit | Go PDF decoder; user-picked thumb page |
 | PDF **Find** + **select** + **paste transcription** | PDF Vision / OCR; `text_quote` locators; Source-page Find |
-| More data-entry stories as added | Spike 7 leftover honesty/polish (conflicted, tray, pinning) unless pulled in |
+| Graph **conflict badge** on repeated Properties (more card items via **S8-D3**) | Full honesty language; tray; pinning; merge/resolve |
+| More data-entry stories as added | Remaining Spike 7 leftovers unless pulled in |
 
 ---
 
@@ -193,6 +225,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 9. **S8-02 is macOS PDFKit → catalog derivative**, not `core/derivatives` learning to parse PDF. Windows keeps the glyph until a later engine renderer.
 10. **S8-03 before Find/paste** — raster `displayImage` has no `PDFSelection`. Region overlay must remount with the live page or locators break.
 11. **Pan vs select** — today’s unnamed click-drag pan will fight I-beam. S8-D2 must name the pan escape (hand and/or modifier) before S8-03.
+12. **Conflict is a count, not a verdict** — badge when `propertyKey` appears ≥ 2 times on that card. Values may match. Do not write a schema flag or a resolve action.
 
 ---
 

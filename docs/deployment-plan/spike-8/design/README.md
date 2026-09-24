@@ -10,6 +10,7 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 | --- | --- | --- | --- |
 | S8-D1 | [`S8-D1-auto-transcribe.md`](S8-D1-auto-transcribe.md) | PR **S8-01** | Auto Transcribe on citation transcription; warn + proceed on large page |
 | S8-D2 | [`S8-D2-pdf-text-find.md`](S8-D2-pdf-text-find.md) | PRs **S8-03**, **S8-04**, **S8-05** | PDF Find on the tool strip; I-beam vs pan; paste transcription from selection |
+| S8-D3 | [`S8-D3-graph-visuals.md`](S8-D3-graph-visuals.md) | PR **S8-06** | Graph card visuals; first item: conflict badge on repeated Properties |
 
 ## How to use
 
@@ -23,6 +24,7 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 
 - Offline-first macOS genealogy app inside a local `*.provenencia` project. Deployment target **macOS 14**.
 - **Citation composer** is a navigable place (Option B): viewer \| form. Shipped in Spike 7. Do **not** redesign the shell, locators, or Observation list unless a brief says so.
+- **Evidence graph cards** already list every Observation as its own row. Competing values on one Property are legal. **S8-D3** adds a notice badge, not a resolve flow.
 - **Transcription** is the Citation reading. Observations are separate. Auto Transcribe must not write Observations.
 - Media in composer: **image** and **PDF** viewers. **Auto Transcribe (S8-D1) is image-only.** PDF Find / select / paste is **S8-D2** (text layer, no Vision). Audio/video: honest disable.
 - Locator: default `artifact`, optional `page` (PDF), optional `region` polygon. One region max. Geometry: [`ArtifactRegionGeometry`](../../../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift).
