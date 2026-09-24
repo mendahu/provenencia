@@ -83,7 +83,7 @@ Design the selectors for how often they change and how many items they hold. Do 
 | **Observation** | **2–3** per Citation | Not a document switch — a list on the form | Subject + property + value | Keep the stacked list. Inline simple values; modal only for heavy editors. N is small enough that a dialog-per-row is the thing to *lose*, not the list. |
 | **Subject** | Graph-sized (can be large) | Per row, not a layer | Working label / ref / type | Picker **on the row**. Not a fourth menu stack. |
 
-Census-scale (dozens of Observations on one reading) is an **edge**, not the default. Do not virtualize or group-by-subject unless a frame proves 2–3-row chrome breaks at 20.
+Do **not** design for a whole-census Artifact or dozens of Observations on one reading. A census Source is expected to be **page- or household-sized scans** (one page, maybe a handful). Unrelated households on the same film are separate Artifacts. If dogfood later shows a single Citation with a huge observation list, revisit then — not this board.
 
 ### 2.3 Entry points (initial state only)
 
@@ -187,7 +187,6 @@ The cleverness is **not** inventing a file-browser. It is matching chrome to §2
 7. **Dirty Artifact change** — confirm abandon vs stay.
 8. **Typical observations** — 2–3 rows; text/integer edit **on the row**; name/date open a modal from a button.
 8b. **Wide form** — if needed, slightly wider sidebar or two-column form; viewer still dominates.
-8c. **Edge: many observations** — still a stack; do not let this drive the default chrome.
 9. **No Artifact** — existing callout + go to Source page.
 10. *(Optional third layout exploration as a discarded frame.)*
 
