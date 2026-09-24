@@ -6,19 +6,20 @@ Pause-and-refine: make **Source → Evidence graph** data entry cheaper. Stories
 
 **Open.** Landings go in [`completed.md`](completed.md). More stories will be added under the same spike.
 
-> **Goal of this spike:** cut the tedium of entering real research without reopening the Interpretation model. First slice is Auto Transcribe (Vision → transcription). Later slices join this plan as they are scoped.
+> **Goal of this spike:** cut the tedium of entering real research without reopening the Interpretation model. Slices land independently. Later stories join this plan as they are scoped.
 
 ## Goal (dogfood bar)
 
 Grow this list as stories land. **By spike close**, every checked story below must be true in the app.
 
 1. **Auto Transcribe** — in the citation composer, on an **image** Artifact, a control fills **transcription** from Vision OCR of the image (or the region polygon when one is set). The researcher can edit and Save as today. Full-image / oversized jobs warn and can still proceed. No Observation writes. **PDF:** button disabled / honest empty — do not OCR PDFs in this slice (copy/paste or a later text-layer story).
+2. **PDF Artifact thumbnails** — PDF Artifacts show a **first-page raster** on Artifact rows (glyph only if render skips). A PDF with a raster can be pinned as Source cover. Notes: [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md).
 
 Further bar items: TBD (additional data-entry stories).
 
 ## Design track
 
-**Composer chrome for Auto Transcribe is designed in Claude Design before the implementation PR.** Briefs: [`design/`](design/).
+**Composer chrome for Auto Transcribe is designed in Claude Design before that PR.** PDF thumbs reuse shipped `PVThumbnail` — no board. Briefs: [`design/`](design/).
 
 | Step | Brief | Covers | Gates |
 | --- | --- | --- | --- |
@@ -30,9 +31,11 @@ Further bar items: TBD (additional data-entry stories).
    design                         build
 ─────────────               ──────────────────────────────────────────
 
-S8-D1  Auto Transcribe UI     (more stories TBD)
+S8-D1  Auto Transcribe UI
   │
   └────── gates ──────────▶ S8-01  Vision + crop + fill transcription
+                              │
+S8-02  PDF first-page thumbs ──┘   (no design gate; parallel with S8-01)
                               │
                             (more PRs as stories are added)
                               │
@@ -45,6 +48,7 @@ S8-D1  Auto Transcribe UI     (more stories TBD)
 
 - [ ] S8-D1 — Design: Auto Transcribe in the citation composer → [`completed.md`](completed.md)
 - [ ] S8-01 — Vision OCR + Auto Transcribe button → [`completed.md`](completed.md)
+- [ ] S8-02 — PDF first-page Artifact thumbnails → [`completed.md`](completed.md)
 - [ ] S8-99 — Dogfood close / docs (after later stories, or when we choose to close)
 
 ---
@@ -70,6 +74,21 @@ On-device Vision (`VNRecognizeTextRequest`) fills the composer **transcription**
 
 ---
 
+## S8-02 — PR: PDF first-page thumbnails
+
+macOS **PDFKit** renders page 1 of a PDF Artifact File to the same JPEG thumbnail spec as images (longest edge ≤ 256). Persist as the existing unaudited `file_derivatives` thumbnail so Artifact rows and Source cover pins just work. Go `EnsureThumbnail` still **skips** PDF decode — no engine PDF renderer in this PR.
+
+| | |
+| --- | --- |
+| **In** | Page 1 only; JPEG / 256-edge; PDFKit (same as S7-06 viewer raster); FFI to store bytes as the thumbnail File + link; skip encrypted / empty / corrupt / over-budget → keep file-type glyph; Source cover pin works once a raster exists (no schema change); existing `EnsureFileThumbnail` / list lookup. |
+| **Out** | User-picked cover page; video / Office posters; Quick Look; Go PDF library; `cover_mode` / pin schema; OCR; new `PVThumbnail` chrome. |
+| **Testable** | Image thumbs unchanged; PDF with a first page gets a `thumbnailRelPath`; bad PDF stays skipped + glyph; pin-as-cover accepts a PDF that has a raster; idempotent ensure. |
+| **Depends on** | Shipped `derivatives.EnsureThumbnail` + `PVThumbnail` glyph fallback. **Not** S8-D1 / S8-01. |
+
+Notes: [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md).
+
+---
+
 ## S8-99 — Dogfood close / docs
 
 Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enough (or we stop adding stories). Record in [`completed.md`](completed.md); archive the spike. SemVer only if cutting a product release.
@@ -83,7 +102,8 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 | Composer transcription assist | Auto Observations / subjects / connect |
 | Vision on **image** Artifacts | PDF OCR; audio / video OCR |
 | In-memory crop from locator | Object-store crop files |
-| Warn + proceed on large pages | Hard reject / Apple “too many words” (does not exist) |
+| Warn + proceed on large images | Hard reject / Apple “too many words” (does not exist) |
+| PDF **page-1 thumbnail** via PDFKit | PDF OCR; Go PDF decoder; user-picked thumb page |
 | More data-entry stories as added | Spike 7 leftover honesty/polish (conflicted, tray, pinning) unless pulled in |
 
 ---
@@ -98,6 +118,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 6. **PDF is not an OCR input in S8-01** — disable Auto Transcribe; researchers paste. Image-only PDF scans wait for a later story (text layer or raster OCR).
 7. **Hide Vision behind a protocol** — `FakeStore` / unit tests inject a recognizer.
 8. **More stories do not wait on S8-01** unless they share the composer transcription chrome.
+9. **S8-02 is macOS PDFKit → catalog derivative**, not `core/derivatives` learning to parse PDF. Windows keeps the glyph until a later engine renderer.
 
 ---
 

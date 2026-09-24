@@ -8,7 +8,7 @@ Authoritative domain and stack decisions remain in the sibling docs under [`docs
 
 | Spike | Goal |
 | --- | --- |
-| [Spike 8](spike-8/) | **Pause and refine** data entry (Source → Evidence graph). First story: Vision **Auto Transcribe** on **image** Artifacts into citation transcription (PDF out). More entry-flow stories will join. Dogfood: [`docs/dogfood/ux.md`](../dogfood/ux.md). Plan: [`spike-8/deployment-plan.md`](spike-8/deployment-plan.md). |
+| [Spike 8](spike-8/) | **Pause and refine** data entry. Stories: image **Auto Transcribe**; **PDF Artifact thumbnails**. More entry-flow stories will join. Dogfood: [`docs/dogfood/ux.md`](../dogfood/ux.md). Plan: [`spike-8/deployment-plan.md`](spike-8/deployment-plan.md). |
 
 ## Completed
 
@@ -28,6 +28,7 @@ Spike 8 (open):
 - [`spike-8/deployment-plan.md`](spike-8/deployment-plan.md) — PR sequence, design gates, dogfood bar
 - [`spike-8/completed.md`](spike-8/completed.md) — finished steps
 - [`spike-8/design/`](spike-8/design/) — Claude Design briefs (**S8-D1** open)
+- [`spike-8/artifact-pdf-thumbnails.md`](spike-8/artifact-pdf-thumbnails.md) — scoped **S8-02** note
 
 Spike 7 archive:
 

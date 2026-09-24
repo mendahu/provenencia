@@ -19,6 +19,5 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`interpretation-graph-ui.md`](interpretation-graph-ui.md)
 - [`share-packages.md`](share-packages.md)
 - [`pdf-text-find.md`](pdf-text-find.md)
-- [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md)
 
 Layering for macOS UI (design system / recipes / snowflakes) graduated to [`docs/design-system-layers.md`](../design-system-layers.md); draft archived under [`archive/design-system-hardening.md`](archive/design-system-hardening.md).
