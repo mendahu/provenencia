@@ -10,15 +10,15 @@ struct CitationComposerObservationRow: View {
     let summary: String
     var isFocused: Bool
     var inert: Bool
-    var onSubject: (String) -> Void
-    var onProperty: (String) -> Void
-    var onText: (String) -> Void
-    var onInteger: (String) -> Void
-    var onTerm: (String) -> Void
-    var onEditValue: () -> Void
-    var onTogglePolarity: () -> Void
-    var onRemove: () -> Void
-    var onAddCustomTerm: () -> Void
+    var onSubject: @MainActor (String) -> Void
+    var onProperty: @MainActor (String) -> Void
+    var onText: @MainActor (String) -> Void
+    var onInteger: @MainActor (String) -> Void
+    var onTerm: @MainActor (String) -> Void
+    var onEditValue: @MainActor () -> Void
+    var onTogglePolarity: @MainActor () -> Void
+    var onRemove: @MainActor () -> Void
+    var onAddCustomTerm: @MainActor () -> Void
 
     @State private var actionsMenu = PVContextMenuState()
     @State private var actionsKeyboard = PVContextMenuKeyboard.inactive
@@ -204,22 +204,37 @@ struct CitationComposerObservationRow: View {
     }
 
     private var subjectBinding: Binding<String> {
-        Binding(get: { row.subjectID }, set: onSubject)
+        Binding(
+            get: { row.subjectID },
+            set: { newValue in onSubject(newValue) }
+        )
     }
 
     private var propertyBinding: Binding<String> {
-        Binding(get: { row.propertyID }, set: onProperty)
+        Binding(
+            get: { row.propertyID },
+            set: { newValue in onProperty(newValue) }
+        )
     }
 
     private var textBinding: Binding<String> {
-        Binding(get: { row.valueText }, set: onText)
+        Binding(
+            get: { row.valueText },
+            set: { newValue in onText(newValue) }
+        )
     }
 
     private var integerBinding: Binding<String> {
-        Binding(get: { row.valueIntegerText }, set: onInteger)
+        Binding(
+            get: { row.valueIntegerText },
+            set: { newValue in onInteger(newValue) }
+        )
     }
 
     private var termBinding: Binding<String> {
-        Binding(get: { row.valueTermID }, set: onTerm)
+        Binding(
+            get: { row.valueTermID },
+            set: { newValue in onTerm(newValue) }
+        )
     }
 }

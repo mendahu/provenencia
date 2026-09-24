@@ -66,6 +66,8 @@ struct PVSelectPlacementTests {
         #expect(PVSelectPlacement.contentHeight(optionCount: 20) < 20 * PVSelectPlacement.rowHeight + 20)
         #expect(PVSelectPlacement.contentHeight(optionCount: 20, maxVisibleRows: 10)
             == 10 * PVSelectPlacement.rowHeight + PVSelectPlacement.panelPadding)
+        #expect(PVSelectPlacement.contentHeight(optionCount: 3, maxVisibleRows: 10, rowHeight: 68)
+            == 3 * 68 + PVSelectPlacement.panelPadding)
     }
 
     @Test func widthIsTheGreaterOfTriggerAndMenuWidthThenClamped() {

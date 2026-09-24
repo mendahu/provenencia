@@ -5,7 +5,6 @@ struct CitationComposerFormPane: View {
     @Bindable var model: CitationComposerModel
     var inert: Bool
     var wide: Bool = false
-    var onAddCustomTerm: (UUID) -> Void = { _ in }
 
     @Environment(WorkspaceNavigation.self) private var navigation
 
@@ -77,12 +76,22 @@ struct CitationComposerFormPane: View {
             displayLabel: model.selectedArtifact?.label,
             menuWidth: 320,
             fillsWidth: false,
+            rowHeight: 52,
             isDisabled: inert,
             accessibilitySpokenLabel: L10n.CitationComposer.artifactMenuLabel(
                 title: model.selectedArtifact?.label ?? ""
             ),
             accessibilityIdentifier: "citationComposer.artifact"
-        )
+        ) { option in
+            if let artifact = model.artifacts.first(where: { $0.id == option.id }) {
+                CitationComposerArtifactMenuRow(
+                    artifact: artifact,
+                    citationCount: model.listedCount(for: artifact.id)
+                )
+            } else {
+                PVSelectPlainRow(text: option.label)
+            }
+        }
     }
 
     private var citationSelect: some View {
@@ -95,6 +104,8 @@ struct CitationComposerFormPane: View {
                 : model.activeCitationRef,
             menuWidth: 400,
             fillsWidth: false,
+            maxVisibleRows: 8,
+            rowHeight: 68,
             isDisabled: inert,
             accessibilitySpokenLabel: model.activeCitationRef.isEmpty
                 ? String(localized: L10n.CitationComposer.citationMenuNew)
@@ -103,7 +114,13 @@ struct CitationComposerFormPane: View {
                     count: model.observations.count
                 ),
             accessibilityIdentifier: "citationComposer.citation"
-        )
+        ) { option in
+            if let listed = model.listedCitations.first(where: { $0.id == option.id }) {
+                CitationComposerCitationMenuRow(listed: listed)
+            } else {
+                PVSelectPlainRow(text: option.label)
+            }
+        }
     }
 
     private var artifactBinding: Binding<String> {
@@ -122,13 +139,9 @@ struct CitationComposerFormPane: View {
 
     private var artifactOptions: [PVSelectOption] {
         model.artifacts.map { artifact in
-            let meta = L10n.CitationComposer.artifactMenuMeta(
-                kind: artifactKindLabel(artifact),
-                count: model.listedCount(for: artifact.id)
-            )
-            return PVSelectOption(
+            PVSelectOption(
                 value: artifact.id,
-                label: "\(artifact.label) · \(meta)",
+                label: artifact.label,
                 accessibilityIdentifier: "citationComposer.artifact.row.\(artifact.id)"
             )
         }
@@ -142,32 +155,10 @@ struct CitationComposerFormPane: View {
         )] + model.listedCitations.map { listed in
             PVSelectOption(
                 value: listed.id,
-                label: citationOptionLabel(listed),
+                label: listed.citation.ref,
                 accessibilityIdentifier: "citationComposer.citation.row.\(listed.id)"
             )
         }
-    }
-
-    private func citationOptionLabel(_ listed: CatalogListedCitation) -> String {
-        let count = L10n.CitationComposer.citationMenuCount(count: listed.observationCount)
-        let snippet = listed.citation.transcription
-            .replacingOccurrences(of: "\n", with: " — ")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        if snippet.isEmpty {
-            return "\(listed.citation.ref) · \(count)"
-        }
-        return "\(listed.citation.ref) · \(count) — \(snippet)"
-    }
-
-    private func artifactKindLabel(_ artifact: CatalogArtifact) -> String {
-        let media = artifact.file?.mediaType ?? ""
-        if media.localizedCaseInsensitiveContains("pdf") {
-            return String(localized: L10n.CitationComposer.artifactKindPDF)
-        }
-        if media.hasPrefix("image/") {
-            return String(localized: L10n.CitationComposer.artifactKindImage)
-        }
-        return String(localized: L10n.CitationComposer.artifactKindUnknown)
     }
 
     private var readingFields: some View {
@@ -231,7 +222,7 @@ struct CitationComposerFormPane: View {
                     onEditValue: { model.beginEditObservation(row) },
                     onTogglePolarity: { model.toggleObservationPolarity(id: row.id) },
                     onRemove: { model.removeObservation(id: row.id) },
-                    onAddCustomTerm: { onAddCustomTerm(row.id) }
+                    onAddCustomTerm: { model.beginAddCustomTerm(rowID: row.id) }
                 )
             }
 

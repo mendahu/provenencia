@@ -214,6 +214,43 @@ struct WorkspaceNavigationTests {
         )
     }
 
+    @Test func goToCitationComposerRestoresObservationId() throws {
+        let (navigation, _) = try attachedNavigation()
+        navigation.go(to: WorkspaceLocation(section: .sources, sourceId: "src-1", sourceSurface: .graph))
+        navigation.go(
+            to: WorkspaceLocation(
+                section: .sources,
+                sourceId: "src-1",
+                subjectId: "sub-9",
+                citationId: "cit-1",
+                artifactId: "art-0",
+                observationId: "obs-row",
+                sourceSurface: .citationComposer
+            )
+        )
+        #expect(navigation.currentLocation.observationId == "obs-row")
+        #expect(navigation.currentLocation.artifactId == "art-0")
+        navigation.goBack()
+        #expect(navigation.currentLocation.observationId == nil)
+        #expect(
+            WorkspaceLocation(
+                section: .sources,
+                sourceId: "src-1",
+                subjectId: "sub-9",
+                citationId: "cit-1",
+                observationId: "obs-a",
+                sourceSurface: .citationComposer
+            ) != WorkspaceLocation(
+                section: .sources,
+                sourceId: "src-1",
+                subjectId: "sub-9",
+                citationId: "cit-1",
+                observationId: "obs-b",
+                sourceSurface: .citationComposer
+            )
+        )
+    }
+
     @Test func navigationFileNameStripsDashesAndBraces() {
         #expect(
             InstallPaths.navigationFileName(projectUuid: "{00000000-0000-7000-8000-0000000000AA}")

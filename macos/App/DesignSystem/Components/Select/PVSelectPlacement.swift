@@ -12,7 +12,11 @@ enum PVSelectPlacement {
     /// `PVContextMenuPanel` padding (`space2` × 2).
     static let panelPadding: CGFloat = 8
 
-    static func contentHeight(optionCount: Int, maxVisibleRows: Int = defaultMaxVisibleRows) -> CGFloat {
+    static func contentHeight(
+        optionCount: Int,
+        maxVisibleRows: Int = defaultMaxVisibleRows,
+        rowHeight: CGFloat = rowHeight
+    ) -> CGFloat {
         let rows = min(max(optionCount, 0), max(maxVisibleRows, 0))
         guard rows > 0 else { return 0 }
         return CGFloat(rows) * rowHeight + panelPadding

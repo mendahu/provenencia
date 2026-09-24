@@ -231,4 +231,24 @@ struct PlaceRegistryTests {
         #expect(decoded?.connectFromSubjectId == "p1")
         #expect(decoded?.connectGridX == 2)
     }
+
+    @Test func pencilLocationRoundTripsArtifactAndObservation() {
+        let location = WorkspaceLocation(
+            section: .sources,
+            sourceId: "s1",
+            subjectId: "sub-1",
+            citationId: "cit-1",
+            artifactId: "art-0",
+            observationId: "obs-9",
+            sourceSurface: .citationComposer
+        )
+        let decoded = try? JSONDecoder().decode(
+            WorkspaceLocation.self,
+            from: JSONEncoder().encode(location)
+        )
+        #expect(decoded == location)
+        #expect(decoded?.artifactId == "art-0")
+        #expect(decoded?.observationId == "obs-9")
+        #expect(CitationComposerEntry(location: location)?.observationID == "obs-9")
+    }
 }

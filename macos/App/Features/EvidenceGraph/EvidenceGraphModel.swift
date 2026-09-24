@@ -653,7 +653,12 @@ final class EvidenceGraphModel {
     }
 
     /// Citation composer place for editing an existing citation (property row pencil).
-    func composerLocation(for subjectID: String, citationID: String?) -> WorkspaceLocation? {
+    func composerLocation(
+        for subjectID: String,
+        citationID: String?,
+        observationID: String? = nil,
+        artifactID: String? = nil
+    ) -> WorkspaceLocation? {
         guard canCite else { return nil }
         let snapshot = currentSnapshot()
         let title: String?
@@ -673,6 +678,8 @@ final class EvidenceGraphModel {
             sourceId: sourceID,
             subjectId: subjectID,
             citationId: citationID,
+            artifactId: artifactID,
+            observationId: observationID,
             sourceSurface: .citationComposer,
             ref: ref,
             title: title,
@@ -686,12 +693,20 @@ final class EvidenceGraphModel {
         if let primary = primary(in: snapshot, id: subjectID),
            let observation = primary.observations.first(where: { $0.id == observationID })
         {
-            return composerLocation(for: subjectID, citationID: observation.citationID)
+            return composerLocation(
+                for: subjectID,
+                citationID: observation.citationID,
+                observationID: observation.id
+            )
         }
         if let bridge = snapshot?.bridges.first(where: { $0.id == subjectID }),
            let observation = bridge.observations.first(where: { $0.id == observationID })
         {
-            return composerLocation(for: subjectID, citationID: observation.citationID)
+            return composerLocation(
+                for: subjectID,
+                citationID: observation.citationID,
+                observationID: observation.id
+            )
         }
         return nil
     }
@@ -702,7 +717,12 @@ final class EvidenceGraphModel {
         guard let bridge = snapshot?.bridges.first(where: { $0.id == subjectID }) else {
             return nil
         }
-        return composerLocation(for: subjectID, citationID: bridge.observations.first?.citationID)
+        let first = bridge.observations.first
+        return composerLocation(
+            for: subjectID,
+            citationID: first?.citationID,
+            observationID: first?.id
+        )
     }
 
     /// Queues delete confirm for an uncited subject or bridge card.

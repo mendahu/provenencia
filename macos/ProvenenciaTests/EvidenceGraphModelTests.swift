@@ -907,8 +907,11 @@ struct EvidenceGraphModelTests {
         )
         let locA = model.composerLocation(forObservationID: "obs-a", subjectID: "s1")
         let locB = model.composerLocation(forObservationID: "obs-b", subjectID: "s1")
-        #expect(locA == locB)
+        #expect(locA != locB)
         #expect(locA?.citationId == "cit-shared")
+        #expect(locB?.citationId == "cit-shared")
+        #expect(locA?.observationId == "obs-a")
+        #expect(locB?.observationId == "obs-b")
         #expect(locA?.subjectId == "s1")
         #expect(model.composerLocation(for: "s1")?.citationId == nil)
     }
@@ -986,10 +989,15 @@ struct EvidenceGraphModelTests {
         let location = model.composerLocationForBridgeCitation(subjectID: "b1")
         #expect(location?.citationId == "cit-bridge")
         #expect(location?.subjectId == "b1")
+        #expect(location?.observationId == "obs-edge")
         #expect(model.composerLocation(for: "b1")?.citationId == nil)
         #expect(
             model.composerLocation(forObservationID: "obs-edge", subjectID: "b1")?.citationId
                 == "cit-bridge"
+        )
+        #expect(
+            model.composerLocation(forObservationID: "obs-edge", subjectID: "b1")?.observationId
+                == "obs-edge"
         )
     }
 

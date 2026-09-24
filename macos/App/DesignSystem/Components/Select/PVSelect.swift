@@ -18,6 +18,20 @@ struct PVSelectOption: Identifiable, Equatable {
     }
 }
 
+/// Default one-line option label. Marks, a second line, or other rich
+/// row chrome go through `PVSelect`'s `row:` builder — same slot as
+/// `PVComboBox`.
+struct PVSelectPlainRow: View {
+    let text: String
+
+    var body: some View {
+        Text(verbatim: text)
+            .font(PVFont.body(size: PVTypeScale.bodySmall))
+            .foregroundStyle(PVColor.textPrimary)
+            .lineLimit(1)
+    }
+}
+
 /// A styled dropdown select built on the floating `PVContextMenu` kit.
 /// Click the field to open, click a row to commit, click away or Escape
 /// to dismiss. Keys go to `PVSelectSession`. There is no press-drag.
@@ -26,7 +40,9 @@ struct PVSelectOption: Identifiable, Equatable {
 /// - **Chip** (`icon:` set, `fillsWidth: false`): compact toolbar select.
 /// - **Icon-only chip** (`icon` + `iconOnly`): table column filter; pass
 ///   `accessibilityLabel`.
-struct PVSelect: View {
+/// - **`row:`** optional custom option body. Keyboard, checkmark, and
+///   placement stay on the select.
+struct PVSelect<Row: View>: View {
     @Binding private var selection: String
     private let options: [PVSelectOption]
     private let size: PVControlSize
@@ -37,10 +53,12 @@ struct PVSelect: View {
     private let menuWidth: CGFloat
     private let fillsWidth: Bool
     private let maxVisibleRows: Int
+    private let rowHeight: CGFloat
     private let isDisabled: Bool
     private let accessibilityLabelResource: LocalizedStringResource?
     private let accessibilitySpokenLabel: String?
     private let accessibilityIdentifier: String?
+    private let row: (PVSelectOption) -> Row
 
     @State private var session: PVSelectSession
     @State private var menuState = PVContextMenuState()
@@ -61,10 +79,12 @@ struct PVSelect: View {
         menuWidth: CGFloat = PVSelectPlacement.defaultMenuWidth,
         fillsWidth: Bool = true,
         maxVisibleRows: Int = PVSelectPlacement.defaultMaxVisibleRows,
+        rowHeight: CGFloat = PVSelectPlacement.rowHeight,
         isDisabled: Bool = false,
         accessibilityLabel: LocalizedStringResource? = nil,
         accessibilitySpokenLabel: String? = nil,
-        accessibilityIdentifier: String? = nil
+        accessibilityIdentifier: String? = nil,
+        @ViewBuilder row: @escaping (PVSelectOption) -> Row
     ) {
         self._selection = selection
         self.options = options
@@ -76,10 +96,12 @@ struct PVSelect: View {
         self.menuWidth = menuWidth
         self.fillsWidth = fillsWidth
         self.maxVisibleRows = maxVisibleRows
+        self.rowHeight = rowHeight
         self.isDisabled = isDisabled
         self.accessibilityLabelResource = accessibilityLabel
         self.accessibilitySpokenLabel = accessibilitySpokenLabel
         self.accessibilityIdentifier = accessibilityIdentifier
+        self.row = row
         self._session = State(initialValue: PVSelectSession(
             options: options,
             selection: selection.wrappedValue,
@@ -195,13 +217,13 @@ struct PVSelect: View {
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(Array(options.enumerated()), id: \.element.id) { offset, option in
                             PVContextMenuItem(
-                                plainTitle: option.label,
                                 index: offset,
                                 isSelected: option.id == session.selection,
                                 showsSelectionMark: true,
-                                accessibilityIdentifier: option.accessibilityIdentifier
+                                accessibilityIdentifier: option.accessibilityIdentifier,
+                                action: { applySession { $0.commit(index: offset, close: true) } }
                             ) {
-                                applySession { $0.commit(index: offset, close: true) }
+                                row(option)
                             }
                             .id(offset)
                         }
@@ -223,7 +245,8 @@ struct PVSelect: View {
     private func presentMenu() {
         let contentHeight = PVSelectPlacement.contentHeight(
             optionCount: options.count,
-            maxVisibleRows: maxVisibleRows
+            maxVisibleRows: maxVisibleRows,
+            rowHeight: rowHeight
         )
         let frame = PVSelectPlacement.popupFrame(
             anchor: triggerScreen,
@@ -376,6 +399,46 @@ struct PVSelect: View {
         .allowsHitTesting(false)
     }
 
+}
+
+extension PVSelect where Row == PVSelectPlainRow {
+    init(
+        selection: Binding<String>,
+        options: [PVSelectOption],
+        size: PVControlSize = .md,
+        icon: PVSymbol? = nil,
+        iconOnly: Bool = false,
+        displayLabel: String? = nil,
+        placeholder: String? = nil,
+        menuWidth: CGFloat = PVSelectPlacement.defaultMenuWidth,
+        fillsWidth: Bool = true,
+        maxVisibleRows: Int = PVSelectPlacement.defaultMaxVisibleRows,
+        rowHeight: CGFloat = PVSelectPlacement.rowHeight,
+        isDisabled: Bool = false,
+        accessibilityLabel: LocalizedStringResource? = nil,
+        accessibilitySpokenLabel: String? = nil,
+        accessibilityIdentifier: String? = nil
+    ) {
+        self.init(
+            selection: selection,
+            options: options,
+            size: size,
+            icon: icon,
+            iconOnly: iconOnly,
+            displayLabel: displayLabel,
+            placeholder: placeholder,
+            menuWidth: menuWidth,
+            fillsWidth: fillsWidth,
+            maxVisibleRows: maxVisibleRows,
+            rowHeight: rowHeight,
+            isDisabled: isDisabled,
+            accessibilityLabel: accessibilityLabel,
+            accessibilitySpokenLabel: accessibilitySpokenLabel,
+            accessibilityIdentifier: accessibilityIdentifier
+        ) { option in
+            PVSelectPlainRow(text: option.label)
+        }
+    }
 }
 
 private struct PVSelectPositionContent: ViewModifier {
@@ -580,5 +643,32 @@ private extension View {
     )
     .padding(PVSpacing.space9)
     .frame(width: 280)
+    .background(PVColor.surfacePage)
+}
+
+#Preview("Rich rows") {
+    PVSelect(
+        selection: .constant("cit-1"),
+        options: [
+            PVSelectOption(value: "", label: "New citation"),
+            PVSelectOption(value: "cit-1", label: "CIT-F4N2P"),
+        ],
+        displayLabel: "CIT-F4N2P",
+        menuWidth: 400,
+        fillsWidth: false,
+        rowHeight: 64
+    ) { option in
+        VStack(alignment: .leading, spacing: 2) {
+            Text(verbatim: option.label)
+                .font(PVFont.mono(size: PVTypeScale.caption, weight: PVFontWeight.semibold))
+            if option.id == "cit-1" {
+                Text(verbatim: "Margt. Alderwick, Farmer")
+                    .font(PVFont.body(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textSecondary)
+                    .lineLimit(2)
+            }
+        }
+    }
+    .padding(PVSpacing.space9)
     .background(PVColor.surfacePage)
 }

@@ -39,32 +39,14 @@ struct WorkspaceDestinationHost: View {
                 )
             }
         case .sourceCitationComposer:
-            if let sourceID = navigation.currentLocation.sourceId,
-               navigation.currentLocation.subjectId != nil || navigation.currentLocation.isConnectPrefill
-            {
+            if let entry = CitationComposerEntry(location: navigation.currentLocation) {
                 CitationComposerView(
-                    sourceID: sourceID,
-                    subjectID: navigation.currentLocation.subjectId ?? "",
-                    citationID: navigation.currentLocation.citationId,
-                    connectFromSubjectID: navigation.currentLocation.connectFromSubjectId,
-                    connectToSubjectID: navigation.currentLocation.connectToSubjectId,
-                    connectBridgeTypeKey: navigation.currentLocation.connectBridgeTypeKey,
-                    connectDisambiguationTermID: navigation.currentLocation.connectDisambiguationTermId,
-                    connectGridX: navigation.currentLocation.connectGridX ?? 0,
-                    connectGridY: navigation.currentLocation.connectGridY ?? 0,
+                    entry: entry,
                     session: session,
                     store: store,
                     userID: userID
                 )
-                .id(
-                    [
-                        sourceID,
-                        navigation.currentLocation.subjectId ?? "",
-                        navigation.currentLocation.citationId ?? "",
-                        navigation.currentLocation.connectFromSubjectId ?? "",
-                        navigation.currentLocation.connectToSubjectId ?? "",
-                    ].joined(separator: "-")
-                )
+                .id(entry.identityKey)
             }
         case .sourceFields:
             SourceFieldsView(

@@ -2,21 +2,13 @@ import SwiftUI
 
 /// Citation composer place (S8-10): viewer | form, Layout A + 1500pt two-column.
 struct CitationComposerView: View {
-    let sourceID: String
-    let subjectID: String
-    let citationID: String?
-    let connectFromSubjectID: String?
-    let connectToSubjectID: String?
-    let connectBridgeTypeKey: String?
-    let connectDisambiguationTermID: String?
+    let entry: CitationComposerEntry
     let session: WorkspaceSession
     let store: any GenealogyStore
     let userID: String
 
     @Environment(WorkspaceNavigation.self) private var navigation
     @State private var model: CitationComposerModel
-    @State private var customTermLabel = ""
-    @State private var showCustomTermDialog = false
 
     private static let wideBreakpoint: CGFloat = 1500
     private static let formWidthNarrow: CGFloat = 520
@@ -24,40 +16,18 @@ struct CitationComposerView: View {
     private static let formWidthWideMax: CGFloat = 880
 
     init(
-        sourceID: String,
-        subjectID: String,
-        citationID: String? = nil,
-        connectFromSubjectID: String? = nil,
-        connectToSubjectID: String? = nil,
-        connectBridgeTypeKey: String? = nil,
-        connectDisambiguationTermID: String? = nil,
-        connectGridX: Int64 = 0,
-        connectGridY: Int64 = 0,
+        entry: CitationComposerEntry,
         session: WorkspaceSession,
         store: any GenealogyStore,
         userID: String
     ) {
-        self.sourceID = sourceID
-        self.subjectID = subjectID
-        self.citationID = citationID
-        self.connectFromSubjectID = connectFromSubjectID
-        self.connectToSubjectID = connectToSubjectID
-        self.connectBridgeTypeKey = connectBridgeTypeKey
-        self.connectDisambiguationTermID = connectDisambiguationTermID
+        self.entry = entry
         self.session = session
         self.store = store
         self.userID = userID
         _model = State(
             initialValue: CitationComposerModel(
-                sourceID: sourceID,
-                subjectID: subjectID,
-                citationID: citationID,
-                connectFromSubjectID: connectFromSubjectID,
-                connectToSubjectID: connectToSubjectID,
-                connectBridgeTypeKey: connectBridgeTypeKey,
-                connectDisambiguationTermID: connectDisambiguationTermID,
-                connectGridX: connectGridX,
-                connectGridY: connectGridY,
+                entry: entry,
                 session: session,
                 store: store,
                 userID: userID
@@ -90,7 +60,7 @@ struct CitationComposerView: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(L10n.CitationComposer.accessibilityTitle))
         .accessibilityHint(Text(verbatim: model.identityAnnouncement))
-        .task(id: "\(sourceID)-\(subjectID)-\(citationID ?? "")-\(connectFromSubjectID ?? "")-\(connectToSubjectID ?? "")") {
+        .task(id: entry.identityKey) {
             await model.prepare()
             if model.shouldFallbackToGraph {
                 navigation.go(to: model.graphLocation())
@@ -112,14 +82,14 @@ struct CitationComposerView: View {
             CitationComposerObservationDialogForm(model: model)
         }
         .pvFormDialog(
-            isPresented: $showCustomTermDialog,
+            isPresented: customTermDialogBinding,
             copy: PVFormDialogCopy(
                 title: L10n.CitationComposer.addTermTitle,
                 confirm: L10n.CitationComposer.addTermConfirm,
                 cancel: L10n.CitationComposer.cancel
             ),
             isRunning: false,
-            confirmDisabled: customTermLabel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+            confirmDisabled: model.customTermLabel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
             accessibilityIdentifierPrefix: "citationComposer.term",
             onConfirm: {
                 Task {
@@ -128,17 +98,15 @@ struct CitationComposerView: View {
                     else { return }
                     guard let term = await model.createCustomTerm(
                         propertyID: row.propertyID,
-                        label: customTermLabel
+                        label: model.customTermLabel
                     ) else { return }
                     model.updateObservationTerm(id: rowID, termID: term.id)
-                    model.pendingCustomTermRowID = nil
-                    customTermLabel = ""
-                    showCustomTermDialog = false
+                    model.cancelCustomTermDialog()
                 }
             }
         ) {
             PVField(label: L10n.CitationComposer.addTermLabel, error: model.termError) {
-                PVInput(text: $customTermLabel, size: .sm)
+                PVInput(text: customTermLabelBinding, size: .sm)
                     .accessibilityIdentifier("citationComposer.term.label")
             }
         }
@@ -214,13 +182,7 @@ struct CitationComposerView: View {
                 CitationComposerFormPane(
                     model: model,
                     inert: false,
-                    wide: wide,
-                    onAddCustomTerm: { rowID in
-                        model.termError = nil
-                        model.pendingCustomTermRowID = rowID
-                        customTermLabel = ""
-                        showCustomTermDialog = true
-                    }
+                    wide: wide
                 )
                 .frame(width: formWidth)
                 .frame(maxHeight: .infinity)
@@ -235,6 +197,20 @@ struct CitationComposerView: View {
         Binding(
             get: { model.observationDialog != nil },
             set: { if !$0 { model.cancelObservationDialog() } }
+        )
+    }
+
+    private var customTermDialogBinding: Binding<Bool> {
+        Binding(
+            get: { model.showCustomTermDialog },
+            set: { if !$0 { model.cancelCustomTermDialog() } }
+        )
+    }
+
+    private var customTermLabelBinding: Binding<String> {
+        Binding(
+            get: { model.customTermLabel },
+            set: { model.customTermLabel = $0 }
         )
     }
 
