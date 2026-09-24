@@ -30,7 +30,7 @@ struct PVSectionHeader<Aside: View, Actions: View>: View {
                 .font(PVFont.display(size: PVTypeScale.h3, weight: PVFontWeight.semibold))
                 .foregroundStyle(PVColor.textDisplay)
             if let meta {
-                Text(meta)
+                Text(verbatim: meta)
                     .font(PVFont.mono(size: PVTypeScale.caption))
                     .foregroundStyle(PVColor.textMuted)
             }

@@ -629,4 +629,7 @@ private struct ThrowingStore: GenealogyStore {
     func citationCountsBySource(projectDir _: String, sourceID _: String) async throws -> [String: Int] {
         throw StoreBoom.boom
     }
+    func listCitationsByArtifact(projectDir _: String, artifactID _: String) async throws -> [CatalogListedCitation] {
+        throw StoreBoom.boom
+    }
 }

@@ -170,6 +170,36 @@ func UpdateCitationWithObservations(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
+func ListCitationsByArtifact(in []byte) ([]byte, error) {
+	var req engine.ListCitationsByArtifactRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("list_citations_by_artifact", err)
+	}
+	artifactID, err := parseID(req.GetArtifactId())
+	if err != nil {
+		return nil, err
+	}
+	var out *engine.ListCitationsByArtifactResponse
+	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		list, err := citations.ListByArtifact(c, artifactID)
+		if err != nil {
+			return err
+		}
+		out = &engine.ListCitationsByArtifactResponse{}
+		for _, row := range list {
+			out.Citations = append(out.Citations, &engine.ListedCitation{
+				Citation:         citationProto(row.Citation),
+				ObservationCount: row.ObservationCount,
+			})
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
+}
+
 func citationProto(c citations.Citation) *engine.Citation {
 	return &engine.Citation{
 		Id:                     uuidString(c.ID),

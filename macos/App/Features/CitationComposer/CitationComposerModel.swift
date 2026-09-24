@@ -1,21 +1,28 @@
 import Foundation
 import Observation
 
-/// Thin citation composer (S7-08): board-aligned viewer chrome | form, dialog Observations.
+/// Citation composer (S8-10): Citation is the document; subjects live on each row.
 @MainActor
 @Observable
 final class CitationComposerModel {
     enum Phase: Equatable {
         case loading
-        case pickArtifact
         case compose
         case subjectMissing
         case loadFailed
     }
 
-    /// Committed Observation summary row (edited via dialog, not inline).
+    /// Confirm target when switching Artifact on a dirty saved Citation.
+    struct ArtifactAbandon: Identifiable, Equatable {
+        var id: String { targetArtifactID }
+        var targetArtifactID: String
+    }
+
+    /// One Observation on the Citation. `subjectID` is a field on the row.
     struct ObservationRow: Identifiable, Equatable {
         var id: UUID
+        var persistedID: String? = nil
+        var subjectID: String = ""
         var propertyID: String
         var polarity: String
         var valueText: String
@@ -74,7 +81,7 @@ final class CitationComposerModel {
 
     let sourceID: String
     let subjectID: String
-    /// When set, prepare/save load and update this Citation instead of creating.
+    /// Entry Citation (pencil). Active identity can change via the in-form menu.
     let citationID: String?
     let connectFromSubjectID: String?
     let connectToSubjectID: String?
@@ -95,8 +102,18 @@ final class CitationComposerModel {
     private(set) var sourceTypeIconKey: String = ""
     private(set) var artifacts: [CatalogArtifact] = []
     private(set) var selectedArtifactID: String?
-    /// Frame 7 selection before Continue.
+    /// Frame 7 selection before Continue (kept for tests / default-pick helpers).
     var pendingArtifactID: String?
+    private(set) var activeCitationID: String?
+    private(set) var listedCitations: [CatalogListedCitation] = []
+    private(set) var focusedObservationID: UUID?
+    var pendingArtifactAbandon: ArtifactAbandon?
+    /// VoiceOver announcement after Artifact / Citation identity changes.
+    private(set) var identityAnnouncement: String = ""
+    /// Graph subjects offered on each Observation row (primaries + bridges).
+    private(set) var graphSubjects: [GraphSubjectOption] = []
+    private(set) var propertiesBySubjectTypeID: [String: [CatalogProperty]] = [:]
+    private(set) var allPropertiesByID: [String: CatalogProperty] = [:]
     private(set) var availableProperties: [CatalogProperty] = []
     /// Connect-edge Properties (excluded from Add observation) keyed by id.
     private(set) var connectEdgePropertiesByID: [String: CatalogProperty] = [:]
@@ -130,12 +147,44 @@ final class CitationComposerModel {
     private(set) var loadError: String?
     /// Custom-term dialog failure. Shown on that dialog, not the form footer.
     var termError: String?
+    /// Row that the custom-term dialog writes back to.
+    var pendingCustomTermRowID: UUID?
     var submitAttempted = false
 
     /// When true, host should `go(to:)` the Evidence graph (subject gone).
     private(set) var shouldFallbackToGraph = false
 
-    var isEditingExisting: Bool { citationID != nil }
+    var isEditingExisting: Bool { activeCitationID != nil }
+
+    var showsArtifactSwitcher: Bool { artifacts.count > 1 }
+
+    private(set) var citationCountsByArtifact: [String: Int] = [:]
+
+    func listedCount(for artifactID: String) -> Int {
+        citationCountsByArtifact[artifactID, default: 0]
+    }
+
+    var activeCitationRef: String {
+        if let id = activeCitationID,
+           let listed = listedCitations.first(where: { $0.id == id })
+        {
+            return listed.citation.ref
+        }
+        return ""
+    }
+
+    var isDirty: Bool { currentSnapshot() != baseline }
+
+    var subjectOptions: [PVComboBoxOption] {
+        graphSubjects.map {
+            PVComboBoxOption(value: $0.id, label: $0.label, subtext: $0.ref)
+        }
+    }
+
+    var defaultObservationSubjectID: String {
+        if !subjectID.isEmpty { return subjectID }
+        return graphSubjects.first?.id ?? ""
+    }
 
     var isConnectPrefill: Bool {
         subjectID.isEmpty
@@ -170,7 +219,38 @@ final class CitationComposerModel {
         self.session = session
         self.store = store
         self.userID = userID
+        self.activeCitationID = citationID
     }
+
+    struct GraphSubjectOption: Identifiable, Equatable {
+        var id: String
+        var label: String
+        var ref: String
+        var typeID: String
+        var typeKey: String
+    }
+
+    private struct FormSnapshot: Equatable {
+        var artifactID: String?
+        var citationID: String?
+        var transcription: String
+        var transcriptionUncertain: Bool
+        var transcriptionNote: String
+        var description: String
+        var locator: CitationLocatorDraft
+        var observations: [ObservationRow]
+    }
+
+    private var baseline = FormSnapshot(
+        artifactID: nil,
+        citationID: nil,
+        transcription: "",
+        transcriptionUncertain: false,
+        transcriptionNote: "",
+        description: "",
+        locator: .artifactOnly(),
+        observations: []
+    )
 
     var graphKey: CatalogQueryKey {
         .sourceGraph(project: session.projectKey, sourceId: sourceID)
@@ -267,7 +347,23 @@ final class CitationComposerModel {
         if let match = availableProperties.first(where: { $0.id == id }) {
             return match
         }
-        return connectEdgePropertiesByID[id]
+        if let match = connectEdgePropertiesByID[id] {
+            return match
+        }
+        return allPropertiesByID[id]
+    }
+
+    func propertyOptions(for subjectID: String) -> [PVComboBoxOption] {
+        let typeID = graphSubjects.first(where: { $0.id == subjectID })?.typeID ?? subjectTypeID
+        let props = propertiesBySubjectTypeID[typeID] ?? availableProperties
+        return props
+            .filter { Self.supportedValueTypes.contains($0.valueType) }
+            .sorted { $0.label.localizedCaseInsensitiveCompare($1.label) == .orderedAscending }
+            .map { PVComboBoxOption(value: $0.id, label: $0.label, subtext: $0.key) }
+    }
+
+    func subjectLabel(for subjectID: String) -> String {
+        graphSubjects.first(where: { $0.id == subjectID })?.label ?? subjectID
     }
 
     func termOptions(for propertyID: String) -> [PVComboBoxOption] {
@@ -480,6 +576,12 @@ final class CitationComposerModel {
                 .first { $0.id == workspace.source.sourceTypeID }?
                 .iconKey ?? ""
             artifacts = workspace.artifacts
+            citationCountsByArtifact = try await cached(citationCountsKey) {
+                try await self.store.citationCountsBySource(
+                    projectDir: projectDir,
+                    sourceID: self.sourceID
+                )
+            }
 
             let fields = try await store.listSubjectTypeFields(
                 projectDir: projectDir,
@@ -511,6 +613,24 @@ final class CitationComposerModel {
 
             let subjectLabelsByID = Self.subjectLabels(in: snapshot)
             let typeKeyBySubjectID = Self.typeKeyBySubjectID(in: snapshot)
+            graphSubjects = Self.graphSubjectOptions(in: snapshot)
+            allPropertiesByID = Dictionary(
+                uniqueKeysWithValues: (try await store.listProperties(projectDir: projectDir))
+                    .map { ($0.id, $0) }
+            )
+            var fieldsByType: [String: [CatalogProperty]] = [:]
+            let typeIDs = Set(graphSubjects.map(\.typeID) + [resolved.typeID].filter { !$0.isEmpty })
+            for typeID in typeIDs {
+                let fields = try await store.listSubjectTypeFields(
+                    projectDir: projectDir,
+                    subjectTypeID: typeID
+                )
+                fieldsByType[typeID] = fields.map(\.property)
+                for field in fields {
+                    allPropertiesByID[field.property.id] = field.property
+                }
+            }
+            propertiesBySubjectTypeID = fieldsByType
 
             if let citationID {
                 let (citation, _, citationObservations) = try await store.getCitation(
@@ -522,14 +642,19 @@ final class CitationComposerModel {
                     observations: citationObservations,
                     subjectLabelsByID: subjectLabelsByID
                 )
+                activeCitationID = citationID
+                focusEntrySubject()
                 if artifacts.isEmpty {
                     selectedArtifactID = nil
                     pendingArtifactID = nil
                     phase = .compose
+                    captureBaseline()
                     return
                 }
+                await reloadListedCitations()
                 phase = .compose
                 await reloadArtifactViewer(preferredPage: locator.page)
+                captureBaseline()
                 return
             }
 
@@ -591,27 +716,32 @@ final class CitationComposerModel {
                 selectedArtifactID = nil
                 pendingArtifactID = nil
                 phase = .compose
+                captureBaseline()
                 return
             }
             if artifacts.count == 1 {
                 await applySelectedArtifact(artifacts[0].id)
-                phase = .compose
-                return
-            }
-            let counts = try await cached(citationCountsKey) {
-                try await self.store.citationCountsBySource(
-                    projectDir: projectDir,
-                    sourceID: self.sourceID
+            } else {
+                let counts = try await cached(citationCountsKey) {
+                    try await self.store.citationCountsBySource(
+                        projectDir: projectDir,
+                        sourceID: self.sourceID
+                    )
+                }
+                pendingArtifactID = Self.defaultPendingArtifactID(
+                    artifacts: artifacts,
+                    citationCounts: counts,
+                    selectedID: selectedArtifactID,
+                    coverMode: workspace.source.coverMode,
+                    primaryArtifactID: workspace.source.primaryArtifactID
                 )
+                if let id = pendingArtifactID {
+                    await applySelectedArtifact(id)
+                }
             }
-            pendingArtifactID = Self.defaultPendingArtifactID(
-                artifacts: artifacts,
-                citationCounts: counts,
-                selectedID: selectedArtifactID,
-                coverMode: workspace.source.coverMode,
-                primaryArtifactID: workspace.source.primaryArtifactID
-            )
-            phase = .pickArtifact
+            await reloadListedCitations()
+            phase = .compose
+            captureBaseline()
         } catch {
             loadError = L10n.Errors.message(for: error)
             artifacts = []
@@ -637,27 +767,72 @@ final class CitationComposerModel {
         pendingArtifactID = id
     }
 
-    func confirmArtifactSelection() {
-        Task { await confirmArtifactSelectionAndLoad() }
+    func requestSelectArtifact(_ id: String) {
+        Task { await selectArtifactAndLoad(id) }
     }
 
-    func confirmArtifactSelectionAndLoad() async {
-        guard let id = pendingArtifactID, artifacts.contains(where: { $0.id == id }) else { return }
-        selectedArtifactID = id
-        pendingArtifactID = id
-        resetToEntireArtifact()
-        phase = .compose
-        formError = nil
-        submitAttempted = false
-        await reloadArtifactViewer(preferredPage: nil)
+    func selectArtifactAndLoad(_ id: String) async {
+        guard artifacts.contains(where: { $0.id == id }), id != selectedArtifactID else { return }
+        if isEditingExisting, isDirty {
+            pendingArtifactAbandon = ArtifactAbandon(targetArtifactID: id)
+            return
+        }
+        await applyArtifactSwitch(id)
     }
 
-    func changeArtifact() {
-        guard artifacts.count > 1 else { return }
-        pendingArtifactID = selectedArtifactID
-        phase = .pickArtifact
-        formError = nil
-        submitAttempted = false
+    func confirmAbandonArtifact() {
+        guard let pending = pendingArtifactAbandon else { return }
+        pendingArtifactAbandon = nil
+        Task { await applyArtifactSwitch(pending.targetArtifactID) }
+    }
+
+    func confirmAbandonArtifactAndLoad() async {
+        guard let pending = pendingArtifactAbandon else { return }
+        pendingArtifactAbandon = nil
+        await applyArtifactSwitch(pending.targetArtifactID)
+    }
+
+    func cancelAbandonArtifact() {
+        pendingArtifactAbandon = nil
+    }
+
+    func selectCitation(_ id: String?) {
+        Task { await selectCitationAndLoad(id) }
+    }
+
+    func selectCitationAndLoad(_ id: String?) async {
+        if id == nil || id?.isEmpty == true {
+            resetToNewCitation()
+            await reloadListedCitations()
+            announceIdentityChange()
+            captureBaseline()
+            return
+        }
+        guard let id else { return }
+        do {
+            let (citation, _, citationObservations) = try await store.getCitation(
+                projectDir: session.projectKey.projectDir,
+                citationID: id
+            )
+            applyLoadedCitation(
+                citation,
+                observations: citationObservations,
+                subjectLabelsByID: Dictionary(uniqueKeysWithValues: graphSubjects.map { ($0.id, $0.label) })
+            )
+            activeCitationID = id
+            if citationID == nil, !isConnectPrefill, !subjectID.isEmpty,
+               !observations.contains(where: { $0.subjectID == subjectID })
+            {
+                appendDraftObservation(subjectID: subjectID)
+            }
+            focusEntrySubject()
+            await reloadArtifactViewer(preferredPage: locator.page)
+            await reloadListedCitations()
+            announceIdentityChange()
+            captureBaseline()
+        } catch {
+            formError = L10n.Errors.message(for: error)
+        }
     }
 
     func goToPreviousPage() {
@@ -720,11 +895,61 @@ final class CitationComposerModel {
     }
 
     func beginAddObservation() {
-        observationDialog = .fresh()
+        appendDraftObservation(subjectID: defaultObservationSubjectID)
+    }
+
+    func updateObservationSubject(id: UUID, subjectID: String) {
+        guard let index = observations.firstIndex(where: { $0.id == id }),
+              !observations[index].isConnectFixed
+        else { return }
+        observations[index].subjectID = subjectID
+        let allowed = Set(propertyOptions(for: subjectID).map(\.value))
+        if !allowed.contains(observations[index].propertyID) {
+            clearObservationValue(&observations[index])
+            observations[index].propertyID = ""
+        }
+        focusedObservationID = id
+    }
+
+    func updateObservationProperty(id: UUID, propertyID: String) {
+        guard let index = observations.firstIndex(where: { $0.id == id }),
+              !observations[index].isConnectFixed
+        else { return }
+        let previousType = catalogProperty(id: observations[index].propertyID)?.valueType
+        observations[index].propertyID = propertyID
+        let nextType = catalogProperty(id: propertyID)?.valueType
+        if previousType != nextType {
+            clearObservationValue(&observations[index])
+        }
+        focusedObservationID = id
+    }
+
+    func updateObservationText(id: UUID, text: String) {
+        guard let index = observations.firstIndex(where: { $0.id == id }) else { return }
+        observations[index].valueText = text
+    }
+
+    func updateObservationInteger(id: UUID, text: String) {
+        guard let index = observations.firstIndex(where: { $0.id == id }) else { return }
+        observations[index].valueIntegerText = text
+    }
+
+    func updateObservationTerm(id: UUID, termID: String) {
+        guard let index = observations.firstIndex(where: { $0.id == id }) else { return }
+        observations[index].valueTermID = termID
+    }
+
+    func toggleObservationPolarity(id: UUID) {
+        guard let index = observations.firstIndex(where: { $0.id == id }),
+              !observations[index].isConnectFixed
+        else { return }
+        observations[index].polarity = observations[index].polarity == "negative" ? "positive" : "negative"
     }
 
     func beginEditObservation(_ row: ObservationRow) {
         guard !row.isConnectFixed else { return }
+        let type = catalogProperty(id: row.propertyID)?.valueType
+        guard type == "name" || type == "date" else { return }
         observationDialog = .editing(row)
     }
 
@@ -761,6 +986,9 @@ final class CitationComposerModel {
 
         let row = ObservationRow(
             id: draft.editingID ?? UUID(),
+            persistedID: observations.first(where: { $0.id == draft.editingID })?.persistedID,
+            subjectID: observations.first(where: { $0.id == draft.editingID })?.subjectID
+                ?? defaultObservationSubjectID,
             propertyID: draft.propertyID,
             polarity: draft.polarity == "negative" ? "negative" : "positive",
             valueText: draft.valueText.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -823,7 +1051,7 @@ final class CitationComposerModel {
             return nil
         }
         let locatorJSON = locator.encodeJSON()
-        guard !observations.isEmpty else {
+        if isConnectPrefill, !observations.contains(where: \.isConnectFixed) {
             formError = String(localized: L10n.CitationComposer.saveNeedsObservationError)
             return nil
         }
@@ -832,7 +1060,7 @@ final class CitationComposerModel {
         isSubmitting = true
         defer { isSubmitting = false }
         do {
-            if let citationID {
+            if let citationID = activeCitationID {
                 _ = try await store.updateCitationWithObservations(
                     projectDir: session.projectKey.projectDir,
                     userID: userID,
@@ -886,6 +1114,11 @@ final class CitationComposerModel {
                 )
             }
             session.apply(.createdCitation(sourceId: sourceID))
+            session.noticeToast = VocabularyToast(
+                title: String(localized: L10n.CitationComposer.saveToastTitle),
+                body: String(localized: L10n.CitationComposer.saveToastBody),
+                tone: .success
+            )
             didSubmit = true
             return graphLocation()
         } catch {
@@ -925,19 +1158,19 @@ final class CitationComposerModel {
         citationDescription = citation.description
         locator = CitationLocatorDraft.decode(citation.locatorJSON)
         let fixedIDs = Set(connectEdgePropertiesByID.keys)
-        observations = listed
-            .filter { $0.subjectID == subjectID }
-            .compactMap {
-                Self.observationRow(
-                    from: $0,
-                    propertiesByID: Dictionary(
-                        uniqueKeysWithValues: (availableProperties + Array(connectEdgePropertiesByID.values))
-                            .map { ($0.id, $0) }
-                    ),
-                    fixedPropertyIDs: fixedIDs,
-                    subjectLabelsByID: subjectLabelsByID
-                )
-            }
+        var propertiesByID = allPropertiesByID
+        for property in availableProperties + Array(connectEdgePropertiesByID.values) {
+            propertiesByID[property.id] = property
+        }
+        observations = listed.compactMap {
+            Self.observationRow(
+                from: $0,
+                propertiesByID: propertiesByID,
+                fixedPropertyIDs: fixedIDs,
+                subjectLabelsByID: subjectLabelsByID
+            )
+        }
+        activeCitationID = citation.id
     }
 
     private func applySelectedArtifact(_ id: String) async {
@@ -989,12 +1222,18 @@ final class CitationComposerModel {
         var drafts: [CatalogObservationDraft] = []
         drafts.reserveCapacity(observations.count)
         for row in observations {
+            if row.propertyID.isEmpty { continue }
             guard let property = catalogProperty(id: row.propertyID) else {
                 formError = String(localized: L10n.CitationComposer.missingPropertyError)
                 return nil
             }
+            let rowSubjectID = row.isConnectFixed ? subjectID : row.subjectID
+            if !row.isConnectFixed, rowSubjectID.isEmpty {
+                formError = String(localized: L10n.CitationComposer.dialogPropertyRequired)
+                return nil
+            }
             var draft = CatalogObservationDraft(
-                subjectID: subjectID,
+                subjectID: rowSubjectID,
                 propertyID: property.id,
                 polarity: row.polarity == "negative" ? "negative" : "positive"
             )
@@ -1054,6 +1293,8 @@ final class CitationComposerModel {
         }
         return ObservationRow(
             id: UUID(),
+            persistedID: observation.id,
+            subjectID: observation.subjectID,
             propertyID: observation.propertyID,
             polarity: observation.polarity.isEmpty ? "positive" : observation.polarity,
             valueText: valueText,
@@ -1064,6 +1305,140 @@ final class CitationComposerModel {
             nameDraft: NameValueDraft(from: observation),
             isConnectFixed: isFixed
         )
+    }
+
+    private func applyArtifactSwitch(_ id: String) async {
+        resetToNewCitation()
+        await applySelectedArtifact(id)
+        await reloadListedCitations()
+        announceIdentityChange()
+        captureBaseline()
+    }
+
+    private func resetToNewCitation() {
+        activeCitationID = nil
+        transcription = ""
+        transcriptionUncertain = false
+        transcriptionNote = ""
+        citationDescription = ""
+        resetToEntireArtifact()
+        if isConnectPrefill {
+            observations.removeAll { !$0.isConnectFixed }
+        } else {
+            observations = []
+        }
+        focusedObservationID = nil
+        formError = nil
+        submitAttempted = false
+    }
+
+    private func appendDraftObservation(subjectID: String) {
+        let row = ObservationRow(
+            id: UUID(),
+            subjectID: subjectID,
+            propertyID: "",
+            polarity: "positive",
+            valueText: "",
+            valueIntegerText: "",
+            valueTermID: "",
+            valueSubjectID: "",
+            dateDraft: .empty(),
+            isConnectFixed: false
+        )
+        observations.append(row)
+        focusedObservationID = row.id
+        formError = nil
+    }
+
+    private func clearObservationValue(_ row: inout ObservationRow) {
+        row.valueText = ""
+        row.valueIntegerText = ""
+        row.valueTermID = ""
+        row.valueSubjectID = ""
+        row.dateDraft = .empty()
+        row.nameDraft = .empty()
+    }
+
+    private func reloadListedCitations() async {
+        guard let artifactID = selectedArtifactID else {
+            listedCitations = []
+            return
+        }
+        do {
+            listedCitations = try await store.listCitationsByArtifact(
+                projectDir: session.projectKey.projectDir,
+                artifactID: artifactID
+            )
+        } catch {
+            listedCitations = []
+        }
+    }
+
+    private func focusEntrySubject() {
+        if let match = observations.first(where: { $0.subjectID == subjectID && !subjectID.isEmpty }) {
+            focusedObservationID = match.id
+        } else {
+            focusedObservationID = observations.first?.id
+        }
+    }
+
+    private func currentSnapshot() -> FormSnapshot {
+        FormSnapshot(
+            artifactID: selectedArtifactID,
+            citationID: activeCitationID,
+            transcription: transcription,
+            transcriptionUncertain: transcriptionUncertain,
+            transcriptionNote: transcriptionNote,
+            description: citationDescription,
+            locator: locator,
+            observations: observations
+        )
+    }
+
+    private func captureBaseline() {
+        baseline = currentSnapshot()
+    }
+
+    private func announceIdentityChange() {
+        if let active = activeCitationID,
+           let listed = listedCitations.first(where: { $0.id == active })
+        {
+            identityAnnouncement = L10n.CitationComposer.identityChangedCitation(
+                ref: listed.citation.ref,
+                count: listed.observationCount
+            )
+        } else if let artifact = selectedArtifact {
+            identityAnnouncement = L10n.CitationComposer.identityChangedArtifact(title: artifact.label)
+        } else {
+            identityAnnouncement = String(localized: L10n.CitationComposer.identityChangedNew)
+        }
+    }
+
+    private static func graphSubjectOptions(in snapshot: SourceGraphSnapshot) -> [GraphSubjectOption] {
+        var options: [GraphSubjectOption] = []
+        for placed in snapshot.subjects {
+            options.append(
+                GraphSubjectOption(
+                    id: placed.id,
+                    label: placed.subject.label,
+                    ref: placed.subject.ref,
+                    typeID: placed.subject.subjectTypeID,
+                    typeKey: placed.kind.rawValue
+                )
+            )
+        }
+        for bridge in snapshot.bridges {
+            options.append(
+                GraphSubjectOption(
+                    id: bridge.id,
+                    label: bridge.subject.label,
+                    ref: bridge.subject.ref,
+                    typeID: bridge.subject.subjectTypeID,
+                    typeKey: bridge.kind.rawValue
+                )
+            )
+        }
+        return options
     }
 
     private struct ResolvedSubject {

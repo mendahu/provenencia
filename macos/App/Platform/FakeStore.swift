@@ -1452,12 +1452,28 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         return counts
     }
 
+    func listCitationsByArtifact(projectDir: String, artifactID: String) async throws -> [CatalogListedCitation] {
+        markCatalogSessionHeld(projectDir)
+        let listed = citationsByID.values
+            .filter { $0.artifactID == artifactID }
+            .sorted { $0.ref.localizedCaseInsensitiveCompare($1.ref) == .orderedAscending }
+        return listed.map { citation in
+            let count = observationsBySource.values
+                .flatMap { $0 }
+                .filter { $0.citationID == citation.id }
+                .count
+            return CatalogListedCitation(citation: citation, observationCount: count)
+        }
+    }
+
     private func appendFakeObservations(
         projectDir: String,
         citationID: String,
         drafts: [CatalogObservationDraft]
     ) throws -> [CatalogObservation] {
-        guard !drafts.isEmpty else { throw StoreBoom.boom }
+        if drafts.isEmpty {
+            return []
+        }
         var created: [CatalogObservation] = []
         for draft in drafts {
             guard let subject = subjectsBySource.values.flatMap({ $0 }).first(where: { $0.id == draft.subjectID })

@@ -1147,6 +1147,22 @@ struct GoStore: GenealogyStore {
         return counts
     }
 
+    func listCitationsByArtifact(projectDir: String, artifactID: String) async throws -> [CatalogListedCitation] {
+        var req = Provenencia_Engine_V1_ListCitationsByArtifactRequest()
+        req.projectDir = projectDir
+        req.artifactID = artifactID
+        let resp: Provenencia_Engine_V1_ListCitationsByArtifactResponse = try await provenenciaCall(
+            method: CoreMethod.listCitationsByArtifact,
+            request: req
+        )
+        return resp.citations.map { row in
+            CatalogListedCitation(
+                citation: Self.mapCitation(row.citation),
+                observationCount: Int(row.observationCount)
+            )
+        }
+    }
+
     private static func mapOriginCounts(
         _ c: Provenencia_Engine_V1_VocabularyOriginCounts
     ) -> WorkspaceNavOriginCounts {

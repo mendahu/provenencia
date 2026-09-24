@@ -2143,18 +2143,6 @@ enum L10n {
             comment: "Cancel button that returns to the Evidence graph without writing"
         )
 
-        static let continuePick = LocalizedStringResource(
-            "citationComposer.continuePick",
-            defaultValue: "Continue",
-            comment: "Confirms Artifact selection on the multi-Artifact picker"
-        )
-
-        static let citationSection = LocalizedStringResource(
-            "citationComposer.citationSection",
-            defaultValue: "Citation",
-            comment: "Form pane title above transcription and citation metadata"
-        )
-
         static let transcriptionLabel = LocalizedStringResource(
             "citationComposer.transcriptionLabel",
             defaultValue: "Transcription",
@@ -2189,18 +2177,6 @@ enum L10n {
             "citationComposer.addObservation",
             defaultValue: "Add observation",
             comment: "Button / dialog confirm that commits an Observation"
-        )
-
-        static let addObservationTitle = LocalizedStringResource(
-            "citationComposer.addObservationTitle",
-            defaultValue: "Add observation",
-            comment: "Title of the Add observation form dialog"
-        )
-
-        static let addObservationSubtitle = LocalizedStringResource(
-            "citationComposer.addObservationSubtitle",
-            defaultValue: "Pick a Property, then its value.",
-            comment: "Subtitle under the Add observation dialog title"
         )
 
         static let editObservation = LocalizedStringResource(
@@ -2339,27 +2315,6 @@ enum L10n {
             "citationComposer.dateUnset",
             defaultValue: "No date set",
             comment: "Summary when a date Observation has no valid DateValue yet"
-        )
-
-        static let pickArtifactTitle = LocalizedStringResource(
-            "citationComposer.pickArtifactTitle",
-            defaultValue: "Choose an artifact",
-            comment: "Title when the Source has multiple Artifacts to cite"
-        )
-
-        static func pickArtifactCount(title: String, count: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
-                "citationComposer.pickArtifactCount",
-                defaultValue: "%@ has %lld artifacts attached.",
-                comment: "Caption under Choose an artifact; arguments are Source title and artifact count"
-            ))
-            return String(format: format, locale: .current, title, count)
-        }
-
-        static let changeArtifact = LocalizedStringResource(
-            "citationComposer.changeArtifact",
-            defaultValue: "Change artifact",
-            comment: "Returns to the Artifact picker from the compose shell"
         )
 
         static func artifactIndexOf(index: Int, total: Int, kind: String) -> String {
@@ -2557,12 +2512,6 @@ enum L10n {
             comment: "Validation when Save is pressed without an Artifact"
         )
 
-        static let noObservationsError = LocalizedStringResource(
-            "citationComposer.noObservationsError",
-            defaultValue: "No observations yet — a citation has to record at least one thing the record says.",
-            comment: "Empty Observations section callout"
-        )
-
         static let saveNeedsObservationError = LocalizedStringResource(
             "citationComposer.saveNeedsObservationError",
             defaultValue: "Add at least one observation before saving.",
@@ -2610,6 +2559,186 @@ enum L10n {
             defaultValue: "This Property type is not editable here yet.",
             comment: "Shown for name/subject rows deferred past the thin composer"
         )
+
+        static let newCitation = LocalizedStringResource(
+            "citationComposer.newCitation",
+            defaultValue: "New citation",
+            comment: "Citation identity control when composing a new reading"
+        )
+
+        static let artifactMenuTitle = LocalizedStringResource(
+            "citationComposer.artifactMenuTitle",
+            defaultValue: "Artifacts on this source",
+            comment: "Context menu title for the in-form Artifact switcher"
+        )
+
+        static let subjectLabel = LocalizedStringResource(
+            "citationComposer.subjectLabel",
+            defaultValue: "Subject",
+            comment: "ComboBox label for the Observation subject"
+        )
+
+        static let subjectPlaceholder = LocalizedStringResource(
+            "citationComposer.subjectPlaceholder",
+            defaultValue: "Search subjects",
+            comment: "Placeholder in the Observation subject picker"
+        )
+
+        static let subjectEmpty = LocalizedStringResource(
+            "citationComposer.subjectEmpty",
+            defaultValue: "No matching subjects",
+            comment: "Empty state when subject search has no hits"
+        )
+
+        static let observationActions = LocalizedStringResource(
+            "citationComposer.observationActions",
+            defaultValue: "Observation actions",
+            comment: "VoiceOver name for the Observation row overflow menu"
+        )
+
+        static let editValueTitle = LocalizedStringResource(
+            "citationComposer.editValueTitle",
+            defaultValue: "Edit value",
+            comment: "Title of the name or date Observation editor dialog"
+        )
+
+        static let editValuePlaceholder = LocalizedStringResource(
+            "citationComposer.editValuePlaceholder",
+            defaultValue: "Set value",
+            comment: "Placeholder on the name/date button before a value is set"
+        )
+
+        static let viewerGroup = LocalizedStringResource(
+            "citationComposer.viewerGroup",
+            defaultValue: "Artifact viewer",
+            comment: "VoiceOver group name for the composer viewer pane"
+        )
+
+        static let formGroup = LocalizedStringResource(
+            "citationComposer.formGroup",
+            defaultValue: "Citation form",
+            comment: "VoiceOver group name for the composer form pane"
+        )
+
+        static let citationMenuNew = LocalizedStringResource(
+            "citationComposer.citationMenuNew",
+            defaultValue: "Citation, new",
+            comment: "VoiceOver name for the Citation identity control when New is selected"
+        )
+
+        static let noArtifactsTitle = LocalizedStringResource(
+            "citationComposer.noArtifactsTitle",
+            defaultValue: "This source has no artifacts",
+            comment: "Callout title when the Source has no Artifacts to cite"
+        )
+
+        static let saveToastTitle = LocalizedStringResource(
+            "citationComposer.saveToastTitle",
+            defaultValue: "Citation saved",
+            comment: "Toast title after the composer writes a Citation"
+        )
+
+        static let saveToastBody = LocalizedStringResource(
+            "citationComposer.saveToastBody",
+            defaultValue: "The reading is on this source. Open it again from the citation menu on the artifact.",
+            comment: "Toast body after the composer writes a Citation"
+        )
+
+        static let abandonConfirm = LocalizedStringResource(
+            "citationComposer.abandonConfirm",
+            defaultValue: "Discard edits",
+            comment: "Confirm button when switching Artifact abandons a dirty saved Citation"
+        )
+
+        static let abandonCancel = LocalizedStringResource(
+            "citationComposer.abandonCancel",
+            defaultValue: "Keep editing",
+            comment: "Cancel button on the dirty Artifact-change confirm"
+        )
+
+        static let identityChangedNew = LocalizedStringResource(
+            "citationComposer.identityChangedNew",
+            defaultValue: "Now composing a new citation",
+            comment: "VoiceOver announcement when Citation identity resets to New"
+        )
+
+        static func artifactMenuLabel(title: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "citationComposer.artifactMenuLabel",
+                defaultValue: "Artifact, %@",
+                comment: "VoiceOver name for the Artifact identity control; argument is Artifact title"
+            ))
+            return String(format: format, locale: .current, title)
+        }
+
+        static func artifactMenuMeta(kind: String, count: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "citationComposer.artifactMenuMeta",
+                defaultValue: "%@ · %lld citations",
+                comment: "Artifact menu row meta; arguments are media kind and citation count"
+            ))
+            return String(format: format, locale: .current, kind, count)
+        }
+
+        static let citationMenuTitle = LocalizedStringResource(
+            "citationComposer.citationMenuTitle",
+            defaultValue: "Citations on this artifact",
+            comment: "Context menu title for the Citation identity switcher"
+        )
+
+        static func citationMenuCount(count: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "citationComposer.citationMenuCount",
+                defaultValue: "%lld obs",
+                comment: "Observation count on a Citation menu row; argument is count"
+            ))
+            return String(format: format, locale: .current, count)
+        }
+
+        static func citationMenuRef(ref: String, count: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "citationComposer.citationMenuRef",
+                defaultValue: "Citation, %@, %lld observations",
+                comment: "VoiceOver name for the Citation identity control; arguments are ref and count"
+            ))
+            return String(format: format, locale: .current, ref, count)
+        }
+
+        static func identityChangedCitation(ref: String, count: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "citationComposer.identityChangedCitation",
+                defaultValue: "Now citing %@, %lld observations",
+                comment: "VoiceOver announcement after switching Citation; arguments are ref and count"
+            ))
+            return String(format: format, locale: .current, ref, count)
+        }
+
+        static func identityChangedArtifact(title: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "citationComposer.identityChangedArtifact",
+                defaultValue: "Now citing %@",
+                comment: "VoiceOver announcement after switching Artifact; argument is Artifact title"
+            ))
+            return String(format: format, locale: .current, title)
+        }
+
+        static func abandonTitle(ref: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "citationComposer.abandonTitle",
+                defaultValue: "Discard unsaved edits to %@?",
+                comment: "Confirm title when switching Artifact on a dirty saved Citation; argument is CIT ref"
+            ))
+            return String(format: format, locale: .current, ref)
+        }
+
+        static func abandonMessage(artifactTitle: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "citationComposer.abandonMessage",
+                defaultValue: "Switching to %@ starts a new citation there. The saved citation keeps its last saved reading. Only the changes you haven’t saved are lost.",
+                comment: "Confirm message when switching Artifact; argument is the target Artifact title"
+            ))
+            return String(format: format, locale: .current, artifactTitle)
+        }
     }
 
     /// Origin markers shared by every catalog vocabulary destination —

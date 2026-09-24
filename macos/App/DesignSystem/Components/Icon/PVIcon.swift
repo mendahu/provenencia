@@ -34,6 +34,7 @@ enum PVSymbol: String {
     case zoomOut = "minus.magnifyingglass"
     case zoomIn = "plus.magnifyingglass"
     case plus = "plus"
+    case ellipsis = "ellipsis"
     case sortAscending = "arrow.up"
     case sortDescending = "arrow.down"
     case sortUnsorted = "chevron.up.chevron.down"

@@ -251,6 +251,70 @@ func TestCitations(t *testing.T) {
 				if list[0].Ref[:4] != "CIT-" {
 					t.Fatalf("ref %q", list[0].Ref)
 				}
+				if list[0].ObservationCount != 1 {
+					t.Fatalf("obs count %d", list[0].ObservationCount)
+				}
+			},
+		},
+		{
+			name: "create with zero observations",
+			run: func(t *testing.T) {
+				c, s := mustSeed(t)
+				res, err := CreateWithObservations(c, userID, CreateInput{
+					ArtifactID:    s.artifact.ID,
+					LocatorJSON:   validLocator,
+					Transcription: "transcribe first",
+				}, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !strings.HasPrefix(res.Citation.Ref, "CIT-") {
+					t.Fatalf("citation ref %q", res.Citation.Ref)
+				}
+				if len(res.Observations) != 0 {
+					t.Fatalf("obs count %d", len(res.Observations))
+				}
+				list, err := ListByArtifact(c, s.artifact.ID)
+				if err != nil || len(list) != 1 {
+					t.Fatalf("%v len=%d", err, len(list))
+				}
+				if list[0].ObservationCount != 0 {
+					t.Fatalf("listed count %d", list[0].ObservationCount)
+				}
+			},
+		},
+		{
+			name: "update populated citation down to zero observations",
+			run: func(t *testing.T) {
+				c, s := mustSeed(t)
+				res, err := CreateWithObservations(c, userID, CreateInput{
+					ArtifactID:  s.artifact.ID,
+					LocatorJSON: validLocator,
+				}, []observations.Input{{
+					SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
+					ValueTermID: s.femaleTerm.ID,
+				}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				updated, err := UpdateWithObservations(c, userID, res.Citation.ID, CreateInput{
+					ArtifactID:    s.artifact.ID,
+					LocatorJSON:   validLocator,
+					Transcription: "cleared",
+				}, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if updated.Citation.Transcription != "cleared" {
+					t.Fatalf("transcription %q", updated.Citation.Transcription)
+				}
+				if len(updated.Observations) != 0 {
+					t.Fatalf("obs count %d", len(updated.Observations))
+				}
+				listed, err := observations.ListByCitation(c, res.Citation.ID)
+				if err != nil || len(listed) != 0 {
+					t.Fatalf("persisted %v len=%d", err, len(listed))
+				}
 			},
 		},
 		{

@@ -84,6 +84,36 @@ func TestCreateCitationWithObservations(t *testing.T) {
 	runRPC(t, CreateCitationWithObservations, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 		{
+			name: "creates citation with zero observations",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _, artifactID, _, _ := citationFixture(t)
+				return &engine.CreateCitationWithObservationsRequest{
+					ProjectDir:    dir,
+					UserId:        userID,
+					ArtifactId:    artifactID,
+					LocatorJson:   validLocatorJSON,
+					Transcription: "transcribe first",
+				}
+			},
+			after: func(t *testing.T, out []byte, req proto.Message) {
+				var created engine.CreateCitationWithObservationsResponse
+				if err := proto.Unmarshal(out, &created); err != nil {
+					t.Fatal(err)
+				}
+				if !strings.HasPrefix(created.Citation.GetRef(), "CIT-") {
+					t.Fatalf("citation ref %q", created.Citation.GetRef())
+				}
+				if len(created.Observations) != 0 {
+					t.Fatalf("observations %+v", created.Observations)
+				}
+				if created.Citation.GetTranscription() != "transcribe first" {
+					t.Fatalf("transcription %q", created.Citation.GetTranscription())
+				}
+				cr := req.(*engine.CreateCitationWithObservationsRequest)
+				assertLatestAuditAction(t, cr.ProjectDir, "create_citation_with_observations")
+			},
+		},
+		{
 			name: "bad locator",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, _, artifactID, placeID, propID := citationFixture(t)
@@ -283,6 +313,64 @@ func TestCitationCountsBySource(t *testing.T) {
 				}
 				if len(list.Counts) != 1 || list.Counts[0].GetCount() != 2 {
 					t.Fatalf("%+v", list.Counts)
+				}
+			},
+		},
+	})
+}
+
+func TestListCitationsByArtifact(t *testing.T) {
+	runRPC(t, ListCitationsByArtifact, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "lists citations with observation counts",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _, artifactID, placeID, propID := citationFixture(t)
+				if _, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
+					ProjectDir:    dir,
+					UserId:        userID,
+					ArtifactId:    artifactID,
+					LocatorJson:   validLocatorJSON,
+					Transcription: "empty reading",
+				})); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
+					ProjectDir:    dir,
+					UserId:        userID,
+					ArtifactId:    artifactID,
+					LocatorJson:   validLocatorJSON,
+					Transcription: "Boston",
+					Observations: []*engine.ObservationDraft{{
+						SubjectId:  placeID,
+						PropertyId: propID,
+						ValueText:  "Boston",
+					}},
+				})); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.ListCitationsByArtifactRequest{
+					ProjectDir: dir,
+					ArtifactId: artifactID,
+				}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var list engine.ListCitationsByArtifactResponse
+				if err := proto.Unmarshal(out, &list); err != nil {
+					t.Fatal(err)
+				}
+				if len(list.Citations) != 2 {
+					t.Fatalf("%+v", list.Citations)
+				}
+				counts := map[int32]int{}
+				for _, row := range list.Citations {
+					counts[row.GetObservationCount()]++
+					if !strings.HasPrefix(row.GetCitation().GetRef(), "CIT-") {
+						t.Fatalf("ref %q", row.GetCitation().GetRef())
+					}
+				}
+				if counts[0] != 1 || counts[1] != 1 {
+					t.Fatalf("counts %+v", counts)
 				}
 			},
 		},

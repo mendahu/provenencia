@@ -3,12 +3,12 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 8 (pause and refine / data entry)  
 **Implements later as:** PR **S8-10**  
-**Depends on:** Shipped Option B composer ([`CitationComposerView`](../../../../macos/App/Features/CitationComposer/CitationComposerView.swift), S7-D4 / S7-08); graph handoff (`composerLocation`); locators S7-07  
-**Related:** dogfood “one reading, many subjects” ([`docs/dogfood/ux.md`](../../../dogfood/ux.md)); Spike 7 composer decisions ([`archive/spike-7`](../../archive/spike-7/))  
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
-**Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md); location focus via [`add-workspace-location`](../../../../.cursor/skills/add-workspace-location/SKILL.md)
+**Depends on:** Shipped Option B composer ([`CitationComposerView`](../../../../../macos/App/Features/CitationComposer/CitationComposerView.swift), S7-D4 / S7-08); graph handoff (`composerLocation`); locators S7-07  
+**Related:** dogfood “one reading, many subjects” ([`docs/dogfood/ux.md`](../../../../dogfood/ux.md)); Spike 7 composer decisions ([`archive/spike-7`](../../../archive/spike-7/))  
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)  
+**Skill:** [`add-design-brief`](../../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.cursor/skills/add-ui-component/SKILL.md); location focus via [`add-workspace-location`](../../../../../.cursor/skills/add-workspace-location/SKILL.md)
 
-Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](README.md) first.
+Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](../README.md) first.
 
 **Hand this board first.** **S8-D1** (Auto Transcribe) and **S8-D2** (PDF Find / paste) land on this form. Do not design those controls until this layout is agreed.
 
@@ -163,7 +163,7 @@ The cleverness is **not** inventing a file-browser. It is matching chrome to §2
 
 - Not Auto Transcribe (**S8-D1**) or PDF Find / I-beam / paste (**S8-D2**) — leave a home for those controls on the **new** transcription / viewer chrome.
 - Not minting Subjects from the composer (create stays on the graph).
-- Not Foundation Models / PDF OCR / field detectors ([`docs/dogfood/ux.md`](../../../dogfood/ux.md)).
+- Not Foundation Models / PDF OCR / field detectors ([`docs/dogfood/ux.md`](../../../../dogfood/ux.md)).
 - Not density **filters** on the graph (still dogfood).
 - Not source-to-source commentary, `text_quote` locators, audio/video players.
 - Not a sheet over the live graph (Option A stays rejected).
@@ -273,5 +273,5 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them.
 
 1. Agree the layout (including the discarded alternatives) before **S8-10**.
 2. Archive this brief under `archive/` when the board is agreed.
-3. Record in [`../completed.md`](../completed.md).
+3. Record in [`../../completed.md`](../../completed.md).
 4. Implement **S8-10**, then design **S8-D1** / **S8-D2** against the new chrome.

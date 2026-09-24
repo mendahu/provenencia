@@ -42,7 +42,8 @@ const (
 
 	sqlListByArtifact = `SELECT id, ref, artifact_id, locator_json,
 		COALESCE(transcription, ''), COALESCE(description, ''),
-		transcription_uncertain, COALESCE(transcription_note, '')
+		transcription_uncertain, COALESCE(transcription_note, ''),
+		(SELECT COUNT(*) FROM observations WHERE citation_id = citations.id)
 		FROM citations WHERE artifact_id = ?
 		ORDER BY ref COLLATE NOCASE`
 
@@ -59,14 +60,20 @@ const (
 
 // Citation is one citations row.
 type Citation struct {
-	ID                      []byte
-	Ref                     string
-	ArtifactID              []byte
-	LocatorJSON             string
-	Transcription           string
-	Description             string
-	TranscriptionUncertain  bool
-	TranscriptionNote       string
+	ID                     []byte
+	Ref                    string
+	ArtifactID             []byte
+	LocatorJSON            string
+	Transcription          string
+	Description            string
+	TranscriptionUncertain bool
+	TranscriptionNote      string
+}
+
+// ListedCitation is a Citation plus its Observation count (list-by-artifact).
+type ListedCitation struct {
+	Citation
+	ObservationCount int32
 }
 
 // CreateInput is the Citation side of first-submit create.
@@ -86,7 +93,8 @@ type CreateResult struct {
 	Observations []observations.Observation
 }
 
-// CreateWithObservations mints a Citation and ≥1 Observations atomically.
+// CreateWithObservations mints a Citation and any Observations atomically
+// (zero Observations is allowed — a transcription-first reading).
 func CreateWithObservations(
 	c *database.Catalog,
 	userID []byte,
@@ -101,7 +109,7 @@ func CreateWithObservations(
 	in.Transcription = strings.TrimSpace(in.Transcription)
 	in.Description = strings.TrimSpace(in.Description)
 	in.TranscriptionNote = strings.TrimSpace(in.TranscriptionNote)
-	if len(in.ArtifactID) != 16 || len(obsInputs) == 0 {
+	if len(in.ArtifactID) != 16 {
 		return CreateResult{}, ErrInvalid
 	}
 	if err := locator.Validate(in.LocatorJSON); err != nil {
@@ -138,7 +146,7 @@ func InsertWithObservationsTx(
 	in.Transcription = strings.TrimSpace(in.Transcription)
 	in.Description = strings.TrimSpace(in.Description)
 	in.TranscriptionNote = strings.TrimSpace(in.TranscriptionNote)
-	if len(in.ArtifactID) != 16 || len(obsInputs) == 0 {
+	if len(in.ArtifactID) != 16 {
 		return CreateResult{}, ErrInvalid
 	}
 	if err := locator.Validate(in.LocatorJSON); err != nil {
@@ -209,9 +217,14 @@ func InsertWithObservationsTx(
 		}
 	}
 
-	obsOut, obsChanges, err := observations.InsertManyTx(tx, idBytes, obsInputs)
-	if err != nil {
-		return CreateResult{}, err
+	var obsOut []observations.Observation
+	var obsChanges []audit.Change
+	if len(obsInputs) > 0 {
+		var err error
+		obsOut, obsChanges, err = observations.InsertManyTx(tx, idBytes, obsInputs)
+		if err != nil {
+			return CreateResult{}, err
+		}
 	}
 
 	citFields := map[string]audit.FieldDiff{
@@ -267,7 +280,7 @@ func UpdateWithObservations(
 	in.Transcription = strings.TrimSpace(in.Transcription)
 	in.Description = strings.TrimSpace(in.Description)
 	in.TranscriptionNote = strings.TrimSpace(in.TranscriptionNote)
-	if len(citationID) != 16 || len(in.ArtifactID) != 16 || len(obsInputs) == 0 {
+	if len(citationID) != 16 || len(in.ArtifactID) != 16 {
 		return CreateResult{}, ErrInvalid
 	}
 	if err := locator.Validate(in.LocatorJSON); err != nil {
@@ -336,9 +349,13 @@ func UpdateWithObservations(
 	if err := observations.DeleteByCitationTx(tx, citationID); err != nil {
 		return CreateResult{}, err
 	}
-	obsOut, obsChanges, err := observations.InsertManyTx(tx, citationID, obsInputs)
-	if err != nil {
-		return CreateResult{}, err
+	var obsOut []observations.Observation
+	var obsChanges []audit.Change
+	if len(obsInputs) > 0 {
+		obsOut, obsChanges, err = observations.InsertManyTx(tx, citationID, obsInputs)
+		if err != nil {
+			return CreateResult{}, err
+		}
 	}
 
 	citFields := map[string]audit.FieldDiff{
@@ -426,8 +443,8 @@ func Get(c *database.Catalog, id []byte) (Citation, error) {
 	return scanOne(db.QueryRow(sqlGet, id))
 }
 
-// ListByArtifact returns Citations for an Artifact.
-func ListByArtifact(c *database.Catalog, artifactID []byte) ([]Citation, error) {
+// ListByArtifact returns Citations for an Artifact, each with its Observation count.
+func ListByArtifact(c *database.Catalog, artifactID []byte) ([]ListedCitation, error) {
 	db, err := c.DB()
 	if err != nil {
 		return nil, err
@@ -440,13 +457,13 @@ func ListByArtifact(c *database.Catalog, artifactID []byte) ([]Citation, error) 
 		return nil, err
 	}
 	defer rows.Close()
-	var out []Citation
+	var out []ListedCitation
 	for rows.Next() {
-		cit, err := scanRow(rows)
+		listed, err := scanListedRow(rows)
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, cit)
+		out = append(out, listed)
 	}
 	return out, rows.Err()
 }
@@ -507,6 +524,23 @@ func scanRow(row rowScanner) (Citation, error) {
 	}
 	c.TranscriptionUncertain = uncertain != 0
 	return c, nil
+}
+
+func scanListedRow(row rowScanner) (ListedCitation, error) {
+	var (
+		listed    ListedCitation
+		uncertain int
+	)
+	err := row.Scan(
+		&listed.ID, &listed.Ref, &listed.ArtifactID, &listed.LocatorJSON,
+		&listed.Transcription, &listed.Description, &uncertain, &listed.TranscriptionNote,
+		&listed.ObservationCount,
+	)
+	if err != nil {
+		return ListedCitation{}, err
+	}
+	listed.TranscriptionUncertain = uncertain != 0
+	return listed, nil
 }
 
 func nullIfEmpty(s string) any {

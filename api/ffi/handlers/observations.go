@@ -74,7 +74,7 @@ func AddObservationsToCitation(in []byte) ([]byte, error) {
 
 func observationDraftsToInputs(drafts []*engine.ObservationDraft) ([]observations.Input, error) {
 	if len(drafts) == 0 {
-		return nil, observations.ErrInvalid
+		return nil, nil
 	}
 	out := make([]observations.Input, 0, len(drafts))
 	for _, d := range drafts {

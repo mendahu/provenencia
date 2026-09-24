@@ -14,6 +14,8 @@ final class WorkspaceSession {
     private var valueTypes: [CatalogQueryKey: ObjectIdentifier] = [:]
     private var inFlight: [CatalogQueryKey: Task<Void, Never>] = [:]
     private var invalidatedKeys: Set<CatalogQueryKey> = []
+    /// Transient notice after leaving a place (composer save, etc.).
+    var noticeToast: VocabularyToast?
 
     init(
         projectKey: ProjectKey,

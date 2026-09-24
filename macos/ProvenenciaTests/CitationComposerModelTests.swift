@@ -278,55 +278,52 @@ struct CitationComposerModelTests {
         #expect(model.availableProperties.contains(where: { $0.valueType == "name" }))
     }
 
-    @Test func prepareShowsPickerUntilContinue() async {
+    @Test func prepareMultiArtifactOpensComposeWithDefault() async {
         let store = makeStore()
         seedArtifact(store, count: 2)
         let model = makeModel(store: store)
         await model.prepare()
-        #expect(model.phase == .pickArtifact)
-        #expect(model.selectedArtifactID == nil)
-        #expect(model.pendingArtifactID == "art-0")
-        model.selectPendingArtifact("art-1")
-        #expect(model.phase == .pickArtifact)
-        await model.confirmArtifactSelectionAndLoad()
         #expect(model.phase == .compose)
-        #expect(model.selectedArtifactID == "art-1")
+        #expect(model.selectedArtifactID == "art-0")
+        #expect(model.showsArtifactSwitcher)
         #expect(model.observations.isEmpty)
+        await model.selectArtifactAndLoad("art-1")
+        #expect(model.selectedArtifactID == "art-1")
     }
 
-    @Test func preparePickerDefaultsToFirstArtifactWithFile() async {
+    @Test func prepareDefaultsToFirstArtifactWithFile() async {
         let store = makeStore()
         seedArtifact(store, count: 3)
         stripAttachedFile(store, artifactID: "art-0")
         let model = makeModel(store: store)
         await model.prepare()
-        #expect(model.phase == .pickArtifact)
-        #expect(model.pendingArtifactID == "art-1")
+        #expect(model.phase == .compose)
+        #expect(model.selectedArtifactID == "art-1")
     }
 
-    @Test func preparePickerFallsBackToFirstWhenNoneHaveFiles() async {
+    @Test func prepareFallsBackToFirstWhenNoneHaveFiles() async {
         let store = makeStore()
         seedArtifact(store, count: 2)
         stripAttachedFile(store, artifactID: "art-0")
         stripAttachedFile(store, artifactID: "art-1")
         let model = makeModel(store: store)
         await model.prepare()
-        #expect(model.phase == .pickArtifact)
-        #expect(model.pendingArtifactID == "art-0")
+        #expect(model.phase == .compose)
+        #expect(model.selectedArtifactID == "art-0")
     }
 
-    @Test func preparePickerDefaultsToMostCitedArtifact() async {
+    @Test func prepareDefaultsToMostCitedArtifact() async {
         let store = makeStore()
         seedArtifact(store, count: 3)
         seedCitations(store, artifactID: "art-0", count: 1)
         seedCitations(store, artifactID: "art-2", count: 3)
         let model = makeModel(store: store)
         await model.prepare()
-        #expect(model.phase == .pickArtifact)
-        #expect(model.pendingArtifactID == "art-2")
+        #expect(model.phase == .compose)
+        #expect(model.selectedArtifactID == "art-2")
     }
 
-    @Test func preparePickerCitationTiePrefersThumbnail() async {
+    @Test func prepareCitationTiePrefersThumbnail() async {
         let store = makeStore()
         seedArtifact(store, count: 3)
         seedCitations(store, artifactID: "art-0", count: 2)
@@ -334,8 +331,8 @@ struct CitationComposerModelTests {
         setSourceThumbnail(store, artifactID: "art-2")
         let model = makeModel(store: store)
         await model.prepare()
-        #expect(model.phase == .pickArtifact)
-        #expect(model.pendingArtifactID == "art-2")
+        #expect(model.phase == .compose)
+        #expect(model.selectedArtifactID == "art-2")
     }
 
     @Test func defaultPendingArtifactIDLayers() {
@@ -588,20 +585,19 @@ struct CitationComposerModelTests {
         #expect(rows[1].valueSubjectID == "e1")
     }
 
-    @Test func observationDialogCommitsRow() async {
+    @Test func addObservationCommitsInlineTextRow() async {
         let store = makeStore()
         seedArtifact(store)
         let model = makeModel(store: store)
         await model.prepare()
         model.beginAddObservation()
-        var draft = model.observationDialog!
-        draft.propertyID = occupationPropertyID
-        draft.valueText = "Farmer"
-        model.updateObservationDialog(draft)
-        model.confirmObservationDialog()
         #expect(model.observationDialog == nil)
         #expect(model.observations.count == 1)
+        let id = model.observations[0].id
+        model.updateObservationProperty(id: id, propertyID: occupationPropertyID)
+        model.updateObservationText(id: id, text: "Farmer")
         #expect(model.observations[0].valueText == "Farmer")
+        #expect(model.observations[0].subjectID == subjectID)
     }
 
     @Test func observationDialogCommitsNameValueParts() async throws {
@@ -610,8 +606,10 @@ struct CitationComposerModelTests {
         let model = makeModel(store: store)
         await model.prepare()
         model.beginAddObservation()
+        let id = model.observations[0].id
+        model.updateObservationProperty(id: id, propertyID: namePropertyID)
+        model.beginEditObservation(model.observations[0])
         var draft = model.observationDialog!
-        draft.propertyID = namePropertyID
         draft.nameDraft = NameValueDraft(
             form: "John W. Alderwick",
             parts: [
@@ -638,7 +636,7 @@ struct CitationComposerModelTests {
         #expect(listed[0].nameParts.map(\.value) == ["John", "W.", "Alderwick"])
     }
 
-    @Test func submitRequiresObservationAndWritesArtifactLocator() async throws {
+    @Test func submitEmptyObservationsPersistsReading() async throws {
         let store = makeStore()
         seedArtifact(store)
         let model = makeModel(store: store)
@@ -646,21 +644,33 @@ struct CitationComposerModelTests {
         #expect(model.phase == .compose)
         #expect(model.locator.isArtifactOnly)
         #expect(model.hasLocator)
-
-        let stillEmpty = await model.submit()
-        #expect(stillEmpty == nil)
-        #expect(model.formError != nil)
-
-        model.beginAddObservation()
-        var draft = model.observationDialog!
-        draft.propertyID = occupationPropertyID
-        draft.valueText = "Farmer"
-        model.updateObservationDialog(draft)
-        model.confirmObservationDialog()
+        model.transcription = "transcribe first"
 
         let location = await model.submit()
         #expect(location?.sourceSurface == .graph)
         #expect(location?.sourceId == sourceID)
+        #expect(store.citationsByID.values.contains(where: { $0.transcription == "transcribe first" }))
+        let listed = try await store.listObservationsBySource(
+            projectDir: projectDir,
+            sourceID: sourceID
+        )
+        #expect(listed.isEmpty)
+        let json = store.citationsByID.values.first?.locatorJSON ?? ""
+        #expect(json.contains("\"artifact\""))
+        #expect(!json.contains("\"page\""))
+    }
+
+    @Test func submitWritesObservationForEntrySubject() async throws {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.beginAddObservation()
+        let id = model.observations[0].id
+        model.updateObservationProperty(id: id, propertyID: occupationPropertyID)
+        model.updateObservationText(id: id, text: "Farmer")
+        let location = await model.submit()
+        #expect(location?.sourceSurface == .graph)
         let listed = try await store.listObservationsBySource(
             projectDir: projectDir,
             sourceID: sourceID
@@ -669,9 +679,6 @@ struct CitationComposerModelTests {
         #expect(listed[0].valueText == "Farmer")
         #expect(listed[0].propertyID == occupationPropertyID)
         #expect(listed[0].subjectID == subjectID)
-        let json = store.citationsByID.values.first?.locatorJSON ?? ""
-        #expect(json.contains("\"artifact\""))
-        #expect(!json.contains("\"page\""))
     }
 
     @Test func setPageDoesNotFollowBrowse() async {
@@ -734,15 +741,13 @@ struct CitationComposerModelTests {
         }
         let model = makeModel(store: store)
         await model.prepare()
-        model.selectPendingArtifact("art-0")
-        await model.confirmArtifactSelectionAndLoad()
+        #expect(model.selectedArtifactID == "art-0")
         #expect(model.setPage(2))
         #expect(model.setRegion(sampleRectangle()))
         #expect(model.locator.page == 2)
         #expect(model.locator.region != nil)
 
-        model.selectPendingArtifact("art-1")
-        await model.confirmArtifactSelectionAndLoad()
+        await model.selectArtifactAndLoad("art-1")
         #expect(model.locator.isArtifactOnly)
 
         var draft = CitationLocatorDraft.artifactOnly()
@@ -854,12 +859,7 @@ struct CitationComposerModelTests {
         let model = makeModel(store: store, citationID: citation.id)
         await model.prepare()
         model.transcription = "New"
-        let row = model.observations[0]
-        model.beginEditObservation(row)
-        var draft = model.observationDialog!
-        draft.valueText = "Miller"
-        model.updateObservationDialog(draft)
-        model.confirmObservationDialog()
+        model.updateObservationText(id: model.observations[0].id, text: "Miller")
         let location = await model.submit()
         #expect(location?.sourceSurface == .graph)
         let (_, _, listed) = try await store.getCitation(
@@ -1011,6 +1011,182 @@ struct CitationComposerModelTests {
         #expect(term == nil)
         #expect(model.termError != nil)
         #expect(model.formError == nil)
+    }
+
+    @Test func prepareLoadsAllSubjectsOnSharedCitation() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let otherID = "sub-person-2"
+        store.subjectsBySource[sourceID]?.append(
+            CatalogSubject(
+                id: otherID,
+                ref: "CPR-2",
+                sourceID: sourceID,
+                subjectTypeID: personTypeID,
+                label: "Thomas",
+                description: ""
+            )
+        )
+        store.subjectPositionsBySubject[otherID] = CatalogSubjectPosition(
+            subjectID: otherID, gridX: 1, gridY: 0
+        )
+        let citation = CatalogCitation(
+            id: "cit-shared",
+            ref: "CIT-44",
+            artifactID: "art-0",
+            locatorJSON: #"{"version":1,"selectors":[{"type":"artifact"}]}"#,
+            transcription: "household",
+            description: "",
+            transcriptionUncertain: false,
+            transcriptionNote: ""
+        )
+        store.citationsByID[citation.id] = citation
+        store.observationsBySource[sourceID] = [
+            CatalogObservation(
+                id: "obs-m",
+                ref: "OBS-1",
+                citationID: citation.id,
+                subjectID: subjectID,
+                propertyID: "prop-age",
+                polarity: "positive",
+                valueText: "",
+                valueInteger: 52,
+                valueDateID: "",
+                valueNameID: "",
+                valueSubjectID: "",
+                valueTermID: "",
+                propertyKey: "age",
+                propertyLabel: "Age",
+                propertyValueType: "integer"
+            ),
+            CatalogObservation(
+                id: "obs-t",
+                ref: "OBS-2",
+                citationID: citation.id,
+                subjectID: otherID,
+                propertyID: occupationPropertyID,
+                polarity: "positive",
+                valueText: "Blacksmith",
+                valueInteger: nil,
+                valueDateID: "",
+                valueNameID: "",
+                valueSubjectID: "",
+                valueTermID: "",
+                propertyKey: "occupation",
+                propertyLabel: "Occupation",
+                propertyValueType: "text"
+            ),
+        ]
+        let model = makeModel(store: store, citationID: citation.id)
+        await model.prepare()
+        #expect(model.observations.count == 2)
+        #expect(Set(model.observations.map(\.subjectID)) == [subjectID, otherID])
+        #expect(model.focusedObservationID == model.observations.first(where: { $0.subjectID == subjectID })?.id)
+    }
+
+    @Test func addPropertyCanReuseExistingCitation() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let otherID = "sub-person-2"
+        store.subjectsBySource[sourceID]?.append(
+            CatalogSubject(
+                id: otherID,
+                ref: "CPR-2",
+                sourceID: sourceID,
+                subjectTypeID: personTypeID,
+                label: "Thomas",
+                description: ""
+            )
+        )
+        store.subjectPositionsBySubject[otherID] = CatalogSubjectPosition(
+            subjectID: otherID, gridX: 1, gridY: 0
+        )
+        let citation = CatalogCitation(
+            id: "cit-reuse",
+            ref: "CIT-43",
+            artifactID: "art-0",
+            locatorJSON: #"{"version":1,"selectors":[{"type":"artifact"}]}"#,
+            transcription: "Margt. Alderwick",
+            description: "",
+            transcriptionUncertain: false,
+            transcriptionNote: ""
+        )
+        store.citationsByID[citation.id] = citation
+        store.observationsBySource[sourceID] = [
+            CatalogObservation(
+                id: "obs-t",
+                ref: "OBS-2",
+                citationID: citation.id,
+                subjectID: otherID,
+                propertyID: occupationPropertyID,
+                polarity: "positive",
+                valueText: "Blacksmith",
+                valueInteger: nil,
+                valueDateID: "",
+                valueNameID: "",
+                valueSubjectID: "",
+                valueTermID: "",
+                propertyKey: "occupation",
+                propertyLabel: "Occupation",
+                propertyValueType: "text"
+            ),
+        ]
+        let model = makeModel(store: store)
+        await model.prepare()
+        #expect(model.activeCitationID == nil)
+        await model.selectCitationAndLoad(citation.id)
+        #expect(model.activeCitationID == citation.id)
+        #expect(model.transcription == "Margt. Alderwick")
+        #expect(model.observations.contains(where: { $0.subjectID == otherID }))
+        #expect(model.observations.contains(where: { $0.subjectID == subjectID && $0.propertyID.isEmpty }))
+    }
+
+    @Test func dirtyArtifactChangeOnSavedCitationConfirms() async {
+        let store = makeStore()
+        seedArtifact(store, count: 2)
+        let citation = CatalogCitation(
+            id: "cit-dirty",
+            ref: "CIT-44",
+            artifactID: "art-0",
+            locatorJSON: #"{"version":1,"selectors":[{"type":"artifact"}]}"#,
+            transcription: "saved",
+            description: "",
+            transcriptionUncertain: false,
+            transcriptionNote: ""
+        )
+        store.citationsByID[citation.id] = citation
+        let model = makeModel(store: store, citationID: citation.id)
+        await model.prepare()
+        #expect(model.isEditingExisting)
+        #expect(!model.isDirty)
+        await model.selectArtifactAndLoad("art-1")
+        #expect(model.pendingArtifactAbandon == nil)
+        #expect(model.activeCitationID == nil)
+        #expect(model.selectedArtifactID == "art-1")
+
+        let model2 = makeModel(store: store, citationID: citation.id)
+        await model2.prepare()
+        model2.transcription = "edited"
+        #expect(model2.isDirty)
+        await model2.selectArtifactAndLoad("art-1")
+        #expect(model2.pendingArtifactAbandon?.targetArtifactID == "art-1")
+        #expect(model2.selectedArtifactID == "art-0")
+        model2.cancelAbandonArtifact()
+        #expect(model2.pendingArtifactAbandon == nil)
+        model2.transcription = "edited"
+        await model2.selectArtifactAndLoad("art-1")
+        await model2.confirmAbandonArtifactAndLoad()
+        #expect(model2.selectedArtifactID == "art-1")
+        #expect(model2.activeCitationID == nil)
+    }
+
+    @Test func graphLocationReturnsToEvidenceGraph() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        #expect(model.graphLocation().sourceSurface == .graph)
+        #expect(model.graphLocation().sourceId == sourceID)
     }
 
     @Test func observationIntegerDraftRejectsWords() {

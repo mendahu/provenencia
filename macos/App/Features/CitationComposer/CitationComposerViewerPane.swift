@@ -45,18 +45,7 @@ struct CitationComposerViewerPane: View {
                 .font(PVFont.body(size: PVTypeScale.caption))
                 .foregroundStyle(PVColor.textSecondary)
                 .lineLimit(1)
-            Spacer(minLength: PVSpacing.space3)
-            if model.artifacts.count > 1 {
-                Button {
-                    model.changeArtifact()
-                } label: {
-                    Text(L10n.CitationComposer.changeArtifact)
-                        .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
-                        .foregroundStyle(PVColor.accent)
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("citationComposer.changeArtifact")
-            }
+            Spacer(minLength: 0)
         }
     }
 

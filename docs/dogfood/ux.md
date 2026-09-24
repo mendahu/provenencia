@@ -38,7 +38,7 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 ### Pulled into Spike 8 (2026-09-24)
 
-- **Composer rethink** — Citation as the document; multi-subject rows; reuse / pinning; empty Save ([`S8-D7`](../deployment-plan/spike-8/design/S8-D7-composer-rethink.md) / [`S8-10`](../deployment-plan/spike-8/deployment-plan.md))
+- **Composer rethink** — Citation as the document; multi-subject rows; reuse / pinning; empty Save ([`S8-D7`](../deployment-plan/spike-8/design/archive/S8-D7-composer-rethink.md) / [`S8-10`](../deployment-plan/spike-8/deployment-plan.md))
 - Image **Auto Transcribe** (Vision → transcription)
 - PDF **Find** + **select** + **paste transcription**
 - Source page **Open Evidence graph** (was “graph starts blind”)

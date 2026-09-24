@@ -62,6 +62,13 @@ struct WorkspaceView: View {
         .environment(navigation)
         .environment(session)
         .vocabularyToastOverlay($countsToast, identifier: "workspace.counts.toast")
+        .vocabularyToastOverlay(
+            Binding(
+                get: { session.noticeToast },
+                set: { session.noticeToast = $0 }
+            ),
+            identifier: "workspace.notice.toast"
+        )
         .task {
             await catalogCounts.refreshAll()
             if let message = catalogCounts.lastRefreshError {
