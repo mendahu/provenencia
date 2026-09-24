@@ -19,6 +19,13 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Dense Evidence graphs (census-scale)
+
+- **Date:** 2026-09-24
+- **Where:** Evidence graph
+- **Annoyance:** A real census page can put dozens of Subjects and hundreds of Observations on one canvas. Nothing is wrong with the model — it just gets hard to see the household you care about.
+- **Wanted:** Layers or filters when a Source actually hurts. Not scheduled (descoped from the interpretation-graph-ui leftover list). Parked here until dogfood proves we need it.
+
 ### One reading, many subjects — composer is per-subject
 
 - **Date:** 2026-09-23

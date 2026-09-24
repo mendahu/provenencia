@@ -80,7 +80,8 @@ Exact badge, link chrome, sentence wrapping, and where Add property sits on the 
 
 - Not incomplete-bridge / denied-line language, or collapse/expand (descoped).
 - Not Source-page → graph (that leftover stays out).
-- Not Citation pinning, tray, filters, undo.
+- Not Citation pinning.
+- Not density filters, undo, unplaced tray, or minimap (**descoped**).
 - Not Conclusion Reconciliation Claims.
 - Not PDF Find / OCR (**S8-D1** / **S8-D2**).
 
@@ -170,6 +171,7 @@ If more bundle items land after the board is first drawn, **amend this brief** a
 | `PVConflictBadge` / `PVNegatedBadge` | Compose `PVBadge`. |
 | Incomplete / half-line chrome | UI cannot produce that graph. |
 | Collapse / expand | Descoped. |
+| Filters / undo / tray / minimap | Descoped. UI cannot write unplaced subjects; density lives in dogfood. |
 | Source-page → graph button | Different leftover. |
 | New sentence catalog keys unless templates cannot take the new nouns | Reuse shipped `bridgeSummary*` strings. |
 
@@ -182,7 +184,8 @@ If more bundle items land after the board is first drawn, **amend this brief** a
 - Composer Observation-list restyle
 - Incomplete-bridge visual states (**descoped**)
 - Collapse / expand bridge cards (**descoped**)
-- Filters, undo, tray, pinning
+- Density filters, undo, unplaced tray, minimap (**descoped**)
+- Pinning
 - Source-page Evidence graph entry
 
 ---

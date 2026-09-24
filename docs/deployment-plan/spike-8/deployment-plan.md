@@ -174,7 +174,7 @@ Transcription-row control for PDF: copy current `PDFSelection` string into `tran
 
 Claude Design board for a **bundled** graph-chrome pass. Items: **conflict** + **negated** row badges; always-on **Source-page jump**; **bridge sentences** that prefer endpoint identity Properties; **Add property** on bridge cards. Brief: [`design/S8-D3-graph-visuals.md`](design/S8-D3-graph-visuals.md). Gates **S8-06**.
 
-Does **not** design pinning, tray, composer restyle, denied-lines, Source-page → graph, collapse/expand, or incomplete-bridge chrome (**descoped**).
+Does **not** design pinning, composer restyle, denied-lines, or Source-page → graph. **Descoped:** incomplete-bridge chrome, collapse/expand, density filters, undo, unplaced tray, minimap.
 
 ---
 
@@ -185,7 +185,7 @@ One Evidence graph chrome pass against **S8-D3**. Competing Observations stay as
 | | |
 | --- | --- |
 | **In** | Conflict + negated per **S8-D3**; Source jump via existing `sourcePageLocation` + `go(to:)`; `EvidenceBridgeEdgeSummary` reads endpoint Observations from the snapshot; Add property + extra rows on bridges; L10n + VoiceOver; card height / hit tests. Prefer `PVBadge`. |
-| **Out** | Merge / resolve; schema or FFI; denied-line drawing; incomplete-bridge chrome; collapse/expand; Source-page → graph; tray; pinning; composer form restyle. |
+| **Out** | Merge / resolve; schema or FFI; denied-line drawing; Source-page → graph; pinning; composer form restyle. Incomplete-bridge chrome, collapse/expand, filters, undo, tray, minimap are **descoped**. |
 | **Testable** | Two `name`s → both conflict; negative singleton → negated only; jump location is `.page` for the same `sourceId` and Back returns to `.graph`; relationship sentence uses NameValue form when present and label when not; participation uses `event_type`; location uses `toponym`; bridge Add property opens composer for that bridge (not the connect Citation); extra non-edge row visible + editable; edge keys not duplicated as rows; height/a11y follow the new sentence. |
 | **Depends on** | **S8-D3**. Shipped cards + snapshot + `sourceSurface`. **Not** S8-01…S8-05. |
 
@@ -207,7 +207,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 | Warn + proceed on large images | Hard reject / Apple “too many words” (does not exist) |
 | PDF **page-1 thumbnail** via PDFKit | Go PDF decoder; user-picked thumb page |
 | PDF **Find** + **select** + **paste transcription** | PDF Vision / OCR; `text_quote` locators; Source-page Find |
-| Graph **conflict** + **negated** badges; Source-page jump; richer bridge sentences; **Add property** on bridges | Denied-line drawing; incomplete-bridge chrome; collapse/expand (**descoped**); Source-page → graph; tray; pinning; merge/resolve |
+| Graph **conflict** + **negated** badges; Source-page jump; richer bridge sentences; **Add property** on bridges | Denied-line drawing; Source-page → graph; pinning; merge/resolve; **descoped** leftovers (incomplete bridges, collapse/expand, filters, undo, tray, minimap) |
 | More data-entry stories as added | Remaining Spike 7 leftovers unless pulled in |
 
 ---
@@ -232,6 +232,8 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 16. **Source jump is graph → page** — reuse `sourcePageLocation`. The reverse (page → graph) stays a leftover.
 17. **Collapse/expand is descoped** — do not hide the bridge sentence behind a disclosure.
 18. **Bridge Add property is a new Citation** — `composerLocation(for: bridgeID)`, not `composerLocationForBridgeCitation` (that edits the connect Citation). Extra rows omit edge keys already in the sentence.
+19. **Unplaced tray is descoped** — canvas create and Connect always write a position. The snapshot **omits** subjects with no row. No UI path produces a tray candidate until imports exist.
+20. **Filters / undo / minimap are descoped** — density stays a dogfood note; undo can return if ⌘Z becomes a real pain; minimap was scope-creep.
 
 ---
 
