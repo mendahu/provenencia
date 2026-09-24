@@ -27,7 +27,7 @@ Spike 8 (open):
 - [`spike-8/README.md`](spike-8/README.md) — spike overview
 - [`spike-8/deployment-plan.md`](spike-8/deployment-plan.md) — PR sequence, design gates, dogfood bar
 - [`spike-8/completed.md`](spike-8/completed.md) — finished steps
-- [`spike-8/design/`](spike-8/design/) — Claude Design briefs (**S8-D7** first, then **S8-D1**…**S8-D6** open)
+- [`spike-8/design/`](spike-8/design/) — Claude Design briefs (**S8-D7** first, then **S8-D1**…**S8-D6** open). Working rules: [`spike-8/design/claude-design-working-rules.md`](spike-8/design/claude-design-working-rules.md)
 - [`spike-8/artifact-pdf-thumbnails.md`](spike-8/artifact-pdf-thumbnails.md) — scoped **S8-02** note
 - [`spike-8/pdf-text-find.md`](spike-8/pdf-text-find.md) — scoped **S8-D2** / **S8-03…S8-05** note
 

@@ -6,9 +6,43 @@
 **Depends on:** Shipped uncited-subject delete ([`EvidenceGraphModel.beginDelete`](../../../../macos/App/Features/EvidenceGraph/EvidenceGraphModel.swift)); Go `subjects.Delete` (`ErrInUse` when any Observation references the subject as `subject_id` **or** `value_subject_id`); composer draft-row remove only  
 **Related:** interpretation-graph-ui leftover **18** / §4.3 / hiccup 3. Leftover **19** is **folded here, descoped as a feature:** no Change type UI — delete and place again. Leftover **20** (adopt imports) is **descoped**.  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
-**Skill:** [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
+**Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](README.md) first.
+
+This brief is an **enhancement** of shipped graph delete chrome (plus new confirms).
+
+### Claude Design — do this first (in order)
+
+Work **in place** on this board. Do not fork a parallel copy of the surface.
+- **Rethink** (this brief says replace): throw away the old frames. Do not keep a before/after to ship.
+- **Enhancement**: add to the existing frames. Do not start a second composer / graph / page.
+
+1. **Clear this board’s local design-system cache.** Claude Design keeps a stale pack; drawing against it invents local copies of kit controls.
+2. **Delete this board’s reference** to the design-system bundle.
+3. **Pull a fresh copy** of the Provenencia design system from the main project. Do not continue until the fetched kit lists current components. If the kit looks stale or empty, delete the cache and refetch. Do **not** draw a replacement kit locally.
+4. **Compose from that kit.** Instance existing components. Reach for a **bespoke / local** control only when the use is truly this domain. One call site is not a new design-system primitive.
+
+**Reach for (kit).** Instance these first. The **UI building-block inventory** later in this brief names the snowflakes and which kit piece each situation should use.
+
+| Situation | Use |
+| --- | --- |
+| Labeled value, textarea, or trailing control | Field + TextArea / Input |
+| Primary / secondary / ghost action | Button; icon-only → IconButton |
+| Choose one from a short list | Select |
+| Searchable pick | ComboBox |
+| Warning, error, or inline hint | Callout |
+| Page- or pane-level empty | EmptyState |
+| Confirm replace or destroy | Confirm (`item:` snapshot, not a Bool) |
+| Short create / edit form | FormDialog |
+| Status / count / polarity mark | Badge; compact token → Chip |
+| Cover or file thumb | Thumbnail |
+| Grouping / raised or sunken row | Card |
+| Section title | SectionHeader |
+| Transient after-save notice | Toast |
+| Native menu of actions | ContextMenu |
+
+Do **not** invent a local Field, Button, Card, Select, Callout, or Confirm.
 
 ---
 
@@ -121,6 +155,8 @@ Freeze the matrix on this brief before **S8-09** starts. If refinement adds path
 ---
 
 ## 6. UI building-block inventory
+
+This table is **binding**. Instance the Ship kit rows; do not redraw them.
 
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |

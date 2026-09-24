@@ -19,9 +19,9 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 ## How to use
 
 1. Open the Provenencia Claude Design project / design-system bundle (`macos/App/DesignSystem/README.md`).
-2. **Start with S8-D7.** Paste **one** open brief as the prompt. The brief tells Claude to **clear cache, drop the stale design-system reference, and pull a fresh pack**, then **redesign in place** (do not preserve the old composer frames).
-3. Keep the shipped visual language. **Reuse kit components**; bespoke only when the use is truly domain-specific. No new design-system primitives unless raised as a finding.
-4. Every open brief must include a **UI building-block inventory** (components / recipes / snowflakes per [`docs/design-system-layers.md`](../../../design-system-layers.md)).
+2. **Start with S8-D7.** Paste **one** open brief (it already contains the [working-rules](claude-design-working-rules.md) ritual + kit reach-for table). New briefs: [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md).
+3. Claude **clears cache, drops the stale pack, pulls a fresh design system**, and **works in place**. Rethink briefs replace frames; enhancement briefs extend them.
+4. **Inventory is binding.** Instance kit components named in the brief; bespoke only when the use is truly domain-specific.
 5. When the board is done, archive the brief under `archive/` and write up [`../completed.md`](../completed.md).
 
 ## Shared product facts (all briefs)

@@ -185,6 +185,7 @@ Rules for action items:
 
 - Pointed UI layering audit / compose-down plan: [`evaluate-ui-component`](../evaluate-ui-component/SKILL.md) — prefer this when an action item names a specific `PV*` or feature sheet
 - New UI classification: [`add-ui-component`](../add-ui-component/SKILL.md)
+- Claude Design brief / kit inventory: [`add-design-brief`](../add-design-brief/SKILL.md)
 - Diff security: Cursor `review-security` / security-review subagent
 - L10n fixes: `add-localized-string`
 - Catalog session: `use-catalog-session`

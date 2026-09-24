@@ -18,7 +18,7 @@ Stories land one at a time. **Composer rethink** (flexible Citation document). *
 | --- | --- |
 | [**Deployment plan**](deployment-plan.md) | PR sequence, design gates, dogfood bar, scope |
 | [**Completed**](completed.md) | Finished steps |
-| [Design briefs](design/) | Claude Design — **S8-D7** first, then **S8-D1**…**S8-D6** (**S8-02** has no board) |
+| [Design briefs](design/) | Claude Design — **S8-D7** first, then **S8-D1**…**S8-D6** (**S8-02** has no board). Working rules: [`design/claude-design-working-rules.md`](design/claude-design-working-rules.md) |
 | [PDF thumbnails](artifact-pdf-thumbnails.md) | Scoped note for **S8-02** (promoted from ideas) |
 | [PDF Find](pdf-text-find.md) | Scoped note for **S8-D2** / **S8-03…S8-05** (promoted from ideas) |
 

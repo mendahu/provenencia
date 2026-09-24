@@ -6,20 +6,45 @@
 **Depends on:** Shipped Option B composer ([`CitationComposerView`](../../../../macos/App/Features/CitationComposer/CitationComposerView.swift), S7-D4 / S7-08); graph handoff (`composerLocation`); locators S7-07  
 **Related:** dogfood “one reading, many subjects” ([`docs/dogfood/ux.md`](../../../dogfood/ux.md)); archived [S7-D4](../../archive/spike-7/design/archive/S7-D4-citation-composer.md)  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
-**Skill:** [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md); location focus via [`add-workspace-location`](../../../../.cursor/skills/add-workspace-location/SKILL.md)
+**Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md); location focus via [`add-workspace-location`](../../../../.cursor/skills/add-workspace-location/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](README.md) first.
 
 **Hand this board first.** **S8-D1** (Auto Transcribe) and **S8-D2** (PDF Find / paste) land on this form. Do not design those controls until this layout is agreed.
 
+This brief is a **rethink**: replace the Spike 7 subject-locked frames and the artifact pre-screen. Option B (viewer \| form as a place) stays; the old form chrome does not.
+
 ### Claude Design — do this first (in order)
 
-You are redesigning the **citation composer**. Work **in place** on this board. Replace the shipped Spike 7 frames. Do **not** preserve the old subject-locked layout, the artifact pre-screen as a full-page gate, or a side-by-side “before” to keep. Option B (viewer \| form as a place) stays; the form chrome does not.
+Work **in place** on this board. Do not fork a parallel copy of the surface.
+- **Rethink** (this brief says replace): throw away the old frames. Do not keep a before/after to ship.
+- **Enhancement**: add to the existing frames. Do not start a second composer / graph / page.
 
-1. **Clear this board’s local design-system cache.** Claude Design keeps a stale pack; drawing against it will invent local copies of kit controls.
+1. **Clear this board’s local design-system cache.** Claude Design keeps a stale pack; drawing against it invents local copies of kit controls.
 2. **Delete this board’s reference** to the design-system bundle.
-3. **Pull a fresh copy** of the Provenencia design system from the main project. Do not continue until the fetched kit lists the current components (`Field`, `Button`, `TextArea`, `Callout`, `Card`, `Thumbnail`, `Select`, confirm, etc.). If the kit looks stale or empty, delete the cache and refetch again. Do **not** draw a replacement kit locally.
-4. **Compose from that kit.** Reuse existing components. Reach for a **bespoke / local** control only when the use is truly this domain (Citation identity, observation rows with a subject). One call site is not a new design-system primitive. If the kit already has a field, button, menu, thumbnail, or dialog that fits, instance it.
+3. **Pull a fresh copy** of the Provenencia design system from the main project. Do not continue until the fetched kit lists current components. If the kit looks stale or empty, delete the cache and refetch. Do **not** draw a replacement kit locally.
+4. **Compose from that kit.** Instance existing components. Reach for a **bespoke / local** control only when the use is truly this domain. One call site is not a new design-system primitive.
+
+**Reach for (kit).** Instance these first. The **UI building-block inventory** later in this brief names the snowflakes and which kit piece each situation should use.
+
+| Situation | Use |
+| --- | --- |
+| Labeled value, textarea, or trailing control | Field + TextArea / Input |
+| Primary / secondary / ghost action | Button; icon-only → IconButton |
+| Choose one from a short list | Select |
+| Searchable pick | ComboBox |
+| Warning, error, or inline hint | Callout |
+| Page- or pane-level empty | EmptyState |
+| Confirm replace or destroy | Confirm (`item:` snapshot, not a Bool) |
+| Short create / edit form | FormDialog |
+| Status / count / polarity mark | Badge; compact token → Chip |
+| Cover or file thumb | Thumbnail |
+| Grouping / raised or sunken row | Card |
+| Section title | SectionHeader |
+| Transient after-save notice | Toast |
+| Native menu of actions | ContextMenu |
+
+Do **not** invent a local Field, Button, Card, Select, Callout, or Confirm.
 
 ---
 
@@ -202,6 +227,8 @@ The cleverness is **not** inventing a file-browser. It is matching chrome to §2
 ---
 
 ## 6. UI building-block inventory
+
+This table is **binding**. Instance the Ship kit rows; do not redraw them.
 
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
