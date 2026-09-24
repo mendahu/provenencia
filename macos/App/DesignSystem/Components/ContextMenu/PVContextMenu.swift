@@ -18,11 +18,14 @@ struct PVContextMenuState: Equatable {
     }
 }
 
-/// Action-menu defaults. `PVSelect` opts out so it can own press-drag and
-/// closed-field keys; overflow / right-click menus stay click-to-open.
+/// Action-menu defaults. `PVSelect` opts out of key-stealing and mouse-up
+/// dismiss so the field keeps closed-field keys and the opening click does
+/// not immediately close the menu.
 enum PVContextMenuInteraction {
     static let defaultStealKeys = true
     static let defaultDismissOnMouseUp = true
+    /// Select opts in so click-away can see the real panel window (ComboBox).
+    static let defaultDismissOnClickAway = false
 }
 
 /// Optional ↑/↓/⏎ navigation (and type-to-select) for an open overlay menu.
@@ -212,9 +215,10 @@ struct PVContextMenuItem: View {
                 if let titleResource {
                     Text(titleResource)
                 } else if let titleString {
-                    Text(titleString)
+                    Text(verbatim: titleString)
                 }
             }
+            .lineLimit(1)
         }
         .font(PVFont.body(size: PVTypeScale.bodySmall))
         .foregroundStyle(foreground)
@@ -251,6 +255,7 @@ extension View {
         keyboard: Binding<PVContextMenuKeyboard>? = nil,
         stealKeys: Bool = PVContextMenuInteraction.defaultStealKeys,
         dismissOnMouseUp: Bool = PVContextMenuInteraction.defaultDismissOnMouseUp,
+        dismissOnClickAway: Bool = PVContextMenuInteraction.defaultDismissOnClickAway,
         @ViewBuilder content: @escaping () -> Content
     ) -> some View {
         modifier(PVContextMenuPresenter(
@@ -258,6 +263,7 @@ extension View {
             keyboard: keyboard,
             stealKeys: stealKeys,
             dismissOnMouseUp: dismissOnMouseUp,
+            dismissOnClickAway: dismissOnClickAway,
             content: content
         ))
     }
@@ -316,6 +322,7 @@ private struct PVContextMenuPresenter<MenuContent: View>: ViewModifier {
     var keyboard: Binding<PVContextMenuKeyboard>?
     var stealKeys: Bool = true
     var dismissOnMouseUp: Bool = true
+    var dismissOnClickAway: Bool = false
     @ViewBuilder var content: () -> MenuContent
     @State private var dismissMonitor: Any?
     @State private var actionRegistry = PVContextMenuActionRegistry()
@@ -326,6 +333,7 @@ private struct PVContextMenuPresenter<MenuContent: View>: ViewModifier {
                 PVContextMenuPopupWindow(
                     isPresented: state.isPresented,
                     origin: state.origin,
+                    dismissOnClickAway: dismissOnClickAway,
                     onDismiss: { state.dismiss() },
                     content: menuRoot
                 )
@@ -369,9 +377,9 @@ private struct PVContextMenuPresenter<MenuContent: View>: ViewModifier {
         removeDismissMonitor()
         // Dismiss on mouse*Up* (not Down): Button actions fire on mouseUp, and
         // tearing the panel down on mouseDown prevents the item from running.
-        // Select owns its own press-drag loop (`dismissOnMouseUp` false) and
-        // its own keys (`stealKeys` false) so this default stays action-menu
-        // click-to-open.
+        // Select sets `dismissOnMouseUp` false so the opening click's mouse-up
+        // does not close the menu, and `stealKeys` false so closed-field keys
+        // stay on the trigger.
         var matching: NSEvent.EventTypeMask = [.rightMouseDown, .otherMouseDown]
         if dismissOnMouseUp {
             matching.insert(.leftMouseUp)
@@ -467,6 +475,7 @@ private struct PVContextMenuPresenter<MenuContent: View>: ViewModifier {
 private struct PVContextMenuPopupWindow<Content: View>: NSViewRepresentable {
     var isPresented: Bool
     var origin: CGPoint
+    var dismissOnClickAway: Bool = false
     var onDismiss: () -> Void
     var content: Content
 
@@ -480,6 +489,7 @@ private struct PVContextMenuPopupWindow<Content: View>: NSViewRepresentable {
         let coordinator = context.coordinator
         coordinator.onDismiss = onDismiss
         coordinator.origin = origin
+        coordinator.dismissOnClickAway = dismissOnClickAway
         coordinator.wantsPresented = isPresented
         coordinator.setContent(content)
         DispatchQueue.main.async {
@@ -500,12 +510,14 @@ private struct PVContextMenuPopupWindow<Content: View>: NSViewRepresentable {
         weak var anchor: NSView?
         var onDismiss: () -> Void = {}
         var origin: CGPoint = .zero
+        var dismissOnClickAway = false
         var wantsPresented = false
 
         private var panel: PVContextMenuNSPanel?
         private var hosting: PVContextMenuHostingView?
         private var content: AnyView = AnyView(EmptyView())
         private var observers: [NSObjectProtocol] = []
+        nonisolated(unsafe) private var clickAwayMonitor: Any?
         private var shownSize: CGSize?
 
         func setContent(_ content: some View) {
@@ -596,6 +608,14 @@ private struct PVContextMenuPopupWindow<Content: View>: NSViewRepresentable {
 
         private func startWatching(parent: NSWindow) {
             stopWatching()
+            if dismissOnClickAway {
+                clickAwayMonitor = NSEvent.addLocalMonitorForEvents(
+                    matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]
+                ) { [weak self] event in
+                    self?.handleClickAway(event)
+                    return event
+                }
+            }
             let center = NotificationCenter.default
             for name in [NSWindow.didMoveNotification, NSWindow.didResizeNotification] {
                 observers.append(center.addObserver(forName: name, object: parent, queue: .main) { [weak self] _ in
@@ -617,7 +637,23 @@ private struct PVContextMenuPopupWindow<Content: View>: NSViewRepresentable {
             }
         }
 
+        /// Same rule as `PVComboBox`: a down in the panel or on the trigger
+        /// is not "away." Everything else dismisses, using the real windows
+        /// instead of a guessed screen rect.
+        private func handleClickAway(_ event: NSEvent) {
+            if let panel, event.window === panel { return }
+            if let anchor, event.window === anchor.window {
+                let point = anchor.convert(event.locationInWindow, from: nil)
+                if anchor.bounds.contains(point) { return }
+            }
+            dismissFromAppKit()
+        }
+
         private func stopWatching() {
+            if let clickAwayMonitor {
+                NSEvent.removeMonitor(clickAwayMonitor)
+                self.clickAwayMonitor = nil
+            }
             observers.forEach(NotificationCenter.default.removeObserver)
             observers.removeAll()
         }

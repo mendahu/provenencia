@@ -186,7 +186,7 @@ struct PVSelectSessionTests {
         var nav = session()
         nav.handleKey(.space)
         nav.handleKey(.down)
-        nav.handlePointer(.clickAway)
+        nav.clickAway()
         #expect(!nav.isOpen)
         #expect(nav.selection == "given")
     }
@@ -218,7 +218,7 @@ struct PVSelectSessionTests {
             PVSelectAccessibility.triggerLabel(session: nav, displayLabel: nil, placeholder: "Choose")
                 == "Choose"
         )
-        nav.handlePointer(.press(.trigger))
+        nav.toggle()
         nav.increment()
         #expect(!nav.isOpen)
         #expect(nav.selection == "")
@@ -333,30 +333,43 @@ struct PVSelectSessionTests {
         #expect(!nav.isOpen)
     }
 
-    @Test func pressDragReleaseOntoGivenNameCommits() {
+    @Test func toggleOpensAndASecondToggleClosesWithoutCommit() {
         var nav = session()
         nav.handleKey(.character("s"))
-        nav.handlePointer(.press(.trigger))
-        #expect(nav.isOpen)
-        nav.handlePointer(.drag(.row(1)))
         #expect(nav.selection == "surname")
-        nav.handlePointer(.release(.row(1)))
-        #expect(nav.selection == "given")
+        nav.toggle()
+        #expect(nav.isOpen)
+        nav.handleKey(.down)
+        #expect(nav.highlightIndex == 3)
+        #expect(nav.selection == "surname")
+        nav.toggle()
         #expect(!nav.isOpen)
+        #expect(nav.selection == "surname")
     }
 
-    @Test func pressReleaseOnTriggerThenClickAwayRestores() {
+    @Test func clickARowCommitsAndALaterToggleOpensAgain() {
+        var nav = session()
+        nav.toggle()
+        nav.commit(index: 2, close: true)
+        #expect(!nav.isOpen)
+        #expect(nav.selection == "surname")
+        nav.toggle()
+        #expect(nav.isOpen)
+        #expect(nav.highlightIndex == 2)
+        #expect(nav.selection == "surname")
+    }
+
+    @Test func toggleThenClickAwayRestores() {
         var nav = session()
         nav.handleKey(.character("s"))
         nav.handleKey(.space)
         nav.handleKey(.down)
         nav.handleKey(.return)
         #expect(nav.selection == "suffix")
-        nav.handlePointer(.press(.trigger))
-        nav.handlePointer(.release(.trigger))
+        nav.toggle()
         #expect(nav.isOpen)
         #expect(nav.selection == "suffix")
-        nav.handlePointer(.clickAway)
+        nav.clickAway()
         #expect(!nav.isOpen)
         #expect(nav.selection == "suffix")
     }
@@ -366,7 +379,7 @@ struct PVSelectSessionTests {
         nav.handleKey(.down)
         nav.handleKey(.character("s"))
         nav.handleKey(.space)
-        nav.handlePointer(.press(.trigger))
+        nav.toggle()
         #expect(nav.selection == "given")
         #expect(!nav.isOpen)
     }

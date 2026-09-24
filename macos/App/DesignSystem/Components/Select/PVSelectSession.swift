@@ -1,7 +1,7 @@
 import Foundation
 
-/// Closed vs open policy for `PVSelect`. The view forwards keys and pointer
-/// hit targets here so tests and chrome cannot drift.
+/// Closed vs open policy for `PVSelect`. The view forwards keys and
+/// click-to-open / click-away here so tests and chrome cannot drift.
 struct PVSelectSession: Equatable {
     var options: [PVSelectOption]
     var selection: String
@@ -74,18 +74,19 @@ struct PVSelectSession: Equatable {
         handleKey(.up)
     }
 
-    // MARK: Pointer
+    /// Click the field: open if closed, restore and close if open.
+    mutating func toggle() {
+        guard !isDisabled else { return }
+        if isOpen {
+            dismissRestoring()
+        } else {
+            open()
+        }
+    }
 
-    mutating func handlePointer(_ event: PVSelectPointerEvent) {
-        switch event {
-        case .press(let target):
-            press(target)
-        case .drag(let target):
-            drag(target)
-        case .release(let target):
-            release(target)
-        case .clickAway:
-            clickAway()
+    mutating func clickAway() {
+        if isOpen {
+            dismissRestoring()
         }
     }
 
@@ -189,15 +190,6 @@ struct PVSelectSession: Equatable {
         highlightIndex = toFirst ? 0 : options.count - 1
     }
 
-    mutating func setHighlight(_ index: Int) {
-        guard isOpen else { return }
-        if index < 0 {
-            highlightIndex = -1
-        } else if options.indices.contains(index) {
-            highlightIndex = index
-        }
-    }
-
     /// Single-key cycle vs accumulating prefix, matching `PVContextMenuKeyboard`.
     @discardableResult
     mutating func applyTypeSelect(_ character: Character, now: Date = Date(), commit: Bool) -> Bool {
@@ -213,47 +205,6 @@ struct PVSelectSession: Equatable {
             highlightIndex = hit
         }
         return true
-    }
-
-    // MARK: Pointer transitions
-
-    private mutating func press(_ target: PVSelectPointerTarget) {
-        switch target {
-        case .trigger:
-            open()
-        case .outside:
-            clickAway()
-        case .row:
-            break
-        }
-    }
-
-    private mutating func drag(_ target: PVSelectPointerTarget) {
-        guard isOpen else { return }
-        switch target {
-        case .row(let index):
-            setHighlight(index)
-        case .trigger, .outside:
-            highlightIndex = -1
-        }
-    }
-
-    private mutating func release(_ target: PVSelectPointerTarget) {
-        guard isOpen else { return }
-        switch target {
-        case .row(let index):
-            commit(index: index, close: true)
-        case .trigger:
-            break
-        case .outside:
-            dismissRestoring()
-        }
-    }
-
-    private mutating func clickAway() {
-        if isOpen {
-            dismissRestoring()
-        }
     }
 }
 

@@ -19,9 +19,8 @@ struct PVSelectOption: Identifiable, Equatable {
 }
 
 /// A styled dropdown select built on the floating `PVContextMenu` kit.
-/// Interaction matches a native macOS popup button (`NSPopUpButton`): custom
-/// Frost chrome, native closed/open contract. The view forwards keys and
-/// pointer hit targets into `PVSelectSession`.
+/// Click the field to open, click a row to commit, click away or Escape
+/// to dismiss. Keys go to `PVSelectSession`. There is no press-drag.
 ///
 /// - **Field** (default): full-width control matching `PVInput` rest border.
 /// - **Chip** (`icon:` set, `fillsWidth: false`): compact toolbar select.
@@ -49,7 +48,6 @@ struct PVSelect: View {
     @State private var triggerScreen = CGRect.zero
     @State private var visibleScreen = CGRect.zero
     @State private var menuScreen = CGRect.zero
-    @State private var isTracking = false
     @FocusState private var isFocused: Bool
 
     init(
@@ -110,7 +108,7 @@ struct PVSelect: View {
     }
 
     var body: some View {
-        trigger
+        PVSelectTriggerSurface(isEnabled: !isDisabled, chrome: trigger, onClick: toggleMenu)
             .opacity(isDisabled ? 0.45 : 1)
             .focusable(!isDisabled)
             .focused($isFocused)
@@ -118,7 +116,6 @@ struct PVSelect: View {
             .onMoveCommand(perform: handleMoveCommand)
             .onKeyPress(action: handleTriggerKey)
             .background(anchorReader)
-            .overlay(pressTracker)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(accessibilityLabelText)
             .accessibilityValue(Text(verbatim: spoken.value))
@@ -141,7 +138,8 @@ struct PVSelect: View {
                 $menuState,
                 keyboard: options.isEmpty ? nil : $keyboard,
                 stealKeys: false,
-                dismissOnMouseUp: false
+                dismissOnMouseUp: false,
+                dismissOnClickAway: true
             ) {
                 menu
             }
@@ -205,6 +203,10 @@ struct PVSelect: View {
                     }
                 }
                 .frame(maxHeight: height)
+                .onAppear {
+                    guard session.highlightIndex >= 0 else { return }
+                    proxy.scrollTo(session.highlightIndex, anchor: .center)
+                }
                 .onChange(of: session.highlightIndex) { _, index in
                     guard index >= 0 else { return }
                     proxy.scrollTo(index, anchor: .center)
@@ -231,6 +233,11 @@ struct PVSelect: View {
             itemTitles: options.map(\.label)
         )
         menuState.present(at: PVSelectPlacement.menuOrigin(anchor: triggerScreen, frame: frame))
+    }
+
+    private func toggleMenu() {
+        isFocused = true
+        applySession { $0.toggle() }
     }
 
     private func applySession(_ body: (inout PVSelectSession) -> Void) {
@@ -364,41 +371,6 @@ struct PVSelect: View {
         .allowsHitTesting(false)
     }
 
-    private var pressTracker: some View {
-        PVSelectPressTracker(
-            isEnabled: !isDisabled,
-            triggerScreen: triggerScreen,
-            menuScreen: menuScreen,
-            onPress: { point in
-                isFocused = true
-                isTracking = true
-                applySession { $0.handlePointer(.press(target(at: point))) }
-            },
-            onDrag: { point in
-                applySession { $0.handlePointer(.drag(target(at: point))) }
-            },
-            onRelease: { point in
-                applySession { $0.handlePointer(.release(target(at: point))) }
-                isTracking = false
-            },
-            onClickAway: {
-                guard session.isOpen, !isTracking else { return }
-                applySession { $0.handlePointer(.clickAway) }
-            },
-            isMenuOpen: session.isOpen
-        )
-    }
-
-    private func target(at point: CGPoint) -> PVSelectPointerTarget {
-        PVSelectPointerTracking.hitTest(
-            point: point,
-            trigger: triggerScreen,
-            rows: PVSelectPointerTracking.rowFrames(
-                panel: menuScreen,
-                count: options.count
-            )
-        )
-    }
 }
 
 private struct PVSelectPositionContent: ViewModifier {
@@ -419,6 +391,90 @@ private struct PVSelectPositionContent: ViewModifier {
     }
 }
 
+/// AppKit owns the field click. SwiftUI paints the chrome and keeps keys
+/// (same split as the Evidence graph cards).
+private struct PVSelectTriggerSurface<Chrome: View>: NSViewRepresentable {
+    var isEnabled: Bool
+    var chrome: Chrome
+    var onClick: () -> Void
+
+    func makeNSView(context: Context) -> PVSelectTriggerSurfaceView {
+        let view = PVSelectTriggerSurfaceView()
+        apply(to: view)
+        return view
+    }
+
+    func updateNSView(_ view: PVSelectTriggerSurfaceView, context: Context) {
+        apply(to: view)
+    }
+
+    func sizeThatFits(
+        _ proposal: ProposedViewSize,
+        nsView: PVSelectTriggerSurfaceView,
+        context: Context
+    ) -> CGSize? {
+        nsView.measuredSize(proposal: proposal)
+    }
+
+    private func apply(to view: PVSelectTriggerSurfaceView) {
+        view.isEnabled = isEnabled
+        view.onClick = onClick
+        view.setChrome(chrome)
+    }
+}
+
+private final class PVSelectTriggerSurfaceView: NSView {
+    var isEnabled = true
+    var onClick: (() -> Void)?
+    private let hosting = NSHostingView(rootView: AnyView(EmptyView()))
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        hosting.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(hosting)
+        NSLayoutConstraint.activate([
+            hosting.leadingAnchor.constraint(equalTo: leadingAnchor),
+            hosting.trailingAnchor.constraint(equalTo: trailingAnchor),
+            hosting.topAnchor.constraint(equalTo: topAnchor),
+            hosting.bottomAnchor.constraint(equalTo: bottomAnchor),
+        ])
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) is not used")
+    }
+
+    func setChrome(_ chrome: some View) {
+        hosting.rootView = AnyView(chrome)
+        invalidateIntrinsicContentSize()
+    }
+
+    func measuredSize(proposal: ProposedViewSize) -> CGSize {
+        let fitting = hosting.fittingSize
+        let width = proposal.width ?? fitting.width
+        let height = proposal.height ?? fitting.height
+        return CGSize(width: max(width, 1), height: max(height, fitting.height, 1))
+    }
+
+    override var intrinsicContentSize: NSSize { hosting.fittingSize }
+
+    override var acceptsFirstResponder: Bool { false }
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    /// Do not let the hosted chrome take the click. This view is the target.
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        guard isEnabled, bounds.contains(point) else { return nil }
+        return self
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        guard isEnabled else { return }
+        onClick?()
+    }
+}
+
 private struct PVSelectScreenAnchor: NSViewRepresentable {
     var onChange: (CGRect, CGRect) -> Void
 
@@ -433,126 +489,6 @@ private struct PVSelectScreenAnchor: NSViewRepresentable {
             let visible = window.screen?.visibleFrame ?? screen
             onChange(screen, visible)
         }
-    }
-}
-
-/// Mouse-down tracking on the trigger, plus click-away while the menu is open
-/// from the keyboard (not mid-drag).
-private struct PVSelectPressTracker: NSViewRepresentable {
-    var isEnabled: Bool
-    var triggerScreen: CGRect
-    var menuScreen: CGRect
-    var onPress: (CGPoint) -> Void
-    var onDrag: (CGPoint) -> Void
-    var onRelease: (CGPoint) -> Void
-    var onClickAway: () -> Void
-    var isMenuOpen: Bool
-
-    func makeNSView(context: Context) -> PVSelectPressView {
-        let view = PVSelectPressView()
-        apply(to: view)
-        return view
-    }
-
-    func updateNSView(_ view: PVSelectPressView, context: Context) {
-        apply(to: view)
-        view.installClickAwayIfNeeded()
-    }
-
-    private func apply(to view: PVSelectPressView) {
-        view.isEnabled = isEnabled
-        view.triggerScreen = triggerScreen
-        view.menuScreen = menuScreen
-        view.onPress = onPress
-        view.onDrag = onDrag
-        view.onRelease = onRelease
-        view.onClickAway = onClickAway
-        view.isMenuOpen = isMenuOpen
-    }
-}
-
-private final class PVSelectPressView: NSView {
-    var isEnabled = true
-    var isMenuOpen = false
-    var triggerScreen = CGRect.zero
-    var menuScreen = CGRect.zero
-    var onPress: ((CGPoint) -> Void)?
-    var onDrag: ((CGPoint) -> Void)?
-    var onRelease: ((CGPoint) -> Void)?
-    var onClickAway: (() -> Void)?
-    /// Opaque `NSEvent` tokens. `deinit` is nonisolated, so these stay
-    /// `nonisolated(unsafe)` the same way other kit caches do.
-    nonisolated(unsafe) private var clickAwayMonitor: Any?
-    nonisolated(unsafe) private var trackMonitor: Any?
-    private var isTracking = false
-
-    override var acceptsFirstResponder: Bool { false }
-
-    override func hitTest(_ point: NSPoint) -> NSView? {
-        guard isEnabled else { return nil }
-        return self
-    }
-
-    override func mouseDown(with event: NSEvent) {
-        guard isEnabled else { return }
-        isTracking = true
-        onPress?(screenPoint(event))
-        if let trackMonitor {
-            NSEvent.removeMonitor(trackMonitor)
-        }
-        trackMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDragged, .leftMouseUp]) { [weak self] next in
-            guard let self else { return next }
-            switch next.type {
-            case .leftMouseDragged:
-                self.onDrag?(self.screenPoint(next))
-            case .leftMouseUp:
-                self.onRelease?(self.screenPoint(next))
-                self.finishTracking()
-            default:
-                break
-            }
-            return nil
-        }
-    }
-
-    private func finishTracking() {
-        isTracking = false
-        if let trackMonitor {
-            NSEvent.removeMonitor(trackMonitor)
-            self.trackMonitor = nil
-        }
-    }
-
-    func installClickAwayIfNeeded() {
-        if isMenuOpen {
-            guard clickAwayMonitor == nil else { return }
-            clickAwayMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
-                guard let self, self.isMenuOpen, !self.isTracking else { return event }
-                let point = self.screenPoint(event)
-                if self.triggerScreen.contains(point) || self.menuScreen.contains(point) {
-                    return event
-                }
-                self.onClickAway?()
-                return event
-            }
-        } else if let clickAwayMonitor {
-            NSEvent.removeMonitor(clickAwayMonitor)
-            self.clickAwayMonitor = nil
-        }
-    }
-
-    deinit {
-        if let clickAwayMonitor {
-            NSEvent.removeMonitor(clickAwayMonitor)
-        }
-        if let trackMonitor {
-            NSEvent.removeMonitor(trackMonitor)
-        }
-    }
-
-    private func screenPoint(_ event: NSEvent) -> CGPoint {
-        guard let window = event.window ?? window else { return .zero }
-        return window.convertToScreen(NSRect(origin: event.locationInWindow, size: .zero)).origin
     }
 }
 

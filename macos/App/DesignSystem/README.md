@@ -293,29 +293,30 @@ swept across anchor positions rather than spot-checked.
 ## The Select contract
 
 `PVSelect` is custom Frost chrome on `PVContextMenu` that implements a
-**native macOS popup-button contract**. It is **not** SwiftUI `Picker` /
-`Menu` and **not** `NSPopUpButton`. Behavior lives in `PVSelectSession`,
-`PVSelectPlacement`, and `PVSelectPointerTracking` so tests exercise the
-same path as the view.
+**native macOS popup-button contract**, minus press-drag-release. It is
+**not** SwiftUI `Picker` / `Menu` and **not** `NSPopUpButton`.
+`PVSelectSession` owns open / commit / keys. `PVSelectPlacement` owns
+where the panel sits. The menu is a normal click-to-open list: click a
+row, or scroll and then click.
 
-**Interaction contract** (mirrors `NSPopUpButton`):
+**Interaction contract:**
 
 | Input | Closed (focused trigger) | Open (menu showing) |
 |---|---|---|
-| Click / press | Open | Choose the row under the pointer |
-| Press–drag–release | Open on press; highlight follows; release on a row commits | Same tracking loop |
+| Click the field | Open | Close without commit (same as Escape) |
+| Click a row | — | Commit that row and close |
+| Scroll the list | — | Reveal more rows; click to commit |
 | Space / Return | Open | Commit the highlighted row |
 | ↑ / ↓ | Commit next/prev. Stay closed. Clamp — do **not** wrap. | Move highlight. Clamp. |
 | a–z, 0–9 | Commit the match. Stay closed. | Jump highlight only |
 | Home / End | Commit first/last. Stay closed. | First / last highlight |
 | Escape | No-op | Dismiss; restore the snapshot taken at open |
 | Click away | — | Dismiss without commit (same as Escape) |
-| Release on trigger | — | Leave the menu open |
 
 **Selected vs highlight.** The committed row keeps a leading checkmark and
-the `.isSelected` trait, with **no** fill. Keyboard and pointer highlight
-use one `surfaceSelected` fill. A committed+highlighted row shows both;
-two rows must not look equally selected.
+the `.isSelected` trait, with **no** fill. Keyboard highlight uses
+`surfaceSelected` fill. A committed+highlighted row shows both; two rows
+must not look equally selected.
 
 **Placement.** Width is `max(trigger, menuWidth)` then clamped to the
 screen. Gap 4 pt, left-aligned. Prefer below; flip above when the

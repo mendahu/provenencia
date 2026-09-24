@@ -31,6 +31,7 @@ struct PVContextMenuStateTests {
     @Test func actionMenusKeepClickToOpenDefaults() {
         #expect(PVContextMenuInteraction.defaultStealKeys)
         #expect(PVContextMenuInteraction.defaultDismissOnMouseUp)
+        #expect(!PVContextMenuInteraction.defaultDismissOnClickAway)
     }
 }
 
