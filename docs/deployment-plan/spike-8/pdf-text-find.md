@@ -29,13 +29,13 @@ Find and paste both need a **live PDFKit page** (`PDFView` / equivalent), not `P
 | Region tools | Stay; exclusive with select (armed region tool wins). Find stays available. |
 | No text layer | Disable Find / paste; short reason. No Vision fallback. |
 | Source-page viewer | Out. Composer only. |
-| `text_quote` locator | Out. Hits do not write locator JSON. |
+| `text_quote` locator | Out. Hits do not write locator JSON. Parked: [`text-quote-locators.md`](../../ideas/text-quote-locators.md). |
 
 ## Out
 
 - PDF OCR / Vision on page rasters
 - Full in-document Find UI on Source page
-- Seeding `text_quote` from hits
+- Seeding `text_quote` from hits ([`text-quote-locators.md`](../../ideas/text-quote-locators.md))
 - Changing locator schema
 
 ## Related

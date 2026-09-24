@@ -48,7 +48,7 @@ Exact placement of Find vs page/zoom/region is a board finding. Paste lives with
 
 - Not image OCR (**S8-D1** / **S8-01**).
 - Not PDF page-1 **thumbnails** (**S8-02**).
-- Not `text_quote` locators.
+- Not `text_quote` locators — parked in [`text-quote-locators.md`](../../../ideas/text-quote-locators.md).
 - Not Foundation Models.
 
 ---

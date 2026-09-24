@@ -26,7 +26,7 @@ Stories land one at a time. **Auto Transcribe** (Vision on **images** only). **P
 
 Spike 7 shipped the composer place, locators, and durable connect. Dogfood then showed that a single newspaper notice still means a lot of typing. Background (OCR APIs, page-size honesty, later LLM extract): [`docs/dogfood/ux.md`](../../dogfood/ux.md).
 
-**Later (not this spike unless a story is added):** Foundation Models draft cards, PDF OCR / Vision on page rasters, `text_quote` locators, Source-page Find, user-picked PDF cover page, audio/video. **Source-to-source** commentary (`mentions` / `remark`, placeholder Sources, merge) is a parked idea: [`docs/ideas/source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md) — not S8-D4.
+**Later (not this spike unless a story is added):** Foundation Models draft cards, PDF OCR / Vision on page rasters, Source-page Find, user-picked PDF cover page, audio/video. Parked ideas (not this spike): **source-to-source** commentary ([`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)); **`text_quote` locators** ([`text-quote-locators.md`](../../ideas/text-quote-locators.md)) — Find/paste does not seed them.
 
 **Parked in dogfood (not standalone spike stories):** composer rethink — one reading × many subjects, Citation pinning, empty-Citation Save policy ([`docs/dogfood/ux.md`](../../dogfood/ux.md)).
 

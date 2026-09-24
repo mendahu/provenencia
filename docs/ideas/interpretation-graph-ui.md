@@ -444,7 +444,7 @@ description
 
 macOS building blocks, per media type:
 
-- **PDF** — `PDFKit.PDFView` wrapped in `NSViewRepresentable`. Gives page navigation (feeding `artifact_page`), and `PDFSelection` gives selected text plus surrounding context, which is exactly `text_quote.exact` / `prefix` / `suffix`. `PDFPage` coordinate conversion supports normalized region points.
+- **PDF** — `PDFKit.PDFView` wrapped in `NSViewRepresentable`. Gives page navigation (feeding `artifact_page`), and `PDFSelection` gives selected text plus surrounding context, which is exactly `text_quote.exact` / `prefix` / `suffix`. `PDFPage` coordinate conversion supports normalized region points. **Client write of `text_quote` is parked:** [`text-quote-locators.md`](text-quote-locators.md) (Spike 8 Find/paste fills transcription only).
 - **Image** — `NSImage` plus a custom overlay for polygon drawing.
 - **Audio/video** — AVKit `AVPlayer` with a time observer for `time_range`.
 - **QuickLook** (`QLPreviewView`) is tempting because it handles every format nearly free — but it exposes no selection or coordinate API, so it cannot produce locators. Useful as a read-only preview, not as the composer.

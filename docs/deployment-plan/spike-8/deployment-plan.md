@@ -145,7 +145,7 @@ Notes: [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md).
 
 Claude Design board for the PDF **tool strip** (Find), **cursors** (I-beam default vs pan), and transcription **Paste from selection**. Brief: [`design/S8-D2-pdf-text-find.md`](design/S8-D2-pdf-text-find.md). Gates **S8-03**, **S8-04**, **S8-05**.
 
-Does **not** design image OCR, PDF thumbnails, or `text_quote` locators.
+Does **not** design image OCR, PDF thumbnails, or `text_quote` locators ([`text-quote-locators.md`](../../ideas/text-quote-locators.md)).
 
 ---
 
@@ -171,7 +171,7 @@ Find field on `ArtifactViewerToolChrome` (PDF only). `PDFDocument.findString` �
 | | |
 | --- | --- |
 | **In** | Keyword field; Find / next / prev; current-hit highlight; sync `model.page`; no-match and no-text-layer copy; L10n; disable while a region tool is drawing if the board says so (Find itself may stay). |
-| **Out** | Source-page Find; `text_quote` locators; OCR fallback; image Find. |
+| **Out** | Source-page Find; `text_quote` locators ([`text-quote-locators.md`](../../ideas/text-quote-locators.md)); OCR fallback; image Find. |
 | **Testable** | Fake/document fixture: hit changes page; wrap/stop per board; empty query / no hits; hidden on image Artifacts. |
 | **Depends on** | **S8-D2**, **S8-03**. |
 
@@ -268,7 +268,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 | In-memory crop from locator | Object-store crop files |
 | Warn + proceed on large images | Hard reject / Apple “too many words” (does not exist) |
 | PDF **page-1 thumbnail** via PDFKit | Go PDF decoder; user-picked thumb page |
-| PDF **Find** + **select** + **paste transcription** | PDF Vision / OCR; `text_quote` locators; Source-page Find |
+| PDF **Find** + **select** + **paste transcription** | PDF Vision / OCR; `text_quote` locators ([`text-quote-locators.md`](../../ideas/text-quote-locators.md)); Source-page Find |
 | Graph **conflict** + **negated** badges; Source-page jump; richer bridge sentences; **Add property** on bridges | Denied-line drawing; composer rethink / pinning (dogfood); merge/resolve; **descoped** leftovers (incomplete bridges, collapse/expand, filters, undo, tray, minimap) |
 | Source page **Open Evidence graph** (more page items via **S8-D4**) | Source-to-source commentary (`mentions` / `remark`, placeholder + merge — [`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)) |
 | Sources list **graph-progress counts** (more list items via **S8-D5**) | Folding counts into `sourcesList`; a Subjects list destination |
