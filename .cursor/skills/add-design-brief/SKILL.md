@@ -100,4 +100,4 @@ Match an open Spike 8 brief (`S8-D7` rethink, `S8-D1` enhancement):
 - Implement against the board + inventory (kit first)
 - Later briefs on the same surface **extend the new frames**, not the discarded ones
 
-When a **spike closes**, distill that folder to a decisions README. Delete `completed.md`, `deployment-plan.md`, and design briefs. Git has the PR history. See [`docs/deployment-plan/archive/`](../../../docs/deployment-plan/archive/).
+When a **spike closes**, use [`archive-docs`](../archive-docs/SKILL.md) — do not leave briefs and `completed.md` in `archive/`.

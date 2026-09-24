@@ -11,7 +11,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - **Prefer one file per idea.** Keep the entry short; link out to model docs when the idea depends on an existing layer.
 - **Rough is fine.** Bullets, open questions, and “maybe later” notes are enough.
 - **Promote out.** When an idea is pulled into a deployment-plan spike, move the file into that spike folder.
-- **Archive when shipped.** Move finished ideas into [`archive/`](archive/).
+- **Archive when shipped.** Move finished ideas into [`archive/`](archive/) and distill with [`archive-docs`](../../.cursor/skills/archive-docs/SKILL.md).
 - **Dogfood nits stay out.** UI friction from using the app on real data goes in [`docs/dogfood/ux.md`](../dogfood/ux.md), not here.
 
 ## Current ideas
