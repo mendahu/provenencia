@@ -108,7 +108,12 @@ struct PVSelect: View {
     }
 
     var body: some View {
-        PVSelectTriggerSurface(isEnabled: !isDisabled, chrome: trigger, onClick: toggleMenu)
+        PVSelectTriggerSurface(
+            isEnabled: !isDisabled,
+            stretchesHorizontally: icon == nil && fillsWidth,
+            chrome: trigger,
+            onClick: toggleMenu
+        )
             .opacity(isDisabled ? 0.45 : 1)
             .focusable(!isDisabled)
             .focused($isFocused)
@@ -392,9 +397,11 @@ private struct PVSelectPositionContent: ViewModifier {
 }
 
 /// AppKit owns the field click. SwiftUI paints the chrome and keeps keys
-/// (same split as the Evidence graph cards).
+/// (same split as the Evidence graph cards). Sizing comes from the hosted
+/// chrome (`PVSelectPlacement.triggerSize`), never from the proposal alone.
 private struct PVSelectTriggerSurface<Chrome: View>: NSViewRepresentable {
     var isEnabled: Bool
+    var stretchesHorizontally: Bool
     var chrome: Chrome
     var onClick: () -> Void
 
@@ -418,6 +425,7 @@ private struct PVSelectTriggerSurface<Chrome: View>: NSViewRepresentable {
 
     private func apply(to view: PVSelectTriggerSurfaceView) {
         view.isEnabled = isEnabled
+        view.stretchesHorizontally = stretchesHorizontally
         view.onClick = onClick
         view.setChrome(chrome)
     }
@@ -425,6 +433,7 @@ private struct PVSelectTriggerSurface<Chrome: View>: NSViewRepresentable {
 
 private final class PVSelectTriggerSurfaceView: NSView {
     var isEnabled = true
+    var stretchesHorizontally = true
     var onClick: (() -> Void)?
     private let hosting = NSHostingView(rootView: AnyView(EmptyView()))
 
@@ -451,10 +460,11 @@ private final class PVSelectTriggerSurfaceView: NSView {
     }
 
     func measuredSize(proposal: ProposedViewSize) -> CGSize {
-        let fitting = hosting.fittingSize
-        let width = proposal.width ?? fitting.width
-        let height = proposal.height ?? fitting.height
-        return CGSize(width: max(width, 1), height: max(height, fitting.height, 1))
+        PVSelectPlacement.triggerSize(
+            proposedWidth: proposal.width,
+            fitting: hosting.fittingSize,
+            stretchesHorizontally: stretchesHorizontally
+        )
     }
 
     override var intrinsicContentSize: NSSize { hosting.fittingSize }

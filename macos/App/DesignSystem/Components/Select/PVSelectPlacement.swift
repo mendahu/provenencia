@@ -41,4 +41,21 @@ enum PVSelectPlacement {
     static func menuOrigin(anchor: CGRect, frame: CGRect) -> CGPoint {
         CGPoint(x: frame.minX - anchor.minX, y: anchor.maxY - frame.maxY)
     }
+
+    /// Layout size of the trigger for a SwiftUI proposal. The trigger is a
+    /// control, not a container: it always takes its own chrome height, and
+    /// only a full-width field follows the proposed width (like
+    /// `.frame(maxWidth: .infinity)`). Accepting the proposal outright made
+    /// stacks hand the select all remaining space (#181).
+    static func triggerSize(
+        proposedWidth: CGFloat?,
+        fitting: CGSize,
+        stretchesHorizontally: Bool
+    ) -> CGSize {
+        var width = fitting.width
+        if stretchesHorizontally, let proposedWidth {
+            width = max(proposedWidth, fitting.width)
+        }
+        return CGSize(width: max(width, 1), height: max(fitting.height, 1))
+    }
 }
