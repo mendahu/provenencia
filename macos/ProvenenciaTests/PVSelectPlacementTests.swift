@@ -114,4 +114,59 @@ struct PVSelectPlacementTests {
         #expect(restored.width == frame.width)
         #expect(restored.height == frame.height)
     }
+
+    // MARK: Trigger sizing (#181)
+
+    private let chrome = CGSize(width: 136, height: 28)
+
+    @Test func triggerKeepsChromeHeightWhateverTheStackProposes() {
+        for stretches in [true, false] {
+            let size = PVSelectPlacement.triggerSize(
+                proposedWidth: 400,
+                fitting: chrome,
+                stretchesHorizontally: stretches
+            )
+            #expect(size.height == chrome.height)
+        }
+    }
+
+    @Test func fullWidthFieldFollowsTheProposedWidth() {
+        let wide = PVSelectPlacement.triggerSize(
+            proposedWidth: 400, fitting: chrome, stretchesHorizontally: true
+        )
+        #expect(wide.width == 400)
+
+        let infinite = PVSelectPlacement.triggerSize(
+            proposedWidth: .infinity, fitting: chrome, stretchesHorizontally: true
+        )
+        #expect(infinite.width == .infinity)
+
+        let narrow = PVSelectPlacement.triggerSize(
+            proposedWidth: 0, fitting: chrome, stretchesHorizontally: true
+        )
+        #expect(narrow.width == chrome.width)
+
+        let unspecified = PVSelectPlacement.triggerSize(
+            proposedWidth: nil, fitting: chrome, stretchesHorizontally: true
+        )
+        #expect(unspecified.width == chrome.width)
+    }
+
+    @Test func chipIgnoresTheProposedWidth() {
+        for proposed in [CGFloat?.none, 0, 400, .infinity] {
+            let size = PVSelectPlacement.triggerSize(
+                proposedWidth: proposed, fitting: chrome, stretchesHorizontally: false
+            )
+            #expect(size.width == chrome.width)
+            #expect(size.height == chrome.height)
+        }
+    }
+
+    @Test func triggerNeverReportsZeroSize() {
+        let size = PVSelectPlacement.triggerSize(
+            proposedWidth: nil, fitting: .zero, stretchesHorizontally: true
+        )
+        #expect(size.width >= 1)
+        #expect(size.height >= 1)
+    }
 }
