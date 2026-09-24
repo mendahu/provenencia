@@ -12,6 +12,15 @@ Paste this entire document into Claude Design as the requirements for one board/
 
 **Hand this board first.** **S8-D1** (Auto Transcribe) and **S8-D2** (PDF Find / paste) land on this form. Do not design those controls until this layout is agreed.
 
+### Claude Design — do this first (in order)
+
+You are redesigning the **citation composer**. Work **in place** on this board. Replace the shipped Spike 7 frames. Do **not** preserve the old subject-locked layout, the artifact pre-screen as a full-page gate, or a side-by-side “before” to keep. Option B (viewer \| form as a place) stays; the form chrome does not.
+
+1. **Clear this board’s local design-system cache.** Claude Design keeps a stale pack; drawing against it will invent local copies of kit controls.
+2. **Delete this board’s reference** to the design-system bundle.
+3. **Pull a fresh copy** of the Provenencia design system from the main project. Do not continue until the fetched kit lists the current components (`Field`, `Button`, `TextArea`, `Callout`, `Card`, `Thumbnail`, `Select`, confirm, etc.). If the kit looks stale or empty, delete the cache and refetch again. Do **not** draw a replacement kit locally.
+4. **Compose from that kit.** Reuse existing components. Reach for a **bespoke / local** control only when the use is truly this domain (Citation identity, observation rows with a subject). One call site is not a new design-system primitive. If the kit already has a field, button, menu, thumbnail, or dialog that fits, instance it.
+
 ---
 
 ## 1. Objective
@@ -170,7 +179,7 @@ The cleverness is **not** inventing a file-browser. It is matching chrome to §2
 | CR-9 | Connect entry still shows two **fixed** endpoint rows + optional term; Property picker still excludes edge keys. |
 | CR-10 | Shared-reading honesty: Citation `ref` visible; if other subjects have rows, that is obvious. |
 | CR-11 | Viewer \| form (or the chosen alternative) still has an a11y tree as its own place. Cancel / Back returns to the graph. After Save, go to the graph as today. |
-| CR-12 | Prefer existing `PV*` (`PVField`, `PVButton`, `PVThumbnail`, popover/menu, NameValue / DateValue dialogs). Form pane may **widen** past 400pt or use a two-column form if inline rows need it. No new kit primitive unless a finding says the kit cannot do an identity switcher. |
+| CR-12 | **Kit first.** Instance existing design-system components (`Field`, `Button`, `TextArea`, `Callout`, `Card`, `Thumbnail`, `Select`, confirm). Form pane may **widen** past 400pt or use a two-column form if inline rows need it. A local snowflake is allowed only when the use is Citation/Observation-specific and no kit control fits. No new kit primitive for a one-off identity switcher. |
 | CR-13 | VoiceOver: Artifact, Citation, and focused Observation are named. Changing Artifact or Citation is announced as a document change. |
 | CR-14 | L10n for new chrome. `Text(verbatim:)` for refs / counts. |
 
@@ -214,8 +223,10 @@ The cleverness is **not** inventing a file-browser. It is matching chrome to §2
 
 | Do not add | Why |
 | --- | --- |
+| A parallel board that keeps the Spike 7 composer | Build in place; the old frames go away. |
+| A local copy of Field / Button / Card / Select | Stale cache. Refetch the kit. |
 | Subject list destination in the composer | That is the graph. |
-| `PVCitationSwitcher` kit control | One call site unless a second appears. Compose menu + thumbs. |
+| `PVCitationSwitcher` (or kit equivalent) | One call site. Compose existing menu + thumbs. |
 | Four-column file browser | The failure mode this brief exists to avoid. |
 | Live graph pane by default | Option B + hop stays until a finding says otherwise. |
 
