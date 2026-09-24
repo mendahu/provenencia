@@ -4,9 +4,9 @@
 
 **Open.** Checklist and PR sequence: [`deployment-plan.md`](deployment-plan.md). Finished steps: [`completed.md`](completed.md).
 
-A pause after Spike 7: the evidence path works, but **entering Sources and filling an Evidence graph is tedious**. This spike amalgamates small, mostly unrelated improvements to that flow — not a new layer. A thin **conflict badge** on repeated Properties is pulled in as graph chrome (**S8-D3** / **S8-06**); the rest of the honesty/polish slice (negated lines, tray, pinning) stays out unless added.
+A pause after Spike 7: the evidence path works, but **entering Sources and filling an Evidence graph is tedious**. This spike amalgamates small, mostly unrelated improvements to that flow — not a new layer. Thin **conflict** and **negated** row badges are pulled in as graph chrome (**S8-D3** / **S8-06**); the rest of the honesty/polish slice (denied lines, tray, pinning) stays out unless added.
 
-Stories land one at a time. **Auto Transcribe** (Vision on **images** only). **PDF Artifact thumbnails** (first-page raster so rows and Source covers can tell PDFs apart). **PDF Find + select + paste transcription** (live PDFKit page; I-beam default; no Vision on PDF). **Graph visual enhancements** (conflict badge first; more items join that PR).
+Stories land one at a time. **Auto Transcribe** (Vision on **images** only). **PDF Artifact thumbnails** (first-page raster so rows and Source covers can tell PDFs apart). **PDF Find + select + paste transcription** (live PDFKit page; I-beam default; no Vision on PDF). **Graph visual enhancements** (conflict + negated badges; more items join that PR).
 
 > **Do not invent Observations.** Transcription is the reading. The researcher still edits and Save still writes the Citation.
 
@@ -26,7 +26,7 @@ Stories land one at a time. **Auto Transcribe** (Vision on **images** only). **P
 
 Spike 7 shipped the composer place, locators, and durable connect. Dogfood then showed that a single newspaper notice still means a lot of typing. Background (OCR APIs, page-size honesty, later LLM extract): [`docs/dogfood/ux.md`](../../dogfood/ux.md).
 
-**Later (not this spike unless a story is added):** Citation pinning across subjects, graph+composer rethink, Foundation Models draft cards, PDF OCR / Vision on page rasters, `text_quote` locators, Source-page Find, user-picked PDF cover page, audio/video, full honesty language (negated lines, incomplete bridges, filters, undo), tray.
+**Later (not this spike unless a story is added):** Citation pinning across subjects, graph+composer rethink, Foundation Models draft cards, PDF OCR / Vision on page rasters, `text_quote` locators, Source-page Find, user-picked PDF cover page, audio/video, leftover honesty (incomplete bridges, denied-line drawing, filters, undo), tray.
 
 ## Out of scope (for this spike)
 
