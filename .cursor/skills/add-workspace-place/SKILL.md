@@ -17,7 +17,7 @@ presentation it needs. Spike 4 centralizes this in `Features/Workspace/Session/`
 `reconcileNavigation` from pre-S4 patterns.
 
 Authoritative design: [`docs/ideas/archive/page-navigation-performance.md`](../../../docs/ideas/archive/page-navigation-performance.md).
-Sequencing: [`docs/deployment-plan/archive/spike-4/completed.md`](../../../docs/deployment-plan/archive/spike-4/completed.md).
+Spike decisions: [`docs/deployment-plan/archive/spike-4/README.md`](../../../docs/deployment-plan/archive/spike-4/README.md).
 
 ## When this applies
 

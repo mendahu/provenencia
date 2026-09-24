@@ -1,41 +1,15 @@
-# Spike 7 — Citations, Observations, and the citation composer
+# Spike 7 — Citations, Observations, composer
 
-## Status
+**Done.** Citation → Observation pipeline on the Evidence graph. Schema: [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md). Themes: [`interpretation-graph-ui.md`](../../../ideas/archive/interpretation-graph-ui.md). Composer rethink is Spike 8 (**S8-D7**).
 
-**Done.** Spike archived after S7-01…S7-15 / S7-11. Open work: none. Finished steps: [`completed.md`](completed.md).
+## Decisions
 
-Stand up the Interpretation **Citation → Observation** pipeline on the Evidence graph: **Subject fields** editor, NameValue, image/PDF citation composer as a **navigable place**, cited property rows on cards, and durable connect macros. Authoritative design: [`interpretation-graph-ui.md`](../../../ideas/interpretation-graph-ui.md) §4–§6 / slices 3–7. Canvas inherits from [Spike 6](../spike-6/) (Go).
-
-> **UI dogfood is inverted:** Add property + card chrome first, then a **thin** composer (text cite → card grows), then viewers / locators / NameValue. See [`deployment-plan.md`](deployment-plan.md) § Incremental UI dogfood.
-
-> **Composer is Option B:** navigate away from the graph to a first-class workspace place (viewer \| form). Not an in-window modal over the canvas, and not a companion `NSWindow`.
-
-> **Subject types are not user-editable.** The seven seeded kinds (person / event / place / bridges / source) stay product-seeded with first-class graph plumbing. No Subject types CatalogVocabulary UI in this spike (S7-D1 / S7-04 descoped). Behavior (capabilities, locked bindings, connect matrix, **Property term** sets) is declared in one **Interpretation subject registry** in S7-01 / **S7-01b** — the plugin extension point later.
-
-> **Property terms (S7-01b):** kind/edge Properties (`event_type`, `role`, `relationship_type`) use `value_type = term` + `property_terms` — registry-driven only (not offered in Subject fields create). No Event types / Roles admin destinations; composer picker ± Add custom for user **term rows**.
-
-## Documents
-
-| Doc | Role |
-| --- | --- |
-| [**Deployment plan**](deployment-plan.md) | PR sequence, design gates, dogfood bar, scope |
-| [**Completed**](completed.md) | Finished steps |
-| [Design briefs](design/) | Claude Design — S7-D2 through S7-D10 archived (see [completed.md](completed.md)); S7-D1 descoped. |
-
-## Relationship to Spike 5 / 6 / later
-
-Spike 5 shipped subjects, positions, Subject types seed, and Sources-family stubs. Spike 6 shipped the canvas prototype (provisional connect). Spike 7 is slices **3–7** of the design note collapsed into one spike: Subject **fields** editor (not types), **Property terms**, artifact viewer + Citations, Observations (six value types including NameValue as its **own design stream**), and durable connect.
-
-**Later (not this spike):** Source-page `mentions` / `remark`, audio/video composers, Citation pinning across graph edits, conflicted/negated visual language, unplaced tray / minimap, removing the Subject types sidebar stub if desired.
-
-## Out of scope (for this spike)
-
-- **Subject types** CatalogVocabulary editor / user-defined Subject types (product-seeded + first-class only)
-- Event types / Roles / Relationship-types CatalogVocabulary destinations (Property terms use composer picker ± Add custom)
-- In-window composer modal over the graph; companion `NSWindow`
-- `real` / `boolean` Property value types
-- Audio / video / QuickLook-as-composer
-- Conclusion `name_format` profiles
-- Citation pinning across successive graph edits
-- Auto-layout, unplaced tray, minimap
-- Product SemVer bump for docs-only planning (bump only if cutting a release)
+- **Composer is Option B:** a navigable workspace place (artifact viewer \| form). Not a sheet over the graph, not a companion window. Back returns to the graph.
+- **Subject types stay product-seeded** (person / event / place / bridges / source). No types editor. Behavior lives in one Interpretation subject registry (capabilities, locked bindings, connect matrix, term Properties).
+- **Subject fields** (`properties` + bindings) remain the extensible config surface.
+- Observation value types for v1: `text`, `integer`, `date`, `name`, `subject`, **`term`**. Not `real` / `boolean`.
+- Kind/edge Properties use **`property_terms`**. Term-typed Properties are registry-driven; the composer picker may Add custom **term rows**. No Event types / Roles admin destinations.
+- Connect writes a **cited bridge** (subject + position + Citation + edge Observations) in one transaction. Endpoint Properties are system-owned; Add property excludes them.
+- Locator: default `artifact`, optional PDF `page`, optional `region` polygon (one region).
+- NameValue is its own editor, hosted by the composer for `value_type = name`.
+- The shipped composer was **subject-locked** (one card per trip; Save required ≥1 Observation). That policy is what Spike 8 rethinks — the schema already allows one Citation × many subjects and an empty reading.

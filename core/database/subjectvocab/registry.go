@@ -225,7 +225,7 @@ var seedTerms = []seedTerm{
 	{PropertyKey: "relationship_type", Key: "ward", Label: "Ward"},
 }
 
-// Connect matrix from interpretation-graph-ui.md §3.2. Omitted pairs refuse by default.
+// Connect matrix (interpretation-graph-ui / Spike 7). Omitted pairs refuse by default.
 var seedConnect = []seedConnectRule{
 	{
 		FromTypeKey: "person", ToTypeKey: "event",

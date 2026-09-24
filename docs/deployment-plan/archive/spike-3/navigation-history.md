@@ -1,8 +1,6 @@
 # Navigation history (back / forward)
 
-**Status:** archived — Spike 3 complete. Requirements for navigation history and persistence. PR sequence: [`deployment-plan.md`](deployment-plan.md) (S3-03…S3-06).
-
-Visual chrome: Claude Design **App Layout** board ([`design/README.md`](design/README.md)). This note owns **behavior**; the board is the visual source of truth for placement and menu layout.
+**Status:** live behavior contract (shipped in Spike 3). Spike note: [`README.md`](README.md).
 
 ## Problem
 
@@ -188,7 +186,7 @@ Evidence work is link-shaped: Source ↔ (later) File ↔ Citation ↔ Person. W
 
 ## Still open
 
-_None for navigation history behavior._ Implementation order is locked in [`deployment-plan.md`](deployment-plan.md) (catalog UUID → history store → toolbar chrome; omnibar on the parallel search track).
+_None for navigation history behavior._
 
 ## Explicitly out of scope
 
@@ -200,10 +198,6 @@ _None for navigation history behavior._ Implementation order is locked in [`depl
 
 ## Related docs
 
-- [`deployment-plan.md`](deployment-plan.md) — sequenced PRs
-- [`design/README.md`](design/README.md) — App Layout board + uploads
-- [`omnibar-search.md`](omnibar-search.md) (jumps that should push history; toolbar neighbor)
+- [`omnibar-search.md`](omnibar-search.md)
 - [`macos-client-patterns.md`](../../../macos-client-patterns.md)
-- [`S2-01-workspace-chrome.md`](../spike-2/design/archive/S2-01-workspace-chrome.md)
-- [`S2-04-sources-list.md`](../spike-2/design/archive/S2-04-sources-list.md) / [`S2-23-source-detail.md`](../spike-2/design/archive/S2-23-source-detail.md) (list ↔ Source page; historical local-back notes — superseded by this spike)
-- [`S2-20-files-list.md`](../spike-2/design/archive/S2-20-files-list.md) (Source deep link — brief descoped with S2-21; still useful as a Files→Source jump sketch)
+- [`add-workspace-location`](../../../../.cursor/skills/add-workspace-location/SKILL.md)
