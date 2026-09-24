@@ -5,7 +5,7 @@
 **Implements later as:** PRs **S7-09** first (Add property + card growth), then **S7-10** (connect)  
 **Depends on:** Spike 6 canvas + cards (S6-D1/D2). Prefer **S7-12** (Marks) and **S7-14** (`PVCallout` actions) already landed. Composer place chrome is **S7-D4** — this board only needs a handoff target (navigate away), not the finished composer.  
 **Related briefs:** [`S7-D8`](S7-D8-pvcallout-actions.md) — Callout actions (gate CTA); [`S7-D4`](S7-D4-citation-composer.md) — composer place (do not design it here)  
-**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md) — inventory in §9  
+**Design system layers:** [`docs/design-system-layers.md`](../../../../../design-system-layers.md) — inventory in §9  
 **Dogfood order:** Design and ship **S7-09** before thick composer work so Add property is clickable early.
 
 > **Shipped delta (S7-09):** Edit label/description reuses the create `PVFormDialog` (board copy said create-only).
@@ -195,7 +195,7 @@ Claude Design board + short notes for S7-09 / S7-10. Archive this brief when don
 
 ## 9. UI building-block inventory (binding for design + implement)
 
-Provenencia UI is layered as **components / recipes / snowflakes** ([`docs/design-system-layers.md`](../../../design-system-layers.md)). This table is the repo source of truth for *what* this board may introduce. Paths are from `macos/App/` unless noted.
+Provenencia UI is layered as **components / recipes / snowflakes** ([`docs/design-system-layers.md`](../../../../../design-system-layers.md)). This table is the repo source of truth for *what* this board may introduce. Paths are from `macos/App/` unless noted.
 
 **How to read**
 

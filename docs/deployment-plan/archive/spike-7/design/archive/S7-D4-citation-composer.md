@@ -4,10 +4,10 @@
 **Spike:** Provenencia Spike 7 (Citations / Observations / composer)  
 **Implements later as:** PR **S7-08** (thin submit path); viewers/locators/NameValue fill in via **S7-06 / S7-07 / S7-02b**  
 **Depends on:** Evidence graph handoff designed in **S7-D3**; NameValue editor designed separately in **S7-D5** (composer only hosts it)  
-**Related briefs:** [`S7-D3`](archive/S7-D3-evidence-graph-updates.md) — graph entry / return; [`S7-D5`](S7-D5-name-value-editor.md) — NameValue modal  
+**Related briefs:** [`S7-D3`](../archive/S7-D3-evidence-graph-updates.md) — graph entry / return; [`S7-D5`](S7-D5-name-value-editor.md) — NameValue modal  
 **Phase the board:** prioritize shell + form + text/term Observations + breadcrumbs (enough for S7-08). Viewer, locator tools, and NameValue host can be later frames on the same board.
 
-Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](README.md) first.
+Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](../README.md) first.
 
 ---
 
@@ -93,7 +93,7 @@ The citation is **subject-scoped** — the leaf names what the Citation is *for*
 | `{scope}` | When | Copy source |
 | --- | --- | --- |
 | Primary subject | Add property on person / event / place | Working **subject label** (same string the card leads with) |
-| Bridge subject | Connect handoff, or Add property on a bridge | Full sentence: **`{endpoint A label} {edge phrase} {endpoint B label}`**, using the same edge-phrase templates as the durable bridge card ([S7-D3 §3.1](archive/S7-D3-evidence-graph-updates.md)) plus the two connected subjects’ working labels. Example: “John is the father of Mary”, “Margt. participated as head of household at 1851 census”, “Marriage took place in Leeds”. Do **not** use the bridge working `label` or a bare type word (“Relationship”). The bridge **card** still omits endpoint names in its body (those stay on the root cards); this crumb is the one place that joins endpoints + phrase for orientation. Until the phrase or an endpoint label is incomplete, fall back to the best readable partial (e.g. honesty / missing term), still under **Citation for …**. |
+| Bridge subject | Connect handoff, or Add property on a bridge | Full sentence: **`{endpoint A label} {edge phrase} {endpoint B label}`**, using the same edge-phrase templates as the durable bridge card ([S7-D3 §3.1](../archive/S7-D3-evidence-graph-updates.md)) plus the two connected subjects’ working labels. Example: “John is the father of Mary”, “Margt. participated as head of household at 1851 census”, “Marriage took place in Leeds”. Do **not** use the bridge working `label` or a bare type word (“Relationship”). The bridge **card** still omits endpoint names in its body (those stay on the root cards); this crumb is the one place that joins endpoints + phrase for orientation. Until the phrase or an endpoint label is incomplete, fall back to the best readable partial (e.g. honesty / missing term), still under **Citation for …**. |
 
 Examples:
 

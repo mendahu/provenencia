@@ -31,6 +31,7 @@ IDs stay stable (`S7-NN`, `S7-DN`). Do not renumber when moving steps here.
 | [S7-13](#s7-13--pr-pvcard-call-site-cleanup) | PR | Manual card cousins → `PVCard` |
 | [S7-D10](#s7-d10--design-pvselect-native-popup--remount) | Design | Native-popup Select kit page; gates S7-15 |
 | [S7-15](#s7-15--pr-pvselect-native-popup-parity) | PR | `PVSelect` native-popup contract + DateValue / table-filter remount |
+| [S7-11](#s7-11--dogfood-close--docs) | Docs | Honesty dogfood, cited-bridge sentence, archive |
 
 ## Steps
 
@@ -40,7 +41,7 @@ IDs stay stable (`S7-NN`, `S7-DN`). Do not renumber when moving steps here.
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | Spike 5 `subject_types`; Spike 7 plan |
-| **Deliverables** | Done. Migration [`000023.sql`](../../../core/database/migrations/000023.sql) adds `properties` (five `value_type`s at land — **`term` follows in S7-01b**) and `subject_type_fields` (`sort_order`). Package [`core/database/properties/`](../../../core/database/properties/) with audited CRUD. Package [`core/database/subjectvocab/`](../../../core/database/subjectvocab/) owns create-time Install (types + Properties + bindings), capabilities, presentation tokens, locked bindings, and connect matrix. Onboarding `createCatalog` calls `subjectvocab.Install` (replaces `subjecttypes.Install`). FFI: Property CRUD, subject-type field assign/remove (locked refuse), placeable / presentation / connect lookup. Swift: GenealogyStore + FakeStore + GoStore stubs. Docs: interpretation-layer DDL + `add-seeded-vocabulary` skill. Kind/edge Properties (`event_type`, `role`, `relationship_type`) are **omitted** from Install until **S7-01b** introduces them as `term`. |
+| **Deliverables** | Done. Migration [`000023.sql`](../../../../core/database/migrations/000023.sql) adds `properties` (five `value_type`s at land — **`term` follows in S7-01b**) and `subject_type_fields` (`sort_order`). Package [`core/database/properties/`](../../../../core/database/properties/) with audited CRUD. Package [`core/database/subjectvocab/`](../../../../core/database/subjectvocab/) owns create-time Install (types + Properties + bindings), capabilities, presentation tokens, locked bindings, and connect matrix. Onboarding `createCatalog` calls `subjectvocab.Install` (replaces `subjecttypes.Install`). FFI: Property CRUD, subject-type field assign/remove (locked refuse), placeable / presentation / connect lookup. Swift: GenealogyStore + FakeStore + GoStore stubs. Docs: interpretation-layer DDL + `add-seeded-vocabulary` skill. Kind/edge Properties (`event_type`, `role`, `relationship_type`) are **omitted** from Install until **S7-01b** introduces them as `term`. |
 | **Tests** | Done. Go: `properties`, `subjectvocab`, `subjecttypes`, onboarding; FFI `subject_defs_test` via `runRPC`. |
 | **Dogfood** | Create a new project → seeded Properties (§3.2) and bindings (§3.3) present; placeable list is person/event/place; removing a locked participation edge binding fails. |
 | **Out** | Property terms (**S7-01b**); Subject fields UI (S7-05); Observations (S7-03); Evidence graph Swift migration off hard-coded kinds (S7-09); NameValue tables (S7-02); Subject type researcher CRUD. |
@@ -60,7 +61,7 @@ python3 scripts/check-localizable-xcstrings.py
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | S7-01 |
-| **Deliverables** | Done. Migration [`000024.sql`](../../../core/database/migrations/000024.sql) rebuilds `properties` CHECK to include `term` and adds `property_terms`. Package [`core/database/propertyterms/`](../../../core/database/propertyterms/) with audited CRUD (product/plugin terms locked; `ErrInUse` stub until S7-03). `properties.Create` refuses `value_type = term` for researchers; Upsert/seed allows it. `subjectvocab` Install seeds kind/edge Properties (`event_type`, `role`, `relationship_type`), bindings, and `seedTerms` (§3.4–3.6). Term capabilities (birthday / tree-edge) deferred. FFI: List/Create/Update/Delete PropertyTerm. Swift: GenealogyStore + FakeStore + GoStore stubs + L10n for `propertyterms.*`. Docs: seeded-vocabulary §3.6 starter set; interpretation binding matrix. |
+| **Deliverables** | Done. Migration [`000024.sql`](../../../../core/database/migrations/000024.sql) rebuilds `properties` CHECK to include `term` and adds `property_terms`. Package [`core/database/propertyterms/`](../../../../core/database/propertyterms/) with audited CRUD (product/plugin terms locked; `ErrInUse` stub until S7-03). `properties.Create` refuses `value_type = term` for researchers; Upsert/seed allows it. `subjectvocab` Install seeds kind/edge Properties (`event_type`, `role`, `relationship_type`), bindings, and `seedTerms` (§3.4–3.6). Term capabilities (birthday / tree-edge) deferred. FFI: List/Create/Update/Delete PropertyTerm. Swift: GenealogyStore + FakeStore + GoStore stubs + L10n for `propertyterms.*`. Docs: seeded-vocabulary §3.6 starter set; interpretation binding matrix. |
 | **Tests** | Done. Go: `properties`, `propertyterms`, `subjectvocab`, onboarding; FFI `property_terms_test` via `runRPC`. |
 | **Dogfood** | Create a new project → 15 seeded Properties including term rows (`event_type`, `role`, `relationship_type`, `sex_at_birth`); ListPropertyTerms on `event_type` includes `birth`; Create Property with `term` fails; user term create/update/delete works; product term update fails. |
 | **Out** | Observation `value_term_id` (S7-03); composer term picker UI (S7-D4 / S7-08); Subject fields UI (S7-05); Event types / Roles admin destinations. |
@@ -112,7 +113,7 @@ xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destin
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | — (parallel after S7-01; not gated on S7-D5) |
-| **Deliverables** | Done. Migration [`000025.sql`](../../../core/database/migrations/000025.sql) adds `name_values` + `name_value_parts` per structured-name-model §§2–3. Package [`core/database/namevalues/`](../../../core/database/namevalues/) with DateValue-shaped `Insert` / `Lookup` (write-once value object; transactional parent + parts). `apperr.CodeNameValuesInvalid`. Product part-type **compiled registry** (`PartTypes` / `KnownPartType`); Insert rejects unknown non-empty types; empty type = untyped. Skill [`add-name-value`](../../../.cursor/skills/add-name-value/SKILL.md) + rule `name-values.mdc`. |
+| **Deliverables** | Done. Migration [`000025.sql`](../../../../core/database/migrations/000025.sql) adds `name_values` + `name_value_parts` per structured-name-model §§2–3. Package [`core/database/namevalues/`](../../../../core/database/namevalues/) with DateValue-shaped `Insert` / `Lookup` (write-once value object; transactional parent + parts). `apperr.CodeNameValuesInvalid`. Product part-type **compiled registry** (`PartTypes` / `KnownPartType`); Insert rejects unknown non-empty types; empty type = untyped. Skill [`add-name-value`](../../../../.cursor/skills/add-name-value/SKILL.md) + rule `name-values.mdc`. |
 | **Tests** | Done. Go: `namevalues` table-driven Insert/Lookup (form-only, parts, rejects unknown type, schema/`user_version`); registry coverage. |
 | **Dogfood** | Schema/Go only — no app UI yet. Consumers: Observations `value_name_id` (**S7-03**); Swift editor (**S7-02b**). |
 | **Out** | Swift NameValue editor (**S7-02b**); Observation FK / composer (**S7-03** / **S7-08**); `name_format_profiles` / project defaults; FFI; user-minted part-type catalog. |
@@ -131,7 +132,7 @@ CGO_ENABLED=1 go test -tags fts5 ./core/database/namevalues/... ./core/database/
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | S7-01, S7-01b, S7-02 |
-| **Deliverables** | Done. Migration [`000026.sql`](../../../core/database/migrations/000026.sql) adds `citations`, `citation_notes`, `observations`, `observation_notes`. Package [`core/locator/`](../../../core/locator/) validates `page` / `region` / `text_quote` (unknown types preserved). Packages [`core/database/citations/`](../../../core/database/citations/) (`CreateWithObservations`) and [`core/database/observations/`](../../../core/database/observations/) (`AddToCitation`, `ListBySource`). Tx-scoped `datevalues.InsertTx` / `namevalues.InsertTx`. Property / property-term `InUse` checks Observations. FFI: create + append + list-by-source. Swift: GenealogyStore / FakeStore / GoStore; `SourceGraphSnapshot` sets `isCited` + per-subject observations; `CatalogMutation.createdCitation` / `addedObservations`. L10n for `locator.invalid` / `citations.invalid` / `observations.invalid`. |
+| **Deliverables** | Done. Migration [`000026.sql`](../../../../core/database/migrations/000026.sql) adds `citations`, `citation_notes`, `observations`, `observation_notes`. Package [`core/locator/`](../../../../core/locator/) validates `page` / `region` / `text_quote` (unknown types preserved). Packages [`core/database/citations/`](../../../../core/database/citations/) (`CreateWithObservations`) and [`core/database/observations/`](../../../../core/database/observations/) (`AddToCitation`, `ListBySource`). Tx-scoped `datevalues.InsertTx` / `namevalues.InsertTx`. Property / property-term `InUse` checks Observations. FFI: create + append + list-by-source. Swift: GenealogyStore / FakeStore / GoStore; `SourceGraphSnapshot` sets `isCited` + per-subject observations; `CatalogMutation.createdCitation` / `addedObservations`. L10n for `locator.invalid` / `citations.invalid` / `observations.invalid`. |
 | **Tests** | Done. Go: locator, citations, observations; FFI `citations_test` via `runRPC`. Swift: SourceGraphSnapshot cited flag; CatalogQueryRegistry invalidation. |
 | **Dogfood** | Schema/FFI ready — composer submit UI is **S7-08**; card chrome **S7-09**. Create-with-observations + append + list round-trip via FakeStore / Go tests. |
 | **Out** | Composer UI (S7-08); Add-property / cited-row chrome (S7-09); NameValue Swift editor (S7-02b); durable connect (S7-10). |
@@ -163,7 +164,7 @@ python3 scripts/check-localizable-xcstrings.py
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | **S7-D6**; schedule after S7-03, before S7-09 |
-| **Deliverables** | Done. `DesignSystem/Recipes/Marks/` (`PVMark` / `PVMarkKey` / `PVMarkFamily` / `PVMarkSize` + `PVFileTypeGlyph`) with `Assets.xcassets/Marks/` (9 file + 22 type + 7 subject template SVGs). Colocated [`MARKS.md`](../../../macos/App/DesignSystem/Recipes/Marks/MARKS.md). All former `PVEvidenceIcon` / `PVSubjectIcon` call sites rewritten to `PVMark` (graph cards/palette/bridges, Subject fields strip, Sources/types/thumbs/omnibar). Registry `IconSymbol` → curated `subject_*` keys. L10n `designSystem.mark.*` (renamed from `evidenceIcon`). Retired `Recipes/EvidenceIcon/` + `Recipes/SubjectIcon/` + `EvidenceIcons` catalog. DesignSystem README + layers docs updated. |
+| **Deliverables** | Done. `DesignSystem/Recipes/Marks/` (`PVMark` / `PVMarkKey` / `PVMarkFamily` / `PVMarkSize` + `PVFileTypeGlyph`) with `Assets.xcassets/Marks/` (9 file + 22 type + 7 subject template SVGs). Colocated [`MARKS.md`](../../../../macos/App/DesignSystem/Recipes/Marks/MARKS.md). All former `PVEvidenceIcon` / `PVSubjectIcon` call sites rewritten to `PVMark` (graph cards/palette/bridges, Subject fields strip, Sources/types/thumbs/omnibar). Registry `IconSymbol` → curated `subject_*` keys. L10n `designSystem.mark.*` (renamed from `evidenceIcon`). Retired `Recipes/EvidenceIcon/` + `Recipes/SubjectIcon/` + `EvidenceIcons` catalog. DesignSystem README + layers docs updated. |
 | **Tests** | Done. Go: `subjectvocab` IconSymbol assert; Swift: SourceTypes / PVFileTypeGlyph tests on `PVMarkKey`. |
 | **Dogfood** | Sources type icons still tint; Subject fields strip shows all seven kinds incl. source; Evidence graph cards/palette/bridges show subject marks at zoom; no Canvas leftover. |
 | **Out** | Card Add-property / cited-row UX (**S7-09**); Subject fields IA; researcher-editable subject icons; merging with SF Symbols `PVIcon`. |
@@ -282,7 +283,7 @@ python3 scripts/check-localizable-xcstrings.py
 | --- | --- |
 | **Kind** | PR |
 | **Depends on** | S7-08 |
-| **Deliverables** | Done. New isolated [`Features/ArtifactViewer/`](../../../macos/App/Features/ArtifactViewer/): `ArtifactViewerSource` + `ArtifactViewerKind` (image/pdf/audio/video/unsupported), `ArtifactViewerModel` (`load` via shared [`ProjectFiles.objectURL`](../../../macos/App/Platform/ProjectFiles.swift) only), `ArtifactMediaViewport` (document zoom 0.5…4), `ArtifactViewer` / `ArtifactViewerToolChrome` (board Frame 1/2 page + zoom). Composer hosts the module: one tool strip = viewer chrome + Draw region / Clear stubs; canvas replaces the S7-08 placeholder. Real PDF `pageCount` + page field; audio/video kinds show coming-soon empty state (no players). |
+| **Deliverables** | Done. New isolated [`Features/ArtifactViewer/`](../../../../macos/App/Features/ArtifactViewer/): `ArtifactViewerSource` + `ArtifactViewerKind` (image/pdf/audio/video/unsupported), `ArtifactViewerModel` (`load` via shared [`ProjectFiles.objectURL`](../../../../macos/App/Platform/ProjectFiles.swift) only), `ArtifactMediaViewport` (document zoom 0.5…4), `ArtifactViewer` / `ArtifactViewerToolChrome` (board Frame 1/2 page + zoom). Composer hosts the module: one tool strip = viewer chrome + Draw region / Clear stubs; canvas replaces the S7-08 placeholder. Real PDF `pageCount` + page field; audio/video kinds show coming-soon empty state (no players). |
 | **Tests** | `ArtifactViewerModelTests` (kind classify, zoom/page clamp, ProjectFiles PNG/PDF load, missing file, audio empty); `CitationComposerModelTests` still green; `check-localizable-xcstrings.py`. |
 | **Dogfood** | Open composer on an image or PDF Artifact → see document; PDF page flip + zoom; Save still works. |
 | **Out** | Polygon / region locators (**S7-07**); audio/video **playback**; QuickLook. |
@@ -319,7 +320,7 @@ python3 scripts/check-localizable-xcstrings.py
 | **Dogfood** | PDF Set page; draw region before Set page (page auto-layers); image region; list remove; Save artifact-only with an Observation. |
 | **Out** | NameValue (S7-02b); Connect prefill (S7-10); PDF Find; PDF text selection (raster viewer — follow-on); multiple regions; time-range UI. |
 
-**Follow-on:** PDF text selection for transcription paste (S7-07 In-list) waits on a text-aware PDF path; current viewer is a page raster. See [`ideas/pdf-text-find.md`](../../ideas/pdf-text-find.md).
+**Follow-on:** PDF text selection for transcription paste (S7-07 In-list) waits on a text-aware PDF path; current viewer is a page raster. See [`ideas/pdf-text-find.md`](../../../ideas/pdf-text-find.md).
 
 **Landed:** default entire-artifact cite + real region locators replace the Draw-region stub.
 
@@ -450,4 +451,40 @@ python3 scripts/check-localizable-xcstrings.py
 #   PVSelectPointerTrackingTests / PVContextMenuTests / PVTableTests / DateValueDraftTests
 rg -n 'Picker\(' macos/App/Features/Dates/DateValueEditorForm.swift
 rg -n 'Menu \{|Picker\(' macos/App/DesignSystem/Components/Table/PVTable.swift
+```
+
+### S7-11 — Dogfood close / docs
+
+| | |
+| --- | --- |
+| **Kind** | Docs |
+| **Depends on** | S7-01…S7-15 |
+| **Deliverables** | Done. Honesty pass against the dogfood bar; cited bridge cards use `EvidenceBridgeEdgeSummary.sentence` (S7-D3) on painted title, height, and VoiceOver; spike archived. |
+| **Out** | SemVer bump; next-spike polish (conflicted / negated / uncited visual language, Source-page commentary, audio / video, PDF text-selection paste). |
+
+#### Dogfood bar (honesty pass)
+
+Manual / landed-PR pass after S7-15. Cited bridge copy in this close step.
+
+| # | Bar item | Result |
+| --- | --- | --- |
+| 1 | Subject fields editor (not a Source fields clone); types stay stub | **Pass** — S7-05 type strip + table + inspector; types remain seeded |
+| 2 | Add property → citation composer place | **Pass** — S7-09 navigates; S7-08 is the place |
+| 3 | Image + PDF viewers (zoom/pan + region; PDF page + text selection) | **Pass with follow-on** — S7-06 / S7-07 image + PDF page/region. PDF text-selection paste is still a raster-viewer follow-on ([`ideas/pdf-text-find.md`](../../../ideas/pdf-text-find.md)) |
+| 4 | One submit writes Citation + N Observations; Back; card grows | **Pass** — S7-08; text path shipped before viewers |
+| 5 | NameValue end-to-end (schema → Go → DateValue-shaped editor) | **Pass** — S7-02 / S7-02b |
+| 6 | Durable Connect (disambiguation → composer → cited bridge) | **Pass** — S7-10. Leftover uncited JSON bridges keep honesty labels and have no lines |
+| 7 | Empty Artifact gate (cannot cite without an Artifact) | **Pass** — graph `PVCallout` + composer no-Artifact gate |
+| 8 | Composer has its own accessibility tree | **Pass** — Option B place; not layered on the canvas |
+
+**Cited-bridge copy:** S7-10 painted the mid-`phrase` (“Participated as subject”). Cited cards now use the full `sentence` (“Jerry participated as subject at Birth”) when person / event / role (or location / relationship equivalents) carry `valueText`. Role-only fixtures still fall back to the phrase.
+
+#### Verdict: **Close**
+
+Slices 3–7 of the design note are in the app. Next Interpretation work can take honesty/polish and media beyond image/PDF without reopening the composer place or connect macros.
+
+**Verify:**
+
+```bash
+# xcodebuild test — EvidenceBridgeEdgeSummaryTests / GraphCanvasEdgeGeometryTests
 ```

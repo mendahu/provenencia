@@ -3,8 +3,8 @@
 **Kind:** Design-system brief (light Claude Design / handoff notes — not a full product surface board)  
 **Spike:** Provenencia Spike 7  
 **Implements later as:** PR **S7-12**  
-**Depends on:** Shipped [`PVEvidenceIcon`](../../../../macos/App/DesignSystem/Recipes/EvidenceIcon/PVEvidenceIcon.swift) + [`EVIDENCE-ICONS.md`](../../../../macos/App/DesignSystem/Recipes/EvidenceIcon/EVIDENCE-ICONS.md) (migrate into **Marks**); [`PVSubjectIcon`](../../../../macos/App/DesignSystem/Recipes/SubjectIcon/PVSubjectIcon.swift) (S6 Canvas paths + S7-D2 **source** folio); Subject fields type strip ([`SubjectFieldsView`](../../../../macos/App/Features/SubjectFields/SubjectFieldsView.swift)); registry presentation tokens from **S7-01**  
-**Related briefs:** [`S7-D3`](S7-D3-evidence-graph-updates.md) — graph cards / palette consume the consolidated marks; do not redesign card chrome here. Archived [`S7-D2`](archive/S7-D2-subject-fields.md) — **source** subject mark SoT (not on the original S6 graph board).  
+**Depends on:** Shipped [`PVEvidenceIcon`](../../../../macos/App/DesignSystem/Recipes/EvidenceIcon/PVEvidenceIcon.swift) + [`EVIDENCE-ICONS.md`](../../../../macos/App/DesignSystem/Recipes/EvidenceIcon/EVIDENCE-ICONS.md) (migrate into **Marks**); [`PVSubjectIcon`](../../../../macos/App/DesignSystem/Recipes/SubjectIcon/PVSubjectIcon.swift) (S6 Canvas paths + S7-D2 **source** folio); Subject fields type strip ([`SubjectFieldsView`](../../../../../../macos/App/Features/SubjectFields/SubjectFieldsView.swift)); registry presentation tokens from **S7-01**  
+**Related briefs:** [`S7-D3`](S7-D3-evidence-graph-updates.md) — graph cards / palette consume the consolidated marks; do not redesign card chrome here. Archived [`S7-D2`](../archive/S7-D2-subject-fields.md) — **source** subject mark SoT (not on the original S6 graph board).  
 **Schedule:** After schema/Go (**S7-03**) on the checklist, **before** Add property / graph chrome thickening (**S7-09**). Independent of Citations/Observations code — design-system only.
 
 ### Claude Design boards (artwork SoT)
@@ -16,7 +16,7 @@ Open these when harvesting glyphs or checking stroke weight — do not redesign 
 | **Evidence graph** (S6 cards / palette / bridges) | https://claude.ai/design/p/2239e965-3b09-4c13-b85a-d54316ffd8fb?via=share | person, event, place, relationship, participation, location marks |
 | **Subject fields** (S7-D2 type strip) | https://claude.ai/design/p/6dceb4b9-d08a-40ad-a46f-430651ea9b3c?via=share | **source** folio mark (+ parity check for other type-strip glyphs) |
 
-Paste this document into Claude Design only if you need visual confirmation of stroke weight / size at canvas zoom. Prefer a short implementer handoff: pack membership, key naming, tint API, and call-site migration. Read the shared product facts in [`README.md`](README.md) first.
+Paste this document into Claude Design only if you need visual confirmation of stroke weight / size at canvas zoom. Prefer a short implementer handoff: pack membership, key naming, tint API, and call-site migration. Read the shared product facts in [`README.md`](../README.md) first.
 
 ---
 
@@ -142,7 +142,7 @@ Otherwise: implementer checklist in **S7-12** dogfood is enough.
 
 ## 7. UI building-block inventory (binding for design + implement)
 
-Provenencia UI is layered as **components / recipes / snowflakes** ([`docs/design-system-layers.md`](../../../design-system-layers.md)). This table is the repo SoT for *what* **S7-12** may touch. Paths are from `macos/App/` unless noted. Template: [`S7-D3`](S7-D3-evidence-graph-updates.md) §9.
+Provenencia UI is layered as **components / recipes / snowflakes** ([`docs/design-system-layers.md`](../../../../../design-system-layers.md)). This table is the repo SoT for *what* **S7-12** may touch. Paths are from `macos/App/` unless noted. Template: [`S7-D3`](S7-D3-evidence-graph-updates.md) §9.
 
 **How to read**
 
@@ -207,5 +207,5 @@ Do **not** invent new design-system **components** for marks. Curated research a
 When content is agreed (board optional):
 
 1. Archive this brief under `archive/`.
-2. Record in [`../completed.md`](../completed.md).
+2. Record in [`../completed.md`](../../completed.md).
 3. Implement **S7-12** against this contract (especially §7 — **`Recipes/Marks/`**) before **S7-09** thickens graph chrome.

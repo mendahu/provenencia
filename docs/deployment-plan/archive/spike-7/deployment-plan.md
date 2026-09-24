@@ -1,10 +1,10 @@
 # Deployment Plan — Spike 7
 
-Citations, Observations, NameValue, Subject **fields** editor, citation composer place, and durable connect macros. Authoritative design: [`interpretation-graph-ui.md`](../../ideas/interpretation-graph-ui.md) §4–§6 / slices 3–7. Schema: [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md), [`structured-name-model.md`](../../structured-name-model.md). Canvas: [Spike 6 archive](../archive/spike-6/). Navigation skills: [`add-workspace-location`](../../../.cursor/skills/add-workspace-location/SKILL.md), [`add-workspace-place`](../../../.cursor/skills/add-workspace-place/SKILL.md).
+Citations, Observations, NameValue, Subject **fields** editor, citation composer place, and durable connect macros. Authoritative design: [`interpretation-graph-ui.md`](../../../ideas/interpretation-graph-ui.md) §4–§6 / slices 3–7. Schema: [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md), [`structured-name-model.md`](../../../structured-name-model.md). Canvas: [Spike 6 archive](../spike-6/). Navigation skills: [`add-workspace-location`](../../../../.cursor/skills/add-workspace-location/SKILL.md), [`add-workspace-place`](../../../../.cursor/skills/add-workspace-place/SKILL.md).
 
 ## Status
 
-**Open.** Landings go in [`completed.md`](completed.md).
+**Closed.** Landings are in [`completed.md`](completed.md).
 
 > **Goal of this spike:** prove the full evidence path — cite an Artifact portion, assert typed Observations on a subject, see them on the card, and make connect write real Citation-backed edges — without layering composer a11y onto the canvas.
 
@@ -29,7 +29,7 @@ All of the following must be true in the app **by spike close**. Build them as i
 
 Product value types: **`text`**, **`integer`**, **`date`**, **`name`**, **`subject`**, **`term`**.
 
-**Dropped:** `real` and `boolean` — no editors, not offered when creating Properties, no seed Properties use them. Align [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) in S7-01 / S7-01b / S7-03 so the schema does not invent unused columns.
+**Dropped:** `real` and `boolean` — no editors, not offered when creating Properties, no seed Properties use them. Align [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md) in S7-01 / S7-01b / S7-03 so the schema does not invent unused columns.
 
 | Type | Why |
 | --- | --- |
@@ -40,13 +40,13 @@ Product value types: **`text`**, **`integer`**, **`date`**, **`name`**, **`subje
 | **name** | Primary person assertion; NameValue (`name_values` + `name_value_parts` only) |
 | **integer** | Researcher-defined counts / ages (no seed Property yet) |
 
-**Seed:** [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.2–3.3 for person / event / place / participation / location / relationship. Defer `source` / `mentions` / `remark` UI. Kind/edge Properties use **Property terms** (large product sets + optional user terms via picker) — not free-text pickers.
+**Seed:** [`seeded-vocabulary.md`](../../../seeded-vocabulary.md) §3.2–3.3 for person / event / place / participation / location / relationship. Defer `source` / `mentions` / `remark` UI. Kind/edge Properties use **Property terms** (large product sets + optional user terms via picker) — not free-text pickers.
 
 ## Interpretation subject registry (central source of truth)
 
-Spike 5 already seeds Subject types from [`core/database/subjecttypes/registry.go`](../../../core/database/subjecttypes/registry.go). Spike 7 **must not** sprinkle “person is placeable,” “participation needs person+event,” or connect pair rules across Swift views and handlers.
+Spike 5 already seeds Subject types from [`core/database/subjecttypes/registry.go`](../../../../core/database/subjecttypes/registry.go). Spike 7 **must not** sprinkle “person is placeable,” “participation needs person+event,” or connect pair rules across Swift views and handlers.
 
-**In S7-01**, grow a single declarative Interpretation vocabulary registry (prefer one package parallel to [`sourcevocab`](../../../core/database/sourcevocab/) — e.g. expand `subjecttypes` into / introduce `subjectvocab` that owns Install for types + properties + bindings). That registry is the **only** product definition of:
+**In S7-01**, grow a single declarative Interpretation vocabulary registry (prefer one package parallel to [`sourcevocab`](../../../../core/database/sourcevocab/) — e.g. expand `subjecttypes` into / introduce `subjectvocab` that owns Install for types + properties + bindings). That registry is the **only** product definition of:
 
 | Concern | Declared on | Used by |
 | --- | --- | --- |
@@ -342,7 +342,7 @@ Schema/Go (01–03, 01b) may start before design finishes; **UI PRs gate on the 
 - [x] S7-13 — `PVCard` call-site cleanup (manual cousins) → [`completed.md`](completed.md)
 - [x] S7-D10 — Design: PVSelect native popup + remount → [`completed.md`](completed.md)
 - [x] S7-15 — `PVSelect` native-popup parity + unify cousins → [`completed.md`](completed.md)
-- [ ] S7-11 — Dogfood close / docs → [`completed.md`](completed.md)
+- [x] S7-11 — Dogfood close / docs → [`completed.md`](completed.md)
 
 ## Descoped
 
@@ -390,7 +390,7 @@ Light Claude Design board / kit handoff for an optional **actions** slot on Call
 
 ## S7-D7 — Design: Card component
 
-Claude Design **Card** kit page / board, referenced from the already-shipped macOS [`PVCard`](../../../macos/App/DesignSystem/Components/Card/PVCard.swift). Brief archived: [`design/archive/S7-D7-card-component.md`](design/archive/S7-D7-card-component.md). Child remount slip: [`design/archive/S7-D7B-card-view-remount.md`](design/archive/S7-D7B-card-view-remount.md). Gates **S7-13**. Document tones, solid/dashed border, elevation, and radius; use implemented Artifacts / Subject fields / metadata cards as the visual source of truth. Does **not** redesign Evidence graph subject/bridge cards (those stay snowflakes under **S7-D3**). Schedule after **S7-10**, before dogfood close.
+Claude Design **Card** kit page / board, referenced from the already-shipped macOS [`PVCard`](../../../../macos/App/DesignSystem/Components/Card/PVCard.swift). Brief archived: [`design/archive/S7-D7-card-component.md`](design/archive/S7-D7-card-component.md). Child remount slip: [`design/archive/S7-D7B-card-view-remount.md`](design/archive/S7-D7B-card-view-remount.md). Gates **S7-13**. Document tones, solid/dashed border, elevation, and radius; use implemented Artifacts / Subject fields / metadata cards as the visual source of truth. Does **not** redesign Evidence graph subject/bridge cards (those stay snowflakes under **S7-D3**). Schedule after **S7-10**, before dogfood close.
 
 ---
 
@@ -402,7 +402,7 @@ Claude Design board for **locator chrome**: default `artifact` layer, **Set Page
 
 ## S7-D10 — Design: PVSelect native popup + remount
 
-Claude Design **Select** kit page from the already-shipped macOS [`PVSelect`](../../../macos/App/DesignSystem/Components/Select/PVSelect.swift), plus remount of leftover system popups. Brief archived: [`design/archive/S7-D10-pvselect-native-parity.md`](design/archive/S7-D10-pvselect-native-parity.md). Child remount slip: [`design/archive/S7-D10B-select-view-remount.md`](design/archive/S7-D10B-select-view-remount.md). Gates **S7-15**. The kit page **must document the full native-popup contract** (closed vs open table, state frames, keys, press-drag-release, placement, a11y) — chrome-only is incomplete. Points DateValue calendar/month and `PVTable` column filter at Select; existing `PVSelect` hosts stay. Does **not** absorb `PVComboBox`, action menus, or segmented chips. Schedule after **S7-13**, before dogfood close.
+Claude Design **Select** kit page from the already-shipped macOS [`PVSelect`](../../../../macos/App/DesignSystem/Components/Select/PVSelect.swift), plus remount of leftover system popups. Brief archived: [`design/archive/S7-D10-pvselect-native-parity.md`](design/archive/S7-D10-pvselect-native-parity.md). Child remount slip: [`design/archive/S7-D10B-select-view-remount.md`](design/archive/S7-D10B-select-view-remount.md). Gates **S7-15**. The kit page **must document the full native-popup contract** (closed vs open table, state frames, keys, press-drag-release, placement, a11y) — chrome-only is incomplete. Points DateValue calendar/month and `PVTable` column filter at Select; existing `PVSelect` hosts stay. Does **not** absorb `PVComboBox`, action menus, or segmented chips. Schedule after **S7-13**, before dogfood close.
 
 ---
 
@@ -419,7 +419,7 @@ Migration(s) for `properties`, `subject_type_fields`; `value_type` limited to te
 - Declares the **connect matrix** (endpoint pairs → bridge type → edge Properties / disambiguation fields)
 - Exposes lookup helpers / FFI so graph, Subject fields, composer, and connect **do not hard-code type keys, the placeable set, or kind→chrome maps**
 
-Wire Install into `onboarding.createCatalog` only. Follow [`.cursor/skills/add-seeded-vocabulary`](../../../.cursor/skills/add-seeded-vocabulary/SKILL.md); update that skill’s domain table when the package lands.
+Wire Install into `onboarding.createCatalog` only. Follow [`.cursor/skills/add-seeded-vocabulary`](../../../../.cursor/skills/add-seeded-vocabulary/SKILL.md); update that skill’s domain table when the package lands.
 
 | | |
 | --- | --- |
@@ -436,9 +436,9 @@ Land **immediately after S7-01**, before Subject fields UI and before Observatio
 
 **Problem:** Free-text `event_type` / `role` / `relationship_type` lets researchers invent synonyms (`birth` vs `birthday` vs `DOB`); UI facets (birthday, family tree, connect disambiguation) and Conclusion type-identity then miss. Tiny enum + `other` + free-text name fails the same way for sameness. Graph `subjects.label` stays working identity only — not type identity.
 
-**Model:** New `value_type = term` + `property_terms` table (origin-namespaced vocabulary rows). Observations (S7-03) store `value_term_id`. **Introduce** kind/edge Properties (`event_type`, `role`, `relationship_type`) here as `term` — they are **not** seeded as `text` in S7-01. Install seeds those Properties + bindings + **large** product term sets ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.4–3.6). Term capabilities (birthday, tree-edge, …) are **deferred** to a later discussion/PR. **`term` Properties are registry-only** — Create Property for `origin=user` refuses `value_type = term` (Subject fields offers the other five types only). Researchers may mint `origin=user` **term rows** under those registry Properties via composer picker **Add custom…** (rename/delete when unused) — **no** Event types / Roles CatalogVocabulary destinations. Plugins that add bridge or kind subjects contribute term-typed Properties + term sets through the same `subjectvocab` registry shape.
+**Model:** New `value_type = term` + `property_terms` table (origin-namespaced vocabulary rows). Observations (S7-03) store `value_term_id`. **Introduce** kind/edge Properties (`event_type`, `role`, `relationship_type`) here as `term` — they are **not** seeded as `text` in S7-01. Install seeds those Properties + bindings + **large** product term sets ([`seeded-vocabulary.md`](../../../seeded-vocabulary.md) §3.4–3.6). Term capabilities (birthday, tree-edge, …) are **deferred** to a later discussion/PR. **`term` Properties are registry-only** — Create Property for `origin=user` refuses `value_type = term` (Subject fields offers the other five types only). Researchers may mint `origin=user` **term rows** under those registry Properties via composer picker **Add custom…** (rename/delete when unused) — **no** Event types / Roles CatalogVocabulary destinations. Plugins that add bridge or kind subjects contribute term-typed Properties + term sets through the same `subjectvocab` registry shape.
 
-Authoritative schema notes: [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) §5.1.1. Design decision: [`interpretation-graph-ui.md`](../../ideas/interpretation-graph-ui.md) #23.
+Authoritative schema notes: [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md) §5.1.1. Design decision: [`interpretation-graph-ui.md`](../../../ideas/interpretation-graph-ui.md) #23.
 
 | | |
 | --- | --- |
@@ -498,7 +498,7 @@ Move subject type marks (`PVSubjectIcon` Canvas paths) **and** today’s evidenc
 
 ## S7-14 — PVCallout actions slot
 
-Extend [`PVCallout`](../../../macos/App/DesignSystem/Components/Callout/PVCallout.swift) with an optional actions slot (match **S7-D8** / web Callout `actions`). Existing text-only call sites must keep compiling and looking the same.
+Extend [`PVCallout`](../../../../macos/App/DesignSystem/Components/Callout/PVCallout.swift) with an optional actions slot (match **S7-D8** / web Callout `actions`). Existing text-only call sites must keep compiling and looking the same.
 
 | | |
 | --- | --- |
@@ -571,9 +571,9 @@ PDFKit + image overlay; resolve files via `ProjectFiles`; no QuickLook for compo
 
 Interactive tools feeding nested selectors; Go is source of truth for invariants (≥3 points, non-self-intersecting, etc.). **Design first:** full locator chrome via **S7-D9**.
 
-**Whole Artifact:** validated `artifact` selector (see [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) §3.4). UI **prepopulates** `artifact` on every cite; researchers layer **Set Page** (PDF) and/or one region on top. Locator **summary list** shows each layer with remove (artifact is the non-removable floor). No entire-artifact checkbox.
+**Whole Artifact:** validated `artifact` selector (see [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md) §3.4). UI **prepopulates** `artifact` on every cite; researchers layer **Set Page** (PDF) and/or one region on top. Locator **summary list** shows each layer with remove (artifact is the non-removable floor). No entire-artifact checkbox.
 
-PDF **text selection** for transcription paste is a follow-on (the current viewer is a page raster). Full in-document Find UI stays an [ideas](../../ideas/pdf-text-find.md) item.
+PDF **text selection** for transcription paste is a follow-on (the current viewer is a page raster). Full in-document Find UI stays an [ideas](../../../ideas/pdf-text-find.md) item.
 
 | | |
 | --- | --- |
@@ -622,10 +622,10 @@ After **S7-D7**, migrate the remaining **manual card cousins** onto shared `PVCa
 
 | Call site | Today | Target |
 | --- | --- | --- |
-| [`OnboardingIdentifyView`](../../../macos/App/Features/Onboarding/OnboardingIdentifyView.swift) | Hand-built `surfaceCard` + `md` + `borderSubtle` | `PVCard` |
-| [`OnboardingProjectMetaLines`](../../../macos/App/Features/Onboarding/OnboardingProjectMetaLines.swift) | Same pattern | `PVCard` |
-| [`SourceTypesDetailPane`](../../../macos/App/Features/SourceTypes/SourceTypesDetailPane.swift) (icon / tile chrome ~line 411) | Same with `sm` radius | `PVCard(cornerRadius: .sm)` (or equivalent) |
-| [`OnboardingOpenPicker`](../../../macos/App/Features/Onboarding/OnboardingOpenPicker.swift) (empty-folder block) | Sunken + dashed | `PVCard(tone: .sunken, border: .dashed)` |
+| [`OnboardingIdentifyView`](../../../../macos/App/Features/Onboarding/OnboardingIdentifyView.swift) | Hand-built `surfaceCard` + `md` + `borderSubtle` | `PVCard` |
+| [`OnboardingProjectMetaLines`](../../../../macos/App/Features/Onboarding/OnboardingProjectMetaLines.swift) | Same pattern | `PVCard` |
+| [`SourceTypesDetailPane`](../../../../macos/App/Features/SourceTypes/SourceTypesDetailPane.swift) (icon / tile chrome ~line 411) | Same with `sm` radius | `PVCard(cornerRadius: .sm)` (or equivalent) |
+| [`OnboardingOpenPicker`](../../../../macos/App/Features/Onboarding/OnboardingOpenPicker.swift) (empty-folder block) | Sunken + dashed | `PVCard(tone: .sunken, border: .dashed)` |
 
 | | |
 | --- | --- |
@@ -638,7 +638,7 @@ After **S7-D7**, migrate the remaining **manual card cousins** onto shared `PVCa
 
 ## S7-15 — PVSelect native-popup parity + unify cousins
 
-Keep custom Frost chrome (field + chip). Do **not** swap in SwiftUI `Picker` / `Menu` or AppKit `NSPopUpButton`. Reach **interaction and accessibility parity** with a native macOS popup button — same product decision as [`PVTable`](../../../macos/App/DesignSystem/Components/Table/PVTable.swift) (custom look, native contract) — **and** delete the remaining dropdown forks so every pick-one menu is `PVSelect`.
+Keep custom Frost chrome (field + chip). Do **not** swap in SwiftUI `Picker` / `Menu` or AppKit `NSPopUpButton`. Reach **interaction and accessibility parity** with a native macOS popup button — same product decision as [`PVTable`](../../../../macos/App/DesignSystem/Components/Table/PVTable.swift) (custom look, native contract) — **and** delete the remaining dropdown forks so every pick-one menu is `PVSelect`.
 
 **Evaluate-ui-component (S7-D10 inventory):** five production hosts already compose `PVSelect` (NameValue part type, Source fields data type, onboarding project, Sources filter + sort). Two DateValue `Picker`s and `PVTable.filterMenu` (`Menu` + inline `Picker`) reimplement the same exclusive-choice contract. `PVComboBox`, `PVContextMenu` action menus, and segmented `PVChip` groups are different interactions — leave them.
 
@@ -675,16 +675,16 @@ Keyboard was started (↑/↓ opens, type-select jumps) but the closed-field con
 
 | | |
 | --- | --- |
-| **In** | `PVSelect` native-popup contract (press-drag-release; closed-field arrows + type-select; selected-vs-highlight; flip/scroll/width; Home/End; popup-button a11y); DesignSystem README contract; unit tests for movement, type-select, and placement. Migrate [`DateValueEditorForm`](../../../macos/App/Features/Dates/DateValueEditorForm.swift) calendar + month `Picker`s and [`PVTable.filterMenu`](../../../macos/App/DesignSystem/Components/Table/PVTable.swift) onto `PVSelect` (add icon-only chip only if the filter needs it). Existing hosts keep compiling. `rg` clean of feature `Picker(` / table `Menu {` dropdowns. |
+| **In** | `PVSelect` native-popup contract (press-drag-release; closed-field arrows + type-select; selected-vs-highlight; flip/scroll/width; Home/End; popup-button a11y); DesignSystem README contract; unit tests for movement, type-select, and placement. Migrate [`DateValueEditorForm`](../../../../macos/App/Features/Dates/DateValueEditorForm.swift) calendar + month `Picker`s and [`PVTable.filterMenu`](../../../../macos/App/DesignSystem/Components/Table/PVTable.swift) onto `PVSelect` (add icon-only chip only if the filter needs it). Existing hosts keep compiling. `rg` clean of feature `Picker(` / table `Menu {` dropdowns. |
 | **Out** | Replacing `PVSelect` with SwiftUI `Picker`; `PVComboBox` rewrite; `PVContextMenu` action menus; segmented `PVChip` groups; option sections / separators / disabled rows; visual restyle of field or chip chrome; new product call sites. |
 | **Testable** | NameValue part-type: tab to the select, ↑/↓ changes the type without a menu; type `s` lands Surname while closed; Space opens; press-drag-release chooses; Esc restores; VoiceOver reads a popup button with a value. DateValue month + calendar are `PVSelect` and follow the same keys. Table filter (when shown) is `PVSelect`, not `Menu`+`Picker`. A select near the bottom of the window opens upward. |
-| **Depends on** | **S7-D10**. Shipped [`PVSelect`](../../../macos/App/DesignSystem/Components/Select/PVSelect.swift). After **S7-13**, before **S7-11**. |
+| **Depends on** | **S7-D10**. Shipped [`PVSelect`](../../../../macos/App/DesignSystem/Components/Select/PVSelect.swift). After **S7-13**, before **S7-11**. |
 
 ---
 
 ## S7-11 — Dogfood close / docs
 
-Honesty pass against the [goal bar](#goal-dogfood-bar), including viewers/locators/NameValue/connect. Record in [`completed.md`](completed.md); update [`README.md`](README.md); archive design briefs; point [`docs/deployment-plan/README.md`](../README.md) at archive when closed; SemVer only if cutting a product release.
+Honesty pass against the [goal bar](#goal-dogfood-bar), including viewers/locators/NameValue/connect. Record in [`completed.md`](completed.md); update [`README.md`](README.md); archive design briefs; point [`docs/deployment-plan/README.md`](../../README.md) at archive when closed; SemVer only if cutting a product release.
 
 ---
 
@@ -722,11 +722,11 @@ Honesty pass against the [goal bar](#goal-dogfood-bar), including viewers/locato
 
 ## Definition of done
 
-- [ ] Checklist above complete
-- [ ] Dogfood bar items 1–8 met
-- [ ] Design briefs archived under `design/archive/`
-- [ ] [`docs/deployment-plan/README.md`](../README.md) points at archive when closed
-- [ ] Design note status line points at Spike 7 archive (slices 3–7 advanced)
+- [x] Checklist above complete
+- [x] Dogfood bar items 1–8 met (item 3: PDF text-selection paste is a documented follow-on)
+- [x] Design briefs archived under `design/archive/`
+- [x] [`docs/deployment-plan/README.md`](../../README.md) points at archive when closed
+- [x] Design note status line points at Spike 7 archive (slices 3–7 advanced)
 
 ## What the next spike inherits
 

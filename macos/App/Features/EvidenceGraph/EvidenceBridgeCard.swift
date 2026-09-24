@@ -86,7 +86,7 @@ struct EvidenceBridgeCard: View {
     static func contentHeight(for placed: SourceGraphPlacedBridge) -> CGFloat {
         let header = placed.isCited ? headerContentHeightCited : headerContentHeightUncited
         let text = placed.isCited
-            ? EvidenceBridgeEdgeSummary.phrase(for: placed)
+            ? EvidenceBridgeEdgeSummary.sentence(for: placed)
             : String(localized: L10n.EvidenceGraph.bridgeHonestyBody)
         let font = placed.isCited
             ? PVFont.nsDisplay(size: 14.5, weight: PVFontWeight.medium)
@@ -161,7 +161,7 @@ struct EvidenceBridgeCard: View {
     static func accessibilityLabel(for placed: SourceGraphPlacedBridge) -> String {
         let ref = placed.subject.ref.trimmingCharacters(in: .whitespacesAndNewlines)
         if placed.isCited {
-            let summary = EvidenceBridgeEdgeSummary.phrase(for: placed)
+            let summary = EvidenceBridgeEdgeSummary.sentence(for: placed)
             if ref.isEmpty {
                 return "\(placed.typeLabel), \(summary)"
             }
@@ -272,7 +272,7 @@ private struct EvidenceBridgeCardChrome: View {
     private var bodyRow: some View {
         HStack(alignment: .top, spacing: 8) {
             if placed.isCited {
-                Text(verbatim: EvidenceBridgeEdgeSummary.phrase(for: placed))
+                Text(verbatim: EvidenceBridgeEdgeSummary.sentence(for: placed))
                     .font(PVFont.display(size: 14.5, weight: PVFontWeight.medium))
                     .foregroundStyle(PVColor.textPrimary)
                     .lineLimit(3)

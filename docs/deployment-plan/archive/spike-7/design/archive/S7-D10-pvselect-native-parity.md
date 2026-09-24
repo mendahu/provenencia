@@ -3,10 +3,10 @@
 **Kind:** Claude Design board / design-system component (kit page + view remount)  
 **Spike:** Provenencia Spike 7  
 **Implements later as:** PR **S7-15**  
-**Depends on:** Shipped macOS [`PVSelect`](../../../../../macos/App/DesignSystem/Components/Select/PVSelect.swift) (already in the app kit — this brief **documents the native-popup contract** and remounts cousins; not a greenfield invent)  
-**Related:** [`S7-D7`](S7-D7-card-component.md) remount pattern. Type-to-filter fields stay [`PVComboBox`](../../../../../macos/App/DesignSystem/Components/ComboBox/PVComboBox.swift). Action menus stay `PVContextMenu`. Segmented `PVChip` groups are not Select.  
-**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)  
-**Skill:** [`add-ui-component`](../../../../../.cursor/skills/add-ui-component/SKILL.md) — **Extend** `PVSelect`; compose it at call sites. Child remount slip: [`S7-D10B-select-view-remount.md`](S7-D10B-select-view-remount.md)
+**Depends on:** Shipped macOS [`PVSelect`](../../../../../../macos/App/DesignSystem/Components/Select/PVSelect.swift) (already in the app kit — this brief **documents the native-popup contract** and remounts cousins; not a greenfield invent)  
+**Related:** [`S7-D7`](S7-D7-card-component.md) remount pattern. Type-to-filter fields stay [`PVComboBox`](../../../../../../macos/App/DesignSystem/Components/ComboBox/PVComboBox.swift). Action menus stay `PVContextMenu`. Segmented `PVChip` groups are not Select.  
+**Design system layers:** [`docs/design-system-layers.md`](../../../../../design-system-layers.md)  
+**Skill:** [`add-ui-component`](../../../../../../.cursor/skills/add-ui-component/SKILL.md) — **Extend** `PVSelect`; compose it at call sites. Child remount slip: [`S7-D10B-select-view-remount.md`](S7-D10B-select-view-remount.md)
 
 > **Shipped delta (S7-15):** `PVSelect` implements the native popup contract via `PVSelectSession` (closed-field keys, snapshot Escape, press-drag-release). DateValue calendar/month and `PVTable.filterMenu` remount on Select. VoiceOver stays on the trigger (adjustable + expanded custom content). SwiftUI cannot claim AppKit's popup-button role — documented in `DesignSystem/README.md`. ComboBox and action menus were **not** rewritten.
 
@@ -62,12 +62,12 @@ If a child board still cannot see Select after refetch, treat that as a stale-bu
 
 | View | File | Chrome today |
 | --- | --- | --- |
-| Onboarding | [`OnboardingOpenPicker`](../../../../../macos/App/Features/Onboarding/OnboardingOpenPicker.swift) | `PVSelect` field — existing project |
-| Source fields | [`SourceFieldsDetailPane`](../../../../../macos/App/Features/SourceFields/SourceFieldsDetailPane.swift) | `PVSelect` field — data type (create only) |
-| Sources list | [`SourcesListView`](../../../../../macos/App/Features/Sources/SourcesListView.swift) | `PVSelect` chip — type filter + sort |
-| NameValue | [`NameValueEditorForm`](../../../../../macos/App/Features/Names/NameValueEditorForm.swift) | `PVSelect` field — part type |
-| DateValue | [`DateValueEditorForm`](../../../../../macos/App/Features/Dates/DateValueEditorForm.swift) | `PVSelect` field — calendar and month |
-| Table kit | [`PVTable`](../../../../../macos/App/DesignSystem/Components/Table/PVTable.swift) `filterMenu` | Icon-only `PVSelect` chip |
+| Onboarding | [`OnboardingOpenPicker`](../../../../../../macos/App/Features/Onboarding/OnboardingOpenPicker.swift) | `PVSelect` field — existing project |
+| Source fields | [`SourceFieldsDetailPane`](../../../../../../macos/App/Features/SourceFields/SourceFieldsDetailPane.swift) | `PVSelect` field — data type (create only) |
+| Sources list | [`SourcesListView`](../../../../../../macos/App/Features/Sources/SourcesListView.swift) | `PVSelect` chip — type filter + sort |
+| NameValue | [`NameValueEditorForm`](../../../../../../macos/App/Features/Names/NameValueEditorForm.swift) | `PVSelect` field — part type |
+| DateValue | [`DateValueEditorForm`](../../../../../../macos/App/Features/Dates/DateValueEditorForm.swift) | `PVSelect` field — calendar and month |
+| Table kit | [`PVTable`](../../../../../../macos/App/DesignSystem/Components/Table/PVTable.swift) `filterMenu` | Icon-only `PVSelect` chip |
 
 **Not Select** (do not remount):
 

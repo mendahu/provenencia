@@ -8,7 +8,7 @@
 **Depends on:** Spike 5 nested Sources config stubs (S5-D3); S7-01 schema/seed may land in parallel  
 **Related briefs:** [`S7-D2`](S7-D2-subject-fields.md) — Subject fields; Source types pattern from Spike 2
 
-Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](README.md) first.
+Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](../README.md) first.
 
 ---
 
@@ -24,7 +24,7 @@ Researchers browse seeded and user-defined Subject types (`person`, `event`, `pl
 
 ## 2. Domain facts the UI must reflect
 
-Authoritative schema: [`interpretation-layer-data-model.md`](../../../../interpretation-layer-data-model.md); origin: [`seeded-vocabulary.md`](../../../../seeded-vocabulary.md) §1.1 / §3.1.
+Authoritative schema: [`interpretation-layer-data-model.md`](../../../../../interpretation-layer-data-model.md); origin: [`seeded-vocabulary.md`](../../../../../seeded-vocabulary.md) §1.1 / §3.1.
 
 | Fact | UI implication |
 | --- | --- |

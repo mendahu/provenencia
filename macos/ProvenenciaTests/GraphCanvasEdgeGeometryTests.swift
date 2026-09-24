@@ -286,4 +286,84 @@ struct GraphCanvasEdgeGeometryTests {
         #expect(actions.contains(where: { $0.id == EvidenceBridgeCard.editActionID }))
         #expect(!actions.contains(where: { $0.id == EvidenceBridgeCard.editCitationActionID }))
     }
+
+    @Test func citedBridgeCopyUsesTheFullSentence() {
+        let placed = SourceGraphPlacedBridge(
+            subject: CatalogSubject(
+                id: "b1",
+                ref: "CPA-1",
+                sourceID: "src",
+                subjectTypeID: "t",
+                label: "Working",
+                description: ""
+            ),
+            kind: .participation,
+            typeLabel: "Participation",
+            gridX: 0,
+            gridY: 0,
+            isCited: true,
+            observations: [
+                CatalogObservation(
+                    id: "obs-person",
+                    ref: "OBS-P",
+                    citationID: "cit-1",
+                    subjectID: "b1",
+                    propertyID: "p-person",
+                    polarity: "positive",
+                    valueText: "Jerry",
+                    valueInteger: nil,
+                    valueDateID: "",
+                    valueNameID: "",
+                    valueSubjectID: "s-person",
+                    valueTermID: "",
+                    propertyKey: "person",
+                    propertyLabel: "Person",
+                    propertyValueType: "subject"
+                ),
+                CatalogObservation(
+                    id: "obs-event",
+                    ref: "OBS-E",
+                    citationID: "cit-1",
+                    subjectID: "b1",
+                    propertyID: "p-event",
+                    polarity: "positive",
+                    valueText: "Birth",
+                    valueInteger: nil,
+                    valueDateID: "",
+                    valueNameID: "",
+                    valueSubjectID: "s-event",
+                    valueTermID: "",
+                    propertyKey: "event",
+                    propertyLabel: "Event",
+                    propertyValueType: "subject"
+                ),
+                CatalogObservation(
+                    id: "obs-role",
+                    ref: "OBS-R",
+                    citationID: "cit-1",
+                    subjectID: "b1",
+                    propertyID: "p-role",
+                    polarity: "positive",
+                    valueText: "subject",
+                    valueInteger: nil,
+                    valueDateID: "",
+                    valueNameID: "",
+                    valueSubjectID: "",
+                    valueTermID: "term-subject",
+                    propertyKey: "role",
+                    propertyLabel: "Role",
+                    propertyValueType: "term"
+                ),
+            ]
+        )
+        let sentence = EvidenceBridgeEdgeSummary.sentence(for: placed)
+        #expect(sentence == L10n.EvidenceGraph.bridgeSummaryParticipation(
+            person: "Jerry",
+            role: "subject",
+            event: "Birth"
+        ))
+        #expect(EvidenceBridgeCard.accessibilityLabel(for: placed).contains("Jerry"))
+        #expect(EvidenceBridgeCard.accessibilityLabel(for: placed).contains("Birth"))
+        #expect(EvidenceBridgeCard.contentHeight(for: placed) >= EvidenceBridgeCard.edgeLayoutHeight)
+    }
 }

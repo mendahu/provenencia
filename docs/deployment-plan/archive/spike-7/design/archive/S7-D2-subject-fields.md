@@ -4,11 +4,11 @@
 **Spike:** Provenencia Spike 7 (Citations / Observations / composer)  
 **Implements later as:** PR **S7-05** only  
 **Depends on:** Spike 5 seeded `subject_types` (fixed product set; **no** Subject types editor); S7-01 schema/seed; **S7-01b Property terms** (sixth `value_type = term`)  
-**Related briefs:** archived [`S7-D1`](archive/S7-D1-subject-types.md) (**descoped**); Source fields (S2-02) is **contrast only** — do not copy its layout; composer term picker lives in **S7-D4** (not this board)
+**Related briefs:** archived [`S7-D1`](../archive/S7-D1-subject-types.md) (**descoped**); Source fields (S2-02) is **contrast only** — do not copy its layout; composer term picker lives in **S7-D4** (not this board)
 
 **Already running a board from an older brief?** Paste the delta only: [`S7-D2-subject-fields-addendum-property-terms.md`](S7-D2-subject-fields-addendum-property-terms.md).
 
-Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](README.md) first.
+Paste this entire document into Claude Design as the requirements for one board/flow. Read the shared product facts in [`README.md`](../README.md) first.
 
 ---
 
@@ -33,7 +33,7 @@ This is config only — not the citation composer, not Observation entry, not a 
 
 ## 2. Domain facts the UI must reflect
 
-Authoritative schema: interpretation-layer Properties / `subject_type_fields` / **`property_terms`**; seeds: [`seeded-vocabulary.md`](../../../../seeded-vocabulary.md) §3.2–3.6. Direction: [`interpretation-graph-ui.md`](../../../../ideas/interpretation-graph-ui.md) decision **23**.
+Authoritative schema: interpretation-layer Properties / `subject_type_fields` / **`property_terms`**; seeds: [`seeded-vocabulary.md`](../../../../../seeded-vocabulary.md) §3.2–3.6. Direction: [`interpretation-graph-ui.md`](../../../../../ideas/interpretation-graph-ui.md) decision **23**.
 
 | Fact | UI implication |
 | --- | --- |
