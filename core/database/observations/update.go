@@ -7,6 +7,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database/audit"
+	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/namevalues"
 )
 
 const (
@@ -56,7 +58,7 @@ func ApplyForCitationTx(tx *sql.Tx, citationID []byte, inputs []Input) ([]Observ
 	for _, in := range inputs {
 		switch {
 		case len(in.ID) == 0:
-			obs, chs, err := insertOne(tx, citationID, in)
+			obs, chs, err := insertOne(tx, citationID, in, InsertOptions{AllowEdgeRows: false})
 			if err != nil {
 				return nil, nil, err
 			}
@@ -74,14 +76,12 @@ func ApplyForCitationTx(tx *sql.Tx, citationID []byte, inputs []Input) ([]Observ
 				return nil, nil, ErrInvalid
 			}
 			seen[key] = struct{}{}
-			obs, ch, err := updateOne(tx, citationID, prev, in)
+			obs, chs, err := updateOne(tx, citationID, prev, in)
 			if err != nil {
 				return nil, nil, err
 			}
 			out = append(out, obs)
-			if ch != nil {
-				changes = append(changes, *ch)
-			}
+			changes = append(changes, chs...)
 		}
 	}
 
@@ -106,7 +106,7 @@ func ApplyForCitationTx(tx *sql.Tx, citationID []byte, inputs []Input) ([]Observ
 	return out, changes, nil
 }
 
-func updateOne(tx *sql.Tx, citationID []byte, prev Observation, in Input) (Observation, *audit.Change, error) {
+func updateOne(tx *sql.Tx, citationID []byte, prev Observation, in Input) (Observation, []audit.Change, error) {
 	polarity := stringsTrimPolarity(in.Polarity)
 	if polarity != PolarityPositive && polarity != PolarityNegative {
 		return Observation{}, nil, ErrInvalid
@@ -154,25 +154,33 @@ func updateOne(tx *sql.Tx, citationID []byte, prev Observation, in Input) (Obser
 	); err != nil {
 		return Observation{}, nil, err
 	}
+	var extra []audit.Change
 	if in.Notes != nil {
-		if _, err := tx.Exec(sqlDeleteObservationNotes, prev.ID); err != nil {
+		noteChanges, err := replaceNotes(tx, prev.ID, in.Notes)
+		if err != nil {
 			return Observation{}, nil, err
 		}
-		for _, body := range in.Notes {
-			body = strings.TrimSpace(body)
-			if body == "" {
-				continue
-			}
-			if err := insertObservationNote(tx, prev.ID, body); err != nil {
-				return Observation{}, nil, err
-			}
-		}
+		extra = append(extra, noteChanges...)
 	}
-	if err := releaseDateValue(tx, prev.ValueDateID, resolved.DateID); err != nil {
+	if deleted, err := releaseDateValue(tx, prev.ValueDateID, resolved.DateID); err != nil {
 		return Observation{}, nil, err
+	} else if deleted != nil {
+		extra = append(extra, audit.Change{
+			EntityType: "date_value",
+			EntityID:   append([]byte(nil), prev.ValueDateID...),
+			Action:     audit.ActionDelete,
+			Fields:     audit.DeletedRow(deleted),
+		})
 	}
-	if err := releaseNameValue(tx, prev.ValueNameID, resolved.NameID); err != nil {
+	if deleted, err := releaseNameValue(tx, prev.ValueNameID, resolved.NameID); err != nil {
 		return Observation{}, nil, err
+	} else if deleted != nil {
+		extra = append(extra, audit.Change{
+			EntityType: "name_value",
+			EntityID:   append([]byte(nil), prev.ValueNameID...),
+			Action:     audit.ActionDelete,
+			Fields:     audit.DeletedRow(deleted),
+		})
 	}
 
 	obs := Observation{
@@ -195,7 +203,17 @@ func updateOne(tx *sql.Tx, citationID []byte, prev Observation, in Input) (Obser
 	obs.ValueNameID = append([]byte(nil), resolved.NameID...)
 	obs.ValueSubjectID = append([]byte(nil), resolved.SubjectID...)
 	obs.ValueTermID = append([]byte(nil), resolved.TermID...)
-	return obs, observationUpdateChange(prev, obs), nil
+	changes := extra
+	if resolved.DateChange != nil {
+		changes = append(changes, *resolved.DateChange)
+	}
+	if resolved.NameChange != nil {
+		changes = append(changes, *resolved.NameChange)
+	}
+	if ch := observationUpdateChange(prev, obs); ch != nil {
+		changes = append([]audit.Change{*ch}, changes...)
+	}
+	return obs, changes, nil
 }
 
 func observationUpdateChange(prev, next Observation) *audit.Change {
@@ -285,34 +303,46 @@ func listRowsByCitationTx(tx *sql.Tx, citationID []byte) ([]Observation, error) 
 	return out, rows.Err()
 }
 
-func releaseDateValue(tx *sql.Tx, oldID, newID []byte) error {
+func releaseDateValue(tx *sql.Tx, oldID, newID []byte) (map[string]any, error) {
 	if len(oldID) != 16 || bytes.Equal(oldID, newID) {
-		return nil
+		return nil, nil
 	}
 	var n int
 	if err := tx.QueryRow(sqlCountDateRefs, oldID, oldID).Scan(&n); err != nil {
-		return err
+		return nil, err
 	}
 	if n > 0 {
-		return nil
+		return nil, nil
 	}
-	_, err := tx.Exec(sqlDeleteDateValue, oldID)
-	return err
+	prev, err := datevalues.LookupTx(tx, oldID)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(sqlDeleteDateValue, oldID); err != nil {
+		return nil, err
+	}
+	return dateValueMap(oldID, prev), nil
 }
 
-func releaseNameValue(tx *sql.Tx, oldID, newID []byte) error {
+func releaseNameValue(tx *sql.Tx, oldID, newID []byte) (map[string]any, error) {
 	if len(oldID) != 16 || bytes.Equal(oldID, newID) {
-		return nil
+		return nil, nil
 	}
 	var n int
 	if err := tx.QueryRow(sqlCountNameRefs, oldID).Scan(&n); err != nil {
-		return err
+		return nil, err
 	}
 	if n > 0 {
-		return nil
+		return nil, nil
 	}
-	_, err := tx.Exec(sqlDeleteNameValue, oldID)
-	return err
+	prev, err := namevalues.LookupTx(tx, oldID)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(sqlDeleteNameValue, oldID); err != nil {
+		return nil, err
+	}
+	return nameValueMap(oldID, prev), nil
 }
 
 func stringsTrimPolarity(polarity string) string {

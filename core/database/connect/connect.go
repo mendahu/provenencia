@@ -117,7 +117,7 @@ func CreateCitedBridge(c *database.Catalog, userID []byte, in CreateInput) (Resu
 		}
 	}
 
-	cited, citChanges, err := citations.InsertWithObservationsTx(tx, in.Citation, obs)
+	cited, citChanges, err := citations.InsertWithObservationsTx(tx, in.Citation, obs, observations.InsertOptions{AllowEdgeRows: true})
 	if err != nil {
 		return Result{}, err
 	}

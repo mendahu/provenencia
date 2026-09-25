@@ -119,7 +119,7 @@ func CreateWithObservations(
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	res, changes, err := InsertWithObservationsTx(tx, in, obsInputs)
+	res, changes, err := InsertWithObservationsTx(tx, in, obsInputs, observations.InsertOptions{AllowEdgeRows: false})
 	if err != nil {
 		return CreateResult{}, err
 	}
@@ -153,6 +153,7 @@ func InsertWithObservationsTx(
 	tx *sql.Tx,
 	in CreateInput,
 	obsInputs []observations.Input,
+	opts observations.InsertOptions,
 ) (CreateResult, []audit.Change, error) {
 	if err := normalizeCreateInput(&in); err != nil {
 		return CreateResult{}, nil, err
@@ -248,7 +249,7 @@ func InsertWithObservationsTx(
 	var obsOut []observations.Observation
 	if len(obsInputs) > 0 {
 		var obsChanges []audit.Change
-		obsOut, obsChanges, err = observations.InsertManyTx(tx, idBytes, obsInputs)
+		obsOut, obsChanges, err = observations.InsertManyTx(tx, idBytes, obsInputs, opts)
 		if err != nil {
 			return CreateResult{}, nil, err
 		}
@@ -415,6 +416,130 @@ func UpdateWithObservations(
 		},
 		Observations: obsOut,
 	}, nil
+}
+
+// CitationFieldsInput is the citation-row fields Update may change.
+type CitationFieldsInput struct {
+	LocatorJSON            string
+	Transcription          string
+	Description            string
+	TranscriptionUncertain bool
+	TranscriptionNote      string
+}
+
+// Update changes citation columns only. Zero changes commits nothing and
+// returns the stored row. It never touches notes or observations.
+func Update(c *database.Catalog, userID, citationID []byte, in CitationFieldsInput) (Citation, error) {
+	db, err := c.DB()
+	if err != nil {
+		return Citation{}, err
+	}
+	in.LocatorJSON = strings.TrimSpace(in.LocatorJSON)
+	in.Transcription = strings.TrimSpace(in.Transcription)
+	in.Description = strings.TrimSpace(in.Description)
+	in.TranscriptionNote = strings.TrimSpace(in.TranscriptionNote)
+	if len(citationID) != 16 {
+		return Citation{}, ErrInvalid
+	}
+	if err := locator.Validate(in.LocatorJSON); err != nil {
+		return Citation{}, err
+	}
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
+		return Citation{}, err
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return Citation{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	prev, err := scanOne(tx.QueryRow(sqlGet, citationID))
+	if errors.Is(err, sql.ErrNoRows) {
+		return Citation{}, ErrInvalid
+	}
+	if err != nil {
+		return Citation{}, err
+	}
+
+	fields := map[string]audit.FieldDiff{}
+	if prev.LocatorJSON != in.LocatorJSON {
+		fields["locator_json"] = audit.FieldDiff{Old: prev.LocatorJSON, New: in.LocatorJSON}
+	}
+	if prev.Transcription != in.Transcription {
+		fields["transcription"] = audit.FieldDiff{Old: emptyAsNil(prev.Transcription), New: emptyAsNil(in.Transcription)}
+	}
+	if prev.Description != in.Description {
+		fields["description"] = audit.FieldDiff{Old: emptyAsNil(prev.Description), New: emptyAsNil(in.Description)}
+	}
+	if prev.TranscriptionUncertain != in.TranscriptionUncertain {
+		fields["transcription_uncertain"] = audit.FieldDiff{
+			Old: prev.TranscriptionUncertain,
+			New: in.TranscriptionUncertain,
+		}
+	}
+	if prev.TranscriptionNote != in.TranscriptionNote {
+		fields["transcription_note"] = audit.FieldDiff{
+			Old: emptyAsNil(prev.TranscriptionNote),
+			New: emptyAsNil(in.TranscriptionNote),
+		}
+	}
+	if len(fields) == 0 {
+		if err := tx.Commit(); err != nil {
+			return Citation{}, err
+		}
+		return prev, nil
+	}
+
+	uncertain := 0
+	if in.TranscriptionUncertain {
+		uncertain = 1
+	}
+	if _, err := tx.Exec(
+		sqlUpdate,
+		prev.ArtifactID,
+		in.LocatorJSON,
+		nullIfEmpty(in.Transcription),
+		nullIfEmpty(in.Description),
+		uncertain,
+		nullIfEmpty(in.TranscriptionNote),
+		citationID,
+	); err != nil {
+		return Citation{}, err
+	}
+	if _, err := audit.Record(tx, audit.Revision{
+		UserID:     userID,
+		ActionType: "update_citation",
+		CreatedAt:  project.NowUTC(),
+		Changes: []audit.Change{{
+			EntityType: "citation",
+			EntityID:   citationID,
+			Action:     audit.ActionUpdate,
+			Fields:     fields,
+		}},
+	}); err != nil {
+		return Citation{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return Citation{}, err
+	}
+	return Citation{
+		ID:                     append([]byte(nil), citationID...),
+		Ref:                    prev.Ref,
+		ArtifactID:             append([]byte(nil), prev.ArtifactID...),
+		LocatorJSON:            in.LocatorJSON,
+		Transcription:          in.Transcription,
+		Description:            in.Description,
+		TranscriptionUncertain: in.TranscriptionUncertain,
+		TranscriptionNote:      in.TranscriptionNote,
+	}, nil
+}
+
+func emptyAsNil(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
 }
 
 // ListNotes returns citation_notes bodies for a citation.

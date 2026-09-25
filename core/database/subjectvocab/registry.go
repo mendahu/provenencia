@@ -10,9 +10,9 @@ import (
 // Term capabilities (birthday facets, tree-edge roles, …) are deferred until a later PR.
 
 const (
-	RoleRoot         = "root"
-	RoleBridge       = "bridge"
-	RoleReification  = "reification"
+	RoleRoot        = "root"
+	RoleBridge      = "bridge"
+	RoleReification = "reification"
 
 	DisambiguationNone             = "none"
 	DisambiguationRole             = "role"
@@ -229,33 +229,33 @@ var seedTerms = []seedTerm{
 var seedConnect = []seedConnectRule{
 	{
 		FromTypeKey: "person", ToTypeKey: "event",
-		BridgeTypeKey: "participation",
+		BridgeTypeKey:    "participation",
 		EdgePropertyKeys: []string{"person", "event"},
-		Disambiguation: DisambiguationRole,
+		Disambiguation:   DisambiguationRole,
 	},
 	{
 		FromTypeKey: "event", ToTypeKey: "person",
-		BridgeTypeKey: "participation",
+		BridgeTypeKey:    "participation",
 		EdgePropertyKeys: []string{"person", "event"},
-		Disambiguation: DisambiguationRole,
+		Disambiguation:   DisambiguationRole,
 	},
 	{
 		FromTypeKey: "person", ToTypeKey: "person",
-		BridgeTypeKey: "relationship",
+		BridgeTypeKey:    "relationship",
 		EdgePropertyKeys: []string{"person", "related_to"},
-		Disambiguation: DisambiguationRelationshipType,
+		Disambiguation:   DisambiguationRelationshipType,
 	},
 	{
 		FromTypeKey: "event", ToTypeKey: "place",
-		BridgeTypeKey: "location",
+		BridgeTypeKey:    "location",
 		EdgePropertyKeys: []string{"event", "place"},
-		Disambiguation: DisambiguationNone,
+		Disambiguation:   DisambiguationNone,
 	},
 	{
 		FromTypeKey: "place", ToTypeKey: "event",
-		BridgeTypeKey: "location",
+		BridgeTypeKey:    "location",
 		EdgePropertyKeys: []string{"event", "place"},
-		Disambiguation: DisambiguationNone,
+		Disambiguation:   DisambiguationNone,
 	},
 	{FromTypeKey: "person", ToTypeKey: "place", Refuse: true},
 	{FromTypeKey: "place", ToTypeKey: "person", Refuse: true},

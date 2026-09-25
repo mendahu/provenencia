@@ -348,6 +348,66 @@ func TestCitations(t *testing.T) {
 			},
 		},
 		{
+			name: "Update changes citation fields only and skips no-op",
+			run: func(t *testing.T) {
+				c, s := mustSeed(t)
+				res, err := CreateWithObservations(c, userID, CreateInput{
+					ArtifactID:    s.artifact.ID,
+					LocatorJSON:   validLocator,
+					Transcription: "was",
+					Notes:         []string{"keep"},
+				}, []observations.Input{{
+					SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
+					ValueTermID: s.femaleTerm.ID,
+				}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				got, err := Update(c, userID, res.Citation.ID, CitationFieldsInput{
+					LocatorJSON:   validLocator,
+					Transcription: "now",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got.Transcription != "now" {
+					t.Fatalf("transcription %q", got.Transcription)
+				}
+				if latestAction(t, c) != "update_citation" {
+					t.Fatalf("action %q", latestAction(t, c))
+				}
+				notes, err := ListNotes(c, res.Citation.ID)
+				if err != nil || len(notes) != 1 || notes[0] != "keep" {
+					t.Fatalf("notes %v %+v", err, notes)
+				}
+				obs, err := observations.ListByCitation(c, res.Citation.ID)
+				if err != nil || len(obs) != 1 {
+					t.Fatalf("obs %v len=%d", err, len(obs))
+				}
+				db, err := c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				var n int
+				if err := db.QueryRow(`SELECT COUNT(*) FROM audit_transactions`).Scan(&n); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := Update(c, userID, res.Citation.ID, CitationFieldsInput{
+					LocatorJSON:   validLocator,
+					Transcription: "now",
+				}); err != nil {
+					t.Fatal(err)
+				}
+				var after int
+				if err := db.QueryRow(`SELECT COUNT(*) FROM audit_transactions`).Scan(&after); err != nil {
+					t.Fatal(err)
+				}
+				if after != n {
+					t.Fatalf("no-op recorded revision %d -> %d", n, after)
+				}
+			},
+		},
+		{
 			name: "mapConstraint preserves non-constraint errors",
 			run: func(t *testing.T) {
 				raw := errors.New("disk full")

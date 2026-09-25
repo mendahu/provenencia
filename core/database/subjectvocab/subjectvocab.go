@@ -78,12 +78,19 @@ type Presentation struct {
 	EdgeToToken   string
 }
 
+// ConnectEdge is one cited edge on a bridge: property key binds an endpoint type.
+type ConnectEdge struct {
+	PropertyKey     string
+	EndpointTypeKey string
+}
+
 // ConnectRule describes one allowed (or refused) connect endpoint pair.
 type ConnectRule struct {
 	FromTypeKey      string
 	ToTypeKey        string
 	BridgeTypeKey    string
 	EdgePropertyKeys []string
+	Edges            []ConnectEdge
 	Disambiguation   string
 	Refuse           bool
 }
@@ -340,14 +347,7 @@ func Connect(fromTypeKey, toTypeKey string) ConnectRule {
 	toTypeKey = strings.TrimSpace(toTypeKey)
 	for _, r := range seedConnect {
 		if r.FromTypeKey == fromTypeKey && r.ToTypeKey == toTypeKey {
-			return ConnectRule{
-				FromTypeKey:      r.FromTypeKey,
-				ToTypeKey:        r.ToTypeKey,
-				BridgeTypeKey:    r.BridgeTypeKey,
-				EdgePropertyKeys: append([]string(nil), r.EdgePropertyKeys...),
-				Disambiguation:   r.Disambiguation,
-				Refuse:           r.Refuse,
-			}
+			return ruleFromSeed(r)
 		}
 	}
 	return ConnectRule{
@@ -361,16 +361,54 @@ func Connect(fromTypeKey, toTypeKey string) ConnectRule {
 func ListConnectRules() []ConnectRule {
 	out := make([]ConnectRule, 0, len(seedConnect))
 	for _, r := range seedConnect {
-		out = append(out, ConnectRule{
-			FromTypeKey:      r.FromTypeKey,
-			ToTypeKey:        r.ToTypeKey,
-			BridgeTypeKey:    r.BridgeTypeKey,
-			EdgePropertyKeys: append([]string(nil), r.EdgePropertyKeys...),
-			Disambiguation:   r.Disambiguation,
-			Refuse:           r.Refuse,
-		})
+		out = append(out, ruleFromSeed(r))
 	}
 	return out
+}
+
+func ruleFromSeed(r seedConnectRule) ConnectRule {
+	return ConnectRule{
+		FromTypeKey:      r.FromTypeKey,
+		ToTypeKey:        r.ToTypeKey,
+		BridgeTypeKey:    r.BridgeTypeKey,
+		EdgePropertyKeys: append([]string(nil), r.EdgePropertyKeys...),
+		Edges:            edgesFromKeys(r.EdgePropertyKeys),
+		Disambiguation:   r.Disambiguation,
+		Refuse:           r.Refuse,
+	}
+}
+
+func edgesFromKeys(keys []string) []ConnectEdge {
+	out := make([]ConnectEdge, 0, len(keys))
+	for _, key := range keys {
+		endpoint := key
+		if key == "related_to" {
+			endpoint = "person"
+		}
+		out = append(out, ConnectEdge{PropertyKey: key, EndpointTypeKey: endpoint})
+	}
+	return out
+}
+
+// EdgeEndpoint returns the endpoint type a bridge edge property binds, if the
+// pair is a non-refused connect rule.
+func EdgeEndpoint(bridgeTypeKey, propertyKey string) (endpointTypeKey string, ok bool) {
+	bridgeTypeKey = strings.TrimSpace(bridgeTypeKey)
+	propertyKey = strings.TrimSpace(propertyKey)
+	if bridgeTypeKey == "" || propertyKey == "" {
+		return "", false
+	}
+	for _, r := range seedConnect {
+		if r.Refuse || r.BridgeTypeKey != bridgeTypeKey {
+			continue
+		}
+		for _, e := range edgesFromKeys(r.EdgePropertyKeys) {
+			if e.PropertyKey == propertyKey {
+				return e.EndpointTypeKey, true
+			}
+		}
+	}
+	return "", false
 }
 
 // AllTypes returns every seeded type's registry info.
