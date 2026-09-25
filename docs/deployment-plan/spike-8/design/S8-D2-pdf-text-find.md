@@ -3,7 +3,7 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 8 (pause and refine / data entry)  
 **Implements later as:** **S8-03** (PDFKit viewport + I-beam default), **S8-04** (Find), **S8-05** (paste from selection)  
-**Depends on:** **S8-D7** / **S8-10** (viewer slot on the new composer; brief [`archive/S8-D7-composer-rethink.md`](archive/S8-D7-composer-rethink.md)); tool strip ([`ArtifactViewerToolChrome`](../../../../macos/App/Features/ArtifactViewer/ArtifactViewer.swift)); locators S7-07; transcription field (**S8-D1** image Auto Transcribe — do not fight that row)  
+**Depends on:** **S8-D7** / **S8-10** (viewer slot on the new composer; brief [`archive/S8-D7-composer-rethink.md`](archive/S8-D7-composer-rethink.md)); **S8-D8** / **S8-11** (citation fields section with Save citation; no footer Save — brief [`S8-D8-composer-connect-simplification.md`](S8-D8-composer-connect-simplification.md)); tool strip ([`ArtifactViewerToolChrome`](../../../../macos/App/Features/ArtifactViewer/ArtifactViewer.swift)); locators S7-07; transcription field (**S8-D1** image Auto Transcribe — do not fight that row)  
 **Related:** [`../pdf-text-find.md`](../pdf-text-find.md); dogfood OCR notes  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
 **Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
