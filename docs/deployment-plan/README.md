@@ -10,7 +10,7 @@ Closed spikes under [`archive/`](archive/) keep **themes and decisions**. PR ord
 
 | Spike | Goal |
 | --- | --- |
-| [Spike 8](spike-8/) | **Pause and refine** data entry. Composer rethink first; then Auto Transcribe, PDF thumbs / Find / paste, graph chrome, Source-page jump, list counts, delete paths. Dogfood: [`docs/dogfood/ux.md`](../dogfood/ux.md). Plan: [`spike-8/deployment-plan.md`](spike-8/deployment-plan.md). |
+| [Spike 8](spike-8/) | **Pause and refine** data entry. Composer rethink first; then Auto Transcribe, PDF Find / paste, graph chrome, Source-page jump, list counts, delete paths. Dogfood: [`docs/dogfood/ux.md`](../dogfood/ux.md). Plan: [`spike-8/deployment-plan.md`](spike-8/deployment-plan.md). |
 
 ## Completed
 

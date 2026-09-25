@@ -20,6 +20,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`text-quote-locators.md`](text-quote-locators.md)
 - [`audio-video-sources.md`](audio-video-sources.md)
 - [`share-packages.md`](share-packages.md)
+- [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md)
 
 ## Archived
 

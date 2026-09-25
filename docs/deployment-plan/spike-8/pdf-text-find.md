@@ -18,7 +18,7 @@ Composer-only. Image Artifacts unchanged (still raster + region + **S8-01**). Im
 
 Find and paste both need a **live PDFKit page** (`PDFView` / equivalent), not `PDFPage` flattened to `NSImage`. Region overlay (S7-07) today maps onto the raster document. **S8-03** remounts PDF paint onto PDFKit and remaps pan / select / region coordinates. **S8-04** (Find) and **S8-05** (paste) cannot ship on the raster viewer.
 
-**S8-02** (page-1 thumbnail) also uses PDFKit but writes a derivative at ingest — it does **not** unblock the composer viewport. **S8-01** is the image twin of S8-05; prefer S8-05 after S8-01 so one transcription action row.
+**S8-01** is the image twin of S8-05; prefer S8-05 after S8-01 so one transcription action row. PDF Artifact thumbnails are not this spike ([`artifact-pdf-thumbnails.md`](../../ideas/artifact-pdf-thumbnails.md)).
 
 ## Locked
 

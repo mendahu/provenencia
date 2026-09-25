@@ -14,6 +14,7 @@ IDs stay stable (`S8-NN`, `S8-DN`). Do not renumber when moving steps here.
 | S8-11 | PR | Row-level composer commits, Connect in the composer, lossless audit |
 | S8-D1 | Design | Auto Transcribe — trailing secondary button; combined replace + whole-page confirm; image-only |
 | S8-01 | PR | Vision OCR fills image-citation transcription; reusable `Features/OCR` module |
+| S8-02 | Descoped | PDF page-1 Artifact thumbs — not this spike; engine-only if revived |
 
 ## Steps
 
@@ -96,3 +97,7 @@ Vision OCR fills the citation transcription field on **image** Artifacts. A loca
 - PDF OCR / PDF page rasters; PDF Find / paste (**S8-D2** / **S8-03…S8-05**)
 - Observation extract; persisted crops; Live Text overlay
 - `PVAutoTranscribe` kit primitive; raising macOS 14; product version bump
+
+### S8-02 — PDF first-page Artifact thumbnails (descoped)
+
+Not this spike. PDF Artifacts keep the file-type glyph. A Swift/PDFKit derivative would not work on Windows and is not the client's job. If the idea returns, generate in `core/derivatives` like image thumbs. Parked: [`artifact-pdf-thumbnails.md`](../../ideas/artifact-pdf-thumbnails.md). The **S8-02** id is retired.
