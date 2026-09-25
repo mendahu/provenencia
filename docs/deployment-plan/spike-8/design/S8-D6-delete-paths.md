@@ -82,7 +82,7 @@ Exact copy, which paths get a confirm vs a refuse, and whether shared Citations 
 | Cited subject / cited bridge | No trash. Engine `ErrInUse`. Researcher who placed the wrong person and then cited them is stuck. |
 | Connect is atomic | UI does not persist an uncited bridge. Deleting a bridge is deleting a cited subgraph. |
 | One Citation → many Observations, possibly many subjects | Deleting one Observation must not silently delete a shared Citation. Deleting a Citation deletes every Observation on it. |
-| Composer `removeObservation` | Draft rows only. No persisted Observation/Citation delete FFI. |
+| Composer Observation delete | **S8-11** ships row Delete… with confirm (`DeleteObservation`, one audited revision; edge rows refused). No Citation delete FFI. |
 | `citations` package has no `Delete` | Citation delete is greenfield on both sides. |
 | Source with Subjects | Source delete stays blocked (`NO ACTION`). Not this story unless a later item adds Source-layer delete. |
 | Wrong type | Immutable `subject_type_id`. **No Change type UI.** Delete + place a new subject. Refs are cheap to burn. |
@@ -96,8 +96,8 @@ Fill allow / refuse / cascade when this story is refined. Rows may be added.
 | Uncited primary | Allowed + confirm | Keep; copy only? |
 | Cited primary | Hidden + engine fail | Allow with damage count, or refuse with a path to strip citations first? |
 | Cited bridge | Hidden + engine fail | Same. Endpoints stay? |
-| One Observation on a card | No UI | Leave the Citation if other Observations remain? |
-| Last Observation on a Citation | No UI | Delete the empty Citation, or keep leftover **10** (empty Citation — dogfood)? |
+| One Observation on a card | **Decided by S8-D8 / S8-11:** composer row Delete… with confirm; the Citation always stays | Card-level delete affordance only (reuse `observations.Delete`) |
+| Last Observation on a Citation | **Decided by S8-D8 / S8-11:** the empty Citation stays (empty Citations are legal) | Whether a later whole-Citation delete is offered from here |
 | Whole Citation (shared) | No UI | Count Observations **and** other subjects that lose support. |
 | Citation notes / observation notes | Follow parent? | Silent with parent vs listed in the confirm. |
 | Subject that is only an edge object | Engine counts `value_subject_id` | Deleting John while he is `related_to` on a bridge. |
@@ -162,10 +162,10 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them.
 | --- | --- | --- | --- | --- |
 | Graph delete confirm | Snowflake | **Extend** | `EvidenceGraphView` + `EvidenceGraphModel` | Today uncited only. |
 | Subject / bridge trash | Snowflake | **Extend** | `EvidenceSubjectCard` / `EvidenceBridgeCard` | Cited cards have no trash. |
-| Composer observation remove | Snowflake | **Extend** if persisted delete ships | `CitationComposerFormPane` | Draft-only today. |
+| Composer observation remove | Snowflake | Ship (**S8-11**) | `CitationComposerObservationRow` | Row Delete… + confirm ships in S8-11. Edge rows are engine-locked (`observations.edge_locked`). Do not add a second Observation delete. |
 | Confirm | Recipe | Ship | `.pvConfirm` / `PVConfirm` | Damage copy. |
 | `subjects.Delete` | Engine | **Extend** | `core/database/subjects` | Cascade vs keep `ErrInUse` per matrix. |
-| Citation / Observation delete | Engine | **Add** if matrix allows | `core/database/citations`, `observations` | No Citation `Delete` today. |
+| Citation / Observation delete | Engine | Citation: **Add** if matrix allows. Observation: Ship (**S8-11** `observations.Delete`) | `core/database/citations`, `observations` | No Citation `Delete` today. Reuse S8-11's lossless audit shape for any cascade. |
 | Delete-impact query | Engine | **Add** | counts before confirm | Two Observation FKs + shared Citation. |
 
 ### Explicit non-goals

@@ -20,17 +20,19 @@ Grow this list as stories land. **By spike close**, every checked story below mu
 6. **Graph visual enhancements** — conflict + negated row badges; always-on **jump to the Source page**; cited **bridge sentences** prefer endpoint `name` / `event_type` / `toponym`, then working label; **Add property** on bridge cards (extra non-edge rows). More items may join **S8-D3** / **S8-06**.
 7. **Source page enhancements** — the Source detail page has an **Open Evidence graph** control for the same Source (disabled with no Artifact). More items may join **S8-D4** / **S8-07**.
 8. **Sources list refresh** — the Sources list shows **subject** and **observation** counts per Source so a worked Evidence graph is obvious next to an empty one. Counts live on their own cache keys (one Source invalidates; the list payload does not). More items may join **S8-D5** / **S8-08**.
-9. **Delete paths** — the researcher can remove a mistaken Interpretation entity when the refined matrix allows it, with a confirm that **counts the cascade** (or an honest refuse). Uncited subject delete stays. Cited subject / shared Citation / Observation paths are decided on **S8-D6** before **S8-09**. More items may join that brief.
+9. **Delete paths** — the researcher can remove a mistaken Interpretation entity when the refined matrix allows it, with a confirm that **counts the cascade** (or an honest refuse). Uncited subject delete stays. Cited subject / shared Citation paths are decided on **S8-D6** before **S8-09**. **Single Observation delete from the composer ships in S8-11.** More items may join that brief.
+10. **Composer and Connect simplification** — each Observation row saves, reverts, and deletes on its own (delete asks first; nothing is ever deleted by omission). The reading has its own **Save reading**. Leaving the composer with unsaved work always asks. Connect goes straight to the composer, where a **pending connection** (endpoints + role / relationship type) saves onto a new **or existing** Citation. Endpoints can be corrected to another subject of the same type. Bridges are named by their cited sentence. A person / event / place can be created from a composer row. The audit log can reconstruct every Interpretation create, edit, and delete. **Ships before items 2, 4, and 5.**
 
 Further bar items: TBD (additional data-entry stories).
 
 ## Design track
 
-**Composer, graph, Source-page, and Sources-list chrome is designed in Claude Design before the matching UI PRs.** **S8-D7 first** — Auto Transcribe and PDF Find/paste design against the new form. PDF thumbs reuse shipped `PVThumbnail` — no board. Briefs: [`design/`](design/).
+**Composer, graph, Source-page, and Sources-list chrome is designed in Claude Design before the matching UI PRs.** **S8-D7 first, then S8-D8** — Auto Transcribe and PDF Find/paste design against the S8-D8 form. PDF thumbs reuse shipped `PVThumbnail` — no board. Briefs: [`design/`](design/).
 
 | Step | Brief | Covers | Gates |
 | --- | --- | --- | --- |
 | **S8-D7** | Citation composer rethink | Flexible Citation document; compact Artifact vs robust Citation (ref + transcription); inline simple observations; empty Save | **S8-10** |
+| **S8-D8** | Composer and Connect simplification | Row-level Observation Save / Revert / Delete; Save reading; unsaved-work guard; pending connection in the composer (no graph sheet); endpoint retarget; computed bridge names; New person / event / place from a row | **S8-11** |
 | **S8-D1** | Auto Transcribe in the composer | Button, progress, replace confirm, large-page warning + proceed, failure copy | **S8-01** |
 | **S8-D2** | PDF Find + select + paste | Tool-strip Find; I-beam vs pan; paste-from-selection vs Auto Transcribe row | **S8-03**, **S8-04**, **S8-05** |
 | **S8-D3** | Evidence graph visual enhancements | Conflict + negated; Source-page jump; richer bridge sentences; Add property on bridges | **S8-06** |
@@ -49,8 +51,15 @@ S8-D7  Composer rethink
   └────── gates ──────────▶ S8-10  Flexible composer (identity + multi-subject
                               │     rows + empty Save). FIRST composer PR.
                               │
-                              ├──────▶ S8-D1 / S8-01  (design + build after S8-10)
-                              └──────▶ S8-D2 / S8-03…S8-05
+S8-D8  Composer + Connect     │
+       simplification         │
+  │                           ▼
+  └────── gates ──────────▶ S8-11  Row-level commits, unsaved guard, Connect in
+                              │     the composer, audit + write integrity.
+                              │     SECOND composer PR (after S8-10).
+                              │
+                              ├──────▶ S8-D1 / S8-01  (design + build after S8-11)
+                              └──────▶ S8-D2 / S8-03…S8-05  (after S8-11)
 
 S8-D1  Auto Transcribe UI
   │
@@ -94,6 +103,8 @@ S8-D6  Delete paths
 **Order notes**
 
 - **S8-D7 / S8-10 first** among composer work. Do not implement **S8-01** or **S8-03…S8-05** on the old form. **S8-D1** / **S8-D2** boards wait until the rethink layout is agreed.
+- **S8-D8 / S8-11 next**, before **S8-D1** / **S8-01** and **S8-D2** / **S8-03…S8-05**. S8-11 replaces the composer's save model (footer Save → row commits + Save reading) and removes the graph's Connect sheet. Auto Transcribe and PDF paste land on the S8-11 reading section, not the S8-10 footer. **S8-D1** / **S8-D2** boards redraw against **S8-D8** frames.
+- **S8-11 ships single Observation delete from the composer.** **S8-D6** / **S8-09** still own subject, bridge, and whole-Citation deletes and their counted cascades. S8-09 must reuse S8-11's `observations.Delete` (and its audit shape) rather than adding a second Observation delete.
 - **S8-03** remounts PDF from raster → PDFKit. Find and paste cannot ship on `ArtifactMediaViewport` bitmaps.
 - **S8-04** and **S8-05** are parallel after **S8-03**.
 - **S8-01** / **S8-02** do not block **S8-D2**. **S8-05** should follow **S8-01** when both touch the transcription `PVField`.
@@ -109,6 +120,8 @@ S8-D6  Delete paths
 
 - [x] S8-D7 — Design: Citation composer rethink → [`completed.md`](completed.md)
 - [x] S8-10 — Flexible citation composer (identity + multi-subject + empty Save) → [`completed.md`](completed.md)
+- [ ] S8-D8 — Design: Composer and Connect simplification → [`completed.md`](completed.md)
+- [ ] S8-11 — Composer and Connect simplification + Interpretation write integrity → [`completed.md`](completed.md)
 - [ ] S8-D1 — Design: Auto Transcribe in the citation composer → [`completed.md`](completed.md)
 - [ ] S8-01 — Vision OCR + Auto Transcribe button → [`completed.md`](completed.md)
 - [ ] S8-02 — PDF first-page Artifact thumbnails → [`completed.md`](completed.md)
@@ -149,6 +162,393 @@ Replace the subject-locked composer with one place whose document is the Citatio
 
 ---
 
+## S8-D8 — Design: Composer and Connect simplification
+
+Claude Design board that **extends** the S8-10 composer and the shipped graph. It replaces the bundled footer Save with row-level Save / Revert / Delete plus **Save reading**. It adds an unsaved-work guard on every exit, moves Connect's role / relationship-type choice from a graph sheet into a **pending connection** group in the composer (saving onto a new or existing Citation), lets endpoints be retargeted to same-type subjects, names bridges by their computed sentence, and adds **New person / event / place** to the row subject picker. Brief: [`design/S8-D8-composer-connect-simplification.md`](design/S8-D8-composer-connect-simplification.md). Gates **S8-11**.
+
+Does **not** design Auto Transcribe (**S8-D1**), PDF Find / paste (**S8-D2**), graph badges / sentence wording (**S8-D3**), or subject / bridge / Citation delete cascades (**S8-D6**).
+
+---
+
+## S8-11 — PR: Composer and Connect simplification + Interpretation write integrity
+
+One PR that implements the **S8-D8** board **and** the engine, audit, FFI, and client fixes from the S8-10 adversarial review that are still relevant once S8-D8's save model is in. The review found that the composer deletes saved Observations by omission, that edits are lost silently on most exits, that Connect loses the connection when an existing Citation is picked, that the audit log cannot reconstruct what was asserted, and that the server does not check that a bridge's edges point at the chosen endpoints.
+
+**This section is the implementation contract.** Where it names a function, file, field number, error code, or audit field, implement exactly that. If something here turns out to be wrong in the code, stop, fix this section in the same PR (with a one-line reason), then continue. Do not silently diverge.
+
+| | |
+| --- | --- |
+| **In** | Everything in §S8-11.1 through §S8-11.9 below. |
+| **Out** | Subject / bridge / whole-Citation delete and cascades (**S8-09**); undo / ⌘Z; autosave; guarding app quit, window close, project switch, sign-out; rewriting stored labels on existing bridges; creating bridges or `source` subjects from the composer; generalizing `EvidenceBridgeEdgeSummary` sentence templates; any catalog migration; Auto Transcribe / PDF work; graph badges (**S8-06**). |
+| **Testable** | §S8-11.10 (every row is a required test). |
+| **Depends on** | **S8-D8** agreed. **S8-10** shipped. **Not** S8-01…S8-09. |
+
+### S8-11.1 Frozen decisions
+
+These are decided. Do not reopen them in the PR.
+
+1. **Observations are committed one at a time.** The bundled update RPC `METHOD_UPDATE_CITATION_WITH_OBSERVATIONS` (71) and `observations.ApplyForCitationTx` are **deleted**. Nothing in the product deletes an Observation except an explicit `DeleteObservation` call.
+2. **First commit creates the Citation.** On a New Citation, the first of {row Save, Save reading, Save connection} creates the Citation from the **current reading draft**. Row Save uses `CreateCitationWithObservations` with exactly one draft. Save reading uses it with zero drafts. Save connection uses `CreateCitedBridge` without `citation_id`.
+3. **Row commits never write the reading** on a saved Citation, and Save reading never writes rows. The only exception is decision 2.
+4. **A saved Citation's Artifact is immutable.** `UpdateCitation` has no `artifact_id`. Switching Artifact in the composer means "work on a Citation on another Artifact". It is allowed only when there is no unsaved document work.
+5. **Connect stays one atomic write**, with one audit revision `create_cited_bridge`. It may attach to an existing Citation (`citation_id`). The server computes the bridge position, validates that the edge Observations bind the chosen endpoints, and never stores a client label.
+6. **Edge rows are engine-locked.** An Observation is an **edge row** when its subject's type is a bridge type and its Property key is one of that bridge type's edge keys in `subjectvocab`. Edge rows are only created by `CreateCitedBridge`. They can never be deleted by `DeleteObservation`. `UpdateObservation` may change **only** `value_subject_id`, and only to a subject on the same Source whose type is that edge's endpoint type. Every other write to an edge row fails with `observations.edge_locked`.
+7. **The disambiguation row (role / relationship_type) is required only by `CreateCitedBridge`.** After that it is an ordinary term Observation (editable, deletable).
+8. **Audit follows `docs/audit-revision-history.md` literally.** Creates record the complete initial row. Deletes record the complete prior row. Updates record changed fields only. Child value rows (`date_values`, `name_values`) and notes get their own `audit_changes` entries. No revision is ever recorded with zero changes.
+9. **Primary subject create is one transaction with its position.** `CreateSubject` takes an optional placement. The graph's create and the composer's "New person…" both use it. `SetSubjectPosition` remains for drags only.
+10. **Bridges are named by their computed sentence.** New bridges store `label = NULL`. The bridge Edit dialog edits description only and sends the bridge's **current stored label unchanged**, so no audit noise is produced.
+11. **The unsaved-work guard lives in `WorkspaceNavigation`** as a single optional leave guard (§S8-11.6). It covers `go(to:)`, `goBack()`, `goForward()`, and `go(toIndex:)`. It does not cover `fallbackToSectionRoot()`, `attachProject`, app quit, or window close.
+12. **No schema migration.** Every change here fits the existing tables.
+
+### S8-11.2 Protobuf and FFI contract (`api/proto/engine.proto`)
+
+Run `./scripts/generate-proto.sh` after editing and commit generated Go + Swift. Add each new method to `api/ffi/dispatch.go` as a single `case` calling `handlers.<Name>` (see [`add-ffi-handler`](../../../.cursor/skills/add-ffi-handler/SKILL.md)).
+
+**Method enum**
+
+| Change | Exact edit |
+| --- | --- |
+| Remove bundled update (commit 7, §S8-11.11) | Delete `METHOD_UPDATE_CITATION_WITH_OBSERVATIONS = 71;`. Add `reserved 71;` and `reserved "METHOD_UPDATE_CITATION_WITH_OBSERVATIONS";` next to the existing `reserved 27;` lines. Delete `UpdateCitationWithObservationsRequest` / `Response` messages, the handler, its test, the `dispatch.go` case, and the Swift store method. |
+| Add | `METHOD_UPDATE_CITATION = 75;` |
+| Add | `METHOD_UPDATE_OBSERVATION = 76;` |
+| Add | `METHOD_DELETE_OBSERVATION = 77;` |
+| Add | `METHOD_GET_SUBJECT_FIELDS_WORKSPACE = 78;` |
+
+**New messages**
+
+```proto
+message UpdateCitationRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string citation_id = 3;
+  string locator_json = 4;
+  string transcription = 5;
+  string description = 6;
+  bool transcription_uncertain = 7;
+  string transcription_note = 8;
+}
+message UpdateCitationResponse { Citation citation = 1; }
+
+message UpdateObservationRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  Observation observation = 3; // id required; citation_id ignored (read from the stored row)
+}
+message UpdateObservationResponse { Observation observation = 1; } // listed shape (property_key/label/value_type, date, name)
+
+message DeleteObservationRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string observation_id = 3;
+}
+message DeleteObservationResponse {}
+
+message GetSubjectFieldsWorkspaceRequest { string project_dir = 1; }
+message SubjectTypeFieldsGroup {
+  string subject_type_id = 1;
+  repeated SubjectTypeField fields = 2;          // same rows ListSubjectTypeFields returns
+  SubjectTypePresentation presentation = 3;      // same as GetSubjectTypePresentation; unset when subjectvocab.TypeByKey has none
+}
+message GetSubjectFieldsWorkspaceResponse {
+  repeated Property properties = 1;
+  repeated SubjectType types = 2;
+  repeated SubjectTypeFieldsGroup groups = 3;
+}
+
+message ConnectEdge {
+  string property_key = 1;        // e.g. "person", "event", "place", "related_to"
+  string endpoint_type_key = 2;   // subject type key the edge binds, e.g. "person"
+}
+```
+
+`SubjectTypeField`, `SubjectTypePresentation`, `Property`, and `SubjectType` are the existing messages. Reuse them; do not add parallel shapes.
+
+**Changed messages**
+
+| Message | Exact edit |
+| --- | --- |
+| `ConnectRule` | Add `repeated ConnectEdge edges = 7;`, ordered **A then B** (same order as `edge_property_keys`). Keep `edge_property_keys = 4` unchanged. |
+| `CreateSubjectRequest` | Add `bool has_placement = 7; int64 grid_x = 8; int64 grid_y = 9;`. |
+| `CreateSubjectResponse` | Unchanged (subject). Position is implied by the request. |
+| `CreateCitedBridgeRequest` | Add `string citation_id = 19;` (commit 5). Remove `label = 7`, `grid_x = 9`, `grid_y = 10`, and add `reserved 7, 9, 10; reserved "label", "grid_x", "grid_y";` (commit 7). |
+| `CreateCitedBridgeResponse` | Unchanged shape. `observations` must be the **listed** shape, so the client gets `property_key` and labels without another round trip. In the handler, after `connect.CreateCitedBridge` returns and inside the same `withProjectCatalog` closure, call `observations.ListByCitation(c, res.Citation.ID)`, keep only the rows whose ids are in `res.Observations`, and map them with `listedObservationProto`. |
+
+**Handlers** (`api/ffi/handlers/`)
+
+- `citations.go`: add `UpdateCitation` (commit 5). Delete `UpdateCitationWithObservations` (commit 7).
+- `observations.go`: add `UpdateObservation` and `DeleteObservation`. Collapse `observationToInput` and `observationDraftToInput` into one internal `valueInput(...)` helper that both call, so the value-field parsing exists once.
+- `subject_defs.go`: add `GetSubjectFieldsWorkspace` next to `ListSubjectTypeFields` / `GetSubjectTypePresentation`. `ListConnectRules` (same file) fills `edges`.
+- `subjects.go`: `CreateSubject` passes placement through.
+- `connect.go`: map `citation_id`; stop reading label / grid.
+
+**New error code** (`core/apperr/apperr.go`): `CodeObservationsEdgeLocked = "observations.edge_locked"`, `KindConflict`. Swift: `L10n.Errors` case + `error.observations.edge_locked` in `Localizable.xcstrings` ("This observation connects a bridge to its endpoints. Change the endpoint instead of editing or deleting it." — final copy on the board).
+
+### S8-11.3 Engine contract (Go, `core/database/…`)
+
+Follow [`add-catalog-query`](../../../.cursor/skills/add-catalog-query/SKILL.md) and [`use-catalog-session`](../../../.cursor/skills/use-catalog-session/SKILL.md). Every write below is one SQLite transaction that includes its `audit.Record`.
+
+**`audit`**
+
+- `audit.Record` returns `ErrInvalid` when `len(rev.Changes) == 0`. In commit 1, run `rg -n "audit\.Record\(" core --glob '!*_test.go'` (25 call sites today) and make each one skip `Record` when it has no changes. `subjects.Update` already does; `citations.UpdateWithObservations` does not (fix it too; it lives until commit 7).
+- Add `audit.FullRow(fields map[string]any) map[string]FieldDiff` (old = nil, new = value) and `audit.DeletedRow(fields map[string]any) map[string]FieldDiff` (old = value, new = nil). These helpers keep every key present, with JSON `null` for unset columns. Use them for every create and delete in this PR.
+
+**`subjectvocab`**
+
+- Add `type ConnectEdge struct { PropertyKey, EndpointTypeKey string }` and `Edges []ConnectEdge` on `ConnectRule`, filled from the seed matrix, ordered A then B, written here as *property key* binds *endpoint type*. Participation: `person` binds `person`, then `event` binds `event`. Relationship: `person` binds `person`, then `related_to` binds `person`. Location: `event` binds `event`, then `place` binds `place`. Check these against `seedConnect`'s `EdgePropertyKeys` order and keep that order.
+- Add `func EdgeEndpoint(bridgeTypeKey, propertyKey string) (endpointTypeKey string, ok bool)`. It returns ok for any non-refused rule whose `BridgeTypeKey` matches.
+- `observations` will import `subjectvocab`. If that creates an import cycle, move `ConnectEdge` / `EdgeEndpoint` into a new leaf package `core/database/connectedges` that both import, and note it here.
+
+**`subjects`**
+
+- `InsertTx(tx, in CreateInput) (Subject, audit.Change, error)` no longer records a revision and no longer takes `userID`. Its change uses `audit.FullRow` with `id, ref, source_id, subject_type_id, label, description`.
+- `Create(c, userID, in CreateInput, placement *Placement) (Subject, error)`, where `type Placement struct{ GridX, GridY int64 }`. In one tx it calls `InsertTx`, then `subjectpositions.SetTx` when `placement != nil`, then records `create_subject` with the one change. Positions stay unaudited (layout).
+- Add `GetTx(tx, id)` (exported) for `connect`.
+- Use `errors.Is(err, sql.ErrNoRows)` throughout (it already does).
+
+**`subjectpositions`**
+
+- Fix the `SetTx` doc comment (it mentions a `skipExistsCheck` parameter that does not exist).
+- Add `GetTx(tx, subjectID) (Position, error)` for the midpoint.
+
+**`citations`**
+
+- Extract `normalizeCreateInput(in *CreateInput) error` (trim + `len(ArtifactID)==16` + `locator.Validate`). `CreateWithObservations` and `InsertWithObservationsTx` both call it once. Delete the duplicated trimming.
+- `InsertWithObservationsTx(tx, in, obs []observations.Input, opts observations.InsertOptions) (CreateResult, []audit.Change, error)` no longer records. Its changes are: the citation `FullRow` (`id, ref, artifact_id, locator_json, transcription, description, transcription_uncertain, transcription_note`), one `citation_note` `FullRow` per note (`id, citation_id, body`), then the observation changes from `observations.InsertManyTx`.
+- `CreateWithObservations(c, userID, in, obs)` records `create_citation_with_observations` with those changes. It passes `InsertOptions{AllowEdgeRows: false}`.
+- **New** `Update(c, userID, citationID []byte, in ReadingInput) (Citation, error)`, where `ReadingInput` = `LocatorJSON, Transcription, Description, TranscriptionUncertain, TranscriptionNote`. It trims, validates the locator, loads the previous row in the tx, updates only the reading columns, and records `update_citation` with changed fields only. With zero changes it commits nothing and returns the stored row. It never touches `citation_notes` or observations.
+- Delete `UpdateWithObservations` in commit 7 (§S8-11.11).
+- Ref-mint retry loop: when an insert error is **not** a unique conflict, return `mapConstraint(err)` (constraint violation → `ErrInvalid`, anything else → the raw error). Today it always returns `ErrInvalid`, which hides real database errors. Same fix in `observations.insertOne`.
+- Use `errors.Is(err, sql.ErrNoRows)` everywhere in the package.
+
+**`observations`**
+
+- In commit 7 (§S8-11.11), delete `ApplyForCitationTx`, delete `listRowsByCitationTx` if it has no other caller, and delete `DeleteByCitationTx` if `rg DeleteByCitationTx` finds no caller outside tests.
+- `type InsertOptions struct { AllowEdgeRows bool }`. `insertOne` looks up the subject's type key and the Property key. When `subjectvocab.EdgeEndpoint(typeKey, propKey)` is ok and `!opts.AllowEdgeRows`, it returns `ErrEdgeLocked`.
+- `insertOne` returns `[]audit.Change`: the observation `FullRow` (`id, ref, citation_id, subject_id, property_id, polarity, value_text, value_integer, value_date_id, value_name_id, value_subject_id, value_term_id`), then a `date_value` `FullRow` when it inserted a date, a `name_value` `FullRow` when it inserted a name, and one `observation_note` `FullRow` per note.
+- `AddToCitation` passes `AllowEdgeRows: false`.
+- Replace `resolveValue`'s 7-value return with `type resolvedValue struct { Text string; Integer *int64; DateID, NameID, SubjectID, TermID []byte; DateChange, NameChange *audit.Change }`. It returns `(resolvedValue, error)`. When it calls `datevalues.UpdateTx` / `namevalues.UpdateTx`, it first loads the prior value row and sets `DateChange` / `NameChange` to an update change with changed fields only (nil when nothing changed). When it inserts, it sets a create change.
+- **New** `Update(c, userID []byte, in Input) (Listed, error)`. `in.ID` is required. In one tx:
+  1. Load the stored row by id (`sqlGetRow`, new). Missing → `ErrInvalid`.
+  2. Classify edge-ness from the **stored** subject + Property (decision 6). If it is an edge row: when `SubjectID`, `PropertyID`, or `Polarity` differ from stored → `ErrEdgeLocked`. Otherwise validate the new `ValueSubjectID`: the subject exists, `source_id` equals the bridge subject's `source_id`, and its type key equals `EdgeEndpoint(...)`. Failure → `ErrInvalid`.
+  3. Run the existing `updateOne` logic (binding check, `resolveValue`, notes when `in.Notes != nil`, release date / name values).
+  4. Changes: the `observationUpdateChange` diff (if any), plus `DateChange` / `NameChange` (if any), plus a `date_value` / `name_value` `DeletedRow` for any value row that `releaseDateValue` / `releaseNameValue` deleted (they must now return the deleted row's fields), plus note changes.
+  5. Zero changes → commit without a revision. Otherwise record `update_observation`.
+  6. Return the listed shape (re-read with `sqlListSelect … WHERE o.id = ?` in the tx).
+- **New** `Delete(c, userID, id []byte) error`. In one tx: load the stored row. Missing → `ErrInvalid`. Edge row → `ErrEdgeLocked`. Load its notes. Delete notes (one `observation_note` `DeletedRow` each), delete the row (observation `DeletedRow` with every column), release its date / name value rows (a `DeletedRow` for each one actually deleted). Record `delete_observation`. **Never** delete the Citation, even if it becomes empty.
+
+**`connect`**
+
+- `CreateInput`: remove `Label`, `GridX`, `GridY`. Add `CitationID []byte` (nil = new Citation).
+- **All reads happen inside the transaction** (`subjects.GetTx`, `subjecttypes` / `properties` Tx variants — add `GetByIDTx` / `LookupTx` where missing, each the existing query on `*sql.Tx`).
+- Replace `sameSource` with `bytes.Equal`.
+- Validation, in this order (any failure → `ErrInvalid` unless noted):
+  1. From and To exist, are different subjects, and both have `source_id == in.SourceID`.
+  2. `rule := subjectvocab.Connect(fromType, toType)`. Refused → `ErrRefused`. `in.BridgeTypeKey` non-empty and different from `rule.BridgeTypeKey` → `ErrInvalid`.
+  3. **Bind endpoints to edges.** `rule.Edges` is `[A, B]`. When `A.EndpointTypeKey != B.EndpointTypeKey`, bind each edge to whichever of From / To has that type. When they are equal (person–person relationship), bind A → From and B → To.
+  4. **Inputs must be exactly** one row per edge plus, when `rule.Disambiguation` is not `""` / `"none"`, exactly one row whose Property key is `rule.Disambiguation`. Anything else is invalid: extra rows, missing rows, duplicate keys, or a non-empty `SubjectID` on any row.
+  5. Each edge row: `ValueSubjectID` equals its bound endpoint's id, and polarity is positive (or empty).
+  6. Disambiguation row: `ValueTermID` set (term-on-property is checked later by `resolveValue`).
+  7. When `CitationID` is set: the Citation exists, its Artifact's `source_id == in.SourceID`, and every reading field in `in.Citation` is zero-valued (`ArtifactID` empty, `LocatorJSON`, `Transcription`, `Description`, `TranscriptionNote` empty, `TranscriptionUncertain` false, `Notes` empty). When it is not set, `in.Citation` goes through `normalizeCreateInput`.
+  8. Both endpoints have positions (`subjectpositions.GetTx`). A missing position is invalid, because the UI always places subjects.
+- **Midpoint:** `gridX = floorDiv(fromX + toX + 1, 2)`, `gridY = floorDiv(fromY + toY + 1, 2)`, where `floorDiv` rounds toward −∞. This equals today's client `GraphCanvasGridMapping` midpoint for any integers, including negatives. Add a table test with negative and odd sums.
+- Writes: `subjects.InsertTx` (label empty → NULL), `subjectpositions.SetTx`, then either `citations.InsertWithObservationsTx(..., InsertOptions{AllowEdgeRows: true})` (new Citation) or `observations.InsertManyTx(tx, citationID, obs, InsertOptions{AllowEdgeRows: true})` (attach). Set each row's `SubjectID` to the bridge id before inserting.
+- Record **one** revision `create_cited_bridge` containing: the subject change, the citation (+ notes) changes when new, and every observation / value change.
+
+**`GetSubjectFieldsWorkspace`** (handler-level composition, no new package): `properties.List`, the same subject-type list `ListSubjectTypes` returns, `subjectvocab.ListBindings(c, typeID)` per type, and `subjectvocab.TypeByKey(type.Key)` for the presentation, all inside **one** `withProjectCatalog` call. A type with no registry entry leaves `presentation` unset. Any other error fails the RPC. The client's `try?` goes away.
+
+**Go idioms in touched files:** `errors.Is` for `sql.ErrNoRows`; no function returns more than three values; no duplicated trim / validate blocks; `bytes.Equal` for id comparison.
+
+### S8-11.4 Swift Platform (`macos/App/Platform/`)
+
+- `GenealogyStore` protocol:
+  - **Remove** `updateCitationWithObservations`.
+  - **Add** `updateCitation(projectDir:userID:citationID:locatorJSON:transcription:description:transcriptionUncertain:transcriptionNote:) -> CatalogCitation`.
+  - **Add** `updateObservation(projectDir:userID:observation: CatalogObservation) -> CatalogObservation`.
+  - **Add** `deleteObservation(projectDir:userID:observationID:)`.
+  - **Add** `getSubjectFieldsWorkspace(projectDir:) -> SubjectFieldsSnapshot`.
+  - **Change** `createSubject(...)` to add `placement: CatalogGridCell?` (new `struct CatalogGridCell: Sendable, Equatable { var gridX: Int64; var gridY: Int64 }`).
+  - **Change** `createCitedBridge(...)`: remove `label`, `gridX`, `gridY`; add `citationID: String?`. Return `(CatalogSubject, CatalogCitation, [CatalogObservation])` with listed observations.
+- `CatalogConnectRule`: add `var edges: [CatalogConnectEdge]` (`propertyKey`, `endpointTypeKey`). Update `productMatrix` to match the Go seed exactly. Keep the comment that the table mirrors Go.
+- `GoStore`: map every change. `FakeStore`: implement the same semantics as Go, because model tests rely on it:
+  - edge rows refuse delete and non-retarget updates with the `observations.edge_locked` error
+  - `createCitedBridge` computes the same midpoint, binds endpoints the same way, and supports `citationID`
+  - `createSubject` stores the placement
+  - `updateCitation` changes reading fields only
+- New `Platform/InterpretationValueKinds.swift`: `enum ObservationPolarity: String { case positive, negative }` and `enum PropertyValueType: String { case text, integer, date, name, subject, term }`. `Features/CitationComposer/` and `Features/EvidenceGraph/` must not contain the bare literals `"positive"`, `"negative"`, `"text"`, `"integer"`, `"date"`, `"name"`, `"subject"`, or `"term"` as value-type or polarity comparisons. Wire structs keep `String` fields; compare with `.rawValue`.
+- `CatalogQueryRegistry.load(.subjectFieldsWorkspace)` calls `getSubjectFieldsWorkspace` once (no per-type loop, no `try?`).
+
+### S8-11.5 Session cache (`Features/Workspace/Session/WorkspaceSession.swift`)
+
+Add a per-key **generation** so a stale load can never overwrite newer data or clear a newer load's in-flight marker.
+
+- `private var generations: [CatalogQueryKey: Int] = [:]`. Change `inFlight` to `[CatalogQueryKey: (generation: Int, task: Task<Void, Never>)]`.
+- `ensureQuery` bumps the generation when it starts a load and captures it. In the task, after `await loader()`: if `generations[key] != captured`, return **without** touching the handle or `inFlight`. Otherwise apply the result, and clear `inFlight[key]` only if its stored generation equals `captured`.
+- `invalidate(_:)` bumps the generation (then cancels and clears as today).
+- `setQueryValue(_:value:)` bumps the generation and cancels / clears any in-flight load for that key, so an optimistic patch (graph drag) cannot be overwritten by an older load.
+- `readyValue` loops on `inFlight[key]?.task` as today. With the guard it can only wait on the newest load.
+
+### S8-11.6 Navigation leave guard (`Features/Workspace/WorkspaceNavigation.swift`)
+
+Follow [`add-workspace-location`](../../../.cursor/skills/add-workspace-location/SKILL.md).
+
+```swift
+enum PendingNavigation: Equatable {
+    case location(WorkspaceLocation)
+    case back
+    case forward
+    case index(Int)
+}
+
+@MainActor
+protocol WorkspaceLeaveGuard: AnyObject {
+    /// Return true to hold this navigation. The guard must later call
+    /// `resumeHeldNavigation()` or `cancelHeldNavigation()`.
+    func shouldHoldNavigation(_ pending: PendingNavigation) -> Bool
+}
+```
+
+- `@ObservationIgnored weak var leaveGuard: (any WorkspaceLeaveGuard)?` (views never observe it) and `private(set) var heldNavigation: PendingNavigation?`.
+- `go(to:)`: when `location == currentLocation`, proceed without asking (coalesce). Otherwise ask the guard. Held → store `heldNavigation` and return.
+- `goBack()`, `goForward()`, `go(toIndex:)`: ask the guard the same way when a move is possible.
+- `resumeHeldNavigation()`: take `heldNavigation`, clear it, and perform it **without** asking the guard again. `cancelHeldNavigation()` clears it.
+- `fallbackToSectionRoot()` and `attachProject(...)` never ask the guard.
+- `CitationComposerView` sets `navigation.leaveGuard = model` in `.onAppear` and clears it in `.onDisappear` only when `navigation.leaveGuard === model`.
+- The composer model conforms. It holds when there is unsaved document work **or** a touched pending connection (definitions in S8-D8 §2.3), and sets `pendingLeave` (an `Identifiable` item carrying the counts) that drives the `.pvConfirm(item:)`. **Discard changes** → `navigation.resumeHeldNavigation()`. **Keep editing** → `navigation.cancelHeldNavigation()`.
+
+### S8-11.7 Composer (`Features/CitationComposer/`)
+
+**Split `CitationComposerModel` (1,700 lines) into these files.** Each type is `@MainActor @Observable final class` unless marked struct. Keep every file under ~500 lines.
+
+| File | Owns |
+| --- | --- |
+| `CitationComposerModel.swift` | Coordinator: `entry`, `phase`, `prepare()`, Artifact / Citation identity, the menus' enabled state, `WorkspaceLeaveGuard` conformance, `pendingLeave`, the new-subject dialog, and composing the three child models. No row or reading logic. |
+| `CitationReadingDraft.swift` | Reading fields (`locator`, `transcription`, `transcriptionUncertain`, `transcriptionNote`, `description`), their saved baseline, `isDirty`, `saveReading()`. |
+| `CitationObservationRows.swift` | `[ObservationRow]`, per-row state + baseline + error, and `commit(rowID:)`, `revert(rowID:)`, `requestDelete(rowID:)`, `confirmDelete()`, add-draft, and the inline edit mutators. |
+| `CitationPendingConnection.swift` | Pending connection: endpoints A/B (id + type key), term, `isTouched`, `canSave`, `save()`, `discard()`. |
+| `CitationComposerVocabulary.swift` (struct) | Built from (fields snapshot, graph snapshot, connect rules, cached terms): `propertiesByID`, `propertiesByTypeID`, `graphSubjects` (bridges labelled with `EvidenceBridgeEdgeSummary.sentence(for:)`), `termsByPropertyID`, `edgeEndpoint(for:)`, `propertyOptions(forSubjectID:)`, `subjectOptions(forEndpointType:)`. The coordinator rebuilds it only when an input changes (store it; do not recompute in computed properties per render). |
+
+**`ObservationRow`** replaces `isConnectFixed` with `var kind: Kind` (`.ordinary`, `.endpoint(endpointTypeKey: String)`). It gains:
+- `var state: RowState` (`.draft`, `.saved`, `.edited`, `.saving`, `.error(String)`)
+- `var baseline: RowValues?` (nil for drafts). `RowValues` is the value-bearing subset: subject, property, polarity, value fields, date draft, name draft.
+
+State is derived on every edit: a draft stays `.draft`; a saved row whose values differ from `baseline` becomes `.edited`; if equal, `.saved`.
+
+**Commands** (each one sets the row to `.saving` first and ignores re-entry while saving):
+
+| Command | Condition | Store call | On success | On failure |
+| --- | --- | --- | --- | --- |
+| Row Save | Citation is New | `createCitationWithObservations(reading draft, [row draft])` | Set `citationID`; reading baseline = current reading; row `.saved` with `persistedID` + baseline; `session.apply(.savedCitation(sourceId:))`; reload listed citations for the Artifact | Row `.error(message)`; nothing else changes |
+| Row Save | Citation saved, row draft | `addObservationsToCitation(citationID, [row draft])` | Row `.saved` with `persistedID`; `session.apply(.savedCitation)` | Row `.error` |
+| Row Save | Citation saved, row edited | `updateObservation(row as CatalogObservation)` | Row `.saved`, baseline = values; `session.apply(.savedCitation)` | Row `.error` (edge-locked message for edge rows) |
+| Row Revert | draft | — | Remove the row | — |
+| Row Revert | edited / error | — | Restore baseline → `.saved` | — |
+| Delete… | saved / edited, `.ordinary` | `.pvConfirm(item:)` then `deleteObservation(persistedID)` | Remove row; `session.apply(.savedCitation)`; Citation stays even if empty | Row `.error`; row stays |
+| Save reading | Citation is New | `createCitationWithObservations(reading, [])` | Set `citationID`; reading baseline; `session.apply(.savedCitation)`; reload listed citations | Reading error under the reading fields |
+| Save reading | Citation saved | `updateCitation(...)` | Reading baseline = current; `session.apply(.savedCitation)` | Reading error |
+| Save connection | any | `createCitedBridge(citationID: current citationID or nil, reading fields only when nil, observations: [edge A, edge B, term])` | When the Citation was New: set `citationID` + reading baseline. Append the returned three observations as `.saved` rows (edges `.endpoint`). Clear the pending connection. `session.apply(.savedCitation)` (also invalidates the graph). | Error on the pending connection group |
+| New person / event / place | row subject picker | `createSubject(type, label, description, placement: rightOfGraph)` | `session.apply(.mutatedSourceGraph)`; set the row's subject | Error in the dialog; dialog stays open |
+
+**Placement for composer-created subjects** (`rightOfGraph`): take every placed primary and bridge in the current graph snapshot. `gridX = max(gridX) + 3`, `gridY = min(gridY)`. With none placed, use `(2, 2)`.
+
+**Behaviour rules:**
+- Changing a row's subject to one whose type does not allow the row's Property: clear Property and value in the **current** values only, keep `baseline`, and show the Property field error. **Save** is disabled until valid. The `buildObservationUpdates` "skip empty property" path is gone, because there is no bundle any more.
+- The name / date dialog's confirm writes into the row's current values only (row becomes `.edited` / stays `.draft`). The row's Save commits.
+- Artifact and Citation `PVSelect`s are disabled while there is unsaved document work (hint per S8-D8). Delete `ArtifactAbandon`, `pendingArtifactAbandon`, and the abandon confirm.
+- Identity switches (`selectCitation`, `selectArtifact`) run through one stored `identityTask: Task<Void, Never>?`. Starting a new switch cancels the previous one. After every `await` inside a switch, check `Task.isCancelled` and return without applying.
+- Switching Citation or Artifact **keeps** the pending connection (endpoints + term) and does not reset it.
+- Footer: **Done** only (goes through `navigation.go(to: graphLocation())`, so the guard applies) plus the unsaved summary. Remove the footer Save, the post-save `session.noticeToast` from the composer, and `didSubmit` / `submitAttempted` / `formError` (errors are per row / per reading / per connection now).
+- Remove `applyEntryOverlay`'s Connect branch and `entryConnectPrefill`. The pending connection model is created once from the entry and lives until saved or discarded.
+- `CitationComposerEntry.connect` drops `termID`, `gridX`, `gridY`. Update `identityKey`.
+- Delete `CitationComposerModel.endpointTypeKey(forEdgePropertyKey:)`, `edgePropertyKeys(typeKey:rules:)` duplication, and `bridgeSentence(...)`. Use `CatalogConnectRule.edges` and `EvidenceBridgeEdgeSummary`.
+- The wrong error message for a row with no subject (`dialogPropertyRequired`) becomes a dedicated subject-required row error.
+
+### S8-11.8 Evidence graph (`Features/EvidenceGraph/`) and location
+
+- **Remove** the disambiguation sheet:
+  - delete `EvidenceConnectDisambiguationForm.swift` and its Xcode target entry
+  - delete `PendingDisambiguation` and every `disambiguation*` member, `confirmDisambiguation`, `cancelDisambiguation`, `selectDisambiguationTerm`, `isDisambiguating`, `canConfirmDisambiguation`, and `midpointCell`
+  - delete the sheet presentation in `EvidenceGraphView` and the L10n keys used only by it
+- `completeConnectPair`: a valid pair sets `pendingComposerHandoff` directly. The unreachable `do/catch` goes away with the term loading.
+- `WorkspaceLocation`: remove `connectDisambiguationTermId`, `connectGridX`, `connectGridY` (properties, `CodingKeys`, init params, decoder, `==`). Persisted history JSON that still has those keys must decode (Swift ignores unknown keys). Add a test that decodes a legacy JSON string with all three keys.
+- `connectComposerLocation`: build the title from `EvidenceBridgeEdgeSummary.sentence(kind:…, term: nil)`, using endpoint labels bound via `CatalogConnectRule.edges` (not the hard-coded `switch kind` on person / event / place).
+- `SourceGraphSnapshot.build` takes `rules: [CatalogConnectRule]`. `citedEndpoints` reads A / B property keys from the matching rule's `edges` instead of hard-coded keys. Update every caller (graph model, composer vocabulary, tests).
+- `confirmPrimaryCreate`: one `store.createSubject(..., placement: CatalogGridCell(gridX: pendingGridX, gridY: pendingGridY))`. Remove the follow-up `setSubjectPosition`.
+- Bridge **Edit** dialog: Description only. `confirmEdit` for a bridge sends the bridge's **stored** `subject.label` unchanged, plus the new description.
+- Primary create / edit dialog: add the working-label caption (S8-D8 CS-14).
+- `prepare()`: remove `_ = fields` / `_ = sources`. `EvidenceGraphView.task` stops warming query keys itself (the model's `prepare()` already does). Move `refreshSourceChrome` into the model as computed `sourceTitle` / `sourceRef` from the `sourcesList` handle, and delete the view's duplicated key properties.
+- **Drag persistence:** add `private var positionGeneration: [String: Int]` and `private var confirmedPositions: [String: CatalogGridCell]` (seeded from the snapshot on first touch). Each `commitDrag` / `moveSubject` bumps the subject's generation. On success, set `confirmedPositions`. On failure, revert to `confirmedPositions[subjectID]` **only if** the generation still matches, then toast.
+
+### S8-11.9 Docs to update in the same PR
+
+- `docs/audit-revision-history.md`: add a short "Interpretation action types" list (`create_subject`, `update_subject`, `delete_subject`, `create_citation_with_observations`, `update_citation`, `add_observations`, `update_observation`, `delete_observation`, `create_cited_bridge`) and note that `name_value` changes carry `parts` as one JSON array field.
+- `docs/macos-client-patterns.md`: one paragraph on the leave guard and the row-commit pattern.
+- `.cursor/skills/add-workspace-location/SKILL.md`: mention `WorkspaceLeaveGuard` for places with unsaved work.
+- `completed.md`: S8-11 entry. This file: tick S8-11.
+- S8-D6 brief: already notes that single Observation delete is S8-11's. S8-09 reuses `observations.Delete`.
+
+### S8-11.10 Required tests
+
+Go (`CGO_ENABLED=1 go test -tags fts5 ./api/... ./core/...`):
+
+| Package | Test |
+| --- | --- |
+| `audit` | `Record` with zero changes → `ErrInvalid`. `FullRow` / `DeletedRow` keep null keys. |
+| `citations` | Create audit has all eight citation fields (nulls included) + note rows + full observation rows. `Update` changes only reading fields, records changed fields only, records nothing on a no-op, never touches notes. A non-unique insert error is not turned into `ErrInvalid`. |
+| `observations` | `Update`: date edit in place records a `date_value` update change; name edit records a `name_value` change; no-op → no revision; released date recorded as a `date_value` delete. `Delete`: records every column + notes + released values; Citation still exists afterwards (including when it was the last row). Edge rows: delete → `edge_locked`; property / subject / polarity change → `edge_locked`; retarget to same-type same-Source subject → ok; wrong type → `invalid`; other Source → `invalid`. `AddToCitation` with an edge Property on a bridge subject → `edge_locked`. |
+| `connect` | Endpoint mismatch → invalid. From/To in either order bind by type. Person–person binds A→From, B→To. Extra row / missing term / non-empty SubjectID → invalid. Attach to an existing Citation: no new `citations` row; one revision; wrong-Source Citation → invalid; non-empty reading with `citation_id` → invalid. Midpoint table incl. negative + odd sums. Exactly one `create_cited_bridge` revision containing subject + citation + observation changes. A failing insert rolls back (no subject row). |
+| `subjects` | `Create` with placement writes subject + position in one tx and one revision. Without placement, no position row. |
+| `subjectvocab` | `EdgeEndpoint` for every bridge type; `ListConnectRules` edges in A, B order. |
+| `api/ffi/handlers` | `runRPC` tables for `UpdateCitation`, `UpdateObservation`, `DeleteObservation`, `GetSubjectFieldsWorkspace`, changed `CreateSubject` / `CreateCitedBridge` / `ListConnectRules`. `observations.edge_locked` surfaces as that code. |
+| `api/ffi` (`dispatch_test.go`) | Method 71 → the unknown-method error (router-only test, per `add-ffi-handler`). |
+
+Swift (`xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS'`, Swift Testing per [`add-swift-test`](../../../.cursor/skills/add-swift-test/SKILL.md)):
+
+| Suite | Test |
+| --- | --- |
+| `WorkspaceSessionTests` | A slow older load finishing after a newer one does not overwrite the value or clear the newer `inFlight`. `setQueryValue` during an in-flight load wins. `readyValue` waits for the newest load. |
+| `WorkspaceNavigationTests` | Guard holds `go(to:)` / back / forward / index. Resume performs the held move once. Cancel drops it. Same-location `go(to:)` does not ask. `fallbackToSectionRoot` does not ask. Weak guard released → navigation proceeds. |
+| `CitationComposerModelTests` (rewrite) | First row Save on New creates the Citation with the reading and one Observation. Second row Save calls add, not create. Edited row Save calls update only. Revert draft removes it; revert edited restores it. Delete asks, then calls delete; Citation stays. Incompatible subject change never calls delete, and Save is disabled. Save reading on New → empty Citation; on saved → `updateCitation` only (no row writes). Menus disabled with unsaved document work; enabled with only a pending connection. Leave guard holds for dirty reading / edited row / touched connection; does not hold for an untouched connection or empty drafts. Pending connection on New and on an existing Citation (passes `citationID`, no reading). Switching Citation keeps the pending connection. Endpoint retarget offers only same-type subjects and calls update. Edge row has no delete. New person creates with `rightOfGraph` placement and fills the row. Two quick Citation switches apply only the last. |
+| `EvidenceGraphModelTests` | A valid Connect pair hands off immediately (no disambiguation state); the location has no term / grid keys. Primary create calls `createSubject(placement:)` once and never `setSubjectPosition`. Drag failure after a newer drag does not revert the newer move. Bridge edit sends the stored label unchanged. |
+| `WorkspaceLocation` / `SourceGraphSnapshotTests` | Legacy JSON with `connectDisambiguationTermId` / `connectGridX` / `connectGridY` decodes. Endpoints come from `rule.edges`. |
+
+Also run `python3 scripts/check-localizable-xcstrings.py` and discard accidental catalog churn.
+
+### S8-11.11 Commit order
+
+Land as these commits, in order. Each commit builds, and its tests pass, before the next starts.
+
+1. **Audit helpers + zero-change guard.** `audit.FullRow` / `DeletedRow`; `Record` rejects empty; fix every call site. Tests.
+2. **Engine: full-state audit on existing creates.** `subjects.InsertTx` / `citations.InsertWithObservationsTx` / `observations.insertOne` return changes; callers record; `normalizeCreateInput`; ref-retry error mapping; `resolvedValue` struct. Tests.
+3. **Engine: edge classification + observation Update / Delete.** `subjectvocab` edges + `EdgeEndpoint`; `InsertOptions`; `observations.Update` / `Delete`; `citations.Update`. **Do not delete** `ApplyForCitationTx` / `UpdateWithObservations` yet (the app still calls them); make them record full-state changes via the new helpers so they stay correct until commit 7. Tests.
+4. **Engine: Connect hardening.** Tx-only reads, endpoint binding, exact-inputs rule, attach, midpoint, single revision; `subjects.Create` placement. The `CreateCitedBridge` and `CreateSubject` handlers are updated to the new Go signatures in this commit: they stop passing `label` / `grid_x` / `grid_y` (those proto fields still exist and are now ignored), and pass `nil` placement / `nil` citation id. Tests.
+5. **Proto + FFI (additive).** Add methods 75–78, `ConnectEdge` / `edges`, `CreateSubjectRequest` placement, and `CreateCitedBridgeRequest.citation_id` (field 19). Handlers + `dispatch.go` + `runRPC` tests. Regenerate. The Swift protocol / `GoStore` / `FakeStore` gain the new methods. `createSubject` gains `placement:` and `createCitedBridge` gains `citationID:`; update their one call site each to pass `nil`. **Nothing is removed from the proto in this commit.**
+6. **Session generation guard + navigation leave guard.** §S8-11.5, §S8-11.6. Tests.
+7. **Composer rewrite + removal of the bundled path.** §S8-11.7 in full. In the same commit, delete everything the old footer Save used:
+   - `METHOD_UPDATE_CITATION_WITH_OBSERVATIONS` (reserve 71 + name) and its messages
+   - its handler, handler test, and `dispatch.go` case
+   - `citations.UpdateWithObservations` and `observations.ApplyForCitationTx`
+   - the Swift `updateCitationWithObservations` in protocol / `GoStore` / `FakeStore`
+   - `CreateCitedBridgeRequest` fields 7 / 9 / 10 (reserve numbers + names) and the matching Swift parameters
+   
+   Regenerate. Tests.
+
+   Between commits 7 and 8 the graph's disambiguation sheet still exists, and `WorkspaceLocation` still carries `connectDisambiguationTermId` / grid keys. The rewritten composer **ignores** them: `CitationComposerEntry(location:)` stops reading them in this commit, and the pending connection starts with an empty term. This is expected. Do not add a bridge to carry the old term through.
+8. **Graph + location.** §S8-11.8. Tests.
+9. **Docs + L10n cleanup.** §S8-11.9; prune dead L10n keys; xcstrings check.
+
+### S8-11.12 Do not
+
+- Do not keep any code path that deletes an Observation because it was missing from a payload.
+- Do not add autosave, save-on-blur, or ⌘Z.
+- Do not let `DeleteObservation` delete a Citation.
+- Do not trust the client for bridge labels, bridge positions, or endpoint binding.
+- Do not record audit revisions outside the write's transaction, or with zero changes.
+- Do not add a DesignSystem component. S8-D8's inventory is binding.
+- Do not add a catalog migration.
+- Do not bump `VERSION` unless this PR is cut as a release.
+
+---
+
 ## S8-D1 — Design: Auto Transcribe in the citation composer
 
 Claude Design board for the **transcription** field: Auto Transcribe control, in-progress state, replace confirm, large-page / slow-job warning that can still proceed, and failure/empty states. Brief: [`design/S8-D1-auto-transcribe.md`](design/S8-D1-auto-transcribe.md). Gates **S8-01**.
@@ -166,7 +566,7 @@ On-device Vision (`VNRecognizeTextRequest`) fills the composer **transcription**
 | **In** | Protocol-shaped OCR seam (tests do not call Vision); `CGImage` from the already-loaded **image**; bounding-box crop (optional mask later); Auto Transcribe control per **S8-D1**; replace confirm if transcription is non-empty; preflight warn on artifact-only / huge bitmap / dense-image heuristics, with proceed; L10n; skip PDF / audio / video / no image. |
 | **Out** | PDF OCR; PDF page raster → Vision; PDF Find / select / paste (**S8-03…S8-05**); Foundation Models; writing Observations; persisted crop objects; `RecognizeDocumentsRequest` (macOS 26); raising the deployment target. |
 | **Testable** | Fake recognizer fills / fails / empty; crop uses region vs full page; preflight flags large page; replace does not overwrite without confirm; button disabled while running. |
-| **Depends on** | **S8-D1**, **S8-10**. Locators (S7-06 / S7-07). Do not land on the pre-rethink form. |
+| **Depends on** | **S8-D1**, **S8-10**, **S8-11**. Locators (S7-06 / S7-07). Do not land on the pre-rethink form or the S8-10 footer-Save form; the control sits on the S8-11 reading section. |
 
 ---
 
@@ -202,7 +602,7 @@ Replace the composer PDF **raster** (`displayImage` / `ArtifactMediaViewport`) w
 | **In** | Live `PDFDocument` / `PDFView` (or equivalent) for PDF Artifacts; I-beam default; pan mode; cursors; region tools exclusive with select; zoom/page chrome still work; no-text-layer is paintable (select does nothing useful). |
 | **Out** | Find UI (**S8-04**); paste button (**S8-05**); Vision; changing image pan; Source-page viewer. |
 | **Testable** | PDF path no longer depends on `displayImage` for hit-testing text; image path unchanged; region draft still normalizes; pan mode still moves the page; selecting text does not pan. |
-| **Depends on** | **S8-D2**, **S8-10**. Locators S7-07. **Not** S8-01 / S8-02. Do not remount the pre-rethink viewer slot. |
+| **Depends on** | **S8-D2**, **S8-10**, **S8-11**. Locators S7-07. **Not** S8-01 / S8-02. Do not remount the pre-rethink viewer slot. |
 
 This is the load-bearing remount. Do not start S8-04 / S8-05 until it lands.
 
@@ -328,7 +728,8 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 
 | In | Out |
 | --- | --- |
-| **Composer rethink** (Citation document; multi-subject rows; reuse; empty Save) | Four-list file browser; minting Subjects from the composer; Option A overlay |
+| **Composer rethink** (Citation document; multi-subject rows; reuse; empty Save) | Four-list file browser; Option A overlay |
+| **Composer + Connect simplification** (row-level Observation commits; Save reading; unsaved-work guard; pending connection in the composer; endpoint retarget; computed bridge names; **New person / event / place from a row**; full-state audit; engine-enforced Connect edges) | Autosave; ⌘Z; app-quit / window-close guards; creating bridges or `source` subjects from the composer; subject / bridge / Citation delete cascades (**S8-09**) |
 | Composer transcription assist (after **S8-10**) | Auto Observations / subjects / connect |
 | Vision on **image** Artifacts | PDF OCR; audio / video OCR |
 | In-memory crop from locator | Object-store crop files |
@@ -352,7 +753,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 5. **No file middleman** — `ProjectFiles.objectURL` → image `NSImage` → `CGImage` → crop → `VNImageRequestHandler`.
 6. **PDF is not an OCR input** — S8-01 disables Auto Transcribe. S8-05 pastes a PDFKit selection. Image-only PDFs get neither Vision nor fake text.
 7. **Hide Vision behind a protocol** — `FakeStore` / unit tests inject a recognizer.
-8. **S8-10 before any other composer chrome** — Auto Transcribe and PDF Find/paste must not land on the subject-locked form. Graph / Source-page / list / delete / PDF thumbs do not wait on S8-10.
+8. **S8-10, then S8-11, before any other composer chrome** — Auto Transcribe and PDF Find/paste must not land on the subject-locked form or on the S8-10 footer-Save form. Graph / Source-page / list / delete / PDF thumbs do not wait on S8-10 or S8-11. Graph PRs that touch Connect (**S8-06**) must rebase onto S8-11 if it has landed, because S8-11 removes the disambiguation sheet.
 8b. **More stories do not wait on S8-01** unless they share the composer transcription chrome.
 9. **S8-02 is macOS PDFKit → catalog derivative**, not `core/derivatives` learning to parse PDF. Windows keeps the glyph until a later engine renderer.
 10. **S8-03 before Find/paste** — raster `displayImage` has no `PDFSelection`. Region overlay must remount with the live page or locators break.
@@ -370,7 +771,14 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 22. **Delete is a counted cascade or a refuse** — do not hide cited trash and let the engine fail. Freeze **S8-D6** before writing tx deletes. No Change type; wrong type is delete + place.
 23. **Composer document is the Citation** — `subjectId` / `citationId` on the location are focus, not locks. Do not filter observations to the entry subject. Do not keep the Artifact pre-screen.
 24. **Empty Citation is a policy change** — schema allows it; Swift Save and `CreateWithObservations` (≥1) do not. S8-10 must relax the engine path.
-25. **Two lists only** — Citations on this Artifact; Observations on this Citation. Subjects stay on the graph (plus a row-level picker).
+25. **Two lists only** — Citations on this Artifact; Observations on this Citation. Subjects stay on the graph (plus a row-level picker, which since **S8-11** can create a person / event / place — never a bridge).
+26. **Nothing deletes by omission** (S8-11) — an Observation is removed only by `DeleteObservation`. Do not reintroduce a "send the whole list and diff" write.
+27. **First commit mints the Citation** (S8-11) — on a New Citation, row Save / Save reading / Save connection creates it from the current reading draft. After that, row commits and Save reading are independent.
+28. **Edge rows are engine-locked** (S8-11) — only `CreateCitedBridge` creates them; they cannot be deleted; only `value_subject_id` can change, and only to a same-type subject on the same Source. The UI lock is a courtesy; the engine is the rule.
+29. **Bridge names are computed** (S8-11) — show `EvidenceBridgeEdgeSummary`; new bridges store no label; bridge Edit sends the stored label unchanged.
+30. **The server places bridges** (S8-11) — midpoint `floorDiv(a + b + 1, 2)` per axis from the endpoints' stored positions. Do not carry grid cells through `WorkspaceLocation`.
+31. **Audit is lossless** (S8-11) — creates and deletes record every column (nulls included), child `date_value` / `name_value` / note rows get their own changes, and zero-change revisions are rejected. See `docs/audit-revision-history.md` §3.2.
+32. **Unsaved work is guarded at navigation** (S8-11) — `WorkspaceNavigation.leaveGuard`. Places with drafts implement `WorkspaceLeaveGuard`; do not add per-button dirty checks.
 
 ---
 
