@@ -307,6 +307,35 @@ struct CitationComposerModelTests {
         #expect(model.availableProperties.contains(where: { $0.valueType == "name" }))
     }
 
+    @Test func prepareOnWarmSessionDoesNotRelistCatalog() async {
+        let store = makeStore()
+        seedArtifact(store, count: 1)
+        let model = makeModel(store: store)
+        let session = model.session
+        let project = session.projectKey
+        let graph: QueryHandle<SourceGraphRows> = session.query(
+            .sourceGraph(project: project, sourceId: sourceID)
+        )
+        let fields: QueryHandle<SubjectFieldsSnapshot> = session.query(
+            .subjectFieldsWorkspace(project: project)
+        )
+        let workspace: QueryHandle<CatalogSourceWorkspace> = session.query(
+            .sourceWorkspace(project: project, sourceId: sourceID)
+        )
+        for _ in 0..<80 {
+            if graph.value != nil, fields.value != nil, workspace.value != nil { break }
+            try? await Task.sleep(nanoseconds: 25_000_000)
+        }
+        let subjectsAtWarm = store.listSubjectsCalls
+        let typesAtWarm = store.listSubjectTypesCalls
+        let workspaceAtWarm = store.getSourceWorkspaceCalls
+        await model.prepare()
+        #expect(model.phase == .compose)
+        #expect(store.listSubjectsCalls == subjectsAtWarm)
+        #expect(store.listSubjectTypesCalls == typesAtWarm)
+        #expect(store.getSourceWorkspaceCalls == workspaceAtWarm)
+    }
+
     @Test func prepareMultiArtifactOpensComposeWithDefault() async {
         let store = makeStore()
         seedArtifact(store, count: 2)

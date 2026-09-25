@@ -109,28 +109,77 @@ final class CitationComposerModel {
     private(set) var subjectLabel: String = ""
     private(set) var subjectTypeKey: String = ""
     private(set) var subjectTypeID: String = ""
-    private(set) var sourceTitle: String = ""
+    var sourceTitle: String { workspace?.source.title ?? "" }
     /// Source-type `icon_key` for fileless Artifact picker thumbs (Frame 8).
-    private(set) var sourceTypeIconKey: String = ""
-    private(set) var artifacts: [CatalogArtifact] = []
+    var sourceTypeIconKey: String {
+        sourceTypes.first { $0.id == workspace?.source.sourceTypeID }?.iconKey ?? ""
+    }
+    var artifacts: [CatalogArtifact] { workspace?.artifacts ?? [] }
     private(set) var document = Document.blank()
-    private(set) var listedCitations: [CatalogListedCitation] = []
+    var listedCitations: [CatalogListedCitation] {
+        guard let artifactID = selectedArtifactID else { return [] }
+        let handle: QueryHandle<[CatalogListedCitation]>? = session.queryHandle(
+            citationsKey(artifactID: artifactID)
+        )
+        return handle?.value ?? []
+    }
     private(set) var focusedObservationID: UUID?
     var pendingArtifactAbandon: ArtifactAbandon?
     /// VoiceOver announcement after Artifact / Citation identity changes.
     private(set) var identityAnnouncement: String = ""
     /// Graph subjects offered on each Observation row (primaries + bridges).
-    private(set) var graphSubjects: [GraphSubjectOption] = []
-    private(set) var propertiesBySubjectTypeID: [String: [CatalogProperty]] = [:]
-    private(set) var allPropertiesByID: [String: CatalogProperty] = [:]
-    private(set) var availableProperties: [CatalogProperty] = []
+    var graphSubjects: [GraphSubjectOption] {
+        Self.graphSubjectOptions(in: graphSnapshot)
+    }
+    var propertiesBySubjectTypeID: [String: [CatalogProperty]] {
+        Dictionary(
+            uniqueKeysWithValues: fields.fieldsByTypeID.map { ($0.key, $0.value.map(\.property)) }
+        )
+    }
+    var allPropertiesByID: [String: CatalogProperty] {
+        var byID = Dictionary(uniqueKeysWithValues: fields.properties.map { ($0.id, $0) })
+        for fieldsForType in fields.fieldsByTypeID.values {
+            for field in fieldsForType {
+                byID[field.property.id] = field.property
+            }
+        }
+        return byID
+    }
+    var availableProperties: [CatalogProperty] {
+        properties(
+            forSubjectTypeID: subjectTypeID,
+            typeKey: subjectTypeKey,
+            excludingEdges: true
+        )
+    }
     /// Connect-edge Properties (excluded from Add observation) keyed by id.
-    private(set) var connectEdgePropertiesByID: [String: CatalogProperty] = [:]
+    var connectEdgePropertiesByID: [String: CatalogProperty] {
+        let excluded = Self.excludedEdgePropertyKeys(typeKey: subjectTypeKey, rules: connectRules)
+        let props = propertiesBySubjectTypeID[subjectTypeID] ?? []
+        return Dictionary(uniqueKeysWithValues: props.filter { excluded.contains($0.key) }.map { ($0.id, $0) })
+    }
     /// Connect matrix used to lock edge rows for any Subject, not just entry type.
-    private var connectRules: [CatalogConnectRule] = []
+    var connectRules: [CatalogConnectRule] {
+        let handle: QueryHandle<[CatalogConnectRule]>? = session.queryHandle(connectRulesKey)
+        return handle?.value ?? []
+    }
     /// Connect-new prefill; restored when identity returns to New.
     private var entryConnectPrefill: [ObservationRow] = []
-    private(set) var termsByPropertyID: [String: [CatalogPropertyTerm]] = [:]
+    var termsByPropertyID: [String: [CatalogPropertyTerm]] {
+        var result: [String: [CatalogPropertyTerm]] = [:]
+        let ids = Set(
+            allPropertiesByID.values.filter { $0.valueType == "term" }.map(\.id)
+        )
+        for id in ids {
+            let handle: QueryHandle<[CatalogPropertyTerm]>? = session.queryHandle(
+                termsKey(propertyID: id)
+            )
+            if let terms = handle?.value {
+                result[id] = terms
+            }
+        }
+        return result
+    }
     private(set) var isSubmitting = false
     private(set) var didSubmit = false
 
@@ -193,7 +242,10 @@ final class CitationComposerModel {
 
     var showsArtifactSwitcher: Bool { artifacts.count > 1 }
 
-    private(set) var citationCountsByArtifact: [String: Int] = [:]
+    var citationCountsByArtifact: [String: Int] {
+        let handle: QueryHandle<[String: Int]>? = session.queryHandle(citationCountsKey)
+        return handle?.value ?? [:]
+    }
 
     func listedCount(for artifactID: String) -> Int {
         citationCountsByArtifact[artifactID, default: 0]
@@ -279,6 +331,60 @@ final class CitationComposerModel {
 
     var citationCountsKey: CatalogQueryKey {
         .citationCounts(project: session.projectKey, sourceId: sourceID)
+    }
+
+    var fieldsKey: CatalogQueryKey {
+        .subjectFieldsWorkspace(project: session.projectKey)
+    }
+
+    var connectRulesKey: CatalogQueryKey {
+        .connectRules(project: session.projectKey)
+    }
+
+    private func citationsKey(artifactID: String) -> CatalogQueryKey {
+        .citationsByArtifact(project: session.projectKey, artifactId: artifactID)
+    }
+
+    private func termsKey(propertyID: String) -> CatalogQueryKey {
+        .propertyTerms(project: session.projectKey, propertyId: propertyID)
+    }
+
+    private var workspace: CatalogSourceWorkspace? {
+        let handle: QueryHandle<CatalogSourceWorkspace>? = session.queryHandle(workspaceKey)
+        return handle?.value
+    }
+
+    private var sourceTypes: [CatalogSourceType] {
+        let handle: QueryHandle<[CatalogSourceType]>? = session.queryHandle(sourceTypesKey)
+        return handle?.value ?? []
+    }
+
+    private var fields: SubjectFieldsSnapshot {
+        let handle: QueryHandle<SubjectFieldsSnapshot>? = session.queryHandle(fieldsKey)
+        return handle?.value ?? .empty
+    }
+
+    private var graphSnapshot: SourceGraphSnapshot {
+        let handle: QueryHandle<SourceGraphRows>? = session.queryHandle(graphKey)
+        return SourceGraphSnapshot.build(
+            rows: handle?.value ?? SourceGraphRows(sourceId: sourceID),
+            types: fields.types
+        )
+    }
+
+    private func properties(
+        forSubjectTypeID typeID: String,
+        typeKey: String,
+        excludingEdges: Bool
+    ) -> [CatalogProperty] {
+        let excluded = excludingEdges
+            ? Self.excludedEdgePropertyKeys(typeKey: typeKey, rules: connectRules)
+            : []
+        return (propertiesBySubjectTypeID[typeID] ?? [])
+            .filter {
+                Self.supportedValueTypes.contains($0.valueType) && !excluded.contains($0.key)
+            }
+            .sorted { $0.label.localizedCaseInsensitiveCompare($1.label) == .orderedAscending }
     }
 
     var selectedArtifact: CatalogArtifact? {
@@ -540,43 +646,9 @@ final class CitationComposerModel {
         shouldFallbackToGraph = false
 
         do {
-            let projectDir = session.projectKey.projectDir
-            // Prefer handles PlaceRegistry already warmed. Cold opens fill the
-            // same keys sequentially — FakeStore bags are not safe to hit concurrently.
-            let snapshot = try await cached(graphKey) {
-                let subjects = try await self.store.listSubjects(
-                    projectDir: projectDir,
-                    sourceID: self.sourceID
-                )
-                let positions = try await self.store.listSubjectPositions(
-                    projectDir: projectDir,
-                    sourceID: self.sourceID
-                )
-                let types = try await self.store.listSubjectTypes(projectDir: projectDir)
-                let observations = try await self.store.listObservationsBySource(
-                    projectDir: projectDir,
-                    sourceID: self.sourceID
-                )
-                return SourceGraphSnapshot.build(
-                    sourceId: self.sourceID,
-                    subjects: subjects,
-                    positions: positions,
-                    types: types,
-                    observations: observations
-                )
-            }
-            let workspace = try await cached(workspaceKey) {
-                try await self.store.getSourceWorkspace(
-                    projectDir: projectDir,
-                    sourceID: self.sourceID
-                )
-            }
-            let sourceTypes = try await cached(sourceTypesKey) {
-                try await self.store.listSourceTypes(projectDir: projectDir)
-            }
-            let rules = try await store.listConnectRules()
-            connectRules = rules
-            let types = try await store.listSubjectTypes(projectDir: projectDir)
+            try await warmCatalogHandles()
+            let snapshot = graphSnapshot
+            let types = fields.types
 
             let resolved: ResolvedSubject
             if let bridgeKey = entry.connectBridgeTypeKey,
@@ -594,70 +666,15 @@ final class CitationComposerModel {
             subjectLabel = resolved.label
             subjectTypeKey = resolved.typeKey
             subjectTypeID = resolved.typeID
-            sourceTitle = workspace.source.title
-            sourceTypeIconKey = sourceTypes
-                .first { $0.id == workspace.source.sourceTypeID }?
-                .iconKey ?? ""
-            artifacts = workspace.artifacts
-            citationCountsByArtifact = try await cached(citationCountsKey) {
-                try await self.store.citationCountsBySource(
-                    projectDir: projectDir,
-                    sourceID: self.sourceID
-                )
-            }
-
-            let fields = try await store.listSubjectTypeFields(
-                projectDir: projectDir,
-                subjectTypeID: resolved.typeID
-            )
-            let excluded = Self.excludedEdgePropertyKeys(
-                typeKey: resolved.typeKey,
-                rules: rules
-            )
-            let allProperties = fields.map(\.property)
-            connectEdgePropertiesByID = Dictionary(
-                uniqueKeysWithValues: allProperties
-                    .filter { excluded.contains($0.key) }
-                    .map { ($0.id, $0) }
-            )
-            availableProperties = allProperties
-                .filter {
-                    Self.supportedValueTypes.contains($0.valueType)
-                        && !excluded.contains($0.key)
-                }
-                .sorted { $0.label.localizedCaseInsensitiveCompare($1.label) == .orderedAscending }
-
-            for property in availableProperties where property.valueType == "term" {
-                termsByPropertyID[property.id] = try await store.listPropertyTerms(
-                    projectDir: projectDir,
-                    propertyID: property.id
-                )
-            }
+            await warmTermHandles()
 
             let subjectLabelsByID = Self.subjectLabels(in: snapshot)
             let typeKeyBySubjectID = Self.typeKeyBySubjectID(in: snapshot)
-            graphSubjects = Self.graphSubjectOptions(in: snapshot)
-            allPropertiesByID = Dictionary(
-                uniqueKeysWithValues: (try await store.listProperties(projectDir: projectDir))
-                    .map { ($0.id, $0) }
-            )
-            var fieldsByType: [String: [CatalogProperty]] = [:]
-            let typeIDs = Set(graphSubjects.map(\.typeID) + [resolved.typeID].filter { !$0.isEmpty })
-            for typeID in typeIDs {
-                let fields = try await store.listSubjectTypeFields(
-                    projectDir: projectDir,
-                    subjectTypeID: typeID
-                )
-                fieldsByType[typeID] = fields.map(\.property)
-                for field in fields {
-                    allPropertiesByID[field.property.id] = field.property
-                }
-            }
-            propertiesBySubjectTypeID = fieldsByType
+            let allProperties = propertiesBySubjectTypeID[resolved.typeID] ?? []
 
             if let citationID = entry.citationID {
                 let (citation, _, citationObservations) = try await store.getCitation(
-                    projectDir: projectDir,
+                    projectDir: session.projectKey.projectDir,
                     citationID: citationID
                 )
                 replaceDocument(
@@ -678,7 +695,7 @@ final class CitationComposerModel {
             {
                 var rows = Self.connectEdgePrefillRows(
                     bridgeTypeKey: resolved.typeKey,
-                    rules: rules,
+                    rules: connectRules,
                     properties: allProperties,
                     endpointA: (
                         id: fromID,
@@ -692,15 +709,12 @@ final class CitationComposerModel {
                     )
                 )
                 if let termID, !termID.isEmpty,
-                   let termProperty = allProperties.first(where: { $0.key == rules
+                   let termProperty = allProperties.first(where: { $0.key == connectRules
                        .first(where: { $0.bridgeTypeKey == resolved.typeKey && !$0.refuse })?
                        .disambiguation })
                 {
-                    let terms = try await store.listPropertyTerms(
-                        projectDir: projectDir,
-                        propertyID: termProperty.id
-                    )
-                    termsByPropertyID[termProperty.id] = terms
+                    await warmTerms(for: termProperty.id)
+                    let terms = termsByPropertyID[termProperty.id] ?? []
                     rows.append(
                         ObservationRow(
                             id: UUID(),
@@ -733,16 +747,10 @@ final class CitationComposerModel {
             }
             if artifacts.count == 1 {
                 await applySelectedArtifact(artifacts[0].id)
-            } else {
-                let counts = try await cached(citationCountsKey) {
-                    try await self.store.citationCountsBySource(
-                        projectDir: projectDir,
-                        sourceID: self.sourceID
-                    )
-                }
+            } else if let workspace {
                 pendingArtifactID = Self.defaultPendingArtifactID(
                     artifacts: artifacts,
-                    citationCounts: counts,
+                    citationCounts: citationCountsByArtifact,
                     selectedID: selectedArtifactID,
                     coverMode: workspace.source.coverMode,
                     primaryArtifactID: workspace.source.primaryArtifactID
@@ -756,23 +764,40 @@ final class CitationComposerModel {
             captureBaseline()
         } catch {
             loadError = L10n.Errors.message(for: error)
-            artifacts = []
             phase = .loadFailed
         }
     }
 
-    /// Uses a warmed session value when one exists. Otherwise loads sequentially
-    /// and publishes into the same key so the cache stays the owner.
-    private func cached<Value>(
-        _ key: CatalogQueryKey,
-        load: () async throws -> Value
-    ) async throws -> Value {
-        if let ready: Value = await session.readyValue(key) {
-            return ready
+    private func warmCatalogHandles() async throws {
+        let _: QueryHandle<SourceGraphRows> = session.query(graphKey)
+        let _: QueryHandle<SubjectFieldsSnapshot> = session.query(fieldsKey)
+        let _: QueryHandle<CatalogSourceWorkspace> = session.query(workspaceKey)
+        let _: QueryHandle<[CatalogSourceType]> = session.query(sourceTypesKey)
+        let _: QueryHandle<[String: Int]> = session.query(citationCountsKey)
+        let _: QueryHandle<[CatalogConnectRule]> = session.query(connectRulesKey)
+
+        let rows: SourceGraphRows? = await session.readyValue(graphKey)
+        let fieldsReady: SubjectFieldsSnapshot? = await session.readyValue(fieldsKey)
+        let workspaceReady: CatalogSourceWorkspace? = await session.readyValue(workspaceKey)
+        _ = await session.readyValue(sourceTypesKey) as [CatalogSourceType]?
+        _ = await session.readyValue(citationCountsKey) as [String: Int]?
+        _ = await session.readyValue(connectRulesKey) as [CatalogConnectRule]?
+        guard rows != nil, fieldsReady != nil, workspaceReady != nil else {
+            struct CatalogHandleMissing: Error {}
+            throw CatalogHandleMissing()
         }
-        let value = try await load()
-        session.setQueryValue(key, value: value)
-        return value
+    }
+
+    private func warmTermHandles() async {
+        for property in availableProperties where property.valueType == "term" {
+            await warmTerms(for: property.id)
+        }
+    }
+
+    private func warmTerms(for propertyID: String) async {
+        let key = termsKey(propertyID: propertyID)
+        let _: QueryHandle<[CatalogPropertyTerm]> = session.query(key)
+        _ = await session.readyValue(key) as [CatalogPropertyTerm]?
     }
 
     func selectPendingArtifact(_ id: String) {
@@ -1043,10 +1068,15 @@ final class CitationComposerModel {
                 label: trimmed,
                 description: ""
             )
-            var list = termsByPropertyID[propertyID] ?? []
-            list.append(term)
-            list.sort { $0.label.localizedCaseInsensitiveCompare($1.label) == .orderedAscending }
-            termsByPropertyID[propertyID] = list
+            session.apply(.createdPropertyTerm(propertyId: propertyID))
+            let key = termsKey(propertyID: propertyID)
+            let handle: QueryHandle<[CatalogPropertyTerm]>? = session.queryHandle(key)
+            var list = handle?.value ?? []
+            if !list.contains(where: { $0.id == term.id }) {
+                list.append(term)
+                list.sort { $0.label.localizedCaseInsensitiveCompare($1.label) == .orderedAscending }
+                session.setQueryValue(key, value: list)
+            }
             termError = nil
             return term
         } catch {
@@ -1130,7 +1160,7 @@ final class CitationComposerModel {
                     observations: drafts
                 )
             }
-            session.apply(.createdCitation(sourceId: sourceID))
+            session.apply(.savedCitation(sourceId: sourceID))
             session.noticeToast = VocabularyToast(
                 title: String(localized: L10n.CitationComposer.saveToastTitle),
                 body: String(localized: L10n.CitationComposer.saveToastBody),
@@ -1194,7 +1224,6 @@ final class CitationComposerModel {
     private func presentDocument(announce: Bool) async {
         if artifacts.isEmpty {
             document.artifactID = nil
-            listedCitations = []
             artifactViewer.unload()
         } else {
             await reloadArtifactViewer(preferredPage: document.locator.page)
@@ -1452,18 +1481,10 @@ final class CitationComposerModel {
     }
 
     private func reloadListedCitations() async {
-        guard let artifactID = selectedArtifactID else {
-            listedCitations = []
-            return
-        }
-        do {
-            listedCitations = try await store.listCitationsByArtifact(
-                projectDir: session.projectKey.projectDir,
-                artifactID: artifactID
-            )
-        } catch {
-            listedCitations = []
-        }
+        guard let artifactID = selectedArtifactID else { return }
+        let key = citationsKey(artifactID: artifactID)
+        let _: QueryHandle<[CatalogListedCitation]> = session.query(key)
+        _ = await session.readyValue(key) as [CatalogListedCitation]?
     }
 
     private func currentSnapshot() -> FormSnapshot {

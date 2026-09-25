@@ -33,10 +33,13 @@ final class WorkspaceSession {
     }
 
     /// Waits out an in-flight load, then returns the cached value.
-    /// Does not start a load. Nil when the key was never warmed or the load failed.
+    /// Does not start a load. Nil when the key was never warmed, is stale, or the load failed.
     func readyValue<Value>(_ key: CatalogQueryKey) async -> Value? {
         while let task = inFlight[key] {
             await task.value
+        }
+        if invalidatedKeys.contains(key) {
+            return nil
         }
         return queryHandle(key)?.value
     }
@@ -80,19 +83,29 @@ final class WorkspaceSession {
     }
 
     /// Patches the list row + cached page shell on identity/cover save, then
-    /// busts whatever else the registry says the write reached. Patching first
-    /// keeps the edit on screen while a busted page revalidates.
+    /// invalidates and revalidates whatever else the registry says the write
+    /// reached. Features only call `apply`; they do not query afterward or
+    /// tell sibling views to refresh.
     func apply(_ mutation: CatalogMutation) {
         if let source = mutation.patchedSource {
             patchUpdatedSource(source)
         }
+        var keys: [CatalogQueryKey] = []
         for invalidation in registry.invalidations(by: mutation, project: projectKey) {
             switch invalidation {
             case .key(let key):
-                invalidate(key)
+                keys.append(key)
             case .allCached(let kind):
-                invalidateAll { $0.kind == kind && $0.project == projectKey }
+                keys.append(contentsOf: handles.keys.filter {
+                    $0.kind == kind && $0.project == projectKey
+                })
             }
+        }
+        for key in keys {
+            invalidate(key)
+        }
+        for key in keys {
+            revalidate(key)
         }
     }
 
@@ -140,6 +153,13 @@ final class WorkspaceSession {
         invalidatedKeys.insert(key)
     }
 
+    /// Starts the registry loader when this key is already cached.
+    /// Unwarmed keys load on the next `apply(location:)` / `query`.
+    private func revalidate(_ key: CatalogQueryKey) {
+        guard handles[key] != nil else { return }
+        warmQuery(key)
+    }
+
     func invalidateAll(matching predicate: (CatalogQueryKey) -> Bool) {
         for key in handles.keys where predicate(key) {
             invalidate(key)
@@ -161,11 +181,17 @@ final class WorkspaceSession {
         case .typeSuggestions:
             let _: QueryHandle<[CatalogTypeSuggestion]> = query(key)
         case .sourceGraph:
-            let _: QueryHandle<SourceGraphSnapshot> = query(key)
+            let _: QueryHandle<SourceGraphRows> = query(key)
         case .citationCounts:
             let _: QueryHandle<[String: Int]> = query(key)
         case .subjectFieldsWorkspace:
             let _: QueryHandle<SubjectFieldsSnapshot> = query(key)
+        case .connectRules:
+            let _: QueryHandle<[CatalogConnectRule]> = query(key)
+        case .propertyTerms:
+            let _: QueryHandle<[CatalogPropertyTerm]> = query(key)
+        case .citationsByArtifact:
+            let _: QueryHandle<[CatalogListedCitation]> = query(key)
         }
     }
 

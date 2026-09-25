@@ -73,11 +73,21 @@ Destination view  →  reads QueryHandle(s)  →  patches / invalidates on mutat
 
 | Piece | Role |
 | --- | --- |
-| `WorkspaceSession` | Project-scoped cache: get-or-load, in-flight dedupe, patch vs invalidate |
+| `WorkspaceSession` | Project-scoped cache: get-or-load, in-flight dedupe, patch vs invalidate+revalidate |
 | `CatalogQueryRegistry` | Declarative loaders + mutation → cache key map |
 | `PlaceRegistry` | `WorkspaceLocation` → place id, presentation, required query keys |
 | `WorkspaceDestinationHost` | Routes by presentation (list vs detail are separate views) |
 | `QueryHandle` | Observable load state per key (`.ready`, `.loading`, stale `isFetching`) |
+
+**Cache contract (required):**
+
+1. The registry is the only loader. Features do not rebuild a `CatalogQueryKey` payload from `GenealogyStore`.
+2. `session.apply(mutation)` patches if the mutation says so, then invalidates and **revalidates every already-warmed key**. Features never `session.query` after `apply`.
+3. `readyValue` waits out in-flight work, then returns `nil` if the key is still stale.
+4. `setQueryValue` is an overlay (optimistic drag, list-row patch the write returned). It is not a substitute for `apply`.
+5. Views observe handles. Models keep form/interaction state only. Evidence graph cards are a **pure join** of `sourceGraph` (`SourceGraphRows`) and `subjectFieldsWorkspace` types — that join is not a third cache key.
+6. If a place reads a key, that key is in `PlaceRegistry.queryKeys`.
+7. `getCitation` is the exception: a one-shot into the composer `Document` draft. Do not cache the open citation.
 
 **View rules (required):**
 
@@ -85,7 +95,7 @@ Destination view  →  reads QueryHandle(s)  →  patches / invalidates on mutat
 - Read display data via `session.queryHandle(_)`; observe with `@Bindable var handle: QueryHandle<…>` in a child view.
 - Never call `session.query()` from computed properties that `body` reads every frame.
 
-**Mutations:** patch list/detail synchronously when the save response is enough (`updatedSource`); invalidate on create/delete/ambiguous busts. Stale-while-revalidate is for **navigation reads**, not edit sync.
+**Mutations:** patch list/detail synchronously when the save response is enough (`updatedSource`); `apply` invalidates+reloads on create/delete/ambiguous busts. Name mutations for the **read model** they change (`.mutatedSourceGraph`, `.savedCitation`), not the UI verb. Stale-while-revalidate is for **navigation reads**, not the only path after a write.
 
 **One cache owns each list.** A payload that duplicates another key's data has to
 be invalidated whenever that data changes anywhere, which is a bust with no

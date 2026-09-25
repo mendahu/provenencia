@@ -80,12 +80,12 @@ struct CatalogQueryRegistry: Sendable {
         Spec(
             kind: .sourceGraph,
             stalePolicy: .sessionFresh,
-            invalidateOn: [.createdSubject, .createdCitation, .addedObservations]
+            invalidateOn: [.mutatedSourceGraph, .savedCitation]
         ),
         Spec(
             kind: .citationCounts,
             stalePolicy: .sessionFresh,
-            invalidateOn: [.createdCitation]
+            invalidateOn: [.savedCitation]
         ),
         Spec(
             kind: .subjectFieldsWorkspace,
@@ -94,6 +94,22 @@ struct CatalogQueryRegistry: Sendable {
                 .createdProperty, .updatedProperty, .deletedProperty,
                 .mutatedSubjectTypeFields,
             ]
+        ),
+        Spec(
+            kind: .connectRules,
+            stalePolicy: .sessionFresh,
+            // Seeded product matrix with no CRUD surface.
+            invalidateOn: []
+        ),
+        Spec(
+            kind: .propertyTerms,
+            stalePolicy: .sessionFresh,
+            invalidateOn: [.createdPropertyTerm]
+        ),
+        Spec(
+            kind: .citationsByArtifact,
+            stalePolicy: .sessionFresh,
+            invalidateOn: [.savedCitation]
         ),
     ]
 
@@ -129,17 +145,27 @@ struct CatalogQueryRegistry: Sendable {
                 projectDir: project.projectDir,
                 sourceID: sourceId
             )
-            async let types = store.listSubjectTypes(projectDir: project.projectDir)
             async let observations = store.listObservationsBySource(
                 projectDir: project.projectDir,
                 sourceID: sourceId
             )
-            return SourceGraphSnapshot.build(
+            return SourceGraphRows(
                 sourceId: sourceId,
                 subjects: try await subjects,
                 positions: try await positions,
-                types: try await types,
                 observations: try await observations
+            )
+        case .connectRules:
+            return try await store.listConnectRules()
+        case .propertyTerms(let project, let propertyId):
+            return try await store.listPropertyTerms(
+                projectDir: project.projectDir,
+                propertyID: propertyId
+            )
+        case .citationsByArtifact(let project, let artifactId):
+            return try await store.listCitationsByArtifact(
+                projectDir: project.projectDir,
+                artifactID: artifactId
             )
         case .subjectFieldsWorkspace(let project):
             let dir = project.projectDir
@@ -206,22 +232,31 @@ private extension CatalogQueryKey.Kind {
             }
         case .sourceGraph:
             switch mutation {
-            case .createdSubject(let sourceId),
-                 .createdCitation(let sourceId),
-                 .addedObservations(let sourceId):
+            case .mutatedSourceGraph(let sourceId), .savedCitation(let sourceId):
                 return .key(.sourceGraph(project: project, sourceId: sourceId))
             default:
                 return .allCached(.sourceGraph)
             }
         case .citationCounts:
             switch mutation {
-            case .createdCitation(let sourceId):
+            case .savedCitation(let sourceId):
                 return .key(.citationCounts(project: project, sourceId: sourceId))
             default:
                 return .allCached(.citationCounts)
             }
         case .subjectFieldsWorkspace:
             return .key(.subjectFieldsWorkspace(project: project))
+        case .connectRules:
+            return .key(.connectRules(project: project))
+        case .propertyTerms:
+            switch mutation {
+            case .createdPropertyTerm(let propertyId):
+                return .key(.propertyTerms(project: project, propertyId: propertyId))
+            default:
+                return .allCached(.propertyTerms)
+            }
+        case .citationsByArtifact:
+            return .allCached(.citationsByArtifact)
         }
     }
 }

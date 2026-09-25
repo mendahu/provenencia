@@ -45,6 +45,44 @@ struct SourceGraphPlacedBridge: Identifiable, Sendable, Equatable {
     var endpointBID: String?
 }
 
+/// Catalog rows for one Source's Evidence graph. Types stay on
+/// `subjectFieldsWorkspace` so a citation save does not reload vocabulary.
+struct SourceGraphRows: Sendable, Equatable {
+    var sourceId: String
+    var subjects: [CatalogSubject]
+    var positions: [CatalogSubjectPosition]
+    var observations: [CatalogObservation]
+
+    init(
+        sourceId: String,
+        subjects: [CatalogSubject] = [],
+        positions: [CatalogSubjectPosition] = [],
+        observations: [CatalogObservation] = []
+    ) {
+        self.sourceId = sourceId
+        self.subjects = subjects
+        self.positions = positions
+        self.observations = observations
+    }
+
+    /// Returns a copy with one subject's grid cell updated.
+    func updatingPosition(subjectID: String, gridX: Int64, gridY: Int64) -> SourceGraphRows {
+        var next = positions
+        if let index = next.firstIndex(where: { $0.subjectID == subjectID }) {
+            next[index].gridX = gridX
+            next[index].gridY = gridY
+        } else {
+            next.append(CatalogSubjectPosition(subjectID: subjectID, gridX: gridX, gridY: gridY))
+        }
+        return SourceGraphRows(
+            sourceId: sourceId,
+            subjects: subjects,
+            positions: next,
+            observations: observations
+        )
+    }
+}
+
 /// Source-scoped Evidence graph payload (primaries + bridges + positions).
 struct SourceGraphSnapshot: Sendable, Equatable {
     var sourceId: String
@@ -59,6 +97,19 @@ struct SourceGraphSnapshot: Sendable, Equatable {
         self.sourceId = sourceId
         self.subjects = subjects
         self.bridges = bridges
+    }
+
+    /// Joins catalog rows with subject types. Unplaced subjects and `source`
+    /// types are omitted. Endpoint ids come from cited `value_subject_id` on
+    /// edge Properties (`person` / `event` / `place` / `related_to`).
+    static func build(rows: SourceGraphRows, types: [CatalogSubjectType]) -> SourceGraphSnapshot {
+        build(
+            sourceId: rows.sourceId,
+            subjects: rows.subjects,
+            positions: rows.positions,
+            types: types,
+            observations: rows.observations
+        )
     }
 
     /// Joins catalog rows into placed primaries and bridges. Unplaced subjects
@@ -165,21 +216,5 @@ struct SourceGraphSnapshot: Sendable, Equatable {
         return lhs.ref.localizedStandardCompare(rhs.ref) == .orderedAscending
     }
 
-    /// Returns a copy with one subject's or bridge's grid cell updated.
-    func updatingPosition(subjectID: String, gridX: Int64, gridY: Int64) -> SourceGraphSnapshot {
-        if let index = subjects.firstIndex(where: { $0.id == subjectID }) {
-            var next = subjects
-            next[index].gridX = gridX
-            next[index].gridY = gridY
-            return SourceGraphSnapshot(sourceId: sourceId, subjects: next, bridges: bridges)
-        }
-        if let index = bridges.firstIndex(where: { $0.id == subjectID }) {
-            var next = bridges
-            next[index].gridX = gridX
-            next[index].gridY = gridY
-            return SourceGraphSnapshot(sourceId: sourceId, subjects: subjects, bridges: next)
-        }
-        return self
-    }
 }
 

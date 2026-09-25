@@ -360,6 +360,101 @@ struct WorkspaceSessionTests {
         #expect(handle.value?.first?.ref == "SRC-1")
         #expect(store.heldCatalogProjectDir == projectDir)
     }
+
+    @Test func applyCitationMutationReloadsGraphWithoutASecondQuery() async {
+        let store = FakeStore()
+        seedStore(store)
+        store.subjectTypesByProject[projectDir] = [
+            CatalogSubjectType(
+                id: "type-person",
+                key: "person",
+                origin: "provenencia",
+                label: "Person",
+                description: "",
+                refPrefix: "PER",
+                candidateRefPrefix: "CPR"
+            ),
+        ]
+        store.subjectsBySource["s1"] = [
+            CatalogSubject(
+                id: "sub-1",
+                ref: "CPR-1",
+                sourceID: "s1",
+                subjectTypeID: "type-person",
+                label: "Alice",
+                description: ""
+            ),
+        ]
+        store.subjectPositionsBySubject["sub-1"] = CatalogSubjectPosition(
+            subjectID: "sub-1",
+            gridX: 0,
+            gridY: 0
+        )
+        let session = makeSession(store: store)
+        let key = CatalogQueryKey.sourceGraph(project: session.projectKey, sourceId: "s1")
+        let handle: QueryHandle<SourceGraphRows> = session.query(key)
+        await waitForFetchComplete(handle)
+        #expect(handle.value?.observations.isEmpty == true)
+
+        store.observationsBySource["s1"] = [
+            CatalogObservation(
+                id: "obs-1",
+                ref: "OBS-1",
+                citationID: "cit-1",
+                subjectID: "sub-1",
+                propertyID: "prop-name",
+                polarity: "positive",
+                valueText: "Alice",
+                valueInteger: nil,
+                valueDateID: "",
+                valueNameID: "",
+                valueSubjectID: "",
+                valueTermID: "",
+                propertyKey: "name",
+                propertyLabel: "Name",
+                propertyValueType: "name"
+            ),
+        ]
+        session.apply(.savedCitation(sourceId: "s1"))
+        await waitForFetchComplete(handle)
+        #expect(handle.value?.observations.count == 1)
+    }
+
+    @Test func applySavedCitationDoesNotReloadSubjectFields() async {
+        let store = FakeStore()
+        seedStore(store)
+        store.subjectTypesByProject[projectDir] = [
+            CatalogSubjectType(
+                id: "type-person",
+                key: "person",
+                origin: "provenencia",
+                label: "Person",
+                description: "",
+                refPrefix: "PER",
+                candidateRefPrefix: "CPR"
+            ),
+        ]
+        let session = makeSession(store: store)
+        let fieldsKey = CatalogQueryKey.subjectFieldsWorkspace(project: session.projectKey)
+        let fields: QueryHandle<SubjectFieldsSnapshot> = session.query(fieldsKey)
+        await waitForFetchComplete(fields)
+        let typesAtLoad = fields.value?.types
+        store.subjectTypesByProject[projectDir] = []
+        session.apply(.savedCitation(sourceId: "s1"))
+        await Task.yield()
+        #expect(fields.value?.types == typesAtLoad)
+        #expect(fields.isFetching == false)
+    }
+
+    @Test func readyValueIgnoresStaleCache() async {
+        let session = makeSession()
+        let key = CatalogQueryKey.sourcesList(project: session.projectKey)
+        let handle = session.ensureQuery(key) { ["alpha"] }
+        await waitForFetchComplete(handle)
+        session.invalidate(key)
+        let ready: [String]? = await session.readyValue(key)
+        #expect(ready == nil)
+    }
 }
 
 /// One-shot gate so concurrent loaders block until tests observe stale data.

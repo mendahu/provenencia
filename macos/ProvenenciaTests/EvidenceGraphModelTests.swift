@@ -108,6 +108,35 @@ struct EvidenceGraphModelTests {
         return store
     }
 
+    private func seedFields(_ session: WorkspaceSession, store: FakeStore) {
+        session.setQueryValue(
+            CatalogQueryKey.subjectFieldsWorkspace(project: session.projectKey),
+            value: SubjectFieldsSnapshot(
+                properties: store.propertiesByProject[projectDir] ?? [],
+                types: store.subjectTypesByProject[projectDir] ?? [],
+                fieldsByTypeID: store.subjectTypeFieldsByType,
+                presentationsByKey: [:]
+            )
+        )
+    }
+
+    /// Session graph payload. `types` is ignored — vocabulary lives on `subjectFieldsWorkspace`.
+    private func graphRows(
+        sourceId: String,
+        subjects: [CatalogSubject],
+        positions: [CatalogSubjectPosition],
+        types: [CatalogSubjectType] = [],
+        observations: [CatalogObservation] = []
+    ) -> SourceGraphRows {
+        _ = types
+        return SourceGraphRows(
+            sourceId: sourceId,
+            subjects: subjects,
+            positions: positions,
+            observations: observations
+        )
+    }
+
     private func makeModel(store: FakeStore) -> EvidenceGraphModel {
         let session = WorkspaceSession(
             projectKey: ProjectKey(projectDir: projectDir),
@@ -135,7 +164,7 @@ struct EvidenceGraphModelTests {
         let store = makeStore()
         let model = makeModel(store: store)
         await model.prepare()
-        let _: QueryHandle<SourceGraphSnapshot> = model.session.query(
+        let _: QueryHandle<SourceGraphRows> = model.session.query(
             CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
         )
 
@@ -159,7 +188,7 @@ struct EvidenceGraphModelTests {
         #expect(positions.first?.gridY == 3)
 
         // Session must re-query so the canvas leaves the stale empty snapshot.
-        let handle: QueryHandle<SourceGraphSnapshot>? = model.session.queryHandle(
+        let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(
             CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
         )
         var waited = 0
@@ -168,7 +197,7 @@ struct EvidenceGraphModelTests {
             waited += 1
         }
         #expect(handle?.value?.subjects.count == 1)
-        #expect(handle?.value?.subjects.first?.subject.label == "Alice")
+        #expect(handle?.value?.subjects.first?.label == "Alice")
     }
 
     @Test func cancelCreateDisarmsTool() async {
@@ -230,18 +259,10 @@ struct EvidenceGraphModelTests {
         let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
         model.session.setQueryValue(
             key,
-            value: SourceGraphSnapshot(
+            value: SourceGraphRows(
                 sourceId: sourceID,
-                subjects: [
-                    SourceGraphPlacedSubject(
-                        subject: subject,
-                        kind: .person,
-                        typeLabel: "Person",
-                        gridX: 1,
-                        gridY: 2,
-                        isCited: false
-                    ),
-                ]
+                subjects: [subject],
+                positions: [CatalogSubjectPosition(subjectID: "s1", gridX: 1, gridY: 2)]
             )
         )
 
@@ -256,9 +277,9 @@ struct EvidenceGraphModelTests {
             deltaY: 0
         )
         #expect(result == nil)
-        let handle: QueryHandle<SourceGraphSnapshot>? = model.session.queryHandle(key)
-        #expect(handle?.value?.subjects.first?.gridX == 1)
-        #expect(handle?.value?.subjects.first?.gridY == 2)
+        let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+        #expect(handle?.value?.positions.first?.gridX == 1)
+        #expect(handle?.value?.positions.first?.gridY == 2)
         #expect(model.toast?.tone == .danger)
         #expect(model.toast?.title == String(localized: L10n.EvidenceGraph.positionPersistFailedTitle))
     }
@@ -272,29 +293,21 @@ struct EvidenceGraphModelTests {
             label: "A",
             description: ""
         )
-        let snapshot = SourceGraphSnapshot(
+        let rows = SourceGraphRows(
             sourceId: sourceID,
-            subjects: [
-                SourceGraphPlacedSubject(
-                    subject: subject,
-                    kind: .person,
-                    typeLabel: "Person",
-                    gridX: 1,
-                    gridY: 1,
-                    isCited: false
-                ),
-            ]
+            subjects: [subject],
+            positions: [CatalogSubjectPosition(subjectID: "s1", gridX: 1, gridY: 1)]
         )
-        let next = snapshot.updatingPosition(subjectID: "s1", gridX: 4, gridY: 5)
-        #expect(next.subjects[0].gridX == 4)
-        #expect(next.subjects[0].gridY == 5)
+        let next = rows.updatingPosition(subjectID: "s1", gridX: 4, gridY: 5)
+        #expect(next.positions[0].gridX == 4)
+        #expect(next.positions[0].gridY == 5)
     }
 
-    @Test func createdSubjectInvalidatesSourceGraph() {
+    @Test func mutatedSourceGraphInvalidatesSourceGraph() {
         let registry = CatalogQueryRegistry.standard
         let project = ProjectKey(projectDir: projectDir)
         let effects = registry.invalidations(
-            by: .createdSubject(sourceId: sourceID),
+            by: .mutatedSourceGraph(sourceId: sourceID),
             project: project
         )
         #expect(effects == [.key(.sourceGraph(project: project, sourceId: sourceID))])
@@ -332,7 +345,7 @@ struct EvidenceGraphModelTests {
         let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
         model.session.setQueryValue(
             key,
-            value: SourceGraphSnapshot.build(
+            value: graphRows(
                 sourceId: sourceID,
                 subjects: [person, event],
                 positions: [
@@ -398,7 +411,7 @@ struct EvidenceGraphModelTests {
         let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
         model.session.setQueryValue(
             key,
-            value: SourceGraphSnapshot.build(
+            value: graphRows(
                 sourceId: sourceID,
                 subjects: [event, place],
                 positions: [
@@ -444,7 +457,7 @@ struct EvidenceGraphModelTests {
         let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
         model.session.setQueryValue(
             key,
-            value: SourceGraphSnapshot.build(
+            value: graphRows(
                 sourceId: sourceID,
                 subjects: [person, event],
                 positions: [
@@ -490,7 +503,7 @@ struct EvidenceGraphModelTests {
         let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
         model.session.setQueryValue(
             key,
-            value: SourceGraphSnapshot.build(
+            value: graphRows(
                 sourceId: sourceID,
                 subjects: [person, placeSubject],
                 positions: [
@@ -542,7 +555,7 @@ struct EvidenceGraphModelTests {
         let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
         model.session.setQueryValue(
             key,
-            value: SourceGraphSnapshot.build(
+            value: graphRows(
                 sourceId: sourceID,
                 subjects: [e1, e2],
                 positions: [
@@ -580,7 +593,7 @@ struct EvidenceGraphModelTests {
         let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
         model.session.setQueryValue(
             key,
-            value: SourceGraphSnapshot.build(
+            value: graphRows(
                 sourceId: sourceID,
                 subjects: [person],
                 positions: [CatalogSubjectPosition(subjectID: "p1", gridX: 1, gridY: 2)],
@@ -653,19 +666,10 @@ struct EvidenceGraphModelTests {
         let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
         model.session.setQueryValue(
             key,
-            value: SourceGraphSnapshot(
+            value: graphRows(
                 sourceId: sourceID,
-                subjects: [
-                    SourceGraphPlacedSubject(
-                        subject: subject,
-                        kind: .person,
-                        typeLabel: "Person",
-                        gridX: 0,
-                        gridY: 0,
-                        isCited: false
-                    ),
-                ],
-                bridges: []
+                subjects: [subject],
+                positions: [CatalogSubjectPosition(subjectID: "s-uncited", gridX: 0, gridY: 0)]
             )
         )
         model.beginDelete(subjectID: "s-uncited")
@@ -678,7 +682,7 @@ struct EvidenceGraphModelTests {
         #expect(store.subjectsBySource[sourceID]?.isEmpty == true)
         // Allow the invalidated sourceGraph query to finish reloading.
         try await Task.sleep(for: .milliseconds(50))
-        let handle: QueryHandle<SourceGraphSnapshot>? = model.session.queryHandle(
+        let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(
             CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
         )
         #expect(handle?.value?.subjects.isEmpty == true)
@@ -735,7 +739,7 @@ struct EvidenceGraphModelTests {
         let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
         model.session.setQueryValue(
             key,
-            value: SourceGraphSnapshot.build(
+            value: graphRows(
                 sourceId: sourceID,
                 subjects: [person, event, bridge],
                 positions: [
@@ -751,8 +755,8 @@ struct EvidenceGraphModelTests {
         let ok = await model.confirmDeleteSubject()
         #expect(ok)
         try await Task.sleep(for: .milliseconds(50))
-        let handle: QueryHandle<SourceGraphSnapshot>? = model.session.queryHandle(key)
-        #expect(handle?.value?.bridges.isEmpty == true)
+        let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+        #expect(handle?.value?.subjects.contains { $0.id == "b1" } == false)
         #expect(handle?.value?.subjects.count == 2)
     }
 
@@ -798,20 +802,11 @@ struct EvidenceGraphModelTests {
         let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
         model.session.setQueryValue(
             key,
-            value: SourceGraphSnapshot(
+            value: graphRows(
                 sourceId: sourceID,
-                subjects: [
-                    SourceGraphPlacedSubject(
-                        subject: subject,
-                        kind: .person,
-                        typeLabel: "Person",
-                        gridX: 0,
-                        gridY: 0,
-                        isCited: true,
-                        observations: [observation]
-                    ),
-                ],
-                bridges: []
+                subjects: [subject],
+                positions: [CatalogSubjectPosition(subjectID: "s-cited", gridX: 0, gridY: 0)],
+                observations: [observation]
             )
         )
         model.beginDelete(subjectID: "s-cited")
@@ -889,20 +884,11 @@ struct EvidenceGraphModelTests {
         let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
         model.session.setQueryValue(
             key,
-            value: SourceGraphSnapshot(
+            value: graphRows(
                 sourceId: sourceID,
-                subjects: [
-                    SourceGraphPlacedSubject(
-                        subject: subject,
-                        kind: .person,
-                        typeLabel: "Person",
-                        gridX: 0,
-                        gridY: 0,
-                        isCited: true,
-                        observations: [obsA, obsB]
-                    ),
-                ],
-                bridges: []
+                subjects: [subject],
+                positions: [CatalogSubjectPosition(subjectID: "s1", gridX: 0, gridY: 0)],
+                observations: [obsA, obsB]
             )
         )
         let locA = model.composerLocation(forObservationID: "obs-a", subjectID: "s1")
@@ -970,20 +956,11 @@ struct EvidenceGraphModelTests {
         let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
         model.session.setQueryValue(
             key,
-            value: SourceGraphSnapshot(
+            value: graphRows(
                 sourceId: sourceID,
-                subjects: [],
-                bridges: [
-                    SourceGraphPlacedBridge(
-                        subject: bridgeSubject,
-                        kind: .participation,
-                        typeLabel: "Participation",
-                        gridX: 0,
-                        gridY: 0,
-                        isCited: true,
-                        observations: [observation]
-                    ),
-                ]
+                subjects: [bridgeSubject],
+                positions: [CatalogSubjectPosition(subjectID: "b1", gridX: 0, gridY: 0)],
+                observations: [observation]
             )
         )
         let location = model.composerLocationForBridgeCitation(subjectID: "b1")
@@ -1036,9 +1013,10 @@ struct EvidenceGraphModelTests {
             description: ""
         )
         let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        seedFields(model.session, store: store)
         model.session.setQueryValue(
             key,
-            value: SourceGraphSnapshot.build(
+            value: graphRows(
                 sourceId: sourceID,
                 subjects: [person],
                 positions: [CatalogSubjectPosition(subjectID: "p1", gridX: 2, gridY: 3)],
@@ -1066,9 +1044,10 @@ struct EvidenceGraphModelTests {
             description: ""
         )
         let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        seedFields(model.session, store: store)
         model.session.setQueryValue(
             key,
-            value: SourceGraphSnapshot.build(
+            value: graphRows(
                 sourceId: sourceID,
                 subjects: [person],
                 positions: [CatalogSubjectPosition(subjectID: "p1", gridX: 0, gridY: 0)],

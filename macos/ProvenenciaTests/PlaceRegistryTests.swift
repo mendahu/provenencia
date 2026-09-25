@@ -70,7 +70,12 @@ struct PlaceRegistryTests {
         #expect(graphPlace?.placeID == .sourceGraph)
         #expect(graphPlace?.presentation == .sourceGraph)
         #expect(graphPlace?.deepId == "src-1")
-        #expect(graphPlace?.queryKeys == [.sourceGraph(project: project, sourceId: "src-1")])
+        #expect(graphPlace?.queryKeys == [
+            .sourceGraph(project: project, sourceId: "src-1"),
+            .subjectFieldsWorkspace(project: project),
+            .sourcesList(project: project),
+            .connectRules(project: project),
+        ])
     }
 
     @Test func resolvesSourceTypesWithSelection() {
@@ -130,7 +135,12 @@ struct PlaceRegistryTests {
             (
                 WorkspaceLocation(section: .sources, sourceId: "s1", sourceSurface: .graph),
                 .sourceGraph,
-                [.sourceGraph(project: project, sourceId: "s1")]
+                [
+                    .sourceGraph(project: project, sourceId: "s1"),
+                    .subjectFieldsWorkspace(project: project),
+                    .sourcesList(project: project),
+                    .connectRules(project: project),
+                ]
             ),
             (
                 WorkspaceLocation(
@@ -142,7 +152,11 @@ struct PlaceRegistryTests {
                 .sourceCitationComposer,
                 [
                     .sourceGraph(project: project, sourceId: "s1"),
+                    .subjectFieldsWorkspace(project: project),
+                    .sourcesList(project: project),
+                    .connectRules(project: project),
                     .sourceWorkspace(project: project, sourceId: "s1"),
+                    .sourceTypesList(project: project),
                     .citationCounts(project: project, sourceId: "s1"),
                 ]
             ),
@@ -250,5 +264,9 @@ struct PlaceRegistryTests {
         #expect(decoded?.artifactId == "art-0")
         #expect(decoded?.observationId == "obs-9")
         #expect(CitationComposerEntry(location: location)?.observationID == "obs-9")
+        let place = resolve(location)
+        #expect(place?.queryKeys.contains(
+            .citationsByArtifact(project: project, artifactId: "art-0")
+        ) == true)
     }
 }

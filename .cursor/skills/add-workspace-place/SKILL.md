@@ -60,12 +60,16 @@ handles; they do not own fetch-on-appear lifecycle.
 
 | Mechanism | Use when |
 | --- | --- |
-| **Patch** (`setQueryValue`, `.updatedSource`) | Save returns enough data to update list row + detail workspace synchronously |
-| **Invalidate** (`session.apply(.created…)`) | Create, delete, or patch is impractical |
-| **Stale-while-revalidate** | Navigation reads only — Back, sidebar return; show cached frame, `isFetching` while reloading |
+| **Patch** (`setQueryValue`, `.updatedSource`) | Overlay after a write that returned enough data. Always pair with `apply` so the registry still refetches. |
+| **Invalidate + revalidate** (`session.apply`) | Default after a catalog write. `apply` marks keys stale and reloads any that are already warmed. Features do **not** `session.query` after `apply`. |
+| **Stale-while-revalidate** | Navigation reads — Back, sidebar return; show cached frame, `isFetching` while reloading. Not the only refresh path after a write. |
 
 Do **not** call `session.query()` from view `body` or from model computed properties
 that `body` reads every frame — that starves the MainActor and breaks observation.
+
+Do **not** fold a shared list into a page payload (`sourceGraph` is subjects +
+positions + observations; types live on `subjectFieldsWorkspace`). Do **not**
+copy catalog lists onto a feature model — observe the handle.
 
 ## Steps
 
@@ -147,7 +151,7 @@ private struct ListContent: View {
 
 - `warmListQueries()` calls `session.query(key)` — **only** from `.task`, actions, or tests.
 - Display arrays read `session.queryHandle(key)?.value ?? []`.
-- CRUD: `session.apply(CatalogMutation…)` + `setQueryValue` patch or rely on registry invalidation.
+- CRUD: `session.apply(CatalogMutation…)` only. Optional `setQueryValue` overlay; never `query` after `apply`.
 - `syncCatalogCounts()` when list handle reaches `.ready` (sidebar badges).
 
 **Master–detail selection** (fields/types): `reconcileSelection(for:)` on

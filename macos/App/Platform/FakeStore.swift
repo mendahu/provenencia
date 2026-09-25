@@ -36,6 +36,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var lastClosedCatalogProjectDir: String?
     /// When set, `listSources` throws instead of returning the in-memory list.
     var listSourcesError: Error?
+    var listSubjectsCalls = 0
+    var listSubjectTypesCalls = 0
+    var getSourceWorkspaceCalls = 0
     /// Monotonic stand-in for audit_transactions.revision (Sources Updated sort).
     private var nextAuditRevision: Int64 = 1
     /// When set, `searchCatalog` throws (omnibar error UI).
@@ -231,6 +234,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     func getSourceWorkspace(projectDir: String, sourceID: String) async throws -> CatalogSourceWorkspace {
+        getSourceWorkspaceCalls += 1
         markCatalogSessionHeld(projectDir)
         let raw = (sourcesByProject[projectDir] ?? []).first { $0.id == sourceID }
             ?? CatalogSource(id: sourceID, ref: "SRC-XXXXX", sourceTypeID: "", title: "", description: "")
@@ -947,6 +951,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     func listSubjectTypes(projectDir: String) async throws -> [CatalogSubjectType] {
+        listSubjectTypesCalls += 1
         markCatalogSessionHeld(projectDir)
         return subjectTypesByProject[projectDir] ?? []
     }
@@ -1015,6 +1020,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     func listSubjects(projectDir: String, sourceID: String) async throws -> [CatalogSubject] {
+        listSubjectsCalls += 1
         markCatalogSessionHeld(projectDir)
         if let listSubjectsError {
             throw listSubjectsError

@@ -244,7 +244,6 @@ final class SubjectFieldsModel {
                 propertyID: property.id
             )
             session.apply(.deletedProperty)
-            warmWorkspaceQuery()
             selectedPropertyID = nil
             pendingDeleteID = nil
             toast = VocabularyToast(
@@ -296,7 +295,6 @@ final class SubjectFieldsModel {
             } else {
                 session.apply(.mutatedSubjectTypeFields)
             }
-            warmWorkspaceQuery()
             closeCreate()
             selectedPropertyID = created.id
             toast = VocabularyToast(
@@ -328,7 +326,6 @@ final class SubjectFieldsModel {
                     propertyID: property.id
                 )
                 session.apply(.mutatedSubjectTypeFields)
-                warmWorkspaceQuery()
             } catch {
                 formError = L10n.Errors.message(for: error)
             }
@@ -342,7 +339,6 @@ final class SubjectFieldsModel {
                 propertyID: property.id
             )
             session.apply(.mutatedSubjectTypeFields)
-            warmWorkspaceQuery()
         } catch {
             formError = L10n.Errors.message(for: error)
         }

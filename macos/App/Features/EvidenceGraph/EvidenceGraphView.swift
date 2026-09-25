@@ -24,6 +24,18 @@ struct EvidenceGraphView: View {
         CatalogQueryKey.sourceGraph(project: session.projectKey, sourceId: sourceID)
     }
 
+    private var fieldsKey: CatalogQueryKey {
+        CatalogQueryKey.subjectFieldsWorkspace(project: session.projectKey)
+    }
+
+    private var sourcesListKey: CatalogQueryKey {
+        CatalogQueryKey.sourcesList(project: session.projectKey)
+    }
+
+    private var connectRulesKey: CatalogQueryKey {
+        CatalogQueryKey.connectRules(project: session.projectKey)
+    }
+
     init(
         sourceID: String,
         session: WorkspaceSession,
@@ -46,9 +58,12 @@ struct EvidenceGraphView: View {
 
     var body: some View {
         Group {
-            if let handle: QueryHandle<SourceGraphSnapshot> = session.queryHandle(graphKey) {
+            if let graphHandle: QueryHandle<SourceGraphRows> = session.queryHandle(graphKey),
+               let fieldsHandle: QueryHandle<SubjectFieldsSnapshot> = session.queryHandle(fieldsKey)
+            {
                 EvidenceGraphContent(
-                    handle: handle,
+                    graphHandle: graphHandle,
+                    fieldsHandle: fieldsHandle,
                     model: model,
                     sourceID: sourceID,
                     sourceTitle: sourceTitle,
@@ -65,7 +80,10 @@ struct EvidenceGraphView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityIdentifier("workspace.destination.evidenceGraph")
         .task(id: sourceID) {
-            let _: QueryHandle<SourceGraphSnapshot> = session.query(graphKey)
+            let _: QueryHandle<SourceGraphRows> = session.query(graphKey)
+            let _: QueryHandle<SubjectFieldsSnapshot> = session.query(fieldsKey)
+            let _: QueryHandle<[CatalogSource]> = session.query(sourcesListKey)
+            let _: QueryHandle<[CatalogConnectRule]> = session.query(connectRulesKey)
             await model.prepare()
             await refreshSourceChrome()
         }
@@ -91,22 +109,9 @@ struct EvidenceGraphView: View {
     }
 
     private func refreshSourceChrome() async {
-        let listKey = CatalogQueryKey.sourcesList(project: session.projectKey)
-        if let handle: QueryHandle<[CatalogSource]> = session.queryHandle(listKey),
-           let sources = handle.value,
-           let match = sources.first(where: { $0.id == sourceID })
-        {
-            sourceTitle = match.title
-            sourceRef = match.ref
-            return
-        }
-        let handle: QueryHandle<[CatalogSource]> = session.query(listKey)
-        var waited = 0
-        while handle.value == nil && waited < 40 {
-            try? await Task.sleep(nanoseconds: 25_000_000)
-            waited += 1
-        }
-        if let match = handle.value?.first(where: { $0.id == sourceID }) {
+        let _: QueryHandle<[CatalogSource]> = session.query(sourcesListKey)
+        let sources: [CatalogSource]? = await session.readyValue(sourcesListKey)
+        if let match = sources?.first(where: { $0.id == sourceID }) {
             sourceTitle = match.title
             sourceRef = match.ref
         }
@@ -115,7 +120,8 @@ struct EvidenceGraphView: View {
 // MARK: - Content
 
 private struct EvidenceGraphContent: View {
-    @Bindable var handle: QueryHandle<SourceGraphSnapshot>
+    @Bindable var graphHandle: QueryHandle<SourceGraphRows>
+    @Bindable var fieldsHandle: QueryHandle<SubjectFieldsSnapshot>
     @Bindable var model: EvidenceGraphModel
     let sourceID: String
     let sourceTitle: String
@@ -125,7 +131,7 @@ private struct EvidenceGraphContent: View {
     @FocusState private var focus: EvidenceGraphFocus?
 
     private var snapshot: SourceGraphSnapshot {
-        model.displaySnapshot(from: handle.value)
+        model.displaySnapshot(rows: graphHandle.value, types: fieldsHandle.value?.types ?? [])
     }
 
     private var subjects: [SourceGraphPlacedSubject] {
@@ -296,7 +302,8 @@ private struct EvidenceGraphContent: View {
         ZStack(alignment: .top) {
             GraphCanvasScrollView(contentSize: contentSize, contentID: sourceID) {
                 EvidenceGraphDocument(
-                    handle: handle,
+                    graphHandle: graphHandle,
+                    fieldsHandle: fieldsHandle,
                     model: model,
                     contentSize: contentSize,
                     navigation: navigation
@@ -472,7 +479,8 @@ private struct EvidenceGraphContent: View {
 // MARK: - Document (paint-only; AppKit owns pointer)
 
 private struct EvidenceGraphDocument: View {
-    @Bindable var handle: QueryHandle<SourceGraphSnapshot>
+    @Bindable var graphHandle: QueryHandle<SourceGraphRows>
+    @Bindable var fieldsHandle: QueryHandle<SubjectFieldsSnapshot>
     @Bindable var model: EvidenceGraphModel
     let contentSize: CGSize
     let navigation: WorkspaceNavigation
@@ -482,7 +490,8 @@ private struct EvidenceGraphDocument: View {
         Group {
             if let pointer {
                 EvidenceGraphDocumentBody(
-                    handle: handle,
+                    graphHandle: graphHandle,
+                    fieldsHandle: fieldsHandle,
                     model: model,
                     contentSize: contentSize,
                     navigation: navigation,
@@ -499,14 +508,15 @@ private struct EvidenceGraphDocument: View {
 
 /// Observes ``GraphCanvasPointerController`` so live drag offsets refresh paint.
 private struct EvidenceGraphDocumentBody: View {
-    @Bindable var handle: QueryHandle<SourceGraphSnapshot>
+    @Bindable var graphHandle: QueryHandle<SourceGraphRows>
+    @Bindable var fieldsHandle: QueryHandle<SubjectFieldsSnapshot>
     @Bindable var model: EvidenceGraphModel
     let contentSize: CGSize
     let navigation: WorkspaceNavigation
     @Bindable var pointer: GraphCanvasPointerController
 
     private var snapshot: SourceGraphSnapshot {
-        model.displaySnapshot(from: handle.value)
+        model.displaySnapshot(rows: graphHandle.value, types: fieldsHandle.value?.types ?? [])
     }
 
     private var subjects: [SourceGraphPlacedSubject] {
@@ -521,6 +531,12 @@ private struct EvidenceGraphDocumentBody: View {
         model.inputMode
     }
 
+    private var selectedBridgeID: String? {
+        bridges.contains(where: { $0.id == model.selectedSubjectID })
+            ? model.selectedSubjectID
+            : nil
+    }
+
     var body: some View {
         ZStack(alignment: .topLeading) {
             GraphCanvasGridView(contentSize: contentSize)
@@ -529,9 +545,7 @@ private struct EvidenceGraphDocumentBody: View {
             EvidenceGraphEdgesHost(
                 pointer: pointer,
                 snapshot: snapshot,
-                selectedBridgeID: bridges.contains(where: { $0.id == model.selectedSubjectID })
-                    ? model.selectedSubjectID
-                    : nil
+                selectedBridgeID: selectedBridgeID
             )
             .frame(width: contentSize.width, height: contentSize.height)
 
@@ -560,7 +574,7 @@ private struct EvidenceGraphDocumentBody: View {
                     .position(EvidenceSubjectCard.contentCenter(gridX: ghost.gridX, gridY: ghost.gridY))
             }
 
-            if subjects.isEmpty, bridges.isEmpty, handle.status == .ready, inputMode == .idle {
+            if subjects.isEmpty, bridges.isEmpty, graphHandle.status == .ready, inputMode == .idle {
                 emptyOverlay
             }
         }
