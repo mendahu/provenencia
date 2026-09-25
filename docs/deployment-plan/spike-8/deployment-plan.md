@@ -120,7 +120,7 @@ S8-D6  Delete paths
 
 - [x] S8-D7 — Design: Citation composer rethink → [`completed.md`](completed.md)
 - [x] S8-10 — Flexible citation composer (identity + multi-subject + empty Save) → [`completed.md`](completed.md)
-- [ ] S8-D8 — Design: Composer and Connect simplification → [`completed.md`](completed.md)
+- [x] S8-D8 — Design: Composer and Connect simplification → [`completed.md`](completed.md)
 - [ ] S8-11 — Composer and Connect simplification + Interpretation write integrity → [`completed.md`](completed.md)
 - [ ] S8-D1 — Design: Auto Transcribe in the citation composer → [`completed.md`](completed.md)
 - [ ] S8-01 — Vision OCR + Auto Transcribe button → [`completed.md`](completed.md)
@@ -164,7 +164,7 @@ Replace the subject-locked composer with one place whose document is the Citatio
 
 ## S8-D8 — Design: Composer and Connect simplification
 
-Claude Design board that **extends** the S8-10 composer and the shipped graph. It replaces the bundled footer Save with row-level Save / Revert / Delete plus **Save citation**. It adds an unsaved-work guard on every exit, moves Connect's role / relationship-type choice from a graph sheet into a single compact **connection row** in the composer (read-only endpoints; saves onto a new or existing Citation; endpoints cannot be changed), names bridges by their computed sentence, and adds **New person / event / place** to the row subject picker. Brief: [`design/S8-D8-composer-connect-simplification.md`](design/S8-D8-composer-connect-simplification.md). Gates **S8-11**.
+Claude Design board that **extends** the S8-10 composer and the shipped graph. It replaces the bundled footer Save with row-level Save / Revert / Delete plus **Save citation**. It adds an unsaved-work guard on every exit, moves Connect's role / relationship-type choice from a graph sheet into a single compact **connection row** in the composer (read-only endpoints; saves onto a new or existing Citation; endpoints cannot be changed), names bridges by their computed sentence, and adds **New person / event / place** to the row subject picker. Brief: [`design/archive/S8-D8-composer-connect-simplification.md`](design/archive/S8-D8-composer-connect-simplification.md). Gates **S8-11**. **Done.** Row-level commits + one-row connection (endpoints fixed); location connections have no term; citation wording, not "reading".
 
 Does **not** design Auto Transcribe (**S8-D1**), PDF Find / paste (**S8-D2**), graph badges / sentence wording (**S8-D3**), or subject / bridge / Citation delete cascades (**S8-D6**).
 

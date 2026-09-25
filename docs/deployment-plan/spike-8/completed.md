@@ -10,6 +10,7 @@ IDs stay stable (`S8-NN`, `S8-DN`). Do not renumber when moving steps here.
 | --- | --- | --- |
 | S8-D7 | Design | Citation composer rethink — Layout A + 1500pt two-column; C/D rejected |
 | S8-10 | PR | Flexible composer: Citation is the document; identity, reuse, empty Save |
+| S8-D8 | Design | Composer + Connect simplification — row-level commits, one-row connection, citation wording |
 
 ## Steps
 
@@ -19,7 +20,7 @@ IDs stay stable (`S8-NN`, `S8-DN`). Do not renumber when moving steps here.
 
 Agreed on the board, not a second mode: 1 Artifact hides the Artifact chip; 2–3 use a ghost `PVButton` + `PVContextMenuPanel`; Citation identity is New + `CIT-…` with observation count and transcription snippet. Empty Save is quiet, not a blocker. Connect keeps two locked endpoint rows.
 
-Brief archived: [`design/archive/S8-D7-composer-rethink.md`](design/archive/S8-D7-composer-rethink.md). Next composer chrome is **S8-D1** (Auto Transcribe).
+Brief archived: [`design/archive/S8-D7-composer-rethink.md`](design/archive/S8-D7-composer-rethink.md). Next composer chrome was **S8-D8**.
 
 ### S8-10 — Flexible citation composer
 
@@ -39,3 +40,11 @@ Shipped the S8-D7 form. The composer is no longer subject-locked: every Observat
 - Vision / OCR, PDF remount / Find / paste (**S8-01+**)
 - Minting Subjects, project-wide Citation search, `WorkspaceLocation.observationId`
 - New kit primitive, four-list browser
+
+### S8-D8 — Design: Composer and Connect simplification
+
+**Board pick:** keep Layout A + the 1500pt two-column form. Replace the footer Save with per-row Save / Revert / Delete plus **Save citation**. Connect skips the graph sheet and finishes as one compact composer row (read-only endpoints + role / relationship type). Location connections have no term ("No role or type"; Save enabled immediately; never touched). Bridges are named by their computed sentence. New person / event / place from the row subject picker. Copy is citation wording, not "reading".
+
+Agreed: a connection is one unit — wrong endpoint means discard or delete the bridge and connect again. Observation refs (`OBS-…`) show on persisted rows; saved connections show the bridge ref (`CPA-…` / `CRL-…` / `CLO-…`). Unsaved-work guard on every in-app `go(to:)`.
+
+Brief archived: [`design/archive/S8-D8-composer-connect-simplification.md`](design/archive/S8-D8-composer-connect-simplification.md). Next composer chrome is **S8-D1** (Auto Transcribe) on these frames.

@@ -3,12 +3,12 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 8 (pause and refine / data entry)  
 **Implements later as:** PR **S8-11**  
-**Depends on:** **S8-D7** / **S8-10** (shipped Citation-document composer, Layout A + 1500pt two-column; brief [`archive/S8-D7-composer-rethink.md`](archive/S8-D7-composer-rethink.md)); shipped Evidence graph Connect tool and create dialog  
-**Related:** [`S8-D6-delete-paths.md`](S8-D6-delete-paths.md) (this board decides **single Observation delete** from the composer; S8-D6 keeps subject / bridge / Citation cascades); [`docs/audit-revision-history.md`](../../../audit-revision-history.md) (one research action = one revision); [`docs/interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md) §6 (bridges are cited subject-valued edges)  
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
-**Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md); navigation via [`add-workspace-location`](../../../../.cursor/skills/add-workspace-location/SKILL.md)
+**Depends on:** **S8-D7** / **S8-10** (shipped Citation-document composer, Layout A + 1500pt two-column; brief [`S8-D7-composer-rethink.md`](S8-D7-composer-rethink.md)); shipped Evidence graph Connect tool and create dialog  
+**Related:** [`S8-D6-delete-paths.md`](../S8-D6-delete-paths.md) (this board decides **single Observation delete** from the composer; S8-D6 keeps subject / bridge / Citation cascades); [`docs/audit-revision-history.md`](../../../../audit-revision-history.md) (one research action = one revision); [`docs/interpretation-layer-data-model.md`](../../../../interpretation-layer-data-model.md) §6 (bridges are cited subject-valued edges)  
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)  
+**Skill:** [`add-design-brief`](../../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.cursor/skills/add-ui-component/SKILL.md); navigation via [`add-workspace-location`](../../../../../.cursor/skills/add-workspace-location/SKILL.md)
 
-Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](README.md) first.
+Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](../README.md) first.
 
 This brief is an **enhancement** of the **S8-D7** composer and the shipped Evidence graph. Keep Layout A, the 1500pt two-column split, the viewer, the identity line, and the observation stack. Change **how work is saved**, **how Connect reaches the composer**, and **a few graph dialogs**. Do not restyle anything this brief does not name.
 
@@ -87,7 +87,8 @@ Need a new person → leave the composer         Subject ▾ … New person…  
 | Connect is atomic | The bridge subject, its grid position, its two endpoint Observations, its role / relationship-type Observation, and (if New) the Citation are written together by **Save connection**. Nothing about the connection persists before that. |
 | A connection is one unit | Its two endpoint Observations are structural and **immutable**: no subject, Property, value, or polarity change, and no delete. The engine enforces this, not just the UI. The composer never shows them as separate property rows — before and after save, the bridge's endpoints and role appear as **one connection row**. |
 | Wrong endpoint = redo the connection | Before save: **Discard connection**, go back to the graph, Connect again. After save: delete the bridge from the graph (**S8-D6** / **S8-09** designs that delete) and Connect again. The composer offers no endpoint editing. |
-| Role / relationship type is the only choice | The connection cannot be saved without it. After save, the connection row still lets the researcher change the role (row Save / Revert, like any row). The connection row has **no** Delete. |
+| Role / relationship type is the only choice on participation and relationship | Those connections cannot be saved without a term. After save, the connection row still lets the researcher change the role (row Save / Revert, like any row). The connection row has **no** Delete. |
+| Location connections have no term | An event ↔ place bridge (`location`) is created from its two edges alone. Its connection row keeps the two-line layout, with the muted text "No role or type" in place of the term picker. **Save connection** is enabled immediately and sends only the two edge Observations. A pending location row is never "touched", so it never triggers the leave guard. Once saved, it shows only its `CLO-…` ref: no Save / Revert, no ⋯, no Delete, no polarity. |
 | Bridge sentence is derived | Show `EvidenceBridgeEdgeSummary`'s sentence wherever a bridge is named (card title, composer subject picker, connection row, breadcrumb). No stored bridge label is edited. Missing nouns follow §2.4; the name is never blank. |
 | Grid position is layout, not evidence | A new bridge lands at the midpoint of its two endpoints (engine-computed). A primary created from the composer lands to the right of the existing graph (§3.6). Neither is a research assertion. |
 | Delete scope | This board ships **single Observation delete from the composer** only. Subject / bridge / whole-Citation deletes and their counted cascades stay on **S8-D6**. |
@@ -122,9 +123,9 @@ Saved     ⇄  John Robins · child · Birth 1850   Role [ child ▾ ]   (Save /
 ```
 
 - **Leading mark + sentence.** A connection glyph (reuse the bridge-kind icon the graph uses) and the bridge sentence with both endpoint names as **read-only text**. No endpoint pickers, no Property labels (`person`, `event`, …), no per-edge values.
-- **Role / relationship type** is the only control: the existing inline term picker + "Add term…" dialog.
-- **Pending** (Connect entry, nothing written yet): sits at the **top** of the observation stack, above the Citation's existing rows. Trailing actions **Save connection** (primary, small) and **Discard** (ghost). Save connection is disabled until a term is picked. On success the row switches to **Saved** in place.
-- **Saved** (the connection's Citation is open — after Save connection, or when the composer opens the bridge's connect Citation): the same row, showing the saved role. Changing the role makes it **Edited** with row Save / Revert (§2.1). There is **no** Delete and no polarity toggle in its ⋯ menu (the menu may be omitted entirely).
+- **Role / relationship type** is the only control on participation and relationship: the existing inline term picker + "Add term…" dialog. Location rows have no picker — they show muted "No role or type" instead.
+- **Pending** (Connect entry, nothing written yet): sits at the **top** of the observation stack, above the Citation's existing rows. Trailing actions **Save connection** (primary, small) and **Discard** (ghost). Save connection is disabled until a term is picked, **except** on a location row, which can save immediately. On success the row switches to **Saved** in place.
+- **Saved** (the connection's Citation is open — after Save connection, or when the composer opens the bridge's connect Citation): the same row, showing the saved role. Changing the role on a participation / relationship row makes it **Edited** with row Save / Revert (§2.1). A saved location row is display-only (`CLO-…` ref, no Save / Revert, no ⋯). There is **no** Delete and no polarity toggle on any connection row.
 - The Citation's other rows show below in their normal states and keep their own row Saves.
 - **Discard** removes the pending row without writing. The composer becomes a plain Add-property-style composer on the same Citation. If the Citation is still New and has no other work, Done returns to the graph with nothing written.
 - Other role Observations on a bridge (for example a second role cited from a different Citation) are ordinary term rows on their own Citation. Only the connect Citation's edges + its role Observation form the connection row.
@@ -134,7 +135,7 @@ Saved     ⇄  John Robins · child · Birth 1850   Role [ child ▾ ]   (Save /
 Two terms, used exactly this way in the PR:
 
 - **Unsaved document work** = dirty citation fields **or** any Draft-with-Property / Edited row.
-- **Touched pending connection** = the researcher picked a term on the pending connection row. An untouched pending row (endpoints from the graph, no term yet) is **not** touched.
+- **Touched pending connection** = the researcher picked a term on the pending connection row. An untouched pending row (endpoints from the graph, no term yet) is **not** touched. A pending **location** connection is never touched.
 
 | Exit | Behavior |
 | --- | --- |
@@ -274,7 +275,7 @@ The board must make it obvious in step 2 that the connection will be saved onto 
 | CS-7 | Unsaved-work guard per §2.3, one `.pvConfirm(item:)` for every exit, counting what is lost. |
 | CS-8 | While unsaved document work exists (§2.3), the Artifact and Citation `PVSelect`s are disabled and show the hint. A pending connection never disables them. No abandon confirm remains. |
 | CS-9 | Connect entry shows one pending **connection row** (§2.2) at the top of the stack. No graph sheet precedes it. When an existing Citation is selected, the row states which Citation it will be saved to. |
-| CS-10 | **Save connection** is disabled until the term is set. The role / relationship-type control reuses the existing inline term picker + "Add term…" dialog. |
+| CS-10 | **Save connection** is disabled until the term is set on participation and relationship. Location rows have no term picker (muted "No role or type") and Save connection is enabled immediately. The role / relationship-type control reuses the existing inline term picker + "Add term…" dialog. |
 | CS-11 | The connection row is **one line**: connection glyph, bridge sentence with endpoint names as read-only text, role picker, trailing actions. It never shows endpoint pickers, edge Property labels, or one row per edge. Saved connection rows have no Delete and no polarity toggle; changing the role uses row Save / Revert. |
 | CS-12 | Bridges are named by their computed sentence in the card title, the composer subject picker, the connection row, and the composer breadcrumb title. Missing nouns and unreadable edges follow the §2.4 fallback chain; no surface ever shows a blank bridge name. The bridge **Edit** FormDialog has Description only. |
 | CS-13 | Row subject `PVComboBox` has three fixed trailing options **New person… / New event… / New place…** (ordinary rows only; the connection row has no subject picker). Each opens a `pvFormDialog` with Label (required, prefilled from the query) and Description. Success fills the row's subject; failure shows the error in the dialog. |
@@ -359,6 +360,6 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 
 1. Agree the frames. Record any board-level copy decisions in this brief before archiving.
 2. Archive this brief under `archive/` when the board is agreed.
-3. Record in [`../completed.md`](../completed.md).
-4. Implement **S8-11** against the board and the S8-11 plan in [`../deployment-plan.md`](../deployment-plan.md#s8-11--pr-composer-and-connect-simplification--interpretation-write-integrity).
+3. Record in [`../../completed.md`](../../completed.md).
+4. Implement **S8-11** against the board and the S8-11 plan in [`../../deployment-plan.md`](../../deployment-plan.md#s8-11--pr-composer-and-connect-simplification--interpretation-write-integrity).
 5. **S8-D1** and **S8-D2** design against this board's citation fields section and row chrome, not the S8-10 frames.
