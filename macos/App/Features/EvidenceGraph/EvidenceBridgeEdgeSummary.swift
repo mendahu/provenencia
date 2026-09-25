@@ -11,8 +11,15 @@ enum EvidenceBridgeEdgeSummary {
     /// Snapshot-aware sentence. Nouns come from cited endpoints; unreadable
     /// edges fall back to the stored label or kind phrase · ref. Never empty.
     static func sentence(for bridge: SourceGraphPlacedBridge, in snapshot: SourceGraphSnapshot) -> String {
-        let endpointA = noun(subjectID: bridge.endpointAID, snapshot: snapshot)
-        let endpointB = noun(subjectID: bridge.endpointBID, snapshot: snapshot)
+        let resolved = snapshot.bridges.first(where: { $0.id == bridge.id }) ?? bridge
+        let endpointA = noun(
+            subjectID: bridge.endpointAID ?? resolved.endpointAID,
+            snapshot: snapshot
+        )
+        let endpointB = noun(
+            subjectID: bridge.endpointBID ?? resolved.endpointBID,
+            snapshot: snapshot
+        )
         let term = termDisplay(kind: bridge.kind, in: bridge.observations)
         if endpointA == nil || endpointB == nil {
             return nonEmpty(wholeNameFallback(for: bridge))

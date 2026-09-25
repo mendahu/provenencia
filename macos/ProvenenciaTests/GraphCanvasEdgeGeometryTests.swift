@@ -6,6 +6,16 @@ import Testing
 @Suite
 struct GraphCanvasEdgeGeometryTests {
     private func snapshot(for placed: SourceGraphPlacedBridge) -> SourceGraphSnapshot {
+        var placed = placed
+        if placed.endpointAID == nil || placed.endpointBID == nil {
+            let ends = SourceGraphSnapshot.citedEndpoints(
+                kind: placed.kind,
+                observations: placed.observations,
+                rules: CatalogConnectRule.productMatrix
+            )
+            placed.endpointAID = placed.endpointAID ?? ends.a
+            placed.endpointBID = placed.endpointBID ?? ends.b
+        }
         var subjects: [SourceGraphPlacedSubject] = []
         for observation in placed.observations where !observation.valueSubjectID.isEmpty {
             if subjects.contains(where: { $0.id == observation.valueSubjectID }) { continue }
