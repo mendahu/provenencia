@@ -60,6 +60,8 @@ enum PVSymbol: String {
     case regionLBottomLeft = "pv.region.l.bottomLeft"
     case regionCircle = "circle"
     case regionFreeform = "lasso"
+    /// Lucide `scan-text` — Auto transcribe on a transcription field.
+    case scanText = "doc.text.viewfinder"
 
     fileprivate var regionLOpen: PVLOpenCorner? {
         switch self {

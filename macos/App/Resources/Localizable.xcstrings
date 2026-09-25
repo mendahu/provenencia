@@ -11633,6 +11633,246 @@
           }
         }
       }
+    },
+    "citationComposer.autoTranscribe": {
+      "comment": "Button that fills transcription from Vision OCR of the image",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto transcribe"
+          }
+        }
+      }
+    },
+    "citationComposer.autoTranscribeReading": {
+      "comment": "Busy label on Auto transcribe while OCR is running",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading text…"
+          }
+        }
+      }
+    },
+    "citationComposer.autoTranscribeDrawnRegion": {
+      "comment": "VoiceOver name when Auto transcribe will read the locator region",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto transcribe, drawn region"
+          }
+        }
+      }
+    },
+    "citationComposer.autoTranscribeHintWholeImage": {
+      "comment": "Hint under transcription when OCR will read the full image",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reads the whole image. Draw a region to transcribe a crop."
+          }
+        }
+      }
+    },
+    "citationComposer.autoTranscribeHintRegion": {
+      "comment": "Hint under transcription when a locator region will be cropped",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reads the drawn region."
+          }
+        }
+      }
+    },
+    "citationComposer.autoTranscribeHintPDF": {
+      "comment": "Disabled hint when the Artifact is a PDF",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select text in the viewer and paste it. Auto transcribe is for images."
+          }
+        }
+      }
+    },
+    "citationComposer.autoTranscribeHintAudio": {
+      "comment": "Disabled hint when the Artifact is audio",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio cannot be read as text."
+          }
+        }
+      }
+    },
+    "citationComposer.autoTranscribeHintVideo": {
+      "comment": "Disabled hint when the Artifact is video",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video cannot be read as text."
+          }
+        }
+      }
+    },
+    "citationComposer.autoTranscribeHintMissingFile": {
+      "comment": "Disabled hint when the Artifact file is missing",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There is no file to read."
+          }
+        }
+      }
+    },
+    "citationComposer.autoTranscribeHintNoRaster": {
+      "comment": "Disabled hint when the image raster failed to load",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There is no image to read."
+          }
+        }
+      }
+    },
+    "citationComposer.autoTranscribeReplaceTitle": {
+      "comment": "Confirm title when Auto transcribe would overwrite existing text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replace the transcription?"
+          }
+        }
+      }
+    },
+    "citationComposer.autoTranscribeReplaceMessage": {
+      "comment": "Confirm message when replacing a non-empty transcription",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto transcribe will replace the text in this field. Nothing is written until you save the citation."
+          }
+        }
+      }
+    },
+    "citationComposer.autoTranscribeWholePageTitle": {
+      "comment": "Confirm title when OCR would read a large image with no region",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcribe the whole page?"
+          }
+        }
+      }
+    },
+    "citationComposer.autoTranscribeWholePageMessage": {
+      "comment": "Confirm message for a large no-region Auto transcribe job",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This image is large and has no region. Reading the whole page can be slow and inaccurate. Draw a region, or continue."
+          }
+        }
+      }
+    },
+    "citationComposer.autoTranscribeReplaceAndWholePageMessage": {
+      "comment": "Confirm message when replacing text and reading a large whole page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto transcribe will replace the text in this field. This image is large and has no region, so the whole page will be read — that can be slow and inaccurate. Nothing is written until you save the citation."
+          }
+        }
+      }
+    },
+    "citationComposer.autoTranscribeKeep": {
+      "comment": "Cancel Auto transcribe confirm and leave the existing transcription",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep"
+          }
+        }
+      }
+    },
+    "citationComposer.autoTranscribeConfirm": {
+      "comment": "Confirm button that starts Auto transcribe after a warning",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcribe"
+          }
+        }
+      }
+    },
+    "citationComposer.autoTranscribeFailed": {
+      "comment": "Callout when Vision OCR fails",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Provenencia couldn’t read this image. The transcription is unchanged."
+          }
+        }
+      }
+    },
+    "citationComposer.autoTranscribeNothingFound": {
+      "comment": "Callout when OCR returns no text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing was found in this image. The transcription is unchanged."
+          }
+        }
+      }
+    },
+    "citationComposer.autoTranscribeDismiss": {
+      "comment": "Action that clears the Auto transcribe failure callout",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dismiss"
+          }
+        }
+      }
     }
   },
   "version": "1.1"

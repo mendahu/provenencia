@@ -174,20 +174,42 @@ struct CitationComposerFormPane: View {
 
     private var citationFields: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space5) {
-            PVField(label: L10n.CitationComposer.transcriptionLabel) {
+            PVField(
+                label: L10n.CitationComposer.transcriptionLabel,
+                hint: model.autoTranscribeHint
+            ) {
                 HStack(spacing: PVSpacing.space4) {
                     Toggle(isOn: $model.transcriptionUncertain) {
                         Text(L10n.CitationComposer.uncertainLabel)
                             .font(PVFont.body(size: PVTypeScale.caption))
                     }
                     .toggleStyle(.checkbox)
-                    .disabled(inert)
+                    .disabled(inert || model.isTranscribing)
                     .accessibilityIdentifier("citationComposer.uncertain")
                     Spacer(minLength: 0)
+                    PVButton(
+                        model.isTranscribing
+                            ? L10n.CitationComposer.autoTranscribeReading
+                            : L10n.CitationComposer.autoTranscribe,
+                        variant: .secondary,
+                        size: .sm,
+                        icon: .scanText,
+                        loading: model.isTranscribing
+                    ) {
+                        model.requestAutoTranscribe()
+                    }
+                    .disabled(inert || !model.canAutoTranscribe)
+                    .accessibilityIdentifier("citationComposer.autoTranscribe")
+                    .accessibilityLabel(
+                        model.locator.hasRegion
+                            ? Text(L10n.CitationComposer.autoTranscribeDrawnRegion)
+                            : Text(L10n.CitationComposer.autoTranscribe)
+                    )
+                    .accessibilityHint(Text(model.autoTranscribeHint))
                 }
             }
             PVTextArea(text: $model.transcription, lineLimit: wide ? 6...8 : 2...6)
-                .disabled(inert)
+                .disabled(inert || model.isTranscribing)
                 .accessibilityIdentifier("citationComposer.transcription")
             if model.transcriptionUncertain {
                 PVField(label: L10n.CitationComposer.uncertainNoteLabel) {
@@ -204,6 +226,19 @@ struct CitationComposerFormPane: View {
             if let error = model.fields.error {
                 PVCallout(tone: .danger, message: error, compact: true)
             }
+            if let message = model.transcriptionOCRMessage {
+                PVCallout(tone: .warning, message: message, compact: true) {
+                    PVButton(
+                        L10n.CitationComposer.autoTranscribeDismiss,
+                        variant: .ghost,
+                        size: .sm
+                    ) {
+                        model.dismissTranscriptionOCRMessage()
+                    }
+                    .accessibilityIdentifier("citationComposer.autoTranscribe.dismiss")
+                }
+                .accessibilityIdentifier("citationComposer.autoTranscribe.callout")
+            }
             HStack {
                 Text(verbatim: model.fields.statusText)
                     .font(PVFont.body(size: PVTypeScale.caption))
@@ -217,7 +252,7 @@ struct CitationComposerFormPane: View {
                 ) {
                     Task { await model.fields.saveCitation() }
                 }
-                .disabled(inert || model.fields.isSaving)
+                .disabled(inert || model.fields.isSaving || model.isTranscribing)
                 .accessibilityIdentifier("citationComposer.saveCitation")
             }
         }

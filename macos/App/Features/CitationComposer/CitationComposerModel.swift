@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Observation
 
@@ -70,6 +71,12 @@ final class CitationComposerModel {
         var connectionTouched: Bool
     }
 
+    struct PendingTranscriptionConfirm: Identifiable, Equatable {
+        var id = UUID()
+        var existingText: String
+        var includeWholePage: Bool
+    }
+
     struct GraphSubjectOption: Identifiable, Equatable {
         var id: String
         var label: String
@@ -137,17 +144,23 @@ final class CitationComposerModel {
     var locatorCapabilities: ArtifactLocatorCapabilities {
         artifactViewer.locatorCapabilities
     }
+    private let ocrEngine: any OCREngine
+    var isTranscribing = false
+    var transcriptionOCRMessage: String?
+    var pendingTranscriptionConfirm: PendingTranscriptionConfirm?
 
     init(
         entry: CitationComposerEntry,
         session: WorkspaceSession,
         store: any GenealogyStore,
-        userID: String
+        userID: String,
+        ocrEngine: any OCREngine = VisionOCREngine()
     ) {
         self.entry = entry
         self.session = session
         self.store = store
         self.userID = userID
+        self.ocrEngine = ocrEngine
         self.context = CitationComposerContext(
             store: store,
             session: session,
@@ -173,7 +186,12 @@ final class CitationComposerModel {
     }
     var transcription: String {
         get { fields.transcription }
-        set { fields.transcription = newValue }
+        set {
+            if newValue != fields.transcription {
+                transcriptionOCRMessage = nil
+            }
+            fields.transcription = newValue
+        }
     }
     var transcriptionUncertain: Bool {
         get { fields.transcriptionUncertain }
@@ -229,14 +247,53 @@ final class CitationComposerModel {
         citationCountsByArtifact[artifactID, default: 0]
     }
 
-    var identityMenusDisabled: Bool { hasUnsavedDocumentWork }
+    var identityMenusDisabled: Bool { hasUnsavedDocumentWork || isTranscribing }
 
     var hasUnsavedDocumentWork: Bool {
         fields.isDirty || observationRows.hasEditedOrSaving
     }
 
     var shouldHoldLeave: Bool {
-        hasUnsavedDocumentWork || connections.hasTouchedWork
+        hasUnsavedDocumentWork || connections.hasTouchedWork || isTranscribing
+    }
+
+    /// Image raster only — PDF page rasters also live on `displayImage`.
+    var imageRaster: NSImage? {
+        guard isImageArtifact else { return nil }
+        return artifactViewer.displayImage
+    }
+
+    var canAutoTranscribe: Bool {
+        imageRaster != nil && !isTranscribing
+    }
+
+    var autoTranscribeHint: LocalizedStringResource {
+        switch artifactViewer.kind {
+        case .pdf:
+            return L10n.CitationComposer.autoTranscribeHintPDF
+        case .audio:
+            return L10n.CitationComposer.autoTranscribeHintAudio
+        case .video:
+            return L10n.CitationComposer.autoTranscribeHintVideo
+        case .unsupported:
+            return L10n.CitationComposer.autoTranscribeHintNoRaster
+        case .image:
+            break
+        }
+        if imageRaster == nil {
+            return artifactViewer.emptyReason == .missingFile
+                ? L10n.CitationComposer.autoTranscribeHintMissingFile
+                : L10n.CitationComposer.autoTranscribeHintNoRaster
+        }
+        if locator.hasRegion {
+            return L10n.CitationComposer.autoTranscribeHintRegion
+        }
+        return L10n.CitationComposer.autoTranscribeHintWholeImage
+    }
+
+    var needsWholePageWarning: Bool {
+        guard let image = imageRaster, locator.region == nil else { return false }
+        return OCRImage.isOversized(image.size)
     }
 
     var unsavedSummary: String {
@@ -534,25 +591,98 @@ final class CitationComposerModel {
 
     @discardableResult
     func setPage(_ page: Int) -> Bool {
-        locator.setPage(page, capabilities: locatorCapabilities)
+        guard !isTranscribing else { return false }
+        return locator.setPage(page, capabilities: locatorCapabilities)
     }
 
     @discardableResult
     func setRegion(_ draft: ArtifactRegionDraft) -> Bool {
+        guard !isTranscribing else { return false }
         let ok = locator.setRegion(draft, capabilities: locatorCapabilities, autoPage: artifactViewer.page)
         if ok { armedRegionTool = nil }
         return ok
     }
 
-    func clearRegion() { locator.clearRegion() }
+    func clearRegion() {
+        guard !isTranscribing else { return }
+        locator.clearRegion()
+    }
     func resetToEntireArtifact() {
+        guard !isTranscribing else { return }
         locator.resetToEntireArtifact()
         armedRegionTool = nil
     }
-    func removePage() { locator.removePage() }
-    func removeRegion() { locator.clearRegion() }
+    func removePage() {
+        guard !isTranscribing else { return }
+        locator.removePage()
+    }
+    func removeRegion() {
+        guard !isTranscribing else { return }
+        locator.clearRegion()
+    }
     func disarmRegionTool() { armedRegionTool = nil }
     func clearLocator() { resetToEntireArtifact() }
+
+    func requestAutoTranscribe() {
+        guard canAutoTranscribe else { return }
+        transcriptionOCRMessage = nil
+        let hasText = !transcription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let wholePage = needsWholePageWarning
+        if hasText || wholePage {
+            pendingTranscriptionConfirm = PendingTranscriptionConfirm(
+                existingText: transcription,
+                includeWholePage: wholePage
+            )
+            return
+        }
+        Task { await runAutoTranscribe() }
+    }
+
+    func confirmAutoTranscribe() {
+        pendingTranscriptionConfirm = nil
+        Task { await runAutoTranscribe() }
+    }
+
+    func cancelAutoTranscribeConfirm() {
+        pendingTranscriptionConfirm = nil
+    }
+
+    func dismissTranscriptionOCRMessage() {
+        transcriptionOCRMessage = nil
+    }
+
+    func runAutoTranscribe() async {
+        guard canAutoTranscribe, let nsImage = imageRaster else { return }
+        guard let cgImage = OCRImage.cgImage(from: nsImage) else {
+            transcriptionOCRMessage = String(localized: L10n.CitationComposer.autoTranscribeFailed)
+            return
+        }
+        let source: CGImage
+        if let region = locator.region, region.isValid {
+            let bounds = ArtifactRegionGeometry.boundingRect(of: region.points)
+            guard let cropped = OCRImage.crop(cgImage, normalizedRect: bounds) else {
+                transcriptionOCRMessage = String(localized: L10n.CitationComposer.autoTranscribeFailed)
+                return
+            }
+            source = cropped
+        } else {
+            source = cgImage
+        }
+        isTranscribing = true
+        defer { isTranscribing = false }
+        do {
+            let text = try await ocrEngine.recognizeText(in: source)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if text.isEmpty {
+                transcriptionOCRMessage = String(localized: L10n.CitationComposer.autoTranscribeNothingFound)
+                return
+            }
+            fields.transcription = text
+            transcriptionOCRMessage = nil
+        } catch {
+            transcriptionOCRMessage = String(localized: L10n.CitationComposer.autoTranscribeFailed)
+        }
+    }
 
     func graphLocation() -> WorkspaceLocation {
         WorkspaceLocation(section: .sources, sourceId: sourceID, sourceSurface: .graph)

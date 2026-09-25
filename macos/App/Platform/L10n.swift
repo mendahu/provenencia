@@ -2430,6 +2430,126 @@ enum L10n {
             comment: "Note field shown when transcription uncertain is checked"
         )
 
+        static let autoTranscribe = LocalizedStringResource(
+            "citationComposer.autoTranscribe",
+            defaultValue: "Auto transcribe",
+            comment: "Button that fills transcription from Vision OCR of the image"
+        )
+
+        static let autoTranscribeReading = LocalizedStringResource(
+            "citationComposer.autoTranscribeReading",
+            defaultValue: "Reading text…",
+            comment: "Busy label on Auto transcribe while OCR is running"
+        )
+
+        static let autoTranscribeDrawnRegion = LocalizedStringResource(
+            "citationComposer.autoTranscribeDrawnRegion",
+            defaultValue: "Auto transcribe, drawn region",
+            comment: "VoiceOver name when Auto transcribe will read the locator region"
+        )
+
+        static let autoTranscribeHintWholeImage = LocalizedStringResource(
+            "citationComposer.autoTranscribeHintWholeImage",
+            defaultValue: "Reads the whole image. Draw a region to transcribe a crop.",
+            comment: "Hint under transcription when OCR will read the full image"
+        )
+
+        static let autoTranscribeHintRegion = LocalizedStringResource(
+            "citationComposer.autoTranscribeHintRegion",
+            defaultValue: "Reads the drawn region.",
+            comment: "Hint under transcription when a locator region will be cropped"
+        )
+
+        static let autoTranscribeHintPDF = LocalizedStringResource(
+            "citationComposer.autoTranscribeHintPDF",
+            defaultValue: "Select text in the viewer and paste it. Auto transcribe is for images.",
+            comment: "Disabled hint when the Artifact is a PDF"
+        )
+
+        static let autoTranscribeHintAudio = LocalizedStringResource(
+            "citationComposer.autoTranscribeHintAudio",
+            defaultValue: "Audio cannot be read as text.",
+            comment: "Disabled hint when the Artifact is audio"
+        )
+
+        static let autoTranscribeHintVideo = LocalizedStringResource(
+            "citationComposer.autoTranscribeHintVideo",
+            defaultValue: "Video cannot be read as text.",
+            comment: "Disabled hint when the Artifact is video"
+        )
+
+        static let autoTranscribeHintMissingFile = LocalizedStringResource(
+            "citationComposer.autoTranscribeHintMissingFile",
+            defaultValue: "There is no file to read.",
+            comment: "Disabled hint when the Artifact file is missing"
+        )
+
+        static let autoTranscribeHintNoRaster = LocalizedStringResource(
+            "citationComposer.autoTranscribeHintNoRaster",
+            defaultValue: "There is no image to read.",
+            comment: "Disabled hint when the image raster failed to load"
+        )
+
+        static let autoTranscribeReplaceTitle = LocalizedStringResource(
+            "citationComposer.autoTranscribeReplaceTitle",
+            defaultValue: "Replace the transcription?",
+            comment: "Confirm title when Auto transcribe would overwrite existing text"
+        )
+
+        static let autoTranscribeReplaceMessage = LocalizedStringResource(
+            "citationComposer.autoTranscribeReplaceMessage",
+            defaultValue: "Auto transcribe will replace the text in this field. Nothing is written until you save the citation.",
+            comment: "Confirm message when replacing a non-empty transcription"
+        )
+
+        static let autoTranscribeWholePageTitle = LocalizedStringResource(
+            "citationComposer.autoTranscribeWholePageTitle",
+            defaultValue: "Transcribe the whole page?",
+            comment: "Confirm title when OCR would read a large image with no region"
+        )
+
+        static let autoTranscribeWholePageMessage = LocalizedStringResource(
+            "citationComposer.autoTranscribeWholePageMessage",
+            defaultValue: "This image is large and has no region. Reading the whole page can be slow and inaccurate. Draw a region, or continue.",
+            comment: "Confirm message for a large no-region Auto transcribe job"
+        )
+
+        static let autoTranscribeReplaceAndWholePageMessage = LocalizedStringResource(
+            "citationComposer.autoTranscribeReplaceAndWholePageMessage",
+            defaultValue: "Auto transcribe will replace the text in this field. This image is large and has no region, so the whole page will be read — that can be slow and inaccurate. Nothing is written until you save the citation.",
+            comment: "Confirm message when replacing text and reading a large whole page"
+        )
+
+        static let autoTranscribeKeep = LocalizedStringResource(
+            "citationComposer.autoTranscribeKeep",
+            defaultValue: "Keep",
+            comment: "Cancel Auto transcribe confirm and leave the existing transcription"
+        )
+
+        static let autoTranscribeConfirm = LocalizedStringResource(
+            "citationComposer.autoTranscribeConfirm",
+            defaultValue: "Transcribe",
+            comment: "Confirm button that starts Auto transcribe after a warning"
+        )
+
+        static let autoTranscribeFailed = LocalizedStringResource(
+            "citationComposer.autoTranscribeFailed",
+            defaultValue: "Provenencia couldn’t read this image. The transcription is unchanged.",
+            comment: "Callout when Vision OCR fails"
+        )
+
+        static let autoTranscribeNothingFound = LocalizedStringResource(
+            "citationComposer.autoTranscribeNothingFound",
+            defaultValue: "Nothing was found in this image. The transcription is unchanged.",
+            comment: "Callout when OCR returns no text"
+        )
+
+        static let autoTranscribeDismiss = LocalizedStringResource(
+            "citationComposer.autoTranscribeDismiss",
+            defaultValue: "Dismiss",
+            comment: "Action that clears the Auto transcribe failure callout"
+        )
+
         static let descriptionLabel = LocalizedStringResource(
             "citationComposer.descriptionLabel",
             defaultValue: "Description",

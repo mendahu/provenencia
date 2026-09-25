@@ -86,6 +86,7 @@ struct CitationComposerViewerPane: View {
             }
             .frame(height: PVSpacing.hitMin)
             .padding(.horizontal, PVSpacing.space6)
+            .disabled(model.isTranscribing)
             PVDivider()
         }
         .background(PVColor.surfaceCard)

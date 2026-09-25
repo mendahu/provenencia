@@ -47,6 +47,18 @@ final class ArtifactViewerModel {
         zoom = 1
     }
 
+    /// Test hook: install an in-memory image raster without going through ``load``.
+    func installImageRasterForTesting(_ image: NSImage) {
+        kind = .image
+        content = .image(image)
+        displayImage = image
+        emptyReason = .idle
+        isLoading = false
+        page = 1
+        pageCount = 1
+        zoom = 1
+    }
+
     /// Sole entry point for hosts (composer, future Source sheet, …).
     func load(_ source: ArtifactViewerSource) async {
         loadGeneration += 1
