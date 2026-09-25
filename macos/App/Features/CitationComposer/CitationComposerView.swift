@@ -56,6 +56,15 @@ struct CitationComposerView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(PVColor.surfacePage)
+        .onAppear {
+            model.navigation = navigation
+            navigation.leaveGuard = model
+        }
+        .onDisappear {
+            if navigation.leaveGuard === model {
+                navigation.leaveGuard = nil
+            }
+        }
         .accessibilityIdentifier("workspace.destination.citationComposer")
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(L10n.CitationComposer.accessibilityTitle))
@@ -127,6 +136,34 @@ struct CitationComposerView: View {
             accessibilityIdentifierPrefix: "citationComposer.abandon",
             onConfirm: { model.confirmAbandonArtifact() },
             detail: { _ in EmptyView() }
+        )
+        .pvConfirm(
+            item: leaveBinding,
+            copy: { _ in
+                PVConfirmCopy(
+                    title: L10n.CitationComposer.abandonTitle(ref: model.activeCitationRef),
+                    message: String(localized: L10n.CitationComposer.saveToastBody),
+                    confirm: L10n.CitationComposer.abandonConfirm,
+                    cancel: L10n.CitationComposer.abandonCancel
+                )
+            },
+            tone: .danger,
+            accessibilityIdentifierPrefix: "citationComposer.leave",
+            onConfirm: { model.discardLeaveChanges() },
+            detail: { _ in EmptyView() }
+        )
+    }
+
+    private var leaveBinding: Binding<CitationComposerModel.PendingLeave?> {
+        Binding(
+            get: { model.pendingLeave },
+            set: { newValue in
+                if newValue == nil {
+                    model.keepEditingAfterLeave()
+                } else {
+                    model.pendingLeave = newValue
+                }
+            }
         )
     }
 

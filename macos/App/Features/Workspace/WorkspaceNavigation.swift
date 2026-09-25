@@ -1,6 +1,20 @@
 import Foundation
 import Observation
 
+enum PendingNavigation: Equatable {
+    case location(WorkspaceLocation)
+    case back
+    case forward
+    case index(Int)
+}
+
+@MainActor
+protocol WorkspaceLeaveGuard: AnyObject {
+    /// Return true to hold this navigation. The guard must later call
+    /// `resumeHeldNavigation()` or `cancelHeldNavigation()`.
+    func shouldHoldNavigation(_ pending: PendingNavigation) -> Bool
+}
+
 /// First-class workspace navigation history (`go(to:)` / Back / Forward).
 /// Owned by `WorkspaceView` and injected via `.environment` so any destination
 /// can commit or apply places without talking to sidebar chrome.
@@ -19,6 +33,10 @@ final class WorkspaceNavigation {
     private(set) var lastHistoryIssue: NavigationHistoryIssue?
     /// Fired synchronously whenever a location is committed (including history restore).
     var onLocationCommit: ((WorkspaceLocation) -> Void)?
+    /// Views never observe this; it only intercepts committed moves.
+    @ObservationIgnored
+    weak var leaveGuard: (any WorkspaceLeaveGuard)?
+    private(set) var heldNavigation: PendingNavigation?
 
     private var history: NavigationHistoryStore?
     private var projectUuid: String = ""
@@ -68,30 +86,49 @@ final class WorkspaceNavigation {
 
     /// Committed navigation. Coalesces identical locations; truncates forward.
     func go(to location: WorkspaceLocation) {
-        guard let history else {
-            apply(location)
+        if location == currentLocation {
+            performGo(to: location)
             return
         }
-        apply(history.go(to: location))
-        refreshHistoryIssue()
+        if hold(.location(location)) { return }
+        performGo(to: location)
     }
 
     func goBack() {
-        guard let history, let location = history.goBack() else { return }
-        apply(location)
-        refreshHistoryIssue()
+        guard history != nil, canGoBack else { return }
+        if hold(.back) { return }
+        performBack()
     }
 
     func goForward() {
-        guard let history, let location = history.goForward() else { return }
-        apply(location)
-        refreshHistoryIssue()
+        guard history != nil, canGoForward else { return }
+        if hold(.forward) { return }
+        performForward()
     }
 
     func go(toIndex index: Int) {
-        guard let history, let location = history.go(toIndex: index) else { return }
-        apply(location)
-        refreshHistoryIssue()
+        guard history != nil else { return }
+        if hold(.index(index)) { return }
+        performIndex(index)
+    }
+
+    func resumeHeldNavigation() {
+        guard let pending = heldNavigation else { return }
+        heldNavigation = nil
+        switch pending {
+        case .location(let location):
+            performGo(to: location)
+        case .back:
+            performBack()
+        case .forward:
+            performForward()
+        case .index(let index):
+            performIndex(index)
+        }
+    }
+
+    func cancelHeldNavigation() {
+        heldNavigation = nil
     }
 
     /// Nearest history entries before current (nearest first) for the Back jump menu.
@@ -113,6 +150,39 @@ final class WorkspaceNavigation {
             return
         }
         apply(history.replaceCurrent(with: root))
+        refreshHistoryIssue()
+    }
+
+    private func hold(_ pending: PendingNavigation) -> Bool {
+        guard let leaveGuard, leaveGuard.shouldHoldNavigation(pending) else { return false }
+        heldNavigation = pending
+        return true
+    }
+
+    private func performGo(to location: WorkspaceLocation) {
+        guard let history else {
+            apply(location)
+            return
+        }
+        apply(history.go(to: location))
+        refreshHistoryIssue()
+    }
+
+    private func performBack() {
+        guard let history, let location = history.goBack() else { return }
+        apply(location)
+        refreshHistoryIssue()
+    }
+
+    private func performForward() {
+        guard let history, let location = history.goForward() else { return }
+        apply(location)
+        refreshHistoryIssue()
+    }
+
+    private func performIndex(_ index: Int) {
+        guard let history, let location = history.go(toIndex: index) else { return }
+        apply(location)
         refreshHistoryIssue()
     }
 

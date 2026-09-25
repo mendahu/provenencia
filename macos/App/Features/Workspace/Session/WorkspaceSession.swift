@@ -12,7 +12,8 @@ final class WorkspaceSession {
 
     private var handles: [CatalogQueryKey: AnyObject] = [:]
     private var valueTypes: [CatalogQueryKey: ObjectIdentifier] = [:]
-    private var inFlight: [CatalogQueryKey: Task<Void, Never>] = [:]
+    private var generations: [CatalogQueryKey: Int] = [:]
+    private var inFlight: [CatalogQueryKey: (generation: Int, task: Task<Void, Never>)] = [:]
     private var invalidatedKeys: Set<CatalogQueryKey> = []
     /// Transient notice after leaving a place (composer save, etc.).
     var noticeToast: VocabularyToast?
@@ -35,7 +36,7 @@ final class WorkspaceSession {
     /// Waits out an in-flight load, then returns the cached value.
     /// Does not start a load. Nil when the key was never warmed, is stale, or the load failed.
     func readyValue<Value>(_ key: CatalogQueryKey) async -> Value? {
-        while let task = inFlight[key] {
+        while let task = inFlight[key]?.task {
             await task.value
         }
         if invalidatedKeys.contains(key) {
@@ -61,6 +62,9 @@ final class WorkspaceSession {
 
     /// Synchronous cache write. Clears stale flag without calling the loader.
     func setQueryValue<Value>(_ key: CatalogQueryKey, value: Value) {
+        bumpGeneration(key)
+        inFlight[key]?.task.cancel()
+        inFlight[key] = nil
         let handle = typedHandle(for: key, as: Value.self)
         handle.applySuccess(value)
         invalidatedKeys.remove(key)
@@ -126,31 +130,46 @@ final class WorkspaceSession {
         }
 
         invalidatedKeys.remove(key)
+        let captured = bumpGeneration(key)
         let hadStaleValue = handle.value != nil
         handle.beginLoading(stale: hadStaleValue)
 
         let task = Task { @MainActor in
+            let outcome: Result<Value, Error>
             do {
-                let result = try await loader()
-                handle.applySuccess(result)
+                outcome = .success(try await loader())
             } catch {
+                outcome = .failure(error)
+            }
+            if self.generations[key] != captured {
+                return
+            }
+            switch outcome {
+            case .success(let result):
+                handle.applySuccess(result)
+            case .failure(let error):
                 handle.applyFailure(error, clearValue: !hadStaleValue)
             }
-            // Clear before a possible follow-up — `query` early-returns while
-            // `inFlight` is set, so a mutation mid-load would otherwise stick.
-            self.inFlight[key] = nil
-            if self.invalidatedKeys.contains(key) {
-                let _: QueryHandle<Value> = self.ensureQuery(key, loader: loader)
+            if self.inFlight[key]?.generation == captured {
+                self.inFlight[key] = nil
             }
         }
-        inFlight[key] = task
+        inFlight[key] = (captured, task)
         return handle
     }
 
     func invalidate(_ key: CatalogQueryKey) {
-        inFlight[key]?.cancel()
+        bumpGeneration(key)
+        inFlight[key]?.task.cancel()
         inFlight[key] = nil
         invalidatedKeys.insert(key)
+    }
+
+    @discardableResult
+    private func bumpGeneration(_ key: CatalogQueryKey) -> Int {
+        let next = (generations[key] ?? 0) + 1
+        generations[key] = next
+        return next
     }
 
     /// Starts the registry loader when this key is already cached.

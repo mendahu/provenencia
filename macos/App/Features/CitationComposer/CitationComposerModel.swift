@@ -105,6 +105,16 @@ final class CitationComposerModel {
     private let userID: String
     private let store: any GenealogyStore
     let session: WorkspaceSession
+    @ObservationIgnored
+    weak var navigation: WorkspaceNavigation?
+    var pendingLeave: PendingLeave?
+
+    struct PendingLeave: Identifiable, Equatable {
+        var id = UUID()
+        var citationDirty: Bool
+        var observationCount: Int
+        var connectionTouched: Bool
+    }
 
     var sourceID: String { entry.sourceID }
     var subjectID: String { entry.subjectID }
@@ -1709,5 +1719,28 @@ final class CitationComposerModel {
             place: subject(for: "place"),
             term: term(for: kind == .relationship ? "relationship_type" : "role")
         )
+    }
+}
+
+extension CitationComposerModel: WorkspaceLeaveGuard {
+    func shouldHoldNavigation(_ pending: PendingNavigation) -> Bool {
+        _ = pending
+        guard isDirty else { return false }
+        pendingLeave = PendingLeave(
+            citationDirty: isDirty,
+            observationCount: 0,
+            connectionTouched: false
+        )
+        return true
+    }
+
+    func discardLeaveChanges() {
+        pendingLeave = nil
+        navigation?.resumeHeldNavigation()
+    }
+
+    func keepEditingAfterLeave() {
+        pendingLeave = nil
+        navigation?.cancelHeldNavigation()
     }
 }

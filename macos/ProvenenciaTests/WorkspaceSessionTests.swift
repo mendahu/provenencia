@@ -455,6 +455,41 @@ struct WorkspaceSessionTests {
         let ready: [String]? = await session.readyValue(key)
         #expect(ready == nil)
     }
+
+    @Test func staleOlderLoadDoesNotOverwriteNewer() async {
+        let session = makeSession()
+        let key = CatalogQueryKey.sourcesList(project: session.projectKey)
+        let olderGate = Gate()
+        let handle = session.ensureQuery(key) {
+            await olderGate.waitForOpen()
+            return ["old"]
+        }
+        session.invalidate(key)
+        _ = session.ensureQuery(key) { ["new"] }
+        await waitForFetchComplete(handle)
+        #expect(handle.value == ["new"])
+        await olderGate.open()
+        await Task.yield()
+        #expect(handle.value == ["new"])
+        #expect(handle.isFetching == false)
+    }
+
+    @Test func setQueryValueWinsOverInFlightLoad() async {
+        let session = makeSession()
+        let key = CatalogQueryKey.sourcesList(project: session.projectKey)
+        let gate = Gate()
+        let handle = session.ensureQuery(key) {
+            await gate.waitForOpen()
+            return ["stale"]
+        }
+        session.setQueryValue(key, value: ["patched"])
+        #expect(handle.value == ["patched"])
+        await gate.open()
+        await Task.yield()
+        #expect(handle.value == ["patched"])
+        let ready: [String]? = await session.readyValue(key)
+        #expect(ready == ["patched"])
+    }
 }
 
 /// One-shot gate so concurrent loaders block until tests observe stale data.
