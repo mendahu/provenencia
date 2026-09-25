@@ -10,12 +10,11 @@
 
 Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](README.md) first.
 
-This brief is an **enhancement** of the **S8-D7** composer viewer / transcription row.
+This brief is an **enhancement** of the existing **S8-D7** / **S8-D8** composer board — not a rethink, and not the Spike 7 form. Keep the current frames (Layout A, citation fields section, **Save citation**, viewer, observation stack, and the **S8-D1** transcription row). Add PDF **Find**, I-beam selection, and **Paste transcription from selection**. Do not restyle anything this brief does not name.
 
 ### Claude Design — do this first (in order)
 
 Work **in place** on this board. Do not fork a parallel copy of the surface.
-- **Rethink** (this brief says replace): throw away the old frames. Do not keep a before/after to ship.
 - **Enhancement**: add to the existing frames. Do not start a second composer / graph / page.
 
 1. **Clear this board’s local design-system cache.** Claude Design keeps a stale pack; drawing against it invents local copies of kit controls.
@@ -51,7 +50,7 @@ Do **not** invent a local Field, Button, Card, Select, Callout, or Confirm.
 Make a **born-digital PDF** usable in the citation composer without OCR:
 
 1. **Find** on the PDF tool strip — keyword field + Find (next/previous). Jump to that page and **highlight** the hit. For large registers.
-2. **Text selection** as the default PDF pointer (I-beam). Today click-drag **pans** the raster. Pan must remain possible (hand tool and/or modifier) but must not steal every drag.
+2. **Text selection** as the default PDF pointer (I-beam), matching Preview / PDFKit. Today click-drag **pans** the raster. After remount, **drag selects** and **scroll pans** (trackpad, wheel, scrollbars). No hand tool. No modifier-drag.
 3. **Paste transcription from selection** on the transcription field (PDF only) — sibling to image **Auto Transcribe** (**S8-D1**).
 
 Do **not** redesign Observation list, Save/Cancel, or image-viewer pan/zoom.
@@ -72,7 +71,7 @@ Exact placement of Find vs page/zoom/region is a board finding. Paste lives with
 | Fact | UI implication |
 | --- | --- |
 | S7-06 PDF is a **bitmap** | Find/select require a **PDFKit page**, not `NSImage`. S8-03 is the remount. |
-| Click-drag currently pans | Default becomes select; pan is a mode or modifier. Cursors must match. |
+| Click-drag currently pans | Default becomes select (I-beam). Pan is the scroll view, like Preview — not a hand tool or Option/Space/Command-drag. |
 | Region tools (S7-07) | Armed region tool: draw, not select. Find can stay. Overlay coords follow the new view. |
 | No text layer (scan-in-PDF) | Honest disable. Do not offer Auto Transcribe / Vision here. |
 | Transcription ≠ Observation | Paste fills the textarea only. Same replace-confirm pattern as S8-D1. |
@@ -91,7 +90,7 @@ Exact placement of Find vs page/zoom/region is a board finding. Paste lives with
 
 | Ships in **S8-03** | **S8-04** | **S8-05** |
 | --- | --- | --- |
-| PDFKit-backed page; I-beam default; pan mode/modifier; region overlay still works; cursors | Find field + next/prev + highlight + page jump; no-text empty | Paste control; replace confirm; disabled with no selection / no text layer |
+| PDFKit-backed page; I-beam default; scroll-to-pan; region overlay still works; cursors | Find field + next/prev + highlight + page jump; no-text empty | Paste control; replace confirm; disabled with no selection / no text layer |
 
 S8-04 and S8-05 **must not** start on the raster viewer.
 
@@ -104,7 +103,7 @@ S8-04 and S8-05 **must not** start on the raster viewer.
 | PF-1 | PDF tool strip shows **Find** (field + commit + next/previous). Image strip unchanged. |
 | PF-2 | First hit / next / prev updates **page chrome** and a visible **highlight**. Wrap or stop at ends — board picks one and says so. |
 | PF-3 | No matches / no text layer: short honest copy. Not a Vision offer. |
-| PF-4 | Default PDF cursor is **I-beam**; drag selects text. Pan documented (hand control and/or Option-drag). |
+| PF-4 | Default PDF cursor is **I-beam**; drag selects text. Pan is native scroll (two-finger trackpad, mouse wheel, scrollbars), same as Preview. No hand tool. No modifier-drag. |
 | PF-5 | Armed **region** tool: select-drag is off; draw as today. Disarm restores I-beam. |
 | PF-6 | **Paste transcription from selection** on the transcription row for PDF. Disabled without a selection. Image shows Auto Transcribe, not this button (or both visible with the other disabled — board picks one pattern, not two competing fills). |
 | PF-7 | Non-empty transcription → **replace confirm** (`.pvConfirm`), same as S8-D1. |
@@ -119,7 +118,7 @@ S8-04 and S8-05 **must not** start on the raster viewer.
 2. Text selected — Paste enabled.
 3. Find typed + hits — highlight + page change.
 4. Find no hits / image-only PDF.
-5. Hand / pan mode (if a control).
+5. Zoomed page — scroll/trackpad pans; drag still selects.
 6. Region tool armed — draw, not select.
 7. Transcription row: image Artifact (Auto Transcribe) vs PDF (Paste).
 8. Replace confirm on paste.
@@ -133,7 +132,7 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them.
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
 | Artifact viewer tool chrome | Snowflake | **Extend** | `Features/ArtifactViewer/ArtifactViewer.swift` (`ArtifactViewerToolChrome`) | Find group after page/zoom/region. |
-| Artifact media viewport | Snowflake | **Extend / remount** | `Features/ArtifactViewer/ArtifactMediaViewport.swift` | PDF path leaves raster; images stay. |
+| Artifact media viewport | Snowflake | **Extend / remount** | `Features/ArtifactViewer/ArtifactMediaViewport.swift` | PDF path leaves raster for `PDFView` (scroll pans); images keep click-drag pan. |
 | Artifact viewer model | Snowflake | **Extend** | `Features/ArtifactViewer/ArtifactViewerModel.swift` | Keep `PDFDocument`; stop flattening PDF to `displayImage` for paint. |
 | Region overlay | Snowflake | **Extend** | `Features/ArtifactViewer/ArtifactRegionOverlay.swift` | Remap to PDFKit page space. |
 | Citation composer form | Snowflake | **Extend** | `Features/CitationComposer/CitationComposerFormPane.swift` | Paste control next to S8-D1 Auto Transcribe. |
@@ -146,6 +145,7 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them.
 | Do not add | Why |
 | --- | --- |
 | `PVFindBar` kit control | One composer PDF strip unless a second host exists. |
+| Hand tool or modifier-drag pan | Preview / PDFKit: scroll pans. Space fights the transcription field. |
 | Live Text on images | S8-D1 Vision path. |
 | Source Artifact sheet Find | Later. |
 
@@ -157,6 +157,7 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them.
 - `text_quote` locator writes
 - Changing Save / Observation chrome
 - Thumbnail generation (parked; not this spike)
+- Changing image-viewer click-drag pan
 
 ---
 

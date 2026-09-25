@@ -8,7 +8,7 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 
 | Step | Brief | Feeds | Notes |
 | --- | --- | --- | --- |
-| S8-D2 | [`S8-D2-pdf-text-find.md`](S8-D2-pdf-text-find.md) | PRs **S8-03**, **S8-04**, **S8-05** | PDF Find on the tool strip; I-beam vs pan; paste transcription from selection |
+| S8-D2 | [`S8-D2-pdf-text-find.md`](S8-D2-pdf-text-find.md) | PRs **S8-03**, **S8-04**, **S8-05** | PDF Find on the tool strip; I-beam + scroll-to-pan; paste transcription from selection |
 | S8-D3 | [`S8-D3-graph-visuals.md`](S8-D3-graph-visuals.md) | PR **S8-06** | Conflict + negated; Source-page jump; richer bridge sentences; Add property on bridges |
 | S8-D4 | [`S8-D4-source-page.md`](S8-D4-source-page.md) | PR **S8-07** | Source page enhancements; first item: jump to Evidence graph |
 | S8-D5 | [`S8-D5-sources-list.md`](S8-D5-sources-list.md) | PR **S8-08** | Sources list refresh; first item: subject + observation counts |

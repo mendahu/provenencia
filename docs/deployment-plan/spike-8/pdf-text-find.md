@@ -9,14 +9,14 @@ S7-06 paints PDF pages as a **raster** in `ArtifactMediaViewport` and **click-dr
 ## Product (this spike)
 
 1. **Find** — field on the PDF tool strip (`ArtifactViewerToolChrome`). Type a keyword, Find (and next/previous). Jump the page chrome to the hit and **highlight** it. Navigation only — not a locator type.
-2. **Select text** — default pointer on PDF is an **I-beam**. Drag selects `PDFSelection`. Pan is no longer the unnamed default (board picks explicit hand tool and/or modifier-drag).
+2. **Select text** — default pointer on PDF is an **I-beam**. Drag selects `PDFSelection`. Pan is the scroll view (trackpad, wheel, scrollbars), same as Preview / PDFKit. No hand tool. No modifier-drag.
 3. **Paste transcription from selection** — control above / on the transcription field copies the current PDF selection into `transcription` (replace-confirm if non-empty, same honesty as Auto Transcribe).
 
 Composer-only. Image Artifacts unchanged (still raster + region + **S8-01**). Image-only PDFs (no text layer): Find and select **honest empty** — do **not** OCR in this slice.
 
 ## Why the PRs are ordered this way
 
-Find and paste both need a **live PDFKit page** (`PDFView` / equivalent), not `PDFPage` flattened to `NSImage`. Region overlay (S7-07) today maps onto the raster document. **S8-03** remounts PDF paint onto PDFKit and remaps pan / select / region coordinates. **S8-04** (Find) and **S8-05** (paste) cannot ship on the raster viewer.
+Find and paste both need a **live PDFKit page** (`PDFView` / equivalent), not `PDFPage` flattened to `NSImage`. Region overlay (S7-07) today maps onto the raster document. **S8-03** remounts PDF paint onto PDFKit, takes Preview’s pointer contract (drag selects, scroll pans), and remaps region coordinates. **S8-04** (Find) and **S8-05** (paste) cannot ship on the raster viewer.
 
 **S8-01** is the image twin of S8-05; prefer S8-05 after S8-01 so one transcription action row. PDF Artifact thumbnails are not this spike ([`artifact-pdf-thumbnails.md`](../../ideas/artifact-pdf-thumbnails.md)).
 
@@ -25,7 +25,7 @@ Find and paste both need a **live PDFKit page** (`PDFView` / equivalent), not `P
 | Decision | Choice |
 | --- | --- |
 | Search API | `PDFDocument.findString` / `beginFindString` → `PDFSelection` |
-| Default gesture (PDF) | Text selection. Pan is explicit. |
+| Default gesture (PDF) | Text selection. Pan is the scroll view (Preview / PDFKit). No hand tool. |
 | Region tools | Stay; exclusive with select (armed region tool wins). Find stays available. |
 | No text layer | Disable Find / paste; short reason. No Vision fallback. |
 | Source-page viewer | Out. Composer only. |
