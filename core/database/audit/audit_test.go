@@ -449,13 +449,39 @@ func TestRecord(t *testing.T) {
 			},
 		},
 		{
+			name: "rejects zero changes",
+			run: func(t *testing.T, c *database.Catalog) {
+				tx := begin(t, c)
+				defer tx.Rollback()
+				_, err := Record(tx, Revision{
+					CreatedAt: fixedAt,
+					Changes:   nil,
+				})
+				if !errors.Is(err, ErrInvalid) {
+					t.Fatalf("got %v", err)
+				}
+				_, err = Record(tx, Revision{
+					CreatedAt: fixedAt,
+					Changes:   []Change{},
+				})
+				if !errors.Is(err, ErrInvalid) {
+					t.Fatalf("got %v", err)
+				}
+			},
+		},
+		{
 			name: "rejects blank created_at",
 			run: func(t *testing.T, c *database.Catalog) {
 				tx := begin(t, c)
 				defer tx.Rollback()
 				_, err := Record(tx, Revision{
 					CreatedAt: "  ",
-					Changes:   nil,
+					Changes: []Change{{
+						EntityType: "source",
+						EntityID:   entityID,
+						Action:     ActionCreate,
+						Fields:     map[string]FieldDiff{"title": {Old: nil, New: "A"}},
+					}},
 				})
 				if !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
@@ -470,6 +496,12 @@ func TestRecord(t *testing.T) {
 				_, err := Record(tx, Revision{
 					UserID:    []byte{1, 2},
 					CreatedAt: fixedAt,
+					Changes: []Change{{
+						EntityType: "source",
+						EntityID:   entityID,
+						Action:     ActionCreate,
+						Fields:     map[string]FieldDiff{"title": {Old: nil, New: "A"}},
+					}},
 				})
 				if !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
@@ -479,7 +511,15 @@ func TestRecord(t *testing.T) {
 		{
 			name: "rejects nil tx",
 			run: func(t *testing.T, c *database.Catalog) {
-				_, err := Record(nil, Revision{CreatedAt: fixedAt})
+				_, err := Record(nil, Revision{
+					CreatedAt: fixedAt,
+					Changes: []Change{{
+						EntityType: "source",
+						EntityID:   entityID,
+						Action:     ActionCreate,
+						Fields:     map[string]FieldDiff{"title": {Old: nil, New: "A"}},
+					}},
+				})
 				if !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
@@ -495,6 +535,68 @@ func TestRecord(t *testing.T) {
 			}
 			defer c.Close()
 			tt.run(t, c)
+		})
+	}
+}
+
+func TestFullRowDeletedRow(t *testing.T) {
+	tests := []struct {
+		name string
+		got  map[string]FieldDiff
+		want map[string]FieldDiff
+	}{
+		{
+			name: "FullRow keeps null keys",
+			got: FullRow(map[string]any{
+				"id":          "aaaaaaaa-bbbb-7ccc-8ddd-eeeeeeeeeeee",
+				"label":       "Mary",
+				"description": nil,
+			}),
+			want: map[string]FieldDiff{
+				"id":          {Old: nil, New: "aaaaaaaa-bbbb-7ccc-8ddd-eeeeeeeeeeee"},
+				"label":       {Old: nil, New: "Mary"},
+				"description": {Old: nil, New: nil},
+			},
+		},
+		{
+			name: "DeletedRow keeps null keys",
+			got: DeletedRow(map[string]any{
+				"id":          "aaaaaaaa-bbbb-7ccc-8ddd-eeeeeeeeeeee",
+				"label":       "Mary",
+				"description": nil,
+			}),
+			want: map[string]FieldDiff{
+				"id":          {Old: "aaaaaaaa-bbbb-7ccc-8ddd-eeeeeeeeeeee", New: nil},
+				"label":       {Old: "Mary", New: nil},
+				"description": {Old: nil, New: nil},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if len(tt.got) != len(tt.want) {
+				t.Fatalf("len got %d want %d (%+v)", len(tt.got), len(tt.want), tt.got)
+			}
+			for k, want := range tt.want {
+				got, ok := tt.got[k]
+				if !ok {
+					t.Fatalf("missing key %q", k)
+				}
+				if got.Old != want.Old || got.New != want.New {
+					t.Fatalf("%s: got %+v want %+v", k, got, want)
+				}
+			}
+			raw, err := json.Marshal(tt.got)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var decoded map[string]FieldDiff
+			if err := json.Unmarshal(raw, &decoded); err != nil {
+				t.Fatal(err)
+			}
+			if decoded["description"].Old != nil || decoded["description"].New != nil {
+				t.Fatalf("description should stay JSON null, got %+v", decoded["description"])
+			}
 		})
 	}
 }

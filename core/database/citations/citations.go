@@ -387,13 +387,15 @@ func UpdateWithObservations(
 	}
 	changes = append(changes, obsChanges...)
 
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "update_citation_with_observations",
-		CreatedAt:  project.NowUTC(),
-		Changes:    changes,
-	}); err != nil {
-		return CreateResult{}, err
+	if len(changes) > 0 {
+		if _, err := audit.Record(tx, audit.Revision{
+			UserID:     userID,
+			ActionType: "update_citation_with_observations",
+			CreatedAt:  project.NowUTC(),
+			Changes:    changes,
+		}); err != nil {
+			return CreateResult{}, err
+		}
 	}
 	if err := tx.Commit(); err != nil {
 		return CreateResult{}, err
