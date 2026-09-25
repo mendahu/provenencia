@@ -8,8 +8,8 @@ import SwiftUI
 /// label over type with an honesty body; durable (cited) cards put type·ref
 /// on the chrome row and the full edge-summary sentence as the title below.
 struct EvidenceBridgeCard: View {
-    static let width: CGFloat = 236
-    static let approximateHalfHeight: CGFloat = 36
+    nonisolated static let width: CGFloat = 236
+    nonisolated static let approximateHalfHeight: CGFloat = 36
 
     static let editActionID = "edit"
     static let editCitationActionID = "editCitation"

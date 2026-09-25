@@ -140,13 +140,14 @@ struct CitationComposerModelTests {
     private func seedCitation(
         _ store: FakeStore,
         id: String = "cit-1",
+        locatorJSON: String = #"{"version":1,"selectors":[{"type":"artifact"}]}"#,
         observations: [CatalogObservation] = []
     ) {
         store.citationsByID[id] = CatalogCitation(
             id: id,
             ref: "CIT-1",
             artifactID: "art-0",
-            locatorJSON: #"{"version":1,"selectors":[{"type":"artifact"}]}"#,
+            locatorJSON: locatorJSON,
             transcription: "saved text",
             description: "",
             transcriptionUncertain: false,
@@ -331,6 +332,13 @@ struct CitationComposerModelTests {
         await connect.prepare()
         #expect(connect.connections.rows.first?.isPending == true)
         #expect(connect.identityMenusDisabled == false)
+        connect.connections.applyTerm(
+            connectionID: connect.connections.rows[0].id,
+            termID: "term-witness"
+        )
+        #expect(connect.identityMenusDisabled == false)
+        #expect(connect.shouldHoldLeave)
+        #expect(connect.shouldHoldNavigation(.back))
     }
 
     @Test func leaveGuardHoldsDirtyEditedAndTouchedNotUntouchedOrEmpty() async {
@@ -360,6 +368,26 @@ struct CitationComposerModelTests {
         #expect(connect.shouldHoldNavigation(.back))
     }
 
+    @Test func editPrepareKeepsRegionLocatorAndIsNotDirty() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let locatorJSON = """
+        {"version":1,"selectors":[{"type":"artifact"},{"type":"region","unit":"normalized","points":[{"x":0.1,"y":0.1},{"x":0.4,"y":0.1},{"x":0.4,"y":0.4},{"x":0.1,"y":0.4}]}]}
+        """
+        seedCitation(
+            store,
+            locatorJSON: locatorJSON,
+            observations: [occupationObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1")]
+        )
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        #expect(model.fields.locator.hasRegion)
+        #expect(model.fields.locator.region?.points.count == 4)
+        #expect(model.fields.isDirty == false)
+        #expect(model.hasUnsavedDocumentWork == false)
+        #expect(model.shouldHoldNavigation(.back) == false)
+    }
+
     @Test func pendingConnectionOnNewAndExisting() async {
         let store = makeStore()
         seedArtifact(store)
@@ -377,7 +405,7 @@ struct CitationComposerModelTests {
         )
         existing.connections.applyTerm(connectionID: existing.connections.rows[0].id, termID: "term-witness")
         store.recordedCalls = []
-        await existing.performSaveConnection()
+        await existing.connections.saveConnection()
         #expect(store.recordedCalls.contains { $0.hasPrefix("createCitedBridge citationID=cit-1 observations=3") })
 
         let fresh = makeModel(
@@ -389,7 +417,7 @@ struct CitationComposerModelTests {
         await fresh.prepare()
         fresh.connections.applyTerm(connectionID: fresh.connections.rows[0].id, termID: "term-witness")
         store.recordedCalls = []
-        await fresh.performSaveConnection()
+        await fresh.connections.saveConnection()
         #expect(store.recordedCalls.contains { $0.hasPrefix("createCitedBridge citationID=nil observations=3") })
         #expect(fresh.activeCitationID != nil)
     }
@@ -430,7 +458,7 @@ struct CitationComposerModelTests {
         model.transcription = "dirty"
         #expect(model.shouldHoldNavigation(.back))
         store.recordedCalls = []
-        await model.performSaveConnection()
+        await model.connections.saveConnection()
         #expect(store.recordedCalls.contains { $0.hasPrefix("createCitedBridge citationID=nil observations=2") })
     }
 
@@ -573,9 +601,10 @@ struct CitationComposerModelTests {
         await model.prepare()
         model.connections.applyTerm(connectionID: model.connections.rows[0].id, termID: "term-witness")
         let before = model.observations.count
-        await model.performSaveConnection()
+        await model.connections.saveConnection()
         #expect(model.connections.rows[0].isPending == false)
         #expect(model.observations.count == before)
+        #expect(model.vocabulary.graphSubjects.contains { $0.typeKey == "participation" })
     }
 
     @Test func roleChangeCallsUpdateOrAddAndHasNoDelete() async {
@@ -617,7 +646,7 @@ struct CitationComposerModelTests {
         #expect(model.connections.rows[0].canCommitRole == false)
         model.connections.applyTerm(connectionID: connectionID, termID: "term-other")
         store.recordedCalls = []
-        await model.performCommitRole(connectionID: connectionID)
+        await model.connections.commitRole(connectionID: connectionID)
         #expect(store.recordedCalls.contains { $0.hasPrefix("updateObservation") })
     }
 

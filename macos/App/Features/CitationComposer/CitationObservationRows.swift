@@ -240,10 +240,10 @@ final class CitationObservationRows {
 
     var pendingDelete: PendingDelete?
 
-    private weak var owner: CitationComposerModel?
+    private weak var context: CitationComposerContext?
 
-    func attach(_ owner: CitationComposerModel) {
-        self.owner = owner
+    func attach(_ context: CitationComposerContext) {
+        self.context = context
     }
 
     func replace(_ next: [ObservationRow]) {
@@ -259,11 +259,11 @@ final class CitationObservationRows {
     }
 
     func commit(rowID: UUID) async {
-        guard let owner, let index = rows.firstIndex(where: { $0.id == rowID }) else { return }
+        guard let context, let index = rows.firstIndex(where: { $0.id == rowID }) else { return }
         if case .saving = rows[index].state { return }
         guard rows[index].canSave else { return }
         rows[index].state = .saving
-        await owner.performCommitObservation(rowID: rowID)
+        await performCommit(rowID: rowID, context: context)
     }
 
     func revert(rowID: UUID) {
@@ -285,9 +285,9 @@ final class CitationObservationRows {
     }
 
     func confirmDelete() async {
-        guard let owner, let pending = pendingDelete else { return }
+        guard let context, let pending = pendingDelete else { return }
         pendingDelete = nil
-        await owner.performDeleteObservation(rowID: pending.id)
+        await performDelete(rowID: pending.id, context: context)
     }
 
     func cancelDelete() {
@@ -384,6 +384,108 @@ final class CitationObservationRows {
             case .draft: return !$0.isEmptyDraft
             case .saved: return false
             }
+        }
+    }
+
+    var unsavedObservationCount: Int {
+        rows.filter {
+            if case .saved = $0.state { return false }
+            return !$0.isEmptyDraft
+        }.count
+    }
+
+    private func performCommit(rowID: UUID, context: CitationComposerContext) async {
+        guard let index = rows.firstIndex(where: { $0.id == rowID }) else { return }
+        let row = rows[index]
+        guard let property = context.vocabulary.property(id: row.propertyID) else {
+            markError(rowID: rowID, message: String(localized: L10n.CitationComposer.missingPropertyError))
+            return
+        }
+        let (draftOrNil, draftError) = row.asDraft(property: property)
+        if let draftError {
+            markError(rowID: rowID, message: draftError)
+            return
+        }
+        guard let draft = draftOrNil else { return }
+        let values = context.citationValues()
+        do {
+            if context.citationID == nil {
+                guard let artifactID = context.artifactID else {
+                    markError(rowID: rowID, message: String(localized: L10n.CitationComposer.needArtifact))
+                    return
+                }
+                let created = try await context.store.createCitationWithObservations(
+                    projectDir: context.projectDir,
+                    userID: context.userID,
+                    artifactID: artifactID,
+                    locatorJSON: values.locator.encodeJSON(),
+                    transcription: values.transcription,
+                    description: values.description,
+                    transcriptionUncertain: values.transcriptionUncertain,
+                    transcriptionNote: values.transcriptionNote,
+                    citationNotes: [],
+                    observations: [draft]
+                )
+                context.citationID = created.0.id
+                context.captureCitationBaseline()
+                if let written = created.1.first {
+                    markSaved(rowID: rowID, id: written.id, ref: written.ref)
+                } else {
+                    markError(rowID: rowID, message: String(localized: L10n.CitationComposer.rowStateError))
+                }
+                context.applySavedCitation()
+                await context.reloadListedCitations()
+            } else if row.persistedID == nil, let citationID = context.citationID {
+                let written = try await context.store.addObservationsToCitation(
+                    projectDir: context.projectDir,
+                    userID: context.userID,
+                    citationID: citationID,
+                    observations: [draft]
+                )
+                if let written = written.first {
+                    markSaved(rowID: rowID, id: written.id, ref: written.ref)
+                } else {
+                    markError(rowID: rowID, message: String(localized: L10n.CitationComposer.rowStateError))
+                }
+                context.applySavedCitation()
+            } else if let citationID = context.citationID {
+                let (observationOrNil, updateError) = row.asCatalogObservation(property: property)
+                if let updateError {
+                    markError(rowID: rowID, message: updateError)
+                    return
+                }
+                if var observation = observationOrNil {
+                    observation.citationID = citationID
+                    let written = try await context.store.updateObservation(
+                        projectDir: context.projectDir,
+                        userID: context.userID,
+                        observation: observation
+                    )
+                    markSaved(rowID: rowID, id: written.id, ref: written.ref)
+                    context.applySavedCitation()
+                } else {
+                    markError(rowID: rowID, message: String(localized: L10n.CitationComposer.rowStateError))
+                }
+            }
+        } catch {
+            markError(rowID: rowID, message: L10n.Errors.message(for: error))
+        }
+    }
+
+    private func performDelete(rowID: UUID, context: CitationComposerContext) async {
+        guard let row = rows.first(where: { $0.id == rowID }),
+              let persistedID = row.persistedID
+        else { return }
+        do {
+            try await context.store.deleteObservation(
+                projectDir: context.projectDir,
+                userID: context.userID,
+                observationID: persistedID
+            )
+            remove(rowID: rowID)
+            context.applySavedCitation()
+        } catch {
+            markError(rowID: rowID, message: L10n.Errors.message(for: error))
         }
     }
 

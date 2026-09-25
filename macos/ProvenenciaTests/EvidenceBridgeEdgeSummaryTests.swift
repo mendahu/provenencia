@@ -58,7 +58,12 @@ struct EvidenceBridgeEdgeSummaryTests {
         label: String = "Working label",
         ref: String = "CPA-1"
     ) -> SourceGraphPlacedBridge {
-        SourceGraphPlacedBridge(
+        let ends = SourceGraphSnapshot.citedEndpoints(
+            kind: kind,
+            observations: observations,
+            rules: CatalogConnectRule.productMatrix
+        )
+        return SourceGraphPlacedBridge(
             subject: CatalogSubject(
                 id: "bridge-1",
                 ref: ref,
@@ -72,7 +77,9 @@ struct EvidenceBridgeEdgeSummaryTests {
             gridX: 0,
             gridY: 0,
             isCited: !observations.isEmpty,
-            observations: observations
+            observations: observations,
+            endpointAID: ends.a,
+            endpointBID: ends.b
         )
     }
 

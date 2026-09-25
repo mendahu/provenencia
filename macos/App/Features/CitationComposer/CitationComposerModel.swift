@@ -78,20 +78,13 @@ final class CitationComposerModel {
         var typeKey: String
     }
 
-    static let supportedValueTypes: Set<String> = [
-        PropertyValueType.text.rawValue,
-        PropertyValueType.integer.rawValue,
-        PropertyValueType.date.rawValue,
-        PropertyValueType.term.rawValue,
-        PropertyValueType.name.rawValue,
-    ]
-
     static let newSubjectPrefix = "__new__."
 
     let entry: CitationComposerEntry
     private let userID: String
     private let store: any GenealogyStore
     let session: WorkspaceSession
+    let context: CitationComposerContext
     @ObservationIgnored
     weak var navigation: WorkspaceNavigation?
     var pendingLeave: PendingLeave?
@@ -99,7 +92,7 @@ final class CitationComposerModel {
     let fields = CitationFieldsDraft()
     let observationRows = CitationObservationRows()
     let connections = CitationConnections()
-    private(set) var vocabulary = CitationComposerVocabulary.empty
+    var vocabulary: CitationComposerVocabulary { context.vocabulary }
 
     var sourceID: String { entry.sourceID }
     var subjectID: String { entry.subjectID }
@@ -131,7 +124,10 @@ final class CitationComposerModel {
     var showCustomTermDialog = false
     private(set) var loadError: String?
     private(set) var shouldFallbackToGraph = false
-    var selectedArtifactID: String?
+    var selectedArtifactID: String? {
+        get { context.artifactID }
+        set { context.artifactID = newValue }
+    }
     private var identityTask: Task<Void, Never>?
 
     let artifactViewer = ArtifactViewerModel()
@@ -152,14 +148,20 @@ final class CitationComposerModel {
         self.session = session
         self.store = store
         self.userID = userID
+        self.context = CitationComposerContext(
+            store: store,
+            session: session,
+            userID: userID,
+            sourceID: entry.sourceID
+        )
         if case .edit(_, _, _, let artifactID, _) = entry {
-            selectedArtifactID = artifactID
+            context.artifactID = artifactID
         } else if case .addProperty(_, _, let artifactID) = entry {
-            selectedArtifactID = artifactID
+            context.artifactID = artifactID
         }
-        fields.attach(self)
-        observationRows.attach(self)
-        connections.attach(self)
+        fields.attach(context)
+        observationRows.attach(context)
+        connections.attach(context)
     }
 
     var graphSubjects: [GraphSubjectOption] { vocabulary.graphSubjects }
@@ -185,7 +187,10 @@ final class CitationComposerModel {
         get { fields.description }
         set { fields.description = newValue }
     }
-    var activeCitationID: String?
+    var activeCitationID: String? {
+        get { context.citationID }
+        set { context.citationID = newValue }
+    }
     var isEditingExisting: Bool { activeCitationID != nil }
     var showsArtifactSwitcher: Bool { artifacts.count > 1 }
     var hasNoArtifacts: Bool { phase == .compose && artifacts.isEmpty }
@@ -227,16 +232,17 @@ final class CitationComposerModel {
     var identityMenusDisabled: Bool { hasUnsavedDocumentWork }
 
     var hasUnsavedDocumentWork: Bool {
-        fields.isDirty || observationRows.hasEditedOrSaving || connections.hasTouchedWork
+        fields.isDirty || observationRows.hasEditedOrSaving
+    }
+
+    var shouldHoldLeave: Bool {
+        hasUnsavedDocumentWork || connections.hasTouchedWork
     }
 
     var unsavedSummary: String {
         L10n.CitationComposer.unsavedSummary(
             citationDirty: fields.isDirty,
-            observationCount: observationRows.rows.filter {
-                if case .saved = $0.state { return false }
-                return !$0.isEmptyDraft
-            }.count,
+            observationCount: observationRows.unsavedObservationCount,
             connectionTouched: connections.hasTouchedWork
         )
     }
@@ -343,20 +349,9 @@ final class CitationComposerModel {
         return handle?.value ?? []
     }
 
-    private var fieldsSnapshot: SubjectFieldsSnapshot {
-        let handle: QueryHandle<SubjectFieldsSnapshot>? = session.queryHandle(fieldsKey)
-        return handle?.value ?? .empty
-    }
+    private var fieldsSnapshot: SubjectFieldsSnapshot { context.fieldsSnapshot }
 
-    var graphSnapshot: SourceGraphSnapshot {
-        let handle: QueryHandle<SourceGraphRows>? = session.queryHandle(graphKey)
-        let rulesHandle: QueryHandle<[CatalogConnectRule]>? = session.queryHandle(connectRulesKey)
-        return SourceGraphSnapshot.build(
-            rows: handle?.value ?? SourceGraphRows(sourceId: sourceID),
-            types: fieldsSnapshot.types,
-            rules: rulesHandle?.value ?? []
-        )
-    }
+    var graphSnapshot: SourceGraphSnapshot { context.graphSnapshot }
 
     func prepare() async {
         phase = .loading
@@ -365,7 +360,6 @@ final class CitationComposerModel {
         landingColumn = nil
         do {
             try await warmCatalogHandles()
-            rebuildVocabulary()
             if entry.citationID == nil, entry.subjectID.isEmpty, !entry.isConnect {
                 phase = .subjectMissing
                 shouldFallbackToGraph = true
@@ -390,7 +384,6 @@ final class CitationComposerModel {
                 subjectTypeID = type.id
             }
             await warmTermHandles()
-            rebuildVocabulary()
             seedPendingConnectionIfNeeded()
             if let citationID = entry.citationID {
                 try await loadCitation(citationID)
@@ -403,6 +396,9 @@ final class CitationComposerModel {
             applyEntryFocus()
             if artifacts.isEmpty {
                 selectedArtifactID = nil
+            } else if activeCitationID != nil {
+                // Loaded citation already has artifact + locator; do not reset to artifact-only.
+                await reloadArtifactViewer(preferredPage: fields.locator.page)
             } else if artifacts.count == 1 {
                 await applySelectedArtifact(artifacts[0].id)
             } else if let workspace {
@@ -515,7 +511,6 @@ final class CitationComposerModel {
             )
             session.apply(.createdPropertyTerm(propertyId: propertyID))
             await warmTerms(for: propertyID)
-            rebuildVocabulary()
             termError = nil
             return term
         } catch {
@@ -593,269 +588,13 @@ final class CitationComposerModel {
             )
             landingColumn = slot.landingColumn
             session.apply(.mutatedSourceGraph(sourceId: sourceID))
-            _ = await session.readyValue(graphKey) as SourceGraphRows?
-            rebuildVocabulary()
+            await context.waitForGraph()
             observationRows.applySubject(rowID: draft.rowID, subjectID: created.id, vocabulary: vocabulary)
             newSubjectDraft = nil
         } catch {
             draft.error = L10n.Errors.message(for: error)
             draft.isSaving = false
             newSubjectDraft = draft
-        }
-    }
-
-    func performSaveCitation() async {
-        guard let artifactID = selectedArtifactID else {
-            fields.error = String(localized: L10n.CitationComposer.needArtifact)
-            return
-        }
-        do {
-            if let citationID = activeCitationID {
-                _ = try await store.updateCitation(
-                    projectDir: session.projectKey.projectDir,
-                    userID: userID,
-                    citationID: citationID,
-                    locatorJSON: fields.locator.encodeJSON(),
-                    transcription: fields.transcription,
-                    description: fields.description,
-                    transcriptionUncertain: fields.transcriptionUncertain,
-                    transcriptionNote: fields.transcriptionNote
-                )
-            } else {
-                let created = try await store.createCitationWithObservations(
-                    projectDir: session.projectKey.projectDir,
-                    userID: userID,
-                    artifactID: artifactID,
-                    locatorJSON: fields.locator.encodeJSON(),
-                    transcription: fields.transcription,
-                    description: fields.description,
-                    transcriptionUncertain: fields.transcriptionUncertain,
-                    transcriptionNote: fields.transcriptionNote,
-                    citationNotes: [],
-                    observations: []
-                )
-                activeCitationID = created.0.id
-                await reloadListedCitations()
-            }
-            fields.captureBaseline()
-            session.apply(.savedCitation(sourceId: sourceID))
-        } catch {
-            fields.error = L10n.Errors.message(for: error)
-        }
-    }
-
-    func performCommitObservation(rowID: UUID) async {
-        guard let index = observationRows.rows.firstIndex(where: { $0.id == rowID }) else { return }
-        let row = observationRows.rows[index]
-        guard let property = catalogProperty(id: row.propertyID) else {
-            observationRows.markError(rowID: rowID, message: String(localized: L10n.CitationComposer.missingPropertyError))
-            return
-        }
-        let (draftOrNil, draftError) = row.asDraft(property: property)
-        if let draftError {
-            observationRows.markError(rowID: rowID, message: draftError)
-        } else if let draft = draftOrNil {
-            do {
-                if activeCitationID == nil {
-                    guard let artifactID = selectedArtifactID else {
-                        observationRows.markError(
-                            rowID: rowID,
-                            message: String(localized: L10n.CitationComposer.needArtifact)
-                        )
-                        return
-                    }
-                    let created = try await store.createCitationWithObservations(
-                        projectDir: session.projectKey.projectDir,
-                        userID: userID,
-                        artifactID: artifactID,
-                        locatorJSON: fields.locator.encodeJSON(),
-                        transcription: fields.transcription,
-                        description: fields.description,
-                        transcriptionUncertain: fields.transcriptionUncertain,
-                        transcriptionNote: fields.transcriptionNote,
-                        citationNotes: [],
-                        observations: [draft]
-                    )
-                    activeCitationID = created.0.id
-                    fields.captureBaseline()
-                    if let written = created.1.first {
-                        observationRows.markSaved(rowID: rowID, id: written.id, ref: written.ref)
-                    }
-                    await reloadListedCitations()
-                } else if row.persistedID == nil, let citationID = activeCitationID {
-                    let written = try await store.addObservationsToCitation(
-                        projectDir: session.projectKey.projectDir,
-                        userID: userID,
-                        citationID: citationID,
-                        observations: [draft]
-                    )
-                    if let written = written.first {
-                        observationRows.markSaved(rowID: rowID, id: written.id, ref: written.ref)
-                    }
-                } else if let citationID = activeCitationID {
-                    let (observationOrNil, updateError) = row.asCatalogObservation(property: property)
-                    if let updateError {
-                        observationRows.markError(rowID: rowID, message: updateError)
-                        return
-                    }
-                    if var observation = observationOrNil {
-                        observation.citationID = citationID
-                        let written = try await store.updateObservation(
-                            projectDir: session.projectKey.projectDir,
-                            userID: userID,
-                            observation: observation
-                        )
-                        observationRows.markSaved(rowID: rowID, id: written.id, ref: written.ref)
-                    }
-                }
-                session.apply(.savedCitation(sourceId: sourceID))
-            } catch {
-                observationRows.markError(rowID: rowID, message: L10n.Errors.message(for: error))
-            }
-        }
-    }
-
-    func performDeleteObservation(rowID: UUID) async {
-        guard let row = observationRows.rows.first(where: { $0.id == rowID }),
-              let persistedID = row.persistedID
-        else { return }
-        do {
-            try await store.deleteObservation(
-                projectDir: session.projectKey.projectDir,
-                userID: userID,
-                observationID: persistedID
-            )
-            observationRows.remove(rowID: rowID)
-            session.apply(.savedCitation(sourceId: sourceID))
-        } catch {
-            observationRows.markError(rowID: rowID, message: L10n.Errors.message(for: error))
-        }
-    }
-
-    func performSaveConnection() async {
-        guard let pending = connections.rows.first(where: \.isPending),
-              let drafts = connections.edgeDrafts(for: pending, vocabulary: vocabulary)
-        else { return }
-        do {
-            let attachID = activeCitationID
-            let created = try await store.createCitedBridge(
-                projectDir: session.projectKey.projectDir,
-                userID: userID,
-                sourceID: sourceID,
-                fromSubjectID: pending.fromSubjectID,
-                toSubjectID: pending.toSubjectID,
-                bridgeTypeKey: pending.bridgeTypeKey,
-                description: "",
-                artifactID: attachID == nil ? (selectedArtifactID ?? "") : "",
-                locatorJSON: attachID == nil ? fields.locator.encodeJSON() : "",
-                transcription: attachID == nil ? fields.transcription : "",
-                citationDescription: attachID == nil ? fields.description : "",
-                transcriptionUncertain: attachID == nil && fields.transcriptionUncertain,
-                transcriptionNote: attachID == nil ? fields.transcriptionNote : "",
-                citationNotes: [],
-                observations: drafts,
-                citationID: attachID
-            )
-            if activeCitationID == nil {
-                activeCitationID = created.1.id
-                fields.captureBaseline()
-                await reloadListedCitations()
-            }
-            let role = created.2.first { obs in
-                pending.termProperty.map { obs.propertyID == $0.id } ?? false
-            }
-            connections.markPendingSaved(
-                ConnectionRow(
-                    id: pending.id,
-                    isPending: false,
-                    fromSubjectID: pending.fromSubjectID,
-                    toSubjectID: pending.toSubjectID,
-                    fromLabel: pending.fromLabel,
-                    toLabel: pending.toLabel,
-                    bridgeTypeKey: pending.bridgeTypeKey,
-                    bridgeID: created.0.id,
-                    bridgeRef: created.0.ref,
-                    sentence: vocabulary.graphSubjects.first { $0.id == created.0.id }?.label
-                        ?? pending.sentence,
-                    termProperty: pending.termProperty,
-                    rolePersistedID: role?.id,
-                    rolePersistedRef: role?.ref,
-                    roleTermID: role?.valueTermID ?? pending.roleTermID,
-                    roleBaselineTermID: role?.valueTermID ?? pending.roleTermID,
-                    termTouched: false,
-                    isSaving: false,
-                    error: nil
-                )
-            )
-            session.apply(.savedCitation(sourceId: sourceID))
-            rebuildVocabulary()
-        } catch {
-            connections.markError(connectionID: pending.id, message: L10n.Errors.message(for: error))
-        }
-    }
-
-    func performCommitRole(connectionID: UUID) async {
-        guard let row = connections.rows.first(where: { $0.id == connectionID }),
-              let citationID = activeCitationID,
-              let termProperty = row.termProperty,
-              let bridgeID = row.bridgeID
-        else { return }
-        do {
-            if let roleID = row.rolePersistedID {
-                let observation = CatalogObservation(
-                    id: roleID,
-                    ref: row.rolePersistedRef ?? "",
-                    citationID: citationID,
-                    subjectID: bridgeID,
-                    propertyID: termProperty.id,
-                    polarity: ObservationPolarity.positive.rawValue,
-                    valueText: "",
-                    valueInteger: nil,
-                    valueDateID: "",
-                    valueNameID: "",
-                    valueSubjectID: "",
-                    valueTermID: row.roleTermID,
-                    propertyKey: termProperty.key,
-                    propertyLabel: termProperty.label,
-                    propertyValueType: termProperty.valueType
-                )
-                let written = try await store.updateObservation(
-                    projectDir: session.projectKey.projectDir,
-                    userID: userID,
-                    observation: observation
-                )
-                connections.updateRole(
-                    connectionID: connectionID,
-                    persistedID: written.id,
-                    persistedRef: written.ref,
-                    termID: written.valueTermID
-                )
-            } else {
-                let written = try await store.addObservationsToCitation(
-                    projectDir: session.projectKey.projectDir,
-                    userID: userID,
-                    citationID: citationID,
-                    observations: [
-                        CatalogObservationDraft(
-                            subjectID: bridgeID,
-                            propertyID: termProperty.id,
-                            polarity: ObservationPolarity.positive.rawValue,
-                            valueTermID: row.roleTermID
-                        ),
-                    ]
-                )
-                if let written = written.first {
-                    connections.updateRole(
-                        connectionID: connectionID,
-                        persistedID: written.id,
-                        persistedRef: written.ref,
-                        termID: written.valueTermID
-                    )
-                }
-            }
-            session.apply(.savedCitation(sourceId: sourceID))
-        } catch {
-            connections.markError(connectionID: connectionID, message: L10n.Errors.message(for: error))
         }
     }
 
@@ -908,7 +647,8 @@ final class CitationComposerModel {
             citationID: citationID
         )
         if Task.isCancelled { return }
-        rebuildVocabulary()
+        await context.waitForGraph()
+        if Task.isCancelled { return }
         let grouped = CitationConnections.groupSaved(
             observations: listed,
             vocabulary: vocabulary,
@@ -934,14 +674,20 @@ final class CitationComposerModel {
         } else {
             termProperty = nil
         }
-        let sentence = EvidenceBridgeEdgeSummary.sentence(
-            kind: EvidenceBridgeKind(rawValue: bridgeKey) ?? .location,
-            person: from?.typeKey == "person" ? from?.label : to?.typeKey == "person" ? to?.label : nil,
-            related: bridgeKey == "relationship" ? to?.label : nil,
-            event: from?.typeKey == "event" ? from?.label : to?.typeKey == "event" ? to?.label : nil,
-            place: from?.typeKey == "place" ? from?.label : to?.typeKey == "place" ? to?.label : nil,
-            term: nil
-        )
+        let sentence: String
+        if let rule {
+            sentence = ConnectEndpointBinding.pendingSentence(
+                rule: rule,
+                fromID: fromID,
+                fromTypeKey: from?.typeKey ?? "",
+                fromLabel: from?.label ?? fromID,
+                toID: toID,
+                toTypeKey: to?.typeKey ?? "",
+                toLabel: to?.label ?? toID
+            )
+        } else {
+            sentence = ""
+        }
         connections.seedPending(
             fromSubjectID: fromID,
             toSubjectID: toID,
@@ -1019,10 +765,7 @@ final class CitationComposerModel {
     }
 
     private func reloadListedCitations() async {
-        guard let artifactID = selectedArtifactID else { return }
-        let key = citationsKey(artifactID: artifactID)
-        let _: QueryHandle<[CatalogListedCitation]> = session.query(key)
-        _ = await session.readyValue(key) as [CatalogListedCitation]?
+        await context.reloadListedCitations()
     }
 
     private func warmCatalogHandles() async throws {
@@ -1059,25 +802,6 @@ final class CitationComposerModel {
         let key = termsKey(propertyID: propertyID)
         let _: QueryHandle<[CatalogPropertyTerm]> = session.query(key)
         _ = await session.readyValue(key) as [CatalogPropertyTerm]?
-    }
-
-    private func rebuildVocabulary() {
-        var terms: [String: [CatalogPropertyTerm]] = [:]
-        for property in fieldsSnapshot.properties
-            where property.valueType == PropertyValueType.term.rawValue
-        {
-            let handle: QueryHandle<[CatalogPropertyTerm]>? = session.queryHandle(termsKey(propertyID: property.id))
-            if let value = handle?.value {
-                terms[property.id] = value
-            }
-        }
-        let rulesHandle: QueryHandle<[CatalogConnectRule]>? = session.queryHandle(connectRulesKey)
-        vocabulary = CitationComposerVocabulary.make(
-            fields: fieldsSnapshot,
-            snapshot: graphSnapshot,
-            rules: rulesHandle?.value ?? [],
-            termsByPropertyID: terms
-        )
     }
 
     private func announceIdentityChange() {
@@ -1130,13 +854,10 @@ final class CitationComposerModel {
 extension CitationComposerModel: WorkspaceLeaveGuard {
     func shouldHoldNavigation(_ pending: PendingNavigation) -> Bool {
         _ = pending
-        guard hasUnsavedDocumentWork else { return false }
+        guard shouldHoldLeave else { return false }
         pendingLeave = PendingLeave(
             citationDirty: fields.isDirty,
-            observationCount: observationRows.rows.filter {
-                if case .saved = $0.state { return false }
-                return !$0.isEmptyDraft
-            }.count,
+            observationCount: observationRows.unsavedObservationCount,
             connectionTouched: connections.hasTouchedWork
         )
         return true

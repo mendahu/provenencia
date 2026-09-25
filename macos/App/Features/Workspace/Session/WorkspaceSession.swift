@@ -61,13 +61,20 @@ final class WorkspaceSession {
     }
 
     /// Synchronous cache write. Clears stale flag without calling the loader.
+    /// If a load was in flight, the patch wins immediately and that load is
+    /// restarted so a later refetch is not dropped.
     func setQueryValue<Value>(_ key: CatalogQueryKey, value: Value) {
+        let hadInFlight = inFlight[key] != nil
         bumpGeneration(key)
         inFlight[key]?.task.cancel()
         inFlight[key] = nil
         let handle = typedHandle(for: key, as: Value.self)
         handle.applySuccess(value)
         invalidatedKeys.remove(key)
+        if hadInFlight {
+            invalidatedKeys.insert(key)
+            revalidate(key)
+        }
     }
 
     /// Resolves the place for `location` and starts loading its query keys (non-blocking).

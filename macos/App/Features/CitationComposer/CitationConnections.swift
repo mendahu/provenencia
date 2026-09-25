@@ -85,11 +85,11 @@ struct ConnectionRow: Identifiable, Equatable {
 final class CitationConnections {
     var rows: [ConnectionRow] = []
 
-    private weak var owner: CitationComposerModel?
+    private weak var context: CitationComposerContext?
     private var pendingSeed: ConnectionRow?
 
-    func attach(_ owner: CitationComposerModel) {
-        self.owner = owner
+    func attach(_ context: CitationComposerContext) {
+        self.context = context
     }
 
     func seedPending(
@@ -149,11 +149,11 @@ final class CitationConnections {
     }
 
     func saveConnection() async {
-        guard let owner, let index = rows.firstIndex(where: \.isPending) else { return }
+        guard let context, let index = rows.firstIndex(where: \.isPending) else { return }
         if rows[index].isSaving || !rows[index].canSave { return }
         rows[index].isSaving = true
         rows[index].error = nil
-        await owner.performSaveConnection()
+        await performSave(context: context)
         if let current = rows.firstIndex(where: \.isPending) {
             rows[current].isSaving = false
         }
@@ -165,11 +165,11 @@ final class CitationConnections {
     }
 
     func commitRole(connectionID: UUID) async {
-        guard let owner, let index = rows.firstIndex(where: { $0.id == connectionID }) else { return }
+        guard let context, let index = rows.firstIndex(where: { $0.id == connectionID }) else { return }
         if rows[index].isSaving || !rows[index].canCommitRole { return }
         rows[index].isSaving = true
         rows[index].error = nil
-        await owner.performCommitRole(connectionID: connectionID)
+        await performCommitRole(connectionID: connectionID, context: context)
         if let current = rows.firstIndex(where: { $0.id == connectionID }) {
             rows[current].isSaving = false
         }
@@ -277,31 +277,26 @@ final class CitationConnections {
 
     func edgeDrafts(for pending: ConnectionRow, vocabulary: CitationComposerVocabulary) -> [CatalogObservationDraft]? {
         guard let rule = vocabulary.connectRule(bridgeTypeKey: pending.bridgeTypeKey) else { return nil }
+        let fromType = vocabulary.graphSubjects.first { $0.id == pending.fromSubjectID }?.typeKey ?? ""
+        let toType = vocabulary.graphSubjects.first { $0.id == pending.toSubjectID }?.typeKey ?? ""
+        guard let bindings = ConnectEndpointBinding.bind(
+            rule: rule,
+            fromID: pending.fromSubjectID,
+            fromTypeKey: fromType,
+            fromLabel: pending.fromLabel,
+            toID: pending.toSubjectID,
+            toTypeKey: toType,
+            toLabel: pending.toLabel
+        ) else { return nil }
         var drafts: [CatalogObservationDraft] = []
-        for edge in rule.edges {
-            guard let property = vocabulary.property(key: edge.propertyKey) else { return nil }
-            let endpointID: String
-            let fromType = vocabulary.graphSubjects.first { $0.id == pending.fromSubjectID }?.typeKey ?? ""
-            let toType = vocabulary.graphSubjects.first { $0.id == pending.toSubjectID }?.typeKey ?? ""
-            if rule.edges[0].endpointTypeKey != rule.edges[1].endpointTypeKey {
-                if edge.endpointTypeKey == fromType {
-                    endpointID = pending.fromSubjectID
-                } else if edge.endpointTypeKey == toType {
-                    endpointID = pending.toSubjectID
-                } else {
-                    return nil
-                }
-            } else if edge.propertyKey == rule.edges[0].propertyKey {
-                endpointID = pending.fromSubjectID
-            } else {
-                endpointID = pending.toSubjectID
-            }
+        for binding in bindings {
+            guard let property = vocabulary.property(key: binding.propertyKey) else { return nil }
             drafts.append(
                 CatalogObservationDraft(
                     subjectID: "",
                     propertyID: property.id,
                     polarity: ObservationPolarity.positive.rawValue,
-                    valueSubjectID: endpointID
+                    valueSubjectID: binding.subjectID
                 )
             )
         }
@@ -316,5 +311,138 @@ final class CitationConnections {
             )
         }
         return drafts
+    }
+
+    private func performSave(context: CitationComposerContext) async {
+        guard let pending = rows.first(where: \.isPending),
+              let drafts = edgeDrafts(for: pending, vocabulary: context.vocabulary)
+        else { return }
+        let values = context.citationValues()
+        do {
+            let attachID = context.citationID
+            let created = try await context.store.createCitedBridge(
+                projectDir: context.projectDir,
+                userID: context.userID,
+                sourceID: context.sourceID,
+                fromSubjectID: pending.fromSubjectID,
+                toSubjectID: pending.toSubjectID,
+                bridgeTypeKey: pending.bridgeTypeKey,
+                description: "",
+                artifactID: attachID == nil ? (context.artifactID ?? "") : "",
+                locatorJSON: attachID == nil ? values.locator.encodeJSON() : "",
+                transcription: attachID == nil ? values.transcription : "",
+                citationDescription: attachID == nil ? values.description : "",
+                transcriptionUncertain: attachID == nil && values.transcriptionUncertain,
+                transcriptionNote: attachID == nil ? values.transcriptionNote : "",
+                citationNotes: [],
+                observations: drafts,
+                citationID: attachID
+            )
+            if context.citationID == nil {
+                context.citationID = created.1.id
+                context.captureCitationBaseline()
+            }
+            context.applySavedCitation()
+            await context.waitForGraph()
+            await context.reloadListedCitations()
+            let role = created.2.first { obs in
+                pending.termProperty.map { obs.propertyID == $0.id } ?? false
+            }
+            markPendingSaved(
+                ConnectionRow(
+                    id: pending.id,
+                    isPending: false,
+                    fromSubjectID: pending.fromSubjectID,
+                    toSubjectID: pending.toSubjectID,
+                    fromLabel: pending.fromLabel,
+                    toLabel: pending.toLabel,
+                    bridgeTypeKey: pending.bridgeTypeKey,
+                    bridgeID: created.0.id,
+                    bridgeRef: created.0.ref,
+                    sentence: context.vocabulary.graphSubjects.first { $0.id == created.0.id }?.label
+                        ?? pending.sentence,
+                    termProperty: pending.termProperty,
+                    rolePersistedID: role?.id,
+                    rolePersistedRef: role?.ref,
+                    roleTermID: role?.valueTermID ?? pending.roleTermID,
+                    roleBaselineTermID: role?.valueTermID ?? pending.roleTermID,
+                    termTouched: false,
+                    isSaving: false,
+                    error: nil
+                )
+            )
+        } catch {
+            markError(connectionID: pending.id, message: L10n.Errors.message(for: error))
+        }
+    }
+
+    private func performCommitRole(connectionID: UUID, context: CitationComposerContext) async {
+        guard let row = rows.first(where: { $0.id == connectionID }),
+              let citationID = context.citationID,
+              let termProperty = row.termProperty,
+              let bridgeID = row.bridgeID
+        else { return }
+        do {
+            if let roleID = row.rolePersistedID {
+                let observation = CatalogObservation(
+                    id: roleID,
+                    ref: row.rolePersistedRef ?? "",
+                    citationID: citationID,
+                    subjectID: bridgeID,
+                    propertyID: termProperty.id,
+                    polarity: ObservationPolarity.positive.rawValue,
+                    valueText: "",
+                    valueInteger: nil,
+                    valueDateID: "",
+                    valueNameID: "",
+                    valueSubjectID: "",
+                    valueTermID: row.roleTermID,
+                    propertyKey: termProperty.key,
+                    propertyLabel: termProperty.label,
+                    propertyValueType: termProperty.valueType
+                )
+                let written = try await context.store.updateObservation(
+                    projectDir: context.projectDir,
+                    userID: context.userID,
+                    observation: observation
+                )
+                updateRole(
+                    connectionID: connectionID,
+                    persistedID: written.id,
+                    persistedRef: written.ref,
+                    termID: written.valueTermID
+                )
+            } else {
+                let written = try await context.store.addObservationsToCitation(
+                    projectDir: context.projectDir,
+                    userID: context.userID,
+                    citationID: citationID,
+                    observations: [
+                        CatalogObservationDraft(
+                            subjectID: bridgeID,
+                            propertyID: termProperty.id,
+                            polarity: ObservationPolarity.positive.rawValue,
+                            valueTermID: row.roleTermID
+                        ),
+                    ]
+                )
+                if let written = written.first {
+                    updateRole(
+                        connectionID: connectionID,
+                        persistedID: written.id,
+                        persistedRef: written.ref,
+                        termID: written.valueTermID
+                    )
+                } else {
+                    markError(
+                        connectionID: connectionID,
+                        message: String(localized: L10n.CitationComposer.rowStateError)
+                    )
+                }
+            }
+            context.applySavedCitation()
+        } catch {
+            markError(connectionID: connectionID, message: L10n.Errors.message(for: error))
+        }
     }
 }

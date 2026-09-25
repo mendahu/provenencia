@@ -647,6 +647,56 @@ struct EvidenceGraphModelTests {
         #expect(store.subjectPositionsBySubject["s1"]?.gridX == 9)
     }
 
+    @Test func successfulOlderDragIsConfirmedWhenNewerFails() async {
+        let store = makeStore()
+        let subject = CatalogSubject(
+            id: "s1",
+            ref: "CPR-1",
+            sourceID: sourceID,
+            subjectTypeID: personTypeID,
+            label: "A",
+            description: ""
+        )
+        store.subjectsBySource[sourceID] = [subject]
+        store.subjectPositionsBySubject["s1"] = CatalogSubjectPosition(
+            subjectID: "s1", gridX: 1, gridY: 2
+        )
+        let model = makeModel(store: store)
+        await model.prepare()
+        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        model.session.setQueryValue(
+            key,
+            value: SourceGraphRows(
+                sourceId: sourceID,
+                subjects: [subject],
+                positions: [CatalogSubjectPosition(subjectID: "s1", gridX: 1, gridY: 2)]
+            )
+        )
+        store.setSubjectPositionDelayNanoseconds = 80_000_000
+        store.setSubjectPositionErrors = [
+            nil,
+            CoreInvokeError.coded(status: 1, code: "internal.unknown", kind: .internal, params: []),
+        ]
+        _ = model.commitDrag(
+            subjectID: "s1",
+            originGridX: 1,
+            originGridY: 2,
+            documentDelta: CGSize(width: 160, height: 0)
+        )
+        try? await Task.sleep(nanoseconds: 10_000_000)
+        _ = model.commitDrag(
+            subjectID: "s1",
+            originGridX: 5,
+            originGridY: 2,
+            documentDelta: CGSize(width: 160, height: 0)
+        )
+        try? await Task.sleep(nanoseconds: 200_000_000)
+        let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+        #expect(handle?.value?.positions.first?.gridX == 5)
+        #expect(handle?.value?.positions.first?.gridY == 2)
+        #expect(store.subjectPositionsBySubject["s1"]?.gridX == 5)
+    }
+
     @Test func noArtifactDisablesArmingAndComposerLocation() async {
         let store = makeStore()
         store.sourcesByProject[projectDir] = [

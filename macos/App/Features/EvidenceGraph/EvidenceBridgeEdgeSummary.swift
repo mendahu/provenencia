@@ -11,30 +11,17 @@ enum EvidenceBridgeEdgeSummary {
     /// Snapshot-aware sentence. Nouns come from cited endpoints; unreadable
     /// edges fall back to the stored label or kind phrase · ref. Never empty.
     static func sentence(for bridge: SourceGraphPlacedBridge, in snapshot: SourceGraphSnapshot) -> String {
-        let person = noun(propertyKey: "person", in: bridge, snapshot: snapshot)
-        let related = noun(propertyKey: "related_to", in: bridge, snapshot: snapshot)
-        let event = noun(propertyKey: "event", in: bridge, snapshot: snapshot)
-        let place = noun(propertyKey: "place", in: bridge, snapshot: snapshot)
+        let endpointA = noun(subjectID: bridge.endpointAID, snapshot: snapshot)
+        let endpointB = noun(subjectID: bridge.endpointBID, snapshot: snapshot)
         let term = termDisplay(kind: bridge.kind, in: bridge.observations)
-        let nouns: [String?]
-        switch bridge.kind {
-        case .location:
-            nouns = [event, place]
-        case .relationship:
-            nouns = [person, related]
-        case .participation:
-            nouns = [person, event]
-        }
-        if nouns.contains(where: { $0 == nil }) {
+        if endpointA == nil || endpointB == nil {
             return nonEmpty(wholeNameFallback(for: bridge))
         }
         return nonEmpty(
-            sentence(
+            ConnectEndpointBinding.sentence(
                 kind: bridge.kind,
-                person: person,
-                related: related,
-                event: event,
-                place: place,
+                endpointA: endpointA,
+                endpointB: endpointB,
                 term: term
             ),
             fallback: wholeNameFallback(for: bridge)
@@ -117,12 +104,8 @@ enum EvidenceBridgeEdgeSummary {
         return phrase(kind: .participation, term: role)
     }
 
-    private static func noun(
-        propertyKey: String,
-        in bridge: SourceGraphPlacedBridge,
-        snapshot: SourceGraphSnapshot
-    ) -> String? {
-        guard let subjectID = subjectID(propertyKey: propertyKey, in: bridge.observations),
+    private static func noun(subjectID: String?, snapshot: SourceGraphSnapshot) -> String? {
+        guard let subjectID,
               let placed = snapshot.subjects.first(where: { $0.id == subjectID })
         else { return nil }
         let label = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -149,15 +132,6 @@ enum EvidenceBridgeEdgeSummary {
         let next = fallback.trimmingCharacters(in: .whitespacesAndNewlines)
         if !next.isEmpty { return next }
         return "—"
-    }
-
-    private static func subjectID(
-        propertyKey: String,
-        in observations: [CatalogObservation]
-    ) -> String? {
-        let id = observations.first(where: { $0.propertyKey == propertyKey })?.valueSubjectID
-            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return id.isEmpty ? nil : id
     }
 
     private static func termDisplay(

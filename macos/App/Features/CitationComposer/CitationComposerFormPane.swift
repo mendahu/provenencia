@@ -281,7 +281,7 @@ struct CitationComposerFormPane: View {
 
     private var footer: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space4) {
-            if model.hasUnsavedDocumentWork {
+            if model.shouldHoldLeave {
                 Text(verbatim: model.unsavedSummary)
                     .font(PVFont.body(size: PVTypeScale.caption))
                     .foregroundStyle(PVColor.textMuted)

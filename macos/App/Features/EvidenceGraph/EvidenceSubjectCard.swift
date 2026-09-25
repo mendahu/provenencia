@@ -10,9 +10,9 @@ struct EvidenceSubjectCard: View {
     static let documentCoordinateSpace = "evidenceGraphDocument"
 
     /// Fixed card width — keep in sync with content centering / offset.
-    static let width: CGFloat = 264
+    nonisolated static let width: CGFloat = 264
     /// Top of the card sits this far above the grid center (layout + edges share it).
-    static let approximateHalfHeight: CGFloat = 36
+    nonisolated static let approximateHalfHeight: CGFloat = 36
     /// Minimum edge hit-testing height for a header-only shell.
     static let edgeLayoutHeight: CGFloat = 88
 

@@ -478,17 +478,64 @@ struct WorkspaceSessionTests {
         let session = makeSession()
         let key = CatalogQueryKey.sourcesList(project: session.projectKey)
         let gate = Gate()
+        let stale = CatalogSource(
+            id: "stale",
+            ref: "SRC-S",
+            sourceTypeID: "t",
+            title: "Stale",
+            description: ""
+        )
+        let patched = CatalogSource(
+            id: "patched",
+            ref: "SRC-P",
+            sourceTypeID: "t",
+            title: "Patched",
+            description: ""
+        )
         let handle = session.ensureQuery(key) {
             await gate.waitForOpen()
-            return ["stale"]
+            return [stale]
         }
-        session.setQueryValue(key, value: ["patched"])
-        #expect(handle.value == ["patched"])
+        session.setQueryValue(key, value: [patched])
+        #expect(handle.value?.first?.id == "patched")
         await gate.open()
         await Task.yield()
-        #expect(handle.value == ["patched"])
-        let ready: [String]? = await session.readyValue(key)
-        #expect(ready == ["patched"])
+        #expect(handle.value?.first?.id != "stale")
+    }
+
+    @Test func setQueryValueRestartsInFlightLoad() async {
+        let store = FakeStore()
+        store.sourcesByProject[projectDir] = [
+            CatalogSource(
+                id: "s1",
+                ref: "SRC-1",
+                sourceTypeID: "t",
+                title: "Census",
+                description: ""
+            ),
+        ]
+        let session = makeSession(store: store)
+        let key = CatalogQueryKey.sourcesList(project: session.projectKey)
+        let gate = Gate()
+        let handle = session.ensureQuery(key) {
+            await gate.waitForOpen()
+            return [CatalogSource]()
+        }
+        session.setQueryValue(
+            key,
+            value: [
+                CatalogSource(
+                    id: "patched",
+                    ref: "SRC-P",
+                    sourceTypeID: "t",
+                    title: "Patched",
+                    description: ""
+                ),
+            ]
+        )
+        #expect(handle.value?.first?.id == "patched")
+        await waitForFetchComplete(handle)
+        #expect(handle.value?.first?.id == "s1")
     }
 }
 

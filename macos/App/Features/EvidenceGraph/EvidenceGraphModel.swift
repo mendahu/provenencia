@@ -37,6 +37,13 @@ final class EvidenceGraphModel {
     private(set) var pendingComposerHandoff: WorkspaceLocation?
     private var positionGeneration: [String: Int] = [:]
     private var confirmedPositions: [String: CatalogGridCell] = [:]
+    @ObservationIgnored
+    private var snapshotMemo: (
+        rows: SourceGraphRows,
+        types: [CatalogSubjectType],
+        rules: [CatalogConnectRule],
+        value: SourceGraphSnapshot
+    )?
     /// Uncited subject pending delete confirm.
     var pendingDelete: PendingDelete?
     var isDeleting = false
@@ -149,11 +156,22 @@ final class EvidenceGraphModel {
 
     /// Snapshot as loaded. Edges come from cited observations.
     func displaySnapshot(rows: SourceGraphRows?, types: [CatalogSubjectType]) -> SourceGraphSnapshot {
-        SourceGraphSnapshot.build(
-            rows: rows ?? SourceGraphRows(sourceId: sourceID),
+        let rules = connectRules
+        let normalized = rows ?? SourceGraphRows(sourceId: sourceID)
+        if let snapshotMemo,
+           snapshotMemo.rows == normalized,
+           snapshotMemo.types == types,
+           snapshotMemo.rules == rules
+        {
+            return snapshotMemo.value
+        }
+        let value = SourceGraphSnapshot.build(
+            rows: normalized,
             types: types,
-            rules: connectRules
+            rules: rules
         )
+        snapshotMemo = (normalized, types, rules, value)
+        return value
     }
 
     func prepare() async {
@@ -739,35 +757,14 @@ final class EvidenceGraphModel {
         toLabel: String,
         rule: CatalogConnectRule
     ) -> WorkspaceLocation {
-        let kind = EvidenceBridgeKind(rawValue: rule.bridgeTypeKey) ?? .participation
-        var person: String?
-        var related: String?
-        var event: String?
-        var place: String?
-        for (index, edge) in rule.edges.enumerated() {
-            let label: String
-            if fromKind.rawValue == edge.endpointTypeKey, toKind.rawValue != edge.endpointTypeKey {
-                label = fromLabel
-            } else if toKind.rawValue == edge.endpointTypeKey, fromKind.rawValue != edge.endpointTypeKey {
-                label = toLabel
-            } else {
-                label = index == 0 ? fromLabel : toLabel
-            }
-            switch edge.propertyKey {
-            case "person": person = label
-            case "related_to": related = label
-            case "event": event = label
-            case "place": place = label
-            default: break
-            }
-        }
-        let sentence = EvidenceBridgeEdgeSummary.sentence(
-            kind: kind,
-            person: person,
-            related: related,
-            event: event,
-            place: place,
-            term: nil
+        let sentence = ConnectEndpointBinding.pendingSentence(
+            rule: rule,
+            fromID: fromID,
+            fromTypeKey: fromKind.rawValue,
+            fromLabel: fromLabel,
+            toID: toID,
+            toTypeKey: toKind.rawValue,
+            toLabel: toLabel
         )
         return WorkspaceLocation(
             section: .sources,
@@ -967,12 +964,6 @@ final class EvidenceGraphModel {
         snapshot?.subjects.first { $0.id == id }
     }
 
-    private func displayLabel(forPrimaryID id: String, in snapshot: SourceGraphSnapshot) -> String {
-        guard let placed = snapshot.subjects.first(where: { $0.id == id }) else { return id }
-        let trimmed = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? placed.typeLabel : trimmed
-    }
-
     private func bumpPositionGeneration(subjectID: String) -> Int {
         if confirmedPositions[subjectID] == nil, let cell = gridCell(for: subjectID) {
             confirmedPositions[subjectID] = CatalogGridCell(gridX: cell.x, gridY: cell.y)
@@ -1007,8 +998,9 @@ final class EvidenceGraphModel {
                 gridX: gridX,
                 gridY: gridY
             )
+            confirmedPositions[subjectID] = CatalogGridCell(gridX: gridX, gridY: gridY)
             if positionGeneration[subjectID] == generation {
-                confirmedPositions[subjectID] = CatalogGridCell(gridX: gridX, gridY: gridY)
+                applyPositionPatch(subjectID: subjectID, gridX: gridX, gridY: gridY)
             }
             return true
         } catch {
