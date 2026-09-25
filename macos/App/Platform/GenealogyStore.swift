@@ -722,10 +722,7 @@ protocol GenealogyStore: Sendable {
         fromSubjectID: String,
         toSubjectID: String,
         bridgeTypeKey: String,
-        label: String,
         description: String,
-        gridX: Int64,
-        gridY: Int64,
         artifactID: String,
         locatorJSON: String,
         transcription: String,
@@ -775,20 +772,6 @@ protocol GenealogyStore: Sendable {
     func deleteObservation(projectDir: String, userID: String, observationID: String) async throws
 
     func getSubjectFieldsWorkspace(projectDir: String) async throws -> SubjectFieldsSnapshot
-
-    func updateCitationWithObservations(
-        projectDir: String,
-        userID: String,
-        citationID: String,
-        artifactID: String,
-        locatorJSON: String,
-        transcription: String,
-        description: String,
-        transcriptionUncertain: Bool,
-        transcriptionNote: String,
-        citationNotes: [String],
-        observations: [CatalogObservation]
-    ) async throws -> (CatalogCitation, [CatalogObservation])
 
     func addObservationsToCitation(
         projectDir: String,

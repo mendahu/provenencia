@@ -121,55 +121,6 @@ func GetCitation(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-func UpdateCitationWithObservations(in []byte) ([]byte, error) {
-	var req engine.UpdateCitationWithObservationsRequest
-	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("update_citation_with_observations", err)
-	}
-	userID, err := parseUserID(req.GetUserId())
-	if err != nil {
-		return nil, err
-	}
-	citationID, err := parseID(req.GetCitationId())
-	if err != nil {
-		return nil, err
-	}
-	artifactID, err := parseID(req.GetArtifactId())
-	if err != nil {
-		return nil, err
-	}
-	inputs, err := observationsToInputs(req.GetObservations())
-	if err != nil {
-		return nil, err
-	}
-	var out *engine.UpdateCitationWithObservationsResponse
-	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		res, err := citations.UpdateWithObservations(c, userID, citationID, citations.CreateInput{
-			ArtifactID:             artifactID,
-			LocatorJSON:            req.GetLocatorJson(),
-			Transcription:          req.GetTranscription(),
-			Description:            req.GetDescription(),
-			TranscriptionUncertain: req.GetTranscriptionUncertain(),
-			TranscriptionNote:      req.GetTranscriptionNote(),
-			Notes:                  req.GetCitationNotes(),
-		}, inputs)
-		if err != nil {
-			return err
-		}
-		out = &engine.UpdateCitationWithObservationsResponse{
-			Citation: citationProto(res.Citation),
-		}
-		for _, o := range res.Observations {
-			out.Observations = append(out.Observations, observationProto(o))
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return proto.Marshal(out)
-}
-
 func UpdateCitation(in []byte) ([]byte, error) {
 	var req engine.UpdateCitationRequest
 	if err := proto.Unmarshal(in, &req); err != nil {

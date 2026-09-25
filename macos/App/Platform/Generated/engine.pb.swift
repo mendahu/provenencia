@@ -94,7 +94,6 @@ public nonisolated enum Provenencia_Engine_V1_Method: SwiftProtobuf.Enum, Swift.
   case addObservationsToCitation // = 68
   case listObservationsBySource // = 69
   case getCitation // = 70
-  case updateCitationWithObservations // = 71
   case createCitedBridge // = 72
   case citationCountsBySource // = 73
   case listCitationsByArtifact // = 74
@@ -180,7 +179,6 @@ public nonisolated enum Provenencia_Engine_V1_Method: SwiftProtobuf.Enum, Swift.
     case 68: self = .addObservationsToCitation
     case 69: self = .listObservationsBySource
     case 70: self = .getCitation
-    case 71: self = .updateCitationWithObservations
     case 72: self = .createCitedBridge
     case 73: self = .citationCountsBySource
     case 74: self = .listCitationsByArtifact
@@ -264,7 +262,6 @@ public nonisolated enum Provenencia_Engine_V1_Method: SwiftProtobuf.Enum, Swift.
     case .addObservationsToCitation: return 68
     case .listObservationsBySource: return 69
     case .getCitation: return 70
-    case .updateCitationWithObservations: return 71
     case .createCitedBridge: return 72
     case .citationCountsBySource: return 73
     case .listCitationsByArtifact: return 74
@@ -348,7 +345,6 @@ public nonisolated enum Provenencia_Engine_V1_Method: SwiftProtobuf.Enum, Swift.
     .addObservationsToCitation,
     .listObservationsBySource,
     .getCitation,
-    .updateCitationWithObservations,
     .createCitedBridge,
     .citationCountsBySource,
     .listCitationsByArtifact,
@@ -3875,7 +3871,7 @@ public nonisolated struct Provenencia_Engine_V1_GetCitationResponse: Sendable {
   fileprivate var _citation: Provenencia_Engine_V1_Citation? = nil
 }
 
-public nonisolated struct Provenencia_Engine_V1_UpdateCitationWithObservationsRequest: Sendable {
+public nonisolated struct Provenencia_Engine_V1_CreateCitedBridgeRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -3884,7 +3880,15 @@ public nonisolated struct Provenencia_Engine_V1_UpdateCitationWithObservationsRe
 
   public var userID: String = String()
 
-  public var citationID: String = String()
+  public var sourceID: String = String()
+
+  public var fromSubjectID: String = String()
+
+  public var toSubjectID: String = String()
+
+  public var bridgeTypeKey: String = String()
+
+  public var description_p: String = String()
 
   public var artifactID: String = String()
 
@@ -3892,7 +3896,7 @@ public nonisolated struct Provenencia_Engine_V1_UpdateCitationWithObservationsRe
 
   public var transcription: String = String()
 
-  public var description_p: String = String()
+  public var citationDescription: String = String()
 
   public var transcriptionUncertain: Bool = false
 
@@ -3900,142 +3904,13 @@ public nonisolated struct Provenencia_Engine_V1_UpdateCitationWithObservationsRe
 
   public var citationNotes: [String] = []
 
-  /// Stored rows include id and are updated. An empty id inserts a new observation.
-  public var observations: [Provenencia_Engine_V1_Observation] = []
+  public var observations: [Provenencia_Engine_V1_ObservationDraft] = []
+
+  public var citationID: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
-}
-
-public nonisolated struct Provenencia_Engine_V1_UpdateCitationWithObservationsResponse: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var citation: Provenencia_Engine_V1_Citation {
-    get {_citation ?? Provenencia_Engine_V1_Citation()}
-    set {_citation = newValue}
-  }
-  /// Returns true if `citation` has been explicitly set.
-  public var hasCitation: Bool {self._citation != nil}
-  /// Clears the value of `citation`. Subsequent reads from it will return its default value.
-  public mutating func clearCitation() {self._citation = nil}
-
-  public var observations: [Provenencia_Engine_V1_Observation] = []
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-
-  fileprivate var _citation: Provenencia_Engine_V1_Citation? = nil
-}
-
-public nonisolated struct Provenencia_Engine_V1_CreateCitedBridgeRequest: @unchecked Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var projectDir: String {
-    get {_storage._projectDir}
-    set {_uniqueStorage()._projectDir = newValue}
-  }
-
-  public var userID: String {
-    get {_storage._userID}
-    set {_uniqueStorage()._userID = newValue}
-  }
-
-  public var sourceID: String {
-    get {_storage._sourceID}
-    set {_uniqueStorage()._sourceID = newValue}
-  }
-
-  public var fromSubjectID: String {
-    get {_storage._fromSubjectID}
-    set {_uniqueStorage()._fromSubjectID = newValue}
-  }
-
-  public var toSubjectID: String {
-    get {_storage._toSubjectID}
-    set {_uniqueStorage()._toSubjectID = newValue}
-  }
-
-  public var bridgeTypeKey: String {
-    get {_storage._bridgeTypeKey}
-    set {_uniqueStorage()._bridgeTypeKey = newValue}
-  }
-
-  public var label: String {
-    get {_storage._label}
-    set {_uniqueStorage()._label = newValue}
-  }
-
-  public var description_p: String {
-    get {_storage._description_p}
-    set {_uniqueStorage()._description_p = newValue}
-  }
-
-  public var gridX: Int64 {
-    get {_storage._gridX}
-    set {_uniqueStorage()._gridX = newValue}
-  }
-
-  public var gridY: Int64 {
-    get {_storage._gridY}
-    set {_uniqueStorage()._gridY = newValue}
-  }
-
-  public var artifactID: String {
-    get {_storage._artifactID}
-    set {_uniqueStorage()._artifactID = newValue}
-  }
-
-  public var locatorJson: String {
-    get {_storage._locatorJson}
-    set {_uniqueStorage()._locatorJson = newValue}
-  }
-
-  public var transcription: String {
-    get {_storage._transcription}
-    set {_uniqueStorage()._transcription = newValue}
-  }
-
-  public var citationDescription: String {
-    get {_storage._citationDescription}
-    set {_uniqueStorage()._citationDescription = newValue}
-  }
-
-  public var transcriptionUncertain: Bool {
-    get {_storage._transcriptionUncertain}
-    set {_uniqueStorage()._transcriptionUncertain = newValue}
-  }
-
-  public var transcriptionNote: String {
-    get {_storage._transcriptionNote}
-    set {_uniqueStorage()._transcriptionNote = newValue}
-  }
-
-  public var citationNotes: [String] {
-    get {_storage._citationNotes}
-    set {_uniqueStorage()._citationNotes = newValue}
-  }
-
-  public var observations: [Provenencia_Engine_V1_ObservationDraft] {
-    get {_storage._observations}
-    set {_uniqueStorage()._observations = newValue}
-  }
-
-  public var citationID: String {
-    get {_storage._citationID}
-    set {_uniqueStorage()._citationID = newValue}
-  }
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-
-  fileprivate var _storage = _StorageClass.defaultInstance
 }
 
 public nonisolated struct Provenencia_Engine_V1_CreateCitedBridgeResponse: Sendable {
@@ -4268,7 +4143,7 @@ public nonisolated struct Provenencia_Engine_V1_Error: Sendable {
 fileprivate nonisolated let _protobuf_package = "provenencia.engine.v1"
 
 nonisolated extension Provenencia_Engine_V1_Method: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0METHOD_UNSPECIFIED\0\u{1}METHOD_PING\0\u{1}METHOD_GET_VERSION\0\u{1}METHOD_GET_INSTALL_IDENTITY\0\u{1}METHOD_COMPLETE_ONBOARDING\0\u{1}METHOD_REMOVE_INSTALL_IDENTITY\0\u{1}METHOD_GET_ACTIVE_PROJECT\0\u{1}METHOD_OPEN_PROJECT\0\u{1}METHOD_REMOVE_ACTIVE_PROJECT\0\u{1}METHOD_LIST_PROJECT_USERS\0\u{1}METHOD_SIGN_OUT\0\u{1}METHOD_GET_PROJECT_INFO\0\u{1}METHOD_LIST_SOURCES\0\u{1}METHOD_GET_SOURCE_WORKSPACE\0\u{1}METHOD_CREATE_SOURCE\0\u{1}METHOD_UPDATE_SOURCE\0\u{1}METHOD_ADD_SOURCE_NOTE\0\u{1}METHOD_UPDATE_SOURCE_NOTE\0\u{1}METHOD_DELETE_SOURCE_NOTE\0\u{1}METHOD_SET_SOURCE_METADATA\0\u{1}METHOD_CLEAR_SOURCE_METADATA\0\u{1}METHOD_CREATE_ARTIFACT\0\u{1}METHOD_INGEST_ARTIFACT_FILE\0\u{1}METHOD_LIST_SOURCE_TYPES\0\u{1}METHOD_CREATE_SOURCE_TYPE\0\u{1}METHOD_LIST_METADATA_FIELDS\0\u{1}METHOD_CREATE_METADATA_FIELD\0\u{2}\u{2}METHOD_UPDATE_METADATA_FIELD\0\u{1}METHOD_DELETE_SOURCE_TYPE\0\u{1}METHOD_DELETE_METADATA_FIELD\0\u{1}METHOD_UPDATE_SOURCE_TYPE\0\u{1}METHOD_LIST_TYPE_SUGGESTIONS\0\u{1}METHOD_ASSIGN_TYPE_FIELD\0\u{1}METHOD_REMOVE_TYPE_FIELD\0\u{1}METHOD_GET_WORKSPACE_NAV_COUNTS\0\u{1}METHOD_UPDATE_ARTIFACT\0\u{1}METHOD_LIST_SOURCE_CREDIBILITY_GRADES\0\u{1}METHOD_UPSERT_SOURCE_CREDIBILITY_ASSESSMENT\0\u{1}METHOD_DISMISS_SOURCE_METADATA_SUGGESTION\0\u{1}METHOD_REORDER_SOURCE_METADATA\0\u{1}METHOD_ENSURE_FILE_THUMBNAIL\0\u{1}METHOD_CLOSE_CATALOG_SESSION\0\u{1}METHOD_SET_SOURCE_COVER\0\u{1}METHOD_SEARCH_CATALOG\0\u{1}METHOD_LIST_SUBJECT_TYPES\0\u{1}METHOD_CREATE_SUBJECT\0\u{1}METHOD_UPDATE_SUBJECT\0\u{1}METHOD_DELETE_SUBJECT\0\u{1}METHOD_LIST_SUBJECTS\0\u{1}METHOD_SET_SUBJECT_POSITION\0\u{1}METHOD_CLEAR_SUBJECT_POSITION\0\u{1}METHOD_LIST_SUBJECT_POSITIONS\0\u{1}METHOD_LIST_PROPERTIES\0\u{1}METHOD_CREATE_PROPERTY\0\u{1}METHOD_UPDATE_PROPERTY\0\u{1}METHOD_DELETE_PROPERTY\0\u{1}METHOD_LIST_SUBJECT_TYPE_FIELDS\0\u{1}METHOD_ASSIGN_SUBJECT_TYPE_FIELD\0\u{1}METHOD_REMOVE_SUBJECT_TYPE_FIELD\0\u{1}METHOD_LIST_PLACEABLE_SUBJECT_TYPES\0\u{1}METHOD_GET_SUBJECT_TYPE_PRESENTATION\0\u{1}METHOD_LIST_CONNECT_RULES\0\u{1}METHOD_LIST_PROPERTY_TERMS\0\u{1}METHOD_CREATE_PROPERTY_TERM\0\u{1}METHOD_UPDATE_PROPERTY_TERM\0\u{1}METHOD_DELETE_PROPERTY_TERM\0\u{1}METHOD_CREATE_CITATION_WITH_OBSERVATIONS\0\u{1}METHOD_ADD_OBSERVATIONS_TO_CITATION\0\u{1}METHOD_LIST_OBSERVATIONS_BY_SOURCE\0\u{1}METHOD_GET_CITATION\0\u{1}METHOD_UPDATE_CITATION_WITH_OBSERVATIONS\0\u{1}METHOD_CREATE_CITED_BRIDGE\0\u{1}METHOD_CITATION_COUNTS_BY_SOURCE\0\u{1}METHOD_LIST_CITATIONS_BY_ARTIFACT\0\u{1}METHOD_UPDATE_CITATION\0\u{1}METHOD_UPDATE_OBSERVATION\0\u{1}METHOD_DELETE_OBSERVATION\0\u{1}METHOD_GET_SUBJECT_FIELDS_WORKSPACE\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0METHOD_UNSPECIFIED\0\u{1}METHOD_PING\0\u{1}METHOD_GET_VERSION\0\u{1}METHOD_GET_INSTALL_IDENTITY\0\u{1}METHOD_COMPLETE_ONBOARDING\0\u{1}METHOD_REMOVE_INSTALL_IDENTITY\0\u{1}METHOD_GET_ACTIVE_PROJECT\0\u{1}METHOD_OPEN_PROJECT\0\u{1}METHOD_REMOVE_ACTIVE_PROJECT\0\u{1}METHOD_LIST_PROJECT_USERS\0\u{1}METHOD_SIGN_OUT\0\u{1}METHOD_GET_PROJECT_INFO\0\u{1}METHOD_LIST_SOURCES\0\u{1}METHOD_GET_SOURCE_WORKSPACE\0\u{1}METHOD_CREATE_SOURCE\0\u{1}METHOD_UPDATE_SOURCE\0\u{1}METHOD_ADD_SOURCE_NOTE\0\u{1}METHOD_UPDATE_SOURCE_NOTE\0\u{1}METHOD_DELETE_SOURCE_NOTE\0\u{1}METHOD_SET_SOURCE_METADATA\0\u{1}METHOD_CLEAR_SOURCE_METADATA\0\u{1}METHOD_CREATE_ARTIFACT\0\u{1}METHOD_INGEST_ARTIFACT_FILE\0\u{1}METHOD_LIST_SOURCE_TYPES\0\u{1}METHOD_CREATE_SOURCE_TYPE\0\u{1}METHOD_LIST_METADATA_FIELDS\0\u{1}METHOD_CREATE_METADATA_FIELD\0\u{2}\u{2}METHOD_UPDATE_METADATA_FIELD\0\u{1}METHOD_DELETE_SOURCE_TYPE\0\u{1}METHOD_DELETE_METADATA_FIELD\0\u{1}METHOD_UPDATE_SOURCE_TYPE\0\u{1}METHOD_LIST_TYPE_SUGGESTIONS\0\u{1}METHOD_ASSIGN_TYPE_FIELD\0\u{1}METHOD_REMOVE_TYPE_FIELD\0\u{1}METHOD_GET_WORKSPACE_NAV_COUNTS\0\u{1}METHOD_UPDATE_ARTIFACT\0\u{1}METHOD_LIST_SOURCE_CREDIBILITY_GRADES\0\u{1}METHOD_UPSERT_SOURCE_CREDIBILITY_ASSESSMENT\0\u{1}METHOD_DISMISS_SOURCE_METADATA_SUGGESTION\0\u{1}METHOD_REORDER_SOURCE_METADATA\0\u{1}METHOD_ENSURE_FILE_THUMBNAIL\0\u{1}METHOD_CLOSE_CATALOG_SESSION\0\u{1}METHOD_SET_SOURCE_COVER\0\u{1}METHOD_SEARCH_CATALOG\0\u{1}METHOD_LIST_SUBJECT_TYPES\0\u{1}METHOD_CREATE_SUBJECT\0\u{1}METHOD_UPDATE_SUBJECT\0\u{1}METHOD_DELETE_SUBJECT\0\u{1}METHOD_LIST_SUBJECTS\0\u{1}METHOD_SET_SUBJECT_POSITION\0\u{1}METHOD_CLEAR_SUBJECT_POSITION\0\u{1}METHOD_LIST_SUBJECT_POSITIONS\0\u{1}METHOD_LIST_PROPERTIES\0\u{1}METHOD_CREATE_PROPERTY\0\u{1}METHOD_UPDATE_PROPERTY\0\u{1}METHOD_DELETE_PROPERTY\0\u{1}METHOD_LIST_SUBJECT_TYPE_FIELDS\0\u{1}METHOD_ASSIGN_SUBJECT_TYPE_FIELD\0\u{1}METHOD_REMOVE_SUBJECT_TYPE_FIELD\0\u{1}METHOD_LIST_PLACEABLE_SUBJECT_TYPES\0\u{1}METHOD_GET_SUBJECT_TYPE_PRESENTATION\0\u{1}METHOD_LIST_CONNECT_RULES\0\u{1}METHOD_LIST_PROPERTY_TERMS\0\u{1}METHOD_CREATE_PROPERTY_TERM\0\u{1}METHOD_UPDATE_PROPERTY_TERM\0\u{1}METHOD_DELETE_PROPERTY_TERM\0\u{1}METHOD_CREATE_CITATION_WITH_OBSERVATIONS\0\u{1}METHOD_ADD_OBSERVATIONS_TO_CITATION\0\u{1}METHOD_LIST_OBSERVATIONS_BY_SOURCE\0\u{1}METHOD_GET_CITATION\0\u{2}\u{2}METHOD_CREATE_CITED_BRIDGE\0\u{1}METHOD_CITATION_COUNTS_BY_SOURCE\0\u{1}METHOD_LIST_CITATIONS_BY_ARTIFACT\0\u{1}METHOD_UPDATE_CITATION\0\u{1}METHOD_UPDATE_OBSERVATION\0\u{1}METHOD_DELETE_OBSERVATION\0\u{1}METHOD_GET_SUBJECT_FIELDS_WORKSPACE\0")
 }
 
 nonisolated extension Provenencia_Engine_V1_ErrorKind: SwiftProtobuf._ProtoNameProviding {
@@ -11519,9 +11394,9 @@ nonisolated extension Provenencia_Engine_V1_GetCitationResponse: SwiftProtobuf.M
   }
 }
 
-nonisolated extension Provenencia_Engine_V1_UpdateCitationWithObservationsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".UpdateCitationWithObservationsRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}citation_id\0\u{3}artifact_id\0\u{3}locator_json\0\u{1}transcription\0\u{1}description\0\u{3}transcription_uncertain\0\u{3}transcription_note\0\u{3}citation_notes\0\u{1}observations\0")
+nonisolated extension Provenencia_Engine_V1_CreateCitedBridgeRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CreateCitedBridgeRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}source_id\0\u{3}from_subject_id\0\u{3}to_subject_id\0\u{3}bridge_type_key\0\u{2}\u{2}description\0\u{4}\u{3}artifact_id\0\u{3}locator_json\0\u{1}transcription\0\u{3}citation_description\0\u{3}transcription_uncertain\0\u{3}transcription_note\0\u{3}citation_notes\0\u{1}observations\0\u{3}citation_id\0\u{b}label\0\u{b}grid_x\0\u{b}grid_y\0\u{c}\u{7}\u{1}\u{c}\u{9}\u{1}\u{c}\u{a}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -11531,15 +11406,20 @@ nonisolated extension Provenencia_Engine_V1_UpdateCitationWithObservationsReques
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.projectDir) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.userID) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.citationID) }()
-      case 4: try { try decoder.decodeSingularStringField(value: &self.artifactID) }()
-      case 5: try { try decoder.decodeSingularStringField(value: &self.locatorJson) }()
-      case 6: try { try decoder.decodeSingularStringField(value: &self.transcription) }()
-      case 7: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
-      case 8: try { try decoder.decodeSingularBoolField(value: &self.transcriptionUncertain) }()
-      case 9: try { try decoder.decodeSingularStringField(value: &self.transcriptionNote) }()
-      case 10: try { try decoder.decodeRepeatedStringField(value: &self.citationNotes) }()
-      case 11: try { try decoder.decodeRepeatedMessageField(value: &self.observations) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.sourceID) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.fromSubjectID) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.toSubjectID) }()
+      case 6: try { try decoder.decodeSingularStringField(value: &self.bridgeTypeKey) }()
+      case 8: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
+      case 11: try { try decoder.decodeSingularStringField(value: &self.artifactID) }()
+      case 12: try { try decoder.decodeSingularStringField(value: &self.locatorJson) }()
+      case 13: try { try decoder.decodeSingularStringField(value: &self.transcription) }()
+      case 14: try { try decoder.decodeSingularStringField(value: &self.citationDescription) }()
+      case 15: try { try decoder.decodeSingularBoolField(value: &self.transcriptionUncertain) }()
+      case 16: try { try decoder.decodeSingularStringField(value: &self.transcriptionNote) }()
+      case 17: try { try decoder.decodeRepeatedStringField(value: &self.citationNotes) }()
+      case 18: try { try decoder.decodeRepeatedMessageField(value: &self.observations) }()
+      case 19: try { try decoder.decodeSingularStringField(value: &self.citationID) }()
       default: break
       }
     }
@@ -11552,279 +11432,68 @@ nonisolated extension Provenencia_Engine_V1_UpdateCitationWithObservationsReques
     if !self.userID.isEmpty {
       try visitor.visitSingularStringField(value: self.userID, fieldNumber: 2)
     }
-    if !self.citationID.isEmpty {
-      try visitor.visitSingularStringField(value: self.citationID, fieldNumber: 3)
+    if !self.sourceID.isEmpty {
+      try visitor.visitSingularStringField(value: self.sourceID, fieldNumber: 3)
     }
-    if !self.artifactID.isEmpty {
-      try visitor.visitSingularStringField(value: self.artifactID, fieldNumber: 4)
+    if !self.fromSubjectID.isEmpty {
+      try visitor.visitSingularStringField(value: self.fromSubjectID, fieldNumber: 4)
     }
-    if !self.locatorJson.isEmpty {
-      try visitor.visitSingularStringField(value: self.locatorJson, fieldNumber: 5)
+    if !self.toSubjectID.isEmpty {
+      try visitor.visitSingularStringField(value: self.toSubjectID, fieldNumber: 5)
     }
-    if !self.transcription.isEmpty {
-      try visitor.visitSingularStringField(value: self.transcription, fieldNumber: 6)
+    if !self.bridgeTypeKey.isEmpty {
+      try visitor.visitSingularStringField(value: self.bridgeTypeKey, fieldNumber: 6)
     }
     if !self.description_p.isEmpty {
-      try visitor.visitSingularStringField(value: self.description_p, fieldNumber: 7)
+      try visitor.visitSingularStringField(value: self.description_p, fieldNumber: 8)
+    }
+    if !self.artifactID.isEmpty {
+      try visitor.visitSingularStringField(value: self.artifactID, fieldNumber: 11)
+    }
+    if !self.locatorJson.isEmpty {
+      try visitor.visitSingularStringField(value: self.locatorJson, fieldNumber: 12)
+    }
+    if !self.transcription.isEmpty {
+      try visitor.visitSingularStringField(value: self.transcription, fieldNumber: 13)
+    }
+    if !self.citationDescription.isEmpty {
+      try visitor.visitSingularStringField(value: self.citationDescription, fieldNumber: 14)
     }
     if self.transcriptionUncertain != false {
-      try visitor.visitSingularBoolField(value: self.transcriptionUncertain, fieldNumber: 8)
+      try visitor.visitSingularBoolField(value: self.transcriptionUncertain, fieldNumber: 15)
     }
     if !self.transcriptionNote.isEmpty {
-      try visitor.visitSingularStringField(value: self.transcriptionNote, fieldNumber: 9)
+      try visitor.visitSingularStringField(value: self.transcriptionNote, fieldNumber: 16)
     }
     if !self.citationNotes.isEmpty {
-      try visitor.visitRepeatedStringField(value: self.citationNotes, fieldNumber: 10)
+      try visitor.visitRepeatedStringField(value: self.citationNotes, fieldNumber: 17)
     }
     if !self.observations.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.observations, fieldNumber: 11)
+      try visitor.visitRepeatedMessageField(value: self.observations, fieldNumber: 18)
     }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Provenencia_Engine_V1_UpdateCitationWithObservationsRequest, rhs: Provenencia_Engine_V1_UpdateCitationWithObservationsRequest) -> Bool {
-    if lhs.projectDir != rhs.projectDir {return false}
-    if lhs.userID != rhs.userID {return false}
-    if lhs.citationID != rhs.citationID {return false}
-    if lhs.artifactID != rhs.artifactID {return false}
-    if lhs.locatorJson != rhs.locatorJson {return false}
-    if lhs.transcription != rhs.transcription {return false}
-    if lhs.description_p != rhs.description_p {return false}
-    if lhs.transcriptionUncertain != rhs.transcriptionUncertain {return false}
-    if lhs.transcriptionNote != rhs.transcriptionNote {return false}
-    if lhs.citationNotes != rhs.citationNotes {return false}
-    if lhs.observations != rhs.observations {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Provenencia_Engine_V1_UpdateCitationWithObservationsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".UpdateCitationWithObservationsResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}citation\0\u{1}observations\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._citation) }()
-      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.observations) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._citation {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-    } }()
-    if !self.observations.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.observations, fieldNumber: 2)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Provenencia_Engine_V1_UpdateCitationWithObservationsResponse, rhs: Provenencia_Engine_V1_UpdateCitationWithObservationsResponse) -> Bool {
-    if lhs._citation != rhs._citation {return false}
-    if lhs.observations != rhs.observations {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Provenencia_Engine_V1_CreateCitedBridgeRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".CreateCitedBridgeRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}source_id\0\u{3}from_subject_id\0\u{3}to_subject_id\0\u{3}bridge_type_key\0\u{1}label\0\u{1}description\0\u{3}grid_x\0\u{3}grid_y\0\u{3}artifact_id\0\u{3}locator_json\0\u{1}transcription\0\u{3}citation_description\0\u{3}transcription_uncertain\0\u{3}transcription_note\0\u{3}citation_notes\0\u{1}observations\0\u{3}citation_id\0")
-
-  fileprivate class _StorageClass {
-    var _projectDir: String = String()
-    var _userID: String = String()
-    var _sourceID: String = String()
-    var _fromSubjectID: String = String()
-    var _toSubjectID: String = String()
-    var _bridgeTypeKey: String = String()
-    var _label: String = String()
-    var _description_p: String = String()
-    var _gridX: Int64 = 0
-    var _gridY: Int64 = 0
-    var _artifactID: String = String()
-    var _locatorJson: String = String()
-    var _transcription: String = String()
-    var _citationDescription: String = String()
-    var _transcriptionUncertain: Bool = false
-    var _transcriptionNote: String = String()
-    var _citationNotes: [String] = []
-    var _observations: [Provenencia_Engine_V1_ObservationDraft] = []
-    var _citationID: String = String()
-
-      // This property is used as the initial default value for new instances of the type.
-      // The type itself is protecting the reference to its storage via CoW semantics.
-      // This will force a copy to be made of this reference when the first mutation occurs;
-      // hence, it is safe to mark this as `nonisolated(unsafe)`.
-      static nonisolated(unsafe) let defaultInstance = _StorageClass()
-
-    private init() {}
-
-    init(copying source: _StorageClass) {
-      _projectDir = source._projectDir
-      _userID = source._userID
-      _sourceID = source._sourceID
-      _fromSubjectID = source._fromSubjectID
-      _toSubjectID = source._toSubjectID
-      _bridgeTypeKey = source._bridgeTypeKey
-      _label = source._label
-      _description_p = source._description_p
-      _gridX = source._gridX
-      _gridY = source._gridY
-      _artifactID = source._artifactID
-      _locatorJson = source._locatorJson
-      _transcription = source._transcription
-      _citationDescription = source._citationDescription
-      _transcriptionUncertain = source._transcriptionUncertain
-      _transcriptionNote = source._transcriptionNote
-      _citationNotes = source._citationNotes
-      _observations = source._observations
-      _citationID = source._citationID
-    }
-  }
-
-  fileprivate mutating func _uniqueStorage() -> _StorageClass {
-    if !isKnownUniquelyReferenced(&_storage) {
-      _storage = _StorageClass(copying: _storage)
-    }
-    return _storage
-  }
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    _ = _uniqueStorage()
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      while let fieldNumber = try decoder.nextFieldNumber() {
-        // The use of inline closures is to circumvent an issue where the compiler
-        // allocates stack space for every case branch when no optimizations are
-        // enabled. https://github.com/apple/swift-protobuf/issues/1034
-        switch fieldNumber {
-        case 1: try { try decoder.decodeSingularStringField(value: &_storage._projectDir) }()
-        case 2: try { try decoder.decodeSingularStringField(value: &_storage._userID) }()
-        case 3: try { try decoder.decodeSingularStringField(value: &_storage._sourceID) }()
-        case 4: try { try decoder.decodeSingularStringField(value: &_storage._fromSubjectID) }()
-        case 5: try { try decoder.decodeSingularStringField(value: &_storage._toSubjectID) }()
-        case 6: try { try decoder.decodeSingularStringField(value: &_storage._bridgeTypeKey) }()
-        case 7: try { try decoder.decodeSingularStringField(value: &_storage._label) }()
-        case 8: try { try decoder.decodeSingularStringField(value: &_storage._description_p) }()
-        case 9: try { try decoder.decodeSingularInt64Field(value: &_storage._gridX) }()
-        case 10: try { try decoder.decodeSingularInt64Field(value: &_storage._gridY) }()
-        case 11: try { try decoder.decodeSingularStringField(value: &_storage._artifactID) }()
-        case 12: try { try decoder.decodeSingularStringField(value: &_storage._locatorJson) }()
-        case 13: try { try decoder.decodeSingularStringField(value: &_storage._transcription) }()
-        case 14: try { try decoder.decodeSingularStringField(value: &_storage._citationDescription) }()
-        case 15: try { try decoder.decodeSingularBoolField(value: &_storage._transcriptionUncertain) }()
-        case 16: try { try decoder.decodeSingularStringField(value: &_storage._transcriptionNote) }()
-        case 17: try { try decoder.decodeRepeatedStringField(value: &_storage._citationNotes) }()
-        case 18: try { try decoder.decodeRepeatedMessageField(value: &_storage._observations) }()
-        case 19: try { try decoder.decodeSingularStringField(value: &_storage._citationID) }()
-        default: break
-        }
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      if !_storage._projectDir.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._projectDir, fieldNumber: 1)
-      }
-      if !_storage._userID.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._userID, fieldNumber: 2)
-      }
-      if !_storage._sourceID.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._sourceID, fieldNumber: 3)
-      }
-      if !_storage._fromSubjectID.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._fromSubjectID, fieldNumber: 4)
-      }
-      if !_storage._toSubjectID.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._toSubjectID, fieldNumber: 5)
-      }
-      if !_storage._bridgeTypeKey.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._bridgeTypeKey, fieldNumber: 6)
-      }
-      if !_storage._label.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._label, fieldNumber: 7)
-      }
-      if !_storage._description_p.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._description_p, fieldNumber: 8)
-      }
-      if _storage._gridX != 0 {
-        try visitor.visitSingularInt64Field(value: _storage._gridX, fieldNumber: 9)
-      }
-      if _storage._gridY != 0 {
-        try visitor.visitSingularInt64Field(value: _storage._gridY, fieldNumber: 10)
-      }
-      if !_storage._artifactID.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._artifactID, fieldNumber: 11)
-      }
-      if !_storage._locatorJson.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._locatorJson, fieldNumber: 12)
-      }
-      if !_storage._transcription.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._transcription, fieldNumber: 13)
-      }
-      if !_storage._citationDescription.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._citationDescription, fieldNumber: 14)
-      }
-      if _storage._transcriptionUncertain != false {
-        try visitor.visitSingularBoolField(value: _storage._transcriptionUncertain, fieldNumber: 15)
-      }
-      if !_storage._transcriptionNote.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._transcriptionNote, fieldNumber: 16)
-      }
-      if !_storage._citationNotes.isEmpty {
-        try visitor.visitRepeatedStringField(value: _storage._citationNotes, fieldNumber: 17)
-      }
-      if !_storage._observations.isEmpty {
-        try visitor.visitRepeatedMessageField(value: _storage._observations, fieldNumber: 18)
-      }
-      if !_storage._citationID.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._citationID, fieldNumber: 19)
-      }
+    if !self.citationID.isEmpty {
+      try visitor.visitSingularStringField(value: self.citationID, fieldNumber: 19)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_CreateCitedBridgeRequest, rhs: Provenencia_Engine_V1_CreateCitedBridgeRequest) -> Bool {
-    if lhs._storage !== rhs._storage {
-      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
-        let _storage = _args.0
-        let rhs_storage = _args.1
-        if _storage._projectDir != rhs_storage._projectDir {return false}
-        if _storage._userID != rhs_storage._userID {return false}
-        if _storage._sourceID != rhs_storage._sourceID {return false}
-        if _storage._fromSubjectID != rhs_storage._fromSubjectID {return false}
-        if _storage._toSubjectID != rhs_storage._toSubjectID {return false}
-        if _storage._bridgeTypeKey != rhs_storage._bridgeTypeKey {return false}
-        if _storage._label != rhs_storage._label {return false}
-        if _storage._description_p != rhs_storage._description_p {return false}
-        if _storage._gridX != rhs_storage._gridX {return false}
-        if _storage._gridY != rhs_storage._gridY {return false}
-        if _storage._artifactID != rhs_storage._artifactID {return false}
-        if _storage._locatorJson != rhs_storage._locatorJson {return false}
-        if _storage._transcription != rhs_storage._transcription {return false}
-        if _storage._citationDescription != rhs_storage._citationDescription {return false}
-        if _storage._transcriptionUncertain != rhs_storage._transcriptionUncertain {return false}
-        if _storage._transcriptionNote != rhs_storage._transcriptionNote {return false}
-        if _storage._citationNotes != rhs_storage._citationNotes {return false}
-        if _storage._observations != rhs_storage._observations {return false}
-        if _storage._citationID != rhs_storage._citationID {return false}
-        return true
-      }
-      if !storagesAreEqual {return false}
-    }
+    if lhs.projectDir != rhs.projectDir {return false}
+    if lhs.userID != rhs.userID {return false}
+    if lhs.sourceID != rhs.sourceID {return false}
+    if lhs.fromSubjectID != rhs.fromSubjectID {return false}
+    if lhs.toSubjectID != rhs.toSubjectID {return false}
+    if lhs.bridgeTypeKey != rhs.bridgeTypeKey {return false}
+    if lhs.description_p != rhs.description_p {return false}
+    if lhs.artifactID != rhs.artifactID {return false}
+    if lhs.locatorJson != rhs.locatorJson {return false}
+    if lhs.transcription != rhs.transcription {return false}
+    if lhs.citationDescription != rhs.citationDescription {return false}
+    if lhs.transcriptionUncertain != rhs.transcriptionUncertain {return false}
+    if lhs.transcriptionNote != rhs.transcriptionNote {return false}
+    if lhs.citationNotes != rhs.citationNotes {return false}
+    if lhs.observations != rhs.observations {return false}
+    if lhs.citationID != rhs.citationID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

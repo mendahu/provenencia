@@ -22,10 +22,6 @@ const (
 
 	sqlDeleteObservationNotes = `DELETE FROM observation_notes WHERE observation_id = ?`
 
-	sqlListRowsByCitation = `SELECT id, ref, citation_id, subject_id, property_id, polarity,
-		value_text, value_integer, value_date_id, value_name_id, value_subject_id, value_term_id
-		FROM observations WHERE citation_id = ?`
-
 	sqlCountDateRefs = `SELECT
 		(SELECT COUNT(*) FROM observations WHERE value_date_id = ?) +
 		(SELECT COUNT(*) FROM source_metadata WHERE date_value_id = ?)`
@@ -36,75 +32,6 @@ const (
 
 	sqlDeleteNameValue = `DELETE FROM name_values WHERE id = ?`
 )
-
-// ApplyForCitationTx updates each input that already belongs to citationID,
-// inserts inputs with no id, and deletes stored rows missing from inputs.
-func ApplyForCitationTx(tx *sql.Tx, citationID []byte, inputs []Input) ([]Observation, []audit.Change, error) {
-	if tx == nil || len(citationID) != 16 {
-		return nil, nil, ErrInvalid
-	}
-	existing, err := listRowsByCitationTx(tx, citationID)
-	if err != nil {
-		return nil, nil, err
-	}
-	byID := make(map[string]Observation, len(existing))
-	for _, row := range existing {
-		byID[uuidString(row.ID)] = row
-	}
-
-	out := make([]Observation, 0, len(inputs))
-	changes := make([]audit.Change, 0, len(inputs))
-	seen := make(map[string]struct{}, len(inputs))
-	for _, in := range inputs {
-		switch {
-		case len(in.ID) == 0:
-			obs, chs, err := insertOne(tx, citationID, in, InsertOptions{AllowEdgeRows: false})
-			if err != nil {
-				return nil, nil, err
-			}
-			out = append(out, obs)
-			changes = append(changes, chs...)
-		case len(in.ID) != 16:
-			return nil, nil, ErrInvalid
-		default:
-			key := uuidString(in.ID)
-			prev, ok := byID[key]
-			if key == "" || !ok {
-				return nil, nil, ErrInvalid
-			}
-			if _, dup := seen[key]; dup {
-				return nil, nil, ErrInvalid
-			}
-			seen[key] = struct{}{}
-			obs, chs, err := updateOne(tx, citationID, prev, in)
-			if err != nil {
-				return nil, nil, err
-			}
-			out = append(out, obs)
-			changes = append(changes, chs...)
-		}
-	}
-
-	for _, prev := range existing {
-		key := uuidString(prev.ID)
-		if _, ok := seen[key]; ok {
-			continue
-		}
-		if _, err := tx.Exec(sqlDeleteObservation, prev.ID, citationID); err != nil {
-			return nil, nil, err
-		}
-		changes = append(changes, audit.Change{
-			EntityType: "observation",
-			EntityID:   prev.ID,
-			Action:     audit.ActionDelete,
-			Fields: map[string]audit.FieldDiff{
-				"id":  {Old: uuidString(prev.ID), New: nil},
-				"ref": {Old: prev.Ref, New: nil},
-			},
-		})
-	}
-	return out, changes, nil
-}
 
 func updateOne(tx *sql.Tx, citationID []byte, prev Observation, in Input) (Observation, []audit.Change, error) {
 	polarity := stringsTrimPolarity(in.Polarity)
@@ -261,46 +188,6 @@ func observationUpdateChange(prev, next Observation) *audit.Change {
 		Action:     audit.ActionUpdate,
 		Fields:     fields,
 	}
-}
-
-func listRowsByCitationTx(tx *sql.Tx, citationID []byte) ([]Observation, error) {
-	rows, err := tx.Query(sqlListRowsByCitation, citationID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var out []Observation
-	for rows.Next() {
-		var (
-			obs       Observation
-			valueText sql.NullString
-			valueInt  sql.NullInt64
-			dateID    []byte
-			nameID    []byte
-			subjectID []byte
-			termID    []byte
-		)
-		if err := rows.Scan(
-			&obs.ID, &obs.Ref, &obs.CitationID, &obs.SubjectID, &obs.PropertyID, &obs.Polarity,
-			&valueText, &valueInt, &dateID, &nameID, &subjectID, &termID,
-		); err != nil {
-			return nil, err
-		}
-		if valueText.Valid {
-			obs.ValueText = valueText.String
-			obs.HasText = obs.ValueText != ""
-		}
-		if valueInt.Valid {
-			obs.ValueInteger = valueInt.Int64
-			obs.HasInteger = true
-		}
-		obs.ValueDateID = append([]byte(nil), dateID...)
-		obs.ValueNameID = append([]byte(nil), nameID...)
-		obs.ValueSubjectID = append([]byte(nil), subjectID...)
-		obs.ValueTermID = append([]byte(nil), termID...)
-		out = append(out, obs)
-	}
-	return out, rows.Err()
 }
 
 func releaseDateValue(tx *sql.Tx, oldID, newID []byte) (map[string]any, error) {

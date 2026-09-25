@@ -8,1562 +8,755 @@ struct CitationComposerModelTests {
     private let projectDir = "/tmp/citation-composer-model.provenencia"
     private let sourceID = "src-1"
     private let subjectID = "sub-person-1"
+    private let eventID = "sub-event-1"
+    private let placeID = "sub-place-1"
     private let personTypeID = "type-person"
+    private let eventTypeID = "type-event"
+    private let placeTypeID = "type-place"
     private let participationTypeID = "type-participation"
+    private let relationshipTypeID = "type-relationship"
+    private let locationTypeID = "type-location"
     private let namePropertyID = "prop-name"
     private let occupationPropertyID = "prop-occupation"
     private let personEdgePropertyID = "prop-person-edge"
     private let eventEdgePropertyID = "prop-event-edge"
+    private let placeEdgePropertyID = "prop-place-edge"
+    private let relatedToPropertyID = "prop-related-to"
+    private let rolePropertyID = "prop-role"
+    private let relationshipTypePropertyID = "prop-relationship-type"
 
     private func makeStore() -> FakeStore {
         let store = FakeStore()
         store.subjectTypesByProject[projectDir] = [
-            CatalogSubjectType(
-                id: personTypeID,
-                key: "person",
-                origin: "provenencia",
-                label: "Person",
-                description: "",
-                refPrefix: "PER",
-                candidateRefPrefix: "CPR"
-            ),
-            CatalogSubjectType(
-                id: participationTypeID,
-                key: "participation",
-                origin: "provenencia",
-                label: "Participation",
-                description: "",
-                refPrefix: "PTN",
-                candidateRefPrefix: "CPA"
-            ),
+            type(id: personTypeID, key: "person", label: "Person", prefix: "PER"),
+            type(id: eventTypeID, key: "event", label: "Event", prefix: "EVT"),
+            type(id: placeTypeID, key: "place", label: "Place", prefix: "PLC"),
+            type(id: participationTypeID, key: "participation", label: "Participation", prefix: "PTN"),
+            type(id: relationshipTypeID, key: "relationship", label: "Relationship", prefix: "REL"),
+            type(id: locationTypeID, key: "location", label: "Location", prefix: "LOC"),
         ]
         store.propertiesByProject[projectDir] = [
-            CatalogProperty(
-                id: namePropertyID,
-                key: "name",
-                origin: "provenencia",
-                label: "Name",
-                description: "",
-                valueType: "name"
-            ),
-            CatalogProperty(
-                id: occupationPropertyID,
-                key: "occupation",
-                origin: "provenencia",
-                label: "Occupation",
-                description: "",
-                valueType: "text"
-            ),
-            CatalogProperty(
-                id: personEdgePropertyID,
-                key: "person",
-                origin: "provenencia",
-                label: "Person",
-                description: "",
-                valueType: "subject"
-            ),
-            CatalogProperty(
-                id: eventEdgePropertyID,
-                key: "event",
-                origin: "provenencia",
-                label: "Event",
-                description: "",
-                valueType: "subject"
-            ),
-            CatalogProperty(
-                id: "prop-age",
-                key: "age",
-                origin: "user",
-                label: "Age",
-                description: "",
-                valueType: "integer"
-            ),
-        ]
-        store.subjectTypeFieldsByType[participationTypeID] = [
-            CatalogSubjectTypeField(
-                property: store.propertiesByProject[projectDir]![2],
-                sortOrder: 0,
-                locked: true
-            ),
-            CatalogSubjectTypeField(
-                property: store.propertiesByProject[projectDir]![3],
-                sortOrder: 1,
-                locked: true
-            ),
-            CatalogSubjectTypeField(
-                property: store.propertiesByProject[projectDir]![1],
-                sortOrder: 2,
-                locked: false
+            property(id: namePropertyID, key: "name", label: "Name", valueType: "name"),
+            property(id: occupationPropertyID, key: "occupation", label: "Occupation", valueType: "text"),
+            property(id: personEdgePropertyID, key: "person", label: "Person", valueType: "subject"),
+            property(id: eventEdgePropertyID, key: "event", label: "Event", valueType: "subject"),
+            property(id: placeEdgePropertyID, key: "place", label: "Place", valueType: "subject"),
+            property(id: relatedToPropertyID, key: "related_to", label: "Related to", valueType: "subject"),
+            property(id: rolePropertyID, key: "role", label: "Role", valueType: "term"),
+            property(
+                id: relationshipTypePropertyID,
+                key: "relationship_type",
+                label: "Relationship type",
+                valueType: "term"
             ),
         ]
         store.subjectTypeFieldsByType[personTypeID] = [
-            CatalogSubjectTypeField(
-                property: store.propertiesByProject[projectDir]![0],
-                sortOrder: 0,
-                locked: false
-            ),
-            CatalogSubjectTypeField(
-                property: store.propertiesByProject[projectDir]![1],
-                sortOrder: 1,
-                locked: false
-            ),
-            CatalogSubjectTypeField(
-                property: store.propertiesByProject[projectDir]![4],
-                sortOrder: 2,
-                locked: false
-            ),
+            field(store.propertiesByProject[projectDir]![0], 0),
+            field(store.propertiesByProject[projectDir]![1], 1),
         ]
-        store.connectRules = [
-            CatalogConnectRule(
-                fromTypeKey: "person",
-                toTypeKey: "event",
-                bridgeTypeKey: "participation",
-                edgePropertyKeys: ["person", "event"],
-                disambiguation: "role",
-                refuse: false
-            ),
+        store.subjectTypeFieldsByType[eventTypeID] = [
+            field(store.propertiesByProject[projectDir]![3], 0),
         ]
-        store.sourcesByProject[projectDir] = [
-            CatalogSource(
-                id: sourceID,
-                ref: "SRC-1",
-                sourceTypeID: "stype",
-                title: "Census",
-                description: ""
-            ),
+        store.subjectTypeFieldsByType[placeTypeID] = [
+            field(store.propertiesByProject[projectDir]![4], 0),
         ]
-        let person = CatalogSubject(
-            id: subjectID,
-            ref: "CPR-1",
-            sourceID: sourceID,
-            subjectTypeID: personTypeID,
-            label: "Margt.",
-            description: ""
-        )
-        store.subjectsBySource[sourceID] = [person]
-        store.subjectPositionsBySubject[subjectID] = CatalogSubjectPosition(
-            subjectID: subjectID,
-            gridX: 0,
-            gridY: 0
-        )
-        return store
-    }
-
-    private func seedArtifact(
-        _ store: FakeStore,
-        count: Int = 1,
-        pdf: Bool = true,
-        mediaType: String? = nil
-    ) {
-        let type = mediaType ?? (pdf ? "application/pdf" : "image/jpeg")
-        let ext = type.contains("pdf") ? "pdf" : (type.hasPrefix("image/") ? "jpg" : "bin")
-        store.artifactsBySource[sourceID] = (0..<count).map { i in
-            CatalogArtifact(
-                id: "art-\(i)",
-                ref: "ART-\(i)",
-                sourceID: sourceID,
-                fileID: "file-\(i)",
-                label: "Scan \(i + 1)",
-                description: "",
-                file: CatalogFileRef(
-                    id: "file-\(i)",
-                    relPath: "objects/file-\(i).\(ext)",
-                    originalFilename: "scan\(i).\(ext)",
-                    mediaType: type,
-                    byteSize: 10
-                )
-            )
-        }
-    }
-
-    private func stripAttachedFile(_ store: FakeStore, artifactID: String) {
-        guard var artifacts = store.artifactsBySource[sourceID],
-              let index = artifacts.firstIndex(where: { $0.id == artifactID })
-        else { return }
-        artifacts[index].fileID = ""
-        artifacts[index].file = nil
-        store.artifactsBySource[sourceID] = artifacts
-    }
-
-    private func seedCitations(_ store: FakeStore, artifactID: String, count: Int) {
-        for i in 0..<count {
-            let id = "cit-\(artifactID)-\(i)"
-            store.citationsByID[id] = CatalogCitation(
-                id: id,
-                ref: "CIT-\(i)",
-                artifactID: artifactID,
-                locatorJSON: #"{"version":1,"selectors":[{"type":"artifact"}]}"#,
-                transcription: "",
-                description: "",
-                transcriptionUncertain: false,
-                transcriptionNote: ""
-            )
-        }
-    }
-
-    private func setSourceThumbnail(_ store: FakeStore, artifactID: String) {
-        guard var sources = store.sourcesByProject[projectDir],
-              let index = sources.firstIndex(where: { $0.id == sourceID })
-        else { return }
-        sources[index].coverMode = "artifact"
-        sources[index].primaryArtifactID = artifactID
-        store.sourcesByProject[projectDir] = sources
-    }
-
-    private func sampleRectangle() -> ArtifactRegionDraft {
-        ArtifactRegionDraft(
-            kind: .rectangle,
-            points: [
-                CGPoint(x: 0.1, y: 0.1),
-                CGPoint(x: 0.4, y: 0.1),
-                CGPoint(x: 0.4, y: 0.3),
-                CGPoint(x: 0.1, y: 0.3),
-            ]
-        )
-    }
-
-    private func makeModel(store: FakeStore, entry: CitationComposerEntry) -> CitationComposerModel {
-        let session = WorkspaceSession(
-            projectKey: ProjectKey(projectDir: projectDir),
-            store: store
-        )
-        return CitationComposerModel(
-            entry: entry,
-            session: session,
-            store: store,
-            userID: "user-1"
-        )
-    }
-
-    private func makeModel(
-        store: FakeStore,
-        subjectID: String? = nil,
-        citationID: String? = nil,
-        observationID: String? = nil,
-        artifactID: String? = nil,
-        connectFromSubjectID: String? = nil,
-        connectToSubjectID: String? = nil,
-        connectBridgeTypeKey: String? = nil,
-        connectDisambiguationTermID: String? = nil
-    ) -> CitationComposerModel {
-        let entry: CitationComposerEntry
-        if let fromID = connectFromSubjectID,
-           let toID = connectToSubjectID,
-           let bridge = connectBridgeTypeKey
-        {
-            entry = .connect(
-                sourceID: sourceID,
-                fromSubjectID: fromID,
-                toSubjectID: toID,
-                bridgeTypeKey: bridge,
-                termID: connectDisambiguationTermID,
-                gridX: 0,
-                gridY: 0
-            )
-        } else if let citationID {
-            entry = .edit(
-                sourceID: sourceID,
-                subjectID: subjectID ?? self.subjectID,
-                citationID: citationID,
-                artifactID: artifactID,
-                observationID: observationID
-            )
-        } else {
-            entry = .addProperty(
-                sourceID: sourceID,
-                subjectID: subjectID ?? self.subjectID,
-                artifactID: artifactID
-            )
-        }
-        return makeModel(store: store, entry: entry)
-    }
-
-    @Test func excludedEdgePropertyKeysForBridgeType() {
-        let keys = CitationComposerModel.excludedEdgePropertyKeys(
-            typeKey: "participation",
-            rules: [
-                CatalogConnectRule(
-                    fromTypeKey: "person",
-                    toTypeKey: "event",
-                    bridgeTypeKey: "participation",
-                    edgePropertyKeys: ["person", "event"],
-                    disambiguation: "role",
-                    refuse: false
-                ),
-            ]
-        )
-        #expect(keys == Set(["person", "event"]))
-    }
-
-    @Test func prepareAutoSelectsSingleArtifactAndIncludesNameType() async {
-        let store = makeStore()
-        seedArtifact(store, count: 1)
-        let model = makeModel(store: store)
-        await model.prepare()
-        #expect(model.phase == .compose)
-        #expect(model.selectedArtifactID == "art-0")
-        #expect(model.observations.isEmpty)
-        #expect(model.availableProperties.map(\.id).sorted() == ["prop-age", namePropertyID, occupationPropertyID].sorted())
-        #expect(model.availableProperties.contains(where: { $0.valueType == "name" }))
-    }
-
-    @Test func prepareOnWarmSessionDoesNotRelistCatalog() async {
-        let store = makeStore()
-        seedArtifact(store, count: 1)
-        let model = makeModel(store: store)
-        let session = model.session
-        let project = session.projectKey
-        let graph: QueryHandle<SourceGraphRows> = session.query(
-            .sourceGraph(project: project, sourceId: sourceID)
-        )
-        let fields: QueryHandle<SubjectFieldsSnapshot> = session.query(
-            .subjectFieldsWorkspace(project: project)
-        )
-        let workspace: QueryHandle<CatalogSourceWorkspace> = session.query(
-            .sourceWorkspace(project: project, sourceId: sourceID)
-        )
-        for _ in 0..<80 {
-            if graph.value != nil, fields.value != nil, workspace.value != nil { break }
-            try? await Task.sleep(nanoseconds: 25_000_000)
-        }
-        let subjectsAtWarm = store.listSubjectsCalls
-        let typesAtWarm = store.listSubjectTypesCalls
-        let workspaceAtWarm = store.getSourceWorkspaceCalls
-        await model.prepare()
-        #expect(model.phase == .compose)
-        #expect(store.listSubjectsCalls == subjectsAtWarm)
-        #expect(store.listSubjectTypesCalls == typesAtWarm)
-        #expect(store.getSourceWorkspaceCalls == workspaceAtWarm)
-    }
-
-    @Test func prepareMultiArtifactOpensComposeWithDefault() async {
-        let store = makeStore()
-        seedArtifact(store, count: 2)
-        let model = makeModel(store: store)
-        await model.prepare()
-        #expect(model.phase == .compose)
-        #expect(model.selectedArtifactID == "art-0")
-        #expect(model.showsArtifactSwitcher)
-        #expect(model.observations.isEmpty)
-        await model.selectArtifactAndLoad("art-1")
-        #expect(model.selectedArtifactID == "art-1")
-    }
-
-    @Test func prepareDefaultsToFirstArtifactWithFile() async {
-        let store = makeStore()
-        seedArtifact(store, count: 3)
-        stripAttachedFile(store, artifactID: "art-0")
-        let model = makeModel(store: store)
-        await model.prepare()
-        #expect(model.phase == .compose)
-        #expect(model.selectedArtifactID == "art-1")
-    }
-
-    @Test func prepareFallsBackToFirstWhenNoneHaveFiles() async {
-        let store = makeStore()
-        seedArtifact(store, count: 2)
-        stripAttachedFile(store, artifactID: "art-0")
-        stripAttachedFile(store, artifactID: "art-1")
-        let model = makeModel(store: store)
-        await model.prepare()
-        #expect(model.phase == .compose)
-        #expect(model.selectedArtifactID == "art-0")
-    }
-
-    @Test func prepareDefaultsToMostCitedArtifact() async {
-        let store = makeStore()
-        seedArtifact(store, count: 3)
-        seedCitations(store, artifactID: "art-0", count: 1)
-        seedCitations(store, artifactID: "art-2", count: 3)
-        let model = makeModel(store: store)
-        await model.prepare()
-        #expect(model.phase == .compose)
-        #expect(model.selectedArtifactID == "art-2")
-    }
-
-    @Test func prepareCitationTiePrefersThumbnail() async {
-        let store = makeStore()
-        seedArtifact(store, count: 3)
-        seedCitations(store, artifactID: "art-0", count: 2)
-        seedCitations(store, artifactID: "art-2", count: 2)
-        setSourceThumbnail(store, artifactID: "art-2")
-        let model = makeModel(store: store)
-        await model.prepare()
-        #expect(model.phase == .compose)
-        #expect(model.selectedArtifactID == "art-2")
-    }
-
-    @Test func defaultPendingArtifactIDLayers() {
-        func artifact(_ id: String, file: Bool = true) -> CatalogArtifact {
-            CatalogArtifact(
-                id: id,
-                ref: id,
-                sourceID: sourceID,
-                fileID: file ? "file-\(id)" : "",
-                label: id,
-                description: "",
-                file: file
-                    ? CatalogFileRef(
-                        id: "file-\(id)",
-                        relPath: "objects/\(id).pdf",
-                        originalFilename: "\(id).pdf",
-                        mediaType: "application/pdf",
-                        byteSize: 10
-                    )
-                    : nil
-            )
-        }
-
-        #expect(
-            CitationComposerModel.defaultPendingArtifactID(
-                artifacts: [artifact("art-0"), artifact("art-1"), artifact("art-2")],
-                citationCounts: ["art-0": 1, "art-1": 4, "art-2": 2],
-                selectedID: nil,
-                coverMode: "type_icon",
-                primaryArtifactID: ""
-            ) == "art-1"
-        )
-        #expect(
-            CitationComposerModel.defaultPendingArtifactID(
-                artifacts: [artifact("art-0"), artifact("art-1")],
-                citationCounts: ["art-0": 2, "art-1": 2],
-                selectedID: nil,
-                coverMode: "artifact",
-                primaryArtifactID: "art-1"
-            ) == "art-1"
-        )
-        #expect(
-            CitationComposerModel.defaultPendingArtifactID(
-                artifacts: [artifact("art-0"), artifact("art-1")],
-                citationCounts: [:],
-                selectedID: nil,
-                coverMode: "artifact",
-                primaryArtifactID: "art-1"
-            ) == "art-1"
-        )
-        #expect(
-            CitationComposerModel.defaultPendingArtifactID(
-                artifacts: [artifact("art-0", file: false), artifact("art-1"), artifact("art-2")],
-                citationCounts: [:],
-                selectedID: nil,
-                coverMode: "type_icon",
-                primaryArtifactID: ""
-            ) == "art-1"
-        )
-        #expect(
-            CitationComposerModel.defaultPendingArtifactID(
-                artifacts: [artifact("art-0", file: false), artifact("art-1", file: false)],
-                citationCounts: [:],
-                selectedID: nil,
-                coverMode: "type_icon",
-                primaryArtifactID: ""
-            ) == "art-0"
-        )
-        #expect(
-            CitationComposerModel.defaultPendingArtifactID(
-                artifacts: [artifact("art-0"), artifact("art-1")],
-                citationCounts: ["art-0": 1, "art-1": 3],
-                selectedID: "art-0",
-                coverMode: "type_icon",
-                primaryArtifactID: ""
-            ) == "art-0"
-        )
-    }
-
-    @Test func prepareNoArtifactsOpensInertCompose() async {
-        let store = makeStore()
-        let model = makeModel(store: store)
-        await model.prepare()
-        #expect(model.phase == .compose)
-        #expect(model.hasNoArtifacts)
-        #expect(model.sourcePageLocation().sourceSurface == .page)
-        #expect(model.sourcePageLocation().sourceId == sourceID)
-    }
-
-    @Test func prepareExcludesConnectEdgePropertiesOnBridge() async {
-        let store = makeStore()
-        seedArtifact(store)
-        let bridgeID = "sub-bridge-1"
-        store.subjectsBySource[sourceID]?.append(
-            CatalogSubject(
-                id: bridgeID,
-                ref: "CPA-1",
-                sourceID: sourceID,
-                subjectTypeID: participationTypeID,
-                label: "Participation",
-                description: ""
-            )
-        )
-        store.subjectPositionsBySubject[bridgeID] = CatalogSubjectPosition(
-            subjectID: bridgeID,
-            gridX: 1,
-            gridY: 0
-        )
-        let model = makeModel(store: store, subjectID: bridgeID)
-        await model.prepare()
-        #expect(model.phase == .compose)
-        #expect(model.availableProperties.map(\.key) == ["occupation"])
-        #expect(!model.availableProperties.contains(where: { $0.key == "person" }))
-        #expect(model.observations.isEmpty)
-    }
-
-    @Test func preparePrefillsFixedConnectEdgeRowsFromLocationPayload() async {
-        let store = makeStore()
-        seedArtifact(store)
-        let eventTypeID = "type-event"
-        store.subjectTypesByProject[projectDir]?.append(
-            CatalogSubjectType(
-                id: eventTypeID,
-                key: "event",
-                origin: "provenencia",
-                label: "Event",
-                description: "",
-                refPrefix: "EVT",
-                candidateRefPrefix: "CEV"
-            )
-        )
-        store.propertiesByProject[projectDir]?.append(
-            CatalogProperty(
-                id: "prop-role",
-                key: "role",
-                origin: "provenencia",
-                label: "Role",
-                description: "",
-                valueType: "term"
-            )
-        )
-        store.subjectTypeFieldsByType[participationTypeID]?.append(
-            CatalogSubjectTypeField(
-                property: store.propertiesByProject[projectDir]!.last!,
-                sortOrder: 3,
-                locked: false
-            )
-        )
-        store.propertyTermsByProperty["prop-role"] = [
+        store.subjectTypeFieldsByType[participationTypeID] = [
+            field(store.propertiesByProject[projectDir]![2], 0),
+            field(store.propertiesByProject[projectDir]![3], 1),
+            field(store.propertiesByProject[projectDir]![6], 2),
+        ]
+        store.subjectTypeFieldsByType[relationshipTypeID] = [
+            field(store.propertiesByProject[projectDir]![2], 0),
+            field(store.propertiesByProject[projectDir]![5], 1),
+            field(store.propertiesByProject[projectDir]![7], 2),
+        ]
+        store.subjectTypeFieldsByType[locationTypeID] = [
+            field(store.propertiesByProject[projectDir]![3], 0),
+            field(store.propertiesByProject[projectDir]![4], 1),
+        ]
+        store.connectRules = CatalogConnectRule.productMatrix
+        store.propertyTermsByProperty[rolePropertyID] = [
             CatalogPropertyTerm(
                 id: "term-witness",
-                propertyID: "prop-role",
+                propertyID: rolePropertyID,
                 key: "witness",
                 origin: "provenencia",
                 label: "Witness",
                 description: ""
             ),
         ]
-        let eventID = "sub-event-1"
-        store.subjectsBySource[sourceID] = [
-            CatalogSubject(
-                id: subjectID,
-                ref: "CPR-1",
-                sourceID: sourceID,
-                subjectTypeID: personTypeID,
-                label: "Margt.",
-                description: ""
-            ),
-            CatalogSubject(
-                id: eventID,
-                ref: "CEV-1",
-                sourceID: sourceID,
-                subjectTypeID: eventTypeID,
-                label: "Enumeration, 1871",
-                description: ""
-            ),
-        ]
-        store.subjectPositionsBySubject[eventID] = CatalogSubjectPosition(
-            subjectID: eventID, gridX: 2, gridY: 0
-        )
-        let model = makeModel(
-            store: store,
-            subjectID: "",
-            connectFromSubjectID: subjectID,
-            connectToSubjectID: eventID,
-            connectBridgeTypeKey: "participation",
-            connectDisambiguationTermID: "term-witness"
-        )
-        await model.prepare()
-        #expect(model.phase == .compose)
-        #expect(model.isConnectPrefill)
-        #expect(model.observations.count == 3)
-        #expect(model.observations.filter(\.isConnectFixed).count == 2)
-        #expect(model.observations.filter(\.isConnectFixed).map(\.valueSubjectID).sorted() == [eventID, subjectID].sorted())
-        #expect(model.observations.contains(where: { $0.valueTermID == "term-witness" && !$0.isConnectFixed }))
-        #expect(
-            model.subjectLabel == EvidenceBridgeEdgeSummary.sentence(
-                kind: .participation,
-                person: "Margt.",
-                related: nil,
-                event: "Enumeration, 1871",
-                place: nil,
-                term: String(localized: L10n.PropertyTerm.roleWitness)
-            )
-        )
-        model.removeObservation(id: model.observations[0].id)
-        #expect(model.observations.filter(\.isConnectFixed).count == 2)
-    }
-
-    @Test func connectEdgePrefillRowsAssignEndpointsByPropertyKey() {
-        let rows = CitationComposerModel.connectEdgePrefillRows(
-            bridgeTypeKey: "participation",
-            rules: [
-                CatalogConnectRule(
-                    fromTypeKey: "person",
-                    toTypeKey: "event",
-                    bridgeTypeKey: "participation",
-                    edgePropertyKeys: ["person", "event"],
-                    disambiguation: "role",
-                    refuse: false
-                ),
-            ],
-            properties: [
-                CatalogProperty(
-                    id: personEdgePropertyID,
-                    key: "person",
-                    origin: "provenencia",
-                    label: "Person",
-                    description: "",
-                    valueType: "subject"
-                ),
-                CatalogProperty(
-                    id: eventEdgePropertyID,
-                    key: "event",
-                    origin: "provenencia",
-                    label: "Event",
-                    description: "",
-                    valueType: "subject"
-                ),
-            ],
-            endpointA: (id: "p1", label: "Alice", typeKey: "person"),
-            endpointB: (id: "e1", label: "Birth", typeKey: "event")
-        )
-        #expect(rows.count == 2)
-        #expect(rows[0].propertyID == personEdgePropertyID)
-        #expect(rows[0].valueSubjectID == "p1")
-        #expect(rows[0].valueText == "Alice")
-        #expect(rows[0].isConnectFixed)
-        #expect(rows[1].propertyID == eventEdgePropertyID)
-        #expect(rows[1].valueSubjectID == "e1")
-    }
-
-    @Test func addObservationCommitsInlineTextRow() async {
-        let store = makeStore()
-        seedArtifact(store)
-        let model = makeModel(store: store)
-        await model.prepare()
-        model.beginAddObservation()
-        #expect(model.observationDialog == nil)
-        #expect(model.observations.count == 1)
-        let id = model.observations[0].id
-        model.updateObservationProperty(id: id, propertyID: occupationPropertyID)
-        model.updateObservationText(id: id, text: "Farmer")
-        #expect(model.observations[0].valueText == "Farmer")
-        #expect(model.observations[0].subjectID == subjectID)
-    }
-
-    @Test func observationDialogCommitsNameValueParts() async throws {
-        let store = makeStore()
-        seedArtifact(store)
-        let model = makeModel(store: store)
-        await model.prepare()
-        model.beginAddObservation()
-        let id = model.observations[0].id
-        model.updateObservationProperty(id: id, propertyID: namePropertyID)
-        model.beginEditObservation(model.observations[0])
-        var draft = model.observationDialog!
-        draft.nameDraft = NameValueDraft(
-            form: "John W. Alderwick",
-            parts: [
-                CatalogNameValuePart(value: "John", type: "given"),
-                CatalogNameValuePart(value: "W.", type: "initial"),
-                CatalogNameValuePart(value: "Alderwick", type: "surname"),
-            ]
-        )
-        model.updateObservationDialog(draft)
-        #expect(model.canConfirmObservation)
-        model.confirmObservationDialog()
-        #expect(model.observations.count == 1)
-        #expect(NameValueDisplay.string(for: model.observations[0].nameDraft) == "John W. Alderwick")
-
-        let location = await model.submit()
-        #expect(location?.sourceSurface == .graph)
-        let listed = try await store.listObservationsBySource(
-            projectDir: projectDir,
-            sourceID: sourceID
-        )
-        #expect(listed.count == 1)
-        #expect(listed[0].nameForm == "John W. Alderwick")
-        #expect(listed[0].nameParts.map(\.type) == ["given", "initial", "surname"])
-        #expect(listed[0].nameParts.map(\.value) == ["John", "W.", "Alderwick"])
-    }
-
-    @Test func submitEmptyObservationsPersistsReading() async throws {
-        let store = makeStore()
-        seedArtifact(store)
-        let model = makeModel(store: store)
-        await model.prepare()
-        #expect(model.phase == .compose)
-        #expect(model.locator.isArtifactOnly)
-        #expect(model.hasLocator)
-        model.transcription = "transcribe first"
-
-        let location = await model.submit()
-        #expect(location?.sourceSurface == .graph)
-        #expect(location?.sourceId == sourceID)
-        #expect(store.citationsByID.values.contains(where: { $0.transcription == "transcribe first" }))
-        let listed = try await store.listObservationsBySource(
-            projectDir: projectDir,
-            sourceID: sourceID
-        )
-        #expect(listed.isEmpty)
-        let json = store.citationsByID.values.first?.locatorJSON ?? ""
-        #expect(json.contains("\"artifact\""))
-        #expect(!json.contains("\"page\""))
-    }
-
-    @Test func submitWritesObservationForEntrySubject() async throws {
-        let store = makeStore()
-        seedArtifact(store)
-        let model = makeModel(store: store)
-        await model.prepare()
-        model.beginAddObservation()
-        let id = model.observations[0].id
-        model.updateObservationProperty(id: id, propertyID: occupationPropertyID)
-        model.updateObservationText(id: id, text: "Farmer")
-        let location = await model.submit()
-        #expect(location?.sourceSurface == .graph)
-        let listed = try await store.listObservationsBySource(
-            projectDir: projectDir,
-            sourceID: sourceID
-        )
-        #expect(listed.count == 1)
-        #expect(listed[0].valueText == "Farmer")
-        #expect(listed[0].propertyID == occupationPropertyID)
-        #expect(listed[0].subjectID == subjectID)
-    }
-
-    @Test func setPageDoesNotFollowBrowse() async {
-        let store = makeStore()
-        seedArtifact(store, count: 1, pdf: true)
-        let model = makeModel(store: store)
-        await model.prepare()
-        #expect(model.locator.isArtifactOnly)
-        model.goToNextPage()
-        #expect(model.locator.page == nil)
-        #expect(model.setPageFromViewer())
-        #expect(model.locator.page == model.artifactViewer.page)
-        #expect(model.isLocatorPageSetOnViewer)
-        model.resetToEntireArtifact()
-        #expect(model.locator.isArtifactOnly)
-    }
-
-    @Test func pdfRegionAutoInsertsCurrentPage() async {
-        let store = makeStore()
-        seedArtifact(store, count: 1, pdf: true)
-        let model = makeModel(store: store)
-        await model.prepare()
-        #expect(model.setRegion(sampleRectangle()))
-        #expect(model.locator.page == model.artifactViewer.page)
-        #expect(model.locator.region?.kind == .rectangle)
-        #expect(model.locator.encodeJSON().contains("\"page\""))
-        #expect(model.locator.encodeJSON().contains("\"region\""))
-    }
-
-    @Test func imageRegionHasNoPage() async {
-        let store = makeStore()
-        seedArtifact(store, pdf: false)
-        let model = makeModel(store: store)
-        await model.prepare()
-        #expect(!model.setPageFromViewer())
-        #expect(model.setRegion(sampleRectangle()))
-        #expect(model.locator.page == nil)
-        #expect(model.locator.region != nil)
-        #expect(!model.locator.encodeJSON().contains("\"page\""))
-    }
-
-    @Test func audioRefusesPageAndRegion() async {
-        let store = makeStore()
-        seedArtifact(store, mediaType: "audio/mpeg")
-        let model = makeModel(store: store)
-        await model.prepare()
-        #expect(model.artifactViewer.kind == .audio)
-        #expect(!model.setPage(2))
-        #expect(!model.setRegion(sampleRectangle()))
-        #expect(model.locator.isArtifactOnly)
-        #expect(model.locator.encodeJSON().contains("\"artifact\""))
-    }
-
-    @Test func switchingKindPeelsIllegalLayers() async {
-        let store = makeStore()
-        seedArtifact(store, count: 2, pdf: true)
-        if var artifacts = store.artifactsBySource[sourceID], artifacts.indices.contains(1) {
-            artifacts[1].file?.mediaType = "image/jpeg"
-            store.artifactsBySource[sourceID] = artifacts
-        }
-        let model = makeModel(store: store)
-        await model.prepare()
-        #expect(model.selectedArtifactID == "art-0")
-        #expect(model.setPage(2))
-        #expect(model.setRegion(sampleRectangle()))
-        #expect(model.locator.page == 2)
-        #expect(model.locator.region != nil)
-
-        await model.selectArtifactAndLoad("art-1")
-        #expect(model.locator.isArtifactOnly)
-
-        var draft = CitationLocatorDraft.artifactOnly()
-        let setPage = draft.setPage(3, capabilities: ArtifactViewerKind.pdf.locatorCapabilities)
-        let setRegion = draft.setRegion(
-            sampleRectangle(),
-            capabilities: ArtifactViewerKind.pdf.locatorCapabilities,
-            autoPage: 3
-        )
-        #expect(setPage)
-        #expect(setRegion)
-        draft.peelIllegalLayers(capabilities: ArtifactViewerKind.image.locatorCapabilities)
-        #expect(draft.page == nil)
-        #expect(draft.region != nil)
-        draft.peelIllegalLayers(capabilities: ArtifactViewerKind.audio.locatorCapabilities)
-        #expect(draft.page == nil)
-        #expect(draft.region == nil)
-    }
-
-    @Test func missingSubjectFallsBack() async {
-        let store = makeStore()
-        seedArtifact(store)
-        let model = makeModel(store: store, subjectID: "missing")
-        await model.prepare()
-        #expect(model.phase == .subjectMissing)
-        #expect(model.shouldFallbackToGraph)
-    }
-
-    @Test func prepareLoadsExistingCitationForEdit() async throws {
-        let store = makeStore()
-        seedArtifact(store)
-        let citation = CatalogCitation(
-            id: "cit-edit",
-            ref: "CIT-1",
-            artifactID: "art-0",
-            locatorJSON: #"{"version":1,"selectors":[{"type":"page","artifact_page":3}]}"#,
-            transcription: "Farmer",
-            description: "Note",
-            transcriptionUncertain: true,
-            transcriptionNote: "blurry"
-        )
-        store.citationsByID[citation.id] = citation
-        store.observationsBySource[sourceID] = [
-            CatalogObservation(
-                id: "obs-1",
-                ref: "OBS-1",
-                citationID: citation.id,
-                subjectID: subjectID,
-                propertyID: occupationPropertyID,
-                polarity: "positive",
-                valueText: "Farmer",
-                valueInteger: nil,
-                valueDateID: "",
-                valueNameID: "",
-                valueSubjectID: "",
-                valueTermID: "",
-                propertyKey: "occupation",
-                propertyLabel: "Occupation",
-                propertyValueType: "text"
-            ),
-        ]
-        let model = makeModel(store: store, citationID: citation.id)
-        await model.prepare()
-        #expect(model.phase == .compose)
-        #expect(model.isEditingExisting)
-        #expect(model.selectedArtifactID == "art-0")
-        #expect(model.transcription == "Farmer")
-        #expect(model.transcriptionUncertain)
-        #expect(model.locatorPage == 3)
-        #expect(model.locator.encodeJSON().contains("\"artifact\""))
-        #expect(model.locator.encodeJSON().contains("\"page\""))
-        #expect(model.observations.count == 1)
-        #expect(model.observations[0].valueText == "Farmer")
-    }
-
-    @Test func submitUpdatesExistingCitation() async throws {
-        let store = makeStore()
-        seedArtifact(store)
-        let citation = CatalogCitation(
-            id: "cit-edit",
-            ref: "CIT-1",
-            artifactID: "art-0",
-            locatorJSON: #"{"version":1,"selectors":[{"type":"page","artifact_page":1}]}"#,
-            transcription: "Old",
-            description: "",
-            transcriptionUncertain: false,
-            transcriptionNote: ""
-        )
-        store.citationsByID[citation.id] = citation
-        store.observationsBySource[sourceID] = [
-            CatalogObservation(
-                id: "obs-1",
-                ref: "OBS-1",
-                citationID: citation.id,
-                subjectID: subjectID,
-                propertyID: occupationPropertyID,
-                polarity: "positive",
-                valueText: "Old",
-                valueInteger: nil,
-                valueDateID: "",
-                valueNameID: "",
-                valueSubjectID: "",
-                valueTermID: "",
-                propertyKey: "occupation",
-                propertyLabel: "Occupation",
-                propertyValueType: "text"
-            ),
-        ]
-        let model = makeModel(store: store, citationID: citation.id)
-        await model.prepare()
-        model.transcription = "New"
-        model.updateObservationText(id: model.observations[0].id, text: "Miller")
-        let location = await model.submit()
-        #expect(location?.sourceSurface == .graph)
-        let (_, _, listed) = try await store.getCitation(
-            projectDir: projectDir,
-            citationID: citation.id
-        )
-        #expect(store.citationsByID[citation.id]?.transcription == "New")
-        #expect(store.citationsByID[citation.id]?.locatorJSON.contains("\"artifact\"") == true)
-        #expect(listed.count == 1)
-        #expect(listed[0].id == "obs-1")
-        #expect(listed[0].ref == "OBS-1")
-        #expect(listed[0].valueText == "Miller")
-    }
-
-    @Test func submitConnectPrefillCreatesCitedBridge() async throws {
-        let store = makeStore()
-        seedArtifact(store)
-        let eventTypeID = "type-event"
-        store.subjectTypesByProject[projectDir]?.append(
-            CatalogSubjectType(
-                id: eventTypeID,
-                key: "event",
+        store.propertyTermsByProperty[relationshipTypePropertyID] = [
+            CatalogPropertyTerm(
+                id: "term-spouse",
+                propertyID: relationshipTypePropertyID,
+                key: "spouse",
                 origin: "provenencia",
-                label: "Event",
-                description: "",
-                refPrefix: "EVT",
-                candidateRefPrefix: "CEV"
-            )
-        )
-        let eventID = "sub-event-1"
+                label: "Spouse",
+                description: ""
+            ),
+        ]
+        store.sourcesByProject[projectDir] = [
+            CatalogSource(
+                id: sourceID, ref: "SRC-1", sourceTypeID: "stype", title: "Census", description: ""
+            ),
+        ]
         store.subjectsBySource[sourceID] = [
-            CatalogSubject(
-                id: subjectID,
-                ref: "CPR-1",
-                sourceID: sourceID,
-                subjectTypeID: personTypeID,
-                label: "Margt.",
-                description: ""
-            ),
-            CatalogSubject(
-                id: eventID,
-                ref: "CEV-1",
-                sourceID: sourceID,
-                subjectTypeID: eventTypeID,
-                label: "Birth",
-                description: ""
-            ),
+            subject(id: subjectID, typeID: personTypeID, ref: "CPR-1", label: "Margt."),
+            subject(id: eventID, typeID: eventTypeID, ref: "CEV-1", label: "Birth"),
+            subject(id: placeID, typeID: placeTypeID, ref: "CPL-1", label: "Boston"),
         ]
         store.subjectPositionsBySubject[subjectID] = CatalogSubjectPosition(
             subjectID: subjectID, gridX: 0, gridY: 0
         )
         store.subjectPositionsBySubject[eventID] = CatalogSubjectPosition(
-            subjectID: eventID, gridX: 2, gridY: 0
+            subjectID: eventID, gridX: 8, gridY: 0
         )
-        let before = (store.subjectsBySource[sourceID] ?? []).count
+        store.subjectPositionsBySubject[placeID] = CatalogSubjectPosition(
+            subjectID: placeID, gridX: 16, gridY: 0
+        )
+        return store
+    }
+
+    private func seedArtifact(_ store: FakeStore) {
+        store.artifactsBySource[sourceID] = [
+            CatalogArtifact(
+                id: "art-0",
+                ref: "ART-0",
+                sourceID: sourceID,
+                fileID: "file-0",
+                label: "Scan 1",
+                description: "",
+                file: CatalogFileRef(
+                    id: "file-0",
+                    relPath: "objects/file-0.pdf",
+                    originalFilename: "scan.pdf",
+                    mediaType: "application/pdf",
+                    byteSize: 10
+                )
+            ),
+        ]
+    }
+
+    private func seedCitation(
+        _ store: FakeStore,
+        id: String = "cit-1",
+        observations: [CatalogObservation] = []
+    ) {
+        store.citationsByID[id] = CatalogCitation(
+            id: id,
+            ref: "CIT-1",
+            artifactID: "art-0",
+            locatorJSON: #"{"version":1,"selectors":[{"type":"artifact"}]}"#,
+            transcription: "saved text",
+            description: "",
+            transcriptionUncertain: false,
+            transcriptionNote: ""
+        )
+        store.observationsBySource[sourceID] = observations
+    }
+
+    private func makeModel(
+        store: FakeStore,
+        subjectID: String? = nil,
+        citationID: String? = nil,
+        connectFrom: String? = nil,
+        connectTo: String? = nil,
+        bridge: String? = nil
+    ) -> CitationComposerModel {
+        let entry: CitationComposerEntry
+        if let connectFrom, let connectTo, let bridge {
+            entry = .connect(
+                sourceID: sourceID,
+                fromSubjectID: connectFrom,
+                toSubjectID: connectTo,
+                bridgeTypeKey: bridge
+            )
+        } else if let citationID {
+            entry = .edit(
+                sourceID: sourceID,
+                subjectID: subjectID ?? self.subjectID,
+                citationID: citationID,
+                artifactID: "art-0",
+                observationID: nil
+            )
+        } else {
+            entry = .addProperty(
+                sourceID: sourceID,
+                subjectID: subjectID ?? self.subjectID,
+                artifactID: "art-0"
+            )
+        }
+        return CitationComposerModel(
+            entry: entry,
+            session: WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store),
+            store: store,
+            userID: "user-1"
+        )
+    }
+
+    @Test func firstRowSaveOnNewCreatesCitationAndExposesRef() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.beginAddObservation()
+        let rowID = model.observations[0].id
+        model.updateObservationProperty(id: rowID, propertyID: occupationPropertyID)
+        model.updateObservationText(id: rowID, text: "miller")
+        await model.observationRows.commit(rowID: rowID)
+        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations observations=1") })
+        #expect(model.activeCitationID != nil)
+        #expect(model.observations[0].persistedRef == "OBS-FAKE1")
+        #expect(model.observations[0].state == .saved)
+    }
+
+    @Test func draftHasNoRefLoadedHasStoredRef() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store, observations: [occupationObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1")])
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        #expect(model.observations[0].persistedRef == "OBS-ABC")
+        model.beginAddObservation()
+        #expect(model.observations.last?.persistedRef == nil)
+    }
+
+    @Test func secondRowSaveCallsAdd() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store, observations: [occupationObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1")])
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        model.beginAddObservation()
+        let rowID = model.observations.last!.id
+        model.updateObservationProperty(id: rowID, propertyID: occupationPropertyID)
+        model.updateObservationText(id: rowID, text: "weaver")
+        store.recordedCalls = []
+        await model.observationRows.commit(rowID: rowID)
+        #expect(store.recordedCalls.contains { $0.hasPrefix("addObservationsToCitation") })
+        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations") } == false)
+    }
+
+    @Test func editedRowSaveCallsUpdateOnly() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store, observations: [occupationObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1")])
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        let rowID = model.observations[0].id
+        model.updateObservationText(id: rowID, text: "changed")
+        #expect(model.observations[0].state == .edited)
+        store.recordedCalls = []
+        await model.observationRows.commit(rowID: rowID)
+        #expect(store.recordedCalls == ["updateObservation id=obs-1"])
+    }
+
+    @Test func revertDraftRemovesAndRevertEditedRestores() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store, observations: [occupationObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1")])
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        model.beginAddObservation()
+        let draftID = model.observations.last!.id
+        model.observationRows.revert(rowID: draftID)
+        #expect(model.observations.count == 1)
+        let rowID = model.observations[0].id
+        model.updateObservationText(id: rowID, text: "changed")
+        model.observationRows.revert(rowID: rowID)
+        #expect(model.observations[0].valueText == "miller")
+        #expect(model.observations[0].state == .saved)
+    }
+
+    @Test func deleteAsksThenDeletesAndKeepsCitation() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store, observations: [occupationObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1")])
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        model.observationRows.requestDelete(rowID: model.observations[0].id)
+        #expect(model.observationRows.pendingDelete != nil)
+        await model.observationRows.confirmDelete()
+        #expect(store.recordedCalls.contains { $0 == "deleteObservation id=obs-1" })
+        #expect(model.observations.isEmpty)
+        #expect(model.activeCitationID == "cit-1")
+        #expect(store.citationsByID["cit-1"] != nil)
+    }
+
+    @Test func incompatibleSubjectClearsPropertyAndDisablesSave() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store, observations: [occupationObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1")])
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        store.recordedCalls = []
+        model.updateObservationSubject(id: model.observations[0].id, subjectID: eventID)
+        #expect(store.recordedCalls.isEmpty)
+        #expect(model.observations[0].propertyID.isEmpty)
+        #expect(model.observations[0].canSave == false)
+        #expect(model.observations[0].propertyError != nil)
+    }
+
+    @Test func saveCitationOnNewAndSaved() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.transcription = "note"
+        await model.fields.saveCitation()
+        #expect(store.recordedCalls.contains { $0 == "createCitationWithObservations observations=0" })
+        #expect(model.activeCitationID != nil)
+        store.recordedCalls = []
+        model.transcription = "changed"
+        await model.fields.saveCitation()
+        #expect(store.recordedCalls.contains { $0.hasPrefix("updateCitation") })
+        #expect(store.recordedCalls.contains { $0.hasPrefix("addObservations") } == false)
+        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitation") } == false)
+    }
+
+    @Test func menusDisabledWithUnsavedWorkEnabledWithPendingConnection() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        #expect(model.identityMenusDisabled == false)
+        model.transcription = "dirty"
+        #expect(model.identityMenusDisabled)
+        let connect = makeModel(
+            store: store,
+            connectFrom: subjectID,
+            connectTo: eventID,
+            bridge: "participation"
+        )
+        await connect.prepare()
+        #expect(connect.connections.rows.first?.isPending == true)
+        #expect(connect.identityMenusDisabled == false)
+    }
+
+    @Test func leaveGuardHoldsDirtyEditedAndTouchedNotUntouchedOrEmpty() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        #expect(model.shouldHoldNavigation(.back) == false)
+        model.transcription = "dirty"
+        #expect(model.shouldHoldNavigation(.back))
+        model.keepEditingAfterLeave()
+        model.fields.resetBlank()
+        model.beginAddObservation()
+        #expect(model.shouldHoldNavigation(.back) == false)
+        let connect = makeModel(
+            store: store,
+            connectFrom: subjectID,
+            connectTo: eventID,
+            bridge: "participation"
+        )
+        await connect.prepare()
+        #expect(connect.shouldHoldNavigation(.back) == false)
+        connect.connections.applyTerm(
+            connectionID: connect.connections.rows[0].id,
+            termID: "term-witness"
+        )
+        #expect(connect.shouldHoldNavigation(.back))
+    }
+
+    @Test func pendingConnectionOnNewAndExisting() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store)
+        let existing = makeModel(store: store, citationID: "cit-1")
+        await existing.prepare()
+        existing.connections.seedPending(
+            fromSubjectID: subjectID,
+            toSubjectID: eventID,
+            fromLabel: "Margt.",
+            toLabel: "Birth",
+            bridgeTypeKey: "participation",
+            termProperty: store.propertiesByProject[projectDir]!.first { $0.id == rolePropertyID },
+            sentence: "pending"
+        )
+        existing.connections.applyTerm(connectionID: existing.connections.rows[0].id, termID: "term-witness")
+        store.recordedCalls = []
+        await existing.performSaveConnection()
+        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitedBridge citationID=cit-1 observations=3") })
+
+        let fresh = makeModel(
+            store: store,
+            connectFrom: subjectID,
+            connectTo: eventID,
+            bridge: "participation"
+        )
+        await fresh.prepare()
+        fresh.connections.applyTerm(connectionID: fresh.connections.rows[0].id, termID: "term-witness")
+        store.recordedCalls = []
+        await fresh.performSaveConnection()
+        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitedBridge citationID=nil observations=3") })
+        #expect(fresh.activeCitationID != nil)
+    }
+
+    @Test func switchingCitationKeepsPendingConnection() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store)
         let model = makeModel(
             store: store,
-            subjectID: "",
-            connectFromSubjectID: subjectID,
-            connectToSubjectID: eventID,
-            connectBridgeTypeKey: "participation"
+            connectFrom: subjectID,
+            connectTo: eventID,
+            bridge: "participation"
         )
         await model.prepare()
-        let location = await model.submit()
-        #expect(location?.sourceSurface == .graph)
-        let after = store.subjectsBySource[sourceID] ?? []
-        #expect(after.count == before + 1)
-        #expect(after.contains(where: { $0.subjectTypeID == participationTypeID }))
-        #expect(!store.citationsByID.isEmpty)
+        #expect(model.connections.rows.contains { $0.isPending })
+        model.selectCitation("cit-1")
+        await model.awaitIdentitySwitch()
+        #expect(model.connections.rows.contains { $0.isPending })
+        #expect(model.activeCitationID == "cit-1")
     }
 
-    @Test func fakeStoreRefusesPersonPlaceCitedBridge() async {
+    @Test func pendingLocationCanSaveWithoutTermAndIsNeverTouched() async {
         let store = makeStore()
-        store.subjectTypesByProject[projectDir]?.append(
-            CatalogSubjectType(
-                id: "type-place",
-                key: "place",
-                origin: "provenencia",
-                label: "Place",
-                description: "",
-                refPrefix: "PLC",
-                candidateRefPrefix: "CPL"
-            )
+        seedArtifact(store)
+        let model = makeModel(
+            store: store,
+            connectFrom: eventID,
+            connectTo: placeID,
+            bridge: "location"
         )
-        store.subjectsBySource[sourceID] = [
-            CatalogSubject(
-                id: subjectID,
-                ref: "CPR-1",
-                sourceID: sourceID,
-                subjectTypeID: personTypeID,
-                label: "Alice",
-                description: ""
+        await model.prepare()
+        let pending = model.connections.rows[0]
+        #expect(pending.canSave)
+        #expect(pending.isTouched == false)
+        #expect(pending.termProperty == nil)
+        #expect(model.shouldHoldNavigation(.back) == false)
+        model.transcription = "dirty"
+        #expect(model.shouldHoldNavigation(.back))
+        store.recordedCalls = []
+        await model.performSaveConnection()
+        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitedBridge citationID=nil observations=2") })
+    }
+
+    @Test func savedLocationExposesNoRoleCommands() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.connections.replaceSaved([
+            ConnectionRow(
+                id: UUID(),
+                isPending: false,
+                fromSubjectID: eventID,
+                toSubjectID: placeID,
+                fromLabel: "Birth",
+                toLabel: "Boston",
+                bridgeTypeKey: "location",
+                bridgeID: "bridge-loc",
+                bridgeRef: "CLO-1",
+                sentence: "Birth in Boston",
+                termProperty: nil,
+                rolePersistedID: nil,
+                rolePersistedRef: nil,
+                roleTermID: "",
+                roleBaselineTermID: nil,
+                termTouched: false,
+                isSaving: false,
+                error: nil
             ),
-            CatalogSubject(
-                id: "pl1",
-                ref: "CPL-1",
-                sourceID: sourceID,
-                subjectTypeID: "type-place",
-                label: "Leeds",
-                description: ""
-            ),
-        ]
-        do {
-            _ = try await store.createCitedBridge(
-                projectDir: projectDir,
-                userID: "user-1",
-                sourceID: sourceID,
+        ])
+        #expect(model.connections.rows[0].canCommitRole == false)
+        #expect(model.connections.rows[0].isLocation)
+    }
+
+    @Test func participationUsesRoleRelationshipUsesRelationship() {
+        #expect(
+            ConnectionRow(
+                id: UUID(), isPending: true, fromSubjectID: "", toSubjectID: "", fromLabel: "",
+                toLabel: "", bridgeTypeKey: "participation", sentence: "",
+                termProperty: CatalogProperty(
+                    id: rolePropertyID, key: "role", origin: "provenencia", label: "Role",
+                    description: "", valueType: "term"
+                ),
+                roleTermID: "", termTouched: false, isSaving: false
+            ).termFieldLabel == String(localized: L10n.CitationComposer.connectionRole)
+        )
+        #expect(
+            ConnectionRow(
+                id: UUID(), isPending: true, fromSubjectID: "", toSubjectID: "", fromLabel: "",
+                toLabel: "", bridgeTypeKey: "relationship", sentence: "",
+                termProperty: CatalogProperty(
+                    id: relationshipTypePropertyID, key: "relationship_type", origin: "provenencia",
+                    label: "Type", description: "", valueType: "term"
+                ),
+                roleTermID: "", termTouched: false, isSaving: false
+            ).termFieldLabel == String(localized: L10n.CitationComposer.connectionRelationship)
+        )
+    }
+
+    @Test func polarityMenuTitleFollowsPolarity() {
+        var row = ObservationRow.draft(subjectID: subjectID)
+        #expect(row.polarityMenuTitle == String(localized: L10n.CitationComposer.negateObservation))
+        row.polarity = ObservationPolarity.negative.rawValue
+        #expect(row.polarityMenuTitle == String(localized: L10n.CitationComposer.affirmObservation))
+    }
+
+    @Test func nameDialogApplyOnlyUpdatesRow() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(
+            store,
+            observations: [
+                CatalogObservation(
+                    id: "obs-name",
+                    ref: "OBS-N",
+                    citationID: "cit-1",
+                    subjectID: subjectID,
+                    propertyID: namePropertyID,
+                    polarity: ObservationPolarity.positive.rawValue,
+                    valueText: "Ada",
+                    valueInteger: nil,
+                    valueDateID: "",
+                    valueNameID: "",
+                    nameForm: "Ada",
+                    valueSubjectID: "",
+                    valueTermID: "",
+                    propertyKey: "name",
+                    propertyLabel: "Name",
+                    propertyValueType: "name"
+                ),
+            ]
+        )
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        model.beginEditObservation(model.observations[0])
+        var draft = model.observationDialog!
+        draft.nameDraft = NameValueDraft(form: "Ada Lovelace", parts: [], formTouched: true)
+        model.updateObservationDialog(draft)
+        store.recordedCalls = []
+        model.confirmObservationDialog()
+        #expect(store.recordedCalls.isEmpty)
+        #expect(model.observations[0].state == .edited)
+    }
+
+    @Test func loadingBridgeEdgesYieldsOneConnectionAndKeepsExtraRole() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let bridge = subject(id: "bridge-1", typeID: participationTypeID, ref: "PTN-1", label: "")
+        store.subjectsBySource[sourceID]?.append(bridge)
+        store.subjectPositionsBySubject[bridge.id] = CatalogSubjectPosition(
+            subjectID: bridge.id, gridX: 4, gridY: 0
+        )
+        seedCitation(
+            store,
+            observations: [
+                edgeObservation(id: "e1", ref: "OBS-E1", subjectID: bridge.id, propertyID: personEdgePropertyID),
+                edgeObservation(id: "e2", ref: "OBS-E2", subjectID: bridge.id, propertyID: eventEdgePropertyID),
+                roleObservation(id: "r1", ref: "OBS-R1", subjectID: bridge.id, termID: "term-witness"),
+                roleObservation(id: "r2", ref: "OBS-R2", subjectID: bridge.id, termID: "term-witness"),
+            ]
+        )
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        #expect(model.connections.rows.count == 1)
+        #expect(model.connections.rows[0].bridgeRef == "PTN-1")
+        #expect(model.observations.count == 1)
+        #expect(model.observations[0].persistedRef == "OBS-R2")
+        #expect(model.observations.contains { $0.propertyID == personEdgePropertyID } == false)
+    }
+
+    @Test func saveConnectionDoesNotAppendObservationRows() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(
+            store: store,
+            connectFrom: subjectID,
+            connectTo: eventID,
+            bridge: "participation"
+        )
+        await model.prepare()
+        model.connections.applyTerm(connectionID: model.connections.rows[0].id, termID: "term-witness")
+        let before = model.observations.count
+        await model.performSaveConnection()
+        #expect(model.connections.rows[0].isPending == false)
+        #expect(model.observations.count == before)
+    }
+
+    @Test func roleChangeCallsUpdateOrAddAndHasNoDelete() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store)
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        let connectionID = UUID()
+        model.connections.replaceSaved([
+            ConnectionRow(
+                id: connectionID,
+                isPending: false,
                 fromSubjectID: subjectID,
-                toSubjectID: "pl1",
-                bridgeTypeKey: "",
-                label: "Nope",
-                description: "",
-                gridX: 0,
-                gridY: 0,
-                artifactID: "art-0",
-                locatorJSON: "{}",
-                transcription: "",
-                citationDescription: "",
-                transcriptionUncertain: false,
-                transcriptionNote: "",
-                citationNotes: [],
-                observations: [],
-                citationID: nil
-            )
-            Issue.record("expected refuse")
-        } catch let error as CoreInvokeError {
-            guard case .coded(_, let code, _, _) = error else {
-                Issue.record("expected coded error")
-                return
-            }
-            #expect(code == "connect.refused")
-        } catch {
-            Issue.record("expected CoreInvokeError")
-        }
-    }
-
-    @Test func prepareFailureIsNotTheEmptyArtifactGate() async {
-        let store = makeStore()
-        store.listSubjectsError = CoreInvokeError.failed(status: 1)
-        let model = makeModel(store: store)
-        await model.prepare()
-        #expect(model.phase == .loadFailed)
-        #expect(model.loadError != nil)
-        #expect(model.hasNoArtifacts == false)
-    }
-
-    @Test func customTermFailureStaysOnTheTermDialog() async {
-        let store = makeStore()
-        store.createPropertyTermError = CoreInvokeError.failed(status: 1)
-        let model = makeModel(store: store)
-        let term = await model.createCustomTerm(propertyID: occupationPropertyID, label: "Farmer")
-        #expect(term == nil)
-        #expect(model.termError != nil)
-        #expect(model.formError == nil)
-    }
-
-    @Test func prepareLoadsAllSubjectsOnSharedCitation() async {
-        let store = makeStore()
-        seedArtifact(store)
-        let otherID = "sub-person-2"
-        store.subjectsBySource[sourceID]?.append(
-            CatalogSubject(
-                id: otherID,
-                ref: "CPR-2",
-                sourceID: sourceID,
-                subjectTypeID: personTypeID,
-                label: "Thomas",
-                description: ""
-            )
-        )
-        store.subjectPositionsBySubject[otherID] = CatalogSubjectPosition(
-            subjectID: otherID, gridX: 1, gridY: 0
-        )
-        let citation = CatalogCitation(
-            id: "cit-shared",
-            ref: "CIT-44",
-            artifactID: "art-0",
-            locatorJSON: #"{"version":1,"selectors":[{"type":"artifact"}]}"#,
-            transcription: "household",
-            description: "",
-            transcriptionUncertain: false,
-            transcriptionNote: ""
-        )
-        store.citationsByID[citation.id] = citation
-        store.observationsBySource[sourceID] = [
-            CatalogObservation(
-                id: "obs-m",
-                ref: "OBS-1",
-                citationID: citation.id,
-                subjectID: subjectID,
-                propertyID: "prop-age",
-                polarity: "positive",
-                valueText: "",
-                valueInteger: 52,
-                valueDateID: "",
-                valueNameID: "",
-                valueSubjectID: "",
-                valueTermID: "",
-                propertyKey: "age",
-                propertyLabel: "Age",
-                propertyValueType: "integer"
-            ),
-            CatalogObservation(
-                id: "obs-t",
-                ref: "OBS-2",
-                citationID: citation.id,
-                subjectID: otherID,
-                propertyID: occupationPropertyID,
-                polarity: "positive",
-                valueText: "Blacksmith",
-                valueInteger: nil,
-                valueDateID: "",
-                valueNameID: "",
-                valueSubjectID: "",
-                valueTermID: "",
-                propertyKey: "occupation",
-                propertyLabel: "Occupation",
-                propertyValueType: "text"
-            ),
-        ]
-        let model = makeModel(store: store, citationID: citation.id)
-        await model.prepare()
-        #expect(model.observations.count == 2)
-        #expect(Set(model.observations.map(\.subjectID)) == [subjectID, otherID])
-        #expect(model.focusedObservationID == model.observations.first(where: { $0.subjectID == subjectID })?.id)
-    }
-
-    @Test func addPropertyCanReuseExistingCitation() async {
-        let store = makeStore()
-        seedArtifact(store)
-        let otherID = "sub-person-2"
-        store.subjectsBySource[sourceID]?.append(
-            CatalogSubject(
-                id: otherID,
-                ref: "CPR-2",
-                sourceID: sourceID,
-                subjectTypeID: personTypeID,
-                label: "Thomas",
-                description: ""
-            )
-        )
-        store.subjectPositionsBySubject[otherID] = CatalogSubjectPosition(
-            subjectID: otherID, gridX: 1, gridY: 0
-        )
-        let citation = CatalogCitation(
-            id: "cit-reuse",
-            ref: "CIT-43",
-            artifactID: "art-0",
-            locatorJSON: #"{"version":1,"selectors":[{"type":"artifact"}]}"#,
-            transcription: "Margt. Alderwick",
-            description: "",
-            transcriptionUncertain: false,
-            transcriptionNote: ""
-        )
-        store.citationsByID[citation.id] = citation
-        store.observationsBySource[sourceID] = [
-            CatalogObservation(
-                id: "obs-t",
-                ref: "OBS-2",
-                citationID: citation.id,
-                subjectID: otherID,
-                propertyID: occupationPropertyID,
-                polarity: "positive",
-                valueText: "Blacksmith",
-                valueInteger: nil,
-                valueDateID: "",
-                valueNameID: "",
-                valueSubjectID: "",
-                valueTermID: "",
-                propertyKey: "occupation",
-                propertyLabel: "Occupation",
-                propertyValueType: "text"
-            ),
-        ]
-        let model = makeModel(store: store)
-        await model.prepare()
-        #expect(model.activeCitationID == nil)
-        await model.selectCitationAndLoad(citation.id)
-        #expect(model.activeCitationID == citation.id)
-        #expect(model.transcription == "Margt. Alderwick")
-        #expect(model.observations.contains(where: { $0.subjectID == otherID }))
-        #expect(model.observations.contains(where: { $0.subjectID == subjectID && $0.propertyID.isEmpty }))
-    }
-
-    @Test func dirtyArtifactChangeOnSavedCitationConfirms() async {
-        let store = makeStore()
-        seedArtifact(store, count: 2)
-        let citation = CatalogCitation(
-            id: "cit-dirty",
-            ref: "CIT-44",
-            artifactID: "art-0",
-            locatorJSON: #"{"version":1,"selectors":[{"type":"artifact"}]}"#,
-            transcription: "saved",
-            description: "",
-            transcriptionUncertain: false,
-            transcriptionNote: ""
-        )
-        store.citationsByID[citation.id] = citation
-        let model = makeModel(store: store, citationID: citation.id)
-        await model.prepare()
-        #expect(model.isEditingExisting)
-        #expect(!model.isDirty)
-        await model.selectArtifactAndLoad("art-1")
-        #expect(model.pendingArtifactAbandon == nil)
-        #expect(model.activeCitationID == nil)
-        #expect(model.selectedArtifactID == "art-1")
-
-        let model2 = makeModel(store: store, citationID: citation.id)
-        await model2.prepare()
-        model2.transcription = "edited"
-        #expect(model2.isDirty)
-        await model2.selectArtifactAndLoad("art-1")
-        #expect(model2.pendingArtifactAbandon?.targetArtifactID == "art-1")
-        #expect(model2.selectedArtifactID == "art-0")
-        model2.cancelAbandonArtifact()
-        #expect(model2.pendingArtifactAbandon == nil)
-        model2.transcription = "edited"
-        await model2.selectArtifactAndLoad("art-1")
-        await model2.confirmAbandonArtifactAndLoad()
-        #expect(model2.selectedArtifactID == "art-1")
-        #expect(model2.activeCitationID == nil)
-    }
-
-    @Test func graphLocationReturnsToEvidenceGraph() async {
-        let store = makeStore()
-        seedArtifact(store)
-        let model = makeModel(store: store)
-        await model.prepare()
-        #expect(model.graphLocation().sourceSurface == .graph)
-        #expect(model.graphLocation().sourceId == sourceID)
-    }
-
-    @Test func observationIntegerDraftRejectsWords() {
-        var draft = CatalogObservationDraft(subjectID: "s", propertyID: "p")
-        let failure = CitationObservationValue.apply(
-            valueType: "integer",
-            fields: CitationObservationValue.Fields(valueIntegerText: "nope"),
-            to: &draft
-        )
-        #expect(failure == .invalidInteger)
-        #expect(draft.valueInteger == nil)
-    }
-
-    @Test func connectEdgeLockUsesSubjectTypeNotEntry() {
-        let rules = [
-            CatalogConnectRule(
-                fromTypeKey: "person",
-                toTypeKey: "event",
+                toSubjectID: eventID,
+                fromLabel: "Margt.",
+                toLabel: "Birth",
                 bridgeTypeKey: "participation",
-                edgePropertyKeys: ["person", "event"],
-                disambiguation: "role",
-                refuse: false
+                bridgeID: "bridge-1",
+                bridgeRef: "PTN-1",
+                sentence: "sentence",
+                termProperty: store.propertiesByProject[projectDir]!.first { $0.id == rolePropertyID },
+                rolePersistedID: "role-1",
+                rolePersistedRef: "OBS-ROLE",
+                roleTermID: "term-witness",
+                roleBaselineTermID: "term-witness",
+                termTouched: false,
+                isSaving: false,
+                error: nil
             ),
-        ]
-        #expect(
-            CitationComposerModel.isConnectEdgeProperty(
-                propertyKey: "person",
-                subjectTypeKey: "participation",
-                rules: rules
-            )
+        ])
+        store.subjectsBySource[sourceID]?.append(
+            subject(id: "bridge-1", typeID: participationTypeID, ref: "PTN-1", label: "")
         )
-        #expect(
-            !CitationComposerModel.isConnectEdgeProperty(
-                propertyKey: "person",
-                subjectTypeKey: "person",
-                rules: rules
-            )
+        store.observationsBySource[sourceID, default: []].append(
+            roleObservation(id: "role-1", ref: "OBS-ROLE", subjectID: "bridge-1", termID: "term-witness")
         )
-        #expect(
-            !CitationComposerModel.isConnectEdgeProperty(
-                propertyKey: "occupation",
-                subjectTypeKey: "participation",
-                rules: rules
-            )
-        )
+        model.connections.applyTerm(connectionID: connectionID, termID: "term-witness")
+        #expect(model.connections.rows[0].canCommitRole == false)
+        model.connections.applyTerm(connectionID: connectionID, termID: "term-other")
+        store.recordedCalls = []
+        await model.performCommitRole(connectionID: connectionID)
+        #expect(store.recordedCalls.contains { $0.hasPrefix("updateObservation") })
     }
 
-    @Test func addPropertySwitchLocksConnectEdgesOnBridgeCitation() async {
+    @Test func newPersonUsesComposerSlotAndReusesLandingColumn() async {
         let store = makeStore()
         seedArtifact(store)
-        let seeded = seedParticipationCitation(store)
-        let viaPencil = makeModel(
-            store: store,
-            entry: .edit(
-                sourceID: sourceID,
-                subjectID: seeded.bridgeID,
-                citationID: seeded.citation.id,
-                artifactID: seeded.citation.artifactID,
-                observationID: seeded.occupationObservationID
-            )
-        )
-        await viaPencil.prepare()
-        #expect(viaPencil.phase == .compose)
-        #expect(connectLockSignature(viaPencil) == seeded.expectedLocks)
-        #expect(
-            viaPencil.observations.first(where: { $0.id == viaPencil.focusedObservationID })?.persistedID
-                == seeded.occupationObservationID
-        )
-
-        let viaAddProperty = makeModel(
-            store: store,
-            entry: .addProperty(sourceID: sourceID, subjectID: subjectID, artifactID: nil)
-        )
-        await viaAddProperty.prepare()
-        #expect(viaAddProperty.activeCitationID == nil)
-        #expect(viaAddProperty.entry.citationID == nil)
-        await viaAddProperty.selectCitationAndLoad(seeded.citation.id)
-        #expect(viaAddProperty.activeCitationID == seeded.citation.id)
-        #expect(viaAddProperty.entry.citationID == nil)
-        #expect(connectLockSignature(viaAddProperty) == seeded.expectedLocks)
-        #expect(
-            viaAddProperty.observations.contains(where: { $0.subjectID == subjectID && $0.propertyID.isEmpty })
-        )
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.beginAddObservation()
+        let rowID = model.observations[0].id
+        model.beginNewSubject(typeKey: "person", rowID: rowID)
+        model.newSubjectDraft?.label = "Ada"
+        store.recordedCalls = []
+        await model.confirmNewSubject()
+        #expect(model.landingColumn != nil)
+        #expect(store.recordedCalls.contains { $0.hasPrefix("createSubject") && $0.contains("placement=") })
+        let firstColumn = model.landingColumn
+        model.beginAddObservation()
+        let secondID = model.observations.last!.id
+        model.beginNewSubject(typeKey: "person", rowID: secondID)
+        model.newSubjectDraft?.label = "Ben"
+        await model.confirmNewSubject()
+        #expect(model.landingColumn == firstColumn)
     }
 
-    @Test func entryParsesFromWorkspaceLocation() {
-        let add = WorkspaceLocation(
-            section: .sources,
-            sourceId: sourceID,
-            subjectId: subjectID,
-            artifactId: "art-0",
-            sourceSurface: .citationComposer
-        )
-        #expect(CitationComposerEntry(location: add) == .addProperty(
-            sourceID: sourceID,
-            subjectID: subjectID,
-            artifactID: "art-0"
-        ))
+    @Test func newSubjectDisabledWhileGraphReloading() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.session.apply(.mutatedSourceGraph(sourceId: sourceID))
+        #expect(model.isGraphReloading)
+        model.beginAddObservation()
+        model.beginNewSubject(typeKey: "person", rowID: model.observations[0].id)
+        #expect(model.newSubjectDraft == nil)
+    }
 
-        let edit = WorkspaceLocation(
-            section: .sources,
-            sourceId: sourceID,
-            subjectId: subjectID,
-            citationId: "cit-1",
-            artifactId: "art-0",
-            observationId: "obs-9",
-            sourceSurface: .citationComposer
+    @Test func twoQuickCitationSwitchesApplyOnlyLast() async {
+        let store = makeStore()
+        seedArtifact(store)
+        store.citationsByID["cit-a"] = CatalogCitation(
+            id: "cit-a", ref: "CIT-A", artifactID: "art-0",
+            locatorJSON: #"{"version":1,"selectors":[{"type":"artifact"}]}"#,
+            transcription: "A", description: "", transcriptionUncertain: false, transcriptionNote: ""
         )
-        #expect(CitationComposerEntry(location: edit) == .edit(
-            sourceID: sourceID,
-            subjectID: subjectID,
-            citationID: "cit-1",
-            artifactID: "art-0",
-            observationID: "obs-9"
-        ))
+        store.citationsByID["cit-b"] = CatalogCitation(
+            id: "cit-b", ref: "CIT-B", artifactID: "art-0",
+            locatorJSON: #"{"version":1,"selectors":[{"type":"artifact"}]}"#,
+            transcription: "B", description: "", transcriptionUncertain: false, transcriptionNote: ""
+        )
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.selectCitation("cit-a")
+        model.selectCitation("cit-b")
+        await model.awaitIdentitySwitch()
+        #expect(model.activeCitationID == "cit-b")
+        #expect(model.transcription == "B")
+    }
 
-        let connect = WorkspaceLocation(
+    @Test func connectEntryIgnoresLegacyTermAndGrid() {
+        let location = WorkspaceLocation(
             section: .sources,
             sourceId: sourceID,
-            connectFromSubjectId: "p1",
-            connectToSubjectId: "e1",
+            connectFromSubjectId: subjectID,
+            connectToSubjectId: eventID,
             connectBridgeTypeKey: "participation",
-            connectDisambiguationTermId: "term-1",
+            connectDisambiguationTermId: "term-witness",
             connectGridX: 2,
             connectGridY: 3,
             sourceSurface: .citationComposer
         )
-        #expect(CitationComposerEntry(location: connect) == .connect(
+        let entry = CitationComposerEntry(location: location)
+        #expect(entry == .connect(
             sourceID: sourceID,
-            fromSubjectID: "p1",
-            toSubjectID: "e1",
-            bridgeTypeKey: "participation",
-            termID: "term-1",
-            gridX: 2,
-            gridY: 3
+            fromSubjectID: subjectID,
+            toSubjectID: eventID,
+            bridgeTypeKey: "participation"
         ))
-        #expect(CitationComposerEntry(location: WorkspaceLocation(section: .sources, sourceId: sourceID)) == nil)
     }
 
-    @Test func locationEqualityDistinguishesObservationFocus() {
-        let a = WorkspaceLocation(
-            section: .sources,
-            sourceId: sourceID,
-            subjectId: subjectID,
-            citationId: "cit-1",
-            observationId: "obs-a",
-            sourceSurface: .citationComposer
+    private func type(id: String, key: String, label: String, prefix: String) -> CatalogSubjectType {
+        CatalogSubjectType(
+            id: id, key: key, origin: "provenencia", label: label, description: "",
+            refPrefix: prefix, candidateRefPrefix: "C" + prefix
         )
-        let b = WorkspaceLocation(
-            section: .sources,
-            sourceId: sourceID,
-            subjectId: subjectID,
-            citationId: "cit-1",
-            observationId: "obs-b",
-            sourceSurface: .citationComposer
-        )
-        #expect(a != b)
-        #expect(a.citationId == b.citationId)
     }
 
-    @Test func newCitationAfterSwitchRestoresConnectPrefill() async {
-        let store = makeStore()
-        seedArtifact(store)
-        let eventID = "sub-event-1"
-        store.subjectsBySource[sourceID]?.append(
-            CatalogSubject(
-                id: eventID,
-                ref: "CEV-1",
-                sourceID: sourceID,
-                subjectTypeID: "type-event",
-                label: "Enumeration, 1871",
-                description: ""
-            )
+    private func property(id: String, key: String, label: String, valueType: String) -> CatalogProperty {
+        CatalogProperty(
+            id: id, key: key, origin: "provenencia", label: label, description: "", valueType: valueType
         )
-        store.subjectTypesByProject[projectDir]?.append(
-            CatalogSubjectType(
-                id: "type-event",
-                key: "event",
-                origin: "provenencia",
-                label: "Event",
-                description: "",
-                refPrefix: "EVT",
-                candidateRefPrefix: "CEV"
-            )
-        )
-        store.subjectPositionsBySubject[eventID] = CatalogSubjectPosition(
-            subjectID: eventID, gridX: 2, gridY: 0
-        )
-        let seeded = seedParticipationCitation(store)
-        let model = makeModel(
-            store: store,
-            subjectID: "",
-            connectFromSubjectID: subjectID,
-            connectToSubjectID: eventID,
-            connectBridgeTypeKey: "participation"
-        )
-        await model.prepare()
-        #expect(model.isConnectPrefill)
-        #expect(model.observations.filter(\.isConnectFixed).count == 2)
-        let prefillIDs = model.observations.map(\.id)
-        await model.selectCitationAndLoad(seeded.citation.id)
-        #expect(model.activeCitationID == seeded.citation.id)
-        #expect(connectLockSignature(model) == seeded.expectedLocks)
-        await model.selectCitationAndLoad(nil)
-        #expect(model.activeCitationID == nil)
-        #expect(model.observations.map(\.id) == prefillIDs)
-        #expect(model.observations.filter(\.isConnectFixed).count == 2)
     }
 
-    private struct SeededParticipationCitation {
-        var bridgeID: String
-        var citation: CatalogCitation
-        var occupationObservationID: String
-        var expectedLocks: [String]
+    private func field(_ property: CatalogProperty, _ order: Int) -> CatalogSubjectTypeField {
+        CatalogSubjectTypeField(property: property, sortOrder: order, locked: false)
     }
 
-    private func seedParticipationCitation(_ store: FakeStore) -> SeededParticipationCitation {
-        let bridgeID = "sub-bridge-1"
-        if store.subjectsBySource[sourceID]?.contains(where: { $0.id == bridgeID }) != true {
-            store.subjectsBySource[sourceID]?.append(
-                CatalogSubject(
-                    id: bridgeID,
-                    ref: "CPA-1",
-                    sourceID: sourceID,
-                    subjectTypeID: participationTypeID,
-                    label: "Margt. at enumeration",
-                    description: ""
-                )
-            )
-            store.subjectPositionsBySubject[bridgeID] = CatalogSubjectPosition(
-                subjectID: bridgeID, gridX: 1, gridY: 0
-            )
+    private func subject(id: String, typeID: String, ref: String, label: String) -> CatalogSubject {
+        CatalogSubject(
+            id: id, ref: ref, sourceID: sourceID, subjectTypeID: typeID, label: label, description: ""
+        )
+    }
+
+    private func occupationObservation(id: String, ref: String, citationID: String) -> CatalogObservation {
+        CatalogObservation(
+            id: id, ref: ref, citationID: citationID, subjectID: subjectID,
+            propertyID: occupationPropertyID, polarity: ObservationPolarity.positive.rawValue,
+            valueText: "miller", valueInteger: nil, valueDateID: "", valueNameID: "", valueSubjectID: "",
+            valueTermID: "", propertyKey: "occupation", propertyLabel: "Occupation",
+            propertyValueType: "text"
+        )
+    }
+
+    private func edgeObservation(
+        id: String, ref: String, subjectID: String, propertyID: String
+    ) -> CatalogObservation {
+        CatalogObservation(
+            id: id, ref: ref, citationID: "cit-1", subjectID: subjectID, propertyID: propertyID,
+            polarity: ObservationPolarity.positive.rawValue, valueText: "", valueInteger: nil,
+            valueDateID: "", valueNameID: "", valueSubjectID: self.subjectID, valueTermID: "",
+            propertyKey: storeKey(propertyID), propertyLabel: "edge", propertyValueType: "subject"
+        )
+    }
+
+    private func roleObservation(id: String, ref: String, subjectID: String, termID: String) -> CatalogObservation {
+        CatalogObservation(
+            id: id, ref: ref, citationID: "cit-1", subjectID: subjectID, propertyID: rolePropertyID,
+            polarity: ObservationPolarity.positive.rawValue, valueText: "Witness", valueInteger: nil,
+            valueDateID: "", valueNameID: "", valueSubjectID: "", valueTermID: termID, propertyKey: "role",
+            propertyLabel: "Role", propertyValueType: "term"
+        )
+    }
+
+    private func storeKey(_ propertyID: String) -> String {
+        switch propertyID {
+        case personEdgePropertyID: return "person"
+        case eventEdgePropertyID: return "event"
+        case placeEdgePropertyID: return "place"
+        default: return ""
         }
-        let citation = CatalogCitation(
-            id: "cit-ptn",
-            ref: "CIT-PTN",
-            artifactID: "art-0",
-            locatorJSON: #"{"version":1,"selectors":[{"type":"artifact"}]}"#,
-            transcription: "present",
-            description: "",
-            transcriptionUncertain: false,
-            transcriptionNote: ""
-        )
-        store.citationsByID[citation.id] = citation
-        var listed = store.observationsBySource[sourceID] ?? []
-        listed.removeAll { $0.citationID == citation.id }
-        listed.append(contentsOf: [
-            CatalogObservation(
-                id: "obs-person-edge",
-                ref: "OBS-P",
-                citationID: citation.id,
-                subjectID: bridgeID,
-                propertyID: personEdgePropertyID,
-                polarity: "positive",
-                valueText: "",
-                valueInteger: nil,
-                valueDateID: "",
-                valueNameID: "",
-                valueSubjectID: subjectID,
-                valueTermID: "",
-                propertyKey: "person",
-                propertyLabel: "Person",
-                propertyValueType: "subject"
-            ),
-            CatalogObservation(
-                id: "obs-event-edge",
-                ref: "OBS-E",
-                citationID: citation.id,
-                subjectID: bridgeID,
-                propertyID: eventEdgePropertyID,
-                polarity: "positive",
-                valueText: "",
-                valueInteger: nil,
-                valueDateID: "",
-                valueNameID: "",
-                valueSubjectID: "sub-event-1",
-                valueTermID: "",
-                propertyKey: "event",
-                propertyLabel: "Event",
-                propertyValueType: "subject"
-            ),
-            CatalogObservation(
-                id: "obs-occ",
-                ref: "OBS-O",
-                citationID: citation.id,
-                subjectID: bridgeID,
-                propertyID: occupationPropertyID,
-                polarity: "positive",
-                valueText: "Witness",
-                valueInteger: nil,
-                valueDateID: "",
-                valueNameID: "",
-                valueSubjectID: "",
-                valueTermID: "",
-                propertyKey: "occupation",
-                propertyLabel: "Occupation",
-                propertyValueType: "text"
-            ),
-        ])
-        store.observationsBySource[sourceID] = listed
-        return SeededParticipationCitation(
-            bridgeID: bridgeID,
-            citation: citation,
-            occupationObservationID: "obs-occ",
-            expectedLocks: [
-                "\(eventEdgePropertyID):true",
-                "\(occupationPropertyID):false",
-                "\(personEdgePropertyID):true",
-            ]
-        )
-    }
-
-    private func connectLockSignature(_ model: CitationComposerModel) -> [String] {
-        model.observations
-            .filter { !$0.propertyID.isEmpty }
-            .map { "\($0.propertyID):\($0.isConnectFixed)" }
-            .sorted()
     }
 }

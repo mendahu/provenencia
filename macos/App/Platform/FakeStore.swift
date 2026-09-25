@@ -35,6 +35,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var heldCatalogProjectDir: String?
     /// Last `closeCatalogSession` argument (tests only).
     var lastClosedCatalogProjectDir: String?
+    /// Ordered store calls for composer / graph tests.
+    var recordedCalls: [String] = []
     /// When set, `listSources` throws instead of returning the in-memory list.
     var listSourcesError: Error?
     var listSubjectsCalls = 0
@@ -966,6 +968,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         description: String,
         placement: CatalogGridCell?
     ) async throws -> CatalogSubject {
+        recordedCalls.append("createSubject typeID=\(subjectTypeID) placement=\(placement.map { "\($0.gridX),\($0.gridY)" } ?? "nil")")
         markCatalogSessionHeld(projectDir)
         let subject = CatalogSubject(
             id: UUID().uuidString.lowercased(),
@@ -1292,10 +1295,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         fromSubjectID: String,
         toSubjectID: String,
         bridgeTypeKey: String,
-        label: String,
         description: String,
-        gridX: Int64,
-        gridY: Int64,
         artifactID: String,
         locatorJSON: String,
         transcription: String,
@@ -1306,6 +1306,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         observations drafts: [CatalogObservationDraft],
         citationID: String?
     ) async throws -> (CatalogSubject, CatalogCitation, [CatalogObservation]) {
+        recordedCalls.append(
+            "createCitedBridge citationID=\(citationID ?? "nil") observations=\(drafts.count)"
+        )
         markCatalogSessionHeld(projectDir)
         let from = subjectsBySource[sourceID]?.first(where: { $0.id == fromSubjectID })
         let to = subjectsBySource[sourceID]?.first(where: { $0.id == toSubjectID })
@@ -1321,7 +1324,28 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         if !bridgeTypeKey.isEmpty, bridgeTypeKey != rule.bridgeTypeKey {
             throw CoreInvokeError.coded(status: 1, code: "connect.invalid", kind: .user, params: [])
         }
-        _ = (gridX, gridY)
+        if drafts.contains(where: { !$0.subjectID.isEmpty }) {
+            throw CoreInvokeError.coded(status: 1, code: "connect.invalid", kind: .user, params: [])
+        }
+        var expectedKeys = Set(rule.edges.map(\.propertyKey))
+        if rule.disambiguation != "none", !rule.disambiguation.isEmpty {
+            expectedKeys.insert(rule.disambiguation)
+        }
+        let properties = propertiesByProject[projectDir] ?? []
+        let draftKeys = Set(drafts.compactMap { draft in
+            properties.first { $0.id == draft.propertyID }?.key
+        })
+        if draftKeys != expectedKeys || drafts.count != expectedKeys.count {
+            throw CoreInvokeError.coded(status: 1, code: "connect.invalid", kind: .user, params: [])
+        }
+        if let citationID, !citationID.isEmpty {
+            let fieldsUsed = !locatorJSON.isEmpty || !transcription.isEmpty
+                || !citationDescription.isEmpty || transcriptionUncertain || !transcriptionNote.isEmpty
+                || !citationNotes.isEmpty || !artifactID.isEmpty
+            if fieldsUsed {
+                throw CoreInvokeError.coded(status: 1, code: "connect.invalid", kind: .user, params: [])
+            }
+        }
         guard let fromPos = subjectPositionsBySubject[from.id],
               let toPos = subjectPositionsBySubject[to.id]
         else {
@@ -1337,7 +1361,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             userID: userID,
             sourceID: sourceID,
             subjectTypeID: type.id,
-            label: label,
+            label: "",
             description: description,
             placement: CatalogGridCell(gridX: midX, gridY: midY)
         )
@@ -1373,9 +1397,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 observations: stamped
             )
         }
-        let properties = propertiesByProject[projectDir] ?? []
+        let catalogProperties = propertiesByProject[projectDir] ?? []
         for obs in observations {
-            let propertyKey = properties.first(where: { $0.id == obs.propertyID })?.key ?? obs.propertyKey
+            let propertyKey = catalogProperties.first(where: { $0.id == obs.propertyID })?.key ?? obs.propertyKey
             if rule.edges.contains(where: { $0.propertyKey == propertyKey }) {
                 edgeObservationIDs.insert(obs.id)
             }
@@ -1422,6 +1446,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         citationNotes: [String],
         observations drafts: [CatalogObservationDraft]
     ) async throws -> (CatalogCitation, [CatalogObservation]) {
+        recordedCalls.append("createCitationWithObservations observations=\(drafts.count)")
         markCatalogSessionHeld(projectDir)
         let citation = CatalogCitation(
             id: UUID().uuidString.lowercased(),
@@ -1456,73 +1481,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         return (citation, notes, observations)
     }
 
-    func updateCitationWithObservations(
-        projectDir: String,
-        userID _: String,
-        citationID: String,
-        artifactID: String,
-        locatorJSON: String,
-        transcription: String,
-        description: String,
-        transcriptionUncertain: Bool,
-        transcriptionNote: String,
-        citationNotes: [String],
-        observations rows: [CatalogObservation]
-    ) async throws -> (CatalogCitation, [CatalogObservation]) {
-        markCatalogSessionHeld(projectDir)
-        guard citationsByID[citationID] != nil else { throw StoreBoom.boom }
-        let citation = CatalogCitation(
-            id: citationID,
-            ref: citationsByID[citationID]?.ref ?? "CIT-FAKE1",
-            artifactID: artifactID,
-            locatorJSON: locatorJSON,
-            transcription: transcription,
-            description: description,
-            transcriptionUncertain: transcriptionUncertain,
-            transcriptionNote: transcriptionNote
-        )
-        citationsByID[citationID] = citation
-        citationNotesByID[citationID] = citationNotes
-        var existingByID: [String: CatalogObservation] = [:]
-        for list in observationsBySource.values {
-            for obs in list where obs.citationID == citationID {
-                existingByID[obs.id] = obs
-            }
-        }
-        var seen = Set<String>()
-        var written: [CatalogObservation] = []
-        written.reserveCapacity(rows.count)
-        for row in rows {
-            if row.id.isEmpty {
-                written.append(try fakeObservation(
-                    citationID: citationID,
-                    id: UUID().uuidString.lowercased(),
-                    ref: "OBS-FAKE1",
-                    row: row
-                ))
-                continue
-            }
-            guard let prev = existingByID[row.id] else { throw StoreBoom.boom }
-            if seen.contains(row.id) { throw StoreBoom.boom }
-            seen.insert(row.id)
-            written.append(try fakeObservation(
-                citationID: citationID,
-                id: prev.id,
-                ref: prev.ref,
-                row: row
-            ))
-        }
-        for (sourceID, list) in observationsBySource {
-            observationsBySource[sourceID] = list.filter { $0.citationID != citationID }
-        }
-        for obs in written {
-            guard let subject = subjectsBySource.values.flatMap({ $0 }).first(where: { $0.id == obs.subjectID })
-            else { throw StoreBoom.boom }
-            observationsBySource[subject.sourceID, default: []].append(obs)
-        }
-        return (citation, written)
-    }
-
     func addObservationsToCitation(
         projectDir: String,
         userID: String,
@@ -1545,6 +1503,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         observations drafts: [CatalogObservationDraft],
         allowEdgeRows: Bool
     ) async throws -> [CatalogObservation] {
+        recordedCalls.append("addObservationsToCitation citationID=\(citationID) observations=\(drafts.count)")
         markCatalogSessionHeld(projectDir)
         let written = try appendFakeObservations(
             projectDir: projectDir,
@@ -1569,6 +1528,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         transcriptionUncertain: Bool,
         transcriptionNote: String
     ) async throws -> CatalogCitation {
+        recordedCalls.append("updateCitation citationID=\(citationID)")
         markCatalogSessionHeld(projectDir)
         guard var citation = citationsByID[citationID] else { throw StoreBoom.boom }
         citation.locatorJSON = locatorJSON
@@ -1585,6 +1545,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         userID _: String,
         observation: CatalogObservation
     ) async throws -> CatalogObservation {
+        recordedCalls.append("updateObservation id=\(observation.id)")
         markCatalogSessionHeld(projectDir)
         let existing = observationsBySource.values.flatMap { $0 }.first(where: { $0.id == observation.id })
         guard let existing else { throw StoreBoom.boom }
@@ -1606,6 +1567,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     func deleteObservation(projectDir: String, userID _: String, observationID: String) async throws {
+        recordedCalls.append("deleteObservation id=\(observationID)")
         markCatalogSessionHeld(projectDir)
         let existing = observationsBySource.values.flatMap { $0 }.first(where: { $0.id == observationID })
         guard let existing else { throw StoreBoom.boom }

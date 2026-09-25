@@ -90,7 +90,6 @@ const (
 		WHERE o.citation_id = ?
 		ORDER BY o.ref COLLATE NOCASE`
 
-	sqlDeleteByCitation = `DELETE FROM observations WHERE citation_id = ?`
 
 	sqlCountBySubjectOrValue = `SELECT COUNT(*) FROM observations
 		WHERE subject_id = ? OR value_subject_id = ?`
@@ -580,15 +579,6 @@ func ListByCitation(c *database.Catalog, citationID []byte) ([]Listed, error) {
 		return nil, err
 	}
 	return hydrateNameValues(c, listed)
-}
-
-// DeleteByCitationTx removes all Observations for a citation (notes CASCADE).
-func DeleteByCitationTx(tx *sql.Tx, citationID []byte) error {
-	if len(citationID) != 16 {
-		return ErrInvalid
-	}
-	_, err := tx.Exec(sqlDeleteByCitation, citationID)
-	return err
 }
 
 // CountReferencingSubject returns Observations that cite subjectID as subject or value.

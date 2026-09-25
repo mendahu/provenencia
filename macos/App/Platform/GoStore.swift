@@ -986,10 +986,7 @@ struct GoStore: GenealogyStore {
         fromSubjectID: String,
         toSubjectID: String,
         bridgeTypeKey: String,
-        label: String,
         description: String,
-        gridX: Int64,
-        gridY: Int64,
         artifactID: String,
         locatorJSON: String,
         transcription: String,
@@ -1007,10 +1004,7 @@ struct GoStore: GenealogyStore {
         req.fromSubjectID = fromSubjectID
         req.toSubjectID = toSubjectID
         req.bridgeTypeKey = bridgeTypeKey
-        req.label = label
         req.description_p = description
-        req.gridX = gridX
-        req.gridY = gridY
         req.artifactID = artifactID
         req.locatorJson = locatorJSON
         req.transcription = transcription
@@ -1077,38 +1071,6 @@ struct GoStore: GenealogyStore {
             resp.notes,
             resp.observations.map(Self.mapObservation)
         )
-    }
-
-    func updateCitationWithObservations(
-        projectDir: String,
-        userID: String,
-        citationID: String,
-        artifactID: String,
-        locatorJSON: String,
-        transcription: String,
-        description: String,
-        transcriptionUncertain: Bool,
-        transcriptionNote: String,
-        citationNotes: [String],
-        observations: [CatalogObservation]
-    ) async throws -> (CatalogCitation, [CatalogObservation]) {
-        var req = Provenencia_Engine_V1_UpdateCitationWithObservationsRequest()
-        req.projectDir = projectDir
-        req.userID = userID
-        req.citationID = citationID
-        req.artifactID = artifactID
-        req.locatorJson = locatorJSON
-        req.transcription = transcription
-        req.description_p = description
-        req.transcriptionUncertain = transcriptionUncertain
-        req.transcriptionNote = transcriptionNote
-        req.citationNotes = citationNotes
-        req.observations = observations.map(Self.mapCatalogObservation)
-        let resp: Provenencia_Engine_V1_UpdateCitationWithObservationsResponse = try await provenenciaCall(
-            method: CoreMethod.updateCitationWithObservations,
-            request: req
-        )
-        return (Self.mapCitation(resp.citation), resp.observations.map(Self.mapObservation))
     }
 
     func addObservationsToCitation(

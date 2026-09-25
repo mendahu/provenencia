@@ -20,6 +20,12 @@ enum EvidenceBridgeEdgeSummary {
         )
     }
 
+    /// Snapshot-aware sentence. Commit 8 upgrades fallbacks; until then this
+    /// matches the observation-display sentence.
+    static func sentence(for bridge: SourceGraphPlacedBridge, in _: SourceGraphSnapshot) -> String {
+        sentence(for: bridge)
+    }
+
     static func phrase(kind: EvidenceBridgeKind, term: String?) -> String {
         switch kind {
         case .location:

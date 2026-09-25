@@ -128,8 +128,6 @@ func TestCreateCitedBridge(t *testing.T) {
 					FromSubjectId: personID,
 					ToSubjectId:   eventID,
 					BridgeTypeKey: "participation",
-					GridX:         4,
-					GridY:         5,
 					ArtifactId:    artifactID,
 					LocatorJson:   validLocatorJSON,
 					Observations: []*engine.ObservationDraft{

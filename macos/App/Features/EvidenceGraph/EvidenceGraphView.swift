@@ -8,7 +8,7 @@ import SwiftUI
 /// palette place/create/connect, and drag persist (S6-02–S6-04).
 struct EvidenceGraphView: View {
     /// Large enough to pan; Source-scoped graphs stay small (design note §7.1).
-    private static let contentSize = CGSize(width: 4_000, height: 4_000)
+    private static var contentSize: CGSize { EvidenceGraphPlacement.contentSize }
 
     let sourceID: String
     let session: WorkspaceSession

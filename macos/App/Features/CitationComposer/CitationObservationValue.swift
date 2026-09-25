@@ -17,7 +17,7 @@ enum CitationObservationValue {
         case unsupported
     }
 
-    static func fields(from row: CitationComposerModel.ObservationRow) -> Fields {
+    static func fields(from row: ObservationRow) -> Fields {
         Fields(
             valueText: row.valueText,
             valueIntegerText: row.valueIntegerText,

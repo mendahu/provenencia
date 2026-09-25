@@ -576,10 +576,7 @@ private struct ThrowingStore: GenealogyStore {
         fromSubjectID _: String,
         toSubjectID _: String,
         bridgeTypeKey _: String,
-        label _: String,
         description _: String,
-        gridX _: Int64,
-        gridY _: Int64,
         artifactID _: String,
         locatorJSON _: String,
         transcription _: String,
@@ -627,19 +624,6 @@ private struct ThrowingStore: GenealogyStore {
     func getSubjectFieldsWorkspace(projectDir _: String) async throws -> SubjectFieldsSnapshot {
         throw StoreBoom.boom
     }
-    func updateCitationWithObservations(
-        projectDir _: String,
-        userID _: String,
-        citationID _: String,
-        artifactID _: String,
-        locatorJSON _: String,
-        transcription _: String,
-        description _: String,
-        transcriptionUncertain _: Bool,
-        transcriptionNote _: String,
-        citationNotes _: [String],
-        observations _: [CatalogObservation]
-    ) async throws -> (CatalogCitation, [CatalogObservation]) { throw StoreBoom.boom }
     func addObservationsToCitation(
         projectDir _: String,
         userID _: String,

@@ -118,6 +118,13 @@
 		A7090000000000000000000C /* EvidenceBridgeEdgeSummaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7090000000000000000000B /* EvidenceBridgeEdgeSummaryTests.swift */; };
 		A71000000000000000000002 /* PropertyTermDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71000000000000000000001 /* PropertyTermDisplay.swift */; };
 		A71100000000000000000002 /* InterpretationValueKinds.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71100000000000000000001 /* InterpretationValueKinds.swift */; };
+		A71200000000000000000002 /* CitationFieldsDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71200000000000000000001 /* CitationFieldsDraft.swift */; };
+		A71300000000000000000002 /* CitationObservationRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71300000000000000000001 /* CitationObservationRows.swift */; };
+		A71400000000000000000002 /* CitationConnections.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71400000000000000000001 /* CitationConnections.swift */; };
+		A71500000000000000000002 /* CitationComposerVocabulary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71500000000000000000001 /* CitationComposerVocabulary.swift */; };
+		A71600000000000000000002 /* CitationComposerConnectionRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71600000000000000000001 /* CitationComposerConnectionRow.swift */; };
+		A71700000000000000000002 /* EvidenceGraphPlacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71700000000000000000001 /* EvidenceGraphPlacement.swift */; };
+		A71800000000000000000002 /* EvidenceGraphPlacementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71800000000000000000001 /* EvidenceGraphPlacementTests.swift */; };
 		A71000000000000000000004 /* EvidenceConnectDisambiguationForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71000000000000000000003 /* EvidenceConnectDisambiguationForm.swift */; };
 		A71000000000000000000006 /* PropertyTermDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71000000000000000000005 /* PropertyTermDisplayTests.swift */; };
 		AA0000000000000000000491 /* EvidenceGraphModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000490 /* EvidenceGraphModel.swift */; };
@@ -410,6 +417,13 @@
 		A7090000000000000000000B /* EvidenceBridgeEdgeSummaryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceBridgeEdgeSummaryTests.swift; sourceTree = "<group>"; };
 		A71000000000000000000001 /* PropertyTermDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PropertyTermDisplay.swift; sourceTree = "<group>"; };
 		A71100000000000000000001 /* InterpretationValueKinds.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = InterpretationValueKinds.swift; sourceTree = "<group>"; };
+		A71200000000000000000001 /* CitationFieldsDraft.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationFieldsDraft.swift; sourceTree = "<group>"; };
+		A71300000000000000000001 /* CitationObservationRows.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationObservationRows.swift; sourceTree = "<group>"; };
+		A71400000000000000000001 /* CitationConnections.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationConnections.swift; sourceTree = "<group>"; };
+		A71500000000000000000001 /* CitationComposerVocabulary.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerVocabulary.swift; sourceTree = "<group>"; };
+		A71600000000000000000001 /* CitationComposerConnectionRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerConnectionRow.swift; sourceTree = "<group>"; };
+		A71700000000000000000001 /* EvidenceGraphPlacement.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphPlacement.swift; sourceTree = "<group>"; };
+		A71800000000000000000001 /* EvidenceGraphPlacementTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphPlacementTests.swift; sourceTree = "<group>"; };
 		A71000000000000000000003 /* EvidenceConnectDisambiguationForm.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceConnectDisambiguationForm.swift; sourceTree = "<group>"; };
 		A71000000000000000000005 /* PropertyTermDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PropertyTermDisplayTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000490 /* EvidenceGraphModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphModel.swift; sourceTree = "<group>"; };
@@ -846,6 +860,7 @@
 				AA0000000000000000000480 /* EvidenceSubjectCard.swift */,
 				A70900000000000000000005 /* ObservationValueDisplay.swift */,
 				A70900000000000000000009 /* EvidenceBridgeEdgeSummary.swift */,
+				A71700000000000000000001 /* EvidenceGraphPlacement.swift */,
 				A71000000000000000000003 /* EvidenceConnectDisambiguationForm.swift */,
 				AA00000000000000000004A2 /* EvidenceBridgeCard.swift */,
 				AA00000000000000000004A4 /* EvidenceGraphEdgeLayer.swift */,
@@ -898,6 +913,11 @@
 			isa = PBXGroup;
 			children = (
 				A70800000000000000000003 /* CitationComposerModel.swift */,
+				A71200000000000000000001 /* CitationFieldsDraft.swift */,
+				A71300000000000000000001 /* CitationObservationRows.swift */,
+				A71400000000000000000001 /* CitationConnections.swift */,
+				A71500000000000000000001 /* CitationComposerVocabulary.swift */,
+				A71600000000000000000001 /* CitationComposerConnectionRow.swift */,
 				A70C00000000000000000001 /* CitationComposerEntry.swift */,
 				A7080000000000000000001B /* CitationObservationValue.swift */,
 				A70B00000000000000000014 /* CitationLocatorDraft.swift */,
@@ -982,6 +1002,7 @@
 				AA0000000000000000000488 /* SourceGraphSnapshotTests.swift */,
 				AA0000000000000000000494 /* EvidenceGraphModelTests.swift */,
 				A70800000000000000000005 /* CitationComposerModelTests.swift */,
+				A71800000000000000000001 /* EvidenceGraphPlacementTests.swift */,
 				A70B0000000000000000000B /* ArtifactViewerModelTests.swift */,
 				A70B00000000000000000016 /* ArtifactRegionGeometryTests.swift */,
 				AA00000000000000000004A8 /* GraphCanvasEdgeGeometryTests.swift */,
@@ -1481,6 +1502,12 @@
 				AA00000000000000000000E5 /* L10n.swift in Sources */,
 				A71000000000000000000002 /* PropertyTermDisplay.swift in Sources */,
 				A71100000000000000000002 /* InterpretationValueKinds.swift in Sources */,
+				A71200000000000000000002 /* CitationFieldsDraft.swift in Sources */,
+				A71300000000000000000002 /* CitationObservationRows.swift in Sources */,
+				A71400000000000000000002 /* CitationConnections.swift in Sources */,
+				A71500000000000000000002 /* CitationComposerVocabulary.swift in Sources */,
+				A71600000000000000000002 /* CitationComposerConnectionRow.swift in Sources */,
+				A71700000000000000000002 /* EvidenceGraphPlacement.swift in Sources */,
 				AA0000000000000000000005 /* GenealogyStore.swift in Sources */,
 				AA0000000000000000000006 /* FakeStore.swift in Sources */,
 				AA0000000000000000000007 /* GoStore.swift in Sources */,
@@ -1698,6 +1725,7 @@
 				AA0000000000000000000489 /* SourceGraphSnapshotTests.swift in Sources */,
 				AA0000000000000000000495 /* EvidenceGraphModelTests.swift in Sources */,
 				A70800000000000000000006 /* CitationComposerModelTests.swift in Sources */,
+				A71800000000000000000002 /* EvidenceGraphPlacementTests.swift in Sources */,
 				A70B0000000000000000000C /* ArtifactViewerModelTests.swift in Sources */,
 				A70B00000000000000000017 /* ArtifactRegionGeometryTests.swift in Sources */,
 				AA00000000000000000004A9 /* GraphCanvasEdgeGeometryTests.swift in Sources */,

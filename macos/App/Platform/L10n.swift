@@ -2134,8 +2134,302 @@ enum L10n {
         static let save = LocalizedStringResource(
             "citationComposer.save",
             defaultValue: "Save citation",
-            comment: "Primary submit button on the citation composer"
+            comment: "Citation fields button that writes only the Citation row"
         )
+
+        static let done = LocalizedStringResource(
+            "citationComposer.done",
+            defaultValue: "Done",
+            comment: "Footer button that returns to the Evidence graph through the leave guard"
+        )
+
+        static let citationStatusNew = LocalizedStringResource(
+            "citationComposer.citationStatusNew",
+            defaultValue: "First save creates the citation",
+            comment: "Status under citation fields when the Citation does not exist yet"
+        )
+
+        static let citationStatusDirty = LocalizedStringResource(
+            "citationComposer.citationStatusDirty",
+            defaultValue: "Citation has unsaved changes",
+            comment: "Status under citation fields when the Citation row is dirty"
+        )
+
+        static let citationStatusSaved = LocalizedStringResource(
+            "citationComposer.citationStatusSaved",
+            defaultValue: "Citation saved",
+            comment: "Status under citation fields when the Citation row matches the catalog"
+        )
+
+        static let identityMenusDisabledHint = LocalizedStringResource(
+            "citationComposer.identityMenusDisabledHint",
+            defaultValue: "Save or discard changes to switch citation",
+            comment: "Hint under Artifact / Citation menus when unsaved document work disables them"
+        )
+
+        static let rowStateNew = LocalizedStringResource(
+            "citationComposer.rowStateNew",
+            defaultValue: "New",
+            comment: "Badge on a draft Observation or pending connection row"
+        )
+
+        static let rowStateEdited = LocalizedStringResource(
+            "citationComposer.rowStateEdited",
+            defaultValue: "Edited",
+            comment: "Badge on an Observation or connection role that differs from its baseline"
+        )
+
+        static let rowStateSaving = LocalizedStringResource(
+            "citationComposer.rowStateSaving",
+            defaultValue: "Saving",
+            comment: "Badge while a row-level Save is in flight"
+        )
+
+        static let rowStateError = LocalizedStringResource(
+            "citationComposer.rowStateError",
+            defaultValue: "Not saved",
+            comment: "Badge when a row-level Save failed"
+        )
+
+        static let rowStateSaved = LocalizedStringResource(
+            "citationComposer.rowStateSaved",
+            defaultValue: "Saved",
+            comment: "Spoken status for a saved connection without a ref yet"
+        )
+
+        static let negateObservation = LocalizedStringResource(
+            "citationComposer.negateObservation",
+            defaultValue: "Negate observation",
+            comment: "Row menu item that flips a positive Observation to negative"
+        )
+
+        static let affirmObservation = LocalizedStringResource(
+            "citationComposer.affirmObservation",
+            defaultValue: "Affirm observation",
+            comment: "Row menu item that flips a negative Observation to positive"
+        )
+
+        static let applyValue = LocalizedStringResource(
+            "citationComposer.applyValue",
+            defaultValue: "Apply",
+            comment: "Confirm on the name / date dialog; writes into the row only"
+        )
+
+        static let valueDialogSubtitle = LocalizedStringResource(
+            "citationComposer.valueDialogSubtitle",
+            defaultValue: "Updates the row only. The row's Save commits it to CIT-…",
+            comment: "Subtitle on the name / date dialog"
+        )
+
+        static let connectionRelationship = LocalizedStringResource(
+            "citationComposer.connectionRelationship",
+            defaultValue: "Relationship",
+            comment: "Term picker label on a relationship connection row"
+        )
+
+        static let connectionRole = LocalizedStringResource(
+            "citationComposer.connectionRole",
+            defaultValue: "Role",
+            comment: "Term picker label on a participation connection row"
+        )
+
+        static let connectionNoRole = LocalizedStringResource(
+            "citationComposer.connectionNoRole",
+            defaultValue: "No role or type",
+            comment: "Muted slot on a location connection that has no term"
+        )
+
+        static let connectionTermNotChosen = LocalizedStringResource(
+            "citationComposer.connectionTermNotChosen",
+            defaultValue: "not chosen",
+            comment: "VoiceOver fallback when a connection role or type is empty"
+        )
+
+        static let saveRow = LocalizedStringResource(
+            "citationComposer.saveRow",
+            defaultValue: "Save",
+            comment: "Row-level Save on an Observation"
+        )
+
+        static let revertRow = LocalizedStringResource(
+            "citationComposer.revertRow",
+            defaultValue: "Revert",
+            comment: "Row-level Revert on an Observation"
+        )
+
+        static let saveConnection = LocalizedStringResource(
+            "citationComposer.saveConnection",
+            defaultValue: "Save connection",
+            comment: "Writes a pending Connect row as a cited bridge"
+        )
+
+        static let discardConnection = LocalizedStringResource(
+            "citationComposer.discardConnection",
+            defaultValue: "Discard",
+            comment: "Removes a pending connection without writing"
+        )
+
+        static let saveRole = LocalizedStringResource(
+            "citationComposer.saveRole",
+            defaultValue: "Save role",
+            comment: "Commits an edited role or type on a saved connection"
+        )
+
+        static let revertRole = LocalizedStringResource(
+            "citationComposer.revertRole",
+            defaultValue: "Revert",
+            comment: "Restores a saved connection role to its baseline"
+        )
+
+        static let subjectRequiredError = LocalizedStringResource(
+            "citationComposer.subjectRequiredError",
+            defaultValue: "Choose a subject.",
+            comment: "Row error when Save is pressed with no subject"
+        )
+
+        static let propertyRequiredAfterSubject = LocalizedStringResource(
+            "citationComposer.propertyRequiredAfterSubject",
+            defaultValue: "This subject does not allow that property.",
+            comment: "Property field error after an incompatible subject change"
+        )
+
+        static let newSubjectTitle = LocalizedStringResource(
+            "citationComposer.newSubjectTitle",
+            defaultValue: "New subject",
+            comment: "Dialog title when creating a subject from a row picker"
+        )
+
+        static let newSubjectConfirm = LocalizedStringResource(
+            "citationComposer.newSubjectConfirm",
+            defaultValue: "Create",
+            comment: "Confirm creating a subject from the composer"
+        )
+
+        static let newSubjectLabel = LocalizedStringResource(
+            "citationComposer.newSubjectLabel",
+            defaultValue: "Label",
+            comment: "Label field on the composer new-subject dialog"
+        )
+
+        static let deleteObservationTitle = LocalizedStringResource(
+            "citationComposer.deleteObservationTitle",
+            defaultValue: "Delete observation?",
+            comment: "Confirm title before deleting one Observation"
+        )
+
+        static let deleteObservationMessage = LocalizedStringResource(
+            "citationComposer.deleteObservationMessage",
+            defaultValue: "This observation will be removed from the citation. The citation stays.",
+            comment: "Confirm body before deleting one Observation"
+        )
+
+        static let deleteObservationConfirm = LocalizedStringResource(
+            "citationComposer.deleteObservationConfirm",
+            defaultValue: "Delete",
+            comment: "Confirm button that deletes one Observation"
+        )
+
+        static let leaveTitle = LocalizedStringResource(
+            "citationComposer.leaveTitle",
+            defaultValue: "Leave without saving?",
+            comment: "Leave-guard confirm title"
+        )
+
+        static let leaveDiscard = LocalizedStringResource(
+            "citationComposer.leaveDiscard",
+            defaultValue: "Leave",
+            comment: "Leave-guard confirm that discards unsaved composer work"
+        )
+
+        static let leaveKeepEditing = LocalizedStringResource(
+            "citationComposer.leaveKeepEditing",
+            defaultValue: "Keep editing",
+            comment: "Leave-guard cancel that stays on the composer"
+        )
+
+        static func newSubject(typeKey: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "citationComposer.newSubjectOption",
+                defaultValue: "New %@…",
+                comment: "Subject picker option; argument is person, event, or place"
+            ))
+            return String(format: format, locale: .current, typeKey)
+        }
+
+        static func unsavedSummary(
+            citationDirty: Bool,
+            observationCount: Int,
+            connectionTouched: Bool
+        ) -> String {
+            var parts: [String] = []
+            if citationDirty {
+                parts.append(String(localized: LocalizedStringResource(
+                    "citationComposer.unsavedCitationPart",
+                    defaultValue: "the citation",
+                    comment: "Unsaved-summary clause for dirty citation fields"
+                )))
+            }
+            if observationCount == 1 {
+                parts.append(String(localized: LocalizedStringResource(
+                    "citationComposer.unsavedObservationOne",
+                    defaultValue: "1 observation",
+                    comment: "Unsaved-summary clause for one dirty observation row"
+                )))
+            } else if observationCount > 1 {
+                let format = String(localized: LocalizedStringResource(
+                    "citationComposer.unsavedObservationMany",
+                    defaultValue: "%lld observations",
+                    comment: "Unsaved-summary clause for several dirty observation rows"
+                ))
+                parts.append(String(format: format, locale: .current, observationCount))
+            }
+            if connectionTouched {
+                parts.append(String(localized: LocalizedStringResource(
+                    "citationComposer.unsavedConnectionPart",
+                    defaultValue: "a new connection",
+                    comment: "Unsaved-summary clause for a touched pending connection"
+                )))
+            }
+            let joined = parts.joined(separator: ", ")
+            let format = String(localized: LocalizedStringResource(
+                "citationComposer.unsavedSummary",
+                defaultValue: "Unsaved: %@",
+                comment: "Footer and leave-guard body; argument is the joined unsaved parts"
+            ))
+            return String(format: format, locale: .current, joined)
+        }
+
+        static func connectionAccessibility(
+            sentence: String,
+            termLabel: String,
+            term: String,
+            status: String
+        ) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "citationComposer.connectionAccessibility",
+                defaultValue: "Connection, %@. %@ %@. %@",
+                comment: "VoiceOver for a relationship or participation connection"
+            ))
+            return String(format: format, locale: .current, sentence, termLabel, term, status)
+        }
+
+        static func connectionAccessibilityLocation(status: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "citationComposer.connectionAccessibilityLocation",
+                defaultValue: "Connection, Location. %@",
+                comment: "VoiceOver for a location connection; argument is New/Edited/Saved ref"
+            ))
+            return String(format: format, locale: .current, status)
+        }
+
+        static func connectionSavedStatus(ref: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "citationComposer.connectionSavedStatus",
+                defaultValue: "Saved, %@",
+                comment: "VoiceOver status for a saved connection; argument is the bridge ref"
+            ))
+            return String(format: format, locale: .current, ref)
+        }
 
         static let cancel = LocalizedStringResource(
             "citationComposer.cancel",
@@ -5811,6 +6105,12 @@ enum L10n {
             defaultValue: "That observation isn’t valid.",
             comment: "FFI error observations.invalid"
         )
+
+        static let observationsEdgeLocked = LocalizedStringResource(
+            "error.observations.edge_locked",
+            defaultValue: "That connection edge cannot be edited or deleted.",
+            comment: "FFI error observations.edge_locked"
+        )
         static let dateValuesInvalid = LocalizedStringResource(
             "error.datevalues.invalid",
             defaultValue: "Invalid date value.",
@@ -5980,6 +6280,8 @@ enum L10n {
                 return String(localized: citationsInvalid)
             case "observations.invalid":
                 return String(localized: observationsInvalid)
+            case "observations.edge_locked":
+                return String(localized: observationsEdgeLocked)
             case "datevalues.invalid":
                 return String(localized: dateValuesInvalid)
             case "filederivatives.invalid":

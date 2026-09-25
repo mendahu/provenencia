@@ -106,7 +106,6 @@ enum CoreMethod {
     static let addObservationsToCitation = Int32(Provenencia_Engine_V1_Method.addObservationsToCitation.rawValue)
     static let listObservationsBySource = Int32(Provenencia_Engine_V1_Method.listObservationsBySource.rawValue)
     static let getCitation = Int32(Provenencia_Engine_V1_Method.getCitation.rawValue)
-    static let updateCitationWithObservations = Int32(Provenencia_Engine_V1_Method.updateCitationWithObservations.rawValue)
     static let citationCountsBySource = Int32(Provenencia_Engine_V1_Method.citationCountsBySource.rawValue)
     static let listCitationsByArtifact = Int32(Provenencia_Engine_V1_Method.listCitationsByArtifact.rawValue)
     static let updateCitation = Int32(Provenencia_Engine_V1_Method.updateCitation.rawValue)
