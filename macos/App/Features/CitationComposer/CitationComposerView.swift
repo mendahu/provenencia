@@ -223,6 +223,6 @@ struct CitationComposerView: View {
 
     private var observationDialogWidth: CGFloat {
         let type = model.observationDialog.flatMap { model.catalogProperty(id: $0.propertyID)?.valueType }
-        return type == "name" ? 560 : 480
+        return type == PropertyValueType.name.rawValue ? 560 : 480
     }
 }

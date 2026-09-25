@@ -27,6 +27,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var subjectTypePresentations: [String: CatalogSubjectTypePresentation] = [:]
     var connectRules: [CatalogConnectRule] = CatalogConnectRule.productMatrix
     var observationsBySource: [String: [CatalogObservation]] = [:]
+    var edgeObservationIDs: Set<String> = []
     var citationsByID: [String: CatalogCitation] = [:]
     var citationNotesByID: [String: [String]] = [:]
     var metadataBySource: [String: [CatalogMetadataEntry]] = [:]
@@ -962,7 +963,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         sourceID: String,
         subjectTypeID: String,
         label: String,
-        description: String
+        description: String,
+        placement: CatalogGridCell?
     ) async throws -> CatalogSubject {
         markCatalogSessionHeld(projectDir)
         let subject = CatalogSubject(
@@ -974,6 +976,13 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             description: description
         )
         subjectsBySource[sourceID, default: []].append(subject)
+        if let placement {
+            subjectPositionsBySubject[subject.id] = CatalogSubjectPosition(
+                subjectID: subject.id,
+                gridX: placement.gridX,
+                gridY: placement.gridY
+            )
+        }
         return subject
     }
 
@@ -1294,12 +1303,15 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         transcriptionUncertain: Bool,
         transcriptionNote: String,
         citationNotes: [String],
-        observations drafts: [CatalogObservationDraft]
+        observations drafts: [CatalogObservationDraft],
+        citationID: String?
     ) async throws -> (CatalogSubject, CatalogCitation, [CatalogObservation]) {
         markCatalogSessionHeld(projectDir)
         let from = subjectsBySource[sourceID]?.first(where: { $0.id == fromSubjectID })
         let to = subjectsBySource[sourceID]?.first(where: { $0.id == toSubjectID })
-        guard let from, let to else { throw StoreBoom.boom }
+        guard let from, let to, from.id != to.id else {
+            throw CoreInvokeError.coded(status: 1, code: "connect.invalid", kind: .user, params: [])
+        }
         let fromKey = subjectTypesByProject[projectDir]?.first(where: { $0.id == from.subjectTypeID })?.key ?? ""
         let toKey = subjectTypesByProject[projectDir]?.first(where: { $0.id == to.subjectTypeID })?.key ?? ""
         let rule = CatalogConnectRule.match(from: fromKey, to: toKey, in: connectRules)
@@ -1309,40 +1321,93 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         if !bridgeTypeKey.isEmpty, bridgeTypeKey != rule.bridgeTypeKey {
             throw CoreInvokeError.coded(status: 1, code: "connect.invalid", kind: .user, params: [])
         }
+        _ = (gridX, gridY)
+        guard let fromPos = subjectPositionsBySubject[from.id],
+              let toPos = subjectPositionsBySubject[to.id]
+        else {
+            throw CoreInvokeError.coded(status: 1, code: "connect.invalid", kind: .user, params: [])
+        }
         guard let type = subjectTypesByProject[projectDir]?.first(where: { $0.key == rule.bridgeTypeKey }) else {
             throw StoreBoom.boom
         }
+        let midX = Self.floorDiv(fromPos.gridX + toPos.gridX + 1, 2)
+        let midY = Self.floorDiv(fromPos.gridY + toPos.gridY + 1, 2)
         let subject = try await createSubject(
             projectDir: projectDir,
             userID: userID,
             sourceID: sourceID,
             subjectTypeID: type.id,
             label: label,
-            description: description
-        )
-        _ = try await setSubjectPosition(
-            projectDir: projectDir,
-            subjectID: subject.id,
-            gridX: gridX,
-            gridY: gridY
+            description: description,
+            placement: CatalogGridCell(gridX: midX, gridY: midY)
         )
         var stamped = drafts
-        for index in stamped.indices where stamped[index].subjectID.isEmpty {
+        for index in stamped.indices {
             stamped[index].subjectID = subject.id
         }
-        let (citation, observations) = try await createCitationWithObservations(
-            projectDir: projectDir,
-            userID: userID,
-            artifactID: artifactID,
-            locatorJSON: locatorJSON,
-            transcription: transcription,
-            description: citationDescription,
-            transcriptionUncertain: transcriptionUncertain,
-            transcriptionNote: transcriptionNote,
-            citationNotes: citationNotes,
-            observations: stamped
-        )
+        let citation: CatalogCitation
+        let observations: [CatalogObservation]
+        if let citationID, !citationID.isEmpty {
+            guard citationsByID[citationID] != nil else {
+                throw CoreInvokeError.coded(status: 1, code: "connect.invalid", kind: .user, params: [])
+            }
+            citation = citationsByID[citationID]!
+            observations = try await addObservationsToCitation(
+                projectDir: projectDir,
+                userID: userID,
+                citationID: citationID,
+                observations: stamped,
+                allowEdgeRows: true
+            )
+        } else {
+            (citation, observations) = try await createCitationWithObservations(
+                projectDir: projectDir,
+                userID: userID,
+                artifactID: artifactID,
+                locatorJSON: locatorJSON,
+                transcription: transcription,
+                description: citationDescription,
+                transcriptionUncertain: transcriptionUncertain,
+                transcriptionNote: transcriptionNote,
+                citationNotes: citationNotes,
+                observations: stamped
+            )
+        }
+        let properties = propertiesByProject[projectDir] ?? []
+        for obs in observations {
+            let propertyKey = properties.first(where: { $0.id == obs.propertyID })?.key ?? obs.propertyKey
+            if rule.edges.contains(where: { $0.propertyKey == propertyKey }) {
+                edgeObservationIDs.insert(obs.id)
+            }
+        }
         return (subject, citation, observations)
+    }
+
+    private static func floorDiv(_ a: Int64, _ b: Int64) -> Int64 {
+        guard b != 0 else { return 0 }
+        var q = a / b
+        if (a ^ b) < 0 && a % b != 0 {
+            q -= 1
+        }
+        return q
+    }
+
+    private func isEdgeLocked(observation: CatalogObservation, projectDir: String) -> Bool {
+        if edgeObservationIDs.contains(observation.id) { return true }
+        let subject = subjectsBySource.values.flatMap { $0 }.first(where: { $0.id == observation.subjectID })
+        let typeKey = subject.flatMap { subject in
+            subjectTypesByProject[projectDir]?.first(where: { $0.id == subject.subjectTypeID })?.key
+        } ?? ""
+        let propertyKey = observation.propertyKey.isEmpty
+            ? (propertiesByProject[projectDir]?.first(where: { $0.id == observation.propertyID })?.key ?? "")
+            : observation.propertyKey
+        return connectRules.contains { rule in
+            !rule.refuse && rule.bridgeTypeKey == typeKey && rule.edges.contains { $0.propertyKey == propertyKey }
+        }
+    }
+
+    private func edgeLockedError() -> CoreInvokeError {
+        CoreInvokeError.coded(status: 1, code: "observations.edge_locked", kind: .conflict, params: [])
     }
 
     func createCitationWithObservations(
@@ -1460,15 +1525,114 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     func addObservationsToCitation(
         projectDir: String,
-        userID _: String,
+        userID: String,
         citationID: String,
         observations drafts: [CatalogObservationDraft]
     ) async throws -> [CatalogObservation] {
+        try await addObservationsToCitation(
+            projectDir: projectDir,
+            userID: userID,
+            citationID: citationID,
+            observations: drafts,
+            allowEdgeRows: false
+        )
+    }
+
+    private func addObservationsToCitation(
+        projectDir: String,
+        userID _: String,
+        citationID: String,
+        observations drafts: [CatalogObservationDraft],
+        allowEdgeRows: Bool
+    ) async throws -> [CatalogObservation] {
         markCatalogSessionHeld(projectDir)
-        return try appendFakeObservations(
+        let written = try appendFakeObservations(
             projectDir: projectDir,
             citationID: citationID,
             drafts: drafts
+        )
+        if !allowEdgeRows {
+            for obs in written where isEdgeLocked(observation: obs, projectDir: projectDir) {
+                throw edgeLockedError()
+            }
+        }
+        return written
+    }
+
+    func updateCitation(
+        projectDir: String,
+        userID _: String,
+        citationID: String,
+        locatorJSON: String,
+        transcription: String,
+        description: String,
+        transcriptionUncertain: Bool,
+        transcriptionNote: String
+    ) async throws -> CatalogCitation {
+        markCatalogSessionHeld(projectDir)
+        guard var citation = citationsByID[citationID] else { throw StoreBoom.boom }
+        citation.locatorJSON = locatorJSON
+        citation.transcription = transcription
+        citation.description = description
+        citation.transcriptionUncertain = transcriptionUncertain
+        citation.transcriptionNote = transcriptionNote
+        citationsByID[citationID] = citation
+        return citation
+    }
+
+    func updateObservation(
+        projectDir: String,
+        userID _: String,
+        observation: CatalogObservation
+    ) async throws -> CatalogObservation {
+        markCatalogSessionHeld(projectDir)
+        let existing = observationsBySource.values.flatMap { $0 }.first(where: { $0.id == observation.id })
+        guard let existing else { throw StoreBoom.boom }
+        if isEdgeLocked(observation: existing, projectDir: projectDir)
+            || isEdgeLocked(observation: observation, projectDir: projectDir)
+        {
+            throw edgeLockedError()
+        }
+        let next = try fakeObservation(
+            citationID: existing.citationID,
+            id: existing.id,
+            ref: existing.ref,
+            row: observation
+        )
+        for (sourceID, list) in observationsBySource {
+            observationsBySource[sourceID] = list.map { $0.id == next.id ? next : $0 }
+        }
+        return next
+    }
+
+    func deleteObservation(projectDir: String, userID _: String, observationID: String) async throws {
+        markCatalogSessionHeld(projectDir)
+        let existing = observationsBySource.values.flatMap { $0 }.first(where: { $0.id == observationID })
+        guard let existing else { throw StoreBoom.boom }
+        if isEdgeLocked(observation: existing, projectDir: projectDir) {
+            throw edgeLockedError()
+        }
+        for (sourceID, list) in observationsBySource {
+            observationsBySource[sourceID] = list.filter { $0.id != observationID }
+        }
+    }
+
+    func getSubjectFieldsWorkspace(projectDir: String) async throws -> SubjectFieldsSnapshot {
+        markCatalogSessionHeld(projectDir)
+        let types = subjectTypesByProject[projectDir] ?? []
+        var fieldsByTypeID: [String: [CatalogSubjectTypeField]] = [:]
+        var presentationsByKey: [String: CatalogSubjectTypePresentation] = [:]
+        for type in types {
+            fieldsByTypeID[type.id] = subjectTypeFieldsByType[type.id] ?? []
+            if let presentation = subjectTypePresentations[type.key] {
+                presentationsByKey[type.key] = presentation
+            }
+        }
+        return SubjectFieldsSnapshot(
+            properties: propertiesByProject[projectDir] ?? [],
+            types: types,
+            fieldsByTypeID: fieldsByTypeID,
+            presentationsByKey: presentationsByKey
         )
     }
 

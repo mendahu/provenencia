@@ -87,13 +87,13 @@ func TestCitations(t *testing.T) {
 		}
 		person, err := subjects.Create(c, userID, subjects.CreateInput{
 			SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Alice",
-		})
+		}, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
 		place, err := subjects.Create(c, userID, subjects.CreateInput{
 			SourceID: src.ID, SubjectTypeID: placeType.ID, Label: "Boston",
-		})
+		}, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -701,7 +701,7 @@ func TestCitations(t *testing.T) {
 				}
 				event, err := subjects.Create(c, userID, subjects.CreateInput{
 					SourceID: s.artifact.SourceID, SubjectTypeID: eventType.ID, Label: "Birth",
-				})
+				}, nil)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -791,7 +791,7 @@ func TestCitations(t *testing.T) {
 				}
 				event, err := subjects.Create(c, userID, subjects.CreateInput{
 					SourceID: s.artifact.SourceID, SubjectTypeID: eventType.ID, Label: "Birth",
-				})
+				}, nil)
 				if err != nil {
 					t.Fatal(err)
 				}

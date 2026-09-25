@@ -170,6 +170,40 @@ func UpdateCitationWithObservations(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
+func UpdateCitation(in []byte) ([]byte, error) {
+	var req engine.UpdateCitationRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("update_citation", err)
+	}
+	userID, err := parseUserID(req.GetUserId())
+	if err != nil {
+		return nil, err
+	}
+	citationID, err := parseID(req.GetCitationId())
+	if err != nil {
+		return nil, err
+	}
+	var out *engine.UpdateCitationResponse
+	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		cit, err := citations.Update(c, userID, citationID, citations.CitationFieldsInput{
+			LocatorJSON:            req.GetLocatorJson(),
+			Transcription:          req.GetTranscription(),
+			Description:            req.GetDescription(),
+			TranscriptionUncertain: req.GetTranscriptionUncertain(),
+			TranscriptionNote:      req.GetTranscriptionNote(),
+		})
+		if err != nil {
+			return err
+		}
+		out = &engine.UpdateCitationResponse{Citation: citationProto(cit)}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
+}
+
 func ListCitationsByArtifact(in []byte) ([]byte, error) {
 	var req engine.ListCitationsByArtifactRequest
 	if err := proto.Unmarshal(in, &req); err != nil {

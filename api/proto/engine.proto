@@ -83,6 +83,10 @@ enum Method {
   METHOD_CREATE_CITED_BRIDGE = 72;
   METHOD_CITATION_COUNTS_BY_SOURCE = 73;
   METHOD_LIST_CITATIONS_BY_ARTIFACT = 74;
+  METHOD_UPDATE_CITATION = 75;
+  METHOD_UPDATE_OBSERVATION = 76;
+  METHOD_DELETE_OBSERVATION = 77;
+  METHOD_GET_SUBJECT_FIELDS_WORKSPACE = 78;
 }
 
 message PingRequest {
@@ -808,6 +812,9 @@ message CreateSubjectRequest {
   string subject_type_id = 4;
   string label = 5;
   string description = 6;
+  bool has_placement = 7;
+  int64 grid_x = 8;
+  int64 grid_y = 9;
 }
 
 message CreateSubjectResponse {
@@ -921,6 +928,12 @@ message ConnectRule {
   repeated string edge_property_keys = 4;
   string disambiguation = 5; // none | role | relationship_type
   bool refuse = 6;
+  repeated ConnectEdge edges = 7;
+}
+
+message ConnectEdge {
+  string property_key = 1;
+  string endpoint_type_key = 2;
 }
 
 message ListPropertiesRequest {
@@ -1232,12 +1245,51 @@ message CreateCitedBridgeRequest {
   string transcription_note = 16;
   repeated string citation_notes = 17;
   repeated ObservationDraft observations = 18;
+  string citation_id = 19;
 }
 
 message CreateCitedBridgeResponse {
   Subject subject = 1;
   Citation citation = 2;
   repeated Observation observations = 3;
+}
+
+message UpdateCitationRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string citation_id = 3;
+  string locator_json = 4;
+  string transcription = 5;
+  string description = 6;
+  bool transcription_uncertain = 7;
+  string transcription_note = 8;
+}
+message UpdateCitationResponse { Citation citation = 1; }
+
+message UpdateObservationRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  Observation observation = 3;
+}
+message UpdateObservationResponse { Observation observation = 1; }
+
+message DeleteObservationRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string observation_id = 3;
+}
+message DeleteObservationResponse {}
+
+message GetSubjectFieldsWorkspaceRequest { string project_dir = 1; }
+message SubjectTypeFieldsGroup {
+  string subject_type_id = 1;
+  repeated SubjectTypeField fields = 2;
+  SubjectTypePresentation presentation = 3;
+}
+message GetSubjectFieldsWorkspaceResponse {
+  repeated Property properties = 1;
+  repeated SubjectType types = 2;
+  repeated SubjectTypeFieldsGroup groups = 3;
 }
 
 // ErrorKind classifies a failure for client UX (tone, retry hints). Copy still

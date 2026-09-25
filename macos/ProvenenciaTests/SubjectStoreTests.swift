@@ -28,7 +28,8 @@ struct SubjectStoreTests {
             sourceID: sourceID,
             subjectTypeID: typeID,
             label: "Alice",
-            description: "daughter"
+            description: "daughter",
+            placement: nil
         )
         #expect(created.label == "Alice")
         #expect(created.sourceID == sourceID)
@@ -48,7 +49,8 @@ struct SubjectStoreTests {
             sourceID: sourceID,
             subjectTypeID: typeID,
             label: "Bob",
-            description: ""
+            description: "",
+            placement: nil
         )
 
         let position = try await store.setSubjectPosition(

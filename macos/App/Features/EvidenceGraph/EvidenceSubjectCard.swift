@@ -556,7 +556,7 @@ private struct EvidenceCitedPropertyRow: View {
     }
 
     private var isNegative: Bool {
-        observation.polarity.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "negative"
+        observation.polarity.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == ObservationPolarity.negative.rawValue
     }
 }
 

@@ -482,7 +482,8 @@ private struct ThrowingStore: GenealogyStore {
         sourceID _: String,
         subjectTypeID _: String,
         label _: String,
-        description _: String
+        description _: String,
+        placement _: CatalogGridCell?
     ) async throws -> CatalogSubject { throw StoreBoom.boom }
     func updateSubject(
         projectDir _: String,
@@ -586,7 +587,8 @@ private struct ThrowingStore: GenealogyStore {
         transcriptionUncertain _: Bool,
         transcriptionNote _: String,
         citationNotes _: [String],
-        observations _: [CatalogObservationDraft]
+        observations _: [CatalogObservationDraft],
+        citationID _: String?
     ) async throws -> (CatalogSubject, CatalogCitation, [CatalogObservation]) { throw StoreBoom.boom }
     func createCitationWithObservations(
         projectDir _: String,
@@ -604,6 +606,27 @@ private struct ThrowingStore: GenealogyStore {
         projectDir _: String,
         citationID _: String
     ) async throws -> (CatalogCitation, [String], [CatalogObservation]) { throw StoreBoom.boom }
+    func updateCitation(
+        projectDir _: String,
+        userID _: String,
+        citationID _: String,
+        locatorJSON _: String,
+        transcription _: String,
+        description _: String,
+        transcriptionUncertain _: Bool,
+        transcriptionNote _: String
+    ) async throws -> CatalogCitation { throw StoreBoom.boom }
+    func updateObservation(
+        projectDir _: String,
+        userID _: String,
+        observation _: CatalogObservation
+    ) async throws -> CatalogObservation { throw StoreBoom.boom }
+    func deleteObservation(projectDir _: String, userID _: String, observationID _: String) async throws {
+        throw StoreBoom.boom
+    }
+    func getSubjectFieldsWorkspace(projectDir _: String) async throws -> SubjectFieldsSnapshot {
+        throw StoreBoom.boom
+    }
     func updateCitationWithObservations(
         projectDir _: String,
         userID _: String,

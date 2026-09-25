@@ -508,3 +508,144 @@ func TestUpdateCitationWithObservations(t *testing.T) {
 		},
 	})
 }
+
+func TestUpdateCitation(t *testing.T) {
+	runRPC(t, UpdateCitation, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "updates citation fields only",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _, artifactID, placeID, propID := citationFixture(t)
+				createOut, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
+					ProjectDir:    dir,
+					UserId:        userID,
+					ArtifactId:    artifactID,
+					LocatorJson:   validLocatorJSON,
+					Transcription: "was",
+					Observations: []*engine.ObservationDraft{{
+						SubjectId:  placeID,
+						PropertyId: propID,
+						ValueText:  "Boston",
+					}},
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var created engine.CreateCitationWithObservationsResponse
+				if err := proto.Unmarshal(createOut, &created); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.UpdateCitationRequest{
+					ProjectDir:    dir,
+					UserId:        userID,
+					CitationId:    created.Citation.GetId(),
+					LocatorJson:   validLocatorJSON,
+					Transcription: "now",
+				}
+			},
+			after: func(t *testing.T, out []byte, req proto.Message) {
+				var updated engine.UpdateCitationResponse
+				if err := proto.Unmarshal(out, &updated); err != nil {
+					t.Fatal(err)
+				}
+				if updated.Citation.GetTranscription() != "now" {
+					t.Fatalf("transcription %q", updated.Citation.GetTranscription())
+				}
+				ur := req.(*engine.UpdateCitationRequest)
+				assertLatestAuditAction(t, ur.ProjectDir, "update_citation")
+			},
+		},
+	})
+}
+
+func TestUpdateObservation(t *testing.T) {
+	runRPC(t, UpdateObservation, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "updates one observation",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _, artifactID, placeID, propID := citationFixture(t)
+				createOut, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
+					ProjectDir:  dir,
+					UserId:      userID,
+					ArtifactId:  artifactID,
+					LocatorJson: validLocatorJSON,
+					Observations: []*engine.ObservationDraft{{
+						SubjectId:  placeID,
+						PropertyId: propID,
+						ValueText:  "Boston",
+					}},
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var created engine.CreateCitationWithObservationsResponse
+				if err := proto.Unmarshal(createOut, &created); err != nil {
+					t.Fatal(err)
+				}
+				obs := created.Observations[0]
+				obs.ValueText = "Salem"
+				return &engine.UpdateObservationRequest{
+					ProjectDir:  dir,
+					UserId:      userID,
+					Observation: obs,
+				}
+			},
+			after: func(t *testing.T, out []byte, req proto.Message) {
+				var updated engine.UpdateObservationResponse
+				if err := proto.Unmarshal(out, &updated); err != nil {
+					t.Fatal(err)
+				}
+				if updated.Observation.GetValueText() != "Salem" || updated.Observation.GetPropertyKey() == "" {
+					t.Fatalf("%+v", updated.Observation)
+				}
+				ur := req.(*engine.UpdateObservationRequest)
+				assertLatestAuditAction(t, ur.ProjectDir, "update_observation")
+			},
+		},
+	})
+}
+
+func TestDeleteObservation(t *testing.T) {
+	runRPC(t, DeleteObservation, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "deletes observation and keeps citation",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _, artifactID, placeID, propID := citationFixture(t)
+				createOut, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
+					ProjectDir:  dir,
+					UserId:      userID,
+					ArtifactId:  artifactID,
+					LocatorJson: validLocatorJSON,
+					Observations: []*engine.ObservationDraft{{
+						SubjectId:  placeID,
+						PropertyId: propID,
+						ValueText:  "Boston",
+					}},
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var created engine.CreateCitationWithObservationsResponse
+				if err := proto.Unmarshal(createOut, &created); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.DeleteObservationRequest{
+					ProjectDir:    dir,
+					UserId:        userID,
+					ObservationId: created.Observations[0].GetId(),
+				}
+			},
+			after: func(t *testing.T, out []byte, req proto.Message) {
+				var deleted engine.DeleteObservationResponse
+				if err := proto.Unmarshal(out, &deleted); err != nil {
+					t.Fatal(err)
+				}
+				_ = deleted
+				dr := req.(*engine.DeleteObservationRequest)
+				assertLatestAuditAction(t, dr.ProjectDir, "delete_observation")
+			},
+		},
+	})
+}

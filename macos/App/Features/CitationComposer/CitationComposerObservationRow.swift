@@ -116,15 +116,15 @@ struct CitationComposerObservationRow: View {
     @ViewBuilder
     private var valueEditor: some View {
         switch property?.valueType {
-        case "text":
+        case PropertyValueType.text.rawValue:
             PVInput(text: textBinding, size: .sm)
                 .disabled(inert)
                 .accessibilityIdentifier("citationComposer.observation.text.\(row.id.uuidString)")
-        case "integer":
+        case PropertyValueType.integer.rawValue:
             PVInput(text: integerBinding, size: .sm, mono: true)
                 .disabled(inert)
                 .accessibilityIdentifier("citationComposer.observation.integer.\(row.id.uuidString)")
-        case "term":
+        case PropertyValueType.term.rawValue:
             HStack(spacing: PVSpacing.space3) {
                 PVComboBox(
                     selection: termBinding,
@@ -140,14 +140,14 @@ struct CitationComposerObservationRow: View {
                     PVButton(L10n.CitationComposer.addCustomTerm, variant: .ghost, size: .sm, action: onAddCustomTerm)
                 }
             }
-        case "name", "date":
+        case PropertyValueType.name.rawValue, PropertyValueType.date.rawValue:
             Button(action: onEditValue) {
                 HStack {
                     if summary.isEmpty {
                         Text(L10n.CitationComposer.editValuePlaceholder)
                     } else {
                         Text(verbatim: summary)
-                            .font(property?.valueType == "date" ? PVFont.mono(size: PVTypeScale.bodySmall) : PVFont.body(size: PVTypeScale.bodySmall))
+                            .font(property?.valueType == PropertyValueType.date.rawValue ? PVFont.mono(size: PVTypeScale.bodySmall) : PVFont.body(size: PVTypeScale.bodySmall))
                     }
                     Spacer(minLength: 0)
                     PVIcon(.penLine, size: 12)
@@ -163,7 +163,7 @@ struct CitationComposerObservationRow: View {
     }
 
     private var polarityActionTitle: LocalizedStringResource {
-        row.polarity == "negative"
+        row.polarity == ObservationPolarity.negative.rawValue
             ? L10n.CitationComposer.polarityAsserts
             : L10n.CitationComposer.polarityNegates
     }

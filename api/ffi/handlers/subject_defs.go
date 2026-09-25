@@ -5,6 +5,7 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"google.golang.org/protobuf/proto"
 )
@@ -236,14 +237,67 @@ func ListConnectRules(in []byte) ([]byte, error) {
 	}
 	out := &engine.ListConnectRulesResponse{}
 	for _, r := range subjectvocab.ListConnectRules() {
-		out.Rules = append(out.Rules, &engine.ConnectRule{
+		rule := &engine.ConnectRule{
 			FromTypeKey:      r.FromTypeKey,
 			ToTypeKey:        r.ToTypeKey,
 			BridgeTypeKey:    r.BridgeTypeKey,
 			EdgePropertyKeys: append([]string(nil), r.EdgePropertyKeys...),
 			Disambiguation:   r.Disambiguation,
 			Refuse:           r.Refuse,
-		})
+		}
+		for _, e := range r.Edges {
+			rule.Edges = append(rule.Edges, &engine.ConnectEdge{
+				PropertyKey:     e.PropertyKey,
+				EndpointTypeKey: e.EndpointTypeKey,
+			})
+		}
+		out.Rules = append(out.Rules, rule)
+	}
+	return proto.Marshal(out)
+}
+
+func GetSubjectFieldsWorkspace(in []byte) ([]byte, error) {
+	var req engine.GetSubjectFieldsWorkspaceRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("get_subject_fields_workspace", err)
+	}
+	var out *engine.GetSubjectFieldsWorkspaceResponse
+	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		props, err := properties.List(c)
+		if err != nil {
+			return err
+		}
+		types, err := subjecttypes.List(c)
+		if err != nil {
+			return err
+		}
+		out = &engine.GetSubjectFieldsWorkspaceResponse{}
+		for _, p := range props {
+			out.Properties = append(out.Properties, propertyProto(p))
+		}
+		for _, typ := range types {
+			out.Types = append(out.Types, subjectTypeProto(typ))
+			bindings, err := subjectvocab.ListBindings(c, typ.ID)
+			if err != nil {
+				return err
+			}
+			group := &engine.SubjectTypeFieldsGroup{SubjectTypeId: uuidString(typ.ID)}
+			for _, b := range bindings {
+				group.Fields = append(group.Fields, &engine.SubjectTypeField{
+					Property:  propertyProto(b.Property),
+					SortOrder: int32(b.SortOrder),
+					Locked:    b.Locked,
+				})
+			}
+			if info, ok := subjectvocab.TypeByKey(typ.Key); ok {
+				group.Presentation = subjectTypePresentationProto(info)
+			}
+			out.Groups = append(out.Groups, group)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	return proto.Marshal(out)
 }

@@ -142,6 +142,43 @@ func TestCreateSubject(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "creates subject with placement",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, sourceID, typeID := subjectFixture(t)
+				return &engine.CreateSubjectRequest{
+					ProjectDir:    dir,
+					UserId:        userID,
+					SourceId:      sourceID,
+					SubjectTypeId: typeID,
+					Label:         "Placed",
+					HasPlacement:  true,
+					GridX:         -2,
+					GridY:         5,
+				}
+			},
+			after: func(t *testing.T, out []byte, req proto.Message) {
+				var created engine.CreateSubjectResponse
+				if err := proto.Unmarshal(out, &created); err != nil {
+					t.Fatal(err)
+				}
+				cr := req.(*engine.CreateSubjectRequest)
+				listOut, err := ListSubjectPositions(marshalProto(t, &engine.ListSubjectPositionsRequest{
+					ProjectDir: cr.ProjectDir,
+					SourceId:   cr.SourceId,
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var list engine.ListSubjectPositionsResponse
+				if err := proto.Unmarshal(listOut, &list); err != nil {
+					t.Fatal(err)
+				}
+				if len(list.Positions) != 1 || list.Positions[0].GetGridX() != -2 || list.Positions[0].GetGridY() != 5 {
+					t.Fatalf("%+v", list.Positions)
+				}
+			},
+		},
 	})
 }
 

@@ -67,7 +67,7 @@ final class CitationComposerModel {
             ObservationDialogState(
                 editingID: nil,
                 propertyID: "",
-                polarity: "positive",
+                polarity: ObservationPolarity.positive.rawValue,
                 valueText: "",
                 valueIntegerText: "",
                 valueTermID: "",
@@ -93,7 +93,13 @@ final class CitationComposerModel {
     }
 
     /// Value types the composer can edit (subject waits for a later PR).
-    static let supportedValueTypes: Set<String> = ["text", "integer", "date", "term", "name"]
+    static let supportedValueTypes: Set<String> = [
+        PropertyValueType.text.rawValue,
+        PropertyValueType.integer.rawValue,
+        PropertyValueType.date.rawValue,
+        PropertyValueType.term.rawValue,
+        PropertyValueType.name.rawValue,
+    ]
 
     let entry: CitationComposerEntry
     private let userID: String
@@ -168,7 +174,7 @@ final class CitationComposerModel {
     var termsByPropertyID: [String: [CatalogPropertyTerm]] {
         var result: [String: [CatalogPropertyTerm]] = [:]
         let ids = Set(
-            allPropertiesByID.values.filter { $0.valueType == "term" }.map(\.id)
+            allPropertiesByID.values.filter { $0.valueType == PropertyValueType.term.rawValue }.map(\.id)
         )
         for id in ids {
             let handle: QueryHandle<[CatalogPropertyTerm]>? = session.queryHandle(
@@ -578,7 +584,7 @@ final class CitationComposerModel {
                 ObservationRow(
                     id: UUID(),
                     propertyID: property.id,
-                    polarity: "positive",
+                    polarity: ObservationPolarity.positive.rawValue,
                     valueText: endpoint.label,
                     valueIntegerText: "",
                     valueTermID: "",
@@ -719,7 +725,7 @@ final class CitationComposerModel {
                         ObservationRow(
                             id: UUID(),
                             propertyID: termProperty.id,
-                            polarity: "positive",
+                            polarity: ObservationPolarity.positive.rawValue,
                             valueText: terms.first(where: { $0.id == termID })?.label ?? "",
                             valueIntegerText: "",
                             valueTermID: termID,
@@ -789,7 +795,7 @@ final class CitationComposerModel {
     }
 
     private func warmTermHandles() async {
-        for property in availableProperties where property.valueType == "term" {
+        for property in availableProperties where property.valueType == PropertyValueType.term.rawValue {
             await warmTerms(for: property.id)
         }
     }
@@ -970,14 +976,16 @@ final class CitationComposerModel {
     func toggleObservationPolarity(id: UUID) {
         mutateObservation(id: id) { row in
             guard !row.isConnectFixed else { return }
-            row.polarity = row.polarity == "negative" ? "positive" : "negative"
+            row.polarity = row.polarity == ObservationPolarity.negative.rawValue
+                ? ObservationPolarity.positive.rawValue
+                : ObservationPolarity.negative.rawValue
         }
     }
 
     func beginEditObservation(_ row: ObservationRow) {
         guard !row.isConnectFixed else { return }
         let type = catalogProperty(id: row.propertyID)?.valueType
-        guard type == "name" || type == "date" else { return }
+        guard type == PropertyValueType.name.rawValue || type == PropertyValueType.date.rawValue else { return }
         observationDialog = .editing(row)
     }
 
@@ -1018,7 +1026,9 @@ final class CitationComposerModel {
             subjectID: observations.first(where: { $0.id == draft.editingID })?.subjectID
                 ?? defaultObservationSubjectID,
             propertyID: draft.propertyID,
-            polarity: draft.polarity == "negative" ? "negative" : "positive",
+            polarity: draft.polarity == ObservationPolarity.negative.rawValue
+                ? ObservationPolarity.negative.rawValue
+                : ObservationPolarity.positive.rawValue,
             valueText: draft.valueText.trimmingCharacters(in: .whitespacesAndNewlines),
             valueIntegerText: draft.valueIntegerText.trimmingCharacters(in: .whitespacesAndNewlines),
             valueTermID: draft.valueTermID,
@@ -1155,7 +1165,8 @@ final class CitationComposerModel {
                         transcriptionUncertain: transcriptionUncertain,
                         transcriptionNote: transcriptionNote,
                         citationNotes: [],
-                        observations: drafts
+                        observations: drafts,
+                        citationID: nil
                     )
                 } else {
                     _ = try await store.createCitationWithObservations(
@@ -1340,7 +1351,9 @@ final class CitationComposerModel {
             var draft = CatalogObservationDraft(
                 subjectID: rowSubjectID,
                 propertyID: property.id,
-                polarity: row.polarity == "negative" ? "negative" : "positive"
+                polarity: row.polarity == ObservationPolarity.negative.rawValue
+                    ? ObservationPolarity.negative.rawValue
+                    : ObservationPolarity.positive.rawValue
             )
             if let failure = CitationObservationValue.apply(
                 valueType: property.valueType,
@@ -1373,7 +1386,9 @@ final class CitationComposerModel {
             var filled = CatalogObservationDraft(
                 subjectID: rowSubjectID,
                 propertyID: property.id,
-                polarity: row.polarity == "negative" ? "negative" : "positive"
+                polarity: row.polarity == ObservationPolarity.negative.rawValue
+                    ? ObservationPolarity.negative.rawValue
+                    : ObservationPolarity.positive.rawValue
             )
             if let failure = CitationObservationValue.apply(
                 valueType: property.valueType,
@@ -1457,7 +1472,7 @@ final class CitationComposerModel {
             persistedID: observation.id,
             subjectID: observation.subjectID,
             propertyID: observation.propertyID,
-            polarity: observation.polarity.isEmpty ? "positive" : observation.polarity,
+            polarity: observation.polarity.isEmpty ? ObservationPolarity.positive.rawValue : observation.polarity,
             valueText: valueText,
             valueIntegerText: integerText,
             valueTermID: observation.valueTermID,
@@ -1517,7 +1532,7 @@ final class CitationComposerModel {
             id: UUID(),
             subjectID: subjectID,
             propertyID: "",
-            polarity: "positive",
+            polarity: ObservationPolarity.positive.rawValue,
             valueText: "",
             valueIntegerText: "",
             valueTermID: "",

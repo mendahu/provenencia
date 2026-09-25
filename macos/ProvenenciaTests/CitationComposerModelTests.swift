@@ -1039,7 +1039,8 @@ struct CitationComposerModelTests {
                 transcriptionUncertain: false,
                 transcriptionNote: "",
                 citationNotes: [],
-                observations: []
+                observations: [],
+                citationID: nil
             )
             Issue.record("expected refuse")
         } catch let error as CoreInvokeError {

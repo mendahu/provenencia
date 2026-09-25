@@ -148,6 +148,41 @@ func TestSubjectTypeFieldsAndRegistry(t *testing.T) {
 				if len(rules.Rules) < 3 {
 					t.Fatalf("rules=%d", len(rules.Rules))
 				}
+				hasEdges := false
+				for _, r := range rules.Rules {
+					if !r.GetRefuse() && len(r.GetEdges()) == 2 {
+						hasEdges = true
+						break
+					}
+				}
+				if !hasEdges {
+					t.Fatal("connect rules missing edges")
+				}
+			},
+		},
+	})
+}
+
+func TestGetSubjectFieldsWorkspace(t *testing.T) {
+	runRPC(t, GetSubjectFieldsWorkspace, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "loads properties types and groups",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _, _, _ := subjectFixture(t)
+				return &engine.GetSubjectFieldsWorkspaceRequest{ProjectDir: dir}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var got engine.GetSubjectFieldsWorkspaceResponse
+				if err := proto.Unmarshal(out, &got); err != nil {
+					t.Fatal(err)
+				}
+				if len(got.Properties) == 0 || len(got.Types) == 0 || len(got.Groups) == 0 {
+					t.Fatalf("empty workspace props=%d types=%d groups=%d", len(got.Properties), len(got.Types), len(got.Groups))
+				}
+				if len(got.Groups) != len(got.Types) {
+					t.Fatalf("groups %d types %d", len(got.Groups), len(got.Types))
+				}
 			},
 		},
 	})

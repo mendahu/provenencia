@@ -824,7 +824,8 @@ final class EvidenceGraphModel {
                 sourceID: sourceID,
                 subjectTypeID: typeID,
                 label: trimmed,
-                description: draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
+                description: draft.description.trimmingCharacters(in: .whitespacesAndNewlines),
+                placement: nil
             )
             _ = try await store.setSubjectPosition(
                 projectDir: session.projectKey.projectDir,
