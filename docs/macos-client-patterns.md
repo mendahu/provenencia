@@ -124,6 +124,8 @@ A `setQueryValue` patch is an optimization layered on top of invalidation, never
 substitute for it: it silently no-ops when the key was never cached, and it only
 fixes the one row the write returned.
 
+**Leave guard and row commits.** Places with unsaved drafts implement `WorkspaceLeaveGuard` and set `WorkspaceNavigation.leaveGuard` while they are on screen. `go(to:)`, `goBack()`, `goForward()`, and `go(toIndex:)` ask the guard; `fallbackToSectionRoot()` and `attachProject` do not. The citation composer holds when citation fields are dirty, an Observation row is edited or a non-empty draft, or a connection is touched — then **Discard changes** resumes the held move and **Keep editing** cancels it. Observation, citation-field, and connection writes are separate store calls; nothing deletes an Observation because it was missing from a payload.
+
 Agent workflow: [`.cursor/skills/add-workspace-place/SKILL.md`](../.cursor/skills/add-workspace-place/SKILL.md). Design: [`ideas/archive/page-navigation-performance.md`](ideas/archive/page-navigation-performance.md).
 
 ---

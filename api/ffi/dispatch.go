@@ -79,10 +79,13 @@ const (
 	MethodAddObservationsToCitation         = int32(engine.Method_METHOD_ADD_OBSERVATIONS_TO_CITATION)
 	MethodListObservationsBySource          = int32(engine.Method_METHOD_LIST_OBSERVATIONS_BY_SOURCE)
 	MethodGetCitation                       = int32(engine.Method_METHOD_GET_CITATION)
-	MethodUpdateCitationWithObservations    = int32(engine.Method_METHOD_UPDATE_CITATION_WITH_OBSERVATIONS)
 	MethodCreateCitedBridge                 = int32(engine.Method_METHOD_CREATE_CITED_BRIDGE)
 	MethodCitationCountsBySource            = int32(engine.Method_METHOD_CITATION_COUNTS_BY_SOURCE)
 	MethodListCitationsByArtifact           = int32(engine.Method_METHOD_LIST_CITATIONS_BY_ARTIFACT)
+	MethodUpdateCitation                    = int32(engine.Method_METHOD_UPDATE_CITATION)
+	MethodUpdateObservation                 = int32(engine.Method_METHOD_UPDATE_OBSERVATION)
+	MethodDeleteObservation                 = int32(engine.Method_METHOD_DELETE_OBSERVATION)
+	MethodGetSubjectFieldsWorkspace         = int32(engine.Method_METHOD_GET_SUBJECT_FIELDS_WORKSPACE)
 )
 
 // Call routes one coarse FFI operation to api/ffi/handlers.
@@ -226,14 +229,20 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.ListObservationsBySource(in)
 	case MethodGetCitation:
 		return handlers.GetCitation(in)
-	case MethodUpdateCitationWithObservations:
-		return handlers.UpdateCitationWithObservations(in)
 	case MethodCreateCitedBridge:
 		return handlers.CreateCitedBridge(in)
 	case MethodCitationCountsBySource:
 		return handlers.CitationCountsBySource(in)
 	case MethodListCitationsByArtifact:
 		return handlers.ListCitationsByArtifact(in)
+	case MethodUpdateCitation:
+		return handlers.UpdateCitation(in)
+	case MethodUpdateObservation:
+		return handlers.UpdateObservation(in)
+	case MethodDeleteObservation:
+		return handlers.DeleteObservation(in)
+	case MethodGetSubjectFieldsWorkspace:
+		return handlers.GetSubjectFieldsWorkspace(in)
 	default:
 		return nil, apperr.New(apperr.CodeInternalUnknownMethod, apperr.KindInternal, strconv.Itoa(int(method)))
 	}

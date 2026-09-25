@@ -455,6 +455,88 @@ struct WorkspaceSessionTests {
         let ready: [String]? = await session.readyValue(key)
         #expect(ready == nil)
     }
+
+    @Test func staleOlderLoadDoesNotOverwriteNewer() async {
+        let session = makeSession()
+        let key = CatalogQueryKey.sourcesList(project: session.projectKey)
+        let olderGate = Gate()
+        let handle = session.ensureQuery(key) {
+            await olderGate.waitForOpen()
+            return ["old"]
+        }
+        session.invalidate(key)
+        _ = session.ensureQuery(key) { ["new"] }
+        await waitForFetchComplete(handle)
+        #expect(handle.value == ["new"])
+        await olderGate.open()
+        await Task.yield()
+        #expect(handle.value == ["new"])
+        #expect(handle.isFetching == false)
+    }
+
+    @Test func setQueryValueWinsOverInFlightLoad() async {
+        let session = makeSession()
+        let key = CatalogQueryKey.sourcesList(project: session.projectKey)
+        let gate = Gate()
+        let stale = CatalogSource(
+            id: "stale",
+            ref: "SRC-S",
+            sourceTypeID: "t",
+            title: "Stale",
+            description: ""
+        )
+        let patched = CatalogSource(
+            id: "patched",
+            ref: "SRC-P",
+            sourceTypeID: "t",
+            title: "Patched",
+            description: ""
+        )
+        let handle = session.ensureQuery(key) {
+            await gate.waitForOpen()
+            return [stale]
+        }
+        session.setQueryValue(key, value: [patched])
+        #expect(handle.value?.first?.id == "patched")
+        await gate.open()
+        await Task.yield()
+        #expect(handle.value?.first?.id != "stale")
+    }
+
+    @Test func setQueryValueRestartsInFlightLoad() async {
+        let store = FakeStore()
+        store.sourcesByProject[projectDir] = [
+            CatalogSource(
+                id: "s1",
+                ref: "SRC-1",
+                sourceTypeID: "t",
+                title: "Census",
+                description: ""
+            ),
+        ]
+        let session = makeSession(store: store)
+        let key = CatalogQueryKey.sourcesList(project: session.projectKey)
+        let gate = Gate()
+        let handle = session.ensureQuery(key) {
+            await gate.waitForOpen()
+            return [CatalogSource]()
+        }
+        session.setQueryValue(
+            key,
+            value: [
+                CatalogSource(
+                    id: "patched",
+                    ref: "SRC-P",
+                    sourceTypeID: "t",
+                    title: "Patched",
+                    description: ""
+                ),
+            ]
+        )
+        #expect(handle.value?.first?.id == "patched")
+        await waitForFetchComplete(handle)
+        #expect(handle.value?.first?.id == "s1")
+    }
 }
 
 /// One-shot gate so concurrent loaders block until tests observe stale data.

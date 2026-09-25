@@ -188,15 +188,23 @@ func Lookup(c *database.Catalog, id []byte) (Value, error) {
 	if err != nil {
 		return Value{}, err
 	}
-	if len(id) != 16 {
+	return LookupTx(db, id)
+}
+
+// LookupTx returns the name_values row and ordered parts on an existing connection or transaction.
+func LookupTx(q interface {
+	QueryRow(query string, args ...any) *sql.Row
+	Query(query string, args ...any) (*sql.Rows, error)
+}, id []byte) (Value, error) {
+	if q == nil || len(id) != 16 {
 		return Value{}, ErrInvalid
 	}
 	var v Value
 	v.ID = append([]byte(nil), id...)
-	if err := db.QueryRow(sqlLookupValue, id).Scan(&v.Form); err != nil {
+	if err := q.QueryRow(sqlLookupValue, id).Scan(&v.Form); err != nil {
 		return Value{}, err
 	}
-	rows, err := db.Query(sqlLookupParts, id)
+	rows, err := q.Query(sqlLookupParts, id)
 	if err != nil {
 		return Value{}, err
 	}

@@ -226,9 +226,6 @@ struct PlaceRegistryTests {
             connectFromSubjectId: "p1",
             connectToSubjectId: "e1",
             connectBridgeTypeKey: "participation",
-            connectDisambiguationTermId: "term-1",
-            connectGridX: 2,
-            connectGridY: 3,
             sourceSurface: .citationComposer,
             title: "Margt. participated as Witness at Birth"
         )
@@ -243,7 +240,6 @@ struct PlaceRegistryTests {
         )
         #expect(decoded == location)
         #expect(decoded?.connectFromSubjectId == "p1")
-        #expect(decoded?.connectGridX == 2)
     }
 
     @Test func pencilLocationRoundTripsArtifactAndObservation() {

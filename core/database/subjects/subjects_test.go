@@ -2,6 +2,7 @@ package subjects
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -9,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
+	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -96,7 +98,7 @@ func TestSubjects(t *testing.T) {
 					SourceID:      src.ID,
 					SubjectTypeID: person.ID,
 					Label:         "Alice",
-				})
+				}, nil)
 				if !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v want ErrInvalid", err)
 				}
@@ -116,7 +118,7 @@ func TestSubjects(t *testing.T) {
 					SourceID:      src.ID,
 					SubjectTypeID: person.ID,
 					Label:         "Alice",
-				})
+				}, nil)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -129,6 +131,29 @@ func TestSubjects(t *testing.T) {
 				if latestEntityType(t, c) != "subject" {
 					t.Fatalf("entity %s", latestEntityType(t, c))
 				}
+				db, err := c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				var raw string
+				if err := db.QueryRow(`
+					SELECT changes_json FROM audit_changes
+					ORDER BY rowid DESC LIMIT 1`).Scan(&raw); err != nil {
+					t.Fatal(err)
+				}
+				var fields map[string]any
+				if err := json.Unmarshal([]byte(raw), &fields); err != nil {
+					t.Fatal(err)
+				}
+				for _, key := range []string{"id", "ref", "source_id", "subject_type_id", "label", "description"} {
+					if _, ok := fields[key]; !ok {
+						t.Fatalf("subject create missing %q in %+v", key, fields)
+					}
+				}
+				desc, _ := fields["description"].(map[string]any)
+				if desc["new"] != nil {
+					t.Fatalf("empty description should be null: %+v", fields)
+				}
 				got, err := Get(c, s.ID)
 				if err != nil || got.Label != "Alice" {
 					t.Fatalf("%v %+v", err, got)
@@ -136,6 +161,36 @@ func TestSubjects(t *testing.T) {
 				byRef, err := getByRef(c, s.Ref)
 				if err != nil || string(byRef.ID) != string(s.ID) {
 					t.Fatalf("%v %+v", err, byRef)
+				}
+				if _, err := subjectpositions.Get(c, s.ID); !errors.Is(err, sql.ErrNoRows) {
+					t.Fatalf("no placement wrote position: %v", err)
+				}
+			},
+		},
+		{
+			name: "create with placement writes position",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				mustSubjectTypes(t, c)
+				src := mustSource(t, c)
+				person, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				s, err := Create(c, userID, CreateInput{
+					SourceID:      src.ID,
+					SubjectTypeID: person.ID,
+					Label:         "Placed",
+				}, &Placement{GridX: -2, GridY: 5})
+				if err != nil {
+					t.Fatal(err)
+				}
+				pos, err := subjectpositions.Get(c, s.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if pos.GridX != -2 || pos.GridY != 5 {
+					t.Fatalf("position %+v", pos)
 				}
 			},
 		},
@@ -152,7 +207,7 @@ func TestSubjects(t *testing.T) {
 				s, err := Create(c, userID, CreateInput{
 					SourceID:      src.ID,
 					SubjectTypeID: event.ID,
-				})
+				}, nil)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -173,7 +228,7 @@ func TestSubjects(t *testing.T) {
 				}
 				s, err := Create(c, userID, CreateInput{
 					SourceID: src.ID, SubjectTypeID: person.ID, Label: "Alice",
-				})
+				}, nil)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -207,7 +262,7 @@ func TestSubjects(t *testing.T) {
 				}
 				s, err := Create(c, userID, CreateInput{
 					SourceID: src.ID, SubjectTypeID: person.ID, Label: "Bob",
-				})
+				}, nil)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -262,10 +317,10 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := Create(c, userID, CreateInput{SourceID: srcA.ID, SubjectTypeID: person.ID, Label: "A"}); err != nil {
+				if _, err := Create(c, userID, CreateInput{SourceID: srcA.ID, SubjectTypeID: person.ID, Label: "A"}, nil); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := Create(c, userID, CreateInput{SourceID: srcB.ID, SubjectTypeID: person.ID, Label: "B"}); err != nil {
+				if _, err := Create(c, userID, CreateInput{SourceID: srcB.ID, SubjectTypeID: person.ID, Label: "B"}, nil); err != nil {
 					t.Fatal(err)
 				}
 				list, err := ListBySource(c, srcA.ID)
@@ -277,7 +332,7 @@ func TestSubjects(t *testing.T) {
 		{
 			name: "reject invalid ids",
 			run: func(t *testing.T, c *database.Catalog) {
-				if _, err := Create(c, userID, CreateInput{}); !errors.Is(err, ErrInvalid) {
+				if _, err := Create(c, userID, CreateInput{}, nil); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 				if _, err := Get(c, []byte{1}); !errors.Is(err, ErrInvalid) {

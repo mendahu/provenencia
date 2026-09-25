@@ -53,6 +53,11 @@ func connectFixture(t *testing.T) (
 	if err := proto.Unmarshal(personOut, &person); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := SetSubjectPosition(marshalProto(t, &engine.SetSubjectPositionRequest{
+		ProjectDir: dir, SubjectId: person.Subject.GetId(), GridX: 0, GridY: 0,
+	})); err != nil {
+		t.Fatal(err)
+	}
 	eventOut, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
 		ProjectDir: dir, UserId: userID, SourceId: sourceID, SubjectTypeId: eventTypeID, Label: "Census",
 	}))
@@ -61,6 +66,11 @@ func connectFixture(t *testing.T) (
 	}
 	var event engine.CreateSubjectResponse
 	if err := proto.Unmarshal(eventOut, &event); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := SetSubjectPosition(marshalProto(t, &engine.SetSubjectPositionRequest{
+		ProjectDir: dir, SubjectId: event.Subject.GetId(), GridX: 2, GridY: 4,
+	})); err != nil {
 		t.Fatal(err)
 	}
 	propsOut, err := ListProperties(marshalProto(t, &engine.ListPropertiesRequest{ProjectDir: dir}))
@@ -118,8 +128,6 @@ func TestCreateCitedBridge(t *testing.T) {
 					FromSubjectId: personID,
 					ToSubjectId:   eventID,
 					BridgeTypeKey: "participation",
-					GridX:         4,
-					GridY:         5,
 					ArtifactId:    artifactID,
 					LocatorJson:   validLocatorJSON,
 					Observations: []*engine.ObservationDraft{
@@ -168,6 +176,11 @@ func TestCreateCitedBridge(t *testing.T) {
 				}
 				var place engine.CreateSubjectResponse
 				if err := proto.Unmarshal(placeOut, &place); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := SetSubjectPosition(marshalProto(t, &engine.SetSubjectPositionRequest{
+					ProjectDir: dir, SubjectId: place.Subject.GetId(), GridX: 6, GridY: 4,
+				})); err != nil {
 					t.Fatal(err)
 				}
 				propsOut, err := ListProperties(marshalProto(t, &engine.ListPropertiesRequest{ProjectDir: dir}))

@@ -15,17 +15,14 @@ enum CitationComposerEntry: Equatable, Sendable {
         sourceID: String,
         fromSubjectID: String,
         toSubjectID: String,
-        bridgeTypeKey: String,
-        termID: String?,
-        gridX: Int64,
-        gridY: Int64
+        bridgeTypeKey: String
     )
 
     var sourceID: String {
         switch self {
         case .addProperty(let sourceID, _, _),
              .edit(let sourceID, _, _, _, _),
-             .connect(let sourceID, _, _, _, _, _, _):
+             .connect(let sourceID, _, _, _):
             return sourceID
         }
     }
@@ -74,33 +71,18 @@ enum CitationComposerEntry: Equatable, Sendable {
     }
 
     var connectFromSubjectID: String? {
-        if case .connect(_, let from, _, _, _, _, _) = self { return from }
+        if case .connect(_, let from, _, _) = self { return from }
         return nil
     }
 
     var connectToSubjectID: String? {
-        if case .connect(_, _, let to, _, _, _, _) = self { return to }
+        if case .connect(_, _, let to, _) = self { return to }
         return nil
     }
 
     var connectBridgeTypeKey: String? {
-        if case .connect(_, _, _, let key, _, _, _) = self { return key }
+        if case .connect(_, _, _, let key) = self { return key }
         return nil
-    }
-
-    var connectDisambiguationTermID: String? {
-        if case .connect(_, _, _, _, let term, _, _) = self { return term }
-        return nil
-    }
-
-    var connectGridX: Int64 {
-        if case .connect(_, _, _, _, _, let x, _) = self { return x }
-        return 0
-    }
-
-    var connectGridY: Int64 {
-        if case .connect(_, _, _, _, _, _, let y) = self { return y }
-        return 0
     }
 
     /// Remount key: the frozen query, not the live document.
@@ -110,12 +92,13 @@ enum CitationComposerEntry: Equatable, Sendable {
             return "add-\(sourceID)-\(subjectID)-\(artifactID ?? "")"
         case let .edit(sourceID, subjectID, citationID, artifactID, observationID):
             return "edit-\(sourceID)-\(subjectID)-\(citationID)-\(artifactID ?? "")-\(observationID ?? "")"
-        case let .connect(sourceID, fromID, toID, bridge, termID, gridX, gridY):
-            return "connect-\(sourceID)-\(fromID)-\(toID)-\(bridge)-\(termID ?? "")-\(gridX)-\(gridY)"
+        case let .connect(sourceID, fromID, toID, bridge):
+            return "connect-\(sourceID)-\(fromID)-\(toID)-\(bridge)"
         }
     }
 
     /// Fail-closed parse. Host mounts only when this succeeds.
+    /// Connect ignores leftover location term / grid keys (S8-11.7).
     init?(location: WorkspaceLocation) {
         guard location.sourceSurface == .citationComposer,
               let sourceID = location.sourceId, !sourceID.isEmpty
@@ -130,10 +113,7 @@ enum CitationComposerEntry: Equatable, Sendable {
                 sourceID: sourceID,
                 fromSubjectID: fromID,
                 toSubjectID: toID,
-                bridgeTypeKey: bridge,
-                termID: location.connectDisambiguationTermId,
-                gridX: location.connectGridX ?? 0,
-                gridY: location.connectGridY ?? 0
+                bridgeTypeKey: bridge
             )
             return
         }

@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// Inline Observation row: subject + property + value, or sunken Connect lock.
+/// Inline Observation row: subject + property + value, with row-level Save.
 struct CitationComposerObservationRow: View {
-    let row: CitationComposerModel.ObservationRow
+    let row: ObservationRow
     let property: CatalogProperty?
     let propertyOptions: [PVComboBoxOption]
     let subjectOptions: [PVComboBoxOption]
@@ -17,23 +17,15 @@ struct CitationComposerObservationRow: View {
     var onTerm: @MainActor (String) -> Void
     var onEditValue: @MainActor () -> Void
     var onTogglePolarity: @MainActor () -> Void
-    var onRemove: @MainActor () -> Void
+    var onSave: @MainActor () -> Void
+    var onRevert: @MainActor () -> Void
+    var onRequestDelete: @MainActor () -> Void
     var onAddCustomTerm: @MainActor () -> Void
 
     @State private var actionsMenu = PVContextMenuState()
     @State private var actionsKeyboard = PVContextMenuKeyboard.inactive
 
     var body: some View {
-        Group {
-            if row.isConnectFixed {
-                fixedRow
-            } else {
-                editableRow
-            }
-        }
-    }
-
-    private var editableRow: some View {
         PVCard(tone: isFocused ? .raised : .card, padding: 0) {
             VStack(alignment: .leading, spacing: PVSpacing.space3) {
                 HStack(alignment: .center, spacing: PVSpacing.space3) {
@@ -46,7 +38,7 @@ struct CitationComposerObservationRow: View {
                         label: L10n.CitationComposer.subjectLabel,
                         accessibilityIdentifierPrefix: "citationComposer.observation.subject.\(row.id.uuidString)"
                     )
-                    .disabled(inert)
+                    .disabled(inert || isSaving)
                     PVComboBox(
                         selection: propertyBinding,
                         options: propertyOptions,
@@ -56,7 +48,8 @@ struct CitationComposerObservationRow: View {
                         label: L10n.CitationComposer.propertyLabel,
                         accessibilityIdentifierPrefix: "citationComposer.observation.property.\(row.id.uuidString)"
                     )
-                    .disabled(inert)
+                    .disabled(inert || isSaving)
+                    statusBadge
                     if !inert {
                         PVIconButton(
                             .ellipsis,
@@ -74,7 +67,32 @@ struct CitationComposerObservationRow: View {
                         }
                     }
                 }
+                if let error = row.propertyError {
+                    Text(verbatim: error)
+                        .font(PVFont.body(size: PVTypeScale.caption))
+                        .foregroundStyle(PVColor.danger)
+                }
+                if case .error(let message) = row.state {
+                    PVCallout(tone: .danger, message: message, compact: true)
+                }
                 valueEditor
+                HStack {
+                    Spacer(minLength: 0)
+                    if canRevert {
+                        PVButton(L10n.CitationComposer.revertRow, variant: .ghost, size: .sm, action: onRevert)
+                            .disabled(inert || isSaving)
+                    }
+                    if row.canSave {
+                        PVButton(
+                            L10n.CitationComposer.saveRow,
+                            variant: .secondary,
+                            size: .sm,
+                            loading: isSaving,
+                            action: onSave
+                        )
+                        .disabled(inert)
+                    }
+                }
             }
             .padding(PVSpacing.space5)
         }
@@ -88,43 +106,52 @@ struct CitationComposerObservationRow: View {
         .accessibilityAddTraits(isFocused ? .isSelected : [])
     }
 
-    private var fixedRow: some View {
-        PVCard(tone: .sunken, cornerRadius: PVRadius.sm) {
-            HStack(alignment: .center, spacing: PVSpacing.space5) {
-                PVIcon(.lock, size: 14)
-                    .foregroundStyle(PVColor.textFaint)
-                VStack(alignment: .leading, spacing: PVSpacing.space1) {
-                    Text(verbatim: property?.label ?? "—")
-                        .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
-                        .foregroundStyle(PVColor.textSecondary)
-                    Text(verbatim: summary)
-                        .font(PVFont.body(size: PVTypeScale.bodySmall))
-                        .foregroundStyle(PVColor.textPrimary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                PVBadge(L10n.CitationComposer.connectSystemBadge, tone: .neutral)
-            }
-            .padding(.horizontal, PVSpacing.space5)
-            .padding(.vertical, PVSpacing.space5)
+    private var isSaving: Bool {
+        if case .saving = row.state { return true }
+        return false
+    }
+
+    private var canRevert: Bool {
+        switch row.state {
+        case .draft, .edited, .error:
+            return true
+        case .saved, .saving:
+            return false
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(
-            Text(verbatim: "\(property?.label ?? ""), \(summary), \(String(localized: L10n.CitationComposer.connectSystemBadge))")
-        )
+    }
+
+    @ViewBuilder
+    private var statusBadge: some View {
+        switch row.state {
+        case .draft:
+            PVBadge(L10n.CitationComposer.rowStateNew, tone: .info)
+        case .edited:
+            PVBadge(L10n.CitationComposer.rowStateEdited, tone: .warning)
+        case .saving:
+            PVBadge(L10n.CitationComposer.rowStateSaving, tone: .neutral)
+        case .error:
+            PVBadge(L10n.CitationComposer.rowStateError, tone: .danger)
+        case .saved:
+            if let ref = row.persistedRef, !ref.isEmpty {
+                Text(verbatim: ref)
+                    .font(PVFont.mono(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textMuted)
+            }
+        }
     }
 
     @ViewBuilder
     private var valueEditor: some View {
         switch property?.valueType {
-        case "text":
+        case PropertyValueType.text.rawValue:
             PVInput(text: textBinding, size: .sm)
-                .disabled(inert)
+                .disabled(inert || isSaving)
                 .accessibilityIdentifier("citationComposer.observation.text.\(row.id.uuidString)")
-        case "integer":
+        case PropertyValueType.integer.rawValue:
             PVInput(text: integerBinding, size: .sm, mono: true)
-                .disabled(inert)
+                .disabled(inert || isSaving)
                 .accessibilityIdentifier("citationComposer.observation.integer.\(row.id.uuidString)")
-        case "term":
+        case PropertyValueType.term.rawValue:
             HStack(spacing: PVSpacing.space3) {
                 PVComboBox(
                     selection: termBinding,
@@ -135,26 +162,26 @@ struct CitationComposerObservationRow: View {
                     label: L10n.CitationComposer.termLabel,
                     accessibilityIdentifierPrefix: "citationComposer.observation.term.\(row.id.uuidString)"
                 )
-                .disabled(inert)
+                .disabled(inert || isSaving)
                 if !inert {
                     PVButton(L10n.CitationComposer.addCustomTerm, variant: .ghost, size: .sm, action: onAddCustomTerm)
                 }
             }
-        case "name", "date":
+        case PropertyValueType.name.rawValue, PropertyValueType.date.rawValue:
             Button(action: onEditValue) {
                 HStack {
                     if summary.isEmpty {
                         Text(L10n.CitationComposer.editValuePlaceholder)
                     } else {
                         Text(verbatim: summary)
-                            .font(property?.valueType == "date" ? PVFont.mono(size: PVTypeScale.bodySmall) : PVFont.body(size: PVTypeScale.bodySmall))
+                            .font(property?.valueType == PropertyValueType.date.rawValue ? PVFont.mono(size: PVTypeScale.bodySmall) : PVFont.body(size: PVTypeScale.bodySmall))
                     }
                     Spacer(minLength: 0)
                     PVIcon(.penLine, size: 12)
                 }
             }
             .buttonStyle(.pv(.secondary, size: .sm))
-            .disabled(inert)
+            .disabled(inert || isSaving)
             .accessibilityLabel(Text(L10n.CitationComposer.editObservation))
             .accessibilityIdentifier("citationComposer.observation.edit.\(row.id.uuidString)")
         default:
@@ -163,13 +190,13 @@ struct CitationComposerObservationRow: View {
     }
 
     private var polarityActionTitle: LocalizedStringResource {
-        row.polarity == "negative"
-            ? L10n.CitationComposer.polarityAsserts
-            : L10n.CitationComposer.polarityNegates
+        row.polarity == ObservationPolarity.negative.rawValue
+            ? L10n.CitationComposer.affirmObservation
+            : L10n.CitationComposer.negateObservation
     }
 
     private var actionsMenuPanel: some View {
-        PVContextMenuPanel(width: 180) {
+        PVContextMenuPanel(width: 220) {
             PVContextMenuItem(
                 polarityActionTitle,
                 index: 0,
@@ -177,12 +204,14 @@ struct CitationComposerObservationRow: View {
             ) {
                 onTogglePolarity()
             }
-            PVContextMenuItem(
-                L10n.CitationComposer.removeObservation,
-                index: 1,
-                accessibilityIdentifier: "citationComposer.observation.remove.\(row.id.uuidString)"
-            ) {
-                onRemove()
+            if row.persistedID != nil {
+                PVContextMenuItem(
+                    L10n.CitationComposer.removeObservation,
+                    index: 1,
+                    accessibilityIdentifier: "citationComposer.observation.remove.\(row.id.uuidString)"
+                ) {
+                    onRequestDelete()
+                }
             }
         }
     }
@@ -192,49 +221,35 @@ struct CitationComposerObservationRow: View {
             actionsMenu.dismiss()
             return
         }
+        var titles = [String(localized: polarityActionTitle)]
+        if row.persistedID != nil {
+            titles.append(String(localized: L10n.CitationComposer.removeObservation))
+        }
         actionsKeyboard = PVContextMenuKeyboard(
-            itemCount: 2,
+            itemCount: titles.count,
             activeIndex: -1,
-            itemTitles: [
-                String(localized: polarityActionTitle),
-                String(localized: L10n.CitationComposer.removeObservation),
-            ]
+            itemTitles: titles
         )
         actionsMenu.present(at: CGPoint(x: 0, y: PVSpacing.controlHeightSmall))
     }
 
     private var subjectBinding: Binding<String> {
-        Binding(
-            get: { row.subjectID },
-            set: { newValue in onSubject(newValue) }
-        )
+        Binding(get: { row.subjectID }, set: { onSubject($0) })
     }
 
     private var propertyBinding: Binding<String> {
-        Binding(
-            get: { row.propertyID },
-            set: { newValue in onProperty(newValue) }
-        )
+        Binding(get: { row.propertyID }, set: { onProperty($0) })
     }
 
     private var textBinding: Binding<String> {
-        Binding(
-            get: { row.valueText },
-            set: { newValue in onText(newValue) }
-        )
+        Binding(get: { row.valueText }, set: { onText($0) })
     }
 
     private var integerBinding: Binding<String> {
-        Binding(
-            get: { row.valueIntegerText },
-            set: { newValue in onInteger(newValue) }
-        )
+        Binding(get: { row.valueIntegerText }, set: { onInteger($0) })
     }
 
     private var termBinding: Binding<String> {
-        Binding(
-            get: { row.valueTermID },
-            set: { newValue in onTerm(newValue) }
-        )
+        Binding(get: { row.valueTermID }, set: { onTerm($0) })
     }
 }

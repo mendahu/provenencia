@@ -56,6 +56,15 @@ struct CitationComposerView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(PVColor.surfacePage)
+        .onAppear {
+            model.navigation = navigation
+            navigation.leaveGuard = model
+        }
+        .onDisappear {
+            if navigation.leaveGuard === model {
+                navigation.leaveGuard = nil
+            }
+        }
         .accessibilityIdentifier("workspace.destination.citationComposer")
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(L10n.CitationComposer.accessibilityTitle))
@@ -70,7 +79,8 @@ struct CitationComposerView: View {
             isPresented: observationDialogBinding,
             copy: PVFormDialogCopy(
                 title: L10n.CitationComposer.editValueTitle,
-                confirm: L10n.CitationComposer.save,
+                subtitle: L10n.CitationComposer.valueDialogSubtitle,
+                confirm: L10n.CitationComposer.applyValue,
                 cancel: L10n.CitationComposer.cancel
             ),
             width: observationDialogWidth,
@@ -110,23 +120,73 @@ struct CitationComposerView: View {
                     .accessibilityIdentifier("citationComposer.term.label")
             }
         }
+        .pvFormDialog(
+            isPresented: newSubjectBinding,
+            copy: PVFormDialogCopy(
+                title: L10n.CitationComposer.newSubjectTitle,
+                confirm: L10n.CitationComposer.newSubjectConfirm,
+                cancel: L10n.CitationComposer.cancel
+            ),
+            isRunning: model.newSubjectDraft?.isSaving == true,
+            confirmDisabled: (model.newSubjectDraft?.label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ?? true)
+                || model.isGraphReloading,
+            accessibilityIdentifierPrefix: "citationComposer.newSubject",
+            onConfirm: { Task { await model.confirmNewSubject() } }
+        ) {
+            VStack(alignment: .leading, spacing: PVSpacing.space5) {
+                PVField(label: L10n.CitationComposer.newSubjectLabel, error: model.newSubjectDraft?.error) {
+                    PVInput(text: newSubjectLabelBinding, size: .sm)
+                        .accessibilityIdentifier("citationComposer.newSubject.label")
+                }
+                PVField(label: L10n.CitationComposer.descriptionLabel) {
+                    PVTextArea(text: newSubjectDescriptionBinding, lineLimit: 1...3)
+                        .accessibilityIdentifier("citationComposer.newSubject.description")
+                }
+            }
+        }
         .pvConfirm(
-            item: abandonBinding,
-            copy: { item in
+            item: deleteBinding,
+            copy: { _ in
                 PVConfirmCopy(
-                    title: L10n.CitationComposer.abandonTitle(ref: model.activeCitationRef),
-                    message: L10n.CitationComposer.abandonMessage(
-                        artifactTitle: model.artifacts.first(where: { $0.id == item.targetArtifactID })?.label
-                            ?? item.targetArtifactID
-                    ),
-                    confirm: L10n.CitationComposer.abandonConfirm,
-                    cancel: L10n.CitationComposer.abandonCancel
+                    title: String(localized: L10n.CitationComposer.deleteObservationTitle),
+                    message: String(localized: L10n.CitationComposer.deleteObservationMessage),
+                    confirm: L10n.CitationComposer.deleteObservationConfirm,
+                    cancel: L10n.CitationComposer.cancel
                 )
             },
             tone: .danger,
-            accessibilityIdentifierPrefix: "citationComposer.abandon",
-            onConfirm: { model.confirmAbandonArtifact() },
+            accessibilityIdentifierPrefix: "citationComposer.deleteObservation",
+            onConfirm: { Task { await model.observationRows.confirmDelete() } },
             detail: { _ in EmptyView() }
+        )
+        .pvConfirm(
+            item: leaveBinding,
+            copy: { _ in
+                PVConfirmCopy(
+                    title: String(localized: L10n.CitationComposer.leaveTitle),
+                    message: model.unsavedSummary,
+                    confirm: L10n.CitationComposer.leaveDiscard,
+                    cancel: L10n.CitationComposer.leaveKeepEditing
+                )
+            },
+            tone: .danger,
+            accessibilityIdentifierPrefix: "citationComposer.leave",
+            onConfirm: { model.discardLeaveChanges() },
+            detail: { _ in EmptyView() }
+        )
+    }
+
+    private var leaveBinding: Binding<CitationComposerModel.PendingLeave?> {
+        Binding(
+            get: { model.pendingLeave },
+            set: { newValue in
+                if newValue == nil {
+                    model.keepEditingAfterLeave()
+                } else {
+                    model.pendingLeave = newValue
+                }
+            }
         )
     }
 
@@ -214,15 +274,42 @@ struct CitationComposerView: View {
         )
     }
 
-    private var abandonBinding: Binding<CitationComposerModel.ArtifactAbandon?> {
+    private var deleteBinding: Binding<CitationObservationRows.PendingDelete?> {
         Binding(
-            get: { model.pendingArtifactAbandon },
-            set: { model.pendingArtifactAbandon = $0 }
+            get: { model.observationRows.pendingDelete },
+            set: { newValue in
+                if newValue == nil {
+                    model.observationRows.cancelDelete()
+                } else {
+                    model.observationRows.pendingDelete = newValue
+                }
+            }
+        )
+    }
+
+    private var newSubjectBinding: Binding<Bool> {
+        Binding(
+            get: { model.newSubjectDraft != nil },
+            set: { if !$0 { model.cancelNewSubject() } }
+        )
+    }
+
+    private var newSubjectLabelBinding: Binding<String> {
+        Binding(
+            get: { model.newSubjectDraft?.label ?? "" },
+            set: { model.newSubjectDraft?.label = $0 }
+        )
+    }
+
+    private var newSubjectDescriptionBinding: Binding<String> {
+        Binding(
+            get: { model.newSubjectDraft?.description ?? "" },
+            set: { model.newSubjectDraft?.description = $0 }
         )
     }
 
     private var observationDialogWidth: CGFloat {
         let type = model.observationDialog.flatMap { model.catalogProperty(id: $0.propertyID)?.valueType }
-        return type == "name" ? 560 : 480
+        return type == PropertyValueType.name.rawValue ? 560 : 480
     }
 }

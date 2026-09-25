@@ -35,6 +35,7 @@ const (
 	CodeLocatorInvalid               = "locator.invalid"
 	CodeCitationsInvalid             = "citations.invalid"
 	CodeObservationsInvalid          = "observations.invalid"
+	CodeObservationsEdgeLocked       = "observations.edge_locked"
 	CodeSourceTypesInvalid           = "sourcetypes.invalid"
 	CodeSourceTypesInUse             = "sourcetypes.in_use"
 	CodeSourceTypesDuplicateKey      = "sourcetypes.duplicate_key"

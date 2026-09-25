@@ -1,22 +1,37 @@
 import Foundation
 
 /// Durable bridge copy: relational **phrase** on cards (S7-D3 §3.1) and full
-/// **sentence** on the composer crumb (S7-D4).
+/// **sentence** wherever a bridge is named (S8-D8 §2.4).
 enum EvidenceBridgeEdgeSummary {
     /// Relational phrase only — “is the father of”, “participated as witness”.
     static func phrase(for placed: SourceGraphPlacedBridge) -> String {
         phrase(kind: placed.kind, term: termDisplay(kind: placed.kind, in: placed.observations))
     }
 
-    /// Full sentence — “John is the father of Mary”.
-    static func sentence(for placed: SourceGraphPlacedBridge) -> String {
-        sentence(
-            kind: placed.kind,
-            person: subjectDisplay(propertyKey: "person", in: placed.observations),
-            related: subjectDisplay(propertyKey: "related_to", in: placed.observations),
-            event: subjectDisplay(propertyKey: "event", in: placed.observations),
-            place: subjectDisplay(propertyKey: "place", in: placed.observations),
-            term: termDisplay(kind: placed.kind, in: placed.observations)
+    /// Snapshot-aware sentence. Nouns come from cited endpoints; unreadable
+    /// edges fall back to the stored label or kind phrase · ref. Never empty.
+    static func sentence(for bridge: SourceGraphPlacedBridge, in snapshot: SourceGraphSnapshot) -> String {
+        let resolved = snapshot.bridges.first(where: { $0.id == bridge.id }) ?? bridge
+        let endpointA = noun(
+            subjectID: bridge.endpointAID ?? resolved.endpointAID,
+            snapshot: snapshot
+        )
+        let endpointB = noun(
+            subjectID: bridge.endpointBID ?? resolved.endpointBID,
+            snapshot: snapshot
+        )
+        let term = termDisplay(kind: bridge.kind, in: bridge.observations)
+        if endpointA == nil || endpointB == nil {
+            return nonEmpty(wholeNameFallback(for: bridge))
+        }
+        return nonEmpty(
+            ConnectEndpointBinding.sentence(
+                kind: bridge.kind,
+                endpointA: endpointA,
+                endpointB: endpointB,
+                term: term
+            ),
+            fallback: wholeNameFallback(for: bridge)
         )
     }
 
@@ -96,11 +111,34 @@ enum EvidenceBridgeEdgeSummary {
         return phrase(kind: .participation, term: role)
     }
 
-    private static func subjectDisplay(
-        propertyKey: String,
-        in observations: [CatalogObservation]
-    ) -> String? {
-        display(propertyKey: propertyKey, in: observations)
+    private static func noun(subjectID: String?, snapshot: SourceGraphSnapshot) -> String? {
+        guard let subjectID,
+              let placed = snapshot.subjects.first(where: { $0.id == subjectID })
+        else { return nil }
+        let label = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !label.isEmpty { return label }
+        let typed = L10n.EvidenceGraph.bridgeNounTypeAndRef(
+            type: placed.typeLabel,
+            ref: placed.subject.ref
+        )
+        return typed.isEmpty ? nil : typed
+    }
+
+    private static func wholeNameFallback(for bridge: SourceGraphPlacedBridge) -> String {
+        let stored = bridge.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !stored.isEmpty { return stored }
+        return L10n.EvidenceGraph.bridgeNameKindAndRef(
+            phrase: phrase(for: bridge),
+            ref: bridge.subject.ref
+        )
+    }
+
+    private static func nonEmpty(_ value: String, fallback: String = "") -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty { return trimmed }
+        let next = fallback.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !next.isEmpty { return next }
+        return "—"
     }
 
     private static func termDisplay(
@@ -122,16 +160,5 @@ enum EvidenceBridgeEdgeSummary {
             )
         }
         return catalog.isEmpty ? nil : catalog
-    }
-
-    private static func display(
-        propertyKey: String,
-        in observations: [CatalogObservation]
-    ) -> String? {
-        guard let observation = observations.first(where: { $0.propertyKey == propertyKey })
-        else { return nil }
-        let rendered = ObservationValueDisplay.string(for: observation)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        return rendered.isEmpty ? nil : rendered
     }
 }

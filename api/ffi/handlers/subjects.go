@@ -49,6 +49,10 @@ func CreateSubject(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	var placement *subjects.Placement
+	if req.GetHasPlacement() {
+		placement = &subjects.Placement{GridX: req.GetGridX(), GridY: req.GetGridY()}
+	}
 	var out *engine.CreateSubjectResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		s, err := subjects.Create(c, userID, subjects.CreateInput{
@@ -56,7 +60,7 @@ func CreateSubject(in []byte) ([]byte, error) {
 			SubjectTypeID: typeID,
 			Label:         req.GetLabel(),
 			Description:   req.GetDescription(),
-		})
+		}, placement)
 		if err != nil {
 			return err
 		}

@@ -174,11 +174,14 @@ struct EvidenceGraphModelTests {
         #expect(model.pendingGridX == 2)
         #expect(model.pendingGridY == 3)
         model.draft.label = "Alice"
+        store.recordedCalls = []
 
         let id = await model.confirmCreate()
         #expect(id != nil)
         #expect(model.armedKind == nil)
         #expect(model.isCreating == false)
+        #expect(store.recordedCalls.contains { $0.hasPrefix("createSubject") && $0.contains("placement=2,3") })
+        #expect(store.recordedCalls.contains { $0.hasPrefix("setSubjectPosition") } == false)
 
         let subjects = try await store.listSubjects(projectDir: projectDir, sourceID: sourceID)
         #expect(subjects.count == 1)
@@ -367,21 +370,13 @@ struct EvidenceGraphModelTests {
         #expect(model.connectOriginID == "p1")
         await model.handleConnectPick(subjectID: "e1", kind: .event, label: "Birth")
         #expect(model.isCreating == false)
-        #expect(model.pendingDisambiguation != nil)
-        #expect(model.canConfirmDisambiguation == false)
-        #expect((store.subjectsBySource[sourceID] ?? []).count == 2)
-
-        model.selectDisambiguationTerm("term-witness")
-        #expect(model.canConfirmDisambiguation)
-        let handoff = model.confirmDisambiguation()
+        let handoff = model.consumeComposerHandoff()
         #expect(handoff?.isConnectPrefill == true)
         #expect(handoff?.subjectId == nil)
         #expect(handoff?.connectFromSubjectId == "p1")
         #expect(handoff?.connectToSubjectId == "e1")
         #expect(handoff?.connectBridgeTypeKey == "participation")
-        #expect(handoff?.connectDisambiguationTermId == "term-witness")
         #expect(handoff?.sourceSurface == .citationComposer)
-        #expect(model.pendingDisambiguation == nil)
 
         let subjects = try await store.listSubjects(projectDir: projectDir, sourceID: sourceID)
         #expect(subjects.count == 2)
@@ -424,58 +419,11 @@ struct EvidenceGraphModelTests {
         model.toggleConnect()
         await model.handleConnectPick(subjectID: "e1", kind: .event, label: "Birth")
         await model.handleConnectPick(subjectID: "pl1", kind: .place, label: "Leeds")
-        #expect(model.pendingDisambiguation == nil)
         #expect(model.isCreating == false)
         let handoff = model.consumeComposerHandoff()
         #expect(handoff?.isConnectPrefill == true)
         #expect(handoff?.connectBridgeTypeKey == "location")
-        #expect(handoff?.connectDisambiguationTermId == nil)
         #expect(handoff?.subjectId == nil)
-    }
-
-    @Test func cancelDisambiguationWritesNothingAndKeepsOrigin() async {
-        let store = makeStore()
-        let model = makeModel(store: store)
-        await model.prepare()
-        let person = CatalogSubject(
-            id: "p1",
-            ref: "CPR-1",
-            sourceID: sourceID,
-            subjectTypeID: personTypeID,
-            label: "Alice",
-            description: ""
-        )
-        let event = CatalogSubject(
-            id: "e1",
-            ref: "CEV-1",
-            sourceID: sourceID,
-            subjectTypeID: "type-event",
-            label: "Birth",
-            description: ""
-        )
-        store.subjectsBySource[sourceID] = [person, event]
-        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
-        model.session.setQueryValue(
-            key,
-            value: graphRows(
-                sourceId: sourceID,
-                subjects: [person, event],
-                positions: [
-                    CatalogSubjectPosition(subjectID: "p1", gridX: 0, gridY: 0),
-                    CatalogSubjectPosition(subjectID: "e1", gridX: 4, gridY: 0),
-                ],
-                types: store.subjectTypesByProject[projectDir] ?? []
-            )
-        )
-        model.toggleConnect()
-        await model.handleConnectPick(subjectID: "p1", kind: .person, label: "Alice")
-        await model.handleConnectPick(subjectID: "e1", kind: .event, label: "Birth")
-        #expect(model.pendingDisambiguation != nil)
-        model.cancelDisambiguation()
-        #expect(model.pendingDisambiguation == nil)
-        #expect(model.armedConnect)
-        #expect(model.connectOriginID == "p1")
-        #expect((store.subjectsBySource[sourceID] ?? []).count == 2)
     }
 
     @Test func personPlaceConnectToastsAndKeepsOrigin() async {
@@ -517,7 +465,6 @@ struct EvidenceGraphModelTests {
         model.toggleConnect()
         await model.handleConnectPick(subjectID: "p1", kind: .person, label: "Alice")
         await model.handleConnectPick(subjectID: "pl1", kind: .place, label: "Town")
-        #expect(model.pendingDisambiguation == nil)
         #expect(model.isCreating == false)
         #expect(model.armedConnect == true)
         #expect(model.connectOriginID == "p1")
@@ -611,6 +558,143 @@ struct EvidenceGraphModelTests {
         #expect(model.editingSubjectID == nil)
         #expect(store.subjectsBySource[sourceID]?.first?.label == "New name")
         #expect(store.subjectsBySource[sourceID]?.first?.description == "Updated")
+    }
+
+    @Test func bridgeEditSendsStoredLabelUnchanged() async {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.prepare()
+        let bridge = CatalogSubject(
+            id: "b1",
+            ref: "CPA-1",
+            sourceID: sourceID,
+            subjectTypeID: "type-participation",
+            label: "Stored",
+            description: "Was"
+        )
+        store.subjectsBySource[sourceID] = [bridge]
+        store.subjectPositionsBySubject["b1"] = CatalogSubjectPosition(
+            subjectID: "b1", gridX: 2, gridY: 2
+        )
+        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        model.session.setQueryValue(
+            key,
+            value: graphRows(
+                sourceId: sourceID,
+                subjects: [bridge],
+                positions: [CatalogSubjectPosition(subjectID: "b1", gridX: 2, gridY: 2)],
+                types: store.subjectTypesByProject[projectDir] ?? []
+            )
+        )
+        model.beginEdit(subjectID: "b1")
+        model.draft.label = "Changed in the dialog"
+        model.draft.description = "New note"
+        store.recordedCalls = []
+        let id = await model.confirmEdit()
+        #expect(id == "b1")
+        #expect(store.recordedCalls.contains { $0 == "updateSubject id=b1 label=Stored" })
+        #expect(store.subjectsBySource[sourceID]?.first?.label == "Stored")
+        #expect(store.subjectsBySource[sourceID]?.first?.description == "New note")
+    }
+
+    @Test func failedOlderDragDoesNotRevertNewerMove() async {
+        let store = makeStore()
+        let subject = CatalogSubject(
+            id: "s1",
+            ref: "CPR-1",
+            sourceID: sourceID,
+            subjectTypeID: personTypeID,
+            label: "A",
+            description: ""
+        )
+        store.subjectsBySource[sourceID] = [subject]
+        store.subjectPositionsBySubject["s1"] = CatalogSubjectPosition(
+            subjectID: "s1", gridX: 1, gridY: 2
+        )
+        let model = makeModel(store: store)
+        await model.prepare()
+        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        model.session.setQueryValue(
+            key,
+            value: SourceGraphRows(
+                sourceId: sourceID,
+                subjects: [subject],
+                positions: [CatalogSubjectPosition(subjectID: "s1", gridX: 1, gridY: 2)]
+            )
+        )
+        store.setSubjectPositionDelayNanoseconds = 80_000_000
+        store.setSubjectPositionErrors = [
+            CoreInvokeError.coded(status: 1, code: "internal.unknown", kind: .internal, params: []),
+            nil,
+        ]
+        _ = model.commitDrag(
+            subjectID: "s1",
+            originGridX: 1,
+            originGridY: 2,
+            documentDelta: CGSize(width: 160, height: 0)
+        )
+        try? await Task.sleep(nanoseconds: 10_000_000)
+        _ = model.commitDrag(
+            subjectID: "s1",
+            originGridX: 5,
+            originGridY: 2,
+            documentDelta: CGSize(width: 160, height: 0)
+        )
+        try? await Task.sleep(nanoseconds: 150_000_000)
+        let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+        #expect(handle?.value?.positions.first?.gridX == 9)
+        #expect(handle?.value?.positions.first?.gridY == 2)
+        #expect(store.subjectPositionsBySubject["s1"]?.gridX == 9)
+    }
+
+    @Test func successfulOlderDragIsConfirmedWhenNewerFails() async {
+        let store = makeStore()
+        let subject = CatalogSubject(
+            id: "s1",
+            ref: "CPR-1",
+            sourceID: sourceID,
+            subjectTypeID: personTypeID,
+            label: "A",
+            description: ""
+        )
+        store.subjectsBySource[sourceID] = [subject]
+        store.subjectPositionsBySubject["s1"] = CatalogSubjectPosition(
+            subjectID: "s1", gridX: 1, gridY: 2
+        )
+        let model = makeModel(store: store)
+        await model.prepare()
+        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        model.session.setQueryValue(
+            key,
+            value: SourceGraphRows(
+                sourceId: sourceID,
+                subjects: [subject],
+                positions: [CatalogSubjectPosition(subjectID: "s1", gridX: 1, gridY: 2)]
+            )
+        )
+        store.setSubjectPositionDelayNanoseconds = 80_000_000
+        store.setSubjectPositionErrors = [
+            nil,
+            CoreInvokeError.coded(status: 1, code: "internal.unknown", kind: .internal, params: []),
+        ]
+        _ = model.commitDrag(
+            subjectID: "s1",
+            originGridX: 1,
+            originGridY: 2,
+            documentDelta: CGSize(width: 160, height: 0)
+        )
+        try? await Task.sleep(nanoseconds: 10_000_000)
+        _ = model.commitDrag(
+            subjectID: "s1",
+            originGridX: 5,
+            originGridY: 2,
+            documentDelta: CGSize(width: 160, height: 0)
+        )
+        try? await Task.sleep(nanoseconds: 200_000_000)
+        let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+        #expect(handle?.value?.positions.first?.gridX == 5)
+        #expect(handle?.value?.positions.first?.gridY == 2)
+        #expect(store.subjectPositionsBySubject["s1"]?.gridX == 5)
     }
 
     @Test func noArtifactDisablesArmingAndComposerLocation() async {

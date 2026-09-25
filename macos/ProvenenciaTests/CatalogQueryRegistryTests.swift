@@ -264,7 +264,8 @@ struct CatalogQueryRegistryTests {
         #expect(handle.value?.positions.first { $0.subjectID == "sub-1" }?.gridX == 2)
         let snapshot = SourceGraphSnapshot.build(
             rows: handle.value ?? SourceGraphRows(sourceId: "s1"),
-            types: store.subjectTypesByProject[projectDir] ?? []
+            types: store.subjectTypesByProject[projectDir] ?? [],
+            rules: CatalogConnectRule.productMatrix
         )
         #expect(snapshot.subjects.count == 1)
         #expect(snapshot.subjects.first?.kind == .person)

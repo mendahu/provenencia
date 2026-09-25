@@ -7,6 +7,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -91,19 +92,19 @@ func TestObservations(t *testing.T) {
 		}
 		person, err := subjects.Create(c, userID, subjects.CreateInput{
 			SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Bob",
-		})
+		}, &subjects.Placement{GridX: 0, GridY: 0})
 		if err != nil {
 			t.Fatal(err)
 		}
 		place, err := subjects.Create(c, userID, subjects.CreateInput{
 			SourceID: src.ID, SubjectTypeID: placeType.ID,
-		})
+		}, &subjects.Placement{GridX: 4, GridY: 0})
 		if err != nil {
 			t.Fatal(err)
 		}
 		event, err := subjects.Create(c, userID, subjects.CreateInput{
 			SourceID: src.ID, SubjectTypeID: eventType.ID, Label: "Birth",
-		})
+		}, &subjects.Placement{GridX: 2, GridY: 4})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -322,6 +323,193 @@ func TestObservations(t *testing.T) {
 				}})
 				if !errors.Is(err, observations.ErrInvalid) {
 					t.Fatalf("got %v want ErrInvalid", err)
+				}
+			},
+		},
+		{
+			name: "update date in place records date_value change",
+			run: func(t *testing.T) {
+				c, s := mustSeed(t)
+				year := 1842
+				res, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, []observations.Input{{
+					SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
+					Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year},
+				}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				year2 := 1843
+				got, err := observations.Update(c, userID, observations.Input{
+					ID: res.Observations[0].ID, SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
+					Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year2},
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got.Date == nil || got.Date.StartYear == nil || *got.Date.StartYear != 1843 {
+					t.Fatalf("date %+v", got.Date)
+				}
+				if latestAction(t, c) != "update_observation" {
+					t.Fatalf("action %q", latestAction(t, c))
+				}
+			},
+		},
+		{
+			name: "update no-op records no revision",
+			run: func(t *testing.T) {
+				c, s := mustSeed(t)
+				res, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, []observations.Input{{
+					SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
+					ValueText: "Boston", HasText: true,
+				}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				db, err := c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				var before int
+				if err := db.QueryRow(`SELECT COUNT(*) FROM audit_transactions`).Scan(&before); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := observations.Update(c, userID, observations.Input{
+					ID: res.Observations[0].ID, SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
+					ValueText: "Boston", HasText: true,
+				}); err != nil {
+					t.Fatal(err)
+				}
+				var after int
+				if err := db.QueryRow(`SELECT COUNT(*) FROM audit_transactions`).Scan(&after); err != nil {
+					t.Fatal(err)
+				}
+				if after != before {
+					t.Fatalf("revisions before=%d after=%d", before, after)
+				}
+			},
+		},
+		{
+			name: "delete records full row and leaves citation",
+			run: func(t *testing.T) {
+				c, s := mustSeed(t)
+				res, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+					Notes: []string{"keep me"},
+				}, []observations.Input{{
+					SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
+					ValueText: "Boston", HasText: true,
+					Notes: []string{"obs note"},
+				}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := observations.Delete(c, userID, res.Observations[0].ID); err != nil {
+					t.Fatal(err)
+				}
+				if latestAction(t, c) != "delete_observation" {
+					t.Fatalf("action %q", latestAction(t, c))
+				}
+				list, err := observations.ListByCitation(c, res.Citation.ID)
+				if err != nil || len(list) != 0 {
+					t.Fatalf("obs leftover %v len=%d", err, len(list))
+				}
+				if _, err := citations.Get(c, res.Citation.ID); err != nil {
+					t.Fatalf("citation should remain: %v", err)
+				}
+			},
+		},
+		{
+			name: "edge rows refuse update and delete",
+			run: func(t *testing.T) {
+				c, s := mustSeed(t)
+				personProp, err := properties.Lookup(c, "person", properties.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				eventProp, err := properties.Lookup(c, "event", properties.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				roleProp, err := properties.Lookup(c, "role", properties.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				roleTerm, err := propertyterms.Lookup(c, roleProp.ID, "witness", propertyterms.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				bridge, err := connect.CreateCitedBridge(c, userID, connect.CreateInput{
+					SourceID: s.source.ID, FromSubjectID: s.person.ID, ToSubjectID: s.event.ID,
+					Citation: citations.CreateInput{ArtifactID: s.artifact.ID, LocatorJSON: validLocator},
+					Observations: []observations.Input{
+						{PropertyID: personProp.ID, ValueSubjectID: s.person.ID},
+						{PropertyID: eventProp.ID, ValueSubjectID: s.event.ID},
+						{PropertyID: roleProp.ID, ValueTermID: roleTerm.ID},
+					},
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				var edge observations.Observation
+				var role observations.Observation
+				for _, o := range bridge.Observations {
+					if string(o.PropertyID) == string(personProp.ID) {
+						edge = o
+					}
+					if string(o.PropertyID) == string(roleProp.ID) {
+						role = o
+					}
+				}
+				if len(edge.ID) != 16 || len(role.ID) != 16 {
+					t.Fatalf("missing rows edge=%x role=%x", edge.ID, role.ID)
+				}
+				if err := observations.Delete(c, userID, edge.ID); !errors.Is(err, observations.ErrEdgeLocked) {
+					t.Fatalf("delete edge %v", err)
+				}
+				if _, err := observations.Update(c, userID, observations.Input{
+					ID: edge.ID, SubjectID: edge.SubjectID, PropertyID: edge.PropertyID,
+					ValueSubjectID: s.person.ID,
+				}); !errors.Is(err, observations.ErrEdgeLocked) {
+					t.Fatalf("update edge no-op %v", err)
+				}
+				if _, err := observations.Update(c, userID, observations.Input{
+					ID: edge.ID, SubjectID: edge.SubjectID, PropertyID: edge.PropertyID,
+					ValueSubjectID: s.event.ID,
+				}); !errors.Is(err, observations.ErrEdgeLocked) {
+					t.Fatalf("update edge retarget %v", err)
+				}
+				if _, err := observations.Update(c, userID, observations.Input{
+					ID: role.ID, SubjectID: role.SubjectID, PropertyID: role.PropertyID,
+					ValueTermID: roleTerm.ID,
+				}); err != nil {
+					t.Fatalf("role update %v", err)
+				}
+				if err := observations.Delete(c, userID, role.ID); err != nil {
+					t.Fatalf("role delete %v", err)
+				}
+				if _, err := observations.AddToCitation(c, userID, bridge.Citation.ID, []observations.Input{{
+					SubjectID: bridge.Subject.ID, PropertyID: personProp.ID, ValueSubjectID: s.person.ID,
+				}}); !errors.Is(err, observations.ErrEdgeLocked) {
+					t.Fatalf("add edge %v", err)
+				}
+				ordinary, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, []observations.Input{{
+					SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
+					ValueText: "Leeds", HasText: true,
+				}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := observations.Update(c, userID, observations.Input{
+					ID: ordinary.Observations[0].ID, SubjectID: bridge.Subject.ID, PropertyID: personProp.ID,
+					ValueSubjectID: s.person.ID,
+				}); !errors.Is(err, observations.ErrEdgeLocked) {
+					t.Fatalf("move ordinary onto edge %v", err)
 				}
 			},
 		},

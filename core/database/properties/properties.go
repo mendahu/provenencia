@@ -30,12 +30,12 @@ const (
 	OriginProvenencia = "provenencia"
 	OriginUser        = "user"
 
-	ValueTypeText     = "text"
-	ValueTypeInteger  = "integer"
-	ValueTypeDate     = "date"
-	ValueTypeName     = "name"
-	ValueTypeSubject  = "subject"
-	ValueTypeTerm     = "term"
+	ValueTypeText    = "text"
+	ValueTypeInteger = "integer"
+	ValueTypeDate    = "date"
+	ValueTypeName    = "name"
+	ValueTypeSubject = "subject"
+	ValueTypeTerm    = "term"
 
 	sqlUpsert = `INSERT INTO properties (id, key, origin, label, description, value_type)
 		VALUES (?, ?, ?, ?, ?, ?)
@@ -57,7 +57,7 @@ const (
 			UNION ALL
 			SELECT 1 FROM observations WHERE property_id = ?
 		) LIMIT 1`
-	sqlUsedBy = `SELECT COUNT(*) FROM subject_type_fields WHERE property_id = ?`
+	sqlUsedBy        = `SELECT COUNT(*) FROM subject_type_fields WHERE property_id = ?`
 	sqlCountByOrigin = `SELECT origin, COUNT(*) FROM properties GROUP BY origin`
 )
 
@@ -291,14 +291,15 @@ func GetByID(c *database.Catalog, id []byte) (Property, error) {
 	if len(id) != 16 {
 		return Property{}, ErrInvalid
 	}
-	var p Property
-	err = db.QueryRow(sqlGetByID, id).Scan(
-		&p.ID, &p.Key, &p.Origin, &p.Label, &p.Description, &p.ValueType,
-	)
-	if err != nil {
-		return Property{}, err
+	return scanProperty(db.QueryRow(sqlGetByID, id))
+}
+
+// GetByIDTx returns the Property with the given id on an open transaction.
+func GetByIDTx(tx *sql.Tx, id []byte) (Property, error) {
+	if len(id) != 16 {
+		return Property{}, ErrInvalid
 	}
-	return p, nil
+	return scanProperty(tx.QueryRow(sqlGetByID, id))
 }
 
 // Lookup returns the Property for (key, origin), or sql.ErrNoRows.
@@ -312,14 +313,17 @@ func Lookup(c *database.Catalog, key, origin string) (Property, error) {
 	if key == "" || origin == "" {
 		return Property{}, ErrInvalid
 	}
-	var p Property
-	err = db.QueryRow(sqlLookup, key, origin).Scan(
-		&p.ID, &p.Key, &p.Origin, &p.Label, &p.Description, &p.ValueType,
-	)
-	if err != nil {
-		return Property{}, err
+	return scanProperty(db.QueryRow(sqlLookup, key, origin))
+}
+
+// LookupTx returns the Property for (key, origin) on an open transaction.
+func LookupTx(tx *sql.Tx, key, origin string) (Property, error) {
+	key = strings.TrimSpace(key)
+	origin = strings.TrimSpace(origin)
+	if key == "" || origin == "" {
+		return Property{}, ErrInvalid
 	}
-	return p, nil
+	return scanProperty(tx.QueryRow(sqlLookup, key, origin))
 }
 
 // List returns all properties rows.
@@ -481,4 +485,17 @@ func nullJSON(s string) any {
 		return nil
 	}
 	return s
+}
+
+type rowScanner interface {
+	Scan(dest ...any) error
+}
+
+func scanProperty(row rowScanner) (Property, error) {
+	var p Property
+	err := row.Scan(&p.ID, &p.Key, &p.Origin, &p.Label, &p.Description, &p.ValueType)
+	if err != nil {
+		return Property{}, err
+	}
+	return p, nil
 }

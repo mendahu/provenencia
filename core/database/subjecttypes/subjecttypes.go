@@ -144,6 +144,16 @@ func Lookup(c *database.Catalog, key, origin string) (Type, error) {
 	return scanType(db.QueryRow(sqlLookup, key, origin))
 }
 
+// LookupTx returns the type for (key, origin) on an open transaction.
+func LookupTx(tx *sql.Tx, key, origin string) (Type, error) {
+	key = strings.TrimSpace(key)
+	origin = strings.TrimSpace(origin)
+	if key == "" || origin == "" {
+		return Type{}, ErrInvalid
+	}
+	return scanType(tx.QueryRow(sqlLookup, key, origin))
+}
+
 // GetByID returns a type by id, or sql.ErrNoRows.
 func GetByID(c *database.Catalog, id []byte) (Type, error) {
 	db, err := c.DB()
@@ -154,6 +164,14 @@ func GetByID(c *database.Catalog, id []byte) (Type, error) {
 		return Type{}, ErrInvalid
 	}
 	return scanType(db.QueryRow(sqlGetByID, id))
+}
+
+// GetByIDTx returns a type by id on an open transaction.
+func GetByIDTx(tx *sql.Tx, id []byte) (Type, error) {
+	if len(id) != 16 {
+		return Type{}, ErrInvalid
+	}
+	return scanType(tx.QueryRow(sqlGetByID, id))
 }
 
 // List returns all subject_types rows.

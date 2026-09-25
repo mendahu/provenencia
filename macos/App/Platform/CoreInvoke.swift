@@ -106,9 +106,12 @@ enum CoreMethod {
     static let addObservationsToCitation = Int32(Provenencia_Engine_V1_Method.addObservationsToCitation.rawValue)
     static let listObservationsBySource = Int32(Provenencia_Engine_V1_Method.listObservationsBySource.rawValue)
     static let getCitation = Int32(Provenencia_Engine_V1_Method.getCitation.rawValue)
-    static let updateCitationWithObservations = Int32(Provenencia_Engine_V1_Method.updateCitationWithObservations.rawValue)
     static let citationCountsBySource = Int32(Provenencia_Engine_V1_Method.citationCountsBySource.rawValue)
     static let listCitationsByArtifact = Int32(Provenencia_Engine_V1_Method.listCitationsByArtifact.rawValue)
+    static let updateCitation = Int32(Provenencia_Engine_V1_Method.updateCitation.rawValue)
+    static let updateObservation = Int32(Provenencia_Engine_V1_Method.updateObservation.rawValue)
+    static let deleteObservation = Int32(Provenencia_Engine_V1_Method.deleteObservation.rawValue)
+    static let getSubjectFieldsWorkspace = Int32(Provenencia_Engine_V1_Method.getSubjectFieldsWorkspace.rawValue)
 }
 
 func provenenciaInvoke(method: Int32, request: Data) throws -> Data {

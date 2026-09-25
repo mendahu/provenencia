@@ -171,6 +171,35 @@ func TestSubjectVocab(t *testing.T) {
 				if rule.Refuse || rule.BridgeTypeKey != "participation" || rule.Disambiguation != DisambiguationRole {
 					t.Fatalf("%+v", rule)
 				}
+				if len(rule.Edges) != 2 || rule.Edges[0].PropertyKey != "person" || rule.Edges[0].EndpointTypeKey != "person" ||
+					rule.Edges[1].PropertyKey != "event" || rule.Edges[1].EndpointTypeKey != "event" {
+					t.Fatalf("participation edges %+v", rule.Edges)
+				}
+				rel := Connect("person", "person")
+				if len(rel.Edges) != 2 || rel.Edges[0].PropertyKey != "person" || rel.Edges[1].PropertyKey != "related_to" ||
+					rel.Edges[1].EndpointTypeKey != "person" {
+					t.Fatalf("relationship edges %+v", rel.Edges)
+				}
+				loc := Connect("event", "place")
+				if len(loc.Edges) != 2 || loc.Edges[0].PropertyKey != "event" || loc.Edges[1].PropertyKey != "place" {
+					t.Fatalf("location edges %+v", loc.Edges)
+				}
+				if endpoint, ok := EdgeEndpoint("participation", "person"); !ok || endpoint != "person" {
+					t.Fatalf("EdgeEndpoint participation/person %q %v", endpoint, ok)
+				}
+				if endpoint, ok := EdgeEndpoint("relationship", "related_to"); !ok || endpoint != "person" {
+					t.Fatalf("EdgeEndpoint relationship/related_to %q %v", endpoint, ok)
+				}
+				if endpoint, ok := EdgeEndpoint("location", "place"); !ok || endpoint != "place" {
+					t.Fatalf("EdgeEndpoint location/place %q %v", endpoint, ok)
+				}
+				if _, ok := EdgeEndpoint("participation", "role"); ok {
+					t.Fatal("role is not an edge")
+				}
+				rules := ListConnectRules()
+				if len(rules) == 0 || len(rules[0].Edges) != len(rules[0].EdgePropertyKeys) {
+					t.Fatalf("ListConnectRules edges %+v", rules)
+				}
 				refuse := Connect("person", "place")
 				if !refuse.Refuse {
 					t.Fatalf("%+v", refuse)

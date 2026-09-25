@@ -211,7 +211,14 @@ func Lookup(c *database.Catalog, id []byte) (Value, error) {
 	if err != nil {
 		return Value{}, err
 	}
-	if len(id) != 16 {
+	return LookupTx(db, id)
+}
+
+// LookupTx returns the date_values row for id on an existing connection or transaction.
+func LookupTx(q interface {
+	QueryRow(query string, args ...any) *sql.Row
+}, id []byte) (Value, error) {
+	if q == nil || len(id) != 16 {
 		return Value{}, ErrInvalid
 	}
 	var (
@@ -221,7 +228,7 @@ func Lookup(c *database.Catalog, id []byte) (Value, error) {
 		endY, endM, endD, endH, endMin, endS, endMs               sql.NullInt64
 	)
 	v.ID = append([]byte(nil), id...)
-	err = db.QueryRow(sqlLookup, id).Scan(
+	err := q.QueryRow(sqlLookup, id).Scan(
 		&v.Kind,
 		&qual,
 		&cal,

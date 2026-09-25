@@ -37,6 +37,64 @@ func ListObservationsBySource(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
+func UpdateObservation(in []byte) ([]byte, error) {
+	var req engine.UpdateObservationRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("update_observation", err)
+	}
+	userID, err := parseUserID(req.GetUserId())
+	if err != nil {
+		return nil, err
+	}
+	input, err := observationToInput(req.GetObservation())
+	if err != nil {
+		return nil, err
+	}
+	if len(input.ID) != 16 {
+		return nil, observations.ErrInvalid
+	}
+	var out *engine.UpdateObservationResponse
+	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		row, err := observations.Update(c, userID, input)
+		if err != nil {
+			return err
+		}
+		out = &engine.UpdateObservationResponse{Observation: listedObservationProto(row)}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
+}
+
+func DeleteObservation(in []byte) ([]byte, error) {
+	var req engine.DeleteObservationRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("delete_observation", err)
+	}
+	userID, err := parseUserID(req.GetUserId())
+	if err != nil {
+		return nil, err
+	}
+	id, err := parseID(req.GetObservationId())
+	if err != nil {
+		return nil, err
+	}
+	var out *engine.DeleteObservationResponse
+	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		if err := observations.Delete(c, userID, id); err != nil {
+			return err
+		}
+		out = &engine.DeleteObservationResponse{}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
+}
+
 func AddObservationsToCitation(in []byte) ([]byte, error) {
 	var req engine.AddObservationsToCitationRequest
 	if err := proto.Unmarshal(in, &req); err != nil {
@@ -111,42 +169,8 @@ func observationToInput(o *engine.Observation) (observations.Input, error) {
 		}
 		in.ID = parsed
 	}
-	text := strings.TrimSpace(o.GetValueText())
-	if text != "" {
-		in.ValueText = text
-		in.HasText = true
-	}
-	if o.ValueInteger != nil {
-		in.ValueInteger = o.GetValueInteger()
-		in.HasInteger = true
-	}
-	if o.GetDate() != nil && strings.TrimSpace(o.GetDate().GetKind()) != "" {
-		v := dateValueFromProto(o.GetDate())
-		in.Date = &v
-	}
-	if dateID, err := optionalID(o.GetValueDateId()); err != nil {
+	if err := valueInput(&in, o.GetValueText(), o.ValueInteger, o.GetDate(), o.GetValueDateId(), o.GetName(), o.GetValueNameId(), o.GetValueSubjectId(), o.GetValueTermId()); err != nil {
 		return observations.Input{}, err
-	} else if dateID != nil {
-		in.ValueDateID = dateID
-	}
-	if o.GetName() != nil && strings.TrimSpace(o.GetName().GetForm()) != "" {
-		v := nameValueFromProto(o.GetName())
-		in.Name = &v
-	}
-	if nameID, err := optionalID(o.GetValueNameId()); err != nil {
-		return observations.Input{}, err
-	} else if nameID != nil {
-		in.ValueNameID = nameID
-	}
-	if subjectValID, err := optionalID(o.GetValueSubjectId()); err != nil {
-		return observations.Input{}, err
-	} else if subjectValID != nil {
-		in.ValueSubjectID = subjectValID
-	}
-	if termID, err := optionalID(o.GetValueTermId()); err != nil {
-		return observations.Input{}, err
-	} else if termID != nil {
-		in.ValueTermID = termID
 	}
 	return in, nil
 }
@@ -210,44 +234,61 @@ func observationDraftToInputAllowEmptySubject(d *engine.ObservationDraft) (obser
 		Polarity:   d.GetPolarity(),
 		Notes:      d.GetNotes(),
 	}
-	text := strings.TrimSpace(d.GetValueText())
+	if err := valueInput(&in, d.GetValueText(), d.ValueInteger, d.GetDate(), d.GetValueDateId(), d.GetName(), d.GetValueNameId(), d.GetValueSubjectId(), d.GetValueTermId()); err != nil {
+		return observations.Input{}, err
+	}
+	return in, nil
+}
+
+func valueInput(
+	in *observations.Input,
+	valueText string,
+	valueInteger *int64,
+	date *engine.DateValueInput,
+	valueDateID string,
+	name *engine.NameValueInput,
+	valueNameID string,
+	valueSubjectID string,
+	valueTermID string,
+) error {
+	text := strings.TrimSpace(valueText)
 	if text != "" {
 		in.ValueText = text
 		in.HasText = true
 	}
-	if d.ValueInteger != nil {
-		in.ValueInteger = d.GetValueInteger()
+	if valueInteger != nil {
+		in.ValueInteger = *valueInteger
 		in.HasInteger = true
 	}
-	if d.GetDate() != nil && strings.TrimSpace(d.GetDate().GetKind()) != "" {
-		v := dateValueFromProto(d.GetDate())
+	if date != nil && strings.TrimSpace(date.GetKind()) != "" {
+		v := dateValueFromProto(date)
 		in.Date = &v
 	}
-	if dateID, err := optionalID(d.GetValueDateId()); err != nil {
-		return observations.Input{}, err
+	if dateID, err := optionalID(valueDateID); err != nil {
+		return err
 	} else if dateID != nil {
 		in.ValueDateID = dateID
 	}
-	if d.GetName() != nil && strings.TrimSpace(d.GetName().GetForm()) != "" {
-		v := nameValueFromProto(d.GetName())
+	if name != nil && strings.TrimSpace(name.GetForm()) != "" {
+		v := nameValueFromProto(name)
 		in.Name = &v
 	}
-	if nameID, err := optionalID(d.GetValueNameId()); err != nil {
-		return observations.Input{}, err
+	if nameID, err := optionalID(valueNameID); err != nil {
+		return err
 	} else if nameID != nil {
 		in.ValueNameID = nameID
 	}
-	if subjectValID, err := optionalID(d.GetValueSubjectId()); err != nil {
-		return observations.Input{}, err
+	if subjectValID, err := optionalID(valueSubjectID); err != nil {
+		return err
 	} else if subjectValID != nil {
 		in.ValueSubjectID = subjectValID
 	}
-	if termID, err := optionalID(d.GetValueTermId()); err != nil {
-		return observations.Input{}, err
+	if termID, err := optionalID(valueTermID); err != nil {
+		return err
 	} else if termID != nil {
 		in.ValueTermID = termID
 	}
-	return in, nil
+	return nil
 }
 
 func optionalID(s string) ([]byte, error) {

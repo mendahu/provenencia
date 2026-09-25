@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/project"
+	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/ref"
 )
 
@@ -55,8 +56,14 @@ type CreateInput struct {
 	Description   string
 }
 
+// Placement is an optional grid cell written with the Subject (unaudited layout).
+type Placement struct {
+	GridX int64
+	GridY int64
+}
+
 // Create inserts a Subject, mints a ref from the type's candidate_ref_prefix, and records create_subject.
-func Create(c *database.Catalog, userID []byte, in CreateInput) (Subject, error) {
+func Create(c *database.Catalog, userID []byte, in CreateInput, placement *Placement) (Subject, error) {
 	db, err := c.DB()
 	if err != nil {
 		return Subject{}, err
@@ -76,8 +83,21 @@ func Create(c *database.Catalog, userID []byte, in CreateInput) (Subject, error)
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	s, err := InsertTx(tx, userID, in)
+	s, change, err := InsertTx(tx, in)
 	if err != nil {
+		return Subject{}, err
+	}
+	if placement != nil {
+		if _, err := subjectpositions.SetTx(tx, s.ID, placement.GridX, placement.GridY); err != nil {
+			return Subject{}, err
+		}
+	}
+	if _, err := audit.Record(tx, audit.Revision{
+		UserID:     userID,
+		ActionType: "create_subject",
+		CreatedAt:  project.NowUTC(),
+		Changes:    []audit.Change{change},
+	}); err != nil {
 		return Subject{}, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -86,27 +106,24 @@ func Create(c *database.Catalog, userID []byte, in CreateInput) (Subject, error)
 	return s, nil
 }
 
-// InsertTx inserts a Subject on an open transaction (no commit).
-func InsertTx(tx *sql.Tx, userID []byte, in CreateInput) (Subject, error) {
+// InsertTx inserts a Subject on an open transaction (no commit, no revision).
+func InsertTx(tx *sql.Tx, in CreateInput) (Subject, audit.Change, error) {
 	in.Label = strings.TrimSpace(in.Label)
 	in.Description = strings.TrimSpace(in.Description)
 	if len(in.SourceID) != 16 || len(in.SubjectTypeID) != 16 {
-		return Subject{}, ErrInvalid
-	}
-	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return Subject{}, err
+		return Subject{}, audit.Change{}, ErrInvalid
 	}
 	if err := requireSource(tx, in.SourceID); err != nil {
-		return Subject{}, err
+		return Subject{}, audit.Change{}, err
 	}
 	prefix, err := requireTypePrefix(tx, in.SubjectTypeID)
 	if err != nil {
-		return Subject{}, err
+		return Subject{}, audit.Change{}, err
 	}
 
 	id, err := uuid.NewV7()
 	if err != nil {
-		return Subject{}, err
+		return Subject{}, audit.Change{}, err
 	}
 	idBytes := id[:]
 
@@ -114,44 +131,32 @@ func InsertTx(tx *sql.Tx, userID []byte, in CreateInput) (Subject, error) {
 	for attempt := 0; attempt < maxRefRetries; attempt++ {
 		subjectRef, err = ref.Mint(prefix)
 		if err != nil {
-			return Subject{}, err
+			return Subject{}, audit.Change{}, err
 		}
 		_, err = tx.Exec(sqlInsert, idBytes, subjectRef, in.SourceID, in.SubjectTypeID, nullStr(in.Label), nullStr(in.Description))
 		if err == nil {
 			break
 		}
 		if !database.IsUniqueConflict(err) {
-			return Subject{}, mapConstraint(err)
+			return Subject{}, audit.Change{}, mapConstraint(err)
 		}
 	}
 	if err != nil {
-		return Subject{}, ErrInvalid
+		return Subject{}, audit.Change{}, ErrInvalid
 	}
 
-	fields := map[string]audit.FieldDiff{
-		"id":              {Old: nil, New: id.String()},
-		"ref":             {Old: nil, New: subjectRef},
-		"source_id":       {Old: nil, New: uuidString(in.SourceID)},
-		"subject_type_id": {Old: nil, New: uuidString(in.SubjectTypeID)},
-	}
-	if in.Label != "" {
-		fields["label"] = audit.FieldDiff{Old: nil, New: in.Label}
-	}
-	if in.Description != "" {
-		fields["description"] = audit.FieldDiff{Old: nil, New: in.Description}
-	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "create_subject",
-		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
-			EntityType: "subject",
-			EntityID:   idBytes,
-			Action:     audit.ActionCreate,
-			Fields:     fields,
-		}},
-	}); err != nil {
-		return Subject{}, err
+	change := audit.Change{
+		EntityType: "subject",
+		EntityID:   idBytes,
+		Action:     audit.ActionCreate,
+		Fields: audit.FullRow(map[string]any{
+			"id":              id.String(),
+			"ref":             subjectRef,
+			"source_id":       uuidJSON(in.SourceID),
+			"subject_type_id": uuidJSON(in.SubjectTypeID),
+			"label":           nullJSON(in.Label),
+			"description":     nullJSON(in.Description),
+		}),
 	}
 	return Subject{
 		ID:            append([]byte(nil), idBytes...),
@@ -160,7 +165,7 @@ func InsertTx(tx *sql.Tx, userID []byte, in CreateInput) (Subject, error) {
 		SubjectTypeID: append([]byte(nil), in.SubjectTypeID...),
 		Label:         in.Label,
 		Description:   in.Description,
-	}, nil
+	}, change, nil
 }
 
 // Update changes label and/or description only. subject_type_id is immutable.
@@ -341,6 +346,14 @@ type rowScanner interface {
 	Scan(dest ...any) error
 }
 
+// GetTx returns a Subject by id on an open transaction, or sql.ErrNoRows.
+func GetTx(tx *sql.Tx, id []byte) (Subject, error) {
+	if len(id) != 16 {
+		return Subject{}, ErrInvalid
+	}
+	return getTx(tx, id)
+}
+
 func getTx(tx *sql.Tx, id []byte) (Subject, error) {
 	return scanSubject(tx.QueryRow(sqlGet, id))
 }
@@ -398,6 +411,17 @@ func uuidString(id []byte) string {
 		return ""
 	}
 	return u.String()
+}
+
+func uuidJSON(id []byte) any {
+	if len(id) != 16 {
+		return nil
+	}
+	s := uuidString(id)
+	if s == "" {
+		return nil
+	}
+	return s
 }
 
 func mapConstraint(err error) error {

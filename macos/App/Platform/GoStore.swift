@@ -678,7 +678,8 @@ struct GoStore: GenealogyStore {
         sourceID: String,
         subjectTypeID: String,
         label: String,
-        description: String
+        description: String,
+        placement: CatalogGridCell?
     ) async throws -> CatalogSubject {
         var req = Provenencia_Engine_V1_CreateSubjectRequest()
         req.projectDir = projectDir
@@ -687,6 +688,11 @@ struct GoStore: GenealogyStore {
         req.subjectTypeID = subjectTypeID
         req.label = label
         req.description_p = description
+        if let placement {
+            req.hasPlacement_p = true
+            req.gridX = placement.gridX
+            req.gridY = placement.gridY
+        }
         let resp: Provenencia_Engine_V1_CreateSubjectResponse = try await provenenciaCall(
             method: CoreMethod.createSubject,
             request: req
@@ -980,10 +986,7 @@ struct GoStore: GenealogyStore {
         fromSubjectID: String,
         toSubjectID: String,
         bridgeTypeKey: String,
-        label: String,
         description: String,
-        gridX: Int64,
-        gridY: Int64,
         artifactID: String,
         locatorJSON: String,
         transcription: String,
@@ -991,7 +994,8 @@ struct GoStore: GenealogyStore {
         transcriptionUncertain: Bool,
         transcriptionNote: String,
         citationNotes: [String],
-        observations: [CatalogObservationDraft]
+        observations: [CatalogObservationDraft],
+        citationID: String?
     ) async throws -> (CatalogSubject, CatalogCitation, [CatalogObservation]) {
         var req = Provenencia_Engine_V1_CreateCitedBridgeRequest()
         req.projectDir = projectDir
@@ -1000,10 +1004,7 @@ struct GoStore: GenealogyStore {
         req.fromSubjectID = fromSubjectID
         req.toSubjectID = toSubjectID
         req.bridgeTypeKey = bridgeTypeKey
-        req.label = label
         req.description_p = description
-        req.gridX = gridX
-        req.gridY = gridY
         req.artifactID = artifactID
         req.locatorJson = locatorJSON
         req.transcription = transcription
@@ -1012,6 +1013,7 @@ struct GoStore: GenealogyStore {
         req.transcriptionNote = transcriptionNote
         req.citationNotes = citationNotes
         req.observations = observations.map(Self.mapObservationDraft)
+        req.citationID = citationID ?? ""
         let resp: Provenencia_Engine_V1_CreateCitedBridgeResponse = try await provenenciaCall(
             method: CoreMethod.createCitedBridge,
             request: req
@@ -1071,38 +1073,6 @@ struct GoStore: GenealogyStore {
         )
     }
 
-    func updateCitationWithObservations(
-        projectDir: String,
-        userID: String,
-        citationID: String,
-        artifactID: String,
-        locatorJSON: String,
-        transcription: String,
-        description: String,
-        transcriptionUncertain: Bool,
-        transcriptionNote: String,
-        citationNotes: [String],
-        observations: [CatalogObservation]
-    ) async throws -> (CatalogCitation, [CatalogObservation]) {
-        var req = Provenencia_Engine_V1_UpdateCitationWithObservationsRequest()
-        req.projectDir = projectDir
-        req.userID = userID
-        req.citationID = citationID
-        req.artifactID = artifactID
-        req.locatorJson = locatorJSON
-        req.transcription = transcription
-        req.description_p = description
-        req.transcriptionUncertain = transcriptionUncertain
-        req.transcriptionNote = transcriptionNote
-        req.citationNotes = citationNotes
-        req.observations = observations.map(Self.mapCatalogObservation)
-        let resp: Provenencia_Engine_V1_UpdateCitationWithObservationsResponse = try await provenenciaCall(
-            method: CoreMethod.updateCitationWithObservations,
-            request: req
-        )
-        return (Self.mapCitation(resp.citation), resp.observations.map(Self.mapObservation))
-    }
-
     func addObservationsToCitation(
         projectDir: String,
         userID: String,
@@ -1145,6 +1115,83 @@ struct GoStore: GenealogyStore {
             counts[row.artifactID] = Int(row.count)
         }
         return counts
+    }
+
+    func updateCitation(
+        projectDir: String,
+        userID: String,
+        citationID: String,
+        locatorJSON: String,
+        transcription: String,
+        description: String,
+        transcriptionUncertain: Bool,
+        transcriptionNote: String
+    ) async throws -> CatalogCitation {
+        var req = Provenencia_Engine_V1_UpdateCitationRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.citationID = citationID
+        req.locatorJson = locatorJSON
+        req.transcription = transcription
+        req.description_p = description
+        req.transcriptionUncertain = transcriptionUncertain
+        req.transcriptionNote = transcriptionNote
+        let resp: Provenencia_Engine_V1_UpdateCitationResponse = try await provenenciaCall(
+            method: CoreMethod.updateCitation,
+            request: req
+        )
+        return Self.mapCitation(resp.citation)
+    }
+
+    func updateObservation(
+        projectDir: String,
+        userID: String,
+        observation: CatalogObservation
+    ) async throws -> CatalogObservation {
+        var req = Provenencia_Engine_V1_UpdateObservationRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.observation = Self.mapCatalogObservation(observation)
+        let resp: Provenencia_Engine_V1_UpdateObservationResponse = try await provenenciaCall(
+            method: CoreMethod.updateObservation,
+            request: req
+        )
+        return Self.mapObservation(resp.observation)
+    }
+
+    func deleteObservation(projectDir: String, userID: String, observationID: String) async throws {
+        var req = Provenencia_Engine_V1_DeleteObservationRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.observationID = observationID
+        let _: Provenencia_Engine_V1_DeleteObservationResponse = try await provenenciaCall(
+            method: CoreMethod.deleteObservation,
+            request: req
+        )
+    }
+
+    func getSubjectFieldsWorkspace(projectDir: String) async throws -> SubjectFieldsSnapshot {
+        var req = Provenencia_Engine_V1_GetSubjectFieldsWorkspaceRequest()
+        req.projectDir = projectDir
+        let resp: Provenencia_Engine_V1_GetSubjectFieldsWorkspaceResponse = try await provenenciaCall(
+            method: CoreMethod.getSubjectFieldsWorkspace,
+            request: req
+        )
+        var fieldsByTypeID: [String: [CatalogSubjectTypeField]] = [:]
+        var presentationsByKey: [String: CatalogSubjectTypePresentation] = [:]
+        for group in resp.groups {
+            fieldsByTypeID[group.subjectTypeID] = group.fields.map(Self.mapSubjectTypeField)
+            if group.hasPresentation {
+                let presentation = Self.mapSubjectTypePresentation(group.presentation)
+                presentationsByKey[presentation.typeKey] = presentation
+            }
+        }
+        return SubjectFieldsSnapshot(
+            properties: resp.properties.map(Self.mapProperty),
+            types: resp.types.map(Self.mapSubjectType),
+            fieldsByTypeID: fieldsByTypeID,
+            presentationsByKey: presentationsByKey
+        )
     }
 
     func listCitationsByArtifact(projectDir: String, artifactID: String) async throws -> [CatalogListedCitation] {
@@ -1398,7 +1445,8 @@ struct GoStore: GenealogyStore {
             bridgeTypeKey: r.bridgeTypeKey,
             edgePropertyKeys: r.edgePropertyKeys,
             disambiguation: r.disambiguation,
-            refuse: r.refuse
+            refuse: r.refuse,
+            edges: r.edges.map { CatalogConnectEdge(propertyKey: $0.propertyKey, endpointTypeKey: $0.endpointTypeKey) }
         )
     }
 

@@ -9115,7 +9115,7 @@
       }
     },
     "citationComposer.save": {
-      "comment": "Primary submit button on the citation composer",
+      "comment": "Citation fields button that writes only the Citation row",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -9686,18 +9686,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Choose an Artifact before saving."
-          }
-        }
-      }
-    },
-    "citationComposer.saveNeedsObservationError": {
-      "comment": "Footer error when Save is refused for empty Observations",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add at least one observation before saving."
           }
         }
       }
@@ -10614,102 +10602,6 @@
         }
       }
     },
-    "evidenceGraph.connect.disambiguationRoleTitle": {
-      "comment": "Title of the Connect disambiguation sheet for person↔event",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "What role?"
-          }
-        }
-      }
-    },
-    "evidenceGraph.connect.disambiguationRelationshipTitle": {
-      "comment": "Title of the Connect disambiguation sheet for person↔person",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "What relationship?"
-          }
-        }
-      }
-    },
-    "evidenceGraph.connect.disambiguationSubtitleBare": {
-      "comment": "Subtitle on the Connect disambiguation sheet",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choose a term, then cite the connection."
-          }
-        }
-      }
-    },
-    "evidenceGraph.connect.disambiguationSubtitle": {
-      "comment": "Connect disambiguation pair line; arguments are endpoint A then B labels",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ → %@"
-          }
-        }
-      }
-    },
-    "evidenceGraph.connect.disambiguationConfirm": {
-      "comment": "Confirm button on the Connect disambiguation sheet",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Continue"
-          }
-        }
-      }
-    },
-    "evidenceGraph.connect.disambiguationPlaceholder": {
-      "comment": "Placeholder for the Connect disambiguation ComboBox",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choose a term"
-          }
-        }
-      }
-    },
-    "evidenceGraph.connect.disambiguationEmpty": {
-      "comment": "Empty label when the Connect disambiguation ComboBox has no terms",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No terms"
-          }
-        }
-      }
-    },
-    "evidenceGraph.connect.disambiguationTermLabel": {
-      "comment": "Accessibility label for the Connect disambiguation ComboBox",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Term"
-          }
-        }
-      }
-    },
     "propertyTerm.role.subject": {
       "comment": "Product role term: subject",
       "extractionState": "manual",
@@ -11082,54 +10974,6 @@
         }
       }
     },
-    "citationComposer.saveToastTitle": {
-      "comment": "Toast title after the composer writes a Citation",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Citation saved"
-          }
-        }
-      }
-    },
-    "citationComposer.saveToastBody": {
-      "comment": "Toast body after the composer writes a Citation",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The reading is on this source. Open it again from the citation menu on the artifact."
-          }
-        }
-      }
-    },
-    "citationComposer.abandonConfirm": {
-      "comment": "Confirm button when switching Artifact abandons a dirty saved Citation",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Discard edits"
-          }
-        }
-      }
-    },
-    "citationComposer.abandonCancel": {
-      "comment": "Cancel button on the dirty Artifact-change confirm",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keep editing"
-          }
-        }
-      }
-    },
     "citationComposer.identityChangedNew": {
       "comment": "VoiceOver announcement when Citation identity resets to New",
       "extractionState": "manual",
@@ -11214,26 +11058,578 @@
         }
       }
     },
-    "citationComposer.abandonTitle": {
-      "comment": "Confirm title when switching Artifact on a dirty saved Citation; argument is CIT ref",
+    "citationComposer.done": {
+      "comment": "Footer button that returns to the Evidence graph through the leave guard",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Discard unsaved edits to %@?"
+            "value": "Done"
           }
         }
       }
     },
-    "citationComposer.abandonMessage": {
-      "comment": "Confirm message when switching Artifact; argument is the target Artifact title",
+    "citationComposer.citationStatusNew": {
+      "comment": "Status under citation fields when the Citation does not exist yet",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Switching to %@ starts a new citation there. The saved citation keeps its last saved reading. Only the changes you haven’t saved are lost."
+            "value": "First save creates the citation"
+          }
+        }
+      }
+    },
+    "citationComposer.citationStatusDirty": {
+      "comment": "Status under citation fields when the Citation row is dirty",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Citation has unsaved changes"
+          }
+        }
+      }
+    },
+    "citationComposer.citationStatusSaved": {
+      "comment": "Status under citation fields when the Citation row matches the catalog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Citation saved"
+          }
+        }
+      }
+    },
+    "citationComposer.identityMenusDisabledHint": {
+      "comment": "Hint under Artifact / Citation menus when unsaved document work disables them",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save or discard changes to switch citation"
+          }
+        }
+      }
+    },
+    "citationComposer.rowStateNew": {
+      "comment": "Badge on a draft Observation or pending connection row",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New"
+          }
+        }
+      }
+    },
+    "citationComposer.rowStateEdited": {
+      "comment": "Badge on an Observation or connection role that differs from its baseline",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edited"
+          }
+        }
+      }
+    },
+    "citationComposer.rowStateSaving": {
+      "comment": "Badge while a row-level Save is in flight",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saving"
+          }
+        }
+      }
+    },
+    "citationComposer.rowStateError": {
+      "comment": "Badge when a row-level Save failed",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not saved"
+          }
+        }
+      }
+    },
+    "citationComposer.rowStateSaved": {
+      "comment": "Spoken status for a saved connection without a ref yet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved"
+          }
+        }
+      }
+    },
+    "citationComposer.negateObservation": {
+      "comment": "Row menu item that flips a positive Observation to negative",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Negate observation"
+          }
+        }
+      }
+    },
+    "citationComposer.affirmObservation": {
+      "comment": "Row menu item that flips a negative Observation to positive",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Affirm observation"
+          }
+        }
+      }
+    },
+    "citationComposer.applyValue": {
+      "comment": "Confirm on the name / date dialog; writes into the row only",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apply"
+          }
+        }
+      }
+    },
+    "citationComposer.valueDialogSubtitle": {
+      "comment": "Subtitle on the name / date dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updates the row only. The row's Save commits it to CIT-…"
+          }
+        }
+      }
+    },
+    "citationComposer.connectionRelationship": {
+      "comment": "Term picker label on a relationship connection row",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relationship"
+          }
+        }
+      }
+    },
+    "citationComposer.connectionRole": {
+      "comment": "Term picker label on a participation connection row",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Role"
+          }
+        }
+      }
+    },
+    "citationComposer.connectionNoRole": {
+      "comment": "Muted slot on a location connection that has no term",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No role or type"
+          }
+        }
+      }
+    },
+    "citationComposer.connectionTermNotChosen": {
+      "comment": "VoiceOver fallback when a connection role or type is empty",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "not chosen"
+          }
+        }
+      }
+    },
+    "citationComposer.saveRow": {
+      "comment": "Row-level Save on an Observation",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
+          }
+        }
+      }
+    },
+    "citationComposer.revertRow": {
+      "comment": "Row-level Revert on an Observation",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revert"
+          }
+        }
+      }
+    },
+    "citationComposer.saveConnection": {
+      "comment": "Writes a pending Connect row as a cited bridge",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save connection"
+          }
+        }
+      }
+    },
+    "citationComposer.discardConnection": {
+      "comment": "Removes a pending connection without writing",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Discard"
+          }
+        }
+      }
+    },
+    "citationComposer.saveRole": {
+      "comment": "Commits an edited role or type on a saved connection",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save role"
+          }
+        }
+      }
+    },
+    "citationComposer.revertRole": {
+      "comment": "Restores a saved connection role to its baseline",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revert"
+          }
+        }
+      }
+    },
+    "citationComposer.subjectRequiredError": {
+      "comment": "Row error when Save is pressed with no subject",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a subject."
+          }
+        }
+      }
+    },
+    "citationComposer.propertyRequiredAfterSubject": {
+      "comment": "Property field error after an incompatible subject change",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This subject does not allow that property."
+          }
+        }
+      }
+    },
+    "citationComposer.newSubjectTitle": {
+      "comment": "Dialog title when creating a subject from a row picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New subject"
+          }
+        }
+      }
+    },
+    "citationComposer.newSubjectConfirm": {
+      "comment": "Confirm creating a subject from the composer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create"
+          }
+        }
+      }
+    },
+    "citationComposer.newSubjectLabel": {
+      "comment": "Label field on the composer new-subject dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Label"
+          }
+        }
+      }
+    },
+    "citationComposer.deleteObservationTitle": {
+      "comment": "Confirm title before deleting one Observation",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete observation?"
+          }
+        }
+      }
+    },
+    "citationComposer.deleteObservationMessage": {
+      "comment": "Confirm body before deleting one Observation",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This observation will be removed from the citation. The citation stays."
+          }
+        }
+      }
+    },
+    "citationComposer.deleteObservationConfirm": {
+      "comment": "Confirm button that deletes one Observation",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete"
+          }
+        }
+      }
+    },
+    "citationComposer.leaveTitle": {
+      "comment": "Leave-guard confirm title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leave without saving?"
+          }
+        }
+      }
+    },
+    "citationComposer.leaveDiscard": {
+      "comment": "Leave-guard confirm that discards unsaved composer work",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leave"
+          }
+        }
+      }
+    },
+    "citationComposer.leaveKeepEditing": {
+      "comment": "Leave-guard cancel that stays on the composer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep editing"
+          }
+        }
+      }
+    },
+    "citationComposer.newSubjectOption": {
+      "comment": "Subject picker option; argument is person, event, or place",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New %@…"
+          }
+        }
+      }
+    },
+    "citationComposer.unsavedCitationPart": {
+      "comment": "Unsaved-summary clause for dirty citation fields",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "the citation"
+          }
+        }
+      }
+    },
+    "citationComposer.unsavedObservationOne": {
+      "comment": "Unsaved-summary clause for one dirty observation row",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 observation"
+          }
+        }
+      }
+    },
+    "citationComposer.unsavedObservationMany": {
+      "comment": "Unsaved-summary clause for several dirty observation rows",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld observations"
+          }
+        }
+      }
+    },
+    "citationComposer.unsavedConnectionPart": {
+      "comment": "Unsaved-summary clause for a touched pending connection",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a new connection"
+          }
+        }
+      }
+    },
+    "citationComposer.unsavedSummary": {
+      "comment": "Footer and leave-guard body; argument is the joined unsaved parts",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unsaved: %@"
+          }
+        }
+      }
+    },
+    "citationComposer.connectionAccessibility": {
+      "comment": "VoiceOver for a relationship or participation connection",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connection, %@. %@ %@. %@"
+          }
+        }
+      }
+    },
+    "citationComposer.connectionAccessibilityLocation": {
+      "comment": "VoiceOver for a location connection; argument is New/Edited/Saved ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connection, Location. %@"
+          }
+        }
+      }
+    },
+    "citationComposer.connectionSavedStatus": {
+      "comment": "VoiceOver status for a saved connection; argument is the bridge ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved, %@"
+          }
+        }
+      }
+    },
+    "error.observations.edge_locked": {
+      "comment": "FFI error observations.edge_locked",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That connection edge cannot be edited or deleted."
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.workingLabelHint": {
+      "comment": "Caption under Label on the graph primary create/edit dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Working label. Cards show the cited name once one is recorded."
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.nounTypeAndRef": {
+      "comment": "Bridge endpoint noun when the working label is blank; type label then ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ %@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.nameKindAndRef": {
+      "comment": "Bridge name when edges cannot be read; kind phrase then bridge ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@"
           }
         }
       }

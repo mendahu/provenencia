@@ -9,12 +9,12 @@ struct CitationComposerObservationDialogForm: View {
             let property = model.catalogProperty(id: draft.propertyID)
             PVField(error: model.dialogValueError) {
                 VStack(alignment: .leading, spacing: PVSpacing.space6) {
-                    if property?.valueType == "name" {
+                    if property?.valueType == PropertyValueType.name.rawValue {
                         NameValueEditorForm(
                             draft: nameBinding,
                             accessibilityIdentifierPrefix: "citationComposer.dialog.name"
                         )
-                    } else if property?.valueType == "date" {
+                    } else if property?.valueType == PropertyValueType.date.rawValue {
                         DateValueEditorForm(
                             draft: dateBinding,
                             accessibilityIdentifierPrefix: "citationComposer.dialog.date"

@@ -17,7 +17,7 @@ enum CitationObservationValue {
         case unsupported
     }
 
-    static func fields(from row: CitationComposerModel.ObservationRow) -> Fields {
+    static func fields(from row: ObservationRow) -> Fields {
         Fields(
             valueText: row.valueText,
             valueIntegerText: row.valueIntegerText,
@@ -41,17 +41,17 @@ enum CitationObservationValue {
 
     static func summary(valueType: String, fields: Fields, termLabel: String?) -> String {
         switch valueType {
-        case "text":
+        case PropertyValueType.text.rawValue:
             return fields.valueText
-        case "integer":
+        case PropertyValueType.integer.rawValue:
             return fields.valueIntegerText
-        case "term":
+        case PropertyValueType.term.rawValue:
             return termLabel ?? fields.valueTermID
-        case "date":
+        case PropertyValueType.date.rawValue:
             return dateSummary(fields.dateDraft)
-        case "name":
+        case PropertyValueType.name.rawValue:
             return NameValueDisplay.string(for: fields.nameDraft)
-        case "subject":
+        case PropertyValueType.subject.rawValue:
             let trimmed = fields.valueText.trimmingCharacters(in: .whitespacesAndNewlines)
             return trimmed.isEmpty ? fields.valueSubjectID : trimmed
         default:
@@ -62,15 +62,15 @@ enum CitationObservationValue {
     /// Dialog confirm. Subject values are saved from loaded rows, not picked in the dialog.
     static func isDialogValid(valueType: String, fields: Fields) -> Bool {
         switch valueType {
-        case "text":
+        case PropertyValueType.text.rawValue:
             return !fields.valueText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        case "integer":
+        case PropertyValueType.integer.rawValue:
             return Int64(fields.valueIntegerText.trimmingCharacters(in: .whitespacesAndNewlines)) != nil
-        case "term":
+        case PropertyValueType.term.rawValue:
             return !fields.valueTermID.isEmpty
-        case "date":
+        case PropertyValueType.date.rawValue:
             return fields.dateDraft.isValid
-        case "name":
+        case PropertyValueType.name.rawValue:
             return fields.nameDraft.isValid
         default:
             return false
@@ -84,22 +84,22 @@ enum CitationObservationValue {
         to draft: inout CatalogObservationDraft
     ) -> Failure? {
         switch valueType {
-        case "text":
+        case PropertyValueType.text.rawValue:
             draft.valueText = fields.valueText
-        case "integer":
+        case PropertyValueType.integer.rawValue:
             guard let value = Int64(fields.valueIntegerText) else { return .invalidInteger }
             draft.valueInteger = value
-        case "term":
+        case PropertyValueType.term.rawValue:
             draft.valueTermID = fields.valueTermID
-        case "date":
+        case PropertyValueType.date.rawValue:
             guard fields.dateDraft.isValid else { return .invalidDate }
             draft.date = fields.dateDraft.toInput()
-        case "name":
+        case PropertyValueType.name.rawValue:
             guard fields.nameDraft.isValid else { return .unsupported }
             let input = fields.nameDraft.toInput()
             draft.nameForm = input.form
             draft.nameParts = input.parts
-        case "subject":
+        case PropertyValueType.subject.rawValue:
             guard !fields.valueSubjectID.isEmpty else { return .unsupported }
             draft.valueSubjectID = fields.valueSubjectID
         default:

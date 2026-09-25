@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Right sidebar: identity line, reading fields, Observation list, Cancel / Save.
+/// Right sidebar: identity line, citation fields, connections, observations, Done.
 struct CitationComposerFormPane: View {
     @Bindable var model: CitationComposerModel
     var inert: Bool
@@ -26,7 +26,8 @@ struct CitationComposerFormPane: View {
         ScrollView {
             VStack(alignment: .leading, spacing: PVSpacing.space8) {
                 identityLine
-                readingFields
+                citationFields
+                connectionsSection
                 observationsSection
             }
             .padding(PVSpacing.space7)
@@ -40,15 +41,18 @@ struct CitationComposerFormPane: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: PVSpacing.space6) {
                     identityLine
-                    readingFields
+                    citationFields
                 }
                 .padding(PVSpacing.space7)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             PVDivider(axis: .vertical, color: PVColor.borderDefault)
             ScrollView {
-                observationsSection
-                    .padding(PVSpacing.space7)
+                VStack(alignment: .leading, spacing: PVSpacing.space8) {
+                    connectionsSection
+                    observationsSection
+                }
+                .padding(PVSpacing.space7)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
@@ -57,12 +61,19 @@ struct CitationComposerFormPane: View {
     }
 
     private var identityLine: some View {
-        HStack(alignment: .center, spacing: PVSpacing.space3) {
-            if model.showsArtifactSwitcher {
-                artifactSelect
+        VStack(alignment: .leading, spacing: PVSpacing.space2) {
+            HStack(alignment: .center, spacing: PVSpacing.space3) {
+                if model.showsArtifactSwitcher {
+                    artifactSelect
+                }
+                Spacer(minLength: 0)
+                citationSelect
             }
-            Spacer(minLength: 0)
-            citationSelect
+            if model.identityMenusDisabled {
+                Text(L10n.CitationComposer.identityMenusDisabledHint)
+                    .font(PVFont.body(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textMuted)
+            }
         }
         .accessibilityElement(children: .contain)
     }
@@ -77,7 +88,7 @@ struct CitationComposerFormPane: View {
             menuWidth: 320,
             fillsWidth: false,
             rowHeight: 52,
-            isDisabled: inert,
+            isDisabled: inert || model.identityMenusDisabled,
             accessibilitySpokenLabel: L10n.CitationComposer.artifactMenuLabel(
                 title: model.selectedArtifact?.label ?? ""
             ),
@@ -106,7 +117,7 @@ struct CitationComposerFormPane: View {
             fillsWidth: false,
             maxVisibleRows: 8,
             rowHeight: 68,
-            isDisabled: inert,
+            isDisabled: inert || model.identityMenusDisabled,
             accessibilitySpokenLabel: model.activeCitationRef.isEmpty
                 ? String(localized: L10n.CitationComposer.citationMenuNew)
                 : L10n.CitationComposer.citationMenuRef(
@@ -161,7 +172,7 @@ struct CitationComposerFormPane: View {
         }
     }
 
-    private var readingFields: some View {
+    private var citationFields: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space5) {
             PVField(label: L10n.CitationComposer.transcriptionLabel) {
                 HStack(spacing: PVSpacing.space4) {
@@ -190,10 +201,41 @@ struct CitationComposerFormPane: View {
                     .disabled(inert)
                     .accessibilityIdentifier("citationComposer.description")
             }
-            if inert {
-                Text(L10n.CitationComposer.fieldsDisabledHint)
+            if let error = model.fields.error {
+                PVCallout(tone: .danger, message: error, compact: true)
+            }
+            HStack {
+                Text(verbatim: model.fields.statusText)
                     .font(PVFont.body(size: PVTypeScale.caption))
                     .foregroundStyle(PVColor.textMuted)
+                Spacer(minLength: 0)
+                PVButton(
+                    L10n.CitationComposer.save,
+                    variant: .secondary,
+                    size: .sm,
+                    loading: model.fields.isSaving
+                ) {
+                    Task { await model.fields.saveCitation() }
+                }
+                .disabled(inert || model.fields.isSaving)
+                .accessibilityIdentifier("citationComposer.saveCitation")
+            }
+        }
+    }
+
+    private var connectionsSection: some View {
+        VStack(alignment: .leading, spacing: PVSpacing.space5) {
+            ForEach(model.connections.rows) { row in
+                CitationComposerConnectionRow(
+                    row: row,
+                    termOptions: row.termProperty.map { model.termOptions(for: $0.id) } ?? [],
+                    inert: inert,
+                    onTerm: { model.connections.applyTerm(connectionID: row.id, termID: $0) },
+                    onSave: { Task { await model.connections.saveConnection() } },
+                    onDiscard: { model.connections.discard() },
+                    onCommitRole: { Task { await model.connections.commitRole(connectionID: row.id) } },
+                    onRevertRole: { model.connections.revertRole(connectionID: row.id) }
+                )
             }
         }
     }
@@ -221,7 +263,9 @@ struct CitationComposerFormPane: View {
                     onTerm: { model.updateObservationTerm(id: row.id, termID: $0) },
                     onEditValue: { model.beginEditObservation(row) },
                     onTogglePolarity: { model.toggleObservationPolarity(id: row.id) },
-                    onRemove: { model.removeObservation(id: row.id) },
+                    onSave: { Task { await model.observationRows.commit(rowID: row.id) } },
+                    onRevert: { model.observationRows.revert(rowID: row.id) },
+                    onRequestDelete: { model.observationRows.requestDelete(rowID: row.id) },
                     onAddCustomTerm: { model.beginAddCustomTerm(rowID: row.id) }
                 )
             }
@@ -237,30 +281,18 @@ struct CitationComposerFormPane: View {
 
     private var footer: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space4) {
-            if let formError = model.formError, model.submitAttempted {
-                PVCallout(tone: .danger, message: formError, compact: true)
+            if model.shouldHoldLeave {
+                Text(verbatim: model.unsavedSummary)
+                    .font(PVFont.body(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textMuted)
+                    .accessibilityIdentifier("citationComposer.unsavedSummary")
             }
             HStack {
                 Spacer(minLength: 0)
-                PVButton(L10n.CitationComposer.cancel, variant: .ghost, size: .sm) {
+                PVButton(L10n.CitationComposer.done, variant: .primary, size: .sm) {
                     navigation.go(to: model.graphLocation())
                 }
-                .disabled(model.isSubmitting)
-                .accessibilityIdentifier("citationComposer.form.cancel")
-                PVButton(
-                    L10n.CitationComposer.save,
-                    variant: .primary,
-                    size: .sm,
-                    loading: model.isSubmitting
-                ) {
-                    Task {
-                        if let location = await model.submit() {
-                            navigation.go(to: location)
-                        }
-                    }
-                }
-                .disabled(model.isSubmitting || inert)
-                .accessibilityIdentifier("citationComposer.save")
+                .accessibilityIdentifier("citationComposer.done")
             }
         }
         .padding(.horizontal, PVSpacing.space7)

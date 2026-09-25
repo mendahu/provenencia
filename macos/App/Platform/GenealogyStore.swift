@@ -229,6 +229,16 @@ struct CatalogSubjectTypePresentation: Sendable, Equatable, Identifiable {
     var id: String { typeKey }
 }
 
+struct CatalogGridCell: Sendable, Equatable {
+    var gridX: Int64
+    var gridY: Int64
+}
+
+struct CatalogConnectEdge: Sendable, Equatable {
+    var propertyKey: String
+    var endpointTypeKey: String
+}
+
 struct CatalogConnectRule: Sendable, Equatable {
     var fromTypeKey: String
     var toTypeKey: String
@@ -236,6 +246,7 @@ struct CatalogConnectRule: Sendable, Equatable {
     var edgePropertyKeys: [String]
     var disambiguation: String
     var refuse: Bool
+    var edges: [CatalogConnectEdge] = []
 
     /// FakeStore and unit-test double of `subjectvocab.seedConnect`.
     /// Live connect reads `listConnectRules` only. When the Go registry changes, update this table in the same change.
@@ -243,27 +254,47 @@ struct CatalogConnectRule: Sendable, Equatable {
         CatalogConnectRule(
             fromTypeKey: "person", toTypeKey: "event",
             bridgeTypeKey: "participation", edgePropertyKeys: ["person", "event"],
-            disambiguation: "role", refuse: false
+            disambiguation: "role", refuse: false,
+            edges: [
+                CatalogConnectEdge(propertyKey: "person", endpointTypeKey: "person"),
+                CatalogConnectEdge(propertyKey: "event", endpointTypeKey: "event"),
+            ]
         ),
         CatalogConnectRule(
             fromTypeKey: "event", toTypeKey: "person",
             bridgeTypeKey: "participation", edgePropertyKeys: ["person", "event"],
-            disambiguation: "role", refuse: false
+            disambiguation: "role", refuse: false,
+            edges: [
+                CatalogConnectEdge(propertyKey: "person", endpointTypeKey: "person"),
+                CatalogConnectEdge(propertyKey: "event", endpointTypeKey: "event"),
+            ]
         ),
         CatalogConnectRule(
             fromTypeKey: "person", toTypeKey: "person",
             bridgeTypeKey: "relationship", edgePropertyKeys: ["person", "related_to"],
-            disambiguation: "relationship_type", refuse: false
+            disambiguation: "relationship_type", refuse: false,
+            edges: [
+                CatalogConnectEdge(propertyKey: "person", endpointTypeKey: "person"),
+                CatalogConnectEdge(propertyKey: "related_to", endpointTypeKey: "person"),
+            ]
         ),
         CatalogConnectRule(
             fromTypeKey: "event", toTypeKey: "place",
             bridgeTypeKey: "location", edgePropertyKeys: ["event", "place"],
-            disambiguation: "none", refuse: false
+            disambiguation: "none", refuse: false,
+            edges: [
+                CatalogConnectEdge(propertyKey: "event", endpointTypeKey: "event"),
+                CatalogConnectEdge(propertyKey: "place", endpointTypeKey: "place"),
+            ]
         ),
         CatalogConnectRule(
             fromTypeKey: "place", toTypeKey: "event",
             bridgeTypeKey: "location", edgePropertyKeys: ["event", "place"],
-            disambiguation: "none", refuse: false
+            disambiguation: "none", refuse: false,
+            edges: [
+                CatalogConnectEdge(propertyKey: "event", endpointTypeKey: "event"),
+                CatalogConnectEdge(propertyKey: "place", endpointTypeKey: "place"),
+            ]
         ),
         CatalogConnectRule(
             fromTypeKey: "person", toTypeKey: "place",
@@ -613,7 +644,8 @@ protocol GenealogyStore: Sendable {
         sourceID: String,
         subjectTypeID: String,
         label: String,
-        description: String
+        description: String,
+        placement: CatalogGridCell?
     ) async throws -> CatalogSubject
     func updateSubject(
         projectDir: String,
@@ -690,10 +722,7 @@ protocol GenealogyStore: Sendable {
         fromSubjectID: String,
         toSubjectID: String,
         bridgeTypeKey: String,
-        label: String,
         description: String,
-        gridX: Int64,
-        gridY: Int64,
         artifactID: String,
         locatorJSON: String,
         transcription: String,
@@ -701,7 +730,8 @@ protocol GenealogyStore: Sendable {
         transcriptionUncertain: Bool,
         transcriptionNote: String,
         citationNotes: [String],
-        observations: [CatalogObservationDraft]
+        observations: [CatalogObservationDraft],
+        citationID: String?
     ) async throws -> (CatalogSubject, CatalogCitation, [CatalogObservation])
 
     func createCitationWithObservations(
@@ -722,19 +752,26 @@ protocol GenealogyStore: Sendable {
         citationID: String
     ) async throws -> (CatalogCitation, [String], [CatalogObservation])
 
-    func updateCitationWithObservations(
+    func updateCitation(
         projectDir: String,
         userID: String,
         citationID: String,
-        artifactID: String,
         locatorJSON: String,
         transcription: String,
         description: String,
         transcriptionUncertain: Bool,
-        transcriptionNote: String,
-        citationNotes: [String],
-        observations: [CatalogObservation]
-    ) async throws -> (CatalogCitation, [CatalogObservation])
+        transcriptionNote: String
+    ) async throws -> CatalogCitation
+
+    func updateObservation(
+        projectDir: String,
+        userID: String,
+        observation: CatalogObservation
+    ) async throws -> CatalogObservation
+
+    func deleteObservation(projectDir: String, userID: String, observationID: String) async throws
+
+    func getSubjectFieldsWorkspace(projectDir: String) async throws -> SubjectFieldsSnapshot
 
     func addObservationsToCitation(
         projectDir: String,

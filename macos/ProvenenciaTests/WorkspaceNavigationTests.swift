@@ -397,4 +397,45 @@ struct WorkspaceNavigationTests {
         navigation.go(toIndex: 0)
         #expect(committed.last == .sectionRoot(.sources))
     }
+
+    @Test func leaveGuardHoldsAndResumes() throws {
+        let (navigation, _) = try attachedNavigation()
+        let guardBox = HoldGuard()
+        navigation.leaveGuard = guardBox
+        navigation.go(to: .sectionRoot(.sourceFields))
+        #expect(navigation.currentLocation == .sectionRoot(.sources))
+        #expect(navigation.heldNavigation == .location(.sectionRoot(.sourceFields)))
+        navigation.resumeHeldNavigation()
+        #expect(navigation.currentLocation == .sectionRoot(.sourceFields))
+        #expect(navigation.heldNavigation == nil)
+    }
+
+    @Test func leaveGuardCancelKeepsPlace() throws {
+        let (navigation, _) = try attachedNavigation()
+        navigation.go(to: .sectionRoot(.sourceFields))
+        let guardBox = HoldGuard()
+        navigation.leaveGuard = guardBox
+        navigation.goBack()
+        #expect(navigation.currentLocation == .sectionRoot(.sourceFields))
+        #expect(navigation.heldNavigation == .back)
+        navigation.cancelHeldNavigation()
+        #expect(navigation.currentLocation == .sectionRoot(.sourceFields))
+        #expect(navigation.heldNavigation == nil)
+    }
+
+    @Test func leaveGuardDoesNotHoldIdenticalLocation() throws {
+        let (navigation, _) = try attachedNavigation()
+        let guardBox = HoldGuard()
+        navigation.leaveGuard = guardBox
+        navigation.go(to: .sectionRoot(.sources))
+        #expect(navigation.heldNavigation == nil)
+        #expect(navigation.currentLocation == .sectionRoot(.sources))
+    }
+}
+
+@MainActor
+private final class HoldGuard: WorkspaceLeaveGuard {
+    func shouldHoldNavigation(_ pending: PendingNavigation) -> Bool {
+        true
+    }
 }

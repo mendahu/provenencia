@@ -10,6 +10,8 @@ IDs stay stable (`S8-NN`, `S8-DN`). Do not renumber when moving steps here.
 | --- | --- | --- |
 | S8-D7 | Design | Citation composer rethink — Layout A + 1500pt two-column; C/D rejected |
 | S8-10 | PR | Flexible composer: Citation is the document; identity, reuse, empty Save |
+| S8-D8 | Design | Composer + Connect simplification — row-level commits, one-row connection, citation wording |
+| S8-11 | PR | Row-level composer commits, Connect in the composer, lossless audit |
 
 ## Steps
 
@@ -19,7 +21,7 @@ IDs stay stable (`S8-NN`, `S8-DN`). Do not renumber when moving steps here.
 
 Agreed on the board, not a second mode: 1 Artifact hides the Artifact chip; 2–3 use a ghost `PVButton` + `PVContextMenuPanel`; Citation identity is New + `CIT-…` with observation count and transcription snippet. Empty Save is quiet, not a blocker. Connect keeps two locked endpoint rows.
 
-Brief archived: [`design/archive/S8-D7-composer-rethink.md`](design/archive/S8-D7-composer-rethink.md). Next composer chrome is **S8-D1** (Auto Transcribe).
+Brief archived: [`design/archive/S8-D7-composer-rethink.md`](design/archive/S8-D7-composer-rethink.md). Next composer chrome was **S8-D8**.
 
 ### S8-10 — Flexible citation composer
 
@@ -39,3 +41,32 @@ Shipped the S8-D7 form. The composer is no longer subject-locked: every Observat
 - Vision / OCR, PDF remount / Find / paste (**S8-01+**)
 - Minting Subjects, project-wide Citation search, `WorkspaceLocation.observationId`
 - New kit primitive, four-list browser
+
+### S8-D8 — Design: Composer and Connect simplification
+
+**Board pick:** keep Layout A + the 1500pt two-column form. Replace the footer Save with per-row Save / Revert / Delete plus **Save citation**. Connect skips the graph sheet and finishes as one compact composer row (read-only endpoints + role / relationship type). Location connections have no term ("No role or type"; Save enabled immediately; never touched). Bridges are named by their computed sentence. New person / event / place from the row subject picker. Copy is citation wording, not "reading".
+
+Agreed: a connection is one unit — wrong endpoint means discard or delete the bridge and connect again. Observation refs (`OBS-…`) show on persisted rows; saved connections show the bridge ref (`CPA-…` / `CRL-…` / `CLO-…`). Unsaved-work guard on every in-app `go(to:)`.
+
+Brief archived: [`design/archive/S8-D8-composer-connect-simplification.md`](design/archive/S8-D8-composer-connect-simplification.md). Next composer chrome is **S8-D1** (Auto Transcribe) on these frames.
+
+### S8-11 — Composer and Connect simplification + Interpretation write integrity
+
+Shipped the S8-D8 save model and the S8-10 review leftovers that still applied: no omission-delete, a navigation leave guard, attach-to-existing-Citation Connect, full-state create/delete audit, and engine-locked edge Observations.
+
+**What shipped**
+
+- Observations commit one at a time (`UpdateObservation` / `DeleteObservation` / `AddObservationsToCitation`). The bundled update RPC 71 is reserved and gone.
+- First commit (row Save, Save citation, or Save connection) creates the Citation from the current citation draft. After that, citation fields and rows write independently.
+- Connect is one atomic `create_cited_bridge` with server midpoint and endpoint binding. A pending location connection has no term and is never touched.
+- Edge Observations are immutable (`observations.edge_locked`). The composer shows one connection row, not edge rows.
+- Creates record every column; `audit.Record` rejects zero-change revisions. `CreateSubject` writes optional placement in the same transaction.
+- `WorkspaceLeaveGuard` holds `go(to:)` / back / forward / index when the composer has unsaved document work or a touched connection.
+- Bridges are named by `EvidenceBridgeEdgeSummary.sentence(for:in:)` (working label → type + ref; unreadable edges → stored label → kind phrase · ref).
+
+**What stayed out**
+
+- Autosave, ⌘Z, app-quit / window-close / project-switch guards
+- Subject / bridge / whole-Citation delete cascades (**S8-09**)
+- Identity-Observation nouns on bridges (**S8-06**)
+- Auto Transcribe / PDF Find (**S8-01+**)

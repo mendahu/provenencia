@@ -47,10 +47,34 @@ type Revision struct {
 	Changes     []Change
 }
 
+// FullRow is a create change: every key is present with old = nil and new = value.
+// Unset columns should be passed as nil so JSON encodes them as null.
+func FullRow(fields map[string]any) map[string]FieldDiff {
+	out := make(map[string]FieldDiff, len(fields))
+	for k, v := range fields {
+		out[k] = FieldDiff{Old: nil, New: v}
+	}
+	return out
+}
+
+// DeletedRow is a delete change: every key is present with old = value and new = nil.
+// Unset columns should be passed as nil so JSON encodes them as null.
+func DeletedRow(fields map[string]any) map[string]FieldDiff {
+	out := make(map[string]FieldDiff, len(fields))
+	for k, v := range fields {
+		out[k] = FieldDiff{Old: v, New: nil}
+	}
+	return out
+}
+
 // Record allocates the next revision and inserts the transaction + changes on tx.
 // The caller owns BEGIN/COMMIT; Record must run inside that transaction.
+// An empty Changes slice is invalid — callers must skip Record when nothing changed.
 func Record(tx *sql.Tx, rev Revision) (int64, error) {
 	if tx == nil {
+		return 0, ErrInvalid
+	}
+	if len(rev.Changes) == 0 {
 		return 0, ErrInvalid
 	}
 	createdAt := strings.TrimSpace(rev.CreatedAt)
