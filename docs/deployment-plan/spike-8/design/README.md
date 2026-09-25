@@ -8,7 +8,6 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 
 | Step | Brief | Feeds | Notes |
 | --- | --- | --- | --- |
-| S8-D1 | [`S8-D1-auto-transcribe.md`](S8-D1-auto-transcribe.md) | PR **S8-01** | Auto Transcribe on citation transcription; warn + proceed on large page. **After S8-D8** — draw on its citation fields section. |
 | S8-D2 | [`S8-D2-pdf-text-find.md`](S8-D2-pdf-text-find.md) | PRs **S8-03**, **S8-04**, **S8-05** | PDF Find on the tool strip; I-beam vs pan; paste transcription from selection |
 | S8-D3 | [`S8-D3-graph-visuals.md`](S8-D3-graph-visuals.md) | PR **S8-06** | Conflict + negated; Source-page jump; richer bridge sentences; Add property on bridges |
 | S8-D4 | [`S8-D4-source-page.md`](S8-D4-source-page.md) | PR **S8-07** | Source page enhancements; first item: jump to Evidence graph |
@@ -21,11 +20,12 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 | --- | --- | --- | --- |
 | S8-D7 | [`archive/S8-D7-composer-rethink.md`](archive/S8-D7-composer-rethink.md) | **S8-10** | **Layout A** (viewer \| 520pt stacked form). At window ≥ **1500pt**, form widens to 760–880pt and splits **reading \| observation stack**. **C** (subject headings) and **D** (four columns) rejected. |
 | S8-D8 | [`archive/S8-D8-composer-connect-simplification.md`](archive/S8-D8-composer-connect-simplification.md) | **S8-11** | Row-level Save / Revert / Delete + **Save citation**; unsaved-work guard; one-row connection (endpoints fixed); location connections have no term; computed bridge names; New person / event / place from a row. Copy is citation wording, not "reading". |
+| S8-D1 | [`archive/S8-D1-auto-transcribe.md`](archive/S8-D1-auto-transcribe.md) | **S8-01** | Trailing secondary **Auto transcribe** on the transcription label row; combined replace + whole-page confirm; field locked while running; image Artifacts only. |
 
 ## How to use
 
 1. Open the Provenencia Claude Design project / design-system bundle (`macos/App/DesignSystem/README.md`).
-2. **Start with S8-D1** (Auto Transcribe on the S8-D8 citation fields section). Paste **one** open brief (it already contains the [working-rules](claude-design-working-rules.md) ritual + kit reach-for table). New briefs: [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md).
+2. **Start with S8-D2** (PDF Find / select / paste on the S8-11 composer). Paste **one** open brief (it already contains the [working-rules](claude-design-working-rules.md) ritual + kit reach-for table). New briefs: [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md).
 3. Claude **clears cache, drops the stale pack, pulls a fresh design system**, and **works in place**. Rethink briefs replace frames; enhancement briefs extend them.
 4. **Inventory is binding.** Instance kit components named in the brief; bespoke only when the use is truly domain-specific.
 5. When the board is done, archive the brief under `archive/` and write up [`../completed.md`](../completed.md).

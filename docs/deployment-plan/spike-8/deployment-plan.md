@@ -122,8 +122,8 @@ S8-D6  Delete paths
 - [x] S8-10 — Flexible citation composer (identity + multi-subject + empty Save) → [`completed.md`](completed.md)
 - [x] S8-D8 — Design: Composer and Connect simplification → [`completed.md`](completed.md)
 - [x] S8-11 — Composer and Connect simplification + Interpretation write integrity → [`completed.md`](completed.md)
-- [ ] S8-D1 — Design: Auto Transcribe in the citation composer → [`completed.md`](completed.md)
-- [ ] S8-01 — Vision OCR + Auto Transcribe button → [`completed.md`](completed.md)
+- [x] S8-D1 — Design: Auto Transcribe in the citation composer → [`completed.md`](completed.md)
+- [x] S8-01 — Vision OCR + Auto Transcribe button → [`completed.md`](completed.md)
 - [ ] S8-02 — PDF first-page Artifact thumbnails → [`completed.md`](completed.md)
 - [ ] S8-D2 — Design: PDF Find, text selection, paste transcription → [`completed.md`](completed.md)
 - [ ] S8-03 — PDFKit live viewer + I-beam default → [`completed.md`](completed.md)
@@ -632,7 +632,7 @@ Land as these commits, in order. Each commit builds, and its tests pass, before 
 
 ## S8-D1 — Design: Auto Transcribe in the citation composer
 
-Claude Design board for the **transcription** field: Auto Transcribe control, in-progress state, replace confirm, large-page / slow-job warning that can still proceed, and failure/empty states. Brief: [`design/S8-D1-auto-transcribe.md`](design/S8-D1-auto-transcribe.md). Gates **S8-01**.
+Claude Design board for the **transcription** field: Auto Transcribe control, in-progress state, replace confirm, large-page / slow-job warning that can still proceed, and failure/empty states. Brief: [`design/archive/S8-D1-auto-transcribe.md`](design/archive/S8-D1-auto-transcribe.md). Gates **S8-01**. **Done.** Trailing secondary **Auto transcribe**; combined replace + whole-page confirm; field locked while running; image-only.
 
 Does **not** design Observation auto-fill, LLM extract, PDF OCR, or PDF Find (**S8-D2**).
 
@@ -641,6 +641,8 @@ Does **not** design Observation auto-fill, LLM extract, PDF OCR, or PDF Find (**
 ## S8-01 — PR: Vision OCR + Auto Transcribe
 
 On-device Vision (`VNRecognizeTextRequest`) fills the composer **transcription** textarea for **image** Artifacts only. Crop in memory from the loaded `NSImage` and the region locator when present. No temp file, no catalog write until the researcher Saves. PDF / audio / video: do not run Vision.
+
+**Done.** Reusable `Features/OCR` module; composer wires image-only enablement, locator crop, replace / whole-page confirms, and a running lock. No PDF OCR, Observations, Live Text, or new kit primitive.
 
 | | |
 | --- | --- |
