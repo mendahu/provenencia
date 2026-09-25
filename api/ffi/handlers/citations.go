@@ -138,7 +138,7 @@ func UpdateCitationWithObservations(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	inputs, err := observationDraftsToInputs(req.GetObservations())
+	inputs, err := observationsToInputs(req.GetObservations())
 	if err != nil {
 		return nil, err
 	}

@@ -1402,7 +1402,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         transcriptionUncertain: Bool,
         transcriptionNote: String,
         citationNotes: [String],
-        observations drafts: [CatalogObservationDraft]
+        observations rows: [CatalogObservation]
     ) async throws -> (CatalogCitation, [CatalogObservation]) {
         markCatalogSessionHeld(projectDir)
         guard citationsByID[citationID] != nil else { throw StoreBoom.boom }
@@ -1418,15 +1418,44 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         )
         citationsByID[citationID] = citation
         citationNotesByID[citationID] = citationNotes
+        var existingByID: [String: CatalogObservation] = [:]
+        for list in observationsBySource.values {
+            for obs in list where obs.citationID == citationID {
+                existingByID[obs.id] = obs
+            }
+        }
+        var seen = Set<String>()
+        var written: [CatalogObservation] = []
+        written.reserveCapacity(rows.count)
+        for row in rows {
+            if row.id.isEmpty {
+                written.append(try fakeObservation(
+                    citationID: citationID,
+                    id: UUID().uuidString.lowercased(),
+                    ref: "OBS-FAKE1",
+                    row: row
+                ))
+                continue
+            }
+            guard let prev = existingByID[row.id] else { throw StoreBoom.boom }
+            if seen.contains(row.id) { throw StoreBoom.boom }
+            seen.insert(row.id)
+            written.append(try fakeObservation(
+                citationID: citationID,
+                id: prev.id,
+                ref: prev.ref,
+                row: row
+            ))
+        }
         for (sourceID, list) in observationsBySource {
             observationsBySource[sourceID] = list.filter { $0.citationID != citationID }
         }
-        let created = try appendFakeObservations(
-            projectDir: projectDir,
-            citationID: citationID,
-            drafts: drafts
-        )
-        return (citation, created)
+        for obs in written {
+            guard let subject = subjectsBySource.values.flatMap({ $0 }).first(where: { $0.id == obs.subjectID })
+            else { throw StoreBoom.boom }
+            observationsBySource[subject.sourceID, default: []].append(obs)
+        }
+        return (citation, written)
     }
 
     func addObservationsToCitation(
@@ -1470,6 +1499,59 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 .count
             return CatalogListedCitation(citation: citation, observationCount: count)
         }
+    }
+
+    private func fakeObservation(
+        citationID: String,
+        id: String,
+        ref: String,
+        row: CatalogObservation
+    ) throws -> CatalogObservation {
+        guard subjectsBySource.values.flatMap({ $0 }).contains(where: { $0.id == row.subjectID }) else {
+            throw StoreBoom.boom
+        }
+        let property = propertiesByProject.values.flatMap { $0 }.first(where: { $0.id == row.propertyID })
+        var displayText = row.valueText
+        if displayText.isEmpty, !row.valueTermID.isEmpty {
+            displayText = propertyTermsByProperty[row.propertyID]?
+                .first(where: { $0.id == row.valueTermID })?
+                .label ?? ""
+        }
+        if displayText.isEmpty, !row.nameForm.isEmpty {
+            displayText = row.nameForm
+        }
+        if displayText.isEmpty, let date = row.date {
+            displayText = DateValueDisplay.string(for: date)
+        }
+        if displayText.isEmpty, !row.valueSubjectID.isEmpty {
+            displayText = subjectsBySource.values
+                .flatMap { $0 }
+                .first(where: { $0.id == row.valueSubjectID })?
+                .label ?? ""
+        }
+        return CatalogObservation(
+            id: id,
+            ref: ref,
+            citationID: citationID,
+            subjectID: row.subjectID,
+            propertyID: row.propertyID,
+            polarity: row.polarity.isEmpty ? "positive" : row.polarity,
+            valueText: displayText,
+            valueInteger: row.valueInteger,
+            valueDateID: row.valueDateID,
+            date: row.date,
+            valueNameID: row.valueNameID,
+            nameForm: row.nameForm,
+            nameParts: row.nameParts,
+            valueSubjectID: row.valueSubjectID,
+            valueTermID: row.valueTermID,
+            propertyKey: row.propertyKey.isEmpty ? (property?.key ?? "") : row.propertyKey,
+            propertyLabel: row.propertyLabel.isEmpty ? (property?.label ?? "") : row.propertyLabel,
+            propertyValueType: row.propertyValueType.isEmpty ? (property?.valueType ?? "") : row.propertyValueType,
+            valueTermKey: row.valueTermKey.isEmpty
+                ? (propertyTermsByProperty[row.propertyID]?.first(where: { $0.id == row.valueTermID })?.key ?? "")
+                : row.valueTermKey
+        )
     }
 
     private func appendFakeObservations(

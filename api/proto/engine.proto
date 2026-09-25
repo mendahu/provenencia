@@ -1100,6 +1100,7 @@ message Observation {
 }
 
 // ObservationDraft is one Observation insert payload (create or append).
+// An update sends Observation rows, which already have ids.
 message ObservationDraft {
   string subject_id = 1;
   string property_id = 2;
@@ -1203,7 +1204,8 @@ message UpdateCitationWithObservationsRequest {
   bool transcription_uncertain = 8;
   string transcription_note = 9;
   repeated string citation_notes = 10;
-  repeated ObservationDraft observations = 11;
+  // Stored rows include id and are updated. An empty id inserts a new observation.
+  repeated Observation observations = 11;
 }
 
 message UpdateCitationWithObservationsResponse {

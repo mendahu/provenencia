@@ -50,6 +50,17 @@ const (
 		phrase
 	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
+	sqlUpdate = `UPDATE date_values SET
+		kind = ?, qualifier = ?, calendar = ?,
+		start_year = ?, start_month = ?, start_day = ?,
+		start_hour = ?, start_minute = ?, start_second = ?, start_millisecond = ?, start_tz = ?,
+		end_year = ?, end_month = ?, end_day = ?,
+		end_hour = ?, end_minute = ?, end_second = ?, end_millisecond = ?, end_tz = ?,
+		phrase = ?
+		WHERE id = ?`
+
+	sqlExists = `SELECT 1 FROM date_values WHERE id = ?`
+
 	sqlLookup = `SELECT kind, qualifier, calendar,
 		start_year, start_month, start_day,
 		start_hour, start_minute, start_second, start_millisecond, start_tz,
@@ -144,6 +155,54 @@ func InsertTx(q interface {
 		return nil, err
 	}
 	return id[:], nil
+}
+
+// UpdateTx rewrites the date_values row id. The id stays the same.
+func UpdateTx(tx *sql.Tx, id []byte, v Value) error {
+	if tx == nil || len(id) != 16 {
+		return ErrInvalid
+	}
+	v.Kind = strings.TrimSpace(v.Kind)
+	v.Qualifier = strings.TrimSpace(v.Qualifier)
+	v.Calendar = strings.TrimSpace(v.Calendar)
+	v.Phrase = strings.TrimSpace(v.Phrase)
+	v.StartTZ = strings.TrimSpace(v.StartTZ)
+	v.EndTZ = strings.TrimSpace(v.EndTZ)
+	if err := validate(v); err != nil {
+		return err
+	}
+	var one int
+	if err := tx.QueryRow(sqlExists, id).Scan(&one); err != nil {
+		if err == sql.ErrNoRows {
+			return ErrInvalid
+		}
+		return err
+	}
+	_, err := tx.Exec(
+		sqlUpdate,
+		v.Kind,
+		nullIfEmpty(v.Qualifier),
+		nullIfEmpty(v.Calendar),
+		nullInt(v.StartYear),
+		nullInt(v.StartMonth),
+		nullInt(v.StartDay),
+		nullInt(v.StartHour),
+		nullInt(v.StartMinute),
+		nullInt(v.StartSecond),
+		nullInt(v.StartMillisecond),
+		nullIfEmpty(v.StartTZ),
+		nullInt(v.EndYear),
+		nullInt(v.EndMonth),
+		nullInt(v.EndDay),
+		nullInt(v.EndHour),
+		nullInt(v.EndMinute),
+		nullInt(v.EndSecond),
+		nullInt(v.EndMillisecond),
+		nullIfEmpty(v.EndTZ),
+		nullIfEmpty(v.Phrase),
+		id,
+	)
+	return err
 }
 
 // Lookup returns the date_values row for id, or sql.ErrNoRows.

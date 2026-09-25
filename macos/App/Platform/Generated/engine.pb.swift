@@ -3540,6 +3540,7 @@ public nonisolated struct Provenencia_Engine_V1_Observation: @unchecked Sendable
 }
 
 /// ObservationDraft is one Observation insert payload (create or append).
+/// An update sends Observation rows, which already have ids.
 public nonisolated struct Provenencia_Engine_V1_ObservationDraft: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -3861,7 +3862,8 @@ public nonisolated struct Provenencia_Engine_V1_UpdateCitationWithObservationsRe
 
   public var citationNotes: [String] = []
 
-  public var observations: [Provenencia_Engine_V1_ObservationDraft] = []
+  /// Stored rows include id and are updated. An empty id inserts a new observation.
+  public var observations: [Provenencia_Engine_V1_Observation] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 

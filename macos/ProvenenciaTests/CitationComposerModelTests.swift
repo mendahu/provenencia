@@ -927,6 +927,8 @@ struct CitationComposerModelTests {
         #expect(store.citationsByID[citation.id]?.transcription == "New")
         #expect(store.citationsByID[citation.id]?.locatorJSON.contains("\"artifact\"") == true)
         #expect(listed.count == 1)
+        #expect(listed[0].id == "obs-1")
+        #expect(listed[0].ref == "OBS-1")
         #expect(listed[0].valueText == "Miller")
     }
 

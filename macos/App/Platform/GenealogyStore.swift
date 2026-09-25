@@ -733,7 +733,7 @@ protocol GenealogyStore: Sendable {
         transcriptionUncertain: Bool,
         transcriptionNote: String,
         citationNotes: [String],
-        observations: [CatalogObservationDraft]
+        observations: [CatalogObservation]
     ) async throws -> (CatalogCitation, [CatalogObservation])
 
     func addObservationsToCitation(

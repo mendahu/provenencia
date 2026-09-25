@@ -1,6 +1,8 @@
 package citations
 
 import (
+	"bytes"
+	"database/sql"
 	"errors"
 	"strings"
 	"testing"
@@ -8,6 +10,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -122,6 +126,35 @@ func TestCitations(t *testing.T) {
 			t.Fatal(err)
 		}
 		return actionType
+	}
+	latestEntities := func(t *testing.T, c *database.Catalog) []string {
+		t.Helper()
+		db, err := c.DB()
+		if err != nil {
+			t.Fatal(err)
+		}
+		rows, err := db.Query(`
+			SELECT c.entity_type || '/' || c.action
+			FROM audit_changes c
+			JOIN audit_transactions tx ON tx.id = c.audit_transaction_id
+			WHERE tx.revision = (SELECT MAX(revision) FROM audit_transactions)
+			ORDER BY c.rowid`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer rows.Close()
+		var out []string
+		for rows.Next() {
+			var action string
+			if err := rows.Scan(&action); err != nil {
+				t.Fatal(err)
+			}
+			out = append(out, action)
+		}
+		if err := rows.Err(); err != nil {
+			t.Fatal(err)
+		}
+		return out
 	}
 
 	tests := []struct {
@@ -314,6 +347,320 @@ func TestCitations(t *testing.T) {
 				listed, err := observations.ListByCitation(c, res.Citation.ID)
 				if err != nil || len(listed) != 0 {
 					t.Fatalf("persisted %v len=%d", err, len(listed))
+				}
+			},
+		},
+		{
+			name: "transcription-only save keeps observation id and ref",
+			run: func(t *testing.T) {
+				c, s := mustSeed(t)
+				res, err := CreateWithObservations(c, userID, CreateInput{
+					ArtifactID:  s.artifact.ID,
+					LocatorJSON: validLocator,
+				}, []observations.Input{{
+					SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
+					ValueText: "Boston", HasText: true,
+				}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				updated, err := UpdateWithObservations(c, userID, res.Citation.ID, CreateInput{
+					ArtifactID:    s.artifact.ID,
+					LocatorJSON:   validLocator,
+					Transcription: "margin note",
+				}, []observations.Input{{
+					ID:        res.Observations[0].ID,
+					SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
+					ValueText: "Boston", HasText: true,
+				}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(updated.Observations) != 1 {
+					t.Fatalf("obs %+v", updated.Observations)
+				}
+				got := updated.Observations[0]
+				if !bytes.Equal(got.ID, res.Observations[0].ID) || got.Ref != res.Observations[0].Ref {
+					t.Fatalf("id/ref changed %q %q", got.Ref, res.Observations[0].Ref)
+				}
+				if got.ValueText != "Boston" {
+					t.Fatalf("text %q", got.ValueText)
+				}
+				actions := latestEntities(t, c)
+				if len(actions) != 1 || actions[0] != "citation/update" {
+					t.Fatalf("audit %v", actions)
+				}
+			},
+		},
+		{
+			name: "changed observation value keeps id",
+			run: func(t *testing.T) {
+				c, s := mustSeed(t)
+				res, err := CreateWithObservations(c, userID, CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, []observations.Input{{
+					SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
+					ValueText: "Boston", HasText: true,
+				}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				updated, err := UpdateWithObservations(c, userID, res.Citation.ID, CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, []observations.Input{{
+					ID:        res.Observations[0].ID,
+					SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
+					ValueText: "Salem", HasText: true,
+				}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				got := updated.Observations[0]
+				if !bytes.Equal(got.ID, res.Observations[0].ID) || got.Ref != res.Observations[0].Ref {
+					t.Fatalf("id/ref changed")
+				}
+				if got.ValueText != "Salem" {
+					t.Fatalf("text %q", got.ValueText)
+				}
+				actions := latestEntities(t, c)
+				if len(actions) != 1 || actions[0] != "observation/update" {
+					t.Fatalf("audit %v", actions)
+				}
+			},
+		},
+		{
+			name: "new observation inserts and dropped id deletes",
+			run: func(t *testing.T) {
+				c, s := mustSeed(t)
+				res, err := CreateWithObservations(c, userID, CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, []observations.Input{{
+					SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
+					ValueText: "Boston", HasText: true,
+				}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				kept := res.Observations[0]
+				added, err := UpdateWithObservations(c, userID, res.Citation.ID, CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, []observations.Input{
+					{
+						ID: kept.ID, SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
+						ValueText: "Boston", HasText: true,
+					},
+					{
+						SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
+						ValueText: "Salem", HasText: true,
+					},
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(added.Observations) != 2 || !bytes.Equal(added.Observations[0].ID, kept.ID) {
+					t.Fatalf("added %+v", added.Observations)
+				}
+				if bytes.Equal(added.Observations[1].ID, kept.ID) || added.Observations[1].Ref == kept.Ref {
+					t.Fatalf("new row reused identity")
+				}
+				dropped, err := UpdateWithObservations(c, userID, res.Citation.ID, CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, []observations.Input{{
+					ID: kept.ID, SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
+					ValueText: "Boston", HasText: true,
+				}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(dropped.Observations) != 1 || !bytes.Equal(dropped.Observations[0].ID, kept.ID) {
+					t.Fatalf("dropped %+v", dropped.Observations)
+				}
+			},
+		},
+		{
+			name: "foreign or duplicate observation id is invalid",
+			run: func(t *testing.T) {
+				c, s := mustSeed(t)
+				res, err := CreateWithObservations(c, userID, CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, []observations.Input{{
+					SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
+					ValueText: "Boston", HasText: true,
+				}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				foreign, err := uuid.NewV7()
+				if err != nil {
+					t.Fatal(err)
+				}
+				_, err = UpdateWithObservations(c, userID, res.Citation.ID, CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, []observations.Input{{
+					ID: foreign[:], SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
+					ValueText: "Salem", HasText: true,
+				}})
+				if !errors.Is(err, observations.ErrInvalid) {
+					t.Fatalf("foreign %v", err)
+				}
+				_, err = UpdateWithObservations(c, userID, res.Citation.ID, CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, []observations.Input{
+					{
+						ID: res.Observations[0].ID, SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
+						ValueText: "Boston", HasText: true,
+					},
+					{
+						ID: res.Observations[0].ID, SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
+						ValueText: "Salem", HasText: true,
+					},
+				})
+				if !errors.Is(err, observations.ErrInvalid) {
+					t.Fatalf("duplicate %v", err)
+				}
+				listed, err := observations.ListByCitation(c, res.Citation.ID)
+				if err != nil || len(listed) != 1 || listed[0].ValueText != "Boston" {
+					t.Fatalf("rolled back %+v %v", listed, err)
+				}
+			},
+		},
+		{
+			name: "date and name values update in place",
+			run: func(t *testing.T) {
+				c, s := mustSeed(t)
+				eventType, err := subjecttypes.Lookup(c, "event", subjecttypes.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				event, err := subjects.Create(c, userID, subjects.CreateInput{
+					SourceID: s.artifact.SourceID, SubjectTypeID: eventType.ID, Label: "Birth",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				dateProp, err := properties.Lookup(c, "date", properties.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				nameProp, err := properties.Lookup(c, "name", properties.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				year := 1842
+				res, err := CreateWithObservations(c, userID, CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, []observations.Input{
+					{
+						SubjectID: event.ID, PropertyID: dateProp.ID,
+						Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year},
+					},
+					{
+						SubjectID: s.person.ID, PropertyID: nameProp.ID,
+						Name: &namevalues.Value{Form: "Ada"},
+					},
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				var dateObs, nameObs observations.Observation
+				for _, obs := range res.Observations {
+					switch {
+					case len(obs.ValueDateID) == 16:
+						dateObs = obs
+					case len(obs.ValueNameID) == 16:
+						nameObs = obs
+					}
+				}
+				if len(dateObs.ID) != 16 || len(nameObs.ID) != 16 {
+					t.Fatalf("created %+v", res.Observations)
+				}
+				year = 1843
+				updated, err := UpdateWithObservations(c, userID, res.Citation.ID, CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, []observations.Input{
+					{
+						ID: dateObs.ID, SubjectID: event.ID, PropertyID: dateProp.ID,
+						Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year},
+					},
+					{
+						ID: nameObs.ID, SubjectID: s.person.ID, PropertyID: nameProp.ID,
+						Name: &namevalues.Value{Form: "Ada Lovelace"},
+					},
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				for _, obs := range updated.Observations {
+					switch {
+					case bytes.Equal(obs.ID, dateObs.ID):
+						if !bytes.Equal(obs.ValueDateID, dateObs.ValueDateID) || obs.Ref != dateObs.Ref {
+							t.Fatalf("date identity changed")
+						}
+					case bytes.Equal(obs.ID, nameObs.ID):
+						if !bytes.Equal(obs.ValueNameID, nameObs.ValueNameID) || obs.Ref != nameObs.Ref {
+							t.Fatalf("name identity changed")
+						}
+					default:
+						t.Fatalf("unexpected observation %q", obs.Ref)
+					}
+				}
+				gotDate, err := datevalues.Lookup(c, dateObs.ValueDateID)
+				if err != nil || gotDate.StartYear == nil || *gotDate.StartYear != 1843 {
+					t.Fatalf("date %+v %v", gotDate, err)
+				}
+				gotName, err := namevalues.Lookup(c, nameObs.ValueNameID)
+				if err != nil || gotName.Form != "Ada Lovelace" {
+					t.Fatalf("name %+v %v", gotName, err)
+				}
+			},
+		},
+		{
+			name: "unused date value is deleted when the observation stops using it",
+			run: func(t *testing.T) {
+				c, s := mustSeed(t)
+				eventType, err := subjecttypes.Lookup(c, "event", subjecttypes.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				event, err := subjects.Create(c, userID, subjects.CreateInput{
+					SourceID: s.artifact.SourceID, SubjectTypeID: eventType.ID, Label: "Birth",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				dateProp, err := properties.Lookup(c, "date", properties.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				eventTypeProp, err := properties.Lookup(c, "event_type", properties.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				birth, err := propertyterms.Lookup(c, eventTypeProp.ID, "birth", propertyterms.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				year := 1842
+				res, err := CreateWithObservations(c, userID, CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, []observations.Input{{
+					SubjectID: event.ID, PropertyID: dateProp.ID,
+					Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year},
+				}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				dateID := append([]byte(nil), res.Observations[0].ValueDateID...)
+				if _, err := UpdateWithObservations(c, userID, res.Citation.ID, CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, []observations.Input{{
+					ID: res.Observations[0].ID, SubjectID: event.ID, PropertyID: eventTypeProp.ID,
+					ValueTermID: birth.ID,
+				}}); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := datevalues.Lookup(c, dateID); err != sql.ErrNoRows {
+					t.Fatalf("date row err=%v", err)
 				}
 			},
 		},

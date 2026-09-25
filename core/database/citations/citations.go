@@ -265,7 +265,7 @@ func InsertWithObservationsTx(
 	}, nil
 }
 
-// UpdateWithObservations replaces Citation fields and all Observations for one citation.
+// UpdateWithObservations updates the citation row and each observation by id.
 func UpdateWithObservations(
 	c *database.Catalog,
 	userID, citationID []byte,
@@ -346,21 +346,12 @@ func UpdateWithObservations(
 		}
 	}
 
-	if err := observations.DeleteByCitationTx(tx, citationID); err != nil {
+	obsOut, obsChanges, err := observations.ApplyForCitationTx(tx, citationID, obsInputs)
+	if err != nil {
 		return CreateResult{}, err
 	}
-	var obsOut []observations.Observation
-	var obsChanges []audit.Change
-	if len(obsInputs) > 0 {
-		obsOut, obsChanges, err = observations.InsertManyTx(tx, citationID, obsInputs)
-		if err != nil {
-			return CreateResult{}, err
-		}
-	}
 
-	citFields := map[string]audit.FieldDiff{
-		"id": {Old: uuidString(citationID), New: uuidString(citationID)},
-	}
+	citFields := map[string]audit.FieldDiff{}
 	if string(prev.ArtifactID) != string(in.ArtifactID) {
 		citFields["artifact_id"] = audit.FieldDiff{
 			Old: uuidString(prev.ArtifactID),
@@ -370,13 +361,30 @@ func UpdateWithObservations(
 	if prev.LocatorJSON != in.LocatorJSON {
 		citFields["locator_json"] = audit.FieldDiff{Old: prev.LocatorJSON, New: in.LocatorJSON}
 	}
+	if prev.Transcription != in.Transcription {
+		citFields["transcription"] = audit.FieldDiff{Old: prev.Transcription, New: in.Transcription}
+	}
+	if prev.Description != in.Description {
+		citFields["description"] = audit.FieldDiff{Old: prev.Description, New: in.Description}
+	}
+	if prev.TranscriptionUncertain != in.TranscriptionUncertain {
+		citFields["transcription_uncertain"] = audit.FieldDiff{
+			Old: prev.TranscriptionUncertain,
+			New: in.TranscriptionUncertain,
+		}
+	}
+	if prev.TranscriptionNote != in.TranscriptionNote {
+		citFields["transcription_note"] = audit.FieldDiff{Old: prev.TranscriptionNote, New: in.TranscriptionNote}
+	}
 	changes := make([]audit.Change, 0, 1+len(obsChanges))
-	changes = append(changes, audit.Change{
-		EntityType: "citation",
-		EntityID:   citationID,
-		Action:     audit.ActionUpdate,
-		Fields:     citFields,
-	})
+	if len(citFields) > 0 {
+		changes = append(changes, audit.Change{
+			EntityType: "citation",
+			EntityID:   citationID,
+			Action:     audit.ActionUpdate,
+			Fields:     citFields,
+		})
+	}
 	changes = append(changes, obsChanges...)
 
 	if _, err := audit.Record(tx, audit.Revision{

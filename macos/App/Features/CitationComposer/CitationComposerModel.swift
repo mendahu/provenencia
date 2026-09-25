@@ -1102,12 +1102,22 @@ final class CitationComposerModel {
             formError = String(localized: L10n.CitationComposer.saveNeedsObservationError)
             return nil
         }
-        guard let drafts = buildObservationDrafts() else { return nil }
+        let updates: [CatalogObservation]?
+        let drafts: [CatalogObservationDraft]?
+        if activeCitationID == nil {
+            updates = nil
+            drafts = buildObservationDrafts()
+            guard drafts != nil else { return nil }
+        } else {
+            drafts = nil
+            updates = buildObservationUpdates()
+            guard updates != nil else { return nil }
+        }
 
         isSubmitting = true
         defer { isSubmitting = false }
         do {
-            if let citationID = activeCitationID {
+            if let citationID = activeCitationID, let updates {
                 _ = try await store.updateCitationWithObservations(
                     projectDir: session.projectKey.projectDir,
                     userID: userID,
@@ -1119,46 +1129,48 @@ final class CitationComposerModel {
                     transcriptionUncertain: transcriptionUncertain,
                     transcriptionNote: transcriptionNote,
                     citationNotes: [],
-                    observations: drafts
+                    observations: updates
                 )
-            } else if isConnectPrefill,
-                      let fromID = entry.connectFromSubjectID,
-                      let toID = entry.connectToSubjectID,
-                      let bridgeKey = entry.connectBridgeTypeKey
-            {
-                _ = try await store.createCitedBridge(
-                    projectDir: session.projectKey.projectDir,
-                    userID: userID,
-                    sourceID: sourceID,
-                    fromSubjectID: fromID,
-                    toSubjectID: toID,
-                    bridgeTypeKey: bridgeKey,
-                    label: subjectLabel,
-                    description: "",
-                    gridX: entry.connectGridX,
-                    gridY: entry.connectGridY,
-                    artifactID: artifactID,
-                    locatorJSON: locatorJSON,
-                    transcription: transcription,
-                    citationDescription: citationDescription,
-                    transcriptionUncertain: transcriptionUncertain,
-                    transcriptionNote: transcriptionNote,
-                    citationNotes: [],
-                    observations: drafts
-                )
-            } else {
-                _ = try await store.createCitationWithObservations(
-                    projectDir: session.projectKey.projectDir,
-                    userID: userID,
-                    artifactID: artifactID,
-                    locatorJSON: locatorJSON,
-                    transcription: transcription,
-                    description: citationDescription,
-                    transcriptionUncertain: transcriptionUncertain,
-                    transcriptionNote: transcriptionNote,
-                    citationNotes: [],
-                    observations: drafts
-                )
+            } else if let drafts {
+                if isConnectPrefill,
+                   let fromID = entry.connectFromSubjectID,
+                   let toID = entry.connectToSubjectID,
+                   let bridgeKey = entry.connectBridgeTypeKey
+                {
+                    _ = try await store.createCitedBridge(
+                        projectDir: session.projectKey.projectDir,
+                        userID: userID,
+                        sourceID: sourceID,
+                        fromSubjectID: fromID,
+                        toSubjectID: toID,
+                        bridgeTypeKey: bridgeKey,
+                        label: subjectLabel,
+                        description: "",
+                        gridX: entry.connectGridX,
+                        gridY: entry.connectGridY,
+                        artifactID: artifactID,
+                        locatorJSON: locatorJSON,
+                        transcription: transcription,
+                        citationDescription: citationDescription,
+                        transcriptionUncertain: transcriptionUncertain,
+                        transcriptionNote: transcriptionNote,
+                        citationNotes: [],
+                        observations: drafts
+                    )
+                } else {
+                    _ = try await store.createCitationWithObservations(
+                        projectDir: session.projectKey.projectDir,
+                        userID: userID,
+                        artifactID: artifactID,
+                        locatorJSON: locatorJSON,
+                        transcription: transcription,
+                        description: citationDescription,
+                        transcriptionUncertain: transcriptionUncertain,
+                        transcriptionNote: transcriptionNote,
+                        citationNotes: [],
+                        observations: drafts
+                    )
+                }
             }
             session.apply(.savedCitation(sourceId: sourceID))
             session.noticeToast = VocabularyToast(
@@ -1341,6 +1353,58 @@ final class CitationComposerModel {
             drafts.append(draft)
         }
         return drafts
+    }
+
+    /// Observations for an update. Existing rows keep their id. A row with no persisted id is new.
+    private func buildObservationUpdates() -> [CatalogObservation]? {
+        var updates: [CatalogObservation] = []
+        updates.reserveCapacity(observations.count)
+        for row in observations {
+            if row.propertyID.isEmpty { continue }
+            guard let property = catalogProperty(id: row.propertyID) else {
+                formError = String(localized: L10n.CitationComposer.missingPropertyError)
+                return nil
+            }
+            let rowSubjectID = row.subjectID
+            if !row.isConnectFixed, rowSubjectID.isEmpty {
+                formError = String(localized: L10n.CitationComposer.dialogPropertyRequired)
+                return nil
+            }
+            var filled = CatalogObservationDraft(
+                subjectID: rowSubjectID,
+                propertyID: property.id,
+                polarity: row.polarity == "negative" ? "negative" : "positive"
+            )
+            if let failure = CitationObservationValue.apply(
+                valueType: property.valueType,
+                fields: CitationObservationValue.fields(from: row),
+                to: &filled
+            ) {
+                formError = CitationObservationValue.message(for: failure)
+                return nil
+            }
+            updates.append(CatalogObservation(
+                id: row.persistedID ?? "",
+                ref: "",
+                citationID: activeCitationID ?? "",
+                subjectID: rowSubjectID,
+                propertyID: property.id,
+                polarity: filled.polarity,
+                valueText: filled.valueText,
+                valueInteger: filled.valueInteger,
+                valueDateID: filled.valueDateID,
+                date: filled.date,
+                valueNameID: filled.valueNameID,
+                nameForm: filled.nameForm,
+                nameParts: filled.nameParts,
+                valueSubjectID: filled.valueSubjectID,
+                valueTermID: filled.valueTermID,
+                propertyKey: property.key,
+                propertyLabel: property.label,
+                propertyValueType: property.valueType
+            ))
+        }
+        return updates
     }
 
     static func locatorJSON(page: Int) -> String? {

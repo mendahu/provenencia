@@ -587,19 +587,10 @@ private struct EvidenceGraphDocumentBody: View {
         .onChange(of: model.canCite) { _, _ in
             publishHitTargets()
         }
-        .onChange(of: subjects.map(\.id)) { _, _ in
-            publishHitTargets()
-        }
-        .onChange(of: bridges.map(\.id)) { _, _ in
-            publishHitTargets()
-        }
         .onChange(of: pointer.offsets.count) { _, _ in
             publishHitTargets()
         }
-        .onChange(of: subjects.map { "\($0.id):\($0.gridX),\($0.gridY):\($0.observations.count)" }) { _, _ in
-            publishHitTargets()
-        }
-        .onChange(of: bridges.map { "\($0.id):\($0.gridX),\($0.gridY):\($0.observations.count)" }) { _, _ in
+        .onChange(of: EvidenceGraphHitRefresh.token(subjects: subjects, bridges: bridges)) { _, _ in
             publishHitTargets()
         }
     }
@@ -783,5 +774,34 @@ private struct EvidenceGraphDocumentBody: View {
         )
         .frame(width: 420)
         .position(x: contentSize.width / 2, y: contentSize.height / 2)
+    }
+}
+
+/// Canvas hit targets must refresh when observation ids change, not only when
+/// the row count does. Saving a citation deletes and reinserts its observations.
+enum EvidenceGraphHitRefresh {
+    static func token(
+        subjects: [SourceGraphPlacedSubject],
+        bridges: [SourceGraphPlacedBridge]
+    ) -> String {
+        var parts: [String] = []
+        parts.reserveCapacity(subjects.count + bridges.count)
+        for placed in subjects {
+            parts.append(cardToken(id: placed.id, gridX: placed.gridX, gridY: placed.gridY, observations: placed.observations))
+        }
+        for placed in bridges {
+            parts.append(cardToken(id: placed.id, gridX: placed.gridX, gridY: placed.gridY, observations: placed.observations))
+        }
+        return parts.joined(separator: "|")
+    }
+
+    private static func cardToken(
+        id: String,
+        gridX: Int64,
+        gridY: Int64,
+        observations: [CatalogObservation]
+    ) -> String {
+        let ids = observations.map(\.id).joined(separator: ",")
+        return "\(id)@\(gridX),\(gridY):\(ids)"
     }
 }

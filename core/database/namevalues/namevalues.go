@@ -6,8 +6,9 @@
 // Insert rejects unknown non-empty types. User-minted part-type vocabulary
 // (DB rows) is deferred — keep DDL as open TEXT.
 //
-// NameValues are value objects (UUID for persistence only). Mutation is not
-// supported; consumers attach new rows when a name assertion changes.
+// NameValues are value objects (UUID for persistence only). Observation saves
+// call UpdateTx to rewrite a row an observation already points at, so
+// value_name_id stays stable. Other callers attach a new row.
 // Format profiles and project defaults live elsewhere (structured-name-model §4).
 package namevalues
 
@@ -37,6 +38,12 @@ const (
 
 	sqlInsertPart = `INSERT INTO name_value_parts (id, name_value_id, idx, value, type)
 		VALUES (?, ?, ?, ?, ?)`
+
+	sqlUpdateValue = `UPDATE name_values SET form = ? WHERE id = ?`
+
+	sqlDeleteParts = `DELETE FROM name_value_parts WHERE name_value_id = ?`
+
+	sqlValueExists = `SELECT 1 FROM name_values WHERE id = ?`
 
 	sqlLookupValue = `SELECT form FROM name_values WHERE id = ?`
 
@@ -124,6 +131,55 @@ func InsertTx(tx *sql.Tx, v Value) ([]byte, error) {
 		}
 	}
 	return idBytes, nil
+}
+
+// UpdateTx rewrites form and replaces parts for an existing name_values id.
+func UpdateTx(tx *sql.Tx, id []byte, v Value) error {
+	if tx == nil || len(id) != 16 {
+		return ErrInvalid
+	}
+	v.Form = strings.TrimSpace(v.Form)
+	parts := make([]Part, len(v.Parts))
+	for i, p := range v.Parts {
+		parts[i] = Part{
+			Idx:   p.Idx,
+			Value: strings.TrimSpace(p.Value),
+			Type:  strings.TrimSpace(p.Type),
+		}
+	}
+	if err := validate(v.Form, parts); err != nil {
+		return err
+	}
+	var one int
+	if err := tx.QueryRow(sqlValueExists, id).Scan(&one); err != nil {
+		if err == sql.ErrNoRows {
+			return ErrInvalid
+		}
+		return err
+	}
+	if _, err := tx.Exec(sqlUpdateValue, v.Form, id); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(sqlDeleteParts, id); err != nil {
+		return err
+	}
+	for _, p := range parts {
+		partID, err := uuid.NewV7()
+		if err != nil {
+			return err
+		}
+		if _, err := tx.Exec(
+			sqlInsertPart,
+			partID[:],
+			id,
+			p.Idx,
+			p.Value,
+			nullIfEmpty(p.Type),
+		); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Lookup returns the name_values row and ordered parts for id, or sql.ErrNoRows.

@@ -9854,6 +9854,7 @@ func (x *Observation) GetPropertyValueType() string {
 }
 
 // ObservationDraft is one Observation insert payload (create or append).
+// An update sends Observation rows, which already have ids.
 type ObservationDraft struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	SubjectId      string                 `protobuf:"bytes,1,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
@@ -10782,9 +10783,10 @@ type UpdateCitationWithObservationsRequest struct {
 	TranscriptionUncertain bool                   `protobuf:"varint,8,opt,name=transcription_uncertain,json=transcriptionUncertain,proto3" json:"transcription_uncertain,omitempty"`
 	TranscriptionNote      string                 `protobuf:"bytes,9,opt,name=transcription_note,json=transcriptionNote,proto3" json:"transcription_note,omitempty"`
 	CitationNotes          []string               `protobuf:"bytes,10,rep,name=citation_notes,json=citationNotes,proto3" json:"citation_notes,omitempty"`
-	Observations           []*ObservationDraft    `protobuf:"bytes,11,rep,name=observations,proto3" json:"observations,omitempty"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	// Stored rows include id and are updated. An empty id inserts a new observation.
+	Observations  []*Observation `protobuf:"bytes,11,rep,name=observations,proto3" json:"observations,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateCitationWithObservationsRequest) Reset() {
@@ -10887,7 +10889,7 @@ func (x *UpdateCitationWithObservationsRequest) GetCitationNotes() []string {
 	return nil
 }
 
-func (x *UpdateCitationWithObservationsRequest) GetObservations() []*ObservationDraft {
+func (x *UpdateCitationWithObservationsRequest) GetObservations() []*Observation {
 	if x != nil {
 		return x.Observations
 	}
@@ -12093,7 +12095,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x13GetCitationResponse\x12;\n" +
 	"\bcitation\x18\x01 \x01(\v2\x1f.provenencia.engine.v1.CitationR\bcitation\x12\x14\n" +
 	"\x05notes\x18\x02 \x03(\tR\x05notes\x12F\n" +
-	"\fobservations\x18\x03 \x03(\v2\".provenencia.engine.v1.ObservationR\fobservations\"\xea\x03\n" +
+	"\fobservations\x18\x03 \x03(\v2\".provenencia.engine.v1.ObservationR\fobservations\"\xe5\x03\n" +
 	"%UpdateCitationWithObservationsRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +
@@ -12108,8 +12110,8 @@ const file_engine_proto_rawDesc = "" +
 	"\x17transcription_uncertain\x18\b \x01(\bR\x16transcriptionUncertain\x12-\n" +
 	"\x12transcription_note\x18\t \x01(\tR\x11transcriptionNote\x12%\n" +
 	"\x0ecitation_notes\x18\n" +
-	" \x03(\tR\rcitationNotes\x12K\n" +
-	"\fobservations\x18\v \x03(\v2'.provenencia.engine.v1.ObservationDraftR\fobservations\"\xad\x01\n" +
+	" \x03(\tR\rcitationNotes\x12F\n" +
+	"\fobservations\x18\v \x03(\v2\".provenencia.engine.v1.ObservationR\fobservations\"\xad\x01\n" +
 	"&UpdateCitationWithObservationsResponse\x12;\n" +
 	"\bcitation\x18\x01 \x01(\v2\x1f.provenencia.engine.v1.CitationR\bcitation\x12F\n" +
 	"\fobservations\x18\x02 \x03(\v2\".provenencia.engine.v1.ObservationR\fobservations\"\xc4\x05\n" +
@@ -12499,7 +12501,7 @@ var file_engine_proto_depIdxs = []int32{
 	170, // 73: provenencia.engine.v1.ListCitationsByArtifactResponse.citations:type_name -> provenencia.engine.v1.ListedCitation
 	158, // 74: provenencia.engine.v1.GetCitationResponse.citation:type_name -> provenencia.engine.v1.Citation
 	159, // 75: provenencia.engine.v1.GetCitationResponse.observations:type_name -> provenencia.engine.v1.Observation
-	160, // 76: provenencia.engine.v1.UpdateCitationWithObservationsRequest.observations:type_name -> provenencia.engine.v1.ObservationDraft
+	159, // 76: provenencia.engine.v1.UpdateCitationWithObservationsRequest.observations:type_name -> provenencia.engine.v1.Observation
 	158, // 77: provenencia.engine.v1.UpdateCitationWithObservationsResponse.citation:type_name -> provenencia.engine.v1.Citation
 	159, // 78: provenencia.engine.v1.UpdateCitationWithObservationsResponse.observations:type_name -> provenencia.engine.v1.Observation
 	160, // 79: provenencia.engine.v1.CreateCitedBridgeRequest.observations:type_name -> provenencia.engine.v1.ObservationDraft
