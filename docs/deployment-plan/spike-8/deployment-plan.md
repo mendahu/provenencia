@@ -15,7 +15,7 @@ Grow this list as stories land. **By spike close**, every checked story below mu
 1. **Composer rethink** — the citation composer is a **Citation document**: pick Artifact and Citation in-form (no create-time pre-screen); see **all** Observations on that Citation; each row names a **Subject**; Save with zero Observations is allowed; Add property can **reuse** an existing Citation. Graph stays a place. Entry points only pre-select. **This story ships before Auto Transcribe and PDF Find/paste.**
 2. **Auto Transcribe** — in the **new** composer, on an **image** Artifact, a control fills **transcription** from Vision OCR of the image (or the region polygon when one is set). The researcher can edit and Save as today. Full-image / oversized jobs warn and can still proceed. No Observation writes. **PDF:** this button stays disabled (text-layer path is bar items 3–4).
 3. **PDF Find** — on a PDF in the composer, a Find field on the viewer tool strip jumps to a keyword hit with a highlight. Image-only PDFs (no text layer) fail honestly. Notes: [`pdf-text-find.md`](pdf-text-find.md).
-4. **PDF select + paste transcription** — default PDF pointer is text select (pan is explicit). **Paste transcription from selection** fills the transcription field. No Vision on PDF pages.
+4. **PDF select + paste transcription** — default PDF pointer is text select; scroll/trackpad pans (Preview / PDFKit). **Paste transcription from selection** fills the transcription field. No Vision on PDF pages.
 5. **Graph visual enhancements** — conflict + negated row badges; always-on **jump to the Source page**; cited **bridge sentences** prefer endpoint `name` / `event_type` / `toponym`, then working label; **Add property** on bridge cards (extra non-edge rows). More items may join **S8-D3** / **S8-06**.
 6. **Source page enhancements** — the Source detail page has an **Open Evidence graph** control for the same Source (disabled with no Artifact). More items may join **S8-D4** / **S8-07**.
 7. **Sources list refresh** — the Sources list shows **subject** and **observation** counts per Source so a worked Evidence graph is obvious next to an empty one. Counts live on their own cache keys (one Source invalidates; the list payload does not). More items may join **S8-D5** / **S8-08**.
@@ -33,7 +33,7 @@ Further bar items: TBD (additional data-entry stories).
 | **S8-D7** | Citation composer rethink | Flexible Citation document; compact Artifact vs robust Citation (ref + transcription); inline simple observations; empty Save | **S8-10** |
 | **S8-D8** | Composer and Connect simplification | Row-level Observation Save / Revert / Delete; Save citation; unsaved-work guard; one-row connection in the composer (no graph sheet; endpoints fixed); computed bridge names; New person / event / place from a row | **S8-11** |
 | **S8-D1** | Auto Transcribe in the composer | Button, progress, replace confirm, large-page warning + proceed, failure copy | **S8-01** |
-| **S8-D2** | PDF Find + select + paste | Tool-strip Find; I-beam vs pan; paste-from-selection vs Auto Transcribe row | **S8-03**, **S8-04**, **S8-05** |
+| **S8-D2** | PDF Find + select + paste | Tool-strip Find; I-beam + scroll-to-pan; paste-from-selection vs Auto Transcribe row | **S8-03**, **S8-04**, **S8-05** |
 | **S8-D3** | Evidence graph visual enhancements | Conflict + negated; Source-page jump; richer bridge sentences; Add property on bridges | **S8-06** |
 | **S8-D4** | Source page enhancements | Jump to Evidence graph; more page items join this brief | **S8-07** |
 | **S8-D5** | Sources list design refresh | Subject + observation counts; more list items join this brief | **S8-08** |
@@ -67,7 +67,7 @@ S8-D1  Auto Transcribe UI
 
 S8-D2  PDF Find / select / paste
   │
-  └────── gates ──────────▶ S8-03  PDFKit live page + I-beam default + pan mode
+  └────── gates ──────────▶ S8-03  PDFKit live page + I-beam default (scroll pans)
                               │     (after S8-10; MUST precede Find and paste)
                               ├──────▶ S8-04  Find field + highlight + page jump
                               └──────▶ S8-05  Paste transcription from selection
@@ -650,7 +650,7 @@ On-device Vision (`VNRecognizeTextRequest`) fills the composer **transcription**
 
 ## S8-D2 — Design: PDF Find, text selection, paste transcription
 
-Claude Design board for the PDF **tool strip** (Find), **cursors** (I-beam default vs pan), and transcription **Paste from selection**. Brief: [`design/S8-D2-pdf-text-find.md`](design/S8-D2-pdf-text-find.md). Gates **S8-03**, **S8-04**, **S8-05**.
+Claude Design board for the PDF **tool strip** (Find), **cursors** (I-beam default; scroll pans like Preview), and transcription **Paste from selection**. Brief: [`design/S8-D2-pdf-text-find.md`](design/S8-D2-pdf-text-find.md). Gates **S8-03**, **S8-04**, **S8-05**.
 
 Does **not** design image OCR, PDF thumbnails, or `text_quote` locators ([`text-quote-locators.md`](../../ideas/text-quote-locators.md)).
 
@@ -658,13 +658,13 @@ Does **not** design image OCR, PDF thumbnails, or `text_quote` locators ([`text-
 
 ## S8-03 — PR: PDFKit live page + I-beam default
 
-Replace the composer PDF **raster** (`displayImage` / `ArtifactMediaViewport`) with a **PDFKit-backed** page so `PDFSelection` exists. Default drag **selects text**. Pan is an explicit hand tool and/or modifier (per **S8-D2**). Region overlay (S7-07) still draws in page space. Image viewer unchanged.
+Replace the composer PDF **raster** (`displayImage` / `ArtifactMediaViewport`) with a **PDFKit-backed** page so `PDFSelection` exists. Default drag **selects text**. Pan is the `PDFView` scroll view (trackpad, wheel, scrollbars), same as Preview — not a hand tool or modifier (per **S8-D2**). Region overlay (S7-07) still draws in page space. Image viewer unchanged.
 
 | | |
 | --- | --- |
-| **In** | Live `PDFDocument` / `PDFView` (or equivalent) for PDF Artifacts; I-beam default; pan mode; cursors; region tools exclusive with select; zoom/page chrome still work; no-text-layer is paintable (select does nothing useful). |
+| **In** | Live `PDFDocument` / `PDFView` (or equivalent) for PDF Artifacts; I-beam default; scroll-to-pan; cursors; region tools exclusive with select; zoom/page chrome still work; no-text-layer is paintable (select does nothing useful). |
 | **Out** | Find UI (**S8-04**); paste button (**S8-05**); Vision; changing image pan; Source-page viewer. |
-| **Testable** | PDF path no longer depends on `displayImage` for hit-testing text; image path unchanged; region draft still normalizes; pan mode still moves the page; selecting text does not pan. |
+| **Testable** | PDF path no longer depends on `displayImage` for hit-testing text; image path unchanged; region draft still normalizes; scroll/trackpad still moves the page; selecting text does not pan. |
 | **Depends on** | **S8-D2**, **S8-10**, **S8-11**. Locators S7-07. **Not** S8-01. Do not remount the pre-rethink viewer slot. |
 
 This is the load-bearing remount. Do not start S8-04 / S8-05 until it lands.
@@ -819,7 +819,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 8b. **More stories do not wait on S8-01** unless they share the composer transcription chrome.
 9. **PDF Artifact thumbs are not this spike** — rows keep the file-type glyph. If the idea returns, generate in Go (`core/derivatives`), not Swift/PDFKit. Parked: [`artifact-pdf-thumbnails.md`](../../ideas/artifact-pdf-thumbnails.md).
 10. **S8-03 before Find/paste** — raster `displayImage` has no `PDFSelection`. Region overlay must remount with the live page or locators break.
-11. **Pan vs select** — today’s unnamed click-drag pan will fight I-beam. S8-D2 must name the pan escape (hand and/or modifier) before S8-03.
+11. **Pan vs select** — today’s unnamed click-drag pan will fight I-beam. Locked: Preview / PDFKit — drag selects, scroll pans. No hand tool or modifier-drag.
 12. **Conflict is a count, not a verdict** — badge when `propertyKey` appears ≥ 2 times on that card. Values may match. Do not write a schema flag or a resolve action.
 13. **Negated is polarity, not a missing line** — `polarity = negative` on the Observation. Italic-danger today is not enough; S8-D3 designs an explicit mark. Do not draw a ghost connect edge.
 14. **Incomplete bridges are descoped** — Connect is atomic and the UI cannot write person-without-event. Do not add half-line chrome.
