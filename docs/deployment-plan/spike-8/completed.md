@@ -12,6 +12,8 @@ IDs stay stable (`S8-NN`, `S8-DN`). Do not renumber when moving steps here.
 | S8-10 | PR | Flexible composer: Citation is the document; identity, reuse, empty Save |
 | S8-D8 | Design | Composer + Connect simplification — row-level commits, one-row connection, citation wording |
 | S8-11 | PR | Row-level composer commits, Connect in the composer, lossless audit |
+| S8-D1 | Design | Auto Transcribe — trailing secondary button; combined replace + whole-page confirm; image-only |
+| S8-01 | PR | Vision OCR fills image-citation transcription; reusable `Features/OCR` module |
 
 ## Steps
 
@@ -48,7 +50,7 @@ Shipped the S8-D7 form. The composer is no longer subject-locked: every Observat
 
 Agreed: a connection is one unit — wrong endpoint means discard or delete the bridge and connect again. Observation refs (`OBS-…`) show on persisted rows; saved connections show the bridge ref (`CPA-…` / `CRL-…` / `CLO-…`). Unsaved-work guard on every in-app `go(to:)`.
 
-Brief archived: [`design/archive/S8-D8-composer-connect-simplification.md`](design/archive/S8-D8-composer-connect-simplification.md). Next composer chrome is **S8-D1** (Auto Transcribe) on these frames.
+Brief archived: [`design/archive/S8-D8-composer-connect-simplification.md`](design/archive/S8-D8-composer-connect-simplification.md). Auto Transcribe shipped as **S8-01**. Next composer chrome is **S8-D2** (PDF Find / paste).
 
 ### S8-11 — Composer and Connect simplification + Interpretation write integrity
 
@@ -70,3 +72,27 @@ Shipped the S8-D8 save model and the S8-10 review leftovers that still applied: 
 - Subject / bridge / whole-Citation delete cascades (**S8-09**)
 - Identity-Observation nouns on bridges (**S8-06**)
 - Auto Transcribe / PDF Find (**S8-01+**)
+
+### S8-D1 — Design: Auto Transcribe
+
+**Board pick:** trailing secondary `sm` **Auto transcribe** in the transcription label row (beside Uncertain). Replace and whole-page share **one** confirm when both apply. The textarea, Save citation, identity menus, and locator tools lock while running. Image Artifacts only — never a PDF page raster, audio, video, or missing file.
+
+Agreed: italic `PVField` hint says what will be read or why the button is disabled; fail/empty keeps prior text and shows a compact warning callout; Uncertain stays manual; no new kit primitive.
+
+Brief archived: [`design/archive/S8-D1-auto-transcribe.md`](design/archive/S8-D1-auto-transcribe.md). Shipped as **S8-01**.
+
+### S8-01 — Auto Transcribe for image citations
+
+Vision OCR fills the citation transcription field on **image** Artifacts. A locator region crops in memory; no region reads the whole image (and warns when that page is oversized). The researcher edits and **Save citation** writes the Citation. Filling the field dirties the S8-11 leave guard.
+
+**What shipped**
+
+- Reusable `Features/OCR` module: `OCREngine` protocol, `OCRImage` crop/preflight, `VisionOCREngine` (`VNRecognizeTextRequest`)
+- Composer wires image-only enablement, locator → crop, replace / whole-page confirms, running lock, fail callout
+- Tests inject a fake engine; PDF / audio / missing-file paths stay disabled
+
+**What stayed out**
+
+- PDF OCR / PDF page rasters; PDF Find / paste (**S8-D2** / **S8-03…S8-05**)
+- Observation extract; persisted crops; Live Text overlay
+- `PVAutoTranscribe` kit primitive; raising macOS 14; product version bump

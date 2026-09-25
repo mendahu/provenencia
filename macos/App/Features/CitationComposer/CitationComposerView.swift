@@ -175,6 +175,36 @@ struct CitationComposerView: View {
             onConfirm: { model.discardLeaveChanges() },
             detail: { _ in EmptyView() }
         )
+        .pvConfirm(
+            item: transcriptionConfirmBinding,
+            copy: { pending in
+                let replacing = !pending.existingText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                let title: LocalizedStringResource
+                let message: LocalizedStringResource
+                if replacing && pending.includeWholePage {
+                    title = L10n.CitationComposer.autoTranscribeReplaceTitle
+                    message = L10n.CitationComposer.autoTranscribeReplaceAndWholePageMessage
+                } else if replacing {
+                    title = L10n.CitationComposer.autoTranscribeReplaceTitle
+                    message = L10n.CitationComposer.autoTranscribeReplaceMessage
+                } else {
+                    title = L10n.CitationComposer.autoTranscribeWholePageTitle
+                    message = L10n.CitationComposer.autoTranscribeWholePageMessage
+                }
+                return PVConfirmCopy(
+                    title: String(localized: title),
+                    message: String(localized: message),
+                    confirm: L10n.CitationComposer.autoTranscribeConfirm,
+                    cancel: replacing
+                        ? L10n.CitationComposer.autoTranscribeKeep
+                        : L10n.CitationComposer.cancel
+                )
+            },
+            tone: .irreversible,
+            accessibilityIdentifierPrefix: "citationComposer.autoTranscribe.confirm",
+            onConfirm: { model.confirmAutoTranscribe() },
+            detail: { _ in EmptyView() }
+        )
     }
 
     private var leaveBinding: Binding<CitationComposerModel.PendingLeave?> {
@@ -185,6 +215,19 @@ struct CitationComposerView: View {
                     model.keepEditingAfterLeave()
                 } else {
                     model.pendingLeave = newValue
+                }
+            }
+        )
+    }
+
+    private var transcriptionConfirmBinding: Binding<CitationComposerModel.PendingTranscriptionConfirm?> {
+        Binding(
+            get: { model.pendingTranscriptionConfirm },
+            set: { newValue in
+                if newValue == nil {
+                    model.cancelAutoTranscribeConfirm()
+                } else {
+                    model.pendingTranscriptionConfirm = newValue
                 }
             }
         )

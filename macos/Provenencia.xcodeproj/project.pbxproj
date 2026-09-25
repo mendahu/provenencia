@@ -126,6 +126,11 @@
 		A71700000000000000000002 /* EvidenceGraphPlacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71700000000000000000001 /* EvidenceGraphPlacement.swift */; };
 		A71800000000000000000002 /* EvidenceGraphPlacementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71800000000000000000001 /* EvidenceGraphPlacementTests.swift */; };
 		A71900000000000000000002 /* CitationComposerContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71900000000000000000001 /* CitationComposerContext.swift */; };
+		A71D00000000000000000002 /* OCREngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71D00000000000000000001 /* OCREngine.swift */; };
+		A71D00000000000000000004 /* OCRImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71D00000000000000000003 /* OCRImage.swift */; };
+		A71D00000000000000000006 /* VisionOCREngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71D00000000000000000005 /* VisionOCREngine.swift */; };
+		A71D00000000000000000008 /* OCRImageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71D00000000000000000007 /* OCRImageTests.swift */; };
+		A71D0000000000000000000A /* CitationAutoTranscribeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71D00000000000000000009 /* CitationAutoTranscribeTests.swift */; };
 		A71A00000000000000000002 /* ConnectEndpointBinding.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71A00000000000000000001 /* ConnectEndpointBinding.swift */; };
 		A71B00000000000000000002 /* ConnectEndpointBindingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71B00000000000000000001 /* ConnectEndpointBindingTests.swift */; };
 		A71000000000000000000006 /* PropertyTermDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71000000000000000000005 /* PropertyTermDisplayTests.swift */; };
@@ -427,6 +432,11 @@
 		A71700000000000000000001 /* EvidenceGraphPlacement.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphPlacement.swift; sourceTree = "<group>"; };
 		A71800000000000000000001 /* EvidenceGraphPlacementTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphPlacementTests.swift; sourceTree = "<group>"; };
 		A71900000000000000000001 /* CitationComposerContext.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerContext.swift; sourceTree = "<group>"; };
+		A71D00000000000000000001 /* OCREngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OCREngine.swift; sourceTree = "<group>"; };
+		A71D00000000000000000003 /* OCRImage.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OCRImage.swift; sourceTree = "<group>"; };
+		A71D00000000000000000005 /* VisionOCREngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = VisionOCREngine.swift; sourceTree = "<group>"; };
+		A71D00000000000000000007 /* OCRImageTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OCRImageTests.swift; sourceTree = "<group>"; };
+		A71D00000000000000000009 /* CitationAutoTranscribeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationAutoTranscribeTests.swift; sourceTree = "<group>"; };
 		A71A00000000000000000001 /* ConnectEndpointBinding.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConnectEndpointBinding.swift; sourceTree = "<group>"; };
 		A71B00000000000000000001 /* ConnectEndpointBindingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConnectEndpointBindingTests.swift; sourceTree = "<group>"; };
 		A71000000000000000000005 /* PropertyTermDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PropertyTermDisplayTests.swift; sourceTree = "<group>"; };
@@ -829,6 +839,7 @@
 				A70D00000000000000000010 /* Names */,
 				A70B0000000000000000000D /* ArtifactViewer */,
 				A70800000000000000000007 /* CitationComposer */,
+				A71D0000000000000000000B /* OCR */,
 				AA000000000000000000047C /* GraphCanvas */,
 				AA000000000000000000047D /* EvidenceGraph */,
 				423C55925CCDB8118E02BF19 /* SourceFields */,
@@ -838,6 +849,16 @@
 				AA0000000000000000000280 /* CatalogVocabulary */,
 			);
 			path = Features;
+			sourceTree = "<group>";
+		};
+		A71D0000000000000000000B /* OCR */ = {
+			isa = PBXGroup;
+			children = (
+				A71D00000000000000000001 /* OCREngine.swift */,
+				A71D00000000000000000003 /* OCRImage.swift */,
+				A71D00000000000000000005 /* VisionOCREngine.swift */,
+			);
+			path = OCR;
 			sourceTree = "<group>";
 		};
 		AA000000000000000000047C /* GraphCanvas */ = {
@@ -1007,6 +1028,8 @@
 				AA0000000000000000000488 /* SourceGraphSnapshotTests.swift */,
 				AA0000000000000000000494 /* EvidenceGraphModelTests.swift */,
 				A70800000000000000000005 /* CitationComposerModelTests.swift */,
+				A71D00000000000000000007 /* OCRImageTests.swift */,
+				A71D00000000000000000009 /* CitationAutoTranscribeTests.swift */,
 				A71800000000000000000001 /* EvidenceGraphPlacementTests.swift */,
 				A71B00000000000000000001 /* ConnectEndpointBindingTests.swift */,
 				A70B0000000000000000000B /* ArtifactViewerModelTests.swift */,
@@ -1513,6 +1536,9 @@
 				A71400000000000000000002 /* CitationConnections.swift in Sources */,
 				A71500000000000000000002 /* CitationComposerVocabulary.swift in Sources */,
 				A71900000000000000000002 /* CitationComposerContext.swift in Sources */,
+				A71D00000000000000000002 /* OCREngine.swift in Sources */,
+				A71D00000000000000000004 /* OCRImage.swift in Sources */,
+				A71D00000000000000000006 /* VisionOCREngine.swift in Sources */,
 				A71600000000000000000002 /* CitationComposerConnectionRow.swift in Sources */,
 				A71700000000000000000002 /* EvidenceGraphPlacement.swift in Sources */,
 				A71A00000000000000000002 /* ConnectEndpointBinding.swift in Sources */,
@@ -1732,6 +1758,8 @@
 				AA0000000000000000000489 /* SourceGraphSnapshotTests.swift in Sources */,
 				AA0000000000000000000495 /* EvidenceGraphModelTests.swift in Sources */,
 				A70800000000000000000006 /* CitationComposerModelTests.swift in Sources */,
+				A71D00000000000000000008 /* OCRImageTests.swift in Sources */,
+				A71D0000000000000000000A /* CitationAutoTranscribeTests.swift in Sources */,
 				A71800000000000000000002 /* EvidenceGraphPlacementTests.swift in Sources */,
 				A71B00000000000000000002 /* ConnectEndpointBindingTests.swift in Sources */,
 				A70B0000000000000000000C /* ArtifactViewerModelTests.swift in Sources */,

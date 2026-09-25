@@ -3,12 +3,14 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 8 (pause and refine / data entry)  
 **Implements later as:** PR **S8-01**  
-**Depends on:** **S8-D7** / **S8-10** (new composer form; brief [`archive/S8-D7-composer-rethink.md`](archive/S8-D7-composer-rethink.md)); **S8-D8** / **S8-11** (citation fields section gets its own **Save citation**; the footer Save is gone — draw on those frames, brief [`archive/S8-D8-composer-connect-simplification.md`](archive/S8-D8-composer-connect-simplification.md)); locators S7-07; transcription `PVField` + `PVTextArea` in [`CitationComposerFormPane`](../../../../macos/App/Features/CitationComposer/CitationComposerFormPane.swift) (place the control on the **S8-11** citation fields section)  
-**Related:** [`docs/dogfood/ux.md`](../../../dogfood/ux.md) (OCR notes); locator decisions in [Spike 7](../../archive/spike-7/)  
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
-**Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md) — compose kit; snowflake wiring in `Features/CitationComposer/`
+**Depends on:** **S8-D7** / **S8-10** (new composer form; brief [`S8-D7-composer-rethink.md`](S8-D7-composer-rethink.md)); **S8-D8** / **S8-11** (citation fields section gets its own **Save citation**; the footer Save is gone — draw on those frames, brief [`S8-D8-composer-connect-simplification.md`](S8-D8-composer-connect-simplification.md)); locators S7-07; transcription `PVField` + `PVTextArea` in [`CitationComposerFormPane`](../../../../../macos/App/Features/CitationComposer/CitationComposerFormPane.swift) (place the control on the **S8-11** citation fields section)  
+**Related:** [`docs/dogfood/ux.md`](../../../../dogfood/ux.md) (OCR notes); locator decisions in [Spike 7](../../../archive/spike-7/)  
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)  
+**Skill:** [`add-design-brief`](../../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.cursor/skills/add-ui-component/SKILL.md) — compose kit; snowflake wiring in `Features/CitationComposer/`
 
-Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](README.md) first.
+**Board pick:** trailing secondary `sm` **Auto transcribe** on the transcription label row (beside Uncertain); one confirm when replace and whole-page both apply; textarea, Save citation, identity menus, and locator tools locked while running; **image Artifacts only** (never a PDF page raster).
+
+Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](../README.md) first.
 
 This brief is an **enhancement** of the existing **S8-D7** / **S8-D8** composer board — not a rethink, and not the Spike 7 form. Keep the current frames (Layout A, citation fields section, **Save citation**, viewer, observation stack). Add **Auto Transcribe** on the transcription field. Do not restyle anything this brief does not name.
 
@@ -85,7 +87,7 @@ Placement is a board finding: trailing slot on `PVField` (beside Uncertain), a c
 
 ### 2.1 What this board is not
 
-- Not PDF OCR, PDF Find, or text-layer select/paste ([**S8-D2**](S8-D2-pdf-text-find.md)).
+- Not PDF OCR, PDF Find, or text-layer select/paste ([**S8-D2**](../S8-D2-pdf-text-find.md)).
 - Not Foundation Models / Apple Intelligence / draft graph cards.
 - Not auto Observations, NameValue, or connect macros.
 - Not a new kit **Transcribe** component unless a second call site is already known (it is not).
@@ -175,5 +177,5 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Prove
 ## 8. Handoff
 
 1. Archive this brief under `archive/` when the board is agreed.
-2. Record in [`../completed.md`](../completed.md).
+2. Record in [`../../completed.md`](../../completed.md).
 3. Implement **S8-01** against the board: Vision + in-memory crop + L10n + tests with a fake recognizer.
