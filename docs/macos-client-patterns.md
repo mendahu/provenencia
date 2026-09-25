@@ -26,6 +26,7 @@ Audience: someone comfortable with JavaScript and Go, new to Apple platforms.
 | `Features/EvidenceGraph/` | Evidence graph for one source: cards, connect, composer handoff. | `EvidenceGraphView` |
 | `Features/GraphCanvas/` | Product-agnostic pan/zoom canvas used by the evidence graph. | `GraphCanvasScrollView` |
 | `Features/CitationComposer/` | Citation place: artifact, locator, observations. | `CitationComposerView` |
+| `Features/OCR/` | Reusable on-device text recognition (Vision). Not a screen. | `OCREngine`, `OCRImage` |
 | `Features/ArtifactViewer/` | Image and PDF viewer plus region geometry. | `ArtifactViewer` |
 | `Features/Names/` | Shared name-value editor. | `NameValueEditorForm` |
 | `Features/Dates/` | Shared date-value editor. | `DateValueEditorForm` |
