@@ -117,8 +117,7 @@ struct PVContextMenuItem: View {
     @Environment(\.pvContextMenuDismiss) private var dismiss
     @Environment(\.pvContextMenuKeyboardContext) private var keyboard
 
-    private let titleResource: LocalizedStringResource?
-    private let titleString: String?
+    private let labelContent: AnyView
     var index: Int?
     var isEnabled: Bool = true
     var isSelected: Bool = false
@@ -138,8 +137,12 @@ struct PVContextMenuItem: View {
         accessibilityIdentifier: String? = nil,
         action: @escaping () -> Void = {}
     ) {
-        self.titleResource = title
-        self.titleString = nil
+        self.labelContent = AnyView(
+            Text(title)
+                .font(PVFont.body(size: PVTypeScale.bodySmall))
+                .foregroundStyle(PVColor.textPrimary)
+                .lineLimit(1)
+        )
         self.index = index
         self.isEnabled = isEnabled
         self.isSelected = isSelected
@@ -158,8 +161,31 @@ struct PVContextMenuItem: View {
         accessibilityIdentifier: String? = nil,
         action: @escaping () -> Void = {}
     ) {
-        self.titleResource = nil
-        self.titleString = plainTitle
+        self.labelContent = AnyView(
+            Text(verbatim: plainTitle)
+                .font(PVFont.body(size: PVTypeScale.bodySmall))
+                .foregroundStyle(PVColor.textPrimary)
+                .lineLimit(1)
+        )
+        self.index = index
+        self.isEnabled = isEnabled
+        self.isSelected = isSelected
+        self.showsSelectionMark = showsSelectionMark
+        self.accessibilityIdentifier = accessibilityIdentifier
+        self.action = action
+    }
+
+    /// Custom row body. The item still owns highlight, checkmark, and dismiss.
+    init(
+        index: Int? = nil,
+        isEnabled: Bool = true,
+        isSelected: Bool = false,
+        showsSelectionMark: Bool = false,
+        accessibilityIdentifier: String? = nil,
+        action: @escaping () -> Void = {},
+        @ViewBuilder label: () -> some View
+    ) {
+        self.labelContent = AnyView(label())
         self.index = index
         self.isEnabled = isEnabled
         self.isSelected = isSelected
@@ -190,41 +216,33 @@ struct PVContextMenuItem: View {
                     dismiss()
                     action()
                 } label: {
-                    label(foreground: PVColor.textPrimary, showsCheck: showsSelectionMark && chrome.showsCheckmark)
+                    label(showsCheck: showsSelectionMark && chrome.showsCheckmark)
                 }
                 .buttonStyle(PVContextMenuItemButtonStyle(isSelected: fillHighlight))
                 .accessibilityAddIdentifiers(accessibilityIdentifier)
                 .accessibilityAddTraits(chrome.isSelectedTrait ? .isSelected : [])
             } else {
-                label(foreground: PVColor.textFaint, showsCheck: showsSelectionMark && chrome.showsCheckmark)
+                label(showsCheck: showsSelectionMark && chrome.showsCheckmark)
+                    .opacity(0.45)
                     .accessibilityAddIdentifiers(accessibilityIdentifier)
                     .accessibilityRemoveTraits(.isButton)
             }
         }
     }
 
-    private func label(foreground: Color, showsCheck: Bool) -> some View {
-        HStack(spacing: PVSpacing.space3) {
+    private func label(showsCheck: Bool) -> some View {
+        HStack(alignment: .center, spacing: PVSpacing.space3) {
             if showsSelectionMark {
                 PVIcon(.check, size: 13)
                     .foregroundStyle(PVColor.accent)
                     .opacity(showsCheck ? 1 : 0)
                     .frame(width: 22)
             }
-            Group {
-                if let titleResource {
-                    Text(titleResource)
-                } else if let titleString {
-                    Text(verbatim: titleString)
-                }
-            }
-            .lineLimit(1)
+            labelContent
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .font(PVFont.body(size: PVTypeScale.bodySmall))
-        .foregroundStyle(foreground)
-        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, PVSpacing.space5)
-        .padding(.vertical, PVSpacing.space4)
+        .padding(.vertical, PVSpacing.space3)
         .contentShape(Rectangle())
     }
 }

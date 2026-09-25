@@ -239,22 +239,14 @@ struct SourceGraphSnapshotTests {
             label: "Alice",
             description: ""
         )
-        let snapshot = SourceGraphSnapshot(
+        let rows = SourceGraphRows(
             sourceId: "src-1",
-            subjects: [
-                SourceGraphPlacedSubject(
-                    subject: alice,
-                    kind: .person,
-                    typeLabel: "Person",
-                    gridX: 1,
-                    gridY: 2,
-                    isCited: false
-                ),
-            ]
+            subjects: [alice],
+            positions: [CatalogSubjectPosition(subjectID: alice.id, gridX: 1, gridY: 2)]
         )
-        let next = snapshot.updatingPosition(subjectID: alice.id, gridX: 9, gridY: 8)
-        #expect(next.subjects[0].gridX == 9)
-        #expect(next.subjects[0].gridY == 8)
+        let next = rows.updatingPosition(subjectID: alice.id, gridX: 9, gridY: 8)
+        #expect(next.positions[0].gridX == 9)
+        #expect(next.positions[0].gridY == 8)
     }
 
     @Test func accessibilityLabelIncludesUncited() {

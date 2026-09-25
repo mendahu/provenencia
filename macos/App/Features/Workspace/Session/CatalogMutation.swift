@@ -30,19 +30,20 @@ enum CatalogMutation: Sendable, Equatable {
     /// `mutatedSourceWorkspace` because it also moves each field's `usedBy`.
     case mutatedSourceMetadata(sourceId: String)
 
-    /// A primary subject was created on this Source's Evidence graph.
-    case createdSubject(sourceId: String)
+    /// Subjects or positions on this Source's Evidence graph changed
+    /// (create, relabel, or delete).
+    case mutatedSourceGraph(sourceId: String)
 
-    /// A Citation with Observations was created for this Source.
-    case createdCitation(sourceId: String)
-
-    /// Observations were appended to a Citation on this Source.
-    case addedObservations(sourceId: String)
+    /// A Citation was created or updated for this Source (including cited-bridge).
+    case savedCitation(sourceId: String)
 
     case createdProperty
     case updatedProperty
     case deletedProperty
     case mutatedSubjectTypeFields
+
+    /// A term was added to one Property's vocabulary.
+    case createdPropertyTerm(propertyId: String)
 }
 
 /// Mutation kind for registry invalidation tags (no associated payload).
@@ -59,13 +60,13 @@ enum CatalogMutationKind: Hashable, Sendable {
     case removedTypeSuggestion
     case mutatedSourceWorkspace
     case mutatedSourceMetadata
-    case createdSubject
-    case createdCitation
-    case addedObservations
+    case mutatedSourceGraph
+    case savedCitation
     case createdProperty
     case updatedProperty
     case deletedProperty
     case mutatedSubjectTypeFields
+    case createdPropertyTerm
 }
 
 extension CatalogMutation {
@@ -98,12 +99,10 @@ extension CatalogMutation {
             return .mutatedSourceWorkspace
         case .mutatedSourceMetadata:
             return .mutatedSourceMetadata
-        case .createdSubject:
-            return .createdSubject
-        case .createdCitation:
-            return .createdCitation
-        case .addedObservations:
-            return .addedObservations
+        case .mutatedSourceGraph:
+            return .mutatedSourceGraph
+        case .savedCitation:
+            return .savedCitation
         case .createdProperty:
             return .createdProperty
         case .updatedProperty:
@@ -112,6 +111,8 @@ extension CatalogMutation {
             return .deletedProperty
         case .mutatedSubjectTypeFields:
             return .mutatedSubjectTypeFields
+        case .createdPropertyTerm:
+            return .createdPropertyTerm
         }
     }
 

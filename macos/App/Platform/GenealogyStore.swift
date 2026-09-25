@@ -141,6 +141,13 @@ struct CatalogCitation: Sendable, Equatable, Identifiable {
     var transcriptionNote: String
 }
 
+/// Citation list row for the composer identity menu (ref + transcription + count).
+struct CatalogListedCitation: Sendable, Equatable, Identifiable {
+    var citation: CatalogCitation
+    var observationCount: Int
+    var id: String { citation.id }
+}
+
 /// One ordered NameValue part as stored on an Observation.
 struct CatalogNameValuePart: Sendable, Equatable {
     var value: String
@@ -726,7 +733,7 @@ protocol GenealogyStore: Sendable {
         transcriptionUncertain: Bool,
         transcriptionNote: String,
         citationNotes: [String],
-        observations: [CatalogObservationDraft]
+        observations: [CatalogObservation]
     ) async throws -> (CatalogCitation, [CatalogObservation])
 
     func addObservationsToCitation(
@@ -739,6 +746,8 @@ protocol GenealogyStore: Sendable {
     func listObservationsBySource(projectDir: String, sourceID: String) async throws -> [CatalogObservation]
 
     func citationCountsBySource(projectDir: String, sourceID: String) async throws -> [String: Int]
+
+    func listCitationsByArtifact(projectDir: String, artifactID: String) async throws -> [CatalogListedCitation]
 }
 
 /// Draft payload for one Observation insert (FFI ObservationDraft).

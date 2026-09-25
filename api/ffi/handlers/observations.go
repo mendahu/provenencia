@@ -72,9 +72,88 @@ func AddObservationsToCitation(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
+func observationsToInputs(rows []*engine.Observation) ([]observations.Input, error) {
+	if len(rows) == 0 {
+		return nil, nil
+	}
+	out := make([]observations.Input, 0, len(rows))
+	for _, row := range rows {
+		in, err := observationToInput(row)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, in)
+	}
+	return out, nil
+}
+
+func observationToInput(o *engine.Observation) (observations.Input, error) {
+	if o == nil || strings.TrimSpace(o.GetSubjectId()) == "" {
+		return observations.Input{}, observations.ErrInvalid
+	}
+	subjectID, err := parseID(o.GetSubjectId())
+	if err != nil {
+		return observations.Input{}, err
+	}
+	propertyID, err := parseID(o.GetPropertyId())
+	if err != nil {
+		return observations.Input{}, err
+	}
+	in := observations.Input{
+		SubjectID:  subjectID,
+		PropertyID: propertyID,
+		Polarity:   o.GetPolarity(),
+	}
+	if id := strings.TrimSpace(o.GetId()); id != "" {
+		parsed, err := parseID(id)
+		if err != nil {
+			return observations.Input{}, err
+		}
+		in.ID = parsed
+	}
+	text := strings.TrimSpace(o.GetValueText())
+	if text != "" {
+		in.ValueText = text
+		in.HasText = true
+	}
+	if o.ValueInteger != nil {
+		in.ValueInteger = o.GetValueInteger()
+		in.HasInteger = true
+	}
+	if o.GetDate() != nil && strings.TrimSpace(o.GetDate().GetKind()) != "" {
+		v := dateValueFromProto(o.GetDate())
+		in.Date = &v
+	}
+	if dateID, err := optionalID(o.GetValueDateId()); err != nil {
+		return observations.Input{}, err
+	} else if dateID != nil {
+		in.ValueDateID = dateID
+	}
+	if o.GetName() != nil && strings.TrimSpace(o.GetName().GetForm()) != "" {
+		v := nameValueFromProto(o.GetName())
+		in.Name = &v
+	}
+	if nameID, err := optionalID(o.GetValueNameId()); err != nil {
+		return observations.Input{}, err
+	} else if nameID != nil {
+		in.ValueNameID = nameID
+	}
+	if subjectValID, err := optionalID(o.GetValueSubjectId()); err != nil {
+		return observations.Input{}, err
+	} else if subjectValID != nil {
+		in.ValueSubjectID = subjectValID
+	}
+	if termID, err := optionalID(o.GetValueTermId()); err != nil {
+		return observations.Input{}, err
+	} else if termID != nil {
+		in.ValueTermID = termID
+	}
+	return in, nil
+}
+
 func observationDraftsToInputs(drafts []*engine.ObservationDraft) ([]observations.Input, error) {
 	if len(drafts) == 0 {
-		return nil, observations.ErrInvalid
+		return nil, nil
 	}
 	out := make([]observations.Input, 0, len(drafts))
 	for _, d := range drafts {
@@ -181,16 +260,16 @@ func optionalID(s string) ([]byte, error) {
 
 func observationProto(o observations.Observation) *engine.Observation {
 	return &engine.Observation{
-		Id:         uuidString(o.ID),
-		Ref:        o.Ref,
-		CitationId: uuidString(o.CitationID),
-		SubjectId:  uuidString(o.SubjectID),
-		PropertyId: uuidString(o.PropertyID),
-		Polarity:   o.Polarity,
-		ValueText:  o.ValueText,
-		ValueInteger: optionalInt64(o.HasInteger, o.ValueInteger),
-		ValueDateId:  uuidString(o.ValueDateID),
-		ValueNameId:  uuidString(o.ValueNameID),
+		Id:             uuidString(o.ID),
+		Ref:            o.Ref,
+		CitationId:     uuidString(o.CitationID),
+		SubjectId:      uuidString(o.SubjectID),
+		PropertyId:     uuidString(o.PropertyID),
+		Polarity:       o.Polarity,
+		ValueText:      o.ValueText,
+		ValueInteger:   optionalInt64(o.HasInteger, o.ValueInteger),
+		ValueDateId:    uuidString(o.ValueDateID),
+		ValueNameId:    uuidString(o.ValueNameID),
 		ValueSubjectId: uuidString(o.ValueSubjectID),
 		ValueTermId:    uuidString(o.ValueTermID),
 	}

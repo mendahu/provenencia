@@ -116,8 +116,9 @@ type Listed struct {
 	Date *datevalues.Value
 }
 
-// Input is one Observation draft for insert (create or append).
+// Input is one Observation write. ID empty inserts. ID set updates that row.
 type Input struct {
+	ID             []byte
 	SubjectID      []byte
 	PropertyID     []byte
 	Polarity       string // "" → positive
@@ -205,6 +206,9 @@ func InsertManyTx(tx *sql.Tx, citationID []byte, inputs []Input) ([]Observation,
 }
 
 func insertOne(tx *sql.Tx, citationID []byte, in Input) (Observation, audit.Change, error) {
+	if len(in.ID) != 0 {
+		return Observation{}, audit.Change{}, ErrInvalid
+	}
 	polarity := strings.TrimSpace(in.Polarity)
 	if polarity == "" {
 		polarity = PolarityPositive
@@ -236,7 +240,7 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input) (Observation, audit.Chan
 		return Observation{}, audit.Change{}, err
 	}
 
-	valueText, valueInt, dateID, nameID, subjectID, termID, err := resolveValue(tx, prop.ValueType, in)
+	valueText, valueInt, dateID, nameID, subjectID, termID, err := resolveValue(tx, prop.ValueType, in, nil)
 	if err != nil {
 		return Observation{}, audit.Change{}, err
 	}
@@ -330,7 +334,7 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input) (Observation, audit.Chan
 	}, nil
 }
 
-func resolveValue(tx *sql.Tx, valueType string, in Input) (
+func resolveValue(tx *sql.Tx, valueType string, in Input, existing *Observation) (
 	text string, integer *int64, dateID, nameID, subjectID, termID []byte, err error,
 ) {
 	switch valueType {
@@ -351,6 +355,13 @@ func resolveValue(tx *sql.Tx, valueType string, in Input) (
 			return "", nil, nil, nil, nil, nil, ErrInvalid
 		}
 		if in.Date != nil {
+			if existing != nil && len(existing.ValueDateID) == 16 {
+				if err = datevalues.UpdateTx(tx, existing.ValueDateID, *in.Date); err != nil {
+					return "", nil, nil, nil, nil, nil, err
+				}
+				dateID = append([]byte(nil), existing.ValueDateID...)
+				return "", nil, dateID, nil, nil, nil, nil
+			}
 			dateID, err = datevalues.InsertTx(tx, *in.Date)
 			return "", nil, dateID, nil, nil, nil, err
 		}
@@ -363,6 +374,13 @@ func resolveValue(tx *sql.Tx, valueType string, in Input) (
 			return "", nil, nil, nil, nil, nil, ErrInvalid
 		}
 		if in.Name != nil {
+			if existing != nil && len(existing.ValueNameID) == 16 {
+				if err = namevalues.UpdateTx(tx, existing.ValueNameID, *in.Name); err != nil {
+					return "", nil, nil, nil, nil, nil, err
+				}
+				nameID = append([]byte(nil), existing.ValueNameID...)
+				return "", nil, nil, nameID, nil, nil, nil
+			}
 			nameID, err = namevalues.InsertTx(tx, *in.Name)
 			return "", nil, nil, nameID, nil, nil, err
 		}
@@ -513,14 +531,14 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 	var out []Listed
 	for rows.Next() {
 		var (
-			l                                                          Listed
-			valueText                                                  sql.NullString
-			valueInt                                                   sql.NullInt64
-			dateID, nameID, subjectID, termID                          []byte
-			termLabel, nameForm, subjectLabel                          string
-			kind, qual, cal, phrase, startTZ, endTZ                    sql.NullString
-			startY, startM, startD, startH, startMin, startS, startMs  sql.NullInt64
-			endY, endM, endD, endH, endMin, endS, endMs                sql.NullInt64
+			l                                                         Listed
+			valueText                                                 sql.NullString
+			valueInt                                                  sql.NullInt64
+			dateID, nameID, subjectID, termID                         []byte
+			termLabel, nameForm, subjectLabel                         string
+			kind, qual, cal, phrase, startTZ, endTZ                   sql.NullString
+			startY, startM, startD, startH, startMin, startS, startMs sql.NullInt64
+			endY, endM, endD, endH, endMin, endS, endMs               sql.NullInt64
 		)
 		if err := rows.Scan(
 			&l.ID, &l.Ref, &l.CitationID, &l.SubjectID, &l.PropertyID, &l.Polarity,

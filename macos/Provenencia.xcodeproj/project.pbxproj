@@ -61,8 +61,9 @@
 		A70B00000000000000000015 /* CitationLocatorDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000014 /* CitationLocatorDraft.swift */; };
 		A70B00000000000000000017 /* ArtifactRegionGeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000016 /* ArtifactRegionGeometryTests.swift */; };
 		A70800000000000000000004 /* CitationComposerModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70800000000000000000003 /* CitationComposerModel.swift */; };
+		A70C00000000000000000002 /* CitationComposerEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70C00000000000000000001 /* CitationComposerEntry.swift */; };
 		A7080000000000000000001C /* CitationObservationValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7080000000000000000001B /* CitationObservationValue.swift */; };
-		A70A00000000000000000002 /* CitationComposerArtifactPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70A00000000000000000001 /* CitationComposerArtifactPicker.swift */; };
+		A70A00000000000000000002 /* CitationComposerIdentityMenus.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70A00000000000000000001 /* CitationComposerIdentityMenus.swift */; };
 		A70A00000000000000000004 /* CitationComposerViewerPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70A00000000000000000003 /* CitationComposerViewerPane.swift */; };
 		A70A00000000000000000006 /* CitationComposerFormPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70A00000000000000000005 /* CitationComposerFormPane.swift */; };
 		A70A00000000000000000008 /* CitationComposerObservationRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70A00000000000000000007 /* CitationComposerObservationRow.swift */; };
@@ -334,8 +335,9 @@
 		A70B00000000000000000014 /* CitationLocatorDraft.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationLocatorDraft.swift; sourceTree = "<group>"; };
 		A70B00000000000000000016 /* ArtifactRegionGeometryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactRegionGeometryTests.swift; sourceTree = "<group>"; };
 		A70800000000000000000003 /* CitationComposerModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerModel.swift; sourceTree = "<group>"; };
+		A70C00000000000000000001 /* CitationComposerEntry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerEntry.swift; sourceTree = "<group>"; };
 		A7080000000000000000001B /* CitationObservationValue.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationObservationValue.swift; sourceTree = "<group>"; };
-		A70A00000000000000000001 /* CitationComposerArtifactPicker.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerArtifactPicker.swift; sourceTree = "<group>"; };
+		A70A00000000000000000001 /* CitationComposerIdentityMenus.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerIdentityMenus.swift; sourceTree = "<group>"; };
 		A70A00000000000000000003 /* CitationComposerViewerPane.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerViewerPane.swift; sourceTree = "<group>"; };
 		A70A00000000000000000005 /* CitationComposerFormPane.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerFormPane.swift; sourceTree = "<group>"; };
 		A70A00000000000000000007 /* CitationComposerObservationRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerObservationRow.swift; sourceTree = "<group>"; };
@@ -893,10 +895,11 @@
 			isa = PBXGroup;
 			children = (
 				A70800000000000000000003 /* CitationComposerModel.swift */,
+				A70C00000000000000000001 /* CitationComposerEntry.swift */,
 				A7080000000000000000001B /* CitationObservationValue.swift */,
 				A70B00000000000000000014 /* CitationLocatorDraft.swift */,
 				A70800000000000000000001 /* CitationComposerView.swift */,
-				A70A00000000000000000001 /* CitationComposerArtifactPicker.swift */,
+				A70A00000000000000000001 /* CitationComposerIdentityMenus.swift */,
 				A70A00000000000000000003 /* CitationComposerViewerPane.swift */,
 				A70A00000000000000000005 /* CitationComposerFormPane.swift */,
 				A70A00000000000000000007 /* CitationComposerObservationRow.swift */,
@@ -1627,9 +1630,10 @@
 				A70B00000000000000000013 /* ArtifactRegionOverlay.swift in Sources */,
 				A70800000000000000000002 /* CitationComposerView.swift in Sources */,
 				A70800000000000000000004 /* CitationComposerModel.swift in Sources */,
+				A70C00000000000000000002 /* CitationComposerEntry.swift in Sources */,
 				A7080000000000000000001C /* CitationObservationValue.swift in Sources */,
 				A70B00000000000000000015 /* CitationLocatorDraft.swift in Sources */,
-				A70A00000000000000000002 /* CitationComposerArtifactPicker.swift in Sources */,
+				A70A00000000000000000002 /* CitationComposerIdentityMenus.swift in Sources */,
 				A70A00000000000000000004 /* CitationComposerViewerPane.swift in Sources */,
 				A70A00000000000000000006 /* CitationComposerFormPane.swift in Sources */,
 				A70A00000000000000000008 /* CitationComposerObservationRow.swift in Sources */,
@@ -1843,7 +1847,7 @@
 					"$(PROJECT_DIR)/Core",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.1.1;
+				MARKETING_VERSION = 0.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = app.provenencia;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1885,7 +1889,7 @@
 					"$(PROJECT_DIR)/Core",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.1.1;
+				MARKETING_VERSION = 0.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = app.provenencia;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1906,7 +1910,7 @@
 				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.1.1;
+				MARKETING_VERSION = 0.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = app.provenencia.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -1927,7 +1931,7 @@
 				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.1.1;
+				MARKETING_VERSION = 0.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = app.provenencia.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;

@@ -33,6 +33,10 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     var subjectId: String?
     /// Existing Citation when editing from a property row; nil for create.
     var citationId: String?
+    /// Artifact already known at entry (pencil). Identity switches do not write this back.
+    var artifactId: String?
+    /// Observation to focus when opening an existing Citation (pencil).
+    var observationId: String?
     /// Connect-prefill endpoints when `sourceSurface == .citationComposer` and `subjectId` is nil.
     var connectFromSubjectId: String?
     var connectToSubjectId: String?
@@ -53,7 +57,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     var sourceTitle: String?
 
     enum CodingKeys: String, CodingKey {
-        case section, sourceId, fieldId, typeId, subjectId, citationId
+        case section, sourceId, fieldId, typeId, subjectId, citationId, artifactId, observationId
         case connectFromSubjectId, connectToSubjectId, connectBridgeTypeKey, connectDisambiguationTermId
         case connectGridX, connectGridY
         case sourceSurface, ref, title, sourceTitle
@@ -66,6 +70,8 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         typeId: String? = nil,
         subjectId: String? = nil,
         citationId: String? = nil,
+        artifactId: String? = nil,
+        observationId: String? = nil,
         connectFromSubjectId: String? = nil,
         connectToSubjectId: String? = nil,
         connectBridgeTypeKey: String? = nil,
@@ -83,6 +89,8 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         self.typeId = Self.nilIfEmpty(typeId)
         self.subjectId = Self.nilIfEmpty(subjectId)
         self.citationId = Self.nilIfEmpty(citationId)
+        self.artifactId = Self.nilIfEmpty(artifactId)
+        self.observationId = Self.nilIfEmpty(observationId)
         self.connectFromSubjectId = Self.nilIfEmpty(connectFromSubjectId)
         self.connectToSubjectId = Self.nilIfEmpty(connectToSubjectId)
         self.connectBridgeTypeKey = Self.nilIfEmpty(connectBridgeTypeKey)
@@ -103,6 +111,8 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         typeId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .typeId))
         subjectId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .subjectId))
         citationId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .citationId))
+        artifactId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .artifactId))
+        observationId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .observationId))
         connectFromSubjectId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .connectFromSubjectId))
         connectToSubjectId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .connectToSubjectId))
         connectBridgeTypeKey = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .connectBridgeTypeKey))
@@ -130,6 +140,8 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
             && lhs.typeId == rhs.typeId
             && lhs.subjectId == rhs.subjectId
             && lhs.citationId == rhs.citationId
+            && lhs.artifactId == rhs.artifactId
+            && lhs.observationId == rhs.observationId
             && lhs.connectFromSubjectId == rhs.connectFromSubjectId
             && lhs.connectToSubjectId == rhs.connectToSubjectId
             && lhs.connectBridgeTypeKey == rhs.connectBridgeTypeKey

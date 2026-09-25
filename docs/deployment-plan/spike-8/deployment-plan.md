@@ -107,8 +107,8 @@ S8-D6  Delete paths
 
 ## Checklist
 
-- [ ] S8-D7 — Design: Citation composer rethink → [`completed.md`](completed.md)
-- [ ] S8-10 — Flexible citation composer (identity + multi-subject + empty Save) → [`completed.md`](completed.md)
+- [x] S8-D7 — Design: Citation composer rethink → [`completed.md`](completed.md)
+- [x] S8-10 — Flexible citation composer (identity + multi-subject + empty Save) → [`completed.md`](completed.md)
 - [ ] S8-D1 — Design: Auto Transcribe in the citation composer → [`completed.md`](completed.md)
 - [ ] S8-01 — Vision OCR + Auto Transcribe button → [`completed.md`](completed.md)
 - [ ] S8-02 — PDF first-page Artifact thumbnails → [`completed.md`](completed.md)
@@ -130,7 +130,7 @@ S8-D6  Delete paths
 
 ## S8-D7 — Design: Citation composer rethink
 
-Claude Design board for a **flexible Citation document**: in-form Artifact + Citation identity (replace the create-time pre-screen), Observation list across subjects, empty Save, reuse. **Density is the problem** — the board must explore layout ideas, not a four-list stack. Brief: [`design/S8-D7-composer-rethink.md`](design/S8-D7-composer-rethink.md). Gates **S8-10**. **Do this board first.**
+Claude Design board for a **flexible Citation document**: in-form Artifact + Citation identity (replace the create-time pre-screen), Observation list across subjects, empty Save, reuse. **Density is the problem** — the board must explore layout ideas, not a four-list stack. Brief: [`design/archive/S8-D7-composer-rethink.md`](design/archive/S8-D7-composer-rethink.md). Gates **S8-10**. **Done.** Layout A + 1500pt two-column; C/D rejected.
 
 Does **not** design Auto Transcribe (**S8-D1**) or PDF Find/paste (**S8-D2**) — only leave homes on the new chrome.
 

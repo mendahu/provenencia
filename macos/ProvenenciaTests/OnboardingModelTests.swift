@@ -615,7 +615,7 @@ private struct ThrowingStore: GenealogyStore {
         transcriptionUncertain _: Bool,
         transcriptionNote _: String,
         citationNotes _: [String],
-        observations _: [CatalogObservationDraft]
+        observations _: [CatalogObservation]
     ) async throws -> (CatalogCitation, [CatalogObservation]) { throw StoreBoom.boom }
     func addObservationsToCitation(
         projectDir _: String,
@@ -627,6 +627,9 @@ private struct ThrowingStore: GenealogyStore {
         throw StoreBoom.boom
     }
     func citationCountsBySource(projectDir _: String, sourceID _: String) async throws -> [String: Int] {
+        throw StoreBoom.boom
+    }
+    func listCitationsByArtifact(projectDir _: String, artifactID _: String) async throws -> [CatalogListedCitation] {
         throw StoreBoom.boom
     }
 }

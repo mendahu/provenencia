@@ -26,10 +26,6 @@ final class EvidenceGraphModel {
     var armedConnect = false
     /// First primary chosen while connecting.
     var connectOriginID: String?
-    /// Connect-matrix rows from `listConnectRules`. Empty until that read succeeds.
-    private(set) var connectRules: [CatalogConnectRule] = []
-    /// Set when `listConnectRules` fails. Connect stays disarmed.
-    private(set) var connectRulesError: String?
     /// Role / relationship_type sheet (not a history entry; writes nothing).
     var pendingDisambiguation: PendingDisambiguation?
 
@@ -78,12 +74,36 @@ final class EvidenceGraphModel {
     var toast: VocabularyToast?
 
     /// Seeded type ids keyed by primary or bridge kind rawValue.
-    private(set) var typeIDByKind: [String: String] = [:]
-    private(set) var typeLabelByKind: [String: String] = [:]
+    var typeIDByKind: [String: String] {
+        Dictionary(uniqueKeysWithValues: placeableTypes.map { ($0.key, $0.id) })
+    }
+
+    var typeLabelByKind: [String: String] {
+        Dictionary(uniqueKeysWithValues: placeableTypes.map { ($0.key, $0.label) })
+    }
+
     /// Registry presentation tokens keyed by type key (S7-09).
-    private(set) var presentationByKind: [String: CatalogSubjectTypePresentation] = [:]
+    var presentationByKind: [String: CatalogSubjectTypePresentation] {
+        fieldsSnapshot?.presentationsByKey ?? [:]
+    }
+
     /// False when the Source has zero Artifacts — disables cite controls (S7-09).
-    private(set) var canCite = true
+    var canCite: Bool {
+        guard let match = sourceRow else { return true }
+        return match.hasArtifact
+    }
+
+    var connectRules: [CatalogConnectRule] {
+        let handle: QueryHandle<[CatalogConnectRule]>? = session.queryHandle(connectRulesKey)
+        return handle?.value ?? []
+    }
+
+    var connectRulesError: String? {
+        guard let handle: QueryHandle<[CatalogConnectRule]> = session.queryHandle(connectRulesKey),
+              handle.status == .error
+        else { return nil }
+        return handle.error.map { L10n.Errors.message(for: $0) }
+    }
 
     var isSheetPresented: Bool {
         isCreating || editingSubjectID != nil
@@ -113,6 +133,35 @@ final class EvidenceGraphModel {
         CatalogQueryKey.sourceGraph(project: session.projectKey, sourceId: sourceID)
     }
 
+    private var fieldsKey: CatalogQueryKey {
+        CatalogQueryKey.subjectFieldsWorkspace(project: session.projectKey)
+    }
+
+    private var sourcesListKey: CatalogQueryKey {
+        CatalogQueryKey.sourcesList(project: session.projectKey)
+    }
+
+    private var connectRulesKey: CatalogQueryKey {
+        CatalogQueryKey.connectRules(project: session.projectKey)
+    }
+
+    private var fieldsSnapshot: SubjectFieldsSnapshot? {
+        let handle: QueryHandle<SubjectFieldsSnapshot>? = session.queryHandle(fieldsKey)
+        return handle?.value
+    }
+
+    private var sourceRow: CatalogSource? {
+        let handle: QueryHandle<[CatalogSource]>? = session.queryHandle(sourcesListKey)
+        return handle?.value?.first { $0.id == sourceID }
+    }
+
+    private var placeableTypes: [CatalogSubjectType] {
+        (fieldsSnapshot?.types ?? []).filter {
+            EvidencePrimaryKind(rawValue: $0.key) != nil
+                || EvidenceBridgeKind(rawValue: $0.key) != nil
+        }
+    }
+
     init(
         sourceID: String,
         session: WorkspaceSession,
@@ -126,81 +175,38 @@ final class EvidenceGraphModel {
     }
 
     /// Snapshot as loaded. Edges come from cited observations.
-    func displaySnapshot(from raw: SourceGraphSnapshot?) -> SourceGraphSnapshot {
-        raw ?? SourceGraphSnapshot(sourceId: sourceID)
+    func displaySnapshot(rows: SourceGraphRows?, types: [CatalogSubjectType]) -> SourceGraphSnapshot {
+        SourceGraphSnapshot.build(
+            rows: rows ?? SourceGraphRows(sourceId: sourceID),
+            types: types
+        )
     }
 
     func prepare() async {
-        do {
-            let types = try await store.listSubjectTypes(projectDir: session.projectKey.projectDir)
-            var ids: [String: String] = [:]
-            var labels: [String: String] = [:]
-            for type in types {
-                let isPrimary = EvidencePrimaryKind(rawValue: type.key) != nil
-                let isBridge = EvidenceBridgeKind(rawValue: type.key) != nil
-                guard isPrimary || isBridge else { continue }
-                ids[type.key] = type.id
-                labels[type.key] = type.label
-            }
-            typeIDByKind = ids
-            typeLabelByKind = labels
-        } catch {
-            typeIDByKind = [:]
-            typeLabelByKind = [:]
-        }
-
-        var presentations: [String: CatalogSubjectTypePresentation] = [:]
-        if let placeable = try? await store.listPlaceableSubjectTypes() {
-            for item in placeable {
-                presentations[item.typeKey] = item
-            }
-        }
-        let keys = EvidencePrimaryKind.allCases.map(\.rawValue)
-            + EvidenceBridgeKind.allCases.map(\.rawValue)
-        for key in keys where presentations[key] == nil {
-            if let presentation = try? await store.getSubjectTypePresentation(typeKey: key) {
-                presentations[key] = presentation
-            }
-        }
-        presentationByKind = presentations
-
-        do {
-            connectRules = try await store.listConnectRules()
-            connectRulesError = nil
-        } catch {
-            connectRules = []
-            let message = L10n.Errors.message(for: error)
-            connectRulesError = message
+        let fields: QueryHandle<SubjectFieldsSnapshot> = session.query(fieldsKey)
+        let rules: QueryHandle<[CatalogConnectRule]> = session.query(connectRulesKey)
+        let sources: QueryHandle<[CatalogSource]> = session.query(sourcesListKey)
+        _ = await session.readyValue(fieldsKey) as SubjectFieldsSnapshot?
+        _ = await session.readyValue(connectRulesKey) as [CatalogConnectRule]?
+        _ = await session.readyValue(sourcesListKey) as [CatalogSource]?
+        if rules.status == .error, let message = connectRulesError {
             toast = VocabularyToast(
                 title: String(localized: L10n.EvidenceGraph.connectRulesUnavailableTitle),
                 body: message,
                 tone: .danger
             )
         }
-
-        await refreshCanCite()
+        if !canCite {
+            disarm()
+        }
+        _ = fields
+        _ = sources
     }
 
     func refreshCanCite() async {
-        let listKey = CatalogQueryKey.sourcesList(project: session.projectKey)
-        let sources: [CatalogSource]?
-        if let handle: QueryHandle<[CatalogSource]> = session.queryHandle(listKey) {
-            sources = handle.value
-        } else {
-            let handle: QueryHandle<[CatalogSource]> = session.query(listKey)
-            var waited = 0
-            while handle.value == nil && waited < 40 {
-                try? await Task.sleep(nanoseconds: 25_000_000)
-                waited += 1
-            }
-            sources = handle.value
-        }
-        guard let match = sources?.first(where: { $0.id == sourceID }) else {
-            // Keep previous / default until the Sources list includes this id.
-            return
-        }
-        canCite = match.hasArtifact
-        if !match.hasArtifact {
+        let _: QueryHandle<[CatalogSource]> = session.query(sourcesListKey)
+        _ = await session.readyValue(sourcesListKey) as [CatalogSource]?
+        if !canCite {
             disarm()
         }
     }
@@ -501,7 +507,7 @@ final class EvidenceGraphModel {
         }
 
         do {
-            let properties = try await store.listProperties(projectDir: session.projectKey.projectDir)
+            let properties = fieldsSnapshot?.properties ?? []
             guard let property = properties.first(where: { $0.key == rule.disambiguation }) else {
                 toast = VocabularyToast(
                     title: String(localized: L10n.EvidenceGraph.connectInvalidPairTitle),
@@ -510,10 +516,12 @@ final class EvidenceGraphModel {
                 )
                 return
             }
-            let terms = try await store.listPropertyTerms(
-                projectDir: session.projectKey.projectDir,
-                propertyID: property.id
+            let termsKey = CatalogQueryKey.propertyTerms(
+                project: session.projectKey,
+                propertyId: property.id
             )
+            let _: QueryHandle<[CatalogPropertyTerm]> = session.query(termsKey)
+            let terms = await session.readyValue(termsKey) as [CatalogPropertyTerm]? ?? []
             pendingDisambiguation = PendingDisambiguation(
                 fromID: originID,
                 toID: targetID,
@@ -627,8 +635,7 @@ final class EvidenceGraphModel {
                 label: trimmed,
                 description: draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
             )
-            session.apply(.createdSubject(sourceId: sourceID))
-            let _: QueryHandle<SourceGraphSnapshot> = session.query(graphKey)
+            session.apply(.mutatedSourceGraph(sourceId: sourceID))
             editingSubjectID = nil
             editingPrimaryKind = nil
             editingBridgeKind = nil
@@ -653,7 +660,12 @@ final class EvidenceGraphModel {
     }
 
     /// Citation composer place for editing an existing citation (property row pencil).
-    func composerLocation(for subjectID: String, citationID: String?) -> WorkspaceLocation? {
+    func composerLocation(
+        for subjectID: String,
+        citationID: String?,
+        observationID: String? = nil,
+        artifactID: String? = nil
+    ) -> WorkspaceLocation? {
         guard canCite else { return nil }
         let snapshot = currentSnapshot()
         let title: String?
@@ -673,6 +685,8 @@ final class EvidenceGraphModel {
             sourceId: sourceID,
             subjectId: subjectID,
             citationId: citationID,
+            artifactId: artifactID,
+            observationId: observationID,
             sourceSurface: .citationComposer,
             ref: ref,
             title: title,
@@ -686,12 +700,20 @@ final class EvidenceGraphModel {
         if let primary = primary(in: snapshot, id: subjectID),
            let observation = primary.observations.first(where: { $0.id == observationID })
         {
-            return composerLocation(for: subjectID, citationID: observation.citationID)
+            return composerLocation(
+                for: subjectID,
+                citationID: observation.citationID,
+                observationID: observation.id
+            )
         }
         if let bridge = snapshot?.bridges.first(where: { $0.id == subjectID }),
            let observation = bridge.observations.first(where: { $0.id == observationID })
         {
-            return composerLocation(for: subjectID, citationID: observation.citationID)
+            return composerLocation(
+                for: subjectID,
+                citationID: observation.citationID,
+                observationID: observation.id
+            )
         }
         return nil
     }
@@ -702,7 +724,12 @@ final class EvidenceGraphModel {
         guard let bridge = snapshot?.bridges.first(where: { $0.id == subjectID }) else {
             return nil
         }
-        return composerLocation(for: subjectID, citationID: bridge.observations.first?.citationID)
+        let first = bridge.observations.first
+        return composerLocation(
+            for: subjectID,
+            citationID: first?.citationID,
+            observationID: first?.id
+        )
     }
 
     /// Queues delete confirm for an uncited subject or bridge card.
@@ -738,8 +765,7 @@ final class EvidenceGraphModel {
                 userID: userID,
                 subjectID: pending.id
             )
-            session.apply(.createdSubject(sourceId: sourceID))
-            let _: QueryHandle<SourceGraphSnapshot> = session.query(graphKey)
+            session.apply(.mutatedSourceGraph(sourceId: sourceID))
             if selectedSubjectID == pending.id {
                 selectSubject(id: nil)
             }
@@ -806,8 +832,7 @@ final class EvidenceGraphModel {
                 gridX: pendingGridX,
                 gridY: pendingGridY
             )
-            session.apply(.createdSubject(sourceId: sourceID))
-            let _: QueryHandle<SourceGraphSnapshot> = session.query(graphKey)
+            session.apply(.mutatedSourceGraph(sourceId: sourceID))
             isCreating = false
             disarm()
             return created.id
@@ -1068,10 +1093,10 @@ final class EvidenceGraphModel {
     }
 
     private func currentSnapshot() -> SourceGraphSnapshot? {
-        guard let handle: QueryHandle<SourceGraphSnapshot> = session.queryHandle(graphKey) else {
+        guard let handle: QueryHandle<SourceGraphRows> = session.queryHandle(graphKey) else {
             return nil
         }
-        return displaySnapshot(from: handle.value)
+        return displaySnapshot(rows: handle.value, types: fieldsSnapshot?.types ?? [])
     }
 
     private func primary(in snapshot: SourceGraphSnapshot?, id: String) -> SourceGraphPlacedSubject? {
@@ -1098,12 +1123,12 @@ final class EvidenceGraphModel {
     }
 
     private func applyPositionPatch(subjectID: String, gridX: Int64, gridY: Int64) {
-        if let handle: QueryHandle<SourceGraphSnapshot> = session.queryHandle(graphKey),
-           let snapshot = handle.value
+        if let handle: QueryHandle<SourceGraphRows> = session.queryHandle(graphKey),
+           let rows = handle.value
         {
             session.setQueryValue(
                 graphKey,
-                value: snapshot.updatingPosition(subjectID: subjectID, gridX: gridX, gridY: gridY)
+                value: rows.updatingPosition(subjectID: subjectID, gridX: gridX, gridY: gridY)
             )
         }
     }

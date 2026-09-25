@@ -1082,7 +1082,7 @@ struct GoStore: GenealogyStore {
         transcriptionUncertain: Bool,
         transcriptionNote: String,
         citationNotes: [String],
-        observations: [CatalogObservationDraft]
+        observations: [CatalogObservation]
     ) async throws -> (CatalogCitation, [CatalogObservation]) {
         var req = Provenencia_Engine_V1_UpdateCitationWithObservationsRequest()
         req.projectDir = projectDir
@@ -1095,7 +1095,7 @@ struct GoStore: GenealogyStore {
         req.transcriptionUncertain = transcriptionUncertain
         req.transcriptionNote = transcriptionNote
         req.citationNotes = citationNotes
-        req.observations = observations.map(Self.mapObservationDraft)
+        req.observations = observations.map(Self.mapCatalogObservation)
         let resp: Provenencia_Engine_V1_UpdateCitationWithObservationsResponse = try await provenenciaCall(
             method: CoreMethod.updateCitationWithObservations,
             request: req
@@ -1145,6 +1145,22 @@ struct GoStore: GenealogyStore {
             counts[row.artifactID] = Int(row.count)
         }
         return counts
+    }
+
+    func listCitationsByArtifact(projectDir: String, artifactID: String) async throws -> [CatalogListedCitation] {
+        var req = Provenencia_Engine_V1_ListCitationsByArtifactRequest()
+        req.projectDir = projectDir
+        req.artifactID = artifactID
+        let resp: Provenencia_Engine_V1_ListCitationsByArtifactResponse = try await provenenciaCall(
+            method: CoreMethod.listCitationsByArtifact,
+            request: req
+        )
+        return resp.citations.map { row in
+            CatalogListedCitation(
+                citation: Self.mapCitation(row.citation),
+                observationCount: Int(row.observationCount)
+            )
+        }
     }
 
     private static func mapOriginCounts(
@@ -1420,6 +1436,42 @@ struct GoStore: GenealogyStore {
             propertyLabel: o.propertyLabel,
             propertyValueType: o.propertyValueType
         )
+    }
+
+    private static func mapCatalogObservation(_ o: CatalogObservation) -> Provenencia_Engine_V1_Observation {
+        var msg = Provenencia_Engine_V1_Observation()
+        msg.id = o.id
+        msg.ref = o.ref
+        msg.citationID = o.citationID
+        msg.subjectID = o.subjectID
+        msg.propertyID = o.propertyID
+        msg.polarity = o.polarity
+        msg.valueText = o.valueText
+        if let valueInteger = o.valueInteger {
+            msg.valueInteger = valueInteger
+        }
+        if let date = o.date {
+            msg.date = Self.mapDateValueToProto(date)
+        }
+        msg.valueDateID = o.valueDateID
+        if !o.nameForm.isEmpty {
+            var name = Provenencia_Engine_V1_NameValueInput()
+            name.form = o.nameForm
+            for part in o.nameParts {
+                var p = Provenencia_Engine_V1_NameValuePartInput()
+                p.value = part.value
+                p.type = part.type
+                name.parts.append(p)
+            }
+            msg.name = name
+        }
+        msg.valueNameID = o.valueNameID
+        msg.valueSubjectID = o.valueSubjectID
+        msg.valueTermID = o.valueTermID
+        msg.propertyKey = o.propertyKey
+        msg.propertyLabel = o.propertyLabel
+        msg.propertyValueType = o.propertyValueType
+        return msg
     }
 
     private static func mapObservationDraft(_ d: CatalogObservationDraft) -> Provenencia_Engine_V1_ObservationDraft {

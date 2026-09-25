@@ -136,6 +136,70 @@ struct CatalogQueryRegistryTests {
         #expect(handle.value?["art-1"] == nil)
     }
 
+    @Test func connectRulesLoadFromStore() async {
+        let store = FakeStore()
+        store.connectRules = CatalogConnectRule.productMatrix
+        let session = makeSession(store: store)
+        let handle: QueryHandle<[CatalogConnectRule]> = session.query(
+            CatalogQueryKey.connectRules(project: session.projectKey)
+        )
+        await waitForFetchComplete(handle)
+        #expect(handle.value?.isEmpty == false)
+    }
+
+    @Test func applyCreatedPropertyTermReloadsTerms() async {
+        let store = FakeStore()
+        store.propertyTermsByProperty["p1"] = [
+            CatalogPropertyTerm(
+                id: "t1",
+                propertyID: "p1",
+                key: "witness",
+                origin: "provenencia",
+                label: "Witness",
+                description: ""
+            ),
+        ]
+        let session = makeSession(store: store)
+        let key = CatalogQueryKey.propertyTerms(project: session.projectKey, propertyId: "p1")
+        let handle: QueryHandle<[CatalogPropertyTerm]> = session.query(key)
+        await waitForFetchComplete(handle)
+        #expect(handle.value?.count == 1)
+
+        store.propertyTermsByProperty["p1"]?.append(
+            CatalogPropertyTerm(
+                id: "t2",
+                propertyID: "p1",
+                key: "neighbor",
+                origin: "user",
+                label: "Neighbor",
+                description: ""
+            )
+        )
+        session.apply(.createdPropertyTerm(propertyId: "p1"))
+        await waitForFetchComplete(handle)
+        #expect(handle.value?.count == 2)
+    }
+
+    @Test func citationsByArtifactLoadsListedRows() async {
+        let store = FakeStore()
+        store.citationsByID["cit-1"] = CatalogCitation(
+            id: "cit-1",
+            ref: "CIT-1",
+            artifactID: "art-0",
+            locatorJSON: "{}",
+            transcription: "",
+            description: "",
+            transcriptionUncertain: false,
+            transcriptionNote: ""
+        )
+        let session = makeSession(store: store)
+        let handle: QueryHandle<[CatalogListedCitation]> = session.query(
+            CatalogQueryKey.citationsByArtifact(project: session.projectKey, artifactId: "art-0")
+        )
+        await waitForFetchComplete(handle)
+        #expect(handle.value?.map(\.id) == ["cit-1"])
+    }
+
     @Test func sourceGraphLoadsPlacedPrimaries() async {
         let store = FakeStore()
         seedStore(store)
@@ -189,19 +253,23 @@ struct CatalogQueryRegistryTests {
         )
 
         let session = makeSession(store: store)
-        let handle: QueryHandle<SourceGraphSnapshot> = session.query(
+        let handle: QueryHandle<SourceGraphRows> = session.query(
             CatalogQueryKey.sourceGraph(project: session.projectKey, sourceId: "s1")
         )
         await waitForFetchComplete(handle)
 
         #expect(handle.value?.sourceId == "s1")
-        #expect(handle.value?.subjects.count == 1)
-        #expect(handle.value?.subjects.first?.id == "sub-1")
-        #expect(handle.value?.subjects.first?.kind == .person)
-        #expect(handle.value?.subjects.first?.gridX == 2)
-        #expect(handle.value?.bridges.count == 1)
-        #expect(handle.value?.bridges.first?.id == "sub-bridge")
-        #expect(handle.value?.bridges.first?.kind == .location)
+        #expect(handle.value?.subjects.count == 2)
+        #expect(handle.value?.subjects.map(\.id).sorted() == ["sub-1", "sub-bridge"])
+        #expect(handle.value?.positions.first { $0.subjectID == "sub-1" }?.gridX == 2)
+        let snapshot = SourceGraphSnapshot.build(
+            rows: handle.value ?? SourceGraphRows(sourceId: "s1"),
+            types: store.subjectTypesByProject[projectDir] ?? []
+        )
+        #expect(snapshot.subjects.count == 1)
+        #expect(snapshot.subjects.first?.kind == .person)
+        #expect(snapshot.bridges.count == 1)
+        #expect(snapshot.bridges.first?.kind == .location)
     }
 
     @Test func registryBackedQueryDoesNotRecallLoader() async {
@@ -443,15 +511,16 @@ struct CatalogQueryRegistryTests {
             .allCached(.sourceWorkspace),
             .key(.typeSuggestions(project: project, typeId: "t1")),
         ])
-        #expect(registry.invalidations(by: .createdSubject(sourceId: "s1"), project: project) == [
+        #expect(registry.invalidations(by: .mutatedSourceGraph(sourceId: "s1"), project: project) == [
             .key(.sourceGraph(project: project, sourceId: "s1")),
         ])
-        #expect(registry.invalidations(by: .createdCitation(sourceId: "s1"), project: project) == [
+        #expect(registry.invalidations(by: .savedCitation(sourceId: "s1"), project: project) == [
             .key(.sourceGraph(project: project, sourceId: "s1")),
             .key(.citationCounts(project: project, sourceId: "s1")),
+            .allCached(.citationsByArtifact),
         ])
-        #expect(registry.invalidations(by: .addedObservations(sourceId: "s1"), project: project) == [
-            .key(.sourceGraph(project: project, sourceId: "s1")),
+        #expect(registry.invalidations(by: .createdPropertyTerm(propertyId: "p1"), project: project) == [
+            .key(.propertyTerms(project: project, propertyId: "p1")),
         ])
         // Grades are seeded vocabulary with no CRUD surface, so nothing stales them.
         let everyMutation: [CatalogMutation] = [
@@ -460,7 +529,9 @@ struct CatalogQueryRegistryTests {
             .createdMetadataField, .updatedMetadataField(id: "f1"), .deletedMetadataField(id: "f1"),
             .assignedTypeSuggestion(typeId: "t1"), .removedTypeSuggestion(typeId: "t1"),
             .mutatedSourceWorkspace(sourceId: "s1"), .mutatedSourceMetadata(sourceId: "s1"),
-            .createdSubject(sourceId: "s1"),
+            .mutatedSourceGraph(sourceId: "s1"),
+            .savedCitation(sourceId: "s1"),
+            .createdPropertyTerm(propertyId: "p1"),
         ]
         #expect(everyMutation.allSatisfy { mutation in
             !registry.invalidations(by: mutation, project: project).contains(
@@ -504,16 +575,15 @@ struct CatalogQueryRegistryTests {
         )
         session.apply(.createdMetadataField)
         session.apply(.createdSourceType)
+        await waitForFetchComplete(fieldsHandle)
+        #expect(fieldsHandle.value?.map(\.label) == ["Author", "Folio"])
+        #expect(workspaceHandle.isFetching == false)
 
         // The page is untouched — re-querying it opens no catalog.
+        store.heldCatalogProjectDir = nil
         let _: QueryHandle<CatalogSourceWorkspace> = session.query(workspaceKey)
         await Task.yield()
         #expect(store.heldCatalogProjectDir == nil)
-
-        // The list that owns the field is the one that refetches.
-        let _: QueryHandle<[CatalogMetadataField]> = session.query(fieldsKey)
-        await waitForFetchComplete(fieldsHandle)
-        #expect(fieldsHandle.value?.map(\.label) == ["Author", "Folio"])
     }
 
     /// Edits that restate a derived metadata row still reach every cached page,

@@ -9138,18 +9138,6 @@
         }
       }
     },
-    "citationComposer.continuePick": {
-      "comment": "Confirms Artifact selection on the multi-Artifact picker",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Continue"
-          }
-        }
-      }
-    },
     "citationComposer.transcriptionLabel": {
       "comment": "Label for the Citation transcription field",
       "extractionState": "manual",
@@ -9218,30 +9206,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Add observation"
-          }
-        }
-      }
-    },
-    "citationComposer.addObservationTitle": {
-      "comment": "Title of the Add observation form dialog",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add observation"
-          }
-        }
-      }
-    },
-    "citationComposer.addObservationSubtitle": {
-      "comment": "Subtitle under the Add observation dialog title",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pick a Property, then its value."
           }
         }
       }
@@ -9558,42 +9522,6 @@
         }
       }
     },
-    "citationComposer.pickArtifactTitle": {
-      "comment": "Title when the Source has multiple Artifacts to cite",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choose an artifact"
-          }
-        }
-      }
-    },
-    "citationComposer.pickArtifactCount": {
-      "comment": "Caption under Choose an artifact; arguments are Source title and artifact count",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ has %lld artifacts attached."
-          }
-        }
-      }
-    },
-    "citationComposer.changeArtifact": {
-      "comment": "Returns to the Artifact picker from the compose shell",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Change artifact"
-          }
-        }
-      }
-    },
     "citationComposer.artifactIndexOf": {
       "comment": "Viewer header index; arguments are 1-based index, total, and media kind",
       "extractionState": "manual",
@@ -9762,18 +9690,6 @@
         }
       }
     },
-    "citationComposer.noObservationsError": {
-      "comment": "Empty Observations section callout",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No observations yet — a citation has to record at least one thing the record says."
-          }
-        }
-      }
-    },
     "citationComposer.saveNeedsObservationError": {
       "comment": "Footer error when Save is refused for empty Observations",
       "extractionState": "manual",
@@ -9878,18 +9794,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Evidence graph for %@"
-          }
-        }
-      }
-    },
-    "citationComposer.citationSection": {
-      "comment": "Form pane title above transcription and citation metadata",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Citation"
           }
         }
       }
@@ -11042,6 +10946,294 @@
           "stringUnit": {
             "state": "translated",
             "value": "Those subjects can’t be connected."
+          }
+        }
+      }
+    },
+    "citationComposer.newCitation": {
+      "comment": "Citation identity control when composing a new reading",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New citation"
+          }
+        }
+      }
+    },
+    "citationComposer.subjectLabel": {
+      "comment": "ComboBox label for the Observation subject",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subject"
+          }
+        }
+      }
+    },
+    "citationComposer.subjectPlaceholder": {
+      "comment": "Placeholder in the Observation subject picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search subjects"
+          }
+        }
+      }
+    },
+    "citationComposer.subjectEmpty": {
+      "comment": "Empty state when subject search has no hits",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No matching subjects"
+          }
+        }
+      }
+    },
+    "citationComposer.observationActions": {
+      "comment": "VoiceOver name for the Observation row overflow menu",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Observation actions"
+          }
+        }
+      }
+    },
+    "citationComposer.editValueTitle": {
+      "comment": "Title of the name or date Observation editor dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit value"
+          }
+        }
+      }
+    },
+    "citationComposer.editValuePlaceholder": {
+      "comment": "Placeholder on the name/date button before a value is set",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set value"
+          }
+        }
+      }
+    },
+    "citationComposer.viewerGroup": {
+      "comment": "VoiceOver group name for the composer viewer pane",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artifact viewer"
+          }
+        }
+      }
+    },
+    "citationComposer.formGroup": {
+      "comment": "VoiceOver group name for the composer form pane",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Citation form"
+          }
+        }
+      }
+    },
+    "citationComposer.citationMenuNew": {
+      "comment": "VoiceOver name for the Citation identity control when New is selected",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Citation, new"
+          }
+        }
+      }
+    },
+    "citationComposer.noArtifactsTitle": {
+      "comment": "Callout title when the Source has no Artifacts to cite",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This source has no artifacts"
+          }
+        }
+      }
+    },
+    "citationComposer.saveToastTitle": {
+      "comment": "Toast title after the composer writes a Citation",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Citation saved"
+          }
+        }
+      }
+    },
+    "citationComposer.saveToastBody": {
+      "comment": "Toast body after the composer writes a Citation",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The reading is on this source. Open it again from the citation menu on the artifact."
+          }
+        }
+      }
+    },
+    "citationComposer.abandonConfirm": {
+      "comment": "Confirm button when switching Artifact abandons a dirty saved Citation",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Discard edits"
+          }
+        }
+      }
+    },
+    "citationComposer.abandonCancel": {
+      "comment": "Cancel button on the dirty Artifact-change confirm",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep editing"
+          }
+        }
+      }
+    },
+    "citationComposer.identityChangedNew": {
+      "comment": "VoiceOver announcement when Citation identity resets to New",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Now composing a new citation"
+          }
+        }
+      }
+    },
+    "citationComposer.artifactMenuLabel": {
+      "comment": "VoiceOver name for the Artifact identity control; argument is Artifact title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artifact, %@"
+          }
+        }
+      }
+    },
+    "citationComposer.artifactMenuMeta": {
+      "comment": "Artifact menu row meta; arguments are media kind and citation count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %lld citations"
+          }
+        }
+      }
+    },
+    "citationComposer.citationMenuCount": {
+      "comment": "Observation count on a Citation menu row; argument is count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld obs"
+          }
+        }
+      }
+    },
+    "citationComposer.citationMenuRef": {
+      "comment": "VoiceOver name for the Citation identity control; arguments are ref and count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Citation, %@, %lld observations"
+          }
+        }
+      }
+    },
+    "citationComposer.identityChangedCitation": {
+      "comment": "VoiceOver announcement after switching Citation; arguments are ref and count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Now citing %@, %lld observations"
+          }
+        }
+      }
+    },
+    "citationComposer.identityChangedArtifact": {
+      "comment": "VoiceOver announcement after switching Artifact; argument is Artifact title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Now citing %@"
+          }
+        }
+      }
+    },
+    "citationComposer.abandonTitle": {
+      "comment": "Confirm title when switching Artifact on a dirty saved Citation; argument is CIT ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Discard unsaved edits to %@?"
+          }
+        }
+      }
+    },
+    "citationComposer.abandonMessage": {
+      "comment": "Confirm message when switching Artifact; argument is the target Artifact title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switching to %@ starts a new citation there. The saved citation keeps its last saved reading. Only the changes you haven’t saved are lost."
           }
         }
       }

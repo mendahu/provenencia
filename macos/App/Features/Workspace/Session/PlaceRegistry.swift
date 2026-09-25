@@ -27,11 +27,19 @@ struct PlaceRegistry: Sendable {
             },
             queryKeys: { project, location in
                 guard let sourceId = location.sourceId else { return [] }
-                return [
+                var keys: [CatalogQueryKey] = [
                     .sourceGraph(project: project, sourceId: sourceId),
+                    .subjectFieldsWorkspace(project: project),
+                    .sourcesList(project: project),
+                    .connectRules(project: project),
                     .sourceWorkspace(project: project, sourceId: sourceId),
+                    .sourceTypesList(project: project),
                     .citationCounts(project: project, sourceId: sourceId),
                 ]
+                if let artifactId = location.artifactId, !artifactId.isEmpty {
+                    keys.append(.citationsByArtifact(project: project, artifactId: artifactId))
+                }
+                return keys
             },
             deepId: { $0.subjectId }
         ),
@@ -44,7 +52,12 @@ struct PlaceRegistry: Sendable {
             },
             queryKeys: { project, location in
                 guard let sourceId = location.sourceId else { return [] }
-                return [.sourceGraph(project: project, sourceId: sourceId)]
+                return [
+                    .sourceGraph(project: project, sourceId: sourceId),
+                    .subjectFieldsWorkspace(project: project),
+                    .sourcesList(project: project),
+                    .connectRules(project: project),
+                ]
             },
             deepId: { $0.sourceId }
         ),

@@ -458,4 +458,46 @@ struct GraphCanvasEdgeGeometryTests {
                 + EvidenceBridgeCard.headerToBodySpacing
         )
     }
+
+    @Test func hitRefreshTokenChangesWhenObservationIDIsReplaced() {
+        func card(observationID: String) -> SourceGraphPlacedSubject {
+            SourceGraphPlacedSubject(
+                subject: CatalogSubject(
+                    id: "s1",
+                    ref: "CPR-1",
+                    sourceID: "src",
+                    subjectTypeID: "t",
+                    label: "Alice",
+                    description: ""
+                ),
+                kind: .person,
+                typeLabel: "Person",
+                gridX: 0,
+                gridY: 0,
+                isCited: true,
+                observations: [
+                    CatalogObservation(
+                        id: observationID,
+                        ref: "OBS-1",
+                        citationID: "cit-1",
+                        subjectID: "s1",
+                        propertyID: "p1",
+                        polarity: "positive",
+                        valueText: "Farmer",
+                        valueInteger: nil,
+                        valueDateID: "",
+                        valueNameID: "",
+                        valueSubjectID: "",
+                        valueTermID: "",
+                        propertyKey: "occupation",
+                        propertyLabel: "Occupation",
+                        propertyValueType: "text"
+                    ),
+                ]
+            )
+        }
+        let before = EvidenceGraphHitRefresh.token(subjects: [card(observationID: "obs-old")], bridges: [])
+        let after = EvidenceGraphHitRefresh.token(subjects: [card(observationID: "obs-new")], bridges: [])
+        #expect(before != after)
+    }
 }

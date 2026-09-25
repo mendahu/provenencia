@@ -82,6 +82,7 @@ enum Method {
   METHOD_UPDATE_CITATION_WITH_OBSERVATIONS = 71;
   METHOD_CREATE_CITED_BRIDGE = 72;
   METHOD_CITATION_COUNTS_BY_SOURCE = 73;
+  METHOD_LIST_CITATIONS_BY_ARTIFACT = 74;
 }
 
 message PingRequest {
@@ -1099,6 +1100,7 @@ message Observation {
 }
 
 // ObservationDraft is one Observation insert payload (create or append).
+// An update sends Observation rows, which already have ids.
 message ObservationDraft {
   string subject_id = 1;
   string property_id = 2;
@@ -1166,6 +1168,20 @@ message CitationCountsBySourceResponse {
   repeated ArtifactCitationCount counts = 1;
 }
 
+message ListedCitation {
+  Citation citation = 1;
+  int32 observation_count = 2;
+}
+
+message ListCitationsByArtifactRequest {
+  string project_dir = 1;
+  string artifact_id = 2;
+}
+
+message ListCitationsByArtifactResponse {
+  repeated ListedCitation citations = 1;
+}
+
 message GetCitationRequest {
   string project_dir = 1;
   string citation_id = 2;
@@ -1188,7 +1204,8 @@ message UpdateCitationWithObservationsRequest {
   bool transcription_uncertain = 8;
   string transcription_note = 9;
   repeated string citation_notes = 10;
-  repeated ObservationDraft observations = 11;
+  // Stored rows include id and are updated. An empty id inserts a new observation.
+  repeated Observation observations = 11;
 }
 
 message UpdateCitationWithObservationsResponse {
