@@ -81,7 +81,7 @@ Exact placement of Find vs page/zoom/region is a board finding. Paste lives with
 ### 2.1 What this board is not
 
 - Not image OCR (**S8-D1** / **S8-01**).
-- Not PDF page-1 **thumbnails** (**S8-02**).
+- Not PDF page-1 **thumbnails** (parked: [`artifact-pdf-thumbnails.md`](../../../ideas/artifact-pdf-thumbnails.md)).
 - Not `text_quote` locators — parked in [`text-quote-locators.md`](../../../ideas/text-quote-locators.md).
 - Not Foundation Models.
 
@@ -156,7 +156,7 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them.
 - Vision on PDF pages
 - `text_quote` locator writes
 - Changing Save / Observation chrome
-- Thumbnail generation (**S8-02**)
+- Thumbnail generation (parked; not this spike)
 
 ---
 
