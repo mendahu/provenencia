@@ -1,29 +1,44 @@
 import Foundation
 
 /// Durable bridge copy: relational **phrase** on cards (S7-D3 §3.1) and full
-/// **sentence** on the composer crumb (S7-D4).
+/// **sentence** wherever a bridge is named (S8-D8 §2.4).
 enum EvidenceBridgeEdgeSummary {
     /// Relational phrase only — “is the father of”, “participated as witness”.
     static func phrase(for placed: SourceGraphPlacedBridge) -> String {
         phrase(kind: placed.kind, term: termDisplay(kind: placed.kind, in: placed.observations))
     }
 
-    /// Full sentence — “John is the father of Mary”.
-    static func sentence(for placed: SourceGraphPlacedBridge) -> String {
-        sentence(
-            kind: placed.kind,
-            person: subjectDisplay(propertyKey: "person", in: placed.observations),
-            related: subjectDisplay(propertyKey: "related_to", in: placed.observations),
-            event: subjectDisplay(propertyKey: "event", in: placed.observations),
-            place: subjectDisplay(propertyKey: "place", in: placed.observations),
-            term: termDisplay(kind: placed.kind, in: placed.observations)
+    /// Snapshot-aware sentence. Nouns come from cited endpoints; unreadable
+    /// edges fall back to the stored label or kind phrase · ref. Never empty.
+    static func sentence(for bridge: SourceGraphPlacedBridge, in snapshot: SourceGraphSnapshot) -> String {
+        let person = noun(propertyKey: "person", in: bridge, snapshot: snapshot)
+        let related = noun(propertyKey: "related_to", in: bridge, snapshot: snapshot)
+        let event = noun(propertyKey: "event", in: bridge, snapshot: snapshot)
+        let place = noun(propertyKey: "place", in: bridge, snapshot: snapshot)
+        let term = termDisplay(kind: bridge.kind, in: bridge.observations)
+        let nouns: [String?]
+        switch bridge.kind {
+        case .location:
+            nouns = [event, place]
+        case .relationship:
+            nouns = [person, related]
+        case .participation:
+            nouns = [person, event]
+        }
+        if nouns.contains(where: { $0 == nil }) {
+            return nonEmpty(wholeNameFallback(for: bridge))
+        }
+        return nonEmpty(
+            sentence(
+                kind: bridge.kind,
+                person: person,
+                related: related,
+                event: event,
+                place: place,
+                term: term
+            ),
+            fallback: wholeNameFallback(for: bridge)
         )
-    }
-
-    /// Snapshot-aware sentence. Commit 8 upgrades fallbacks; until then this
-    /// matches the observation-display sentence.
-    static func sentence(for bridge: SourceGraphPlacedBridge, in _: SourceGraphSnapshot) -> String {
-        sentence(for: bridge)
     }
 
     static func phrase(kind: EvidenceBridgeKind, term: String?) -> String {
@@ -102,11 +117,47 @@ enum EvidenceBridgeEdgeSummary {
         return phrase(kind: .participation, term: role)
     }
 
-    private static func subjectDisplay(
+    private static func noun(
+        propertyKey: String,
+        in bridge: SourceGraphPlacedBridge,
+        snapshot: SourceGraphSnapshot
+    ) -> String? {
+        guard let subjectID = subjectID(propertyKey: propertyKey, in: bridge.observations),
+              let placed = snapshot.subjects.first(where: { $0.id == subjectID })
+        else { return nil }
+        let label = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !label.isEmpty { return label }
+        let typed = L10n.EvidenceGraph.bridgeNounTypeAndRef(
+            type: placed.typeLabel,
+            ref: placed.subject.ref
+        )
+        return typed.isEmpty ? nil : typed
+    }
+
+    private static func wholeNameFallback(for bridge: SourceGraphPlacedBridge) -> String {
+        let stored = bridge.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !stored.isEmpty { return stored }
+        return L10n.EvidenceGraph.bridgeNameKindAndRef(
+            phrase: phrase(for: bridge),
+            ref: bridge.subject.ref
+        )
+    }
+
+    private static func nonEmpty(_ value: String, fallback: String = "") -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty { return trimmed }
+        let next = fallback.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !next.isEmpty { return next }
+        return "—"
+    }
+
+    private static func subjectID(
         propertyKey: String,
         in observations: [CatalogObservation]
     ) -> String? {
-        display(propertyKey: propertyKey, in: observations)
+        let id = observations.first(where: { $0.propertyKey == propertyKey })?.valueSubjectID
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return id.isEmpty ? nil : id
     }
 
     private static func termDisplay(
@@ -128,16 +179,5 @@ enum EvidenceBridgeEdgeSummary {
             )
         }
         return catalog.isEmpty ? nil : catalog
-    }
-
-    private static func display(
-        propertyKey: String,
-        in observations: [CatalogObservation]
-    ) -> String? {
-        guard let observation = observations.first(where: { $0.propertyKey == propertyKey })
-        else { return nil }
-        let rendered = ObservationValueDisplay.string(for: observation)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        return rendered.isEmpty ? nil : rendered
     }
 }

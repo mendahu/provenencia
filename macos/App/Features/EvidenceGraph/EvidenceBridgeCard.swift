@@ -26,6 +26,7 @@ struct EvidenceBridgeCard: View {
     static let bodyActionHitHeight: CGFloat = 28
 
     let placed: SourceGraphPlacedBridge
+    let snapshot: SourceGraphSnapshot
     var isSelected: Bool
     var isActivated: Bool
     /// Live document-space drag offset from AppKit pointer ownership.
@@ -42,6 +43,7 @@ struct EvidenceBridgeCard: View {
     var body: some View {
         EvidenceBridgeCardChrome(
             placed: placed,
+            snapshot: snapshot,
             isSelected: isSelected,
             isActivated: isActivated,
             isDragging: isDragging,
@@ -51,7 +53,7 @@ struct EvidenceBridgeCard: View {
         .offset(dragOffset)
         .zIndex(isDragging || isActivated ? 1 : 0)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text(verbatim: Self.accessibilityLabel(for: placed)))
+        .accessibilityLabel(Text(verbatim: Self.accessibilityLabel(for: placed, in: snapshot)))
         .accessibilityIdentifier("evidenceGraph.bridge.\(placed.id)")
     }
 
@@ -69,13 +71,17 @@ struct EvidenceBridgeCard: View {
 
     /// Document-space frame used for edge attachment and AppKit hit targets.
     /// Height follows the wrapped body so lines and hits stay on the painted card.
-    static func contentFrame(for placed: SourceGraphPlacedBridge, dragOffset: CGSize = .zero) -> CGRect {
+    static func contentFrame(
+        for placed: SourceGraphPlacedBridge,
+        in snapshot: SourceGraphSnapshot,
+        dragOffset: CGSize = .zero
+    ) -> CGRect {
         let center = contentCenter(gridX: placed.gridX, gridY: placed.gridY)
         return CGRect(
             x: center.x - width / 2 + dragOffset.width,
             y: center.y - approximateHalfHeight + dragOffset.height,
             width: width,
-            height: contentHeight(for: placed)
+            height: contentHeight(for: placed, in: snapshot)
         )
     }
 
@@ -85,10 +91,13 @@ struct EvidenceBridgeCard: View {
     /// frame taller than the fill strands bottom-approach edge terminals below
     /// the card (the ``GraphCanvasEdgeGeometry/endpointTuck`` measures from
     /// this frame's `maxY`).
-    static func contentHeight(for placed: SourceGraphPlacedBridge) -> CGFloat {
+    static func contentHeight(
+        for placed: SourceGraphPlacedBridge,
+        in snapshot: SourceGraphSnapshot
+    ) -> CGFloat {
         let header = placed.isCited ? headerContentHeightCited : headerContentHeightUncited
         let text = placed.isCited
-            ? EvidenceBridgeEdgeSummary.sentence(for: placed)
+            ? EvidenceBridgeEdgeSummary.sentence(for: placed, in: snapshot)
             : String(localized: L10n.EvidenceGraph.bridgeHonestyBody)
         let font = placed.isCited
             ? PVFont.nsDisplay(size: 14.5, weight: PVFontWeight.medium)
@@ -124,10 +133,11 @@ struct EvidenceBridgeCard: View {
 
     static func actionTargets(
         for placed: SourceGraphPlacedBridge,
+        in snapshot: SourceGraphSnapshot,
         canCite: Bool,
         dragOffset: CGSize = .zero
     ) -> [GraphCanvasActionTarget] {
-        let frame = contentFrame(for: placed, dragOffset: dragOffset)
+        let frame = contentFrame(for: placed, in: snapshot, dragOffset: dragOffset)
         let headerHits = EvidenceCardHeaderActionHits.frames(
             cardFrame: frame,
             paddingX: shellPaddingX,
@@ -159,10 +169,13 @@ struct EvidenceBridgeCard: View {
         return actions
     }
 
-    static func accessibilityLabel(for placed: SourceGraphPlacedBridge) -> String {
+    static func accessibilityLabel(
+        for placed: SourceGraphPlacedBridge,
+        in snapshot: SourceGraphSnapshot
+    ) -> String {
         let ref = placed.subject.ref.trimmingCharacters(in: .whitespacesAndNewlines)
         if placed.isCited {
-            let summary = EvidenceBridgeEdgeSummary.sentence(for: placed)
+            let summary = EvidenceBridgeEdgeSummary.sentence(for: placed, in: snapshot)
             if ref.isEmpty {
                 return "\(placed.typeLabel), \(summary)"
             }
@@ -180,6 +193,7 @@ struct EvidenceBridgeCard: View {
 
 private struct EvidenceBridgeCardChrome: View {
     let placed: SourceGraphPlacedBridge
+    let snapshot: SourceGraphSnapshot
     var isSelected: Bool
     var isActivated: Bool
     var isDragging: Bool
@@ -273,7 +287,7 @@ private struct EvidenceBridgeCardChrome: View {
     private var bodyRow: some View {
         HStack(alignment: .top, spacing: 8) {
             if placed.isCited {
-                Text(verbatim: EvidenceBridgeEdgeSummary.sentence(for: placed))
+                Text(verbatim: EvidenceBridgeEdgeSummary.sentence(for: placed, in: snapshot))
                     .font(PVFont.display(size: 14.5, weight: PVFontWeight.medium))
                     .foregroundStyle(PVColor.textPrimary)
                     .lineLimit(3)

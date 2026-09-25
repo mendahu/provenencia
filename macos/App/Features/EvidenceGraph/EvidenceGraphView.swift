@@ -17,8 +17,6 @@ struct EvidenceGraphView: View {
 
     @Environment(WorkspaceNavigation.self) private var navigation
     @State private var model: EvidenceGraphModel
-    @State private var sourceTitle: String = ""
-    @State private var sourceRef: String?
 
     private var graphKey: CatalogQueryKey {
         CatalogQueryKey.sourceGraph(project: session.projectKey, sourceId: sourceID)
@@ -26,14 +24,6 @@ struct EvidenceGraphView: View {
 
     private var fieldsKey: CatalogQueryKey {
         CatalogQueryKey.subjectFieldsWorkspace(project: session.projectKey)
-    }
-
-    private var sourcesListKey: CatalogQueryKey {
-        CatalogQueryKey.sourcesList(project: session.projectKey)
-    }
-
-    private var connectRulesKey: CatalogQueryKey {
-        CatalogQueryKey.connectRules(project: session.projectKey)
     }
 
     init(
@@ -66,8 +56,8 @@ struct EvidenceGraphView: View {
                     fieldsHandle: fieldsHandle,
                     model: model,
                     sourceID: sourceID,
-                    sourceTitle: sourceTitle,
-                    sourceRef: sourceRef,
+                    sourceTitle: model.sourceTitle,
+                    sourceRef: model.sourceRef,
                     contentSize: Self.contentSize,
                     navigation: navigation
                 )
@@ -80,12 +70,7 @@ struct EvidenceGraphView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityIdentifier("workspace.destination.evidenceGraph")
         .task(id: sourceID) {
-            let _: QueryHandle<SourceGraphRows> = session.query(graphKey)
-            let _: QueryHandle<SubjectFieldsSnapshot> = session.query(fieldsKey)
-            let _: QueryHandle<[CatalogSource]> = session.query(sourcesListKey)
-            let _: QueryHandle<[CatalogConnectRule]> = session.query(connectRulesKey)
             await model.prepare()
-            await refreshSourceChrome()
         }
         .onChange(of: model.armedKind) { _, kind in
             if kind != nil {
@@ -105,15 +90,6 @@ struct EvidenceGraphView: View {
             if model.armedKind != nil || model.armedConnect {
                 NSCursor.pop()
             }
-        }
-    }
-
-    private func refreshSourceChrome() async {
-        let _: QueryHandle<[CatalogSource]> = session.query(sourcesListKey)
-        let sources: [CatalogSource]? = await session.readyValue(sourcesListKey)
-        if let match = sources?.first(where: { $0.id == sourceID }) {
-            sourceTitle = match.title
-            sourceRef = match.ref
         }
     }
 }
@@ -151,15 +127,6 @@ private struct EvidenceGraphContent: View {
         )
     }
 
-    private var disambiguationPresented: Binding<Bool> {
-        Binding(
-            get: { model.pendingDisambiguation != nil },
-            set: { newValue in
-                if !newValue { model.cancelDisambiguation() }
-            }
-        )
-    }
-
     var body: some View {
         VStack(spacing: 0) {
             header
@@ -185,7 +152,7 @@ private struct EvidenceGraphContent: View {
         .accessibilityRotor(String(localized: L10n.EvidenceGraph.linksRotor)) {
             ForEach(bridges) { placed in
                 AccessibilityRotorEntry(
-                    EvidenceBridgeCard.accessibilityLabel(for: placed),
+                    EvidenceBridgeCard.accessibilityLabel(for: placed, in: snapshot),
                     id: placed.id
                 ) {
                     model.selectSubject(id: placed.id)
@@ -194,25 +161,6 @@ private struct EvidenceGraphContent: View {
         }
         .vocabularyToastOverlay($model.toast, identifier: "evidenceGraph.toast")
         .pvFormDialog(
-            isPresented: disambiguationPresented,
-            copy: PVFormDialogCopy(
-                title: model.disambiguationTitle(),
-                subtitle: L10n.EvidenceGraph.connectDisambiguationSubtitleBare,
-                confirm: L10n.EvidenceGraph.connectDisambiguationConfirm,
-                cancel: L10n.EvidenceGraph.createCancel
-            ),
-            isRunning: false,
-            confirmDisabled: !model.canConfirmDisambiguation,
-            accessibilityIdentifierPrefix: "evidenceGraph.connect.disambiguation",
-            onConfirm: {
-                if let location = model.confirmDisambiguation() {
-                    navigation.go(to: location)
-                }
-            }
-        ) {
-            EvidenceConnectDisambiguationForm(model: model)
-        }
-        .pvFormDialog(
             isPresented: sheetPresented,
             copy: PVFormDialogCopy(
                 title: model.createDialogTitle(),
@@ -220,7 +168,9 @@ private struct EvidenceGraphContent: View {
                 cancel: L10n.EvidenceGraph.createCancel
             ),
             isRunning: model.isSaving,
-            confirmDisabled: model.draft.label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+            confirmDisabled: model.isEditingBridge
+                ? false
+                : model.draft.label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
             accessibilityIdentifierPrefix: model.editingSubjectID != nil
                 ? "evidenceGraph.edit"
                 : "evidenceGraph.create",
@@ -416,18 +366,21 @@ private struct EvidenceGraphContent: View {
                     .font(PVFont.body(size: PVTypeScale.caption))
                     .foregroundStyle(PVColor.danger)
             }
-            PVField(
-                label: L10n.EvidenceGraph.labelField,
-                error: model.labelError,
-                required: true
-            ) {
-                PVInput(
-                    text: Binding(
-                        get: { model.draft.label },
-                        set: { model.draft.label = $0 }
-                    ),
-                    isInvalid: model.labelError != nil
-                )
+            if !model.isEditingBridge {
+                PVField(
+                    label: L10n.EvidenceGraph.labelField,
+                    hint: L10n.EvidenceGraph.workingLabelHint,
+                    error: model.labelError,
+                    required: true
+                ) {
+                    PVInput(
+                        text: Binding(
+                            get: { model.draft.label },
+                            set: { model.draft.label = $0 }
+                        ),
+                        isInvalid: model.labelError != nil
+                    )
+                }
             }
             PVField(label: L10n.EvidenceGraph.descriptionField) {
                 PVTextArea(
@@ -670,10 +623,15 @@ private struct EvidenceGraphDocumentBody: View {
             targets.append(
                 GraphCanvasHitTarget(
                     id: placed.id,
-                    frame: EvidenceBridgeCard.contentFrame(for: placed, dragOffset: offset),
+                    frame: EvidenceBridgeCard.contentFrame(
+                        for: placed,
+                        in: snapshot,
+                        dragOffset: offset
+                    ),
                     acceptsConnect: false,
                     actions: EvidenceBridgeCard.actionTargets(
                         for: placed,
+                        in: snapshot,
                         canCite: model.canCite,
                         dragOffset: offset
                     )
@@ -744,6 +702,7 @@ private struct EvidenceGraphDocumentBody: View {
         let drag = pointer.offsets[placed.id] ?? .zero
         EvidenceBridgeCard(
             placed: placed,
+            snapshot: snapshot,
             isSelected: model.selectedSubjectID == placed.id,
             isActivated: model.activatedSubjectID == placed.id,
             dragOffset: drag,

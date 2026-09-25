@@ -677,18 +677,21 @@ struct CitationComposerModelTests {
         #expect(model.transcription == "B")
     }
 
-    @Test func connectEntryIgnoresLegacyTermAndGrid() {
-        let location = WorkspaceLocation(
-            section: .sources,
-            sourceId: sourceID,
-            connectFromSubjectId: subjectID,
-            connectToSubjectId: eventID,
-            connectBridgeTypeKey: "participation",
-            connectDisambiguationTermId: "term-witness",
-            connectGridX: 2,
-            connectGridY: 3,
-            sourceSurface: .citationComposer
-        )
+    @Test func connectEntryIgnoresLegacyTermAndGrid() throws {
+        let json = """
+        {
+          "section":"sources",
+          "sourceId":"\(sourceID)",
+          "connectFromSubjectId":"\(subjectID)",
+          "connectToSubjectId":"\(eventID)",
+          "connectBridgeTypeKey":"participation",
+          "connectDisambiguationTermId":"term-witness",
+          "connectGridX":2,
+          "connectGridY":3,
+          "sourceSurface":"citationComposer"
+        }
+        """
+        let location = try JSONDecoder().decode(WorkspaceLocation.self, from: Data(json.utf8))
         let entry = CitationComposerEntry(location: location)
         #expect(entry == .connect(
             sourceID: sourceID,

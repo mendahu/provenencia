@@ -101,27 +101,32 @@ struct SourceGraphSnapshot: Sendable, Equatable {
 
     /// Joins catalog rows with subject types. Unplaced subjects and `source`
     /// types are omitted. Endpoint ids come from cited `value_subject_id` on
-    /// edge Properties (`person` / `event` / `place` / `related_to`).
-    static func build(rows: SourceGraphRows, types: [CatalogSubjectType]) -> SourceGraphSnapshot {
+    /// the matching connect rule's edge Properties.
+    static func build(
+        rows: SourceGraphRows,
+        types: [CatalogSubjectType],
+        rules: [CatalogConnectRule]
+    ) -> SourceGraphSnapshot {
         build(
             sourceId: rows.sourceId,
             subjects: rows.subjects,
             positions: rows.positions,
             types: types,
-            observations: rows.observations
+            observations: rows.observations,
+            rules: rules
         )
     }
 
     /// Joins catalog rows into placed primaries and bridges. Unplaced subjects
     /// and `source` types are omitted. Endpoint ids come from cited
-    /// `value_subject_id` on edge Properties (`person` / `event` / `place` /
-    /// `related_to`).
+    /// `value_subject_id` on the matching connect rule's edges.
     static func build(
         sourceId: String,
         subjects: [CatalogSubject],
         positions: [CatalogSubjectPosition],
         types: [CatalogSubjectType],
-        observations: [CatalogObservation] = []
+        observations: [CatalogObservation] = [],
+        rules: [CatalogConnectRule] = []
     ) -> SourceGraphSnapshot {
         let typeByID = Dictionary(uniqueKeysWithValues: types.map { ($0.id, $0) })
         let positionBySubject = Dictionary(uniqueKeysWithValues: positions.map { ($0.subjectID, $0) })
@@ -154,7 +159,11 @@ struct SourceGraphSnapshot: Sendable, Equatable {
             } else if let kind = EvidenceBridgeKind(rawValue: type.key) {
                 let subjectObservations = (observationsBySubject[subject.id] ?? [])
                     .sorted(by: Self.observationDisplayOrder)
-                let ends = Self.citedEndpoints(kind: kind, observations: subjectObservations)
+                let ends = Self.citedEndpoints(
+                    kind: kind,
+                    observations: subjectObservations,
+                    rules: rules
+                )
                 placedBridges.append(
                     SourceGraphPlacedBridge(
                         subject: subject,
@@ -184,24 +193,21 @@ struct SourceGraphSnapshot: Sendable, Equatable {
         return SourceGraphSnapshot(sourceId: sourceId, subjects: placed, bridges: placedBridges)
     }
 
-    /// Cited A/B endpoints from edge `value_subject_id` (S7-10).
+    /// Cited A/B endpoints from the matching rule's `edges` (A then B).
     static func citedEndpoints(
         kind: EvidenceBridgeKind,
-        observations: [CatalogObservation]
+        observations: [CatalogObservation],
+        rules: [CatalogConnectRule]
     ) -> (a: String?, b: String?) {
         func subjectID(for key: String) -> String? {
             let id = observations.first(where: { $0.propertyKey == key })?.valueSubjectID
                 .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             return id.isEmpty ? nil : id
         }
-        switch kind {
-        case .participation:
-            return (subjectID(for: "person"), subjectID(for: "event"))
-        case .relationship:
-            return (subjectID(for: "person"), subjectID(for: "related_to"))
-        case .location:
-            return (subjectID(for: "event"), subjectID(for: "place"))
-        }
+        let edges = rules.first { $0.bridgeTypeKey == kind.rawValue && !$0.refuse }?.edges ?? []
+        let a = edges.first.map { subjectID(for: $0.propertyKey) } ?? nil
+        let b = edges.dropFirst().first.map { subjectID(for: $0.propertyKey) } ?? nil
+        return (a.flatMap { $0 }, b.flatMap { $0 })
     }
 
     /// Card row order: property label A→Z, then key, then Observation ref.

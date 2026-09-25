@@ -350,9 +350,11 @@ final class CitationComposerModel {
 
     var graphSnapshot: SourceGraphSnapshot {
         let handle: QueryHandle<SourceGraphRows>? = session.queryHandle(graphKey)
+        let rulesHandle: QueryHandle<[CatalogConnectRule]>? = session.queryHandle(connectRulesKey)
         return SourceGraphSnapshot.build(
             rows: handle?.value ?? SourceGraphRows(sourceId: sourceID),
-            types: fieldsSnapshot.types
+            types: fieldsSnapshot.types,
+            rules: rulesHandle?.value ?? []
         )
     }
 

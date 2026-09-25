@@ -54,6 +54,11 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var reorderSourceMetadataError: Error?
     /// When set, `setSubjectPosition` throws (Evidence graph drag should revert).
     var setSubjectPositionError: Error?
+    /// Optional delay before each `setSubjectPosition` (generation-guard tests).
+    var setSubjectPositionDelayNanoseconds: UInt64 = 0
+    /// Per-call errors consumed in order; `nil` means that call succeeds.
+    var setSubjectPositionErrors: [Error?] = []
+    private var setSubjectPositionCallIndex = 0
     var listSubjectsError: Error?
     var listConnectRulesError: Error?
     var createPropertyTermError: Error?
@@ -996,6 +1001,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         label: String,
         description: String
     ) async throws -> CatalogSubject {
+        recordedCalls.append("updateSubject id=\(subjectID) label=\(label)")
         markCatalogSessionHeld(projectDir)
         for (sourceID, var list) in subjectsBySource {
             guard let idx = list.firstIndex(where: { $0.id == subjectID }) else { continue }
@@ -1047,8 +1053,19 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         gridY: Int64
     ) async throws -> CatalogSubjectPosition {
         markCatalogSessionHeld(projectDir)
-        if let setSubjectPositionError {
-            throw setSubjectPositionError
+        recordedCalls.append("setSubjectPosition subjectID=\(subjectID) \(gridX),\(gridY)")
+        if setSubjectPositionDelayNanoseconds > 0 {
+            try await Task.sleep(nanoseconds: setSubjectPositionDelayNanoseconds)
+        }
+        if setSubjectPositionCallIndex < setSubjectPositionErrors.count {
+            let error = setSubjectPositionErrors[setSubjectPositionCallIndex]
+            setSubjectPositionCallIndex += 1
+            if let error { throw error }
+        } else {
+            setSubjectPositionCallIndex += 1
+            if let setSubjectPositionError {
+                throw setSubjectPositionError
+            }
         }
         let position = CatalogSubjectPosition(subjectID: subjectID, gridX: gridX, gridY: gridY)
         subjectPositionsBySubject[subjectID] = position

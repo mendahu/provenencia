@@ -63,7 +63,8 @@ struct SourceGraphSnapshotTests {
             subjects: [alice],
             positions: [CatalogSubjectPosition(subjectID: alice.id, gridX: 0, gridY: 0)],
             types: [personType],
-            observations: [observation]
+            observations: [observation],
+            rules: CatalogConnectRule.productMatrix
         )
         #expect(snapshot.subjects.count == 1)
         #expect(snapshot.subjects[0].isCited)
@@ -119,7 +120,8 @@ struct SourceGraphSnapshotTests {
             subjects: [alice],
             positions: [CatalogSubjectPosition(subjectID: alice.id, gridX: 0, gridY: 0)],
             types: [personType],
-            observations: [sex, name]
+            observations: [sex, name],
+            rules: CatalogConnectRule.productMatrix
         )
         #expect(snapshot.subjects[0].observations.map(\.propertyLabel) == ["Name", "Sex at Birth"])
     }
@@ -202,7 +204,8 @@ struct SourceGraphSnapshotTests {
                     propertyLabel: "Place",
                     propertyValueType: "subject"
                 ),
-            ]
+            ],
+            rules: CatalogConnectRule.productMatrix
         )
 
         #expect(snapshot.sourceId == "src-1")
@@ -216,6 +219,85 @@ struct SourceGraphSnapshotTests {
         #expect(snapshot.bridges[0].kind == .location)
         #expect(snapshot.bridges[0].endpointAID == birth.id)
         #expect(snapshot.bridges[0].endpointBID == alice.id)
+    }
+
+    @Test func citedEndpointsComeFromRuleEdges() {
+        let custom = CatalogConnectRule(
+            fromTypeKey: "event",
+            toTypeKey: "place",
+            bridgeTypeKey: "location",
+            edgePropertyKeys: ["place", "event"],
+            disambiguation: "none",
+            refuse: false,
+            edges: [
+                CatalogConnectEdge(propertyKey: "place", endpointTypeKey: "place"),
+                CatalogConnectEdge(propertyKey: "event", endpointTypeKey: "event"),
+            ]
+        )
+        let ends = SourceGraphSnapshot.citedEndpoints(
+            kind: .location,
+            observations: [
+                CatalogObservation(
+                    id: "obs-event",
+                    ref: "OBS-E",
+                    citationID: "cit-1",
+                    subjectID: "s-loc",
+                    propertyID: "prop-event",
+                    polarity: ObservationPolarity.positive.rawValue,
+                    valueText: "",
+                    valueInteger: nil,
+                    valueDateID: "",
+                    valueNameID: "",
+                    valueSubjectID: "s-birth",
+                    valueTermID: "",
+                    propertyKey: "event",
+                    propertyLabel: "Event",
+                    propertyValueType: PropertyValueType.subject.rawValue
+                ),
+                CatalogObservation(
+                    id: "obs-place",
+                    ref: "OBS-P",
+                    citationID: "cit-1",
+                    subjectID: "s-loc",
+                    propertyID: "prop-place",
+                    polarity: ObservationPolarity.positive.rawValue,
+                    valueText: "",
+                    valueInteger: nil,
+                    valueDateID: "",
+                    valueNameID: "",
+                    valueSubjectID: "s-alice",
+                    valueTermID: "",
+                    propertyKey: "place",
+                    propertyLabel: "Place",
+                    propertyValueType: PropertyValueType.subject.rawValue
+                ),
+            ],
+            rules: [custom]
+        )
+        #expect(ends.a == "s-alice")
+        #expect(ends.b == "s-birth")
+    }
+
+    @Test func legacyConnectKeysDecodeAndAreIgnored() throws {
+        let json = """
+        {
+          "section":"sources",
+          "sourceId":"s1",
+          "connectFromSubjectId":"p1",
+          "connectToSubjectId":"e1",
+          "connectBridgeTypeKey":"participation",
+          "connectDisambiguationTermId":"term-witness",
+          "connectGridX":2,
+          "connectGridY":3,
+          "sourceSurface":"citationComposer"
+        }
+        """
+        let decoded = try JSONDecoder().decode(WorkspaceLocation.self, from: Data(json.utf8))
+        #expect(decoded.connectFromSubjectId == "p1")
+        #expect(decoded.connectToSubjectId == "e1")
+        #expect(decoded.connectBridgeTypeKey == "participation")
+        #expect(decoded.isConnectPrefill)
+        #expect(decoded.sourceSurface == .citationComposer)
     }
 
     @Test func connectRulesRefusePersonPlace() {

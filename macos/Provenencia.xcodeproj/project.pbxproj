@@ -125,7 +125,6 @@
 		A71600000000000000000002 /* CitationComposerConnectionRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71600000000000000000001 /* CitationComposerConnectionRow.swift */; };
 		A71700000000000000000002 /* EvidenceGraphPlacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71700000000000000000001 /* EvidenceGraphPlacement.swift */; };
 		A71800000000000000000002 /* EvidenceGraphPlacementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71800000000000000000001 /* EvidenceGraphPlacementTests.swift */; };
-		A71000000000000000000004 /* EvidenceConnectDisambiguationForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71000000000000000000003 /* EvidenceConnectDisambiguationForm.swift */; };
 		A71000000000000000000006 /* PropertyTermDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71000000000000000000005 /* PropertyTermDisplayTests.swift */; };
 		AA0000000000000000000491 /* EvidenceGraphModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000490 /* EvidenceGraphModel.swift */; };
 		AA0000000000000000000493 /* EvidenceGraphPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000492 /* EvidenceGraphPalette.swift */; };
@@ -424,7 +423,6 @@
 		A71600000000000000000001 /* CitationComposerConnectionRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerConnectionRow.swift; sourceTree = "<group>"; };
 		A71700000000000000000001 /* EvidenceGraphPlacement.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphPlacement.swift; sourceTree = "<group>"; };
 		A71800000000000000000001 /* EvidenceGraphPlacementTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphPlacementTests.swift; sourceTree = "<group>"; };
-		A71000000000000000000003 /* EvidenceConnectDisambiguationForm.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceConnectDisambiguationForm.swift; sourceTree = "<group>"; };
 		A71000000000000000000005 /* PropertyTermDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PropertyTermDisplayTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000490 /* EvidenceGraphModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphModel.swift; sourceTree = "<group>"; };
 		AA0000000000000000000492 /* EvidenceGraphPalette.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphPalette.swift; sourceTree = "<group>"; };
@@ -861,7 +859,6 @@
 				A70900000000000000000005 /* ObservationValueDisplay.swift */,
 				A70900000000000000000009 /* EvidenceBridgeEdgeSummary.swift */,
 				A71700000000000000000001 /* EvidenceGraphPlacement.swift */,
-				A71000000000000000000003 /* EvidenceConnectDisambiguationForm.swift */,
 				AA00000000000000000004A2 /* EvidenceBridgeCard.swift */,
 				AA00000000000000000004A4 /* EvidenceGraphEdgeLayer.swift */,
 				AA0000000000000000000490 /* EvidenceGraphModel.swift */,
@@ -1572,7 +1569,6 @@
 				AA0000000000000000000497 /* EvidenceCanvasInputMode.swift in Sources */,
 				AA00000000000000000004A3 /* EvidenceBridgeCard.swift in Sources */,
 				A7090000000000000000000A /* EvidenceBridgeEdgeSummary.swift in Sources */,
-				A71000000000000000000004 /* EvidenceConnectDisambiguationForm.swift in Sources */,
 				AA00000000000000000004A5 /* EvidenceGraphEdgeLayer.swift in Sources */,
 				AA00000000000000000004A7 /* GraphCanvasEdgeGeometry.swift in Sources */,
 				AA00000000000000000004C1 /* GraphCanvasHitTarget.swift in Sources */,

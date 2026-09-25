@@ -1241,6 +1241,12 @@ enum L10n {
             comment: "Label field title on the create-subject dialog"
         )
 
+        static let workingLabelHint = LocalizedStringResource(
+            "evidenceGraph.create.workingLabelHint",
+            defaultValue: "Working label. Cards show the cited name once one is recorded.",
+            comment: "Caption under Label on the graph primary create/edit dialog"
+        )
+
         static let descriptionField = LocalizedStringResource(
             "evidenceGraph.create.descriptionField",
             defaultValue: "Description",
@@ -1468,56 +1474,25 @@ enum L10n {
             comment: "Toast body explaining which primary pairs Connect accepts; person↔place is refused"
         )
 
-        static let connectDisambiguationRoleTitle = LocalizedStringResource(
-            "evidenceGraph.connect.disambiguationRoleTitle",
-            defaultValue: "What role?",
-            comment: "Title of the Connect disambiguation sheet for person↔event"
-        )
-
-        static let connectDisambiguationRelationshipTitle = LocalizedStringResource(
-            "evidenceGraph.connect.disambiguationRelationshipTitle",
-            defaultValue: "What relationship?",
-            comment: "Title of the Connect disambiguation sheet for person↔person"
-        )
-
-        static let connectDisambiguationSubtitleBare = LocalizedStringResource(
-            "evidenceGraph.connect.disambiguationSubtitleBare",
-            defaultValue: "Choose a term, then cite the connection.",
-            comment: "Subtitle on the Connect disambiguation sheet"
-        )
-
-        static func connectDisambiguationSubtitle(from: String, to: String) -> String {
+        /// Endpoint noun fallback: "{type} {ref}".
+        static func bridgeNounTypeAndRef(type: String, ref: String) -> String {
             let format = String(localized: LocalizedStringResource(
-                "evidenceGraph.connect.disambiguationSubtitle",
-                defaultValue: "%@ → %@",
-                comment: "Connect disambiguation pair line; arguments are endpoint A then B labels"
+                "evidenceGraph.bridge.nounTypeAndRef",
+                defaultValue: "%@ %@",
+                comment: "Bridge endpoint noun when the working label is blank; type label then ref"
             ))
-            return String(format: format, locale: .current, from, to)
+            return String(format: format, locale: .current, type, ref)
         }
 
-        static let connectDisambiguationConfirm = LocalizedStringResource(
-            "evidenceGraph.connect.disambiguationConfirm",
-            defaultValue: "Continue",
-            comment: "Confirm button on the Connect disambiguation sheet"
-        )
-
-        static let connectDisambiguationPlaceholder = LocalizedStringResource(
-            "evidenceGraph.connect.disambiguationPlaceholder",
-            defaultValue: "Choose a term",
-            comment: "Placeholder for the Connect disambiguation ComboBox"
-        )
-
-        static let connectDisambiguationEmpty = LocalizedStringResource(
-            "evidenceGraph.connect.disambiguationEmpty",
-            defaultValue: "No terms",
-            comment: "Empty label when the Connect disambiguation ComboBox has no terms"
-        )
-
-        static let connectDisambiguationTermLabel = LocalizedStringResource(
-            "evidenceGraph.connect.disambiguationTermLabel",
-            defaultValue: "Term",
-            comment: "Accessibility label for the Connect disambiguation ComboBox"
-        )
+        /// Whole-name fallback: "{kind phrase} · {ref}".
+        static func bridgeNameKindAndRef(phrase: String, ref: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "evidenceGraph.bridge.nameKindAndRef",
+                defaultValue: "%@ · %@",
+                comment: "Bridge name when edges cannot be read; kind phrase then bridge ref"
+            ))
+            return String(format: format, locale: .current, phrase, ref)
+        }
 
         static func subjectCount(count: Int) -> LocalizedStringResource {
             count == 1 ? subjectCountOne : subjectCountOther(count: count)

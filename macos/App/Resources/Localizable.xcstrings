@@ -10614,102 +10614,6 @@
         }
       }
     },
-    "evidenceGraph.connect.disambiguationRoleTitle": {
-      "comment": "Title of the Connect disambiguation sheet for person↔event",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "What role?"
-          }
-        }
-      }
-    },
-    "evidenceGraph.connect.disambiguationRelationshipTitle": {
-      "comment": "Title of the Connect disambiguation sheet for person↔person",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "What relationship?"
-          }
-        }
-      }
-    },
-    "evidenceGraph.connect.disambiguationSubtitleBare": {
-      "comment": "Subtitle on the Connect disambiguation sheet",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choose a term, then cite the connection."
-          }
-        }
-      }
-    },
-    "evidenceGraph.connect.disambiguationSubtitle": {
-      "comment": "Connect disambiguation pair line; arguments are endpoint A then B labels",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ → %@"
-          }
-        }
-      }
-    },
-    "evidenceGraph.connect.disambiguationConfirm": {
-      "comment": "Confirm button on the Connect disambiguation sheet",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Continue"
-          }
-        }
-      }
-    },
-    "evidenceGraph.connect.disambiguationPlaceholder": {
-      "comment": "Placeholder for the Connect disambiguation ComboBox",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choose a term"
-          }
-        }
-      }
-    },
-    "evidenceGraph.connect.disambiguationEmpty": {
-      "comment": "Empty label when the Connect disambiguation ComboBox has no terms",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No terms"
-          }
-        }
-      }
-    },
-    "evidenceGraph.connect.disambiguationTermLabel": {
-      "comment": "Accessibility label for the Connect disambiguation ComboBox",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Term"
-          }
-        }
-      }
-    },
     "propertyTerm.role.subject": {
       "comment": "Product role term: subject",
       "extractionState": "manual",
@@ -11774,6 +11678,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "That connection edge cannot be edited or deleted."
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.workingLabelHint": {
+      "comment": "Caption under Label on the graph primary create/edit dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Working label. Cards show the cited name once one is recorded."
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.nounTypeAndRef": {
+      "comment": "Bridge endpoint noun when the working label is blank; type label then ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ %@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.nameKindAndRef": {
+      "comment": "Bridge name when edges cannot be read; kind phrase then bridge ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@"
           }
         }
       }
