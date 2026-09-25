@@ -8,7 +8,7 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 
 | Step | Brief | Feeds | Notes |
 | --- | --- | --- | --- |
-| S8-D8 | [`S8-D8-composer-connect-simplification.md`](S8-D8-composer-connect-simplification.md) | PR **S8-11** | Row-level Observation Save / Revert / Delete; Save reading; unsaved-work guard; Connect finishes in the composer; endpoint retarget; computed bridge names; New person from a row. **Next composer chrome.** |
+| S8-D8 | [`S8-D8-composer-connect-simplification.md`](S8-D8-composer-connect-simplification.md) | PR **S8-11** | Row-level Observation Save / Revert / Delete; Save reading; unsaved-work guard; Connect finishes in the composer as one compact row (endpoints fixed); computed bridge names; New person from a row. **Next composer chrome.** |
 | S8-D1 | [`S8-D1-auto-transcribe.md`](S8-D1-auto-transcribe.md) | PR **S8-01** | Auto Transcribe on citation transcription; warn + proceed on large page. **After S8-D8** — draw on its reading section. |
 | S8-D2 | [`S8-D2-pdf-text-find.md`](S8-D2-pdf-text-find.md) | PRs **S8-03**, **S8-04**, **S8-05** | PDF Find on the tool strip; I-beam vs pan; paste transcription from selection |
 | S8-D3 | [`S8-D3-graph-visuals.md`](S8-D3-graph-visuals.md) | PR **S8-06** | Conflict + negated; Source-page jump; richer bridge sentences; Add property on bridges |
