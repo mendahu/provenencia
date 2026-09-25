@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
+	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
@@ -93,11 +94,11 @@ func TestCreateCitedBridge(t *testing.T) {
 			}
 			return p
 		}
-		create := func(typeID []byte, label string) subjects.Subject {
+		create := func(typeID []byte, label string, x, y int64) subjects.Subject {
 			t.Helper()
 			s, err := subjects.Create(c, userID, subjects.CreateInput{
 				SourceID: src.ID, SubjectTypeID: typeID, Label: label,
-			})
+			}, &subjects.Placement{GridX: x, GridY: y})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -119,10 +120,10 @@ func TestCreateCitedBridge(t *testing.T) {
 		}
 		return seed{
 			c: c, source: src, artifact: art,
-			person: create(lookupType("person"), "Alice"),
-			personB: create(lookupType("person"), "Bob"),
-			event: create(lookupType("event"), "Wedding"),
-			place: create(lookupType("place"), "Leeds"),
+			person:     create(lookupType("person"), "Alice", 0, 0),
+			personB:    create(lookupType("person"), "Bob", 4, 0),
+			event:      create(lookupType("event"), "Wedding", 2, 4),
+			place:      create(lookupType("place"), "Leeds", 6, 4),
 			personProp: personProp, eventProp: eventProp, placeProp: placeProp,
 			related: related, roleProp: roleProp, relType: relType,
 			roleTerm: roleTerm, relTerm: relTerm,
@@ -153,9 +154,6 @@ func TestCreateCitedBridge(t *testing.T) {
 			FromSubjectID: s.person.ID,
 			ToSubjectID:   s.event.ID,
 			BridgeTypeKey: "participation",
-			Label:         "",
-			GridX:         2,
-			GridY:         3,
 			Citation: citations.CreateInput{
 				ArtifactID:  s.artifact.ID,
 				LocatorJSON: validLocator,
@@ -178,6 +176,31 @@ func TestCreateCitedBridge(t *testing.T) {
 		}
 		if got.Ref == "" {
 			t.Fatal("missing bridge ref")
+		}
+		pos, err := subjectpositions.Get(s.c, res.Subject.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if pos.GridX != 1 || pos.GridY != 2 {
+			t.Fatalf("midpoint (%d,%d)", pos.GridX, pos.GridY)
+		}
+		db, err := s.c.DB()
+		if err != nil {
+			t.Fatal(err)
+		}
+		var actions int
+		if err := db.QueryRow(`SELECT COUNT(*) FROM audit_transactions WHERE action_type = 'create_cited_bridge'`).Scan(&actions); err != nil {
+			t.Fatal(err)
+		}
+		if actions != 1 {
+			t.Fatalf("revisions %d", actions)
+		}
+		var latest string
+		if err := db.QueryRow(`SELECT action_type FROM audit_transactions ORDER BY rowid DESC LIMIT 1`).Scan(&latest); err != nil {
+			t.Fatal(err)
+		}
+		if latest != "create_cited_bridge" {
+			t.Fatalf("latest %q", latest)
 		}
 	})
 
@@ -274,4 +297,133 @@ func TestCreateCitedBridge(t *testing.T) {
 			t.Fatal("failed citation left a bridge subject")
 		}
 	})
+
+	t.Run("location extra term invalid", func(t *testing.T) {
+		s := mustSeed(t)
+		_, err := CreateCitedBridge(s.c, userID, CreateInput{
+			SourceID:      s.source.ID,
+			FromSubjectID: s.event.ID,
+			ToSubjectID:   s.place.ID,
+			BridgeTypeKey: "location",
+			Citation: citations.CreateInput{
+				ArtifactID:  s.artifact.ID,
+				LocatorJSON: validLocator,
+			},
+			Observations: []observations.Input{
+				{PropertyID: s.eventProp.ID, ValueSubjectID: s.event.ID},
+				{PropertyID: s.placeProp.ID, ValueSubjectID: s.place.ID},
+				{PropertyID: s.roleProp.ID, ValueTermID: s.roleTerm.ID},
+			},
+		})
+		if !errors.Is(err, ErrInvalid) {
+			t.Fatalf("got %v want invalid", err)
+		}
+	})
+
+	t.Run("attach existing citation", func(t *testing.T) {
+		s := mustSeed(t)
+		cited, err := citations.CreateWithObservations(s.c, userID, citations.CreateInput{
+			ArtifactID:  s.artifact.ID,
+			LocatorJSON: validLocator,
+		}, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res, err := CreateCitedBridge(s.c, userID, CreateInput{
+			SourceID:      s.source.ID,
+			FromSubjectID: s.event.ID,
+			ToSubjectID:   s.place.ID,
+			BridgeTypeKey: "location",
+			CitationID:    cited.Citation.ID,
+			Observations: []observations.Input{
+				{PropertyID: s.eventProp.ID, ValueSubjectID: s.event.ID},
+				{PropertyID: s.placeProp.ID, ValueSubjectID: s.place.ID},
+			},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(res.Citation.ID) != string(cited.Citation.ID) {
+			t.Fatal("did not attach")
+		}
+		if res.Citation.LocatorJSON != validLocator {
+			t.Fatalf("locator %q", res.Citation.LocatorJSON)
+		}
+	})
+
+	t.Run("attach with citation fields invalid", func(t *testing.T) {
+		s := mustSeed(t)
+		cited, err := citations.CreateWithObservations(s.c, userID, citations.CreateInput{
+			ArtifactID:  s.artifact.ID,
+			LocatorJSON: validLocator,
+		}, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = CreateCitedBridge(s.c, userID, CreateInput{
+			SourceID:      s.source.ID,
+			FromSubjectID: s.event.ID,
+			ToSubjectID:   s.place.ID,
+			BridgeTypeKey: "location",
+			CitationID:    cited.Citation.ID,
+			Citation: citations.CreateInput{
+				Transcription: "nope",
+			},
+			Observations: []observations.Input{
+				{PropertyID: s.eventProp.ID, ValueSubjectID: s.event.ID},
+				{PropertyID: s.placeProp.ID, ValueSubjectID: s.place.ID},
+			},
+		})
+		if !errors.Is(err, ErrInvalid) {
+			t.Fatalf("got %v want invalid", err)
+		}
+	})
+
+	t.Run("missing position invalid", func(t *testing.T) {
+		s := mustSeed(t)
+		if err := subjectpositions.Clear(s.c, s.place.ID); err != nil {
+			t.Fatal(err)
+		}
+		_, err := CreateCitedBridge(s.c, userID, CreateInput{
+			SourceID:      s.source.ID,
+			FromSubjectID: s.event.ID,
+			ToSubjectID:   s.place.ID,
+			BridgeTypeKey: "location",
+			Citation: citations.CreateInput{
+				ArtifactID:  s.artifact.ID,
+				LocatorJSON: validLocator,
+			},
+			Observations: []observations.Input{
+				{PropertyID: s.eventProp.ID, ValueSubjectID: s.event.ID},
+				{PropertyID: s.placeProp.ID, ValueSubjectID: s.place.ID},
+			},
+		})
+		if !errors.Is(err, ErrInvalid) {
+			t.Fatalf("got %v want invalid", err)
+		}
+	})
+}
+
+func TestFloorDiv(t *testing.T) {
+	cases := []struct {
+		a, b, want int64
+	}{
+		{3, 2, 1},
+		{4, 2, 2},
+		{0, 2, 0},
+		{-1, 2, -1},
+		{-3, 2, -2},
+		{-4, 2, -2},
+		{5, 2, 2},
+		{-5, 2, -3},
+		{1, 2, 0},
+	}
+	for _, tc := range cases {
+		if got := floorDiv(tc.a, tc.b); got != tc.want {
+			t.Fatalf("floorDiv(%d,%d)=%d want %d", tc.a, tc.b, got, tc.want)
+		}
+	}
+	if floorDiv(-3+1+1, 2) != -1 {
+		t.Fatal("negative odd midpoint")
+	}
 }

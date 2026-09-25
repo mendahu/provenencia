@@ -56,7 +56,7 @@ func CreateSubject(in []byte) ([]byte, error) {
 			SubjectTypeID: typeID,
 			Label:         req.GetLabel(),
 			Description:   req.GetDescription(),
-		})
+		}, nil)
 		if err != nil {
 			return err
 		}

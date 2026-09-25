@@ -5,10 +5,10 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
-	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -44,7 +44,7 @@ func TestSubjectPositions(t *testing.T) {
 		}
 		return src
 	}
-	mustPerson := func(t *testing.T, c *database.Catalog, sourceID []byte, label string) subjects.Subject {
+	mustPerson := func(t *testing.T, c *database.Catalog, sourceID []byte, label string) []byte {
 		t.Helper()
 		if err := subjectvocab.Install(c); err != nil {
 			t.Fatal(err)
@@ -53,13 +53,18 @@ func TestSubjectPositions(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		s, err := subjects.Create(c, userID, subjects.CreateInput{
-			SourceID: sourceID, SubjectTypeID: person.ID, Label: label,
-		})
+		db, err := c.DB()
 		if err != nil {
 			t.Fatal(err)
 		}
-		return s
+		id := uuid.New()
+		if _, err := db.Exec(
+			`INSERT INTO subjects (id, ref, source_id, subject_type_id, label) VALUES (?, ?, ?, ?, ?)`,
+			id[:], "CPR-"+label, sourceID, person.ID, label,
+		); err != nil {
+			t.Fatal(err)
+		}
+		return id[:]
 	}
 	auditCount := func(t *testing.T, c *database.Catalog) int {
 		t.Helper()
@@ -85,14 +90,14 @@ func TestSubjectPositions(t *testing.T) {
 				src := mustSource(t, c, "Deed")
 				sub := mustPerson(t, c, src.ID, "Alice")
 				before := auditCount(t, c)
-				p, err := Set(c, sub.ID, -3, 7)
+				p, err := Set(c, sub, -3, 7)
 				if err != nil {
 					t.Fatal(err)
 				}
 				if p.GridX != -3 || p.GridY != 7 {
 					t.Fatalf("%+v", p)
 				}
-				got, err := Get(c, sub.ID)
+				got, err := Get(c, sub)
 				if err != nil || got.GridX != -3 || got.GridY != 7 {
 					t.Fatalf("%v %+v", err, got)
 				}
@@ -107,13 +112,13 @@ func TestSubjectPositions(t *testing.T) {
 				mustUser(t, c)
 				src := mustSource(t, c, "Deed")
 				sub := mustPerson(t, c, src.ID, "Alice")
-				if _, err := Set(c, sub.ID, 1, 1); err != nil {
+				if _, err := Set(c, sub, 1, 1); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := Set(c, sub.ID, 2, 3); err != nil {
+				if _, err := Set(c, sub, 2, 3); err != nil {
 					t.Fatal(err)
 				}
-				got, err := Get(c, sub.ID)
+				got, err := Get(c, sub)
 				if err != nil || got.GridX != 2 || got.GridY != 3 {
 					t.Fatalf("%v %+v", err, got)
 				}
@@ -136,21 +141,21 @@ func TestSubjectPositions(t *testing.T) {
 				mustUser(t, c)
 				src := mustSource(t, c, "Deed")
 				sub := mustPerson(t, c, src.ID, "Alice")
-				_, err := Get(c, sub.ID)
+				_, err := Get(c, sub)
 				if !errors.Is(err, sql.ErrNoRows) {
 					t.Fatalf("got %v", err)
 				}
-				if _, err := Set(c, sub.ID, 0, 0); err != nil {
+				if _, err := Set(c, sub, 0, 0); err != nil {
 					t.Fatal(err)
 				}
 				before := auditCount(t, c)
-				if err := Clear(c, sub.ID); err != nil {
+				if err := Clear(c, sub); err != nil {
 					t.Fatal(err)
 				}
-				if err := Clear(c, sub.ID); err != nil {
+				if err := Clear(c, sub); err != nil {
 					t.Fatal(err)
 				}
-				_, err = Get(c, sub.ID)
+				_, err = Get(c, sub)
 				if !errors.Is(err, sql.ErrNoRows) {
 					t.Fatalf("got %v", err)
 				}
@@ -168,16 +173,16 @@ func TestSubjectPositions(t *testing.T) {
 				a1 := mustPerson(t, c, srcA.ID, "A1")
 				a2 := mustPerson(t, c, srcA.ID, "A2")
 				b1 := mustPerson(t, c, srcB.ID, "B1")
-				if _, err := Set(c, a1.ID, 1, 0); err != nil {
+				if _, err := Set(c, a1, 1, 0); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := Set(c, b1.ID, 9, 9); err != nil {
+				if _, err := Set(c, b1, 9, 9); err != nil {
 					t.Fatal(err)
 				}
 				// a2 stays unplaced
 				_ = a2
 				list, err := ListBySource(c, srcA.ID)
-				if err != nil || len(list) != 1 || string(list[0].SubjectID) != string(a1.ID) {
+				if err != nil || len(list) != 1 || string(list[0].SubjectID) != string(a1) {
 					t.Fatalf("%v %+v", err, list)
 				}
 			},
@@ -201,7 +206,7 @@ func TestSubjectPositions(t *testing.T) {
 				mustUser(t, c)
 				src := mustSource(t, c, "Deed")
 				sub := mustPerson(t, c, src.ID, "Alice")
-				if _, err := Set(c, sub.ID, 4, -1); err != nil {
+				if _, err := Set(c, sub, 4, -1); err != nil {
 					t.Fatal(err)
 				}
 				dir := c.Dir()
@@ -213,7 +218,7 @@ func TestSubjectPositions(t *testing.T) {
 					t.Fatal(err)
 				}
 				defer reopened.Close()
-				got, err := Get(reopened, sub.ID)
+				got, err := Get(reopened, sub)
 				if err != nil || got.GridX != 4 || got.GridY != -1 {
 					t.Fatalf("%v %+v", err, got)
 				}

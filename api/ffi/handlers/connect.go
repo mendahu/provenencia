@@ -44,10 +44,7 @@ func CreateCitedBridge(in []byte) ([]byte, error) {
 			FromSubjectID: fromID,
 			ToSubjectID:   toID,
 			BridgeTypeKey: req.GetBridgeTypeKey(),
-			Label:         req.GetLabel(),
 			Description:   req.GetDescription(),
-			GridX:         req.GetGridX(),
-			GridY:         req.GetGridY(),
 			Citation: citations.CreateInput{
 				ArtifactID:             artifactID,
 				LocatorJSON:            req.GetLocatorJson(),

@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/project"
+	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/ref"
 )
 
@@ -55,8 +56,14 @@ type CreateInput struct {
 	Description   string
 }
 
+// Placement is an optional grid cell written with the Subject (unaudited layout).
+type Placement struct {
+	GridX int64
+	GridY int64
+}
+
 // Create inserts a Subject, mints a ref from the type's candidate_ref_prefix, and records create_subject.
-func Create(c *database.Catalog, userID []byte, in CreateInput) (Subject, error) {
+func Create(c *database.Catalog, userID []byte, in CreateInput, placement *Placement) (Subject, error) {
 	db, err := c.DB()
 	if err != nil {
 		return Subject{}, err
@@ -79,6 +86,11 @@ func Create(c *database.Catalog, userID []byte, in CreateInput) (Subject, error)
 	s, change, err := InsertTx(tx, in)
 	if err != nil {
 		return Subject{}, err
+	}
+	if placement != nil {
+		if _, err := subjectpositions.SetTx(tx, s.ID, placement.GridX, placement.GridY); err != nil {
+			return Subject{}, err
+		}
 	}
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
@@ -332,6 +344,14 @@ func ListBySource(c *database.Catalog, sourceID []byte) ([]Subject, error) {
 
 type rowScanner interface {
 	Scan(dest ...any) error
+}
+
+// GetTx returns a Subject by id on an open transaction, or sql.ErrNoRows.
+func GetTx(tx *sql.Tx, id []byte) (Subject, error) {
+	if len(id) != 16 {
+		return Subject{}, ErrInvalid
+	}
+	return getTx(tx, id)
 }
 
 func getTx(tx *sql.Tx, id []byte) (Subject, error) {

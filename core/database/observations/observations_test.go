@@ -92,19 +92,19 @@ func TestObservations(t *testing.T) {
 		}
 		person, err := subjects.Create(c, userID, subjects.CreateInput{
 			SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Bob",
-		})
+		}, &subjects.Placement{GridX: 0, GridY: 0})
 		if err != nil {
 			t.Fatal(err)
 		}
 		place, err := subjects.Create(c, userID, subjects.CreateInput{
 			SourceID: src.ID, SubjectTypeID: placeType.ID,
-		})
+		}, &subjects.Placement{GridX: 4, GridY: 0})
 		if err != nil {
 			t.Fatal(err)
 		}
 		event, err := subjects.Create(c, userID, subjects.CreateInput{
 			SourceID: src.ID, SubjectTypeID: eventType.ID, Label: "Birth",
-		})
+		}, &subjects.Placement{GridX: 2, GridY: 4})
 		if err != nil {
 			t.Fatal(err)
 		}

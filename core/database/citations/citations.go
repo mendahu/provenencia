@@ -56,6 +56,10 @@ const (
 
 	sqlArtifactExists = `SELECT 1 FROM artifacts WHERE id = ?`
 
+	sqlCitationSource = `SELECT a.source_id FROM citations c
+		INNER JOIN artifacts a ON a.id = c.artifact_id
+		WHERE c.id = ?`
+
 	maxRefRetries = 8
 )
 
@@ -135,6 +139,11 @@ func CreateWithObservations(
 		return CreateResult{}, err
 	}
 	return res, nil
+}
+
+// NormalizeCreateInput trims citation fields and validates the locator.
+func NormalizeCreateInput(in *CreateInput) error {
+	return normalizeCreateInput(in)
 }
 
 func normalizeCreateInput(in *CreateInput) error {
@@ -577,6 +586,26 @@ func Get(c *database.Catalog, id []byte) (Citation, error) {
 		return Citation{}, ErrInvalid
 	}
 	return scanOne(db.QueryRow(sqlGet, id))
+}
+
+// GetTx returns a Citation by id on an open transaction.
+func GetTx(tx *sql.Tx, id []byte) (Citation, error) {
+	if len(id) != 16 {
+		return Citation{}, ErrInvalid
+	}
+	return scanOne(tx.QueryRow(sqlGet, id))
+}
+
+// SourceIDTx returns the Artifact source_id for a Citation.
+func SourceIDTx(tx *sql.Tx, citationID []byte) ([]byte, error) {
+	if len(citationID) != 16 {
+		return nil, ErrInvalid
+	}
+	var sourceID []byte
+	if err := tx.QueryRow(sqlCitationSource, citationID).Scan(&sourceID); err != nil {
+		return nil, err
+	}
+	return sourceID, nil
 }
 
 // ListByArtifact returns Citations for an Artifact, each with its Observation count.
