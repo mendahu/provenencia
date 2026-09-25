@@ -10,12 +10,11 @@
 
 Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](README.md) first.
 
-This brief is an **enhancement** of the **S8-D7** composer (not the Spike 7 form).
+This brief is an **enhancement** of the existing **S8-D7** / **S8-D8** composer board — not a rethink, and not the Spike 7 form. Keep the current frames (Layout A, citation fields section, **Save citation**, viewer, observation stack). Add **Auto Transcribe** on the transcription field. Do not restyle anything this brief does not name.
 
 ### Claude Design — do this first (in order)
 
 Work **in place** on this board. Do not fork a parallel copy of the surface.
-- **Rethink** (this brief says replace): throw away the old frames. Do not keep a before/after to ship.
 - **Enhancement**: add to the existing frames. Do not start a second composer / graph / page.
 
 1. **Clear this board’s local design-system cache.** Claude Design keeps a stale pack; drawing against it invents local copies of kit controls.
