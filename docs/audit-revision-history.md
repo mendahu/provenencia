@@ -267,6 +267,24 @@ Conceptually:
 
 Deletion therefore does not destroy the historical content needed for reconstruction.
 
+### Interpretation action types
+
+Interpretation writes use these `audit_revisions.action` values:
+
+| Action | When |
+| --- | --- |
+| `create_subject` | Insert a subject, optionally with its first grid position |
+| `update_subject` | Change a subject's label or description |
+| `delete_subject` | Remove a subject |
+| `create_citation_with_observations` | First commit that mints a Citation (zero or more Observations) |
+| `update_citation` | Citation fields only |
+| `add_observations` | Add Observation rows to an existing Citation |
+| `update_observation` | Change one ordinary Observation (and any child date/name/note rows) |
+| `delete_observation` | Remove one ordinary Observation |
+| `create_cited_bridge` | Atomic Connect: bridge subject + Citation + edge Observations |
+
+A `name_value` change carries `parts` as **one JSON array field** on that `name_value` change row, not one change per part.
+
 ---
 
 # 4. Transaction grouping

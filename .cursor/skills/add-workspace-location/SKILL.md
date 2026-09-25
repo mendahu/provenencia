@@ -126,5 +126,6 @@ Inject a temp navigation file URL via `attachProject(uuid:fileURL:)`.
 
 - Persist/API: `NavigationHistoryStore`, `WorkspaceNavigation.attachProject`
 - Keyboard: `NavigationCoordinator` + `ProvenenciaApp` (`⌘[` / `⌘]`)
+- Unsaved work: `WorkspaceLeaveGuard` on `WorkspaceNavigation.leaveGuard` — `go(to:)` / back / forward / index ask the guard; `fallbackToSectionRoot()` and `attachProject` do not. The citation composer is the first place that holds.
 - Catalog session for destination loads: [`use-catalog-session`](../use-catalog-session/SKILL.md)
 - Place registry + query cache: [`add-workspace-place`](../add-workspace-place/SKILL.md)

@@ -121,7 +121,7 @@ S8-D6  Delete paths
 - [x] S8-D7 — Design: Citation composer rethink → [`completed.md`](completed.md)
 - [x] S8-10 — Flexible citation composer (identity + multi-subject + empty Save) → [`completed.md`](completed.md)
 - [x] S8-D8 — Design: Composer and Connect simplification → [`completed.md`](completed.md)
-- [ ] S8-11 — Composer and Connect simplification + Interpretation write integrity → [`completed.md`](completed.md)
+- [x] S8-11 — Composer and Connect simplification + Interpretation write integrity → [`completed.md`](completed.md)
 - [ ] S8-D1 — Design: Auto Transcribe in the citation composer → [`completed.md`](completed.md)
 - [ ] S8-01 — Vision OCR + Auto Transcribe button → [`completed.md`](completed.md)
 - [ ] S8-02 — PDF first-page Artifact thumbnails → [`completed.md`](completed.md)
@@ -173,6 +173,8 @@ Does **not** design Auto Transcribe (**S8-D1**), PDF Find / paste (**S8-D2**), g
 ## S8-11 — PR: Composer and Connect simplification + Interpretation write integrity
 
 One PR that implements the **S8-D8** board **and** the engine, audit, FFI, and client fixes from the S8-10 adversarial review that are still relevant once S8-D8's save model is in. The review found that the composer deletes saved Observations by omission, that edits are lost silently on most exits, that Connect loses the connection when an existing Citation is picked, that the audit log cannot reconstruct what was asserted, and that the server does not check that a bridge's edges point at the chosen endpoints.
+
+**Done.** Row-level Observation commits, Save citation, Connect in the composer, engine-locked edges, attach-to-existing-Citation bridges, full-state create/delete audit, and a navigation leave guard.
 
 **This section is the implementation contract.** Where it names a function, file, field number, error code, or audit field, implement exactly that. If something here turns out to be wrong in the code, stop, fix this section in the same PR (with a one-line reason), then continue. Do not silently diverge.
 

@@ -2781,12 +2781,6 @@ enum L10n {
             comment: "Validation when Save is pressed without an Artifact"
         )
 
-        static let saveNeedsObservationError = LocalizedStringResource(
-            "citationComposer.saveNeedsObservationError",
-            defaultValue: "Add at least one observation before saving.",
-            comment: "Footer error when Save is refused for empty Observations"
-        )
-
         static let dialogPropertyRequired = LocalizedStringResource(
             "citationComposer.dialogPropertyRequired",
             defaultValue: "Pick the Property this observation is about.",
@@ -2895,30 +2889,6 @@ enum L10n {
             comment: "Callout title when the Source has no Artifacts to cite"
         )
 
-        static let saveToastTitle = LocalizedStringResource(
-            "citationComposer.saveToastTitle",
-            defaultValue: "Citation saved",
-            comment: "Toast title after the composer writes a Citation"
-        )
-
-        static let saveToastBody = LocalizedStringResource(
-            "citationComposer.saveToastBody",
-            defaultValue: "The reading is on this source. Open it again from the citation menu on the artifact.",
-            comment: "Toast body after the composer writes a Citation"
-        )
-
-        static let abandonConfirm = LocalizedStringResource(
-            "citationComposer.abandonConfirm",
-            defaultValue: "Discard edits",
-            comment: "Confirm button when switching Artifact abandons a dirty saved Citation"
-        )
-
-        static let abandonCancel = LocalizedStringResource(
-            "citationComposer.abandonCancel",
-            defaultValue: "Keep editing",
-            comment: "Cancel button on the dirty Artifact-change confirm"
-        )
-
         static let identityChangedNew = LocalizedStringResource(
             "citationComposer.identityChangedNew",
             defaultValue: "Now composing a new citation",
@@ -2979,23 +2949,6 @@ enum L10n {
             return String(format: format, locale: .current, title)
         }
 
-        static func abandonTitle(ref: String) -> String {
-            let format = String(localized: LocalizedStringResource(
-                "citationComposer.abandonTitle",
-                defaultValue: "Discard unsaved edits to %@?",
-                comment: "Confirm title when switching Artifact on a dirty saved Citation; argument is CIT ref"
-            ))
-            return String(format: format, locale: .current, ref)
-        }
-
-        static func abandonMessage(artifactTitle: String) -> String {
-            let format = String(localized: LocalizedStringResource(
-                "citationComposer.abandonMessage",
-                defaultValue: "Switching to %@ starts a new citation there. The saved citation keeps its last saved reading. Only the changes you haven’t saved are lost.",
-                comment: "Confirm message when switching Artifact; argument is the target Artifact title"
-            ))
-            return String(format: format, locale: .current, artifactTitle)
-        }
     }
 
     /// Origin markers shared by every catalog vocabulary destination —

@@ -9690,18 +9690,6 @@
         }
       }
     },
-    "citationComposer.saveNeedsObservationError": {
-      "comment": "Footer error when Save is refused for empty Observations",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add at least one observation before saving."
-          }
-        }
-      }
-    },
     "citationComposer.dialogPropertyRequired": {
       "comment": "Inline error under Property in the Add observation dialog",
       "extractionState": "manual",
@@ -10986,54 +10974,6 @@
         }
       }
     },
-    "citationComposer.saveToastTitle": {
-      "comment": "Toast title after the composer writes a Citation",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Citation saved"
-          }
-        }
-      }
-    },
-    "citationComposer.saveToastBody": {
-      "comment": "Toast body after the composer writes a Citation",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The reading is on this source. Open it again from the citation menu on the artifact."
-          }
-        }
-      }
-    },
-    "citationComposer.abandonConfirm": {
-      "comment": "Confirm button when switching Artifact abandons a dirty saved Citation",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Discard edits"
-          }
-        }
-      }
-    },
-    "citationComposer.abandonCancel": {
-      "comment": "Cancel button on the dirty Artifact-change confirm",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keep editing"
-          }
-        }
-      }
-    },
     "citationComposer.identityChangedNew": {
       "comment": "VoiceOver announcement when Citation identity resets to New",
       "extractionState": "manual",
@@ -11114,30 +11054,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Now citing %@"
-          }
-        }
-      }
-    },
-    "citationComposer.abandonTitle": {
-      "comment": "Confirm title when switching Artifact on a dirty saved Citation; argument is CIT ref",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Discard unsaved edits to %@?"
-          }
-        }
-      }
-    },
-    "citationComposer.abandonMessage": {
-      "comment": "Confirm message when switching Artifact; argument is the target Artifact title",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Switching to %@ starts a new citation there. The saved citation keeps its last saved reading. Only the changes you haven’t saved are lost."
           }
         }
       }
