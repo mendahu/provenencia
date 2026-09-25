@@ -104,6 +104,8 @@ Every editable Observation row is in exactly one state. The board must draw each
 | **Saving** | Commit in flight. | Save shows busy; row inputs disabled |
 | **Error** | Last commit failed. | Error text **on the row** (Field error / compact Callout), Save + Revert still available |
 
+**Observation ref on every persisted row.** Saved, Edited, Saving, and Error rows show the Observation's `OBS-…` ref as quiet monospaced metadata on the row (for example, trailing the Property / value line or in the row's corner). The board picks the spot; it must not compete with the value. Draft rows have no ref yet: show nothing, or a muted "New" token, never a placeholder ref. The ref appears on the row as soon as the first Save returns and never changes afterward. The connection row shows the **bridge's** ref (`CPA-…` / `CRL-…` / `CLO-…`) in the same style, because the connection is one unit and its edge Observations are not shown individually.
+
 A **Draft** row with no Property picked does not count as unsaved document work (it is an empty placeholder). Every other Draft or Edited row counts (§2.3).
 
 Polarity toggle on a **Saved** row is an edit: the row becomes **Edited** until saved. Do not auto-commit polarity.
@@ -153,7 +155,7 @@ A bridge's name is built from **nouns** (one per endpoint) and the **role / rela
 | Tier | Noun source | Example | Who ships it |
 | --- | --- | --- | --- |
 | 1 | The endpoint's **identity Observation**: `name` (person, NameValue form), `event_type` (event, term label), `toponym` (place). With several, the first in card display order. | "John Robins", "Birth", "London" | **S8-06** (already scoped) |
-| 2 | The endpoint's **working label** (`subjects.label`, trimmed). | "Person 3", "Baptism?" | today; kept |
+| 2 | The **endpoint's** working label (the person / event / place's `subjects.label`, trimmed). Primaries keep a required Label field in the graph create / edit dialog and the composer's New… dialog, so this almost always resolves. This is **not** the bridge's label, which no longer has an input. | "Person 3", "Baptism?" | today; kept |
 | 3 | The endpoint's **type label + ref**. | "Person CPR-F4N2P" | **S8-11** |
 
 The endpoint always exists, because the engine refuses to delete a subject that an edge points at, so tier 3 always resolves. Tier 3 is also what shows when the working label is blank. The graph dialog requires a label, but other writers (import, older catalogs) may not have one.
@@ -164,7 +166,7 @@ The **role** term is optional in the sentence. When it is missing, use the exist
 
 | Tier | Show | Example |
 | --- | --- | --- |
-| A | The bridge's **stored label** if one exists (older bridges only; new bridges store none). Read-only. | "Mary's baptism" |
+| A | The **bridge's own** stored label, if one exists. Only older bridges have one, because the bridge label input is removed and new bridges store none. Read-only. | "Mary's baptism" |
 | B | **Kind phrase** (+ role term if known) **· bridge ref** | "Participation · CPA-7K2QD", "Participation as godparent · CPA-7K2QD" |
 
 The ref is always the picker subtext and the VoiceOver hint, so two bridges that fall back to the same words are still distinguishable.
@@ -264,6 +266,7 @@ The board must make it obvious in step 2 that the connection will be saved onto 
 | --- | --- |
 | CS-1 | Every editable Observation row shows its state (§2.1). Draft, Saved, Edited, Saving, and Error are visually distinct without relying on color alone (icon, label, or text). |
 | CS-2 | Row **Save** is a `PVIconButton` (checkmark) with an accessible name "Save observation"; **Revert** is a `PVIconButton` (counter-clockwise arrow) "Revert observation". Both are hidden on Saved rows. Return in an inline text / integer field triggers Save when valid. Esc in an inline field triggers Revert. |
+| CS-2b | Every persisted Observation row shows its `OBS-…` ref (§2.1) as `Text(verbatim:)` in `PVFont.mono(size: PVTypeScale.caption)` with `PVColor.textMuted`, and `.textSelection(.enabled)` so it can be copied. Draft rows show no ref (or a muted "New" token). The saved connection row shows the bridge subject's ref the same way. The ref is part of the row's VoiceOver label ("Observation OBS-7K2QD"). |
 | CS-3 | Row errors render **on the row** (the Field's error slot or a compact `PVCallout` under the row). The footer no longer shows observation errors. |
 | CS-4 | **Delete observation…** lives in the row ⋯ `ContextMenu` for Saved and Edited rows, opens `.pvConfirm(item:)` with the Observation ref and Citation ref, and deletes only that row. Draft rows use Revert (no confirm). The connection row has no Delete. |
 | CS-5 | The reading section gets **Save reading** (`PVButton` secondary, small) under the description field, enabled only when the reading is dirty (or always on a New Citation with no rows, so an empty reading-only Citation can be saved). The footer primary **Save** is removed. |
@@ -286,7 +289,7 @@ The board must make it obvious in step 2 that the connection will be saved onto 
 
 1. **Add property, New Citation** — Draft row focused, reading empty, Save reading enabled.
 2. **After first row Save** — identity shows `CIT-…`, row Saved, second Draft row being filled.
-3. **Row states** — one stack showing Saved, Edited, Saving, Error, and Draft together (reference frame).
+3. **Row states** — one stack showing Saved, Edited, Saving, Error, and Draft together (reference frame), with the `OBS-…` ref on every persisted row and none on the Draft.
 4. **Delete observation confirm** — shared Citation with rows on two subjects; delete one.
 5. **Incompatible subject change** — Property cleared, inline error, Revert available (§3.3).
 6. **Pending connection, New Citation** — one connection row on top, role empty, Save connection disabled.
@@ -311,7 +314,7 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 | --- | --- | --- | --- | --- |
 | Composer place | Snowflake | **Extend** | `Features/CitationComposer/CitationComposerView.swift` | Hosts the guard confirm and the new-subject FormDialog. Abandon confirm removed. |
 | Form pane | Snowflake | **Extend** | `Features/CitationComposer/CitationComposerFormPane.swift` | Save reading under the reading fields; footer = Done + unsaved summary; connection row(s) at the top of the stack. |
-| Observation row | Snowflake | **Extend** | `Features/CitationComposer/CitationComposerObservationRow.swift` | State marker, Save / Revert IconButtons, row error, Delete in ⋯. Ordinary rows only — edge Observations never render here. |
+| Observation row | Snowflake | **Extend** | `Features/CitationComposer/CitationComposerObservationRow.swift` | State marker, `OBS-…` ref (persisted rows), Save / Revert IconButtons, row error, Delete in ⋯. Ordinary rows only — edge Observations never render here. |
 | Connection row | Snowflake | **New** (feature-private) | `Features/CitationComposer/CitationComposerConnectionRow.swift` | One `PVCard` row (same height class as an Observation row): bridge-kind icon + sentence `Text` + term `PVComboBox` + trailing `PVButton`s (pending) or Save / Revert `PVIconButton`s (edited). One call site → stays a snowflake. |
 | Observation dialog (name / date) | Snowflake | Ship | `Features/CitationComposer/CitationComposerObservationDialogForm.swift` | Dialog confirm now updates the row draft only (row becomes Edited); the row's Save commits. |
 | New-subject dialog | Snowflake | **New** (feature-private) | inside `CitationComposerView` via `pvFormDialog` | Label + Description `PVField`s. Do not add a kit control. |
