@@ -3,6 +3,7 @@ package citations
 import (
 	"bytes"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -246,6 +247,112 @@ func TestCitations(t *testing.T) {
 				}
 				if !placeObs[0].HasText || placeObs[0].ValueText != "Boston" {
 					t.Fatalf("toponym %+v", placeObs[0])
+				}
+			},
+		},
+		{
+			name: "create audit is full-state including nulls and notes",
+			run: func(t *testing.T) {
+				c, s := mustSeed(t)
+				res, err := CreateWithObservations(c, userID, CreateInput{
+					ArtifactID:  s.artifact.ID,
+					LocatorJSON: validLocator,
+					Notes:       []string{"see folio 12"},
+				}, []observations.Input{{
+					SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
+					ValueTermID: s.femaleTerm.ID,
+				}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				db, err := c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				rows, err := db.Query(`
+					SELECT entity_type, action, changes_json FROM audit_changes
+					WHERE audit_transaction_id = (
+						SELECT id FROM audit_transactions ORDER BY revision DESC LIMIT 1
+					)
+					ORDER BY rowid`)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer rows.Close()
+				type row struct {
+					entity, action string
+					fields         map[string]any
+				}
+				var got []row
+				for rows.Next() {
+					var entity, action, raw string
+					if err := rows.Scan(&entity, &action, &raw); err != nil {
+						t.Fatal(err)
+					}
+					var fields map[string]any
+					if err := json.Unmarshal([]byte(raw), &fields); err != nil {
+						t.Fatal(err)
+					}
+					got = append(got, row{entity, action, fields})
+				}
+				if err := rows.Err(); err != nil {
+					t.Fatal(err)
+				}
+				if len(got) < 3 {
+					t.Fatalf("changes %d want >= 3", len(got))
+				}
+				if got[0].entity != "citation" || got[0].action != "create" {
+					t.Fatalf("first %+v", got[0])
+				}
+				for _, key := range []string{
+					"id", "ref", "artifact_id", "locator_json",
+					"transcription", "description", "transcription_uncertain", "transcription_note",
+				} {
+					if _, ok := got[0].fields[key]; !ok {
+						t.Fatalf("citation missing %q in %+v", key, got[0].fields)
+					}
+				}
+				for _, key := range []string{"transcription", "description", "transcription_note"} {
+					diff, _ := got[0].fields[key].(map[string]any)
+					if diff["new"] != nil {
+						t.Fatalf("empty citation %s should be null: %+v", key, got[0].fields)
+					}
+				}
+				if got[1].entity != "citation_note" {
+					t.Fatalf("note %+v", got[1])
+				}
+				if body, _ := got[1].fields["body"].(map[string]any); body["new"] != "see folio 12" {
+					t.Fatalf("note body %+v", got[1].fields)
+				}
+				if got[2].entity != "observation" {
+					t.Fatalf("obs %+v", got[2])
+				}
+				for _, key := range []string{
+					"id", "ref", "citation_id", "subject_id", "property_id", "polarity",
+					"value_text", "value_integer", "value_date_id", "value_name_id",
+					"value_subject_id", "value_term_id",
+				} {
+					if _, ok := got[2].fields[key]; !ok {
+						t.Fatalf("observation missing %q in %+v", key, got[2].fields)
+					}
+				}
+				for _, key := range []string{"value_text", "value_date_id"} {
+					diff, _ := got[2].fields[key].(map[string]any)
+					if diff["new"] != nil {
+						t.Fatalf("unused observation %s should be null: %+v", key, got[2].fields)
+					}
+				}
+				if string(res.Citation.ID) == "" {
+					t.Fatal("empty citation id")
+				}
+			},
+		},
+		{
+			name: "mapConstraint preserves non-constraint errors",
+			run: func(t *testing.T) {
+				raw := errors.New("disk full")
+				if got := mapConstraint(raw); got != raw {
+					t.Fatalf("got %v want raw", got)
 				}
 			},
 		},

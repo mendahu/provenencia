@@ -2,6 +2,7 @@ package subjects
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -128,6 +129,29 @@ func TestSubjects(t *testing.T) {
 				}
 				if latestEntityType(t, c) != "subject" {
 					t.Fatalf("entity %s", latestEntityType(t, c))
+				}
+				db, err := c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				var raw string
+				if err := db.QueryRow(`
+					SELECT changes_json FROM audit_changes
+					ORDER BY rowid DESC LIMIT 1`).Scan(&raw); err != nil {
+					t.Fatal(err)
+				}
+				var fields map[string]any
+				if err := json.Unmarshal([]byte(raw), &fields); err != nil {
+					t.Fatal(err)
+				}
+				for _, key := range []string{"id", "ref", "source_id", "subject_type_id", "label", "description"} {
+					if _, ok := fields[key]; !ok {
+						t.Fatalf("subject create missing %q in %+v", key, fields)
+					}
+				}
+				desc, _ := fields["description"].(map[string]any)
+				if desc["new"] != nil {
+					t.Fatalf("empty description should be null: %+v", fields)
 				}
 				got, err := Get(c, s.ID)
 				if err != nil || got.Label != "Alice" {

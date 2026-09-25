@@ -4,8 +4,10 @@ package connect
 import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -86,13 +88,21 @@ func CreateCitedBridge(c *database.Catalog, userID []byte, in CreateInput) (Resu
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	bridge, err := subjects.InsertTx(tx, userID, subjects.CreateInput{
+	bridge, subjectChange, err := subjects.InsertTx(tx, subjects.CreateInput{
 		SourceID:      in.SourceID,
 		SubjectTypeID: bridgeType.ID,
 		Label:         in.Label,
 		Description:   in.Description,
 	})
 	if err != nil {
+		return Result{}, err
+	}
+	if _, err := audit.Record(tx, audit.Revision{
+		UserID:     userID,
+		ActionType: "create_subject",
+		CreatedAt:  project.NowUTC(),
+		Changes:    []audit.Change{subjectChange},
+	}); err != nil {
 		return Result{}, err
 	}
 	if _, err := subjectpositions.SetTx(tx, bridge.ID, in.GridX, in.GridY); err != nil {
@@ -107,8 +117,16 @@ func CreateCitedBridge(c *database.Catalog, userID []byte, in CreateInput) (Resu
 		}
 	}
 
-	cited, err := citations.InsertWithObservationsTx(tx, userID, in.Citation, obs)
+	cited, citChanges, err := citations.InsertWithObservationsTx(tx, in.Citation, obs)
 	if err != nil {
+		return Result{}, err
+	}
+	if _, err := audit.Record(tx, audit.Revision{
+		UserID:     userID,
+		ActionType: "create_citation_with_observations",
+		CreatedAt:  project.NowUTC(),
+		Changes:    citChanges,
+	}); err != nil {
 		return Result{}, err
 	}
 	if err := tx.Commit(); err != nil {

@@ -56,12 +56,12 @@ func ApplyForCitationTx(tx *sql.Tx, citationID []byte, inputs []Input) ([]Observ
 	for _, in := range inputs {
 		switch {
 		case len(in.ID) == 0:
-			obs, ch, err := insertOne(tx, citationID, in)
+			obs, chs, err := insertOne(tx, citationID, in)
 			if err != nil {
 				return nil, nil, err
 			}
 			out = append(out, obs)
-			changes = append(changes, ch)
+			changes = append(changes, chs...)
 		case len(in.ID) != 16:
 			return nil, nil, ErrInvalid
 		default:
@@ -133,7 +133,7 @@ func updateOne(tx *sql.Tx, citationID []byte, prev Observation, in Input) (Obser
 	if err != nil {
 		return Observation{}, nil, err
 	}
-	valueText, valueInt, dateID, nameID, subjectID, termID, err := resolveValue(tx, prop.ValueType, in, &prev)
+	resolved, err := resolveValue(tx, prop.ValueType, in, &prev)
 	if err != nil {
 		return Observation{}, nil, err
 	}
@@ -143,12 +143,12 @@ func updateOne(tx *sql.Tx, citationID []byte, prev Observation, in Input) (Obser
 		in.SubjectID,
 		in.PropertyID,
 		polarity,
-		nullIfEmpty(valueText),
-		nullInt64(valueInt),
-		nullBlob(dateID),
-		nullBlob(nameID),
-		nullBlob(subjectID),
-		nullBlob(termID),
+		nullIfEmpty(resolved.Text),
+		nullInt64(resolved.Integer),
+		nullBlob(resolved.DateID),
+		nullBlob(resolved.NameID),
+		nullBlob(resolved.SubjectID),
+		nullBlob(resolved.TermID),
 		prev.ID,
 		citationID,
 	); err != nil {
@@ -168,10 +168,10 @@ func updateOne(tx *sql.Tx, citationID []byte, prev Observation, in Input) (Obser
 			}
 		}
 	}
-	if err := releaseDateValue(tx, prev.ValueDateID, dateID); err != nil {
+	if err := releaseDateValue(tx, prev.ValueDateID, resolved.DateID); err != nil {
 		return Observation{}, nil, err
 	}
-	if err := releaseNameValue(tx, prev.ValueNameID, nameID); err != nil {
+	if err := releaseNameValue(tx, prev.ValueNameID, resolved.NameID); err != nil {
 		return Observation{}, nil, err
 	}
 
@@ -183,18 +183,18 @@ func updateOne(tx *sql.Tx, citationID []byte, prev Observation, in Input) (Obser
 		PropertyID: append([]byte(nil), in.PropertyID...),
 		Polarity:   polarity,
 	}
-	if valueText != "" {
-		obs.ValueText = valueText
+	if resolved.Text != "" {
+		obs.ValueText = resolved.Text
 		obs.HasText = true
 	}
-	if valueInt != nil {
-		obs.ValueInteger = *valueInt
+	if resolved.Integer != nil {
+		obs.ValueInteger = *resolved.Integer
 		obs.HasInteger = true
 	}
-	obs.ValueDateID = append([]byte(nil), dateID...)
-	obs.ValueNameID = append([]byte(nil), nameID...)
-	obs.ValueSubjectID = append([]byte(nil), subjectID...)
-	obs.ValueTermID = append([]byte(nil), termID...)
+	obs.ValueDateID = append([]byte(nil), resolved.DateID...)
+	obs.ValueNameID = append([]byte(nil), resolved.NameID...)
+	obs.ValueSubjectID = append([]byte(nil), resolved.SubjectID...)
+	obs.ValueTermID = append([]byte(nil), resolved.TermID...)
 	return obs, observationUpdateChange(prev, obs), nil
 }
 

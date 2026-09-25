@@ -165,12 +165,12 @@ func AddToCitation(c *database.Catalog, userID, citationID []byte, inputs []Inpu
 	out := make([]Observation, 0, len(inputs))
 	changes := make([]audit.Change, 0, len(inputs))
 	for _, in := range inputs {
-		obs, ch, err := insertOne(tx, citationID, in)
+		obs, chs, err := insertOne(tx, citationID, in)
 		if err != nil {
 			return nil, err
 		}
 		out = append(out, obs)
-		changes = append(changes, ch)
+		changes = append(changes, chs...)
 	}
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
@@ -195,59 +195,67 @@ func InsertManyTx(tx *sql.Tx, citationID []byte, inputs []Input) ([]Observation,
 	out := make([]Observation, 0, len(inputs))
 	changes := make([]audit.Change, 0, len(inputs))
 	for _, in := range inputs {
-		obs, ch, err := insertOne(tx, citationID, in)
+		obs, chs, err := insertOne(tx, citationID, in)
 		if err != nil {
 			return nil, nil, err
 		}
 		out = append(out, obs)
-		changes = append(changes, ch)
+		changes = append(changes, chs...)
 	}
 	return out, changes, nil
 }
 
-func insertOne(tx *sql.Tx, citationID []byte, in Input) (Observation, audit.Change, error) {
+type resolvedValue struct {
+	Text                   string
+	Integer                *int64
+	DateID, NameID         []byte
+	SubjectID, TermID      []byte
+	DateChange, NameChange *audit.Change
+}
+
+func insertOne(tx *sql.Tx, citationID []byte, in Input) (Observation, []audit.Change, error) {
 	if len(in.ID) != 0 {
-		return Observation{}, audit.Change{}, ErrInvalid
+		return Observation{}, nil, ErrInvalid
 	}
 	polarity := strings.TrimSpace(in.Polarity)
 	if polarity == "" {
 		polarity = PolarityPositive
 	}
 	if polarity != PolarityPositive && polarity != PolarityNegative {
-		return Observation{}, audit.Change{}, ErrInvalid
+		return Observation{}, nil, ErrInvalid
 	}
 	if len(in.SubjectID) != 16 || len(in.PropertyID) != 16 {
-		return Observation{}, audit.Change{}, ErrInvalid
+		return Observation{}, nil, ErrInvalid
 	}
 
 	var subjectTypeID []byte
 	if err := tx.QueryRow(sqlSubjectType, in.SubjectID).Scan(&subjectTypeID); err != nil {
 		if err == sql.ErrNoRows {
-			return Observation{}, audit.Change{}, ErrInvalid
+			return Observation{}, nil, ErrInvalid
 		}
-		return Observation{}, audit.Change{}, err
+		return Observation{}, nil, err
 	}
 	var one int
 	if err := tx.QueryRow(sqlBindingExists, subjectTypeID, in.PropertyID).Scan(&one); err != nil {
 		if err == sql.ErrNoRows {
-			return Observation{}, audit.Change{}, ErrInvalid
+			return Observation{}, nil, ErrInvalid
 		}
-		return Observation{}, audit.Change{}, err
+		return Observation{}, nil, err
 	}
 
 	prop, err := getPropertyTx(tx, in.PropertyID)
 	if err != nil {
-		return Observation{}, audit.Change{}, err
+		return Observation{}, nil, err
 	}
 
-	valueText, valueInt, dateID, nameID, subjectID, termID, err := resolveValue(tx, prop.ValueType, in, nil)
+	resolved, err := resolveValue(tx, prop.ValueType, in, nil)
 	if err != nil {
-		return Observation{}, audit.Change{}, err
+		return Observation{}, nil, err
 	}
 
 	id, err := uuid.NewV7()
 	if err != nil {
-		return Observation{}, audit.Change{}, err
+		return Observation{}, nil, err
 	}
 	idBytes := id[:]
 
@@ -255,7 +263,7 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input) (Observation, audit.Chan
 	for attempt := 0; attempt < maxRefRetries; attempt++ {
 		obsRef, err = ref.Mint(ref.PrefixObservation)
 		if err != nil {
-			return Observation{}, audit.Change{}, err
+			return Observation{}, nil, err
 		}
 		_, err = tx.Exec(
 			sqlInsert,
@@ -265,22 +273,48 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input) (Observation, audit.Chan
 			in.SubjectID,
 			in.PropertyID,
 			polarity,
-			nullIfEmpty(valueText),
-			nullInt64(valueInt),
-			nullBlob(dateID),
-			nullBlob(nameID),
-			nullBlob(subjectID),
-			nullBlob(termID),
+			nullIfEmpty(resolved.Text),
+			nullInt64(resolved.Integer),
+			nullBlob(resolved.DateID),
+			nullBlob(resolved.NameID),
+			nullBlob(resolved.SubjectID),
+			nullBlob(resolved.TermID),
 		)
 		if err == nil {
 			break
 		}
 		if !database.IsUniqueConflict(err) {
-			return Observation{}, audit.Change{}, ErrInvalid
+			return Observation{}, nil, mapConstraint(err)
 		}
 	}
 	if err != nil {
-		return Observation{}, audit.Change{}, ErrInvalid
+		return Observation{}, nil, ErrInvalid
+	}
+
+	changes := []audit.Change{{
+		EntityType: "observation",
+		EntityID:   idBytes,
+		Action:     audit.ActionCreate,
+		Fields: audit.FullRow(map[string]any{
+			"id":               id.String(),
+			"ref":              obsRef,
+			"citation_id":      uuidJSON(citationID),
+			"subject_id":       uuidJSON(in.SubjectID),
+			"property_id":      uuidJSON(in.PropertyID),
+			"polarity":         polarity,
+			"value_text":       emptyAsNil(resolved.Text),
+			"value_integer":    nullInt64(resolved.Integer),
+			"value_date_id":    uuidJSON(resolved.DateID),
+			"value_name_id":    uuidJSON(resolved.NameID),
+			"value_subject_id": uuidJSON(resolved.SubjectID),
+			"value_term_id":    uuidJSON(resolved.TermID),
+		}),
+	}}
+	if resolved.DateChange != nil {
+		changes = append(changes, *resolved.DateChange)
+	}
+	if resolved.NameChange != nil {
+		changes = append(changes, *resolved.NameChange)
 	}
 
 	for _, body := range in.Notes {
@@ -290,11 +324,21 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input) (Observation, audit.Chan
 		}
 		noteID, err := uuid.NewV7()
 		if err != nil {
-			return Observation{}, audit.Change{}, err
+			return Observation{}, nil, err
 		}
 		if _, err := tx.Exec(sqlInsertNote, noteID[:], idBytes, body); err != nil {
-			return Observation{}, audit.Change{}, err
+			return Observation{}, nil, err
 		}
+		changes = append(changes, audit.Change{
+			EntityType: "observation_note",
+			EntityID:   noteID[:],
+			Action:     audit.ActionCreate,
+			Fields: audit.FullRow(map[string]any{
+				"id":             noteID.String(),
+				"observation_id": id.String(),
+				"body":           body,
+			}),
+		})
 	}
 
 	obs := Observation{
@@ -305,115 +349,105 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input) (Observation, audit.Chan
 		PropertyID: append([]byte(nil), in.PropertyID...),
 		Polarity:   polarity,
 	}
-	if valueText != "" {
-		obs.ValueText = valueText
+	if resolved.Text != "" {
+		obs.ValueText = resolved.Text
 		obs.HasText = true
 	}
-	if valueInt != nil {
-		obs.ValueInteger = *valueInt
+	if resolved.Integer != nil {
+		obs.ValueInteger = *resolved.Integer
 		obs.HasInteger = true
 	}
-	obs.ValueDateID = append([]byte(nil), dateID...)
-	obs.ValueNameID = append([]byte(nil), nameID...)
-	obs.ValueSubjectID = append([]byte(nil), subjectID...)
-	obs.ValueTermID = append([]byte(nil), termID...)
-
-	fields := map[string]audit.FieldDiff{
-		"id":          {Old: nil, New: id.String()},
-		"ref":         {Old: nil, New: obsRef},
-		"citation_id": {Old: nil, New: uuidString(citationID)},
-		"subject_id":  {Old: nil, New: uuidString(in.SubjectID)},
-		"property_id": {Old: nil, New: uuidString(in.PropertyID)},
-		"polarity":    {Old: nil, New: polarity},
-	}
-	return obs, audit.Change{
-		EntityType: "observation",
-		EntityID:   idBytes,
-		Action:     audit.ActionCreate,
-		Fields:     fields,
-	}, nil
+	obs.ValueDateID = append([]byte(nil), resolved.DateID...)
+	obs.ValueNameID = append([]byte(nil), resolved.NameID...)
+	obs.ValueSubjectID = append([]byte(nil), resolved.SubjectID...)
+	obs.ValueTermID = append([]byte(nil), resolved.TermID...)
+	return obs, changes, nil
 }
 
-func resolveValue(tx *sql.Tx, valueType string, in Input, existing *Observation) (
-	text string, integer *int64, dateID, nameID, subjectID, termID []byte, err error,
-) {
+func resolveValue(tx *sql.Tx, valueType string, in Input, existing *Observation) (resolvedValue, error) {
 	switch valueType {
 	case properties.ValueTypeText:
-		text = strings.TrimSpace(in.ValueText)
+		text := strings.TrimSpace(in.ValueText)
 		if !in.HasText || text == "" || hasOtherScalars(in, "text") {
-			return "", nil, nil, nil, nil, nil, ErrInvalid
+			return resolvedValue{}, ErrInvalid
 		}
-		return text, nil, nil, nil, nil, nil, nil
+		return resolvedValue{Text: text}, nil
 	case properties.ValueTypeInteger:
 		if !in.HasInteger || hasOtherScalars(in, "integer") {
-			return "", nil, nil, nil, nil, nil, ErrInvalid
+			return resolvedValue{}, ErrInvalid
 		}
 		v := in.ValueInteger
-		return "", &v, nil, nil, nil, nil, nil
+		return resolvedValue{Integer: &v}, nil
 	case properties.ValueTypeDate:
 		if hasOtherScalars(in, "date") {
-			return "", nil, nil, nil, nil, nil, ErrInvalid
+			return resolvedValue{}, ErrInvalid
 		}
 		if in.Date != nil {
 			if existing != nil && len(existing.ValueDateID) == 16 {
-				if err = datevalues.UpdateTx(tx, existing.ValueDateID, *in.Date); err != nil {
-					return "", nil, nil, nil, nil, nil, err
+				if err := datevalues.UpdateTx(tx, existing.ValueDateID, *in.Date); err != nil {
+					return resolvedValue{}, err
 				}
-				dateID = append([]byte(nil), existing.ValueDateID...)
-				return "", nil, dateID, nil, nil, nil, nil
+				return resolvedValue{DateID: append([]byte(nil), existing.ValueDateID...)}, nil
 			}
-			dateID, err = datevalues.InsertTx(tx, *in.Date)
-			return "", nil, dateID, nil, nil, nil, err
+			dateID, err := datevalues.InsertTx(tx, *in.Date)
+			if err != nil {
+				return resolvedValue{}, err
+			}
+			ch := dateCreateChange(dateID, *in.Date)
+			return resolvedValue{DateID: dateID, DateChange: &ch}, nil
 		}
 		if len(in.ValueDateID) != 16 {
-			return "", nil, nil, nil, nil, nil, ErrInvalid
+			return resolvedValue{}, ErrInvalid
 		}
-		return "", nil, in.ValueDateID, nil, nil, nil, nil
+		return resolvedValue{DateID: in.ValueDateID}, nil
 	case properties.ValueTypeName:
 		if hasOtherScalars(in, "name") {
-			return "", nil, nil, nil, nil, nil, ErrInvalid
+			return resolvedValue{}, ErrInvalid
 		}
 		if in.Name != nil {
 			if existing != nil && len(existing.ValueNameID) == 16 {
-				if err = namevalues.UpdateTx(tx, existing.ValueNameID, *in.Name); err != nil {
-					return "", nil, nil, nil, nil, nil, err
+				if err := namevalues.UpdateTx(tx, existing.ValueNameID, *in.Name); err != nil {
+					return resolvedValue{}, err
 				}
-				nameID = append([]byte(nil), existing.ValueNameID...)
-				return "", nil, nil, nameID, nil, nil, nil
+				return resolvedValue{NameID: append([]byte(nil), existing.ValueNameID...)}, nil
 			}
-			nameID, err = namevalues.InsertTx(tx, *in.Name)
-			return "", nil, nil, nameID, nil, nil, err
+			nameID, err := namevalues.InsertTx(tx, *in.Name)
+			if err != nil {
+				return resolvedValue{}, err
+			}
+			ch := nameCreateChange(nameID, *in.Name)
+			return resolvedValue{NameID: nameID, NameChange: &ch}, nil
 		}
 		if len(in.ValueNameID) != 16 {
-			return "", nil, nil, nil, nil, nil, ErrInvalid
+			return resolvedValue{}, ErrInvalid
 		}
-		return "", nil, nil, in.ValueNameID, nil, nil, nil
+		return resolvedValue{NameID: in.ValueNameID}, nil
 	case properties.ValueTypeSubject:
 		if len(in.ValueSubjectID) != 16 || hasOtherScalars(in, "subject") {
-			return "", nil, nil, nil, nil, nil, ErrInvalid
+			return resolvedValue{}, ErrInvalid
 		}
 		var one int
 		if err := tx.QueryRow(sqlSubjectExists, in.ValueSubjectID).Scan(&one); err != nil {
 			if err == sql.ErrNoRows {
-				return "", nil, nil, nil, nil, nil, ErrInvalid
+				return resolvedValue{}, ErrInvalid
 			}
-			return "", nil, nil, nil, nil, nil, err
+			return resolvedValue{}, err
 		}
-		return "", nil, nil, nil, in.ValueSubjectID, nil, nil
+		return resolvedValue{SubjectID: in.ValueSubjectID}, nil
 	case properties.ValueTypeTerm:
 		if len(in.ValueTermID) != 16 || hasOtherScalars(in, "term") {
-			return "", nil, nil, nil, nil, nil, ErrInvalid
+			return resolvedValue{}, ErrInvalid
 		}
 		var one int
 		if err := tx.QueryRow(sqlTermOnProperty, in.ValueTermID, in.PropertyID).Scan(&one); err != nil {
 			if err == sql.ErrNoRows {
-				return "", nil, nil, nil, nil, nil, ErrInvalid
+				return resolvedValue{}, ErrInvalid
 			}
-			return "", nil, nil, nil, nil, nil, err
+			return resolvedValue{}, err
 		}
-		return "", nil, nil, nil, nil, in.ValueTermID, nil
+		return resolvedValue{TermID: in.ValueTermID}, nil
 	default:
-		return "", nil, nil, nil, nil, nil, ErrInvalid
+		return resolvedValue{}, ErrInvalid
 	}
 }
 
@@ -688,4 +722,81 @@ func uuidString(id []byte) string {
 		return ""
 	}
 	return u.String()
+}
+
+func uuidJSON(id []byte) any {
+	if len(id) != 16 {
+		return nil
+	}
+	s := uuidString(id)
+	if s == "" {
+		return nil
+	}
+	return s
+}
+
+func mapConstraint(err error) error {
+	if database.IsConstraintViolation(err) {
+		return ErrInvalid
+	}
+	return err
+}
+
+func dateCreateChange(id []byte, v datevalues.Value) audit.Change {
+	return audit.Change{
+		EntityType: "date_value",
+		EntityID:   append([]byte(nil), id...),
+		Action:     audit.ActionCreate,
+		Fields: audit.FullRow(map[string]any{
+			"id":                uuidJSON(id),
+			"kind":              emptyAsNil(v.Kind),
+			"qualifier":         emptyAsNil(v.Qualifier),
+			"calendar":          emptyAsNil(v.Calendar),
+			"start_year":        intPtrAny(v.StartYear),
+			"start_month":       intPtrAny(v.StartMonth),
+			"start_day":         intPtrAny(v.StartDay),
+			"start_hour":        intPtrAny(v.StartHour),
+			"start_minute":      intPtrAny(v.StartMinute),
+			"start_second":      intPtrAny(v.StartSecond),
+			"start_millisecond": intPtrAny(v.StartMillisecond),
+			"start_tz":          emptyAsNil(v.StartTZ),
+			"end_year":          intPtrAny(v.EndYear),
+			"end_month":         intPtrAny(v.EndMonth),
+			"end_day":           intPtrAny(v.EndDay),
+			"end_hour":          intPtrAny(v.EndHour),
+			"end_minute":        intPtrAny(v.EndMinute),
+			"end_second":        intPtrAny(v.EndSecond),
+			"end_millisecond":   intPtrAny(v.EndMillisecond),
+			"end_tz":            emptyAsNil(v.EndTZ),
+			"phrase":            emptyAsNil(v.Phrase),
+		}),
+	}
+}
+
+func nameCreateChange(id []byte, v namevalues.Value) audit.Change {
+	parts := make([]map[string]any, len(v.Parts))
+	for i, p := range v.Parts {
+		parts[i] = map[string]any{
+			"idx":   p.Idx,
+			"value": p.Value,
+			"type":  emptyAsNil(p.Type),
+		}
+	}
+	return audit.Change{
+		EntityType: "name_value",
+		EntityID:   append([]byte(nil), id...),
+		Action:     audit.ActionCreate,
+		Fields: audit.FullRow(map[string]any{
+			"id":    uuidJSON(id),
+			"form":  v.Form,
+			"parts": parts,
+		}),
+	}
+}
+
+func intPtrAny(p *int) any {
+	if p == nil {
+		return nil
+	}
+	return *p
 }

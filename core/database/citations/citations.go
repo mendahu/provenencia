@@ -4,6 +4,7 @@ package citations
 
 import (
 	"database/sql"
+	"errors"
 	"strings"
 
 	"github.com/google/uuid"
@@ -105,14 +106,7 @@ func CreateWithObservations(
 	if err != nil {
 		return CreateResult{}, err
 	}
-	in.LocatorJSON = strings.TrimSpace(in.LocatorJSON)
-	in.Transcription = strings.TrimSpace(in.Transcription)
-	in.Description = strings.TrimSpace(in.Description)
-	in.TranscriptionNote = strings.TrimSpace(in.TranscriptionNote)
-	if len(in.ArtifactID) != 16 {
-		return CreateResult{}, ErrInvalid
-	}
-	if err := locator.Validate(in.LocatorJSON); err != nil {
+	if err := normalizeCreateInput(&in); err != nil {
 		return CreateResult{}, err
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
@@ -125,8 +119,16 @@ func CreateWithObservations(
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	res, err := InsertWithObservationsTx(tx, userID, in, obsInputs)
+	res, changes, err := InsertWithObservationsTx(tx, in, obsInputs)
 	if err != nil {
+		return CreateResult{}, err
+	}
+	if _, err := audit.Record(tx, audit.Revision{
+		UserID:     userID,
+		ActionType: "create_citation_with_observations",
+		CreatedAt:  project.NowUTC(),
+		Changes:    changes,
+	}); err != nil {
 		return CreateResult{}, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -135,38 +137,38 @@ func CreateWithObservations(
 	return res, nil
 }
 
-// InsertWithObservationsTx writes a Citation + Observations on an open transaction.
-func InsertWithObservationsTx(
-	tx *sql.Tx,
-	userID []byte,
-	in CreateInput,
-	obsInputs []observations.Input,
-) (CreateResult, error) {
+func normalizeCreateInput(in *CreateInput) error {
 	in.LocatorJSON = strings.TrimSpace(in.LocatorJSON)
 	in.Transcription = strings.TrimSpace(in.Transcription)
 	in.Description = strings.TrimSpace(in.Description)
 	in.TranscriptionNote = strings.TrimSpace(in.TranscriptionNote)
 	if len(in.ArtifactID) != 16 {
-		return CreateResult{}, ErrInvalid
+		return ErrInvalid
 	}
-	if err := locator.Validate(in.LocatorJSON); err != nil {
-		return CreateResult{}, err
-	}
-	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return CreateResult{}, err
+	return locator.Validate(in.LocatorJSON)
+}
+
+// InsertWithObservationsTx writes a Citation + Observations on an open transaction (no revision).
+func InsertWithObservationsTx(
+	tx *sql.Tx,
+	in CreateInput,
+	obsInputs []observations.Input,
+) (CreateResult, []audit.Change, error) {
+	if err := normalizeCreateInput(&in); err != nil {
+		return CreateResult{}, nil, err
 	}
 
 	var one int
 	if err := tx.QueryRow(sqlArtifactExists, in.ArtifactID).Scan(&one); err != nil {
-		if err == sql.ErrNoRows {
-			return CreateResult{}, ErrInvalid
+		if errors.Is(err, sql.ErrNoRows) {
+			return CreateResult{}, nil, ErrInvalid
 		}
-		return CreateResult{}, err
+		return CreateResult{}, nil, err
 	}
 
 	id, err := uuid.NewV7()
 	if err != nil {
-		return CreateResult{}, err
+		return CreateResult{}, nil, err
 	}
 	idBytes := id[:]
 
@@ -179,7 +181,7 @@ func InsertWithObservationsTx(
 	for attempt := 0; attempt < maxRefRetries; attempt++ {
 		citRef, err = ref.Mint(ref.PrefixCitation)
 		if err != nil {
-			return CreateResult{}, err
+			return CreateResult{}, nil, err
 		}
 		_, err = tx.Exec(
 			sqlInsert,
@@ -196,12 +198,28 @@ func InsertWithObservationsTx(
 			break
 		}
 		if !database.IsUniqueConflict(err) {
-			return CreateResult{}, ErrInvalid
+			return CreateResult{}, nil, mapConstraint(err)
 		}
 	}
 	if err != nil {
-		return CreateResult{}, ErrInvalid
+		return CreateResult{}, nil, ErrInvalid
 	}
+
+	changes := []audit.Change{{
+		EntityType: "citation",
+		EntityID:   idBytes,
+		Action:     audit.ActionCreate,
+		Fields: audit.FullRow(map[string]any{
+			"id":                      id.String(),
+			"ref":                     citRef,
+			"artifact_id":             uuidJSON(in.ArtifactID),
+			"locator_json":            in.LocatorJSON,
+			"transcription":           nullIfEmpty(in.Transcription),
+			"description":             nullIfEmpty(in.Description),
+			"transcription_uncertain": in.TranscriptionUncertain,
+			"transcription_note":      nullIfEmpty(in.TranscriptionNote),
+		}),
+	}}
 
 	for _, body := range in.Notes {
 		body = strings.TrimSpace(body)
@@ -210,44 +228,31 @@ func InsertWithObservationsTx(
 		}
 		noteID, err := uuid.NewV7()
 		if err != nil {
-			return CreateResult{}, err
+			return CreateResult{}, nil, err
 		}
 		if _, err := tx.Exec(sqlInsertNote, noteID[:], idBytes, body); err != nil {
-			return CreateResult{}, err
+			return CreateResult{}, nil, err
 		}
+		changes = append(changes, audit.Change{
+			EntityType: "citation_note",
+			EntityID:   noteID[:],
+			Action:     audit.ActionCreate,
+			Fields: audit.FullRow(map[string]any{
+				"id":          noteID.String(),
+				"citation_id": id.String(),
+				"body":        body,
+			}),
+		})
 	}
 
 	var obsOut []observations.Observation
-	var obsChanges []audit.Change
 	if len(obsInputs) > 0 {
-		var err error
+		var obsChanges []audit.Change
 		obsOut, obsChanges, err = observations.InsertManyTx(tx, idBytes, obsInputs)
 		if err != nil {
-			return CreateResult{}, err
+			return CreateResult{}, nil, err
 		}
-	}
-
-	citFields := map[string]audit.FieldDiff{
-		"id":          {Old: nil, New: id.String()},
-		"ref":         {Old: nil, New: citRef},
-		"artifact_id": {Old: nil, New: uuidString(in.ArtifactID)},
-	}
-	changes := make([]audit.Change, 0, 1+len(obsChanges))
-	changes = append(changes, audit.Change{
-		EntityType: "citation",
-		EntityID:   idBytes,
-		Action:     audit.ActionCreate,
-		Fields:     citFields,
-	})
-	changes = append(changes, obsChanges...)
-
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "create_citation_with_observations",
-		CreatedAt:  project.NowUTC(),
-		Changes:    changes,
-	}); err != nil {
-		return CreateResult{}, err
+		changes = append(changes, obsChanges...)
 	}
 
 	return CreateResult{
@@ -262,7 +267,7 @@ func InsertWithObservationsTx(
 			TranscriptionNote:      in.TranscriptionNote,
 		},
 		Observations: obsOut,
-	}, nil
+	}, changes, nil
 }
 
 // UpdateWithObservations updates the citation row and each observation by id.
@@ -276,15 +281,11 @@ func UpdateWithObservations(
 	if err != nil {
 		return CreateResult{}, err
 	}
-	in.LocatorJSON = strings.TrimSpace(in.LocatorJSON)
-	in.Transcription = strings.TrimSpace(in.Transcription)
-	in.Description = strings.TrimSpace(in.Description)
-	in.TranscriptionNote = strings.TrimSpace(in.TranscriptionNote)
-	if len(citationID) != 16 || len(in.ArtifactID) != 16 {
-		return CreateResult{}, ErrInvalid
-	}
-	if err := locator.Validate(in.LocatorJSON); err != nil {
+	if err := normalizeCreateInput(&in); err != nil {
 		return CreateResult{}, err
+	}
+	if len(citationID) != 16 {
+		return CreateResult{}, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return CreateResult{}, err
@@ -297,7 +298,7 @@ func UpdateWithObservations(
 	defer func() { _ = tx.Rollback() }()
 
 	prev, err := scanOne(tx.QueryRow(sqlGet, citationID))
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return CreateResult{}, ErrInvalid
 	}
 	if err != nil {
@@ -306,7 +307,7 @@ func UpdateWithObservations(
 
 	var one int
 	if err := tx.QueryRow(sqlArtifactExists, in.ArtifactID).Scan(&one); err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return CreateResult{}, ErrInvalid
 		}
 		return CreateResult{}, err
@@ -514,7 +515,7 @@ type rowScanner interface {
 
 func scanOne(row rowScanner) (Citation, error) {
 	cit, err := scanRow(row)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return Citation{}, err
 	}
 	return cit, err
@@ -566,4 +567,22 @@ func uuidString(id []byte) string {
 		return ""
 	}
 	return u.String()
+}
+
+func uuidJSON(id []byte) any {
+	if len(id) != 16 {
+		return nil
+	}
+	s := uuidString(id)
+	if s == "" {
+		return nil
+	}
+	return s
+}
+
+func mapConstraint(err error) error {
+	if database.IsConstraintViolation(err) {
+		return ErrInvalid
+	}
+	return err
 }
