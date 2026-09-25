@@ -3,7 +3,7 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 8 (pause and refine / data entry)  
 **Implements later as:** PR **S8-01**  
-**Depends on:** **S8-D7** / **S8-10** (new composer form; brief [`archive/S8-D7-composer-rethink.md`](archive/S8-D7-composer-rethink.md)); **S8-D8** / **S8-11** (reading section gets its own **Save reading**; the footer Save is gone — draw on those frames, brief [`S8-D8-composer-connect-simplification.md`](S8-D8-composer-connect-simplification.md)); locators S7-07; transcription `PVField` + `PVTextArea` in [`CitationComposerFormPane`](../../../../macos/App/Features/CitationComposer/CitationComposerFormPane.swift) (place the control on the **S8-10** chrome)  
+**Depends on:** **S8-D7** / **S8-10** (new composer form; brief [`archive/S8-D7-composer-rethink.md`](archive/S8-D7-composer-rethink.md)); **S8-D8** / **S8-11** (citation fields section gets its own **Save citation**; the footer Save is gone — draw on those frames, brief [`S8-D8-composer-connect-simplification.md`](S8-D8-composer-connect-simplification.md)); locators S7-07; transcription `PVField` + `PVTextArea` in [`CitationComposerFormPane`](../../../../macos/App/Features/CitationComposer/CitationComposerFormPane.swift) (place the control on the **S8-10** chrome)  
 **Related:** [`docs/dogfood/ux.md`](../../../dogfood/ux.md) (OCR notes); locator decisions in [Spike 7](../../archive/spike-7/)  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
 **Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md) — compose kit; snowflake wiring in `Features/CitationComposer/`
@@ -48,7 +48,7 @@ Do **not** invent a local Field, Button, Card, Select, Callout, or Confirm.
 
 ## 1. Objective
 
-Add **Auto Transcribe** next to the citation **transcription** field. On click, OCR the **image Artifact**, or the **region polygon** when one is on the locator, and dump the text into the textarea. The researcher edits as today, and **Save reading** (S8-D8) writes the Citation. Filling the field makes the reading dirty, so the S8-11 unsaved-work guard applies.
+Add **Auto Transcribe** next to the citation **transcription** field. On click, OCR the **image Artifact**, or the **region polygon** when one is on the locator, and dump the text into the textarea. The researcher edits as today, and **Save citation** (S8-D8) writes the Citation. Filling the field makes the citation fields dirty, so the S8-11 unsaved-work guard applies.
 
 **Image types only.** PDF, audio, and video do not run OCR in this MVP. PDF Find / select / paste is **S8-D2** (not this button). Image-only PDF scans are not Vision’d here.
 

@@ -52,7 +52,7 @@ An adversarial review of the shipped composer and graph found that several desig
 
 Five changes, in priority order:
 
-1. **Save Observations one row at a time.** Today one footer **Save** sends the Citation reading plus every row, and the engine **deletes any saved row the payload leaves out**. Removing a row, or changing its subject to one whose type does not allow the property, silently deletes a persisted Observation with no confirm. After this board, each row has its own **Save** and **Revert**, and deleting a saved row asks first. The reading (transcription, uncertainty, note, description, locator) keeps its own **Save reading**.
+1. **Save Observations one row at a time.** Today one footer **Save** sends the Citation fields plus every row, and the engine **deletes any saved row the payload leaves out**. Removing a row, or changing its subject to one whose type does not allow the property, silently deletes a persisted Observation with no confirm. After this board, each row has its own **Save** and **Revert**, and deleting a saved row asks first. The Citation's own fields (transcription, uncertainty, note, description, locator) keep their own **Save citation**.
 2. **Guard every exit while work is unsaved.** Today only switching Artifact on a dirty saved Citation asks. Cancel, Back, the sidebar, the omnibar, and switching Citation all throw edits away silently. After this board, any navigation away from a composer with unsaved work asks **Discard / Keep editing**. While work is unsaved, the Artifact and Citation menus are **disabled** (with a reason) instead of offering an abandon confirm.
 3. **Connect goes straight to the composer, and the composer finishes it as one unit.** The graph's role / relationship-type sheet is **removed**. The composer shows a **connection row**: a single compact row in the observation stack, not three property rows. It reads as one assertion — the bridge sentence with its two endpoints ("John Robins · Birth 1850") as read-only text, plus the one thing the researcher chooses: the role or relationship type. **Save connection** commits it. The endpoints come from the graph pick and **cannot be changed** in the composer. A wrong endpoint means **Discard connection** before saving, or deleting the bridge (S8-D6 / S8-09) and connecting again after. The connection can attach to a **new or an existing** Citation on the Artifact. Today, picking an existing Citation in Connect mode silently drops the connection.
 4. **Bridges have no typed label.** A bridge's name is its sentence ("John Robins was born in 1850 London"), computed from its cited edges every time it is shown. The bridge **Edit** dialog edits **description only**. Pickers that list bridges show the sentence. When an endpoint has no cited name / event type / toponym, the sentence still reads cleanly through a fixed **fallback chain** (§2.4): each endpoint falls back to its working label, then its type + ref. If the edges cannot be read at all, the name falls back to a bare kind phrase plus the bridge's ref. A bridge is never shown with an empty name.
@@ -63,7 +63,7 @@ Also, as copy only: the graph's primary **create / edit dialog** explains that t
 ```text
 Before                                         After
 ──────                                         ─────
-[ Save ] sends reading + all rows              Reading   … [ Save reading ]
+[ Save ] sends citation + all rows             Citation  … [ Save citation ]
   (omitted saved rows are deleted)             Row  Mary · birth_date · 1850   [✓] [↺] [⋯]
                                                Row  (draft) John · name · …     [✓] [↺] [⋯]
 Cancel / Back discard silently                 Any exit while dirty → Discard / Keep editing
@@ -79,11 +79,11 @@ Need a new person → leave the composer         Subject ▾ … New person…  
 
 | Fact | UI implication |
 | --- | --- |
-| A Citation must exist before an Observation can | On a **New** Citation, the **first** commit (row Save, Save connection, or Save reading) creates the Citation from the current reading draft. After that the identity line shows the new `CIT-…` and further commits attach to it. |
-| Empty Citation is legal | **Save reading** on a New Citation with no rows is a normal save, not an error. |
+| A Citation must exist before an Observation can | On a **New** Citation, the **first** commit (row Save, Save connection, or Save citation) creates the Citation from the current citation draft. After that the identity line shows the new `CIT-…` and further commits attach to it. |
+| Empty Citation is legal | **Save citation** on a New Citation with no rows is a normal save, not an error. |
 | A saved Citation cannot change Artifact | Artifact is fixed once the Citation is saved. Switching Artifact means "start another Citation on that Artifact". Allowed only when nothing is unsaved. |
 | One row = one Observation = one audited change | Row **Save** writes that row only. Row **Delete** removes that Observation only and never touches the Citation or other rows. Deleting the **last** row leaves an empty Citation (legal). |
-| Row commits do not save the reading | On a saved Citation, a dirty reading stays dirty after a row Save. The two are independent. The **only** time a row commit writes the reading is when it creates the Citation (first commit on New). |
+| Row commits do not save the citation fields | On a saved Citation, dirty citation fields stay dirty after a row Save. The two are independent. The **only** time a row commit writes the citation fields is when it creates the Citation (first commit on New). |
 | Connect is atomic | The bridge subject, its grid position, its two endpoint Observations, its role / relationship-type Observation, and (if New) the Citation are written together by **Save connection**. Nothing about the connection persists before that. |
 | A connection is one unit | Its two endpoint Observations are structural and **immutable**: no subject, Property, value, or polarity change, and no delete. The engine enforces this, not just the UI. The composer never shows them as separate property rows — before and after save, the bridge's endpoints and role appear as **one connection row**. |
 | Wrong endpoint = redo the connection | Before save: **Discard connection**, go back to the graph, Connect again. After save: delete the bridge from the graph (**S8-D6** / **S8-09** designs that delete) and Connect again. The composer offers no endpoint editing. |
@@ -133,7 +133,7 @@ Saved     ⇄  John Robins · child · Birth 1850   Role [ child ▾ ]   (Save /
 
 Two terms, used exactly this way in the PR:
 
-- **Unsaved document work** = dirty reading **or** any Draft-with-Property / Edited row.
+- **Unsaved document work** = dirty citation fields **or** any Draft-with-Property / Edited row.
 - **Touched pending connection** = the researcher picked a term on the pending connection row. An untouched pending row (endpoints from the graph, no term yet) is **not** touched.
 
 | Exit | Behavior |
@@ -141,12 +141,12 @@ Two terms, used exactly this way in the PR:
 | **Done** (footer; replaces Cancel) | Confirm **Discard changes** / **Keep editing** when there is unsaved document work **or** a touched pending connection. Otherwise leave. |
 | Toolbar Back / Forward / history jump menu | Same rule and confirm; on Discard, the navigation proceeds |
 | Sidebar, omnibar hit, breadcrumb, any other in-app place change | Same rule and confirm; on Discard, the navigation proceeds |
-| Artifact menu, Citation menu | **Disabled** with a one-line hint ("Save or discard changes to switch reading") when there is **unsaved document work**. A pending connection (touched or not) never disables them — it moves with the switch. No confirm. |
-| Save connection / row Save / Save reading | Not an exit. No confirm. |
+| Artifact menu, Citation menu | **Disabled** with a one-line hint ("Save or discard changes to switch citation") when there is **unsaved document work**. A pending connection (touched or not) never disables them — it moves with the switch. No confirm. |
+| Save connection / row Save / Save citation | Not an exit. No confirm. |
 
 Not guarded in this story: quitting the app, closing the window, switching project, signing out. Say so on the board (a quiet note, not chrome).
 
-The confirm body counts what is lost, e.g. "Unsaved: the reading, 2 observations, a new connection."
+The confirm body counts what is lost, e.g. "Unsaved: the citation, 2 observations, a new connection."
 
 ### 2.4 Bridge name fallback
 
@@ -177,7 +177,7 @@ The ref is always the picker subtext and the VoiceOver hint, so two bridges that
 - Not undo / ⌘Z.
 - Not deleting subjects, bridges, or whole Citations (**S8-D6**).
 - Not creating bridges or `source` subjects from the composer. Only primaries (person / event / place).
-- Not Auto Transcribe (**S8-D1**) or PDF Find / paste (**S8-D2**). Leave the transcription Field's trailing slot as it is; **S8-D1** designs against this board's reading section.
+- Not Auto Transcribe (**S8-D1**) or PDF Find / paste (**S8-D2**). Leave the transcription Field's trailing slot as it is; **S8-D1** designs against this board's citation fields section.
 - Not graph visual badges or bridge sentence wording (**S8-D3**). This board only decides that the sentence replaces the stored label.
 - Not changing Connect rules, edge Properties, or which pairs are refused.
 - Not a new navigation mode or place. The composer stays the same `WorkspaceLocation` surface.
@@ -190,7 +190,7 @@ The ref is always the picker subtext and the VoiceOver hint, so two bridges that
 
 1. Entry pre-selects Artifact (if one), **New** Citation, one Draft row aimed at the card's subject.
 2. Researcher types transcription, picks a Property, fills the value, presses row **Save**.
-3. Citation and Observation are created together. Identity line changes from "New" to `CIT-…`. Reading is now saved. Row is **Saved**.
+3. Citation and Observation are created together. Identity line changes from "New" to `CIT-…`. The citation fields are now saved. Row is **Saved**.
 4. Researcher adds a second row (Add observation), saves it. Only that row is written.
 5. **Done** returns to the graph (no confirm; nothing unsaved).
 
@@ -198,7 +198,7 @@ The ref is always the picker subtext and the VoiceOver hint, so two bridges that
 
 1. Entry loads the Citation, all rows **Saved**, focus on the pencil's row.
 2. Researcher edits the value → row **Edited** → **Save** → **Saved**.
-3. Researcher opens another row's ⋯ → **Delete observation…** → Confirm ("Delete OBS-… ? This removes one observation from CIT-…. The reading and other observations stay.") → row disappears.
+3. Researcher opens another row's ⋯ → **Delete observation…** → Confirm ("Delete OBS-… ? This removes one observation from CIT-…. The citation and its other observations stay.") → row disappears.
 4. If that was the last row, the stack shows the quiet empty hint (Citation stays).
 
 ### 3.3 Change a saved row's subject to an incompatible type
@@ -220,7 +220,7 @@ The ref is always the picker subtext and the VoiceOver hint, so two bridges that
 2. Transcription and existing rows load; the pending connection row stays on top with the role the researcher already picked (if any).
 3. **Save connection** attaches the connection to `CIT-7Q2…`. No new Citation is minted.
 
-The board must make it obvious in step 2 that the connection will be saved onto the chosen reading (the "Will be saved to CIT-7Q2…" caption under the row).
+The board must make it obvious in step 2 that the connection will be saved onto the chosen Citation (the "Will be saved to CIT-7Q2…" caption under the row).
 
 ### 3.6 Create a person from the row
 
@@ -237,8 +237,8 @@ The board must make it obvious in step 2 that the connection will be saved onto 
 
 ### 3.8 Guarded exit
 
-1. Reading is dirty and one row is Edited. Researcher clicks the sidebar "Sources".
-2. Confirm: "Discard unsaved changes? Unsaved: the reading, 1 observation." **Discard changes** / **Keep editing**.
+1. The citation fields are dirty and one row is Edited. Researcher clicks the sidebar "Sources".
+2. Confirm: "Discard unsaved changes? Unsaved: the citation, 1 observation." **Discard changes** / **Keep editing**.
 3. Keep editing → stays, nothing lost. Discard → navigates to Sources.
 
 ---
@@ -248,7 +248,7 @@ The board must make it obvious in step 2 that the connection will be saved onto 
 | Ships in **S8-11** | Does **not** ship there |
 | --- | --- |
 | Row-level commit (Save / Revert / Delete… with confirm) for every editable row | Auto-save, save-on-blur, ⌘Z |
-| **Save reading** for reading fields; first commit on New creates the Citation | Moving a saved Citation to another Artifact |
+| **Save citation** for citation fields; first commit on New creates the Citation | Moving a saved Citation to another Artifact |
 | Unsaved-work guard on Done / Back / Forward / history / sidebar / omnibar / any in-app `go(to:)` | Guarding app quit, window close, project switch, sign-out |
 | Artifact / Citation menus disabled while unsaved; abandon confirm **removed** | A Citation-level delete |
 | Connection row (pending + saved); **Save connection**; attach to New **or** existing Citation; role editable after save | Graph role / relationship-type sheet (removed) |
@@ -269,8 +269,8 @@ The board must make it obvious in step 2 that the connection will be saved onto 
 | CS-2b | Every persisted Observation row shows its `OBS-…` ref (§2.1) as `Text(verbatim:)` in `PVFont.mono(size: PVTypeScale.caption)` with `PVColor.textMuted`, and `.textSelection(.enabled)` so it can be copied. Draft rows show no ref (or a muted "New" token). The saved connection row shows the bridge subject's ref the same way. The ref is part of the row's VoiceOver label ("Observation OBS-7K2QD"). |
 | CS-3 | Row errors render **on the row** (the Field's error slot or a compact `PVCallout` under the row). The footer no longer shows observation errors. |
 | CS-4 | **Delete observation…** lives in the row ⋯ `ContextMenu` for Saved and Edited rows, opens `.pvConfirm(item:)` with the Observation ref and Citation ref, and deletes only that row. Draft rows use Revert (no confirm). The connection row has no Delete. |
-| CS-5 | The reading section gets **Save reading** (`PVButton` secondary, small) under the description field, enabled only when the reading is dirty (or always on a New Citation with no rows, so an empty reading-only Citation can be saved). The footer primary **Save** is removed. |
-| CS-6 | The footer has **Done** (secondary) only, plus the unsaved summary text when there is unsaved work ("Unsaved: reading, 2 observations"). |
+| CS-5 | The citation fields section gets **Save citation** (`PVButton` secondary, small) under the description field, enabled only when the citation fields are dirty (or always on a New Citation with no rows, so an empty Citation (no observations) can be saved). The footer primary **Save** is removed. |
+| CS-6 | The footer has **Done** (secondary) only, plus the unsaved summary text when there is unsaved work ("Unsaved: citation, 2 observations"). |
 | CS-7 | Unsaved-work guard per §2.3, one `.pvConfirm(item:)` for every exit, counting what is lost. |
 | CS-8 | While unsaved document work exists (§2.3), the Artifact and Citation `PVSelect`s are disabled and show the hint. A pending connection never disables them. No abandon confirm remains. |
 | CS-9 | Connect entry shows one pending **connection row** (§2.2) at the top of the stack. No graph sheet precedes it. When an existing Citation is selected, the row states which Citation it will be saved to. |
@@ -287,7 +287,7 @@ The board must make it obvious in step 2 that the connection will be saved onto 
 
 ## 6. Suggested frames
 
-1. **Add property, New Citation** — Draft row focused, reading empty, Save reading enabled.
+1. **Add property, New Citation** — Draft row focused, citation fields empty, Save citation enabled.
 2. **After first row Save** — identity shows `CIT-…`, row Saved, second Draft row being filled.
 3. **Row states** — one stack showing Saved, Edited, Saving, Error, and Draft together (reference frame), with the `OBS-…` ref on every persisted row and none on the Draft.
 4. **Delete observation confirm** — shared Citation with rows on two subjects; delete one.
@@ -302,7 +302,7 @@ The board must make it obvious in step 2 that the connection will be saved onto 
 13. **Bridge Edit dialog** — description only.
 13b. **Bridge name fallbacks** — one bridge card + its picker row at each tier: working label ("Person 3 — Birth"), type + ref ("Person CPR-F4N2P — Birth"), and whole-name fallback ("Participation · CPA-7K2QD").
 14. **Graph create dialog** — working-label caption.
-15. **Wide (≥1500pt) variant** of frames 2 and 7 — reading | observation stack split still works with Save reading on the reading side.
+15. **Wide (≥1500pt) variant** of frames 2 and 7 — citation fields | observation stack split still works with Save citation on the citation side.
 
 ---
 
@@ -313,7 +313,7 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
 | Composer place | Snowflake | **Extend** | `Features/CitationComposer/CitationComposerView.swift` | Hosts the guard confirm and the new-subject FormDialog. Abandon confirm removed. |
-| Form pane | Snowflake | **Extend** | `Features/CitationComposer/CitationComposerFormPane.swift` | Save reading under the reading fields; footer = Done + unsaved summary; connection row(s) at the top of the stack. |
+| Form pane | Snowflake | **Extend** | `Features/CitationComposer/CitationComposerFormPane.swift` | Save citation under the citation fields; footer = Done + unsaved summary; connection row(s) at the top of the stack. |
 | Observation row | Snowflake | **Extend** | `Features/CitationComposer/CitationComposerObservationRow.swift` | State marker, `OBS-…` ref (persisted rows), Save / Revert IconButtons, row error, Delete in ⋯. Ordinary rows only — edge Observations never render here. |
 | Connection row | Snowflake | **New** (feature-private) | `Features/CitationComposer/CitationComposerConnectionRow.swift` | One `PVCard` row (same height class as an Observation row): bridge-kind icon + sentence `Text` + term `PVComboBox` + trailing `PVButton`s (pending) or Save / Revert `PVIconButton`s (edited). One call site → stays a snowflake. |
 | Observation dialog (name / date) | Snowflake | Ship | `Features/CitationComposer/CitationComposerObservationDialogForm.swift` | Dialog confirm now updates the row draft only (row becomes Edited); the row's Save commits. |
@@ -322,7 +322,7 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 | Graph disambiguation sheet | Snowflake | **Remove** | `Features/EvidenceGraph/EvidenceConnectDisambiguationForm.swift` | Role / relationship type moves into the composer's connection row. |
 | Bridge card title | Snowflake | Ship | `Features/EvidenceGraph/EvidenceBridgeCard.swift` | Renders `EvidenceBridgeEdgeSummary.sentence(for:in:)`, which applies the §2.4 fallback chain. |
 | IconButton | Component | Ship | `DesignSystem/Components/IconButton/` | Row Save / Revert. |
-| Button | Component | Ship | `DesignSystem/Components/Button/` | Save reading, Save connection, Discard connection, Done. |
+| Button | Component | Ship | `DesignSystem/Components/Button/` | Save citation, Save connection, Discard connection, Done. |
 | ComboBox | Component | Ship | `DesignSystem/Components/ComboBox/PVComboBox.swift` | Row subject (with New… options), Property, connection role term. |
 | Select | Component | Ship | `DesignSystem/Components/Select/PVSelect.swift` | Artifact / Citation identity (disabled state + hint). |
 | Confirm | Component | Ship | `.pvConfirm(item:)` | Delete observation; unsaved-work guard. |
@@ -361,4 +361,4 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 2. Archive this brief under `archive/` when the board is agreed.
 3. Record in [`../completed.md`](../completed.md).
 4. Implement **S8-11** against the board and the S8-11 plan in [`../deployment-plan.md`](../deployment-plan.md#s8-11--pr-composer-and-connect-simplification--interpretation-write-integrity).
-5. **S8-D1** and **S8-D2** design against this board's reading section and row chrome, not the S8-10 frames.
+5. **S8-D1** and **S8-D2** design against this board's citation fields section and row chrome, not the S8-10 frames.
