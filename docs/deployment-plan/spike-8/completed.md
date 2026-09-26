@@ -19,6 +19,8 @@ IDs stay stable (`S8-NN`, `S8-DN`). Do not renumber when moving steps here.
 | S8-04 | PR | PDF Find on the composer strip; wrap, highlight, page jump |
 | S8-D2 | Design | PDF Find + I-beam select + paste transcription from selection |
 | S8-05 | PR | Paste PDF I-beam selection into citation transcription |
+| S8-D3 | Design | Evidence graph visuals — ochre conflict bracket + Not; Source jump; identity nouns; Add property on bridges |
+| S8-06 | PR | Graph chrome: row marks, Source-page jump, richer bridge sentences, Add property on bridges |
 
 ## Steps
 
@@ -163,3 +165,28 @@ Composer PDF Artifacts replace Auto transcribe with Paste. The I-beam `PDFSelect
 - Source-page Find / paste
 - `text_quote` locators
 - Changing image Auto Transcribe or image pan
+
+### S8-D3 — Design: Evidence graph visual enhancements
+
+**Board pick:** ochre conflict **bracket** in an 11px gutter joining each competing `propertyKey` run (not `PVBadge`); **"Not"** in danger micro-caps before a denied value (italic-danger kept); ghost **Jump to Source page** with a trailing arrow after the muted Source title; bridge sentences prefer endpoint identity Observations then working label; cited bridges reuse primary rows + **Add property** for extra non-edge Observations; canvas legend floats bottom-left while any mark is present.
+
+Agreed: badges are notices, not resolve actions; identity pick is first positive then first; Add property opens a new Citation (`composerLocation(for:)`), never the connect Citation.
+
+Brief archived: [`design/archive/S8-D3-graph-visuals.md`](design/archive/S8-D3-graph-visuals.md). Shipped as **S8-06**.
+
+### S8-06 — Graph visual enhancements
+
+Shipped the S8-D3 graph-chrome pass. Competing Observations stay as separate rows. Conflict is a shared ochre bracket; negation is an explicit “Not”. The header always jumps to the same Source’s filing page. Cited bridges name endpoints from identity Properties and can take extra Observations.
+
+**What shipped**
+
+- Conflict bracket + “Not” prefix on cited rows (`EvidenceCitedPropertyMarks` / `EvidenceCitedPropertyRow`); canvas legend while any mark exists
+- Always-on **Jump to Source page** via `sourcePageLocation` + `go(to:)`
+- `EvidenceBridgeEdgeSummary` identity-Observation nouns (`name` / `event_type` / `toponym`), then working label
+- Add property + extra non-edge rows on bridge cards (new Citation, not the connect Citation)
+
+**What stayed out**
+
+- Merge / resolve; denied-line drawing
+- Source-page → graph (**S8-07**)
+- Incomplete-bridge chrome, collapse/expand, filters, undo, tray, minimap
