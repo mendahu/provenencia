@@ -1092,6 +1092,38 @@ struct GoStore: GenealogyStore {
         return counts
     }
 
+    func listSourceGraphProgress(projectDir: String) async throws -> [SourceGraphProgress] {
+        var req = Provenencia_Engine_V1_ListSourceGraphProgressRequest()
+        req.projectDir = projectDir
+        let resp: Provenencia_Engine_V1_ListSourceGraphProgressResponse = try await provenenciaCall(
+            method: CoreMethod.listSourceGraphProgress,
+            request: req
+        )
+        return resp.rows.map(Self.mapSourceGraphProgress)
+    }
+
+    func getSourceGraphProgress(projectDir: String, sourceID: String) async throws -> SourceGraphProgress {
+        var req = Provenencia_Engine_V1_GetSourceGraphProgressRequest()
+        req.projectDir = projectDir
+        req.sourceID = sourceID
+        let resp: Provenencia_Engine_V1_GetSourceGraphProgressResponse = try await provenenciaCall(
+            method: CoreMethod.getSourceGraphProgress,
+            request: req
+        )
+        if resp.hasProgress {
+            return Self.mapSourceGraphProgress(resp.progress)
+        }
+        return .zeros(sourceId: sourceID)
+    }
+
+    private static func mapSourceGraphProgress(_ row: Provenencia_Engine_V1_SourceGraphProgress) -> SourceGraphProgress {
+        SourceGraphProgress(
+            sourceId: row.sourceID,
+            subjectCount: Int(row.subjectCount),
+            observationCount: Int(row.observationCount)
+        )
+    }
+
     func updateCitation(
         projectDir: String,
         userID: String,

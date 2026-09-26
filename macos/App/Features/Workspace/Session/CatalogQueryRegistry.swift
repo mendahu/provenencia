@@ -111,6 +111,13 @@ struct CatalogQueryRegistry: Sendable {
             stalePolicy: .sessionFresh,
             invalidateOn: [.savedCitation]
         ),
+        Spec(
+            kind: .sourceGraphProgress,
+            stalePolicy: .sessionFresh,
+            // Canvas writes patch one Source via Get + setQueryValue — do not
+            // restale the project-wide map (or sourcesList).
+            invalidateOn: []
+        ),
     ]
 
     func stalePolicy(for key: CatalogQueryKey) -> CatalogQueryStalePolicy {
@@ -167,6 +174,13 @@ struct CatalogQueryRegistry: Sendable {
                 projectDir: project.projectDir,
                 artifactID: artifactId
             )
+        case .sourceGraphProgress(let project):
+            let rows = try await store.listSourceGraphProgress(projectDir: project.projectDir)
+            var map: [String: SourceGraphProgress] = [:]
+            for row in rows {
+                map[row.sourceId] = row
+            }
+            return map
         case .subjectFieldsWorkspace(let project):
             return try await store.getSubjectFieldsWorkspace(projectDir: project.projectDir)
         }
@@ -237,6 +251,8 @@ private extension CatalogQueryKey.Kind {
             }
         case .citationsByArtifact:
             return .allCached(.citationsByArtifact)
+        case .sourceGraphProgress:
+            return .key(.sourceGraphProgress(project: project))
         }
     }
 }

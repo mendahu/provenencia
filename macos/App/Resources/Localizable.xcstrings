@@ -5286,6 +5286,30 @@
         }
       }
     },
+    "sources.list.graphCountsLoading": {
+      "comment": "VoiceOver while Sources list graph-progress counts have not arrived",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "counts loading"
+          }
+        }
+      }
+    },
+    "sources.list.graphNotStarted": {
+      "comment": "Italic graph-zone state when a Source has zero canvas subjects",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "not started"
+          }
+        }
+      }
+    },
     "sources.list.needsArtifact": {
       "comment": "Blocked graph zone label when the Source has no Artifact",
       "extractionState": "manual",
@@ -5330,6 +5354,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "No sources for this type"
+          }
+        }
+      }
+    },
+    "sources.list.observationCountOne": {
+      "comment": "Sources list graph-zone observation count when exactly one Observation",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 observation"
+          }
+        }
+      }
+    },
+    "sources.list.observationCountOther": {
+      "comment": "Sources list graph-zone observation count; argument is Observation count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld observations"
           }
         }
       }
@@ -5426,6 +5474,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sorted by %@"
+          }
+        }
+      }
+    },
+    "sources.list.subjectCountOne": {
+      "comment": "Sources list graph-zone subject count when exactly one canvas subject",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 subject"
+          }
+        }
+      }
+    },
+    "sources.list.subjectCountOther": {
+      "comment": "Sources list graph-zone subject count; argument is canvas subject count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld subjects"
           }
         }
       }

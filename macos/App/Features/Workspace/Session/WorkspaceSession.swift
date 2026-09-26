@@ -118,6 +118,44 @@ final class WorkspaceSession {
         for key in keys {
             revalidate(key)
         }
+        refreshSourceGraphProgress(for: mutation)
+    }
+
+    /// Surgical Get-one + map merge. Skips when the list never warmed the map.
+    private func refreshSourceGraphProgress(for mutation: CatalogMutation) {
+        let sourceId: String
+        switch mutation {
+        case .mutatedSourceGraph(let id), .savedCitation(let id):
+            sourceId = id
+        default:
+            return
+        }
+        let key = CatalogQueryKey.sourceGraphProgress(project: projectKey)
+        let existing: QueryHandle<[String: SourceGraphProgress]>? = queryHandle(key)
+        guard existing != nil else { return }
+        Task { await self.patchSourceGraphProgress(sourceId: sourceId) }
+    }
+
+    private func patchSourceGraphProgress(sourceId: String) async {
+        let key = CatalogQueryKey.sourceGraphProgress(project: projectKey)
+        let existing: QueryHandle<[String: SourceGraphProgress]>? = queryHandle(key)
+        guard existing != nil else { return }
+        do {
+            let one = try await store.getSourceGraphProgress(
+                projectDir: projectKey.projectDir,
+                sourceID: sourceId
+            )
+            let handle: QueryHandle<[String: SourceGraphProgress]>? = queryHandle(key)
+            var map = handle?.value ?? [:]
+            if one.isZero {
+                map.removeValue(forKey: sourceId)
+            } else {
+                map[sourceId] = one
+            }
+            setQueryValue(key, value: map)
+        } catch {
+            // Keep last counts; the next mutation or Sources place visit retries.
+        }
     }
 
     /// Get-or-load with in-flight dedupe. Reuses cached `.ready` data until invalidated.
@@ -218,6 +256,8 @@ final class WorkspaceSession {
             let _: QueryHandle<[CatalogPropertyTerm]> = query(key)
         case .citationsByArtifact:
             let _: QueryHandle<[CatalogListedCitation]> = query(key)
+        case .sourceGraphProgress:
+            let _: QueryHandle<[String: SourceGraphProgress]> = query(key)
         }
     }
 

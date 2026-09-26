@@ -42,6 +42,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var listSubjectsCalls = 0
     var listSubjectTypesCalls = 0
     var getSourceWorkspaceCalls = 0
+    var listSourceGraphProgressCalls = 0
+    var getSourceGraphProgressCalls = 0
+    /// Optional override for graph-progress rows (tests). Missing keys compute from subjects/observations.
+    var graphProgressBySource: [String: SourceGraphProgress] = [:]
+    var listSourceGraphProgressError: Error?
+    var getSourceGraphProgressError: Error?
     /// Monotonic stand-in for audit_transactions.revision (Sources Updated sort).
     private var nextAuditRevision: Int64 = 1
     /// When set, `searchCatalog` throws (omnibar error UI).
@@ -1621,6 +1627,40 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             counts[citation.artifactID, default: 0] += 1
         }
         return counts
+    }
+
+    func listSourceGraphProgress(projectDir: String) async throws -> [SourceGraphProgress] {
+        markCatalogSessionHeld(projectDir)
+        listSourceGraphProgressCalls += 1
+        if let listSourceGraphProgressError { throw listSourceGraphProgressError }
+        let ids = Set((sourcesByProject[projectDir] ?? []).map(\.id) + subjectsBySource.keys + graphProgressBySource.keys)
+        return ids.compactMap { id in
+            let row = graphProgress(for: id, projectDir: projectDir)
+            return row.isZero ? nil : row
+        }
+    }
+
+    func getSourceGraphProgress(projectDir: String, sourceID: String) async throws -> SourceGraphProgress {
+        markCatalogSessionHeld(projectDir)
+        getSourceGraphProgressCalls += 1
+        if let getSourceGraphProgressError { throw getSourceGraphProgressError }
+        return graphProgress(for: sourceID, projectDir: projectDir)
+    }
+
+    private func graphProgress(for sourceID: String, projectDir: String) -> SourceGraphProgress {
+        if let override = graphProgressBySource[sourceID] {
+            return override
+        }
+        let sourceTypeIDs = Set(
+            (subjectTypesByProject[projectDir] ?? []).filter { $0.key == "source" }.map(\.id)
+        )
+        let subjects = (subjectsBySource[sourceID] ?? []).filter { !sourceTypeIDs.contains($0.subjectTypeID) }
+        let observations = observationsBySource[sourceID] ?? []
+        return SourceGraphProgress(
+            sourceId: sourceID,
+            subjectCount: subjects.count,
+            observationCount: observations.count
+        )
     }
 
     func listCitationsByArtifact(projectDir: String, artifactID: String) async throws -> [CatalogListedCitation] {

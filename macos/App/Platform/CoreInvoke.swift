@@ -112,6 +112,8 @@ enum CoreMethod {
     static let updateObservation = Int32(Provenencia_Engine_V1_Method.updateObservation.rawValue)
     static let deleteObservation = Int32(Provenencia_Engine_V1_Method.deleteObservation.rawValue)
     static let getSubjectFieldsWorkspace = Int32(Provenencia_Engine_V1_Method.getSubjectFieldsWorkspace.rawValue)
+    static let listSourceGraphProgress = Int32(Provenencia_Engine_V1_Method.listSourceGraphProgress.rawValue)
+    static let getSourceGraphProgress = Int32(Provenencia_Engine_V1_Method.getSourceGraphProgress.rawValue)
 }
 
 func provenenciaInvoke(method: Int32, request: Data) throws -> Data {

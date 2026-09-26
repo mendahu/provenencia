@@ -88,6 +88,8 @@ enum Method {
   METHOD_UPDATE_OBSERVATION = 76;
   METHOD_DELETE_OBSERVATION = 77;
   METHOD_GET_SUBJECT_FIELDS_WORKSPACE = 78;
+  METHOD_LIST_SOURCE_GRAPH_PROGRESS = 79;
+  METHOD_GET_SOURCE_GRAPH_PROGRESS = 80;
 }
 
 message PingRequest {
@@ -1269,6 +1271,31 @@ message GetSubjectFieldsWorkspaceResponse {
   repeated Property properties = 1;
   repeated SubjectType types = 2;
   repeated SubjectTypeFieldsGroup groups = 3;
+}
+
+message SourceGraphProgress {
+  string source_id = 1;
+  int32 subject_count = 2;
+  int32 observation_count = 3;
+  reserved 4;
+  reserved "uncited_count";
+}
+
+message ListSourceGraphProgressRequest {
+  string project_dir = 1;
+}
+
+message ListSourceGraphProgressResponse {
+  repeated SourceGraphProgress rows = 1;
+}
+
+message GetSourceGraphProgressRequest {
+  string project_dir = 1;
+  string source_id = 2;
+}
+
+message GetSourceGraphProgressResponse {
+  SourceGraphProgress progress = 1;
 }
 
 // ErrorKind classifies a failure for client UX (tone, retry hints). Copy still

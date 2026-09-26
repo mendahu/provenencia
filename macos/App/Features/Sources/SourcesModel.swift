@@ -73,10 +73,32 @@ final class SourcesModel {
         CatalogQueryKey.sourceTypesList(project: session.projectKey)
     }
 
+    static func sourceGraphProgressKey(for session: WorkspaceSession) -> CatalogQueryKey {
+        CatalogQueryKey.sourceGraphProgress(project: session.projectKey)
+    }
+
     /// Starts list queries once (`.task` / dialog). Do not call from view `body`.
     func warmListQueries() {
         let _: QueryHandle<[CatalogSource]> = session.query(Self.sourcesListKey(for: session))
         let _: QueryHandle<[CatalogSourceType]> = session.query(Self.sourceTypesListKey(for: session))
+        let _: QueryHandle<[String: SourceGraphProgress]> = session.query(
+            Self.sourceGraphProgressKey(for: session)
+        )
+    }
+
+    func graphProgress(for sourceID: String) -> SourceGraphProgress? {
+        let handle: QueryHandle<[String: SourceGraphProgress]>? = session.queryHandle(
+            Self.sourceGraphProgressKey(for: session)
+        )
+        return handle?.value?[sourceID]
+    }
+
+    var graphCountsLoading: Bool {
+        let handle: QueryHandle<[String: SourceGraphProgress]>? = session.queryHandle(
+            Self.sourceGraphProgressKey(for: session)
+        )
+        guard let handle else { return true }
+        return handle.value == nil && handle.status != .ready
     }
 
     var sources: [CatalogSource] {

@@ -103,6 +103,8 @@ const (
 	Method_METHOD_UPDATE_OBSERVATION                   Method = 76
 	Method_METHOD_DELETE_OBSERVATION                   Method = 77
 	Method_METHOD_GET_SUBJECT_FIELDS_WORKSPACE         Method = 78
+	Method_METHOD_LIST_SOURCE_GRAPH_PROGRESS           Method = 79
+	Method_METHOD_GET_SOURCE_GRAPH_PROGRESS            Method = 80
 )
 
 // Enum value maps for Method.
@@ -185,6 +187,8 @@ var (
 		76: "METHOD_UPDATE_OBSERVATION",
 		77: "METHOD_DELETE_OBSERVATION",
 		78: "METHOD_GET_SUBJECT_FIELDS_WORKSPACE",
+		79: "METHOD_LIST_SOURCE_GRAPH_PROGRESS",
+		80: "METHOD_GET_SOURCE_GRAPH_PROGRESS",
 	}
 	Method_value = map[string]int32{
 		"METHOD_UNSPECIFIED":                          0,
@@ -264,6 +268,8 @@ var (
 		"METHOD_UPDATE_OBSERVATION":                   76,
 		"METHOD_DELETE_OBSERVATION":                   77,
 		"METHOD_GET_SUBJECT_FIELDS_WORKSPACE":         78,
+		"METHOD_LIST_SOURCE_GRAPH_PROGRESS":           79,
+		"METHOD_GET_SOURCE_GRAPH_PROGRESS":            80,
 	}
 )
 
@@ -11570,6 +11576,250 @@ func (x *GetSubjectFieldsWorkspaceResponse) GetGroups() []*SubjectTypeFieldsGrou
 	return nil
 }
 
+type SourceGraphProgress struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	SourceId         string                 `protobuf:"bytes,1,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	SubjectCount     int32                  `protobuf:"varint,2,opt,name=subject_count,json=subjectCount,proto3" json:"subject_count,omitempty"`
+	ObservationCount int32                  `protobuf:"varint,3,opt,name=observation_count,json=observationCount,proto3" json:"observation_count,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *SourceGraphProgress) Reset() {
+	*x = SourceGraphProgress{}
+	mi := &file_engine_proto_msgTypes[185]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SourceGraphProgress) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SourceGraphProgress) ProtoMessage() {}
+
+func (x *SourceGraphProgress) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[185]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SourceGraphProgress.ProtoReflect.Descriptor instead.
+func (*SourceGraphProgress) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{185}
+}
+
+func (x *SourceGraphProgress) GetSourceId() string {
+	if x != nil {
+		return x.SourceId
+	}
+	return ""
+}
+
+func (x *SourceGraphProgress) GetSubjectCount() int32 {
+	if x != nil {
+		return x.SubjectCount
+	}
+	return 0
+}
+
+func (x *SourceGraphProgress) GetObservationCount() int32 {
+	if x != nil {
+		return x.ObservationCount
+	}
+	return 0
+}
+
+type ListSourceGraphProgressRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSourceGraphProgressRequest) Reset() {
+	*x = ListSourceGraphProgressRequest{}
+	mi := &file_engine_proto_msgTypes[186]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSourceGraphProgressRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSourceGraphProgressRequest) ProtoMessage() {}
+
+func (x *ListSourceGraphProgressRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[186]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSourceGraphProgressRequest.ProtoReflect.Descriptor instead.
+func (*ListSourceGraphProgressRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{186}
+}
+
+func (x *ListSourceGraphProgressRequest) GetProjectDir() string {
+	if x != nil {
+		return x.ProjectDir
+	}
+	return ""
+}
+
+type ListSourceGraphProgressResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Rows          []*SourceGraphProgress `protobuf:"bytes,1,rep,name=rows,proto3" json:"rows,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSourceGraphProgressResponse) Reset() {
+	*x = ListSourceGraphProgressResponse{}
+	mi := &file_engine_proto_msgTypes[187]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSourceGraphProgressResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSourceGraphProgressResponse) ProtoMessage() {}
+
+func (x *ListSourceGraphProgressResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[187]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSourceGraphProgressResponse.ProtoReflect.Descriptor instead.
+func (*ListSourceGraphProgressResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{187}
+}
+
+func (x *ListSourceGraphProgressResponse) GetRows() []*SourceGraphProgress {
+	if x != nil {
+		return x.Rows
+	}
+	return nil
+}
+
+type GetSourceGraphProgressRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	SourceId      string                 `protobuf:"bytes,2,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetSourceGraphProgressRequest) Reset() {
+	*x = GetSourceGraphProgressRequest{}
+	mi := &file_engine_proto_msgTypes[188]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSourceGraphProgressRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSourceGraphProgressRequest) ProtoMessage() {}
+
+func (x *GetSourceGraphProgressRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[188]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSourceGraphProgressRequest.ProtoReflect.Descriptor instead.
+func (*GetSourceGraphProgressRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{188}
+}
+
+func (x *GetSourceGraphProgressRequest) GetProjectDir() string {
+	if x != nil {
+		return x.ProjectDir
+	}
+	return ""
+}
+
+func (x *GetSourceGraphProgressRequest) GetSourceId() string {
+	if x != nil {
+		return x.SourceId
+	}
+	return ""
+}
+
+type GetSourceGraphProgressResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Progress      *SourceGraphProgress   `protobuf:"bytes,1,opt,name=progress,proto3" json:"progress,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetSourceGraphProgressResponse) Reset() {
+	*x = GetSourceGraphProgressResponse{}
+	mi := &file_engine_proto_msgTypes[189]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSourceGraphProgressResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSourceGraphProgressResponse) ProtoMessage() {}
+
+func (x *GetSourceGraphProgressResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[189]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSourceGraphProgressResponse.ProtoReflect.Descriptor instead.
+func (*GetSourceGraphProgressResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{189}
+}
+
+func (x *GetSourceGraphProgressResponse) GetProgress() *SourceGraphProgress {
+	if x != nil {
+		return x.Progress
+	}
+	return nil
+}
+
 // Error is the protobuf payload on provenencia_call status 1 (failure).
 // Success payloads remain method-specific response messages.
 type Error struct {
@@ -11583,7 +11833,7 @@ type Error struct {
 
 func (x *Error) Reset() {
 	*x = Error{}
-	mi := &file_engine_proto_msgTypes[185]
+	mi := &file_engine_proto_msgTypes[190]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11595,7 +11845,7 @@ func (x *Error) String() string {
 func (*Error) ProtoMessage() {}
 
 func (x *Error) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[185]
+	mi := &file_engine_proto_msgTypes[190]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11608,7 +11858,7 @@ func (x *Error) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Error.ProtoReflect.Descriptor instead.
 func (*Error) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{185}
+	return file_engine_proto_rawDescGZIP(), []int{190}
 }
 
 func (x *Error) GetCode() string {
@@ -12546,11 +12796,26 @@ const file_engine_proto_rawDesc = "" +
 	"properties\x18\x01 \x03(\v2\x1f.provenencia.engine.v1.PropertyR\n" +
 	"properties\x128\n" +
 	"\x05types\x18\x02 \x03(\v2\".provenencia.engine.v1.SubjectTypeR\x05types\x12E\n" +
-	"\x06groups\x18\x03 \x03(\v2-.provenencia.engine.v1.SubjectTypeFieldsGroupR\x06groups\"i\n" +
+	"\x06groups\x18\x03 \x03(\v2-.provenencia.engine.v1.SubjectTypeFieldsGroupR\x06groups\"\x99\x01\n" +
+	"\x13SourceGraphProgress\x12\x1b\n" +
+	"\tsource_id\x18\x01 \x01(\tR\bsourceId\x12#\n" +
+	"\rsubject_count\x18\x02 \x01(\x05R\fsubjectCount\x12+\n" +
+	"\x11observation_count\x18\x03 \x01(\x05R\x10observationCountJ\x04\b\x04\x10\x05R\runcited_count\"A\n" +
+	"\x1eListSourceGraphProgressRequest\x12\x1f\n" +
+	"\vproject_dir\x18\x01 \x01(\tR\n" +
+	"projectDir\"a\n" +
+	"\x1fListSourceGraphProgressResponse\x12>\n" +
+	"\x04rows\x18\x01 \x03(\v2*.provenencia.engine.v1.SourceGraphProgressR\x04rows\"]\n" +
+	"\x1dGetSourceGraphProgressRequest\x12\x1f\n" +
+	"\vproject_dir\x18\x01 \x01(\tR\n" +
+	"projectDir\x12\x1b\n" +
+	"\tsource_id\x18\x02 \x01(\tR\bsourceId\"h\n" +
+	"\x1eGetSourceGraphProgressResponse\x12F\n" +
+	"\bprogress\x18\x01 \x01(\v2*.provenencia.engine.v1.SourceGraphProgressR\bprogress\"i\n" +
 	"\x05Error\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x124\n" +
 	"\x04kind\x18\x02 \x01(\x0e2 .provenencia.engine.v1.ErrorKindR\x04kind\x12\x16\n" +
-	"\x06params\x18\x03 \x03(\tR\x06params*\x85\x14\n" +
+	"\x06params\x18\x03 \x03(\tR\x06params*\xd2\x14\n" +
 	"\x06Method\x12\x16\n" +
 	"\x12METHOD_UNSPECIFIED\x10\x00\x12\x0f\n" +
 	"\vMETHOD_PING\x10\x01\x12\x16\n" +
@@ -12629,7 +12894,9 @@ const file_engine_proto_rawDesc = "" +
 	"\x16METHOD_UPDATE_CITATION\x10K\x12\x1d\n" +
 	"\x19METHOD_UPDATE_OBSERVATION\x10L\x12\x1d\n" +
 	"\x19METHOD_DELETE_OBSERVATION\x10M\x12'\n" +
-	"#METHOD_GET_SUBJECT_FIELDS_WORKSPACE\x10N\"\x04\b\x1b\x10\x1b\"\x04\bG\x10G*\x12METHOD_COUNT_FILES*(METHOD_UPDATE_CITATION_WITH_OBSERVATIONS*\x88\x01\n" +
+	"#METHOD_GET_SUBJECT_FIELDS_WORKSPACE\x10N\x12%\n" +
+	"!METHOD_LIST_SOURCE_GRAPH_PROGRESS\x10O\x12$\n" +
+	" METHOD_GET_SOURCE_GRAPH_PROGRESS\x10P\"\x04\b\x1b\x10\x1b\"\x04\bG\x10G*\x12METHOD_COUNT_FILES*(METHOD_UPDATE_CITATION_WITH_OBSERVATIONS*\x88\x01\n" +
 	"\tErrorKind\x12\x1a\n" +
 	"\x16ERROR_KIND_UNSPECIFIED\x10\x00\x12\x13\n" +
 	"\x0fERROR_KIND_USER\x10\x01\x12\x17\n" +
@@ -12650,7 +12917,7 @@ func file_engine_proto_rawDescGZIP() []byte {
 }
 
 var file_engine_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 186)
+var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 191)
 var file_engine_proto_goTypes = []any{
 	(Method)(0),                                       // 0: provenencia.engine.v1.Method
 	(ErrorKind)(0),                                    // 1: provenencia.engine.v1.ErrorKind
@@ -12839,7 +13106,12 @@ var file_engine_proto_goTypes = []any{
 	(*GetSubjectFieldsWorkspaceRequest)(nil),          // 184: provenencia.engine.v1.GetSubjectFieldsWorkspaceRequest
 	(*SubjectTypeFieldsGroup)(nil),                    // 185: provenencia.engine.v1.SubjectTypeFieldsGroup
 	(*GetSubjectFieldsWorkspaceResponse)(nil),         // 186: provenencia.engine.v1.GetSubjectFieldsWorkspaceResponse
-	(*Error)(nil),                                     // 187: provenencia.engine.v1.Error
+	(*SourceGraphProgress)(nil),                       // 187: provenencia.engine.v1.SourceGraphProgress
+	(*ListSourceGraphProgressRequest)(nil),            // 188: provenencia.engine.v1.ListSourceGraphProgressRequest
+	(*ListSourceGraphProgressResponse)(nil),           // 189: provenencia.engine.v1.ListSourceGraphProgressResponse
+	(*GetSourceGraphProgressRequest)(nil),             // 190: provenencia.engine.v1.GetSourceGraphProgressRequest
+	(*GetSourceGraphProgressResponse)(nil),            // 191: provenencia.engine.v1.GetSourceGraphProgressResponse
+	(*Error)(nil),                                     // 192: provenencia.engine.v1.Error
 }
 var file_engine_proto_depIdxs = []int32{
 	24,  // 0: provenencia.engine.v1.CompleteOnboardingResponse.project:type_name -> provenencia.engine.v1.ProjectInfo
@@ -12929,12 +13201,14 @@ var file_engine_proto_depIdxs = []int32{
 	123, // 84: provenencia.engine.v1.GetSubjectFieldsWorkspaceResponse.properties:type_name -> provenencia.engine.v1.Property
 	104, // 85: provenencia.engine.v1.GetSubjectFieldsWorkspaceResponse.types:type_name -> provenencia.engine.v1.SubjectType
 	185, // 86: provenencia.engine.v1.GetSubjectFieldsWorkspaceResponse.groups:type_name -> provenencia.engine.v1.SubjectTypeFieldsGroup
-	1,   // 87: provenencia.engine.v1.Error.kind:type_name -> provenencia.engine.v1.ErrorKind
-	88,  // [88:88] is the sub-list for method output_type
-	88,  // [88:88] is the sub-list for method input_type
-	88,  // [88:88] is the sub-list for extension type_name
-	88,  // [88:88] is the sub-list for extension extendee
-	0,   // [0:88] is the sub-list for field type_name
+	187, // 87: provenencia.engine.v1.ListSourceGraphProgressResponse.rows:type_name -> provenencia.engine.v1.SourceGraphProgress
+	187, // 88: provenencia.engine.v1.GetSourceGraphProgressResponse.progress:type_name -> provenencia.engine.v1.SourceGraphProgress
+	1,   // 89: provenencia.engine.v1.Error.kind:type_name -> provenencia.engine.v1.ErrorKind
+	90,  // [90:90] is the sub-list for method output_type
+	90,  // [90:90] is the sub-list for method input_type
+	90,  // [90:90] is the sub-list for extension type_name
+	90,  // [90:90] is the sub-list for extension extendee
+	0,   // [0:90] is the sub-list for field type_name
 }
 
 func init() { file_engine_proto_init() }
@@ -12951,7 +13225,7 @@ func file_engine_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_engine_proto_rawDesc), len(file_engine_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   186,
+			NumMessages:   191,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

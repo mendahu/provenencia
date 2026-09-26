@@ -136,6 +136,21 @@ struct CatalogQueryRegistryTests {
         #expect(handle.value?["art-1"] == nil)
     }
 
+    @Test func sourceGraphProgressLoadsMap() async {
+        let store = FakeStore()
+        seedStore(store)
+        store.graphProgressBySource["s1"] = SourceGraphProgress(
+            sourceId: "s1", subjectCount: 12, observationCount: 48
+        )
+        let session = makeSession(store: store)
+        let handle: QueryHandle<[String: SourceGraphProgress]> = session.query(
+            CatalogQueryKey.sourceGraphProgress(project: session.projectKey)
+        )
+        await waitForFetchComplete(handle)
+        #expect(handle.value?["s1"]?.subjectCount == 12)
+        #expect(handle.value?["s1"]?.observationCount == 48)
+    }
+
     @Test func connectRulesLoadFromStore() async {
         let store = FakeStore()
         store.connectRules = CatalogConnectRule.productMatrix
@@ -515,6 +530,21 @@ struct CatalogQueryRegistryTests {
         #expect(registry.invalidations(by: .mutatedSourceGraph(sourceId: "s1"), project: project) == [
             .key(.sourceGraph(project: project, sourceId: "s1")),
         ])
+        #expect(
+            !registry.invalidations(by: .mutatedSourceGraph(sourceId: "s1"), project: project).contains(
+                .key(.sourceGraphProgress(project: project))
+            )
+        )
+        #expect(
+            !registry.invalidations(by: .savedCitation(sourceId: "s1"), project: project).contains(
+                .key(.sourceGraphProgress(project: project))
+            )
+        )
+        #expect(
+            !registry.invalidations(by: .mutatedSourceGraph(sourceId: "s1"), project: project).contains(
+                .key(.sourcesList(project: project))
+            )
+        )
         #expect(registry.invalidations(by: .savedCitation(sourceId: "s1"), project: project) == [
             .key(.sourceGraph(project: project, sourceId: "s1")),
             .key(.citationCounts(project: project, sourceId: "s1")),

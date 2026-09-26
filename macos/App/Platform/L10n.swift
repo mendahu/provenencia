@@ -3441,6 +3441,79 @@ enum L10n {
             comment: "Sources list right-zone action when the Source has an Artifact"
         )
 
+        static let graphNotStarted = LocalizedStringResource(
+            "sources.list.graphNotStarted",
+            defaultValue: "not started",
+            comment: "Italic graph-zone state when a Source has zero canvas subjects"
+        )
+
+        static let graphCountsLoading = LocalizedStringResource(
+            "sources.list.graphCountsLoading",
+            defaultValue: "counts loading",
+            comment: "VoiceOver while Sources list graph-progress counts have not arrived"
+        )
+
+        private static let subjectCountOne = LocalizedStringResource(
+            "sources.list.subjectCountOne",
+            defaultValue: "1 subject",
+            comment: "Sources list graph-zone subject count when exactly one canvas subject"
+        )
+
+        private static func subjectCountOther(count: Int) -> LocalizedStringResource {
+            LocalizedStringResource(
+                "sources.list.subjectCountOther",
+                defaultValue: "\(count) subjects",
+                comment: "Sources list graph-zone subject count; argument is canvas subject count"
+            )
+        }
+
+        private static let observationCountOne = LocalizedStringResource(
+            "sources.list.observationCountOne",
+            defaultValue: "1 observation",
+            comment: "Sources list graph-zone observation count when exactly one Observation"
+        )
+
+        private static func observationCountOther(count: Int) -> LocalizedStringResource {
+            LocalizedStringResource(
+                "sources.list.observationCountOther",
+                defaultValue: "\(count) observations",
+                comment: "Sources list graph-zone observation count; argument is Observation count"
+            )
+        }
+
+        static func graphSubjectCount(_ count: Int) -> String {
+            if count == 1 { return String(localized: subjectCountOne) }
+            return String(localized: subjectCountOther(count: count))
+        }
+
+        static func graphObservationCount(_ count: Int) -> String {
+            if count == 1 { return String(localized: observationCountOne) }
+            return String(localized: observationCountOther(count: count))
+        }
+
+        static func graphCountLine(subjects: Int, observations: Int) -> String {
+            "\(graphSubjectCount(subjects)) · \(graphObservationCount(observations))"
+        }
+
+        static func graphZoneAccessibility(
+            progress: SourceGraphProgress?,
+            countsLoading: Bool
+        ) -> String {
+            let open = String(localized: openGraph)
+            if countsLoading && progress == nil {
+                return "\(open), \(String(localized: graphCountsLoading))"
+            }
+            let subjects = progress?.subjectCount ?? 0
+            if subjects == 0 {
+                return "\(open), \(graphSubjectCount(0)), \(String(localized: graphNotStarted))"
+            }
+            return [
+                open,
+                graphSubjectCount(subjects),
+                graphObservationCount(progress?.observationCount ?? 0),
+            ].joined(separator: ", ")
+        }
+
         static let needsArtifact = LocalizedStringResource(
             "sources.list.needsArtifact",
             defaultValue: "Needs an artifact",

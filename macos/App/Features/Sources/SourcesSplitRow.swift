@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// Shared column track for the Sources list caption band and split rows (S5-D2):
-/// `minmax(0,1fr) | 210px`, so the hairline stacks straight down.
+/// Shared column track for the Sources list caption band and split rows (S5-D2 / S8-D5):
+/// `minmax(0,1fr) | 248px`, so the hairline stacks straight down.
 enum SourcesSplitLayout {
-    static let graphZoneWidth: CGFloat = 210
+    static let graphZoneWidth: CGFloat = 248
 
     static func columns<Page: View, Graph: View>(
         @ViewBuilder page: () -> Page,
@@ -31,6 +31,8 @@ struct SourcesSplitRow: View {
     let typeLabel: String
     let typeIconKey: String?
     let projectDir: String
+    var progress: SourceGraphProgress?
+    var countsLoading: Bool = false
     var onOpenPage: () -> Void
     var onOpenGraph: () -> Void
 
@@ -90,12 +92,14 @@ struct SourcesSplitRow: View {
     private var graphZone: some View {
         if source.hasArtifact {
             Button(action: onOpenGraph) {
-                HStack(spacing: PVSpacing.space3 + PVSpacing.spacePx) {
+                HStack(alignment: .top, spacing: PVSpacing.space3 + PVSpacing.spacePx) {
                     PVIcon(.network, size: 16)
-                    Text(L10n.Sources.openGraph)
-                        .font(PVFont.body(size: PVTypeScale.bodySmall))
-                        .lineLimit(1)
-                    Spacer(minLength: 0)
+                    VStack(alignment: .leading, spacing: PVSpacing.space1) {
+                        Text(L10n.Sources.openGraph)
+                            .font(PVFont.body(size: PVTypeScale.bodySmall))
+                            .lineLimit(1)
+                        graphCountLine
+                    }
                 }
                 .padding(.horizontal, PVSpacing.space6)
                 .padding(.vertical, PVSpacing.space5 + PVSpacing.spacePx)
@@ -103,7 +107,10 @@ struct SourcesSplitRow: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(SourcesSplitZoneButtonStyle(emphasizeOnHover: true))
-            .accessibilityLabel(Text(L10n.Sources.openGraph))
+            .accessibilityLabel(Text(verbatim: L10n.Sources.graphZoneAccessibility(
+                progress: progress,
+                countsLoading: countsLoading
+            )))
             .accessibilityIdentifier("sources.row.\(source.id).graph")
         } else {
             HStack(spacing: PVSpacing.space3 + PVSpacing.spacePx) {
@@ -125,6 +132,38 @@ struct SourcesSplitRow: View {
             .accessibilityLabel(Text(L10n.Sources.needsArtifact))
             .accessibilityHint(Text(L10n.Sources.needsArtifactTooltip))
             .accessibilityIdentifier("sources.row.\(source.id).graphBlocked")
+        }
+    }
+
+    @ViewBuilder
+    private var graphCountLine: some View {
+        if countsLoading && progress == nil {
+            Rectangle()
+                .fill(PVColor.borderSubtle)
+                .frame(height: 1)
+                .padding(.trailing, PVSpacing.space3)
+                .padding(.vertical, 5)
+                .accessibilityHidden(true)
+        } else if (progress?.subjectCount ?? 0) == 0 {
+            HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space2) {
+                Text(verbatim: L10n.Sources.graphSubjectCount(0))
+                    .font(PVFont.mono(size: PVTypeScale.micro))
+                Text(verbatim: "·")
+                    .font(PVFont.mono(size: PVTypeScale.micro))
+                Text(L10n.Sources.graphNotStarted)
+                    .font(PVFont.body(size: PVTypeScale.micro))
+                    .italic()
+            }
+            .foregroundStyle(PVColor.textMuted)
+            .lineLimit(1)
+        } else if let progress {
+            Text(verbatim: L10n.Sources.graphCountLine(
+                subjects: progress.subjectCount,
+                observations: progress.observationCount
+            ))
+            .font(PVFont.mono(size: PVTypeScale.micro))
+            .foregroundStyle(PVColor.textMuted)
+            .lineLimit(1)
         }
     }
 }
