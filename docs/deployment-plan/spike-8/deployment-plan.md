@@ -149,7 +149,7 @@ S8-D10 ────────────────────▶ S8-19  Ev
 - [x] S8-07 — Source page enhancements (Evidence graph jump + metadata dates as text + delete + clickable `url` + brief bundle) → [`completed.md`](completed.md)
 - [x] S8-D5 — Design: Sources list refresh → [`completed.md`](completed.md)
 - [x] S8-08 — Sources list refresh (graph-progress counts + brief bundle) → [`completed.md`](completed.md)
-- [ ] S8-09 — Cross-resource FKs: Artifact / Citation no longer CASCADE → [`completed.md`](completed.md)
+- [x] S8-09 — Cross-resource FKs: Artifact / Citation / property terms no longer CASCADE → [`completed.md`](completed.md)
 - [ ] S8-12 — Delete-impact registry + `GetDeleteImpact` → [`completed.md`](completed.md)
 - [ ] S8-D9 — Design: shared delete confirm / blocked notice → [`completed.md`](completed.md)
 - [ ] S8-13 — DeleteImpact recipe → [`completed.md`](completed.md)
@@ -845,7 +845,7 @@ Enhancement of shipped card trash. Trash on every card; DeleteImpact confirm or 
 
 ## S8-09 — PR: Cross-resource FKs (`NO ACTION`)
 
-One format step. Only the two FKs that treat a **different resource** as a child: `artifacts.source_id` and `citations.artifact_id`. SQLite cannot `ALTER` the action — rebuild those two tables (`PRAGMA foreign_keys=OFF`, copy, rename, `foreign_key_check`). Follow [`add-catalog-migration`](../../../.cursor/skills/add-catalog-migration/SKILL.md) (`000030.sql`). Update the CREATE TABLE copies in `interpretation-layer-data-model.md` / `source-layer-data-model.md`.
+One format step. The three FKs that treat a **different resource** as a child: `artifacts.source_id`, `citations.artifact_id`, and `property_terms.property_id`. SQLite cannot `ALTER` the action — rebuild those tables (`PRAGMA foreign_keys=OFF`, copy, rename, `foreign_key_check`). Follow [`add-catalog-migration`](../../../.cursor/skills/add-catalog-migration/SKILL.md) (`000030.sql`). Update the CREATE TABLE copies in `interpretation-layer-data-model.md` / `source-layer-data-model.md`.
 
 **Do not** strip CASCADE from facets (notes, metadata, positions, …). Those stay. Existing `Delete` functions keep working.
 

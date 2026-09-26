@@ -299,7 +299,7 @@ func TestArtifacts(t *testing.T) {
 			},
 		},
 		{
-			name: "source delete cascades artifacts file remains",
+			name: "source delete refused while artifact exists",
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				src := mustSource(t, c)
@@ -314,11 +314,36 @@ func TestArtifacts(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := db.Exec(`DELETE FROM sources WHERE id = ?`, src.ID); err != nil {
+				if _, err := db.Exec(`DELETE FROM sources WHERE id = ?`, src.ID); err == nil {
+					t.Fatal("expected source delete to fail while an artifact remains")
+				}
+				if artifactCount(t, c) != 1 {
+					t.Fatalf("artifact count %d", artifactCount(t, c))
+				}
+				if _, err := files.Lookup(c, f.ID); err != nil {
+					t.Fatalf("file retained: %v", err)
+				}
+			},
+		},
+		{
+			name: "artifact without citation deletes file remains",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				src := mustSource(t, c)
+				f := mustFile(t, c, "scan.bin", []byte("scan"))
+				a, err := Create(c, userID, CreateInput{SourceID: src.ID, FileID: f.ID, Label: "Scan"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				db, err := c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := db.Exec(`DELETE FROM artifacts WHERE id = ?`, a.ID); err != nil {
 					t.Fatal(err)
 				}
 				if artifactCount(t, c) != 0 {
-					t.Fatalf("cascaded count %d", artifactCount(t, c))
+					t.Fatalf("count %d", artifactCount(t, c))
 				}
 				if _, err := files.Lookup(c, f.ID); err != nil {
 					t.Fatalf("file retained: %v", err)
