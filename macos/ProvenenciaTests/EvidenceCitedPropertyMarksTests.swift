@@ -29,6 +29,11 @@ struct EvidenceCitedPropertyMarksTests {
         )
     }
 
+    @Test func citedRowInsetAlwaysReservesGutter() {
+        #expect(EvidenceCitedPropertyMarks.leadingInset(shell: 13) == 24)
+        #expect(EvidenceCitedPropertyMarks.leadingInset(shell: 11) == 22)
+    }
+
     @Test func twoNamesAreBothConflicted() {
         let rows = [
             observation(id: "a", key: "name", value: "Wm Robins"),

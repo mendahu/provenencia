@@ -2,8 +2,15 @@ import Foundation
 
 /// Conflict / negated marks and extra-row filtering for cited graph cards (S8-06).
 enum EvidenceCitedPropertyMarks {
-    /// Left gutter on every row of a card that holds a conflict bracket.
+    /// Reserved leading gutter on every cited property row so values align
+    /// whether a bracket is painted or not (board: 13px shell + 11px = 24px).
     static let conflictGutterWidth: CGFloat = 11
+
+    /// Leading inset for a cited row. The gutter is added to the shell, not
+    /// substituted for it, and is reserved on every row.
+    static func leadingInset(shell: CGFloat) -> CGFloat {
+        shell + conflictGutterWidth
+    }
 
     /// How many times each `propertyKey` appears on this card.
     static func conflictCounts(in observations: [CatalogObservation]) -> [String: Int] {

@@ -8,26 +8,26 @@ struct EvidenceCitedPropertyRowStyle {
     var leadingInset: CGFloat
     var trailingInset: CGFloat
 
-    static func primary(_ style: EvidenceSubjectKindStyle, hasConflict: Bool) -> EvidenceCitedPropertyRowStyle {
+    static func primary(_ style: EvidenceSubjectKindStyle) -> EvidenceCitedPropertyRowStyle {
         EvidenceCitedPropertyRowStyle(
             tint: style.tint,
             chip: style.chip,
             ink: style.ink,
-            leadingInset: hasConflict
-                ? EvidenceCitedPropertyMarks.conflictGutterWidth
-                : EvidenceSubjectCard.shellPaddingX,
+            leadingInset: EvidenceCitedPropertyMarks.leadingInset(
+                shell: EvidenceSubjectCard.shellPaddingX
+            ),
             trailingInset: EvidenceSubjectCard.shellPaddingX
         )
     }
 
-    static func bridge(hasConflict: Bool) -> EvidenceCitedPropertyRowStyle {
+    static func bridge() -> EvidenceCitedPropertyRowStyle {
         EvidenceCitedPropertyRowStyle(
             tint: PVColor.surfaceCard,
             chip: PVColor.surfaceHover,
             ink: PVColor.textMuted,
-            leadingInset: hasConflict
-                ? EvidenceCitedPropertyMarks.conflictGutterWidth
-                : EvidenceBridgeCard.shellPaddingX,
+            leadingInset: EvidenceCitedPropertyMarks.leadingInset(
+                shell: EvidenceBridgeCard.shellPaddingX
+            ),
             trailingInset: EvidenceBridgeCard.shellPaddingX
         )
     }
@@ -138,15 +138,11 @@ struct EvidenceCitedPropertyStack<Footer: View>: View {
         EvidenceCitedPropertyMarks.conflictCounts(in: observations)
     }
 
-    private var hasConflict: Bool {
-        counts.values.contains { $0 >= 2 }
-    }
-
     private var rowStyle: EvidenceCitedPropertyRowStyle {
         if let style {
-            return .primary(style, hasConflict: hasConflict)
+            return .primary(style)
         }
-        return .bridge(hasConflict: hasConflict)
+        return .bridge()
     }
 
     var body: some View {
@@ -194,10 +190,11 @@ private struct EvidenceConflictBracket: View {
 
     var body: some View {
         Path { path in
-            let x: CGFloat = 5
-            let tick: CGFloat = 4
-            let top: CGFloat = 6
-            let bottom = max(height - 6, top + 2)
+            // Board: left 8pt, width 5pt, 12pt inset from the run’s top/bottom.
+            let x: CGFloat = 8
+            let tick: CGFloat = 5
+            let top: CGFloat = 12
+            let bottom = max(height - 12, top + 2)
             path.move(to: CGPoint(x: x + tick, y: top))
             path.addLine(to: CGPoint(x: x, y: top))
             path.addLine(to: CGPoint(x: x, y: bottom))
@@ -207,7 +204,7 @@ private struct EvidenceConflictBracket: View {
             PVColor.warning,
             style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round)
         )
-        .frame(width: EvidenceCitedPropertyMarks.conflictGutterWidth, height: height, alignment: .leading)
+        .frame(width: EvidenceCitedPropertyMarks.conflictGutterWidth + 8, height: height, alignment: .leading)
         .allowsHitTesting(false)
     }
 }
