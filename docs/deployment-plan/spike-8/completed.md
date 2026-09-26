@@ -15,6 +15,7 @@ IDs stay stable (`S8-NN`, `S8-DN`). Do not renumber when moving steps here.
 | S8-D1 | Design | Auto Transcribe — trailing secondary button; combined replace + whole-page confirm; image-only |
 | S8-01 | PR | Vision OCR fills image-citation transcription; reusable `Features/OCR` module |
 | S8-02 | Descoped | PDF page-1 Artifact thumbs — not this spike; engine-only if revived |
+| S8-03 | PR | PDFKit live page + I-beam; scroll pans like Preview |
 
 ## Steps
 
@@ -101,3 +102,20 @@ Vision OCR fills the citation transcription field on **image** Artifacts. A loca
 ### S8-02 — PDF first-page Artifact thumbnails (descoped)
 
 Not this spike. PDF Artifacts keep the file-type glyph. A Swift/PDFKit derivative would not work on Windows and is not the client's job. If the idea returns, generate in `core/derivatives` like image thumbs. Parked: [`artifact-pdf-thumbnails.md`](../../ideas/artifact-pdf-thumbnails.md). The **S8-02** id is retired.
+
+### S8-03 — PDFKit live viewer + I-beam default
+
+Composer PDF Artifacts paint a live `PDFView` instead of a flattened page raster. Drag selects text (I-beam). Trackpad, mouse wheel, and scrollbars pan, matching Preview. Region locators stay unit-square y-down on the media box. Image Artifacts keep click-drag pan.
+
+**What shipped**
+
+- `ArtifactPDFViewport` snowflake: single-page `PDFView`, chrome zoom/page bind, native `PDFSelection`
+- `ArtifactViewerModel` keeps `PDFDocument` and no longer writes `displayImage` for PDF
+- Region overlay remounts on the live page (`mediaRectOverride`); armed tool still wins over select
+
+**What stayed out**
+
+- Find field / `findString` highlight (**S8-04**)
+- Paste transcription from selection (**S8-05**)
+- Vision / Live Text on PDF; changing image pan or wheel-zoom
+- Source-page Find; archiving **S8-D2** (still gates 04 / 05)

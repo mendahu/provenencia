@@ -257,7 +257,7 @@ final class CitationComposerModel {
         hasUnsavedDocumentWork || connections.hasTouchedWork || isTranscribing
     }
 
-    /// Image raster only — PDF page rasters also live on `displayImage`.
+    /// Image raster only — PDF Artifacts use a live `PDFDocument`, not `displayImage`.
     var imageRaster: NSImage? {
         guard isImageArtifact else { return nil }
         return artifactViewer.displayImage

@@ -33,6 +33,17 @@ final class ArtifactRegionOverlayView: NSView {
         }
     }
 
+    /// When set (PDF remount), media box in this view's flipped coordinates.
+    /// Image viewport leaves this nil and uses ``imageSize`` + centering pad.
+    var mediaRectOverride: CGRect? {
+        didSet {
+            if oldValue != mediaRectOverride {
+                needsDisplay = true
+                window?.invalidateCursorRects(for: self)
+            }
+        }
+    }
+
     var onCommit: ((ArtifactRegionDraft) -> Void)?
     var onDisarm: (() -> Void)?
 
@@ -241,7 +252,8 @@ final class ArtifactRegionOverlayView: NSView {
     // MARK: - Private
 
     private var imageRect: CGRect {
-        ArtifactRegionGeometry.imageRect(documentSize: bounds.size, imageSize: imageSize)
+        if let mediaRectOverride { return mediaRectOverride }
+        return ArtifactRegionGeometry.imageRect(documentSize: bounds.size, imageSize: imageSize)
     }
 
     private func handleFreeformClick(_ normalized: CGPoint) {

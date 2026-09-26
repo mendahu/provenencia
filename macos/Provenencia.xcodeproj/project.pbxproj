@@ -53,6 +53,7 @@
 		A70B00000000000000000004 /* ArtifactViewerContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000003 /* ArtifactViewerContent.swift */; };
 		A70B00000000000000000006 /* ArtifactViewerModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000005 /* ArtifactViewerModel.swift */; };
 		A70B00000000000000000008 /* ArtifactMediaViewport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000007 /* ArtifactMediaViewport.swift */; };
+		A70B00000000000000000019 /* ArtifactPDFViewport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000018 /* ArtifactPDFViewport.swift */; };
 		A70B0000000000000000000A /* ArtifactViewer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000009 /* ArtifactViewer.swift */; };
 		A70B0000000000000000000C /* ArtifactViewerModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B0000000000000000000B /* ArtifactViewerModelTests.swift */; };
 		A70B0000000000000000000F /* ArtifactRegionTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B0000000000000000000E /* ArtifactRegionTool.swift */; };
@@ -342,6 +343,7 @@
 		A70B00000000000000000003 /* ArtifactViewerContent.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactViewerContent.swift; sourceTree = "<group>"; };
 		A70B00000000000000000005 /* ArtifactViewerModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactViewerModel.swift; sourceTree = "<group>"; };
 		A70B00000000000000000007 /* ArtifactMediaViewport.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactMediaViewport.swift; sourceTree = "<group>"; };
+		A70B00000000000000000018 /* ArtifactPDFViewport.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactPDFViewport.swift; sourceTree = "<group>"; };
 		A70B00000000000000000009 /* ArtifactViewer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactViewer.swift; sourceTree = "<group>"; };
 		A70B0000000000000000000B /* ArtifactViewerModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactViewerModelTests.swift; sourceTree = "<group>"; };
 		A70B0000000000000000000E /* ArtifactRegionTool.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactRegionTool.swift; sourceTree = "<group>"; };
@@ -926,6 +928,7 @@
 				A70B00000000000000000003 /* ArtifactViewerContent.swift */,
 				A70B00000000000000000005 /* ArtifactViewerModel.swift */,
 				A70B00000000000000000007 /* ArtifactMediaViewport.swift */,
+				A70B00000000000000000018 /* ArtifactPDFViewport.swift */,
 				A70B00000000000000000009 /* ArtifactViewer.swift */,
 				A70B0000000000000000000E /* ArtifactRegionTool.swift */,
 				A70B00000000000000000010 /* ArtifactRegionGeometry.swift */,
@@ -1688,6 +1691,7 @@
 				A70B00000000000000000004 /* ArtifactViewerContent.swift in Sources */,
 				A70B00000000000000000006 /* ArtifactViewerModel.swift in Sources */,
 				A70B00000000000000000008 /* ArtifactMediaViewport.swift in Sources */,
+				A70B00000000000000000019 /* ArtifactPDFViewport.swift in Sources */,
 				A70B0000000000000000000A /* ArtifactViewer.swift in Sources */,
 				A70B0000000000000000000F /* ArtifactRegionTool.swift in Sources */,
 				A70B00000000000000000011 /* ArtifactRegionGeometry.swift in Sources */,
