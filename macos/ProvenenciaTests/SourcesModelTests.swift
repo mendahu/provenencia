@@ -295,7 +295,7 @@ struct SourcesModelTests {
     @Test func warmListQueriesLoadsGraphProgress() async {
         let store = FakeStore()
         store.graphProgressBySource["s1"] = SourceGraphProgress(
-            sourceId: "s1", subjectCount: 4, observationCount: 0, uncitedCount: 4
+            sourceId: "s1", subjectCount: 4, observationCount: 0
         )
         let (model, session) = makeModel(
             store: store,
@@ -309,13 +309,11 @@ struct SourcesModelTests {
             await waitForQuery(progressHandle)
         }
         #expect(model.graphProgress(for: "s1")?.subjectCount == 4)
-        #expect(model.graphProgress(for: "s1")?.uncitedCount == 4)
         #expect(model.graphCountsLoading == false)
     }
 
     @Test func graphProgressCopyMatchesBoard() {
         #expect(L10n.Sources.graphCountLine(subjects: 12, observations: 48) == "12 subjects · 48 observations")
-        #expect(L10n.Sources.graphUncitedCount(3) == "3 uncited")
         #expect(L10n.Sources.graphSubjectCount(0) == "0 subjects")
         #expect(
             L10n.Sources.graphZoneAccessibility(progress: nil, countsLoading: true)
@@ -330,10 +328,10 @@ struct SourcesModelTests {
         #expect(
             L10n.Sources.graphZoneAccessibility(
                 progress: SourceGraphProgress(
-                    sourceId: "s1", subjectCount: 12, observationCount: 48, uncitedCount: 3
+                    sourceId: "s1", subjectCount: 12, observationCount: 48
                 ),
                 countsLoading: false
-            ) == "Open graph, 12 subjects, 48 observations, 3 uncited"
+            ) == "Open graph, 12 subjects, 48 observations"
         )
     }
 }

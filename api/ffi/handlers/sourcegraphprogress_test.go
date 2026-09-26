@@ -87,7 +87,7 @@ func TestGetSourceGraphProgress(t *testing.T) {
 			},
 		},
 		{
-			name: "counts cited and uncited",
+			name: "counts subjects and observations",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, sourceID, artifactID, placeID, propID := citationFixture(t)
 				if _, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
@@ -113,7 +113,7 @@ func TestGetSourceGraphProgress(t *testing.T) {
 				if err := proto.Unmarshal(out, &got); err != nil {
 					t.Fatal(err)
 				}
-				if got.Progress.GetSubjectCount() != 1 || got.Progress.GetObservationCount() != 1 || got.Progress.GetUncitedCount() != 0 {
+				if got.Progress.GetSubjectCount() != 1 || got.Progress.GetObservationCount() != 1 {
 					t.Fatalf("%+v", got.Progress)
 				}
 			},

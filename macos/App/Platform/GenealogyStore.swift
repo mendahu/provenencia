@@ -791,14 +791,13 @@ struct SourceGraphProgress: Sendable, Equatable, Identifiable {
     var sourceId: String
     var subjectCount: Int
     var observationCount: Int
-    var uncitedCount: Int
 
     static func zeros(sourceId: String) -> SourceGraphProgress {
-        SourceGraphProgress(sourceId: sourceId, subjectCount: 0, observationCount: 0, uncitedCount: 0)
+        SourceGraphProgress(sourceId: sourceId, subjectCount: 0, observationCount: 0)
     }
 
     var isZero: Bool {
-        subjectCount == 0 && observationCount == 0 && uncitedCount == 0
+        subjectCount == 0 && observationCount == 0
     }
 }
 

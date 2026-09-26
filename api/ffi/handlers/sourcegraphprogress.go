@@ -59,6 +59,5 @@ func protoProgress(row sourcegraphprogress.Progress) *engine.SourceGraphProgress
 		SourceId:         uuidString(row.SourceID),
 		SubjectCount:     row.SubjectCount,
 		ObservationCount: row.ObservationCount,
-		UncitedCount:     row.UncitedCount,
 	}
 }

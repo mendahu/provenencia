@@ -3481,20 +3481,6 @@ enum L10n {
             )
         }
 
-        private static let uncitedCountOne = LocalizedStringResource(
-            "sources.list.uncitedCountOne",
-            defaultValue: "1 uncited",
-            comment: "Sources list graph-zone uncited count when exactly one subject has no Observation"
-        )
-
-        private static func uncitedCountOther(count: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
-                "sources.list.uncitedCountOther",
-                defaultValue: "\(count) uncited",
-                comment: "Sources list graph-zone uncited count; argument is uncited subject count"
-            )
-        }
-
         static func graphSubjectCount(_ count: Int) -> String {
             if count == 1 { return String(localized: subjectCountOne) }
             return String(localized: subjectCountOther(count: count))
@@ -3503,11 +3489,6 @@ enum L10n {
         static func graphObservationCount(_ count: Int) -> String {
             if count == 1 { return String(localized: observationCountOne) }
             return String(localized: observationCountOther(count: count))
-        }
-
-        static func graphUncitedCount(_ count: Int) -> String {
-            if count == 1 { return String(localized: uncitedCountOne) }
-            return String(localized: uncitedCountOther(count: count))
         }
 
         static func graphCountLine(subjects: Int, observations: Int) -> String {
@@ -3526,15 +3507,11 @@ enum L10n {
             if subjects == 0 {
                 return "\(open), \(graphSubjectCount(0)), \(String(localized: graphNotStarted))"
             }
-            var parts = [
+            return [
                 open,
                 graphSubjectCount(subjects),
                 graphObservationCount(progress?.observationCount ?? 0),
-            ]
-            if let uncited = progress?.uncitedCount, uncited > 0 {
-                parts.append(graphUncitedCount(uncited))
-            }
-            return parts.joined(separator: ", ")
+            ].joined(separator: ", ")
         }
 
         static let needsArtifact = LocalizedStringResource(

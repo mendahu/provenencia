@@ -26,13 +26,6 @@ const (
 		JOIN subjects s ON s.id = o.subject_id
 		GROUP BY s.source_id`
 
-	sqlCountUncitedBySource = `SELECT s.source_id, COUNT(*)
-		FROM subjects s
-		JOIN subject_types t ON t.id = s.subject_type_id
-		WHERE ` + canvasTypeSQL + `
-		AND NOT EXISTS (SELECT 1 FROM observations o WHERE o.subject_id = s.id)
-		GROUP BY s.source_id`
-
 	sqlCountSubjectsOne = `SELECT COUNT(*)
 		FROM subjects s
 		JOIN subject_types t ON t.id = s.subject_type_id
@@ -42,12 +35,6 @@ const (
 		FROM observations o
 		JOIN subjects s ON s.id = o.subject_id
 		WHERE s.source_id = ?`
-
-	sqlCountUncitedOne = `SELECT COUNT(*)
-		FROM subjects s
-		JOIN subject_types t ON t.id = s.subject_type_id
-		WHERE s.source_id = ? AND ` + canvasTypeSQL + `
-		AND NOT EXISTS (SELECT 1 FROM observations o WHERE o.subject_id = s.id)`
 )
 
 // Progress is graph-progress counts for one Source.
@@ -55,7 +42,6 @@ type Progress struct {
 	SourceID         []byte
 	SubjectCount     int32
 	ObservationCount int32
-	UncitedCount     int32
 }
 
 // List returns per-Source counts. Sources with all zeros are omitted.
@@ -72,11 +58,6 @@ func List(c *database.Catalog) ([]Progress, error) {
 	}
 	if err := scanGrouped(db, sqlCountObservationsBySource, func(p *Progress, n int32) {
 		p.ObservationCount = n
-	}, byID); err != nil {
-		return nil, err
-	}
-	if err := scanGrouped(db, sqlCountUncitedBySource, func(p *Progress, n int32) {
-		p.UncitedCount = n
 	}, byID); err != nil {
 		return nil, err
 	}
@@ -101,9 +82,6 @@ func Get(c *database.Catalog, sourceID []byte) (Progress, error) {
 		return Progress{}, err
 	}
 	if err := db.QueryRow(sqlCountObservationsOne, sourceID).Scan(&p.ObservationCount); err != nil {
-		return Progress{}, err
-	}
-	if err := db.QueryRow(sqlCountUncitedOne, sourceID).Scan(&p.UncitedCount); err != nil {
 		return Progress{}, err
 	}
 	return p, nil

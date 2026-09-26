@@ -1120,8 +1120,7 @@ struct GoStore: GenealogyStore {
         SourceGraphProgress(
             sourceId: row.sourceID,
             subjectCount: Int(row.subjectCount),
-            observationCount: Int(row.observationCount),
-            uncitedCount: Int(row.uncitedCount)
+            observationCount: Int(row.observationCount)
         )
     }
 

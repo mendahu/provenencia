@@ -547,10 +547,10 @@ struct WorkspaceSessionTests {
         let store = FakeStore()
         seedStore(store)
         store.graphProgressBySource["s1"] = SourceGraphProgress(
-            sourceId: "s1", subjectCount: 12, observationCount: 48, uncitedCount: 3
+            sourceId: "s1", subjectCount: 12, observationCount: 48
         )
         store.graphProgressBySource["s2"] = SourceGraphProgress(
-            sourceId: "s2", subjectCount: 4, observationCount: 0, uncitedCount: 4
+            sourceId: "s2", subjectCount: 4, observationCount: 0
         )
         let session = makeSession(store: store)
         let listKey = CatalogQueryKey.sourcesList(project: session.projectKey)
@@ -565,7 +565,7 @@ struct WorkspaceSessionTests {
         let sourcesAtLoad = listHandle.value
 
         store.graphProgressBySource["s1"] = SourceGraphProgress(
-            sourceId: "s1", subjectCount: 13, observationCount: 48, uncitedCount: 4
+            sourceId: "s1", subjectCount: 13, observationCount: 48
         )
         session.apply(.mutatedSourceGraph(sourceId: "s1"))
         var waited: UInt64 = 0
@@ -587,7 +587,7 @@ struct WorkspaceSessionTests {
         let store = FakeStore()
         seedStore(store)
         store.graphProgressBySource["s1"] = SourceGraphProgress(
-            sourceId: "s1", subjectCount: 1, observationCount: 1, uncitedCount: 0
+            sourceId: "s1", subjectCount: 1, observationCount: 1
         )
         let session = makeSession(store: store)
         let listHandle: QueryHandle<[CatalogSource]> = session.query(
@@ -600,7 +600,7 @@ struct WorkspaceSessionTests {
         await waitForFetchComplete(progressHandle)
         let sourcesAtLoad = listHandle.value
         store.graphProgressBySource["s1"] = SourceGraphProgress(
-            sourceId: "s1", subjectCount: 1, observationCount: 2, uncitedCount: 0
+            sourceId: "s1", subjectCount: 1, observationCount: 2
         )
         session.apply(.savedCitation(sourceId: "s1"))
         var waited: UInt64 = 0

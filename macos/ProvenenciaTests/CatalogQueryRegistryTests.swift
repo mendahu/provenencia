@@ -140,7 +140,7 @@ struct CatalogQueryRegistryTests {
         let store = FakeStore()
         seedStore(store)
         store.graphProgressBySource["s1"] = SourceGraphProgress(
-            sourceId: "s1", subjectCount: 12, observationCount: 48, uncitedCount: 3
+            sourceId: "s1", subjectCount: 12, observationCount: 48
         )
         let session = makeSession(store: store)
         let handle: QueryHandle<[String: SourceGraphProgress]> = session.query(
@@ -149,7 +149,6 @@ struct CatalogQueryRegistryTests {
         await waitForFetchComplete(handle)
         #expect(handle.value?["s1"]?.subjectCount == 12)
         #expect(handle.value?["s1"]?.observationCount == 48)
-        #expect(handle.value?["s1"]?.uncitedCount == 3)
     }
 
     @Test func connectRulesLoadFromStore() async {

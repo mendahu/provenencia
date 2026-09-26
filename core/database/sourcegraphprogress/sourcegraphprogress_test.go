@@ -166,8 +166,8 @@ func TestSourceGraphProgress(t *testing.T) {
 		if !ok {
 			t.Fatalf("worked missing: %+v", rows)
 		}
-		if got.SubjectCount != 2 || got.ObservationCount != 1 || got.UncitedCount != 1 {
-			t.Fatalf("got %+v want subjects=2 obs=1 uncited=1", got)
+		if got.SubjectCount != 2 || got.ObservationCount != 1 {
+			t.Fatalf("got %+v want subjects=2 obs=1", got)
 		}
 	})
 
@@ -177,7 +177,7 @@ func TestSourceGraphProgress(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got.SubjectCount != 0 || got.ObservationCount != 0 || got.UncitedCount != 0 {
+		if got.SubjectCount != 0 || got.ObservationCount != 0 {
 			t.Fatalf("got %+v", got)
 		}
 		if !bytes.Equal(got.SourceID, s.empty.ID) {
@@ -191,7 +191,7 @@ func TestSourceGraphProgress(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got.SubjectCount != 2 || got.ObservationCount != 1 || got.UncitedCount != 1 {
+		if got.SubjectCount != 2 || got.ObservationCount != 1 {
 			t.Fatalf("got %+v", got)
 		}
 	})

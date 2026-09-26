@@ -1656,12 +1656,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         )
         let subjects = (subjectsBySource[sourceID] ?? []).filter { !sourceTypeIDs.contains($0.subjectTypeID) }
         let observations = observationsBySource[sourceID] ?? []
-        let cited = Set(observations.map(\.subjectID))
         return SourceGraphProgress(
             sourceId: sourceID,
             subjectCount: subjects.count,
-            observationCount: observations.count,
-            uncitedCount: subjects.filter { !cited.contains($0.id) }.count
+            observationCount: observations.count
         )
     }
 

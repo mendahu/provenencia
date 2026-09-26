@@ -1277,7 +1277,8 @@ message SourceGraphProgress {
   string source_id = 1;
   int32 subject_count = 2;
   int32 observation_count = 3;
-  int32 uncited_count = 4;
+  reserved 4;
+  reserved "uncited_count";
 }
 
 message ListSourceGraphProgressRequest {

@@ -5502,30 +5502,6 @@
         }
       }
     },
-    "sources.list.uncitedCountOne": {
-      "comment": "Sources list graph-zone uncited count when exactly one subject has no Observation",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 uncited"
-          }
-        }
-      }
-    },
-    "sources.list.uncitedCountOther": {
-      "comment": "Sources list graph-zone uncited count; argument is uncited subject count",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld uncited"
-          }
-        }
-      }
-    },
     "sources.page.addArtifact": {
       "comment": "Button to open the Add Artifact dialog",
       "extractionState": "manual",

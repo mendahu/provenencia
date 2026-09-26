@@ -23,7 +23,7 @@ IDs stay stable (`S8-NN`, `S8-DN`). Do not renumber when moving steps here.
 | S8-06 | PR | Graph chrome: row marks, Source-page jump, richer bridge sentences, Add property on bridges |
 | S8-D4 | Design | Source page — Evidence graph jump; text metadata; delete; url links |
 | S8-07 | PR | Source page jump + text metadata + delete + urlshape + credibility pin |
-| S8-D5 | Design | Sources list — graph-zone counts; uncited trailing; 248pt zone |
+| S8-D5 | Design | Sources list — graph-zone counts; 248pt zone |
 | S8-08 | PR | Sources list graph-progress counts on a separate cache map |
 
 ## Steps
@@ -224,7 +224,7 @@ Shipped the S8-D4 Source-page pass. The identity header jumps to this Source’s
 
 ### S8-D5 — Design: Sources list refresh
 
-**Board pick:** keep the split row. Graph-progress counts sit on a second line in the graph zone (`12 subjects · 48 observations`, 11px mono muted). The zone widens 210 → **248px**. Uncited trails the zone label on the first line when non-zero. Zero subjects read `0 subjects · not started` (italic). No-Artifact rows stay blocked with no count line. Loading is a 6px inset rule, not a dash.
+**Board pick:** keep the split row. Graph-progress counts sit on a second line in the graph zone (`12 subjects · 48 observations`, 11px mono muted). The zone widens 210 → **248px**. Zero subjects read `0 subjects · not started` (italic). No-Artifact rows stay blocked with no count line. Loading is a 6px inset rule, not a dash. Trailing uncited was drawn, then dropped from the shipped list (quiet and not useful).
 
 Agreed: counts are not a third click; they do not ride `CatalogSource` / `sourcesList`.
 
@@ -236,7 +236,7 @@ Shipped the S8-D5 list pass. Each Source shows whether its Evidence graph has be
 
 **What shipped**
 
-- Graph zone: subject + observation counts; trailing uncited when > 0; `0 subjects · not started`; skeleton rule while the count map loads
+- Graph zone: subject + observation counts; `0 subjects · not started`; skeleton rule while the count map loads
 - Zone width 248pt; no-Artifact rows stay blocked with no numbers
 - `ListSourceGraphProgress` / `GetSourceGraphProgress` aggregates (canvas subjects minus `source` type; observations via subject home). Catalog `000029` adds `observations_subject_id_idx`
 - Session key `.sourceGraphProgress` is one project map. Warm is the List RPC. Graph / composer writes Get-one and `setQueryValue` merge that Source only — `sourcesList` is untouched
@@ -246,3 +246,4 @@ Shipped the S8-D5 list pass. Each Source shows whether its Evidence graph has be
 - Counts on `GetSources` / `CatalogSource`
 - A Subjects list destination or filtering the list by empty graph
 - Source-page count chrome
+- Trailing uncited tally on the graph zone (drawn on the board, then dropped)

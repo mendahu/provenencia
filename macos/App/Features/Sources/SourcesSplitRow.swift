@@ -95,18 +95,9 @@ struct SourcesSplitRow: View {
                 HStack(alignment: .top, spacing: PVSpacing.space3 + PVSpacing.spacePx) {
                     PVIcon(.network, size: 16)
                     VStack(alignment: .leading, spacing: PVSpacing.space1) {
-                        HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space3) {
-                            Text(L10n.Sources.openGraph)
-                                .font(PVFont.body(size: PVTypeScale.bodySmall))
-                                .lineLimit(1)
-                            Spacer(minLength: 0)
-                            if let uncited = progress?.uncitedCount, uncited > 0, (progress?.subjectCount ?? 0) > 0 {
-                                Text(verbatim: L10n.Sources.graphUncitedCount(uncited))
-                                    .font(PVFont.mono(size: PVTypeScale.micro))
-                                    .foregroundStyle(PVColor.textMuted)
-                                    .lineLimit(1)
-                            }
-                        }
+                        Text(L10n.Sources.openGraph)
+                            .font(PVFont.body(size: PVTypeScale.bodySmall))
+                            .lineLimit(1)
                         graphCountLine
                     }
                 }
