@@ -21,6 +21,8 @@ struct ArtifactPDFViewport: NSViewRepresentable {
     var onCommitRegion: ((ArtifactRegionDraft) -> Void)?
     var onDisarmRegionTool: (() -> Void)?
     var freeformDeleteTooltip: String = ""
+    var findSelection: PDFSelection?
+    var findActivationID: Int = 0
 
     func makeCoordinator() -> Coordinator {
         Coordinator(onZoomChange: onZoomChange)
@@ -87,7 +89,9 @@ struct ArtifactPDFViewport: NSViewRepresentable {
             page: page,
             zoom: zoom,
             resetPage: resetPage,
-            selectionEnabled: overlayInput?.armedTool == nil
+            selectionEnabled: overlayInput?.armedTool == nil,
+            findSelection: findSelection,
+            findActivationID: findActivationID
         )
     }
 }
@@ -185,7 +189,9 @@ final class ArtifactPDFHostView: NSView {
         page: Int,
         zoom: CGFloat,
         resetPage: Bool,
-        selectionEnabled: Bool
+        selectionEnabled: Bool,
+        findSelection: PDFSelection?,
+        findActivationID: Int
     ) {
         if pdfView.document !== document {
             pdfView.document = document
@@ -210,7 +216,27 @@ final class ArtifactPDFHostView: NSView {
             pdfView.currentSelection = nil
         }
 
+        applyFindHighlight(findSelection, activationID: findActivationID)
+
         layoutPageOverlay()
+    }
+
+    private var lastFindActivationID = 0
+
+    private func applyFindHighlight(_ selection: PDFSelection?, activationID: Int) {
+        guard let selection else {
+            if pdfView.highlightedSelections != nil {
+                pdfView.highlightedSelections = nil
+            }
+            lastFindActivationID = 0
+            return
+        }
+        selection.color = NSColor(PVColor.markBackground)
+        pdfView.highlightedSelections = [selection]
+        if lastFindActivationID != activationID {
+            lastFindActivationID = activationID
+            pdfView.go(to: selection)
+        }
     }
 
     func layoutPageOverlay() {

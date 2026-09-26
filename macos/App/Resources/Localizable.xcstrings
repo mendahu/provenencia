@@ -9894,6 +9894,162 @@
         }
       }
     },
+    "artifactViewer.findToggle": {
+      "comment": "Opens PDF Find on the citation composer tool strip; also the find field prompt",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Find in PDF"
+          }
+        }
+      }
+    },
+    "artifactViewer.findUnavailable": {
+      "comment": "VoiceOver label for PDF Find when the document has no extractable text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Find unavailable, no text layer"
+          }
+        }
+      }
+    },
+    "artifactViewer.findField": {
+      "comment": "Accessibility label for the PDF Find keyword field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Find in PDF"
+          }
+        }
+      }
+    },
+    "artifactViewer.findPrevious": {
+      "comment": "PDF Find: go to the previous matching string",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous match"
+          }
+        }
+      }
+    },
+    "artifactViewer.findNext": {
+      "comment": "PDF Find: go to the next matching string",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next match"
+          }
+        }
+      }
+    },
+    "artifactViewer.findDone": {
+      "comment": "Closes the PDF Find row",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        }
+      }
+    },
+    "artifactViewer.findMatchOf": {
+      "comment": "Find field suffix; arguments are current match index then total matches",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld of %lld"
+          }
+        }
+      }
+    },
+    "artifactViewer.findNoteNoTextLayer": {
+      "comment": "PDF Find note when every page has empty extractable text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This PDF has no text layer — it’s a scanned image, so there is nothing to find"
+          }
+        }
+      }
+    },
+    "artifactViewer.findNoteNoMatches": {
+      "comment": "PDF Find note when the query hits nothing; argument is page count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No matches in %lld pages"
+          }
+        }
+      }
+    },
+    "artifactViewer.findNoteJumped": {
+      "comment": "PDF Find note after the active hit changes the viewer page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jumped to page %lld."
+          }
+        }
+      }
+    },
+    "artifactViewer.findNoteNextPage": {
+      "comment": "PDF Find note when the following hit is on another page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next match is on page %lld."
+          }
+        }
+      }
+    },
+    "artifactViewer.findNoteWrappedFirst": {
+      "comment": "PDF Find note after next wraps from the last hit to the first",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wrapped to the first match, page %lld"
+          }
+        }
+      }
+    },
+    "artifactViewer.findNoteWrappedLast": {
+      "comment": "PDF Find note after previous wraps from the first hit to the last",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wrapped to the last match, page %lld"
+          }
+        }
+      }
+    },
     "citationComposer.clearMenu": {
       "comment": "Opens the Clear region / Reset to entire artifact menu",
       "extractionState": "manual",
