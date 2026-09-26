@@ -74,8 +74,8 @@ Do **not** redesign the identity header, artifacts accordion, or notes stream. D
 | Saved value vs empty suggestion | **Delete** clears a saved value (`ClearSourceMetadata` — engine already exists). **Dismiss** hides an empty type suggestion. Do not merge those into one control. |
 | After delete | A type-suggested field returns to the suggestion list. An extra field disappears. |
 | `url` is text-shaped for external links | Resting saved `url` values look and act like links. Edit mode stays the same textarea as author. Empty suggestions are not links yet. |
-| Shape check, not reachability | Save rejects strings that are not a well-formed `http`/`https` URL with a host (`URL` / `URLComponents`). No HEAD, no DNS. Typos and `file:` / junk fail; a 404 site still saves. |
-| Open in the default browser | `NSWorkspace` / `openURL` — not a Provenencia web view. Saved values are already `http`/`https`. |
+| Shape check, not reachability | Save accepts `https://example.com` **or** a host-shaped string (`www.url.com`). Parse with `URL` / `URLComponents`; if there is no scheme, parse `https://` + the typed value and require a host. Reject `file:`, `javascript:`, spaces, and junk with no host. No HEAD, no DNS. Store what the researcher typed. |
+| Open in the default browser | `NSWorkspace` / `openURL`. If the saved string has no scheme, open `https://` + that string. Not a Provenencia web view. |
 | Provenance-time sort is not this spike | Do not invent a first-class publication-date control or a Sources-list date sort. Parked: [`source-provenance-date.md`](../../../ideas/source-provenance-date.md). |
 
 ### 2.1 Shipped metadata (match this)
@@ -118,8 +118,8 @@ Add dialog (already shipped): field ComboBox + value Input. Keep it.
 | --- | --- |
 | Jump to Evidence graph from the **existing** board frames (`hasArtifact` gate, **Evidence graph** copy, Back to the page) | Redesigning that jump; opening the graph with zero Artifacts |
 | Metadata section matches shipped quick-add / quick-edit; all fields text; **delete** on saved values (`ClearSourceMetadata`) | Rebuilding Add / suggestions / reorder from scratch; a first-class provenance-date field or list sort |
-| Saved `url` values styled as links; click opens the default browser (`http`/`https`) | In-app browser / WebView; making `text` fields clickable |
-| Save-time `url` shape check (`URL`/`URLComponents`, scheme + host) | Reachability, allow-lists, or a custom parser |
+| Saved `url` values styled as links; click opens the default browser | In-app browser / WebView; making `text` fields clickable |
+| Save-time `url` shape check (`http`/`https` **or** host-only like `www.url.com`) | Requiring a scheme; reachability; allow-lists |
 | Catalog + FFI: drop `data_type = date` / `date_value_id` on source metadata; keep `value_text` | Removing DateValue from Observations / the composer |
 | L10n + VoiceOver for delete, date-as-text, links, `url` field error, and the already-designed jump | Commentary surface; deleting a metadata-**field** vocabulary row (Source Fields page) |
 | Further items **added to this brief** before the PR starts | A second Source-page visuals PR |
@@ -138,7 +138,7 @@ If more bundle items land after the board is first drawn, **amend this brief** a
 | SP-4 | Each **saved** metadata row has a **delete** that clears the value (`ClearSourceMetadata`). Not the suggestion dismiss ×. Suggested fields return to the suggestion list; extras vanish. |
 | SP-5 | Leave the existing Jump to Evidence graph frames untouched. |
 | SP-6 | A saved `url` value is styled as a **link** (`PVColor.textLink` + underline). Click opens it in the default external browser. Pencil / delete unchanged. Do not invent a `PVLink` kit primitive. |
-| SP-7 | Saving a `url` field requires a well-formed `http`/`https` URL with a host (`URL` / `URLComponents`). Inline edit and the Add dialog show the existing field error. Engine rejects the same shape so FFI cannot write junk. No network check. |
+| SP-7 | Saving a `url` field requires a host-shaped value: `http`/`https` with a host, **or** a scheme-less host (`www.url.com`). If there is no scheme, validate by parsing `https://` + the typed string and requiring a host. Store the typed string. Reject `file:` / `javascript:` / junk. Field error on Add and inline edit; same rule in Go `validateValue`. No network check. |
 | SP-8 | Further items get their own `SP-n` rows when scoped. |
 
 ---
@@ -149,7 +149,7 @@ If more bundle items land after the board is first drawn, **amend this brief** a
 2. Metadata — saved row: pencil edit as today, plus **delete**. After delete, a suggested field is an empty dashed row again.
 3. Metadata — extra (non-suggested) field deleted: row gone; field available in Add again.
 4. Metadata — saved `url` row: link-styled value; click opens the browser; pencil edits; delete still works.
-5. Metadata — `url` save with a typo / missing host / `file:` shows the field error and does not write.
+5. Metadata — `url` save: `www.url.com` and `https://example.com` succeed; typo / `file:` / no host shows the field error.
 6. *(Add frames here as more bundle items are scoped.)*
 
 ---
@@ -171,7 +171,7 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them.
 | Confirm | Component | Ship | `DesignSystem/Components/Confirm/` | Only if delete confirms. `item:` snapshot. |
 | DateValue editor form | Snowflake | **Remove** from this page | `Features/Dates/DateValueEditorForm.swift` | Keep for the citation composer. Do not instance here. |
 | Input / Field / ComboBox / FormDialog | Component | Ship | `DesignSystem/Components/` | Add dialog + suggestion input as shipped. |
-| Source page metadata tests | Test | **Extend** | `ProvenenciaTests/SourcePageModelTests.swift` | Date-named field saves as text; delete clears; no date payload; `url` save accepts `https://example.com` and rejects junk / `file:`. |
+| Source page metadata tests | Test | **Extend** | `ProvenenciaTests/SourcePageModelTests.swift` | Date-named field saves as text; delete clears; no date payload; `url` save accepts `https://example.com` and `www.url.com`; rejects junk / `file:`. |
 
 ### Explicit non-goals
 
