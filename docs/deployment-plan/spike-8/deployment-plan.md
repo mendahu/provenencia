@@ -124,8 +124,8 @@ S8-D6  Delete paths
 - [x] S8-03 — PDFKit live viewer + I-beam default → [`completed.md`](completed.md)
 - [x] S8-04 — PDF Find in the tool strip → [`completed.md`](completed.md)
 - [x] S8-05 — Paste transcription from PDF selection → [`completed.md`](completed.md)
-- [ ] S8-D3 — Design: Evidence graph visual enhancements → [`completed.md`](completed.md)
-- [ ] S8-06 — Graph visual enhancements (badges, Source jump, bridge copy + Add property) → [`completed.md`](completed.md)
+- [x] S8-D3 — Design: Evidence graph visual enhancements → [`completed.md`](completed.md)
+- [x] S8-06 — Graph visual enhancements (badges, Source jump, bridge copy + Add property) → [`completed.md`](completed.md)
 - [ ] S8-D4 — Design: Source page enhancements → [`completed.md`](completed.md)
 - [ ] S8-07 — Source page enhancements (Evidence graph jump + brief bundle) → [`completed.md`](completed.md)
 - [ ] S8-D5 — Design: Sources list refresh → [`completed.md`](completed.md)
@@ -705,7 +705,7 @@ Transcription-row control for PDF: copy current `PDFSelection` string into `tran
 
 ## S8-D3 — Design: Evidence graph visual enhancements
 
-Claude Design board for a **bundled** graph-chrome pass. Items: **conflict** + **negated** row badges; always-on **Source-page jump**; **bridge sentences** that prefer endpoint identity Properties; **Add property** on bridge cards. Brief: [`design/S8-D3-graph-visuals.md`](design/S8-D3-graph-visuals.md). Gates **S8-06**.
+Claude Design board for a **bundled** graph-chrome pass. Items: **conflict** + **negated** row marks; always-on **Source-page jump**; **bridge sentences** that prefer endpoint identity Properties; **Add property** on bridge cards. Brief: [`design/archive/S8-D3-graph-visuals.md`](design/archive/S8-D3-graph-visuals.md). Gates **S8-06**. **Done.** Ochre conflict bracket + “Not” prefix (not `PVBadge`); ghost **Jump to Source page**; identity-Observation nouns; Add property + extra non-edge rows on bridges.
 
 Does **not** design the composer rethink (**S8-D7**) or denied-lines. Source-page → graph is **S8-D4**. **Descoped:** incomplete-bridge chrome, collapse/expand, density filters, undo, unplaced tray, minimap.
 
@@ -713,7 +713,7 @@ Does **not** design the composer rethink (**S8-D7**) or denied-lines. Source-pag
 
 ## S8-06 — PR: Graph visual enhancements
 
-One Evidence graph chrome pass against **S8-D3**. Competing Observations stay as separate rows. Duplicate `propertyKey` → conflict badge on each row; `polarity = negative` → negated mark (may stack). Header (or equivalent) **opens the same Source’s detail page**. Cited bridge sentences prefer each endpoint’s identity Observation (`name` / `event_type` / `toponym`), then working label. Bridge cards get **Add property** (reuse `composerLocation(for:)`) and show extra **non-edge** Observation rows. Further items listed on the brief at PR start ship here.
+**Done.** One Evidence graph chrome pass against **S8-D3**. Competing Observations stay as separate rows. Duplicate `propertyKey` → ochre gutter bracket on the run; `polarity = negative` → “Not” prefix (may stack). Header **Jump to Source page** opens the same Source’s detail page. Cited bridge sentences prefer each endpoint’s identity Observation (`name` / `event_type` / `toponym`), then working label. Bridge cards get **Add property** (reuse `composerLocation(for:)`) and show extra **non-edge** Observation rows.
 
 | | |
 | --- | --- |

@@ -99,8 +99,12 @@ struct ObservationRow: Identifiable, Equatable {
         }
     }
 
+    var isNegated: Bool {
+        values.polarity == ObservationPolarity.negative.rawValue
+    }
+
     var polarityMenuTitle: String {
-        if values.polarity == ObservationPolarity.negative.rawValue {
+        if isNegated {
             return String(localized: L10n.CitationComposer.affirmObservation)
         }
         return String(localized: L10n.CitationComposer.negateObservation)

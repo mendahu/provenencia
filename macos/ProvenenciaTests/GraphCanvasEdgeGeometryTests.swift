@@ -407,9 +407,11 @@ struct GraphCanvasEdgeGeometryTests {
         let longPlaced = placed(person: "Bartholomew", event: "the Baptism")
         let oneLine = EvidenceBridgeCard.contentHeight(for: shortPlaced, in: snapshot(for: shortPlaced))
         let wrapped = EvidenceBridgeCard.contentHeight(for: longPlaced, in: snapshot(for: longPlaced))
-        let shell = EvidenceBridgeCard.shellPaddingTop * 2
+        let shell = EvidenceBridgeCard.shellPaddingTop
             + EvidenceBridgeCard.headerContentHeightCited
             + EvidenceBridgeCard.headerToBodySpacing
+            + EvidenceSubjectCard.stackHairline
+            + EvidenceSubjectCard.addPropertyInStackHeight
         // Shell plus a single body line — the old 88 pt floor pinned both cases to 88.
         #expect(oneLine > shell)
         #expect(oneLine < shell + 30)
@@ -596,5 +598,148 @@ struct GraphCanvasEdgeGeometryTests {
         let before = EvidenceGraphHitRefresh.token(subjects: [card(observationID: "obs-old")], bridges: [])
         let after = EvidenceGraphHitRefresh.token(subjects: [card(observationID: "obs-new")], bridges: [])
         #expect(before != after)
+    }
+
+    @Test func citedBridgeExposesAddPropertyWhenCanCite() {
+        let placed = SourceGraphPlacedBridge(
+            subject: CatalogSubject(
+                id: "b1",
+                ref: "CPA-1",
+                sourceID: "src",
+                subjectTypeID: "t",
+                label: "Working",
+                description: ""
+            ),
+            kind: .relationship,
+            typeLabel: "Relationship",
+            gridX: 0,
+            gridY: 0,
+            isCited: true,
+            observations: [
+                CatalogObservation(
+                    id: "obs-person",
+                    ref: "OBS-P",
+                    citationID: "cit-1",
+                    subjectID: "b1",
+                    propertyID: "p-person",
+                    polarity: ObservationPolarity.positive.rawValue,
+                    valueText: "Alice",
+                    valueInteger: nil,
+                    valueDateID: "",
+                    valueNameID: "",
+                    valueSubjectID: "s1",
+                    valueTermID: "",
+                    propertyKey: "person",
+                    propertyLabel: "Person",
+                    propertyValueType: PropertyValueType.subject.rawValue
+                ),
+                CatalogObservation(
+                    id: "obs-related",
+                    ref: "OBS-R",
+                    citationID: "cit-1",
+                    subjectID: "b1",
+                    propertyID: "p-related",
+                    polarity: ObservationPolarity.positive.rawValue,
+                    valueText: "John",
+                    valueInteger: nil,
+                    valueDateID: "",
+                    valueNameID: "",
+                    valueSubjectID: "s2",
+                    valueTermID: "",
+                    propertyKey: "related_to",
+                    propertyLabel: "Related to",
+                    propertyValueType: PropertyValueType.subject.rawValue
+                ),
+                CatalogObservation(
+                    id: "obs-note",
+                    ref: "OBS-N",
+                    citationID: "cit-2",
+                    subjectID: "b1",
+                    propertyID: "p-note",
+                    polarity: ObservationPolarity.positive.rawValue,
+                    valueText: "Named in the household",
+                    valueInteger: nil,
+                    valueDateID: "",
+                    valueNameID: "",
+                    valueSubjectID: "",
+                    valueTermID: "",
+                    propertyKey: "remark",
+                    propertyLabel: "Note",
+                    propertyValueType: PropertyValueType.text.rawValue
+                ),
+            ]
+        )
+        let snap = snapshot(for: placed)
+        let extras = EvidenceBridgeCard.extraObservations(for: placed)
+        #expect(extras.map(\.propertyKey) == ["remark"])
+        let actions = EvidenceBridgeCard.actionTargets(for: placed, in: snap, canCite: true)
+        #expect(actions.contains(where: { $0.id == EvidenceSubjectCard.addPropertyActionID }))
+        #expect(actions.contains(where: {
+            $0.id == EvidenceSubjectCard.editPropertyActionID(observationID: "obs-note")
+        }))
+        #expect(!actions.contains(where: {
+            $0.id == EvidenceSubjectCard.editPropertyActionID(observationID: "obs-person")
+        }))
+        let baseline = SourceGraphPlacedBridge(
+            subject: placed.subject,
+            kind: placed.kind,
+            typeLabel: placed.typeLabel,
+            gridX: 0,
+            gridY: 0,
+            isCited: true,
+            observations: placed.observations.filter { $0.propertyKey != "remark" }
+        )
+        #expect(
+            EvidenceBridgeCard.contentHeight(for: placed, in: snap)
+                > EvidenceBridgeCard.contentHeight(for: baseline, in: snapshot(for: baseline))
+        )
+    }
+
+    @Test func citedBridgeOmitsAddPropertyHitWhenCannotCite() {
+        let placed = SourceGraphPlacedBridge(
+            subject: CatalogSubject(
+                id: "b1",
+                ref: "CPA-1",
+                sourceID: "src",
+                subjectTypeID: "t",
+                label: "Working",
+                description: ""
+            ),
+            kind: .participation,
+            typeLabel: "Participation",
+            gridX: 0,
+            gridY: 0,
+            isCited: true
+        )
+        let actions = EvidenceBridgeCard.actionTargets(
+            for: placed,
+            in: snapshot(for: placed),
+            canCite: false
+        )
+        #expect(!actions.contains(where: { $0.id == EvidenceSubjectCard.addPropertyActionID }))
+        #expect(!actions.contains(where: { $0.id.hasPrefix("editProperty.") }))
+    }
+
+    @Test func uncitedBridgeAddPropertySitsOnTheCardWhenCanCite() {
+        let placed = SourceGraphPlacedBridge(
+            subject: CatalogSubject(
+                id: "b1",
+                ref: "CPA-1",
+                sourceID: "src",
+                subjectTypeID: "t",
+                label: "Working",
+                description: ""
+            ),
+            kind: .participation,
+            typeLabel: "Participation",
+            gridX: 0,
+            gridY: 0,
+            isCited: false
+        )
+        let snap = snapshot(for: placed)
+        let withCite = EvidenceBridgeCard.actionTargets(for: placed, in: snap, canCite: true)
+        #expect(withCite.contains(where: { $0.id == EvidenceSubjectCard.addPropertyActionID }))
+        let noCite = EvidenceBridgeCard.actionTargets(for: placed, in: snap, canCite: false)
+        #expect(!noCite.contains(where: { $0.id == EvidenceSubjectCard.addPropertyActionID }))
     }
 }

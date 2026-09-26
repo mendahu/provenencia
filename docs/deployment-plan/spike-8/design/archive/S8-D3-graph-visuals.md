@@ -3,12 +3,14 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 8 (pause and refine / data entry)  
 **Implements later as:** PR **S8-06** (one graph-chrome pass; more items join this brief)  
-**Depends on:** Shipped Evidence graph ([`EvidenceGraphView`](../../../../macos/App/Features/EvidenceGraph/EvidenceGraphView.swift), [`EvidenceSubjectCard`](../../../../macos/App/Features/EvidenceGraph/EvidenceSubjectCard.swift), [`EvidenceBridgeCard`](../../../../macos/App/Features/EvidenceGraph/EvidenceBridgeCard.swift), [`EvidenceBridgeEdgeSummary`](../../../../macos/App/Features/EvidenceGraph/EvidenceBridgeEdgeSummary.swift)); snapshot already lists every Observation ([`SourceGraphSnapshot`](../../../../macos/App/Features/Workspace/Session/SourceGraphSnapshot.swift)); Source page vs graph already distinct (`sourceSurface`)  
-**Related:** leftover conflicted / negated honesty from [`interpretation-graph-ui.md`](../../../ideas/archive/interpretation-graph-ui.md) — **row badges only**. Incomplete-bridge chrome and collapse/expand are **descoped**.  
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
-**Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
+**Depends on:** Shipped Evidence graph ([`EvidenceGraphView`](../../../../../macos/App/Features/EvidenceGraph/EvidenceGraphView.swift), [`EvidenceSubjectCard`](../../../../../macos/App/Features/EvidenceGraph/EvidenceSubjectCard.swift), [`EvidenceBridgeCard`](../../../../../macos/App/Features/EvidenceGraph/EvidenceBridgeCard.swift), [`EvidenceBridgeEdgeSummary`](../../../../../macos/App/Features/EvidenceGraph/EvidenceBridgeEdgeSummary.swift)); snapshot already lists every Observation ([`SourceGraphSnapshot`](../../../../../macos/App/Features/Workspace/Session/SourceGraphSnapshot.swift)); Source page vs graph already distinct (`sourceSurface`)  
+**Related:** leftover conflicted / negated honesty from [`interpretation-graph-ui.md`](../../../../ideas/archive/interpretation-graph-ui.md) — **row badges only**. Incomplete-bridge chrome and collapse/expand are **descoped**.  
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)  
+**Skill:** [`add-design-brief`](../../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.cursor/skills/add-ui-component/SKILL.md)
 
-Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](README.md) first.
+**Board pick:** ochre conflict **bracket** in an 11px gutter (not `PVBadge`); **"Not"** micro-caps before a denied value; ghost **Jump to Source page** after the muted title; identity-Observation nouns on bridges; Add property + extra non-edge rows on bridges; canvas legend while any mark is present.
+
+Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](../README.md) first.
 
 This brief is an **enhancement** of the shipped Evidence graph cards.
 
@@ -229,5 +231,5 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them.
 ## 8. Handoff
 
 1. Keep this brief open until the **S8-06** bundle is frozen, then archive it.
-2. Record in [`../completed.md`](../completed.md).
+2. Record in [`../../completed.md`](../../completed.md).
 3. Implement **S8-06** against the board.

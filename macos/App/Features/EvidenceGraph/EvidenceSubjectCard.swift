@@ -17,7 +17,7 @@ struct EvidenceSubjectCard: View {
     static let edgeLayoutHeight: CGFloat = 88
 
     /// Horizontal / top padding on the card shell (matches board).
-    static let shellPaddingX: CGFloat = 13
+    nonisolated static let shellPaddingX: CGFloat = 13
     static let shellPaddingTop: CGFloat = 11
     static let shellPaddingBottom: CGFloat = 12
     static let headerHeight: CGFloat = 28
@@ -343,15 +343,11 @@ private struct EvidenceSubjectCardChrome: View {
 
     /// Full-bleed ruled stack: kind-line hairlines between tint rows (board).
     private var citedPropertyStack: some View {
-        VStack(spacing: EvidenceSubjectCard.stackHairline) {
-            ForEach(placed.observations) { observation in
-                EvidenceCitedPropertyRow(
-                    observation: observation,
-                    style: style,
-                    isHovered: hoveredActionID
-                        == EvidenceSubjectCard.editPropertyActionID(observationID: observation.id)
-                )
-            }
+        EvidenceCitedPropertyStack(
+            observations: placed.observations,
+            style: style,
+            hoveredActionID: hoveredActionID
+        ) {
             addPropertyStackRow
         }
         .padding(.top, EvidenceSubjectCard.stackHairline)
@@ -495,68 +491,6 @@ private struct EvidenceSubjectCardChrome: View {
                 .fill(PVColor.graphRing)
                 .padding(-3)
         }
-    }
-}
-
-/// Compact Observation summary row on a cited primary card (feature snowflake).
-///
-/// Board: ruled tint row; hover lifts to chip + 2px kind-ink inset at the leading edge.
-private struct EvidenceCitedPropertyRow: View {
-    let observation: CatalogObservation
-    let style: EvidenceSubjectKindStyle
-    var isHovered: Bool = false
-
-    var body: some View {
-        HStack(alignment: .center, spacing: 8) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(verbatim: propertyLabel)
-                    .font(PVFont.mono(size: 9))
-                    .tracking(0.7)
-                    .textCase(.uppercase)
-                    .foregroundStyle(PVColor.textMuted)
-                    .lineLimit(1)
-                Text(verbatim: valueSummary)
-                    .font(PVFont.body(size: 13))
-                    .italic(isNegative)
-                    .foregroundStyle(isNegative ? PVColor.danger : PVColor.textPrimary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            PVIcon(.penLine, size: 12)
-                .foregroundStyle(PVColor.textFaint)
-        }
-        .padding(.horizontal, EvidenceSubjectCard.shellPaddingX)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, minHeight: EvidenceSubjectCard.propertyRowHeight, alignment: .leading)
-        .background(isHovered ? style.chip : style.tint)
-        .overlay(alignment: .leading) {
-            if isHovered {
-                Rectangle()
-                    .fill(style.ink)
-                    .frame(width: 2)
-            }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(verbatim: "\(propertyLabel), \(valueSummary)"))
-    }
-
-    private var propertyLabel: String {
-        let trimmed = observation.propertyLabel.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty { return trimmed }
-        return observation.propertyKey
-    }
-
-    private var valueSummary: String {
-        let rendered = ObservationValueDisplay.string(for: observation)
-        if rendered.isEmpty {
-            return String(localized: L10n.EvidenceGraph.citedValueUnavailable)
-        }
-        return rendered
-    }
-
-    private var isNegative: Bool {
-        observation.polarity.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == ObservationPolarity.negative.rawValue
     }
 }
 

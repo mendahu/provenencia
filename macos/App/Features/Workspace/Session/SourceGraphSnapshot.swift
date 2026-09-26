@@ -120,6 +120,11 @@ struct SourceGraphSnapshot: Sendable, Equatable {
     /// Joins catalog rows into placed primaries and bridges. Unplaced subjects
     /// and `source` types are omitted. Endpoint ids come from cited
     /// `value_subject_id` on the matching connect rule's edges.
+    ///
+    /// Each card's Observations are sorted with ``observationDisplayOrder``
+    /// (label, then key, then ref). Do not change that order: conflict
+    /// brackets join adjacent same-key rows, and a different sort splits
+    /// a competing Property into one-row marks.
     static func build(
         sourceId: String,
         subjects: [CatalogSubject],
@@ -143,6 +148,8 @@ struct SourceGraphSnapshot: Sendable, Equatable {
             else { continue }
 
             if let kind = EvidencePrimaryKind(rawValue: type.key) {
+                // Keep this sort. Conflict brackets join adjacent same-key
+                // rows; changing order can split a run into one-row marks.
                 let subjectObservations = (observationsBySubject[subject.id] ?? [])
                     .sorted(by: Self.observationDisplayOrder)
                 placed.append(
@@ -211,6 +218,8 @@ struct SourceGraphSnapshot: Sendable, Equatable {
     }
 
     /// Card row order: property label A→Z, then key, then Observation ref.
+    /// Same-key rows must stay adjacent so `EvidenceCitedPropertyMarks.conflictRuns`
+    /// can paint one bracket per competing Property.
     private static func observationDisplayOrder(
         _ lhs: CatalogObservation,
         _ rhs: CatalogObservation

@@ -68,8 +68,9 @@ extension ButtonStyle where Self == PVButtonStyle {
 
 /// A styled push button. Always takes a `LocalizedStringResource` label.
 ///
-/// `icon` prepends a leading glyph (`Button.jsx`'s `iconLeft`); `loading`
-/// swaps it for a spinner and disables the button (`Button.jsx`'s
+/// `icon` prepends a leading glyph (`Button.jsx`'s `iconLeft`); `iconRight`
+/// appends a trailing glyph (`Button.jsx`'s `iconRight`). `loading` swaps
+/// the leading glyph for a spinner and disables the button (`Button.jsx`'s
 /// `loading`) — the web spec spins a `loader` glyph in place, but a native
 /// `ProgressView` reads better as a real AppKit spinner than an animated
 /// SF Symbol would.
@@ -78,6 +79,7 @@ struct PVButton: View {
     private let variant: PVButtonVariant
     private let size: PVControlSize
     private let icon: PVSymbol?
+    private let iconRight: PVSymbol?
     private let loading: Bool
     private let action: () -> Void
 
@@ -86,6 +88,7 @@ struct PVButton: View {
         variant: PVButtonVariant = .secondary,
         size: PVControlSize = .md,
         icon: PVSymbol? = nil,
+        iconRight: PVSymbol? = nil,
         loading: Bool = false,
         action: @escaping () -> Void
     ) {
@@ -93,6 +96,7 @@ struct PVButton: View {
         self.variant = variant
         self.size = size
         self.icon = icon
+        self.iconRight = iconRight
         self.loading = loading
         self.action = action
     }
@@ -107,6 +111,9 @@ struct PVButton: View {
                     PVIcon(icon, size: size.iconGlyphSize)
                 }
                 Text(titleKey)
+                if let iconRight, !loading {
+                    PVIcon(iconRight, size: size.iconGlyphSize)
+                }
             }
         }
         .buttonStyle(.pv(variant, size: size))

@@ -75,7 +75,7 @@ struct CitationComposerObservationRow: View {
                 if case .error(let message) = row.state {
                     PVCallout(tone: .danger, message: message, compact: true)
                 }
-                valueEditor
+                valueRow
                 HStack {
                     Spacer(minLength: 0)
                     if canRevert {
@@ -137,6 +137,16 @@ struct CitationComposerObservationRow: View {
                     .font(PVFont.mono(size: PVTypeScale.caption))
                     .foregroundStyle(PVColor.textMuted)
             }
+        }
+    }
+
+    private var valueRow: some View {
+        HStack(alignment: .center, spacing: PVSpacing.space3) {
+            if row.isNegated {
+                PVBadge(L10n.CitationComposer.negatedBadge, tone: .danger)
+                    .accessibilityIdentifier("citationComposer.observation.negated.\(row.id.uuidString)")
+            }
+            valueEditor
         }
     }
 
