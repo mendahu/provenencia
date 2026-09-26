@@ -26,6 +26,7 @@ IDs stay stable (`S8-NN`, `S8-DN`). Do not renumber when moving steps here.
 | S8-D5 | Design | Sources list — graph-zone counts; 248pt zone |
 | S8-08 | PR | Sources list graph-progress counts on a separate cache map |
 | S8-09 | PR | Cross-resource FKs `NO ACTION`; Observation date/name exclusivity indexes |
+| S8-12 | PR | Delete-impact registry + `GetDeleteImpact`; no-UI `propertyterms.Delete` cutover |
 
 ## Steps
 
@@ -265,3 +266,23 @@ Catalog `000030` stops treating Artifacts, Citations, and property terms as CASC
 - `deleteimpact` / `GetDeleteImpact` (**S8-12**)
 - Official Source / Artifact / Citation `Delete` and delete chrome
 - Unique on `value_subject_id` / `value_term_id`
+
+### S8-12 — Delete-impact registry + `GetDeleteImpact`
+
+`core/database/deleteimpact` is §S8-09.3 / §S8-09.4 as code. Preview is a fetch; writers re-run `Impact` in-tx. Screen chrome stays later.
+
+**What shipped**
+
+- Register every live FK (resource / facet / owned outbound / optional / skip) plus reserved claim/narrative stub probes
+- `Impact` report: existence, extra gates (`not_found`, `edge_locked`, `infra`, `origin_locked`), inbound groups (cap 20, `total` uncapped)
+- Connection-facet split on `observations.subject_id` (edges + `role` / `relationship_type` do not block)
+- Owned-outbound helpers (`always` date/name; `ifUnused` files) and `ReleaseConnectionFacets`
+- FFI `GetDeleteImpact` (method 81); proto `WorkspaceLocation` matches Swift composer/graph fields
+- `propertyterms.Delete` cuts over to Impact (no `sqlInUse`)
+- Swift decode (`CatalogDeleteImpact`) with no trash chrome
+
+**What stayed out**
+
+- DeleteImpact recipe (**S8-13**) and screen writers (**S8-14**…**S8-19**)
+- Impact proto on `Error`
+- Source / Artifact / Citation `Delete`

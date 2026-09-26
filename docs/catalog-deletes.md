@@ -1,6 +1,6 @@
 # Catalog deletes
 
-Authoritative contract for official **resource** and **vocab** deletes. Spike 8 implements this (`S8-09`…`S8-19`). The table-by-table register lives in [`deployment-plan/spike-8/deployment-plan.md`](deployment-plan/spike-8/deployment-plan.md) §S8-09.3 until the spike archives; then fold that list here.
+Authoritative contract for official **resource** and **vocab** deletes. Spike 8 implements this (`S8-09`…`S8-19`). The table-by-table register lives in [`core/database/deleteimpact`](../core/database/deleteimpact) (policy list still in [`deployment-plan/spike-8/deployment-plan.md`](deployment-plan/spike-8/deployment-plan.md) §S8-09.3 until the spike archives).
 
 Skills: [`add-catalog-delete`](../.cursor/skills/add-catalog-delete/SKILL.md), [`add-catalog-migration`](../.cursor/skills/add-catalog-migration/SKILL.md).
 

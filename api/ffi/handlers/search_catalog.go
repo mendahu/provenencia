@@ -43,23 +43,41 @@ func locationFromProto(loc *engine.WorkspaceLocation) search.WorkspaceLocation {
 		return search.WorkspaceLocation{}
 	}
 	return search.WorkspaceLocation{
-		Section:  loc.GetSection(),
-		SourceID: loc.GetSourceId(),
-		FieldID:  loc.GetFieldId(),
-		TypeID:   loc.GetTypeId(),
-		Ref:      loc.GetRef(),
-		Title:    loc.GetTitle(),
+		Section:              loc.GetSection(),
+		SourceID:             loc.GetSourceId(),
+		FieldID:              loc.GetFieldId(),
+		TypeID:               loc.GetTypeId(),
+		SubjectID:            loc.GetSubjectId(),
+		CitationID:           loc.GetCitationId(),
+		ArtifactID:           loc.GetArtifactId(),
+		ObservationID:        loc.GetObservationId(),
+		ConnectFromSubjectID: loc.GetConnectFromSubjectId(),
+		ConnectToSubjectID:   loc.GetConnectToSubjectId(),
+		ConnectBridgeTypeKey: loc.GetConnectBridgeTypeKey(),
+		SourceSurface:        loc.GetSourceSurface(),
+		Ref:                  loc.GetRef(),
+		Title:                loc.GetTitle(),
+		SourceTitle:          loc.GetSourceTitle(),
 	}
 }
 
 func locationToProto(loc search.WorkspaceLocation) *engine.WorkspaceLocation {
 	return &engine.WorkspaceLocation{
-		Section:  loc.Section,
-		SourceId: loc.SourceID,
-		FieldId:  loc.FieldID,
-		TypeId:   loc.TypeID,
-		Ref:      loc.Ref,
-		Title:    loc.Title,
+		Section:              loc.Section,
+		SourceId:             loc.SourceID,
+		FieldId:              loc.FieldID,
+		TypeId:               loc.TypeID,
+		SubjectId:            loc.SubjectID,
+		CitationId:           loc.CitationID,
+		ArtifactId:           loc.ArtifactID,
+		ObservationId:        loc.ObservationID,
+		ConnectFromSubjectId: loc.ConnectFromSubjectID,
+		ConnectToSubjectId:   loc.ConnectToSubjectID,
+		ConnectBridgeTypeKey: loc.ConnectBridgeTypeKey,
+		SourceSurface:        loc.SourceSurface,
+		Ref:                  loc.Ref,
+		Title:                loc.Title,
+		SourceTitle:          loc.SourceTitle,
 	}
 }
 

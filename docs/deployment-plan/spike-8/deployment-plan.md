@@ -150,7 +150,7 @@ S8-D10 ────────────────────▶ S8-19  Ev
 - [x] S8-D5 — Design: Sources list refresh → [`completed.md`](completed.md)
 - [x] S8-08 — Sources list refresh (graph-progress counts + brief bundle) → [`completed.md`](completed.md)
 - [x] S8-09 — Cross-resource FKs: Artifact / Citation / property terms no longer CASCADE → [`completed.md`](completed.md)
-- [ ] S8-12 — Delete-impact registry + `GetDeleteImpact` → [`completed.md`](completed.md)
+- [x] S8-12 — Delete-impact registry + `GetDeleteImpact` → [`completed.md`](completed.md)
 - [ ] S8-D9 — Design: shared delete confirm / blocked notice → [`completed.md`](completed.md)
 - [ ] S8-13 — DeleteImpact recipe → [`completed.md`](completed.md)
 - [ ] S8-D12 — Design: Source page resource delete → [`completed.md`](completed.md)

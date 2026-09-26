@@ -1102,6 +1102,36 @@ struct GoStore: GenealogyStore {
         return resp.rows.map(Self.mapSourceGraphProgress)
     }
 
+    func getDeleteImpact(projectDir: String, kind: String, id: String) async throws -> CatalogDeleteImpact {
+        var req = Provenencia_Engine_V1_GetDeleteImpactRequest()
+        req.projectDir = projectDir
+        req.kind = kind
+        req.id = id
+        let resp: Provenencia_Engine_V1_GetDeleteImpactResponse = try await provenenciaCall(
+            method: CoreMethod.getDeleteImpact,
+            request: req
+        )
+        return CatalogDeleteImpact(
+            allowed: resp.allowed,
+            gate: Self.mapDeleteImpactGate(resp.gate),
+            groups: resp.groups.map { g in
+                CatalogDeleteImpactGroup(
+                    via: g.via,
+                    kind: g.kind,
+                    total: Int(g.total),
+                    listed: g.listed.map { item in
+                        CatalogDeleteImpactListed(
+                            id: item.id,
+                            ref: item.ref,
+                            title: item.title,
+                            location: Self.mapWorkspaceLocationFromProto(item.location)
+                        )
+                    }
+                )
+            }
+        )
+    }
+
     func getSourceGraphProgress(projectDir: String, sourceID: String) async throws -> SourceGraphProgress {
         var req = Provenencia_Engine_V1_GetSourceGraphProgressRequest()
         req.projectDir = projectDir
@@ -1238,6 +1268,15 @@ struct GoStore: GenealogyStore {
         p.typeID = loc.typeId ?? ""
         p.ref = loc.ref ?? ""
         p.title = loc.title ?? ""
+        p.subjectID = loc.subjectId ?? ""
+        p.citationID = loc.citationId ?? ""
+        p.artifactID = loc.artifactId ?? ""
+        p.observationID = loc.observationId ?? ""
+        p.sourceSurface = loc.sourceSurface.rawValue
+        p.connectFromSubjectID = loc.connectFromSubjectId ?? ""
+        p.connectToSubjectID = loc.connectToSubjectId ?? ""
+        p.connectBridgeTypeKey = loc.connectBridgeTypeKey ?? ""
+        p.sourceTitle = loc.sourceTitle ?? ""
         return p
     }
 
@@ -1249,9 +1288,32 @@ struct GoStore: GenealogyStore {
             sourceId: p.sourceID,
             fieldId: p.fieldID,
             typeId: p.typeID,
+            subjectId: p.subjectID,
+            citationId: p.citationID,
+            artifactId: p.artifactID,
+            observationId: p.observationID,
+            connectFromSubjectId: p.connectFromSubjectID,
+            connectToSubjectId: p.connectToSubjectID,
+            connectBridgeTypeKey: p.connectBridgeTypeKey,
+            sourceSurface: SourceSurface(rawValue: p.sourceSurface) ?? .page,
             ref: p.ref,
-            title: p.title
+            title: p.title,
+            sourceTitle: p.sourceTitle
         )
+    }
+
+    private static func mapDeleteImpactGate(
+        _ g: Provenencia_Engine_V1_DeleteImpactGate
+    ) -> CatalogDeleteImpactGate {
+        switch g {
+        case .ok: return .ok
+        case .inbound: return .inbound
+        case .notFound: return .notFound
+        case .edgeLocked: return .edgeLocked
+        case .infra: return .infra
+        case .originLocked: return .originLocked
+        case .unspecified, .UNRECOGNIZED: return .ok
+        }
     }
 
     private static func mapSearchHit(_ h: Provenencia_Engine_V1_SearchHit) -> CatalogSearchHit {

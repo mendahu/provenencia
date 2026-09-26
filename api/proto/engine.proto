@@ -90,6 +90,7 @@ enum Method {
   METHOD_GET_SUBJECT_FIELDS_WORKSPACE = 78;
   METHOD_LIST_SOURCE_GRAPH_PROGRESS = 79;
   METHOD_GET_SOURCE_GRAPH_PROGRESS = 80;
+  METHOD_GET_DELETE_IMPACT = 81;
 }
 
 message PingRequest {
@@ -735,12 +736,21 @@ message CloseCatalogSessionResponse {}
 // WorkspaceLocation is the navigable place payload shared by search hits and
 // (later) omnibar go(to:). Aligns with macOS WorkspaceLocation / WorkspaceSection.
 message WorkspaceLocation {
-  string section = 1;    // sources | source-types | source-fields | files
+  string section = 1;    // sources | source-types | source-fields | subject-fields
   string source_id = 2;
   string field_id = 3;
   string type_id = 4;
   string ref = 5;        // denormalized jump-menu cache
   string title = 6;      // denormalized jump-menu cache
+  string subject_id = 7;
+  string citation_id = 8;
+  string artifact_id = 9;
+  string observation_id = 10;
+  string source_surface = 11; // page | graph | citationComposer
+  string connect_from_subject_id = 12;
+  string connect_to_subject_id = 13;
+  string connect_bridge_type_key = 14;
+  string source_title = 15;
 }
 
 // SearchCatalog finds navigable catalog roots for the omnibar (S3-07+).
@@ -1296,6 +1306,42 @@ message GetSourceGraphProgressRequest {
 
 message GetSourceGraphProgressResponse {
   SourceGraphProgress progress = 1;
+}
+
+enum DeleteImpactGate {
+  DELETE_IMPACT_GATE_UNSPECIFIED = 0;
+  DELETE_IMPACT_GATE_OK = 1;
+  DELETE_IMPACT_GATE_INBOUND = 2;
+  DELETE_IMPACT_GATE_NOT_FOUND = 3;
+  DELETE_IMPACT_GATE_EDGE_LOCKED = 4;
+  DELETE_IMPACT_GATE_INFRA = 5;
+  DELETE_IMPACT_GATE_ORIGIN_LOCKED = 6;
+}
+
+message GetDeleteImpactRequest {
+  string project_dir = 1;
+  string kind = 2; // source | artifact | citation | observation | …
+  string id = 3;
+}
+
+message GetDeleteImpactResponse {
+  bool allowed = 1;
+  DeleteImpactGate gate = 2;
+  repeated DeleteImpactGroup groups = 3;
+}
+
+message DeleteImpactGroup {
+  string via = 1;
+  string kind = 2;
+  int32 total = 3;
+  repeated DeleteImpactListed listed = 4;
+}
+
+message DeleteImpactListed {
+  string id = 1;
+  string ref = 2;
+  string title = 3;
+  WorkspaceLocation location = 4;
 }
 
 // ErrorKind classifies a failure for client UX (tone, retry hints). Copy still

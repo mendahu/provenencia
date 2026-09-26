@@ -87,6 +87,35 @@ struct CatalogCredibilityGrade: Sendable, Equatable, Identifiable {
     var sortOrder: Int
 }
 
+enum CatalogDeleteImpactGate: String, Sendable, Equatable {
+    case ok
+    case inbound
+    case notFound = "not_found"
+    case edgeLocked = "edge_locked"
+    case infra
+    case originLocked = "origin_locked"
+}
+
+struct CatalogDeleteImpact: Sendable, Equatable {
+    var allowed: Bool
+    var gate: CatalogDeleteImpactGate
+    var groups: [CatalogDeleteImpactGroup]
+}
+
+struct CatalogDeleteImpactGroup: Sendable, Equatable {
+    var via: String
+    var kind: String
+    var total: Int
+    var listed: [CatalogDeleteImpactListed]
+}
+
+struct CatalogDeleteImpactListed: Sendable, Equatable, Identifiable {
+    var id: String
+    var ref: String
+    var title: String
+    var location: WorkspaceLocation
+}
+
 /// One omnibar / SearchCatalog hit (stable kinds: source, source_type, source_field).
 struct CatalogSearchHit: Sendable, Equatable, Identifiable {
     var kind: String
@@ -783,6 +812,8 @@ protocol GenealogyStore: Sendable {
     func listSourceGraphProgress(projectDir: String) async throws -> [SourceGraphProgress]
 
     func getSourceGraphProgress(projectDir: String, sourceID: String) async throws -> SourceGraphProgress
+
+    func getDeleteImpact(projectDir: String, kind: String, id: String) async throws -> CatalogDeleteImpact
 }
 
 /// Per-Source Evidence-graph counts for the Sources list (S8-08).
