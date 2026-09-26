@@ -104,6 +104,29 @@ func TestPropertyTerms(t *testing.T) {
 			},
 		},
 		{
+			name: "property delete refused while term exists",
+			run: func(t *testing.T, c *database.Catalog, userID, propID []byte) {
+				if _, err := Create(c, userID, propID, "Land Grant", ""); err != nil {
+					t.Fatal(err)
+				}
+				db, err := c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := db.Exec(`DELETE FROM properties WHERE id = ?`, propID); err == nil {
+					t.Fatal("expected property delete to fail while a term remains")
+				}
+				got, err := properties.GetByID(c, propID)
+				if err != nil || string(got.ID) != string(propID) {
+					t.Fatalf("property %v %+v", err, got)
+				}
+				list, err := ListByProperty(c, propID)
+				if err != nil || len(list) != 1 {
+					t.Fatalf("terms %v len=%d", err, len(list))
+				}
+			},
+		},
+		{
 			name: "duplicate user key",
 			run: func(t *testing.T, c *database.Catalog, userID, propID []byte) {
 				if _, err := Create(c, userID, propID, "Dup", ""); err != nil {

@@ -496,6 +496,28 @@ func TestCitations(t *testing.T) {
 			},
 		},
 		{
+			name: "artifact delete refused while citation exists",
+			run: func(t *testing.T) {
+				c, s := mustSeed(t)
+				if _, err := CreateWithObservations(c, userID, CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, nil); err != nil {
+					t.Fatal(err)
+				}
+				db, err := c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := db.Exec(`DELETE FROM artifacts WHERE id = ?`, s.artifact.ID); err == nil {
+					t.Fatal("expected artifact delete to fail while a citation remains")
+				}
+				var n int
+				if err := db.QueryRow(`SELECT COUNT(*) FROM artifacts WHERE id = ?`, s.artifact.ID).Scan(&n); err != nil || n != 1 {
+					t.Fatalf("artifact %d %v", n, err)
+				}
+			},
+		},
+		{
 			name: "count by source rejects short id",
 			run: func(t *testing.T) {
 				c, _ := mustSeed(t)

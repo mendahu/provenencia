@@ -104,7 +104,7 @@ Each Citation is independently resolvable from its `artifact_id` and locator. Ci
 CREATE TABLE citations (
     id                        BLOB PRIMARY KEY,
     ref                       TEXT UNIQUE NOT NULL,      -- e.g. CIT-3K9M2
-    artifact_id               BLOB NOT NULL REFERENCES artifacts(id) ON DELETE CASCADE,
+    artifact_id               BLOB NOT NULL REFERENCES artifacts(id),
     locator_json              TEXT NOT NULL,
     transcription             TEXT,
     description               TEXT,
@@ -116,6 +116,7 @@ CREATE TABLE citations (
 ```
 
 `ref` is a required short human-readable reference for UI and discussion (prefix `CIT`).
+`artifact_id` is `NO ACTION`: deleting an Artifact while Citations remain fails. Citation notes still CASCADE with the Citation.
 `transcription` preserves the researcher's reading of textual or spoken content within the cited evidence. It is intended to remain faithful to the evidence, including uncertainty where appropriate, rather than silently normalizing abbreviations, names, places, or other values. For example, `Wm Robins` may be transcribed as written and normalized to `William Robins` later through an Observation.
 
 `description` records what the researcher observes in the cited evidence. It is media-neutral and may describe visual, textual, audio, or other characteristics. It is not specifically an accessibility `alt_text` field.
@@ -638,7 +639,7 @@ Categorical values for Properties with `value_type = 'term'`. Same origin rules 
 ```sql
 CREATE TABLE property_terms (
     id           BLOB PRIMARY KEY,
-    property_id  BLOB NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+    property_id  BLOB NOT NULL REFERENCES properties(id),
     key          TEXT NOT NULL,
     origin       TEXT NOT NULL,             -- provenencia | user | plugin:<id>
     label        TEXT NOT NULL,
@@ -874,7 +875,14 @@ CREATE TABLE observations (
 
     CHECK (polarity IN ('positive', 'negative'))
 ) STRICT;
+
+CREATE UNIQUE INDEX observations_value_date_id_uidx
+    ON observations(value_date_id) WHERE value_date_id IS NOT NULL;
+CREATE UNIQUE INDEX observations_value_name_id_uidx
+    ON observations(value_name_id) WHERE value_name_id IS NOT NULL;
 ```
+
+DateValue and NameValue rows are exclusive to one Observation (`000030`). Do **not** unique `value_subject_id` or `value_term_id` — those are shared.
 
 `ref` is a required short human-readable reference for UI and discussion (prefix `OBS`).
 

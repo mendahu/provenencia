@@ -25,6 +25,7 @@ IDs stay stable (`S8-NN`, `S8-DN`). Do not renumber when moving steps here.
 | S8-07 | PR | Source page jump + text metadata + delete + urlshape + credibility pin |
 | S8-D5 | Design | Sources list — graph-zone counts; 248pt zone |
 | S8-08 | PR | Sources list graph-progress counts on a separate cache map |
+| S8-09 | PR | Cross-resource FKs `NO ACTION`; Observation date/name exclusivity indexes |
 
 ## Steps
 
@@ -247,3 +248,20 @@ Shipped the S8-D5 list pass. Each Source shows whether its Evidence graph has be
 - A Subjects list destination or filtering the list by empty graph
 - Source-page count chrome
 - Trailing uncited tally on the graph zone (drawn on the board, then dropped)
+
+### S8-09 — Cross-resource FKs (`NO ACTION`)
+
+Catalog `000030` stops treating Artifacts, Citations, and property terms as CASCADE children of another resource. Observation DateValue / NameValue rows cannot be shared.
+
+**What shipped**
+
+- Rebuild `artifacts` (`source_id` → `NO ACTION`), `citations` (`artifact_id` → `NO ACTION`), `property_terms` (`property_id` → `NO ACTION`)
+- Partial unique indexes on `observations.value_date_id` and `observations.value_name_id`
+- Facet CASCADEs (notes, metadata, layout, positions) and `sources.primary_artifact_id … ON DELETE SET NULL` unchanged
+- Data-model CREATE TABLE copies match
+
+**What stayed out**
+
+- `deleteimpact` / `GetDeleteImpact` (**S8-12**)
+- Official Source / Artifact / Citation `Delete` and delete chrome
+- Unique on `value_subject_id` / `value_term_id`

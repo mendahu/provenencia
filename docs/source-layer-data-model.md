@@ -328,14 +328,14 @@ An Artifact is a concrete evidentiary representation of a Source.
 CREATE TABLE artifacts (
     id              BLOB PRIMARY KEY,          -- UUIDv7, 16 bytes
     ref             TEXT UNIQUE NOT NULL,      -- e.g. ART-3K9M2
-    source_id       BLOB NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+    source_id       BLOB NOT NULL REFERENCES sources(id),
     file_id         BLOB REFERENCES files(id),
     label           TEXT NOT NULL,             -- required list headline
     description     TEXT
 ) STRICT;
 ```
 
-`ref` is required so Artifacts can be named in discussion independently of their Source (`ART-3K9M2` under `SRC-F4N2P`).
+`ref` is required so Artifacts can be named in discussion independently of their Source (`ART-3K9M2` under `SRC-F4N2P`). `source_id` is `NO ACTION`: deleting a Source while Artifacts remain fails. Facet rows (notes, metadata) still CASCADE with the Source.
 
 `label` is the required researcher-facing list headline (distinct from optional `description`).
 

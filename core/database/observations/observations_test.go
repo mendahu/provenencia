@@ -357,6 +357,59 @@ func TestObservations(t *testing.T) {
 			},
 		},
 		{
+			name: "two observations cannot share a date value",
+			run: func(t *testing.T) {
+				c, s := mustSeed(t)
+				year := 1842
+				res, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, []observations.Input{{
+					SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
+					Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year},
+				}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				dateID := res.Observations[0].ValueDateID
+				if len(dateID) != 16 {
+					t.Fatalf("date id %x", dateID)
+				}
+				_, err = observations.AddToCitation(c, userID, res.Citation.ID, []observations.Input{{
+					SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
+					ValueDateID: dateID,
+				}})
+				if err == nil {
+					t.Fatal("expected unique value_date_id to refuse a second observation")
+				}
+			},
+		},
+		{
+			name: "two observations cannot share a name value",
+			run: func(t *testing.T) {
+				c, s := mustSeed(t)
+				res, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, []observations.Input{{
+					SubjectID: s.person.ID, PropertyID: s.nameProp.ID,
+					Name: &namevalues.Value{Form: "Ada Lovelace"},
+				}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				nameID := res.Observations[0].ValueNameID
+				if len(nameID) != 16 {
+					t.Fatalf("name id %x", nameID)
+				}
+				_, err = observations.AddToCitation(c, userID, res.Citation.ID, []observations.Input{{
+					SubjectID: s.person.ID, PropertyID: s.nameProp.ID,
+					ValueNameID: nameID,
+				}})
+				if err == nil {
+					t.Fatal("expected unique value_name_id to refuse a second observation")
+				}
+			},
+		},
+		{
 			name: "update no-op records no revision",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
