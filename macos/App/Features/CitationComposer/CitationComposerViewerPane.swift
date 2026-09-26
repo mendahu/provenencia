@@ -5,6 +5,7 @@ struct CitationComposerViewerPane: View {
     @Bindable var model: CitationComposerModel
     @State private var clearMenu = PVContextMenuState()
     @State private var clearKeyboard = PVContextMenuKeyboard.inactive
+    @FocusState private var findFieldFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -69,7 +70,7 @@ struct CitationComposerViewerPane: View {
         )
     }
 
-    /// Capability layout: viewer chrome (page / Set page / zoom / radios) + Clear.
+    /// Capability layout: viewer chrome (page / Set page / zoom / radios) + Clear + Find.
     private var toolStrip: some View {
         VStack(spacing: 0) {
             HStack(spacing: PVSpacing.space5) {
@@ -83,13 +84,128 @@ struct CitationComposerViewerPane: View {
                 Spacer(minLength: 0)
 
                 clearMenuButton
+
+                if model.artifactViewer.kind == .pdf {
+                    findToggleButton
+                }
             }
             .frame(height: PVSpacing.hitMin)
             .padding(.horizontal, PVSpacing.space6)
             .disabled(model.isTranscribing)
             PVDivider()
+            if model.artifactViewer.kind == .pdf, model.artifactViewer.isFindPresented {
+                findRow
+                    .frame(height: PVSpacing.space10)
+                    .padding(.horizontal, PVSpacing.space6)
+                    .disabled(model.isTranscribing)
+                PVDivider()
+            }
         }
         .background(PVColor.surfaceCard)
+    }
+
+    private var findToggleButton: some View {
+        PVIconButton(
+            .search,
+            label: L10n.ArtifactViewer.findToggle,
+            accessibilityLabel: model.artifactViewer.findHasTextLayer
+                ? L10n.ArtifactViewer.findToggle
+                : L10n.ArtifactViewer.findUnavailable,
+            size: .sm,
+            isSelected: model.artifactViewer.isFindPresented
+        ) {
+            model.artifactViewer.toggleFind()
+            if model.artifactViewer.isFindPresented {
+                findFieldFocused = true
+            }
+        }
+        .background {
+            Button {
+                model.artifactViewer.openFind()
+                findFieldFocused = true
+            } label: {
+                EmptyView()
+            }
+            .keyboardShortcut("f", modifiers: .command)
+            .opacity(0)
+            .accessibilityHidden(true)
+        }
+        .accessibilityIdentifier("artifactViewer.findToggle")
+    }
+
+    private var findRow: some View {
+        let viewer = model.artifactViewer
+        let note = viewer.findStatusNote
+        return HStack(spacing: PVSpacing.space4) {
+            PVInput(
+                text: Binding(
+                    get: { viewer.findQuery },
+                    set: { viewer.findQuery = $0 }
+                ),
+                size: .sm,
+                prompt: L10n.ArtifactViewer.findToggle,
+                icon: .search,
+                suffix: viewer.findCountSuffix,
+                isInvalid: viewer.findIsInvalid,
+                focused: $findFieldFocused,
+                activateOnAppear: true
+            )
+            .frame(width: 220)
+            .disabled(!viewer.findHasTextLayer)
+            .onSubmit { viewer.findNext() }
+            .onKeyPress(keys: [.return], phases: .down) { press in
+                if press.modifiers.contains(.shift) {
+                    viewer.findPrevious()
+                    return .handled
+                }
+                return .ignored
+            }
+            .accessibilityLabel(Text(L10n.ArtifactViewer.findField))
+            .accessibilityIdentifier("artifactViewer.findField")
+
+            PVIconButton(
+                .chevronUp,
+                label: L10n.ArtifactViewer.findPrevious,
+                size: .sm
+            ) {
+                viewer.findPrevious()
+            }
+            .disabled(viewer.findMatchCount == 0)
+            .accessibilityIdentifier("artifactViewer.findPrevious")
+
+            PVIconButton(
+                .chevronDown,
+                label: L10n.ArtifactViewer.findNext,
+                size: .sm
+            ) {
+                viewer.findNext()
+            }
+            .disabled(viewer.findMatchCount == 0)
+            .accessibilityIdentifier("artifactViewer.findNext")
+
+            if !note.isEmpty {
+                Text(verbatim: note)
+                    .font(PVFont.body(size: 12, italic: true))
+                    .foregroundStyle(PVColor.textMuted)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Spacer(minLength: 0)
+            }
+
+            PVButton(L10n.ArtifactViewer.findDone, variant: .ghost, size: .sm) {
+                viewer.closeFind()
+            }
+            .keyboardShortcut(.cancelAction)
+            .accessibilityIdentifier("artifactViewer.findDone")
+        }
+        .onKeyPress(.escape) {
+            viewer.closeFind()
+            return .handled
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text(L10n.ArtifactViewer.findToggle))
+        .accessibilityIdentifier("artifactViewer.findBar")
     }
 
     private var clearMenuButton: some View {

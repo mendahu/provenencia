@@ -16,6 +16,7 @@ IDs stay stable (`S8-NN`, `S8-DN`). Do not renumber when moving steps here.
 | S8-01 | PR | Vision OCR fills image-citation transcription; reusable `Features/OCR` module |
 | S8-02 | Descoped | PDF page-1 Artifact thumbs — not this spike; engine-only if revived |
 | S8-03 | PR | PDFKit live page + I-beam; scroll pans like Preview |
+| S8-04 | PR | PDF Find on the composer strip; wrap, highlight, page jump |
 
 ## Steps
 
@@ -119,3 +120,20 @@ Composer PDF Artifacts paint a live `PDFView` instead of a flattened page raster
 - Paste transcription from selection (**S8-05**)
 - Vision / Live Text on PDF; changing image pan or wheel-zoom
 - Source-page Find; archiving **S8-D2** (still gates 04 / 05)
+
+### S8-04 — PDF Find in the tool strip
+
+Composer PDF Artifacts get Find on the viewer strip: a trailing search button opens a 40pt row with keyword, match count, previous/next, and wrap. Hits highlight on the live `PDFView` and jump the page chrome. Scanned PDFs open the row with an honest no-text note and a disabled field.
+
+**What shipped**
+
+- `ArtifactViewerModel` Find session: `findString` (case-insensitive), wrap, page jump, no-match / no-text notes
+- Composer strip: search `PVIconButton` (⌘F) + under-strip `PVInput` row; Done / Esc close
+- `ArtifactPDFViewport` applies `highlightedSelections` and `go(to:)` for the active hit
+
+**What stayed out**
+
+- Paste transcription from selection (**S8-05**)
+- Vision / Live Text on PDF
+- Source-page Find; `text_quote` locators
+- Archiving **S8-D2** (still gates 05)

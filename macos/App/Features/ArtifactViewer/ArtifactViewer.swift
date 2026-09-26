@@ -238,7 +238,9 @@ struct ArtifactViewer: View {
                     overlayInput: regionOverlayInput,
                     onCommitRegion: onCommitRegion,
                     onDisarmRegionTool: onDisarmRegionTool,
-                    freeformDeleteTooltip: freeformDeleteTooltip
+                    freeformDeleteTooltip: freeformDeleteTooltip,
+                    findSelection: model.activeFindSelection,
+                    findActivationID: model.findActivationID
                 )
             }
         } else if let image = model.displayImage, model.supportsSpatialZoom {

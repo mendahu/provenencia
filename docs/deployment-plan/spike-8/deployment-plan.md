@@ -122,7 +122,7 @@ S8-D6  Delete paths
 - [x] S8-01 — Vision OCR + Auto Transcribe button → [`completed.md`](completed.md)
 - [ ] S8-D2 — Design: PDF Find, text selection, paste transcription → [`completed.md`](completed.md)
 - [x] S8-03 — PDFKit live viewer + I-beam default → [`completed.md`](completed.md)
-- [ ] S8-04 — PDF Find in the tool strip → [`completed.md`](completed.md)
+- [x] S8-04 — PDF Find in the tool strip → [`completed.md`](completed.md)
 - [ ] S8-05 — Paste transcription from PDF selection → [`completed.md`](completed.md)
 - [ ] S8-D3 — Design: Evidence graph visual enhancements → [`completed.md`](completed.md)
 - [ ] S8-06 — Graph visual enhancements (badges, Source jump, bridge copy + Add property) → [`completed.md`](completed.md)
@@ -676,6 +676,8 @@ This is the load-bearing remount. Do not start S8-04 / S8-05 until it lands.
 ## S8-04 — PR: PDF Find
 
 Find field on `ArtifactViewerToolChrome` (PDF only). `PDFDocument.findString` → highlight + page jump + next/previous.
+
+**Done.** Composer under-strip Find; `findString` highlight + wrap + page jump. No paste, Vision, or Source-page Find.
 
 | | |
 | --- | --- |

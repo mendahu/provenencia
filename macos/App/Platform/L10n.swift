@@ -2087,6 +2087,102 @@ enum L10n {
             defaultValue: "Freeform",
             comment: "Region tool: click-to-place polygon vertices"
         )
+
+        static let findToggle = LocalizedStringResource(
+            "artifactViewer.findToggle",
+            defaultValue: "Find in PDF",
+            comment: "Opens PDF Find on the citation composer tool strip; also the find field prompt"
+        )
+
+        static let findUnavailable = LocalizedStringResource(
+            "artifactViewer.findUnavailable",
+            defaultValue: "Find unavailable, no text layer",
+            comment: "VoiceOver label for PDF Find when the document has no extractable text"
+        )
+
+        static let findField = LocalizedStringResource(
+            "artifactViewer.findField",
+            defaultValue: "Find in PDF",
+            comment: "Accessibility label for the PDF Find keyword field"
+        )
+
+        static let findPrevious = LocalizedStringResource(
+            "artifactViewer.findPrevious",
+            defaultValue: "Previous match",
+            comment: "PDF Find: go to the previous matching string"
+        )
+
+        static let findNext = LocalizedStringResource(
+            "artifactViewer.findNext",
+            defaultValue: "Next match",
+            comment: "PDF Find: go to the next matching string"
+        )
+
+        static let findDone = LocalizedStringResource(
+            "artifactViewer.findDone",
+            defaultValue: "Done",
+            comment: "Closes the PDF Find row"
+        )
+
+        static func findMatchOf(current: Int, total: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "artifactViewer.findMatchOf",
+                defaultValue: "%lld of %lld",
+                comment: "Find field suffix; arguments are current match index then total matches"
+            ))
+            return String(format: format, locale: .current, current, total)
+        }
+
+        static let findNoteNoTextLayer = LocalizedStringResource(
+            "artifactViewer.findNoteNoTextLayer",
+            defaultValue: "This PDF has no text layer — it’s a scanned image, so there is nothing to find",
+            comment: "PDF Find note when every page has empty extractable text"
+        )
+
+        static func findNoteNoMatches(pageCount: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "artifactViewer.findNoteNoMatches",
+                defaultValue: "No matches in %lld pages",
+                comment: "PDF Find note when the query hits nothing; argument is page count"
+            ))
+            return String(format: format, locale: .current, pageCount)
+        }
+
+        static func findNoteJumped(page: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "artifactViewer.findNoteJumped",
+                defaultValue: "Jumped to page %lld.",
+                comment: "PDF Find note after the active hit changes the viewer page"
+            ))
+            return String(format: format, locale: .current, page)
+        }
+
+        static func findNoteNextPage(page: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "artifactViewer.findNoteNextPage",
+                defaultValue: "Next match is on page %lld.",
+                comment: "PDF Find note when the following hit is on another page"
+            ))
+            return String(format: format, locale: .current, page)
+        }
+
+        static func findNoteWrappedFirst(page: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "artifactViewer.findNoteWrappedFirst",
+                defaultValue: "Wrapped to the first match, page %lld",
+                comment: "PDF Find note after next wraps from the last hit to the first"
+            ))
+            return String(format: format, locale: .current, page)
+        }
+
+        static func findNoteWrappedLast(page: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "artifactViewer.findNoteWrappedLast",
+                defaultValue: "Wrapped to the last match, page %lld",
+                comment: "PDF Find note after previous wraps from the first hit to the last"
+            ))
+            return String(format: format, locale: .current, page)
+        }
     }
 
     /// Citation composer place (S7-08 thin submit path; board-aligned shell).
