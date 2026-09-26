@@ -17,6 +17,8 @@ IDs stay stable (`S8-NN`, `S8-DN`). Do not renumber when moving steps here.
 | S8-02 | Descoped | PDF page-1 Artifact thumbs — not this spike; engine-only if revived |
 | S8-03 | PR | PDFKit live page + I-beam; scroll pans like Preview |
 | S8-04 | PR | PDF Find on the composer strip; wrap, highlight, page jump |
+| S8-D2 | Design | PDF Find + I-beam select + paste transcription from selection |
+| S8-05 | PR | Paste PDF I-beam selection into citation transcription |
 
 ## Steps
 
@@ -136,4 +138,28 @@ Composer PDF Artifacts get Find on the viewer strip: a trailing search button op
 - Paste transcription from selection (**S8-05**)
 - Vision / Live Text on PDF
 - Source-page Find; `text_quote` locators
-- Archiving **S8-D2** (still gates 05)
+- Archiving **S8-D2** (closed with **S8-05**)
+
+### S8-D2 — Design: PDF Find, text selection, paste transcription
+
+**Board pick:** Find is a trailing search `PVIconButton` that opens a 40pt under-strip row (wrap at ends). PDF default is I-beam select; pan is Preview-style scroll, not a hand tool. The transcription slot shows **one** fill action: image **Auto transcribe**, PDF **Paste transcription from selection**. Replace confirm when the field is non-empty. Scanned PDFs stay honest — no Vision.
+
+Brief archived: [`design/archive/S8-D2-pdf-text-find.md`](design/archive/S8-D2-pdf-text-find.md). Shipped as **S8-03**, **S8-04**, **S8-05**.
+
+### S8-05 — Paste transcription from PDF selection
+
+Composer PDF Artifacts replace Auto transcribe with Paste. The I-beam `PDFSelection` fills the transcription field; a non-empty field asks first. The selection stays on the page so the researcher can check it. Image Artifacts keep Auto transcribe.
+
+**What shipped**
+
+- `ArtifactViewerModel` reports I-beam `currentSelection` (text + page); cleared on unload / new load
+- Transcription row: one trailing `PVButton` — Paste on PDF, Auto transcribe on image
+- Replace confirm via the existing `.pvConfirm(item:)` host; empty field pastes immediately
+- Hints for no selection / selected lines / after paste / no text layer
+
+**What stayed out**
+
+- Vision / Live Text on PDF
+- Source-page Find / paste
+- `text_quote` locators
+- Changing image Auto Transcribe or image pan

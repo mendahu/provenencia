@@ -11850,14 +11850,98 @@
         }
       }
     },
-    "citationComposer.autoTranscribeHintPDF": {
-      "comment": "Disabled hint when the Artifact is a PDF",
+    "citationComposer.pasteTranscription": {
+      "comment": "Button that copies the PDF I-beam selection into transcription",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Select text in the viewer and paste it. Auto transcribe is for images."
+            "value": "Paste transcription from selection"
+          }
+        }
+      }
+    },
+    "citationComposer.pasteHintSelect": {
+      "comment": "Hint when the PDF has a text layer but no I-beam selection",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select text on the page, then paste it here"
+          }
+        }
+      }
+    },
+    "citationComposer.pasteHintNoTextLayer": {
+      "comment": "Hint when every PDF page has empty extractable text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This PDF has no text layer, so there is no text to select"
+          }
+        }
+      }
+    },
+    "citationComposer.pasteHintSelected": {
+      "comment": "Hint when an I-beam selection can be pasted; arguments are line count and page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pastes the %lld lines selected on page %lld"
+          }
+        }
+      }
+    },
+    "citationComposer.pasteHintAfter": {
+      "comment": "Hint after a successful paste; argument is the selection page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pasted from page %lld. Check it against the page, then Save citation"
+          }
+        }
+      }
+    },
+    "citationComposer.pasteUnavailable": {
+      "comment": "VoiceOver when Paste is disabled; argument is the current field hint",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste transcription from selection, unavailable. %@"
+          }
+        }
+      }
+    },
+    "citationComposer.pasteReplaceConfirm": {
+      "comment": "Confirm button that overwrites transcription with the PDF selection",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replace"
+          }
+        }
+      }
+    },
+    "citationComposer.pasteReplaceMessage": {
+      "comment": "Confirm message when paste would overwrite; arguments are selected line count then page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste replaces the text already in the field with the %lld lines selected on page %lld. The current text isn’t kept. Nothing is written until Save citation."
           }
         }
       }

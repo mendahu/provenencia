@@ -87,7 +87,7 @@ Placement is a board finding: trailing slot on `PVField` (beside Uncertain), a c
 
 ### 2.1 What this board is not
 
-- Not PDF OCR, PDF Find, or text-layer select/paste ([**S8-D2**](../S8-D2-pdf-text-find.md)).
+- Not PDF OCR, PDF Find, or text-layer select/paste ([**S8-D2**](S8-D2-pdf-text-find.md)).
 - Not Foundation Models / Apple Intelligence / draft graph cards.
 - Not auto Observations, NameValue, or connect macros.
 - Not a new kit **Transcribe** component unless a second call site is already known (it is not).

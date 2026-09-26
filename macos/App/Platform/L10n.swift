@@ -2556,11 +2556,63 @@ enum L10n {
             comment: "Hint under transcription when a locator region will be cropped"
         )
 
-        static let autoTranscribeHintPDF = LocalizedStringResource(
-            "citationComposer.autoTranscribeHintPDF",
-            defaultValue: "Select text in the viewer and paste it. Auto transcribe is for images.",
-            comment: "Disabled hint when the Artifact is a PDF"
+        static let pasteTranscription = LocalizedStringResource(
+            "citationComposer.pasteTranscription",
+            defaultValue: "Paste transcription from selection",
+            comment: "Button that copies the PDF I-beam selection into transcription"
         )
+
+        static let pasteHintSelect = LocalizedStringResource(
+            "citationComposer.pasteHintSelect",
+            defaultValue: "Select text on the page, then paste it here",
+            comment: "Hint when the PDF has a text layer but no I-beam selection"
+        )
+
+        static let pasteHintNoTextLayer = LocalizedStringResource(
+            "citationComposer.pasteHintNoTextLayer",
+            defaultValue: "This PDF has no text layer, so there is no text to select",
+            comment: "Hint when every PDF page has empty extractable text"
+        )
+
+        static func pasteHintSelected(lines: Int, page: Int) -> LocalizedStringResource {
+            LocalizedStringResource(
+                "citationComposer.pasteHintSelected",
+                defaultValue: "Pastes the \(lines) lines selected on page \(page)",
+                comment: "Hint when an I-beam selection can be pasted; arguments are line count and page"
+            )
+        }
+
+        static func pasteHintAfter(page: Int) -> LocalizedStringResource {
+            LocalizedStringResource(
+                "citationComposer.pasteHintAfter",
+                defaultValue: "Pasted from page \(page). Check it against the page, then Save citation",
+                comment: "Hint after a successful paste; argument is the selection page"
+            )
+        }
+
+        static func pasteUnavailable(hint: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "citationComposer.pasteUnavailable",
+                defaultValue: "Paste transcription from selection, unavailable. %@",
+                comment: "VoiceOver when Paste is disabled; argument is the current field hint"
+            ))
+            return String(format: format, locale: .current, hint)
+        }
+
+        static let pasteReplaceConfirm = LocalizedStringResource(
+            "citationComposer.pasteReplaceConfirm",
+            defaultValue: "Replace",
+            comment: "Confirm button that overwrites transcription with the PDF selection"
+        )
+
+        static func pasteReplaceMessage(selectedLines: Int, page: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "citationComposer.pasteReplaceMessage",
+                defaultValue: "Paste replaces the text already in the field with the %lld lines selected on page %lld. The current text isn’t kept. Nothing is written until Save citation.",
+                comment: "Confirm message when paste would overwrite; arguments are selected line count then page"
+            ))
+            return String(format: format, locale: .current, selectedLines, page)
+        }
 
         static let autoTranscribeHintAudio = LocalizedStringResource(
             "citationComposer.autoTranscribeHintAudio",

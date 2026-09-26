@@ -240,7 +240,8 @@ struct ArtifactViewer: View {
                     onDisarmRegionTool: onDisarmRegionTool,
                     freeformDeleteTooltip: freeformDeleteTooltip,
                     findSelection: model.activeFindSelection,
-                    findActivationID: model.findActivationID
+                    findActivationID: model.findActivationID,
+                    onUserSelectionChange: { model.setUserSelection(string: $0, page: $1) }
                 )
             }
         } else if let image = model.displayImage, model.supportsSpatialZoom {

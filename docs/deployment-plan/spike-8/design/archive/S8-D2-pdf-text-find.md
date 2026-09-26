@@ -3,12 +3,12 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 8 (pause and refine / data entry)  
 **Implements later as:** **S8-03** (PDFKit viewport + I-beam default), **S8-04** (Find), **S8-05** (paste from selection)  
-**Depends on:** **S8-D7** / **S8-10** (viewer slot on the new composer; brief [`archive/S8-D7-composer-rethink.md`](archive/S8-D7-composer-rethink.md)); **S8-D8** / **S8-11** (citation fields section with Save citation; no footer Save — brief [`archive/S8-D8-composer-connect-simplification.md`](archive/S8-D8-composer-connect-simplification.md)); tool strip ([`ArtifactViewerToolChrome`](../../../../macos/App/Features/ArtifactViewer/ArtifactViewer.swift)); locators S7-07; transcription field (**S8-D1** image Auto Transcribe — [`archive/S8-D1-auto-transcribe.md`](archive/S8-D1-auto-transcribe.md); do not fight that row)  
-**Related:** [`../pdf-text-find.md`](../pdf-text-find.md); dogfood OCR notes  
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
-**Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
+**Depends on:** **S8-D7** / **S8-10** (viewer slot on the new composer; brief [`S8-D7-composer-rethink.md`](S8-D7-composer-rethink.md)); **S8-D8** / **S8-11** (citation fields section with Save citation; no footer Save — brief [`S8-D8-composer-connect-simplification.md`](S8-D8-composer-connect-simplification.md)); tool strip ([`ArtifactViewerToolChrome`](../../../../../macos/App/Features/ArtifactViewer/ArtifactViewer.swift)); locators S7-07; transcription field (**S8-D1** image Auto Transcribe — [`S8-D1-auto-transcribe.md`](S8-D1-auto-transcribe.md); do not fight that row)  
+**Related:** [`../../pdf-text-find.md`](../../pdf-text-find.md); dogfood OCR notes  
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)  
+**Skill:** [`add-design-brief`](../../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.cursor/skills/add-ui-component/SKILL.md)
 
-Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](README.md) first.
+Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](../README.md) first.
 
 This brief is an **enhancement** of the existing **S8-D7** / **S8-D8** composer board — not a rethink, and not the Spike 7 form. Keep the current frames (Layout A, citation fields section, **Save citation**, viewer, observation stack, and the **S8-D1** transcription row). Add PDF **Find**, I-beam selection, and **Paste transcription from selection**. Do not restyle anything this brief does not name.
 
@@ -80,8 +80,8 @@ Exact placement of Find vs page/zoom/region is a board finding. Paste lives with
 ### 2.1 What this board is not
 
 - Not image OCR (**S8-D1** / **S8-01**).
-- Not PDF page-1 **thumbnails** (parked: [`artifact-pdf-thumbnails.md`](../../../ideas/artifact-pdf-thumbnails.md)).
-- Not `text_quote` locators — parked in [`text-quote-locators.md`](../../../ideas/text-quote-locators.md).
+- Not PDF page-1 **thumbnails** (parked: [`artifact-pdf-thumbnails.md`](../../../../ideas/artifact-pdf-thumbnails.md)).
+- Not `text_quote` locators — parked in [`text-quote-locators.md`](../../../../ideas/text-quote-locators.md).
 - Not Foundation Models.
 
 ---
@@ -164,5 +164,5 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them.
 ## 8. Handoff
 
 1. Archive this brief when the board is agreed.
-2. Record in [`../completed.md`](../completed.md).
+2. Record in [`../../completed.md`](../../completed.md).
 3. Implement **S8-03** first, then **S8-04** and **S8-05** (parallel after 03).

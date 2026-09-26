@@ -63,6 +63,8 @@ enum PVSymbol: String {
     case regionFreeform = "lasso"
     /// Lucide `scan-text` — Auto transcribe on a transcription field.
     case scanText = "doc.text.viewfinder"
+    /// Lucide `clipboard-paste` — paste PDF selection into transcription.
+    case clipboardPaste = "document.on.clipboard"
 
     fileprivate var regionLOpen: PVLOpenCorner? {
         switch self {

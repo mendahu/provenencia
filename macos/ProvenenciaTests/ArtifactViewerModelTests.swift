@@ -148,6 +148,38 @@ struct ArtifactViewerModelTests {
         #expect(model.page == 2)
     }
 
+    @Test func unloadClearsUserSelection() async throws {
+        let model = ArtifactViewerModel()
+        let project = makeTempProject()
+        defer { try? FileManager.default.removeItem(at: project) }
+        let rel = "objects/ab/cd/sample.pdf"
+        writeFile(project: project, relPath: rel, data: try #require(minimalPDFData(pageCount: 2)))
+
+        await model.load(
+            ArtifactViewerSource(
+                projectDir: project.path,
+                relPath: rel,
+                mediaType: "application/pdf"
+            )
+        )
+        model.installUserSelectionForTesting(text: "Alice", page: 2)
+        #expect(model.hasUserSelection)
+        #expect(model.userSelectionPage == 2)
+
+        model.unload()
+        #expect(!model.hasUserSelection)
+        #expect(model.userSelectionPage == nil)
+
+        await model.load(
+            ArtifactViewerSource(
+                projectDir: project.path,
+                relPath: rel,
+                mediaType: "application/pdf"
+            )
+        )
+        #expect(!model.hasUserSelection)
+    }
+
     @Test func findHitsChangePageAndWrap() async throws {
         let model = ArtifactViewerModel()
         let project = makeTempProject()

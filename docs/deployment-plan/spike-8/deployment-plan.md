@@ -120,10 +120,10 @@ S8-D6  Delete paths
 - [x] S8-11 — Composer and Connect simplification + Interpretation write integrity → [`completed.md`](completed.md)
 - [x] S8-D1 — Design: Auto Transcribe in the citation composer → [`completed.md`](completed.md)
 - [x] S8-01 — Vision OCR + Auto Transcribe button → [`completed.md`](completed.md)
-- [ ] S8-D2 — Design: PDF Find, text selection, paste transcription → [`completed.md`](completed.md)
+- [x] S8-D2 — Design: PDF Find, text selection, paste transcription → [`completed.md`](completed.md)
 - [x] S8-03 — PDFKit live viewer + I-beam default → [`completed.md`](completed.md)
 - [x] S8-04 — PDF Find in the tool strip → [`completed.md`](completed.md)
-- [ ] S8-05 — Paste transcription from PDF selection → [`completed.md`](completed.md)
+- [x] S8-05 — Paste transcription from PDF selection → [`completed.md`](completed.md)
 - [ ] S8-D3 — Design: Evidence graph visual enhancements → [`completed.md`](completed.md)
 - [ ] S8-06 — Graph visual enhancements (badges, Source jump, bridge copy + Add property) → [`completed.md`](completed.md)
 - [ ] S8-D4 — Design: Source page enhancements → [`completed.md`](completed.md)
@@ -650,7 +650,7 @@ On-device Vision (`VNRecognizeTextRequest`) fills the composer **transcription**
 
 ## S8-D2 — Design: PDF Find, text selection, paste transcription
 
-Claude Design board for the PDF **tool strip** (Find), **cursors** (I-beam default; scroll pans like Preview), and transcription **Paste from selection**. Brief: [`design/S8-D2-pdf-text-find.md`](design/S8-D2-pdf-text-find.md). Gates **S8-03**, **S8-04**, **S8-05**.
+Claude Design board for the PDF **tool strip** (Find), **cursors** (I-beam default; scroll pans like Preview), and transcription **Paste from selection**. Brief: [`design/archive/S8-D2-pdf-text-find.md`](design/archive/S8-D2-pdf-text-find.md). Gates **S8-03**, **S8-04**, **S8-05**. **Done.** Find is a trailing search IconButton + under-strip row (wrap). Pan is Preview-style scroll. PDF replaces Auto transcribe with Paste from selection.
 
 Does **not** design image OCR, PDF thumbnails, or `text_quote` locators ([`text-quote-locators.md`](../../ideas/text-quote-locators.md)).
 
@@ -691,6 +691,8 @@ Find field on `ArtifactViewerToolChrome` (PDF only). `PDFDocument.findString` �
 ## S8-05 — PR: Paste transcription from PDF selection
 
 Transcription-row control for PDF: copy current `PDFSelection` string into `transcription`. Replace confirm if the field is non-empty (same as **S8-01**).
+
+**Done.** PDF transcription slot is Paste from the I-beam selection; replace confirm; no Vision. Image row stays Auto Transcribe.
 
 | | |
 | --- | --- |

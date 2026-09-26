@@ -176,33 +176,23 @@ struct CitationComposerView: View {
             detail: { _ in EmptyView() }
         )
         .pvConfirm(
-            item: transcriptionConfirmBinding,
+            item: autoTranscribeConfirmBinding,
             copy: { pending in
-                let replacing = !pending.existingText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                let title: LocalizedStringResource
-                let message: LocalizedStringResource
-                if replacing && pending.includeWholePage {
-                    title = L10n.CitationComposer.autoTranscribeReplaceTitle
-                    message = L10n.CitationComposer.autoTranscribeReplaceAndWholePageMessage
-                } else if replacing {
-                    title = L10n.CitationComposer.autoTranscribeReplaceTitle
-                    message = L10n.CitationComposer.autoTranscribeReplaceMessage
-                } else {
-                    title = L10n.CitationComposer.autoTranscribeWholePageTitle
-                    message = L10n.CitationComposer.autoTranscribeWholePageMessage
-                }
-                return PVConfirmCopy(
-                    title: String(localized: title),
-                    message: String(localized: message),
-                    confirm: L10n.CitationComposer.autoTranscribeConfirm,
-                    cancel: replacing
-                        ? L10n.CitationComposer.autoTranscribeKeep
-                        : L10n.CitationComposer.cancel
-                )
+                transcriptionConfirmCopy(pending)
             },
             tone: .irreversible,
             accessibilityIdentifierPrefix: "citationComposer.autoTranscribe.confirm",
             onConfirm: { model.confirmAutoTranscribe() },
+            detail: { _ in EmptyView() }
+        )
+        .pvConfirm(
+            item: pasteConfirmBinding,
+            copy: { pending in
+                transcriptionConfirmCopy(pending)
+            },
+            tone: .irreversible,
+            accessibilityIdentifierPrefix: "citationComposer.pasteTranscription.confirm",
+            onConfirm: { model.confirmPasteTranscription() },
             detail: { _ in EmptyView() }
         )
     }
@@ -230,6 +220,62 @@ struct CitationComposerView: View {
                     model.pendingTranscriptionConfirm = newValue
                 }
             }
+        )
+    }
+
+    private var autoTranscribeConfirmBinding: Binding<CitationComposerModel.PendingTranscriptionConfirm?> {
+        Binding(
+            get: {
+                guard let pending = model.pendingTranscriptionConfirm, !pending.isPaste else { return nil }
+                return pending
+            },
+            set: { transcriptionConfirmBinding.wrappedValue = $0 }
+        )
+    }
+
+    private var pasteConfirmBinding: Binding<CitationComposerModel.PendingTranscriptionConfirm?> {
+        Binding(
+            get: {
+                guard let pending = model.pendingTranscriptionConfirm, pending.isPaste else { return nil }
+                return pending
+            },
+            set: { transcriptionConfirmBinding.wrappedValue = $0 }
+        )
+    }
+
+    private func transcriptionConfirmCopy(
+        _ pending: CitationComposerModel.PendingTranscriptionConfirm
+    ) -> PVConfirmCopy {
+        if pending.isPaste {
+            let page = pending.pastePage ?? 1
+            let lines = pending.pasteLineCount ?? 1
+            return PVConfirmCopy(
+                title: String(localized: L10n.CitationComposer.autoTranscribeReplaceTitle),
+                message: L10n.CitationComposer.pasteReplaceMessage(selectedLines: lines, page: page),
+                confirm: L10n.CitationComposer.pasteReplaceConfirm,
+                cancel: L10n.CitationComposer.autoTranscribeKeep
+            )
+        }
+        let replacing = !pending.existingText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let title: LocalizedStringResource
+        let message: LocalizedStringResource
+        if replacing && pending.includeWholePage {
+            title = L10n.CitationComposer.autoTranscribeReplaceTitle
+            message = L10n.CitationComposer.autoTranscribeReplaceAndWholePageMessage
+        } else if replacing {
+            title = L10n.CitationComposer.autoTranscribeReplaceTitle
+            message = L10n.CitationComposer.autoTranscribeReplaceMessage
+        } else {
+            title = L10n.CitationComposer.autoTranscribeWholePageTitle
+            message = L10n.CitationComposer.autoTranscribeWholePageMessage
+        }
+        return PVConfirmCopy(
+            title: String(localized: title),
+            message: String(localized: message),
+            confirm: L10n.CitationComposer.autoTranscribeConfirm,
+            cancel: replacing
+                ? L10n.CitationComposer.autoTranscribeKeep
+                : L10n.CitationComposer.cancel
         )
     }
 

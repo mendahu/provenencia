@@ -94,6 +94,18 @@ final class ArtifactViewerModel {
 
     var findStatusNote: String { findNote.localizedString }
 
+    /// I-beam `PDFView.currentSelection` (S8-05). Distinct from Find highlights.
+    private(set) var userSelectionText = ""
+    private(set) var userSelectionPage: Int?
+
+    var hasUserSelection: Bool {
+        !userSelectionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var userSelectionLineCount: Int {
+        Self.lineCount(in: userSelectionText)
+    }
+
     private var loadGeneration = 0
 
     func unload() {
@@ -107,6 +119,7 @@ final class ArtifactViewerModel {
         pageCount = 1
         zoom = 1
         resetFindSession()
+        clearUserSelection()
     }
 
     /// Test hook: install an in-memory image raster without going through ``load``.
@@ -120,6 +133,12 @@ final class ArtifactViewerModel {
         pageCount = 1
         zoom = 1
         resetFindSession()
+        clearUserSelection()
+    }
+
+    /// Test hook: install an I-beam selection without a live `PDFView`.
+    func installUserSelectionForTesting(text: String, page: Int?) {
+        setUserSelection(string: text, page: page)
     }
 
     /// Sole entry point for hosts (composer, future Source sheet, …).
@@ -300,6 +319,32 @@ final class ArtifactViewerModel {
         pageCount = 1
         zoom = 1
         resetFindSession()
+        clearUserSelection()
+    }
+
+    func setUserSelection(string: String?, page: Int?) {
+        let raw = string ?? ""
+        if raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            clearUserSelection()
+            return
+        }
+        userSelectionText = raw
+        userSelectionPage = page
+    }
+
+    func clearUserSelection() {
+        userSelectionText = ""
+        userSelectionPage = nil
+    }
+
+    static func lineCount(in text: String) -> Int {
+        let lines = text.split(whereSeparator: \.isNewline).filter {
+            !$0.trimmingCharacters(in: .whitespaces).isEmpty
+        }
+        if lines.isEmpty {
+            return text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0 : 1
+        }
+        return lines.count
     }
 
     private func resetFindSession() {
