@@ -4,7 +4,9 @@
 
 Draft architecture notes. This document is the authoritative schema and design reference for Provenencia's shared genealogical date value model.
 
-Structured dates are cross-layer infrastructure. They may be referenced by Source metadata, Interpretations, Claims, Conclusions, and other future domain objects that need to represent genealogical dates faithfully.
+Structured dates are cross-layer infrastructure. They may be referenced by Interpretations, Claims, Conclusions, and other future domain objects that need to represent genealogical dates faithfully.
+
+They are **not** used on Source-layer catalog metadata. Filing dates (`publication_date`, `issue_date`, and similar) stay as `source_metadata.value_text`. See [`source-layer-data-model.md`](source-layer-data-model.md) §1.2 and §5.
 
 ---
 
@@ -153,7 +155,7 @@ Timezone labels (`start_tz` / `end_tz`) are independent of the components: optio
 
 `phrase` is optional text that belongs to the **DateValue** when the date is partly or wholly verbal (`Christmas 1887`, dual OS/NS wording, seasonal labels) and structure alone is incomplete.
 
-It is **not** the place for Source-layer transcription fidelity. Callers that preserve “as written on this record” keep that on the referencing row (e.g. Source metadata `value_text`) and attach `date_value_id` for structure. See §4.
+It is **not** the place for Source-layer catalog wording. Catalog dates stay on `source_metadata.value_text` with no DateValue. Observation / Claim callers that preserve “as written on this record” keep that on the referencing row and attach `date_value_id` for structure. See §4.
 
 A DateValue may be phrase-forward (structure sparse or empty) when the evidence is only verbal; prefer adding whatever components can be asserted without inventing precision.
 
@@ -171,17 +173,17 @@ Tables in any domain layer may reference a structured date:
 date_value_id BLOB REFERENCES date_values(id)
 ```
 
-Source metadata (and similar) may preserve both wording and structure:
+Source catalog dates do **not** use this column. A book’s publication wording or a certificate’s issue date lives on `source_metadata.value_text` only. A later project-wide “when was this evidence created or published” sort is a first-class Source attribute, not a DateValue hanging off an EAV key ([`ideas/source-provenance-date.md`](ideas/source-provenance-date.md)).
+
+Interpretation Observations (and later Claims) attach `date_value_id` when the property is a genealogical date:
 
 ```text
-publication_date
-  value_text = "about the year 1890"    -- fidelity for this attachment
-  date_value_id = DateValue(point, ABT, 1890)
+Person P1 -- birth_date --> DateValue(point, 2 JAN 1800)
 ```
 
-The structured DateValue adds machine-readable semantics for sorting, filtering, comparison, and timelines. It does not replace original wording where that wording is meaningful evidence.
+The structured DateValue adds machine-readable semantics for sorting, filtering, comparison, and timelines of **interpreted or concluded** dates. Citation transcription remains the fidelity layer for what the record said.
 
-Later layers reuse the same DateValue model for interpreted or concluded dates without a second incompatible representation. Refined conclusions should usually be **new** DateValue rows (or later-layer assertions), not silent mutation of Source evidence.
+Refined conclusions should usually be **new** DateValue rows (or later-layer assertions), not silent mutation of an Observation’s DateValue.
 
 ---
 
@@ -198,4 +200,4 @@ Later layers reuse the same DateValue model for interpreted or concluded dates w
 9. Missing time components are unknown, not midnight.
 10. Timezone labels are optional free text (not a forced IANA/offset enum); empty means unspecified; do not treat them as UTC converters at the storage layer.
 
-This shared model gives Source, Interpretation, and Conclusion data one consistent representation for genealogical dates while allowing each layer to preserve its own evidentiary or interpretive context.
+This shared model gives Interpretation and Conclusion one consistent representation for genealogical dates while allowing each layer to preserve its own evidentiary or interpretive context. Source catalog filing stays text.

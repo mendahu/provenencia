@@ -4,7 +4,7 @@ description: >-
   Uses or extends Provenencia shared genealogical date_values (core/database/datevalues).
   Use when inserting/looking up DateValues, changing kind/qualifier/precision/timezone
   rules, date_value_id FKs, ABT/BEF/AFT, point/range dates, structured-date-model,
-  or Source/Interpretation/Conclusion date metadata.
+  or Interpretation/Conclusion date properties (not Source catalog metadata).
 ---
 
 # Add or use a DateValue
@@ -53,7 +53,7 @@ Phrase-only `point` values (no civil components) are valid when `Phrase` is set.
 
 ## Cross-layer use
 
-Referencing tables use `date_value_id BLOB REFERENCES date_values(id)`. Prefer keeping source wording in the domain row’s `value_text` (or similar) and attaching structured `date_value_id`.
+Referencing tables use `date_value_id BLOB REFERENCES date_values(id)`. Observation / Claim callers may keep as-written wording on the domain row and attach structured `date_value_id`. **Do not** add `date_value_id` to `source_metadata` — catalog dates are `value_text` only ([`docs/source-layer-data-model.md`](../../../docs/source-layer-data-model.md) §5).
 
 DateValues are value objects (UUID for persistence only). Concluded/refined zones or dates later should usually be **new** DateValue rows (or later-layer assertions), not silent mutation of Source evidence.
 
@@ -79,3 +79,4 @@ Evidence graph cited rows use **`ObservationValueDisplay`**, which prefers struc
 - Treat `range` as FROM–TO event duration
 - Reintroduce `exact`/`year` kinds — use `point` + components
 - Grep `00000N.sql` contents in unit tests to “prove” schema
+- Attach DateValue to `source_metadata` (catalog dates are text)

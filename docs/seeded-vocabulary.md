@@ -99,7 +99,7 @@ gedcom_file
 
 ## 2.2 `source_metadata_fields`
 
-Catalog fields only. Values stay descriptive text, structured dates, or text-shaped URLs; they do not resolve to Interpretation subjects or canonical entities.
+Catalog fields only. Values stay descriptive text or text-shaped URLs; they do not resolve to Interpretation subjects or canonical entities, and they do not attach a DateValue. Date-named keys (`publication_date`, `record_date`, …) are still `data_type = text`.
 
 ```text
 key                     data_type   typical use
@@ -142,15 +142,15 @@ box                     text        archival box
 folder                  text        archival folder
 record_group            text        archival record group
 language                text        interview, oral testimony, book, website
-publication_date        date        book, website page
-issue_date              date        certificate issuance
-record_date             date        date the record was made or filed
-census_date             date        census day / enumeration year
-taken_date              date        photograph
-interview_date          date        interview, oral testimony
-accessed_date           date        website
-export_date             date        GEDCOM
-report_date             date        DNA match report
+publication_date        text        book, website page (as-written; not a DateValue)
+issue_date              text        certificate issuance
+record_date             text        date the record was made or filed
+census_date             text        census day / enumeration year
+taken_date              text        photograph
+interview_date          text        interview, oral testimony
+accessed_date           text        website
+export_date             text        GEDCOM
+report_date             text        DNA match report
 ```
 
 `url` and `accessed_date` describe Source provenencia. The bytes of a capture still live on an Artifact/File.

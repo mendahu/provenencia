@@ -17,6 +17,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 ## Current ideas
 
 - [`source-to-source-relationships.md`](source-to-source-relationships.md)
+- [`source-provenance-date.md`](source-provenance-date.md)
 - [`text-quote-locators.md`](text-quote-locators.md)
 - [`audio-video-sources.md`](audio-video-sources.md)
 - [`share-packages.md`](share-packages.md)
