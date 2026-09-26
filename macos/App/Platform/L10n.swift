@@ -1220,7 +1220,7 @@ enum L10n {
         static let jumpToSourcePage = LocalizedStringResource(
             "evidenceGraph.header.jumpToSourcePage",
             defaultValue: "Jump to Source page",
-            comment: "Ghost header button that opens this Source’s filing page"
+            comment: "Secondary header button that opens this Source’s filing page"
         )
 
         static func jumpToSourcePageAccessibility(title: String) -> String {
@@ -3629,6 +3629,12 @@ enum L10n {
             comment: "Primary save for title or type edit"
         )
 
+        static let jumpToEvidenceGraph = LocalizedStringResource(
+            "sources.page.jumpToEvidenceGraph",
+            defaultValue: "Jump to graph",
+            comment: "Identity-header secondary button that opens this Source's Evidence graph"
+        )
+
         static let editTitle = LocalizedStringResource(
             "sources.page.editTitle",
             defaultValue: "Edit title",
@@ -3653,10 +3659,43 @@ enum L10n {
             comment: "Accessibility label for check to save an inline metadata text edit"
         )
 
-        static let editMetadataDateValue = LocalizedStringResource(
-            "sources.page.editMetadataDateValue",
-            defaultValue: "Edit date value",
-            comment: "Accessibility label for pencil to open the date metadata dialog"
+        static let deleteMetadataValue = LocalizedStringResource(
+            "sources.page.deleteMetadataValue",
+            defaultValue: "Delete value",
+            comment: "Accessibility label for trash on a saved metadata row"
+        )
+
+        static let openMetadataURL = LocalizedStringResource(
+            "sources.page.openMetadataURL",
+            defaultValue: "Open in browser",
+            comment: "Tooltip on a clickable saved url metadata value"
+        )
+
+        static func deleteMetadataConfirmTitle(label: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "sources.page.deleteMetadataConfirmTitle",
+                defaultValue: "Delete %@?",
+                comment: "Confirm title when clearing a saved metadata value; argument is the field label"
+            ))
+            return String(format: format, locale: .current, label)
+        }
+
+        static let deleteMetadataConfirmMessage = LocalizedStringResource(
+            "sources.page.deleteMetadataConfirmMessage",
+            defaultValue: "This removes the saved value. Suggested fields return to the dashed list; extra fields disappear.",
+            comment: "Confirm message when clearing a saved metadata value"
+        )
+
+        static let deleteMetadataConfirm = LocalizedStringResource(
+            "sources.page.deleteMetadataConfirm",
+            defaultValue: "Delete value",
+            comment: "Confirm button that clears a saved metadata value"
+        )
+
+        static let deleteMetadataKeep = LocalizedStringResource(
+            "sources.page.deleteMetadataKeep",
+            defaultValue: "Keep value",
+            comment: "Cancel button on the metadata-value delete confirm"
         )
 
         static let editDescription = LocalizedStringResource(
@@ -3687,36 +3726,6 @@ enum L10n {
             "sources.page.noUnsavedChanges",
             defaultValue: "No unsaved changes",
             comment: "Status under artifact fields when drafts match saved values"
-        )
-
-        static let addDateDialogTitle = LocalizedStringResource(
-            "sources.page.addDateDialogTitle",
-            defaultValue: "Add date value",
-            comment: "Title of DateValue editor when creating structure"
-        )
-
-        static let editDateDialogTitle = LocalizedStringResource(
-            "sources.page.editDateDialogTitle",
-            defaultValue: "Edit date value",
-            comment: "Title of DateValue editor when editing structure"
-        )
-
-        static let saveDateConfirm = LocalizedStringResource(
-            "sources.page.saveDateConfirm",
-            defaultValue: "Save value",
-            comment: "Confirm button on the date metadata dialog"
-        )
-
-        static let dateValueAsWritten = LocalizedStringResource(
-            "sources.page.dateValueAsWritten",
-            defaultValue: "Value as written",
-            comment: "Label for the plain-text wording field in the date metadata dialog"
-        )
-
-        static let dateValueAsWrittenHint = LocalizedStringResource(
-            "sources.page.dateValueAsWrittenHint",
-            defaultValue: "Keep the record's own wording; the structured date below is what search and sorting use",
-            comment: "Hint under Value as written in the date metadata dialog"
         )
 
         static let dateKindLabel = LocalizedStringResource(
@@ -3982,12 +3991,6 @@ enum L10n {
             "sources.page.datePhraseHint",
             defaultValue: "A short gloss carried on the date itself — not the source's wording",
             comment: "Hint under DateValue phrase"
-        )
-
-        static let dateStoredAs = LocalizedStringResource(
-            "sources.page.dateStoredAs",
-            defaultValue: "Stored as",
-            comment: "Label beside DateValue summary preview"
         )
 
         static let dateRangeOrderError = LocalizedStringResource(
@@ -4777,7 +4780,7 @@ enum L10n {
 
         static let formDataTypeHint = LocalizedStringResource(
             "sourceFields.form.dataTypeHint",
-            defaultValue: "Text, date, or url — chosen at create and immutable afterward",
+            defaultValue: "Text or url — chosen at create and immutable afterward",
             comment: "Hint under the data type picker on add"
         )
 

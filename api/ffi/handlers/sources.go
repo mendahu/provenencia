@@ -323,20 +323,10 @@ func SetSourceMetadata(in []byte) ([]byte, error) {
 	}
 	var out *engine.SetSourceMetadataResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		var dateID []byte
-		if d := req.GetDate(); d != nil && d.GetKind() != "" {
-			v := dateValueFromProto(d)
-			var err error
-			dateID, err = datevalues.Insert(c, v)
-			if err != nil {
-				return err
-			}
-		}
 		if _, err := sourcemetadata.Set(c, userID, sourcemetadata.Input{
-			SourceID:    sourceID,
-			FieldID:     fieldID,
-			ValueText:   req.GetValueText(),
-			DateValueID: dateID,
+			SourceID:  sourceID,
+			FieldID:   fieldID,
+			ValueText: req.GetValueText(),
 		}); err != nil {
 			return err
 		}
@@ -495,7 +485,7 @@ func noteProto(n sources.Note) *engine.SourceNote {
 	}
 }
 
-func metadataEntryProto(c *database.Catalog, e sourcemetadata.WorkspaceEntry) *engine.MetadataWorkspaceEntry {
+func metadataEntryProto(_ *database.Catalog, e sourcemetadata.WorkspaceEntry) *engine.MetadataWorkspaceEntry {
 	out := &engine.MetadataWorkspaceEntry{
 		Field: &engine.MetadataField{
 			Id:          uuidString(e.Field.ID),
@@ -511,12 +501,6 @@ func metadataEntryProto(c *database.Catalog, e sourcemetadata.WorkspaceEntry) *e
 	if e.Value != nil {
 		out.HasValue = true
 		out.ValueText = e.Value.ValueText
-		out.DateValueId = uuidString(e.Value.DateValueID)
-		if len(e.Value.DateValueID) == 16 {
-			if dv, err := datevalues.Lookup(c, e.Value.DateValueID); err == nil {
-				out.Date = dateValueProto(dv)
-			}
-		}
 	}
 	return out
 }
@@ -532,7 +516,7 @@ func fileRefProto(f files.File, relPath string) *engine.SourceFileRef {
 }
 
 // dateValueProto is the inverse of dateValueFromProto: it carries a stored
-// DateValue's components back to the client (MetadataWorkspaceEntry.date).
+// DateValue's components back to the client (Observation.date).
 func dateValueProto(v datevalues.Value) *engine.DateValueInput {
 	d := &engine.DateValueInput{
 		Kind:      v.Kind,

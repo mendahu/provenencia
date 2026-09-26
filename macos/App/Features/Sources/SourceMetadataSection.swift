@@ -1,8 +1,14 @@
 import Foundation
 import Observation
 
-/// Metadata rows (saved values + type suggestions), the Add-metadata dialog,
-/// and the structured DateValue editor for the Source page.
+/// Snapshot for the metadata-value delete confirm (`pvConfirm(item:)`).
+struct SourceMetadataDeleteItem: Identifiable, Equatable {
+    var id: String { fieldID }
+    var fieldID: String
+    var label: String
+}
+
+/// Metadata rows (saved values + type suggestions) and the Add-metadata dialog.
 @MainActor
 @Observable
 final class SourceMetadataSection {
@@ -11,6 +17,11 @@ final class SourceMetadataSection {
     /// Saved row currently in explicit edit mode (one at a time).
     var editingFieldID: String?
     private(set) var savingFieldID: String?
+    /// Inline value error after `sourcemetadata.invalid` (cleared on next edit).
+    var fieldError: String?
+    var fieldErrorID: String?
+    /// Confirm target for clearing a saved value.
+    var pendingDelete: SourceMetadataDeleteItem?
 
     // MARK: Add dialog
 
@@ -20,13 +31,7 @@ final class SourceMetadataSection {
     var addFieldError: String?
     var addValueError: String?
     private(set) var isSavingAdd = false
-
-    // MARK: Date editor
-
-    var isEditingDate = false
-    var dateEditorFieldID: String?
-    var dateEditorDraft = DateValueDraft.empty()
-    private(set) var isSavingDate = false
+    private(set) var isClearing = false
 
     private let context: SourcePageContext
 
@@ -59,41 +64,12 @@ final class SourceMetadataSection {
             && !addValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    /// The entry already carries a structured DateValue.
-    func isStructured(_ entry: CatalogMetadataEntry) -> Bool {
-        !entry.dateValueID.isEmpty
-    }
-
-    /// True when the open date editor reopens an existing structured
-    /// DateValue (Edit date value) rather than structuring one for the first time.
-    var isDateEditMode: Bool {
-        guard let fieldID = dateEditorFieldID,
-              let entry = entries.first(where: { $0.field.id == fieldID })
-        else { return false }
-        return isStructured(entry)
-    }
-
-    /// Dialog subtitle: `SRC-XXXXX · Metadata · <field label>`.
-    var dateEditorSubtitle: LocalizedStringResource? {
-        guard let fieldID = dateEditorFieldID,
-              let entry = entries.first(where: { $0.field.id == fieldID })
-        else { return nil }
-        let ref = context.source?.ref ?? "…"
-        let text = "\(ref) · Metadata · \(entry.field.label)"
-        return LocalizedStringResource(String.LocalizationValue(text))
-    }
-
-    /// Confirm enabled when wording is non-empty and the structured draft is valid.
-    var canSaveDateEditor: Bool {
-        guard let fieldID = dateEditorFieldID else { return false }
-        let wording = (drafts[fieldID] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        return !isSavingDate && !wording.isEmpty && dateEditorDraft.isValid
-    }
-
     /// Seeds edit buffers for saved values and drops buffers for rows that no
     /// longer exist (dismissed suggestions). Also exits any open edit mode.
     func resetDrafts() {
         editingFieldID = nil
+        fieldError = nil
+        fieldErrorID = nil
         syncDrafts()
     }
 
@@ -114,6 +90,10 @@ final class SourceMetadataSection {
         }
         drafts[fieldID] = entry.valueText
         editingFieldID = fieldID
+        if fieldErrorID == fieldID {
+            fieldError = nil
+            fieldErrorID = nil
+        }
     }
 
     func cancelEdit() {
@@ -123,6 +103,10 @@ final class SourceMetadataSection {
             drafts[fieldID] = entry.valueText
         }
         editingFieldID = nil
+        if fieldErrorID == fieldID {
+            fieldError = nil
+            fieldErrorID = nil
+        }
     }
 
     func save(fieldID: String) async {
@@ -139,19 +123,45 @@ final class SourceMetadataSection {
         savingFieldID = fieldID
         defer { savingFieldID = nil }
         context.clearPageError()
+        fieldError = nil
+        fieldErrorID = nil
         do {
             let updated = try await context.store.setSourceMetadata(
                 projectDir: context.projectDir,
                 userID: context.userID,
                 sourceID: context.sourceID,
                 fieldID: fieldID,
-                valueText: value,
-                date: nil
+                valueText: value
             )
             replaceEntry(updated)
             if editingFieldID == fieldID {
                 editingFieldID = nil
             }
+        } catch {
+            applySetError(error, fieldID: fieldID)
+        }
+    }
+
+    func askClear(fieldID: String) {
+        guard let entry = entries.first(where: { $0.field.id == fieldID }), entry.hasValue else { return }
+        pendingDelete = SourceMetadataDeleteItem(fieldID: fieldID, label: entry.field.label)
+    }
+
+    func confirmClear() async {
+        guard let item = pendingDelete else { return }
+        guard !isClearing else { return }
+        isClearing = true
+        defer { isClearing = false }
+        context.clearPageError()
+        do {
+            try await context.store.clearSourceMetadata(
+                projectDir: context.projectDir,
+                userID: context.userID,
+                sourceID: context.sourceID,
+                fieldID: item.fieldID
+            )
+            applyCleared(fieldID: item.fieldID)
+            pendingDelete = nil
         } catch {
             context.pageError = L10n.Errors.message(for: error)
         }
@@ -228,108 +238,40 @@ final class SourceMetadataSection {
         }
         isSavingAdd = true
         defer { isSavingAdd = false }
-        do {
-            let entry = try await context.store.setSourceMetadata(
-                projectDir: context.projectDir,
-                userID: context.userID,
-                sourceID: context.sourceID,
-                fieldID: addFieldID,
-                valueText: value,
-                date: nil
-            )
-            replaceEntry(entry)
-            isAdding = false
-        } catch {
-            addValueError = L10n.Errors.message(for: error)
-        }
-    }
-
-    // MARK: Date editor
-
-    /// Single entry point for the date metadata pencil: wording + structure
-    /// share one dialog. Seeds wording from the saved value and the structured
-    /// draft when a DateValue already exists.
-    func openDateEditor(fieldID: String) {
-        guard let entry = entries.first(where: { $0.field.id == fieldID }),
-              entry.hasValue,
-              entry.field.dataType == CatalogFieldDataType.date
-        else { return }
-        if editingFieldID != nil {
-            cancelEdit()
-        }
-        drafts[fieldID] = entry.valueText
-        dateEditorFieldID = fieldID
-        if let date = entry.date {
-            dateEditorDraft = DateValueDraft(from: date)
-        } else {
-            dateEditorDraft = DateValueDraft.empty()
-        }
-        isEditingDate = true
-    }
-
-    /// Test / call-site alias: open the date dialog for a not-yet-structured row.
-    func openStructureDate(fieldID: String) {
-        openDateEditor(fieldID: fieldID)
-    }
-
-    /// Test / call-site alias: open the date dialog for a structured row.
-    func openEditDate(fieldID: String) {
-        openDateEditor(fieldID: fieldID)
-    }
-
-    func cancelDateEditor() {
-        guard !isSavingDate else { return }
-        if let fieldID = dateEditorFieldID,
-           let entry = entries.first(where: { $0.field.id == fieldID })
-        {
-            drafts[fieldID] = entry.valueText
-        }
-        isEditingDate = false
-        dateEditorFieldID = nil
-        dateEditorDraft = DateValueDraft.empty()
-    }
-
-    func saveDateEditor() async {
-        await saveDateEditor(
-            wording: dateEditorFieldID.flatMap { drafts[$0] } ?? "",
-            draft: dateEditorDraft
-        )
-    }
-
-    /// Saves wording + structure from a local dialog draft (avoids binding the
-    /// dialog TextFields to the page observation graph while typing).
-    func saveDateEditor(wording: String, draft: DateValueDraft) async {
-        guard let fieldID = dateEditorFieldID else { return }
-        guard !isSavingDate else { return }
-        guard draft.isValid else { return }
-        let value = wording.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !value.isEmpty else {
-            context.pageError = String(localized: L10n.Sources.metadataValueRequired)
-            return
-        }
-        isSavingDate = true
-        defer { isSavingDate = false }
         context.clearPageError()
         do {
             let entry = try await context.store.setSourceMetadata(
                 projectDir: context.projectDir,
                 userID: context.userID,
                 sourceID: context.sourceID,
-                fieldID: fieldID,
-                valueText: value,
-                date: draft.toInput()
+                fieldID: addFieldID,
+                valueText: value
             )
             replaceEntry(entry)
-            isEditingDate = false
-            dateEditorFieldID = nil
-            dateEditorDraft = DateValueDraft.empty()
+            isAdding = false
         } catch {
-            context.pageError = L10n.Errors.message(for: error)
+            applySetError(error, fieldID: nil)
         }
     }
 
-    /// Patches one workspace row from a `setSourceMetadata` response (the
-    /// server returns the refreshed entry, including structured date state).
+    /// `sourcemetadata.invalid` stays on the value field; I/O goes to `pageError`.
+    func applySetError(_ error: Error, fieldID: String?) {
+        if case .coded(_, let code, _, _) = error as? CoreInvokeError,
+           code == "sourcemetadata.invalid"
+        {
+            let message = L10n.Errors.message(for: error)
+            if isAdding {
+                addValueError = message
+            } else if let fieldID {
+                fieldError = message
+                fieldErrorID = fieldID
+            }
+            return
+        }
+        context.pageError = L10n.Errors.message(for: error)
+    }
+
+    /// Patches one workspace row from a `setSourceMetadata` response.
     private func replaceEntry(_ entry: CatalogMetadataEntry) {
         if let idx = entries.firstIndex(where: { $0.field.id == entry.field.id }) {
             context.workspace?.metadata[idx] = entry
@@ -338,5 +280,24 @@ final class SourceMetadataSection {
         }
         drafts[entry.field.id] = entry.valueText
         context.notifyMetadataMutated()
+    }
+
+    private func applyCleared(fieldID: String) {
+        guard var list = context.workspace?.metadata,
+              let idx = list.firstIndex(where: { $0.field.id == fieldID })
+        else { return }
+        if list[idx].suggested {
+            list[idx].valueText = ""
+            list[idx].hasValue = false
+        } else {
+            list.remove(at: idx)
+        }
+        context.workspace?.metadata = list
+        drafts[fieldID] = ""
+        if editingFieldID == fieldID {
+            editingFieldID = nil
+        }
+        context.notifyMetadataMutated()
+        syncDrafts()
     }
 }

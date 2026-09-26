@@ -239,19 +239,17 @@ func ReprojectSource(q Querier, sourceID []byte) error {
 	noteRows.Close()
 
 	metaRows, err := q.Query(`
-		SELECT COALESCE(m.value_text, ''), COALESCE(d.phrase, ''),
-			COALESCE(CAST(d.start_year AS TEXT), ''),
+		SELECT COALESCE(m.value_text, ''),
 			COALESCE(f.label, ''), COALESCE(f.key, '')
 		FROM source_metadata m
-		LEFT JOIN date_values d ON d.id = m.date_value_id
 		LEFT JOIN source_metadata_fields f ON f.id = m.field_id
 		WHERE m.source_id = ?`, sourceID)
 	if err != nil {
 		return err
 	}
 	for metaRows.Next() {
-		var valueText, phrase, year, fieldLabel, fieldKey string
-		if err := metaRows.Scan(&valueText, &phrase, &year, &fieldLabel, &fieldKey); err != nil {
+		var valueText, fieldLabel, fieldKey string
+		if err := metaRows.Scan(&valueText, &fieldLabel, &fieldKey); err != nil {
 			metaRows.Close()
 			return err
 		}
@@ -259,13 +257,11 @@ func ReprojectSource(q Querier, sourceID []byte) error {
 		if label == "" {
 			label = strings.TrimSpace(fieldKey)
 		}
-		for _, p := range []string{valueText, phrase, year} {
-			if t := strings.TrimSpace(p); t != "" {
-				if label != "" {
-					bodyParts = append(bodyParts, BodyTagMetadata+label+": "+t)
-				} else {
-					bodyParts = append(bodyParts, BodyTagMetadata+t)
-				}
+		if t := strings.TrimSpace(valueText); t != "" {
+			if label != "" {
+				bodyParts = append(bodyParts, BodyTagMetadata+label+": "+t)
+			} else {
+				bodyParts = append(bodyParts, BodyTagMetadata+t)
 			}
 		}
 	}

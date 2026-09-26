@@ -31,7 +31,6 @@ const (
 	OriginUser        = "user"
 
 	DataTypeText = "text"
-	DataTypeDate = "date"
 	DataTypeURL  = "url"
 
 	sqlUpsert = `INSERT INTO source_metadata_fields (id, key, origin, label, data_type, description)
@@ -327,7 +326,7 @@ func originOK(origin string) bool {
 }
 
 func dataTypeOK(dt string) bool {
-	return dt == DataTypeText || dt == DataTypeDate || dt == DataTypeURL
+	return dt == DataTypeText || dt == DataTypeURL
 }
 
 func uuidString(id []byte) string {

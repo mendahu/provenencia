@@ -382,10 +382,6 @@ struct CatalogMetadataEntry: Sendable, Equatable, Identifiable {
     var id: String { field.id }
     var field: CatalogMetadataField
     var valueText: String
-    var dateValueID: String
-    /// Full structured components when `dateValueID` is set — lets the date
-    /// editor rebuild its draft from the catalog instead of a session cache.
-    var date: CatalogDateValueInput?
     var hasValue: Bool
     var suggested: Bool
     var sortOrder: Int32
@@ -494,15 +490,13 @@ protocol GenealogyStore: Sendable {
     func updateSourceNote(projectDir: String, userID: String, noteID: String, body: String) async throws
         -> CatalogSourceNote
     func deleteSourceNote(projectDir: String, userID: String, noteID: String) async throws
-    /// Returns the refreshed workspace entry (structured `date` included) so
-    /// callers can patch without refetching.
+    /// Returns the refreshed workspace entry so callers can patch without refetching.
     func setSourceMetadata(
         projectDir: String,
         userID: String,
         sourceID: String,
         fieldID: String,
-        valueText: String,
-        date: CatalogDateValueInput?
+        valueText: String
     ) async throws -> CatalogMetadataEntry
     func clearSourceMetadata(projectDir: String, userID: String, sourceID: String, fieldID: String) async throws
     /// Permanently dismiss an unfilled type suggestion for this Source.

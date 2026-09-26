@@ -124,7 +124,6 @@ struct SourceFieldsDetailPane: View {
     private var dataTypeOptions: [PVSelectOption] {
         [
             PVSelectOption(value: CatalogFieldDataType.text, label: String(localized: L10n.SourceFields.dataTypeText)),
-            PVSelectOption(value: CatalogFieldDataType.date, label: String(localized: L10n.SourceFields.dataTypeDate)),
             PVSelectOption(value: CatalogFieldDataType.url, label: String(localized: L10n.SourceFields.dataTypeUrl)),
         ]
     }

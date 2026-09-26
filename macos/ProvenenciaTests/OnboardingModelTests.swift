@@ -359,8 +359,7 @@ private struct ThrowingStore: GenealogyStore {
         userID _: String,
         sourceID _: String,
         fieldID _: String,
-        valueText _: String,
-        date _: CatalogDateValueInput?
+        valueText _: String
     ) async throws -> CatalogMetadataEntry { throw StoreBoom.boom }
     func clearSourceMetadata(projectDir _: String, userID _: String, sourceID _: String, fieldID _: String)
         async throws { throw StoreBoom.boom }

@@ -12,6 +12,8 @@ enum PVSymbol: String {
     case chevronForward = "chevron.right"
     /// Lucide `arrow-right` — trailing jump on the Evidence graph header.
     case arrowRight = "arrow.right"
+    /// Lucide `git-branch` — Evidence graph jump on the Source identity header.
+    case gitBranch = "arrow.triangle.branch"
     case photo = "photo"
     case scrollText = "doc.text"
     /// Lucide `file` — locator floor (entire artifact).

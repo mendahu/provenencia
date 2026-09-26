@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/sourcefields"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
@@ -52,17 +51,6 @@ func TestSourceMetadata(t *testing.T) {
 			t.Fatal(err)
 		}
 		return f
-	}
-	mustYear := func(t *testing.T, c *database.Catalog, year int, qual string) []byte {
-		t.Helper()
-		y := year
-		id, err := datevalues.Insert(c, datevalues.Value{
-			Kind: datevalues.KindPoint, Qualifier: qual, StartYear: &y,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		return id
 	}
 	latestAction := func(t *testing.T, c *database.Catalog) string {
 		t.Helper()
@@ -129,7 +117,33 @@ func TestSourceMetadata(t *testing.T) {
 		run  func(t *testing.T, c *database.Catalog)
 	}{
 		{
-			name: "set text and reject date on text field",
+			name: "source_metadata has no date_value_id",
+			run: func(t *testing.T, c *database.Catalog) {
+				db, err := c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				rows, err := db.Query(`PRAGMA table_info(source_metadata)`)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer rows.Close()
+				for rows.Next() {
+					var cid int
+					var name, typ string
+					var notnull, pk int
+					var dflt any
+					if err := rows.Scan(&cid, &name, &typ, &notnull, &dflt, &pk); err != nil {
+						t.Fatal(err)
+					}
+					if name == "date_value_id" {
+						t.Fatal("date_value_id still on source_metadata")
+					}
+				}
+			},
+		},
+		{
+			name: "set text metadata",
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				src := mustSeededSource(t, c)
@@ -140,17 +154,11 @@ func TestSourceMetadata(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if row.ValueText != "12345" || row.DateValueID != nil {
+				if row.ValueText != "12345" {
 					t.Fatalf("%+v", row)
 				}
 				if latestAction(t, c) != "update_source_metadata" {
 					t.Fatalf("action %q", latestAction(t, c))
-				}
-				dv := mustYear(t, c, 1890, datevalues.QualifierABT)
-				if _, err := Set(c, userID, Input{
-					SourceID: src.ID, FieldID: doc.ID, ValueText: "x", DateValueID: dv,
-				}); !errors.Is(err, ErrInvalid) {
-					t.Fatalf("got %v", err)
 				}
 			},
 		},
@@ -169,43 +177,52 @@ func TestSourceMetadata(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if row.ValueText != "https://example.com/record" || row.DateValueID != nil {
+				if row.ValueText != "https://example.com/record" {
 					t.Fatalf("%+v", row)
 				}
-				dv := mustYear(t, c, 1890, datevalues.QualifierABT)
 				if _, err := Set(c, userID, Input{
-					SourceID: src.ID, FieldID: field.ID, ValueText: "x", DateValueID: dv,
-				}); !errors.Is(err, ErrInvalid) {
-					t.Fatalf("got %v", err)
-				}
-			},
-		},
-		{
-			name: "date text only structured only and both",
-			run: func(t *testing.T, c *database.Catalog) {
-				mustUser(t, c)
-				src := mustSeededSource(t, c)
-				rec := mustField(t, c, "record_date")
-				if _, err := Set(c, userID, Input{
-					SourceID: src.ID, FieldID: rec.ID, ValueText: "about the year 1890",
+					SourceID: src.ID, FieldID: field.ID, ValueText: "www.url.com",
 				}); err != nil {
 					t.Fatal(err)
 				}
-				dv := mustYear(t, c, 1890, datevalues.QualifierABT)
-				if _, err := Set(c, userID, Input{
-					SourceID: src.ID, FieldID: rec.ID, DateValueID: dv,
-				}); err != nil {
-					t.Fatal(err)
-				}
-				both, err := Set(c, userID, Input{
-					SourceID: src.ID, FieldID: rec.ID,
-					ValueText: "about the year 1890", DateValueID: dv,
+				lowered, err := Set(c, userID, Input{
+					SourceID: src.ID, FieldID: field.ID, ValueText: "HTTPS://Example.COM/Record",
 				})
 				if err != nil {
 					t.Fatal(err)
 				}
-				if both.ValueText != "about the year 1890" || string(both.DateValueID) != string(dv) {
-					t.Fatalf("%+v", both)
+				if lowered.ValueText != "https://example.com/record" {
+					t.Fatalf("canonical %q", lowered.ValueText)
+				}
+				if _, err := Set(c, userID, Input{
+					SourceID: src.ID, FieldID: field.ID, ValueText: "file:/tmp",
+				}); !errors.Is(err, ErrInvalid) {
+					t.Fatalf("file url %v", err)
+				}
+				if _, err := Set(c, userID, Input{
+					SourceID: src.ID, FieldID: field.ID, ValueText: "not a url",
+				}); !errors.Is(err, ErrInvalid) {
+					t.Fatalf("junk url %v", err)
+				}
+			},
+		},
+		{
+			name: "date-named fields are text",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				src := mustSeededSource(t, c)
+				rec := mustField(t, c, "record_date")
+				if rec.DataType != sourcefields.DataTypeText {
+					t.Fatalf("record_date type %q", rec.DataType)
+				}
+				row, err := Set(c, userID, Input{
+					SourceID: src.ID, FieldID: rec.ID, ValueText: "about the year 1890",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if row.ValueText != "about the year 1890" {
+					t.Fatalf("%+v", row)
 				}
 				kept, err := Set(c, userID, Input{
 					SourceID: src.ID, FieldID: rec.ID,
@@ -214,11 +231,8 @@ func TestSourceMetadata(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if kept.ValueText != "circa 1890" || string(kept.DateValueID) != string(dv) {
-					t.Fatalf("text-only must keep date: %+v", kept)
-				}
-				if _, err := Set(c, userID, Input{SourceID: src.ID, FieldID: rec.ID}); !errors.Is(err, ErrInvalid) {
-					t.Fatalf("empty set %v", err)
+				if kept.ValueText != "circa 1890" {
+					t.Fatalf("%+v", kept)
 				}
 			},
 		},
@@ -565,10 +579,6 @@ func TestSourceMetadata(t *testing.T) {
 				}
 				if _, err := Set(c, userID, Input{SourceID: src.ID, FieldID: doc.ID}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("empty text %v", err)
-				}
-				rec := mustField(t, c, "record_date")
-				if _, err := Set(c, userID, Input{SourceID: src.ID, FieldID: rec.ID, DateValueID: missing}); !errors.Is(err, ErrInvalid) {
-					t.Fatalf("bad date %v", err)
 				}
 			},
 		},

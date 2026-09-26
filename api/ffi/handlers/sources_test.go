@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -185,7 +186,7 @@ func TestSourceNotes(t *testing.T) {
 }
 
 // metadataSetFixture creates a source and returns a request skeleton targeting
-// the first seeded field of the wanted data type ("text" | "date").
+// the first seeded field of the wanted data type ("text" | "url").
 func metadataSetFixture(t *testing.T, dataType string) *engine.SetSourceMetadataRequest {
 	t.Helper()
 	dir, userID, typeID := sourceFixture(t)
@@ -289,51 +290,74 @@ func TestSetSourceMetadata(t *testing.T) {
 				if entry.GetField().GetId() != sr.FieldId {
 					t.Fatalf("field %s want %s", entry.GetField().GetId(), sr.FieldId)
 				}
-				if entry.GetDateValueId() != "" || entry.GetDate() != nil {
-					t.Fatalf("unexpected date on text entry: %+v", entry)
-				}
 			},
 		},
 		{
-			name: "set date metadata returns structured entry and keeps date on text-only update",
+			name: "set url metadata accepts host-shaped values",
 			reqFn: func(t *testing.T) proto.Message {
-				req := metadataSetFixture(t, "date")
-				req.ValueText = "about the year 1890"
-				year := int32(1890)
-				req.Date = &engine.DateValueInput{Kind: "point", Qualifier: "ABT", StartYear: &year}
-				return req
-			},
-			after: func(t *testing.T, raw []byte, req proto.Message) {
-				sr := req.(*engine.SetSourceMetadataRequest)
-				entry := unmarshalSetMetadataEntry(t, raw)
-				if entry.GetDateValueId() == "" {
-					t.Fatal("missing date_value_id")
-				}
-				d := entry.GetDate()
-				if d.GetKind() != "point" || d.GetQualifier() != "ABT" || d.GetStartYear() != 1890 {
-					t.Fatalf("date %+v", d)
-				}
-
-				// A text-only update must keep the structured DateValue and
-				// still return it on the refreshed entry.
-				tout, err := SetSourceMetadata(marshalProto(t, &engine.SetSourceMetadataRequest{
-					ProjectDir: sr.ProjectDir, UserId: sr.UserId, SourceId: sr.SourceId,
-					FieldId: sr.FieldId, ValueText: "circa 1890",
+				req := metadataSetFixture(t, "text")
+				fout, err := CreateMetadataField(marshalProto(t, &engine.CreateMetadataFieldRequest{
+					ProjectDir: req.ProjectDir, UserId: req.UserId, Label: "Catalogue URL", DataType: "url",
 				}))
 				if err != nil {
 					t.Fatal(err)
 				}
-				textEntry := unmarshalSetMetadataEntry(t, tout)
-				if textEntry.GetValueText() != "circa 1890" {
-					t.Fatalf("value %q", textEntry.GetValueText())
+				var field engine.CreateMetadataFieldResponse
+				if err := proto.Unmarshal(fout, &field); err != nil {
+					t.Fatal(err)
 				}
-				if textEntry.GetDateValueId() != entry.GetDateValueId() {
-					t.Fatalf("date_value_id changed: %q -> %q", entry.GetDateValueId(), textEntry.GetDateValueId())
-				}
-				if textEntry.GetDate().GetStartYear() != 1890 {
-					t.Fatalf("date lost on text-only update: %+v", textEntry.GetDate())
+				req.FieldId = field.Field.GetId()
+				req.ValueText = "www.url.com"
+				return req
+			},
+			after: func(t *testing.T, raw []byte, _ proto.Message) {
+				entry := unmarshalSetMetadataEntry(t, raw)
+				if entry.GetValueText() != "www.url.com" || entry.GetField().GetDataType() != "url" {
+					t.Fatalf("entry %+v", entry)
 				}
 			},
+		},
+		{
+			name: "set url metadata rejects file scheme",
+			reqFn: func(t *testing.T) proto.Message {
+				req := metadataSetFixture(t, "text")
+				fout, err := CreateMetadataField(marshalProto(t, &engine.CreateMetadataFieldRequest{
+					ProjectDir: req.ProjectDir, UserId: req.UserId, Label: "Bad URL", DataType: "url",
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var field engine.CreateMetadataFieldResponse
+				if err := proto.Unmarshal(fout, &field); err != nil {
+					t.Fatal(err)
+				}
+				req.FieldId = field.Field.GetId()
+				req.ValueText = "file:/tmp"
+				return req
+			},
+			wantErr:   true,
+			wantErrIs: sourcemetadata.ErrInvalid,
+		},
+		{
+			name: "set url metadata rejects a single label",
+			reqFn: func(t *testing.T) proto.Message {
+				req := metadataSetFixture(t, "text")
+				fout, err := CreateMetadataField(marshalProto(t, &engine.CreateMetadataFieldRequest{
+					ProjectDir: req.ProjectDir, UserId: req.UserId, Label: "Bare word URL", DataType: "url",
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var field engine.CreateMetadataFieldResponse
+				if err := proto.Unmarshal(fout, &field); err != nil {
+					t.Fatal(err)
+				}
+				req.FieldId = field.Field.GetId()
+				req.ValueText = "jakerobins"
+				return req
+			},
+			wantErr:   true,
+			wantErrIs: sourcemetadata.ErrInvalid,
 		},
 	})
 }

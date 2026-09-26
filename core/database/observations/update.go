@@ -22,9 +22,7 @@ const (
 
 	sqlDeleteObservationNotes = `DELETE FROM observation_notes WHERE observation_id = ?`
 
-	sqlCountDateRefs = `SELECT
-		(SELECT COUNT(*) FROM observations WHERE value_date_id = ?) +
-		(SELECT COUNT(*) FROM source_metadata WHERE date_value_id = ?)`
+	sqlCountDateRefs = `SELECT COUNT(*) FROM observations WHERE value_date_id = ?`
 
 	sqlCountNameRefs = `SELECT COUNT(*) FROM observations WHERE value_name_id = ?`
 
@@ -195,7 +193,7 @@ func releaseDateValue(tx *sql.Tx, oldID, newID []byte) (map[string]any, error) {
 		return nil, nil
 	}
 	var n int
-	if err := tx.QueryRow(sqlCountDateRefs, oldID, oldID).Scan(&n); err != nil {
+	if err := tx.QueryRow(sqlCountDateRefs, oldID).Scan(&n); err != nil {
 		return nil, err
 	}
 	if n > 0 {

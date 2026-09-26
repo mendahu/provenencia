@@ -625,7 +625,7 @@ struct CatalogQueryRegistryTests {
                 id: "f1", key: "author", origin: "user", label: label,
                 dataType: "text", description: ""
             ),
-            valueText: "", dateValueID: "", hasValue: false, suggested: true, sortOrder: 0
+            valueText: "", hasValue: false, suggested: true, sortOrder: 0
         )
     }
 
@@ -732,7 +732,7 @@ struct CatalogQueryRegistryTests {
                     id: "f1", key: "author", origin: "user", label: "Author",
                     dataType: "text", description: ""
                 ),
-                valueText: "", dateValueID: "", hasValue: false, suggested: true, sortOrder: 0
+                valueText: "", hasValue: false, suggested: true, sortOrder: 0
             ),
         ]
         session.apply(.changedSourceType(moved))

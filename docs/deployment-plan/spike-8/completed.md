@@ -21,6 +21,8 @@ IDs stay stable (`S8-NN`, `S8-DN`). Do not renumber when moving steps here.
 | S8-05 | PR | Paste PDF I-beam selection into citation transcription |
 | S8-D3 | Design | Evidence graph visuals — ochre conflict bracket + Not; Source jump; identity nouns; Add property on bridges |
 | S8-06 | PR | Graph chrome: row marks, Source-page jump, richer bridge sentences, Add property on bridges |
+| S8-D4 | Design | Source page — Evidence graph jump; text metadata; delete; url links |
+| S8-07 | PR | Source page jump + text metadata + delete + urlshape + credibility pin |
 
 ## Steps
 
@@ -188,5 +190,32 @@ Shipped the S8-D3 graph-chrome pass. Competing Observations stay as separate row
 **What stayed out**
 
 - Merge / resolve; denied-line drawing
-- Source-page → graph (**S8-07**)
 - Incomplete-bridge chrome, collapse/expand, filters, undo, tray, minimap
+
+### S8-D4 — Design: Source page enhancements
+
+**Board pick:** keep shipped metadata quick-add / quick-edit; treat every field (including former date keys) as text; trash on saved rows; saved `url` values as underlined links; identity-header **Evidence graph** jump already drawn (secondary, branch glyph, `hasArtifact` gate). Credibility sits at the bottom of the left overview column; title pencil centers on the first line.
+
+Agreed: no DateValue catalog chrome; no `PVLink`; host-shape validation is engine-only; delete is `ClearSourceMetadata`, not suggestion dismiss or vocabulary delete.
+
+Brief archived: [`design/archive/S8-D4-source-page.md`](design/archive/S8-D4-source-page.md). Shipped as **S8-07**.
+
+### S8-07 — Source page Evidence graph jump and text metadata
+
+Shipped the S8-D4 Source-page pass. The identity header jumps to this Source’s Evidence graph. Catalog metadata is filing text again: dates are phrases, saved rows can be cleared, and `url` values are external links.
+
+**What shipped**
+
+- Trailing secondary **Evidence graph** jump (`SourcesListNavigation.graphLocation` + `hasArtifact`); disabled tooltip reuses the list’s needs-an-artifact copy; Back returns to the page
+- Metadata stays shipped quick-edit; former date keys are text; trash → `ClearSourceMetadata` (suggestion returns to the dashed list; extras vanish)
+- Saved `url` values are `textLink` + underline; click opens the default browser (`https://` prefix when the typed string has no scheme)
+- Host-shape lives only in `core/urlshape`; `SetSourceMetadata` returns `sourcemetadata.invalid` on junk / `file:` / no host. The client puts that on the value field; I/O stays on `pageError`
+- Catalog `000028`: flatten `date_value_id` into `value_text`, drop the column, `data_type` is `text` \| `url`; seeds and search projector follow
+- Credibility pinned to the bottom of the left overview column; title pencil mid-first-line (`PVInlineEdit.RestingAlignment.firstLineCenter`)
+
+**What stayed out**
+
+- In-app browser / `PVLink`; a Swift URL parser or `ValidateURL` RPC
+- DateValue on Observations / the composer (unchanged)
+- First-class Source provenance date or list sort
+- Redesigning the jump or the rest of the identity header

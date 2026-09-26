@@ -120,7 +120,7 @@ func TestSearchFindsTypesAndFields(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	field, err := sourcefields.Create(c, "Publication date", "date", "when published")
+	field, err := sourcefields.Create(c, "Publication date", "text", "when published")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -62,6 +62,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var listSubjectsError: Error?
     var listConnectRulesError: Error?
     var createPropertyTermError: Error?
+    /// When set, `setSourceMetadata` throws (field vs page error tests).
+    var setSourceMetadataError: Error?
     /// When set, `addSourceNote` throws (`pageError` surfacing).
     var addSourceNoteError: Error?
     /// When set, `ingestArtifactFile` throws before mutating artifacts.
@@ -376,29 +378,14 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         userID _: String,
         sourceID: String,
         fieldID: String,
-        valueText: String,
-        date: CatalogDateValueInput?
+        valueText: String
     ) async throws -> CatalogMetadataEntry {
+        if let setSourceMetadataError { throw setSourceMetadataError }
         var list = metadataBySource[sourceID] ?? []
-        let dateID: String
-        let stored: CatalogDateValueInput?
-        if let date {
-            dateID = "dv-\(fieldID.prefix(8))"
-            stored = date
-        } else if let existing = list.first(where: { $0.field.id == fieldID }) {
-            // Text-only updates keep any existing structured DateValue.
-            dateID = existing.dateValueID
-            stored = existing.date
-        } else {
-            dateID = ""
-            stored = nil
-        }
         let entry: CatalogMetadataEntry
         if let idx = list.firstIndex(where: { $0.field.id == fieldID }) {
             list[idx].valueText = valueText
             list[idx].hasValue = true
-            list[idx].dateValueID = dateID
-            list[idx].date = stored
             entry = list[idx]
         } else {
             let field = (fieldsByProject[projectDir] ?? []).first { $0.id == fieldID }
@@ -409,8 +396,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             entry = CatalogMetadataEntry(
                 field: field,
                 valueText: valueText,
-                dateValueID: dateID,
-                date: stored,
                 hasValue: true,
                 suggested: false,
                 sortOrder: order
@@ -422,7 +407,15 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     func clearSourceMetadata(projectDir _: String, userID _: String, sourceID: String, fieldID: String) async throws {
-        metadataBySource[sourceID] = (metadataBySource[sourceID] ?? []).filter { $0.field.id != fieldID }
+        var list = metadataBySource[sourceID] ?? []
+        guard let idx = list.firstIndex(where: { $0.field.id == fieldID }) else { return }
+        if list[idx].suggested {
+            list[idx].valueText = ""
+            list[idx].hasValue = false
+        } else {
+            list.remove(at: idx)
+        }
+        metadataBySource[sourceID] = list
     }
 
     func dismissSourceMetadataSuggestion(

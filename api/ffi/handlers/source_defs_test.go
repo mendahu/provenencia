@@ -205,7 +205,7 @@ func TestUpdateMetadataField(t *testing.T) {
 				}
 				return &engine.UpdateMetadataFieldRequest{
 					ProjectDir: dir, UserId: userID, FieldId: created.Field.GetId(),
-					Label: "Album Code", DataType: "date", Description: "updated",
+					Label: "Album Code", DataType: "url", Description: "updated",
 				}
 			},
 			wantErr: true,

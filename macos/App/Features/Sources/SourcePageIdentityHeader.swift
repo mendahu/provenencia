@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Sticky identity header: thumbnail, title edit, type chip.
 struct SourcePageIdentityHeader: View {
+    @Environment(WorkspaceNavigation.self) private var navigation
     @Bindable var model: SourcePageModel
     /// Local draft so title keystrokes don't invalidate the whole Source page
     /// observation graph on every character.
@@ -20,6 +21,7 @@ struct SourcePageIdentityHeader: View {
                     coverThumbnail
                     titleCluster
                         .frame(maxWidth: .infinity, alignment: .leading)
+                    evidenceGraphJump
                 }
                 // Menu on the row (not the 72pt thumb) so click origin shares
                 // the panel's coordinate space.
@@ -117,6 +119,7 @@ struct SourcePageIdentityHeader: View {
                 saveDisabled: titleDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                 expandsContent: false,
                 axis: .horizontal,
+                restingAlignment: .firstLineCenter,
                 accessibilityIdentifierPrefix: "sources.page.title",
                 onEdit: {
                     titleDraft = model.identity.title
@@ -170,6 +173,27 @@ struct SourcePageIdentityHeader: View {
 
             metaRow
         }
+    }
+
+    private var evidenceGraphJump: some View {
+        let location = model.source.flatMap(SourcesListNavigation.graphLocation(for:))
+        return PVButton(
+            L10n.Sources.jumpToEvidenceGraph,
+            variant: .secondary,
+            size: .sm,
+            icon: .gitBranch
+        ) {
+            if let location {
+                navigation.go(to: location)
+            }
+        }
+        .disabled(location == nil)
+        .help(
+            location == nil
+                ? String(localized: L10n.Sources.needsArtifactTooltip)
+                : String(localized: L10n.Sources.jumpToEvidenceGraph)
+        )
+        .accessibilityIdentifier("sources.page.jumpToEvidenceGraph")
     }
 
     private var metaRow: some View {
