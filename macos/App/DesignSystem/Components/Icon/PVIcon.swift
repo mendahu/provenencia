@@ -10,6 +10,8 @@ enum PVSymbol: String {
     case chevronUp = "chevron.up"
     case chevronBack = "chevron.left"
     case chevronForward = "chevron.right"
+    /// Lucide `arrow-right` — trailing jump on the Evidence graph header.
+    case arrowRight = "arrow.right"
     case photo = "photo"
     case scrollText = "doc.text"
     /// Lucide `file` — locator floor (entire artifact).

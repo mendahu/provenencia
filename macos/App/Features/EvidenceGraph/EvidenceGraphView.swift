@@ -238,6 +238,7 @@ private struct EvidenceGraphContent: View {
                     .foregroundStyle(PVColor.textMuted)
                     .lineLimit(1)
             }
+            jumpToSourcePageButton
             Spacer(minLength: 0)
             Text(L10n.EvidenceGraph.subjectCount(count: subjects.count + bridges.count))
                 .font(PVFont.mono(size: PVTypeScale.caption))
@@ -245,7 +246,24 @@ private struct EvidenceGraphContent: View {
         }
         .padding(.horizontal, PVSpacing.space7)
         .padding(.vertical, PVSpacing.space5)
-        .accessibilityElement(children: .combine)
+    }
+
+    private var jumpToSourcePageButton: some View {
+        let title = sourceTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        return PVButton(
+            L10n.EvidenceGraph.jumpToSourcePage,
+            variant: .ghost,
+            size: .sm,
+            iconRight: .arrowRight
+        ) {
+            navigation.go(to: model.sourcePageLocation(title: sourceTitle, ref: sourceRef))
+        }
+        .accessibilityLabel(
+            title.isEmpty
+                ? Text(L10n.EvidenceGraph.jumpToSourcePage)
+                : Text(verbatim: L10n.EvidenceGraph.jumpToSourcePageAccessibility(title: title))
+        )
+        .accessibilityIdentifier("evidenceGraph.header.jumpToSourcePage")
     }
 
     private var canvasPane: some View {
@@ -274,6 +292,18 @@ private struct EvidenceGraphContent: View {
             }
             .padding(.horizontal, PVSpacing.space5)
             .padding(.top, PVSpacing.space5)
+
+            if EvidenceCitedPropertyMarks.graphHasMarks(subjects: subjects, bridges: bridges) {
+                VStack {
+                    Spacer(minLength: 0)
+                    HStack {
+                        EvidenceGraphRowMarksLegend()
+                        Spacer(minLength: 0)
+                    }
+                }
+                .padding(.horizontal, PVSpacing.space5)
+                .padding(.bottom, PVSpacing.space5)
+            }
         }
     }
 
@@ -675,7 +705,7 @@ private struct EvidenceGraphDocumentBody: View {
         .accessibilityAction(named: Text(L10n.EvidenceGraph.editAccessibility)) {
             model.beginEdit(subjectID: placed.id)
         }
-        .accessibilityAction(named: Text(L10n.EvidenceGraph.addProperty)) {
+        .accessibilityAction(named: Text(addPropertyActionName)) {
             if let location = model.composerLocation(for: placed.id) {
                 navigation.go(to: location)
             }
@@ -719,10 +749,19 @@ private struct EvidenceGraphDocumentBody: View {
                 navigation.go(to: location)
             }
         }
+        .accessibilityAction(named: Text(addPropertyActionName)) {
+            if let location = model.composerLocation(for: placed.id) {
+                navigation.go(to: location)
+            }
+        }
         .accessibilityAction(named: Text(L10n.EvidenceGraph.deleteAccessibility)) {
             model.beginDelete(subjectID: placed.id)
         }
         .offset(x: layout.width, y: layout.height)
+    }
+
+    private var addPropertyActionName: LocalizedStringResource {
+        model.canCite ? L10n.EvidenceGraph.addProperty : L10n.EvidenceGraph.addPropertyUnavailable
     }
 
     private var emptyOverlay: some View {
@@ -733,6 +772,61 @@ private struct EvidenceGraphDocumentBody: View {
         )
         .frame(width: 420)
         .position(x: contentSize.width / 2, y: contentSize.height / 2)
+    }
+}
+
+/// Canvas legend for conflict / negated marks. Floats bottom-left while any
+/// cited row on the graph carries a mark (S8-D3 Frame 09).
+private struct EvidenceGraphRowMarksLegend: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center, spacing: 8) {
+                EvidenceLegendConflictMark()
+                Text(L10n.EvidenceGraph.legendConflict)
+                    .font(PVFont.body(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textSecondary)
+            }
+            HStack(alignment: .center, spacing: 8) {
+                Text(L10n.EvidenceGraph.negatedPrefix)
+                    .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
+                    .tracking(PVTypeScale.micro * PVTracking.caps)
+                    .textCase(.uppercase)
+                    .foregroundStyle(PVColor.danger)
+                Text(L10n.EvidenceGraph.legendNegated)
+                    .font(PVFont.body(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textSecondary)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
+                .fill(PVColor.surfaceCard)
+                .overlay(
+                    RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
+                        .strokeBorder(PVColor.borderSubtle, lineWidth: 1)
+                )
+                .shadow(color: Color.black.opacity(0.08), radius: 8, y: 2)
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("evidenceGraph.legend")
+    }
+}
+
+private struct EvidenceLegendConflictMark: View {
+    var body: some View {
+        Path { path in
+            path.move(to: CGPoint(x: 8, y: 2))
+            path.addLine(to: CGPoint(x: 3, y: 2))
+            path.addLine(to: CGPoint(x: 3, y: 14))
+            path.addLine(to: CGPoint(x: 8, y: 14))
+        }
+        .stroke(
+            PVColor.warning,
+            style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round)
+        )
+        .frame(width: 12, height: 16)
+        .accessibilityHidden(true)
     }
 }
 

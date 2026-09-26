@@ -111,10 +111,21 @@ enum EvidenceBridgeEdgeSummary {
         return phrase(kind: .participation, term: role)
     }
 
+    static func identityPropertyKey(for kind: EvidencePrimaryKind) -> String {
+        switch kind {
+        case .person: "name"
+        case .event: "event_type"
+        case .place: "toponym"
+        }
+    }
+
     private static func noun(subjectID: String?, snapshot: SourceGraphSnapshot) -> String? {
         guard let subjectID,
               let placed = snapshot.subjects.first(where: { $0.id == subjectID })
         else { return nil }
+        if let identity = identityNoun(on: placed) {
+            return identity
+        }
         let label = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
         if !label.isEmpty { return label }
         let typed = L10n.EvidenceGraph.bridgeNounTypeAndRef(
@@ -122,6 +133,24 @@ enum EvidenceBridgeEdgeSummary {
             ref: placed.subject.ref
         )
         return typed.isEmpty ? nil : typed
+    }
+
+    /// First positive identity Observation, else first, else nil (GV-17).
+    private static func identityNoun(on placed: SourceGraphPlacedSubject) -> String? {
+        let key = identityPropertyKey(for: placed.kind)
+        let matches = placed.observations.filter { $0.propertyKey == key }
+        let chosen = matches.first(where: isPositive) ?? matches.first
+        guard let chosen else { return nil }
+        let display = ObservationValueDisplay.string(for: chosen)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return display.isEmpty ? nil : display
+    }
+
+    private static func isPositive(_ observation: CatalogObservation) -> Bool {
+        let polarity = observation.polarity
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        return polarity.isEmpty || polarity == ObservationPolarity.positive.rawValue
     }
 
     private static func wholeNameFallback(for bridge: SourceGraphPlacedBridge) -> String {

@@ -85,25 +85,42 @@ struct EvidenceBridgeCard: View {
         )
     }
 
-    /// Painted height: header plus up to three wrapped body lines.
-    ///
-    /// No minimum floor: bridge cards are shallower than primary cards, and a
-    /// frame taller than the fill strands bottom-approach edge terminals below
-    /// the card (the ``GraphCanvasEdgeGeometry/endpointTuck`` measures from
-    /// this frame's `maxY`).
+    /// Painted height: header plus up to three wrapped body lines, then extra
+    /// non-edge rows and Add property. No minimum floor — a frame taller than
+    /// the fill strands bottom-approach edge terminals below the card.
     static func contentHeight(
         for placed: SourceGraphPlacedBridge,
         in snapshot: SourceGraphSnapshot
     ) -> CGFloat {
         let header = placed.isCited ? headerContentHeightCited : headerContentHeightUncited
+        let body = bodyTextHeight(for: placed, in: snapshot)
+        var height = shellPaddingTop + header + headerToBodySpacing + body
+        if placed.isCited {
+            let extras = CGFloat(extraObservations(for: placed).count)
+            height += EvidenceSubjectCard.stackHairline
+                + extras * (EvidenceSubjectCard.propertyRowHeight + EvidenceSubjectCard.stackHairline)
+                + EvidenceSubjectCard.addPropertyInStackHeight
+        } else {
+            height += 26 + shellPaddingTop
+        }
+        return height
+    }
+
+    static func extraObservations(for placed: SourceGraphPlacedBridge) -> [CatalogObservation] {
+        EvidenceCitedPropertyMarks.extraObservations(in: placed.observations)
+    }
+
+    static func bodyTextHeight(
+        for placed: SourceGraphPlacedBridge,
+        in snapshot: SourceGraphSnapshot
+    ) -> CGFloat {
         let text = placed.isCited
             ? EvidenceBridgeEdgeSummary.sentence(for: placed, in: snapshot)
             : String(localized: L10n.EvidenceGraph.bridgeHonestyBody)
         let font = placed.isCited
             ? PVFont.nsDisplay(size: 14.5, weight: PVFontWeight.medium)
             : PVFont.nsBody(size: 11.5, weight: PVFontWeight.regular, italic: true)
-        let body = wrappedTextHeight(text, width: bodyTextWidth, font: font, maxLines: 3)
-        return shellPaddingTop + header + headerToBodySpacing + body + shellPaddingTop
+        return wrappedTextHeight(text, width: bodyTextWidth, font: font, maxLines: 3)
     }
 
     /// Body copy width inside the shell, leaving room for the trailing icon column.
@@ -148,9 +165,9 @@ struct EvidenceBridgeCard: View {
         var actions: [GraphCanvasActionTarget] = [
             GraphCanvasActionTarget(id: editActionID, frame: headerHits.edit),
         ]
+        let headerHeight = placed.isCited ? headerContentHeightCited : headerContentHeightUncited
+        let bodyTop = frame.minY + shellPaddingTop + headerHeight + headerToBodySpacing
         if canCite {
-            let headerHeight = placed.isCited ? headerContentHeightCited : headerContentHeightUncited
-            let bodyTop = frame.minY + shellPaddingTop + headerHeight + headerToBodySpacing
             actions.append(
                 GraphCanvasActionTarget(
                     id: editCitationActionID,
@@ -159,6 +176,55 @@ struct EvidenceBridgeCard: View {
                         y: bodyTop,
                         width: headerHits.edit.width,
                         height: bodyActionHitHeight
+                    )
+                )
+            )
+        }
+        if placed.isCited {
+            let extras = extraObservations(for: placed)
+            let stackTop = bodyTop + bodyTextHeight(for: placed, in: snapshot)
+            for (index, observation) in extras.enumerated() {
+                let y = stackTop
+                    + EvidenceSubjectCard.stackHairline
+                    + CGFloat(index) * (EvidenceSubjectCard.propertyRowHeight + EvidenceSubjectCard.stackHairline)
+                actions.append(
+                    GraphCanvasActionTarget(
+                        id: EvidenceSubjectCard.editPropertyActionID(observationID: observation.id),
+                        frame: CGRect(
+                            x: frame.minX,
+                            y: y,
+                            width: frame.width,
+                            height: EvidenceSubjectCard.propertyRowHeight
+                        )
+                    )
+                )
+            }
+            if canCite {
+                let addY = stackTop
+                    + EvidenceSubjectCard.stackHairline
+                    + CGFloat(extras.count)
+                    * (EvidenceSubjectCard.propertyRowHeight + EvidenceSubjectCard.stackHairline)
+                actions.append(
+                    GraphCanvasActionTarget(
+                        id: EvidenceSubjectCard.addPropertyActionID,
+                        frame: CGRect(
+                            x: frame.minX,
+                            y: addY,
+                            width: frame.width,
+                            height: EvidenceSubjectCard.addPropertyInStackHeight
+                        )
+                    )
+                )
+            }
+        } else if canCite {
+            actions.append(
+                GraphCanvasActionTarget(
+                    id: EvidenceSubjectCard.addPropertyActionID,
+                    frame: CGRect(
+                        x: frame.minX,
+                        y: frame.maxY - 30 - 4,
+                        width: frame.width,
+                        height: 30
                     )
                 )
             )
@@ -219,9 +285,15 @@ private struct EvidenceBridgeCardChrome: View {
         VStack(alignment: .leading, spacing: EvidenceBridgeCard.headerToBodySpacing) {
             headerRow
             bodyRow
+            if placed.isCited {
+                extraPropertyStack
+            } else {
+                addPropertyQuietRow
+            }
         }
         .padding(.horizontal, EvidenceBridgeCard.shellPaddingX)
-        .padding(.vertical, EvidenceBridgeCard.shellPaddingTop)
+        .padding(.top, EvidenceBridgeCard.shellPaddingTop)
+        .padding(.bottom, placed.isCited ? 0 : EvidenceBridgeCard.shellPaddingTop)
         .frame(width: EvidenceBridgeCard.width, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
@@ -316,6 +388,62 @@ private struct EvidenceBridgeCardChrome: View {
                 }
             }
         }
+    }
+
+    private var extraPropertyStack: some View {
+        EvidenceCitedPropertyStack(
+            observations: EvidenceBridgeCard.extraObservations(for: placed),
+            style: nil,
+            hoveredActionID: hoveredActionID
+        ) {
+            addPropertyStackRow
+        }
+        .padding(.top, EvidenceSubjectCard.stackHairline)
+        .background(PVColor.borderSubtle)
+        .clipShape(
+            UnevenRoundedRectangle(
+                bottomLeadingRadius: PVRadius.md,
+                bottomTrailingRadius: PVRadius.md,
+                style: .continuous
+            )
+        )
+        .padding(.horizontal, -EvidenceBridgeCard.shellPaddingX)
+    }
+
+    private var addPropertyStackRow: some View {
+        let hovered = hoveredActionID == EvidenceSubjectCard.addPropertyActionID
+        return HStack(spacing: 6) {
+            PVIcon(.plus, size: 12)
+            Text(L10n.EvidenceGraph.addProperty)
+                .font(PVFont.body(size: 12))
+        }
+        .foregroundStyle(
+            canCite
+                ? (hovered ? PVColor.textPrimary : PVColor.textMuted)
+                : PVColor.textFaint
+        )
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, EvidenceBridgeCard.shellPaddingX)
+        .padding(.top, 9)
+        .padding(.bottom, 11)
+        .background(hovered && canCite ? PVColor.surfaceHover : PVColor.surfaceCard)
+        .accessibilityHidden(true)
+    }
+
+    private var addPropertyQuietRow: some View {
+        let hovered = hoveredActionID == EvidenceSubjectCard.addPropertyActionID
+        return HStack(spacing: 6) {
+            PVIcon(.plus, size: 12)
+            Text(L10n.EvidenceGraph.addProperty)
+                .font(PVFont.body(size: 12))
+        }
+        .foregroundStyle(
+            canCite
+                ? (hovered ? PVColor.textPrimary : PVColor.textMuted)
+                : PVColor.textFaint
+        )
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityHidden(true)
     }
 
     private var cardBorder: some View {

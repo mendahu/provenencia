@@ -1211,6 +1211,66 @@ enum L10n {
             comment: "Quiet footer control on primary cards that opens the citation composer"
         )
 
+        static let addPropertyUnavailable = LocalizedStringResource(
+            "evidenceGraph.subject.addPropertyUnavailable",
+            defaultValue: "Add property, unavailable — this Source has no Artifacts",
+            comment: "VoiceOver when Add property is disabled because the Source has no Artifact"
+        )
+
+        static let jumpToSourcePage = LocalizedStringResource(
+            "evidenceGraph.header.jumpToSourcePage",
+            defaultValue: "Jump to Source page",
+            comment: "Ghost header button that opens this Source’s filing page"
+        )
+
+        static func jumpToSourcePageAccessibility(title: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "evidenceGraph.header.jumpToSourcePageAccessibility",
+                defaultValue: "Jump to Source page — %@",
+                comment: "VoiceOver for the header jump; argument is the Source title"
+            ))
+            return String(format: format, locale: .current, title)
+        }
+
+        static let negatedPrefix = LocalizedStringResource(
+            "evidenceGraph.row.negatedPrefix",
+            defaultValue: "Not",
+            comment: "Micro-caps prefix before a negative Observation value on a cited graph row"
+        )
+
+        static let negatedAccessibility = LocalizedStringResource(
+            "evidenceGraph.row.negatedAccessibility",
+            defaultValue: "Negated",
+            comment: "VoiceOver mark when a cited graph row has polarity negative"
+        )
+
+        static func conflictOneOf(count: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "evidenceGraph.row.conflictOneOf",
+                defaultValue: "one of %lld values",
+                comment: "VoiceOver fragment when a cited row shares its Property; argument is how many"
+            ))
+            return String(format: format, locale: .current, count)
+        }
+
+        static let citedRowEditHint = LocalizedStringResource(
+            "evidenceGraph.row.editHint",
+            defaultValue: "Edit property",
+            comment: "Trailing VoiceOver hint on a cited graph row that opens the composer"
+        )
+
+        static let legendConflict = LocalizedStringResource(
+            "evidenceGraph.legend.conflict",
+            defaultValue: "Conflict — competing values",
+            comment: "Canvas legend line for the ochre conflict bracket"
+        )
+
+        static let legendNegated = LocalizedStringResource(
+            "evidenceGraph.legend.negated",
+            defaultValue: "Not — Negated — record denies it",
+            comment: "Canvas legend line for the Not prefix on a denied Observation"
+        )
+
         static let citedValueUnavailable = LocalizedStringResource(
             "evidenceGraph.subject.citedValueUnavailable",
             defaultValue: "—",

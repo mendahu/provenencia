@@ -8814,6 +8814,114 @@
         }
       }
     },
+    "evidenceGraph.subject.addPropertyUnavailable": {
+      "comment": "VoiceOver when Add property is disabled because the Source has no Artifact",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add property, unavailable — this Source has no Artifacts"
+          }
+        }
+      }
+    },
+    "evidenceGraph.header.jumpToSourcePage": {
+      "comment": "Ghost header button that opens this Source’s filing page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jump to Source page"
+          }
+        }
+      }
+    },
+    "evidenceGraph.header.jumpToSourcePageAccessibility": {
+      "comment": "VoiceOver for the header jump; argument is the Source title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jump to Source page — %@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.row.negatedPrefix": {
+      "comment": "Micro-caps prefix before a negative Observation value on a cited graph row",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not"
+          }
+        }
+      }
+    },
+    "evidenceGraph.row.negatedAccessibility": {
+      "comment": "VoiceOver mark when a cited graph row has polarity negative",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Negated"
+          }
+        }
+      }
+    },
+    "evidenceGraph.row.conflictOneOf": {
+      "comment": "VoiceOver fragment when a cited row shares its Property; argument is how many",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "one of %lld values"
+          }
+        }
+      }
+    },
+    "evidenceGraph.row.editHint": {
+      "comment": "Trailing VoiceOver hint on a cited graph row that opens the composer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit property"
+          }
+        }
+      }
+    },
+    "evidenceGraph.legend.conflict": {
+      "comment": "Canvas legend line for the ochre conflict bracket",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conflict — competing values"
+          }
+        }
+      }
+    },
+    "evidenceGraph.legend.negated": {
+      "comment": "Canvas legend line for the Not prefix on a denied Observation",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not — Negated — record denies it"
+          }
+        }
+      }
+    },
     "evidenceGraph.subject.addProperty": {
       "comment": "Quiet footer control on primary cards that opens the citation composer",
       "extractionState": "manual",

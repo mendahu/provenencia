@@ -126,6 +126,9 @@
 		A71500000000000000000002 /* CitationComposerVocabulary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71500000000000000000001 /* CitationComposerVocabulary.swift */; };
 		A71600000000000000000002 /* CitationComposerConnectionRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71600000000000000000001 /* CitationComposerConnectionRow.swift */; };
 		A71700000000000000000002 /* EvidenceGraphPlacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71700000000000000000001 /* EvidenceGraphPlacement.swift */; };
+		A80600000000000000000002 /* EvidenceCitedPropertyMarks.swift in Sources */ = {isa = PBXBuildFile; fileRef = A80600000000000000000001 /* EvidenceCitedPropertyMarks.swift */; };
+		A80600000000000000000004 /* EvidenceCitedPropertyRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A80600000000000000000003 /* EvidenceCitedPropertyRow.swift */; };
+		A80600000000000000000006 /* EvidenceCitedPropertyMarksTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A80600000000000000000005 /* EvidenceCitedPropertyMarksTests.swift */; };
 		A71800000000000000000002 /* EvidenceGraphPlacementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71800000000000000000001 /* EvidenceGraphPlacementTests.swift */; };
 		A71900000000000000000002 /* CitationComposerContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71900000000000000000001 /* CitationComposerContext.swift */; };
 		A71D00000000000000000002 /* OCREngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71D00000000000000000001 /* OCREngine.swift */; };
@@ -434,6 +437,9 @@
 		A71500000000000000000001 /* CitationComposerVocabulary.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerVocabulary.swift; sourceTree = "<group>"; };
 		A71600000000000000000001 /* CitationComposerConnectionRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerConnectionRow.swift; sourceTree = "<group>"; };
 		A71700000000000000000001 /* EvidenceGraphPlacement.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphPlacement.swift; sourceTree = "<group>"; };
+		A80600000000000000000001 /* EvidenceCitedPropertyMarks.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceCitedPropertyMarks.swift; sourceTree = "<group>"; };
+		A80600000000000000000003 /* EvidenceCitedPropertyRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceCitedPropertyRow.swift; sourceTree = "<group>"; };
+		A80600000000000000000005 /* EvidenceCitedPropertyMarksTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceCitedPropertyMarksTests.swift; sourceTree = "<group>"; };
 		A71800000000000000000001 /* EvidenceGraphPlacementTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphPlacementTests.swift; sourceTree = "<group>"; };
 		A71900000000000000000001 /* CitationComposerContext.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerContext.swift; sourceTree = "<group>"; };
 		A71D00000000000000000001 /* OCREngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OCREngine.swift; sourceTree = "<group>"; };
@@ -887,6 +893,8 @@
 				AA0000000000000000000478 /* EvidenceGraphView.swift */,
 				AA0000000000000000000496 /* EvidenceCanvasInputMode.swift */,
 				AA0000000000000000000480 /* EvidenceSubjectCard.swift */,
+				A80600000000000000000001 /* EvidenceCitedPropertyMarks.swift */,
+				A80600000000000000000003 /* EvidenceCitedPropertyRow.swift */,
 				A70900000000000000000005 /* ObservationValueDisplay.swift */,
 				A70900000000000000000009 /* EvidenceBridgeEdgeSummary.swift */,
 				A71A00000000000000000001 /* ConnectEndpointBinding.swift */,
@@ -1051,6 +1059,7 @@
 				A70900000000000000000003 /* DateValueDisplayTests.swift */,
 				A70900000000000000000007 /* ObservationValueDisplayTests.swift */,
 				A7090000000000000000000B /* EvidenceBridgeEdgeSummaryTests.swift */,
+				A80600000000000000000005 /* EvidenceCitedPropertyMarksTests.swift */,
 				A71000000000000000000005 /* PropertyTermDisplayTests.swift */,
 				AA0000000000000000000232 /* PVComboBoxTests.swift */,
 			);
@@ -1619,6 +1628,8 @@
 				AA00000000000000000004C5 /* GraphCanvasDocumentView.swift in Sources */,
 				AA000000000000000000047F /* GraphCanvasGridMapping.swift in Sources */,
 				AA0000000000000000000481 /* EvidenceSubjectCard.swift in Sources */,
+				A80600000000000000000002 /* EvidenceCitedPropertyMarks.swift in Sources */,
+				A80600000000000000000004 /* EvidenceCitedPropertyRow.swift in Sources */,
 				A70900000000000000000006 /* ObservationValueDisplay.swift in Sources */,
 				AA0000000000000000000491 /* EvidenceGraphModel.swift in Sources */,
 				AA0000000000000000000493 /* EvidenceGraphPalette.swift in Sources */,
@@ -1783,6 +1794,7 @@
 				A70900000000000000000004 /* DateValueDisplayTests.swift in Sources */,
 				A70900000000000000000008 /* ObservationValueDisplayTests.swift in Sources */,
 				A7090000000000000000000C /* EvidenceBridgeEdgeSummaryTests.swift in Sources */,
+				A80600000000000000000006 /* EvidenceCitedPropertyMarksTests.swift in Sources */,
 				A71000000000000000000006 /* PropertyTermDisplayTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

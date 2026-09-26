@@ -1145,4 +1145,15 @@ struct EvidenceGraphModelTests {
         #expect(location == nil)
         #expect(model.editingSubjectID == "p1")
     }
+
+    @Test func sourcePageLocationUsesSameSourceAndPageSurface() {
+        let model = makeModel(store: makeStore())
+        let location = model.sourcePageLocation(title: "1851 England Census", ref: "SRC-1")
+        #expect(location.section == .sources)
+        #expect(location.sourceId == sourceID)
+        #expect(location.sourceSurface == .page)
+        #expect(location.title == "1851 England Census")
+        #expect(location.ref == "SRC-1")
+        #expect(location.sourceSurface != .graph)
+    }
 }
