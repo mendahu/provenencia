@@ -34,6 +34,33 @@ struct CitationLocatorDraftTests {
         #expect(draft.hasRegion)
     }
 
+    @Test func overlayHidesCommittedRegionOffLocatorPage() {
+        #expect(
+            ArtifactRegionOverlayInput.committedOnCurrentPage(
+                Self.rectangle,
+                locatorPage: 3,
+                viewerPage: 3,
+                supportsPageLocator: true
+            ) == Self.rectangle
+        )
+        #expect(
+            ArtifactRegionOverlayInput.committedOnCurrentPage(
+                Self.rectangle,
+                locatorPage: 3,
+                viewerPage: 4,
+                supportsPageLocator: true
+            ) == nil
+        )
+        #expect(
+            ArtifactRegionOverlayInput.committedOnCurrentPage(
+                Self.rectangle,
+                locatorPage: nil,
+                viewerPage: 1,
+                supportsPageLocator: false
+            ) == Self.rectangle
+        )
+    }
+
     private static let pdf = ArtifactViewerKind.pdf.locatorCapabilities
     private static let image = ArtifactViewerKind.image.locatorCapabilities
     private static let rectangle = ArtifactRegionDraft(

@@ -309,7 +309,12 @@ struct ArtifactViewer: View {
     private var regionOverlayInput: ArtifactRegionOverlayInput {
         ArtifactRegionOverlayInput(
             armedTool: armedRegionTool?.wrappedValue,
-            committed: committedRegion
+            committed: ArtifactRegionOverlayInput.committedOnCurrentPage(
+                committedRegion,
+                locatorPage: locatorPage,
+                viewerPage: model.page,
+                supportsPageLocator: model.locatorCapabilities.supportsPageLocator
+            )
         )
     }
 

@@ -624,4 +624,19 @@ struct ArtifactRegionOverlayInput: Equatable {
     static func == (lhs: ArtifactRegionOverlayInput, rhs: ArtifactRegionOverlayInput) -> Bool {
         lhs.armedTool == rhs.armedTool && lhs.committed == rhs.committed
     }
+
+    /// Paint the committed region only on the locator page. Images have no page
+    /// layer, so they always show. Locator JSON is unchanged.
+    static func committedOnCurrentPage(
+        _ committed: ArtifactRegionDraft?,
+        locatorPage: Int?,
+        viewerPage: Int,
+        supportsPageLocator: Bool
+    ) -> ArtifactRegionDraft? {
+        guard let committed else { return nil }
+        if supportsPageLocator, locatorPage != viewerPage {
+            return nil
+        }
+        return committed
+    }
 }
