@@ -338,6 +338,27 @@ func TestSetSourceMetadata(t *testing.T) {
 			wantErr:   true,
 			wantErrIs: sourcemetadata.ErrInvalid,
 		},
+		{
+			name: "set url metadata rejects a single label",
+			reqFn: func(t *testing.T) proto.Message {
+				req := metadataSetFixture(t, "text")
+				fout, err := CreateMetadataField(marshalProto(t, &engine.CreateMetadataFieldRequest{
+					ProjectDir: req.ProjectDir, UserId: req.UserId, Label: "Bare word URL", DataType: "url",
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var field engine.CreateMetadataFieldResponse
+				if err := proto.Unmarshal(fout, &field); err != nil {
+					t.Fatal(err)
+				}
+				req.FieldId = field.Field.GetId()
+				req.ValueText = "jakerobins"
+				return req
+			},
+			wantErr:   true,
+			wantErrIs: sourcemetadata.ErrInvalid,
+		},
 	})
 }
 

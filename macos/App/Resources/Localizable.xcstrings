@@ -6793,7 +6793,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Evidence graph"
+            "value": "Jump to graph"
           }
         }
       }
@@ -8827,7 +8827,7 @@
       }
     },
     "evidenceGraph.header.jumpToSourcePage": {
-      "comment": "Ghost header button that opens this Source’s filing page",
+      "comment": "Secondary header button that opens this Source’s filing page",
       "extractionState": "manual",
       "localizations": {
         "en": {

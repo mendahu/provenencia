@@ -15,6 +15,7 @@ func TestValidate(t *testing.T) {
 		{name: "http path", in: "http://example.com/record"},
 		{name: "scheme-less www", in: "www.url.com"},
 		{name: "scheme-less host path", in: "archives.norfolk.gov.uk/catalogue/PD28-47"},
+		{name: "ipv4", in: "http://192.168.1.10/record"},
 		{name: "blank", in: "  ", wantErr: true},
 		{name: "spaces", in: "https://example.com/a b", wantErr: true},
 		{name: "typo scheme", in: "htps://example.com", wantErr: true},
@@ -22,6 +23,9 @@ func TestValidate(t *testing.T) {
 		{name: "javascript", in: "javascript:alert(1)", wantErr: true},
 		{name: "no host", in: "https://", wantErr: true},
 		{name: "junk", in: "not a url", wantErr: true},
+		{name: "single label", in: "jakerobins", wantErr: true},
+		{name: "https single label", in: "https://jakerobins", wantErr: true},
+		{name: "empty label", in: "jakerobins.", wantErr: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

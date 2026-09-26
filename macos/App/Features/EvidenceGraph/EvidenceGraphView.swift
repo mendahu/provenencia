@@ -228,7 +228,7 @@ private struct EvidenceGraphContent: View {
     }
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space5) {
+        HStack(alignment: .center, spacing: PVSpacing.space5) {
             Text(L10n.Workspace.evidenceGraphTitle)
                 .font(PVFont.display(size: PVTypeScale.h1, weight: PVFontWeight.medium))
                 .foregroundStyle(PVColor.textDisplay)
@@ -238,23 +238,31 @@ private struct EvidenceGraphContent: View {
                     .foregroundStyle(PVColor.textMuted)
                     .lineLimit(1)
             }
-            jumpToSourcePageButton
+            subjectCountLabel
             Spacer(minLength: 0)
-            Text(L10n.EvidenceGraph.subjectCount(count: subjects.count + bridges.count))
-                .font(PVFont.mono(size: PVTypeScale.caption))
-                .foregroundStyle(PVColor.textFaint)
+            jumpToSourcePageButton
         }
         .padding(.horizontal, PVSpacing.space7)
         .padding(.vertical, PVSpacing.space5)
+    }
+
+    private var subjectCountLabel: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 0) {
+            Text(verbatim: "(")
+            Text(L10n.EvidenceGraph.subjectCount(count: subjects.count + bridges.count))
+            Text(verbatim: ")")
+        }
+        .font(PVFont.mono(size: PVTypeScale.caption))
+        .foregroundStyle(PVColor.textFaint)
     }
 
     private var jumpToSourcePageButton: some View {
         let title = sourceTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         return PVButton(
             L10n.EvidenceGraph.jumpToSourcePage,
-            variant: .ghost,
+            variant: .secondary,
             size: .sm,
-            iconRight: .arrowRight
+            icon: .library
         ) {
             navigation.go(to: model.sourcePageLocation(title: sourceTitle, ref: sourceRef))
         }

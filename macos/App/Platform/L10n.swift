@@ -1220,7 +1220,7 @@ enum L10n {
         static let jumpToSourcePage = LocalizedStringResource(
             "evidenceGraph.header.jumpToSourcePage",
             defaultValue: "Jump to Source page",
-            comment: "Ghost header button that opens this Source’s filing page"
+            comment: "Secondary header button that opens this Source’s filing page"
         )
 
         static func jumpToSourcePageAccessibility(title: String) -> String {
@@ -3631,7 +3631,7 @@ enum L10n {
 
         static let jumpToEvidenceGraph = LocalizedStringResource(
             "sources.page.jumpToEvidenceGraph",
-            defaultValue: "Evidence graph",
+            defaultValue: "Jump to graph",
             comment: "Identity-header secondary button that opens this Source's Evidence graph"
         )
 

@@ -4,6 +4,7 @@ package urlshape
 
 import (
 	"errors"
+	"net"
 	"net/url"
 	"strings"
 )
@@ -58,10 +59,31 @@ func checkHTTP(u *url.URL) error {
 	if scheme != "http" && scheme != "https" {
 		return ErrInvalid
 	}
-	if u.Hostname() == "" {
+	if !hostShaped(u.Hostname()) {
 		return ErrInvalid
 	}
 	return nil
+}
+
+// hostShaped accepts an IP or a dotted name (www.url.com). A single label
+// (jakerobins, localhost) is not enough — url.Parse treats those as hosts.
+func hostShaped(host string) bool {
+	if host == "" {
+		return false
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		return true
+	}
+	labels := strings.Split(host, ".")
+	if len(labels) < 2 {
+		return false
+	}
+	for _, label := range labels {
+		if label == "" {
+			return false
+		}
+	}
+	return true
 }
 
 func hasScheme(s string) bool {
