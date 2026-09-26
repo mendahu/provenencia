@@ -302,7 +302,8 @@ private struct EvidenceGraphContent: View {
                     }
                 }
                 .padding(.horizontal, PVSpacing.space5)
-                .padding(.bottom, PVSpacing.space5)
+                // space5 would sit on the canvas scroller; clear it plus a gap.
+                .padding(.bottom, PVSpacing.space8)
             }
         }
     }

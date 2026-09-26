@@ -11430,6 +11430,18 @@
         }
       }
     },
+    "citationComposer.observation.negatedBadge": {
+      "comment": "Danger badge left of a negated Observation value; PVBadge uppercases it",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not"
+          }
+        }
+      }
+    },
     "citationComposer.negateObservation": {
       "comment": "Row menu item that flips a positive Observation to negative",
       "extractionState": "manual",

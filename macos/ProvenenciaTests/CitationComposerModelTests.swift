@@ -520,8 +520,10 @@ struct CitationComposerModelTests {
 
     @Test func polarityMenuTitleFollowsPolarity() {
         var row = ObservationRow.draft(subjectID: subjectID)
+        #expect(!row.isNegated)
         #expect(row.polarityMenuTitle == String(localized: L10n.CitationComposer.negateObservation))
         row.polarity = ObservationPolarity.negative.rawValue
+        #expect(row.isNegated)
         #expect(row.polarityMenuTitle == String(localized: L10n.CitationComposer.affirmObservation))
     }
 

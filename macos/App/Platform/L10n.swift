@@ -2322,6 +2322,12 @@ enum L10n {
             comment: "Spoken status for a saved connection without a ref yet"
         )
 
+        static let negatedBadge = LocalizedStringResource(
+            "citationComposer.observation.negatedBadge",
+            defaultValue: "Not",
+            comment: "Danger badge left of a negated Observation value; PVBadge uppercases it"
+        )
+
         static let negateObservation = LocalizedStringResource(
             "citationComposer.negateObservation",
             defaultValue: "Negate observation",
