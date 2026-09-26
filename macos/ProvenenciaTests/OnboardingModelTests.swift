@@ -644,4 +644,7 @@ private struct ThrowingStore: GenealogyStore {
     func getSourceGraphProgress(projectDir _: String, sourceID _: String) async throws -> SourceGraphProgress {
         throw StoreBoom.boom
     }
+    func getDeleteImpact(projectDir _: String, kind _: String, id _: String) async throws -> CatalogDeleteImpact {
+        throw StoreBoom.boom
+    }
 }

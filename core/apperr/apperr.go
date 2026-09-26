@@ -52,6 +52,7 @@ const (
 	CodePropertyTermsDuplicateKey    = "propertyterms.duplicate_key"
 	CodePropertyTermsLocked          = "propertyterms.locked"
 	CodePropertyTermsInUse           = "propertyterms.in_use"
+	CodeDeleteImpactInvalid          = "deleteimpact.invalid"
 	CodeSubjectVocabInvalid          = "subjectvocab.invalid"
 	CodeSubjectVocabLocked           = "subjectvocab.locked"
 	CodeConnectInvalid               = "connect.invalid"

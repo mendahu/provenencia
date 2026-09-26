@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
+	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/slug"
 )
@@ -44,7 +45,6 @@ const (
 		ORDER BY label COLLATE NOCASE, origin, key`
 	sqlUpdate = `UPDATE property_terms SET label = ?, description = ? WHERE id = ?`
 	sqlDelete = `DELETE FROM property_terms WHERE id = ?`
-	sqlInUse  = `SELECT 1 FROM observations WHERE value_term_id = ? LIMIT 1`
 )
 
 // Term is one property_terms row.
@@ -259,13 +259,6 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	if existing.Origin != OriginUser {
 		return ErrLocked
 	}
-	inUse, err := InUse(c, id)
-	if err != nil {
-		return err
-	}
-	if inUse {
-		return ErrInUse
-	}
 
 	db, err := c.DB()
 	if err != nil {
@@ -276,6 +269,14 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 		return err
 	}
 	defer func() { _ = tx.Rollback() }()
+
+	report, err := deleteimpact.Impact(tx, deleteimpact.KindPropertyTerm, id)
+	if err != nil {
+		return err
+	}
+	if !report.Allowed {
+		return ErrInUse
+	}
 
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
 		return err
@@ -350,27 +351,6 @@ func ListByProperty(c *database.Catalog, propertyID []byte) ([]Term, error) {
 		out = append(out, t)
 	}
 	return out, rows.Err()
-}
-
-// InUse reports whether any Observation references this term.
-// Until S7-03, always false.
-func InUse(c *database.Catalog, id []byte) (bool, error) {
-	db, err := c.DB()
-	if err != nil {
-		return false, err
-	}
-	if len(id) != 16 {
-		return false, ErrInvalid
-	}
-	var one int
-	err = db.QueryRow(sqlInUse, id).Scan(&one)
-	if errors.Is(err, sql.ErrNoRows) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return true, nil
 }
 
 func scanTerm(row *sql.Row) (Term, error) {
