@@ -31,12 +31,15 @@ Shared genealogical dates: follow `.cursor/skills/add-date-value/SKILL.md` (`cor
 
 Product-seeded vocabulary (`origin=provenencia` registries + `Ensure`): follow `.cursor/skills/add-seeded-vocabulary/SKILL.md`.
 
+Official **resource / vocab `Delete`**: follow `.cursor/skills/add-catalog-delete/SKILL.md`. Do not add `sqlInUse` next to `DELETE`.
+
 ## Functions
 
 - Take `*database.Catalog`. Get the handle with `c.DB()`; return that error (`database.ErrClosed`).
 - Keep SQL as unexported consts next to the functions. Do not add `core/database/queries/`.
 - Domain validation sentinels stay in this package (`users.ErrInvalid`). Do **not** add them to `core/database/errors.go` (that file is lock/format/folder/closed only).
 - `database` must **not** import table packages (import cycle). Use-cases (`onboarding`, later FFI) import both.
+- `Delete` for a resource or vocab row calls `deleteimpact.Impact` in the same tx, then deletes the parent, then owned-outbound release. Facet/field deletes (notes, metadata clear) stay ordinary writes.
 
 ## Tests
 

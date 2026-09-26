@@ -4,7 +4,7 @@
 **Spike:** Provenencia Spike 8 (pause and refine / data entry)  
 **Implements later as:** PR **S8-11**  
 **Depends on:** **S8-D7** / **S8-10** (shipped Citation-document composer, Layout A + 1500pt two-column; brief [`S8-D7-composer-rethink.md`](S8-D7-composer-rethink.md)); shipped Evidence graph Connect tool and create dialog  
-**Related:** [`S8-D6-delete-paths.md`](../S8-D6-delete-paths.md) (this board decides **single Observation delete** from the composer; S8-D6 keeps subject / bridge / Citation cascades); [`docs/audit-revision-history.md`](../../../../audit-revision-history.md) (one research action = one revision); [`docs/interpretation-layer-data-model.md`](../../../../interpretation-layer-data-model.md) §6 (bridges are cited subject-valued edges)  
+**Related:** [`S8-D11-composer-delete.md`](../S8-D11-composer-delete.md) / [`S8-D10-graph-delete.md`](../S8-D10-graph-delete.md) (this board decided **single Observation delete**; subject / Citation erase is those briefs); [`docs/audit-revision-history.md`](../../../../audit-revision-history.md) (one research action = one revision); [`docs/interpretation-layer-data-model.md`](../../../../interpretation-layer-data-model.md) §6 (bridges are cited subject-valued edges)  
 **Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)  
 **Skill:** [`add-design-brief`](../../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.cursor/skills/add-ui-component/SKILL.md); navigation via [`add-workspace-location`](../../../../../.cursor/skills/add-workspace-location/SKILL.md)
 
@@ -54,7 +54,7 @@ Five changes, in priority order:
 
 1. **Save Observations one row at a time.** Today one footer **Save** sends the Citation fields plus every row, and the engine **deletes any saved row the payload leaves out**. Removing a row, or changing its subject to one whose type does not allow the property, silently deletes a persisted Observation with no confirm. After this board, each row has its own **Save** and **Revert**, and deleting a saved row asks first. The Citation's own fields (transcription, uncertainty, note, description, locator) keep their own **Save citation**.
 2. **Guard every exit while work is unsaved.** Today only switching Artifact on a dirty saved Citation asks. Cancel, Back, the sidebar, the omnibar, and switching Citation all throw edits away silently. After this board, any navigation away from a composer with unsaved work asks **Discard / Keep editing**. While work is unsaved, the Artifact and Citation menus are **disabled** (with a reason) instead of offering an abandon confirm.
-3. **Connect goes straight to the composer, and the composer finishes it as one unit.** The graph's role / relationship-type sheet is **removed**. The composer shows a **connection row**: a single compact row in the observation stack, not three property rows. It reads as one assertion — the bridge sentence with its two endpoints ("John Robins · Birth 1850") as read-only text, plus the one thing the researcher chooses: the role or relationship type. **Save connection** commits it. The endpoints come from the graph pick and **cannot be changed** in the composer. A wrong endpoint means **Discard connection** before saving, or deleting the bridge (S8-D6 / S8-09) and connecting again after. The connection can attach to a **new or an existing** Citation on the Artifact. Today, picking an existing Citation in Connect mode silently drops the connection.
+3. **Connect goes straight to the composer, and the composer finishes it as one unit.** The graph's role / relationship-type sheet is **removed**. The composer shows a **connection row**: a single compact row in the observation stack, not three property rows. It reads as one assertion — the bridge sentence with its two endpoints ("John Robins · Birth 1850") as read-only text, plus the one thing the researcher chooses: the role or relationship type. **Save connection** commits it. The endpoints come from the graph pick and **cannot be changed** in the composer. A wrong endpoint means **Discard connection** before saving, or deleting the bridge (S8-D10 / S8-09) and connecting again after. The connection can attach to a **new or an existing** Citation on the Artifact. Today, picking an existing Citation in Connect mode silently drops the connection.
 4. **Bridges have no typed label.** A bridge's name is its sentence ("John Robins was born in 1850 London"), computed from its cited edges every time it is shown. The bridge **Edit** dialog edits **description only**. Pickers that list bridges show the sentence. When an endpoint has no cited name / event type / toponym, the sentence still reads cleanly through a fixed **fallback chain** (§2.4): each endpoint falls back to its working label, then its type + ref. If the edges cannot be read at all, the name falls back to a bare kind phrase plus the bridge's ref. A bridge is never shown with an empty name.
 5. **Create a primary subject from the composer row.** The row's subject picker gets **New person… / New event… / New place…**. It opens a short FormDialog (label, optional description), creates the subject on this Source's graph, and fills the row. This removes the trip "cancel draft → graph → place → Add property → find the Citation again". **This reverses an S8-D7 non-goal on purpose.** It is limited to the three primary kinds. Bridges still come only from Connect.
 
@@ -86,12 +86,12 @@ Need a new person → leave the composer         Subject ▾ … New person…  
 | Row commits do not save the citation fields | On a saved Citation, dirty citation fields stay dirty after a row Save. The two are independent. The **only** time a row commit writes the citation fields is when it creates the Citation (first commit on New). |
 | Connect is atomic | The bridge subject, its grid position, its two endpoint Observations, its role / relationship-type Observation, and (if New) the Citation are written together by **Save connection**. Nothing about the connection persists before that. |
 | A connection is one unit | Its two endpoint Observations are structural and **immutable**: no subject, Property, value, or polarity change, and no delete. The engine enforces this, not just the UI. The composer never shows them as separate property rows — before and after save, the bridge's endpoints and role appear as **one connection row**. |
-| Wrong endpoint = redo the connection | Before save: **Discard connection**, go back to the graph, Connect again. After save: delete the bridge from the graph (**S8-D6** / **S8-09** designs that delete) and Connect again. The composer offers no endpoint editing. |
+| Wrong endpoint = redo the connection | Before save: **Discard connection**, go back to the graph, Connect again. After save: delete the bridge from the graph (**S8-D10** / **S8-09** designs that delete) and Connect again. The composer offers no endpoint editing. |
 | Role / relationship type is the only choice on participation and relationship | Those connections cannot be saved without a term. After save, the connection row still lets the researcher change the role (row Save / Revert, like any row). The connection row has **no** Delete. |
 | Location connections have no term | An event ↔ place bridge (`location`) is created from its two edges alone. Its connection row keeps the two-line layout, with the muted text "No role or type" in place of the term picker. **Save connection** is enabled immediately and sends only the two edge Observations. A pending location row is never "touched", so it never triggers the leave guard. Once saved, it shows only its `CLO-…` ref: no Save / Revert, no ⋯, no Delete, no polarity. |
 | Bridge sentence is derived | Show `EvidenceBridgeEdgeSummary`'s sentence wherever a bridge is named (card title, composer subject picker, connection row, breadcrumb). No stored bridge label is edited. Missing nouns follow §2.4; the name is never blank. |
 | Grid position is layout, not evidence | A new bridge lands at the midpoint of its two endpoints (engine-computed). A primary created from the composer lands to the right of the existing graph (§3.6). Neither is a research assertion. |
-| Delete scope | This board ships **single Observation delete from the composer** only. Subject / bridge / whole-Citation deletes and their counted cascades stay on **S8-D6**. |
+| Delete scope | This board ships **single Observation delete from the composer** only. Subject / bridge / whole-Citation deletes and their counted cascades stay on **S8-D10** / **S8-D11**. |
 
 ### 2.1 Row states (the core of this board)
 
@@ -176,7 +176,7 @@ The ref is always the picker subtext and the VoiceOver hint, so two bridges that
 
 - Not auto-save / save-on-blur. Every commit is an explicit Save (or Return in an inline field).
 - Not undo / ⌘Z.
-- Not deleting subjects, bridges, or whole Citations (**S8-D6**).
+- Not deleting subjects, bridges, or whole Citations (**S8-D10** / **S8-D11**).
 - Not creating bridges or `source` subjects from the composer. Only primaries (person / event / place).
 - Not Auto Transcribe (**S8-D1**) or PDF Find / paste (**S8-D2**). Leave the transcription Field's trailing slot as it is; **S8-D1** designs against this board's citation fields section.
 - Not graph visual badges or bridge sentence wording (**S8-D3**). This board only decides that the sentence replaces the stored label.
@@ -234,7 +234,7 @@ The board must make it obvious in step 2 that the connection will be saved onto 
 
 1. Pending connection row reads "John Robins · Birth 1850", but the researcher meant William. The endpoint names are plain text; nothing on the row edits them.
 2. Researcher presses **Discard**, then **Done** (no confirm if nothing else is unsaved), and Connects William → Birth 1850 on the graph.
-3. After save, the only path is deleting the bridge on the graph (S8-D6 / S8-09) and connecting again. The board does not draw that delete; it only confirms the saved connection row offers no endpoint edit and no Delete.
+3. After save, the only path is deleting the bridge on the graph (S8-D10 / S8-09) and connecting again. The board does not draw that delete; it only confirms the saved connection row offers no endpoint edit and no Delete.
 
 ### 3.8 Guarded exit
 
@@ -348,7 +348,7 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 
 ## 8. Out of scope
 
-- Subject / bridge / Citation delete and counted cascades (**S8-D6** / **S8-09**)
+- Subject / bridge / Citation delete and counted cascades (**S8-D10** / **S8-09**)
 - Auto Transcribe (**S8-D1**), PDF Find / paste (**S8-D2**)
 - Graph card badges and bridge sentence wording (**S8-D3**)
 - Undo, autosave, app-quit / window-close guards

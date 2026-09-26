@@ -73,7 +73,7 @@ Uniqueness is **`UNIQUE (key, origin)`**. Lookup is always `(key, origin)`, neve
 - **Do not** call `Install` from `OpenCatalog`, `catalogsession.Do`, or on every open.
 - **Do not** heal deleted `provenencia` rows or restored suggestion joins on open.
 - Calling `Install` twice would refresh labels via Upsert — create path calls each once.
-- Types/fields of any origin may be deleted when unused (`ErrInUse` while referenced).
+- Unused-vocab delete goes through `deleteimpact` after that page’s PR (**S8-15** types, **S8-16** fields, **S8-17** properties) — not a private `sqlInUse`. **Origin:** plugin never; seeded types/fields may erase when unused; seeded properties/terms stay locked. See [`add-catalog-delete`](../add-catalog-delete/SKILL.md).
 
 ## Where create vs open run
 

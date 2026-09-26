@@ -168,7 +168,7 @@ The cleverness is **not** inventing a file-browser. It is matching chrome to §2
 - Not source-to-source commentary, `text_quote` locators, audio/video players.
 - Not a sheet over the live graph (Option A stays rejected).
 - Not changing Connect rules or edge-property exclusion.
-- Not delete-path matrix (**S8-D6**). Draft-row remove stays; persisted Observation delete follows that brief.
+- Not delete-path matrix (**S8-D9**–**S8-D11**). Draft-row remove stays; persisted Observation delete follows that brief.
 
 ---
 
@@ -262,7 +262,7 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them.
 ## 7. Out of scope
 
 - **S8-D1** / **S8-D2** control design (placement hole only)
-- Graph chrome (**S8-D3**), Source page jump (**S8-D4**), list counts (**S8-D5**), delete matrix (**S8-D6**)
+- Graph chrome (**S8-D3**), Source page jump (**S8-D4**), list counts (**S8-D5**), delete matrix (**S8-D9**–**S8-D11**)
 - Auto Observations / LLM extract
 - Creating Subjects or changing Connect rules
 - Audio / video Sources; `text_quote`

@@ -31,6 +31,7 @@ Work **in place** on this board. Do not fork a parallel copy of the surface.
 | Warning, error, or inline hint | Callout |
 | Page- or pane-level empty | EmptyState |
 | Confirm replace or destroy | Confirm (`item:` snapshot, not a Bool) |
+| Resource delete with inbound check | DeleteImpact recipe (S8-D9 / **S8-13**) — confirm if allowed, notice if blocked |
 | Short create / edit form | FormDialog |
 | Status / count / polarity mark | Badge; compact token → Chip |
 | Cover or file thumb | Thumbnail |
