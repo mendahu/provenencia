@@ -17,7 +17,7 @@ Grow this list as stories land. **By spike close**, every checked story below mu
 3. **PDF Find** — on a PDF in the composer, a Find field on the viewer tool strip jumps to a keyword hit with a highlight. Image-only PDFs (no text layer) fail honestly. Notes: [`pdf-text-find.md`](pdf-text-find.md).
 4. **PDF select + paste transcription** — default PDF pointer is text select; scroll/trackpad pans (Preview / PDFKit). **Paste transcription from selection** fills the transcription field. No Vision on PDF pages.
 5. **Graph visual enhancements** — conflict + negated row badges; always-on **jump to the Source page**; cited **bridge sentences** prefer endpoint `name` / `event_type` / `toponym`, then working label; **Add property** on bridge cards (extra non-edge rows). More items may join **S8-D3** / **S8-06**.
-6. **Source page enhancements** — the Source detail page has an **Open Evidence graph** control for the same Source (disabled with no Artifact). More items may join **S8-D4** / **S8-07**.
+6. **Source page enhancements** — the Source detail page has an **Open Evidence graph** control for the same Source (disabled with no Artifact). Catalog metadata dates are **text** (no DateValue modal). More items may join **S8-D4** / **S8-07**.
 7. **Sources list refresh** — the Sources list shows **subject** and **observation** counts per Source so a worked Evidence graph is obvious next to an empty one. Counts live on their own cache keys (one Source invalidates; the list payload does not). More items may join **S8-D5** / **S8-08**.
 8. **Delete paths** — the researcher can remove a mistaken Interpretation entity when the refined matrix allows it, with a confirm that **counts the cascade** (or an honest refuse). Uncited subject delete stays. Cited subject / shared Citation paths are decided on **S8-D6** before **S8-09**. **Single Observation delete from the composer ships in S8-11.** More items may join that brief.
 9. **Composer and Connect simplification** — each Observation row saves, reverts, and deletes on its own (delete asks first; nothing is ever deleted by omission). The Citation fields have their own **Save citation**. Leaving the composer with unsaved work always asks. Connect goes straight to the composer, where the connection is **one compact row** (read-only endpoints + role / relationship type) that saves onto a new **or existing** Citation. Endpoints are fixed; a wrong one means discard (or delete the bridge) and connect again. Bridges are named by their cited sentence. A person / event / place can be created from a composer row. The audit log can reconstruct every Interpretation create, edit, and delete. **Ships before items 2, 3, and 4.**
@@ -35,7 +35,7 @@ Further bar items: TBD (additional data-entry stories).
 | **S8-D1** | Auto Transcribe in the composer | Button, progress, replace confirm, large-page warning + proceed, failure copy | **S8-01** |
 | **S8-D2** | PDF Find + select + paste | Tool-strip Find; I-beam + scroll-to-pan; paste-from-selection vs Auto Transcribe row | **S8-03**, **S8-04**, **S8-05** |
 | **S8-D3** | Evidence graph visual enhancements | Conflict + negated; Source-page jump; richer bridge sentences; Add property on bridges | **S8-06** |
-| **S8-D4** | Source page enhancements | Jump to Evidence graph; more page items join this brief | **S8-07** |
+| **S8-D4** | Source page enhancements | Jump to Evidence graph; metadata dates as text; more page items join this brief | **S8-07** |
 | **S8-D5** | Sources list design refresh | Subject + observation counts; more list items join this brief | **S8-08** |
 | **S8-D6** | Interpretation delete paths | Delete matrix + damage-count confirms; refine before the PR | **S8-09** |
 
@@ -82,6 +82,7 @@ S8-D3  Graph card visuals
 S8-D4  Source page enhancements
   │
   └────── gates ──────────▶ S8-07  Open Evidence graph from the Source page
+                              │     + metadata dates as text (drop DateValue UI)
                               │     (parallel; pair with S8-06 graph → page)
 
 S8-D5  Sources list refresh
@@ -127,7 +128,7 @@ S8-D6  Delete paths
 - [x] S8-D3 — Design: Evidence graph visual enhancements → [`completed.md`](completed.md)
 - [x] S8-06 — Graph visual enhancements (badges, Source jump, bridge copy + Add property) → [`completed.md`](completed.md)
 - [ ] S8-D4 — Design: Source page enhancements → [`completed.md`](completed.md)
-- [ ] S8-07 — Source page enhancements (Evidence graph jump + brief bundle) → [`completed.md`](completed.md)
+- [ ] S8-07 — Source page enhancements (Evidence graph jump + metadata dates as text + brief bundle) → [`completed.md`](completed.md)
 - [ ] S8-D5 — Design: Sources list refresh → [`completed.md`](completed.md)
 - [ ] S8-08 — Sources list refresh (graph-progress counts + brief bundle) → [`completed.md`](completed.md)
 - [ ] S8-D6 — Design: Interpretation delete paths → [`completed.md`](completed.md)
@@ -726,21 +727,21 @@ Does **not** design the composer rethink (**S8-D7**) or denied-lines. Source-pag
 
 ## S8-D4 — Design: Source page enhancements
 
-Claude Design board for a **bundled** Source-page chrome pass. First item: **Open Evidence graph** for this Source (disabled with no Artifact). More page items join this brief (and **S8-07**) as they are scoped. Brief: [`design/S8-D4-source-page.md`](design/S8-D4-source-page.md). Gates **S8-07**.
+Claude Design board for a **bundled** Source-page chrome pass. Items so far: **Open Evidence graph** for this Source (disabled with no Artifact); **metadata dates as text** (same editor as author; no DateValue modal). More page items join this brief (and **S8-07**) as they are scoped. Brief: [`design/S8-D4-source-page.md`](design/S8-D4-source-page.md). Gates **S8-07**.
 
-Does **not** design graph chrome, source-to-source commentary ([`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)), composer rethink (**S8-D7**), or Sources-list counts (**S8-D5**).
+Does **not** design graph chrome, source-to-source commentary ([`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)), composer DateValue chrome, a first-class provenance date ([`source-provenance-date.md`](../../ideas/source-provenance-date.md)), composer rethink (**S8-D7**), or Sources-list counts (**S8-D5**).
 
 ---
 
 ## S8-07 — PR: Source page enhancements
 
-One Source-page chrome pass against **S8-D4**. Add a control that opens this Source’s Evidence graph (`sourceSurface: .graph`). Same `hasArtifact` rule as the list split-row. Further items listed on the brief at PR start ship here.
+One Source-page pass against **S8-D4**. Add a control that opens this Source’s Evidence graph (`sourceSurface: .graph`). Same `hasArtifact` rule as the list split-row. Collapse catalog date metadata onto the existing text editor and drop `data_type = date` / `date_value_id` from source metadata. Further items listed on the brief at PR start ship here.
 
 | | |
 | --- | --- |
-| **In** | Jump control per **S8-D4**; reuse `SourcesListNavigation.graphLocation` (or equivalent); disabled + reason when no Artifact; `go(to:)`; L10n + VoiceOver; any other SP items frozen on the brief. Prefer `PVButton`. |
-| **Out** | Graph chrome (**S8-06**); opening the graph with zero Artifacts; source-to-source commentary ([`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)); composer rethink (**S8-10**); list counts / refresh (**S8-08**). |
-| **Testable** | Source with an Artifact → location is `.graph` for the same `sourceId`; Back returns to `.page`; no Artifact → control disabled and does not navigate. |
+| **In** | Jump control per **S8-D4**; reuse `SourcesListNavigation.graphLocation` (or equivalent); disabled + reason when no Artifact; `go(to:)`; metadata date rows as text (SP-8…SP-10); catalog migration + FFI so `source_metadata` is `value_text` only (`data_type` `text` \| `url`); seed `record_date` / `issue_date` as text; search projector stops joining `date_values` for metadata; L10n + VoiceOver; any other SP items frozen on the brief. Prefer `PVButton`. |
+| **Out** | Graph chrome (**S8-06**); opening the graph with zero Artifacts; source-to-source commentary ([`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)); composer / Observation DateValue; first-class provenance-date column or list sort ([`source-provenance-date.md`](../../ideas/source-provenance-date.md)); composer rethink (**S8-10**); list counts / refresh (**S8-08**). |
+| **Testable** | Source with an Artifact → location is `.graph` for the same `sourceId`; Back returns to `.page`; no Artifact → control disabled and does not navigate. Date-named metadata saves and edits as text; SetSourceMetadata rejects a DateValue; existing `date` fields / `date_value_id` migrate to text (keep `value_text`; if only a DateValue existed, flatten a readable phrase into `value_text` then drop the FK). Composer date Observations still insert DateValues. |
 | **Depends on** | **S8-D4**. Shipped Source page + `sourceSurface`. **Not** S8-01…S8-06 / **S8-08**. |
 
 ---
@@ -805,7 +806,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 | Warn + proceed on large images | Hard reject / Apple “too many words” (does not exist) |
 | PDF **Find** + **select** + **paste transcription** | PDF Vision / OCR; `text_quote` locators ([`text-quote-locators.md`](../../ideas/text-quote-locators.md)); Source-page Find; **PDF Artifact thumbnails** (glyph stays; parked in [`artifact-pdf-thumbnails.md`](../../ideas/artifact-pdf-thumbnails.md)) |
 | Graph **conflict** + **negated** badges; Source-page jump; richer bridge sentences; **Add property** on bridges | Denied-line drawing; merge/resolve; **descoped** leftovers (incomplete bridges, collapse/expand, filters, undo, tray, minimap, Subject types stub, user-minted name parts) |
-| Source page **Open Evidence graph** (more page items via **S8-D4**) | Source-to-source commentary (`mentions` / `remark`, placeholder + merge — [`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)) |
+| Source page **Open Evidence graph** + **metadata dates as text** (more page items via **S8-D4**) | Source-to-source commentary (`mentions` / `remark`, placeholder + merge — [`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)); first-class Source provenance date / list sort ([`source-provenance-date.md`](../../ideas/source-provenance-date.md)); DateValue on Observations (stays) |
 | Sources list **graph-progress counts** (more list items via **S8-D5**) | Folding counts into `sourcesList`; a Subjects list destination |
 | Interpretation **delete paths** (matrix via **S8-D6**) | Change type UI; adopt/import; undo; silent evidence CASCADE |
 | More data-entry stories as added | Remaining Spike 7 leftovers unless pulled in |
@@ -847,6 +848,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar) once the cluster is enoug
 30. **The server places bridges** (S8-11) — midpoint `floorDiv(a + b + 1, 2)` per axis from the endpoints' stored positions. Do not carry grid cells through `WorkspaceLocation`.
 31. **Audit is lossless** (S8-11) — creates and deletes record every column (nulls included), child `date_value` / `name_value` / note rows get their own changes, and zero-change revisions are rejected. See `docs/audit-revision-history.md` §3.2.
 32. **Unsaved work is guarded at navigation** (S8-11) — `WorkspaceNavigation.leaveGuard`. Places with drafts implement `WorkspaceLeaveGuard`; do not add per-button dirty checks.
+33. **Catalog dates are text** (S8-07) — `source_metadata` has no `date_value_id`. Do not reopen `data_type = 'date'` so a later sort can reuse `publication_date` / `issue_date` keys; that sort is a first-class Source attribute ([`source-provenance-date.md`](../../ideas/source-provenance-date.md)). Observation DateValues stay. Do not remove `DateValueEditorForm` from the composer.
 
 ---
 

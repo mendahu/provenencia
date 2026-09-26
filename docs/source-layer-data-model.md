@@ -39,7 +39,9 @@ Alice Smith and Robert Jones
 
 then its `author` metadata may preserve that exact string. The Source layer does not need to split the authors or resolve either one to a canonical Person.
 
-Dates are the intentional exception: date-valued metadata may additionally reference Provenencia's shared structured genealogical date representation so dates can be sorted and filtered. That cross-layer value model is defined in [`structured-date-model.md`](structured-date-model.md).
+Catalog dates are the same: `publication_date`, `issue_date`, `census_date`, and similar stay as-written text on `source_metadata.value_text` (`"about the year 1890"`, `"15 May 1880"`). They exist so the researcher can file a reference date without parsing it from the Artifact, and so omnibar search can match that wording. They do **not** attach a structured DateValue.
+
+Structured dates belong on Interpretation Observations and later Conclusion claims ([`structured-date-model.md`](structured-date-model.md)). A later project-wide sort or group by when evidence was created or published is a first-class Source attribute, not an EAV metadata key — the printed name of that date changes by type (publication vs issue vs registration vs enumeration). Parked: [`ideas/source-provenance-date.md`](ideas/source-provenance-date.md).
 
 ## 1.3 Offline-first ingestion
 
@@ -81,11 +83,9 @@ source_types
             +--< artifacts >-- files
                                 |
                                 +--< file_derivatives >-- files
-
-source_metadata.date_value_id --> date_values (shared cross-layer model)
 ```
 
-The File store is shared infrastructure, but it is defined here because Artifacts are its primary Source-layer consumer. The `date_values` table is not defined here; see [`structured-date-model.md`](structured-date-model.md).
+The File store is shared infrastructure, but it is defined here because Artifacts are its primary Source-layer consumer.
 
 ---
 
@@ -157,9 +157,8 @@ Notes use a typed table with a real foreign key rather than a polymorphic notes 
 
 Metadata fields form a controlled but extensible vocabulary.
 
-Most fields are text. Structured dates are the deliberate exception for shared
-genealogical date values. `url` is text-shaped (still stored in `value_text`) and
-exists so clients can treat those fields as external links.
+Most fields are text, including catalog dates. `url` is text-shaped (still stored
+in `value_text`) and exists so clients can treat those fields as external links.
 
 ```sql
 CREATE TABLE source_metadata_fields (
@@ -171,15 +170,15 @@ CREATE TABLE source_metadata_fields (
     description     TEXT,
 
     UNIQUE (key, origin),
-    CHECK (data_type IN ('text', 'date', 'url'))
+    CHECK (data_type IN ('text', 'url'))
 ) STRICT;
 ```
 
 Same `origin` / `UNIQUE (key, origin)` rules as `source_types` ([`seeded-vocabulary.md`](seeded-vocabulary.md) §1.1). `source_metadata.field_id` and `source_type_metadata_fields.field_id` reference the UUID `id`. **`data_type` is immutable after create** so existing `source_metadata` values stay consistent with validation.
 
-Possible seeded fields include `author`, `publisher`, `publication_date`, and similar. The authoritative list is in [`seeded-vocabulary.md`](seeded-vocabulary.md).
+Possible seeded fields include `author`, `publisher`, `publication_date`, and similar. Date-named keys are still `data_type = 'text'`. The authoritative list is in [`seeded-vocabulary.md`](seeded-vocabulary.md).
 
-The goal is not to create a general typed EAV system. New structured types should only be introduced for concrete use cases.
+The goal is not to create a general typed EAV system. New structured types should only be introduced for concrete use cases. Do not reintroduce `data_type = 'date'` on catalog fields so a later sort can reuse those keys — that sort cannot be global across `publication_date` / `issue_date` / `census_date` without a first-class attribute ([`ideas/source-provenance-date.md`](ideas/source-provenance-date.md)).
 
 ## 5.2 `source_type_metadata_fields`
 
@@ -215,31 +214,21 @@ CREATE TABLE source_metadata (
     id              BLOB PRIMARY KEY,          -- UUIDv7, 16 bytes
     source_id       BLOB NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
     field_id        BLOB NOT NULL REFERENCES source_metadata_fields(id),
-    value_text      TEXT,
-    date_value_id   BLOB REFERENCES date_values(id)
+    value_text      TEXT
 ) STRICT;
 ```
 
-Ordinary metadata preserves text directly:
+Metadata preserves text directly, including catalog dates:
 
 ```text
 author
   value_text = "Alice Smith and Robert Jones"
-```
 
-Date metadata may preserve both the entered/source wording and a structured representation:
-
-```text
 publication_date
   value_text = "about the year 1890"
-  date_value_id = DateValue(point, ABT, 1890)
 ```
 
-The text remains useful for fidelity even when a structured date exists. `date_values.phrase` is optional wording on the DateValue itself (verbal/seasonal dates), not a substitute for this `value_text`.
-
-The schema and semantics of `date_values` are defined in [`structured-date-model.md`](structured-date-model.md).
-
-Application validation should enforce the intended relationship between `source_metadata_fields.data_type` and `date_value_id`; SQLite cannot express that cross-table constraint with a simple `CHECK`.
+There is no `date_value_id` on this table. Structured DateValues are Interpretation (and later Conclusion) values, not catalog filing. Application validation should enforce that `data_type = 'url'` and `'text'` both store in `value_text` only.
 
 ## 5.4 `source_metadata_layout`
 
@@ -458,9 +447,7 @@ files
 file_derivatives
 ```
 
-`date_values` is shared cross-layer value-object infrastructure and is defined separately in [`structured-date-model.md`](structured-date-model.md).
-
-The audit tables are cross-cutting infrastructure and are defined separately in `audit-revision-history.md`.
+The audit tables are cross-cutting infrastructure and are defined separately in `audit-revision-history.md`. Structured `date_values` are Interpretation / Conclusion infrastructure ([`structured-date-model.md`](structured-date-model.md)), not a Source-layer attachment.
 
 ---
 
@@ -469,7 +456,7 @@ The audit tables are cross-cutting infrastructure and are defined separately in 
 1. Sources are evidentiary objects and remain free of genealogical interpretation. Structured Source **credibility** is an Interpretation assessment entity, not a column on `sources`; see [`research-judgment-model.md`](research-judgment-model.md).
 2. Source types and metadata fields use a seeded, controlled, origin-namespaced vocabulary (`UNIQUE (key, origin)`) rather than an enum; see [`seeded-vocabulary.md`](seeded-vocabulary.md) §1.1.
 3. Source metadata is descriptive and minimally structured.
-4. Metadata values are text by default; shared structured genealogical dates are the intentional structured exception; `url` is text-shaped for external-link affordances.
+4. Metadata values are text (`value_text`); `url` is text-shaped for external-link affordances. Catalog dates are text. Do not attach DateValue (or NameValue) to `source_metadata`.
 5. Source types may suggest metadata fields but do not require them; how one Source presents those suggestions (dismissed, ordered) lives in `source_metadata_layout` rather than on the shared type join or on `source_metadata`.
 6. External provenencia belongs to the Source and must not be required to access ingested evidence.
 7. Artifacts are concrete representations of Sources and do not have an `artifact_type` taxonomy.

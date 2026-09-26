@@ -53,8 +53,9 @@ A **Source-page enhancements** pass. This board and **S8-07** are a **bundle**: 
 **Items so far**
 
 1. **Jump to Evidence graph.** The Sources list already has dual action (file vs graph). The Source **page** has no control that opens that Source’s Evidence graph. Dogfood starts “blind”: you are on the filing page and bounce back to the list, or create a card just so Add property can open an Artifact. Add a **quick link** on the page that `go(to:)` the same Source with `sourceSurface: .graph`.
+2. **Metadata dates are text.** Catalog date fields (`record_date`, `issue_date`, `publication_date`, …) use the **same text editor** as author. Drop the wording + DateValue modal, the date pencil, and any `data_type = date` chrome on this page. The researcher types a reference date; omnibar search matches that string. Structured DateValue stays on Interpretation Observations — not here. Decision: [`source-layer-data-model.md`](../../../source-layer-data-model.md) §1.2 / §5; later sort-by-provenance-time is parked in [`source-provenance-date.md`](../../../ideas/source-provenance-date.md).
 
-Do **not** redesign the identity header, metadata, artifacts accordion, or notes stream — only add chrome for this jump (and later bundle items).
+Do **not** redesign the identity header, artifacts accordion, or notes stream. Do **not** restyle the metadata column — only collapse date rows onto the existing text editor (and later bundle items).
 
 ```text
 [ cover ]  1851 England Census     [ Open Evidence graph ]
@@ -74,6 +75,9 @@ Exact placement (identity header vs page toolbar), label, and no-Artifact disabl
 | No Artifact → no graph | List disables the graph zone. Page control **disabled** + short reason; do not navigate to an empty/blocked graph. Shortcut to add an Artifact is already on this page. |
 | Graph → page is **S8-D3** / **S8-06** | This brief is the other direction only. The pair should feel like the same product (same name, same history rules). |
 | `hasArtifact` is already on `CatalogSource` | Drive enablement from the page’s loaded Source / workspace, not a new query. |
+| Catalog metadata is filing text | Date-named fields are `value_text` only. No DateValue picker, no second value column. |
+| DateValue lives on Observations | The composer / graph date editor stays. Do not delete `DateValueEditorForm`; remove it from **this** page. |
+| Provenance-time sort is not this spike | Do not invent a first-class publication-date control or a Sources-list date sort. Parked: [`source-provenance-date.md`](../../../ideas/source-provenance-date.md). |
 
 ### 2.1 What this board is not
 
@@ -82,6 +86,7 @@ Exact placement (identity header vs page toolbar), label, and no-Artifact disabl
 - Not composer rethink / pinning (**S8-D7**).
 - Not PDF Find on this page.
 - Not Sources-list counts (“12 subjects”) — **S8-D5** / **S8-08**.
+- Not a first-class Source provenance date or list sort by catalog time.
 
 ---
 
@@ -91,7 +96,9 @@ Exact placement (identity header vs page toolbar), label, and no-Artifact disabl
 | --- | --- |
 | Always-visible jump to this Source’s Evidence graph when `hasArtifact` | Opening the graph with zero Artifacts |
 | Disabled + honest copy when no Artifact | A second Sources list action |
-| L10n + VoiceOver; history Back to the page | Schema / FFI; commentary surface |
+| L10n + VoiceOver; history Back to the page | Commentary surface |
+| Metadata date rows use the same text editor as other fields; no DateValue modal on this page | A first-class provenance-date field or Sources-list date sort |
+| Catalog + FFI: drop `data_type = date` / `date_value_id` on source metadata; keep `value_text` | Removing DateValue from Observations / the composer |
 | Further items **added to this brief** before the PR starts | A second Source-page visuals PR |
 
 If more bundle items land after the board is first drawn, **amend this brief** and redraw those frames — still one **S8-07**.
@@ -109,7 +116,10 @@ If more bundle items land after the board is first drawn, **amend this brief** a
 | SP-5 | Copy says **Evidence graph** (not Interpret / Interpretation). Align with the list action. |
 | SP-6 | VoiceOver: control is in the page tree; disabled state is announced. |
 | SP-7 | Prefer `PVButton`. No new kit primitive. |
-| SP-8 | Further items get their own `SP-n` rows when scoped. |
+| SP-8 | Every metadata row (including former date fields) edits as **text** with the existing saved-row / suggestion editor. No date modal, no structure pencil, no `data_type` badge that implies a DateValue. |
+| SP-9 | Suggestion and extra-field add for a date-named key is the same as author: type, Save. Empty stays a suggestion. |
+| SP-10 | Do not show or edit DateValue components on this page. Composer / graph date chrome is unchanged. |
+| SP-11 | Further items get their own `SP-n` rows when scoped. |
 
 ---
 
@@ -118,7 +128,9 @@ If more bundle items land after the board is first drawn, **amend this brief** a
 1. Source with Artifacts — jump enabled in the identity header (or chosen slot).
 2. Source with no Artifact — jump disabled + reason; Add Artifact still available.
 3. After jump — Evidence graph for the same Source; Back returns to the page.
-4. *(Add frames here as more bundle items are scoped.)*
+4. Metadata — date-named field empty suggestion: same dashed text row as author.
+5. Metadata — date-named field with a value: inline text edit / save / clear; no date dialog.
+6. *(Add frames here as more bundle items are scoped.)*
 
 ---
 
@@ -128,12 +140,17 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them.
 
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
-| Source page shell | Snowflake | **Extend** | `Features/Sources/SourcePageView.swift` | Pass navigation if the header does not already have it. |
+| Source page shell | Snowflake | **Extend** | `Features/Sources/SourcePageView.swift` | Pass navigation if the header does not already have it. Drop the date-dialog host. |
 | Identity header | Snowflake | **Extend** | `Features/Sources/SourcePageIdentityHeader.swift` | Likely host for the jump. |
 | Source page model | Snowflake | **Extend** | `Features/Sources/SourcePageModel.swift` | `hasArtifact` from workspace / source row. |
+| Metadata section / view | Snowflake | **Rethink** (date rows only) | `Features/Sources/SourceMetadataSection.swift`, `SourcePageMetadataView.swift` | All values through the text editor. Remove `dateValueCell`, `SourcePageDateEditorForm`, `openDateEditor`. |
+| Metadata text editor | Snowflake | Ship | `SourcePageMetadataTextEditor` (same file) | Date-named fields use this. |
+| DateValue editor form | Snowflake | **Remove** from this page | `Features/Dates/DateValueEditorForm.swift` | Keep for the citation composer. Do not instance here. |
 | Sources list navigation | Snowflake | Ship | `Features/Sources/SourcesListNavigation.swift` | Reuse `graphLocation`. |
 | Button | Component | Ship | `DesignSystem/Components/Button/` | Evidence graph action. |
+| Input / Field | Component | Ship | `DesignSystem/Components/Input/`, `Field/` | Metadata text rows. |
 | Workspace location tests | Test | **Extend** | `ProvenenciaTests` | Page → graph location; disabled when no Artifact. |
+| Source page metadata tests | Test | **Extend** | `ProvenenciaTests/SourcePageModelTests.swift` | Date-named field saves as text; no date payload. |
 
 ### Explicit non-goals
 
@@ -142,15 +159,18 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them.
 | Page-local Back that bypasses history | Toolbar Back / `go(to:)` only. |
 | Graph-specific counts on the page | List counts are **S8-D5**; not this page. |
 | `mentions` / `remark` commentary | Parked: [`source-to-source-relationships.md`](../../../ideas/source-to-source-relationships.md). |
+| DateValue (or NameValue) on metadata | Catalog filing is text. |
+| First-class provenance-date control | Parked: [`source-provenance-date.md`](../../../ideas/source-provenance-date.md). |
 
 ---
 
 ## 7. Out of scope
 
-- Redesigning filing (metadata, notes, artifacts ingest)
-- Composer / graph card chrome
+- Restyling filing (notes, artifacts ingest, metadata **layout**) — date rows becoming text is in scope
+- Composer / graph DateValue chrome
 - Source-page Find
 - Commentary (“what other Sources say about this one”) — [`source-to-source-relationships.md`](../../../ideas/source-to-source-relationships.md)
+- Sorting or grouping Sources by catalog time — [`source-provenance-date.md`](../../../ideas/source-provenance-date.md)
 
 ---
 
