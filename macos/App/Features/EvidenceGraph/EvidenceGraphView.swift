@@ -293,7 +293,7 @@ private struct EvidenceGraphContent: View {
             .padding(.horizontal, PVSpacing.space5)
             .padding(.top, PVSpacing.space5)
 
-            if EvidenceCitedPropertyMarks.graphHasMarks(subjects: subjects, bridges: bridges) {
+            if EvidenceCitedPropertyMarks.graphHasConflict(subjects: subjects, bridges: bridges) {
                 VStack {
                     Spacer(minLength: 0)
                     HStack {
@@ -775,30 +775,18 @@ private struct EvidenceGraphDocumentBody: View {
     }
 }
 
-/// Canvas legend for conflict / negated marks. Floats bottom-left while any
-/// cited row on the graph carries a mark (S8-D3 Frame 09).
+/// Canvas legend for the ochre conflict bracket. One strip, bottom-left, while
+/// any competing Property run is on the graph (S8-D3 Frame 09).
 private struct EvidenceGraphRowMarksLegend: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .center, spacing: 8) {
-                EvidenceLegendConflictMark()
-                Text(L10n.EvidenceGraph.legendConflict)
-                    .font(PVFont.body(size: PVTypeScale.caption))
-                    .foregroundStyle(PVColor.textSecondary)
-            }
-            HStack(alignment: .center, spacing: 8) {
-                Text(L10n.EvidenceGraph.negatedPrefix)
-                    .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
-                    .tracking(PVTypeScale.micro * PVTracking.caps)
-                    .textCase(.uppercase)
-                    .foregroundStyle(PVColor.danger)
-                Text(L10n.EvidenceGraph.legendNegated)
-                    .font(PVFont.body(size: PVTypeScale.caption))
-                    .foregroundStyle(PVColor.textSecondary)
-            }
+        HStack(alignment: .center, spacing: 7) {
+            EvidenceLegendConflictMark()
+            Text(L10n.EvidenceGraph.legendConflict)
+                .font(PVFont.body(size: PVTypeScale.caption))
+                .foregroundStyle(PVColor.textSecondary)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
                 .fill(PVColor.surfaceCard)

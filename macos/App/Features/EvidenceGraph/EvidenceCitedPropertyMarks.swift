@@ -56,18 +56,14 @@ enum EvidenceCitedPropertyMarks {
         return runs
     }
 
-    static func graphHasMarks(
+    static func graphHasConflict(
         subjects: [SourceGraphPlacedSubject],
         bridges: [SourceGraphPlacedBridge]
     ) -> Bool {
-        if subjects.contains(where: { cardHasMarks($0.observations) }) {
+        if subjects.contains(where: { cardHasConflict(in: $0.observations) }) {
             return true
         }
-        return bridges.contains { cardHasMarks(extraObservations(in: $0.observations)) }
-    }
-
-    static func cardHasMarks(_ observations: [CatalogObservation]) -> Bool {
-        observations.contains { isNegated($0) } || cardHasConflict(in: observations)
+        return bridges.contains { cardHasConflict(in: extraObservations(in: $0.observations)) }
     }
 
     /// Observations that are not the connect sentence (edges + role / type).

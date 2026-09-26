@@ -1265,12 +1265,6 @@ enum L10n {
             comment: "Canvas legend line for the ochre conflict bracket"
         )
 
-        static let legendNegated = LocalizedStringResource(
-            "evidenceGraph.legend.negated",
-            defaultValue: "Not — Negated — record denies it",
-            comment: "Canvas legend line for the Not prefix on a denied Observation"
-        )
-
         static let citedValueUnavailable = LocalizedStringResource(
             "evidenceGraph.subject.citedValueUnavailable",
             defaultValue: "—",

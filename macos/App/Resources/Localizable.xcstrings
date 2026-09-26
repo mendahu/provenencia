@@ -8910,18 +8910,6 @@
         }
       }
     },
-    "evidenceGraph.legend.negated": {
-      "comment": "Canvas legend line for the Not prefix on a denied Observation",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not — Negated — record denies it"
-          }
-        }
-      }
-    },
     "evidenceGraph.subject.addProperty": {
       "comment": "Quiet footer control on primary cards that opens the citation composer",
       "extractionState": "manual",

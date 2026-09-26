@@ -16,7 +16,7 @@ struct EvidenceBridgeCard: View {
     static let deleteActionID = "delete"
 
     /// Horizontal / top padding on the bridge shell (matches chrome).
-    static let shellPaddingX: CGFloat = 11
+    nonisolated static let shellPaddingX: CGFloat = 11
     static let shellPaddingTop: CGFloat = 9
     static let headerActionHitHeight: CGFloat = 28
     /// Painted header row (type·ref / working label) before the body sentence.

@@ -17,7 +17,7 @@ struct EvidenceSubjectCard: View {
     static let edgeLayoutHeight: CGFloat = 88
 
     /// Horizontal / top padding on the card shell (matches board).
-    static let shellPaddingX: CGFloat = 13
+    nonisolated static let shellPaddingX: CGFloat = 13
     static let shellPaddingTop: CGFloat = 11
     static let shellPaddingBottom: CGFloat = 12
     static let headerHeight: CGFloat = 28

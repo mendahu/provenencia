@@ -119,7 +119,7 @@ struct EvidenceCitedPropertyMarksTests {
         ]))
     }
 
-    @Test func graphHasMarksReadsBridgeExtras() {
+    @Test func graphHasConflictIgnoresNegationOnly() {
         let subject = SourceGraphPlacedSubject(
             subject: CatalogSubject(
                 id: "s1",
@@ -136,7 +136,7 @@ struct EvidenceCitedPropertyMarksTests {
             isCited: true,
             observations: [observation(id: "a", key: "occupation", value: "Farmer")]
         )
-        #expect(!EvidenceCitedPropertyMarks.graphHasMarks(subjects: [subject], bridges: []))
+        #expect(!EvidenceCitedPropertyMarks.graphHasConflict(subjects: [subject], bridges: []))
 
         let denied = SourceGraphPlacedSubject(
             subject: subject.subject,
@@ -147,6 +147,20 @@ struct EvidenceCitedPropertyMarksTests {
             isCited: true,
             observations: [observation(id: "a", key: "occupation", value: "Farmer", polarity: .negative)]
         )
-        #expect(EvidenceCitedPropertyMarks.graphHasMarks(subjects: [denied], bridges: []))
+        #expect(!EvidenceCitedPropertyMarks.graphHasConflict(subjects: [denied], bridges: []))
+
+        let conflicted = SourceGraphPlacedSubject(
+            subject: subject.subject,
+            kind: .person,
+            typeLabel: "Person",
+            gridX: 0,
+            gridY: 0,
+            isCited: true,
+            observations: [
+                observation(id: "a", key: "name", value: "Wm Robins"),
+                observation(id: "b", key: "name", value: "William Robins"),
+            ]
+        )
+        #expect(EvidenceCitedPropertyMarks.graphHasConflict(subjects: [conflicted], bridges: []))
     }
 }
