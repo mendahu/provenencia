@@ -75,6 +75,10 @@ final class CitationComposerModel {
         var id = UUID()
         var existingText: String
         var includeWholePage: Bool
+        var pastePage: Int? = nil
+        var pasteLineCount: Int? = nil
+
+        var isPaste: Bool { pastePage != nil }
     }
 
     struct GraphSubjectOption: Identifiable, Equatable {
@@ -148,6 +152,9 @@ final class CitationComposerModel {
     var isTranscribing = false
     var transcriptionOCRMessage: String?
     var pendingTranscriptionConfirm: PendingTranscriptionConfirm?
+    private var lastPastePage: Int?
+    private var lastPasteText = ""
+    private var isApplyingPaste = false
 
     init(
         entry: CitationComposerEntry,
@@ -189,6 +196,10 @@ final class CitationComposerModel {
         set {
             if newValue != fields.transcription {
                 transcriptionOCRMessage = nil
+                if !isApplyingPaste {
+                    lastPastePage = nil
+                    lastPasteText = ""
+                }
             }
             fields.transcription = newValue
         }
@@ -267,10 +278,23 @@ final class CitationComposerModel {
         imageRaster != nil && !isTranscribing
     }
 
+    var canPasteTranscription: Bool {
+        isPDFArtifact
+            && artifactViewer.findHasTextLayer
+            && artifactViewer.hasUserSelection
+    }
+
+    var transcriptionActionHint: LocalizedStringResource {
+        if isPDFArtifact {
+            return pasteHint
+        }
+        return autoTranscribeHint
+    }
+
     var autoTranscribeHint: LocalizedStringResource {
         switch artifactViewer.kind {
         case .pdf:
-            return L10n.CitationComposer.autoTranscribeHintPDF
+            return pasteHint
         case .audio:
             return L10n.CitationComposer.autoTranscribeHintAudio
         case .video:
@@ -289,6 +313,22 @@ final class CitationComposerModel {
             return L10n.CitationComposer.autoTranscribeHintRegion
         }
         return L10n.CitationComposer.autoTranscribeHintWholeImage
+    }
+
+    private var pasteHint: LocalizedStringResource {
+        if !artifactViewer.findHasTextLayer {
+            return L10n.CitationComposer.pasteHintNoTextLayer
+        }
+        if let page = lastPastePage, artifactViewer.userSelectionText == lastPasteText {
+            return L10n.CitationComposer.pasteHintAfter(page: page)
+        }
+        if artifactViewer.hasUserSelection, let page = artifactViewer.userSelectionPage {
+            return L10n.CitationComposer.pasteHintSelected(
+                lines: artifactViewer.userSelectionLineCount,
+                page: page
+            )
+        }
+        return L10n.CitationComposer.pasteHintSelect
     }
 
     var needsWholePageWarning: Bool {
@@ -645,6 +685,39 @@ final class CitationComposerModel {
 
     func cancelAutoTranscribeConfirm() {
         pendingTranscriptionConfirm = nil
+    }
+
+    func requestPasteTranscription() {
+        guard canPasteTranscription else { return }
+        let hasText = !transcription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        if hasText {
+            pendingTranscriptionConfirm = PendingTranscriptionConfirm(
+                existingText: transcription,
+                includeWholePage: false,
+                pastePage: artifactViewer.userSelectionPage,
+                pasteLineCount: artifactViewer.userSelectionLineCount
+            )
+            return
+        }
+        applyPasteTranscription()
+    }
+
+    func confirmPasteTranscription() {
+        pendingTranscriptionConfirm = nil
+        applyPasteTranscription()
+    }
+
+    private func applyPasteTranscription() {
+        guard canPasteTranscription else { return }
+        let text = artifactViewer.userSelectionText
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        isApplyingPaste = true
+        lastPastePage = artifactViewer.userSelectionPage
+        lastPasteText = artifactViewer.userSelectionText
+        transcription = text
+        isApplyingPaste = false
+        transcriptionOCRMessage = nil
     }
 
     func dismissTranscriptionOCRMessage() {

@@ -1,6 +1,7 @@
 import AppKit
 import CoreGraphics
 import Foundation
+import PDFKit
 import Testing
 @testable import Provenencia
 
@@ -25,7 +26,112 @@ struct CitationAutoTranscribeTests {
         #expect(model.isPDFArtifact)
         model.requestAutoTranscribe()
         #expect(engine.recognizeCount == 0)
-        #expect(String(localized: model.autoTranscribeHint) == String(localized: L10n.CitationComposer.autoTranscribeHintPDF))
+        #expect(!model.canPasteTranscription)
+        #expect(
+            String(localized: model.transcriptionActionHint)
+                == String(localized: L10n.CitationComposer.pasteHintSelect)
+        )
+    }
+
+    @Test func pasteFillsTranscriptionFromSelection() async {
+        let projectDir = uniqueProjectDir()
+        let store = makeStore(projectDir: projectDir)
+        seedArtifact(store, mediaType: "application/pdf", relPath: "objects/file-0.pdf")
+        let engine = FakeOCREngine()
+        let model = makeModel(store: store, projectDir: projectDir, engine: engine)
+        await model.prepare()
+        model.artifactViewer.installUserSelectionForTesting(
+            text: "Margt. Alderwick\nThos. do.",
+            page: 3
+        )
+        #expect(model.canPasteTranscription)
+        #expect(!model.fields.isDirty)
+        model.requestPasteTranscription()
+        #expect(model.transcription == "Margt. Alderwick\nThos. do.")
+        #expect(model.fields.isDirty)
+        #expect(model.shouldHoldLeave)
+        #expect(model.artifactViewer.userSelectionText.contains("Margt."))
+        #expect(model.artifactViewer.userSelectionPage == 3)
+        #expect(engine.recognizeCount == 0)
+        #expect(
+            String(localized: model.transcriptionActionHint)
+                == String(localized: L10n.CitationComposer.pasteHintAfter(page: 3))
+        )
+    }
+
+    @Test func emptySelectionDoesNotPaste() async {
+        let projectDir = uniqueProjectDir()
+        let store = makeStore(projectDir: projectDir)
+        seedArtifact(store, mediaType: "application/pdf", relPath: "objects/file-0.pdf")
+        let engine = FakeOCREngine()
+        let model = makeModel(store: store, projectDir: projectDir, engine: engine)
+        await model.prepare()
+        model.artifactViewer.installUserSelectionForTesting(text: "   \n  ", page: 1)
+        #expect(!model.canPasteTranscription)
+        model.transcription = "kept"
+        model.fields.captureBaseline()
+        model.requestPasteTranscription()
+        #expect(model.transcription == "kept")
+        #expect(model.pendingTranscriptionConfirm == nil)
+        #expect(engine.recognizeCount == 0)
+    }
+
+    @Test func pasteReplaceDoesNotOverwriteWithoutConfirm() async {
+        let projectDir = uniqueProjectDir()
+        let store = makeStore(projectDir: projectDir)
+        seedArtifact(store, mediaType: "application/pdf", relPath: "objects/file-0.pdf")
+        let engine = FakeOCREngine()
+        let model = makeModel(store: store, projectDir: projectDir, engine: engine)
+        await model.prepare()
+        model.transcription = "existing"
+        model.artifactViewer.installUserSelectionForTesting(text: "new line", page: 2)
+        model.requestPasteTranscription()
+        #expect(model.transcription == "existing")
+        #expect(model.pendingTranscriptionConfirm?.isPaste == true)
+        #expect(model.pendingTranscriptionConfirm?.pastePage == 2)
+        #expect(model.pendingTranscriptionConfirm?.pasteLineCount == 1)
+        model.pendingTranscriptionConfirm = nil
+        #expect(model.transcription == "existing")
+        model.confirmPasteTranscription()
+        #expect(model.transcription == "new line")
+        #expect(engine.recognizeCount == 0)
+    }
+
+    @Test func scannedPDFDisablesPaste() async throws {
+        let projectDir = uniqueProjectDir()
+        let store = makeStore(projectDir: projectDir)
+        try writeBlankPDF(projectDir: projectDir, relPath: "objects/scan.pdf", pageCount: 2)
+        seedArtifact(store, mediaType: "application/pdf", relPath: "objects/scan.pdf")
+        let engine = FakeOCREngine()
+        let model = makeModel(store: store, projectDir: projectDir, engine: engine)
+        await model.prepare()
+        #expect(model.isPDFArtifact)
+        #expect(!model.artifactViewer.findHasTextLayer)
+        model.artifactViewer.installUserSelectionForTesting(text: "ghost", page: 1)
+        #expect(!model.canPasteTranscription)
+        model.requestPasteTranscription()
+        #expect(model.transcription.isEmpty)
+        #expect(
+            String(localized: model.transcriptionActionHint)
+                == String(localized: L10n.CitationComposer.pasteHintNoTextLayer)
+        )
+        #expect(engine.recognizeCount == 0)
+    }
+
+    @Test func imageArtifactDoesNotPaste() async throws {
+        let projectDir = uniqueProjectDir()
+        let store = makeStore(projectDir: projectDir)
+        try writePNG(projectDir: projectDir, relPath: "objects/ab/cd/sample.png")
+        seedArtifact(store, mediaType: "image/png", relPath: "objects/ab/cd/sample.png")
+        let engine = FakeOCREngine()
+        let model = makeModel(store: store, projectDir: projectDir, engine: engine)
+        await model.prepare()
+        model.artifactViewer.installUserSelectionForTesting(text: "should not paste", page: 1)
+        #expect(model.canAutoTranscribe)
+        #expect(!model.canPasteTranscription)
+        model.requestPasteTranscription()
+        #expect(model.transcription.isEmpty)
+        #expect(engine.recognizeCount == 0)
     }
 
     @Test func missingImageFileDisablesButton() async {
@@ -252,6 +358,22 @@ struct CitationAutoTranscribeTests {
               let rep = NSBitmapImageRep(data: tiff),
               let data = rep.representation(using: .png, properties: [:])
         else {
+            throw TestOCRError.failed
+        }
+        let url = URL(fileURLWithPath: projectDir).appendingPathComponent(relPath)
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try data.write(to: url)
+    }
+
+    private func writeBlankPDF(projectDir: String, relPath: String, pageCount: Int) throws {
+        let document = PDFDocument()
+        for _ in 0..<pageCount {
+            document.insert(PDFPage(), at: document.pageCount)
+        }
+        guard let data = document.dataRepresentation() else {
             throw TestOCRError.failed
         }
         let url = URL(fileURLWithPath: projectDir).appendingPathComponent(relPath)

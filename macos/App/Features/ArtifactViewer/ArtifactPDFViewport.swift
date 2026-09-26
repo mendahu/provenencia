@@ -23,6 +23,7 @@ struct ArtifactPDFViewport: NSViewRepresentable {
     var freeformDeleteTooltip: String = ""
     var findSelection: PDFSelection?
     var findActivationID: Int = 0
+    var onUserSelectionChange: ((String?, Int?) -> Void)?
 
     func makeCoordinator() -> Coordinator {
         Coordinator(onZoomChange: onZoomChange)
@@ -57,6 +58,7 @@ struct ArtifactPDFViewport: NSViewRepresentable {
         var onZoomChange: (CGFloat) -> Void
         var onCommitRegion: ((ArtifactRegionDraft) -> Void)?
         var onDisarmRegionTool: (() -> Void)?
+        var onUserSelectionChange: ((String?, Int?) -> Void)?
 
         init(onZoomChange: @escaping (CGFloat) -> Void) {
             self.onZoomChange = onZoomChange
@@ -69,6 +71,10 @@ struct ArtifactPDFViewport: NSViewRepresentable {
         coordinator.onZoomChange = onZoomChange
         host.onZoomChange = { [weak coordinator] value in
             coordinator?.onZoomChange(value)
+        }
+        coordinator.onUserSelectionChange = onUserSelectionChange
+        host.onUserSelectionChange = { [weak coordinator] text, page in
+            coordinator?.onUserSelectionChange?(text, page)
         }
         coordinator.onCommitRegion = onCommitRegion
         coordinator.onDisarmRegionTool = onDisarmRegionTool
@@ -103,6 +109,7 @@ final class ArtifactPDFHostView: NSView {
     let overlayView = ArtifactRegionOverlayView(frame: .zero)
 
     var onZoomChange: ((CGFloat) -> Void)?
+    var onUserSelectionChange: ((String?, Int?) -> Void)?
 
     private var isObserving = false
     private var suppressZoomCallback = false
@@ -174,6 +181,12 @@ final class ArtifactPDFHostView: NSView {
             name: .PDFViewVisiblePagesChanged,
             object: pdfView
         )
+        center.addObserver(
+            self,
+            selector: #selector(pdfSelectionChanged(_:)),
+            name: .PDFViewSelectionChanged,
+            object: pdfView
+        )
         observeScrollableViews()
     }
 
@@ -217,6 +230,7 @@ final class ArtifactPDFHostView: NSView {
         }
 
         applyFindHighlight(findSelection, activationID: findActivationID)
+        reportUserSelection()
 
         layoutPageOverlay()
     }
@@ -263,6 +277,25 @@ final class ArtifactPDFHostView: NSView {
         if notification.name == .PDFViewScaleChanged, !suppressZoomCallback {
             onZoomChange?(ArtifactViewerModel.clampZoom(pdfView.scaleFactor))
         }
+    }
+
+    @objc private func pdfSelectionChanged(_ notification: Notification) {
+        reportUserSelection()
+    }
+
+    private func reportUserSelection() {
+        guard let selection = pdfView.currentSelection,
+              let text = selection.string,
+              !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              let document = pdfView.document,
+              let pdfPage = selection.pages.first
+        else {
+            onUserSelectionChange?(nil, nil)
+            return
+        }
+        let index = document.index(for: pdfPage)
+        let page = index == NSNotFound ? nil : index + 1
+        onUserSelectionChange?(text, page)
     }
 
     private func observeScrollableViews() {

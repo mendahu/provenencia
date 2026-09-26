@@ -41,7 +41,7 @@ Find and paste both need a **live PDFKit page** (`PDFView` / equivalent), not `P
 ## Related
 
 - Plan: [`deployment-plan.md`](deployment-plan.md) **S8-D2**, **S8-03…S8-05**
-- Brief: [`design/S8-D2-pdf-text-find.md`](design/S8-D2-pdf-text-find.md)
+- Brief: [`design/archive/S8-D2-pdf-text-find.md`](design/archive/S8-D2-pdf-text-find.md)
 - Spike 7 raster viewer: archive **S7-06** / **S7-07**
 - Image OCR twin: **S8-D1** / **S8-01**
 - PDFKit: `PDFDocument.findString(_:withOptions:)`

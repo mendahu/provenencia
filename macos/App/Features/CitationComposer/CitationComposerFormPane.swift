@@ -176,7 +176,7 @@ struct CitationComposerFormPane: View {
         VStack(alignment: .leading, spacing: PVSpacing.space5) {
             PVField(
                 label: L10n.CitationComposer.transcriptionLabel,
-                hint: model.autoTranscribeHint
+                hint: model.transcriptionActionHint
             ) {
                 HStack(spacing: PVSpacing.space4) {
                     Toggle(isOn: $model.transcriptionUncertain) {
@@ -187,25 +187,11 @@ struct CitationComposerFormPane: View {
                     .disabled(inert || model.isTranscribing)
                     .accessibilityIdentifier("citationComposer.uncertain")
                     Spacer(minLength: 0)
-                    PVButton(
-                        model.isTranscribing
-                            ? L10n.CitationComposer.autoTranscribeReading
-                            : L10n.CitationComposer.autoTranscribe,
-                        variant: .secondary,
-                        size: .sm,
-                        icon: .scanText,
-                        loading: model.isTranscribing
-                    ) {
-                        model.requestAutoTranscribe()
+                    if model.isPDFArtifact {
+                        pasteTranscriptionButton
+                    } else {
+                        autoTranscribeButton
                     }
-                    .disabled(inert || !model.canAutoTranscribe)
-                    .accessibilityIdentifier("citationComposer.autoTranscribe")
-                    .accessibilityLabel(
-                        model.locator.hasRegion
-                            ? Text(L10n.CitationComposer.autoTranscribeDrawnRegion)
-                            : Text(L10n.CitationComposer.autoTranscribe)
-                    )
-                    .accessibilityHint(Text(model.autoTranscribeHint))
                 }
             }
             PVTextArea(text: $model.transcription, lineLimit: wide ? 6...8 : 2...6)
@@ -256,6 +242,49 @@ struct CitationComposerFormPane: View {
                 .accessibilityIdentifier("citationComposer.saveCitation")
             }
         }
+    }
+
+    private var autoTranscribeButton: some View {
+        PVButton(
+            model.isTranscribing
+                ? L10n.CitationComposer.autoTranscribeReading
+                : L10n.CitationComposer.autoTranscribe,
+            variant: .secondary,
+            size: .sm,
+            icon: .scanText,
+            loading: model.isTranscribing
+        ) {
+            model.requestAutoTranscribe()
+        }
+        .disabled(inert || !model.canAutoTranscribe)
+        .accessibilityIdentifier("citationComposer.autoTranscribe")
+        .accessibilityLabel(
+            model.locator.hasRegion
+                ? Text(L10n.CitationComposer.autoTranscribeDrawnRegion)
+                : Text(L10n.CitationComposer.autoTranscribe)
+        )
+        .accessibilityHint(Text(model.autoTranscribeHint))
+    }
+
+    private var pasteTranscriptionButton: some View {
+        let enabled = !inert && model.canPasteTranscription
+        return PVButton(
+            L10n.CitationComposer.pasteTranscription,
+            variant: .secondary,
+            size: .sm,
+            icon: .clipboardPaste
+        ) {
+            model.requestPasteTranscription()
+        }
+        .disabled(!enabled)
+        .accessibilityIdentifier("citationComposer.pasteTranscription")
+        .accessibilityLabel(
+            enabled
+                ? Text(L10n.CitationComposer.pasteTranscription)
+                : Text(verbatim: L10n.CitationComposer.pasteUnavailable(
+                    hint: String(localized: model.transcriptionActionHint)
+                ))
+        )
     }
 
     private var connectionsSection: some View {
