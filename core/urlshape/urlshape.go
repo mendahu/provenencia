@@ -16,21 +16,31 @@ var ErrInvalid = errors.New("urlshape: invalid")
 // (www.url.com). Scheme-less values are checked as https:// plus the typed
 // string. file, javascript, spaces, and strings with no host fail.
 func Validate(s string) error {
-	_, err := parse(s)
+	_, err := Canonical(s)
 	return err
 }
 
-// OpenHref returns a browser-ready href. Scheme-less input gets an https://
-// prefix. The stored catalog value stays whatever the researcher typed.
-func OpenHref(s string) (string, error) {
+// Canonical returns the lowercase form used for catalog storage. Mixed-case
+// input is accepted when the shape is valid.
+func Canonical(s string) (string, error) {
 	typed, err := parse(s)
 	if err != nil {
 		return "", err
 	}
-	if !hasScheme(typed) {
-		return "https://" + typed, nil
+	return strings.ToLower(typed), nil
+}
+
+// OpenHref returns a browser-ready href. Scheme-less input gets an https://
+// prefix. The href is lowercased to match stored catalog values.
+func OpenHref(s string) (string, error) {
+	canon, err := Canonical(s)
+	if err != nil {
+		return "", err
 	}
-	return typed, nil
+	if !hasScheme(canon) {
+		return "https://" + canon, nil
+	}
+	return canon, nil
 }
 
 func parse(s string) (string, error) {

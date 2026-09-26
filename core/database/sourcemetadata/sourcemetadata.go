@@ -124,9 +124,11 @@ func Set(c *database.Catalog, userID []byte, in Input) (Row, error) {
 		return Row{}, err
 	}
 
-	if err := validateValue(field.DataType, in.ValueText); err != nil {
+	normalized, err := normalizeValue(field.DataType, in.ValueText)
+	if err != nil {
 		return Row{}, err
 	}
+	in.ValueText = normalized
 
 	var row Row
 	var action string
@@ -555,20 +557,21 @@ func listLayout(c *database.Catalog, sourceID []byte) (map[string]layout, int, e
 	return out, maxOrder, rows.Err()
 }
 
-func validateValue(dataType, valueText string) error {
+func normalizeValue(dataType, valueText string) (string, error) {
 	if valueText == "" {
-		return ErrInvalid
+		return "", ErrInvalid
 	}
 	switch dataType {
 	case sourcefields.DataTypeText:
-		return nil
+		return valueText, nil
 	case sourcefields.DataTypeURL:
-		if err := urlshape.Validate(valueText); err != nil {
-			return ErrInvalid
+		canon, err := urlshape.Canonical(valueText)
+		if err != nil {
+			return "", ErrInvalid
 		}
-		return nil
+		return canon, nil
 	default:
-		return ErrInvalid
+		return "", ErrInvalid
 	}
 }
 

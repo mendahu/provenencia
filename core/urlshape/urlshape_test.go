@@ -12,6 +12,7 @@ func TestValidate(t *testing.T) {
 		wantErr bool
 	}{
 		{name: "https", in: "https://example.com"},
+		{name: "mixed case", in: "HTTPS://Example.COM/Record"},
 		{name: "http path", in: "http://example.com/record"},
 		{name: "scheme-less www", in: "www.url.com"},
 		{name: "scheme-less host path", in: "archives.norfolk.gov.uk/catalogue/PD28-47"},
@@ -60,5 +61,29 @@ func TestOpenHref(t *testing.T) {
 	}
 	if _, err := OpenHref("file:/tmp"); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("OpenHref file = %v", err)
+	}
+	href, err = OpenHref("HTTPS://Example.COM/Record")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if href != "https://example.com/record" {
+		t.Fatalf("OpenHref mixed case = %q", href)
+	}
+}
+
+func TestCanonicalLowercases(t *testing.T) {
+	got, err := Canonical("HTTPS://Example.COM/Record")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "https://example.com/record" {
+		t.Fatalf("Canonical = %q", got)
+	}
+	got, err = Canonical("WWW.URL.COM")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "www.url.com" {
+		t.Fatalf("Canonical scheme-less = %q", got)
 	}
 }

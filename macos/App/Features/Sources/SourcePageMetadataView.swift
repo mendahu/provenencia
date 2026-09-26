@@ -131,8 +131,8 @@ struct SourcePageMetadataView: View {
                 .padding(.top, 6)
             SourcePageMetadataLabel(
                 text: entry.field.label,
-                dataType: entry.field.dataType,
-                topPadding: 6
+                topPadding: 6,
+                emphasized: true
             )
 
             SourcePageMetadataTextEditor(

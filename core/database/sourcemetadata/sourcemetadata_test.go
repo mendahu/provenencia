@@ -185,6 +185,15 @@ func TestSourceMetadata(t *testing.T) {
 				}); err != nil {
 					t.Fatal(err)
 				}
+				lowered, err := Set(c, userID, Input{
+					SourceID: src.ID, FieldID: field.ID, ValueText: "HTTPS://Example.COM/Record",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if lowered.ValueText != "https://example.com/record" {
+					t.Fatalf("canonical %q", lowered.ValueText)
+				}
 				if _, err := Set(c, userID, Input{
 					SourceID: src.ID, FieldID: field.ID, ValueText: "file:/tmp",
 				}); !errors.Is(err, ErrInvalid) {

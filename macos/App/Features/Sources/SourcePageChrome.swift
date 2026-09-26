@@ -49,43 +49,26 @@ extension View {
 }
 
 /// Label column used by metadata saved / suggestion rows.
-///
-/// Saved rows pass `dataType` so the board's kind microcaps (icon + type label)
-/// sit under the field name. Suggestions omit it and stay a muted caption.
 struct SourcePageMetadataLabel: View {
     let text: String
-    /// When set, renders the data-type microcaps under the label (saved rows).
-    var dataType: String? = nil
     /// When true, pads leading by the reorder-handle gutter so suggestion
     /// labels align with saved-row labels.
     var alignWithReorderHandle: Bool = false
     var topPadding: CGFloat = 0
+    /// Saved rows use a stronger field name; suggestions stay a muted caption.
+    var emphasized: Bool = false
 
     var body: some View {
-        Group {
-            if let dataType {
-                VStack(alignment: .leading, spacing: PVSpacing.space2) {
-                    Text(text)
-                        .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.semibold))
-                        .foregroundStyle(PVColor.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    HStack(spacing: PVSpacing.space2) {
-                        PVIcon(CatalogFieldDataType.icon(for: dataType), size: 11)
-                        Text(CatalogFieldDataType.label(for: dataType))
-                            .font(PVFont.mono(size: PVTypeScale.micro))
-                            .tracking(PVTypeScale.micro * PVTracking.caps)
-                            .textCase(.uppercase)
-                    }
-                    .foregroundStyle(PVColor.textMuted)
-                }
-            } else {
-                Text(text)
-                    .font(PVFont.body(size: PVTypeScale.caption))
-                    .foregroundStyle(PVColor.textMuted)
-            }
-        }
-        .frame(width: SourcePageLayout.metadataLabelWidth, alignment: .leading)
-        .padding(.leading, alignWithReorderHandle ? SourcePageLayout.metadataSuggestionLabelInset : 0)
-        .padding(.top, topPadding)
+        Text(verbatim: text)
+            .font(
+                emphasized
+                    ? PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.semibold)
+                    : PVFont.body(size: PVTypeScale.caption)
+            )
+            .foregroundStyle(emphasized ? PVColor.textPrimary : PVColor.textMuted)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(width: SourcePageLayout.metadataLabelWidth, alignment: .leading)
+            .padding(.leading, alignWithReorderHandle ? SourcePageLayout.metadataSuggestionLabelInset : 0)
+            .padding(.top, topPadding)
     }
 }
