@@ -246,15 +246,20 @@ struct WorkspaceSessionTests {
         let typesHandle: QueryHandle<[CatalogSourceType]>? = session.queryHandle(
             CatalogQueryKey.sourceTypesList(project: project)
         )
+        let progressHandle: QueryHandle<[String: SourceGraphProgress]>? = session.queryHandle(
+            CatalogQueryKey.sourceGraphProgress(project: project)
+        )
         let fieldsHandle: QueryHandle<[CatalogMetadataField]>? = session.queryHandle(
             CatalogQueryKey.metadataFieldsList(project: project)
         )
         #expect(sourcesHandle != nil)
         #expect(typesHandle != nil)
+        #expect(progressHandle != nil)
         #expect(fieldsHandle == nil)
 
         await waitForFetchComplete(sourcesHandle!)
         await waitForFetchComplete(typesHandle!)
+        await waitForFetchComplete(progressHandle!)
         #expect(sourcesHandle?.value?.first?.title == "Alpha")
         #expect(typesHandle?.value?.first?.label == "Book")
     }
@@ -536,6 +541,78 @@ struct WorkspaceSessionTests {
         #expect(handle.value?.first?.id == "patched")
         await waitForFetchComplete(handle)
         #expect(handle.value?.first?.id == "s1")
+    }
+
+    @Test func applyMutatedSourceGraphPatchesProgressOnly() async {
+        let store = FakeStore()
+        seedStore(store)
+        store.graphProgressBySource["s1"] = SourceGraphProgress(
+            sourceId: "s1", subjectCount: 12, observationCount: 48, uncitedCount: 3
+        )
+        store.graphProgressBySource["s2"] = SourceGraphProgress(
+            sourceId: "s2", subjectCount: 4, observationCount: 0, uncitedCount: 4
+        )
+        let session = makeSession(store: store)
+        let listKey = CatalogQueryKey.sourcesList(project: session.projectKey)
+        let progressKey = CatalogQueryKey.sourceGraphProgress(project: session.projectKey)
+        let listHandle: QueryHandle<[CatalogSource]> = session.query(listKey)
+        let progressHandle: QueryHandle<[String: SourceGraphProgress]> = session.query(progressKey)
+        await waitForFetchComplete(listHandle)
+        await waitForFetchComplete(progressHandle)
+        #expect(progressHandle.value?["s1"]?.subjectCount == 12)
+        #expect(progressHandle.value?["s2"]?.subjectCount == 4)
+        let listCallsBefore = store.listSourceGraphProgressCalls
+        let sourcesAtLoad = listHandle.value
+
+        store.graphProgressBySource["s1"] = SourceGraphProgress(
+            sourceId: "s1", subjectCount: 13, observationCount: 48, uncitedCount: 4
+        )
+        session.apply(.mutatedSourceGraph(sourceId: "s1"))
+        var waited: UInt64 = 0
+        while waited < 2_000_000_000 {
+            if progressHandle.value?["s1"]?.subjectCount == 13 { break }
+            await Task.yield()
+            try? await Task.sleep(nanoseconds: 10_000_000)
+            waited += 10_000_000
+        }
+        #expect(progressHandle.value?["s1"]?.subjectCount == 13)
+        #expect(progressHandle.value?["s2"]?.subjectCount == 4)
+        #expect(listHandle.value == sourcesAtLoad)
+        #expect(listHandle.isFetching == false)
+        #expect(store.listSourceGraphProgressCalls == listCallsBefore)
+        #expect(store.getSourceGraphProgressCalls >= 1)
+    }
+
+    @Test func applySavedCitationDoesNotRefetchSourcesList() async {
+        let store = FakeStore()
+        seedStore(store)
+        store.graphProgressBySource["s1"] = SourceGraphProgress(
+            sourceId: "s1", subjectCount: 1, observationCount: 1, uncitedCount: 0
+        )
+        let session = makeSession(store: store)
+        let listHandle: QueryHandle<[CatalogSource]> = session.query(
+            CatalogQueryKey.sourcesList(project: session.projectKey)
+        )
+        let progressHandle: QueryHandle<[String: SourceGraphProgress]> = session.query(
+            CatalogQueryKey.sourceGraphProgress(project: session.projectKey)
+        )
+        await waitForFetchComplete(listHandle)
+        await waitForFetchComplete(progressHandle)
+        let sourcesAtLoad = listHandle.value
+        store.graphProgressBySource["s1"] = SourceGraphProgress(
+            sourceId: "s1", subjectCount: 1, observationCount: 2, uncitedCount: 0
+        )
+        session.apply(.savedCitation(sourceId: "s1"))
+        var waited: UInt64 = 0
+        while waited < 2_000_000_000 {
+            if progressHandle.value?["s1"]?.observationCount == 2 { break }
+            await Task.yield()
+            try? await Task.sleep(nanoseconds: 10_000_000)
+            waited += 10_000_000
+        }
+        #expect(progressHandle.value?["s1"]?.observationCount == 2)
+        #expect(listHandle.value == sourcesAtLoad)
+        #expect(listHandle.isFetching == false)
     }
 }
 

@@ -126,6 +126,7 @@ struct PlaceRegistry: Sendable {
                 [
                     .sourcesList(project: project),
                     .sourceTypesList(project: project),
+                    .sourceGraphProgress(project: project),
                 ]
             },
             deepId: { _ in nil }

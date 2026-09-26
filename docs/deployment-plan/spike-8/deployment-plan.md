@@ -129,8 +129,8 @@ S8-D6  Delete paths
 - [x] S8-06 — Graph visual enhancements (badges, Source jump, bridge copy + Add property) → [`completed.md`](completed.md)
 - [x] S8-D4 — Design: Source page enhancements → [`completed.md`](completed.md)
 - [x] S8-07 — Source page enhancements (Evidence graph jump + metadata dates as text + delete + clickable `url` + brief bundle) → [`completed.md`](completed.md)
-- [ ] S8-D5 — Design: Sources list refresh → [`completed.md`](completed.md)
-- [ ] S8-08 — Sources list refresh (graph-progress counts + brief bundle) → [`completed.md`](completed.md)
+- [x] S8-D5 — Design: Sources list refresh → [`completed.md`](completed.md)
+- [x] S8-08 — Sources list refresh (graph-progress counts + brief bundle) → [`completed.md`](completed.md)
 - [ ] S8-D6 — Design: Interpretation delete paths → [`completed.md`](completed.md)
 - [ ] S8-09 — Interpretation delete paths (matrix + damage-count confirms) → [`completed.md`](completed.md)
 - [ ] S8-99 — Dogfood close / docs (after later stories, or when we choose to close)
@@ -748,7 +748,7 @@ One Source-page pass against **S8-D4**. Add a control that opens this Source’s
 
 ## S8-D5 — Design: Sources list refresh
 
-Claude Design board for a **bundled** Sources-list chrome pass. First item: **subject** + **observation** counts per Source (optional uncited). More list items join this brief (and **S8-08**) as they are scoped. Brief: [`design/S8-D5-sources-list.md`](design/S8-D5-sources-list.md). Gates **S8-08**.
+Claude Design board for a **bundled** Sources-list chrome pass. First item: **subject** + **observation** counts per Source (optional uncited). More list items join this brief (and **S8-08**) as they are scoped. Brief: [`design/archive/S8-D5-sources-list.md`](design/archive/S8-D5-sources-list.md). Gates **S8-08**.
 
 Does **not** design graph or Source-page chrome, commentary, or folding counts into `CatalogSource`.
 

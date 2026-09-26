@@ -638,4 +638,10 @@ private struct ThrowingStore: GenealogyStore {
     func listCitationsByArtifact(projectDir _: String, artifactID _: String) async throws -> [CatalogListedCitation] {
         throw StoreBoom.boom
     }
+    func listSourceGraphProgress(projectDir _: String) async throws -> [SourceGraphProgress] {
+        throw StoreBoom.boom
+    }
+    func getSourceGraphProgress(projectDir _: String, sourceID _: String) async throws -> SourceGraphProgress {
+        throw StoreBoom.boom
+    }
 }

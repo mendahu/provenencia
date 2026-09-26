@@ -34,6 +34,9 @@ struct SourcesListView: View {
                 SourcesListContent(
                     sourcesHandle: sourcesHandle,
                     typesHandle: typesHandle,
+                    progressHandle: session.queryHandle(
+                        SourcesModel.sourceGraphProgressKey(for: session)
+                    ),
                     model: model
                 )
             } else {
@@ -52,6 +55,7 @@ private struct SourcesListContent: View {
     @Environment(WorkspaceNavigation.self) private var navigation
     @Bindable var sourcesHandle: QueryHandle<[CatalogSource]>
     @Bindable var typesHandle: QueryHandle<[CatalogSourceType]>
+    var progressHandle: QueryHandle<[String: SourceGraphProgress]>?
     @Bindable var model: SourcesModel
 
     var body: some View {
@@ -244,20 +248,25 @@ private struct SourcesListContent: View {
                 LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
                     Section {
                         ForEach(model.visibleSources) { source in
-                            SourcesSplitRow(
-                                source: source,
-                                typeLabel: model.typeLabel(for: source),
-                                typeIconKey: model.typeIconKey(for: source),
-                                projectDir: model.pageProjectDir,
-                                onOpenPage: {
-                                    navigation.go(to: SourcesListNavigation.pageLocation(for: source))
-                                },
-                                onOpenGraph: {
-                                    if let location = SourcesListNavigation.graphLocation(for: source) {
-                                        navigation.go(to: location)
+                            if let progressHandle {
+                                SourcesSplitRowProgress(source: source, model: model, handle: progressHandle)
+                            } else {
+                                SourcesSplitRow(
+                                    source: source,
+                                    typeLabel: model.typeLabel(for: source),
+                                    typeIconKey: model.typeIconKey(for: source),
+                                    projectDir: model.pageProjectDir,
+                                    countsLoading: true,
+                                    onOpenPage: {
+                                        navigation.go(to: SourcesListNavigation.pageLocation(for: source))
+                                    },
+                                    onOpenGraph: {
+                                        if let location = SourcesListNavigation.graphLocation(for: source) {
+                                            navigation.go(to: location)
+                                        }
                                     }
-                                }
-                            )
+                                )
+                            }
                         }
                     } header: {
                         captionBand
@@ -279,7 +288,7 @@ private struct SourcesListContent: View {
         } graph: {
             Text(L10n.Sources.columnEvidenceGraph)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                // Padding inside the fixed 210pt track (not outside — that skewed the hairline).
+                // Padding inside the fixed graph-zone track (not outside — that skewed the hairline).
                 .padding(.horizontal, PVSpacing.space6)
         }
         .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
@@ -369,5 +378,32 @@ private struct SourcesListContent: View {
             }
             PVComboBoxPlainRow(option: option, query: query)
         }
+    }
+}
+
+/// Observes the progress map so one Source's Get-one merge repaints that row.
+private struct SourcesSplitRowProgress: View {
+    @Environment(WorkspaceNavigation.self) private var navigation
+    let source: CatalogSource
+    let model: SourcesModel
+    @Bindable var handle: QueryHandle<[String: SourceGraphProgress]>
+
+    var body: some View {
+        SourcesSplitRow(
+            source: source,
+            typeLabel: model.typeLabel(for: source),
+            typeIconKey: model.typeIconKey(for: source),
+            projectDir: model.pageProjectDir,
+            progress: handle.value?[source.id],
+            countsLoading: handle.value == nil && handle.status != .ready,
+            onOpenPage: {
+                navigation.go(to: SourcesListNavigation.pageLocation(for: source))
+            },
+            onOpenGraph: {
+                if let location = SourcesListNavigation.graphLocation(for: source) {
+                    navigation.go(to: location)
+                }
+            }
+        )
     }
 }

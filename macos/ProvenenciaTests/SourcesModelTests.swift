@@ -291,4 +291,49 @@ struct SourcesModelTests {
         #expect(model.sources.first?.title == "Deed renamed")
         #expect(model.sources.first?.coverMode == "type_icon")
     }
+
+    @Test func warmListQueriesLoadsGraphProgress() async {
+        let store = FakeStore()
+        store.graphProgressBySource["s1"] = SourceGraphProgress(
+            sourceId: "s1", subjectCount: 4, observationCount: 0, uncitedCount: 4
+        )
+        let (model, session) = makeModel(
+            store: store,
+            sources: [source(id: "s1", title: "Album", typeID: "t1")],
+            types: [photoType()]
+        )
+        await warmLists(model, session: session)
+        if let progressHandle: QueryHandle<[String: SourceGraphProgress]> = session.queryHandle(
+            SourcesModel.sourceGraphProgressKey(for: session)
+        ) {
+            await waitForQuery(progressHandle)
+        }
+        #expect(model.graphProgress(for: "s1")?.subjectCount == 4)
+        #expect(model.graphProgress(for: "s1")?.uncitedCount == 4)
+        #expect(model.graphCountsLoading == false)
+    }
+
+    @Test func graphProgressCopyMatchesBoard() {
+        #expect(L10n.Sources.graphCountLine(subjects: 12, observations: 48) == "12 subjects · 48 observations")
+        #expect(L10n.Sources.graphUncitedCount(3) == "3 uncited")
+        #expect(L10n.Sources.graphSubjectCount(0) == "0 subjects")
+        #expect(
+            L10n.Sources.graphZoneAccessibility(progress: nil, countsLoading: true)
+                == "Open graph, counts loading"
+        )
+        #expect(
+            L10n.Sources.graphZoneAccessibility(
+                progress: .zeros(sourceId: "s1"),
+                countsLoading: false
+            ) == "Open graph, 0 subjects, not started"
+        )
+        #expect(
+            L10n.Sources.graphZoneAccessibility(
+                progress: SourceGraphProgress(
+                    sourceId: "s1", subjectCount: 12, observationCount: 48, uncitedCount: 3
+                ),
+                countsLoading: false
+            ) == "Open graph, 12 subjects, 48 observations, 3 uncited"
+        )
+    }
 }

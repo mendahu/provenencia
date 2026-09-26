@@ -20,6 +20,7 @@ struct PlaceRegistryTests {
         #expect(sources?.queryKeys == [
             .sourcesList(project: project),
             .sourceTypesList(project: project),
+            .sourceGraphProgress(project: project),
         ])
 
         let fields = resolve(.sectionRoot(.sourceFields))
@@ -120,7 +121,11 @@ struct PlaceRegistryTests {
             (
                 .sectionRoot(.sources),
                 .sourcesList,
-                [.sourcesList(project: project), .sourceTypesList(project: project)]
+                [
+                    .sourcesList(project: project),
+                    .sourceTypesList(project: project),
+                    .sourceGraphProgress(project: project),
+                ]
             ),
             (
                 WorkspaceLocation(section: .sources, sourceId: "s1"),

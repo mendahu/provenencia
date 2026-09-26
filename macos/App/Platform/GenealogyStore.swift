@@ -779,6 +779,27 @@ protocol GenealogyStore: Sendable {
     func citationCountsBySource(projectDir: String, sourceID: String) async throws -> [String: Int]
 
     func listCitationsByArtifact(projectDir: String, artifactID: String) async throws -> [CatalogListedCitation]
+
+    func listSourceGraphProgress(projectDir: String) async throws -> [SourceGraphProgress]
+
+    func getSourceGraphProgress(projectDir: String, sourceID: String) async throws -> SourceGraphProgress
+}
+
+/// Per-Source Evidence-graph counts for the Sources list (S8-08).
+struct SourceGraphProgress: Sendable, Equatable, Identifiable {
+    var id: String { sourceId }
+    var sourceId: String
+    var subjectCount: Int
+    var observationCount: Int
+    var uncitedCount: Int
+
+    static func zeros(sourceId: String) -> SourceGraphProgress {
+        SourceGraphProgress(sourceId: sourceId, subjectCount: 0, observationCount: 0, uncitedCount: 0)
+    }
+
+    var isZero: Bool {
+        subjectCount == 0 && observationCount == 0 && uncitedCount == 0
+    }
 }
 
 /// Draft payload for one Observation insert (FFI ObservationDraft).
