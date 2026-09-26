@@ -4,9 +4,9 @@
 
 **Open.** Checklist and PR sequence: [`deployment-plan.md`](deployment-plan.md). Finished steps: [`completed.md`](completed.md).
 
-A pause after Spike 7: the evidence path works, but **entering Sources and filling an Evidence graph is tedious**. This spike amalgamates improvements to that flow — not a new layer. **Composer rethink first** (**S8-D7** / **S8-10**): Citation as the document, multi-subject observations, reuse, empty Save. **Then composer and Connect simplification** (**S8-D8** / **S8-11**): row-level Observation commits, an unsaved-work guard, Connect finished in the composer, and lossless audit for Interpretation writes. Then Auto Transcribe and PDF Find/paste land on that form. Graph chrome in **S8-D3** / **S8-06**; Source-page chrome in **S8-D4** / **S8-07**; Sources-list chrome in **S8-D5** / **S8-08**; delete paths in **S8-D6** / **S8-09**.
+A pause after Spike 7: the evidence path works, but **entering Sources and filling an Evidence graph is tedious**. This spike amalgamates improvements to that flow — not a new layer. **Composer rethink first** (**S8-D7** / **S8-10**), then **composer and Connect simplification** (**S8-D8** / **S8-11**), then Auto Transcribe and PDF Find/paste. Graph / Source-page / Sources-list chrome have shipped. Delete paths: **S8-09** (FKs) → **S8-12** (registry) → **S8-D9** / **S8-13** (shared modal) → one screen at a time (Source page, Source Types, Source Fields, Subject Fields, composer, graph).
 
-Stories land one at a time. **Composer rethink** (flexible Citation document). **Auto Transcribe** (Vision on **images** only). **PDF Find + select + paste transcription** (live PDFKit page; I-beam default; no Vision on PDF). **Graph visual enhancements** (badges, Source jump, bridge copy + Add property). **Source page enhancements** (jump to Evidence graph; shipped metadata + dates as text + delete + clickable `url`). **Sources list refresh** (subject + observation counts on their own cache keys). **Delete paths** (counted cascade or honest refuse; no Change type).
+Stories land one at a time. **Composer rethink** (flexible Citation document). **Auto Transcribe** (Vision on **images** only). **PDF Find + select + paste transcription** (live PDFKit page; I-beam default; no Vision on PDF). **Graph visual enhancements** (badges, Source jump, bridge copy + Add property). **Source page enhancements** (jump to Evidence graph; shipped metadata + dates as text + delete + clickable `url`). **Sources list refresh** (subject + observation counts on their own cache keys). **Delete paths** (resource vs facet FKs; inbound-resource-empty erase or refuse; no Change type).
 
 > **Do not invent Observations.** Transcription is the reading. The researcher still edits and Save still writes the Citation.
 
@@ -18,7 +18,7 @@ Stories land one at a time. **Composer rethink** (flexible Citation document). *
 | --- | --- |
 | [**Deployment plan**](deployment-plan.md) | PR sequence, design gates, dogfood bar, scope |
 | [**Completed**](completed.md) | Finished steps |
-| [Design briefs](design/) | Claude Design — **S8-D7** first, then **S8-D8**, then **S8-D1**…**S8-D6**. Working rules: [`design/claude-design-working-rules.md`](design/claude-design-working-rules.md) |
+| [Design briefs](design/) | Claude Design — remaining open: **S8-D9**, then **S8-D12**…**S8-D15**, **S8-D11**, **S8-D10**. Working rules: [`design/claude-design-working-rules.md`](design/claude-design-working-rules.md) |
 | [PDF Find](pdf-text-find.md) | Scoped note for **S8-D2** / **S8-03…S8-05** (promoted from ideas) |
 
 ## Relationship to Spike 7 / dogfood

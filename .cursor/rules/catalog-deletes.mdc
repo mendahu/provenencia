@@ -1,0 +1,18 @@
+---
+description: Official catalog Deletes go through deleteimpact — no private sqlInUse
+globs: core/database/**/*.go,api/ffi/handlers/**/*.go
+alwaysApply: false
+---
+
+# Catalog deletes
+
+Follow `.cursor/skills/add-catalog-delete/SKILL.md` and `docs/catalog-deletes.md`.
+
+- **Resource / vocab `Delete`** must call `deleteimpact.Impact` in the same tx (after extra gates), then `DELETE` the parent, then owned-outbound release. Refuse is a generic `*.in_use` / extra-gate code — not the report on `Error`.
+- Load the row first. Missing → `not_found`. `edge_locked` / infra / `origin_locked` before Impact. Do not treat inbound-empty as allowed.
+- Bridge `subjects.Delete` releases connection facets (edges + disambiguation) first. `observations.Delete` of an edge stays `edge_locked`.
+- Do **not** add `sqlInUse` / `SELECT 1 FROM … LIMIT 1` next to a resource `DELETE`. No-UI writers still cut over.
+- New table in the same PR: classify the FK **and** register count + list probes + title/location projectors.
+- Facet / field writes (notes, `ClearSourceMetadata`, vocab join remove, `searchindex.Delete`) are not official Deletes.
+- FFI: preview is `GetDeleteImpact` (the only rich payload); `Delete*` re-runs Impact as a safety net and returns a generic code. Recipe owns `via` / `kind` L10n. The UI must not call `Delete` when preflight is blocked.
+- UI: DeleteImpact recipe (confirm if allowed, notice if blocked). Do not invent a second inbound query in Swift. `usedBy` must match Impact totals.

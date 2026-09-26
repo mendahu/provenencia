@@ -78,6 +78,7 @@ Prefer extending a composite with slots over a new root `PV*` for a slight varia
 | --- | --- |
 | Short create/edit form | `.pvFormDialog` / `PVFormDialogContent` (on `PVPanel`) |
 | Destructive / irreversible confirm | `.pvConfirm(item:)` — snapshot via `item:`, not Bool; detail slot for key chip / callout |
+| Resource delete with inbound check | **DeleteImpact recipe** (S8-D9 / **S8-13**): confirm when `Impact.allowed`, notice (not Confirm-as-acknowledge) when blocked. Do not hand-build a second inbound list. |
 | One-off body | Pass a snowflake into the DS body/detail slot |
 | Custom chrome that copies header/footer by hand | **Don’t** — compose `PVPanel` / FormDialog / Confirm; only the unique body stays snowflake |
 
