@@ -127,8 +127,8 @@ S8-D6  Delete paths
 - [x] S8-05 — Paste transcription from PDF selection → [`completed.md`](completed.md)
 - [x] S8-D3 — Design: Evidence graph visual enhancements → [`completed.md`](completed.md)
 - [x] S8-06 — Graph visual enhancements (badges, Source jump, bridge copy + Add property) → [`completed.md`](completed.md)
-- [ ] S8-D4 — Design: Source page enhancements → [`completed.md`](completed.md)
-- [ ] S8-07 — Source page enhancements (Evidence graph jump + metadata dates as text + delete + clickable `url` + brief bundle) → [`completed.md`](completed.md)
+- [x] S8-D4 — Design: Source page enhancements → [`completed.md`](completed.md)
+- [x] S8-07 — Source page enhancements (Evidence graph jump + metadata dates as text + delete + clickable `url` + brief bundle) → [`completed.md`](completed.md)
 - [ ] S8-D5 — Design: Sources list refresh → [`completed.md`](completed.md)
 - [ ] S8-08 — Sources list refresh (graph-progress counts + brief bundle) → [`completed.md`](completed.md)
 - [ ] S8-D6 — Design: Interpretation delete paths → [`completed.md`](completed.md)
@@ -727,7 +727,7 @@ Does **not** design the composer rethink (**S8-D7**) or denied-lines. Source-pag
 
 ## S8-D4 — Design: Source page enhancements
 
-Claude Design board for a **bundled** Source-page chrome pass. **This board redraws metadata from the shipped Mac section** (quick-add / quick-edit), drops DateValue catalog chrome, **keeps a delete on saved values**, and styles saved `url` values as **external links**. **Jump to Evidence graph is already drawn** — do not brief it again; **S8-07** still implements it. More page items join this brief (and **S8-07**) as they are scoped. Brief: [`design/S8-D4-source-page.md`](design/S8-D4-source-page.md). Gates **S8-07**.
+Claude Design board for a **bundled** Source-page chrome pass. **This board redraws metadata from the shipped Mac section** (quick-add / quick-edit), drops DateValue catalog chrome, **keeps a delete on saved values**, and styles saved `url` values as **external links**. **Jump to Evidence graph is already drawn** — do not brief it again; **S8-07** implements it. More page items join this brief (and **S8-07**) as they are scoped. Brief: [`design/archive/S8-D4-source-page.md`](design/archive/S8-D4-source-page.md). Gates **S8-07**.
 
 Does **not** redesign the jump, keep the board’s date-entry experiments, graph chrome, source-to-source commentary ([`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)), composer DateValue chrome, a first-class provenance date ([`source-provenance-date.md`](../../ideas/source-provenance-date.md)), composer rethink (**S8-D7**), or Sources-list counts (**S8-D5**).
 

@@ -35,7 +35,7 @@ func TestUpsertLookupList(t *testing.T) {
 					t.Fatalf("got %+v", got)
 				}
 				if _, err := Upsert(c, Field{
-					Key: "author", Origin: OriginProvenencia, Label: "Author", DataType: DataTypeDate,
+					Key: "author", Origin: OriginProvenencia, Label: "Author", DataType: DataTypeURL,
 				}); err != nil {
 					t.Fatal(err)
 				}
@@ -43,7 +43,7 @@ func TestUpsertLookupList(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if got.DataType != DataTypeDate {
+				if got.DataType != DataTypeURL {
 					t.Fatalf("data_type %q", got.DataType)
 				}
 			},
@@ -183,7 +183,7 @@ func TestCreateUpdateGetByID(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := Update(c, created.ID, "Album code", DataTypeDate, ""); !errors.Is(err, ErrInvalid) {
+				if _, err := Update(c, created.ID, "Album code", DataTypeURL, ""); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -282,7 +282,7 @@ func TestCreateUpdateGetByID(t *testing.T) {
 					t.Fatal(err)
 				}
 				if _, err := db.Exec(
-					`INSERT INTO source_metadata (id, source_id, field_id, value_text, date_value_id) VALUES (?, ?, ?, ?, NULL)`,
+					`INSERT INTO source_metadata (id, source_id, field_id, value_text) VALUES (?, ?, ?, ?)`,
 					metaID[:], src.ID, field.ID, "12",
 				); err != nil {
 					t.Fatal(err)

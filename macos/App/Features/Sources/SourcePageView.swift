@@ -7,10 +7,6 @@ struct SourcePageView: View {
     @Environment(WorkspaceSession.self) private var session
     let sourceID: String
     @State private var model: SourcePageModel
-    /// Date dialog confirm wiring — kept off the page observation graph so
-    /// structure/wording keystrokes stay local to the dialog form.
-    @State private var dateEditorCanSave = false
-    @State private var dateEditorSaveAction: (() async -> Void)?
 
     init(
         sourceID: String,
@@ -41,9 +37,7 @@ struct SourcePageView: View {
                 SourcePageContent(
                     workspaceHandle: workspaceHandle,
                     sourceID: sourceID,
-                    model: model,
-                    dateEditorCanSave: $dateEditorCanSave,
-                    dateEditorSaveAction: $dateEditorSaveAction
+                    model: model
                 )
             } else {
                 SourcePageLoadingShell(model: model)
@@ -83,8 +77,8 @@ private struct SourcePageContent: View {
     @Bindable var workspaceHandle: QueryHandle<CatalogSourceWorkspace>
     let sourceID: String
     @Bindable var model: SourcePageModel
-    @Binding var dateEditorCanSave: Bool
-    @Binding var dateEditorSaveAction: (() async -> Void)?
+    /// Metadata column height so the left column can stretch and pin Credibility.
+    @State private var metadataColumnHeight: CGFloat = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -165,33 +159,24 @@ private struct SourcePageContent: View {
         ) {
             SourcePageMetadataView(model: model).addForm
         }
-        .pvFormDialog(
-            isPresented: dateEditorPresented,
-            copy: PVFormDialogCopy(
-                title: model.metadata.isDateEditMode
-                    ? L10n.Sources.editDateDialogTitle
-                    : L10n.Sources.addDateDialogTitle,
-                subtitle: model.metadata.dateEditorSubtitle,
-                confirm: L10n.Sources.saveDateConfirm,
-                cancel: L10n.Sources.cancelAction
+        .pvConfirm(
+            item: Binding(
+                get: { model.metadata.pendingDelete },
+                set: { model.metadata.pendingDelete = $0 }
             ),
-            isRunning: model.metadata.isSavingDate,
-            confirmDisabled: !dateEditorCanSave,
-            accessibilityIdentifierPrefix: "sources.page.date",
-            onConfirm: {
-                Task { await dateEditorSaveAction?() }
-            }
-        ) {
-            SourcePageMetadataView(model: model).dateEditorForm(
-                canSave: $dateEditorCanSave,
-                saveAction: $dateEditorSaveAction
-            )
-        }
-        .onChange(of: model.metadata.isEditingDate) { _, open in
-            if !open {
-                dateEditorCanSave = false
-                dateEditorSaveAction = nil
-            }
+            copy: { item in
+                PVConfirmCopy(
+                    title: L10n.Sources.deleteMetadataConfirmTitle(label: item.label),
+                    message: String(localized: L10n.Sources.deleteMetadataConfirmMessage),
+                    confirm: L10n.Sources.deleteMetadataConfirm,
+                    cancel: L10n.Sources.deleteMetadataKeep
+                )
+            },
+            isRunning: model.metadata.isClearing,
+            accessibilityIdentifierPrefix: "sources.page.metadata.delete",
+            onConfirm: { Task { await model.metadata.confirmClear() } }
+        ) { _ in
+            EmptyView()
         }
         .onChange(of: workspaceHandle.status) { _, _ in
             model.sync(from: workspaceHandle, sourceID: sourceID)
@@ -206,22 +191,29 @@ private struct SourcePageContent: View {
         .accessibilityIdentifier("sources.page")
     }
 
-    /// Board: Description + Credibility | Metadata.
+    /// Board: Description grows; Credibility pins to the bottom of the left
+    /// column so it tracks the metadata column's height.
     private var overviewColumns: some View {
-        LazyVGrid(
-            columns: [
-                GridItem(.flexible(minimum: 400), spacing: PVSpacing.space11, alignment: .top),
-                GridItem(.flexible(minimum: 480), spacing: PVSpacing.space11, alignment: .top),
-            ],
-            alignment: .leading,
-            spacing: PVSpacing.space10
-        ) {
+        HStack(alignment: .top, spacing: PVSpacing.space11) {
             VStack(alignment: .leading, spacing: PVSpacing.space10) {
                 SourcePageDescriptionView(model: model)
+                Spacer(minLength: 0)
                 SourcePageCredibilityView(model: model)
             }
+            .frame(minHeight: metadataColumnHeight, alignment: .top)
+            .frame(maxWidth: .infinity, alignment: .leading)
             SourcePageMetadataView(model: model)
+                .background {
+                    GeometryReader { proxy in
+                        Color.clear.preference(
+                            key: SourcePageOverviewHeightKey.self,
+                            value: proxy.size.height
+                        )
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .onPreferenceChange(SourcePageOverviewHeightKey.self) { metadataColumnHeight = $0 }
     }
 
     private var addArtifactPresented: Binding<Bool> {
@@ -261,14 +253,11 @@ private struct SourcePageContent: View {
         )
     }
 
-    private var dateEditorPresented: Binding<Bool> {
-        Binding(
-            get: { model.metadata.isEditingDate },
-            set: { presented in
-                if !presented {
-                    model.metadata.cancelDateEditor()
-                }
-            }
-        )
+}
+
+private struct SourcePageOverviewHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }

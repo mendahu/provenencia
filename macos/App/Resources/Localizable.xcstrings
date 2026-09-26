@@ -3721,7 +3721,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Text, date, or url — chosen at create and immutable afterward"
+            "value": "Text or url — chosen at create and immutable afterward"
           }
         }
       }
@@ -5478,18 +5478,6 @@
         }
       }
     },
-    "sources.page.addDateDialogTitle": {
-      "comment": "Title of DateValue editor when creating structure",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add date value"
-          }
-        }
-      }
-    },
     "sources.page.addFile": {
       "comment": "Button to attach a first file to a fileless Artifact",
       "extractionState": "manual",
@@ -6462,18 +6450,6 @@
         }
       }
     },
-    "sources.page.dateStoredAs": {
-      "comment": "Label beside DateValue summary preview",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Stored as"
-          }
-        }
-      }
-    },
     "sources.page.dateTimeZone": {
       "comment": "DateValue free-text timezone label",
       "extractionState": "manual",
@@ -6482,30 +6458,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Time zone"
-          }
-        }
-      }
-    },
-    "sources.page.dateValueAsWritten": {
-      "comment": "Label for the plain-text wording field in the date metadata dialog",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Value as written"
-          }
-        }
-      }
-    },
-    "sources.page.dateValueAsWrittenHint": {
-      "comment": "Hint under Value as written in the date metadata dialog",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keep the record's own wording; the structured date below is what search and sorting use"
           }
         }
       }
@@ -6530,6 +6482,66 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enter a year between 1 and 9999."
+          }
+        }
+      }
+    },
+    "sources.page.deleteMetadataConfirm": {
+      "comment": "Confirm button that clears a saved metadata value",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete value"
+          }
+        }
+      }
+    },
+    "sources.page.deleteMetadataConfirmMessage": {
+      "comment": "Confirm message when clearing a saved metadata value",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This removes the saved value. Suggested fields return to the dashed list; extra fields disappear."
+          }
+        }
+      }
+    },
+    "sources.page.deleteMetadataConfirmTitle": {
+      "comment": "Confirm title when clearing a saved metadata value; argument is the field label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete %@?"
+          }
+        }
+      }
+    },
+    "sources.page.deleteMetadataKeep": {
+      "comment": "Cancel button on the metadata-value delete confirm",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep value"
+          }
+        }
+      }
+    },
+    "sources.page.deleteMetadataValue": {
+      "comment": "Accessibility label for trash on a saved metadata row",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete value"
           }
         }
       }
@@ -6606,18 +6618,6 @@
         }
       }
     },
-    "sources.page.editDateDialogTitle": {
-      "comment": "Title of DateValue editor when editing structure",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Edit date value"
-          }
-        }
-      }
-    },
     "sources.page.editDescription": {
       "comment": "Button to enter description edit mode",
       "extractionState": "manual",
@@ -6626,18 +6626,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Edit"
-          }
-        }
-      }
-    },
-    "sources.page.editMetadataDateValue": {
-      "comment": "Accessibility label for pencil to open the date metadata dialog",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Edit date value"
           }
         }
       }
@@ -6794,6 +6782,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Drop a file here, or skip — the artifact stays physical-only"
+          }
+        }
+      }
+    },
+    "sources.page.jumpToEvidenceGraph": {
+      "comment": "Identity-header secondary button that opens this Source's Evidence graph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidence graph"
           }
         }
       }
@@ -7074,6 +7074,18 @@
         }
       }
     },
+    "sources.page.openMetadataURL": {
+      "comment": "Tooltip on a clickable saved url metadata value",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open in browser"
+          }
+        }
+      }
+    },
     "sources.page.optionalFile": {
       "comment": "Label for optional file pick on Add Artifact",
       "extractionState": "manual",
@@ -7130,18 +7142,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Save assessment"
-          }
-        }
-      }
-    },
-    "sources.page.saveDateConfirm": {
-      "comment": "Confirm button on the date metadata dialog",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save value"
           }
         }
       }

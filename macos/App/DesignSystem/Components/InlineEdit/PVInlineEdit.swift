@@ -19,6 +19,28 @@ struct PVInlineEdit<Display: View, Editor: View, RestingTrailing: View, EditingT
         case vertical
     }
 
+    /// Vertical placement of the resting pencil / trailing actions.
+    enum RestingAlignment {
+        /// Pencil and trailing sit at the top of the display (metadata rows).
+        case top
+        /// Centers the pencil on the first line of display chrome (Source title).
+        case firstLineCenter
+
+        fileprivate var stackAlignment: VerticalAlignment { .top }
+
+        fileprivate var editControlTopPadding: CGFloat {
+            switch self {
+            case .top:
+                return 0
+            case .firstLineCenter:
+                let chrome = PVTextArea.Typography.display.verticalPadding
+                let line = PVTypeScale.h1
+                let control = PVControlSize.sm.height
+                return chrome + (line - control) / 2
+            }
+        }
+    }
+
     let isEditing: Bool
     let isSaving: Bool
     var error: String? = nil
@@ -33,6 +55,8 @@ struct PVInlineEdit<Display: View, Editor: View, RestingTrailing: View, EditingT
     /// pencil / Save sit immediately after (Source title).
     var expandsContent: Bool = true
     var axis: Axis = .vertical
+    /// Resting pencil alignment. Default `.top` so metadata rows stay put.
+    var restingAlignment: RestingAlignment = .top
     /// Labeled text buttons (default) vs stacked check / dismiss icons
     /// (metadata board).
     var actionsStyle: PVInlineEditActions.Style = .labeled
@@ -57,11 +81,12 @@ struct PVInlineEdit<Display: View, Editor: View, RestingTrailing: View, EditingT
 
     @ViewBuilder
     private var restingBody: some View {
-        HStack(alignment: .top, spacing: PVSpacing.space3) {
+        HStack(alignment: restingAlignment.stackAlignment, spacing: PVSpacing.space3) {
             display()
                 .modifier(PVInlineEditContentFlex(expands: expandsContent))
             if showsEditControl {
                 PVIconButton(.penLine, label: editLabel, size: .sm, action: onEdit)
+                    .padding(.top, restingAlignment.editControlTopPadding)
                     .accessibilityIdentifier(prefixed("edit"))
             }
             restingTrailing()
@@ -137,6 +162,7 @@ extension PVInlineEdit where RestingTrailing == EmptyView, EditingTrailing == Em
         showsEditControl: Bool = true,
         expandsContent: Bool = true,
         axis: Axis = .vertical,
+        restingAlignment: RestingAlignment = .top,
         actionsStyle: PVInlineEditActions.Style = .labeled,
         accessibilityIdentifierPrefix: String? = nil,
         onEdit: @escaping () -> Void,
@@ -156,6 +182,7 @@ extension PVInlineEdit where RestingTrailing == EmptyView, EditingTrailing == Em
             showsEditControl: showsEditControl,
             expandsContent: expandsContent,
             axis: axis,
+            restingAlignment: restingAlignment,
             actionsStyle: actionsStyle,
             accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
             onEdit: onEdit,

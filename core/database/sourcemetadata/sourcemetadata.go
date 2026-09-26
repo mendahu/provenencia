@@ -4,7 +4,6 @@
 package sourcemetadata
 
 import (
-	"bytes"
 	"database/sql"
 	"errors"
 	"sort"
@@ -19,25 +18,25 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcefields"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcevocab"
+	"github.com/mendahu/provenencia/core/urlshape"
 )
 
 var ErrInvalid = apperr.New(apperr.CodeSourceMetadataInvalid, apperr.KindUser)
 
 const (
-	sqlInsert = `INSERT INTO source_metadata (id, source_id, field_id, value_text, date_value_id)
-		VALUES (?, ?, ?, ?, ?)`
-	sqlUpdate = `UPDATE source_metadata SET value_text = ?, date_value_id = ?
+	sqlInsert = `INSERT INTO source_metadata (id, source_id, field_id, value_text)
+		VALUES (?, ?, ?, ?)`
+	sqlUpdate = `UPDATE source_metadata SET value_text = ?
 		WHERE id = ?`
 	sqlDelete  = `DELETE FROM source_metadata WHERE source_id = ? AND field_id = ?`
-	sqlGetPair = `SELECT id, source_id, field_id, COALESCE(value_text, ''), date_value_id
+	sqlGetPair = `SELECT id, source_id, field_id, COALESCE(value_text, '')
 		FROM source_metadata WHERE source_id = ? AND field_id = ?`
-	sqlListBySource = `SELECT id, source_id, field_id, COALESCE(value_text, ''), date_value_id
+	sqlListBySource = `SELECT id, source_id, field_id, COALESCE(value_text, '')
 		FROM source_metadata WHERE source_id = ?
 		ORDER BY field_id`
 	sqlSourceExists = `SELECT 1 FROM sources WHERE id = ?`
 	sqlFieldGet     = `SELECT id, key, origin, label, data_type, COALESCE(description, '')
 		FROM source_metadata_fields WHERE id = ?`
-	sqlDateExists = `SELECT 1 FROM date_values WHERE id = ?`
 
 	// Layout rows append at the end of the Source's existing order. The next
 	// sort_order is computed inside the INSERT so two appends cannot read the
@@ -61,11 +60,10 @@ const (
 
 // Row is one source_metadata value.
 type Row struct {
-	ID          []byte
-	SourceID    []byte
-	FieldID     []byte
-	ValueText   string
-	DateValueID []byte // nil when unset
+	ID        []byte
+	SourceID  []byte
+	FieldID   []byte
+	ValueText string
 }
 
 // Input is the payload for Set.
@@ -73,11 +71,6 @@ type Input struct {
 	SourceID  []byte
 	FieldID   []byte
 	ValueText string
-	// DateValueID is the structured date for this value. On create, nil/empty
-	// leaves the date unset. On update, nil/empty with a non-empty ValueText
-	// keeps any existing date_value_id (text-only edit); omit both to mean an
-	// empty payload (rejected for date fields).
-	DateValueID []byte
 }
 
 // WorkspaceEntry is a suggested or extra field for Source edit UI.
@@ -107,9 +100,6 @@ func Set(c *database.Catalog, userID []byte, in Input) (Row, error) {
 	if len(in.SourceID) != 16 || len(in.FieldID) != 16 {
 		return Row{}, ErrInvalid
 	}
-	if len(in.DateValueID) != 0 && len(in.DateValueID) != 16 {
-		return Row{}, ErrInvalid
-	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return Row{}, err
 	}
@@ -134,20 +124,8 @@ func Set(c *database.Catalog, userID []byte, in Input) (Row, error) {
 		return Row{}, err
 	}
 
-	dateID := copyBlob(in.DateValueID)
-	// Text-only updates keep any existing structured DateValue (inside the
-	// write tx so it cannot race a concurrent Clear).
-	if !creating && len(dateID) == 0 && in.ValueText != "" {
-		dateID = copyBlob(prev.DateValueID)
-	}
-
-	if err := validateValue(field.DataType, in.ValueText, dateID); err != nil {
+	if err := validateValue(field.DataType, in.ValueText); err != nil {
 		return Row{}, err
-	}
-	if len(dateID) == 16 {
-		if err := requireDate(tx, dateID); err != nil {
-			return Row{}, err
-		}
 	}
 
 	var row Row
@@ -160,7 +138,7 @@ func Set(c *database.Catalog, userID []byte, in Input) (Row, error) {
 			return Row{}, err
 		}
 		idBytes := id[:]
-		if _, err := tx.Exec(sqlInsert, idBytes, in.SourceID, in.FieldID, nullStr(in.ValueText), nullBlob(dateID)); err != nil {
+		if _, err := tx.Exec(sqlInsert, idBytes, in.SourceID, in.FieldID, nullStr(in.ValueText)); err != nil {
 			return Row{}, mapConstraint(err)
 		}
 		// A field the researcher just filled needs a place in the Source's
@@ -169,11 +147,10 @@ func Set(c *database.Catalog, userID []byte, in Input) (Row, error) {
 			return Row{}, mapConstraint(err)
 		}
 		row = Row{
-			ID:          append([]byte(nil), idBytes...),
-			SourceID:    append([]byte(nil), in.SourceID...),
-			FieldID:     append([]byte(nil), in.FieldID...),
-			ValueText:   in.ValueText,
-			DateValueID: copyBlob(dateID),
+			ID:        append([]byte(nil), idBytes...),
+			SourceID:  append([]byte(nil), in.SourceID...),
+			FieldID:   append([]byte(nil), in.FieldID...),
+			ValueText: in.ValueText,
 		}
 		action = audit.ActionCreate
 		fields["id"] = audit.FieldDiff{Old: nil, New: id.String()}
@@ -182,31 +159,22 @@ func Set(c *database.Catalog, userID []byte, in Input) (Row, error) {
 		if in.ValueText != "" {
 			fields["value_text"] = audit.FieldDiff{Old: nil, New: in.ValueText}
 		}
-		if len(dateID) == 16 {
-			fields["date_value_id"] = audit.FieldDiff{Old: nil, New: uuidString(dateID)}
-		}
 	} else {
-		if prev.ValueText == in.ValueText && bytes.Equal(prev.DateValueID, dateID) {
+		if prev.ValueText == in.ValueText {
 			_ = tx.Commit()
 			return prev, nil
 		}
-		if _, err := tx.Exec(sqlUpdate, nullStr(in.ValueText), nullBlob(dateID), prev.ID); err != nil {
+		if _, err := tx.Exec(sqlUpdate, nullStr(in.ValueText), prev.ID); err != nil {
 			return Row{}, mapConstraint(err)
 		}
 		row = Row{
-			ID:          append([]byte(nil), prev.ID...),
-			SourceID:    append([]byte(nil), in.SourceID...),
-			FieldID:     append([]byte(nil), in.FieldID...),
-			ValueText:   in.ValueText,
-			DateValueID: copyBlob(dateID),
+			ID:        append([]byte(nil), prev.ID...),
+			SourceID:  append([]byte(nil), in.SourceID...),
+			FieldID:   append([]byte(nil), in.FieldID...),
+			ValueText: in.ValueText,
 		}
 		action = audit.ActionUpdate
-		if prev.ValueText != in.ValueText {
-			fields["value_text"] = audit.FieldDiff{Old: nullJSON(prev.ValueText), New: nullJSON(in.ValueText)}
-		}
-		if !bytes.Equal(prev.DateValueID, dateID) {
-			fields["date_value_id"] = audit.FieldDiff{Old: uuidJSON(prev.DateValueID), New: uuidJSON(dateID)}
-		}
+		fields["value_text"] = audit.FieldDiff{Old: nullJSON(prev.ValueText), New: nullJSON(in.ValueText)}
 	}
 
 	if _, err := audit.Record(tx, audit.Revision{
@@ -268,9 +236,6 @@ func Clear(c *database.Catalog, userID, sourceID, fieldID []byte) error {
 	}
 	if prev.ValueText != "" {
 		fields["value_text"] = audit.FieldDiff{Old: prev.ValueText, New: nil}
-	}
-	if len(prev.DateValueID) == 16 {
-		fields["date_value_id"] = audit.FieldDiff{Old: uuidString(prev.DateValueID), New: nil}
 	}
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
@@ -590,20 +555,15 @@ func listLayout(c *database.Catalog, sourceID []byte) (map[string]layout, int, e
 	return out, maxOrder, rows.Err()
 }
 
-func validateValue(dataType, valueText string, dateValueID []byte) error {
-	hasDate := len(dateValueID) == 16
-	hasText := valueText != ""
+func validateValue(dataType, valueText string) error {
+	if valueText == "" {
+		return ErrInvalid
+	}
 	switch dataType {
-	case sourcefields.DataTypeText, sourcefields.DataTypeURL:
-		if hasDate {
-			return ErrInvalid
-		}
-		if !hasText {
-			return ErrInvalid
-		}
+	case sourcefields.DataTypeText:
 		return nil
-	case sourcefields.DataTypeDate:
-		if !hasText && !hasDate {
+	case sourcefields.DataTypeURL:
+		if err := urlshape.Validate(valueText); err != nil {
 			return ErrInvalid
 		}
 		return nil
@@ -618,11 +578,9 @@ type rowScanner interface {
 
 func scanRow(row rowScanner) (Row, error) {
 	var r Row
-	var dateID []byte
-	if err := row.Scan(&r.ID, &r.SourceID, &r.FieldID, &r.ValueText, &dateID); err != nil {
+	if err := row.Scan(&r.ID, &r.SourceID, &r.FieldID, &r.ValueText); err != nil {
 		return Row{}, err
 	}
-	r.DateValueID = dateID
 	return r, nil
 }
 
@@ -675,27 +633,11 @@ func requireSource(tx *sql.Tx, sourceID []byte) error {
 	return err
 }
 
-func requireDate(tx *sql.Tx, dateID []byte) error {
-	var one int
-	err := tx.QueryRow(sqlDateExists, dateID).Scan(&one)
-	if errors.Is(err, sql.ErrNoRows) {
-		return ErrInvalid
-	}
-	return err
-}
-
 func nullStr(s string) any {
 	if s == "" {
 		return nil
 	}
 	return s
-}
-
-func nullBlob(b []byte) any {
-	if len(b) == 0 {
-		return nil
-	}
-	return b
 }
 
 func nullJSON(s string) any {
@@ -711,20 +653,6 @@ func uuidString(id []byte) string {
 		return ""
 	}
 	return u.String()
-}
-
-func uuidJSON(id []byte) any {
-	if len(id) == 0 {
-		return nil
-	}
-	return uuidString(id)
-}
-
-func copyBlob(b []byte) []byte {
-	if len(b) == 0 {
-		return nil
-	}
-	return append([]byte(nil), b...)
 }
 
 func mapConstraint(err error) error {

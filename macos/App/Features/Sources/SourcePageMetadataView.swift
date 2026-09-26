@@ -64,6 +64,9 @@ struct SourcePageMetadataView: View {
                             SourcePageMetadataSuggestionRow(
                                 entry: entry,
                                 isSaving: model.metadata.savingFieldID == entry.field.id,
+                                error: model.metadata.fieldErrorID == entry.field.id
+                                    ? model.metadata.fieldError
+                                    : nil,
                                 onSave: { value in
                                     model.metadata.drafts[entry.field.id] = value
                                     Task { await model.metadata.save(fieldID: entry.field.id) }
@@ -122,23 +125,8 @@ struct SourcePageMetadataView: View {
         }
     }
 
-    /// Date dialog body: wording + structure (hosted by the page shell).
-    /// Uses local drafts; parent supplies `canSave` / `saveAction` bindings so
-    /// Confirm stays accurate without live-binding the page model.
-    func dateEditorForm(
-        canSave: Binding<Bool>,
-        saveAction: Binding<(() async -> Void)?>
-    ) -> some View {
-        SourcePageDateEditorForm(
-            model: model,
-            canSave: canSave,
-            saveAction: saveAction
-        )
-    }
-
     private func savedRow(_ entry: CatalogMetadataEntry) -> some View {
-        let isDate = entry.field.dataType == CatalogFieldDataType.date
-        return HStack(alignment: .top, spacing: SourcePageLayout.metadataColumnSpacing) {
+        HStack(alignment: .top, spacing: SourcePageLayout.metadataColumnSpacing) {
             PVReorderHandle()
                 .padding(.top, 6)
             SourcePageMetadataLabel(
@@ -147,46 +135,24 @@ struct SourcePageMetadataView: View {
                 topPadding: 6
             )
 
-            if isDate {
-                dateValueCell(entry)
-            } else {
-                SourcePageMetadataTextEditor(
-                    entry: entry,
-                    isEditing: model.metadata.editingFieldID == entry.field.id,
-                    isSaving: model.metadata.savingFieldID == entry.field.id,
-                    onBeginEdit: { model.metadata.beginEdit(fieldID: entry.field.id) },
-                    onSave: { value in
-                        model.metadata.drafts[entry.field.id] = value
-                        Task { await model.metadata.save(fieldID: entry.field.id) }
-                    },
-                    onCancel: { model.metadata.cancelEdit() }
-                )
-            }
+            SourcePageMetadataTextEditor(
+                entry: entry,
+                isEditing: model.metadata.editingFieldID == entry.field.id,
+                isSaving: model.metadata.savingFieldID == entry.field.id,
+                error: model.metadata.fieldErrorID == entry.field.id
+                    ? model.metadata.fieldError
+                    : nil,
+                onBeginEdit: { model.metadata.beginEdit(fieldID: entry.field.id) },
+                onSave: { value in
+                    model.metadata.drafts[entry.field.id] = value
+                    Task { await model.metadata.save(fieldID: entry.field.id) }
+                },
+                onCancel: { model.metadata.cancelEdit() },
+                onClear: { model.metadata.askClear(fieldID: entry.field.id) }
+            )
         }
         .padding(.vertical, PVSpacing.space3)
         .padding(.horizontal, PVSpacing.space4)
-    }
-
-    private func dateValueCell(_ entry: CatalogMetadataEntry) -> some View {
-        let fieldID = entry.field.id
-        return HStack(alignment: .top, spacing: PVSpacing.space3) {
-            Text(entry.valueText)
-                .font(PVFont.mono(size: PVTypeScale.caption))
-                .foregroundStyle(PVColor.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .sourcePageMetadataValueChrome()
-                .accessibilityIdentifier("sources.page.metadata.\(fieldID).value")
-
-            PVIconButton(
-                .penLine,
-                label: L10n.Sources.editMetadataDateValue,
-                size: .sm
-            ) {
-                model.metadata.openDateEditor(fieldID: fieldID)
-            }
-            .accessibilityIdentifier("sources.page.metadata.\(fieldID).editDate")
-        }
     }
 }
 
@@ -194,6 +160,7 @@ struct SourcePageMetadataView: View {
 private struct SourcePageMetadataSuggestionRow: View {
     let entry: CatalogMetadataEntry
     let isSaving: Bool
+    var error: String? = nil
     let onSave: (String) -> Void
     let onDismiss: () -> Void
 
@@ -202,87 +169,43 @@ private struct SourcePageMetadataSuggestionRow: View {
     var body: some View {
         let fieldID = entry.field.id
         return PVCard(border: .dashed, cornerRadius: PVRadius.sm) {
-            HStack(spacing: SourcePageLayout.metadataColumnSpacing) {
-                SourcePageMetadataLabel(text: entry.field.label, alignWithReorderHandle: true)
-                PVInput(
-                    text: $draft,
-                    size: .sm,
-                    mono: true,
-                    prompt: L10n.Sources.metadataSuggestionPlaceholder
-                )
-                .onSubmit { onSave(draft) }
-                .accessibilityIdentifier("sources.page.metadata.\(fieldID).value")
+            VStack(alignment: .leading, spacing: PVSpacing.space2) {
+                HStack(spacing: SourcePageLayout.metadataColumnSpacing) {
+                    SourcePageMetadataLabel(text: entry.field.label, alignWithReorderHandle: true)
+                    PVInput(
+                        text: $draft,
+                        size: .sm,
+                        mono: true,
+                        prompt: L10n.Sources.metadataSuggestionPlaceholder,
+                        isInvalid: error != nil
+                    )
+                    .onSubmit { onSave(draft) }
+                    .accessibilityIdentifier("sources.page.metadata.\(fieldID).value")
 
-                PVButton(
-                    L10n.Sources.saveMetadataSuggestion,
-                    variant: .ghost,
-                    size: .sm,
-                    loading: isSaving
-                ) {
-                    onSave(draft)
-                }
-                .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                .accessibilityIdentifier("sources.page.metadata.\(fieldID).save")
+                    PVButton(
+                        L10n.Sources.saveMetadataSuggestion,
+                        variant: .ghost,
+                        size: .sm,
+                        loading: isSaving
+                    ) {
+                        onSave(draft)
+                    }
+                    .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .accessibilityIdentifier("sources.page.metadata.\(fieldID).save")
 
-                PVIconButton(.dismiss, label: L10n.Sources.dismissMetadataSuggestion, size: .sm) {
-                    onDismiss()
+                    PVIconButton(.dismiss, label: L10n.Sources.dismissMetadataSuggestion, size: .sm) {
+                        onDismiss()
+                    }
+                    .accessibilityIdentifier("sources.page.metadata.\(fieldID).dismiss")
                 }
-                .accessibilityIdentifier("sources.page.metadata.\(fieldID).dismiss")
+                if let error, !error.isEmpty {
+                    Text(error)
+                        .font(PVFont.body(size: PVTypeScale.caption))
+                        .foregroundStyle(PVColor.danger)
+                }
             }
             .padding(.vertical, PVSpacing.space4)
             .padding(.horizontal, PVSpacing.space5)
-        }
-    }
-}
-
-/// Date dialog: local wording + structure drafts.
-private struct SourcePageDateEditorForm: View {
-    @Bindable var model: SourcePageModel
-    @Binding var canSave: Bool
-    @Binding var saveAction: (() async -> Void)?
-
-    @State private var wording = ""
-    @State private var draft = DateValueDraft.empty()
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space7) {
-            PVField(
-                label: L10n.Sources.dateValueAsWritten,
-                hint: L10n.Sources.dateValueAsWrittenHint,
-                required: true
-            ) {
-                PVTextArea(
-                    text: $wording,
-                    lineLimit: 1...4,
-                    typography: .mono,
-                    activateOnAppear: true
-                )
-                .disabled(model.metadata.isSavingDate)
-                .accessibilityIdentifier("sources.page.date.valueAsWritten")
-            }
-            DateValueEditorForm(draft: $draft, accessibilityIdentifierPrefix: "sources.page.date")
-        }
-        .onAppear(perform: seed)
-        .onChange(of: wording) { _, _ in refreshConfirm() }
-        .onChange(of: draft) { _, _ in refreshConfirm() }
-        .onChange(of: model.metadata.isSavingDate) { _, _ in refreshConfirm() }
-    }
-
-    private func seed() {
-        if let fieldID = model.metadata.dateEditorFieldID {
-            wording = model.metadata.drafts[fieldID]
-                ?? model.metadata.entries.first(where: { $0.field.id == fieldID })?.valueText
-                ?? ""
-        }
-        draft = model.metadata.dateEditorDraft
-        refreshConfirm()
-    }
-
-    private func refreshConfirm() {
-        let wordingOK = !wording.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        canSave = wordingOK && draft.isValid && !model.metadata.isSavingDate
-        saveAction = {
-            await model.metadata.saveDateEditor(wording: wording, draft: draft)
         }
     }
 }
@@ -294,10 +217,13 @@ private struct SourcePageMetadataTextEditor: View {
     let entry: CatalogMetadataEntry
     let isEditing: Bool
     let isSaving: Bool
+    var error: String? = nil
     let onBeginEdit: () -> Void
     let onSave: (String) -> Void
     let onCancel: () -> Void
+    let onClear: () -> Void
 
+    @Environment(\.openURL) private var openURL
     @State private var draft = ""
 
     var body: some View {
@@ -305,6 +231,7 @@ private struct SourcePageMetadataTextEditor: View {
         return PVInlineEdit(
             isEditing: isEditing,
             isSaving: isSaving,
+            error: error,
             saveLabel: L10n.Sources.saveMetadataValue,
             cancelLabel: L10n.Sources.cancelEdit,
             editLabel: L10n.Sources.editMetadataValue,
@@ -320,29 +247,73 @@ private struct SourcePageMetadataTextEditor: View {
             onCancel: {
                 draft = entry.valueText
                 onCancel()
+            },
+            display: { displayValue },
+            editor: {
+                PVTextArea(
+                    text: $draft,
+                    lineLimit: 1...6,
+                    typography: .mono,
+                    isInvalid: error != nil,
+                    activateOnAppear: true
+                )
+                .onSubmit { onSave(draft) }
+                .disabled(isSaving)
+                .accessibilityIdentifier("sources.page.metadata.\(fieldID).value")
+            },
+            restingTrailing: {
+                PVIconButton(
+                    .trash,
+                    label: L10n.Sources.deleteMetadataValue,
+                    size: .sm,
+                    tone: .danger,
+                    action: onClear
+                )
+                .accessibilityIdentifier("sources.page.metadata.\(fieldID).delete")
+            },
+            editingTrailing: { EmptyView() }
+        )
+        .onChange(of: isEditing) { _, editing in
+            if editing {
+                draft = entry.valueText
             }
-        ) {
-            Text(entry.valueText)
+        }
+    }
+
+    @ViewBuilder
+    private var displayValue: some View {
+        let fieldID = entry.field.id
+        if entry.field.dataType == CatalogFieldDataType.url {
+            Button {
+                openSavedURL(entry.valueText)
+            } label: {
+                Text(verbatim: entry.valueText)
+                    .font(PVFont.mono(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textLink)
+                    .underline(true, color: PVColor.textLink)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .buttonStyle(.plain)
+            .sourcePageMetadataValueChrome()
+            .accessibilityIdentifier("sources.page.metadata.\(fieldID).value")
+            .help(String(localized: L10n.Sources.openMetadataURL))
+        } else {
+            Text(verbatim: entry.valueText)
                 .font(PVFont.mono(size: PVTypeScale.caption))
                 .foregroundStyle(PVColor.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .sourcePageMetadataValueChrome()
                 .accessibilityIdentifier("sources.page.metadata.\(fieldID).value")
-        } editor: {
-            PVTextArea(
-                text: $draft,
-                lineLimit: 1...6,
-                typography: .mono,
-                activateOnAppear: true
-            )
-            .onSubmit { onSave(draft) }
-            .disabled(isSaving)
-            .accessibilityIdentifier("sources.page.metadata.\(fieldID).value")
         }
-        .onChange(of: isEditing) { _, editing in
-            if editing {
-                draft = entry.valueText
-            }
+    }
+
+    private func openSavedURL(_ typed: String) {
+        var s = typed.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !s.contains("://") {
+            s = "https://" + s
+        }
+        if let url = URL(string: s) {
+            openURL(url)
         }
     }
 }

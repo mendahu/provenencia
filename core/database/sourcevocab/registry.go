@@ -30,8 +30,8 @@ var seedTypes = []seedType{
 
 var seedFields = []seedField{
 	{Key: "document_number", Label: "Document number", DataType: sourcefields.DataTypeText},
-	{Key: "record_date", Label: "Record date", DataType: sourcefields.DataTypeDate},
-	{Key: "issue_date", Label: "Issue date", DataType: sourcefields.DataTypeDate},
+	{Key: "record_date", Label: "Record date", DataType: sourcefields.DataTypeText},
+	{Key: "issue_date", Label: "Issue date", DataType: sourcefields.DataTypeText},
 }
 
 var seedSuggestions = []seedSuggestion{

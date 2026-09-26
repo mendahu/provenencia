@@ -507,11 +507,11 @@ struct SourcePageModelTests {
         let store = makeStore(
             metadata: [
                 CatalogMetadataEntry(
-                    field: author, valueText: "", dateValueID: "",
+                    field: author, valueText: "",
                     hasValue: false, suggested: true, sortOrder: 0
                 ),
                 CatalogMetadataEntry(
-                    field: repo, valueText: "NRO", dateValueID: "",
+                    field: repo, valueText: "NRO",
                     hasValue: true, suggested: true, sortOrder: 1
                 ),
             ],
@@ -529,7 +529,7 @@ struct SourcePageModelTests {
         let store = makeStore(
             metadata: [
                 CatalogMetadataEntry(
-                    field: author, valueText: "", dateValueID: "",
+                    field: author, valueText: "",
                     hasValue: false, suggested: true, sortOrder: 0
                 ),
             ],
@@ -549,7 +549,7 @@ struct SourcePageModelTests {
         let store = makeStore(
             metadata: [
                 CatalogMetadataEntry(
-                    field: repo, valueText: "NRO", dateValueID: "",
+                    field: repo, valueText: "NRO",
                     hasValue: true, suggested: false, sortOrder: 0
                 ),
             ],
@@ -570,7 +570,7 @@ struct SourcePageModelTests {
         let store = makeStore(
             metadata: [
                 CatalogMetadataEntry(
-                    field: repo, valueText: "NRO", dateValueID: "",
+                    field: repo, valueText: "NRO",
                     hasValue: true, suggested: false, sortOrder: 0
                 ),
             ],
@@ -590,7 +590,7 @@ struct SourcePageModelTests {
         let store = makeStore(
             metadata: [
                 CatalogMetadataEntry(
-                    field: author, valueText: "", dateValueID: "",
+                    field: author, valueText: "",
                     hasValue: false, suggested: true, sortOrder: 0
                 ),
             ],
@@ -613,15 +613,15 @@ struct SourcePageModelTests {
         let store = makeStore(
             metadata: [
                 CatalogMetadataEntry(
-                    field: author, valueText: "A", dateValueID: "",
+                    field: author, valueText: "A",
                     hasValue: true, suggested: true, sortOrder: 0
                 ),
                 CatalogMetadataEntry(
-                    field: issue, valueText: "", dateValueID: "",
+                    field: issue, valueText: "",
                     hasValue: false, suggested: true, sortOrder: 1
                 ),
                 CatalogMetadataEntry(
-                    field: repo, valueText: "B", dateValueID: "",
+                    field: repo, valueText: "B",
                     hasValue: true, suggested: true, sortOrder: 2
                 ),
             ],
@@ -641,11 +641,11 @@ struct SourcePageModelTests {
         let store = makeStore(
             metadata: [
                 CatalogMetadataEntry(
-                    field: author, valueText: "A", dateValueID: "",
+                    field: author, valueText: "A",
                     hasValue: true, suggested: false, sortOrder: 0
                 ),
                 CatalogMetadataEntry(
-                    field: repo, valueText: "B", dateValueID: "",
+                    field: repo, valueText: "B",
                     hasValue: true, suggested: false, sortOrder: 1
                 ),
             ],
@@ -761,15 +761,26 @@ struct SourcePageModelTests {
         #expect(model.artifacts.descriptions[artID] == "Original")
     }
 
-    @Test func saveDateEditorStructuresMetadata() async {
-        let dateField = CatalogMetadataField(
-            id: "f-date", key: "date_of_record", origin: "provenencia",
-            label: "Date of record", dataType: "date", description: ""
+    private func recordDateField() -> CatalogMetadataField {
+        CatalogMetadataField(
+            id: "f-date", key: "record_date", origin: "provenencia",
+            label: "Date of record", dataType: "text", description: ""
         )
+    }
+
+    private func urlField() -> CatalogMetadataField {
+        CatalogMetadataField(
+            id: "f-url", key: "url", origin: "provenencia",
+            label: "URL", dataType: "url", description: ""
+        )
+    }
+
+    @Test func saveDateNamedFieldAsText() async {
+        let dateField = recordDateField()
         let store = makeStore(
             metadata: [
                 CatalogMetadataEntry(
-                    field: dateField, valueText: "about the year 1890", dateValueID: "",
+                    field: dateField, valueText: "about the year 1890",
                     hasValue: true, suggested: false, sortOrder: 0
                 ),
             ],
@@ -777,82 +788,139 @@ struct SourcePageModelTests {
         )
         let model = makeModel(store: store)
         await model.warmFromSession()
-        model.metadata.openDateEditor(fieldID: dateField.id)
-        #expect(model.metadata.drafts[dateField.id] == "about the year 1890")
-        #expect(model.metadata.canSaveDateEditor == false)
+        model.metadata.beginEdit(fieldID: dateField.id)
         model.metadata.drafts[dateField.id] = "abt 1890"
-        model.metadata.dateEditorDraft.qualifier = "ABT"
-        model.metadata.dateEditorDraft.startYear = 1890
-        #expect(model.metadata.canSaveDateEditor == true)
-        await model.metadata.saveDateEditor()
-        #expect(model.metadata.isEditingDate == false)
-        let entry = model.metadata.entries.first { $0.field.id == dateField.id }
-        #expect(entry?.dateValueID.isEmpty == false)
-        #expect(entry?.valueText == "abt 1890")
-        #expect(entry?.date?.qualifier == "ABT")
-        #expect(entry?.date?.startYear == 1890)
+        await model.metadata.save(fieldID: dateField.id)
+        #expect(model.metadata.editingFieldID == nil)
+        #expect(model.metadata.saved.map(\.valueText) == ["abt 1890"])
+        #expect(model.pageError == nil)
     }
 
-    @Test func cancelDateEditorRestoresWording() async {
-        let dateField = CatalogMetadataField(
-            id: "f-date", key: "date_of_record", origin: "provenencia",
-            label: "Date of record", dataType: "date", description: ""
-        )
+    @Test func clearSuggestedMetadataReturnsToDashedList() async {
+        let author = authorField()
         let store = makeStore(
             metadata: [
                 CatalogMetadataEntry(
-                    field: dateField, valueText: "spring 1890", dateValueID: "",
-                    hasValue: true, suggested: false, sortOrder: 0
+                    field: author, valueText: "Mary Robins",
+                    hasValue: true, suggested: true, sortOrder: 0
                 ),
             ],
-            fields: [dateField]
+            fields: [author]
         )
         let model = makeModel(store: store)
         await model.warmFromSession()
-        model.metadata.openDateEditor(fieldID: dateField.id)
-        model.metadata.drafts[dateField.id] = "changed wording"
-        model.metadata.cancelDateEditor()
-        #expect(model.metadata.isEditingDate == false)
-        #expect(model.metadata.drafts[dateField.id] == "spring 1890")
+        model.metadata.askClear(fieldID: author.id)
+        await model.metadata.confirmClear()
+        #expect(model.metadata.pendingDelete == nil)
+        #expect(model.metadata.saved.isEmpty)
+        #expect(model.metadata.suggested.map(\.field.id) == [author.id])
+        #expect(store.metadataBySource[sourceID]?.first?.hasValue == false)
     }
 
-    @Test func reopenDateEditorRebuildsDraftFromCatalog() async {
-        let dateField = CatalogMetadataField(
-            id: "f-date", key: "date_of_record", origin: "provenencia",
-            label: "Date of record", dataType: "date", description: ""
-        )
+    @Test func clearExtraMetadataRemovesRow() async {
+        let repo = repositoryField()
         let store = makeStore(
             metadata: [
                 CatalogMetadataEntry(
-                    field: dateField, valueText: "spring 1890", dateValueID: "",
+                    field: repo, valueText: "NRO",
                     hasValue: true, suggested: false, sortOrder: 0
                 ),
             ],
-            fields: [dateField]
+            fields: [repo]
         )
         let model = makeModel(store: store)
         await model.warmFromSession()
-        model.metadata.openDateEditor(fieldID: dateField.id)
-        model.metadata.dateEditorDraft.setKind("range")
-        model.metadata.dateEditorDraft.startYear = 1890
-        model.metadata.dateEditorDraft.startMonth = 3
-        model.metadata.dateEditorDraft.endYear = 1890
-        model.metadata.dateEditorDraft.endMonth = 6
-        await model.metadata.saveDateEditor()
-        #expect(model.metadata.isEditingDate == false)
+        model.metadata.askClear(fieldID: repo.id)
+        await model.metadata.confirmClear()
+        #expect(model.metadata.pendingDelete == nil)
+        #expect(model.metadata.entries.isEmpty)
+        #expect(store.metadataBySource[sourceID]?.isEmpty == true)
+    }
 
-        // A fresh model on the same store (new session — no in-memory cache)
-        // must rebuild the saved draft from the workspace entry.
-        let reopened = makeModel(store: store)
-        await reopened.warmFromSession()
-        reopened.metadata.openDateEditor(fieldID: dateField.id)
-        #expect(reopened.metadata.isDateEditMode == true)
-        #expect(reopened.metadata.drafts[dateField.id] == "spring 1890")
-        #expect(reopened.metadata.dateEditorDraft.kind == "range")
-        #expect(reopened.metadata.dateEditorDraft.startYear == 1890)
-        #expect(reopened.metadata.dateEditorDraft.startMonth == 3)
-        #expect(reopened.metadata.dateEditorDraft.endYear == 1890)
-        #expect(reopened.metadata.dateEditorDraft.endMonth == 6)
+    @Test func saveSchemeLessURLValue() async {
+        let field = urlField()
+        let store = makeStore(
+            metadata: [
+                CatalogMetadataEntry(
+                    field: field, valueText: "",
+                    hasValue: false, suggested: true, sortOrder: 0
+                ),
+            ],
+            fields: [field]
+        )
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        model.metadata.drafts[field.id] = "www.url.com"
+        await model.metadata.save(fieldID: field.id)
+        #expect(model.metadata.saved.map(\.valueText) == ["www.url.com"])
+        #expect(model.metadata.suggested.isEmpty)
+        #expect(model.pageError == nil)
+        #expect(model.metadata.fieldError == nil)
+    }
+
+    @Test func invalidMetadataSetLandsOnFieldError() async {
+        let field = urlField()
+        let store = makeStore(
+            metadata: [
+                CatalogMetadataEntry(
+                    field: field, valueText: "https://example.com",
+                    hasValue: true, suggested: false, sortOrder: 0
+                ),
+            ],
+            fields: [field]
+        )
+        store.setSourceMetadataError = CoreInvokeError.coded(
+            status: 1, code: "sourcemetadata.invalid", kind: .user, params: []
+        )
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        model.metadata.beginEdit(fieldID: field.id)
+        model.metadata.drafts[field.id] = "file:/tmp"
+        await model.metadata.save(fieldID: field.id)
+        #expect(model.metadata.fieldError == L10n.Errors.message(for: store.setSourceMetadataError!))
+        #expect(model.metadata.fieldErrorID == field.id)
+        #expect(model.metadata.editingFieldID == field.id)
+        #expect(model.pageError == nil)
+    }
+
+    @Test func invalidMetadataAddLandsOnValueField() async {
+        let field = urlField()
+        let store = makeStore(fields: [field])
+        store.setSourceMetadataError = CoreInvokeError.coded(
+            status: 1, code: "sourcemetadata.invalid", kind: .user, params: []
+        )
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        model.metadata.openAdd()
+        model.metadata.addFieldID = field.id
+        model.metadata.addValue = "javascript:alert(1)"
+        await model.metadata.createFromAdd()
+        #expect(model.metadata.addValueError == L10n.Errors.message(for: store.setSourceMetadataError!))
+        #expect(model.metadata.isAdding == true)
+        #expect(model.pageError == nil)
+        #expect(model.metadata.entries.isEmpty)
+    }
+
+    @Test func metadataSetIOFailureLandsOnPageError() async {
+        let field = urlField()
+        let store = makeStore(
+            metadata: [
+                CatalogMetadataEntry(
+                    field: field, valueText: "https://example.com",
+                    hasValue: true, suggested: false, sortOrder: 0
+                ),
+            ],
+            fields: [field]
+        )
+        store.setSourceMetadataError = CoreInvokeError.failed(status: 2)
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        model.metadata.beginEdit(fieldID: field.id)
+        model.metadata.drafts[field.id] = "https://example.org"
+        await model.metadata.save(fieldID: field.id)
+        #expect(model.pageError == L10n.Errors.message(for: store.setSourceMetadataError!))
+        #expect(model.metadata.fieldError == nil)
+        #expect(model.metadata.editingFieldID == field.id)
     }
 
     @Test func expandingArtifactCollapsesOther() async {
