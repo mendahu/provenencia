@@ -28,12 +28,21 @@ const DefaultHitLimit = 50
 
 // WorkspaceLocation is the navigable place for go(to:).
 type WorkspaceLocation struct {
-	Section  string
-	SourceID string
-	FieldID  string
-	TypeID   string
-	Ref      string
-	Title    string
+	Section              string
+	SourceID             string
+	FieldID              string
+	TypeID               string
+	SubjectID            string
+	CitationID           string
+	ArtifactID           string
+	ObservationID        string
+	ConnectFromSubjectID string
+	ConnectToSubjectID   string
+	ConnectBridgeTypeKey string
+	SourceSurface        string
+	Ref                  string
+	Title                string
+	SourceTitle          string
 }
 
 // Query is one SearchCatalog request (after proto mapping).

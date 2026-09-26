@@ -1302,6 +1302,18 @@
         }
       }
     },
+    "error.deleteimpact.invalid": {
+      "comment": "FFI error deleteimpact.invalid",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That delete preview isn’t valid."
+          }
+        }
+      }
+    },
     "error.file.not_found": {
       "comment": "FFI error file.not_found",
       "extractionState": "manual",

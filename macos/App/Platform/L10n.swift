@@ -6402,6 +6402,11 @@ enum L10n {
             defaultValue: "That term is still used by one or more observations.",
             comment: "FFI error propertyterms.in_use"
         )
+        static let deleteImpactInvalid = LocalizedStringResource(
+            "error.deleteimpact.invalid",
+            defaultValue: "That delete preview isn’t valid.",
+            comment: "FFI error deleteimpact.invalid"
+        )
         static let subjectVocabInvalid = LocalizedStringResource(
             "error.subjectvocab.invalid",
             defaultValue: "Invalid subject vocabulary.",
@@ -6616,6 +6621,8 @@ enum L10n {
                 return String(localized: observationsEdgeLocked)
             case "datevalues.invalid":
                 return String(localized: dateValuesInvalid)
+            case "deleteimpact.invalid":
+                return String(localized: deleteImpactInvalid)
             case "filederivatives.invalid":
                 return String(localized: fileDerivativesInvalid)
             case "filederivatives.unprocessable":

@@ -1647,6 +1647,29 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         return graphProgress(for: sourceID, projectDir: projectDir)
     }
 
+    func getDeleteImpact(projectDir: String, kind _: String, id: String) async throws -> CatalogDeleteImpact {
+        markCatalogSessionHeld(projectDir)
+        if fixtureContains(projectDir: projectDir, id: id) {
+            return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
+        }
+        return CatalogDeleteImpact(allowed: false, gate: .notFound, groups: [])
+    }
+
+    private func fixtureContains(projectDir: String, id: String) -> Bool {
+        if (sourcesByProject[projectDir] ?? []).contains(where: { $0.id == id }) { return true }
+        if artifactsBySource.values.contains(where: { $0.contains(where: { $0.id == id }) }) { return true }
+        if (subjectTypesByProject[projectDir] ?? []).contains(where: { $0.id == id }) { return true }
+        if subjectsBySource.values.contains(where: { $0.contains(where: { $0.id == id }) }) { return true }
+        if (sourceTypesByProject[projectDir] ?? []).contains(where: { $0.id == id }) { return true }
+        if (fieldsByProject[projectDir] ?? []).contains(where: { $0.id == id }) { return true }
+        if (propertiesByProject[projectDir] ?? []).contains(where: { $0.id == id }) { return true }
+        if propertyTermsByProperty.values.contains(where: { $0.contains(where: { $0.id == id }) }) { return true }
+        if (credibilityGradesByProject[projectDir] ?? []).contains(where: { $0.id == id }) { return true }
+        if citationsByID[id] != nil { return true }
+        if observationsBySource.values.contains(where: { $0.contains(where: { $0.id == id }) }) { return true }
+        return false
+    }
+
     private func graphProgress(for sourceID: String, projectDir: String) -> SourceGraphProgress {
         if let override = graphProgressBySource[sourceID] {
             return override

@@ -88,6 +88,7 @@ const (
 	MethodGetSubjectFieldsWorkspace         = int32(engine.Method_METHOD_GET_SUBJECT_FIELDS_WORKSPACE)
 	MethodListSourceGraphProgress           = int32(engine.Method_METHOD_LIST_SOURCE_GRAPH_PROGRESS)
 	MethodGetSourceGraphProgress            = int32(engine.Method_METHOD_GET_SOURCE_GRAPH_PROGRESS)
+	MethodGetDeleteImpact                   = int32(engine.Method_METHOD_GET_DELETE_IMPACT)
 )
 
 // Call routes one coarse FFI operation to api/ffi/handlers.
@@ -249,6 +250,8 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.ListSourceGraphProgress(in)
 	case MethodGetSourceGraphProgress:
 		return handlers.GetSourceGraphProgress(in)
+	case MethodGetDeleteImpact:
+		return handlers.GetDeleteImpact(in)
 	default:
 		return nil, apperr.New(apperr.CodeInternalUnknownMethod, apperr.KindInternal, strconv.Itoa(int(method)))
 	}
