@@ -121,7 +121,7 @@ S8-D6  Delete paths
 - [x] S8-D1 — Design: Auto Transcribe in the citation composer → [`completed.md`](completed.md)
 - [x] S8-01 — Vision OCR + Auto Transcribe button → [`completed.md`](completed.md)
 - [ ] S8-D2 — Design: PDF Find, text selection, paste transcription → [`completed.md`](completed.md)
-- [ ] S8-03 — PDFKit live viewer + I-beam default → [`completed.md`](completed.md)
+- [x] S8-03 — PDFKit live viewer + I-beam default → [`completed.md`](completed.md)
 - [ ] S8-04 — PDF Find in the tool strip → [`completed.md`](completed.md)
 - [ ] S8-05 — Paste transcription from PDF selection → [`completed.md`](completed.md)
 - [ ] S8-D3 — Design: Evidence graph visual enhancements → [`completed.md`](completed.md)
@@ -659,6 +659,8 @@ Does **not** design image OCR, PDF thumbnails, or `text_quote` locators ([`text-
 ## S8-03 — PR: PDFKit live page + I-beam default
 
 Replace the composer PDF **raster** (`displayImage` / `ArtifactMediaViewport`) with a **PDFKit-backed** page so `PDFSelection` exists. Default drag **selects text**. Pan is the `PDFView` scroll view (trackpad, wheel, scrollbars), same as Preview — not a hand tool or modifier (per **S8-D2**). Region overlay (S7-07) still draws in page space. Image viewer unchanged.
+
+**Done.** Live `PDFView` in `ArtifactPDFViewport`; I-beam + scroll-to-pan; region overlay remapped to media-box unit-square. No Find, paste, or image-pan change.
 
 | | |
 | --- | --- |

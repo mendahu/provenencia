@@ -33,6 +33,17 @@ final class ArtifactRegionOverlayView: NSView {
         }
     }
 
+    /// When set (PDF remount), media box in this view's flipped coordinates.
+    /// Image viewport leaves this nil and uses ``imageSize`` + centering pad.
+    var mediaRectOverride: CGRect? {
+        didSet {
+            if oldValue != mediaRectOverride {
+                needsDisplay = true
+                window?.invalidateCursorRects(for: self)
+            }
+        }
+    }
+
     var onCommit: ((ArtifactRegionDraft) -> Void)?
     var onDisarm: (() -> Void)?
 
@@ -241,7 +252,8 @@ final class ArtifactRegionOverlayView: NSView {
     // MARK: - Private
 
     private var imageRect: CGRect {
-        ArtifactRegionGeometry.imageRect(documentSize: bounds.size, imageSize: imageSize)
+        if let mediaRectOverride { return mediaRectOverride }
+        return ArtifactRegionGeometry.imageRect(documentSize: bounds.size, imageSize: imageSize)
     }
 
     private func handleFreeformClick(_ normalized: CGPoint) {
@@ -611,5 +623,20 @@ struct ArtifactRegionOverlayInput: Equatable {
 
     static func == (lhs: ArtifactRegionOverlayInput, rhs: ArtifactRegionOverlayInput) -> Bool {
         lhs.armedTool == rhs.armedTool && lhs.committed == rhs.committed
+    }
+
+    /// Paint the committed region only on the locator page. Images have no page
+    /// layer, so they always show. Locator JSON is unchanged.
+    static func committedOnCurrentPage(
+        _ committed: ArtifactRegionDraft?,
+        locatorPage: Int?,
+        viewerPage: Int,
+        supportsPageLocator: Bool
+    ) -> ArtifactRegionDraft? {
+        guard let committed else { return nil }
+        if supportsPageLocator, locatorPage != viewerPage {
+            return nil
+        }
+        return committed
     }
 }

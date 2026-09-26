@@ -21,8 +21,25 @@ final class ArtifactViewerModel {
     private(set) var pageCount: Int = 1
     private(set) var zoom: CGFloat = 1
 
-    /// Raster for the spatial viewport (full image or current PDF page).
+    /// Raster for the image spatial viewport. PDF Artifacts keep ``pdfDocument``
+    /// and do not flatten a page into this (S8-03).
     private(set) var displayImage: NSImage?
+
+    /// Live PDFKit document when ``kind`` is ``ArtifactViewerKind/pdf``.
+    var pdfDocument: PDFDocument? {
+        guard case .pdf(let document) = content else { return nil }
+        return document
+    }
+
+    /// Media-box size of the current PDF page in points (y-up page space).
+    var pdfPageMediaSize: CGSize? {
+        guard let document = pdfDocument,
+              let pdfPage = document.page(at: page - 1)
+        else { return nil }
+        let bounds = pdfPage.bounds(for: .mediaBox)
+        guard bounds.width > 0, bounds.height > 0 else { return nil }
+        return bounds.size
+    }
 
     var supportsPages: Bool { kind.supportsPages }
     var supportsSpatialZoom: Bool { kind.supportsSpatialZoom }
@@ -124,7 +141,7 @@ final class ArtifactViewerModel {
             case .pdf(let document):
                 pageCount = max(document.pageCount, 1)
                 page = 1
-                displayImage = Self.renderPDFPage(document: document, pageIndex: 0)
+                displayImage = nil
             }
         case .failure:
             content = nil
@@ -150,7 +167,6 @@ final class ArtifactViewerModel {
         let clamped = Self.clampPage(newPage, pageCount: pageCount)
         guard clamped != page else { return }
         page = clamped
-        refreshPDFPageDisplay()
     }
 
     func zoomIn() {
@@ -187,27 +203,6 @@ final class ArtifactViewerModel {
         zoom = 1
     }
 
-    private func refreshPDFPageDisplay() {
-        guard case .pdf(let document) = content else { return }
-        displayImage = Self.renderPDFPage(document: document, pageIndex: page - 1)
-    }
-
-    private static func renderPDFPage(document: PDFDocument, pageIndex: Int) -> NSImage? {
-        guard pageIndex >= 0, pageIndex < document.pageCount,
-              let page = document.page(at: pageIndex)
-        else { return nil }
-        let bounds = page.bounds(for: .mediaBox)
-        guard bounds.width > 0, bounds.height > 0 else { return nil }
-        // Raster at backing scale for sharpness, but report media-box *points* as
-        // `NSImage.size` so ArtifactMediaViewport pan/center uses real page layout
-        // (same shell as images). A fixed 2× point size made pages look twice as
-        // large and almost never fit/center in the composer pane.
-        let scale = max(NSScreen.main?.backingScaleFactor ?? 2, 2)
-        let pixelSize = CGSize(width: bounds.width * scale, height: bounds.height * scale)
-        let image = page.thumbnail(of: pixelSize, for: .mediaBox)
-        image.size = bounds.size
-        return image
-    }
 }
 
 private enum ArtifactViewerLoadError: Error {

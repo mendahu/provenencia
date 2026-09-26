@@ -1,7 +1,8 @@
 @preconcurrency import AppKit
 import SwiftUI
 
-/// Spatial pan/zoom shell for image / PDF-page rasters (document range 0.5…4).
+/// Spatial pan/zoom shell for **image** rasters (document range 0.5…4).
+/// PDF Artifacts use ``ArtifactPDFViewport``.
 ///
 /// - **Pan:** click-drag when content is larger than the clip (also trackpad
 ///   two-finger scroll). Mouse wheel zooms toward the cursor.

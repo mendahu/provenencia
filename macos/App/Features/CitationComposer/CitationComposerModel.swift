@@ -257,7 +257,7 @@ final class CitationComposerModel {
         hasUnsavedDocumentWork || connections.hasTouchedWork || isTranscribing
     }
 
-    /// Image raster only — PDF page rasters also live on `displayImage`.
+    /// Image raster only — PDF Artifacts use a live `PDFDocument`, not `displayImage`.
     var imageRaster: NSImage? {
         guard isImageArtifact else { return nil }
         return artifactViewer.displayImage
@@ -598,7 +598,7 @@ final class CitationComposerModel {
     @discardableResult
     func setRegion(_ draft: ArtifactRegionDraft) -> Bool {
         guard !isTranscribing else { return false }
-        let ok = locator.setRegion(draft, capabilities: locatorCapabilities, autoPage: artifactViewer.page)
+        let ok = locator.setRegion(draft, capabilities: locatorCapabilities, viewerPage: artifactViewer.page)
         if ok { armedRegionTool = nil }
         return ok
     }

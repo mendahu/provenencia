@@ -226,27 +226,35 @@ struct ArtifactViewer: View {
                 ProgressView()
                     .controlSize(.small)
             }
+        } else if model.kind == .pdf, let document = model.pdfDocument, model.supportsSpatialZoom {
+            spatialCanvas {
+                ArtifactPDFViewport(
+                    document: document,
+                    page: model.page,
+                    zoom: model.zoom,
+                    contentID: contentIdentity,
+                    onZoomChange: { model.setZoom($0) },
+                    overlayEnabled: model.locatorCapabilities.supportsRegionLocator,
+                    overlayInput: regionOverlayInput,
+                    onCommitRegion: onCommitRegion,
+                    onDisarmRegionTool: onDisarmRegionTool,
+                    freeformDeleteTooltip: freeformDeleteTooltip
+                )
+            }
         } else if let image = model.displayImage, model.supportsSpatialZoom {
-            ArtifactMediaViewport(
-                image: image,
-                zoom: model.zoom,
-                contentID: contentIdentity,
-                onZoomChange: { model.setZoom($0) },
-                overlayEnabled: model.locatorCapabilities.supportsRegionLocator,
-                overlayInput: ArtifactRegionOverlayInput(
-                    armedTool: armedRegionTool?.wrappedValue,
-                    committed: committedRegion
-                ),
-                onCommitRegion: onCommitRegion,
-                onDisarmRegionTool: onDisarmRegionTool,
-                freeformDeleteTooltip: freeformDeleteTooltip
-            )
-            .clipShape(RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
-                    .strokeBorder(PVColor.borderDefault, lineWidth: 1)
-            )
-            .accessibilityLabel(Text(L10n.ArtifactViewer.canvasAccessibility))
+            spatialCanvas {
+                ArtifactMediaViewport(
+                    image: image,
+                    zoom: model.zoom,
+                    contentID: contentIdentity,
+                    onZoomChange: { model.setZoom($0) },
+                    overlayEnabled: model.locatorCapabilities.supportsRegionLocator,
+                    overlayInput: regionOverlayInput,
+                    onCommitRegion: onCommitRegion,
+                    onDisarmRegionTool: onDisarmRegionTool,
+                    freeformDeleteTooltip: freeformDeleteTooltip
+                )
+            }
         } else {
             emptyChrome {
                 VStack(spacing: PVSpacing.space3) {
@@ -295,6 +303,28 @@ struct ArtifactViewer: View {
     }
 
     private var contentIdentity: AnyHashable {
-        "\(model.kind.rawValue)-\(model.page)-\(model.pageCount)-\(model.displayImage?.size.width ?? 0)"
+        "\(model.kind.rawValue)-\(model.page)-\(model.pageCount)-\(model.displayImage?.size.width ?? model.pdfPageMediaSize?.width ?? 0)"
+    }
+
+    private var regionOverlayInput: ArtifactRegionOverlayInput {
+        ArtifactRegionOverlayInput(
+            armedTool: armedRegionTool?.wrappedValue,
+            committed: ArtifactRegionOverlayInput.committedOnCurrentPage(
+                committedRegion,
+                locatorPage: locatorPage,
+                viewerPage: model.page,
+                supportsPageLocator: model.locatorCapabilities.supportsPageLocator
+            )
+        )
+    }
+
+    private func spatialCanvas<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        content()
+            .clipShape(RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
+                    .strokeBorder(PVColor.borderDefault, lineWidth: 1)
+            )
+            .accessibilityLabel(Text(L10n.ArtifactViewer.canvasAccessibility))
     }
 }

@@ -29,12 +29,14 @@ struct CitationLocatorDraft: Equatable, Sendable {
     mutating func setRegion(
         _ draft: ArtifactRegionDraft,
         capabilities: ArtifactLocatorCapabilities,
-        autoPage: Int?
+        viewerPage: Int?
     ) -> Bool {
         guard capabilities.supportsRegionLocator, draft.isValid else { return false }
-        if capabilities.supportsPageLocator, page == nil {
-            guard let autoPage, autoPage >= 1 else { return false }
-            page = autoPage
+        // A region is ink on the current viewer page. Restamp even when a
+        // leftover page locator exists (clear-region-then-redraw on another page).
+        if capabilities.supportsPageLocator {
+            guard let viewerPage, viewerPage >= 1 else { return false }
+            page = viewerPage
         }
         region = draft
         return true
