@@ -598,7 +598,7 @@ final class CitationComposerModel {
     @discardableResult
     func setRegion(_ draft: ArtifactRegionDraft) -> Bool {
         guard !isTranscribing else { return false }
-        let ok = locator.setRegion(draft, capabilities: locatorCapabilities, autoPage: artifactViewer.page)
+        let ok = locator.setRegion(draft, capabilities: locatorCapabilities, viewerPage: artifactViewer.page)
         if ok { armedRegionTool = nil }
         return ok
     }
