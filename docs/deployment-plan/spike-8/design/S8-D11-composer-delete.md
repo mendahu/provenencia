@@ -4,7 +4,7 @@
 **Spike:** Provenencia Spike 8 (pause and refine / data entry)  
 **Implements later as:** PR **S8-18** (Citation Delete + Observation row on DeleteImpact)  
 **Depends on:** Frozen policy, path matrix, and table register in [`../deployment-plan.md`](../deployment-plan.md) §S8-09.1–§S8-09.4; **S8-09**, **S8-12**, and the **S8-D9** recipe (**S8-13**) landed or mocked as the same contract; shipped composer ([**S8-D8**](archive/S8-D8-composer-connect-simplification.md) / **S8-11**) — row Delete… already ships  
-**Related:** Shared confirm / blocked notice is [`S8-D9-impact.md`](S8-D9-impact.md) — **instance it, do not restyle.** Graph delete chrome is a **different board** ([`S8-D10-graph-delete.md`](S8-D10-graph-delete.md) → **S8-19**). Do not redraw the canvas.  
+**Related:** Shared confirm / blocked notice is [`S8-D9-impact.md`](archive/S8-D9-impact.md) — **instance it, do not restyle.** Graph delete chrome is a **different board** ([`S8-D10-graph-delete.md`](S8-D10-graph-delete.md) → **S8-19**). Do not redraw the canvas.  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
 **Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
 

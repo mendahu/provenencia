@@ -53,6 +53,8 @@ enum PVSymbol: String {
     case trash = "trash"
     case plug = "powerplug.fill"
     case externalLink = "arrow.up.right.square"
+    /// Lucide `arrow-up-right` — jump out of a blocker row.
+    case arrowUpRight = "arrow.up.right"
     case fileUp = "doc.badge.plus"
     case penLine = "pencil.line"
     case imageUp = "square.and.arrow.up"

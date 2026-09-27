@@ -14,6 +14,8 @@ struct PVConfirmCopyTests {
         )
         #expect(copy.title == "Delete Photographer?")
         #expect(copy.message == "Nothing is lost.")
+        #expect(copy.confirm == "Delete field")
+        #expect(copy.cancel == "Keep field")
     }
 }
 

@@ -164,6 +164,7 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 | Card | `Components/Card/PVCard.swift` (surface container: tone / border / radius / optional elevation + padding; mirrors web `Card.jsx`; no header/footer slots yet — compose those outside) |
 | Marks | `Recipes/Marks/PVMark.swift` (`file_*` + `type_*` + `subject_*`; see colocated `MARKS.md`; not SF Symbols) |
 | OmnibarHitRow | `Recipes/OmnibarHitRow/PVOmnibarHitRow.swift` |
+| DeleteImpact | `Recipes/DeleteImpact/PVDeleteImpact.swift` (S8-13: confirm when `GetDeleteImpact` is allowed, notice when blocked; composes `.pvConfirm`) |
 | Breadcrumbs | `Components/Breadcrumbs/PVBreadcrumbs.swift` (added for S2-18 Source page trail; Sources → `SRC-…`) |
 | ReorderableList | `Components/ReorderableList/PVReorderableList.swift` (+ `PVReorderHandle`; added for S2-25 Metadata drag order) |
 

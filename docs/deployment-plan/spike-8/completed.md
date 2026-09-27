@@ -27,6 +27,8 @@ IDs stay stable (`S8-NN`, `S8-DN`). Do not renumber when moving steps here.
 | S8-08 | PR | Sources list graph-progress counts on a separate cache map |
 | S8-09 | PR | Cross-resource FKs `NO ACTION`; Observation date/name exclusivity indexes |
 | S8-12 | PR | Delete-impact registry + `GetDeleteImpact`; no-UI `propertyterms.Delete` cutover |
+| S8-D9 | Design | Shared delete confirm / blocked notice — DeleteImpact recipe |
+| S8-13 | PR | DeleteImpact recipe; confirm if allowed, notice if blocked |
 
 ## Steps
 
@@ -286,3 +288,29 @@ Catalog `000030` stops treating Artifacts, Citations, and property terms as CASC
 - DeleteImpact recipe (**S8-13**) and screen writers (**S8-14**…**S8-19**)
 - Impact proto on `Error`
 - Source / Artifact / Citation `Delete`
+
+### S8-D9 — Design: Shared delete confirm / blocked notice
+
+**Board pick:** one kit recipe. `allowed` composes the shipped Confirm (kind noun + ref, quiet “nothing else references it”). `!allowed` is a notice — grouped inbound refs, overflow, extra-gate Callout, one Done. No “Delete anyway,” no Locked badge, no cascade copy.
+
+Agreed after a copy pass: Impact kinds stay `subject` / `property` / `property_term` (not person / relationship / subject_field). G2 is one `observations.value_subject_id` group. G6 facets-only is an allowed confirm; extras list only the extra `OBS-`. Extra gates are `not_found` / `edge_locked` (no unlock) / `origin_locked` (seeded / plugin vocab) / `infra` (user / project). Unknown via uses a reserved stub (`sameness_claim_evidence.observation_id`).
+
+Brief archived: [`design/archive/S8-D9-impact.md`](design/archive/S8-D9-impact.md). Next delete paste is **S8-D12**.
+
+### S8-13 — DeleteImpact recipe
+
+Shipped the S8-D9 recipe. Screens still use `.pvConfirm` until their later PRs instance `.pvDeleteImpact`.
+
+**What shipped**
+
+- `DesignSystem/Recipes/DeleteImpact/` — `.pvDeleteImpact(item:)` branches on `CatalogDeleteImpact.allowed`
+- Confirm composes `.pvConfirm(item:)`; notice lists `via` groups (`listed` + overflow) and extra-gate Callouts
+- Recipe L10n for kind nouns, every live inbound via, unknown-via fallback, overflow, extra gates, VoiceOver
+- Previews for Citation, G2 / G4 / G6, overflow, reserved via, extra gates, property terms
+- Swift tests for confirm copy, blocker rows, overflow, unknown via, extra gates, and erase vs blocked VoiceOver
+
+**What stayed out**
+
+- Wiring any screen (**S8-14**…**S8-19**)
+- Engine / `GetDeleteImpact` (already **S8-12**)
+- Screen-owned target sentences beyond generic “Delete {noun} {ref}?”

@@ -35,8 +35,8 @@ import SwiftUI
 struct PVConfirmCopy {
     let title: String
     let message: String
-    let confirm: LocalizedStringResource
-    let cancel: LocalizedStringResource
+    let confirm: String
+    let cancel: String
 
     init(
         title: String,
@@ -46,8 +46,20 @@ struct PVConfirmCopy {
     ) {
         self.title = title
         self.message = message
-        self.confirm = confirm
-        self.cancel = cancel
+        self.confirm = String(localized: confirm)
+        self.cancel = String(localized: cancel)
+    }
+
+    init(
+        title: String,
+        message: String,
+        confirmLabel: String,
+        cancelLabel: String
+    ) {
+        self.title = title
+        self.message = message
+        self.confirm = confirmLabel
+        self.cancel = cancelLabel
     }
 }
 
@@ -131,7 +143,9 @@ struct PVConfirmContent<Detail: View>: View {
         } footer: {
             HStack(spacing: PVSpacing.space5) {
                 Spacer(minLength: PVSpacing.space8)
-                Button(String(localized: copy.cancel)) { onCancel() }
+                Button(action: onCancel) {
+                    Text(verbatim: copy.cancel)
+                }
                     .buttonStyle(.pv(.secondary, size: .lg))
                     .keyboardShortcut(.cancelAction)
                     .disabled(PVConfirmControls.isActionDisabled(isRunning: isRunning))
@@ -140,14 +154,18 @@ struct PVConfirmContent<Detail: View>: View {
                         prefix: accessibilityIdentifierPrefix,
                         suffix: "cancel"
                     ))
-                PVButton(
-                    copy.confirm,
-                    variant: tone.buttonVariant,
-                    size: .lg,
-                    icon: tone.confirmIcon,
-                    loading: isRunning,
-                    action: onConfirm
-                )
+                Button(action: onConfirm) {
+                    HStack(spacing: PVSpacing.space3) {
+                        if isRunning {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else if let icon = tone.confirmIcon {
+                            PVIcon(icon, size: PVControlSize.lg.iconGlyphSize)
+                        }
+                        Text(verbatim: copy.confirm)
+                    }
+                }
+                .buttonStyle(.pv(tone.buttonVariant, size: .lg))
                 .keyboardShortcut(.defaultAction)
                 .disabled(PVConfirmControls.isActionDisabled(isRunning: isRunning))
                 .modifier(ConfirmOptionalAccessibilityIdentifier(

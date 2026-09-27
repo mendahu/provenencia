@@ -151,8 +151,8 @@ S8-D10 ────────────────────▶ S8-19  Ev
 - [x] S8-08 — Sources list refresh (graph-progress counts + brief bundle) → [`completed.md`](completed.md)
 - [x] S8-09 — Cross-resource FKs: Artifact / Citation / property terms no longer CASCADE → [`completed.md`](completed.md)
 - [x] S8-12 — Delete-impact registry + `GetDeleteImpact` → [`completed.md`](completed.md)
-- [ ] S8-D9 — Design: shared delete confirm / blocked notice → [`completed.md`](completed.md)
-- [ ] S8-13 — DeleteImpact recipe → [`completed.md`](completed.md)
+- [x] S8-D9 — Design: shared delete confirm / blocked notice → [`completed.md`](completed.md)
+- [x] S8-13 — DeleteImpact recipe → [`completed.md`](completed.md)
 - [ ] S8-D12 — Design: Source page resource delete → [`completed.md`](completed.md)
 - [ ] S8-14 — Source + Artifact delete → [`completed.md`](completed.md)
 - [ ] S8-D13 — Design: Source Types delete → [`completed.md`](completed.md)
@@ -801,7 +801,7 @@ One Sources-list chrome pass against **S8-D5**. Show graph-progress counts so a 
 
 ## S8-D9 — Design: Shared delete confirm / blocked notice
 
-Rethink of resource-delete confirmation. One recipe: **confirm** when Impact is allowed, **notice** when it is not. Brief: [`design/S8-D9-impact.md`](design/S8-D9-impact.md). Gates **S8-13**. Paste **first**.
+Rethink of resource-delete confirmation. One recipe: **confirm** when Impact is allowed, **notice** when it is not. Brief: [`design/archive/S8-D9-impact.md`](design/archive/S8-D9-impact.md). Gates **S8-13**. Paste **first**.
 
 Does **not** place trash on any screen. Later boards instance this recipe.
 
@@ -1108,7 +1108,7 @@ Engine-only (plus proto decode). After **S8-09**, FKs already refuse; this PR ma
 
 ## S8-13 — PR: DeleteImpact recipe
 
-One kit pass against [`design/S8-D9-impact.md`](design/S8-D9-impact.md).
+One kit pass against [`design/archive/S8-D9-impact.md`](design/archive/S8-D9-impact.md).
 
 | | |
 | --- | --- |

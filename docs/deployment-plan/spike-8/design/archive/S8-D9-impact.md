@@ -3,20 +3,19 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 8 (pause and refine / data entry)  
 **Implements later as:** PR **S8-13** (DeleteImpact recipe only)  
-**Depends on:** Frozen policy + Impact report in [`../deployment-plan.md`](../deployment-plan.md) §S8-09.1–§S8-09.4; **S8-12** `GetDeleteImpact` landed or mocked as the same payload  
+**Depends on:** Frozen policy + Impact report in [`../../deployment-plan.md`](../../deployment-plan.md) §S8-09.1–§S8-09.4; **S8-12** `GetDeleteImpact` landed or mocked as the same payload  
 **Related:** Every later delete board instances this recipe: Source page (**S8-D12**), Source Types (**S8-D13**), Source Fields (**S8-D14**), Subject Fields (**S8-D15**), composer (**S8-D11**), graph (**S8-D10**). Do not redesign those surfaces here.  
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
-**Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)  
+**Skill:** [`add-design-brief`](../../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.cursor/skills/add-ui-component/SKILL.md)
 
-Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](README.md) first.
+Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](../README.md) first.
 
-This brief is a **rethink of resource-delete confirmation**. Today every trash uses a yes/no Confirm (“Are you sure?”). That sheet cannot show why a delete is blocked. Replace the **entry point** with one recipe that branches on the Impact report. Do not fork a second Confirm component; compose the shipped Confirm for the clear path.
+This brief adds a **net-new recipe to the global design system** (`DeleteImpact`). Today every trash uses a yes/no Confirm (“Are you sure?”). That sheet cannot show why a delete is blocked. The new recipe branches on the Impact report. Do not fork a second Confirm component; compose the shipped Confirm for the clear path.
 
 ### Claude Design — do this first (in order)
 
-Work **in place** on this board. Do not fork a parallel copy of the surface.
-- **Rethink** (this brief says replace): throw away the old frames. Do not keep a before/after to ship.
-- **Enhancement**: add to the existing frames. Do not start a second composer / graph / page.
+This is **not** a rethink of an existing surface. **Add** DeleteImpact to the fetched design system. Keep the rest of the kit; do not throw frames away or ship a before/after of Confirm.
+- **New kit recipe** (this brief): draw the template in the global system. Screens instance it later; they are not this board.
 
 1. **Clear this board’s local design-system cache.** Claude Design keeps a stale pack; drawing against it invents local copies of kit controls.
 2. **Delete this board’s reference** to the design-system bundle.
@@ -116,7 +115,7 @@ Do **not** invent cascade copy (“also delete these 3 Observations”).
 
 ## 5. Suggested frames
 
-1. **Clear Citation** — `CIT-7KD45`, allowed. Confirm yes/no. Baseline vs today’s Confirm.
+1. **Clear Citation** — `CIT-7KD45`, allowed. Confirm yes/no, composed from the shipped Confirm.
 2. **Blocked Citation** — three Observations (`OBS-…` + titles). Notice, not confirm. Rows look tappable.
 3. **Blocked Subject (G2)** — dashed / uncited-looking person. Two groups: none as `subject_id`, one+ as endpoint. Copy must not say “uncited.”
 4. **Overflow** — `total` 27, listed 20, remainder 7.
@@ -162,5 +161,5 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them.
 
 ## 8. Handoff
 
-1. Archive this brief under [`archive/`](archive/) and write [`../completed.md`](../completed.md).
+1. Archive this brief under [`archive/`](.) and write [`../../completed.md`](../../completed.md).
 2. Implement **S8-13** against these frames. Later screen PRs instance the recipe; they do not restyle it.
