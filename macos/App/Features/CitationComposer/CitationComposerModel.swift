@@ -99,6 +99,10 @@ final class CitationComposerModel {
     @ObservationIgnored
     weak var navigation: WorkspaceNavigation?
     var pendingLeave: PendingLeave?
+    var pendingImpact: PVDeleteImpactRequest?
+    var isDeletingResource = false
+    private var pendingObservationRowID: UUID?
+    private var loadedCitationRef = ""
 
     let fields = CitationFieldsDraft()
     let observationRows = CitationObservationRows()
@@ -246,7 +250,7 @@ final class CitationComposerModel {
         {
             return listed.citation.ref
         }
-        return ""
+        return loadedCitationRef
     }
 
     var citationCountsByArtifact: [String: Int] {
@@ -483,16 +487,21 @@ final class CitationComposerModel {
             await warmTermHandles()
             seedPendingConnectionIfNeeded()
             if let citationID = entry.citationID {
-                try await loadCitation(citationID)
+                do {
+                    try await loadCitation(citationID)
+                } catch {
+                    resetComposerIdentity(keepLocator: false)
+                }
             } else {
-                activeCitationID = nil
-                fields.resetBlank()
-                observationRows.replace([])
-                connections.clearSavedKeepingPending()
+                resetComposerIdentity(keepLocator: false)
+            }
+            if let selected = selectedArtifactID, !artifacts.contains(where: { $0.id == selected }) {
+                resetComposerIdentity(keepLocator: false)
             }
             applyEntryFocus()
             if artifacts.isEmpty {
                 selectedArtifactID = nil
+                resetComposerIdentity(keepLocator: false)
             } else if activeCitationID != nil {
                 // Loaded citation already has artifact + locator; do not reset to artifact-only.
                 await reloadArtifactViewer(preferredPage: fields.locator.page)
@@ -524,6 +533,58 @@ final class CitationComposerModel {
 
     func selectCitation(_ id: String?) {
         startIdentitySwitch { await self.selectCitationAndLoad(id) }
+    }
+
+    func askDeleteCitation() async {
+        guard let id = activeCitationID else { return }
+        pendingObservationRowID = nil
+        await presentImpact(
+            kind: "citation",
+            id: id,
+            ref: activeCitationRef.isEmpty ? id : activeCitationRef,
+            title: activeCitationRef
+        )
+    }
+
+    func askDeleteObservation(rowID: UUID) async {
+        guard let row = observationRows.rows.first(where: { $0.id == rowID }),
+              let persistedID = row.persistedID
+        else { return }
+        pendingObservationRowID = rowID
+        let ref = row.persistedRef ?? persistedID
+        await presentImpact(kind: "observation", id: persistedID, ref: ref, title: ref)
+    }
+
+    func confirmPendingImpact() async {
+        guard let request = pendingImpact, request.report.allowed, !isDeletingResource else { return }
+        isDeletingResource = true
+        defer { isDeletingResource = false }
+        fields.error = nil
+        do {
+            if request.target.kind == "citation" {
+                guard let id = activeCitationID else { return }
+                try await store.deleteCitation(
+                    projectDir: session.projectKey.projectDir,
+                    userID: userID,
+                    citationID: id
+                )
+                context.applySavedCitation()
+                pendingImpact = nil
+                pendingObservationRowID = nil
+                resetComposerIdentity(keepLocator: true)
+                await reloadListedCitations()
+                applyEntryFocus()
+                await presentAfterIdentityChange()
+                return
+            }
+            if request.target.kind == "observation", let rowID = pendingObservationRowID {
+                await observationRows.deletePersisted(rowID: rowID)
+            }
+            pendingImpact = nil
+            pendingObservationRowID = nil
+        } catch {
+            fields.error = L10n.Errors.message(for: error)
+        }
     }
 
     func awaitIdentitySwitch() async {
@@ -801,6 +862,31 @@ final class CitationComposerModel {
         }
     }
 
+    private func resetComposerIdentity(keepLocator: Bool) {
+        activeCitationID = nil
+        loadedCitationRef = ""
+        fields.resetBlank(keepLocator: keepLocator)
+        observationRows.replace([])
+        connections.clearSavedKeepingPending()
+    }
+
+    private func presentImpact(kind: String, id: String, ref: String, title: String) async {
+        fields.error = nil
+        do {
+            let report = try await store.getDeleteImpact(
+                projectDir: session.projectKey.projectDir,
+                kind: kind,
+                id: id
+            )
+            pendingImpact = PVDeleteImpactRequest(
+                target: PVDeleteImpactTarget(kind: kind, ref: ref, title: title),
+                report: report
+            )
+        } catch {
+            fields.error = L10n.Errors.message(for: error)
+        }
+    }
+
     private func startIdentitySwitch(_ work: @escaping @MainActor () async -> Void) {
         identityTask?.cancel()
         identityTask = Task { @MainActor in
@@ -858,6 +944,7 @@ final class CitationComposerModel {
             snapshot: graphSnapshot
         )
         activeCitationID = citation.id
+        loadedCitationRef = citation.ref
         selectedArtifactID = citation.artifactID
         fields.replace(from: citation)
         connections.replaceSaved(grouped.connections)

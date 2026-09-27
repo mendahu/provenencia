@@ -145,20 +145,17 @@ struct CitationComposerView: View {
                 }
             }
         }
-        .pvConfirm(
-            item: deleteBinding,
-            copy: { _ in
-                PVConfirmCopy(
-                    title: String(localized: L10n.CitationComposer.deleteObservationTitle),
-                    message: String(localized: L10n.CitationComposer.deleteObservationMessage),
-                    confirm: L10n.CitationComposer.deleteObservationConfirm,
-                    cancel: L10n.CitationComposer.cancel
-                )
-            },
-            tone: .danger,
-            accessibilityIdentifierPrefix: "citationComposer.deleteObservation",
-            onConfirm: { Task { await model.observationRows.confirmDelete() } },
-            detail: { _ in EmptyView() }
+        .pvDeleteImpact(
+            item: Binding(
+                get: { model.pendingImpact },
+                set: { model.pendingImpact = $0 }
+            ),
+            isRunning: model.isDeletingResource,
+            accessibilityIdentifierPrefix: "citationComposer.deleteImpact",
+            onConfirm: { Task { await model.confirmPendingImpact() } },
+            onNavigate: { location in
+                navigation.go(to: location)
+            }
         )
         .pvConfirm(
             item: leaveBinding,
@@ -360,19 +357,6 @@ struct CitationComposerView: View {
         Binding(
             get: { model.customTermLabel },
             set: { model.customTermLabel = $0 }
-        )
-    }
-
-    private var deleteBinding: Binding<CitationObservationRows.PendingDelete?> {
-        Binding(
-            get: { model.observationRows.pendingDelete },
-            set: { newValue in
-                if newValue == nil {
-                    model.observationRows.cancelDelete()
-                } else {
-                    model.observationRows.pendingDelete = newValue
-                }
-            }
         )
     }
 

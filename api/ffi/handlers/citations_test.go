@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/locator"
 	"google.golang.org/protobuf/proto"
 )
@@ -521,6 +522,72 @@ func TestUpdateObservation(t *testing.T) {
 				ur := req.(*engine.UpdateObservationRequest)
 				assertLatestAuditAction(t, ur.ProjectDir, "update_observation")
 			},
+		},
+	})
+}
+
+func TestDeleteCitation(t *testing.T) {
+	runRPC(t, DeleteCitation, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "empty citation erases",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _, artifactID, _, _ := citationFixture(t)
+				createOut, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
+					ProjectDir:  dir,
+					UserId:      userID,
+					ArtifactId:  artifactID,
+					LocatorJson: validLocatorJSON,
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var created engine.CreateCitationWithObservationsResponse
+				if err := proto.Unmarshal(createOut, &created); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.DeleteCitationRequest{
+					ProjectDir: dir,
+					UserId:     userID,
+					CitationId: created.Citation.GetId(),
+				}
+			},
+			want: &engine.DeleteCitationResponse{},
+			after: func(t *testing.T, _ []byte, req proto.Message) {
+				dr := req.(*engine.DeleteCitationRequest)
+				assertLatestAuditAction(t, dr.ProjectDir, "delete_citation")
+			},
+		},
+		{
+			name: "inbound observation refuses",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _, artifactID, placeID, propID := citationFixture(t)
+				createOut, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
+					ProjectDir:  dir,
+					UserId:      userID,
+					ArtifactId:  artifactID,
+					LocatorJson: validLocatorJSON,
+					Observations: []*engine.ObservationDraft{{
+						SubjectId:  placeID,
+						PropertyId: propID,
+						ValueText:  "Boston",
+					}},
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var created engine.CreateCitationWithObservationsResponse
+				if err := proto.Unmarshal(createOut, &created); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.DeleteCitationRequest{
+					ProjectDir: dir,
+					UserId:     userID,
+					CitationId: created.Citation.GetId(),
+				}
+			},
+			wantErr:   true,
+			wantErrIs: citations.ErrInUse,
 		},
 	})
 }

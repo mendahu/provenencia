@@ -161,8 +161,8 @@ S8-D10 ────────────────────▶ S8-19  Ev
 - [ ] S8-16 — Source Fields delete → [`completed.md`](completed.md)
 - [ ] S8-D15 — Design: Subject Fields delete → [`completed.md`](completed.md)
 - [ ] S8-17 — Subject Fields delete → [`completed.md`](completed.md)
-- [ ] S8-D11 — Design: Citation composer delete chrome → [`completed.md`](completed.md)
-- [ ] S8-18 — Composer Citation + Observation row delete → [`completed.md`](completed.md)
+- [x] S8-D11 — Design: Citation composer delete chrome → [`completed.md`](completed.md)
+- [x] S8-18 — Composer Citation + Observation row delete → [`completed.md`](completed.md)
 - [x] S8-D10 — Design: Evidence graph delete chrome → [`completed.md`](completed.md)
 - [x] S8-19 — Graph delete chrome → [`completed.md`](completed.md)
 - [ ] S8-99 — Dogfood close / docs (after later stories, or when we choose to close)
@@ -833,7 +833,7 @@ Enhancement of the shipped Subject Fields page. Brief: [`design/S8-D15-subject-f
 
 ## S8-D11 — Design: Citation composer delete chrome
 
-Enhancement of the S8-D8 composer. **Delete citation** when empty; notice when any Observation remains. Observation **row** Delete… moves onto DeleteImpact (inbound empty today). Brief: [`design/S8-D11-composer-delete.md`](design/S8-D11-composer-delete.md). Gates **S8-18**.
+Enhancement of the S8-D8 composer. **Delete citation** when empty; notice when any Observation remains. Observation **row** Delete… moves onto DeleteImpact (inbound empty today). Brief: [`design/archive/S8-D11-composer-delete.md`](design/archive/S8-D11-composer-delete.md). Gates **S8-18**. **Done.**
 
 ---
 
@@ -1173,7 +1173,7 @@ One pass against [`design/S8-D15-subject-fields-delete.md`](design/S8-D15-subjec
 
 ## S8-18 — PR: Composer delete
 
-One composer pass against [`design/S8-D11-composer-delete.md`](design/S8-D11-composer-delete.md).
+One composer pass against [`design/archive/S8-D11-composer-delete.md`](design/archive/S8-D11-composer-delete.md).
 
 | | |
 | --- | --- |

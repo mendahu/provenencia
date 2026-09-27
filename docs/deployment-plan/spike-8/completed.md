@@ -360,3 +360,26 @@ Shipped official `subjects.Delete` through `deleteimpact` plus `ReleaseConnectio
 
 - Composer Citation / Observation row delete (**S8-18**)
 - Vocab delete chrome (**S8-15**…**S8-17**)
+
+### S8-D11 — Design: Citation composer delete chrome
+
+**Board pick:** Delete citation beside Save citation. Empty Citation is DeleteImpact confirm naming `CIT-…`. Any remaining Observation, including edges, is a notice (`observations.citation_id`). Row ⋯ Delete… is the same recipe (confirm today). Connection row stays locked. After erase or a missing Artifact/Citation, stay in the composer as New Citation.
+
+Brief archived: [`design/archive/S8-D11-composer-delete.md`](design/archive/S8-D11-composer-delete.md). Next delete paste is **S8-D13**.
+
+### S8-18 — Composer delete
+
+Shipped official `citations.Delete` through Impact and cut `observations.Delete` through Impact + owned snapshot/release. Composer instances `.pvDeleteImpact` for Delete citation and ordinary row Delete.
+
+**What shipped**
+
+- Domain writer + `citations.in_use` when any Observation remains (edges count); notes CASCADE
+- `observations.Delete`: `edge_locked` first, then Impact, `SnapshotOwned` / `ReleaseSnapshot`
+- Delete citation beside Save citation; both Citation and row on DeleteImpact
+- Identity fallback after erase / missing Artifact or Citation
+
+**What stayed out**
+
+- Citation→Observation cascade
+- Connection-row Delete
+- Vocab delete chrome (**S8-15**…**S8-17**)

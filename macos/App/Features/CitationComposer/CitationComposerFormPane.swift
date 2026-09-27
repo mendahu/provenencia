@@ -230,6 +230,22 @@ struct CitationComposerFormPane: View {
                     .font(PVFont.body(size: PVTypeScale.caption))
                     .foregroundStyle(PVColor.textMuted)
                 Spacer(minLength: 0)
+                if model.activeCitationID != nil {
+                    PVButton(
+                        L10n.CitationComposer.deleteCitation,
+                        variant: .ghost,
+                        size: .sm
+                    ) {
+                        Task { await model.askDeleteCitation() }
+                    }
+                    .disabled(inert || model.isDeletingResource)
+                    .accessibilityLabel(
+                        Text(verbatim: L10n.CitationComposer.deleteCitationAccessibility(
+                            ref: model.activeCitationRef
+                        ))
+                    )
+                    .accessibilityIdentifier("citationComposer.deleteCitation")
+                }
                 PVButton(
                     L10n.CitationComposer.save,
                     variant: .secondary,
@@ -329,7 +345,7 @@ struct CitationComposerFormPane: View {
                     onTogglePolarity: { model.toggleObservationPolarity(id: row.id) },
                     onSave: { Task { await model.observationRows.commit(rowID: row.id) } },
                     onRevert: { model.observationRows.revert(rowID: row.id) },
-                    onRequestDelete: { model.observationRows.requestDelete(rowID: row.id) },
+                    onRequestDelete: { Task { await model.askDeleteObservation(rowID: row.id) } },
                     onAddCustomTerm: { model.beginAddCustomTerm(rowID: row.id) }
                 )
             }

@@ -93,6 +93,7 @@ enum Method {
   METHOD_GET_DELETE_IMPACT = 81;
   METHOD_DELETE_SOURCE = 82;
   METHOD_DELETE_ARTIFACT = 83;
+  METHOD_DELETE_CITATION = 84;
 }
 
 message PingRequest {
@@ -548,6 +549,14 @@ message DeleteArtifactRequest {
 }
 
 message DeleteArtifactResponse {}
+
+message DeleteCitationRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string citation_id = 3;
+}
+
+message DeleteCitationResponse {}
 
 message IngestArtifactFileRequest {
   string project_dir = 1;

@@ -795,6 +795,7 @@ protocol GenealogyStore: Sendable {
     ) async throws -> CatalogObservation
 
     func deleteObservation(projectDir: String, userID: String, observationID: String) async throws
+    func deleteCitation(projectDir: String, userID: String, citationID: String) async throws
 
     func getSubjectFieldsWorkspace(projectDir: String) async throws -> SubjectFieldsSnapshot
 

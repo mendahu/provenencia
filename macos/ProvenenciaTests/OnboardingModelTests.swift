@@ -626,6 +626,9 @@ private struct ThrowingStore: GenealogyStore {
     func deleteObservation(projectDir _: String, userID _: String, observationID _: String) async throws {
         throw StoreBoom.boom
     }
+    func deleteCitation(projectDir _: String, userID _: String, citationID _: String) async throws {
+        throw StoreBoom.boom
+    }
     func getSubjectFieldsWorkspace(projectDir _: String) async throws -> SubjectFieldsSnapshot {
         throw StoreBoom.boom
     }

@@ -1229,6 +1229,17 @@ struct GoStore: GenealogyStore {
         )
     }
 
+    func deleteCitation(projectDir: String, userID: String, citationID: String) async throws {
+        var req = Provenencia_Engine_V1_DeleteCitationRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.citationID = citationID
+        let _: Provenencia_Engine_V1_DeleteCitationResponse = try await provenenciaCall(
+            method: CoreMethod.deleteCitation,
+            request: req
+        )
+    }
+
     func getSubjectFieldsWorkspace(projectDir: String) async throws -> SubjectFieldsSnapshot {
         var req = Provenencia_Engine_V1_GetSubjectFieldsWorkspaceRequest()
         req.projectDir = projectDir

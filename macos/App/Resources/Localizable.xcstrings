@@ -2274,6 +2274,18 @@
         }
       }
     },
+    "error.citations.in_use": {
+      "comment": "FFI error citations.in_use",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This citation still has observations."
+          }
+        }
+      }
+    },
     "error.datevalues.invalid": {
       "comment": "FFI error datevalues.invalid",
       "extractionState": "manual",
@@ -10230,6 +10242,30 @@
         }
       }
     },
+    "citationComposer.deleteCitation": {
+      "comment": "Citation fields button that presents DeleteImpact for the saved Citation",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete citation"
+          }
+        }
+      }
+    },
+    "citationComposer.deleteCitationAccessibility": {
+      "comment": "VoiceOver for Delete citation; argument is CIT-…",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete citation %@"
+          }
+        }
+      }
+    },
     "citationComposer.cancel": {
       "comment": "Cancel button that returns to the Evidence graph without writing",
       "extractionState": "manual",
@@ -12678,42 +12714,6 @@
         }
       }
     },
-    "citationComposer.deleteObservationTitle": {
-      "comment": "Confirm title before deleting one Observation",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete observation?"
-          }
-        }
-      }
-    },
-    "citationComposer.deleteObservationMessage": {
-      "comment": "Confirm body before deleting one Observation",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This observation will be removed from the citation. The citation stays."
-          }
-        }
-      }
-    },
-    "citationComposer.deleteObservationConfirm": {
-      "comment": "Confirm button that deletes one Observation",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete"
-          }
-        }
-      }
-    },
     "citationComposer.leaveTitle": {
       "comment": "Leave-guard confirm title",
       "extractionState": "manual",
@@ -12866,6 +12866,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "That connection edge cannot be edited or deleted."
+          }
+        }
+      }
+    },
+    "error.observations.in_use": {
+      "comment": "FFI error observations.in_use",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This observation is still in use."
           }
         }
       }
