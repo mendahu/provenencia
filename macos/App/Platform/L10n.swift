@@ -5892,6 +5892,562 @@ enum L10n {
         }
     }
 
+    enum DeleteImpact {
+        static func noun(_ kind: String, count: Int = 1) -> String {
+            let pair: (LocalizedStringResource, LocalizedStringResource)
+            switch kind {
+            case "source":
+                pair = (nounSource, nounSources)
+            case "artifact":
+                pair = (nounArtifact, nounArtifacts)
+            case "citation":
+                pair = (nounCitation, nounCitations)
+            case "observation":
+                pair = (nounObservation, nounObservations)
+            case "subject":
+                pair = (nounSubject, nounSubjects)
+            case "source_type":
+                pair = (nounSourceType, nounSourceTypes)
+            case "source_field":
+                pair = (nounSourceField, nounSourceFields)
+            case "source_credibility_grade":
+                pair = (nounCredibilityGrade, nounCredibilityGrades)
+            case "subject_type":
+                pair = (nounSubjectType, nounSubjectTypes)
+            case "property":
+                pair = (nounProperty, nounProperties)
+            case "property_term":
+                pair = (nounPropertyTerm, nounPropertyTerms)
+            case "sameness_claim":
+                pair = (nounSamenessClaim, nounSamenessClaims)
+            case "user":
+                pair = (nounUser, nounUsers)
+            case "project":
+                pair = (nounProject, nounProjects)
+            default:
+                let raw = kind.replacingOccurrences(of: "_", with: " ")
+                return count == 1 ? raw : raw + "s"
+            }
+            return String(localized: count == 1 ? pair.0 : pair.1)
+        }
+
+        static let nounSource = LocalizedStringResource(
+            "deleteImpact.kind.source.one",
+            defaultValue: "source",
+            comment: "Singular Impact kind noun"
+        )
+        static let nounSources = LocalizedStringResource(
+            "deleteImpact.kind.source.other",
+            defaultValue: "sources",
+            comment: "Plural Impact kind noun"
+        )
+        static let nounArtifact = LocalizedStringResource(
+            "deleteImpact.kind.artifact.one",
+            defaultValue: "artifact",
+            comment: "Singular Impact kind noun"
+        )
+        static let nounArtifacts = LocalizedStringResource(
+            "deleteImpact.kind.artifact.other",
+            defaultValue: "artifacts",
+            comment: "Plural Impact kind noun"
+        )
+        static let nounCitation = LocalizedStringResource(
+            "deleteImpact.kind.citation.one",
+            defaultValue: "citation",
+            comment: "Singular Impact kind noun"
+        )
+        static let nounCitations = LocalizedStringResource(
+            "deleteImpact.kind.citation.other",
+            defaultValue: "citations",
+            comment: "Plural Impact kind noun"
+        )
+        static let nounObservation = LocalizedStringResource(
+            "deleteImpact.kind.observation.one",
+            defaultValue: "observation",
+            comment: "Singular Impact kind noun"
+        )
+        static let nounObservations = LocalizedStringResource(
+            "deleteImpact.kind.observation.other",
+            defaultValue: "observations",
+            comment: "Plural Impact kind noun"
+        )
+        static let nounSubject = LocalizedStringResource(
+            "deleteImpact.kind.subject.one",
+            defaultValue: "subject",
+            comment: "Singular Impact kind noun"
+        )
+        static let nounSubjects = LocalizedStringResource(
+            "deleteImpact.kind.subject.other",
+            defaultValue: "subjects",
+            comment: "Plural Impact kind noun"
+        )
+        static let nounSourceType = LocalizedStringResource(
+            "deleteImpact.kind.sourceType.one",
+            defaultValue: "source type",
+            comment: "Singular Impact kind noun"
+        )
+        static let nounSourceTypes = LocalizedStringResource(
+            "deleteImpact.kind.sourceType.other",
+            defaultValue: "source types",
+            comment: "Plural Impact kind noun"
+        )
+        static let nounSourceField = LocalizedStringResource(
+            "deleteImpact.kind.sourceField.one",
+            defaultValue: "source field",
+            comment: "Singular Impact kind noun"
+        )
+        static let nounSourceFields = LocalizedStringResource(
+            "deleteImpact.kind.sourceField.other",
+            defaultValue: "source fields",
+            comment: "Plural Impact kind noun"
+        )
+        static let nounCredibilityGrade = LocalizedStringResource(
+            "deleteImpact.kind.credibilityGrade.one",
+            defaultValue: "credibility grade",
+            comment: "Singular Impact kind noun"
+        )
+        static let nounCredibilityGrades = LocalizedStringResource(
+            "deleteImpact.kind.credibilityGrade.other",
+            defaultValue: "credibility grades",
+            comment: "Plural Impact kind noun"
+        )
+        static let nounSubjectType = LocalizedStringResource(
+            "deleteImpact.kind.subjectType.one",
+            defaultValue: "subject type",
+            comment: "Singular Impact kind noun"
+        )
+        static let nounSubjectTypes = LocalizedStringResource(
+            "deleteImpact.kind.subjectType.other",
+            defaultValue: "subject types",
+            comment: "Plural Impact kind noun"
+        )
+        static let nounProperty = LocalizedStringResource(
+            "deleteImpact.kind.property.one",
+            defaultValue: "property",
+            comment: "Singular Impact kind noun"
+        )
+        static let nounProperties = LocalizedStringResource(
+            "deleteImpact.kind.property.other",
+            defaultValue: "properties",
+            comment: "Plural Impact kind noun"
+        )
+        static let nounPropertyTerm = LocalizedStringResource(
+            "deleteImpact.kind.propertyTerm.one",
+            defaultValue: "property term",
+            comment: "Singular Impact kind noun"
+        )
+        static let nounPropertyTerms = LocalizedStringResource(
+            "deleteImpact.kind.propertyTerm.other",
+            defaultValue: "property terms",
+            comment: "Plural Impact kind noun"
+        )
+        static let nounSamenessClaim = LocalizedStringResource(
+            "deleteImpact.kind.samenessClaim.one",
+            defaultValue: "sameness claim",
+            comment: "Singular reserved Impact kind noun"
+        )
+        static let nounSamenessClaims = LocalizedStringResource(
+            "deleteImpact.kind.samenessClaim.other",
+            defaultValue: "sameness claims",
+            comment: "Plural reserved Impact kind noun"
+        )
+        static let nounUser = LocalizedStringResource(
+            "deleteImpact.kind.user.one",
+            defaultValue: "user",
+            comment: "Singular infra Impact kind noun"
+        )
+        static let nounUsers = LocalizedStringResource(
+            "deleteImpact.kind.user.other",
+            defaultValue: "users",
+            comment: "Plural infra Impact kind noun"
+        )
+        static let nounProject = LocalizedStringResource(
+            "deleteImpact.kind.project.one",
+            defaultValue: "project",
+            comment: "Singular infra Impact kind noun"
+        )
+        static let nounProjects = LocalizedStringResource(
+            "deleteImpact.kind.project.other",
+            defaultValue: "projects",
+            comment: "Plural infra Impact kind noun"
+        )
+
+        static func confirmTitle(noun: String, ref: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "deleteImpact.confirm.title",
+                defaultValue: "Delete %1$@ %2$@?",
+                comment: "Allowed-delete confirm title; arguments are kind noun and ref"
+            ))
+            return String(format: format, locale: .current, noun, ref)
+        }
+
+        static let confirmMessage = LocalizedStringResource(
+            "deleteImpact.confirm.message",
+            defaultValue: "It’s erased from the catalog. This can’t be undone.",
+            comment: "Allowed-delete confirm consequence"
+        )
+
+        static let nothingReferences = LocalizedStringResource(
+            "deleteImpact.confirm.nothingReferences",
+            defaultValue: "Nothing else references it.",
+            comment: "Quiet line on an allowed delete confirm"
+        )
+
+        static func deleteAction(noun: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "deleteImpact.confirm.delete",
+                defaultValue: "Delete %@",
+                comment: "Allowed-delete confirm button; argument is kind noun"
+            ))
+            return String(format: format, locale: .current, noun)
+        }
+
+        static func keepAction(noun: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "deleteImpact.confirm.keep",
+                defaultValue: "Keep %@",
+                comment: "Allowed-delete keep button; argument is kind noun"
+            ))
+            return String(format: format, locale: .current, noun)
+        }
+
+        static func noticeTitle(noun: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "deleteImpact.notice.title",
+                defaultValue: "You can’t delete this %@",
+                comment: "Blocked-delete notice title; argument is kind noun"
+            ))
+            return String(format: format, locale: .current, noun)
+        }
+
+        static let noticeSubtitle = LocalizedStringResource(
+            "deleteImpact.notice.subtitle",
+            defaultValue: "Remove or re-point what uses it first. Select one to go there.",
+            comment: "Blocked-delete notice subtitle when inbound groups are listed"
+        )
+
+        static let done = LocalizedStringResource(
+            "deleteImpact.notice.done",
+            defaultValue: "Done",
+            comment: "Dismiss the blocked-delete notice"
+        )
+
+        static func overflow(count: Int, kind: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "deleteImpact.overflow",
+                defaultValue: "And %1$lld more %2$@",
+                comment: "Overflow under a capped inbound list; arguments are remainder and plural kind noun"
+            ))
+            return String(format: format, locale: .current, count, noun(kind, count: count))
+        }
+
+        static func viaHeading(via: String, kind: String, total: Int) -> String {
+            let oneOther = viaFormats[via]
+            if let oneOther {
+                let format = String(localized: total == 1 ? oneOther.0 : oneOther.1)
+                return String(format: format, locale: .current, total)
+            }
+            return viaFallback(kind: kind, total: total)
+        }
+
+        static func isKnownVia(_ via: String) -> Bool {
+            viaFormats[via] != nil
+        }
+
+        static let viaUnknownOne = LocalizedStringResource(
+            "deleteImpact.via.unknown.one",
+            defaultValue: "%1$lld %2$@ references this",
+            comment: "Unknown-via group heading, singular; arguments are total and kind noun"
+        )
+        static let viaUnknownOther = LocalizedStringResource(
+            "deleteImpact.via.unknown.other",
+            defaultValue: "%1$lld %2$@ reference this",
+            comment: "Unknown-via group heading, plural; arguments are total and kind noun"
+        )
+
+        static func viaFallback(kind: String, total: Int) -> String {
+            let format = String(localized: total == 1 ? viaUnknownOne : viaUnknownOther)
+            return String(format: format, locale: .current, total, noun(kind, count: total))
+        }
+
+        private static let viaFormats: [String: (LocalizedStringResource, LocalizedStringResource)] = [
+            "observations.citation_id": (
+                LocalizedStringResource(
+                    "deleteImpact.via.observationsCitationId.one",
+                    defaultValue: "%lld observation still belongs to this",
+                    comment: "Inbound heading for observations.citation_id, singular"
+                ),
+                LocalizedStringResource(
+                    "deleteImpact.via.observationsCitationId.other",
+                    defaultValue: "%lld observations still belong to this",
+                    comment: "Inbound heading for observations.citation_id, plural"
+                )
+            ),
+            "observations.subject_id": (
+                LocalizedStringResource(
+                    "deleteImpact.via.observationsSubjectId.one",
+                    defaultValue: "%lld observation cites this card",
+                    comment: "Inbound heading for observations.subject_id, singular"
+                ),
+                LocalizedStringResource(
+                    "deleteImpact.via.observationsSubjectId.other",
+                    defaultValue: "%lld observations cite this card",
+                    comment: "Inbound heading for observations.subject_id, plural"
+                )
+            ),
+            "observations.value_subject_id": (
+                LocalizedStringResource(
+                    "deleteImpact.via.observationsValueSubjectId.one",
+                    defaultValue: "%lld observation uses this as an endpoint",
+                    comment: "Inbound heading for observations.value_subject_id, singular"
+                ),
+                LocalizedStringResource(
+                    "deleteImpact.via.observationsValueSubjectId.other",
+                    defaultValue: "%lld observations use this as an endpoint",
+                    comment: "Inbound heading for observations.value_subject_id, plural"
+                )
+            ),
+            "artifacts.source_id": (
+                LocalizedStringResource(
+                    "deleteImpact.via.artifactsSourceId.one",
+                    defaultValue: "%lld artifact belongs to this source",
+                    comment: "Inbound heading for artifacts.source_id, singular"
+                ),
+                LocalizedStringResource(
+                    "deleteImpact.via.artifactsSourceId.other",
+                    defaultValue: "%lld artifacts belong to this source",
+                    comment: "Inbound heading for artifacts.source_id, plural"
+                )
+            ),
+            "subjects.source_id": (
+                LocalizedStringResource(
+                    "deleteImpact.via.subjectsSourceId.one",
+                    defaultValue: "%lld subject belongs to this source",
+                    comment: "Inbound heading for subjects.source_id, singular"
+                ),
+                LocalizedStringResource(
+                    "deleteImpact.via.subjectsSourceId.other",
+                    defaultValue: "%lld subjects belong to this source",
+                    comment: "Inbound heading for subjects.source_id, plural"
+                )
+            ),
+            "citations.artifact_id": (
+                LocalizedStringResource(
+                    "deleteImpact.via.citationsArtifactId.one",
+                    defaultValue: "%lld citation is drawn from this artifact",
+                    comment: "Inbound heading for citations.artifact_id, singular"
+                ),
+                LocalizedStringResource(
+                    "deleteImpact.via.citationsArtifactId.other",
+                    defaultValue: "%lld citations are drawn from this artifact",
+                    comment: "Inbound heading for citations.artifact_id, plural"
+                )
+            ),
+            "sources.source_type_id": (
+                LocalizedStringResource(
+                    "deleteImpact.via.sourcesSourceTypeId.one",
+                    defaultValue: "%lld source has this type",
+                    comment: "Inbound heading for sources.source_type_id, singular"
+                ),
+                LocalizedStringResource(
+                    "deleteImpact.via.sourcesSourceTypeId.other",
+                    defaultValue: "%lld sources have this type",
+                    comment: "Inbound heading for sources.source_type_id, plural"
+                )
+            ),
+            "source_metadata.field_id": (
+                LocalizedStringResource(
+                    "deleteImpact.via.sourceMetadataFieldId.one",
+                    defaultValue: "%lld source records a value for this field",
+                    comment: "Inbound heading for source_metadata.field_id, singular"
+                ),
+                LocalizedStringResource(
+                    "deleteImpact.via.sourceMetadataFieldId.other",
+                    defaultValue: "%lld sources record a value for this field",
+                    comment: "Inbound heading for source_metadata.field_id, plural"
+                )
+            ),
+            "source_credibility_assessments.credibility_grade_id": (
+                LocalizedStringResource(
+                    "deleteImpact.via.credibilityGradeId.one",
+                    defaultValue: "%lld source uses this grade",
+                    comment: "Inbound heading for source_credibility_assessments.credibility_grade_id, singular"
+                ),
+                LocalizedStringResource(
+                    "deleteImpact.via.credibilityGradeId.other",
+                    defaultValue: "%lld sources use this grade",
+                    comment: "Inbound heading for source_credibility_assessments.credibility_grade_id, plural"
+                )
+            ),
+            "subjects.subject_type_id": (
+                LocalizedStringResource(
+                    "deleteImpact.via.subjectsSubjectTypeId.one",
+                    defaultValue: "%lld subject has this type",
+                    comment: "Inbound heading for subjects.subject_type_id, singular"
+                ),
+                LocalizedStringResource(
+                    "deleteImpact.via.subjectsSubjectTypeId.other",
+                    defaultValue: "%lld subjects have this type",
+                    comment: "Inbound heading for subjects.subject_type_id, plural"
+                )
+            ),
+            "observations.property_id": (
+                LocalizedStringResource(
+                    "deleteImpact.via.observationsPropertyId.one",
+                    defaultValue: "%lld observation uses this property",
+                    comment: "Inbound heading for observations.property_id, singular"
+                ),
+                LocalizedStringResource(
+                    "deleteImpact.via.observationsPropertyId.other",
+                    defaultValue: "%lld observations use this property",
+                    comment: "Inbound heading for observations.property_id, plural"
+                )
+            ),
+            "property_terms.property_id": (
+                LocalizedStringResource(
+                    "deleteImpact.via.propertyTermsPropertyId.one",
+                    defaultValue: "%lld term belongs to this property",
+                    comment: "Inbound heading for property_terms.property_id, singular"
+                ),
+                LocalizedStringResource(
+                    "deleteImpact.via.propertyTermsPropertyId.other",
+                    defaultValue: "%lld terms belong to this property",
+                    comment: "Inbound heading for property_terms.property_id, plural"
+                )
+            ),
+            "observations.value_term_id": (
+                LocalizedStringResource(
+                    "deleteImpact.via.observationsValueTermId.one",
+                    defaultValue: "%lld observation uses this term",
+                    comment: "Inbound heading for observations.value_term_id, singular"
+                ),
+                LocalizedStringResource(
+                    "deleteImpact.via.observationsValueTermId.other",
+                    defaultValue: "%lld observations use this term",
+                    comment: "Inbound heading for observations.value_term_id, plural"
+                )
+            ),
+            "artifacts.file_id": (
+                LocalizedStringResource(
+                    "deleteImpact.via.artifactsFileId.one",
+                    defaultValue: "%lld artifact uses this file",
+                    comment: "Inbound heading for artifacts.file_id, singular"
+                ),
+                LocalizedStringResource(
+                    "deleteImpact.via.artifactsFileId.other",
+                    defaultValue: "%lld artifacts use this file",
+                    comment: "Inbound heading for artifacts.file_id, plural"
+                )
+            ),
+        ]
+
+        static let gateNotFoundTitle = LocalizedStringResource(
+            "deleteImpact.gate.notFound.title",
+            defaultValue: "Already gone",
+            comment: "Extra-gate title for not_found"
+        )
+        static func gateNotFoundBody(ref: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "deleteImpact.gate.notFound.body",
+                defaultValue: "%@ no longer exists. There is nothing left to delete.",
+                comment: "Extra-gate body for not_found; argument is the target ref"
+            ))
+            return String(format: format, locale: .current, ref)
+        }
+
+        static let gateEdgeLockedTitle = LocalizedStringResource(
+            "deleteImpact.gate.edgeLocked.title",
+            defaultValue: "This observation is part of a connection",
+            comment: "Extra-gate title for edge_locked"
+        )
+        static let gateEdgeLockedBody = LocalizedStringResource(
+            "deleteImpact.gate.edgeLocked.body",
+            defaultValue: "It ties a bridge to its endpoints, so you can’t delete it here. Delete the bridge on the evidence graph instead.",
+            comment: "Extra-gate body for edge_locked"
+        )
+
+        static let gateOriginLockedTitle = LocalizedStringResource(
+            "deleteImpact.gate.originLocked.title",
+            defaultValue: "This is built-in vocabulary",
+            comment: "Extra-gate title for origin_locked"
+        )
+        static let gateOriginLockedBody = LocalizedStringResource(
+            "deleteImpact.gate.originLocked.body",
+            defaultValue: "Provenencia-seeded properties and terms can’t be deleted. Plugin vocabulary is removed from the plugin manager, not here.",
+            comment: "Extra-gate body for origin_locked"
+        )
+
+        static let gateInfraTitle = LocalizedStringResource(
+            "deleteImpact.gate.infra.title",
+            defaultValue: "This can’t be deleted here",
+            comment: "Extra-gate title for infra"
+        )
+        static let gateInfraBody = LocalizedStringResource(
+            "deleteImpact.gate.infra.body",
+            defaultValue: "This record is part of the project itself, not a research record.",
+            comment: "Extra-gate body for infra"
+        )
+
+        static let gateUnknownTitle = LocalizedStringResource(
+            "deleteImpact.gate.unknown.title",
+            defaultValue: "Not available right now",
+            comment: "Fallback extra-gate title"
+        )
+        static func gateUnknownBody(ref: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "deleteImpact.gate.unknown.body",
+                defaultValue: "%@ can’t be deleted right now.",
+                comment: "Fallback extra-gate body; argument is the target ref"
+            ))
+            return String(format: format, locale: .current, ref)
+        }
+
+        static func summaryAllowed(noun: String, ref: String, title: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "deleteImpact.summary.allowed",
+                defaultValue: "Delete %1$@ %2$@, %3$@. This erases it and can’t be undone.",
+                comment: "VoiceOver for allowed delete; arguments are noun, ref, title"
+            ))
+            return String(format: format, locale: .current, noun, ref, title)
+        }
+
+        static func summaryBlocked(noun: String, ref: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "deleteImpact.summary.blocked",
+                defaultValue: "Blocked. You can’t delete %1$@ %2$@.",
+                comment: "VoiceOver lead-in for a blocked delete; arguments are noun and ref"
+            ))
+            return String(format: format, locale: .current, noun, ref)
+        }
+
+        static func summaryGroup(heading: String, refs: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "deleteImpact.summary.group",
+                defaultValue: "%1$@: %2$@.",
+                comment: "VoiceOver one inbound group; arguments are heading and comma-separated refs"
+            ))
+            return String(format: format, locale: .current, heading, refs)
+        }
+
+        static func summaryMore(count: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "deleteImpact.summary.more",
+                defaultValue: ", and %lld more",
+                comment: "VoiceOver remainder after the first named refs"
+            ))
+            return String(format: format, locale: .current, count)
+        }
+
+        static func rowAccessibility(ref: String, title: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "deleteImpact.row.goTo",
+                defaultValue: "%1$@, %2$@. Go to it.",
+                comment: "Blocker row accessibility; arguments are ref and title"
+            ))
+            return String(format: format, locale: .current, ref, title)
+        }
+    }
+
     enum Errors {
         static let catalogAlreadyExists = LocalizedStringResource(
             "error.catalog.already_exists",

@@ -80,7 +80,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 
 ## UI
 
-Resource delete chrome uses the **DeleteImpact** recipe ([`S8-D9`](../../../docs/deployment-plan/spike-8/design/S8-D9-impact.md) / **S8-13**): confirm when `allowed`, notice when blocked. Recipe owns `via` / `kind` / overflow L10n. Do not hand-build a yes/no sheet that ignores the report. Official `Delete` for a screen lands **in that screen’s PR**, except no-UI writers (registry PR). `usedBy` is not the only gate and must match Impact totals that block.
+Resource delete chrome uses the **DeleteImpact** recipe ([`S8-D9`](../../../docs/deployment-plan/spike-8/design/archive/S8-D9-impact.md) / **S8-13**): confirm when `allowed`, notice when blocked. Recipe owns `via` / `kind` / overflow L10n. Do not hand-build a yes/no sheet that ignores the report. Official `Delete` for a screen lands **in that screen’s PR**, except no-UI writers (registry PR). `usedBy` is not the only gate and must match Impact totals that block.
 
 ## Do not
 

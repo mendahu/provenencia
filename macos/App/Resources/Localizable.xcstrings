@@ -1158,6 +1158,990 @@
         }
       }
     },
+    "deleteImpact.confirm.delete": {
+      "comment": "Allowed-delete confirm button; argument is kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete %@"
+          }
+        }
+      }
+    },
+    "deleteImpact.confirm.keep": {
+      "comment": "Allowed-delete keep button; argument is kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep %@"
+          }
+        }
+      }
+    },
+    "deleteImpact.confirm.message": {
+      "comment": "Allowed-delete confirm consequence",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It’s erased from the catalog. This can’t be undone."
+          }
+        }
+      }
+    },
+    "deleteImpact.confirm.nothingReferences": {
+      "comment": "Quiet line on an allowed delete confirm",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing else references it."
+          }
+        }
+      }
+    },
+    "deleteImpact.confirm.title": {
+      "comment": "Allowed-delete confirm title; arguments are kind noun and ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete %1$@ %2$@?"
+          }
+        }
+      }
+    },
+    "deleteImpact.gate.edgeLocked.body": {
+      "comment": "Extra-gate body for edge_locked",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It ties a bridge to its endpoints, so you can’t delete it here. Delete the bridge on the evidence graph instead."
+          }
+        }
+      }
+    },
+    "deleteImpact.gate.edgeLocked.title": {
+      "comment": "Extra-gate title for edge_locked",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This observation is part of a connection"
+          }
+        }
+      }
+    },
+    "deleteImpact.gate.infra.body": {
+      "comment": "Extra-gate body for infra",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This record is part of the project itself, not a research record."
+          }
+        }
+      }
+    },
+    "deleteImpact.gate.infra.title": {
+      "comment": "Extra-gate title for infra",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This can’t be deleted here"
+          }
+        }
+      }
+    },
+    "deleteImpact.gate.notFound.body": {
+      "comment": "Extra-gate body for not_found; argument is the target ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ no longer exists. There is nothing left to delete."
+          }
+        }
+      }
+    },
+    "deleteImpact.gate.notFound.title": {
+      "comment": "Extra-gate title for not_found",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Already gone"
+          }
+        }
+      }
+    },
+    "deleteImpact.gate.originLocked.body": {
+      "comment": "Extra-gate body for origin_locked",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Provenencia-seeded properties and terms can’t be deleted. Plugin vocabulary is removed from the plugin manager, not here."
+          }
+        }
+      }
+    },
+    "deleteImpact.gate.originLocked.title": {
+      "comment": "Extra-gate title for origin_locked",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This is built-in vocabulary"
+          }
+        }
+      }
+    },
+    "deleteImpact.gate.unknown.body": {
+      "comment": "Fallback extra-gate body; argument is the target ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ can’t be deleted right now."
+          }
+        }
+      }
+    },
+    "deleteImpact.gate.unknown.title": {
+      "comment": "Fallback extra-gate title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not available right now"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.artifact.one": {
+      "comment": "Singular Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "artifact"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.artifact.other": {
+      "comment": "Plural Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "artifacts"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.citation.one": {
+      "comment": "Singular Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "citation"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.citation.other": {
+      "comment": "Plural Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "citations"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.credibilityGrade.one": {
+      "comment": "Singular Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "credibility grade"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.credibilityGrade.other": {
+      "comment": "Plural Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "credibility grades"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.observation.one": {
+      "comment": "Singular Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "observation"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.observation.other": {
+      "comment": "Plural Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "observations"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.project.one": {
+      "comment": "Singular infra Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "project"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.project.other": {
+      "comment": "Plural infra Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "projects"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.property.one": {
+      "comment": "Singular Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "property"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.property.other": {
+      "comment": "Plural Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "properties"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.propertyTerm.one": {
+      "comment": "Singular Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "property term"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.propertyTerm.other": {
+      "comment": "Plural Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "property terms"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.samenessClaim.one": {
+      "comment": "Singular reserved Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sameness claim"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.samenessClaim.other": {
+      "comment": "Plural reserved Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sameness claims"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.source.one": {
+      "comment": "Singular Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "source"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.source.other": {
+      "comment": "Plural Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sources"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.sourceField.one": {
+      "comment": "Singular Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "source field"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.sourceField.other": {
+      "comment": "Plural Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "source fields"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.sourceType.one": {
+      "comment": "Singular Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "source type"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.sourceType.other": {
+      "comment": "Plural Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "source types"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.subject.one": {
+      "comment": "Singular Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "subject"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.subject.other": {
+      "comment": "Plural Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "subjects"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.subjectType.one": {
+      "comment": "Singular Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "subject type"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.subjectType.other": {
+      "comment": "Plural Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "subject types"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.user.one": {
+      "comment": "Singular infra Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "user"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.user.other": {
+      "comment": "Plural infra Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "users"
+          }
+        }
+      }
+    },
+    "deleteImpact.notice.done": {
+      "comment": "Dismiss the blocked-delete notice",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        }
+      }
+    },
+    "deleteImpact.notice.subtitle": {
+      "comment": "Blocked-delete notice subtitle when inbound groups are listed",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove or re-point what uses it first. Select one to go there."
+          }
+        }
+      }
+    },
+    "deleteImpact.notice.title": {
+      "comment": "Blocked-delete notice title; argument is kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can’t delete this %@"
+          }
+        }
+      }
+    },
+    "deleteImpact.overflow": {
+      "comment": "Overflow under a capped inbound list; arguments are remainder and plural kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "And %1$lld more %2$@"
+          }
+        }
+      }
+    },
+    "deleteImpact.row.goTo": {
+      "comment": "Blocker row accessibility; arguments are ref and title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@. Go to it."
+          }
+        }
+      }
+    },
+    "deleteImpact.summary.allowed": {
+      "comment": "VoiceOver for allowed delete; arguments are noun, ref, title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete %1$@ %2$@, %3$@. This erases it and can’t be undone."
+          }
+        }
+      }
+    },
+    "deleteImpact.summary.blocked": {
+      "comment": "VoiceOver lead-in for a blocked delete; arguments are noun and ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blocked. You can’t delete %1$@ %2$@."
+          }
+        }
+      }
+    },
+    "deleteImpact.summary.group": {
+      "comment": "VoiceOver one inbound group; arguments are heading and comma-separated refs",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@: %2$@."
+          }
+        }
+      }
+    },
+    "deleteImpact.summary.more": {
+      "comment": "VoiceOver remainder after the first named refs",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ", and %lld more"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.artifactsFileId.one": {
+      "comment": "Inbound heading for artifacts.file_id, singular",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld artifact uses this file"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.artifactsFileId.other": {
+      "comment": "Inbound heading for artifacts.file_id, plural",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld artifacts use this file"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.artifactsSourceId.one": {
+      "comment": "Inbound heading for artifacts.source_id, singular",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld artifact belongs to this source"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.artifactsSourceId.other": {
+      "comment": "Inbound heading for artifacts.source_id, plural",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld artifacts belong to this source"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.citationsArtifactId.one": {
+      "comment": "Inbound heading for citations.artifact_id, singular",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld citation is drawn from this artifact"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.citationsArtifactId.other": {
+      "comment": "Inbound heading for citations.artifact_id, plural",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld citations are drawn from this artifact"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.credibilityGradeId.one": {
+      "comment": "Inbound heading for source_credibility_assessments.credibility_grade_id, singular",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld source uses this grade"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.credibilityGradeId.other": {
+      "comment": "Inbound heading for source_credibility_assessments.credibility_grade_id, plural",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld sources use this grade"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.observationsCitationId.one": {
+      "comment": "Inbound heading for observations.citation_id, singular",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld observation still belongs to this"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.observationsCitationId.other": {
+      "comment": "Inbound heading for observations.citation_id, plural",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld observations still belong to this"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.observationsPropertyId.one": {
+      "comment": "Inbound heading for observations.property_id, singular",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld observation uses this property"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.observationsPropertyId.other": {
+      "comment": "Inbound heading for observations.property_id, plural",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld observations use this property"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.observationsSubjectId.one": {
+      "comment": "Inbound heading for observations.subject_id, singular",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld observation cites this card"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.observationsSubjectId.other": {
+      "comment": "Inbound heading for observations.subject_id, plural",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld observations cite this card"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.observationsValueSubjectId.one": {
+      "comment": "Inbound heading for observations.value_subject_id, singular",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld observation uses this as an endpoint"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.observationsValueSubjectId.other": {
+      "comment": "Inbound heading for observations.value_subject_id, plural",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld observations use this as an endpoint"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.observationsValueTermId.one": {
+      "comment": "Inbound heading for observations.value_term_id, singular",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld observation uses this term"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.observationsValueTermId.other": {
+      "comment": "Inbound heading for observations.value_term_id, plural",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld observations use this term"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.propertyTermsPropertyId.one": {
+      "comment": "Inbound heading for property_terms.property_id, singular",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld term belongs to this property"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.propertyTermsPropertyId.other": {
+      "comment": "Inbound heading for property_terms.property_id, plural",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld terms belong to this property"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.sourceMetadataFieldId.one": {
+      "comment": "Inbound heading for source_metadata.field_id, singular",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld source records a value for this field"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.sourceMetadataFieldId.other": {
+      "comment": "Inbound heading for source_metadata.field_id, plural",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld sources record a value for this field"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.sourcesSourceTypeId.one": {
+      "comment": "Inbound heading for sources.source_type_id, singular",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld source has this type"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.sourcesSourceTypeId.other": {
+      "comment": "Inbound heading for sources.source_type_id, plural",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld sources have this type"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.subjectsSourceId.one": {
+      "comment": "Inbound heading for subjects.source_id, singular",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld subject belongs to this source"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.subjectsSourceId.other": {
+      "comment": "Inbound heading for subjects.source_id, plural",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld subjects belong to this source"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.subjectsSubjectTypeId.one": {
+      "comment": "Inbound heading for subjects.subject_type_id, singular",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld subject has this type"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.subjectsSubjectTypeId.other": {
+      "comment": "Inbound heading for subjects.subject_type_id, plural",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld subjects have this type"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.unknown.one": {
+      "comment": "Unknown-via group heading, singular; arguments are total and kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld %2$@ references this"
+          }
+        }
+      }
+    },
+    "deleteImpact.via.unknown.other": {
+      "comment": "Unknown-via group heading, plural; arguments are total and kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld %2$@ reference this"
+          }
+        }
+      }
+    },
     "error.artifacts.file_already_attached": {
       "comment": "FFI error artifacts.file_already_attached",
       "extractionState": "manual",

@@ -8,7 +8,6 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 
 | Step | Brief | Feeds | Notes |
 | --- | --- | --- | --- |
-| S8-D9 | [`S8-D9-impact.md`](S8-D9-impact.md) | PR **S8-13** | Shared confirm / blocked notice. Paste **first**. |
 | S8-D12 | [`S8-D12-source-delete.md`](S8-D12-source-delete.md) | PR **S8-14** | Source + Artifact. |
 | S8-D13 | [`S8-D13-source-types-delete.md`](S8-D13-source-types-delete.md) | PR **S8-15** | Source Types only. |
 | S8-D14 | [`S8-D14-source-fields-delete.md`](S8-D14-source-fields-delete.md) | PR **S8-16** | Source Fields only. |
@@ -27,11 +26,12 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 | S8-D1 | [`archive/S8-D1-auto-transcribe.md`](archive/S8-D1-auto-transcribe.md) | **S8-01** | Trailing secondary **Auto transcribe** on the transcription label row; combined replace + whole-page confirm; field locked while running; image Artifacts only. |
 | S8-D2 | [`archive/S8-D2-pdf-text-find.md`](archive/S8-D2-pdf-text-find.md) | **S8-03**, **S8-04**, **S8-05** | Find is a trailing search IconButton + under-strip row (wrap). I-beam select; scroll pans like Preview. PDF replaces Auto transcribe with Paste from selection. |
 | S8-D3 | [`archive/S8-D3-graph-visuals.md`](archive/S8-D3-graph-visuals.md) | **S8-06** | Ochre conflict bracket + “Not” prefix (not `PVBadge`); ghost **Jump to Source page**; identity-Observation nouns; Add property + extra non-edge rows on bridges; canvas legend while any mark is present. |
+| S8-D9 | [`archive/S8-D9-impact.md`](archive/S8-D9-impact.md) | **S8-13** | DeleteImpact recipe: Confirm when `GetDeleteImpact` is allowed; notice (via groups / overflow / extra gates) when blocked. Citation + subject fixtures; no screen chrome. |
 
 ## How to use
 
 1. Open the Provenencia Claude Design project / design-system bundle (`macos/App/DesignSystem/README.md`).
-2. **Start with S8-D9**, then the next screen in order (**S8-D12**, **S8-D13**, **S8-D14**, **S8-D15**, **S8-D11**, **S8-D10**). Paste **one** open brief. New briefs: [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md). Policy lives in [`docs/catalog-deletes.md`](../../../catalog-deletes.md) and [`../deployment-plan.md`](../deployment-plan.md) §S8-09.1–§S8-09.4.
+2. **Start with S8-D12**, then **S8-D13**, **S8-D14**, **S8-D15**, **S8-D11**, **S8-D10**. Paste **one** open brief. New briefs: [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md). Policy lives in [`docs/catalog-deletes.md`](../../../catalog-deletes.md) and [`../deployment-plan.md`](../deployment-plan.md) §S8-09.1–§S8-09.4. Instance the shipped DeleteImpact recipe; do not restyle it.
 3. Claude **clears cache, drops the stale pack, pulls a fresh design system**, and **works in place**. Rethink briefs replace frames; enhancement briefs extend them.
 4. **Inventory is binding.** Instance kit components named in the brief; bespoke only when the use is truly domain-specific.
 5. When the board is done, archive the brief under `archive/` and write up [`../completed.md`](../completed.md).
@@ -43,7 +43,7 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 - **Evidence graph cards** already list every Observation as its own row. Competing values on one Property are legal. Negative polarity is a denial, not a missing line. **S8-D3** shipped an ochre conflict bracket, a “Not” prefix, a Source-page jump, and richer bridge sentences — not a resolve flow. Incomplete-bridge chrome is descoped.
 - **Source page** is filing (identity, metadata, artifacts, notes). **S8-07** shipped the identity-header **Evidence graph** jump (`hasArtifact`), text-only metadata (including former date keys), delete via `ClearSourceMetadata`, and clickable `url` values. Host-shape lives in Go `core/urlshape`. No Artifact → graph stays blocked.
 - **Sources list** is the split-row file | graph destination. **S8-08** shipped graph-progress counts (subjects + observations) on `.sourceGraphProgress`, not on the `sourcesList` payload.
-- **Delete** is exists + extra gates + inbound-*resource*-empty erase, or a refuse with a named Impact list. Facets CASCADE. **S8-D9** is the shared confirm / notice (recipe L10n for `via` / extra gates). Each later board instances it on one screen; that screen’s PR cuts over or adds the official `Delete`. Wrong type is delete + place. **S8-09** flips Artifact/Citation CASCADEs; **S8-12** is the map.
+- **Delete** is exists + extra gates + inbound-*resource*-empty erase, or a refuse with a named Impact list. Facets CASCADE. **S8-D9** / **S8-13** shipped the shared confirm / notice (recipe L10n for `via` / extra gates). Each later board instances it on one screen; that screen’s PR cuts over or adds the official `Delete`. Wrong type is delete + place. **S8-09** flips Artifact/Citation CASCADEs; **S8-12** is the map.
 - **Transcription** is the Citation reading. Observations are separate. Auto Transcribe must not write Observations.
 - Media in composer: **image** and **PDF** viewers. **Auto Transcribe (S8-D1) is image-only.** PDF Find / select / paste is **S8-D2** (text layer, no Vision). Audio/video: honest disable ([`audio-video-sources.md`](../../../ideas/audio-video-sources.md)).
 - Locator: default `artifact`, optional `page` (PDF), optional `region` polygon. One region max. Geometry: [`ArtifactRegionGeometry`](../../../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift).
