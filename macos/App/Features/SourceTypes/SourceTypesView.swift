@@ -76,21 +76,27 @@ private struct SourceTypesContent: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(PVColor.surfacePage)
         .vocabularyToastOverlay($model.toast, identifier: "sourceTypes.toast")
-        .pvConfirm(
-            item: pendingDelete,
-            copy: deleteCopy(for:),
+        .pvDeleteImpact(
+            item: Binding(
+                get: { model.pendingImpact },
+                set: { newValue in
+                    model.pendingImpact = newValue
+                    if newValue == nil { model.cancelDelete() }
+                }
+            ),
             isRunning: model.isDeleting,
-            accessibilityIdentifierPrefix: "sourceTypes.delete",
+            accessibilityIdentifierPrefix: "sourceTypes.deleteImpact",
             onConfirm: {
                 Task {
-                    if await model.confirmDelete() {
+                    if await model.confirmPendingImpact() {
                         navigation.fallbackToSectionRoot()
                     }
                 }
+            },
+            onNavigate: { location in
+                navigation.go(to: location)
             }
-        ) { type in
-            deleteDetail(for: type)
-        }
+        )
         .onChange(of: navigation.currentLocation) { _, location in
             reconcileSelection(for: location)
         }
@@ -111,31 +117,6 @@ private struct SourceTypesContent: View {
         let outcome = model.syncSelection(from: location)
         if outcome == .missingDeepId {
             navigation.fallbackToSectionRoot()
-        }
-    }
-
-    private var pendingDelete: Binding<CatalogSourceType?> {
-        Binding(
-            get: { model.pendingDeleteType },
-            set: { if $0 == nil { model.cancelDelete() } }
-        )
-    }
-
-    private func deleteCopy(for type: CatalogSourceType) -> PVConfirmCopy {
-        PVConfirmCopy(
-            title: L10n.SourceTypes.deleteConfirmTitle(label: type.label),
-            message: String(localized: L10n.SourceTypes.deleteConfirmMessage),
-            confirm: L10n.SourceTypes.deleteType,
-            cancel: L10n.SourceTypes.deleteKeep
-        )
-    }
-
-    @ViewBuilder
-    private func deleteDetail(for type: CatalogSourceType) -> some View {
-        PVConfirmKeyChip(label: L10n.SourceTypes.deleteKeyReleased, value: type.key)
-            .accessibilityIdentifier("sourceTypes.delete.key")
-        if let deleteError = model.deleteError {
-            PVCallout(tone: .danger, message: deleteError)
         }
     }
 

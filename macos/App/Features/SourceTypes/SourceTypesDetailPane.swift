@@ -63,6 +63,10 @@ struct SourceTypesDetailPane: View {
     private func panel(isLocked: Bool) -> some View {
         VStack(alignment: .leading, spacing: PVSpacing.space7) {
             panelHeader
+            if let deleteError = model.deleteError {
+                PVCallout(tone: .danger, message: deleteError)
+                    .accessibilityIdentifier("sourceTypes.deleteError")
+            }
             if isLocked {
                 lockedNote
             } else {
@@ -106,8 +110,9 @@ struct SourceTypesDetailPane: View {
             showsDelete: model.showsDelete,
             canDelete: model.canDeleteSelectedType,
             deleteTooltip: model.deleteTooltip,
+            deleteAccessibilityLabel: model.deleteAccessibilityLabel,
             identifierPrefix: "sourceTypes",
-            onDelete: { model.askDelete() }
+            onDelete: { Task { await model.askDelete() } }
         )
     }
 

@@ -9,6 +9,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/audit"
+	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/slug"
 )
@@ -25,6 +28,9 @@ var ErrLocked = apperr.New(apperr.CodeSourceTypesInvalid, apperr.KindUser)
 
 // ErrInUse is returned by Delete when sources still reference the type.
 var ErrInUse = apperr.New(apperr.CodeSourceTypesInUse, apperr.KindConflict)
+
+// ErrOriginLocked is returned by Delete when the type is plugin-origin.
+var ErrOriginLocked = apperr.New(apperr.CodeSourceTypesOriginLocked, apperr.KindConflict)
 
 const (
 	OriginProvenencia = "provenencia"
@@ -46,7 +52,6 @@ const (
 		FROM source_types t ORDER BY t.label COLLATE NOCASE, t.origin, t.key`
 	sqlUpdate = `UPDATE source_types SET label = ?, description = ?, icon_key = ? WHERE id = ?`
 	sqlDelete = `DELETE FROM source_types WHERE id = ?`
-	sqlInUse  = `SELECT 1 FROM sources WHERE source_type_id = ? LIMIT 1`
 	sqlUsedBy = `SELECT COUNT(*) FROM sources WHERE source_type_id = ?`
 	sqlCountByOrigin = `SELECT origin, COUNT(*) FROM source_types GROUP BY origin`
 )
@@ -310,29 +315,78 @@ func CountByOrigin(c *database.Catalog) (OriginCounts, error) {
 	return out, nil
 }
 
-// Delete removes a type by id when no sources reference it.
-// Cascades suggestion joins. Any origin may be deleted when unused.
-func Delete(c *database.Catalog, id []byte) error {
-	db, err := c.DB()
-	if err != nil {
+// Delete erases a type when no sources reference it. Suggestion joins CASCADE.
+// Plugin-origin types are origin_locked even when unused.
+func Delete(c *database.Catalog, userID, id []byte) error {
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return err
 	}
 	if len(id) != 16 {
 		return ErrInvalid
 	}
-	var one int
-	err = db.QueryRow(sqlInUse, id).Scan(&one)
-	if err == nil {
-		return ErrInUse
+	prev, err := GetByID(c, id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrInvalid
 	}
-	if !errors.Is(err, sql.ErrNoRows) {
-		return err
-	}
-	_, err = db.Exec(sqlDelete, id)
 	if err != nil {
 		return err
 	}
-	return searchindex.Delete(db, searchindex.KindSourceType, uuidString(id))
+	if strings.HasPrefix(prev.Origin, "plugin:") && len(prev.Origin) > len("plugin:") {
+		return ErrOriginLocked
+	}
+
+	db, err := c.DB()
+	if err != nil {
+		return err
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	report, err := deleteimpact.Impact(tx, deleteimpact.KindSourceType, id)
+	if err != nil {
+		return err
+	}
+	if !report.Allowed {
+		return ErrInUse
+	}
+	if _, err := tx.Exec(sqlDelete, id); err != nil {
+		return err
+	}
+	if err := deleteimpact.ReleaseOwned(tx, deleteimpact.KindSourceType, id); err != nil {
+		return err
+	}
+	fields := map[string]audit.FieldDiff{
+		"id":     {Old: uuidString(id), New: nil},
+		"key":    {Old: prev.Key, New: nil},
+		"origin": {Old: prev.Origin, New: nil},
+		"label":  {Old: prev.Label, New: nil},
+	}
+	if prev.Description != "" {
+		fields["description"] = audit.FieldDiff{Old: prev.Description, New: nil}
+	}
+	if prev.IconKey != "" {
+		fields["icon_key"] = audit.FieldDiff{Old: prev.IconKey, New: nil}
+	}
+	if _, err := audit.Record(tx, audit.Revision{
+		UserID:     userID,
+		ActionType: "delete_source_type",
+		CreatedAt:  project.NowUTC(),
+		Changes: []audit.Change{{
+			EntityType: "source_type",
+			EntityID:   id,
+			Action:     audit.ActionDelete,
+			Fields:     fields,
+		}},
+	}); err != nil {
+		return err
+	}
+	if err := searchindex.Delete(tx, searchindex.KindSourceType, uuidString(id)); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func originOK(origin string) bool {

@@ -714,9 +714,23 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         guard let idx = list.firstIndex(where: { $0.id == typeID }) else {
             throw StoreBoom.boom
         }
-        // The engine refuses a type sources still classify as.
-        guard list[idx].usedBy == 0 else {
-            throw StoreBoom.boom
+        let type = list[idx]
+        if CatalogOrigin.isPlugin(type.origin) {
+            throw CoreInvokeError.coded(
+                status: 1,
+                code: "sourcetypes.origin_locked",
+                kind: .conflict,
+                params: []
+            )
+        }
+        let inbound = (sourcesByProject[projectDir] ?? []).filter { $0.sourceTypeID == typeID }
+        if !inbound.isEmpty || type.usedBy > 0 {
+            throw CoreInvokeError.coded(
+                status: 1,
+                code: "sourcetypes.in_use",
+                kind: .conflict,
+                params: []
+            )
         }
         list.remove(at: idx)
         sourceTypesByProject[projectDir] = list
@@ -1814,10 +1828,52 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         if kind == "observation" {
             return observationDeleteImpact(projectDir: projectDir, id: id)
         }
+        if kind == "source_type" {
+            return sourceTypeDeleteImpact(projectDir: projectDir, id: id)
+        }
         if fixtureContains(projectDir: projectDir, id: id) {
             return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
         }
         return CatalogDeleteImpact(allowed: false, gate: .notFound, groups: [])
+    }
+
+    private func sourceTypeDeleteImpact(projectDir: String, id: String) -> CatalogDeleteImpact {
+        guard let type = (sourceTypesByProject[projectDir] ?? []).first(where: { $0.id == id }) else {
+            return CatalogDeleteImpact(allowed: false, gate: .notFound, groups: [])
+        }
+        if CatalogOrigin.isPlugin(type.origin) {
+            return CatalogDeleteImpact(allowed: false, gate: .originLocked, groups: [])
+        }
+        let inbound = (sourcesByProject[projectDir] ?? []).filter { $0.sourceTypeID == id }
+        let total = inbound.isEmpty ? type.usedBy : inbound.count
+        if total == 0 {
+            return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
+        }
+        return CatalogDeleteImpact(
+            allowed: false,
+            gate: .inbound,
+            groups: [
+                CatalogDeleteImpactGroup(
+                    via: "sources.source_type_id",
+                    kind: "source",
+                    total: total,
+                    listed: inbound.prefix(20).map {
+                        CatalogDeleteImpactListed(
+                            id: $0.id,
+                            ref: $0.ref,
+                            title: $0.title.isEmpty ? $0.ref : $0.title,
+                            location: WorkspaceLocation(
+                                section: .sources,
+                                sourceId: $0.id,
+                                sourceSurface: .page,
+                                ref: $0.ref,
+                                title: $0.title.isEmpty ? $0.ref : $0.title
+                            )
+                        )
+                    }
+                ),
+            ]
+        )
     }
 
     private func citationDeleteImpact(projectDir: String, id: String) -> CatalogDeleteImpact {

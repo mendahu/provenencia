@@ -26,7 +26,7 @@ func TestOpenCatalogDoesNotHealSourceVocab(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := sourcetypes.Delete(c, cert.ID); err != nil {
+	if err := sourcetypes.Delete(c, created.Identity.UserID[:], cert.ID); err != nil {
 		t.Fatal(err)
 	}
 	c.Close()

@@ -5836,59 +5836,17 @@ enum L10n {
         static let deleteType = LocalizedStringResource(
             "sourceTypes.delete.action",
             defaultValue: "Delete type",
-            comment: "Delete button in the Source types detail pane, and the confirm dialog's destructive button"
+            comment: "Tooltip on the Source types inspector trash"
         )
 
-        static let deleteOwnedByPlugin = LocalizedStringResource(
-            "sourceTypes.delete.ownedByPlugin",
-            defaultValue: "Owned by the plugin",
-            comment: "Tooltip on the disabled delete button when the selected type comes from a plugin"
-        )
-
-        static func deleteInUse(count: Int) -> LocalizedStringResource {
-            count == 1 ? deleteInUseOne : deleteInUseOther(count: count)
-        }
-
-        private static let deleteInUseOne = LocalizedStringResource(
-            "sourceTypes.delete.inUseOne",
-            defaultValue: "In use on 1 source",
-            comment: "Tooltip on the disabled delete button when exactly one source is classified as the type"
-        )
-
-        private static func deleteInUseOther(count: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
-                "sourceTypes.delete.inUseOther",
-                defaultValue: "In use on \(count) sources",
-                comment: "Tooltip on the disabled delete button; argument is how many sources are classified as the type"
-            )
-        }
-
-        static func deleteConfirmTitle(label: String) -> String {
+        static func deleteTypeAccessibility(label: String) -> String {
             let format = String(localized: LocalizedStringResource(
-                "sourceTypes.delete.confirmTitle",
-                defaultValue: "Delete %@?",
-                comment: "Title of the delete-type confirmation dialog; argument is the type label"
+                "sourceTypes.delete.accessibility",
+                defaultValue: "Delete type %@",
+                comment: "VoiceOver for Source types trash; argument is the type label"
             ))
             return String(format: format, locale: .current, label)
         }
-
-        static let deleteConfirmMessage = LocalizedStringResource(
-            "sourceTypes.delete.confirmMessage",
-            defaultValue: "No source in this project is classified as this type, so no citation loses its class. The field suggestions attached to it go with it; the fields themselves stay in the vocabulary.",
-            comment: "Message of the delete-type confirmation sheet: what does and does not cascade"
-        )
-
-        static let deleteKeyReleased = LocalizedStringResource(
-            "sourceTypes.delete.keyReleased",
-            defaultValue: "Key released",
-            comment: "Micro-caps label beside the key a type delete releases, in the confirmation sheet"
-        )
-
-        static let deleteKeep = LocalizedStringResource(
-            "sourceTypes.delete.keep",
-            defaultValue: "Keep type",
-            comment: "Button that closes the delete-type confirmation without deleting"
-        )
 
         static let toastDeletedTitle = LocalizedStringResource(
             "sourceTypes.toast.deletedTitle",
@@ -6910,6 +6868,11 @@ enum L10n {
             defaultValue: "That source type is still used by one or more sources.",
             comment: "FFI error sourcetypes.in_use"
         )
+        static let sourceTypesOriginLocked = LocalizedStringResource(
+            "error.sourcetypes.origin_locked",
+            defaultValue: "A plugin owns that source type, so it cannot be deleted.",
+            comment: "FFI error sourcetypes.origin_locked"
+        )
         static func sourceTypesDuplicateKey(key: String) -> String {
             let format = String(localized: LocalizedStringResource(
                 "error.sourcetypes.duplicate_key",
@@ -7173,6 +7136,8 @@ enum L10n {
                 return String(localized: sourceTypesInvalid)
             case "sourcetypes.in_use":
                 return String(localized: sourceTypesInUse)
+            case "sourcetypes.origin_locked":
+                return String(localized: sourceTypesOriginLocked)
             case "sourcetypes.duplicate_key":
                 return sourceTypesDuplicateKey(key: params.first ?? "?")
             case "sourcefields.invalid":

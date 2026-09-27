@@ -3,7 +3,7 @@ import Observation
 
 /// State for the **Source types** workspace destination (S2-03 board /
 /// S2-16 PR): browse/search/sort the project's `source_types` vocabulary,
-/// create or edit project rows, delete unused ones, and assign or remove
+/// create or edit project rows, delete via DeleteImpact, and assign or remove
 /// `source_type_metadata_fields` suggestions each type carries.
 @MainActor
 @Observable
@@ -35,6 +35,7 @@ final class SourceTypesModel {
     private(set) var removingFieldID: String?
 
     private(set) var pendingDeleteID: String?
+    var pendingImpact: PVDeleteImpactRequest?
     private(set) var isDeleting = false
     private(set) var deleteError: String?
 
@@ -207,16 +208,15 @@ final class SourceTypesModel {
 
     var showsDelete: Bool { !isAdding && selectedType != nil }
 
-    var canDeleteSelectedType: Bool {
-        guard let type = selectedType else { return false }
-        return !CatalogOrigin.isPlugin(type.origin) && type.usedBy == 0
-    }
+    var canDeleteSelectedType: Bool { selectedType != nil }
 
-    var deleteTooltip: LocalizedStringResource {
-        guard let type = selectedType else { return L10n.SourceTypes.deleteType }
-        if CatalogOrigin.isPlugin(type.origin) { return L10n.SourceTypes.deleteOwnedByPlugin }
-        if type.usedBy > 0 { return L10n.SourceTypes.deleteInUse(count: type.usedBy) }
-        return L10n.SourceTypes.deleteType
+    var deleteTooltip: LocalizedStringResource { L10n.SourceTypes.deleteType }
+
+    var deleteAccessibilityLabel: String {
+        guard let type = selectedType else {
+            return String(localized: L10n.SourceTypes.deleteType)
+        }
+        return L10n.SourceTypes.deleteTypeAccessibility(label: type.label)
     }
 
     var pendingDeleteType: CatalogSourceType? {
@@ -440,20 +440,40 @@ final class SourceTypesModel {
         }
     }
 
-    func askDelete() {
-        guard canDeleteSelectedType, let type = selectedType else { return }
+    func askDelete() async {
+        guard let type = selectedType else { return }
         deleteError = nil
-        pendingDeleteID = type.id
+        do {
+            let report = try await store.getDeleteImpact(
+                projectDir: session.projectKey.projectDir,
+                kind: "source_type",
+                id: type.id
+            )
+            pendingDeleteID = type.id
+            pendingImpact = PVDeleteImpactRequest(
+                target: PVDeleteImpactTarget(
+                    kind: "source_type",
+                    ref: type.key,
+                    title: type.label
+                ),
+                report: report
+            )
+        } catch {
+            deleteError = L10n.Errors.message(for: error)
+        }
     }
 
     func cancelDelete() {
         guard !isDeleting else { return }
         pendingDeleteID = nil
+        pendingImpact = nil
     }
 
     @discardableResult
-    func confirmDelete() async -> Bool {
-        guard let type = pendingDeleteType, !isDeleting else { return false }
+    func confirmPendingImpact() async -> Bool {
+        guard let request = pendingImpact, request.report.allowed, let type = pendingDeleteType,
+              !isDeleting
+        else { return false }
         isDeleting = true
         deleteError = nil
         defer { isDeleting = false }
@@ -464,6 +484,7 @@ final class SourceTypesModel {
             session.apply(.deletedSourceType(id: type.id))
             patchTypesList { rows in rows.removeAll { $0.id == type.id } }
             pendingDeleteID = nil
+            pendingImpact = nil
             formError = nil
             suggestionError = nil
             mode = .empty

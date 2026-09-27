@@ -40,6 +40,7 @@ const (
 	CodeObservationsInUse            = "observations.in_use"
 	CodeSourceTypesInvalid           = "sourcetypes.invalid"
 	CodeSourceTypesInUse             = "sourcetypes.in_use"
+	CodeSourceTypesOriginLocked      = "sourcetypes.origin_locked"
 	CodeSourceTypesDuplicateKey      = "sourcetypes.duplicate_key"
 	CodeSubjectTypesInvalid          = "subjecttypes.invalid"
 	CodeSubjectTypesDuplicatePrefix  = "subjecttypes.duplicate_prefix"

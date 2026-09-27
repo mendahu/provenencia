@@ -155,8 +155,8 @@ S8-D10 ────────────────────▶ S8-19  Ev
 - [x] S8-13 — DeleteImpact recipe → [`completed.md`](completed.md)
 - [x] S8-D12 — Design: Source page resource delete → [`completed.md`](completed.md)
 - [x] S8-14 — Source + Artifact delete → [`completed.md`](completed.md)
-- [ ] S8-D13 — Design: Source Types delete → [`completed.md`](completed.md)
-- [ ] S8-15 — Source Types delete → [`completed.md`](completed.md)
+- [x] S8-D13 — Design: Source Types delete → [`completed.md`](completed.md)
+- [x] S8-15 — Source Types delete → [`completed.md`](completed.md)
 - [ ] S8-D14 — Design: Source Fields delete → [`completed.md`](completed.md)
 - [ ] S8-16 — Source Fields delete → [`completed.md`](completed.md)
 - [ ] S8-D15 — Design: Subject Fields delete → [`completed.md`](completed.md)
@@ -815,7 +815,7 @@ Enhancement of the shipped Source page. Delete Source and Delete Artifact via De
 
 ## S8-D13 — Design: Source Types delete
 
-Enhancement of the shipped Source Types page. Brief: [`design/S8-D13-source-types-delete.md`](design/S8-D13-source-types-delete.md). Gates **S8-15**.
+Enhancement of the shipped Source Types page. Brief: [`design/archive/S8-D13-source-types-delete.md`](design/archive/S8-D13-source-types-delete.md). Gates **S8-15**. **Done.**
 
 ---
 
@@ -1134,7 +1134,7 @@ One Source-page pass against [`design/archive/S8-D12-source-delete.md`](design/a
 
 ## S8-15 — PR: Source Types delete
 
-One pass against [`design/S8-D13-source-types-delete.md`](design/S8-D13-source-types-delete.md).
+One pass against [`design/archive/S8-D13-source-types-delete.md`](design/archive/S8-D13-source-types-delete.md).
 
 | | |
 | --- | --- |

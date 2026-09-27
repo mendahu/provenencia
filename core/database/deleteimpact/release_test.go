@@ -8,17 +8,11 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/filederivatives"
 	"github.com/mendahu/provenencia/core/database/files"
-	"github.com/mendahu/provenencia/core/database/sourcetypes"
 )
 
 func TestCountFilePointersIfUnused(t *testing.T) {
 	c := testCatalogInternal(t)
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	typeID := insertSourceType(t, c, "book", "Book")
 	srcID := insertSource(t, c, typeID, "SRC-AAAAA", "Deed")
 	db, err := c.DB()
 	if err != nil {
@@ -157,12 +151,7 @@ func TestListedSnippet(t *testing.T) {
 
 func TestCollectFileObjects(t *testing.T) {
 	c := testCatalogInternal(t)
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	typeID := insertSourceType(t, c, "book", "Book")
 	srcID := insertSource(t, c, typeID, "SRC-BBBBB", "Census")
 	db, err := c.DB()
 	if err != nil {
@@ -243,6 +232,25 @@ func TestCollectFileObjects(t *testing.T) {
 	if got[1].ChecksumSHA256 != sumDer || got[1].MediaType != "image/jpeg" {
 		t.Fatalf("derived %+v", got[1])
 	}
+}
+
+func insertSourceType(t *testing.T, c *database.Catalog, key, label string) []byte {
+	t.Helper()
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, err := uuid.NewV7()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(
+		`INSERT INTO source_types (id, key, origin, label) VALUES (?, ?, 'provenencia', ?)`,
+		id[:], key, label,
+	); err != nil {
+		t.Fatal(err)
+	}
+	return id[:]
 }
 
 func insertSource(t *testing.T, c *database.Catalog, typeID []byte, sourceRef, title string) []byte {

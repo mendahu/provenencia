@@ -18,7 +18,7 @@ Stories land one at a time. **Composer rethink** (flexible Citation document). *
 | --- | --- |
 | [**Deployment plan**](deployment-plan.md) | PR sequence, design gates, dogfood bar, scope |
 | [**Completed**](completed.md) | Finished steps |
-| [Design briefs](design/) | Claude Design — remaining open: **S8-D13**…**S8-D15**. Working rules: [`design/claude-design-working-rules.md`](design/claude-design-working-rules.md) |
+| [Design briefs](design/) | Claude Design — remaining open: **S8-D14**, **S8-D15**. Working rules: [`design/claude-design-working-rules.md`](design/claude-design-working-rules.md) |
 | [PDF Find](pdf-text-find.md) | Scoped note for **S8-D2** / **S8-03…S8-05** (promoted from ideas) |
 
 ## Relationship to Spike 7 / dogfood

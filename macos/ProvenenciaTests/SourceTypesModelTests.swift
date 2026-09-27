@@ -22,10 +22,10 @@ struct SourceTypesModelTests {
         )
     }
 
-    private func pluginType(id: String = "t3", label: String = "Grave memorial") -> CatalogSourceType {
+    private func pluginType(id: String = "t3", label: String = "Grave memorial", usedBy: Int = 5) -> CatalogSourceType {
         CatalogSourceType(
             id: id, key: "grave-memorial", origin: "plugin:findagrave", label: label,
-            description: "From the plugin.", usedBy: 5
+            description: "From the plugin.", usedBy: usedBy
         )
     }
 
@@ -141,7 +141,7 @@ struct SourceTypesModelTests {
         model.select("t3")
         #expect(model.isSelectedTypeLocked)
         #expect(!model.canEditAssociations)
-        #expect(!model.canDeleteSelectedType)
+        #expect(model.canDeleteSelectedType)
     }
 
     @Test func selectingLoadsThatTypesSuggestionsInStoredOrder() async {
@@ -380,7 +380,7 @@ struct SourceTypesModelTests {
 
     // MARK: Delete
 
-    @Test func deleteIsGatedOnUseAndPluginOwnership() async {
+    @Test func trashIsOfferedWhenUsedByOrPlugin() async {
         let (model, session) = makeModel(types: [
             userType(id: "t2", label: "Family scrapbook", usedBy: 0),
             seededType(id: "t1", label: "Book", usedBy: 26),
@@ -391,23 +391,81 @@ struct SourceTypesModelTests {
         model.select("t2")
         #expect(model.canDeleteSelectedType)
         #expect(model.deleteTooltip == L10n.SourceTypes.deleteType)
+        #expect(model.deleteAccessibilityLabel == L10n.SourceTypes.deleteTypeAccessibility(label: "Family scrapbook"))
 
         model.select("t1")
-        #expect(!model.canDeleteSelectedType)
-        #expect(model.deleteTooltip == L10n.SourceTypes.deleteInUse(count: 26))
+        #expect(model.canDeleteSelectedType)
+        #expect(model.deleteTooltip == L10n.SourceTypes.deleteType)
 
         model.select("t3")
-        #expect(!model.canDeleteSelectedType)
-        #expect(model.deleteTooltip == L10n.SourceTypes.deleteOwnedByPlugin)
+        #expect(model.canDeleteSelectedType)
+        #expect(model.deleteTooltip == L10n.SourceTypes.deleteType)
     }
 
-    @Test func askDeleteIsIgnoredWhenTheTypeIsInUse() async {
-        let (model, session) = makeModel(types: [seededType(usedBy: 26)])
+    @Test func unusedUserTypeConfirmDeletes() async {
+        let store = FakeStore()
+        let (model, session) = makeModel(store: store, types: [userType()])
+        await warm(model, session: session)
+        model.select("t2")
+        await model.askDelete()
+
+        #expect(model.pendingImpact?.report.allowed == true)
+        #expect(model.pendingImpact?.target.kind == "source_type")
+        #expect(await model.confirmPendingImpact())
+        #expect(model.types.isEmpty)
+        #expect(model.mode == .empty)
+        #expect(store.sourceTypesByProject[projectDir]?.isEmpty == true)
+    }
+
+    @Test func unusedSeededTypeConfirmDeletes() async {
+        let store = FakeStore()
+        let (model, session) = makeModel(store: store, types: [seededType()])
         await warm(model, session: session)
         model.select("t1")
-        model.askDelete()
+        await model.askDelete()
 
-        #expect(model.pendingDeleteType == nil)
+        #expect(model.pendingImpact?.report.allowed == true)
+        #expect(await model.confirmPendingImpact())
+        #expect(model.types.isEmpty)
+        #expect(store.sourceTypesByProject[projectDir]?.isEmpty == true)
+    }
+
+    @Test func typeUsedByTwoSourcesShowsInboundNotice() async {
+        let store = FakeStore()
+        store.sourcesByProject[projectDir] = [
+            CatalogSource(id: "s1", ref: "SRC-AAAAA", sourceTypeID: "t1", title: "Parish", description: ""),
+            CatalogSource(id: "s2", ref: "SRC-BBBBB", sourceTypeID: "t1", title: "Census", description: ""),
+        ]
+        let (model, session) = makeModel(store: store, types: [seededType(usedBy: 2)])
+        await warm(model, session: session)
+        model.select("t1")
+        #expect(model.canDeleteSelectedType)
+        await model.askDelete()
+
+        let report = model.pendingImpact?.report
+        #expect(report?.allowed == false)
+        #expect(report?.gate == .inbound)
+        #expect(report?.groups.first?.via == "sources.source_type_id")
+        #expect(report?.groups.first?.total == 2)
+        #expect(report?.groups.first?.total == model.selectedType?.usedBy)
+        #expect(report?.groups.first?.listed.map(\.ref) == ["SRC-AAAAA", "SRC-BBBBB"])
+        #expect(await model.confirmPendingImpact() == false)
+        #expect(store.sourceTypesByProject[projectDir]?.map(\.id) == ["t1"])
+        #expect(model.types.map(\.id) == ["t1"])
+    }
+
+    @Test func pluginTypeOriginLockedTrashStillOffered() async {
+        let store = FakeStore()
+        let (model, session) = makeModel(store: store, types: [pluginType(usedBy: 0)])
+        await warm(model, session: session)
+        model.select("t3")
+        #expect(model.canDeleteSelectedType)
+        await model.askDelete()
+
+        #expect(model.pendingImpact?.report.allowed == false)
+        #expect(model.pendingImpact?.report.gate == .originLocked)
+        #expect(await model.confirmPendingImpact() == false)
+        #expect(store.sourceTypesByProject[projectDir]?.map(\.id) == ["t3"])
     }
 
     @Test func confirmingDeleteDropsTheTypeAndItsSuggestions() async {
@@ -424,10 +482,11 @@ struct SourceTypesModelTests {
         await warm(model, session: session)
         model.select("t2")
         await warmSuggestions(model, session: session, typeID: "t2")
-        model.askDelete()
+        await model.askDelete()
         #expect(model.pendingDeleteType?.id == "t2")
+        #expect(model.pendingImpact?.report.allowed == true)
 
-        await model.confirmDelete()
+        await model.confirmPendingImpact()
 
         #expect(model.types.isEmpty)
         #expect(model.selectedType == nil)
@@ -507,8 +566,8 @@ struct SourceTypesModelTests {
         }
         #expect(navigation.currentLocation.typeId == model.selectedType?.id)
 
-        model.askDelete()
-        #expect(await model.confirmDelete())
+        await model.askDelete()
+        #expect(await model.confirmPendingImpact())
         navigation.fallbackToSectionRoot()
         #expect(navigation.currentLocation == .sectionRoot(.sourceTypes))
         #expect(navigation.currentLocation.typeId == nil)
