@@ -339,3 +339,24 @@ Shipped official `sources.Delete` and `artifacts.Delete` through `deleteimpact`.
 - Vocab / composer / graph chrome
 - Detach-file-keep-Artifact
 - Composer recovery when an Artifact disappears (**S8-18**)
+
+### S8-D10 — Design: Evidence graph delete chrome
+
+**Board pick:** trash on every card, always enabled. The card never decides confirm vs notice (`isCited` is not a gate). `GetDeleteImpact` then the shipped DeleteImpact recipe. G1 / G5 / G6-facets confirm; G2 / G3 / G4 / G6-extra notice. Via heading for `observations.subject_id` is “This subject has N observations.” VoiceOver on trash: `Delete {kind} {label or sentence}, {ref}`.
+
+Brief archived: [`design/archive/S8-D10-graph-delete.md`](design/archive/S8-D10-graph-delete.md). Next delete paste is **S8-D13**.
+
+### S8-19 — Graph delete
+
+Shipped official `subjects.Delete` through `deleteimpact` plus `ReleaseConnectionFacets` so a facets-only bridge can erase. Graph card trash instances `.pvDeleteImpact`. Stay on the graph after erase.
+
+**What shipped**
+
+- Domain writer + `subjects.in_use`; connection facets released before `DELETE`
+- Always-on card trash; `GetDeleteImpact` then DeleteImpact confirm or notice
+- Via heading “This subject has N observations”; VoiceOver `Delete {kind} {label}, {ref}`
+
+**What stayed out**
+
+- Composer Citation / Observation row delete (**S8-18**)
+- Vocab delete chrome (**S8-15**…**S8-17**)

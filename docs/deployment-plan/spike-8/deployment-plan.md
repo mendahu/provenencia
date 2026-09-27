@@ -163,8 +163,8 @@ S8-D10 ────────────────────▶ S8-19  Ev
 - [ ] S8-17 — Subject Fields delete → [`completed.md`](completed.md)
 - [ ] S8-D11 — Design: Citation composer delete chrome → [`completed.md`](completed.md)
 - [ ] S8-18 — Composer Citation + Observation row delete → [`completed.md`](completed.md)
-- [ ] S8-D10 — Design: Evidence graph delete chrome → [`completed.md`](completed.md)
-- [ ] S8-19 — Graph delete chrome → [`completed.md`](completed.md)
+- [x] S8-D10 — Design: Evidence graph delete chrome → [`completed.md`](completed.md)
+- [x] S8-19 — Graph delete chrome → [`completed.md`](completed.md)
 - [ ] S8-99 — Dogfood close / docs (after later stories, or when we choose to close)
 
 ---
@@ -839,7 +839,7 @@ Enhancement of the S8-D8 composer. **Delete citation** when empty; notice when a
 
 ## S8-D10 — Design: Evidence graph delete chrome
 
-Enhancement of shipped card trash. Trash on every card; DeleteImpact confirm or notice (including endpoint-only G2). Brief: [`design/S8-D10-graph-delete.md`](design/S8-D10-graph-delete.md). Gates **S8-19**.
+Enhancement of shipped card trash. Trash on every card; DeleteImpact confirm or notice (including endpoint-only G2). Brief: [`design/archive/S8-D10-graph-delete.md`](design/archive/S8-D10-graph-delete.md). Gates **S8-19**.
 
 ---
 
@@ -1186,7 +1186,7 @@ One composer pass against [`design/S8-D11-composer-delete.md`](design/S8-D11-com
 
 ## S8-19 — PR: Graph delete
 
-One graph pass against [`design/S8-D10-graph-delete.md`](design/S8-D10-graph-delete.md).
+One graph pass against [`design/archive/S8-D10-graph-delete.md`](design/archive/S8-D10-graph-delete.md).
 
 | | |
 | --- | --- |

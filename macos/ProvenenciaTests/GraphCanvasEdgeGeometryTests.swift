@@ -142,7 +142,7 @@ struct GraphCanvasEdgeGeometryTests {
         #expect(!actions.contains(where: { $0.id.hasPrefix("editProperty.") }))
     }
 
-    @Test func citedCardExposesPropertyEditAndHidesDelete() {
+    @Test func citedCardExposesPropertyEditAndDelete() {
         let observation = CatalogObservation(
             id: "obs-1",
             ref: "OBS-1",
@@ -177,7 +177,7 @@ struct GraphCanvasEdgeGeometryTests {
             observations: [observation]
         )
         let actions = EvidenceSubjectCard.actionTargets(for: placed, canCite: true)
-        #expect(!actions.contains(where: { $0.id == EvidenceSubjectCard.deleteActionID }))
+        #expect(actions.contains(where: { $0.id == EvidenceSubjectCard.deleteActionID }))
         #expect(actions.contains(where: {
             $0.id == EvidenceSubjectCard.editPropertyActionID(observationID: "obs-1")
         }))
@@ -256,7 +256,7 @@ struct GraphCanvasEdgeGeometryTests {
         let actions = EvidenceBridgeCard.actionTargets(for: placed, in: snap, canCite: true)
         let edit = try #require(actions.first { $0.id == EvidenceBridgeCard.editActionID })
         let citation = try #require(actions.first { $0.id == EvidenceBridgeCard.editCitationActionID })
-        #expect(!actions.contains(where: { $0.id == EvidenceBridgeCard.deleteActionID }))
+        #expect(actions.contains(where: { $0.id == EvidenceBridgeCard.deleteActionID }))
 
         #expect(abs(citation.frame.midX - edit.frame.midX) < 0.5)
         #expect(citation.frame.minY > edit.frame.maxY)

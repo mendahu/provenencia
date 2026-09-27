@@ -756,13 +756,14 @@ struct EvidenceGraphModelTests {
                 positions: [CatalogSubjectPosition(subjectID: "s-uncited", gridX: 0, gridY: 0)]
             )
         )
-        model.beginDelete(subjectID: "s-uncited")
-        #expect(model.pendingDelete?.id == "s-uncited")
-        #expect(model.pendingDelete?.label == "Alice")
-        #expect(model.pendingDelete?.ref == "CPR-1")
-        let ok = await model.confirmDeleteSubject()
+        await model.beginDelete(subjectID: "s-uncited")
+        #expect(model.pendingImpact?.target.kind == "subject")
+        #expect(model.pendingImpact?.target.ref == "CPR-1")
+        #expect(model.pendingImpact?.target.title == "Alice")
+        #expect(model.pendingImpact?.report.allowed == true)
+        let ok = await model.confirmPendingImpact()
         #expect(ok)
-        #expect(model.pendingDelete == nil)
+        #expect(model.pendingImpact == nil)
         #expect(store.subjectsBySource[sourceID]?.isEmpty == true)
         // Allow the invalidated sourceGraph query to finish reloading.
         try await Task.sleep(for: .milliseconds(50))
@@ -834,9 +835,10 @@ struct EvidenceGraphModelTests {
                 types: store.subjectTypesByProject[projectDir] ?? []
             )
         )
-        model.beginDelete(subjectID: "b1")
-        #expect(model.pendingDelete?.id == "b1")
-        let ok = await model.confirmDeleteSubject()
+        await model.beginDelete(subjectID: "b1")
+        #expect(model.pendingImpact?.report.allowed == true)
+        #expect(model.pendingImpact?.target.ref == "CPA-1")
+        let ok = await model.confirmPendingImpact()
         #expect(ok)
         try await Task.sleep(for: .milliseconds(50))
         let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
@@ -844,7 +846,7 @@ struct EvidenceGraphModelTests {
         #expect(handle?.value?.subjects.count == 2)
     }
 
-    @Test func beginDeleteIgnoresCitedSubject() async {
+    @Test func beginDeleteCitedEndpointPresentsNotice() async {
         let store = makeStore()
         store.sourcesByProject[projectDir] = [
             CatalogSource(
@@ -856,7 +858,7 @@ struct EvidenceGraphModelTests {
                 hasArtifact: true
             ),
         ]
-        let subject = CatalogSubject(
+        let person = CatalogSubject(
             id: "s-cited",
             ref: "CPR-2",
             sourceID: sourceID,
@@ -864,23 +866,42 @@ struct EvidenceGraphModelTests {
             label: "Bob",
             description: ""
         )
-        let observation = CatalogObservation(
-            id: "obs-1",
+        let event = CatalogSubject(
+            id: "e1",
+            ref: "CEV-1",
+            sourceID: sourceID,
+            subjectTypeID: "type-event",
+            label: "Birth",
+            description: ""
+        )
+        let bridge = CatalogSubject(
+            id: "b1",
+            ref: "CPA-1",
+            sourceID: sourceID,
+            subjectTypeID: "type-participation",
+            label: "",
+            description: ""
+        )
+        store.subjectsBySource[sourceID] = [person, event, bridge]
+        let edge = CatalogObservation(
+            id: "obs-person",
             ref: "OBS-1",
             citationID: "cit-1",
-            subjectID: "s-cited",
-            propertyID: "prop-1",
+            subjectID: "b1",
+            propertyID: "prop-person",
             polarity: "positive",
-            valueText: "Farmer",
+            valueText: "Bob",
             valueInteger: nil,
             valueDateID: "",
             valueNameID: "",
-            valueSubjectID: "",
+            valueSubjectID: "s-cited",
             valueTermID: "",
-            propertyKey: "occupation",
-            propertyLabel: "Occupation",
-            propertyValueType: "text"
+            propertyKey: "person",
+            propertyLabel: "Person",
+            propertyValueType: "subject"
         )
+        store.observationsBySource[sourceID] = [edge]
+        store.edgeObservationIDs.insert(edge.id)
         let model = makeModel(store: store)
         await model.prepare()
         let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
@@ -888,13 +909,153 @@ struct EvidenceGraphModelTests {
             key,
             value: graphRows(
                 sourceId: sourceID,
-                subjects: [subject],
-                positions: [CatalogSubjectPosition(subjectID: "s-cited", gridX: 0, gridY: 0)],
-                observations: [observation]
+                subjects: [person, event, bridge],
+                positions: [
+                    CatalogSubjectPosition(subjectID: "s-cited", gridX: 0, gridY: 0),
+                    CatalogSubjectPosition(subjectID: "e1", gridX: 4, gridY: 0),
+                    CatalogSubjectPosition(subjectID: "b1", gridX: 2, gridY: 0),
+                ],
+                observations: [edge]
             )
         )
-        model.beginDelete(subjectID: "s-cited")
-        #expect(model.pendingDelete == nil)
+        await model.beginDelete(subjectID: "s-cited")
+        #expect(model.pendingImpact?.report.allowed == false)
+        #expect(model.pendingImpact?.report.groups.first?.via == "observations.value_subject_id")
+        let ok = await model.confirmPendingImpact()
+        #expect(!ok)
+        #expect(store.subjectsBySource[sourceID]?.contains { $0.id == "s-cited" } == true)
+        #expect(!store.recordedCalls.contains { $0.hasPrefix("deleteSubject") })
+    }
+
+    @Test func deleteFacetsOnlyBridgeReleasesEdges() async throws {
+        let store = makeStore()
+        store.sourcesByProject[projectDir] = [
+            CatalogSource(
+                id: sourceID,
+                ref: "SRC-1",
+                sourceTypeID: "type-book",
+                title: "Census",
+                description: "",
+                hasArtifact: true
+            ),
+        ]
+        let person = CatalogSubject(
+            id: "p1",
+            ref: "CPR-1",
+            sourceID: sourceID,
+            subjectTypeID: personTypeID,
+            label: "Alice",
+            description: ""
+        )
+        let event = CatalogSubject(
+            id: "e1",
+            ref: "CEV-1",
+            sourceID: sourceID,
+            subjectTypeID: "type-event",
+            label: "Birth",
+            description: ""
+        )
+        let bridge = CatalogSubject(
+            id: "b1",
+            ref: "CPA-1",
+            sourceID: sourceID,
+            subjectTypeID: "type-participation",
+            label: "",
+            description: ""
+        )
+        store.subjectsBySource[sourceID] = [person, event, bridge]
+        store.subjectPositionsBySubject["p1"] = CatalogSubjectPosition(
+            subjectID: "p1", gridX: 0, gridY: 0
+        )
+        store.subjectPositionsBySubject["e1"] = CatalogSubjectPosition(
+            subjectID: "e1", gridX: 4, gridY: 0
+        )
+        store.subjectPositionsBySubject["b1"] = CatalogSubjectPosition(
+            subjectID: "b1", gridX: 2, gridY: 0
+        )
+        let edges = [
+            CatalogObservation(
+                id: "obs-person",
+                ref: "OBS-1",
+                citationID: "cit-1",
+                subjectID: "b1",
+                propertyID: "prop-person",
+                polarity: "positive",
+                valueText: "Alice",
+                valueInteger: nil,
+                valueDateID: "",
+                valueNameID: "",
+                valueSubjectID: "p1",
+                valueTermID: "",
+                propertyKey: "person",
+                propertyLabel: "Person",
+                propertyValueType: "subject"
+            ),
+            CatalogObservation(
+                id: "obs-event",
+                ref: "OBS-2",
+                citationID: "cit-1",
+                subjectID: "b1",
+                propertyID: "prop-event",
+                polarity: "positive",
+                valueText: "Birth",
+                valueInteger: nil,
+                valueDateID: "",
+                valueNameID: "",
+                valueSubjectID: "e1",
+                valueTermID: "",
+                propertyKey: "event",
+                propertyLabel: "Event",
+                propertyValueType: "subject"
+            ),
+            CatalogObservation(
+                id: "obs-role",
+                ref: "OBS-3",
+                citationID: "cit-1",
+                subjectID: "b1",
+                propertyID: "prop-role",
+                polarity: "positive",
+                valueText: "Witness",
+                valueInteger: nil,
+                valueDateID: "",
+                valueNameID: "",
+                valueSubjectID: "",
+                valueTermID: "term-witness",
+                propertyKey: "role",
+                propertyLabel: "Role",
+                propertyValueType: "term"
+            ),
+        ]
+        store.observationsBySource[sourceID] = edges
+        store.edgeObservationIDs.formUnion(["obs-person", "obs-event"])
+        let model = makeModel(store: store)
+        await model.prepare()
+        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        model.session.setQueryValue(
+            key,
+            value: graphRows(
+                sourceId: sourceID,
+                subjects: [person, event, bridge],
+                positions: [
+                    CatalogSubjectPosition(subjectID: "p1", gridX: 0, gridY: 0),
+                    CatalogSubjectPosition(subjectID: "e1", gridX: 4, gridY: 0),
+                    CatalogSubjectPosition(subjectID: "b1", gridX: 2, gridY: 0),
+                ],
+                types: store.subjectTypesByProject[projectDir] ?? [],
+                observations: edges
+            )
+        )
+        await model.beginDelete(subjectID: "b1")
+        #expect(model.pendingImpact?.report.allowed == true)
+        let ok = await model.confirmPendingImpact()
+        #expect(ok)
+        #expect(store.subjectsBySource[sourceID]?.contains { $0.id == "b1" } == false)
+        #expect(store.subjectsBySource[sourceID]?.contains { $0.id == "p1" } == true)
+        #expect(store.subjectsBySource[sourceID]?.contains { $0.id == "e1" } == true)
+        #expect(store.observationsBySource[sourceID]?.isEmpty == true)
+        try await Task.sleep(for: .milliseconds(50))
+        let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+        #expect(handle?.value?.subjects.contains { $0.id == "b1" } == false)
     }
 
     @Test func propertyEditLocationsShareCitationId() async {

@@ -10,7 +10,9 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
+	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/project"
+	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/ref"
 )
@@ -34,7 +36,6 @@ const (
 		ORDER BY label COLLATE NOCASE, ref COLLATE NOCASE`
 	sqlSourceExists = `SELECT 1 FROM sources WHERE id = ?`
 	sqlTypePrefix   = `SELECT candidate_ref_prefix FROM subject_types WHERE id = ?`
-	sqlObsRefs      = `SELECT COUNT(*) FROM observations WHERE subject_id = ? OR value_subject_id = ?`
 	maxRefRetries   = 8
 )
 
@@ -228,38 +229,42 @@ func Update(c *database.Catalog, userID, id []byte, label, description string) e
 	return tx.Commit()
 }
 
-// Delete removes a Subject and records delete_subject. Positions CASCADE.
+// Delete erases a Subject when Impact allows it. Connection facets (edge +
+// disambiguation rows on a bridge) are released first. Positions CASCADE.
 func Delete(c *database.Catalog, userID, id []byte) error {
-	db, err := c.DB()
-	if err != nil {
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return err
 	}
 	if len(id) != 16 {
 		return ErrInvalid
 	}
-	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return err
-	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	prev, err := getTx(tx, id)
+	prev, err := Get(c, id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ErrInvalid
 	}
 	if err != nil {
 		return err
 	}
-	var obsCount int
-	if err := tx.QueryRow(sqlObsRefs, id, id).Scan(&obsCount); err != nil {
+
+	db, err := c.DB()
+	if err != nil {
 		return err
 	}
-	if obsCount > 0 {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	report, err := deleteimpact.Impact(tx, deleteimpact.KindSubject, id)
+	if err != nil {
+		return err
+	}
+	if !report.Allowed {
 		return ErrInUse
+	}
+	if err := deleteimpact.ReleaseConnectionFacets(tx, id); err != nil {
+		return err
 	}
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
 		return err
@@ -287,6 +292,9 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 			Fields:     fields,
 		}},
 	}); err != nil {
+		return err
+	}
+	if err := searchindex.ReprojectSource(tx, prev.SourceID); err != nil {
 		return err
 	}
 	return tx.Commit()

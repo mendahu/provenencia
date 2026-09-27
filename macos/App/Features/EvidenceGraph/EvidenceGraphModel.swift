@@ -10,12 +10,6 @@ final class EvidenceGraphModel {
         var description: String = ""
     }
 
-    struct PendingDelete: Identifiable, Equatable {
-        var id: String
-        var label: String
-        var ref: String
-    }
-
     let sourceID: String
     let session: WorkspaceSession
     let store: any GenealogyStore
@@ -44,8 +38,9 @@ final class EvidenceGraphModel {
         rules: [CatalogConnectRule],
         value: SourceGraphSnapshot
     )?
-    /// Uncited subject pending delete confirm.
-    var pendingDelete: PendingDelete?
+    /// Subject pending DeleteImpact confirm or notice.
+    var pendingImpact: PVDeleteImpactRequest?
+    var pendingDeleteID: String?
     var isDeleting = false
     var deleteError: String?
     var pendingGridX: Int64 = 0
@@ -339,7 +334,7 @@ final class EvidenceGraphModel {
         case EvidenceBridgeCard.editCitationActionID:
             return composerLocationForBridgeCitation(subjectID: subjectID)
         case EvidenceSubjectCard.deleteActionID, EvidenceBridgeCard.deleteActionID:
-            beginDelete(subjectID: subjectID)
+            Task { await beginDelete(subjectID: subjectID) }
             return nil
         case EvidenceSubjectCard.addPropertyActionID:
             return composerLocation(for: subjectID)
@@ -641,32 +636,42 @@ final class EvidenceGraphModel {
         )
     }
 
-    /// Queues delete confirm for an uncited subject or bridge card.
-    func beginDelete(subjectID: String) {
+    /// Fetches Impact and presents the DeleteImpact recipe. The card never gates.
+    func beginDelete(subjectID: String) async {
         let snapshot = currentSnapshot()
         deleteError = nil
-        if let primary = primary(in: snapshot, id: subjectID), !primary.isCited {
-            pendingDelete = PendingDelete(
-                id: subjectID,
-                label: primary.subject.label,
-                ref: primary.subject.ref
-            )
+        let title: String
+        let ref: String
+        if let primary = primary(in: snapshot, id: subjectID) {
+            title = primary.subject.label.isEmpty ? primary.subject.ref : primary.subject.label
+            ref = primary.subject.ref
+        } else if let snapshot, let bridge = snapshot.bridges.first(where: { $0.id == subjectID }) {
+            title = EvidenceBridgeEdgeSummary.sentence(for: bridge, in: snapshot)
+            ref = bridge.subject.ref
+        } else {
             return
         }
-        if let snapshot, let bridge = snapshot.bridges.first(where: { $0.id == subjectID }),
-           !bridge.isCited
-        {
-            pendingDelete = PendingDelete(
-                id: subjectID,
-                label: EvidenceBridgeEdgeSummary.sentence(for: bridge, in: snapshot),
-                ref: bridge.subject.ref
+        do {
+            let report = try await store.getDeleteImpact(
+                projectDir: session.projectKey.projectDir,
+                kind: "subject",
+                id: subjectID
             )
+            pendingDeleteID = subjectID
+            pendingImpact = PVDeleteImpactRequest(
+                target: PVDeleteImpactTarget(kind: "subject", ref: ref, title: title),
+                report: report
+            )
+        } catch {
+            deleteError = L10n.Errors.message(for: error)
         }
     }
 
     @discardableResult
-    func confirmDeleteSubject() async -> Bool {
-        guard let pending = pendingDelete, !isDeleting else { return false }
+    func confirmPendingImpact() async -> Bool {
+        guard let request = pendingImpact, request.report.allowed, let id = pendingDeleteID,
+              !isDeleting
+        else { return false }
         isDeleting = true
         deleteError = nil
         defer { isDeleting = false }
@@ -674,16 +679,17 @@ final class EvidenceGraphModel {
             try await store.deleteSubject(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
-                subjectID: pending.id
+                subjectID: id
             )
             session.apply(.mutatedSourceGraph(sourceId: sourceID))
-            if selectedSubjectID == pending.id {
+            if selectedSubjectID == id {
                 selectSubject(id: nil)
             }
-            if activatedSubjectID == pending.id {
+            if activatedSubjectID == id {
                 activatedSubjectID = nil
             }
-            pendingDelete = nil
+            pendingImpact = nil
+            pendingDeleteID = nil
             return true
         } catch {
             deleteError = L10n.Errors.message(for: error)

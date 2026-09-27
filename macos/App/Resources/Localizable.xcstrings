@@ -1933,7 +1933,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld observation cites this card"
+            "value": "This subject has %lld observation"
           }
         }
       }
@@ -1945,7 +1945,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld observations cite this card"
+            "value": "This subject has %lld observations"
           }
         }
       }
@@ -9811,73 +9811,13 @@
       }
     },
     "evidenceGraph.subject.deleteAccessibility": {
-      "comment": "VoiceOver action / tooltip for trash on an uncited subject card",
+      "comment": "VoiceOver for graph card trash; arguments are kind, label or sentence, catalog ref",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Delete subject"
-          }
-        }
-      }
-    },
-    "evidenceGraph.subject.deleteConfirmTitle": {
-      "comment": "Title on the PVConfirm sheet when deleting an uncited Evidence graph subject",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Do you want to delete this?"
-          }
-        }
-      }
-    },
-    "evidenceGraph.subject.deleteConfirmMessage": {
-      "comment": "Delete-confirm body; arguments are subject label then catalog ref",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ (%@) and its description are removed from this graph. It has no citations, so no evidence is lost."
-          }
-        }
-      }
-    },
-    "evidenceGraph.subject.deleteConfirmMessageNoRef": {
-      "comment": "Delete-confirm body when the subject has no ref; argument is the label",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ and its description are removed from this graph. It has no citations, so no evidence is lost."
-          }
-        }
-      }
-    },
-    "evidenceGraph.subject.deleteConfirm": {
-      "comment": "Confirm button on the Evidence graph delete-subject sheet",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete"
-          }
-        }
-      }
-    },
-    "evidenceGraph.subject.deleteCancel": {
-      "comment": "Cancel button on the Evidence graph delete-subject sheet",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keep"
+            "value": "Delete %@ %@, %@"
           }
         }
       }

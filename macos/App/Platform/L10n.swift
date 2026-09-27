@@ -1161,49 +1161,15 @@ enum L10n {
             comment: "VoiceOver action for the pencil beside a bridge card’s relationship sentence"
         )
 
-        static let deleteAccessibility = LocalizedStringResource(
-            "evidenceGraph.subject.deleteAccessibility",
-            defaultValue: "Delete subject",
-            comment: "VoiceOver action / tooltip for trash on an uncited subject card"
-        )
-
-        /// Board `PVConfirm` title for uncited subject delete.
-        static let deleteConfirmTitle = LocalizedStringResource(
-            "evidenceGraph.subject.deleteConfirmTitle",
-            defaultValue: "Do you want to delete this?",
-            comment: "Title on the PVConfirm sheet when deleting an uncited Evidence graph subject"
-        )
-
-        /// Board message: name (+ ref) and description removed; no citations so no evidence lost.
-        static func deleteConfirmMessage(label: String, ref: String) -> String {
-            let trimmedRef = ref.trimmingCharacters(in: .whitespacesAndNewlines)
-            if trimmedRef.isEmpty {
-                let format = String(localized: LocalizedStringResource(
-                    "evidenceGraph.subject.deleteConfirmMessageNoRef",
-                    defaultValue: "%@ and its description are removed from this graph. It has no citations, so no evidence is lost.",
-                    comment: "Delete-confirm body when the subject has no ref; argument is the label"
-                ))
-                return String(format: format, locale: .current, label)
-            }
+        /// VoiceOver for card trash: "Delete {kind} {label or sentence}, {ref}".
+        static func deleteAccessibility(kind: String, label: String, ref: String) -> String {
             let format = String(localized: LocalizedStringResource(
-                "evidenceGraph.subject.deleteConfirmMessage",
-                defaultValue: "%@ (%@) and its description are removed from this graph. It has no citations, so no evidence is lost.",
-                comment: "Delete-confirm body; arguments are subject label then catalog ref"
+                "evidenceGraph.subject.deleteAccessibility",
+                defaultValue: "Delete %@ %@, %@",
+                comment: "VoiceOver for graph card trash; arguments are kind, label or sentence, catalog ref"
             ))
-            return String(format: format, locale: .current, label, trimmedRef)
+            return String(format: format, locale: .current, kind, label, ref)
         }
-
-        static let deleteConfirm = LocalizedStringResource(
-            "evidenceGraph.subject.deleteConfirm",
-            defaultValue: "Delete",
-            comment: "Confirm button on the Evidence graph delete-subject sheet"
-        )
-
-        static let deleteCancel = LocalizedStringResource(
-            "evidenceGraph.subject.deleteCancel",
-            defaultValue: "Keep",
-            comment: "Cancel button on the Evidence graph delete-subject sheet"
-        )
 
         static let addProperty = LocalizedStringResource(
             "evidenceGraph.subject.addProperty",
@@ -6237,12 +6203,12 @@ enum L10n {
             "observations.subject_id": (
                 LocalizedStringResource(
                     "deleteImpact.via.observationsSubjectId.one",
-                    defaultValue: "%lld observation cites this card",
+                    defaultValue: "This subject has %lld observation",
                     comment: "Inbound heading for observations.subject_id, singular"
                 ),
                 LocalizedStringResource(
                     "deleteImpact.via.observationsSubjectId.other",
-                    defaultValue: "%lld observations cite this card",
+                    defaultValue: "This subject has %lld observations",
                     comment: "Inbound heading for observations.subject_id, plural"
                 )
             ),

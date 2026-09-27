@@ -120,7 +120,7 @@ func isEdgeObservation(tx *sql.Tx, observationID []byte) (bool, error) {
 
 // ReleaseConnectionFacets deletes edge + disambiguation Observations on a
 // bridge subject, then releases their owned outbound values. Endpoints and the
-// Citation stay. Official subjects.Delete calls this in S8-19.
+// Citation stay. Official subjects.Delete calls this before DELETE.
 func ReleaseConnectionFacets(tx *sql.Tx, subjectID []byte) error {
 	if tx == nil || len(subjectID) != 16 {
 		return ErrInvalid

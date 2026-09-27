@@ -190,32 +190,20 @@ private struct EvidenceGraphContent: View {
         ) {
             createForm
         }
-        .pvConfirm(
+        .pvDeleteImpact(
             item: Binding(
-                get: { model.pendingDelete },
-                set: { model.pendingDelete = $0 }
+                get: { model.pendingImpact },
+                set: { model.pendingImpact = $0 }
             ),
-            copy: { pending in
-                PVConfirmCopy(
-                    title: String(localized: L10n.EvidenceGraph.deleteConfirmTitle),
-                    message: L10n.EvidenceGraph.deleteConfirmMessage(
-                        label: pending.label,
-                        ref: pending.ref
-                    ),
-                    confirm: L10n.EvidenceGraph.deleteConfirm,
-                    cancel: L10n.EvidenceGraph.deleteCancel
-                )
-            },
             isRunning: model.isDeleting,
-            accessibilityIdentifierPrefix: "evidenceGraph.delete",
+            accessibilityIdentifierPrefix: "evidenceGraph.deleteImpact",
             onConfirm: {
-                Task { _ = await model.confirmDeleteSubject() }
+                Task { _ = await model.confirmPendingImpact() }
+            },
+            onNavigate: { location in
+                navigation.go(to: location)
             }
-        ) { _ in
-            if let deleteError = model.deleteError {
-                PVCallout(tone: .danger, message: deleteError)
-            }
-        }
+        )
     }
     private var accessibilityGraphLabel: Text {
         if model.armedConnect {
@@ -289,7 +277,10 @@ private struct EvidenceGraphContent: View {
             HStack(alignment: .top, spacing: PVSpacing.space5) {
                 EvidenceGraphPalette(model: model, focus: $focus)
                 Spacer(minLength: 0)
-                if !model.canCite {
+                if let deleteError = model.deleteError {
+                    PVCallout(tone: .danger, message: deleteError)
+                        .frame(width: 360, alignment: .trailing)
+                } else if !model.canCite {
                     noArtifactCallout
                         .frame(width: 360, alignment: .trailing)
                 } else if case .placing(let kind) = model.inputMode {
@@ -719,8 +710,12 @@ private struct EvidenceGraphDocumentBody: View {
                 navigation.go(to: location)
             }
         }
-        .accessibilityAction(named: Text(L10n.EvidenceGraph.deleteAccessibility)) {
-            model.beginDelete(subjectID: placed.id)
+        .accessibilityAction(named: Text(verbatim: L10n.EvidenceGraph.deleteAccessibility(
+            kind: placed.kind.rawValue,
+            label: placed.subject.label.isEmpty ? placed.subject.ref : placed.subject.label,
+            ref: placed.subject.ref
+        ))) {
+            Task { await model.beginDelete(subjectID: placed.id) }
         }
         .accessibilityAction(named: Text(L10n.EvidenceGraph.editPropertyAccessibility)) {
             if let observation = placed.observations.first,
@@ -763,8 +758,12 @@ private struct EvidenceGraphDocumentBody: View {
                 navigation.go(to: location)
             }
         }
-        .accessibilityAction(named: Text(L10n.EvidenceGraph.deleteAccessibility)) {
-            model.beginDelete(subjectID: placed.id)
+        .accessibilityAction(named: Text(verbatim: L10n.EvidenceGraph.deleteAccessibility(
+            kind: placed.kind.rawValue,
+            label: EvidenceBridgeEdgeSummary.sentence(for: placed, in: snapshot),
+            ref: placed.subject.ref
+        ))) {
+            Task { await model.beginDelete(subjectID: placed.id) }
         }
         .offset(x: layout.width, y: layout.height)
     }

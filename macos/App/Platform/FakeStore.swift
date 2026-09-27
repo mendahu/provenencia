@@ -1046,17 +1046,28 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     func deleteSubject(projectDir: String, userID _: String, subjectID: String) async throws {
         markCatalogSessionHeld(projectDir)
-        for list in observationsBySource.values {
-            if list.contains(where: {
-                $0.subjectID == subjectID || $0.valueSubjectID == subjectID
-            }) {
-                throw CoreInvokeError.coded(
-                    status: 1,
-                    code: "subjects.in_use",
-                    kind: .conflict,
-                    params: []
-                )
+        recordedCalls.append("deleteSubject id=\(subjectID)")
+        let report = subjectDeleteImpact(projectDir: projectDir, id: subjectID)
+        if !report.allowed {
+            if report.gate == .notFound {
+                throw StoreBoom.boom
             }
+            throw CoreInvokeError.coded(
+                status: 1,
+                code: "subjects.in_use",
+                kind: .conflict,
+                params: []
+            )
+        }
+        for (sourceID, list) in observationsBySource {
+            let kept = list.filter { observation in
+                guard observation.subjectID == subjectID else { return true }
+                return !isConnectionFacet(observation, projectDir: projectDir)
+            }
+            for observation in list where !kept.contains(where: { $0.id == observation.id }) {
+                edgeObservationIDs.remove(observation.id)
+            }
+            observationsBySource[sourceID] = kept
         }
         for (sourceID, var list) in subjectsBySource {
             guard let idx = list.firstIndex(where: { $0.id == subjectID }) else { continue }
@@ -1775,10 +1786,83 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 )
             }
         }
+        if kind == "subject" {
+            return subjectDeleteImpact(projectDir: projectDir, id: id)
+        }
         if fixtureContains(projectDir: projectDir, id: id) {
             return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
         }
         return CatalogDeleteImpact(allowed: false, gate: .notFound, groups: [])
+    }
+
+    private func subjectDeleteImpact(projectDir: String, id: String) -> CatalogDeleteImpact {
+        guard subjectsBySource.values.contains(where: { $0.contains(where: { $0.id == id }) }) else {
+            return CatalogDeleteImpact(allowed: false, gate: .notFound, groups: [])
+        }
+        let observations = observationsBySource.values.flatMap { $0 }
+        let asEndpoint = observations.filter { $0.valueSubjectID == id }
+        let asOwner = observations.filter {
+            $0.subjectID == id && !isConnectionFacet($0, projectDir: projectDir)
+        }
+        var groups: [CatalogDeleteImpactGroup] = []
+        if !asOwner.isEmpty {
+            groups.append(observationImpactGroup(via: "observations.subject_id", observations: asOwner))
+        }
+        if !asEndpoint.isEmpty {
+            groups.append(observationImpactGroup(via: "observations.value_subject_id", observations: asEndpoint))
+        }
+        if groups.isEmpty {
+            return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
+        }
+        return CatalogDeleteImpact(allowed: false, gate: .inbound, groups: groups)
+    }
+
+    private func observationImpactGroup(
+        via: String,
+        observations: [CatalogObservation]
+    ) -> CatalogDeleteImpactGroup {
+        CatalogDeleteImpactGroup(
+            via: via,
+            kind: "observation",
+            total: observations.count,
+            listed: observations.prefix(20).map { observation in
+                let owner = subjectsBySource.values.flatMap { $0 }.first(where: { $0.id == observation.subjectID })
+                var title = observation.propertyLabel
+                if !observation.valueText.isEmpty {
+                    title = title.isEmpty
+                        ? observation.valueText
+                        : "\(title): \(observation.valueText)"
+                }
+                if title.isEmpty {
+                    title = observation.ref
+                }
+                return CatalogDeleteImpactListed(
+                    id: observation.id,
+                    ref: observation.ref,
+                    title: title,
+                    location: WorkspaceLocation(
+                        section: .sources,
+                        sourceId: owner?.sourceID,
+                        subjectId: observation.subjectID,
+                        citationId: observation.citationID,
+                        observationId: observation.id,
+                        sourceSurface: .citationComposer,
+                        ref: observation.ref,
+                        title: owner?.label.isEmpty == false ? owner?.label : observation.ref
+                    )
+                )
+            }
+        )
+    }
+
+    private func isConnectionFacet(_ observation: CatalogObservation, projectDir: String) -> Bool {
+        if isEdgeLocked(observation: observation, projectDir: projectDir) {
+            return true
+        }
+        let propertyKey = observation.propertyKey.isEmpty
+            ? (propertiesByProject[projectDir]?.first(where: { $0.id == observation.propertyID })?.key ?? "")
+            : observation.propertyKey
+        return propertyKey == "role" || propertyKey == "relationship_type"
     }
 
     private func fixtureContains(projectDir: String, id: String) -> Bool {
