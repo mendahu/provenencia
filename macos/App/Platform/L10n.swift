@@ -2228,6 +2228,21 @@ enum L10n {
             comment: "Citation fields button that writes only the Citation row"
         )
 
+        static let deleteCitation = LocalizedStringResource(
+            "citationComposer.deleteCitation",
+            defaultValue: "Delete citation",
+            comment: "Citation fields button that presents DeleteImpact for the saved Citation"
+        )
+
+        static func deleteCitationAccessibility(ref: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "citationComposer.deleteCitationAccessibility",
+                defaultValue: "Delete citation %@",
+                comment: "VoiceOver for Delete citation; argument is CIT-…"
+            ))
+            return String(format: format, locale: .current, ref)
+        }
+
         static let done = LocalizedStringResource(
             "citationComposer.done",
             defaultValue: "Done",
@@ -2406,24 +2421,6 @@ enum L10n {
             "citationComposer.newSubjectLabel",
             defaultValue: "Label",
             comment: "Label field on the composer new-subject dialog"
-        )
-
-        static let deleteObservationTitle = LocalizedStringResource(
-            "citationComposer.deleteObservationTitle",
-            defaultValue: "Delete observation?",
-            comment: "Confirm title before deleting one Observation"
-        )
-
-        static let deleteObservationMessage = LocalizedStringResource(
-            "citationComposer.deleteObservationMessage",
-            defaultValue: "This observation will be removed from the citation. The citation stays.",
-            comment: "Confirm body before deleting one Observation"
-        )
-
-        static let deleteObservationConfirm = LocalizedStringResource(
-            "citationComposer.deleteObservationConfirm",
-            defaultValue: "Delete",
-            comment: "Confirm button that deletes one Observation"
         )
 
         static let leaveTitle = LocalizedStringResource(
@@ -7020,6 +7017,11 @@ enum L10n {
             defaultValue: "That citation isn’t valid.",
             comment: "FFI error citations.invalid"
         )
+        static let citationsInUse = LocalizedStringResource(
+            "error.citations.in_use",
+            defaultValue: "This citation still has observations.",
+            comment: "FFI error citations.in_use"
+        )
         static let observationsInvalid = LocalizedStringResource(
             "error.observations.invalid",
             defaultValue: "That observation isn’t valid.",
@@ -7030,6 +7032,11 @@ enum L10n {
             "error.observations.edge_locked",
             defaultValue: "That connection edge cannot be edited or deleted.",
             comment: "FFI error observations.edge_locked"
+        )
+        static let observationsInUse = LocalizedStringResource(
+            "error.observations.in_use",
+            defaultValue: "This observation is still in use.",
+            comment: "FFI error observations.in_use"
         )
         static let dateValuesInvalid = LocalizedStringResource(
             "error.datevalues.invalid",
@@ -7202,10 +7209,14 @@ enum L10n {
                 return String(localized: locatorInvalid)
             case "citations.invalid":
                 return String(localized: citationsInvalid)
+            case "citations.in_use":
+                return String(localized: citationsInUse)
             case "observations.invalid":
                 return String(localized: observationsInvalid)
             case "observations.edge_locked":
                 return String(localized: observationsEdgeLocked)
+            case "observations.in_use":
+                return String(localized: observationsInUse)
             case "datevalues.invalid":
                 return String(localized: dateValuesInvalid)
             case "deleteimpact.invalid":

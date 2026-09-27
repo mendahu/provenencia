@@ -1638,6 +1638,25 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
+    func deleteCitation(projectDir: String, userID _: String, citationID: String) async throws {
+        recordedCalls.append("deleteCitation id=\(citationID)")
+        markCatalogSessionHeld(projectDir)
+        let report = citationDeleteImpact(projectDir: projectDir, id: citationID)
+        if !report.allowed {
+            if report.gate == .notFound {
+                throw StoreBoom.boom
+            }
+            throw CoreInvokeError.coded(
+                status: 1,
+                code: "citations.in_use",
+                kind: .conflict,
+                params: []
+            )
+        }
+        citationsByID.removeValue(forKey: citationID)
+        citationNotesByID.removeValue(forKey: citationID)
+    }
+
     func getSubjectFieldsWorkspace(projectDir: String) async throws -> SubjectFieldsSnapshot {
         markCatalogSessionHeld(projectDir)
         let types = subjectTypesByProject[projectDir] ?? []
@@ -1789,10 +1808,42 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         if kind == "subject" {
             return subjectDeleteImpact(projectDir: projectDir, id: id)
         }
+        if kind == "citation" {
+            return citationDeleteImpact(projectDir: projectDir, id: id)
+        }
+        if kind == "observation" {
+            return observationDeleteImpact(projectDir: projectDir, id: id)
+        }
         if fixtureContains(projectDir: projectDir, id: id) {
             return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
         }
         return CatalogDeleteImpact(allowed: false, gate: .notFound, groups: [])
+    }
+
+    private func citationDeleteImpact(projectDir: String, id: String) -> CatalogDeleteImpact {
+        guard citationsByID[id] != nil else {
+            return CatalogDeleteImpact(allowed: false, gate: .notFound, groups: [])
+        }
+        let observations = observationsBySource.values.flatMap { $0 }.filter { $0.citationID == id }
+        if observations.isEmpty {
+            return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
+        }
+        return CatalogDeleteImpact(
+            allowed: false,
+            gate: .inbound,
+            groups: [observationImpactGroup(via: "observations.citation_id", observations: observations)]
+        )
+    }
+
+    private func observationDeleteImpact(projectDir: String, id: String) -> CatalogDeleteImpact {
+        let existing = observationsBySource.values.flatMap { $0 }.first { $0.id == id }
+        guard let existing else {
+            return CatalogDeleteImpact(allowed: false, gate: .notFound, groups: [])
+        }
+        if isEdgeLocked(observation: existing, projectDir: projectDir) {
+            return CatalogDeleteImpact(allowed: false, gate: .edgeLocked, groups: [])
+        }
+        return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
     }
 
     private func subjectDeleteImpact(projectDir: String, id: String) -> CatalogDeleteImpact {

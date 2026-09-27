@@ -476,6 +476,53 @@ func TestObservations(t *testing.T) {
 			},
 		},
 		{
+			name: "delete drops owned date and name values",
+			run: func(t *testing.T) {
+				c, s := mustSeed(t)
+				year := 1844
+				res, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, []observations.Input{
+					{
+						SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
+						Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year},
+					},
+					{
+						SubjectID: s.person.ID, PropertyID: s.nameProp.ID,
+						Name: &namevalues.Value{Form: "Ada"},
+					},
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				dateID := res.Observations[0].ValueDateID
+				nameID := res.Observations[1].ValueNameID
+				if len(dateID) != 16 || len(nameID) != 16 {
+					t.Fatalf("owned ids date=%x name=%x", dateID, nameID)
+				}
+				if err := observations.Delete(c, userID, res.Observations[0].ID); err != nil {
+					t.Fatal(err)
+				}
+				if err := observations.Delete(c, userID, res.Observations[1].ID); err != nil {
+					t.Fatal(err)
+				}
+				db, err := c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				var dates, names int
+				if err := db.QueryRow(`SELECT COUNT(*) FROM date_values WHERE id = ?`, dateID).Scan(&dates); err != nil {
+					t.Fatal(err)
+				}
+				if err := db.QueryRow(`SELECT COUNT(*) FROM name_values WHERE id = ?`, nameID).Scan(&names); err != nil {
+					t.Fatal(err)
+				}
+				if dates != 0 || names != 0 {
+					t.Fatalf("owned leftover dates=%d names=%d", dates, names)
+				}
+			},
+		},
+		{
 			name: "edge rows refuse update and delete",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)

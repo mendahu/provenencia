@@ -238,11 +238,6 @@ struct ObservationRow: Identifiable, Equatable {
 final class CitationObservationRows {
     var rows: [ObservationRow] = []
     var focusedID: UUID?
-    struct PendingDelete: Identifiable, Equatable {
-        var id: UUID
-    }
-
-    var pendingDelete: PendingDelete?
 
     private weak var context: CitationComposerContext?
 
@@ -253,7 +248,6 @@ final class CitationObservationRows {
     func replace(_ next: [ObservationRow]) {
         rows = next
         focusedID = next.first?.id
-        pendingDelete = nil
     }
 
     func addDraft(subjectID: String) {
@@ -281,21 +275,9 @@ final class CitationObservationRows {
         rows[index].state = .saved
     }
 
-    func requestDelete(rowID: UUID) {
-        guard let row = rows.first(where: { $0.id == rowID }),
-              row.persistedID != nil
-        else { return }
-        pendingDelete = PendingDelete(id: rowID)
-    }
-
-    func confirmDelete() async {
-        guard let context, let pending = pendingDelete else { return }
-        pendingDelete = nil
-        await performDelete(rowID: pending.id, context: context)
-    }
-
-    func cancelDelete() {
-        pendingDelete = nil
+    func deletePersisted(rowID: UUID) async {
+        guard let context else { return }
+        await performDelete(rowID: rowID, context: context)
     }
 
     func applySubject(rowID: UUID, subjectID: String, vocabulary: CitationComposerVocabulary) {

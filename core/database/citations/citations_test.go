@@ -526,6 +526,68 @@ func TestCitations(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "empty citation erases and notes cascade",
+			run: func(t *testing.T) {
+				c, s := mustSeed(t)
+				cit, err := CreateWithObservations(c, userID, CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+					Notes: []string{"keep me", "and me"},
+				}, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := Delete(c, userID, cit.Citation.ID); err != nil {
+					t.Fatal(err)
+				}
+				if latestAction(t, c) != "delete_citation" {
+					t.Fatalf("action %q", latestAction(t, c))
+				}
+				if _, err := Get(c, cit.Citation.ID); err == nil {
+					t.Fatal("citation still present")
+				}
+				db, err := c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				var n int
+				if err := db.QueryRow(`SELECT COUNT(*) FROM citation_notes WHERE citation_id = ?`, cit.Citation.ID).Scan(&n); err != nil || n != 0 {
+					t.Fatalf("notes leftover %d %v", n, err)
+				}
+			},
+		},
+		{
+			name: "inbound observations refuse and row remains",
+			run: func(t *testing.T) {
+				c, s := mustSeed(t)
+				cit, err := CreateWithObservations(c, userID, CreateInput{
+					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+				}, []observations.Input{{
+					SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
+					ValueTermID: s.femaleTerm.ID,
+				}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := Delete(c, userID, cit.Citation.ID); !errors.Is(err, ErrInUse) {
+					t.Fatalf("got %v want ErrInUse", err)
+				}
+				if _, err := Get(c, cit.Citation.ID); err != nil {
+					t.Fatalf("citation gone: %v", err)
+				}
+			},
+		},
+		{
+			name: "missing citation is invalid",
+			run: func(t *testing.T) {
+				c, _ := mustSeed(t)
+				missing := make([]byte, 16)
+				missing[15] = 9
+				if err := Delete(c, userID, missing); !errors.Is(err, ErrInvalid) {
+					t.Fatalf("got %v want ErrInvalid", err)
+				}
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

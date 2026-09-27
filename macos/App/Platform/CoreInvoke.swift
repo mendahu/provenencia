@@ -117,6 +117,7 @@ enum CoreMethod {
     static let getDeleteImpact = Int32(Provenencia_Engine_V1_Method.getDeleteImpact.rawValue)
     static let deleteSource = Int32(Provenencia_Engine_V1_Method.deleteSource.rawValue)
     static let deleteArtifact = Int32(Provenencia_Engine_V1_Method.deleteArtifact.rawValue)
+    static let deleteCitation = Int32(Provenencia_Engine_V1_Method.deleteCitation.rawValue)
 }
 
 func provenenciaInvoke(method: Int32, request: Data) throws -> Data {

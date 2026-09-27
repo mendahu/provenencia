@@ -275,13 +275,147 @@ struct CitationComposerModelTests {
         seedCitation(store, observations: [occupationObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1")])
         let model = makeModel(store: store, citationID: "cit-1")
         await model.prepare()
-        model.observationRows.requestDelete(rowID: model.observations[0].id)
-        #expect(model.observationRows.pendingDelete != nil)
-        await model.observationRows.confirmDelete()
+        await model.askDeleteObservation(rowID: model.observations[0].id)
+        #expect(model.pendingImpact?.report.allowed == true)
+        #expect(model.pendingImpact?.target.kind == "observation")
+        await model.confirmPendingImpact()
         #expect(store.recordedCalls.contains { $0 == "deleteObservation id=obs-1" })
         #expect(model.observations.isEmpty)
         #expect(model.activeCitationID == "cit-1")
         #expect(store.citationsByID["cit-1"] != nil)
+    }
+
+    @Test func emptyCitationDeleteConfirmsAndBecomesNew() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store)
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        await model.askDeleteCitation()
+        #expect(model.pendingImpact?.report.allowed == true)
+        #expect(model.pendingImpact?.target.kind == "citation")
+        #expect(model.pendingImpact?.target.ref == "CIT-1")
+        await model.confirmPendingImpact()
+        #expect(store.recordedCalls.contains { $0 == "deleteCitation id=cit-1" })
+        #expect(model.activeCitationID == nil)
+        #expect(model.isEditingExisting == false)
+        #expect(store.citationsByID["cit-1"] == nil)
+    }
+
+    @Test func citationWithRowsNoticesAndDoesNotDelete() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(
+            store,
+            observations: [
+                occupationObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1"),
+                occupationObservation(id: "obs-2", ref: "OBS-DEF", citationID: "cit-1"),
+            ]
+        )
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        await model.askDeleteCitation()
+        #expect(model.pendingImpact?.report.allowed == false)
+        #expect(model.pendingImpact?.report.groups.first?.via == "observations.citation_id")
+        #expect(model.pendingImpact?.report.groups.first?.total == 2)
+        store.recordedCalls = []
+        await model.confirmPendingImpact()
+        #expect(store.recordedCalls.contains { $0.hasPrefix("deleteCitation") } == false)
+        #expect(store.citationsByID["cit-1"] != nil)
+    }
+
+    @Test func connectionOnlyCitationNoticesEdges() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let bridge = subject(id: "bridge-1", typeID: participationTypeID, ref: "PTN-1", label: "")
+        store.subjectsBySource[sourceID]?.append(bridge)
+        store.subjectPositionsBySubject[bridge.id] = CatalogSubjectPosition(
+            subjectID: bridge.id, gridX: 4, gridY: 0
+        )
+        seedCitation(
+            store,
+            observations: [
+                edgeObservation(id: "e1", ref: "OBS-E1", subjectID: bridge.id, propertyID: personEdgePropertyID),
+                edgeObservation(id: "e2", ref: "OBS-E2", subjectID: bridge.id, propertyID: eventEdgePropertyID),
+                roleObservation(id: "r1", ref: "OBS-R1", subjectID: bridge.id, termID: "term-witness"),
+            ]
+        )
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        await model.askDeleteCitation()
+        #expect(model.pendingImpact?.report.allowed == false)
+        #expect(model.pendingImpact?.report.groups.first?.via == "observations.citation_id")
+        #expect(model.pendingImpact?.report.groups.first?.total == 3)
+        store.recordedCalls = []
+        await model.confirmPendingImpact()
+        #expect(store.recordedCalls.contains { $0.hasPrefix("deleteCitation") } == false)
+    }
+
+    @Test func lastRowThenDeleteCitation() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store, observations: [occupationObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1")])
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        await model.askDeleteObservation(rowID: model.observations[0].id)
+        await model.confirmPendingImpact()
+        #expect(model.activeCitationID == "cit-1")
+        await model.askDeleteCitation()
+        #expect(model.pendingImpact?.report.allowed == true)
+        await model.confirmPendingImpact()
+        #expect(store.recordedCalls.contains { $0 == "deleteCitation id=cit-1" })
+        #expect(model.activeCitationID == nil)
+    }
+
+    @Test func savedConnectionRowHasNoDeletePath() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let bridge = subject(id: "bridge-1", typeID: participationTypeID, ref: "PTN-1", label: "")
+        store.subjectsBySource[sourceID]?.append(bridge)
+        store.subjectPositionsBySubject[bridge.id] = CatalogSubjectPosition(
+            subjectID: bridge.id, gridX: 4, gridY: 0
+        )
+        seedCitation(
+            store,
+            observations: [
+                edgeObservation(id: "e1", ref: "OBS-E1", subjectID: bridge.id, propertyID: personEdgePropertyID),
+                edgeObservation(id: "e2", ref: "OBS-E2", subjectID: bridge.id, propertyID: eventEdgePropertyID),
+                roleObservation(id: "r1", ref: "OBS-R1", subjectID: bridge.id, termID: "term-witness"),
+            ]
+        )
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        #expect(model.connections.rows.count == 1)
+        #expect(model.observations.isEmpty)
+        await model.askDeleteObservation(rowID: UUID())
+        #expect(model.pendingImpact == nil)
+    }
+
+    @Test func ghostCitationAndArtifactStayInComposer() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let missing = makeModel(store: store, citationID: "cit-missing")
+        await missing.prepare()
+        #expect(missing.phase == .compose)
+        #expect(missing.activeCitationID == nil)
+        store.recordedCalls = []
+        await missing.fields.saveCitation()
+        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations") })
+        #expect(store.recordedCalls.contains { $0.hasPrefix("updateCitation") } == false)
+
+        seedCitation(store)
+        if var citation = store.citationsByID["cit-1"] {
+            citation.artifactID = "art-gone"
+            store.citationsByID["cit-1"] = citation
+        }
+        let ghostArt = makeModel(store: store, citationID: "cit-1")
+        await ghostArt.prepare()
+        #expect(ghostArt.phase == .compose)
+        #expect(ghostArt.activeCitationID == nil)
+        store.recordedCalls = []
+        await ghostArt.fields.saveCitation()
+        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations") })
+        #expect(store.recordedCalls.contains { $0.hasPrefix("updateCitation") } == false)
     }
 
     @Test func incompatibleSubjectClearsPropertyAndDisablesSave() async {

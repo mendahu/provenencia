@@ -20,6 +20,7 @@ import (
 var (
 	ErrInvalid    = apperr.New(apperr.CodeObservationsInvalid, apperr.KindUser)
 	ErrEdgeLocked = apperr.New(apperr.CodeObservationsEdgeLocked, apperr.KindConflict)
+	ErrInUse      = apperr.New(apperr.CodeObservationsInUse, apperr.KindConflict)
 )
 
 // InsertOptions controls engine-locked edge Observation writes.
@@ -89,7 +90,6 @@ const (
 	sqlListByCitation = sqlListSelect + `
 		WHERE o.citation_id = ?
 		ORDER BY o.ref COLLATE NOCASE`
-
 
 	sqlCountBySubjectOrValue = `SELECT COUNT(*) FROM observations
 		WHERE subject_id = ? OR value_subject_id = ?`

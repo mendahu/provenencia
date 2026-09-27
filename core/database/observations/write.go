@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
+	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 )
@@ -111,15 +112,20 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 		return ErrEdgeLocked
 	}
 
+	report, err := deleteimpact.Impact(tx, deleteimpact.KindObservation, id)
+	if err != nil {
+		return err
+	}
+	if !report.Allowed {
+		return ErrInUse
+	}
+
 	notes, err := listNotesTx(tx, id)
 	if err != nil {
 		return err
 	}
-	changes := make([]audit.Change, 0, 2+len(notes))
+	changes := make([]audit.Change, 0, 1+len(notes))
 	for _, note := range notes {
-		if _, err := tx.Exec(sqlDeleteNote, note.id); err != nil {
-			return err
-		}
 		changes = append(changes, audit.Change{
 			EntityType: "observation_note",
 			EntityID:   note.id,
@@ -131,7 +137,14 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 			}),
 		})
 	}
+	snap, err := deleteimpact.SnapshotOwned(tx, deleteimpact.KindObservation, id)
+	if err != nil {
+		return err
+	}
 	if _, err := tx.Exec(sqlDeleteObservationByID, id); err != nil {
+		return err
+	}
+	if err := deleteimpact.ReleaseSnapshot(tx, snap); err != nil {
 		return err
 	}
 	changes = append(changes, audit.Change{
@@ -140,26 +153,6 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 		Action:     audit.ActionDelete,
 		Fields:     audit.DeletedRow(observationRowMap(prev)),
 	})
-	if deleted, err := releaseDateValue(tx, prev.ValueDateID, nil); err != nil {
-		return err
-	} else if deleted != nil {
-		changes = append(changes, audit.Change{
-			EntityType: "date_value",
-			EntityID:   append([]byte(nil), prev.ValueDateID...),
-			Action:     audit.ActionDelete,
-			Fields:     audit.DeletedRow(deleted),
-		})
-	}
-	if deleted, err := releaseNameValue(tx, prev.ValueNameID, nil); err != nil {
-		return err
-	} else if deleted != nil {
-		changes = append(changes, audit.Change{
-			EntityType: "name_value",
-			EntityID:   append([]byte(nil), prev.ValueNameID...),
-			Action:     audit.ActionDelete,
-			Fields:     audit.DeletedRow(deleted),
-		})
-	}
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
 		ActionType: "delete_observation",

@@ -4,7 +4,7 @@
 **Spike:** Provenencia Spike 8 (pause and refine / data entry)  
 **Implements later as:** PR **S8-11**  
 **Depends on:** **S8-D7** / **S8-10** (shipped Citation-document composer, Layout A + 1500pt two-column; brief [`S8-D7-composer-rethink.md`](S8-D7-composer-rethink.md)); shipped Evidence graph Connect tool and create dialog  
-**Related:** [`S8-D11-composer-delete.md`](../S8-D11-composer-delete.md) / [`S8-D10-graph-delete.md`](S8-D10-graph-delete.md) (this board decided **single Observation delete**; subject / Citation erase is those briefs); [`docs/audit-revision-history.md`](../../../../audit-revision-history.md) (one research action = one revision); [`docs/interpretation-layer-data-model.md`](../../../../interpretation-layer-data-model.md) §6 (bridges are cited subject-valued edges)  
+**Related:** [`S8-D11-composer-delete.md`](S8-D11-composer-delete.md) / [`S8-D10-graph-delete.md`](S8-D10-graph-delete.md) (this board decided **single Observation delete**; subject / Citation erase is those briefs); [`docs/audit-revision-history.md`](../../../../audit-revision-history.md) (one research action = one revision); [`docs/interpretation-layer-data-model.md`](../../../../interpretation-layer-data-model.md) §6 (bridges are cited subject-valued edges)  
 **Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)  
 **Skill:** [`add-design-brief`](../../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.cursor/skills/add-ui-component/SKILL.md); navigation via [`add-workspace-location`](../../../../../.cursor/skills/add-workspace-location/SKILL.md)
 

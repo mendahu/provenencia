@@ -185,6 +185,33 @@ func ListCitationsByArtifact(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
+func DeleteCitation(in []byte) ([]byte, error) {
+	var req engine.DeleteCitationRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("delete_citation", err)
+	}
+	userID, err := parseUserID(req.GetUserId())
+	if err != nil {
+		return nil, err
+	}
+	citationID, err := parseID(req.GetCitationId())
+	if err != nil {
+		return nil, err
+	}
+	var out *engine.DeleteCitationResponse
+	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		if err := citations.Delete(c, userID, citationID); err != nil {
+			return err
+		}
+		out = &engine.DeleteCitationResponse{}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
+}
+
 func citationProto(c citations.Citation) *engine.Citation {
 	return &engine.Citation{
 		Id:                     uuidString(c.ID),

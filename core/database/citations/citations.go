@@ -11,13 +11,17 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
+	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/locator"
 	"github.com/mendahu/provenencia/core/ref"
 )
 
-var ErrInvalid = apperr.New(apperr.CodeCitationsInvalid, apperr.KindUser)
+var (
+	ErrInvalid = apperr.New(apperr.CodeCitationsInvalid, apperr.KindUser)
+	ErrInUse   = apperr.New(apperr.CodeCitationsInUse, apperr.KindConflict)
+)
 
 const (
 	sqlInsert = `INSERT INTO citations (
@@ -39,7 +43,7 @@ const (
 
 	sqlListNotes = `SELECT body FROM citation_notes WHERE citation_id = ? ORDER BY rowid`
 
-	sqlDeleteNotes = `DELETE FROM citation_notes WHERE citation_id = ?`
+	sqlDelete = `DELETE FROM citations WHERE id = ?`
 
 	sqlListByArtifact = `SELECT id, ref, artifact_id, locator_json,
 		COALESCE(transcription, ''), COALESCE(description, ''),
@@ -402,6 +406,69 @@ func emptyAsNil(s string) any {
 		return nil
 	}
 	return s
+}
+
+// Delete erases a Citation when no Observation remains. Notes CASCADE.
+func Delete(c *database.Catalog, userID, id []byte) error {
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
+		return err
+	}
+	if len(id) != 16 {
+		return ErrInvalid
+	}
+	prev, err := Get(c, id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrInvalid
+	}
+	if err != nil {
+		return err
+	}
+
+	db, err := c.DB()
+	if err != nil {
+		return err
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	report, err := deleteimpact.Impact(tx, deleteimpact.KindCitation, id)
+	if err != nil {
+		return err
+	}
+	if !report.Allowed {
+		return ErrInUse
+	}
+	if _, err := tx.Exec(sqlDelete, id); err != nil {
+		return err
+	}
+	fields := map[string]audit.FieldDiff{
+		"id":          {Old: uuidString(id), New: nil},
+		"ref":         {Old: prev.Ref, New: nil},
+		"artifact_id": {Old: uuidString(prev.ArtifactID), New: nil},
+	}
+	if prev.LocatorJSON != "" {
+		fields["locator_json"] = audit.FieldDiff{Old: prev.LocatorJSON, New: nil}
+	}
+	if prev.Transcription != "" {
+		fields["transcription"] = audit.FieldDiff{Old: prev.Transcription, New: nil}
+	}
+	if _, err := audit.Record(tx, audit.Revision{
+		UserID:     userID,
+		ActionType: "delete_citation",
+		CreatedAt:  project.NowUTC(),
+		Changes: []audit.Change{{
+			EntityType: "citation",
+			EntityID:   id,
+			Action:     audit.ActionDelete,
+			Fields:     fields,
+		}},
+	}); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // ListNotes returns citation_notes bodies for a citation.
