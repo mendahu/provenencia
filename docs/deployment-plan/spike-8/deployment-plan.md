@@ -157,8 +157,8 @@ S8-D10 ────────────────────▶ S8-19  Ev
 - [x] S8-14 — Source + Artifact delete → [`completed.md`](completed.md)
 - [x] S8-D13 — Design: Source Types delete → [`completed.md`](completed.md)
 - [x] S8-15 — Source Types delete → [`completed.md`](completed.md)
-- [ ] S8-D14 — Design: Source Fields delete → [`completed.md`](completed.md)
-- [ ] S8-16 — Source Fields delete → [`completed.md`](completed.md)
+- [x] S8-D14 — Design: Source Fields delete → [`completed.md`](completed.md)
+- [x] S8-16 — Source Fields delete → [`completed.md`](completed.md)
 - [ ] S8-D15 — Design: Subject Fields delete → [`completed.md`](completed.md)
 - [ ] S8-17 — Subject Fields delete → [`completed.md`](completed.md)
 - [x] S8-D11 — Design: Citation composer delete chrome → [`completed.md`](completed.md)
@@ -821,7 +821,7 @@ Enhancement of the shipped Source Types page. Brief: [`design/archive/S8-D13-sou
 
 ## S8-D14 — Design: Source Fields delete
 
-Enhancement of the shipped Source Fields page. Brief: [`design/S8-D14-source-fields-delete.md`](design/S8-D14-source-fields-delete.md). Gates **S8-16**.
+Enhancement of the shipped Source Fields page. Brief: [`design/archive/S8-D14-source-fields-delete.md`](design/archive/S8-D14-source-fields-delete.md). Gates **S8-16**. **Done.**
 
 ---
 
@@ -1147,7 +1147,7 @@ One pass against [`design/archive/S8-D13-source-types-delete.md`](design/archive
 
 ## S8-16 — PR: Source Fields delete
 
-One pass against [`design/S8-D14-source-fields-delete.md`](design/S8-D14-source-fields-delete.md).
+One pass against [`design/archive/S8-D14-source-fields-delete.md`](design/archive/S8-D14-source-fields-delete.md).
 
 | | |
 | --- | --- |

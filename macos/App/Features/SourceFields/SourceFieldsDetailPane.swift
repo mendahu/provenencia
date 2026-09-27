@@ -35,6 +35,10 @@ struct SourceFieldsDetailPane: View {
     private func panel(isLocked: Bool) -> some View {
         VStack(alignment: .leading, spacing: PVSpacing.space7) {
             panelHeader
+            if let deleteError = model.deleteError {
+                PVCallout(tone: .danger, message: deleteError)
+                    .accessibilityIdentifier("sourceFields.deleteError")
+            }
             if isLocked {
                 lockedBody
             } else {
@@ -69,8 +73,9 @@ struct SourceFieldsDetailPane: View {
             showsDelete: model.showsDelete,
             canDelete: model.canDeleteSelectedField,
             deleteTooltip: model.deleteTooltip,
+            deleteAccessibilityLabel: model.deleteAccessibilityLabel,
             identifierPrefix: "sourceFields",
-            onDelete: { model.askDelete() }
+            onDelete: { Task { await model.askDelete() } }
         )
     }
 

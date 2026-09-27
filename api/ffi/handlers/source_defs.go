@@ -306,7 +306,8 @@ func DeleteMetadataField(in []byte) ([]byte, error) {
 	if err := proto.Unmarshal(in, &req); err != nil {
 		return nil, unmarshalErr("delete_metadata_field", err)
 	}
-	if _, err := parseUserID(req.GetUserId()); err != nil {
+	userID, err := parseUserID(req.GetUserId())
+	if err != nil {
 		return nil, err
 	}
 	fieldID, err := parseID(req.GetFieldId())
@@ -315,7 +316,7 @@ func DeleteMetadataField(in []byte) ([]byte, error) {
 	}
 	var out *engine.DeleteMetadataFieldResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if err := sourcefields.Delete(c, fieldID); err != nil {
+		if err := sourcefields.Delete(c, userID, fieldID); err != nil {
 			return err
 		}
 		out = &engine.DeleteMetadataFieldResponse{}

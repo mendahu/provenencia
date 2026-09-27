@@ -98,6 +98,208 @@ func TestUpsertLookupList(t *testing.T) {
 	}
 }
 
+func TestDelete(t *testing.T) {
+	userID := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+
+	mustUser := func(t *testing.T, c *database.Catalog) {
+		t.Helper()
+		r, err := ref.Mint(ref.PrefixUser)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := users.Upsert(c, userID, "Jake", r); err != nil {
+			t.Fatal(err)
+		}
+	}
+	latestAction := func(t *testing.T, c *database.Catalog) string {
+		t.Helper()
+		db, err := c.DB()
+		if err != nil {
+			t.Fatal(err)
+		}
+		var actionType string
+		if err := db.QueryRow(
+			`SELECT action_type FROM audit_transactions ORDER BY revision DESC LIMIT 1`,
+		).Scan(&actionType); err != nil {
+			t.Fatal(err)
+		}
+		return actionType
+	}
+
+	tests := []struct {
+		name string
+		run  func(t *testing.T, c *database.Catalog)
+	}{
+		{
+			name: "unused provenencia ok",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				id, err := Upsert(c, Field{
+					Key: "author", Origin: OriginProvenencia, Label: "Author", DataType: DataTypeText,
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := Delete(c, userID, id); err != nil {
+					t.Fatal(err)
+				}
+				if latestAction(t, c) != "delete_source_field" {
+					t.Fatalf("action %q", latestAction(t, c))
+				}
+				_, err = Lookup(c, "author", OriginProvenencia)
+				if !errors.Is(err, sql.ErrNoRows) {
+					t.Fatalf("got %v", err)
+				}
+			},
+		},
+		{
+			name: "in use refuses",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
+					Key: "book", Origin: sourcetypes.OriginUser, Label: "Book",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "T"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				field, err := Create(c, "Folio", DataTypeText, "")
+				if err != nil {
+					t.Fatal(err)
+				}
+				db, err := c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				metaID, err := uuid.NewV7()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := db.Exec(
+					`INSERT INTO source_metadata (id, source_id, field_id, value_text) VALUES (?, ?, ?, ?)`,
+					metaID[:], src.ID, field.ID, "12",
+				); err != nil {
+					t.Fatal(err)
+				}
+				if err := Delete(c, userID, field.ID); !errors.Is(err, ErrInUse) {
+					t.Fatalf("got %v", err)
+				}
+				if _, err := GetByID(c, field.ID); err != nil {
+					t.Fatalf("field gone: %v", err)
+				}
+			},
+		},
+		{
+			name: "unused plugin is origin locked",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				id, err := Upsert(c, Field{
+					Key: "memorial_id", Origin: "plugin:findagrave", Label: "Memorial id", DataType: DataTypeText,
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := Delete(c, userID, id); !errors.Is(err, ErrOriginLocked) {
+					t.Fatalf("got %v", err)
+				}
+				if _, err := GetByID(c, id); err != nil {
+					t.Fatalf("field gone: %v", err)
+				}
+			},
+		},
+		{
+			name: "missing is invalid",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				missing := make([]byte, 16)
+				missing[15] = 9
+				if err := Delete(c, userID, missing); !errors.Is(err, ErrInvalid) {
+					t.Fatalf("got %v", err)
+				}
+			},
+		},
+		{
+			name: "unused field with suggestion and layout still erases",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
+					Key: "book", Origin: sourcetypes.OriginUser, Label: "Book",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "T"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				id, err := Upsert(c, Field{
+					Key: "author", Origin: OriginUser, Label: "Author", DataType: DataTypeText,
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				db, err := c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := db.Exec(
+					`INSERT INTO source_type_metadata_fields (source_type_id, field_id, sort_order) VALUES (?, ?, 0)`,
+					typeID, id,
+				); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := db.Exec(
+					`INSERT INTO source_metadata_layout (source_id, field_id, sort_order) VALUES (?, ?, 0)`,
+					src.ID, id,
+				); err != nil {
+					t.Fatal(err)
+				}
+				if err := Delete(c, userID, id); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := GetByID(c, id); !errors.Is(err, sql.ErrNoRows) {
+					t.Fatalf("field still there: %v", err)
+				}
+				var joins int
+				if err := db.QueryRow(
+					`SELECT COUNT(*) FROM source_type_metadata_fields WHERE field_id = ?`, id,
+				).Scan(&joins); err != nil || joins != 0 {
+					t.Fatalf("suggestion leftover %d %v", joins, err)
+				}
+				if err := db.QueryRow(
+					`SELECT COUNT(*) FROM source_metadata_layout WHERE field_id = ?`, id,
+				).Scan(&joins); err != nil || joins != 0 {
+					t.Fatalf("layout leftover %d %v", joins, err)
+				}
+				if _, err := sourcetypes.GetByID(c, typeID); err != nil {
+					t.Fatalf("type should survive: %v", err)
+				}
+			},
+		},
+		{
+			name: "bad id",
+			run: func(t *testing.T, c *database.Catalog) {
+				if err := Delete(c, userID, []byte{1}); !errors.Is(err, ErrInvalid) {
+					t.Fatalf("got %v", err)
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c, err := database.Create(t.TempDir(), "t.provenencia")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer c.Close()
+			tt.run(t, c)
+		})
+	}
+}
+
 func TestCreateUpdateGetByID(t *testing.T) {
 	tests := []struct {
 		name string
@@ -226,68 +428,6 @@ func TestCreateUpdateGetByID(t *testing.T) {
 			name: "get by id missing",
 			run: func(t *testing.T, c *database.Catalog) {
 				if _, err := GetByID(c, make([]byte, 16)); !errors.Is(err, sql.ErrNoRows) {
-					t.Fatalf("got %v", err)
-				}
-			},
-		},
-		{
-			name: "delete unused provenencia ok",
-			run: func(t *testing.T, c *database.Catalog) {
-				id, err := Upsert(c, Field{
-					Key: "author", Origin: OriginProvenencia, Label: "Author", DataType: DataTypeText,
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
-				if err := Delete(c, id); err != nil {
-					t.Fatal(err)
-				}
-				_, err = Lookup(c, "author", OriginProvenencia)
-				if !errors.Is(err, sql.ErrNoRows) {
-					t.Fatalf("got %v", err)
-				}
-			},
-		},
-		{
-			name: "delete in use refuses",
-			run: func(t *testing.T, c *database.Catalog) {
-				userID := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
-				r, err := ref.Mint(ref.PrefixUser)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if err := users.Upsert(c, userID, "Jake", r); err != nil {
-					t.Fatal(err)
-				}
-				typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-					Key: "book", Origin: sourcetypes.OriginUser, Label: "Book",
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
-				src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "T"})
-				if err != nil {
-					t.Fatal(err)
-				}
-				field, err := Create(c, "Folio", DataTypeText, "")
-				if err != nil {
-					t.Fatal(err)
-				}
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
-				metaID, err := uuid.NewV7()
-				if err != nil {
-					t.Fatal(err)
-				}
-				if _, err := db.Exec(
-					`INSERT INTO source_metadata (id, source_id, field_id, value_text) VALUES (?, ?, ?, ?)`,
-					metaID[:], src.ID, field.ID, "12",
-				); err != nil {
-					t.Fatal(err)
-				}
-				if err := Delete(c, field.ID); !errors.Is(err, ErrInUse) {
 					t.Fatalf("got %v", err)
 				}
 			},
