@@ -159,8 +159,8 @@ S8-D10 ────────────────────▶ S8-19  Ev
 - [x] S8-15 — Source Types delete → [`completed.md`](completed.md)
 - [x] S8-D14 — Design: Source Fields delete → [`completed.md`](completed.md)
 - [x] S8-16 — Source Fields delete → [`completed.md`](completed.md)
-- [ ] S8-D15 — Design: Subject Fields delete → [`completed.md`](completed.md)
-- [ ] S8-17 — Subject Fields delete → [`completed.md`](completed.md)
+- [x] S8-D15 — Design: Subject Fields delete → [`completed.md`](completed.md)
+- [x] S8-17 — Subject Fields delete → [`completed.md`](completed.md)
 - [x] S8-D11 — Design: Citation composer delete chrome → [`completed.md`](completed.md)
 - [x] S8-18 — Composer Citation + Observation row delete → [`completed.md`](completed.md)
 - [x] S8-D10 — Design: Evidence graph delete chrome → [`completed.md`](completed.md)
@@ -827,7 +827,7 @@ Enhancement of the shipped Source Fields page. Brief: [`design/archive/S8-D14-so
 
 ## S8-D15 — Design: Subject Fields delete
 
-Enhancement of the shipped Subject Fields page. Brief: [`design/S8-D15-subject-fields-delete.md`](design/S8-D15-subject-fields-delete.md). Gates **S8-17**.
+Enhancement of the shipped Subject Fields page. Brief: [`design/archive/S8-D15-subject-fields-delete.md`](design/archive/S8-D15-subject-fields-delete.md). Gates **S8-17**. **Done.**
 
 ---
 
@@ -1160,14 +1160,16 @@ One pass against [`design/archive/S8-D14-source-fields-delete.md`](design/archiv
 
 ## S8-17 — PR: Subject Fields delete
 
-One pass against [`design/S8-D15-subject-fields-delete.md`](design/S8-D15-subject-fields-delete.md).
+One pass against [`design/archive/S8-D15-subject-fields-delete.md`](design/archive/S8-D15-subject-fields-delete.md).
 
 | | |
 | --- | --- |
-| **In** | `properties.Delete` through the register. DeleteImpact on Subject Fields. Type-bindings are not blockers (**cutover:** today’s `sqlInUse` / `usedBy` count `subject_type_fields` — drop that). `usedBy` becomes Observation count. Terms **are** blockers (named `…` rows); no Terms page — that notice is honest. Origin: user + unused + no terms; seeded / plugin → `origin_locked`. |
+| **In** | `properties.Delete` through the register. DeleteImpact on Subject Fields. Type-bindings are not blockers (**cutover:** today’s `sqlInUse` / `usedBy` count `subject_type_fields` — drop that). `usedBy` becomes Observation count. Terms **are** blockers (named `…` rows); no Terms page — that notice is honest. Origin: user + unused + no terms; seeded / plugin → `origin_locked`. Inspector edit-in-place for label + description (key / origin / valueType stay immutable). |
 | **Out** | Any other page; a Terms page. |
-| **Testable** | Unused user property with no terms erases; in-use notice names `OBS-…`; property bound only to a type still erases; property with unused terms notices those terms; seeded property is `origin_locked`; `usedBy` matches Observation `total`. Audit + searchindex. |
+| **Testable** | Unused user property with no terms erases; in-use notice names `OBS-…`; property bound only to a type still erases; property with unused terms notices those terms; seeded property is `origin_locked`; `usedBy` matches Observation `total`. Audit + searchindex. Pencil save/revert for label + description; plugin is view-only. |
 | **Depends on** | **S8-D15**, **S8-12**, **S8-13**. |
+
+**Done.**
 
 ---
 

@@ -1201,6 +1201,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         else {
             throw CoreInvokeError.coded(status: 1, code: "properties.invalid", kind: .user, params: [])
         }
+        if CatalogOrigin.isPlugin(list[idx].origin) {
+            throw CoreInvokeError.coded(status: 1, code: "properties.invalid", kind: .user, params: [])
+        }
         list[idx].label = label
         list[idx].description = description
         propertiesByProject[projectDir] = list
@@ -1209,8 +1212,32 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     func deleteProperty(projectDir: String, userID _: String, propertyID: String) async throws {
         markCatalogSessionHeld(projectDir)
+        guard let property = (propertiesByProject[projectDir] ?? []).first(where: { $0.id == propertyID }) else {
+            throw CoreInvokeError.coded(status: 1, code: "properties.invalid", kind: .user, params: [])
+        }
+        if CatalogOrigin.isPlugin(property.origin) || property.origin == CatalogOrigin.provenencia {
+            throw CoreInvokeError.coded(
+                status: 1,
+                code: "properties.origin_locked",
+                kind: .conflict,
+                params: []
+            )
+        }
+        let observations = observationsHoldingProperty(propertyID: propertyID)
+        let terms = propertyTermsByProperty[propertyID] ?? []
+        if !observations.isEmpty || !terms.isEmpty || property.usedBy > 0 {
+            throw CoreInvokeError.coded(
+                status: 1,
+                code: "properties.in_use",
+                kind: .conflict,
+                params: []
+            )
+        }
         propertiesByProject[projectDir]?.removeAll { $0.id == propertyID }
         propertyTermsByProperty[propertyID] = nil
+        for (typeID, list) in subjectTypeFieldsByType {
+            subjectTypeFieldsByType[typeID] = list.filter { $0.property.id != propertyID }
+        }
     }
 
     func listPropertyTerms(projectDir: String, propertyID: String) async throws -> [CatalogPropertyTerm] {
@@ -1848,10 +1875,71 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         if kind == "source_field" {
             return sourceFieldDeleteImpact(projectDir: projectDir, id: id)
         }
+        if kind == "property" {
+            return propertyDeleteImpact(projectDir: projectDir, id: id)
+        }
         if fixtureContains(projectDir: projectDir, id: id) {
             return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
         }
         return CatalogDeleteImpact(allowed: false, gate: .notFound, groups: [])
+    }
+
+    private func observationsHoldingProperty(propertyID: String) -> [CatalogObservation] {
+        observationsBySource.values.flatMap { $0 }.filter { $0.propertyID == propertyID }
+    }
+
+    private func propertyDeleteImpact(projectDir: String, id: String) -> CatalogDeleteImpact {
+        guard let property = (propertiesByProject[projectDir] ?? []).first(where: { $0.id == id }) else {
+            return CatalogDeleteImpact(allowed: false, gate: .notFound, groups: [])
+        }
+        if CatalogOrigin.isPlugin(property.origin) || property.origin == CatalogOrigin.provenencia {
+            return CatalogDeleteImpact(allowed: false, gate: .originLocked, groups: [])
+        }
+        let observations = observationsHoldingProperty(propertyID: id)
+        let terms = propertyTermsByProperty[id] ?? []
+        let observationTotal = observations.isEmpty ? property.usedBy : observations.count
+        var groups: [CatalogDeleteImpactGroup] = []
+        if observationTotal > 0 {
+            if observations.isEmpty {
+                groups.append(
+                    CatalogDeleteImpactGroup(
+                        via: "observations.property_id",
+                        kind: "observation",
+                        total: observationTotal,
+                        listed: []
+                    )
+                )
+            } else {
+                groups.append(
+                    observationImpactGroup(via: "observations.property_id", observations: observations)
+                )
+            }
+        }
+        if !terms.isEmpty {
+            groups.append(
+                CatalogDeleteImpactGroup(
+                    via: "property_terms.property_id",
+                    kind: "property_term",
+                    total: terms.count,
+                    listed: terms.prefix(20).map {
+                        CatalogDeleteImpactListed(
+                            id: $0.id,
+                            ref: $0.key,
+                            title: $0.label.isEmpty ? $0.key : $0.label,
+                            location: WorkspaceLocation(
+                                section: .subjectFields,
+                                ref: $0.key,
+                                title: $0.label.isEmpty ? $0.key : $0.label
+                            )
+                        )
+                    }
+                )
+            )
+        }
+        if groups.isEmpty {
+            return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
+        }
+        return CatalogDeleteImpact(allowed: false, gate: .inbound, groups: groups)
     }
 
     private func sourcesHoldingField(projectDir: String, fieldID: String) -> [CatalogSource] {

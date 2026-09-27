@@ -30,6 +30,11 @@ final class SubjectFieldsModel {
         var bindTypeIDs: Set<String>
     }
 
+    struct EditDraft: Equatable {
+        var label: String
+        var description: String
+    }
+
     private(set) var selectedTypeKey: String?
     var searchQuery = ""
     /// ComboBox selection for “Add a property to {Type}” (resets after bind).
@@ -37,11 +42,14 @@ final class SubjectFieldsModel {
     private(set) var selectedPropertyID: String?
     private(set) var createOpen = false
     var draft: Draft?
+    var editDraft: EditDraft?
+    private(set) var isEditingIdentity = false
     private(set) var isSaving = false
     var formError: String?
     var toast: VocabularyToast?
     private(set) var lockedCallout: String?
     private(set) var pendingDeleteID: String?
+    var pendingImpact: PVDeleteImpactRequest?
     private(set) var isDeleting = false
     private(set) var deleteError: String?
     var searchFocused = false
@@ -145,9 +153,33 @@ final class SubjectFieldsModel {
             && SubjectPropertyValueType.researcherCreatable.contains(draft.valueType)
     }
 
-    var canDeleteSelected: Bool {
+    var showsDelete: Bool { selectedProperty != nil }
+    var canDeleteSelected: Bool { selectedProperty != nil }
+
+    var deleteTooltip: LocalizedStringResource { L10n.SubjectFields.deleteProperty }
+
+    var deleteAccessibilityLabel: String {
+        guard let property = selectedProperty else {
+            return String(localized: L10n.SubjectFields.deleteProperty)
+        }
+        return L10n.SubjectFields.deletePropertyAccessibility(label: property.label)
+    }
+
+    var canEditSelected: Bool {
         guard let property = selectedProperty else { return false }
-        return property.origin == CatalogOrigin.user && property.usedBy == 0
+        return !CatalogOrigin.isPlugin(property.origin)
+    }
+
+    var isEditDirty: Bool {
+        guard let property = selectedProperty, let editDraft else { return false }
+        return editDraft.label.trimmingCharacters(in: .whitespacesAndNewlines) != property.label
+            || editDraft.description.trimmingCharacters(in: .whitespacesAndNewlines) != property.description
+    }
+
+    var canSubmitEdit: Bool {
+        guard canEditSelected, let editDraft, !isSaving else { return false }
+        let label = editDraft.label.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !label.isEmpty && isEditDirty
     }
 
     var pendingDeleteProperty: CatalogProperty? {
@@ -167,6 +199,7 @@ final class SubjectFieldsModel {
     }
 
     func selectProperty(_ id: String?) {
+        cancelEdit()
         selectedPropertyID = id
         lockedCallout = nil
         formError = nil
@@ -208,32 +241,92 @@ final class SubjectFieldsModel {
         }
     }
 
-    func askDelete() {
-        guard canDeleteSelected, let property = selectedProperty else { return }
+    func beginEdit() {
+        guard let property = selectedProperty, canEditSelected else { return }
+        editDraft = EditDraft(label: property.label, description: property.description)
+        isEditingIdentity = true
+        formError = nil
+    }
+
+    func cancelEdit() {
+        isEditingIdentity = false
+        editDraft = nil
+        formError = nil
+    }
+
+    func revertEdit() {
+        guard let property = selectedProperty else { return }
+        editDraft = EditDraft(label: property.label, description: property.description)
+        formError = nil
+    }
+
+    @discardableResult
+    func submitEdit() async -> Bool {
+        guard let property = selectedProperty, let editDraft, canSubmitEdit else { return false }
+        let label = editDraft.label.trimmingCharacters(in: .whitespacesAndNewlines)
+        let description = editDraft.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        isSaving = true
+        formError = nil
+        defer { isSaving = false }
+        do {
+            let updated = try await store.updateProperty(
+                projectDir: session.projectKey.projectDir,
+                userID: userID,
+                propertyID: property.id,
+                label: label,
+                valueType: property.valueType,
+                description: description
+            )
+            session.apply(.updatedProperty)
+            self.editDraft = EditDraft(label: updated.label, description: updated.description)
+            isEditingIdentity = false
+            toast = VocabularyToast(
+                title: String(localized: L10n.SubjectFields.toastUpdatedTitle),
+                body: L10n.SubjectFields.toastUpdatedBody(label: updated.label, key: updated.key),
+                tone: .success
+            )
+            return true
+        } catch {
+            formError = L10n.Errors.message(for: error)
+            return false
+        }
+    }
+
+    func askDelete() async {
+        guard let property = selectedProperty else { return }
+        cancelEdit()
         deleteError = nil
-        pendingDeleteID = property.id
+        do {
+            let report = try await store.getDeleteImpact(
+                projectDir: session.projectKey.projectDir,
+                kind: "property",
+                id: property.id
+            )
+            pendingDeleteID = property.id
+            pendingImpact = PVDeleteImpactRequest(
+                target: PVDeleteImpactTarget(
+                    kind: "property",
+                    ref: property.key,
+                    title: property.label
+                ),
+                report: report
+            )
+        } catch {
+            deleteError = L10n.Errors.message(for: error)
+        }
     }
 
     func cancelDelete() {
         guard !isDeleting else { return }
         pendingDeleteID = nil
-        deleteError = nil
-    }
-
-    /// ComboBox picked an unbound property — bind it to the focused type.
-    func addPropertyFromCombo() async {
-        guard let type = selectedType,
-              !addPropertySelection.isEmpty,
-              let property = snapshot.properties.first(where: { $0.id == addPropertySelection })
-        else { return }
-        selectedPropertyID = property.id
-        await toggleBinding(to: type)
-        addPropertySelection = ""
+        pendingImpact = nil
     }
 
     @discardableResult
-    func confirmDelete() async -> Bool {
-        guard let property = pendingDeleteProperty, !isDeleting else { return false }
+    func confirmPendingImpact() async -> Bool {
+        guard let request = pendingImpact, request.report.allowed, let property = pendingDeleteProperty,
+              !isDeleting
+        else { return false }
         isDeleting = true
         deleteError = nil
         defer { isDeleting = false }
@@ -246,6 +339,9 @@ final class SubjectFieldsModel {
             session.apply(.deletedProperty)
             selectedPropertyID = nil
             pendingDeleteID = nil
+            pendingImpact = nil
+            formError = nil
+            cancelEdit()
             toast = VocabularyToast(
                 title: String(localized: L10n.SubjectFields.toastDeletedTitle),
                 body: L10n.SubjectFields.toastDeletedBody(label: property.label),
@@ -257,6 +353,17 @@ final class SubjectFieldsModel {
             deleteError = L10n.Errors.message(for: error)
             return false
         }
+    }
+
+    /// ComboBox picked an unbound property — bind it to the focused type.
+    func addPropertyFromCombo() async {
+        guard let type = selectedType,
+              !addPropertySelection.isEmpty,
+              let property = snapshot.properties.first(where: { $0.id == addPropertySelection })
+        else { return }
+        selectedPropertyID = property.id
+        await toggleBinding(to: type)
+        addPropertySelection = ""
     }
 
     @discardableResult

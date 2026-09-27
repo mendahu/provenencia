@@ -45,6 +45,7 @@ private struct SubjectFieldsContent: View {
     @Bindable var handle: QueryHandle<SubjectFieldsSnapshot>
     @Bindable var model: SubjectFieldsModel
     let inspectorWidth: CGFloat
+    @Environment(WorkspaceNavigation.self) private var navigation
     @FocusState private var searchFocused: Bool
 
     var body: some View {
@@ -90,29 +91,23 @@ private struct SubjectFieldsContent: View {
         ) {
             createForm
         }
-        .pvConfirm(
-            item: pendingDelete,
-            copy: { _ in
-                PVConfirmCopy(
-                    title: String(localized: L10n.SubjectFields.deleteConfirmTitle),
-                    message: String(localized: L10n.SubjectFields.deleteConfirmMessage),
-                    confirm: L10n.SubjectFields.deleteProperty,
-                    cancel: L10n.SubjectFields.deleteKeep
-                )
-            },
+        .pvDeleteImpact(
+            item: Binding(
+                get: { model.pendingImpact },
+                set: { newValue in
+                    model.pendingImpact = newValue
+                    if newValue == nil { model.cancelDelete() }
+                }
+            ),
             isRunning: model.isDeleting,
-            accessibilityIdentifierPrefix: "subjectFields.delete",
+            accessibilityIdentifierPrefix: "subjectFields.deleteImpact",
             onConfirm: {
-                Task { _ = await model.confirmDelete() }
+                Task { _ = await model.confirmPendingImpact() }
+            },
+            onNavigate: { location in
+                navigation.go(to: location)
             }
-        ) { property in
-            if let deleteError = model.deleteError {
-                PVCallout(tone: .danger, message: deleteError)
-            }
-            Text(verbatim: property.key)
-                .font(PVFont.mono())
-                .foregroundStyle(PVColor.textMuted)
-        }
+        )
         .onChange(of: handle.status) { _, status in
             if status == .ready { model.syncCatalogCounts() }
         }
@@ -153,13 +148,6 @@ private struct SubjectFieldsContent: View {
         Binding(
             get: { model.createOpen },
             set: { if !$0 { model.closeCreate() } }
-        )
-    }
-
-    private var pendingDelete: Binding<CatalogProperty?> {
-        Binding(
-            get: { model.pendingDeleteProperty },
-            set: { if $0 == nil { model.cancelDelete() } }
         )
     }
 
@@ -465,20 +453,11 @@ private struct SubjectFieldsContent: View {
 
     private func inspectorBody(_ property: CatalogProperty) -> some View {
         VStack(alignment: .leading, spacing: PVSpacing.space6) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(verbatim: property.label)
-                    .font(PVFont.display(size: PVTypeScale.h3))
-                    .foregroundStyle(PVColor.textDisplay)
-                Text(verbatim: property.key)
-                    .font(PVFont.mono(size: PVTypeScale.caption))
-                    .foregroundStyle(PVColor.textMuted)
-            }
+            inspectorIdentity(property)
 
-            if !property.description.isEmpty {
-                Text(verbatim: property.description)
-                    .font(PVFont.body(size: PVTypeScale.bodySmall))
-                    .foregroundStyle(PVColor.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+            if let deleteError = model.deleteError {
+                PVCallout(tone: .danger, message: deleteError)
+                    .accessibilityIdentifier("subjectFields.deleteError")
             }
 
             VStack(spacing: PVSpacing.space4) {
@@ -505,8 +484,8 @@ private struct SubjectFieldsContent: View {
                     .font(PVFont.body(size: PVTypeScale.bodySmall))
                     .foregroundStyle(PVColor.textPrimary)
                 }
-                inspectorMetaRow(label: L10n.SubjectFields.inspectorValuesRecorded) {
-                    Text(verbatim: L10n.SubjectFields.valuesRecordedCount(count: property.usedBy))
+                inspectorMetaRow(label: L10n.SubjectFields.inspectorUsedOn) {
+                    Text(verbatim: L10n.SubjectFields.usedOnCount(count: property.usedBy))
                         .font(PVFont.mono(size: PVTypeScale.bodySmall))
                         .foregroundStyle(PVColor.textPrimary)
                 }
@@ -520,7 +499,7 @@ private struct SubjectFieldsContent: View {
             if let lockedCallout = model.lockedCallout {
                 PVCallout(tone: .info, message: lockedCallout)
             }
-            if let formError = model.formError {
+            if let formError = model.formError, !model.isEditingIdentity {
                 PVCallout(tone: .danger, message: formError)
             }
 
@@ -551,10 +530,104 @@ private struct SubjectFieldsContent: View {
                 .accessibilityLabel(Text(L10n.SubjectFields.bindingsAccessibility))
             }
 
-            PVDivider()
-
-            deleteControls(for: property)
         }
+    }
+
+    private func inspectorIdentity(_ property: CatalogProperty) -> some View {
+        PVInlineEdit(
+            isEditing: model.isEditingIdentity,
+            isSaving: model.isSaving,
+            error: model.isEditingIdentity ? model.formError : nil,
+            saveLabel: L10n.SubjectFields.editSave,
+            cancelLabel: L10n.SubjectFields.editCancel,
+            editLabel: L10n.SubjectFields.editAction,
+            saveDisabled: !model.canSubmitEdit,
+            showsEditControl: model.canEditSelected,
+            axis: .vertical,
+            actionsStyle: .iconStack,
+            accessibilityIdentifierPrefix: "subjectFields.identity",
+            onEdit: { model.beginEdit() },
+            onSave: { Task { _ = await model.submitEdit() } },
+            onCancel: { model.cancelEdit() },
+            display: {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(verbatim: property.label)
+                        .font(PVFont.display(size: PVTypeScale.h3))
+                        .foregroundStyle(PVColor.textDisplay)
+                    Text(verbatim: property.key)
+                        .font(PVFont.mono(size: PVTypeScale.caption))
+                        .foregroundStyle(PVColor.textMuted)
+                    if !property.description.isEmpty {
+                        Text(verbatim: property.description)
+                            .font(PVFont.body(size: PVTypeScale.bodySmall))
+                            .foregroundStyle(PVColor.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, PVSpacing.space2)
+                    }
+                }
+            },
+            editor: {
+                VStack(alignment: .leading, spacing: PVSpacing.space4) {
+                    PVInput(
+                        text: editLabelBinding,
+                        size: .sm,
+                        isInvalid: (model.editDraft?.label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) == true,
+                        activateOnAppear: true
+                    )
+                    .accessibilityIdentifier("subjectFields.identity.label")
+                    Text(verbatim: property.key)
+                        .font(PVFont.mono(size: PVTypeScale.caption))
+                        .foregroundStyle(PVColor.textMuted)
+                    Text(L10n.SubjectFields.editKeyStays(key: property.key))
+                        .font(PVFont.body(size: PVTypeScale.caption, italic: true))
+                        .foregroundStyle(PVColor.textMuted)
+                    PVTextArea(
+                        text: editDescriptionBinding,
+                        lineLimit: 2...6,
+                        prompt: L10n.SubjectFields.editDescriptionPlaceholder
+                    )
+                    .accessibilityIdentifier("subjectFields.identity.description")
+                }
+            },
+            restingTrailing: {
+                if model.showsDelete {
+                    PVIconButton(
+                        .trash,
+                        label: model.deleteTooltip,
+                        size: .sm,
+                        tone: .danger
+                    ) {
+                        Task { await model.askDelete() }
+                    }
+                    .disabled(!model.canDeleteSelected)
+                    .accessibilityLabel(Text(verbatim: model.deleteAccessibilityLabel))
+                    .accessibilityIdentifier("subjectFields.delete")
+                }
+            },
+            editingTrailing: { EmptyView() }
+        )
+    }
+
+    private var editLabelBinding: Binding<String> {
+        Binding(
+            get: { model.editDraft?.label ?? "" },
+            set: { newValue in
+                if model.editDraft != nil {
+                    model.editDraft?.label = newValue
+                }
+            }
+        )
+    }
+
+    private var editDescriptionBinding: Binding<String> {
+        Binding(
+            get: { model.editDraft?.description ?? "" },
+            set: { newValue in
+                if model.editDraft != nil {
+                    model.editDraft?.description = newValue
+                }
+            }
+        )
     }
 
     private func inspectorMetaRow<Content: View>(
@@ -603,36 +676,6 @@ private struct SubjectFieldsContent: View {
             "\(type.label), \(bound ? String(localized: L10n.SubjectFields.bindingBound) : String(localized: L10n.SubjectFields.bindingNotBound))"
             + (locked ? ", \(String(localized: L10n.SubjectFields.bindingLocked))" : "")
         )
-    }
-
-    @ViewBuilder
-    private func deleteControls(for property: CatalogProperty) -> some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space4) {
-            PVButton(
-                L10n.SubjectFields.deleteProperty,
-                variant: .danger,
-                size: .sm,
-                icon: .trash
-            ) {
-                model.askDelete()
-            }
-            .disabled(!model.canDeleteSelected)
-            .frame(maxWidth: .infinity)
-
-            Text(deleteNote(for: property))
-                .font(PVFont.body(size: PVTypeScale.caption, italic: true))
-                .foregroundStyle(PVColor.textMuted)
-        }
-    }
-
-    private func deleteNote(for property: CatalogProperty) -> LocalizedStringResource {
-        if property.origin != CatalogOrigin.user {
-            return L10n.SubjectFields.deleteSeeded
-        }
-        if property.usedBy > 0 {
-            return L10n.SubjectFields.deleteInUse
-        }
-        return L10n.SubjectFields.deleteUnused
     }
 
     private var createForm: some View {

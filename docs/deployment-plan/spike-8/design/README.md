@@ -6,9 +6,7 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 
 ## Open
 
-| Step | Brief | Feeds | Notes |
-| --- | --- | --- | --- |
-| S8-D15 | [`S8-D15-subject-fields-delete.md`](S8-D15-subject-fields-delete.md) | PR **S8-17** | Subject Fields only. |
+No open briefs. Remaining spike close is **S8-99**.
 
 ## Agreed
 
@@ -27,11 +25,12 @@ PR sequence and gating: [`../deployment-plan.md`](../deployment-plan.md). Spike 
 | S8-D11 | [`archive/S8-D11-composer-delete.md`](archive/S8-D11-composer-delete.md) | **S8-18** | Delete citation beside Save; notice when any OBS including edges; row on DeleteImpact; connection stays locked. |
 | S8-D13 | [`archive/S8-D13-source-types-delete.md`](archive/S8-D13-source-types-delete.md) | **S8-15** | Trash always on; unused confirm; in-use names SRC-…; plugin origin_locked; seeded unused erasable. |
 | S8-D14 | [`archive/S8-D14-source-fields-delete.md`](archive/S8-D14-source-fields-delete.md) | **S8-16** | Trash always on; unused confirm; in-use names SRC-…; plugin origin_locked; seeded unused erasable. |
+| S8-D15 | [`archive/S8-D15-subject-fields-delete.md`](archive/S8-D15-subject-fields-delete.md) | **S8-17** | Trash always on; unused user + no terms confirm; in-use names OBS-… / terms; type-bindings not listed; seeded/plugin `origin_locked`; pencil edit for label/description. |
 
 ## How to use
 
 1. Open the Provenencia Claude Design project / design-system bundle (`macos/App/DesignSystem/README.md`).
-2. **Start with S8-D15**. Paste **one** open brief. New briefs: [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md). Policy lives in [`docs/catalog-deletes.md`](../../../catalog-deletes.md) and [`../deployment-plan.md`](../deployment-plan.md) §S8-09.1–§S8-09.4. Instance the shipped DeleteImpact recipe; do not restyle it.
+2. Paste **one** open brief when a later spike adds one. New briefs: [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md). Policy lives in [`docs/catalog-deletes.md`](../../../catalog-deletes.md) and [`../deployment-plan.md`](../deployment-plan.md) §S8-09.1–§S8-09.4. Instance the shipped DeleteImpact recipe; do not restyle it.
 3. Claude **clears cache, drops the stale pack, pulls a fresh design system**, and **works in place**. Rethink briefs replace frames; enhancement briefs extend them.
 4. **Inventory is binding.** Instance kit components named in the brief; bespoke only when the use is truly domain-specific.
 5. When the board is done, archive the brief under `archive/` and write up [`../completed.md`](../completed.md).

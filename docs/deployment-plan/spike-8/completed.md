@@ -428,3 +428,28 @@ Shipped official `sourcefields.Delete` through Impact and instanced `.pvDeleteIm
 - Source-page metadata-value delete
 - Restyling DeleteImpact
 - Redesigning the fields list
+
+### S8-D15 — Design: Subject Fields delete
+
+**Board pick:** trash always offered at the top-right of the inspector title (danger `PVIconButton`). DeleteImpact **confirm** when an unused **user** property has no terms; **notice** lists `OBS-…` (`observations.property_id`) and/or terms (`property_terms.property_id`) when blocked. Type-bindings CASCADE and are not listed. Seeded and plugin are `origin_locked`. `usedBy` is Observation count (display only) and must match Impact `total`. After erase, clear selection. The attached board also added pencil edit-in-place for label + description (key stays).
+
+Brief archived: [`design/archive/S8-D15-subject-fields-delete.md`](design/archive/S8-D15-subject-fields-delete.md). Edit-in-place was on the board, not the original five-frame brief.
+
+### S8-17 — Subject Fields delete + edit-in-place
+
+Shipped official `properties.Delete` through Impact and instanced `.pvDeleteImpact` on Subject Fields. Trash is always offered when a property is selected. Label and description edit in place via existing `UpdateProperty`.
+
+**What shipped**
+
+- Domain writer: plugin and seeded extra-gate `origin_locked`; inbound `properties.in_use`; type-bindings CASCADE; audit (properties are not an FTS kind)
+- FFI methods 55/56 kept; `userID` passed through
+- Subject Fields: top-right trash + DeleteImpact confirm / notice; `usedBy` is Observation count
+- Pencil `PVInlineEdit` for user and seeded label/description; plugin is view-only
+
+**What stayed out**
+
+- Terms page / term-row trash / Subject type delete
+- Restyling DeleteImpact
+- Porting VocabularyChrome
+- Editable create-key; after-erase next-row selection
+- Making properties searchable

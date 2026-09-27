@@ -218,7 +218,7 @@ struct CatalogProperty: Sendable, Equatable, Identifiable {
     var description: String
     /// text | integer | date | name | subject | term
     var valueType: String
-    /// subject_type_fields references; delete only at 0.
+    /// Observation count (`observations.property_id`). Display only; not a delete gate.
     var usedBy: Int = 0
 }
 
