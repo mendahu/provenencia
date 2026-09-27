@@ -69,7 +69,7 @@ struct EvidenceSubjectCard: View {
             paddingX: shellPaddingX,
             paddingTop: shellPaddingTop,
             hitHeight: headerHeight,
-            showDelete: !placed.isCited
+            showDelete: true
         )
         var actions: [GraphCanvasActionTarget] = [
             GraphCanvasActionTarget(id: editActionID, frame: headerHits.edit),
@@ -328,14 +328,12 @@ private struct EvidenceSubjectCardChrome: View {
             HStack(spacing: 6) {
                 PVIcon(.penLine, size: 12)
                     .foregroundStyle(PVColor.textMuted)
-                if !placed.isCited {
-                    PVIcon(.trash, size: 12)
-                        .foregroundStyle(
-                            hoveredActionID == EvidenceSubjectCard.deleteActionID
-                                ? PVColor.danger
-                                : PVColor.textMuted
-                        )
-                }
+                PVIcon(.trash, size: 12)
+                    .foregroundStyle(
+                        hoveredActionID == EvidenceSubjectCard.deleteActionID
+                            ? PVColor.danger
+                            : PVColor.textMuted
+                    )
             }
             .frame(height: EvidenceSubjectCard.headerHeight, alignment: .top)
         }

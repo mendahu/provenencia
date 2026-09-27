@@ -79,7 +79,7 @@ struct PVDeleteImpactCopyTests {
     @Test func knownViaHeadingsMatchEngineEdges() {
         let cases: [(String, String, Int, String)] = [
             ("observations.citation_id", "observation", 1, "1 observation still belongs to this"),
-            ("observations.subject_id", "observation", 1, "1 observation cites this card"),
+            ("observations.subject_id", "observation", 1, "This subject has 1 observation"),
             ("observations.value_subject_id", "observation", 2, "2 observations use this as an endpoint"),
             ("artifacts.source_id", "artifact", 1, "1 artifact belongs to this source"),
             ("subjects.source_id", "subject", 2, "2 subjects belong to this source"),

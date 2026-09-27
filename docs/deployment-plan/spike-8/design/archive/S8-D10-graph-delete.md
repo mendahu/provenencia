@@ -3,12 +3,12 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 8 (pause and refine / data entry)  
 **Implements later as:** PR **S8-19** (graph trash + cut over `subjects.Delete`)  
-**Depends on:** Frozen policy, path matrix, and table register in [`../deployment-plan.md`](../deployment-plan.md) §S8-09.1–§S8-09.4; **S8-09**, **S8-12**, and the **S8-D9** recipe (**S8-13**) landed or mocked as the same contract; shipped graph cards ([`EvidenceSubjectCard`](../../../../macos/App/Features/EvidenceGraph/EvidenceSubjectCard.swift), [`EvidenceBridgeCard`](../../../../macos/App/Features/EvidenceGraph/EvidenceBridgeCard.swift), [`EvidenceGraphModel.beginDelete`](../../../../macos/App/Features/EvidenceGraph/EvidenceGraphModel.swift))  
-**Related:** Shared confirm / blocked notice is [`S8-D9-impact.md`](archive/S8-D9-impact.md) — **instance it, do not restyle.** Composer delete chrome is a **different board** ([`S8-D11-composer-delete.md`](S8-D11-composer-delete.md) → **S8-18**). Do not draw the composer. Wrong type is delete + place (leftover **19**). Leftover **20** (adopt) is descoped.  
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
-**Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
+**Depends on:** Frozen policy, path matrix, and table register in [`../../deployment-plan.md`](../../deployment-plan.md) §S8-09.1–§S8-09.4; **S8-09**, **S8-12**, and the **S8-D9** recipe (**S8-13**) landed or mocked as the same contract; shipped graph cards ([`EvidenceSubjectCard`](../../../../../macos/App/Features/EvidenceGraph/EvidenceSubjectCard.swift), [`EvidenceBridgeCard`](../../../../../macos/App/Features/EvidenceGraph/EvidenceBridgeCard.swift), [`EvidenceGraphModel.beginDelete`](../../../../../macos/App/Features/EvidenceGraph/EvidenceGraphModel.swift))  
+**Related:** Shared confirm / blocked notice is [`S8-D9-impact.md`](S8-D9-impact.md) — **instance it, do not restyle.** Composer delete chrome is a **different board** ([`S8-D11-composer-delete.md`](../S8-D11-composer-delete.md) → **S8-18**). Do not draw the composer. Wrong type is delete + place (leftover **19**). Leftover **20** (adopt) is descoped.  
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)  
+**Skill:** [`add-design-brief`](../../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.cursor/skills/add-ui-component/SKILL.md)
 
-Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](README.md) first.
+Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](../README.md) first.
 
 This brief is an **enhancement** of shipped graph delete chrome (uncited trash + confirm). Do not fork a second canvas.
 
@@ -158,5 +158,5 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them.
 
 ## 8. Handoff
 
-1. Archive this brief under [`archive/`](archive/) and write [`../completed.md`](../completed.md).
+1. Archive this brief under [`archive/`](.) and write [`../../completed.md`](../../completed.md).
 2. Implement **S8-19** against these frames + §S8-09.2 G-rows. Cut over `subjects.Delete` in this PR. Reuse `Impact` from **S8-12**.

@@ -160,7 +160,7 @@ struct EvidenceBridgeCard: View {
             paddingX: shellPaddingX,
             paddingTop: shellPaddingTop,
             hitHeight: headerActionHitHeight,
-            showDelete: !placed.isCited
+            showDelete: true
         )
         var actions: [GraphCanvasActionTarget] = [
             GraphCanvasActionTarget(id: editActionID, frame: headerHits.edit),
@@ -343,14 +343,12 @@ private struct EvidenceBridgeCardChrome: View {
                             ? PVColor.textSecondary
                             : PVColor.textMuted
                     )
-                if !placed.isCited {
-                    PVIcon(.trash, size: 12)
-                        .foregroundStyle(
-                            hoveredActionID == EvidenceBridgeCard.deleteActionID
-                                ? PVColor.danger
-                                : PVColor.textMuted
-                        )
-                }
+                PVIcon(.trash, size: 12)
+                    .foregroundStyle(
+                        hoveredActionID == EvidenceBridgeCard.deleteActionID
+                            ? PVColor.danger
+                            : PVColor.textMuted
+                    )
             }
             .alignmentGuide(.top) { d in d[.top] }
         }
