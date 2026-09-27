@@ -5,6 +5,8 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/google/uuid"
@@ -12,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/ref"
@@ -248,7 +251,8 @@ func Update(c *database.Catalog, userID []byte, a Artifact) error {
 }
 
 // Delete erases an Artifact when no Citation points at it. File releases
-// ifUnused (snapshot file_id before DELETE). Cover SET NULL is SQLite's job.
+// ifUnused (snapshot file_id before DELETE). After COMMIT, orphan objects/
+// blobs are unlinked. Cover SET NULL is SQLite's job.
 func Delete(c *database.Catalog, userID, id []byte) error {
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return err
@@ -283,6 +287,10 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	}
 
 	snap, err := deleteimpact.SnapshotOwned(tx, deleteimpact.KindArtifact, id)
+	if err != nil {
+		return err
+	}
+	objects, err := deleteimpact.CollectFileObjects(tx, snap)
 	if err != nil {
 		return err
 	}
@@ -321,7 +329,29 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	if err := searchindex.ReprojectSource(tx, existing.SourceID); err != nil {
 		return err
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	purgeReleasedObjects(c, objects)
+	return nil
+}
+
+// purgeReleasedObjects unlinks objects/ for collected files whose catalog row
+// is gone. Best-effort after COMMIT: a crash leaves orphan bytes, not a live
+// pointer at a missing object. Shared checksums stay on disk.
+func purgeReleasedObjects(c *database.Catalog, objects []deleteimpact.FileObject) {
+	for _, obj := range objects {
+		if _, err := files.LookupByChecksum(c, obj.ChecksumSHA256); err == nil {
+			continue
+		} else if !errors.Is(err, sql.ErrNoRows) {
+			continue
+		}
+		rel, err := files.StorageRelPath(obj.ChecksumSHA256, obj.MediaType)
+		if err != nil {
+			continue
+		}
+		_ = os.Remove(filepath.Join(c.Dir(), filepath.FromSlash(rel)))
+	}
 }
 
 // Get returns an Artifact by id, or sql.ErrNoRows.

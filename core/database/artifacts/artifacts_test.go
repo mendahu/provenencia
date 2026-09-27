@@ -17,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/derivatives"
 	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/ref"
 )
@@ -532,4 +533,168 @@ func TestArtifactDelete(t *testing.T) {
 	if err := Delete(c, userID, make([]byte, 16)); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("missing %v", err)
 	}
+}
+
+func TestArtifactDeletePurgesDisk(t *testing.T) {
+	userID := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	r, err := ref.Mint(ref.PrefixUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := users.Upsert(c, userID, "Jake", r); err != nil {
+		t.Fatal(err)
+	}
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
+		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Family Bible"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	objectPath := func(t *testing.T, f files.File) string {
+		t.Helper()
+		rel, err := files.StorageRelPath(f.ChecksumSHA256, f.MediaType)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return filepath.Join(c.Dir(), filepath.FromSlash(rel))
+	}
+
+	t.Run("fileless leaves other objects", func(t *testing.T) {
+		pngPath := filepath.Join(t.TempDir(), "keep.png")
+		img := image.NewRGBA(image.Rect(0, 0, 8, 8))
+		var buf bytes.Buffer
+		if err := png.Encode(&buf, img); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(pngPath, buf.Bytes(), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		kept, err := ingest.File(c, pngPath, userID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		fileless, err := Create(c, userID, CreateInput{SourceID: src.ID, Label: "Physical"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := Delete(c, userID, fileless.ID); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := files.Lookup(c, kept.File.ID); err != nil {
+			t.Fatalf("unrelated file %v", err)
+		}
+		if _, err := os.Stat(objectPath(t, kept.File)); err != nil {
+			t.Fatalf("unrelated object %v", err)
+		}
+	})
+
+	t.Run("shared file keeps blob until last pointer", func(t *testing.T) {
+		pngPath := filepath.Join(t.TempDir(), "share.png")
+		img := image.NewRGBA(image.Rect(0, 0, 10, 10))
+		var buf bytes.Buffer
+		if err := png.Encode(&buf, img); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(pngPath, buf.Bytes(), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		ingested, err := ingest.File(c, pngPath, userID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		path := objectPath(t, ingested.File)
+		share1, err := Create(c, userID, CreateInput{
+			SourceID: src.ID, FileID: ingested.File.ID, Label: "Share 1",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		share2, err := Create(c, userID, CreateInput{
+			SourceID: src.ID, FileID: ingested.File.ID, Label: "Share 2",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := Delete(c, userID, share1.ID); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := files.LookupByChecksum(c, ingested.File.ChecksumSHA256); err != nil {
+			t.Fatalf("shared row %v", err)
+		}
+		if _, err := os.Stat(path); err != nil {
+			t.Fatalf("shared object %v", err)
+		}
+		if err := Delete(c, userID, share2.ID); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := files.LookupByChecksum(c, ingested.File.ChecksumSHA256); !errors.Is(err, sql.ErrNoRows) {
+			t.Fatalf("last pointer left row %v", err)
+		}
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Fatalf("last pointer left object %v", err)
+		}
+	})
+
+	t.Run("last pointer drops original and derivative", func(t *testing.T) {
+		pngPath := filepath.Join(t.TempDir(), "cover.png")
+		img := image.NewRGBA(image.Rect(0, 0, 32, 32))
+		var buf bytes.Buffer
+		if err := png.Encode(&buf, img); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(pngPath, buf.Bytes(), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		ingested, err := ingest.File(c, pngPath, userID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		art, err := Create(c, userID, CreateInput{
+			SourceID: src.ID, FileID: ingested.File.ID, Label: "Cover scan",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		thumb, err := derivatives.EnsureThumbnail(c, ingested.File.ID)
+		if err != nil || thumb.Skipped {
+			t.Fatalf("thumb %+v %v", thumb, err)
+		}
+		derived, err := files.Lookup(c, thumb.Link.DerivedFileID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		origPath := objectPath(t, ingested.File)
+		thumbPath := objectPath(t, derived)
+		if _, err := os.Stat(origPath); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := os.Stat(thumbPath); err != nil {
+			t.Fatal(err)
+		}
+		if err := Delete(c, userID, art.ID); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := files.LookupByChecksum(c, ingested.File.ChecksumSHA256); !errors.Is(err, sql.ErrNoRows) {
+			t.Fatalf("original row %v", err)
+		}
+		if _, err := files.LookupByChecksum(c, derived.ChecksumSHA256); !errors.Is(err, sql.ErrNoRows) {
+			t.Fatalf("derived row %v", err)
+		}
+		if _, err := os.Stat(origPath); !os.IsNotExist(err) {
+			t.Fatalf("original object %v", err)
+		}
+		if _, err := os.Stat(thumbPath); !os.IsNotExist(err) {
+			t.Fatalf("derived object %v", err)
+		}
+	})
 }

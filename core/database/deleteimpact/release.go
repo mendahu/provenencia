@@ -13,6 +13,28 @@ type OwnedSnapshot struct {
 	cols map[string][]byte
 }
 
+// FileObject is checksum + media_type for a files row (enough for StorageRelPath).
+// Collect these before ReleaseSnapshot; after COMMIT the writer unlinks objects/
+// only when LookupByChecksum is gone.
+type FileObject struct {
+	ChecksumSHA256 string
+	MediaType      string
+}
+
+// CollectFileObjects reads the primary file and its derivatives from a snapshot
+// while those rows still exist. deleteimpact stays SQL-only; disk unlink is the
+// writer's job after COMMIT.
+func CollectFileObjects(tx *sql.Tx, snap OwnedSnapshot) ([]FileObject, error) {
+	if tx == nil {
+		return nil, ErrInvalid
+	}
+	fileID := snap.cols["artifacts.file_id"]
+	if len(fileID) != 16 {
+		return nil, nil
+	}
+	return collectFileObjectsFromID(tx, fileID, map[string]bool{})
+}
+
 // SnapshotOwned reads owned-outbound columns on the live parent row.
 func SnapshotOwned(tx *sql.Tx, kind Kind, id []byte) (OwnedSnapshot, error) {
 	if tx == nil || len(id) != 16 {
@@ -145,6 +167,45 @@ func releaseFileIfUnused(tx *sql.Tx, fileID []byte) error {
 		}
 	}
 	return nil
+}
+
+func collectFileObjectsFromID(tx *sql.Tx, fileID []byte, seen map[string]bool) ([]FileObject, error) {
+	obj, err := lookupFileObject(tx, fileID)
+	if err != nil {
+		return nil, err
+	}
+	var out []FileObject
+	if obj.ChecksumSHA256 != "" && !seen[obj.ChecksumSHA256] {
+		seen[obj.ChecksumSHA256] = true
+		out = append(out, obj)
+	}
+	derived, err := listDerivedFileIDs(tx, fileID)
+	if err != nil {
+		return nil, err
+	}
+	for _, derivedID := range derived {
+		nested, err := collectFileObjectsFromID(tx, derivedID, seen)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, nested...)
+	}
+	return out, nil
+}
+
+func lookupFileObject(tx *sql.Tx, fileID []byte) (FileObject, error) {
+	var checksum, media string
+	err := tx.QueryRow(
+		`SELECT checksum_sha256, COALESCE(media_type, '') FROM files WHERE id = ?`,
+		fileID,
+	).Scan(&checksum, &media)
+	if err == sql.ErrNoRows {
+		return FileObject{}, nil
+	}
+	if err != nil {
+		return FileObject{}, err
+	}
+	return FileObject{ChecksumSHA256: checksum, MediaType: media}, nil
 }
 
 func listDerivedFileIDs(tx *sql.Tx, fileID []byte) ([][]byte, error) {

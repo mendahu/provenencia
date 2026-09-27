@@ -1066,7 +1066,7 @@ These are **owned outbound**, not CASCADE facets. Official Observation `Delete` 
 
 | Table | Bucket | Policy | S8-09 | S8-12 |
 | --- | --- | --- | --- | --- |
-| `files` | Pool + owned outbound of Artifact | Unique `checksum_sha256`. Release `ifUnused` after Artifact delete (other `artifacts.file_id` or derivative FKs still count). | — | Owned-outbound edge on `artifacts` |
+| `files` | Pool + owned outbound of Artifact | Unique `checksum_sha256`. Release `ifUnused` after Artifact delete (other `artifacts.file_id` or derivative FKs still count). After commit, unlink `objects/` when the `files` row was dropped. | — | Owned-outbound edge on `artifacts` |
 | `file_derivatives` | Owned outbound of `files` | No CASCADE today. When a file is actually released, delete derivative rows that name it (either column). Do not CASCADE Artifact←file. | — | Nested after file release |
 
 #### Infrastructure (no researcher delete)
