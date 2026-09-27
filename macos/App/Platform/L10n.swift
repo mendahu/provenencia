@@ -4694,59 +4694,17 @@ enum L10n {
         static let deleteField = LocalizedStringResource(
             "sourceFields.delete.action",
             defaultValue: "Delete field",
-            comment: "Delete button in the Source fields detail pane, and the confirm dialog's destructive button"
+            comment: "Tooltip on the Source fields inspector trash"
         )
 
-        static let deleteOwnedByPlugin = LocalizedStringResource(
-            "sourceFields.delete.ownedByPlugin",
-            defaultValue: "Owned by the plugin",
-            comment: "Tooltip on the disabled delete button when the selected field comes from a plugin"
-        )
-
-        static func deleteInUse(count: Int) -> LocalizedStringResource {
-            count == 1 ? deleteInUseOne : deleteInUseOther(count: count)
-        }
-
-        private static let deleteInUseOne = LocalizedStringResource(
-            "sourceFields.delete.inUseOne",
-            defaultValue: "In use on 1 source",
-            comment: "Tooltip on the disabled delete button when exactly one source carries a value for the field"
-        )
-
-        private static func deleteInUseOther(count: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
-                "sourceFields.delete.inUseOther",
-                defaultValue: "In use on \(count) sources",
-                comment: "Tooltip on the disabled delete button; argument is how many sources carry a value for the field"
-            )
-        }
-
-        static func deleteConfirmTitle(label: String) -> String {
+        static func deleteFieldAccessibility(label: String) -> String {
             let format = String(localized: LocalizedStringResource(
-                "sourceFields.delete.confirmTitle",
-                defaultValue: "Delete %@?",
-                comment: "Title of the delete-field confirmation dialog; argument is the field label"
+                "sourceFields.delete.accessibility",
+                defaultValue: "Delete field %@",
+                comment: "VoiceOver for Source fields trash; argument is the field label"
             ))
             return String(format: format, locale: .current, label)
         }
-
-        static let deleteConfirmMessage = LocalizedStringResource(
-            "sourceFields.delete.confirmMessage",
-            defaultValue: "No source in this project carries a value for this field, so nothing is lost. The key is released and can be minted again by a later field with the same label.",
-            comment: "Message of the delete-field confirmation sheet: what is and is not lost"
-        )
-
-        static let deleteKeyReleased = LocalizedStringResource(
-            "sourceFields.delete.keyReleased",
-            defaultValue: "Key released",
-            comment: "Micro-caps label beside the key a field delete releases, in the confirmation sheet"
-        )
-
-        static let deleteKeep = LocalizedStringResource(
-            "sourceFields.delete.keep",
-            defaultValue: "Keep field",
-            comment: "Button that closes the delete-field confirmation without deleting"
-        )
 
         static let toastDeletedTitle = LocalizedStringResource(
             "sourceFields.toast.deletedTitle",
@@ -6899,6 +6857,11 @@ enum L10n {
             defaultValue: "That metadata field is still used on one or more sources.",
             comment: "FFI error sourcefields.in_use"
         )
+        static let sourceFieldsOriginLocked = LocalizedStringResource(
+            "error.sourcefields.origin_locked",
+            defaultValue: "A plugin owns that source field, so it cannot be deleted.",
+            comment: "FFI error sourcefields.origin_locked"
+        )
         static let sourceVocabInvalid = LocalizedStringResource(
             "error.sourcevocab.invalid",
             defaultValue: "Invalid source vocabulary.",
@@ -7146,6 +7109,8 @@ enum L10n {
                 return sourceFieldsDuplicateKey(key: params.first ?? "?")
             case "sourcefields.in_use":
                 return String(localized: sourceFieldsInUse)
+            case "sourcefields.origin_locked":
+                return String(localized: sourceFieldsOriginLocked)
             case "sourcevocab.invalid":
                 return String(localized: sourceVocabInvalid)
             case "properties.invalid":

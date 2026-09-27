@@ -3,12 +3,12 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 8 (pause and refine / data entry)  
 **Implements later as:** PR **S8-16** (cut over `sourcefields.Delete` + DeleteImpact on this page)  
-**Depends on:** Frozen policy + Impact report in [`../deployment-plan.md`](../deployment-plan.md) §S8-09.1–§S8-09.4; **S8-12** `GetDeleteImpact`; **S8-D9** / **S8-13** DeleteImpact recipe  
-**Related:** Shared confirm / notice is [`S8-D9-impact.md`](archive/S8-D9-impact.md) — **instance it, do not restyle.** Source Types is [`archive/S8-D13-source-types-delete.md`](archive/S8-D13-source-types-delete.md). Subject Fields is [`S8-D15-subject-fields-delete.md`](S8-D15-subject-fields-delete.md). Do not draw those pages.  
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
-**Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
+**Depends on:** Frozen policy + Impact report in [`../../deployment-plan.md`](../../deployment-plan.md) §S8-09.1–§S8-09.4; **S8-12** `GetDeleteImpact`; **S8-D9** / **S8-13** DeleteImpact recipe  
+**Related:** Shared confirm / notice is [`S8-D9-impact.md`](S8-D9-impact.md) — **instance it, do not restyle.** Source Types is [`S8-D13-source-types-delete.md`](S8-D13-source-types-delete.md). Subject Fields is [`../S8-D15-subject-fields-delete.md`](../S8-D15-subject-fields-delete.md). Do not draw those pages.  
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)  
+**Skill:** [`add-design-brief`](../../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.cursor/skills/add-ui-component/SKILL.md)
 
-Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](README.md) first.
+Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`../README.md`](../README.md) first.
 
 This brief is an **enhancement** of the shipped Source Fields page. Do not start a second fields app.
 
@@ -134,5 +134,5 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them.
 
 ## 8. Handoff
 
-1. Archive this brief under [`archive/`](archive/) and write [`../completed.md`](../completed.md).
-2. Implement **S8-16** against these frames. Writer follows [`add-catalog-delete`](../../../../.cursor/skills/add-catalog-delete/SKILL.md).
+1. Archive this brief under [`archive/`](.) and write [`../../completed.md`](../../completed.md).
+2. Implement **S8-16** against these frames. Writer follows [`add-catalog-delete`](../../../../../.cursor/skills/add-catalog-delete/SKILL.md).

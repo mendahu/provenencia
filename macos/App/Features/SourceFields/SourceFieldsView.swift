@@ -76,21 +76,27 @@ private struct SourceFieldsContent: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(PVColor.surfacePage)
         .vocabularyToastOverlay($model.toast, identifier: "sourceFields.toast")
-        .pvConfirm(
-            item: pendingDelete,
-            copy: deleteCopy(for:),
+        .pvDeleteImpact(
+            item: Binding(
+                get: { model.pendingImpact },
+                set: { newValue in
+                    model.pendingImpact = newValue
+                    if newValue == nil { model.cancelDelete() }
+                }
+            ),
             isRunning: model.isDeleting,
-            accessibilityIdentifierPrefix: "sourceFields.delete",
+            accessibilityIdentifierPrefix: "sourceFields.deleteImpact",
             onConfirm: {
                 Task {
-                    if await model.confirmDelete() {
+                    if await model.confirmPendingImpact() {
                         navigation.fallbackToSectionRoot()
                     }
                 }
+            },
+            onNavigate: { location in
+                navigation.go(to: location)
             }
-        ) { field in
-            deleteDetail(for: field)
-        }
+        )
         .onChange(of: navigation.currentLocation) { _, location in
             reconcileSelection(for: location)
         }
@@ -115,31 +121,6 @@ private struct SourceFieldsContent: View {
         let outcome = model.syncSelection(from: location)
         if outcome == .missingDeepId {
             navigation.fallbackToSectionRoot()
-        }
-    }
-
-    private var pendingDelete: Binding<CatalogMetadataField?> {
-        Binding(
-            get: { model.pendingDeleteField },
-            set: { if $0 == nil { model.cancelDelete() } }
-        )
-    }
-
-    private func deleteCopy(for field: CatalogMetadataField) -> PVConfirmCopy {
-        PVConfirmCopy(
-            title: L10n.SourceFields.deleteConfirmTitle(label: field.label),
-            message: String(localized: L10n.SourceFields.deleteConfirmMessage),
-            confirm: L10n.SourceFields.deleteField,
-            cancel: L10n.SourceFields.deleteKeep
-        )
-    }
-
-    @ViewBuilder
-    private func deleteDetail(for field: CatalogMetadataField) -> some View {
-        PVConfirmKeyChip(label: L10n.SourceFields.deleteKeyReleased, value: field.key)
-            .accessibilityIdentifier("sourceFields.delete.key")
-        if let deleteError = model.deleteError {
-            PVCallout(tone: .danger, message: deleteError)
         }
     }
 

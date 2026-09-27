@@ -3054,6 +3054,18 @@
         }
       }
     },
+    "error.sourcefields.origin_locked": {
+      "comment": "FFI error sourcefields.origin_locked",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A plugin owns that source field, so it cannot be deleted."
+          }
+        }
+      }
+    },
     "error.sourcemetadata.invalid": {
       "comment": "FFI error sourcemetadata.invalid",
       "extractionState": "manual",
@@ -4471,7 +4483,7 @@
       }
     },
     "sourceFields.delete.action": {
-      "comment": "Delete button in the Source fields detail pane, and the confirm dialog's destructive button",
+      "comment": "Tooltip on the Source fields inspector trash",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -4482,86 +4494,14 @@
         }
       }
     },
-    "sourceFields.delete.confirmMessage": {
-      "comment": "Message of the delete-field confirmation sheet: what is and is not lost",
+    "sourceFields.delete.accessibility": {
+      "comment": "VoiceOver for Source fields trash; argument is the field label",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No source in this project carries a value for this field, so nothing is lost. The key is released and can be minted again by a later field with the same label."
-          }
-        }
-      }
-    },
-    "sourceFields.delete.confirmTitle": {
-      "comment": "Title of the delete-field confirmation dialog; argument is the field label",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete %@?"
-          }
-        }
-      }
-    },
-    "sourceFields.delete.inUseOne": {
-      "comment": "Tooltip on the disabled delete button when exactly one source carries a value for the field",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In use on 1 source"
-          }
-        }
-      }
-    },
-    "sourceFields.delete.inUseOther": {
-      "comment": "Tooltip on the disabled delete button; argument is how many sources carry a value for the field",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In use on %lld sources"
-          }
-        }
-      }
-    },
-    "sourceFields.delete.keep": {
-      "comment": "Button that closes the delete-field confirmation without deleting",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keep field"
-          }
-        }
-      }
-    },
-    "sourceFields.delete.keyReleased": {
-      "comment": "Micro-caps label beside the key a field delete releases, in the confirmation sheet",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Key released"
-          }
-        }
-      }
-    },
-    "sourceFields.delete.ownedByPlugin": {
-      "comment": "Tooltip on the disabled delete button when the selected field comes from a plugin",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Owned by the plugin"
+            "value": "Delete field %@"
           }
         }
       }

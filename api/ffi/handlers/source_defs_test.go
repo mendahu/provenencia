@@ -373,6 +373,10 @@ func TestDeleteMetadataField(t *testing.T) {
 				}
 			},
 			want: &engine.DeleteMetadataFieldResponse{},
+			after: func(t *testing.T, _ []byte, req proto.Message) {
+				dr := req.(*engine.DeleteMetadataFieldRequest)
+				assertLatestAuditAction(t, dr.ProjectDir, "delete_source_field")
+			},
 		},
 		{
 			name: "refuses field in use",
@@ -408,7 +412,31 @@ func TestDeleteMetadataField(t *testing.T) {
 					ProjectDir: dir, UserId: userID, FieldId: field.Field.GetId(),
 				}
 			},
-			wantErr: true,
+			wantErr:   true,
+			wantErrIs: sourcefields.ErrInUse,
+		},
+		{
+			name: "refuses unused plugin field",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _ := sourceFixture(t)
+				var id []byte
+				err := catalogsession.Do(dir, func(c *database.Catalog) error {
+					var err error
+					id, err = sourcefields.Upsert(c, sourcefields.Field{
+						Key: "memorial_id", Origin: "plugin:findagrave", Label: "Memorial id",
+						DataType: sourcefields.DataTypeText,
+					})
+					return err
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				return &engine.DeleteMetadataFieldRequest{
+					ProjectDir: dir, UserId: userID, FieldId: uuidString(id),
+				}
+			},
+			wantErr:   true,
+			wantErrIs: sourcefields.ErrOriginLocked,
 		},
 	})
 }

@@ -840,9 +840,23 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         guard let idx = list.firstIndex(where: { $0.id == fieldID }) else {
             throw StoreBoom.boom
         }
-        // The engine refuses a field that sources still reference.
-        guard list[idx].usedBy == 0 else {
-            throw StoreBoom.boom
+        let field = list[idx]
+        if CatalogOrigin.isPlugin(field.origin) {
+            throw CoreInvokeError.coded(
+                status: 1,
+                code: "sourcefields.origin_locked",
+                kind: .conflict,
+                params: []
+            )
+        }
+        let inbound = sourcesHoldingField(projectDir: projectDir, fieldID: fieldID)
+        if !inbound.isEmpty || field.usedBy > 0 {
+            throw CoreInvokeError.coded(
+                status: 1,
+                code: "sourcefields.in_use",
+                kind: .conflict,
+                params: []
+            )
         }
         list.remove(at: idx)
         fieldsByProject[projectDir] = list
@@ -1831,10 +1845,58 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         if kind == "source_type" {
             return sourceTypeDeleteImpact(projectDir: projectDir, id: id)
         }
+        if kind == "source_field" {
+            return sourceFieldDeleteImpact(projectDir: projectDir, id: id)
+        }
         if fixtureContains(projectDir: projectDir, id: id) {
             return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
         }
         return CatalogDeleteImpact(allowed: false, gate: .notFound, groups: [])
+    }
+
+    private func sourcesHoldingField(projectDir: String, fieldID: String) -> [CatalogSource] {
+        (sourcesByProject[projectDir] ?? []).filter { source in
+            (metadataBySource[source.id] ?? []).contains { $0.field.id == fieldID && $0.hasValue }
+        }
+    }
+
+    private func sourceFieldDeleteImpact(projectDir: String, id: String) -> CatalogDeleteImpact {
+        guard let field = (fieldsByProject[projectDir] ?? []).first(where: { $0.id == id }) else {
+            return CatalogDeleteImpact(allowed: false, gate: .notFound, groups: [])
+        }
+        if CatalogOrigin.isPlugin(field.origin) {
+            return CatalogDeleteImpact(allowed: false, gate: .originLocked, groups: [])
+        }
+        let inbound = sourcesHoldingField(projectDir: projectDir, fieldID: id)
+        let total = inbound.isEmpty ? field.usedBy : inbound.count
+        if total == 0 {
+            return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
+        }
+        return CatalogDeleteImpact(
+            allowed: false,
+            gate: .inbound,
+            groups: [
+                CatalogDeleteImpactGroup(
+                    via: "source_metadata.field_id",
+                    kind: "source",
+                    total: total,
+                    listed: inbound.prefix(20).map {
+                        CatalogDeleteImpactListed(
+                            id: $0.id,
+                            ref: $0.ref,
+                            title: $0.title.isEmpty ? $0.ref : $0.title,
+                            location: WorkspaceLocation(
+                                section: .sources,
+                                sourceId: $0.id,
+                                sourceSurface: .page,
+                                ref: $0.ref,
+                                title: $0.title.isEmpty ? $0.ref : $0.title
+                            )
+                        )
+                    }
+                ),
+            ]
+        )
     }
 
     private func sourceTypeDeleteImpact(projectDir: String, id: String) -> CatalogDeleteImpact {

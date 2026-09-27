@@ -321,7 +321,7 @@ Shipped the S8-D9 recipe. Screens still use `.pvConfirm` until their later PRs i
 
 **Board pick:** header trash for the Source and a row bin per Artifact. Both instance DeleteImpact — confirm when inbound is empty, notice naming `ART-` / `CPR-` (Source) or `CIT-` (Artifact). Facets CASCADE (notes / metadata / layout are not a pre-step). After Source erase, leave for the Sources list and drop the ghost `sourceId` from history. Artifact erase stays on the page and clears a pinned cover. No Sources-list row delete. Notes stay a facet Confirm.
 
-Brief archived: [`design/archive/S8-D12-source-delete.md`](design/archive/S8-D12-source-delete.md). Next delete paste is **S8-D14**.
+Brief archived: [`design/archive/S8-D12-source-delete.md`](design/archive/S8-D12-source-delete.md). Next delete paste is **S8-D15**.
 
 ### S8-14 — Source + Artifact delete
 
@@ -344,7 +344,7 @@ Shipped official `sources.Delete` and `artifacts.Delete` through `deleteimpact`.
 
 **Board pick:** trash on every card, always enabled. The card never decides confirm vs notice (`isCited` is not a gate). `GetDeleteImpact` then the shipped DeleteImpact recipe. G1 / G5 / G6-facets confirm; G2 / G3 / G4 / G6-extra notice. Via heading for `observations.subject_id` is “This subject has N observations.” VoiceOver on trash: `Delete {kind} {label or sentence}, {ref}`.
 
-Brief archived: [`design/archive/S8-D10-graph-delete.md`](design/archive/S8-D10-graph-delete.md). Next delete paste is **S8-D14**.
+Brief archived: [`design/archive/S8-D10-graph-delete.md`](design/archive/S8-D10-graph-delete.md). Next delete paste is **S8-D15**.
 
 ### S8-19 — Graph delete
 
@@ -365,7 +365,7 @@ Shipped official `subjects.Delete` through `deleteimpact` plus `ReleaseConnectio
 
 **Board pick:** Delete citation beside Save citation. Empty Citation is DeleteImpact confirm naming `CIT-…`. Any remaining Observation, including edges, is a notice (`observations.citation_id`). Row ⋯ Delete… is the same recipe (confirm today). Connection row stays locked. After erase or a missing Artifact/Citation, stay in the composer as New Citation.
 
-Brief archived: [`design/archive/S8-D11-composer-delete.md`](design/archive/S8-D11-composer-delete.md). Next delete paste is **S8-D14**.
+Brief archived: [`design/archive/S8-D11-composer-delete.md`](design/archive/S8-D11-composer-delete.md). Next delete paste is **S8-D15**.
 
 ### S8-18 — Composer delete
 
@@ -388,7 +388,7 @@ Shipped official `citations.Delete` through Impact and cut `observations.Delete`
 
 **Board pick:** trash always offered beside the inspector “Source type” eyebrow. DeleteImpact **confirm** when unused (user or seeded); **notice** lists `SRC-…` (`sources.source_type_id`) when in use. Plugin is `origin_locked`. `used_by` is the inspector usage line and must match Impact `total`. After erase, `fallbackToSectionRoot`.
 
-Brief archived: [`design/archive/S8-D13-source-types-delete.md`](design/archive/S8-D13-source-types-delete.md). Next delete paste is **S8-D14**.
+Brief archived: [`design/archive/S8-D13-source-types-delete.md`](design/archive/S8-D13-source-types-delete.md). Next delete paste is **S8-D15**.
 
 ### S8-15 — Source Types delete
 
@@ -405,3 +405,26 @@ Shipped official `sourcetypes.Delete` through Impact and instanced `.pvDeleteImp
 - Source Fields / Subject Fields
 - Restyling DeleteImpact
 - Redesigning the types list
+
+### S8-D14 — Design: Source Fields delete
+
+**Board pick:** trash always offered beside the inspector “Source field” eyebrow. DeleteImpact **confirm** when unused (user or seeded); **notice** lists `SRC-…` (`source_metadata.field_id`) when in use. Plugin is `origin_locked`. `used_by` is display only and must match Impact `total`. After erase, `fallbackToSectionRoot`.
+
+Brief archived: [`design/archive/S8-D14-source-fields-delete.md`](design/archive/S8-D14-source-fields-delete.md). Next delete paste is **S8-D15**.
+
+### S8-16 — Source Fields delete
+
+Shipped official `sourcefields.Delete` through Impact and instanced `.pvDeleteImpact` on Source Fields. Trash is always offered when a field is selected.
+
+**What shipped**
+
+- Domain writer: plugin extra-gate `origin_locked`; inbound `sourcefields.in_use`; suggestion and layout joins CASCADE; audit + FTS
+- FFI method 30 kept; `userID` passed through
+- Source Fields: DeleteImpact confirm / notice; `used_by` is display only
+
+**What stayed out**
+
+- Subject Fields
+- Source-page metadata-value delete
+- Restyling DeleteImpact
+- Redesigning the fields list

@@ -47,6 +47,7 @@ const (
 	CodeSourceFieldsInvalid          = "sourcefields.invalid"
 	CodeSourceFieldsDuplicateKey     = "sourcefields.duplicate_key"
 	CodeSourceFieldsInUse            = "sourcefields.in_use"
+	CodeSourceFieldsOriginLocked     = "sourcefields.origin_locked"
 	CodeSourceVocabInvalid           = "sourcevocab.invalid"
 	CodePropertiesInvalid            = "properties.invalid"
 	CodePropertiesDuplicateKey       = "properties.duplicate_key"

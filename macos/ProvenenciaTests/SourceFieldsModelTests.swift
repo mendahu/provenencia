@@ -256,90 +256,129 @@ struct SourceFieldsModelTests {
         #expect(!model.showsDelete)
     }
 
-    @Test func unusedProjectOwnedFieldsCanBeDeleted() async {
-        let (model, session) = makeModel(fields: [seededField(), userField()])
+    @Test func trashIsOfferedWhenUsedByOrPlugin() async {
+        let (model, session) = makeModel(fields: [
+            userField(),
+            seededField(),
+            pluginField(),
+            userField(id: "4", label: "Notes", usedBy: 3),
+        ])
         await warm(model, session: session)
+
+        model.select("2")
+        #expect(model.canDeleteSelectedField)
+        #expect(model.deleteTooltip == L10n.SourceFields.deleteField)
+        #expect(model.deleteAccessibilityLabel == L10n.SourceFields.deleteFieldAccessibility(label: "Grandma's album code"))
 
         model.select("1")
         #expect(model.canDeleteSelectedField)
+        #expect(model.deleteTooltip == L10n.SourceFields.deleteField)
+
+        model.select("3")
+        #expect(model.canDeleteSelectedField)
+        #expect(model.deleteTooltip == L10n.SourceFields.deleteField)
+
+        model.select("4")
+        #expect(model.canDeleteSelectedField)
+        #expect(model.deleteTooltip == L10n.SourceFields.deleteField)
+    }
+
+    @Test func unusedUserFieldConfirmDeletes() async {
+        let store = FakeStore()
+        let (model, session) = makeModel(store: store, fields: [userField()])
+        await warm(model, session: session)
+        model.select("2")
+        await model.askDelete()
+
+        #expect(model.pendingImpact?.report.allowed == true)
+        #expect(model.pendingImpact?.target.kind == "source_field")
+        #expect(await model.confirmPendingImpact())
+        #expect(model.fields.isEmpty)
+        #expect(model.mode == .empty)
+        #expect(store.fieldsByProject[projectDir]?.isEmpty == true)
+    }
+
+    @Test func unusedSeededFieldConfirmDeletes() async {
+        let store = FakeStore()
+        let (model, session) = makeModel(store: store, fields: [seededField()])
+        await warm(model, session: session)
+        model.select("1")
+        await model.askDelete()
+
+        #expect(model.pendingImpact?.report.allowed == true)
+        #expect(await model.confirmPendingImpact())
+        #expect(model.fields.isEmpty)
+        #expect(store.fieldsByProject[projectDir]?.isEmpty == true)
+    }
+
+    @Test func fieldUsedByTwoSourcesShowsInboundNotice() async {
+        let store = FakeStore()
+        let field = userField(usedBy: 2)
+        store.sourcesByProject[projectDir] = [
+            CatalogSource(id: "s1", ref: "SRC-AAAAA", sourceTypeID: "t1", title: "Parish", description: ""),
+            CatalogSource(id: "s2", ref: "SRC-BBBBB", sourceTypeID: "t1", title: "Census", description: ""),
+        ]
+        store.metadataBySource["s1"] = [
+            CatalogMetadataEntry(field: field, valueText: "a", hasValue: true, suggested: false, sortOrder: 0),
+        ]
+        store.metadataBySource["s2"] = [
+            CatalogMetadataEntry(field: field, valueText: "b", hasValue: true, suggested: false, sortOrder: 0),
+        ]
+        let (model, session) = makeModel(store: store, fields: [field])
+        await warm(model, session: session)
         model.select("2")
         #expect(model.canDeleteSelectedField)
+        await model.askDelete()
+
+        let report = model.pendingImpact?.report
+        #expect(report?.allowed == false)
+        #expect(report?.gate == .inbound)
+        #expect(report?.groups.first?.via == "source_metadata.field_id")
+        #expect(report?.groups.first?.total == 2)
+        #expect(report?.groups.first?.total == model.selectedField?.usedBy)
+        #expect(report?.groups.first?.listed.map(\.ref) == ["SRC-AAAAA", "SRC-BBBBB"])
+        #expect(await model.confirmPendingImpact() == false)
+        #expect(store.fieldsByProject[projectDir]?.map(\.id) == ["2"])
+        #expect(model.fields.map(\.id) == ["2"])
     }
 
-    @Test func pluginFieldsCannotBeDeletedAndSayWhy() async {
-        let (model, session) = makeModel(fields: [pluginField()])
+    @Test func pluginFieldOriginLockedTrashStillOffered() async {
+        let store = FakeStore()
+        let (model, session) = makeModel(store: store, fields: [pluginField()])
         await warm(model, session: session)
         model.select("3")
+        #expect(model.canDeleteSelectedField)
+        await model.askDelete()
 
-        #expect(!model.canDeleteSelectedField)
-        #expect(String(localized: model.deleteTooltip) == String(localized: L10n.SourceFields.deleteOwnedByPlugin))
-    }
-
-    @Test func fieldsInUseCannotBeDeletedAndCountTheSources() async {
-        let (model, session) = makeModel(fields: [userField(usedBy: 3)])
-        await warm(model, session: session)
-        model.select("2")
-
-        #expect(!model.canDeleteSelectedField)
-        #expect(String(localized: model.deleteTooltip) == String(localized: L10n.SourceFields.deleteInUse(count: 3)))
-    }
-
-    @Test func aSingleUseReadsAsOneSource() async {
-        let (model, session) = makeModel(fields: [userField(usedBy: 1)])
-        await warm(model, session: session)
-        model.select("2")
-
-        #expect(String(localized: model.deleteTooltip) == String(localized: L10n.SourceFields.deleteInUse(count: 1)))
-        #expect(String(localized: model.deleteTooltip) != String(localized: L10n.SourceFields.deleteInUse(count: 2)))
-    }
-
-    @Test func deletableFieldTooltipNamesTheAction() async {
-        let (model, session) = makeModel(fields: [userField()])
-        await warm(model, session: session)
-        model.select("2")
-
-        #expect(String(localized: model.deleteTooltip) == String(localized: L10n.SourceFields.deleteField))
-    }
-
-    @Test func askDeleteOpensConfirmationForTheSelectedField() async {
-        let (model, session) = makeModel(fields: [userField()])
-        await warm(model, session: session)
-        model.select("2")
-        model.askDelete()
-
-        #expect(model.pendingDeleteField?.id == "2")
-    }
-
-    @Test func askDeleteIsIgnoredWhenTheFieldCannotBeDeleted() async {
-        let (model, session) = makeModel(fields: [userField(usedBy: 2)])
-        await warm(model, session: session)
-        model.select("2")
-        model.askDelete()
-
-        #expect(model.pendingDeleteField == nil)
+        #expect(model.pendingImpact?.report.allowed == false)
+        #expect(model.pendingImpact?.report.gate == .originLocked)
+        #expect(await model.confirmPendingImpact() == false)
+        #expect(store.fieldsByProject[projectDir]?.map(\.id) == ["3"])
     }
 
     @Test func cancelDeleteClosesTheConfirmationAndKeepsTheField() async {
         let (model, session) = makeModel(fields: [userField()])
         await warm(model, session: session)
         model.select("2")
-        model.askDelete()
+        await model.askDelete()
         model.cancelDelete()
 
         #expect(model.pendingDeleteField == nil)
+        #expect(model.pendingImpact == nil)
         #expect(model.fields.count == 1)
         #expect(model.selectedField?.id == "2")
     }
 
-    @Test func confirmDeleteRemovesTheFieldClearsSelectionAndToasts() async {
+    @Test func confirmPendingImpactRemovesTheFieldClearsSelectionAndToasts() async {
         let store = FakeStore()
         let counts = CatalogCounts(projectDir: projectDir, store: store)
         let (model, session) = makeModel(store: store, fields: [seededField(), userField()], catalogCounts: counts)
         await warm(model, session: session)
         #expect(counts.sourceFields?.total == 2)
         model.select("2")
-        model.askDelete()
-        let deleted = await model.confirmDelete()
+        await model.askDelete()
+        #expect(model.pendingImpact?.report.allowed == true)
+        let deleted = await model.confirmPendingImpact()
 
         #expect(deleted)
         #expect(model.fields.map(\.id) == ["1"])
@@ -353,17 +392,14 @@ struct SourceFieldsModelTests {
         #expect(counts.sourceFields?.user == 0)
     }
 
-    @Test func confirmDeleteKeepsTheConfirmationOpenWhenTheStoreRefuses() async {
+    @Test func confirmPendingImpactKeepsTheSheetOpenWhenTheStoreRefuses() async {
         let store = FakeStore()
         let (model, session) = makeModel(store: store, fields: [userField()])
         await warm(model, session: session)
         model.select("2")
-        model.askDelete()
-        // A source picks the field up after the model last listed, so the
-        // count the button was enabled from is stale and the engine refuses.
-        // That race is why the dialog has an error path at all.
+        await model.askDelete()
         store.fieldsByProject[projectDir] = [userField(usedBy: 4)]
-        let deleted = await model.confirmDelete()
+        let deleted = await model.confirmPendingImpact()
 
         #expect(!deleted)
         #expect(model.fields.count == 1)
@@ -430,8 +466,8 @@ struct SourceFieldsModelTests {
         #expect(navigation.currentLocation.fieldId == model.fields.first?.id)
         #expect(navigation.canGoBack)
 
-        model.askDelete()
-        #expect(await model.confirmDelete())
+        await model.askDelete()
+        #expect(await model.confirmPendingImpact())
         navigation.fallbackToSectionRoot()
         #expect(navigation.currentLocation == .sectionRoot(.sourceFields))
         #expect(navigation.currentLocation.fieldId == nil)
