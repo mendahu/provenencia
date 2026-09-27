@@ -425,30 +425,34 @@ struct WorkspaceSessionTests {
         #expect(handle.value?.observations.count == 1)
     }
 
-    @Test func applySavedCitationDoesNotReloadSubjectFields() async {
+    /// `usedBy` on the Subject Fields inspector counts Observations, and it
+    /// moves whenever a citation save creates or deletes one.
+    @Test func applySavedCitationInvalidatesSubjectFieldsUsedBy() async {
         let store = FakeStore()
         seedStore(store)
-        store.subjectTypesByProject[projectDir] = [
-            CatalogSubjectType(
-                id: "type-person",
-                key: "person",
+        store.propertiesByProject[projectDir] = [
+            CatalogProperty(
+                id: "prop-name",
+                key: "name",
                 origin: "provenencia",
-                label: "Person",
+                label: "Name",
                 description: "",
-                refPrefix: "PER",
-                candidateRefPrefix: "CPR"
+                valueType: "name",
+                usedBy: 2
             ),
         ]
         let session = makeSession(store: store)
         let fieldsKey = CatalogQueryKey.subjectFieldsWorkspace(project: session.projectKey)
         let fields: QueryHandle<SubjectFieldsSnapshot> = session.query(fieldsKey)
         await waitForFetchComplete(fields)
-        let typesAtLoad = fields.value?.types
-        store.subjectTypesByProject[projectDir] = []
+        #expect(fields.value?.properties.first?.usedBy == 2)
+
+        store.propertiesByProject[projectDir]?[0].usedBy = 1
         session.apply(.savedCitation(sourceId: "s1"))
-        await Task.yield()
-        #expect(fields.value?.types == typesAtLoad)
-        #expect(fields.isFetching == false)
+
+        let _: QueryHandle<SubjectFieldsSnapshot> = session.query(fieldsKey)
+        await waitForFetchComplete(fields)
+        #expect(fields.value?.properties.first?.usedBy == 1)
     }
 
     @Test func readyValueIgnoresStaleCache() async {

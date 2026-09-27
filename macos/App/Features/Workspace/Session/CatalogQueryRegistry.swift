@@ -90,9 +90,11 @@ struct CatalogQueryRegistry: Sendable {
         Spec(
             kind: .subjectFieldsWorkspace,
             stalePolicy: .sessionFresh,
+            // `usedBy` counts Observations per property. Observation writes
+            // travel as `savedCitation`, same as the composer graph payload.
             invalidateOn: [
                 .createdProperty, .updatedProperty, .deletedProperty,
-                .mutatedSubjectTypeFields,
+                .mutatedSubjectTypeFields, .savedCitation,
             ]
         ),
         Spec(
