@@ -57,8 +57,9 @@ struct PVInlineEdit<Display: View, Editor: View, RestingTrailing: View, EditingT
     var axis: Axis = .vertical
     /// Resting pencil alignment. Default `.top` so metadata rows stay put.
     var restingAlignment: RestingAlignment = .top
-    /// Labeled text buttons (default) vs stacked check / dismiss icons
-    /// (metadata board).
+    /// Labeled text buttons (default), stacked check / dismiss (metadata
+    /// board), or a side-by-side icon row that occupies the same trailing
+    /// slot as the resting pencil / trash.
     var actionsStyle: PVInlineEditActions.Style = .labeled
     var accessibilityIdentifierPrefix: String? = nil
     let onEdit: () -> Void
@@ -219,6 +220,9 @@ struct PVInlineEditActions: View {
         case labeled
         /// Stacked icon buttons: filled check (Save) over dismiss (Cancel).
         case iconStack
+        /// Side-by-side check (Save) and dismiss (Cancel), matching the
+        /// resting pencil + trailing trash slot.
+        case iconRow
     }
 
     let isSaving: Bool
@@ -237,6 +241,8 @@ struct PVInlineEditActions: View {
             labeledBody
         case .iconStack:
             iconStackBody
+        case .iconRow:
+            iconRowBody
         }
     }
 
@@ -262,6 +268,27 @@ struct PVInlineEditActions: View {
 
     private var iconStackBody: some View {
         VStack(spacing: PVSpacing.space2) {
+            if isSaving {
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(width: PVControlSize.sm.height, height: PVControlSize.sm.height)
+                    .accessibilityIdentifier(prefixed("save"))
+            } else {
+                PVIconButton(.check, label: saveLabel, size: .sm, tone: .accent, action: onSave)
+                    .disabled(saveDisabled)
+                    .accessibilityIdentifier(prefixed("save"))
+            }
+
+            if showsCancel {
+                PVIconButton(.dismiss, label: cancelLabel, size: .sm, action: onCancel)
+                    .disabled(isSaving)
+                    .accessibilityIdentifier(prefixed("cancel"))
+            }
+        }
+    }
+
+    private var iconRowBody: some View {
+        HStack(spacing: PVSpacing.space2) {
             if isSaving {
                 ProgressView()
                     .controlSize(.small)
@@ -335,6 +362,33 @@ struct PVInlineEditActions: View {
     }
     .padding(PVSpacing.space6)
     .frame(width: 420)
+}
+
+#Preview("Editing icon row") {
+    PVInlineEdit(
+        isEditing: true,
+        isSaving: false,
+        saveLabel: LocalizedStringResource("Save"),
+        cancelLabel: LocalizedStringResource("Cancel"),
+        editLabel: LocalizedStringResource("Edit"),
+        axis: .horizontal,
+        actionsStyle: .iconRow,
+        onEdit: {},
+        onSave: {},
+        onCancel: {}
+    ) {
+        Text("display")
+    } editor: {
+        Text("Burial ground")
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(PVSpacing.space3)
+            .overlay(
+                RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                    .stroke(PVColor.borderDefault, lineWidth: 1)
+            )
+    }
+    .padding(PVSpacing.space6)
+    .frame(width: 340)
 }
 
 #Preview("Editing icon stack") {

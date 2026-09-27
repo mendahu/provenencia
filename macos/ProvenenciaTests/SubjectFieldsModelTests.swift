@@ -387,17 +387,15 @@ struct SubjectFieldsModelTests {
         #expect(store.propertiesByProject[projectDir]?.map(\.id) == [pluginProperty().id])
     }
 
-    @Test func isDirtyTracksUnsavedEditsAndRevertClearsThem() async {
+    @Test func isDirtyTracksUnsavedEditsAndMatchingValuesClearThem() async {
         let (model, session, _) = makeModel(properties: [userProperty()], types: [personType()])
         await warm(model, session: session)
         model.selectProperty(userProperty().id)
         model.beginEdit()
-        #expect(!model.isEditDirty)
-        model.editDraft?.label = "Changed"
-        #expect(model.isEditDirty)
-        model.revertEdit()
-        #expect(!model.isEditDirty)
-        #expect(model.editDraft?.label == "Burial ground")
+        #expect(!model.isEditDirty(label: "Burial ground", description: "Cemetery name"))
+        #expect(model.isEditDirty(label: "Changed", description: "Cemetery name"))
+        #expect(!model.isEditDirty(label: "Burial ground", description: "Cemetery name"))
+        #expect(!model.canSubmitEdit(label: "Burial ground", description: "Cemetery name"))
     }
 
     @Test func saveEditPersistsLabelAndDescriptionAndKeepsKey() async {
@@ -407,10 +405,8 @@ struct SubjectFieldsModelTests {
         await warm(model, session: session)
         model.selectProperty(property.id)
         model.beginEdit()
-        model.editDraft?.label = "Cemetery"
-        model.editDraft?.description = "Where they were buried"
-        #expect(model.canSubmitEdit)
-        #expect(await model.submitEdit())
+        #expect(model.canSubmitEdit(label: "Cemetery", description: "Where they were buried"))
+        #expect(await model.submitEdit(label: "Cemetery", description: "Where they were buried"))
         #expect(model.isEditingIdentity == false)
         await warm(model, session: session)
         #expect(store.propertiesByProject[projectDir]?.first?.label == "Cemetery")
@@ -427,6 +423,6 @@ struct SubjectFieldsModelTests {
         #expect(!model.canEditSelected)
         model.beginEdit()
         #expect(model.isEditingIdentity == false)
-        #expect(model.editDraft == nil)
+        #expect(!model.canSubmitEdit(label: "Plugin fact", description: ""))
     }
 }

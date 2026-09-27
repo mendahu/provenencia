@@ -74,23 +74,6 @@ private struct SubjectFieldsContent: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(PVColor.surfacePage)
         .vocabularyToastOverlay($model.toast, identifier: "subjectFields.toast")
-        .pvFormDialog(
-            isPresented: createOpenBinding,
-            copy: PVFormDialogCopy(
-                title: L10n.SubjectFields.createTitle,
-                subtitle: L10n.SubjectFields.createOriginNote,
-                confirm: L10n.SubjectFields.createSubmit,
-                cancel: L10n.SubjectFields.createCancel
-            ),
-            isRunning: model.isSaving,
-            confirmDisabled: !model.canSubmitCreate,
-            accessibilityIdentifierPrefix: "subjectFields.create",
-            onConfirm: {
-                Task { _ = await model.submitCreate() }
-            }
-        ) {
-            createForm
-        }
         .pvDeleteImpact(
             item: Binding(
                 get: { model.pendingImpact },
@@ -125,6 +108,7 @@ private struct SubjectFieldsContent: View {
             if handle.status == .ready { model.syncCatalogCounts() }
         }
         .background {
+            SubjectFieldsCreateHost(model: model)
             Button(action: { model.focusSearch() }) { EmptyView() }
                 .keyboardShortcut("f", modifiers: .command)
                 .opacity(0)
@@ -142,13 +126,6 @@ private struct SubjectFieldsContent: View {
             return .handled
         }
         .accessibilityIdentifier("subjectFields")
-    }
-
-    private var createOpenBinding: Binding<Bool> {
-        Binding(
-            get: { model.createOpen },
-            set: { if !$0 { model.closeCreate() } }
-        )
     }
 
     private var header: some View {
@@ -453,7 +430,8 @@ private struct SubjectFieldsContent: View {
 
     private func inspectorBody(_ property: CatalogProperty) -> some View {
         VStack(alignment: .leading, spacing: PVSpacing.space6) {
-            inspectorIdentity(property)
+            SubjectFieldsIdentityEditor(property: property, model: model)
+                .id(property.id)
 
             if let deleteError = model.deleteError {
                 PVCallout(tone: .danger, message: deleteError)
@@ -533,103 +511,6 @@ private struct SubjectFieldsContent: View {
         }
     }
 
-    private func inspectorIdentity(_ property: CatalogProperty) -> some View {
-        PVInlineEdit(
-            isEditing: model.isEditingIdentity,
-            isSaving: model.isSaving,
-            error: model.isEditingIdentity ? model.formError : nil,
-            saveLabel: L10n.SubjectFields.editSave,
-            cancelLabel: L10n.SubjectFields.editCancel,
-            editLabel: L10n.SubjectFields.editAction,
-            saveDisabled: !model.canSubmitEdit,
-            showsEditControl: model.canEditSelected,
-            axis: .vertical,
-            actionsStyle: .iconStack,
-            accessibilityIdentifierPrefix: "subjectFields.identity",
-            onEdit: { model.beginEdit() },
-            onSave: { Task { _ = await model.submitEdit() } },
-            onCancel: { model.cancelEdit() },
-            display: {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(verbatim: property.label)
-                        .font(PVFont.display(size: PVTypeScale.h3))
-                        .foregroundStyle(PVColor.textDisplay)
-                    Text(verbatim: property.key)
-                        .font(PVFont.mono(size: PVTypeScale.caption))
-                        .foregroundStyle(PVColor.textMuted)
-                    if !property.description.isEmpty {
-                        Text(verbatim: property.description)
-                            .font(PVFont.body(size: PVTypeScale.bodySmall))
-                            .foregroundStyle(PVColor.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.top, PVSpacing.space2)
-                    }
-                }
-            },
-            editor: {
-                VStack(alignment: .leading, spacing: PVSpacing.space4) {
-                    PVInput(
-                        text: editLabelBinding,
-                        size: .sm,
-                        isInvalid: (model.editDraft?.label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) == true,
-                        activateOnAppear: true
-                    )
-                    .accessibilityIdentifier("subjectFields.identity.label")
-                    Text(verbatim: property.key)
-                        .font(PVFont.mono(size: PVTypeScale.caption))
-                        .foregroundStyle(PVColor.textMuted)
-                    Text(L10n.SubjectFields.editKeyStays(key: property.key))
-                        .font(PVFont.body(size: PVTypeScale.caption, italic: true))
-                        .foregroundStyle(PVColor.textMuted)
-                    PVTextArea(
-                        text: editDescriptionBinding,
-                        lineLimit: 2...6,
-                        prompt: L10n.SubjectFields.editDescriptionPlaceholder
-                    )
-                    .accessibilityIdentifier("subjectFields.identity.description")
-                }
-            },
-            restingTrailing: {
-                if model.showsDelete {
-                    PVIconButton(
-                        .trash,
-                        label: model.deleteTooltip,
-                        size: .sm,
-                        tone: .danger
-                    ) {
-                        Task { await model.askDelete() }
-                    }
-                    .disabled(!model.canDeleteSelected)
-                    .accessibilityLabel(Text(verbatim: model.deleteAccessibilityLabel))
-                    .accessibilityIdentifier("subjectFields.delete")
-                }
-            },
-            editingTrailing: { EmptyView() }
-        )
-    }
-
-    private var editLabelBinding: Binding<String> {
-        Binding(
-            get: { model.editDraft?.label ?? "" },
-            set: { newValue in
-                if model.editDraft != nil {
-                    model.editDraft?.label = newValue
-                }
-            }
-        )
-    }
-
-    private var editDescriptionBinding: Binding<String> {
-        Binding(
-            get: { model.editDraft?.description ?? "" },
-            set: { newValue in
-                if model.editDraft != nil {
-                    model.editDraft?.description = newValue
-                }
-            }
-        )
-    }
-
     private func inspectorMetaRow<Content: View>(
         label: LocalizedStringResource,
         @ViewBuilder content: () -> Content
@@ -677,7 +558,148 @@ private struct SubjectFieldsContent: View {
             + (locked ? ", \(String(localized: L10n.SubjectFields.bindingLocked))" : "")
         )
     }
+}
 
+/// Local drafts so inspector keystrokes don't rebuild the type strip and table.
+private struct SubjectFieldsIdentityEditor: View {
+    let property: CatalogProperty
+    @Bindable var model: SubjectFieldsModel
+    @State private var labelDraft = ""
+    @State private var descriptionDraft = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: PVSpacing.space4) {
+            PVInlineEdit(
+                isEditing: model.isEditingIdentity,
+                isSaving: model.isSaving,
+                error: model.isEditingIdentity ? model.formError : nil,
+                saveLabel: L10n.SubjectFields.editSave,
+                cancelLabel: L10n.SubjectFields.editCancel,
+                editLabel: L10n.SubjectFields.editAction,
+                saveDisabled: !model.canSubmitEdit(label: labelDraft, description: descriptionDraft),
+                showsEditControl: model.canEditSelected,
+                axis: .horizontal,
+                actionsStyle: .iconRow,
+                accessibilityIdentifierPrefix: "subjectFields.identity",
+                onEdit: {
+                    seedDrafts()
+                    model.beginEdit()
+                },
+                onSave: {
+                    Task { _ = await model.submitEdit(label: labelDraft, description: descriptionDraft) }
+                },
+                onCancel: { model.cancelEdit() },
+                display: {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(verbatim: property.label)
+                            .font(PVFont.display(size: PVTypeScale.h3))
+                            .foregroundStyle(PVColor.textDisplay)
+                        Text(verbatim: property.key)
+                            .font(PVFont.mono(size: PVTypeScale.caption))
+                            .foregroundStyle(PVColor.textMuted)
+                    }
+                },
+                editor: {
+                    VStack(alignment: .leading, spacing: 3) {
+                        PVInput(
+                            text: $labelDraft,
+                            size: .sm,
+                            isInvalid: labelDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                            activateOnAppear: true
+                        )
+                        .accessibilityIdentifier("subjectFields.identity.label")
+                        Text(verbatim: property.key)
+                            .font(PVFont.mono(size: PVTypeScale.caption))
+                            .foregroundStyle(PVColor.textMuted)
+                    }
+                },
+                restingTrailing: {
+                    if model.showsDelete {
+                        PVIconButton(
+                            .trash,
+                            label: model.deleteTooltip,
+                            size: .sm,
+                            tone: .danger
+                        ) {
+                            Task { await model.askDelete() }
+                        }
+                        .disabled(!model.canDeleteSelected)
+                        .accessibilityLabel(Text(verbatim: model.deleteAccessibilityLabel))
+                        .accessibilityIdentifier("subjectFields.delete")
+                    }
+                },
+                editingTrailing: { EmptyView() }
+            )
+            if model.isEditingIdentity {
+                PVTextArea(
+                    text: $descriptionDraft,
+                    lineLimit: 2...6,
+                    prompt: L10n.SubjectFields.editDescriptionPlaceholder
+                )
+                .accessibilityIdentifier("subjectFields.identity.description")
+                Text(L10n.SubjectFields.editKeyStays(key: property.key))
+                    .font(PVFont.body(size: PVTypeScale.caption, italic: true))
+                    .foregroundStyle(PVColor.textMuted)
+            } else if !property.description.isEmpty {
+                Text(verbatim: property.description)
+                    .font(PVFont.body(size: PVTypeScale.bodySmall))
+                    .foregroundStyle(PVColor.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .onChange(of: model.isEditingIdentity) { _, editing in
+            if editing { seedDrafts() }
+        }
+    }
+
+    private func seedDrafts() {
+        labelDraft = property.label
+        descriptionDraft = property.description
+    }
+}
+
+/// Local create drafts so dialog keystrokes don't rebuild the destination.
+private struct SubjectFieldsCreateHost: View {
+    @Bindable var model: SubjectFieldsModel
+    @State private var draft: SubjectFieldsModel.Draft?
+
+    var body: some View {
+        Color.clear
+            .frame(width: 0, height: 0)
+            .accessibilityHidden(true)
+            .pvFormDialog(
+                isPresented: createOpenBinding,
+                copy: PVFormDialogCopy(
+                    title: L10n.SubjectFields.createTitle,
+                    subtitle: L10n.SubjectFields.createOriginNote,
+                    confirm: L10n.SubjectFields.createSubmit,
+                    cancel: L10n.SubjectFields.createCancel
+                ),
+                isRunning: model.isSaving,
+                confirmDisabled: !model.canSubmitCreate(draft),
+                accessibilityIdentifierPrefix: "subjectFields.create",
+                onConfirm: {
+                    Task { _ = await model.submitCreate(draft) }
+                }
+            ) {
+                createForm
+            }
+            .onAppear {
+                if model.createOpen { draft = model.draft }
+            }
+            .onChange(of: model.createOpen) { _, open in
+                draft = open ? model.draft : nil
+            }
+    }
+
+    private var createOpenBinding: Binding<Bool> {
+        Binding(
+            get: { model.createOpen },
+            set: { if !$0 { model.closeCreate() } }
+        )
+    }
+
+    @ViewBuilder
     private var createForm: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space6) {
             if let formError = model.formError {
@@ -692,8 +714,8 @@ private struct SubjectFieldsContent: View {
             ) {
                 PVInput(
                     text: Binding(
-                        get: { model.draft?.label ?? "" },
-                        set: { model.draft?.label = $0 }
+                        get: { draft?.label ?? "" },
+                        set: { draft?.label = $0 }
                     ),
                     prompt: L10n.SubjectFields.createLabelPlaceholder
                 )
@@ -706,7 +728,7 @@ private struct SubjectFieldsContent: View {
             ) {
                 PVInput(
                     text: Binding(
-                        get: { model.draftKey },
+                        get: { SubjectFieldsModel.draftKey(label: draft?.label ?? "") },
                         set: { _ in }
                     ),
                     mono: true,
@@ -719,8 +741,8 @@ private struct SubjectFieldsContent: View {
             PVField(label: L10n.SubjectFields.createDescription) {
                 PVTextArea(
                     text: Binding(
-                        get: { model.draft?.description ?? "" },
-                        set: { model.draft?.description = $0 }
+                        get: { draft?.description ?? "" },
+                        set: { draft?.description = $0 }
                     ),
                     lineLimit: 2...4,
                     prompt: L10n.SubjectFields.createDescriptionPlaceholder
@@ -737,10 +759,10 @@ private struct SubjectFieldsContent: View {
                     ForEach(SubjectPropertyValueType.researcherCreatable, id: \.self) { vt in
                         PVChip(
                             text: vt,
-                            isSelected: (model.draft?.valueType ?? "text") == vt,
+                            isSelected: (draft?.valueType ?? "text") == vt,
                             expands: true,
                             selectionLift: true,
-                            action: { model.draft?.valueType = vt }
+                            action: { draft?.valueType = vt }
                         )
                         .accessibilityIdentifier("subjectFields.create.valueType.\(vt)")
                     }
@@ -775,9 +797,9 @@ private struct SubjectFieldsContent: View {
     private func createBindRow(_ type: CatalogSubjectType) -> some View {
         let presentation = model.snapshot.presentation(for: type)
         let ink = SubjectFieldsTypeChrome.ink(typeKey: type.key, presentation: presentation)
-        let on = model.draft?.bindTypeIDs.contains(type.id) == true
+        let on = draft?.bindTypeIDs.contains(type.id) == true
         return Button {
-            model.toggleDraftBind(typeID: type.id)
+            toggleBind(typeID: type.id)
         } label: {
             HStack(spacing: PVSpacing.space5) {
                 SubjectFieldsBindBox(on: on, locked: false)
@@ -798,5 +820,14 @@ private struct SubjectFieldsContent: View {
         .accessibilityLabel(type.label)
         .accessibilityAddTraits(on ? [.isSelected] : [])
         .accessibilityIdentifier("subjectFields.create.bind.\(type.key)")
+    }
+
+    private func toggleBind(typeID: String) {
+        guard draft != nil else { return }
+        if draft!.bindTypeIDs.contains(typeID) {
+            draft!.bindTypeIDs.remove(typeID)
+        } else {
+            draft!.bindTypeIDs.insert(typeID)
+        }
     }
 }

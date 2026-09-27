@@ -30,11 +30,6 @@ final class SubjectFieldsModel {
         var bindTypeIDs: Set<String>
     }
 
-    struct EditDraft: Equatable {
-        var label: String
-        var description: String
-    }
-
     private(set) var selectedTypeKey: String?
     var searchQuery = ""
     /// ComboBox selection for “Add a property to {Type}” (resets after bind).
@@ -42,7 +37,6 @@ final class SubjectFieldsModel {
     private(set) var selectedPropertyID: String?
     private(set) var createOpen = false
     var draft: Draft?
-    var editDraft: EditDraft?
     private(set) var isEditingIdentity = false
     private(set) var isSaving = false
     var formError: String?
@@ -142,10 +136,18 @@ final class SubjectFieldsModel {
     }
 
     var draftKey: String {
-        FieldSlug.kebab(draft?.label ?? "")
+        Self.draftKey(label: draft?.label ?? "")
+    }
+
+    static func draftKey(label: String) -> String {
+        FieldSlug.kebab(label)
     }
 
     var canSubmitCreate: Bool {
+        canSubmitCreate(draft)
+    }
+
+    func canSubmitCreate(_ draft: Draft?) -> Bool {
         guard let draft, !isSaving else { return false }
         let label = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
         return !label.isEmpty
@@ -170,16 +172,16 @@ final class SubjectFieldsModel {
         return !CatalogOrigin.isPlugin(property.origin)
     }
 
-    var isEditDirty: Bool {
-        guard let property = selectedProperty, let editDraft else { return false }
-        return editDraft.label.trimmingCharacters(in: .whitespacesAndNewlines) != property.label
-            || editDraft.description.trimmingCharacters(in: .whitespacesAndNewlines) != property.description
+    func isEditDirty(label: String, description: String) -> Bool {
+        guard let property = selectedProperty else { return false }
+        return label.trimmingCharacters(in: .whitespacesAndNewlines) != property.label
+            || description.trimmingCharacters(in: .whitespacesAndNewlines) != property.description
     }
 
-    var canSubmitEdit: Bool {
-        guard canEditSelected, let editDraft, !isSaving else { return false }
-        let label = editDraft.label.trimmingCharacters(in: .whitespacesAndNewlines)
-        return !label.isEmpty && isEditDirty
+    func canSubmitEdit(label: String, description: String) -> Bool {
+        guard canEditSelected, !isSaving else { return false }
+        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !trimmed.isEmpty && isEditDirty(label: label, description: description)
     }
 
     var pendingDeleteProperty: CatalogProperty? {
@@ -242,29 +244,23 @@ final class SubjectFieldsModel {
     }
 
     func beginEdit() {
-        guard let property = selectedProperty, canEditSelected else { return }
-        editDraft = EditDraft(label: property.label, description: property.description)
+        guard canEditSelected else { return }
         isEditingIdentity = true
         formError = nil
     }
 
     func cancelEdit() {
         isEditingIdentity = false
-        editDraft = nil
-        formError = nil
-    }
-
-    func revertEdit() {
-        guard let property = selectedProperty else { return }
-        editDraft = EditDraft(label: property.label, description: property.description)
         formError = nil
     }
 
     @discardableResult
-    func submitEdit() async -> Bool {
-        guard let property = selectedProperty, let editDraft, canSubmitEdit else { return false }
-        let label = editDraft.label.trimmingCharacters(in: .whitespacesAndNewlines)
-        let description = editDraft.description.trimmingCharacters(in: .whitespacesAndNewlines)
+    func submitEdit(label: String, description: String) async -> Bool {
+        guard let property = selectedProperty, canSubmitEdit(label: label, description: description) else {
+            return false
+        }
+        let trimmedLabel = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
         isSaving = true
         formError = nil
         defer { isSaving = false }
@@ -273,12 +269,11 @@ final class SubjectFieldsModel {
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
                 propertyID: property.id,
-                label: label,
+                label: trimmedLabel,
                 valueType: property.valueType,
-                description: description
+                description: trimmedDescription
             )
             session.apply(.updatedProperty)
-            self.editDraft = EditDraft(label: updated.label, description: updated.description)
             isEditingIdentity = false
             toast = VocabularyToast(
                 title: String(localized: L10n.SubjectFields.toastUpdatedTitle),
@@ -367,8 +362,8 @@ final class SubjectFieldsModel {
     }
 
     @discardableResult
-    func submitCreate() async -> Bool {
-        guard let draft else { return false }
+    func submitCreate(_ incoming: Draft? = nil) async -> Bool {
+        guard let draft = incoming ?? draft else { return false }
         let label = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !label.isEmpty else {
             formError = String(localized: L10n.SubjectFields.errorLabelRequired)
