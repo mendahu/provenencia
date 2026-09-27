@@ -1028,7 +1028,7 @@ struct SourcePageModelTests {
             ref: "CIT-AAAAA",
             artifactID: "a1",
             locatorJSON: "{}",
-            transcription: "",
+            transcription: "John Hartley, worsted weaver",
             description: "",
             transcriptionUncertain: false,
             transcriptionNote: ""
@@ -1038,6 +1038,13 @@ struct SourcePageModelTests {
         await model.askDeleteArtifact(id: "a1")
         #expect(model.pendingImpact?.report.allowed == false)
         #expect(model.pendingImpact?.report.groups.first?.via == "citations.artifact_id")
+        let jump = model.pendingImpact?.report.groups.first?.listed.first?.location
+        #expect(jump?.sourceId == sourceID)
+        #expect(jump?.citationId == "c1")
+        #expect(jump?.artifactId == "a1")
+        #expect(jump?.sourceSurface == .citationComposer)
+        #expect(model.pendingImpact?.report.groups.first?.listed.first?.title == "John Hartley, worsted weaver")
+        #expect(model.pendingImpact?.report.groups.first?.listed.first?.ref == "CIT-AAAAA")
         let left = await model.confirmResourceDelete()
         #expect(!left)
         #expect(store.deleteArtifactCalls == 0)

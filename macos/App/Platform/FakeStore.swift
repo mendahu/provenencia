@@ -1743,6 +1743,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         if kind == "artifact" {
             let cites = citationsByID.values.filter { $0.artifactID == id }
             if !cites.isEmpty {
+                let sourceID = artifactsBySource.first { _, arts in
+                    arts.contains { $0.id == id }
+                }?.key
                 return CatalogDeleteImpact(
                     allowed: false,
                     gate: .inbound,
@@ -1755,9 +1758,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                                 CatalogDeleteImpactListed(
                                     id: $0.id,
                                     ref: $0.ref,
-                                    title: $0.ref,
+                                    title: $0.transcription,
                                     location: WorkspaceLocation(
                                         section: .sources,
+                                        sourceId: sourceID,
                                         citationId: $0.id,
                                         artifactId: $0.artifactID,
                                         sourceSurface: .citationComposer,

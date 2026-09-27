@@ -1693,7 +1693,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Remove or re-point what uses it first. Select one to go there."
+            "value": "The following items need to be deleted before this one can."
           }
         }
       }

@@ -104,6 +104,17 @@ enum CitationComposerEntry: Equatable, Sendable {
               let sourceID = location.sourceId, !sourceID.isEmpty
         else { return nil }
 
+        if let citationID = location.citationId, !citationID.isEmpty {
+            self = .edit(
+                sourceID: sourceID,
+                subjectID: location.subjectId ?? "",
+                citationID: citationID,
+                artifactID: location.artifactId,
+                observationID: location.observationId
+            )
+            return
+        }
+
         if location.subjectId == nil {
             guard let fromID = location.connectFromSubjectId, !fromID.isEmpty,
                   let toID = location.connectToSubjectId, !toID.isEmpty,
@@ -119,16 +130,6 @@ enum CitationComposerEntry: Equatable, Sendable {
         }
 
         guard let subjectID = location.subjectId, !subjectID.isEmpty else { return nil }
-        if let citationID = location.citationId, !citationID.isEmpty {
-            self = .edit(
-                sourceID: sourceID,
-                subjectID: subjectID,
-                citationID: citationID,
-                artifactID: location.artifactId,
-                observationID: location.observationId
-            )
-            return
-        }
         self = .addProperty(
             sourceID: sourceID,
             subjectID: subjectID,

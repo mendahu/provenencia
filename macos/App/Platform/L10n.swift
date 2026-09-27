@@ -6173,7 +6173,7 @@ enum L10n {
 
         static let noticeSubtitle = LocalizedStringResource(
             "deleteImpact.notice.subtitle",
-            defaultValue: "Remove or re-point what uses it first. Select one to go there.",
+            defaultValue: "The following items need to be deleted before this one can.",
             comment: "Blocked-delete notice subtitle when inbound groups are listed"
         )
 

@@ -1,6 +1,7 @@
 package deleteimpact
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -137,6 +138,20 @@ func TestCountFilePointersIfUnused(t *testing.T) {
 	}
 	if err := tx.Commit(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestListedSnippet(t *testing.T) {
+	if got := listedSnippet("  John\nHartley  ", 80); got != "John Hartley" {
+		t.Fatalf("collapse %q", got)
+	}
+	if got := listedSnippet("", 80); got != "" {
+		t.Fatalf("empty %q", got)
+	}
+	long := strings.Repeat("a", 90)
+	got := listedSnippet(long, 80)
+	if got != strings.Repeat("a", 80)+"…" {
+		t.Fatalf("trunc %q", got)
 	}
 }
 

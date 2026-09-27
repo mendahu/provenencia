@@ -569,6 +569,7 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 
 	cit, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
 		ArtifactID: art.ID, LocatorJSON: testLocator,
+		Transcription: "John Hartley, worsted weaver, of 14 Back Nile Street",
 	}, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -584,6 +585,13 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 		}
 		if got.Groups[0].Listed[0].Ref != cit.Citation.Ref {
 			t.Fatalf("listed %+v", got.Groups[0].Listed)
+		}
+		if got.Groups[0].Listed[0].Title != "John Hartley, worsted weaver, of 14 Back Nile Street" {
+			t.Fatalf("title %q", got.Groups[0].Listed[0].Title)
+		}
+		loc := got.Groups[0].Listed[0].Location
+		if loc.Section != "sources" || loc.SourceSurface != "citationComposer" || loc.SourceID == "" || loc.CitationID == "" || loc.ArtifactID == "" {
+			t.Fatalf("citation location %+v", loc)
 		}
 	})
 

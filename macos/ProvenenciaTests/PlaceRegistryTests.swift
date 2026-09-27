@@ -224,6 +224,24 @@ struct PlaceRegistryTests {
         }
     }
 
+    @Test func citationJumpResolvesComposerWithoutSubjectId() {
+        let location = WorkspaceLocation(
+            section: .sources,
+            sourceId: "s1",
+            citationId: "cit-1",
+            artifactId: "art-0",
+            sourceSurface: .citationComposer,
+            ref: "CIT-AAAAA",
+            title: "CIT-AAAAA"
+        )
+        let place = resolve(location)
+        #expect(place?.placeID == .sourceCitationComposer)
+        #expect(place?.presentation == .sourceCitationComposer)
+        #expect(place?.deepId == "cit-1")
+        #expect(CitationComposerEntry(location: location)?.citationID == "cit-1")
+        #expect(CitationComposerEntry(location: location)?.subjectID == "")
+    }
+
     @Test func connectPrefillResolvesComposerWithoutSubjectId() {
         let location = WorkspaceLocation(
             section: .sources,

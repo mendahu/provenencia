@@ -5,6 +5,8 @@ import (
 	"strings"
 )
 
+const listedSnippetMaxRunes = 80
+
 func projectListed(tx *sql.Tx, kind Kind, row probeRow) (Listed, error) {
 	out := Listed{ID: row.ID, Ref: row.Ref}
 	title, loc, err := projectKind(tx, kind, row)
@@ -148,30 +150,60 @@ func projectSubject(tx *sql.Tx, id []byte, ref string) (string, Location, error)
 
 func projectCitation(tx *sql.Tx, id []byte, ref string) (string, Location, error) {
 	var srcID, artID []byte
-	var srcTitle sql.NullString
+	var srcTitle, transcription sql.NullString
 	err := tx.QueryRow(`
-		SELECT a.source_id, c.artifact_id, src.title
+		SELECT a.source_id, c.artifact_id, src.title, c.transcription
 		FROM citations c
 		JOIN artifacts a ON a.id = c.artifact_id
 		JOIN sources src ON src.id = a.source_id
 		WHERE c.id = ?`, id,
-	).Scan(&srcID, &artID, &srcTitle)
+	).Scan(&srcID, &artID, &srcTitle, &transcription)
 	if err == sql.ErrNoRows {
-		return ref, Location{Section: sectionSources, SourceSurface: surfaceCitationComposer, CitationID: uuidString(id), Ref: ref, Title: ref}, nil
+		return "", Location{Section: sectionSources, SourceSurface: surfaceCitationComposer, CitationID: uuidString(id), Ref: ref, Title: ref}, nil
 	}
 	if err != nil {
 		return "", Location{}, err
 	}
-	return ref, Location{
+	locTitle := ref
+	var subID []byte
+	var subLabel sql.NullString
+	obsErr := tx.QueryRow(`
+		SELECT o.subject_id, sub.label
+		FROM observations o
+		JOIN subjects sub ON sub.id = o.subject_id
+		WHERE o.citation_id = ?
+		ORDER BY o.ref COLLATE NOCASE
+		LIMIT 1`, id,
+	).Scan(&subID, &subLabel)
+	if obsErr != nil && obsErr != sql.ErrNoRows {
+		return "", Location{}, obsErr
+	}
+	if label := strings.TrimSpace(subLabel.String); label != "" {
+		locTitle = label
+	}
+	return listedSnippet(transcription.String, listedSnippetMaxRunes), Location{
 		Section:       sectionSources,
 		SourceID:      uuidString(srcID),
+		SubjectID:     uuidString(subID),
 		CitationID:    uuidString(id),
 		ArtifactID:    uuidString(artID),
 		SourceSurface: surfaceCitationComposer,
 		Ref:           ref,
-		Title:         ref,
+		Title:         locTitle,
 		SourceTitle:   srcTitle.String,
 	}, nil
+}
+
+func listedSnippet(s string, maxRunes int) string {
+	s = strings.Join(strings.Fields(s), " ")
+	if s == "" || maxRunes <= 0 {
+		return ""
+	}
+	runes := []rune(s)
+	if len(runes) <= maxRunes {
+		return s
+	}
+	return string(runes[:maxRunes]) + "…"
 }
 
 func projectArtifact(tx *sql.Tx, id []byte, ref string) (string, Location, error) {

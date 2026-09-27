@@ -23,7 +23,7 @@ struct PlaceRegistry: Sendable {
                 $0.section == .sources
                     && $0.sourceId != nil
                     && $0.sourceSurface == .citationComposer
-                    && ($0.subjectId != nil || $0.isConnectPrefill)
+                    && ($0.subjectId != nil || $0.isConnectPrefill || $0.citationId != nil)
             },
             queryKeys: { project, location in
                 guard let sourceId = location.sourceId else { return [] }
@@ -41,7 +41,7 @@ struct PlaceRegistry: Sendable {
                 }
                 return keys
             },
-            deepId: { $0.subjectId }
+            deepId: { $0.subjectId ?? $0.citationId }
         ),
         Spec(
             id: .sourceGraph,
