@@ -89,6 +89,8 @@ const (
 	MethodListSourceGraphProgress           = int32(engine.Method_METHOD_LIST_SOURCE_GRAPH_PROGRESS)
 	MethodGetSourceGraphProgress            = int32(engine.Method_METHOD_GET_SOURCE_GRAPH_PROGRESS)
 	MethodGetDeleteImpact                   = int32(engine.Method_METHOD_GET_DELETE_IMPACT)
+	MethodDeleteSource                      = int32(engine.Method_METHOD_DELETE_SOURCE)
+	MethodDeleteArtifact                    = int32(engine.Method_METHOD_DELETE_ARTIFACT)
 )
 
 // Call routes one coarse FFI operation to api/ffi/handlers.
@@ -252,6 +254,10 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.GetSourceGraphProgress(in)
 	case MethodGetDeleteImpact:
 		return handlers.GetDeleteImpact(in)
+	case MethodDeleteSource:
+		return handlers.DeleteSource(in)
+	case MethodDeleteArtifact:
+		return handlers.DeleteArtifact(in)
 	default:
 		return nil, apperr.New(apperr.CodeInternalUnknownMethod, apperr.KindInternal, strconv.Itoa(int(method)))
 	}

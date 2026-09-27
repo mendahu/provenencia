@@ -44,6 +44,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var getSourceWorkspaceCalls = 0
     var listSourceGraphProgressCalls = 0
     var getSourceGraphProgressCalls = 0
+    var deleteSourceCalls = 0
+    var deleteArtifactCalls = 0
+    /// Optional Impact override keyed by entity id (tests).
+    var deleteImpactByID: [String: CatalogDeleteImpact] = [:]
     /// Optional override for graph-progress rows (tests). Missing keys compute from subjects/observations.
     var graphProgressBySource: [String: SourceGraphProgress] = [:]
     var listSourceGraphProgressError: Error?
@@ -373,6 +377,17 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         throw StoreBoom.boom
     }
 
+    func deleteSource(projectDir: String, userID _: String, sourceID: String) async throws {
+        markCatalogSessionHeld(projectDir)
+        deleteSourceCalls += 1
+        sourcesByProject[projectDir] = (sourcesByProject[projectDir] ?? []).filter { $0.id != sourceID }
+        notesBySource[sourceID] = nil
+        artifactsBySource[sourceID] = nil
+        subjectsBySource[sourceID] = nil
+        metadataBySource[sourceID] = nil
+        credibilityBySource[sourceID] = nil
+    }
+
     func deleteSourceNote(projectDir _: String, userID _: String, noteID: String) async throws {
         for (sourceID, notes) in notesBySource {
             notesBySource[sourceID] = notes.filter { $0.id != noteID }
@@ -498,6 +513,23 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             }
         }
         throw StoreBoom.boom
+    }
+
+    func deleteArtifact(projectDir: String, userID _: String, artifactID: String) async throws {
+        markCatalogSessionHeld(projectDir)
+        deleteArtifactCalls += 1
+        for (sourceID, arts) in artifactsBySource {
+            artifactsBySource[sourceID] = arts.filter { $0.id != artifactID }
+        }
+        for (project, var sources) in sourcesByProject {
+            for i in sources.indices where sources[i].primaryArtifactID == artifactID {
+                sources[i].primaryArtifactID = ""
+                sources[i].coverMode = "type_icon"
+                sources[i].thumbnailRelPath = ""
+            }
+            sourcesByProject[project] = sources
+        }
+        citationsByID = citationsByID.filter { $0.value.artifactID != artifactID }
     }
 
     func ingestArtifactFile(
@@ -1647,8 +1679,102 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         return graphProgress(for: sourceID, projectDir: projectDir)
     }
 
-    func getDeleteImpact(projectDir: String, kind _: String, id: String) async throws -> CatalogDeleteImpact {
+    func getDeleteImpact(projectDir: String, kind: String, id: String) async throws -> CatalogDeleteImpact {
         markCatalogSessionHeld(projectDir)
+        if let override = deleteImpactByID[id] {
+            return override
+        }
+        if kind == "source" {
+            let arts = artifactsBySource[id] ?? []
+            let subs = subjectsBySource[id] ?? []
+            var groups: [CatalogDeleteImpactGroup] = []
+            if !arts.isEmpty {
+                groups.append(
+                    CatalogDeleteImpactGroup(
+                        via: "artifacts.source_id",
+                        kind: "artifact",
+                        total: arts.count,
+                        listed: arts.prefix(20).map {
+                            CatalogDeleteImpactListed(
+                                id: $0.id,
+                                ref: $0.ref,
+                                title: $0.label,
+                                location: WorkspaceLocation(
+                                    section: .sources,
+                                    sourceId: id,
+                                    artifactId: $0.id,
+                                    sourceSurface: .page,
+                                    ref: $0.ref,
+                                    title: $0.label
+                                )
+                            )
+                        }
+                    )
+                )
+            }
+            if !subs.isEmpty {
+                groups.append(
+                    CatalogDeleteImpactGroup(
+                        via: "subjects.source_id",
+                        kind: "subject",
+                        total: subs.count,
+                        listed: subs.prefix(20).map {
+                            CatalogDeleteImpactListed(
+                                id: $0.id,
+                                ref: $0.ref,
+                                title: $0.label,
+                                location: WorkspaceLocation(
+                                    section: .sources,
+                                    sourceId: id,
+                                    subjectId: $0.id,
+                                    sourceSurface: .graph,
+                                    ref: $0.ref,
+                                    title: $0.label
+                                )
+                            )
+                        }
+                    )
+                )
+            }
+            if !groups.isEmpty {
+                return CatalogDeleteImpact(allowed: false, gate: .inbound, groups: groups)
+            }
+        }
+        if kind == "artifact" {
+            let cites = citationsByID.values.filter { $0.artifactID == id }
+            if !cites.isEmpty {
+                let sourceID = artifactsBySource.first { _, arts in
+                    arts.contains { $0.id == id }
+                }?.key
+                return CatalogDeleteImpact(
+                    allowed: false,
+                    gate: .inbound,
+                    groups: [
+                        CatalogDeleteImpactGroup(
+                            via: "citations.artifact_id",
+                            kind: "citation",
+                            total: cites.count,
+                            listed: cites.prefix(20).map {
+                                CatalogDeleteImpactListed(
+                                    id: $0.id,
+                                    ref: $0.ref,
+                                    title: $0.transcription,
+                                    location: WorkspaceLocation(
+                                        section: .sources,
+                                        sourceId: sourceID,
+                                        citationId: $0.id,
+                                        artifactId: $0.artifactID,
+                                        sourceSurface: .citationComposer,
+                                        ref: $0.ref,
+                                        title: $0.ref
+                                    )
+                                )
+                            }
+                        ),
+                    ]
+                )
+            }
+        }
         if fixtureContains(projectDir: projectDir, id: id) {
             return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
         }

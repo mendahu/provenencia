@@ -26,7 +26,7 @@ struct CatalogQueryRegistry: Sendable {
         Spec(
             kind: .sourcesList,
             stalePolicy: .sessionFresh,
-            invalidateOn: [.createdSource]
+            invalidateOn: [.createdSource, .deletedSource]
         ),
         Spec(
             kind: .sourceTypesList,
@@ -35,7 +35,7 @@ struct CatalogQueryRegistry: Sendable {
             // restates rows no type edit touched.
             invalidateOn: [
                 .createdSourceType, .updatedSourceType, .deletedSourceType,
-                .createdSource, .changedSourceType,
+                .createdSource, .deletedSource, .changedSourceType,
             ]
         ),
         Spec(

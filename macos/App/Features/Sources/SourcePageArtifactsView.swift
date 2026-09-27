@@ -184,6 +184,16 @@ struct SourcePageArtifactsView: View {
                 }
                 .frame(minWidth: SourcePageLayout.useAsThumbnailSlotWidth, alignment: .trailing)
 
+                PVIconButton(
+                    .trash,
+                    label: L10n.Sources.deleteArtifact,
+                    size: .sm,
+                    tone: .danger
+                ) {
+                    Task { await model.askDeleteArtifact(id: art.id) }
+                }
+                .accessibilityIdentifier("sources.page.artifact.\(art.id).delete")
+
                 Text(art.ref)
                     .font(PVFont.mono(size: PVTypeScale.caption))
                     .foregroundStyle(PVColor.textMuted)

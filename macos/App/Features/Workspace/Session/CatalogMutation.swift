@@ -11,6 +11,7 @@ enum CatalogMutation: Sendable, Equatable {
     case changedSourceType(CatalogSource)
 
     case createdSource
+    case deletedSource(id: String)
 
     case createdSourceType
     case updatedSourceType(id: String)
@@ -50,6 +51,7 @@ enum CatalogMutation: Sendable, Equatable {
 enum CatalogMutationKind: Hashable, Sendable {
     case changedSourceType
     case createdSource
+    case deletedSource
     case createdSourceType
     case updatedSourceType
     case deletedSourceType
@@ -79,6 +81,8 @@ extension CatalogMutation {
             return .changedSourceType
         case .createdSource:
             return .createdSource
+        case .deletedSource:
+            return .deletedSource
         case .createdSourceType:
             return .createdSourceType
         case .updatedSourceType:

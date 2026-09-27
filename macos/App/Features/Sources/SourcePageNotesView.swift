@@ -37,7 +37,7 @@ struct SourcePageNotesView: View {
                         onCancel: { model.notes.cancelEdit() },
                         onClearError: { model.notes.bodyError = nil },
                         onDelete: {
-                            Task { await model.notes.delete(id: note.id) }
+                            model.notes.askDelete(id: note.id)
                         }
                     )
                 }

@@ -235,7 +235,8 @@ struct PVDeleteImpactNotice: View {
                                 .font(PVFont.body(size: PVTypeScale.bodySmall))
                                 .foregroundStyle(PVColor.textPrimary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .fixedSize(horizontal: false, vertical: true)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
                             PVIcon(.arrowUpRight, size: 14)
                                 .foregroundStyle(PVColor.textFaint)
                         }

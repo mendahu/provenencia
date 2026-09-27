@@ -5,6 +5,7 @@ import (
 
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database/sourcemetadata"
+	"github.com/mendahu/provenencia/core/database/sources"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -432,6 +433,83 @@ func TestDismissAndReorderSourceMetadata(t *testing.T) {
 					}
 				}
 			},
+		},
+	})
+}
+
+func TestDeleteSource(t *testing.T) {
+	runRPC(t, DeleteSource, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "empty source erases",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, typeID := sourceFixture(t)
+				cout, err := CreateSource(marshalProto(t, &engine.CreateSourceRequest{
+					ProjectDir: dir, UserId: userID, SourceTypeId: typeID, Title: "Bare",
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var created engine.CreateSourceResponse
+				if err := proto.Unmarshal(cout, &created); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := AddSourceNote(marshalProto(t, &engine.AddSourceNoteRequest{
+					ProjectDir: dir, UserId: userID, SourceId: created.Source.Id, Body: "faded",
+				})); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.DeleteSourceRequest{
+					ProjectDir: dir, UserId: userID, SourceId: created.Source.Id,
+				}
+			},
+			want: &engine.DeleteSourceResponse{},
+			after: func(t *testing.T, _ []byte, req proto.Message) {
+				dr := req.(*engine.DeleteSourceRequest)
+				_, err := GetSourceWorkspace(marshalProto(t, &engine.GetSourceWorkspaceRequest{
+					ProjectDir: dr.ProjectDir, SourceId: dr.SourceId,
+				}))
+				if err == nil {
+					t.Fatal("workspace still loads")
+				}
+			},
+		},
+		{
+			name: "inbound artifact refuses",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, typeID := sourceFixture(t)
+				cout, err := CreateSource(marshalProto(t, &engine.CreateSourceRequest{
+					ProjectDir: dir, UserId: userID, SourceTypeId: typeID, Title: "Held",
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var created engine.CreateSourceResponse
+				if err := proto.Unmarshal(cout, &created); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateArtifact(marshalProto(t, &engine.CreateArtifactRequest{
+					ProjectDir: dir, UserId: userID, SourceId: created.Source.Id, Label: "Scan",
+				})); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.DeleteSourceRequest{
+					ProjectDir: dir, UserId: userID, SourceId: created.Source.Id,
+				}
+			},
+			wantErr:   true,
+			wantErrIs: sources.ErrInUse,
+		},
+		{
+			name: "missing refuses",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _ := sourceFixture(t)
+				return &engine.DeleteSourceRequest{
+					ProjectDir: dir, UserId: userID, SourceId: "00000000-0000-0000-0000-000000000001",
+				}
+			},
+			wantErr:   true,
+			wantErrIs: sources.ErrInvalid,
 		},
 	})
 }

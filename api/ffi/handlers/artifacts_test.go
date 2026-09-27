@@ -133,3 +133,78 @@ func TestIngestArtifactFileMissingPath(t *testing.T) {
 		},
 	})
 }
+
+func TestDeleteArtifact(t *testing.T) {
+	runRPC(t, DeleteArtifact, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "fileless erases",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, typeID := sourceFixture(t)
+				cout, err := CreateSource(marshalProto(t, &engine.CreateSourceRequest{
+					ProjectDir: dir, UserId: userID, SourceTypeId: typeID, Title: "Photo",
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var created engine.CreateSourceResponse
+				if err := proto.Unmarshal(cout, &created); err != nil {
+					t.Fatal(err)
+				}
+				aout, err := CreateArtifact(marshalProto(t, &engine.CreateArtifactRequest{
+					ProjectDir: dir, UserId: userID, SourceId: created.Source.Id, Label: "Front",
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var art engine.CreateArtifactResponse
+				if err := proto.Unmarshal(aout, &art); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.DeleteArtifactRequest{
+					ProjectDir: dir, UserId: userID, ArtifactId: art.Artifact.Id,
+				}
+			},
+			want: &engine.DeleteArtifactResponse{},
+		},
+		{
+			name: "inbound citation refuses",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, typeID := sourceFixture(t)
+				cout, err := CreateSource(marshalProto(t, &engine.CreateSourceRequest{
+					ProjectDir: dir, UserId: userID, SourceTypeId: typeID, Title: "Photo",
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var created engine.CreateSourceResponse
+				if err := proto.Unmarshal(cout, &created); err != nil {
+					t.Fatal(err)
+				}
+				aout, err := CreateArtifact(marshalProto(t, &engine.CreateArtifactRequest{
+					ProjectDir: dir, UserId: userID, SourceId: created.Source.Id, Label: "Cited",
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var art engine.CreateArtifactResponse
+				if err := proto.Unmarshal(aout, &art); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
+					ProjectDir:  dir,
+					UserId:      userID,
+					ArtifactId:  art.Artifact.Id,
+					LocatorJson: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
+				})); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.DeleteArtifactRequest{
+					ProjectDir: dir, UserId: userID, ArtifactId: art.Artifact.Id,
+				}
+			},
+			wantErr:   true,
+			wantErrIs: artifacts.ErrInUse,
+		},
+	})
+}

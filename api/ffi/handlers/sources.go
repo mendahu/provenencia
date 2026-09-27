@@ -179,6 +179,33 @@ func UpdateSource(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
+func DeleteSource(in []byte) ([]byte, error) {
+	var req engine.DeleteSourceRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("delete_source", err)
+	}
+	userID, err := parseUserID(req.GetUserId())
+	if err != nil {
+		return nil, err
+	}
+	sourceID, err := parseID(req.GetSourceId())
+	if err != nil {
+		return nil, err
+	}
+	var out *engine.DeleteSourceResponse
+	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		if err := sources.Delete(c, userID, sourceID); err != nil {
+			return err
+		}
+		out = &engine.DeleteSourceResponse{}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
+}
+
 func SetSourceCover(in []byte) ([]byte, error) {
 	var req engine.SetSourceCoverRequest
 	if err := proto.Unmarshal(in, &req); err != nil {

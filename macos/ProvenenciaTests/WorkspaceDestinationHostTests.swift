@@ -42,6 +42,20 @@ struct WorkspaceDestinationHostTests {
         )
     }
 
+    @Test func presentationCitationJumpComposer() {
+        #expect(
+            presentation(
+                for: WorkspaceLocation(
+                    section: .sources,
+                    sourceId: "src-1",
+                    citationId: "cit-1",
+                    artifactId: "art-0",
+                    sourceSurface: .citationComposer
+                )
+            ) == .sourceCitationComposer
+        )
+    }
+
     @Test func presentationConnectPrefillComposer() {
         #expect(
             presentation(

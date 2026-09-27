@@ -153,8 +153,8 @@ S8-D10 ────────────────────▶ S8-19  Ev
 - [x] S8-12 — Delete-impact registry + `GetDeleteImpact` → [`completed.md`](completed.md)
 - [x] S8-D9 — Design: shared delete confirm / blocked notice → [`completed.md`](completed.md)
 - [x] S8-13 — DeleteImpact recipe → [`completed.md`](completed.md)
-- [ ] S8-D12 — Design: Source page resource delete → [`completed.md`](completed.md)
-- [ ] S8-14 — Source + Artifact delete → [`completed.md`](completed.md)
+- [x] S8-D12 — Design: Source page resource delete → [`completed.md`](completed.md)
+- [x] S8-14 — Source + Artifact delete → [`completed.md`](completed.md)
 - [ ] S8-D13 — Design: Source Types delete → [`completed.md`](completed.md)
 - [ ] S8-15 — Source Types delete → [`completed.md`](completed.md)
 - [ ] S8-D14 — Design: Source Fields delete → [`completed.md`](completed.md)
@@ -809,7 +809,7 @@ Does **not** place trash on any screen. Later boards instance this recipe.
 
 ## S8-D12 — Design: Source page resource delete
 
-Enhancement of the shipped Source page. Delete Source and Delete Artifact via DeleteImpact. Metadata-row delete stays a facet Confirm. Brief: [`design/S8-D12-source-delete.md`](design/S8-D12-source-delete.md). Gates **S8-14**.
+Enhancement of the shipped Source page. Delete Source and Delete Artifact via DeleteImpact. Metadata-row delete stays a facet Confirm. Brief: [`design/archive/S8-D12-source-delete.md`](design/archive/S8-D12-source-delete.md). Gates **S8-14**.
 
 ---
 
@@ -1066,7 +1066,7 @@ These are **owned outbound**, not CASCADE facets. Official Observation `Delete` 
 
 | Table | Bucket | Policy | S8-09 | S8-12 |
 | --- | --- | --- | --- | --- |
-| `files` | Pool + owned outbound of Artifact | Unique `checksum_sha256`. Release `ifUnused` after Artifact delete (other `artifacts.file_id` or derivative FKs still count). | — | Owned-outbound edge on `artifacts` |
+| `files` | Pool + owned outbound of Artifact | Unique `checksum_sha256`. Release `ifUnused` after Artifact delete (other `artifacts.file_id` or derivative FKs still count). After commit, unlink `objects/` when the `files` row was dropped. | — | Owned-outbound edge on `artifacts` |
 | `file_derivatives` | Owned outbound of `files` | No CASCADE today. When a file is actually released, delete derivative rows that name it (either column). Do not CASCADE Artifact←file. | — | Nested after file release |
 
 #### Infrastructure (no researcher delete)
@@ -1121,7 +1121,7 @@ One kit pass against [`design/archive/S8-D9-impact.md`](design/archive/S8-D9-imp
 
 ## S8-14 — PR: Source + Artifact delete
 
-One Source-page pass against [`design/S8-D12-source-delete.md`](design/S8-D12-source-delete.md).
+One Source-page pass against [`design/archive/S8-D12-source-delete.md`](design/archive/S8-D12-source-delete.md).
 
 | | |
 | --- | --- |

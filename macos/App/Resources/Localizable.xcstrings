@@ -1693,7 +1693,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Remove or re-point what uses it first. Select one to go there."
+            "value": "The following items need to be deleted before this one can."
           }
         }
       }
@@ -13286,6 +13286,126 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dismiss"
+          }
+        }
+      }
+    },
+    "sources.page.deleteSource": {
+      "comment": "Accessibility label for deleting the Source",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete source"
+          }
+        }
+      }
+    },
+    "sources.page.deleteArtifact": {
+      "comment": "Accessibility label for deleting an Artifact",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete artifact"
+          }
+        }
+      }
+    },
+    "sources.page.toastArtifactDeletedTitle": {
+      "comment": "Toast title after an Artifact is erased",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artifact deleted"
+          }
+        }
+      }
+    },
+    "sources.page.toastArtifactDeletedBody": {
+      "comment": "Toast body after Artifact erase; argument is ART-…",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ was erased from this source."
+          }
+        }
+      }
+    },
+    "sources.page.deleteNoteConfirmTitle": {
+      "comment": "Confirm title when deleting a Source note",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this note?"
+          }
+        }
+      }
+    },
+    "sources.page.deleteNoteConfirmMessage": {
+      "comment": "Confirm message when deleting a Source note",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This removes the note from the source."
+          }
+        }
+      }
+    },
+    "sources.page.deleteNoteConfirm": {
+      "comment": "Confirm button that deletes a Source note",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete note"
+          }
+        }
+      }
+    },
+    "sources.page.deleteNoteKeep": {
+      "comment": "Cancel button on the note delete confirm",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep note"
+          }
+        }
+      }
+    },
+    "error.sources.in_use": {
+      "comment": "FFI error sources.in_use",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This source still has artifacts or subjects."
+          }
+        }
+      }
+    },
+    "error.artifacts.in_use": {
+      "comment": "FFI error artifacts.in_use",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This artifact still has citations."
           }
         }
       }
