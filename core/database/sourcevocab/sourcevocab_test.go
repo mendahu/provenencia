@@ -8,6 +8,8 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/sourcefields"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
+	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/ref"
 )
 
 func TestInstall(t *testing.T) {
@@ -85,7 +87,15 @@ func TestInstall(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err := sourcetypes.Delete(c, cert.ID); err != nil {
+				userID := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+				userRef, err := ref.Mint(ref.PrefixUser)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := users.Upsert(c, userID, "Tester", userRef); err != nil {
+					t.Fatal(err)
+				}
+				if err := sourcetypes.Delete(c, userID, cert.ID); err != nil {
 					t.Fatal(err)
 				}
 				_, err = sourcetypes.Lookup(c, "birth_certificate", sourcetypes.OriginProvenencia)

@@ -91,11 +91,12 @@ struct VocabularyPanelHeader: View {
     /// The "used by N sources" line — only Source types carries one so far.
     var usageLine: String?
     let keyHint: LocalizedStringResource
-    /// Disabled rather than hidden when the row cannot be deleted — the
-    /// tooltip is where the reason lives (a plugin owns it, or it is in use).
+    /// Hidden when there is no selection. `canDelete` may still disable trash
+    /// on pages that have not cut over to DeleteImpact.
     let showsDelete: Bool
     let canDelete: Bool
     let deleteTooltip: LocalizedStringResource
+    var deleteAccessibilityLabel: String? = nil
     let identifierPrefix: String
     let onDelete: () -> Void
 
@@ -111,6 +112,9 @@ struct VocabularyPanelHeader: View {
                         onDelete()
                     }
                     .disabled(!canDelete)
+                    .accessibilityLabel(
+                        deleteAccessibilityLabel.map { Text(verbatim: $0) } ?? Text(deleteTooltip)
+                    )
                     .accessibilityIdentifier("\(identifierPrefix).delete")
                 }
             }

@@ -295,6 +295,10 @@ func TestDeleteSourceType(t *testing.T) {
 				}
 			},
 			want: &engine.DeleteSourceTypeResponse{},
+			after: func(t *testing.T, _ []byte, req proto.Message) {
+				dr := req.(*engine.DeleteSourceTypeRequest)
+				assertLatestAuditAction(t, dr.ProjectDir, "delete_source_type")
+			},
 		},
 		{
 			name: "refuses type in use",
@@ -309,7 +313,30 @@ func TestDeleteSourceType(t *testing.T) {
 					ProjectDir: dir, UserId: userID, TypeId: typeID,
 				}
 			},
-			wantErr: true,
+			wantErr:   true,
+			wantErrIs: sourcetypes.ErrInUse,
+		},
+		{
+			name: "refuses unused plugin type",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _ := sourceFixture(t)
+				var id []byte
+				err := catalogsession.Do(dir, func(c *database.Catalog) error {
+					var err error
+					id, err = sourcetypes.Upsert(c, sourcetypes.Type{
+						Key: "grave_memorial", Origin: "plugin:findagrave", Label: "Grave memorial",
+					})
+					return err
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				return &engine.DeleteSourceTypeRequest{
+					ProjectDir: dir, UserId: userID, TypeId: uuidString(id),
+				}
+			},
+			wantErr:   true,
+			wantErrIs: sourcetypes.ErrOriginLocked,
 		},
 		{
 			name: "deletes unused seeded type",

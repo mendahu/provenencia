@@ -279,7 +279,8 @@ func DeleteSourceType(in []byte) ([]byte, error) {
 	if err := proto.Unmarshal(in, &req); err != nil {
 		return nil, unmarshalErr("delete_source_type", err)
 	}
-	if _, err := parseUserID(req.GetUserId()); err != nil {
+	userID, err := parseUserID(req.GetUserId())
+	if err != nil {
 		return nil, err
 	}
 	typeID, err := parseID(req.GetTypeId())
@@ -288,7 +289,7 @@ func DeleteSourceType(in []byte) ([]byte, error) {
 	}
 	var out *engine.DeleteSourceTypeResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if err := sourcetypes.Delete(c, typeID); err != nil {
+		if err := sourcetypes.Delete(c, userID, typeID); err != nil {
 			return err
 		}
 		out = &engine.DeleteSourceTypeResponse{}

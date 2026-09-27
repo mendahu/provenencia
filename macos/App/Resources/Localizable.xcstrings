@@ -3102,6 +3102,18 @@
         }
       }
     },
+    "error.sourcetypes.origin_locked": {
+      "comment": "FFI error sourcetypes.origin_locked",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A plugin owns that source type, so it cannot be deleted."
+          }
+        }
+      }
+    },
     "error.sourcetypes.invalid": {
       "comment": "FFI error sourcetypes.invalid",
       "extractionState": "manual",
@@ -5035,7 +5047,7 @@
       }
     },
     "sourceTypes.delete.action": {
-      "comment": "Delete button in the Source types detail pane, and the confirm dialog's destructive button",
+      "comment": "Tooltip on the Source types inspector trash",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -5046,86 +5058,14 @@
         }
       }
     },
-    "sourceTypes.delete.confirmMessage": {
-      "comment": "Message of the delete-type confirmation sheet: what does and does not cascade",
+    "sourceTypes.delete.accessibility": {
+      "comment": "VoiceOver for Source types trash; argument is the type label",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No source in this project is classified as this type, so no citation loses its class. The field suggestions attached to it go with it; the fields themselves stay in the vocabulary."
-          }
-        }
-      }
-    },
-    "sourceTypes.delete.confirmTitle": {
-      "comment": "Title of the delete-type confirmation dialog; argument is the type label",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete %@?"
-          }
-        }
-      }
-    },
-    "sourceTypes.delete.inUseOne": {
-      "comment": "Tooltip on the disabled delete button when exactly one source is classified as the type",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In use on 1 source"
-          }
-        }
-      }
-    },
-    "sourceTypes.delete.inUseOther": {
-      "comment": "Tooltip on the disabled delete button; argument is how many sources are classified as the type",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In use on %lld sources"
-          }
-        }
-      }
-    },
-    "sourceTypes.delete.keep": {
-      "comment": "Button that closes the delete-type confirmation without deleting",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keep type"
-          }
-        }
-      }
-    },
-    "sourceTypes.delete.keyReleased": {
-      "comment": "Micro-caps label beside the key a type delete releases, in the confirmation sheet",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Key released"
-          }
-        }
-      }
-    },
-    "sourceTypes.delete.ownedByPlugin": {
-      "comment": "Tooltip on the disabled delete button when the selected type comes from a plugin",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Owned by the plugin"
+            "value": "Delete type %@"
           }
         }
       }
