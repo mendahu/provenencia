@@ -11,12 +11,16 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
+	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/ref"
 )
 
 var ErrInvalid = apperr.New(apperr.CodeArtifactsInvalid, apperr.KindUser)
+
+// ErrInUse is returned by Delete when Citations still point at the Artifact.
+var ErrInUse = apperr.New(apperr.CodeArtifactsInUse, apperr.KindConflict)
 
 // ErrFileAlreadyAttached is returned when attaching a File to an Artifact that
 // already has a primary File (first-attach only; better scan = new Artifact).
@@ -34,6 +38,7 @@ const (
 	sqlListBySource = `SELECT id, ref, source_id, file_id, label, COALESCE(description, '')
 		FROM artifacts WHERE source_id = ?
 		ORDER BY ref COLLATE NOCASE`
+	sqlDelete         = `DELETE FROM artifacts WHERE id = ?`
 	sqlExistsBySource = `SELECT 1 FROM artifacts WHERE source_id = ? LIMIT 1`
 	sqlExistsByFile   = `SELECT 1 FROM artifacts WHERE file_id = ? LIMIT 1`
 	sqlSourceExists   = `SELECT 1 FROM sources WHERE id = ?`
@@ -237,6 +242,83 @@ func Update(c *database.Catalog, userID []byte, a Artifact) error {
 		return err
 	}
 	if err := searchindex.ReprojectSource(tx, prev.SourceID); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// Delete erases an Artifact when no Citation points at it. File releases
+// ifUnused (snapshot file_id before DELETE). Cover SET NULL is SQLite's job.
+func Delete(c *database.Catalog, userID, id []byte) error {
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
+		return err
+	}
+	if len(id) != 16 {
+		return ErrInvalid
+	}
+	existing, err := Get(c, id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrInvalid
+	}
+	if err != nil {
+		return err
+	}
+
+	db, err := c.DB()
+	if err != nil {
+		return err
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	report, err := deleteimpact.Impact(tx, deleteimpact.KindArtifact, id)
+	if err != nil {
+		return err
+	}
+	if !report.Allowed {
+		return ErrInUse
+	}
+
+	snap, err := deleteimpact.SnapshotOwned(tx, deleteimpact.KindArtifact, id)
+	if err != nil {
+		return err
+	}
+	if _, err := tx.Exec(sqlDelete, id); err != nil {
+		return err
+	}
+	if err := deleteimpact.ReleaseSnapshot(tx, snap); err != nil {
+		return err
+	}
+
+	fields := map[string]audit.FieldDiff{
+		"id":        {Old: uuidString(id), New: nil},
+		"ref":       {Old: existing.Ref, New: nil},
+		"source_id": {Old: uuidString(existing.SourceID), New: nil},
+		"label":     {Old: existing.Label, New: nil},
+	}
+	if len(existing.FileID) == 16 {
+		fields["file_id"] = audit.FieldDiff{Old: uuidString(existing.FileID), New: nil}
+	}
+	if existing.Description != "" {
+		fields["description"] = audit.FieldDiff{Old: existing.Description, New: nil}
+	}
+	if _, err := audit.Record(tx, audit.Revision{
+		UserID:     userID,
+		ActionType: "delete_artifact",
+		CreatedAt:  project.NowUTC(),
+		Changes: []audit.Change{{
+			EntityType: "artifact",
+			EntityID:   id,
+			Action:     audit.ActionDelete,
+			Fields:     fields,
+		}},
+	}); err != nil {
+		return err
+	}
+	if err := searchindex.ReprojectSource(tx, existing.SourceID); err != nil {
 		return err
 	}
 	return tx.Commit()

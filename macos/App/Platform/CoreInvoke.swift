@@ -115,6 +115,8 @@ enum CoreMethod {
     static let listSourceGraphProgress = Int32(Provenencia_Engine_V1_Method.listSourceGraphProgress.rawValue)
     static let getSourceGraphProgress = Int32(Provenencia_Engine_V1_Method.getSourceGraphProgress.rawValue)
     static let getDeleteImpact = Int32(Provenencia_Engine_V1_Method.getDeleteImpact.rawValue)
+    static let deleteSource = Int32(Provenencia_Engine_V1_Method.deleteSource.rawValue)
+    static let deleteArtifact = Int32(Provenencia_Engine_V1_Method.deleteArtifact.rawValue)
 }
 
 func provenenciaInvoke(method: Int32, request: Data) throws -> Data {

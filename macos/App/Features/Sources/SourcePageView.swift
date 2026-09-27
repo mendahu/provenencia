@@ -74,6 +74,7 @@ private struct SourcePageLoadingShell: View {
 
 /// Observes the workspace handle so cache loads repaint the page.
 private struct SourcePageContent: View {
+    @Environment(WorkspaceNavigation.self) private var navigation
     @Bindable var workspaceHandle: QueryHandle<CatalogSourceWorkspace>
     let sourceID: String
     @Bindable var model: SourcePageModel
@@ -178,8 +179,48 @@ private struct SourcePageContent: View {
         ) { _ in
             EmptyView()
         }
-        .onChange(of: workspaceHandle.status) { _, _ in
+        .pvConfirm(
+            item: Binding(
+                get: { model.notes.pendingDelete },
+                set: { model.notes.pendingDelete = $0 }
+            ),
+            copy: { _ in
+                PVConfirmCopy(
+                    title: String(localized: L10n.Sources.deleteNoteConfirmTitle),
+                    message: String(localized: L10n.Sources.deleteNoteConfirmMessage),
+                    confirm: L10n.Sources.deleteNoteConfirm,
+                    cancel: L10n.Sources.deleteNoteKeep
+                )
+            },
+            isRunning: model.notes.isSaving,
+            accessibilityIdentifierPrefix: "sources.page.note.delete",
+            onConfirm: { Task { await model.notes.confirmDelete() } }
+        ) { _ in
+            EmptyView()
+        }
+        .pvDeleteImpact(
+            item: Binding(
+                get: { model.pendingImpact },
+                set: { model.pendingImpact = $0 }
+            ),
+            isRunning: model.isDeletingResource,
+            accessibilityIdentifierPrefix: "sources.page.deleteImpact",
+            onConfirm: {
+                Task {
+                    if await model.confirmResourceDelete() {
+                        navigation.fallbackToSectionRoot()
+                    }
+                }
+            },
+            onNavigate: { location in
+                navigation.go(to: location)
+            }
+        )
+        .onChange(of: workspaceHandle.status) { _, status in
             model.sync(from: workspaceHandle, sourceID: sourceID)
+            if status == .error, workspaceHandle.value == nil {
+                navigation.fallbackToSectionRoot()
+            }
         }
         .onChange(of: workspaceHandle.value) { _, newValue in
             guard newValue != nil else { return }

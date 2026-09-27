@@ -12,6 +12,9 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
+	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjecttypes"
+	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/ref"
@@ -542,5 +545,102 @@ func TestSources(t *testing.T) {
 			defer c.Close()
 			tt.run(t, c)
 		})
+	}
+}
+
+func TestSourceDelete(t *testing.T) {
+	userID := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	r, err := ref.Mint(ref.PrefixUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := users.Upsert(c, userID, "Jake", r); err != nil {
+		t.Fatal(err)
+	}
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
+		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	empty, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: "Notes only"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	note, err := AddNote(c, userID, empty.ID, "Film is faded")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Delete(c, userID, empty.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Get(c, empty.ID); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("source left %v", err)
+	}
+	if _, err := GetNote(c, note.ID); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("note left %v", err)
+	}
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var action string
+	if err := db.QueryRow(`SELECT action_type FROM audit_transactions ORDER BY revision DESC LIMIT 1`).Scan(&action); err != nil {
+		t.Fatal(err)
+	}
+	if action != "delete_source" {
+		t.Fatalf("audit %q", action)
+	}
+	var docs int
+	if err := db.QueryRow(
+		`SELECT COUNT(*) FROM catalog_search_docs WHERE kind = 'source' AND entity_id = ?`,
+		uuidString(empty.ID),
+	).Scan(&docs); err != nil {
+		t.Fatal(err)
+	}
+	if docs != 0 {
+		t.Fatalf("search docs left=%d", docs)
+	}
+
+	blocked, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: "Has artifact"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: blocked.ID, Label: "Scan"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := Delete(c, userID, blocked.ID); !errors.Is(err, ErrInUse) {
+		t.Fatalf("artifact inbound %v", err)
+	}
+
+	if err := subjectvocab.Install(c); err != nil {
+		t.Fatal(err)
+	}
+	personType, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	uncited, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: "Has subject"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := subjects.Create(c, userID, subjects.CreateInput{
+		SourceID: uncited.ID, SubjectTypeID: personType.ID, Label: "Alice",
+	}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := Delete(c, userID, uncited.ID); !errors.Is(err, ErrInUse) {
+		t.Fatalf("subject inbound %v", err)
+	}
+
+	missing := make([]byte, 16)
+	if err := Delete(c, userID, missing); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("missing %v", err)
 	}
 }

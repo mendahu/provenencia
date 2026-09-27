@@ -29,6 +29,8 @@ IDs stay stable (`S8-NN`, `S8-DN`). Do not renumber when moving steps here.
 | S8-12 | PR | Delete-impact registry + `GetDeleteImpact`; no-UI `propertyterms.Delete` cutover |
 | S8-D9 | Design | Shared delete confirm / blocked notice — DeleteImpact recipe |
 | S8-13 | PR | DeleteImpact recipe; confirm if allowed, notice if blocked |
+| S8-D12 | Design | Source page resource delete — Source + Artifact via DeleteImpact |
+| S8-14 | PR | Official `sources.Delete` + `artifacts.Delete`; Source-page trash |
 
 ## Steps
 
@@ -266,7 +268,7 @@ Catalog `000030` stops treating Artifacts, Citations, and property terms as CASC
 **What stayed out**
 
 - `deleteimpact` / `GetDeleteImpact` (**S8-12**)
-- Official Source / Artifact / Citation `Delete` and delete chrome
+- Official Citation `Delete` and remaining delete chrome
 - Unique on `value_subject_id` / `value_term_id`
 
 ### S8-12 — Delete-impact registry + `GetDeleteImpact`
@@ -287,7 +289,7 @@ Catalog `000030` stops treating Artifacts, Citations, and property terms as CASC
 
 - DeleteImpact recipe (**S8-13**) and screen writers (**S8-14**…**S8-19**)
 - Impact proto on `Error`
-- Source / Artifact / Citation `Delete`
+- Citation `Delete`
 
 ### S8-D9 — Design: Shared delete confirm / blocked notice
 
@@ -295,7 +297,7 @@ Catalog `000030` stops treating Artifacts, Citations, and property terms as CASC
 
 Agreed after a copy pass: Impact kinds stay `subject` / `property` / `property_term` (not person / relationship / subject_field). G2 is one `observations.value_subject_id` group. G6 facets-only is an allowed confirm; extras list only the extra `OBS-`. Extra gates are `not_found` / `edge_locked` (no unlock) / `origin_locked` (seeded / plugin vocab) / `infra` (user / project). Unknown via uses a reserved stub (`sameness_claim_evidence.observation_id`).
 
-Brief archived: [`design/archive/S8-D9-impact.md`](design/archive/S8-D9-impact.md). Next delete paste is **S8-D12**.
+Brief archived: [`design/archive/S8-D9-impact.md`](design/archive/S8-D9-impact.md). Source page paste was **S8-D12** (now shipped).
 
 ### S8-13 — DeleteImpact recipe
 
@@ -314,3 +316,26 @@ Shipped the S8-D9 recipe. Screens still use `.pvConfirm` until their later PRs i
 - Wiring any screen (**S8-14**…**S8-19**)
 - Engine / `GetDeleteImpact` (already **S8-12**)
 - Screen-owned target sentences beyond generic “Delete {noun} {ref}?”
+
+### S8-D12 — Design: Source page resource delete
+
+**Board pick:** header trash for the Source and a row bin per Artifact. Both instance DeleteImpact — confirm when inbound is empty, notice naming `ART-` / `CPR-` (Source) or `CIT-` (Artifact). Facets CASCADE (notes / metadata / layout are not a pre-step). After Source erase, leave for the Sources list and drop the ghost `sourceId` from history. Artifact erase stays on the page and clears a pinned cover. No Sources-list row delete. Notes stay a facet Confirm.
+
+Brief archived: [`design/archive/S8-D12-source-delete.md`](design/archive/S8-D12-source-delete.md). Next delete paste is **S8-D13**.
+
+### S8-14 — Source + Artifact delete
+
+Shipped official `sources.Delete` and `artifacts.Delete` through `deleteimpact`. Source-page trash instances `.pvDeleteImpact`. File `ifUnused` snapshots `file_id` before DELETE. Notes trash now uses `.pvConfirm`.
+
+**What shipped**
+
+- Domain writers + `sources.in_use` / `artifacts.in_use`; FFI methods 82 / 83
+- `SnapshotOwned` / `ReleaseSnapshot` so last-pointer file rows actually drop
+- Header + artifact-row trash; leave page via `fallbackToSectionRoot`; `missingDeepId` reconcile
+- Note facet Confirm (assumed shipped in the brief, was still immediate)
+
+**What stayed out**
+
+- Vocab / composer / graph chrome
+- Detach-file-keep-Artifact
+- Composer recovery when an Artifact disappears (**S8-18**)

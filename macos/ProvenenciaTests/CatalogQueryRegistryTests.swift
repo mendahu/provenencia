@@ -507,6 +507,10 @@ struct CatalogQueryRegistryTests {
             .key(.sourcesList(project: project)),
             .key(.sourceTypesList(project: project)),
         ])
+        #expect(registry.invalidations(by: .deletedSource(id: "s1"), project: project) == [
+            .key(.sourcesList(project: project)),
+            .key(.sourceTypesList(project: project)),
+        ])
         // Adding vocabulary touches only the list that owns it — the Source
         // page reads that list rather than carrying its own copy.
         #expect(registry.invalidations(by: .createdMetadataField, project: project) == [
@@ -555,7 +559,7 @@ struct CatalogQueryRegistryTests {
         ])
         // Grades are seeded vocabulary with no CRUD surface, so nothing stales them.
         let everyMutation: [CatalogMutation] = [
-            .updatedSource(source), .changedSourceType(source), .createdSource,
+            .updatedSource(source), .changedSourceType(source), .createdSource, .deletedSource(id: "s1"),
             .createdSourceType, .updatedSourceType(id: "t1"), .deletedSourceType(id: "t1"),
             .createdMetadataField, .updatedMetadataField(id: "f1"), .deletedMetadataField(id: "f1"),
             .assignedTypeSuggestion(typeId: "t1"), .removedTypeSuggestion(typeId: "t1"),

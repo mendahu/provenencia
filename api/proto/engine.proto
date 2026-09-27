@@ -91,6 +91,8 @@ enum Method {
   METHOD_LIST_SOURCE_GRAPH_PROGRESS = 79;
   METHOD_GET_SOURCE_GRAPH_PROGRESS = 80;
   METHOD_GET_DELETE_IMPACT = 81;
+  METHOD_DELETE_SOURCE = 82;
+  METHOD_DELETE_ARTIFACT = 83;
 }
 
 message PingRequest {
@@ -409,6 +411,14 @@ message UpdateSourceResponse {
   Source source = 1;
 }
 
+message DeleteSourceRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string source_id = 3;
+}
+
+message DeleteSourceResponse {}
+
 message SetSourceCoverRequest {
   string project_dir = 1;
   string user_id = 2;
@@ -530,6 +540,14 @@ message UpdateArtifactRequest {
 message UpdateArtifactResponse {
   Artifact artifact = 1;
 }
+
+message DeleteArtifactRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string artifact_id = 3;
+}
+
+message DeleteArtifactResponse {}
 
 message IngestArtifactFileRequest {
   string project_dir = 1;

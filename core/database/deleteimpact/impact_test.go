@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -417,6 +418,201 @@ func TestImpactCitationAndSubject(t *testing.T) {
 				t.Fatalf("delete edge %v", err)
 			}
 		})
+	})
+}
+
+func TestSnapshotOwnedThenRelease(t *testing.T) {
+	c, userID := testCatalog(t)
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
+		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Deed"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fileA, err := files.NewID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	const sum = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := files.Insert(tx, files.File{
+		ID: fileA, ChecksumSHA256: sum, OriginalFilename: "share.jpg", MediaType: "image/jpeg", ByteSize: 4,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+
+	art1, err := artifacts.Create(c, userID, artifacts.CreateInput{
+		SourceID: src.ID, FileID: fileA, Label: "Share 1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	art2, err := artifacts.Create(c, userID, artifacts.CreateInput{
+		SourceID: src.ID, FileID: fileA, Label: "Share 2",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx, err = db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	snap1, err := deleteimpact.SnapshotOwned(tx, deleteimpact.KindArtifact, art1.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.Exec(`DELETE FROM artifacts WHERE id = ?`, art1.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := deleteimpact.ReleaseSnapshot(tx, snap1); err != nil {
+		t.Fatal(err)
+	}
+	var left int
+	if err := tx.QueryRow(`SELECT COUNT(*) FROM files WHERE id = ?`, fileA).Scan(&left); err != nil {
+		t.Fatal(err)
+	}
+	if left != 1 {
+		t.Fatalf("shared file removed early left=%d", left)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+
+	tx, err = db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	snap2, err := deleteimpact.SnapshotOwned(tx, deleteimpact.KindArtifact, art2.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.Exec(`DELETE FROM artifacts WHERE id = ?`, art2.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := deleteimpact.ReleaseSnapshot(tx, snap2); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.QueryRow(`SELECT COUNT(*) FROM files WHERE id = ?`, fileA).Scan(&left); err != nil {
+		t.Fatal(err)
+	}
+	if left != 0 {
+		t.Fatalf("last pointer left files=%d", left)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestImpactSourceAndArtifact(t *testing.T) {
+	c, userID := testCatalog(t)
+	if err := subjectvocab.Install(c); err != nil {
+		t.Fatal(err)
+	}
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
+		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("empty source allowed", func(t *testing.T) {
+		got := mustImpact(t, c, deleteimpact.KindSource, src.ID)
+		if !got.Allowed || got.Gate != deleteimpact.GateOK || len(got.Groups) != 0 {
+			t.Fatalf("%+v", got)
+		}
+	})
+
+	art, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("source blocked by artifact", func(t *testing.T) {
+		got := mustImpact(t, c, deleteimpact.KindSource, src.ID)
+		if got.Allowed || got.Gate != deleteimpact.GateInbound {
+			t.Fatalf("%+v", got)
+		}
+		if len(got.Groups) != 1 || got.Groups[0].Via != "artifacts.source_id" || got.Groups[0].Total != 1 {
+			t.Fatalf("groups %+v", got.Groups)
+		}
+		if got.Groups[0].Listed[0].Ref != art.Ref {
+			t.Fatalf("listed %+v", got.Groups[0].Listed)
+		}
+	})
+
+	t.Run("empty artifact allowed", func(t *testing.T) {
+		got := mustImpact(t, c, deleteimpact.KindArtifact, art.ID)
+		if !got.Allowed || got.Gate != deleteimpact.GateOK {
+			t.Fatalf("%+v", got)
+		}
+	})
+
+	cit, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
+		ArtifactID: art.ID, LocatorJSON: testLocator,
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("artifact blocked by citation", func(t *testing.T) {
+		got := mustImpact(t, c, deleteimpact.KindArtifact, art.ID)
+		if got.Allowed || got.Gate != deleteimpact.GateInbound {
+			t.Fatalf("%+v", got)
+		}
+		if len(got.Groups) != 1 || got.Groups[0].Via != "citations.artifact_id" || got.Groups[0].Total != 1 {
+			t.Fatalf("groups %+v", got.Groups)
+		}
+		if got.Groups[0].Listed[0].Ref != cit.Citation.Ref {
+			t.Fatalf("listed %+v", got.Groups[0].Listed)
+		}
+	})
+
+	empty, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Uncited"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	personType, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sub, err := subjects.Create(c, userID, subjects.CreateInput{
+		SourceID: empty.ID, SubjectTypeID: personType.ID, Label: "Alice",
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("source blocked by subject", func(t *testing.T) {
+		got := mustImpact(t, c, deleteimpact.KindSource, empty.ID)
+		if got.Allowed || got.Gate != deleteimpact.GateInbound {
+			t.Fatalf("%+v", got)
+		}
+		if len(got.Groups) != 1 || got.Groups[0].Via != "subjects.source_id" || got.Groups[0].Total != 1 {
+			t.Fatalf("groups %+v", got.Groups)
+		}
+		if got.Groups[0].Listed[0].Ref != sub.Ref {
+			t.Fatalf("listed %+v", got.Groups[0].Listed)
+		}
 	})
 }
 

@@ -5,36 +5,74 @@ import (
 	"fmt"
 )
 
-// ReleaseOwned deletes owned-outbound children registered on kind after the
-// parent row is gone (or using the parent's leftover column values).
-func ReleaseOwned(tx *sql.Tx, kind Kind, id []byte) error {
+// OwnedSnapshot is owned-outbound child IDs captured while the parent still
+// exists. ReleaseSnapshot walks those IDs after DELETE (looking up
+// artifacts.file_id after erase is a no-op).
+type OwnedSnapshot struct {
+	kind Kind
+	cols map[string][]byte
+}
+
+// SnapshotOwned reads owned-outbound columns on the live parent row.
+func SnapshotOwned(tx *sql.Tx, kind Kind, id []byte) (OwnedSnapshot, error) {
 	if tx == nil || len(id) != 16 {
+		return OwnedSnapshot{}, ErrInvalid
+	}
+	snap := OwnedSnapshot{kind: kind, cols: map[string][]byte{}}
+	for _, rel := range ownedFor(kind) {
+		switch rel.Child {
+		case "files", "date_values", "name_values":
+			childID, err := lookupParentColumn(tx, rel.Column, id)
+			if err != nil {
+				return OwnedSnapshot{}, err
+			}
+			if len(childID) == 16 {
+				snap.cols[rel.Column] = childID
+			}
+		}
+	}
+	return snap, nil
+}
+
+// ReleaseSnapshot deletes owned-outbound children from a pre-DELETE snapshot.
+func ReleaseSnapshot(tx *sql.Tx, snap OwnedSnapshot) error {
+	if tx == nil {
 		return ErrInvalid
 	}
-	for _, rel := range ownedFor(kind) {
-		if err := runOwned(tx, rel, id); err != nil {
+	for _, rel := range ownedFor(snap.kind) {
+		if err := releaseFromSnapshot(tx, rel, snap); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func runOwned(tx *sql.Tx, rel ownedRelease, parentID []byte) error {
+// ReleaseOwned snapshots then releases. Call it only while the parent row
+// still exists; after DELETE use a SnapshotOwned taken beforehand.
+func ReleaseOwned(tx *sql.Tx, kind Kind, id []byte) error {
+	snap, err := SnapshotOwned(tx, kind, id)
+	if err != nil {
+		return err
+	}
+	return ReleaseSnapshot(tx, snap)
+}
+
+func releaseFromSnapshot(tx *sql.Tx, rel ownedRelease, snap OwnedSnapshot) error {
 	switch rel.Child {
 	case "date_values", "name_values":
-		childID, err := lookupParentColumn(tx, rel.Column, parentID)
-		if err != nil || len(childID) == 0 {
-			return err
+		childID := snap.cols[rel.Column]
+		if len(childID) != 16 {
+			return nil
 		}
 		return deleteValueRow(tx, rel.Child, childID)
 	case "files":
-		fileID, err := lookupParentColumn(tx, rel.Column, parentID)
-		if err != nil || len(fileID) == 0 {
-			return err
+		fileID := snap.cols[rel.Column]
+		if len(fileID) != 16 {
+			return nil
 		}
 		return releaseFileIfUnused(tx, fileID)
 	case "file_derivatives":
-		return releaseFileDerivatives(tx, parentID)
+		return nil
 	default:
 		return nil
 	}

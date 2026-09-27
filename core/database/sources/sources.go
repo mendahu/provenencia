@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
+	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/derivatives"
@@ -18,6 +19,9 @@ import (
 )
 
 var ErrInvalid = apperr.New(apperr.CodeSourcesInvalid, apperr.KindUser)
+
+// ErrInUse is returned by Delete when Artifacts or Subjects still belong to the Source.
+var ErrInUse = apperr.New(apperr.CodeSourcesInUse, apperr.KindConflict)
 
 // Cover modes persisted on sources.cover_mode.
 const (
@@ -58,6 +62,7 @@ const (
 		JOIN audit_transactions t ON t.id = c.audit_transaction_id
 		WHERE c.entity_type = 'source' AND c.entity_id = ?`
 	sqlCount            = `SELECT COUNT(*) FROM sources`
+	sqlDelete           = `DELETE FROM sources WHERE id = ?`
 	sqlTypeExists       = `SELECT 1 FROM source_types WHERE id = ?`
 	sqlArtifactForCover = `SELECT id, source_id, file_id FROM artifacts WHERE id = ?`
 	maxRefRetries       = 8
@@ -331,6 +336,76 @@ func Update(c *database.Catalog, userID []byte, s Source) error {
 		return err
 	}
 	if err := searchindex.ReprojectSource(tx, s.ID); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// Delete erases a Source when inbound resources are empty. Notes, metadata,
+// credibility, and layout CASCADE. Artifacts or Subjects block with ErrInUse.
+func Delete(c *database.Catalog, userID, id []byte) error {
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
+		return err
+	}
+	if len(id) != 16 {
+		return ErrInvalid
+	}
+	existing, err := Get(c, id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrInvalid
+	}
+	if err != nil {
+		return err
+	}
+
+	db, err := c.DB()
+	if err != nil {
+		return err
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	report, err := deleteimpact.Impact(tx, deleteimpact.KindSource, id)
+	if err != nil {
+		return err
+	}
+	if !report.Allowed {
+		return ErrInUse
+	}
+
+	if _, err := tx.Exec(sqlDelete, id); err != nil {
+		return err
+	}
+	if err := deleteimpact.ReleaseOwned(tx, deleteimpact.KindSource, id); err != nil {
+		return err
+	}
+
+	fields := map[string]audit.FieldDiff{
+		"id":             {Old: uuidString(id), New: nil},
+		"ref":            {Old: existing.Ref, New: nil},
+		"source_type_id": {Old: uuidString(existing.SourceTypeID), New: nil},
+		"title":          {Old: existing.Title, New: nil},
+	}
+	if existing.Description != "" {
+		fields["description"] = audit.FieldDiff{Old: existing.Description, New: nil}
+	}
+	if _, err := audit.Record(tx, audit.Revision{
+		UserID:     userID,
+		ActionType: "delete_source",
+		CreatedAt:  project.NowUTC(),
+		Changes: []audit.Change{{
+			EntityType: "source",
+			EntityID:   id,
+			Action:     audit.ActionDelete,
+			Fields:     fields,
+		}},
+	}); err != nil {
+		return err
+	}
+	if err := searchindex.Delete(tx, searchindex.KindSource, uuidString(id)); err != nil {
 		return err
 	}
 	return tx.Commit()

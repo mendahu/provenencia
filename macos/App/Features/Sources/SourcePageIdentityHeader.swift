@@ -21,7 +21,10 @@ struct SourcePageIdentityHeader: View {
                     coverThumbnail
                     titleCluster
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    evidenceGraphJump
+                    HStack(alignment: .top, spacing: PVSpacing.space4) {
+                        deleteSourceButton
+                        evidenceGraphJump
+                    }
                 }
                 // Menu on the row (not the 72pt thumb) so click origin shares
                 // the panel's coordinate space.
@@ -173,6 +176,19 @@ struct SourcePageIdentityHeader: View {
 
             metaRow
         }
+    }
+
+    private var deleteSourceButton: some View {
+        PVIconButton(
+            .trash,
+            label: L10n.Sources.deleteSource,
+            size: .sm,
+            tone: .danger
+        ) {
+            Task { await model.askDeleteSource() }
+        }
+        .disabled(model.source == nil)
+        .accessibilityIdentifier("sources.page.deleteSource")
     }
 
     private var evidenceGraphJump: some View {

@@ -945,4 +945,116 @@ struct SourcePageModelTests {
         model.artifacts.toggleExpanded("a2")
         #expect(model.artifacts.expandedIDs.isEmpty)
     }
+
+    @Test func askDeleteSourcePresentsAllowedImpact() async {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        await model.askDeleteSource()
+        #expect(model.pendingImpact?.report.allowed == true)
+        #expect(model.pendingImpact?.target.kind == "source")
+        #expect(model.pendingImpact?.target.ref == "SRC-AAAAA")
+    }
+
+    @Test func confirmDeleteSourceCallsStore() async {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        await model.askDeleteSource()
+        let left = await model.confirmResourceDelete()
+        #expect(left)
+        #expect(store.deleteSourceCalls == 1)
+        #expect(model.pendingImpact == nil)
+    }
+
+    @Test func blockedSourceDoesNotCallDelete() async {
+        let store = makeStore(
+            artifacts: [
+                CatalogArtifact(
+                    id: "a1", ref: "ART-AAAAA", sourceID: sourceID, fileID: "",
+                    label: "Scan", description: "", file: nil
+                ),
+            ]
+        )
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        await model.askDeleteSource()
+        #expect(model.pendingImpact?.report.allowed == false)
+        #expect(model.pendingImpact?.report.groups.first?.via == "artifacts.source_id")
+        let left = await model.confirmResourceDelete()
+        #expect(!left)
+        #expect(store.deleteSourceCalls == 0)
+    }
+
+    @Test func deleteUncitedArtifactStaysOnPageAndClearsCover() async {
+        var source = CatalogSource(
+            id: sourceID, ref: "SRC-AAAAA", sourceTypeID: "t1",
+            title: "Family album", description: "Held by Mary"
+        )
+        source.coverMode = "artifact"
+        source.primaryArtifactID = "a1"
+        let store = makeStore(
+            source: source,
+            artifacts: [
+                CatalogArtifact(
+                    id: "a1", ref: "ART-AAAAA", sourceID: sourceID, fileID: "f1",
+                    label: "Cover scan", description: "", file: nil
+                ),
+            ]
+        )
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        await model.askDeleteArtifact(id: "a1")
+        #expect(model.pendingImpact?.report.allowed == true)
+        let left = await model.confirmResourceDelete()
+        #expect(!left)
+        #expect(store.deleteArtifactCalls == 1)
+        #expect(model.artifacts.items.isEmpty)
+        #expect(model.source?.primaryArtifactID.isEmpty == true)
+        #expect(model.source?.coverMode == "type_icon")
+    }
+
+    @Test func blockedArtifactDoesNotCallDelete() async {
+        let store = makeStore(
+            artifacts: [
+                CatalogArtifact(
+                    id: "a1", ref: "ART-AAAAA", sourceID: sourceID, fileID: "",
+                    label: "Cited", description: "", file: nil
+                ),
+            ]
+        )
+        store.citationsByID["c1"] = CatalogCitation(
+            id: "c1",
+            ref: "CIT-AAAAA",
+            artifactID: "a1",
+            locatorJSON: "{}",
+            transcription: "",
+            description: "",
+            transcriptionUncertain: false,
+            transcriptionNote: ""
+        )
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        await model.askDeleteArtifact(id: "a1")
+        #expect(model.pendingImpact?.report.allowed == false)
+        #expect(model.pendingImpact?.report.groups.first?.via == "citations.artifact_id")
+        let left = await model.confirmResourceDelete()
+        #expect(!left)
+        #expect(store.deleteArtifactCalls == 0)
+    }
+
+    @Test func noteDeleteWaitsForConfirm() async throws {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        model.notes.draft = "First look"
+        await model.notes.add()
+        let noteID = try #require(model.notes.items.first?.id)
+        model.notes.askDelete(id: noteID)
+        #expect(model.notes.pendingDelete?.id == noteID)
+        #expect(model.notes.items.count == 1)
+        await model.notes.confirmDelete()
+        #expect(model.notes.items.isEmpty)
+        #expect(model.notes.pendingDelete == nil)
+    }
 }

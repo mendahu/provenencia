@@ -3771,6 +3771,57 @@ enum L10n {
             comment: "Cancel button on the metadata-value delete confirm"
         )
 
+        static let deleteSource = LocalizedStringResource(
+            "sources.page.deleteSource",
+            defaultValue: "Delete source",
+            comment: "Accessibility label for deleting the Source"
+        )
+
+        static let deleteArtifact = LocalizedStringResource(
+            "sources.page.deleteArtifact",
+            defaultValue: "Delete artifact",
+            comment: "Accessibility label for deleting an Artifact"
+        )
+
+        static let toastArtifactDeletedTitle = LocalizedStringResource(
+            "sources.page.toastArtifactDeletedTitle",
+            defaultValue: "Artifact deleted",
+            comment: "Toast title after an Artifact is erased"
+        )
+
+        static func toastArtifactDeletedBody(ref: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "sources.page.toastArtifactDeletedBody",
+                defaultValue: "%@ was erased from this source.",
+                comment: "Toast body after Artifact erase; argument is ART-…"
+            ))
+            return String(format: format, locale: .current, ref)
+        }
+
+        static let deleteNoteConfirmTitle = LocalizedStringResource(
+            "sources.page.deleteNoteConfirmTitle",
+            defaultValue: "Delete this note?",
+            comment: "Confirm title when deleting a Source note"
+        )
+
+        static let deleteNoteConfirmMessage = LocalizedStringResource(
+            "sources.page.deleteNoteConfirmMessage",
+            defaultValue: "This removes the note from the source.",
+            comment: "Confirm message when deleting a Source note"
+        )
+
+        static let deleteNoteConfirm = LocalizedStringResource(
+            "sources.page.deleteNoteConfirm",
+            defaultValue: "Delete note",
+            comment: "Confirm button that deletes a Source note"
+        )
+
+        static let deleteNoteKeep = LocalizedStringResource(
+            "sources.page.deleteNoteKeep",
+            defaultValue: "Keep note",
+            comment: "Cancel button on the note delete confirm"
+        )
+
         static let editDescription = LocalizedStringResource(
             "sources.page.editDescription",
             defaultValue: "Edit",
@@ -6562,6 +6613,11 @@ enum L10n {
             defaultValue: "Invalid source.",
             comment: "FFI error sources.invalid"
         )
+        static let sourcesInUse = LocalizedStringResource(
+            "error.sources.in_use",
+            defaultValue: "This source still has artifacts or subjects.",
+            comment: "FFI error sources.in_use"
+        )
         static let subjectsInvalid = LocalizedStringResource(
             "error.subjects.invalid",
             defaultValue: "Invalid subject.",
@@ -6591,6 +6647,11 @@ enum L10n {
             "error.artifacts.invalid",
             defaultValue: "Invalid artifact.",
             comment: "FFI error artifacts.invalid"
+        )
+        static let artifactsInUse = LocalizedStringResource(
+            "error.artifacts.in_use",
+            defaultValue: "This artifact still has citations.",
+            comment: "FFI error artifacts.in_use"
         )
         static let artifactsFileAlreadyAttached = LocalizedStringResource(
             "error.artifacts.file_already_attached",
@@ -7087,6 +7148,8 @@ enum L10n {
                 return String(localized: fileNotFound)
             case "sources.invalid":
                 return String(localized: sourcesInvalid)
+            case "sources.in_use":
+                return String(localized: sourcesInUse)
             case "subjects.invalid":
                 return String(localized: subjectsInvalid)
             case "subjects.in_use":
@@ -7099,6 +7162,8 @@ enum L10n {
                 return String(localized: subjectTypesDuplicatePrefix)
             case "artifacts.invalid":
                 return String(localized: artifactsInvalid)
+            case "artifacts.in_use":
+                return String(localized: artifactsInUse)
             case "artifacts.file_already_attached":
                 return String(localized: artifactsFileAlreadyAttached)
             case "sourcecredibility.invalid":

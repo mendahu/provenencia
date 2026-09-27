@@ -100,6 +100,33 @@ func UpdateArtifact(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
+func DeleteArtifact(in []byte) ([]byte, error) {
+	var req engine.DeleteArtifactRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("delete_artifact", err)
+	}
+	userID, err := parseUserID(req.GetUserId())
+	if err != nil {
+		return nil, err
+	}
+	artifactID, err := parseID(req.GetArtifactId())
+	if err != nil {
+		return nil, err
+	}
+	var out *engine.DeleteArtifactResponse
+	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		if err := artifacts.Delete(c, userID, artifactID); err != nil {
+			return err
+		}
+		out = &engine.DeleteArtifactResponse{}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
+}
+
 func IngestArtifactFile(in []byte) ([]byte, error) {
 	var req engine.IngestArtifactFileRequest
 	if err := proto.Unmarshal(in, &req); err != nil {

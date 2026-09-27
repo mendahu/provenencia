@@ -1,14 +1,18 @@
 package artifacts
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"image"
+	"image/png"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
@@ -390,5 +394,142 @@ func TestArtifacts(t *testing.T) {
 			defer c.Close()
 			tt.run(t, c)
 		})
+	}
+}
+
+func TestArtifactDelete(t *testing.T) {
+	userID := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	r, err := ref.Mint(ref.PrefixUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := users.Upsert(c, userID, "Jake", r); err != nil {
+		t.Fatal(err)
+	}
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
+		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Family Bible"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fileless, err := Create(c, userID, CreateInput{SourceID: src.ID, Label: "Physical"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Delete(c, userID, fileless.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Get(c, fileless.ID); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("artifact left %v", err)
+	}
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var action string
+	if err := db.QueryRow(`SELECT action_type FROM audit_transactions ORDER BY revision DESC LIMIT 1`).Scan(&action); err != nil {
+		t.Fatal(err)
+	}
+	if action != "delete_artifact" {
+		t.Fatalf("audit %q", action)
+	}
+
+	const locator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
+	cited, err := Create(c, userID, CreateInput{SourceID: src.ID, Label: "Cited scan"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
+		ArtifactID: cited.ID, LocatorJSON: locator,
+	}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := Delete(c, userID, cited.ID); !errors.Is(err, ErrInUse) {
+		t.Fatalf("citation inbound %v", err)
+	}
+
+	fileID, err := files.NewID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := files.Insert(tx, files.File{
+		ID: fileID, ChecksumSHA256: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+		OriginalFilename: "share.jpg", MediaType: "image/jpeg", ByteSize: 4,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	share1, err := Create(c, userID, CreateInput{SourceID: src.ID, FileID: fileID, Label: "Share 1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	share2, err := Create(c, userID, CreateInput{SourceID: src.ID, FileID: fileID, Label: "Share 2"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Delete(c, userID, share1.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := files.Lookup(c, fileID); err != nil {
+		t.Fatalf("shared file gone %v", err)
+	}
+	if err := Delete(c, userID, share2.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := files.Lookup(c, fileID); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("last pointer left files %v", err)
+	}
+
+	pngPath := filepath.Join(t.TempDir(), "cover.png")
+	img := image.NewRGBA(image.Rect(0, 0, 8, 8))
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(pngPath, buf.Bytes(), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	ingested, err := ingest.File(c, pngPath, userID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coverArt, err := Create(c, userID, CreateInput{
+		SourceID: src.ID, FileID: ingested.File.ID, Label: "Cover scan",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := sources.SetCover(c, userID, src.ID, sources.CoverModeArtifact, coverArt.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := Delete(c, userID, coverArt.ID); err != nil {
+		t.Fatal(err)
+	}
+	gotSrc, err := sources.Get(c, src.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(gotSrc.PrimaryArtifactID) != 0 || gotSrc.CoverMode != sources.CoverModeTypeIcon {
+		t.Fatalf("cover after erase %+v", gotSrc)
+	}
+
+	if err := Delete(c, userID, make([]byte, 16)); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("missing %v", err)
 	}
 }

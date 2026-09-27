@@ -1,6 +1,11 @@
 import Foundation
 import Observation
 
+/// Snapshot for the note delete confirm (`pvConfirm(item:)`).
+struct SourceNoteDeleteItem: Identifiable, Equatable {
+    var id: String
+}
+
 /// Research notes on the Source page: composer draft plus explicit
 /// edit/save/cancel for existing rows (same pattern as description).
 @MainActor
@@ -14,6 +19,7 @@ final class SourceNotesSection {
     private(set) var editingNoteID: String?
     var bodyDraft = ""
     var bodyError: String?
+    var pendingDelete: SourceNoteDeleteItem?
 
     private let context: SourcePageContext
 
@@ -104,6 +110,16 @@ final class SourceNotesSection {
         } catch {
             bodyError = L10n.Errors.message(for: error)
         }
+    }
+
+    func askDelete(id: String) {
+        pendingDelete = SourceNoteDeleteItem(id: id)
+    }
+
+    func confirmDelete() async {
+        guard let id = pendingDelete?.id else { return }
+        pendingDelete = nil
+        await delete(id: id)
     }
 
     func delete(id: String) async {

@@ -3,28 +3,22 @@ package deleteimpact
 import (
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/filederivatives"
 	"github.com/mendahu/provenencia/core/database/files"
-	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
-	"github.com/mendahu/provenencia/core/database/users"
-	"github.com/mendahu/provenencia/core/ref"
 )
 
 func TestCountFilePointersIfUnused(t *testing.T) {
-	c, userID := testCatalog(t)
+	c := testCatalogInternal(t)
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
 		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Deed"})
-	if err != nil {
-		t.Fatal(err)
-	}
+	srcID := insertSource(t, c, typeID, "SRC-AAAAA", "Deed")
 	db, err := c.DB()
 	if err != nil {
 		t.Fatal(err)
@@ -48,18 +42,8 @@ func TestCountFilePointersIfUnused(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	art1, err := artifacts.Create(c, userID, artifacts.CreateInput{
-		SourceID: src.ID, FileID: fileA, Label: "Scan 1",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	art2, err := artifacts.Create(c, userID, artifacts.CreateInput{
-		SourceID: src.ID, FileID: fileA, Label: "Scan 2",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	art1 := insertArtifact(t, c, srcID, fileA, "ART-AAAAA", "Scan 1")
+	art2 := insertArtifact(t, c, srcID, fileA, "ART-BBBBB", "Scan 2")
 
 	tx, err = db.Begin()
 	if err != nil {
@@ -69,14 +53,14 @@ func TestCountFilePointersIfUnused(t *testing.T) {
 	if err != nil || n != 2 {
 		t.Fatalf("shared count %d %v", n, err)
 	}
-	if _, err := tx.Exec(`DELETE FROM artifacts WHERE id = ?`, art1.ID); err != nil {
+	if _, err := tx.Exec(`DELETE FROM artifacts WHERE id = ?`, art1); err != nil {
 		t.Fatal(err)
 	}
 	n, err = CountFilePointers(tx, fileA)
 	if err != nil || n != 1 {
 		t.Fatalf("after one delete %d %v", n, err)
 	}
-	if _, err := tx.Exec(`DELETE FROM artifacts WHERE id = ?`, art2.ID); err != nil {
+	if _, err := tx.Exec(`DELETE FROM artifacts WHERE id = ?`, art2); err != nil {
 		t.Fatal(err)
 	}
 	n, err = CountFilePointers(tx, fileA)
@@ -123,12 +107,7 @@ func TestCountFilePointersIfUnused(t *testing.T) {
 	if err := tx.Commit(); err != nil {
 		t.Fatal(err)
 	}
-	art3, err := artifacts.Create(c, userID, artifacts.CreateInput{
-		SourceID: src.ID, FileID: fileB, Label: "Lone",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	art3 := insertArtifact(t, c, srcID, fileB, "ART-CCCCC", "Lone")
 	tx, err = db.Begin()
 	if err != nil {
 		t.Fatal(err)
@@ -137,7 +116,7 @@ func TestCountFilePointersIfUnused(t *testing.T) {
 	if err != nil || n != 1 {
 		t.Fatalf("lone+deriv artifacts %d %v", n, err)
 	}
-	if _, err := tx.Exec(`DELETE FROM artifacts WHERE id = ?`, art3.ID); err != nil {
+	if _, err := tx.Exec(`DELETE FROM artifacts WHERE id = ?`, art3); err != nil {
 		t.Fatal(err)
 	}
 	if err := releaseFileIfUnused(tx, fileB); err != nil {
@@ -161,20 +140,50 @@ func TestCountFilePointersIfUnused(t *testing.T) {
 	}
 }
 
-func testCatalog(t *testing.T) (*database.Catalog, []byte) {
+func insertSource(t *testing.T, c *database.Catalog, typeID []byte, sourceRef, title string) []byte {
+	t.Helper()
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, err := uuid.NewV7()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(
+		`INSERT INTO sources (id, ref, source_type_id, title) VALUES (?, ?, ?, ?)`,
+		id[:], sourceRef, typeID, title,
+	); err != nil {
+		t.Fatal(err)
+	}
+	return id[:]
+}
+
+func insertArtifact(t *testing.T, c *database.Catalog, sourceID, fileID []byte, artRef, label string) []byte {
+	t.Helper()
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, err := uuid.NewV7()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(
+		`INSERT INTO artifacts (id, ref, source_id, file_id, label) VALUES (?, ?, ?, ?, ?)`,
+		id[:], artRef, sourceID, fileID, label,
+	); err != nil {
+		t.Fatal(err)
+	}
+	return id[:]
+}
+
+func testCatalogInternal(t *testing.T) *database.Catalog {
 	t.Helper()
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = c.Close() })
-	userID := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
-	r, err := ref.Mint(ref.PrefixUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := users.Upsert(c, userID, "Tester", r); err != nil {
-		t.Fatal(err)
-	}
-	return c, userID
+	return c
 }

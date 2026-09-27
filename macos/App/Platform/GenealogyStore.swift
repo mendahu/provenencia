@@ -497,6 +497,7 @@ protocol GenealogyStore: Sendable {
         title: String,
         description: String
     ) async throws -> CatalogSource
+    func deleteSource(projectDir: String, userID: String, sourceID: String) async throws
     func updateSource(
         projectDir: String,
         userID: String,
@@ -551,6 +552,7 @@ protocol GenealogyStore: Sendable {
         label: String,
         description: String
     ) async throws -> CatalogArtifact
+    func deleteArtifact(projectDir: String, userID: String, artifactID: String) async throws
     func updateArtifact(
         projectDir: String,
         userID: String,

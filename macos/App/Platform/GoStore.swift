@@ -228,6 +228,17 @@ struct GoStore: GenealogyStore {
         return Self.mapNote(resp.note)
     }
 
+    func deleteSource(projectDir: String, userID: String, sourceID: String) async throws {
+        var req = Provenencia_Engine_V1_DeleteSourceRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.sourceID = sourceID
+        let _: Provenencia_Engine_V1_DeleteSourceResponse = try await provenenciaCall(
+            method: CoreMethod.deleteSource,
+            request: req
+        )
+    }
+
     func updateSourceNote(projectDir: String, userID: String, noteID: String, body: String) async throws
         -> CatalogSourceNote
     {
@@ -362,6 +373,17 @@ struct GoStore: GenealogyStore {
             request: req
         )
         return Self.mapArtifact(resp.artifact)
+    }
+
+    func deleteArtifact(projectDir: String, userID: String, artifactID: String) async throws {
+        var req = Provenencia_Engine_V1_DeleteArtifactRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.artifactID = artifactID
+        let _: Provenencia_Engine_V1_DeleteArtifactResponse = try await provenenciaCall(
+            method: CoreMethod.deleteArtifact,
+            request: req
+        )
     }
 
     func ingestArtifactFile(

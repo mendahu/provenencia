@@ -17,6 +17,9 @@ final class SourcePageModel {
 
     private(set) var isLoading = false
     var loadError: Error?
+    var pendingImpact: PVDeleteImpactRequest?
+    var isDeletingResource = false
+    private var pendingResourceID: String?
 
     /// Session contributor name for the note composer byline.
     let sessionDisplayName: String
@@ -149,6 +152,86 @@ final class SourcePageModel {
             String(workspace.notes.count),
             String(workspace.artifacts.count),
         ].joined(separator: "|")
+    }
+
+    func askDeleteSource() async {
+        guard let source else { return }
+        await presentImpact(kind: "source", id: source.id, ref: source.ref, title: source.title)
+    }
+
+    func askDeleteArtifact(id: String) async {
+        guard let art = artifacts.items.first(where: { $0.id == id }) else { return }
+        let title = art.label.isEmpty ? art.ref : art.label
+        await presentImpact(kind: "artifact", id: art.id, ref: art.ref, title: title)
+    }
+
+    /// Returns true when the Source itself was erased (leave the page).
+    @discardableResult
+    func confirmResourceDelete() async -> Bool {
+        guard let request = pendingImpact, request.report.allowed, let id = pendingResourceID else {
+            return false
+        }
+        guard !isDeletingResource else { return false }
+        isDeletingResource = true
+        defer { isDeletingResource = false }
+        context.clearPageError()
+        do {
+            if request.target.kind == "source" {
+                try await context.store.deleteSource(
+                    projectDir: context.projectDir,
+                    userID: context.userID,
+                    sourceID: id
+                )
+                context.session.apply(.deletedSource(id: id))
+                pendingImpact = nil
+                pendingResourceID = nil
+                return true
+            }
+            try await context.store.deleteArtifact(
+                projectDir: context.projectDir,
+                userID: context.userID,
+                artifactID: id
+            )
+            if var workspace = context.workspace {
+                workspace.artifacts.removeAll { $0.id == id }
+                if workspace.source.primaryArtifactID == id {
+                    workspace.source.primaryArtifactID = ""
+                    workspace.source.coverMode = "type_icon"
+                    workspace.source.thumbnailRelPath = ""
+                }
+                context.workspace = workspace
+            }
+            context.toast = VocabularyToast(
+                title: String(localized: L10n.Sources.toastArtifactDeletedTitle),
+                body: L10n.Sources.toastArtifactDeletedBody(ref: request.target.ref),
+                tone: .success
+            )
+            context.notifyWorkspaceMutated()
+            pendingImpact = nil
+            pendingResourceID = nil
+            return false
+        } catch {
+            context.pageError = L10n.Errors.message(for: error)
+            return false
+        }
+    }
+
+    private func presentImpact(kind: String, id: String, ref: String, title: String) async {
+        context.clearPageError()
+        do {
+            let report = try await context.store.getDeleteImpact(
+                projectDir: context.projectDir,
+                kind: kind,
+                id: id
+            )
+            pendingResourceID = id
+            pendingImpact = PVDeleteImpactRequest(
+                target: PVDeleteImpactTarget(kind: kind, ref: ref, title: title),
+                report: report
+            )
+        } catch {
+            context.pageError = L10n.Errors.message(for: error)
+        }
     }
 
     private func resetSections() {
