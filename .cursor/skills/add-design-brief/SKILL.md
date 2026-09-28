@@ -15,7 +15,7 @@ is the **entire prompt** — Claude Design will not follow a linked README unles
 the text is in the pasted file.
 
 Working-rules source (copy the Paste block verbatim):
-[`docs/deployment-plan/spike-8/design/claude-design-working-rules.md`](../../../docs/deployment-plan/spike-8/design/claude-design-working-rules.md).
+[`docs/deployment-plan/claude-design-working-rules.md`](../../../docs/deployment-plan/claude-design-working-rules.md).
 
 Layers / implementing chrome: [`add-ui-component`](../add-ui-component/SKILL.md),
 [`docs/design-system-layers.md`](../../../docs/design-system-layers.md).
@@ -81,7 +81,7 @@ site is already known. Otherwise snowflake + compose.
 
 ## Brief shape
 
-Match an open Spike 8 brief (`S8-D7` rethink, `S8-D1` enhancement):
+Match an open spike brief (rethink vs enhancement):
 
 1. Title + metadata
 2. Paste line + working-rules block (+ one sentence if rethink vs enhance)

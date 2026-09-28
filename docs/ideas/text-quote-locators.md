@@ -67,4 +67,4 @@ They are not exclusive. A locator can already be `page` + `text_quote`, or quote
 - [`interpretation-layer-data-model.md`](../interpretation-layer-data-model.md) §3.6
 - [`interpretation-graph-ui.md`](archive/interpretation-graph-ui.md) §6
 - [`core/locator`](../../core/locator/)
-- Spike 8 Find (not this): [`../deployment-plan/spike-8/pdf-text-find.md`](../deployment-plan/spike-8/pdf-text-find.md)
+- Spike 8 Find (not this): [`../deployment-plan/archive/spike-8/`](../deployment-plan/archive/spike-8/)

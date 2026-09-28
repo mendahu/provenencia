@@ -12,7 +12,7 @@ description: >-
 
 Official **resource** and **vocab** deletes go through **`core/database/deleteimpact`**.
 Contract: [`docs/catalog-deletes.md`](../../../docs/catalog-deletes.md).
-Spike 8 register: [`docs/deployment-plan/spike-8/deployment-plan.md`](../../../docs/deployment-plan/spike-8/deployment-plan.md) §S8-09.3 / §S8-09.4.
+Register: [`core/database/deleteimpact`](../../../core/database/deleteimpact).
 Do **not** add a private `SELECT 1 FROM … LIMIT 1` / `sqlInUse` next to `DELETE`.
 
 Schema first: [`add-catalog-migration`](../add-catalog-migration/SKILL.md).
@@ -80,7 +80,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 
 ## UI
 
-Resource delete chrome uses the **DeleteImpact** recipe ([`S8-D9`](../../../docs/deployment-plan/spike-8/design/archive/S8-D9-impact.md) / **S8-13**): confirm when `allowed`, notice when blocked. Recipe owns `via` / `kind` / overflow L10n. Do not hand-build a yes/no sheet that ignores the report. Official `Delete` for a screen lands **in that screen’s PR**, except no-UI writers (registry PR). `usedBy` is not the only gate and must match Impact totals that block.
+Resource delete chrome uses the **DeleteImpact** recipe ([`macos/App/DesignSystem/Recipes/DeleteImpact/`](../../../macos/App/DesignSystem/Recipes/DeleteImpact/)): confirm when `allowed`, notice when blocked. Recipe owns `via` / `kind` / overflow L10n. Do not hand-build a yes/no sheet that ignores the report. Official `Delete` for a screen lands **in that screen’s PR**, except no-UI writers (registry PR). `usedBy` is not the only gate and must match Impact totals that block.
 
 ## Do not
 

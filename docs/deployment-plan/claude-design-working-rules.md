@@ -2,7 +2,7 @@
 
 Copy the **Paste block** into every Claude Design brief, immediately after “Paste this entire document…”. The brief is the only prompt Claude Design sees — do not rely on this file being linked.
 
-Authoring skill: [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md). Layers: [`docs/design-system-layers.md`](../../../design-system-layers.md).
+Authoring skill: [`add-design-brief`](../../.cursor/skills/add-design-brief/SKILL.md). Layers: [`docs/design-system-layers.md`](../design-system-layers.md).
 
 ---
 

@@ -1,6 +1,6 @@
 # Spike 7 — Citations, Observations, composer
 
-**Done.** Citation → Observation pipeline on the Evidence graph. Schema: [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md). Themes: [`interpretation-graph-ui.md`](../../../ideas/archive/interpretation-graph-ui.md). Composer rethink is Spike 8 (**S8-D7**).
+**Done.** Citation → Observation pipeline on the Evidence graph. Schema: [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md). Themes: [`interpretation-graph-ui.md`](../../../ideas/archive/interpretation-graph-ui.md). Composer rethink shipped in [Spike 8](../spike-8/).
 
 ## Decisions
 
