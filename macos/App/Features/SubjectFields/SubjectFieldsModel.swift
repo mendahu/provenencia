@@ -193,18 +193,80 @@ final class SubjectFieldsModel {
         catalogCounts?.publishSubjectFields(.from(snapshot.properties))
     }
 
-    func selectType(_ key: String?) {
-        // Board: pressing the focused type again clears the filter.
-        selectedTypeKey = (key != nil && key == selectedTypeKey) ? nil : key
-        lockedCallout = nil
-        addPropertySelection = ""
+    // MARK: Selection
+
+    /// Reconciles strip category + inspector row to `location` once the snapshot is cached.
+    /// Both levels are history identity; a missing type key or property id prunes to the list root.
+    @discardableResult
+    func syncSelection(from location: WorkspaceLocation) -> WorkspaceLocationReconcile {
+        guard location.section == .subjectFields else { return .ignored }
+        guard let handle: QueryHandle<SubjectFieldsSnapshot> = session.queryHandle(Self.workspaceKey(for: session)),
+              handle.status == .ready || !snapshot.properties.isEmpty else { return .ignored }
+        if createOpen { return .ignored }
+        if let key = location.subjectTypeKey, !snapshot.types.contains(where: { $0.key == key }) {
+            applySelection(typeKey: nil, propertyID: nil)
+            return .missingDeepId
+        }
+        if let id = location.propertyId, !snapshot.properties.contains(where: { $0.id == id }) {
+            applySelection(typeKey: location.subjectTypeKey, propertyID: nil)
+            return .missingDeepId
+        }
+        applySelection(typeKey: location.subjectTypeKey, propertyID: location.propertyId)
+        return .applied
     }
 
+    /// Committed place for a strip press. Board: pressing the focused type again clears the filter.
+    func location(afterPressingType key: String?) -> WorkspaceLocation {
+        location(typeKey: typeKey(afterPressing: key), propertyID: selectedPropertyID)
+    }
+
+    /// Committed place for an inspector row pick; keeps the strip category.
+    func location(selectingProperty id: String?) -> WorkspaceLocation {
+        location(typeKey: selectedTypeKey, propertyID: id)
+    }
+
+    private func location(typeKey: String?, propertyID: String?) -> WorkspaceLocation {
+        let property = propertyID.flatMap { id in snapshot.properties.first { $0.id == id } }
+        let type = typeKey.flatMap { key in snapshot.types.first { $0.key == key } }
+        return WorkspaceLocation(
+            section: .subjectFields,
+            subjectTypeKey: typeKey,
+            propertyId: propertyID,
+            title: property?.label ?? type?.label
+        )
+    }
+
+    private func typeKey(afterPressing key: String?) -> String? {
+        (key != nil && key == selectedTypeKey) ? nil : key
+    }
+
+    /// Applies UI state for a strip press. History owns the committed place — see `location(afterPressingType:)`.
+    func selectType(_ key: String?) {
+        applyType(typeKey(afterPressing: key))
+    }
+
+    /// Applies UI state for a row pick. History owns the committed place — see `location(selectingProperty:)`.
     func selectProperty(_ id: String?) {
         cancelEdit()
         selectedPropertyID = id
         lockedCallout = nil
         formError = nil
+    }
+
+    /// Idempotent: re-applying the current place must not discard an in-progress identity edit.
+    private func applySelection(typeKey: String?, propertyID: String?) {
+        if typeKey != selectedTypeKey {
+            applyType(typeKey)
+        }
+        if propertyID != selectedPropertyID {
+            selectProperty(propertyID)
+        }
+    }
+
+    private func applyType(_ key: String?) {
+        selectedTypeKey = key
+        lockedCallout = nil
+        addPropertySelection = ""
     }
 
     func focusSearch() {
@@ -351,27 +413,31 @@ final class SubjectFieldsModel {
     }
 
     /// ComboBox picked an unbound property — bind it to the focused type.
-    func addPropertyFromCombo() async {
+    /// Returns the place the caller must commit so the new inspector row survives reload.
+    @discardableResult
+    func addPropertyFromCombo() async -> WorkspaceLocation? {
         guard let type = selectedType,
               !addPropertySelection.isEmpty,
               let property = snapshot.properties.first(where: { $0.id == addPropertySelection })
-        else { return }
+        else { return nil }
         selectedPropertyID = property.id
         await toggleBinding(to: type)
         addPropertySelection = ""
+        return location(selectingProperty: property.id)
     }
 
+    /// Returns the created property's place for the caller to commit; nil when nothing was created.
     @discardableResult
-    func submitCreate(_ incoming: Draft? = nil) async -> Bool {
-        guard let draft = incoming ?? draft else { return false }
+    func submitCreate(_ incoming: Draft? = nil) async -> WorkspaceLocation? {
+        guard let draft = incoming ?? draft else { return nil }
         let label = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !label.isEmpty else {
             formError = String(localized: L10n.SubjectFields.errorLabelRequired)
-            return false
+            return nil
         }
         guard SubjectPropertyValueType.researcherCreatable.contains(draft.valueType) else {
             formError = String(localized: L10n.SubjectFields.errorValueType)
-            return false
+            return nil
         }
         isSaving = true
         formError = nil
@@ -405,10 +471,15 @@ final class SubjectFieldsModel {
                 tone: .success
             )
             syncCatalogCounts()
-            return true
+            return WorkspaceLocation(
+                section: .subjectFields,
+                subjectTypeKey: selectedTypeKey,
+                propertyId: created.id,
+                title: created.label
+            )
         } catch {
             formError = L10n.Errors.message(for: error)
-            return false
+            return nil
         }
     }
 

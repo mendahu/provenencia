@@ -1309,6 +1309,8 @@ struct GoStore: GenealogyStore {
         p.connectFromSubjectID = loc.connectFromSubjectId ?? ""
         p.connectToSubjectID = loc.connectToSubjectId ?? ""
         p.connectBridgeTypeKey = loc.connectBridgeTypeKey ?? ""
+        p.subjectTypeKey = loc.subjectTypeKey ?? ""
+        p.propertyID = loc.propertyId ?? ""
         p.sourceTitle = loc.sourceTitle ?? ""
         return p
     }
@@ -1328,6 +1330,8 @@ struct GoStore: GenealogyStore {
             connectFromSubjectId: p.connectFromSubjectID,
             connectToSubjectId: p.connectToSubjectID,
             connectBridgeTypeKey: p.connectBridgeTypeKey,
+            subjectTypeKey: p.subjectTypeKey,
+            propertyId: p.propertyID,
             sourceSurface: SourceSurface(rawValue: p.sourceSurface) ?? .page,
             ref: p.ref,
             title: p.title,

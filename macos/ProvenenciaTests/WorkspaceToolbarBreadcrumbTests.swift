@@ -47,6 +47,30 @@ struct WorkspaceToolbarBreadcrumbTests {
         #expect(bare.last?.label == "…")
     }
 
+    @Test func subjectFieldsCategoryAndPropertyAreDeep() {
+        var wentTo: WorkspaceLocation?
+        let category = WorkspaceToolbar.breadcrumbItems(
+            for: WorkspaceLocation(section: .subjectFields, subjectTypeKey: "person", title: "Person"),
+            goTo: { wentTo = $0 }
+        )
+        #expect(category.count == 2)
+        #expect(category.last?.label == "Person")
+        category[0].action?()
+        #expect(wentTo == .sectionRoot(.subjectFields))
+
+        let property = WorkspaceToolbar.breadcrumbItems(
+            for: WorkspaceLocation(
+                section: .subjectFields,
+                subjectTypeKey: "person",
+                propertyId: "prop-1",
+                title: "Name"
+            ),
+            goTo: { _ in }
+        )
+        #expect(property.count == 2)
+        #expect(property.last?.label == "Name")
+    }
+
     @Test func evidenceGraphLeafUsesGraphTitle() {
         let items = WorkspaceToolbar.breadcrumbItems(
             for: WorkspaceLocation(

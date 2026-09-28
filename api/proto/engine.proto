@@ -778,6 +778,8 @@ message WorkspaceLocation {
   string connect_to_subject_id = 13;
   string connect_bridge_type_key = 14;
   string source_title = 15;
+  string subject_type_key = 16; // Subject Fields type-strip category; empty = All properties
+  string property_id = 17;      // Subject Fields inspector row
 }
 
 // SearchCatalog finds navigable catalog roots for the omnibar (S3-07+).

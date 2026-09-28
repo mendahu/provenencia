@@ -1928,6 +1928,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                             title: $0.label.isEmpty ? $0.key : $0.label,
                             location: WorkspaceLocation(
                                 section: .subjectFields,
+                                propertyId: id,
                                 ref: $0.key,
                                 title: $0.label.isEmpty ? $0.key : $0.label
                             )

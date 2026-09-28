@@ -182,3 +182,29 @@ func TestSearchCatalog(t *testing.T) {
 		},
 	})
 }
+
+func TestSearchLocationProtoRoundTrip(t *testing.T) {
+	tests := []struct {
+		name string
+		in   search.WorkspaceLocation
+	}{
+		{
+			name: "subject fields category and property",
+			in: search.WorkspaceLocation{
+				Section: "subject-fields", SubjectTypeKey: "person", PropertyID: "prop-1", Title: "Name",
+			},
+		},
+		{
+			name: "source field",
+			in:   search.WorkspaceLocation{Section: search.SectionSourceFields, FieldID: "fld-1", Title: "Author"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := locationFromProto(locationToProto(tt.in))
+			if got != tt.in {
+				t.Fatalf("got %+v want %+v", got, tt.in)
+			}
+		})
+	}
+}

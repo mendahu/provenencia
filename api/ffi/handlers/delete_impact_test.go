@@ -162,3 +162,43 @@ func TestGetDeleteImpact(t *testing.T) {
 		},
 	})
 }
+
+func TestLocationFromImpactSubjectFields(t *testing.T) {
+	tests := []struct {
+		name string
+		in   deleteimpact.Location
+		want *engine.WorkspaceLocation
+	}{
+		{
+			name: "property term deep-links to parent property",
+			in: deleteimpact.Location{
+				Section: "subject-fields", PropertyID: "prop-1", Ref: "lodger", Title: "Lodger",
+			},
+			want: &engine.WorkspaceLocation{
+				Section: "subject-fields", PropertyId: "prop-1", Ref: "lodger", Title: "Lodger",
+			},
+		},
+		{
+			name: "subject type deep-links to strip category",
+			in: deleteimpact.Location{
+				Section: "subject-fields", SubjectTypeKey: "person", Ref: "person", Title: "Person",
+			},
+			want: &engine.WorkspaceLocation{
+				Section: "subject-fields", SubjectTypeKey: "person", Ref: "person", Title: "Person",
+			},
+		},
+		{
+			name: "section root stays empty",
+			in:   deleteimpact.Location{Section: "subject-fields"},
+			want: &engine.WorkspaceLocation{Section: "subject-fields"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := locationFromImpact(tt.in)
+			if !proto.Equal(got, tt.want) {
+				t.Fatalf("got %+v want %+v", got, tt.want)
+			}
+		})
+	}
+}

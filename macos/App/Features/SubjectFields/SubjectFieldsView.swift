@@ -85,14 +85,25 @@ private struct SubjectFieldsContent: View {
             isRunning: model.isDeleting,
             accessibilityIdentifierPrefix: "subjectFields.deleteImpact",
             onConfirm: {
-                Task { _ = await model.confirmPendingImpact() }
+                Task {
+                    if await model.confirmPendingImpact() {
+                        navigation.fallbackToSectionRoot()
+                    }
+                }
             },
             onNavigate: { location in
                 navigation.go(to: location)
             }
         )
+        .onChange(of: navigation.currentLocation) { _, location in
+            reconcileSelection(for: location)
+        }
         .onChange(of: handle.status) { _, status in
             if status == .ready { model.syncCatalogCounts() }
+            reconcileSelection(for: navigation.currentLocation)
+        }
+        .onChange(of: handle.value) { _, _ in
+            reconcileSelection(for: navigation.currentLocation)
         }
         .onChange(of: model.searchFocused) { _, focused in
             if focused { searchFocused = true }
@@ -102,9 +113,14 @@ private struct SubjectFieldsContent: View {
         }
         .onChange(of: model.addPropertySelection) { _, value in
             guard !value.isEmpty else { return }
-            Task { await model.addPropertyFromCombo() }
+            Task {
+                if let location = await model.addPropertyFromCombo() {
+                    navigation.go(to: location)
+                }
+            }
         }
         .onAppear {
+            reconcileSelection(for: navigation.currentLocation)
             if handle.status == .ready { model.syncCatalogCounts() }
         }
         .background {
@@ -126,6 +142,14 @@ private struct SubjectFieldsContent: View {
             return .handled
         }
         .accessibilityIdentifier("subjectFields")
+    }
+
+    private func reconcileSelection(for location: WorkspaceLocation) {
+        guard handle.status == .ready || !(handle.value?.properties ?? []).isEmpty else { return }
+        let outcome = model.syncSelection(from: location)
+        if outcome == .missingDeepId {
+            navigation.fallbackToSectionRoot()
+        }
     }
 
     private var header: some View {
@@ -189,7 +213,7 @@ private struct SubjectFieldsContent: View {
         mark: PVMarkKey?
     ) -> some View {
         Button {
-            model.selectType(key)
+            navigation.go(to: model.location(afterPressingType: key))
         } label: {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .top) {
@@ -292,7 +316,10 @@ private struct SubjectFieldsContent: View {
                     columns: tableColumns,
                     selection: Binding(
                         get: { model.selectedPropertyID },
-                        set: { model.selectProperty($0) }
+                        set: { id in
+                            guard let id else { return }
+                            navigation.go(to: model.location(selectingProperty: id))
+                        }
                     ),
                     primaryText: { $0.label },
                     density: .compact,
@@ -347,6 +374,8 @@ private struct SubjectFieldsContent: View {
             let locked = model.bindingLocked(propertyID: property.id, typeID: type.id)
             let bound = model.isBound(propertyID: property.id, typeID: type.id)
             Button {
+                // Apply locally so the toggle sees the row before the history reconcile lands.
+                navigation.go(to: model.location(selectingProperty: property.id))
                 model.selectProperty(property.id)
                 Task { await model.toggleBinding(to: type) }
             } label: {
@@ -661,6 +690,7 @@ private struct SubjectFieldsIdentityEditor: View {
 /// Local create drafts so dialog keystrokes don't rebuild the destination.
 private struct SubjectFieldsCreateHost: View {
     @Bindable var model: SubjectFieldsModel
+    @Environment(WorkspaceNavigation.self) private var navigation
     @State private var draft: SubjectFieldsModel.Draft?
 
     var body: some View {
@@ -679,7 +709,11 @@ private struct SubjectFieldsCreateHost: View {
                 confirmDisabled: !model.canSubmitCreate(draft),
                 accessibilityIdentifierPrefix: "subjectFields.create",
                 onConfirm: {
-                    Task { _ = await model.submitCreate(draft) }
+                    Task {
+                        if let location = await model.submitCreate(draft) {
+                            navigation.go(to: location)
+                        }
+                    }
                 }
             ) {
                 createForm
