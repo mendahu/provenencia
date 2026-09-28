@@ -205,7 +205,8 @@ struct CitationComposerModelTests {
         model.updateObservationProperty(id: rowID, propertyID: occupationPropertyID)
         model.updateObservationText(id: rowID, text: "miller")
         await model.observationRows.commit(rowID: rowID)
-        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations observations=1") })
+        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations observations=0") })
+        #expect(store.recordedCalls.contains { $0.hasPrefix("addObservationsToCitation") })
         #expect(model.activeCitationID != nil)
         #expect(model.observations[0].persistedRef == "OBS-FAKE1")
         #expect(model.observations[0].state == .saved)
@@ -449,6 +450,34 @@ struct CitationComposerModelTests {
         #expect(store.recordedCalls.contains { $0.hasPrefix("createCitation") } == false)
     }
 
+    @Test func concurrentFirstWritesShareOneCitation() async {
+        let store = makeStore()
+        store.createCitationDelayNanoseconds = 20_000_000
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.beginAddObservation()
+        model.beginAddObservation()
+        let firstID = model.observations[0].id
+        let secondID = model.observations[1].id
+        model.updateObservationProperty(id: firstID, propertyID: occupationPropertyID)
+        model.updateObservationText(id: firstID, text: "miller")
+        model.updateObservationProperty(id: secondID, propertyID: occupationPropertyID)
+        model.updateObservationText(id: secondID, text: "weaver")
+        async let first: Void = model.observationRows.commit(rowID: firstID)
+        async let second: Void = model.observationRows.commit(rowID: secondID)
+        _ = await (first, second)
+        let creates = store.recordedCalls.filter { $0.hasPrefix("createCitationWithObservations") }
+        #expect(creates.count == 1)
+        #expect(creates.first == "createCitationWithObservations observations=0")
+        let adds = store.recordedCalls.filter { $0.hasPrefix("addObservationsToCitation") }
+        #expect(adds.count == 2)
+        #expect(model.activeCitationID != nil)
+        #expect(model.observations[0].state == .saved)
+        #expect(model.observations[1].state == .saved)
+        #expect(Set(model.observations.compactMap(\.persistedID)).count == 2)
+    }
+
     @Test func menusDisabledWithUnsavedWorkEnabledWithPendingConnection() async {
         let store = makeStore()
         seedArtifact(store)
@@ -552,7 +581,11 @@ struct CitationComposerModelTests {
         fresh.connections.applyTerm(connectionID: fresh.connections.rows[0].id, termID: "term-witness")
         store.recordedCalls = []
         await fresh.connections.saveConnection()
-        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitedBridge citationID=nil observations=3") })
+        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations observations=0") })
+        #expect(store.recordedCalls.contains { call in
+            call.hasPrefix("createCitedBridge citationID=") && call.contains("observations=3")
+                && !call.contains("citationID=nil")
+        })
         #expect(fresh.activeCitationID != nil)
     }
 
@@ -593,7 +626,11 @@ struct CitationComposerModelTests {
         #expect(model.shouldHoldNavigation(.back))
         store.recordedCalls = []
         await model.connections.saveConnection()
-        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitedBridge citationID=nil observations=2") })
+        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations observations=0") })
+        #expect(store.recordedCalls.contains { call in
+            call.hasPrefix("createCitedBridge citationID=") && call.contains("observations=2")
+                && !call.contains("citationID=nil")
+        })
     }
 
     @Test func savedLocationExposesNoRoleCommands() async {

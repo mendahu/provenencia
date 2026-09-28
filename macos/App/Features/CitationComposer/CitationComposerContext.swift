@@ -27,6 +27,10 @@ final class CitationComposerContext {
     private var memoSnapshot: SourceGraphSnapshot
     @ObservationIgnored
     private var memoVocabulary = CitationComposerVocabulary.empty
+    @ObservationIgnored
+    private var isCreatingCitation = false
+    @ObservationIgnored
+    private var citationCreateWaiters: [CheckedContinuation<String, Error>] = []
 
     init(
         store: any GenealogyStore,
@@ -63,6 +67,65 @@ final class CitationComposerContext {
 
     func applySavedCitation() {
         session.apply(.savedCitation(sourceId: sourceID))
+    }
+
+    /// One in-flight create so citation Save, Observation commit, and Connect
+    /// cannot mint two citations from a blank document.
+    func ensureCitationID() async throws -> String {
+        if let citationID, !citationID.isEmpty {
+            return citationID
+        }
+        if isCreatingCitation {
+            return try await withCheckedThrowingContinuation { continuation in
+                citationCreateWaiters.append(continuation)
+            }
+        }
+        isCreatingCitation = true
+        do {
+            let id = try await createCitationIfNeeded()
+            isCreatingCitation = false
+            let waiters = citationCreateWaiters
+            citationCreateWaiters = []
+            for waiter in waiters {
+                waiter.resume(returning: id)
+            }
+            return id
+        } catch {
+            isCreatingCitation = false
+            let waiters = citationCreateWaiters
+            citationCreateWaiters = []
+            for waiter in waiters {
+                waiter.resume(throwing: error)
+            }
+            throw error
+        }
+    }
+
+    private func createCitationIfNeeded() async throws -> String {
+        if let citationID, !citationID.isEmpty {
+            return citationID
+        }
+        guard let artifactID, !artifactID.isEmpty else {
+            throw CitationComposerNeedArtifact()
+        }
+        let values = citationValues()
+        let created = try await store.createCitationWithObservations(
+            projectDir: projectDir,
+            userID: userID,
+            artifactID: artifactID,
+            locatorJSON: values.locator.encodeJSON(),
+            transcription: values.transcription,
+            description: values.description,
+            transcriptionUncertain: values.transcriptionUncertain,
+            transcriptionNote: values.transcriptionNote,
+            citationNotes: [],
+            observations: []
+        )
+        citationID = created.0.id
+        captureCitationBaseline()
+        applySavedCitation()
+        await reloadListedCitations()
+        return created.0.id
     }
 
     func reloadListedCitations() async {
@@ -121,3 +184,5 @@ final class CitationComposerContext {
         )
     }
 }
+
+struct CitationComposerNeedArtifact: Error {}
