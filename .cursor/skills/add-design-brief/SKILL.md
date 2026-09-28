@@ -12,10 +12,8 @@ description: >-
 
 Provenencia UI is designed in **Claude Design** before it is implemented. A brief
 is the **entire prompt** — Claude Design will not follow a linked README unless
-the text is in the pasted file.
-
-Working-rules source (copy the Paste block verbatim):
-[`docs/deployment-plan/claude-design-working-rules.md`](../../../docs/deployment-plan/claude-design-working-rules.md).
+the text is in the pasted file. Copy the **Paste block** below verbatim,
+immediately after “Paste this entire document…”.
 
 Layers / implementing chrome: [`add-ui-component`](../add-ui-component/SKILL.md),
 [`docs/design-system-layers.md`](../../../docs/design-system-layers.md).
@@ -34,7 +32,7 @@ Layers / implementing chrome: [`add-ui-component`](../add-ui-component/SKILL.md)
 ```
 - [ ] Path: docs/deployment-plan/<spike>/design/S#-D#-<slug>.md
 - [ ] Header: Kind, Spike, Implements later as, Depends on, Related, layers, skills
-- [ ] Paste line + **working-rules Paste block** (verbatim from claude-design-working-rules.md)
+- [ ] Paste line + **working-rules Paste block** (verbatim from this skill)
 - [ ] In-place note: rethink (replace frames) vs enhancement (extend frames)
 - [ ] Objective, domain facts, what this board is not
 - [ ] Implementation gate table (what the PR ships)
@@ -57,7 +55,44 @@ Claude Design often keeps a **stale design-system pack**. Every brief tells it t
 Work **in place**. Do not fork a parallel surface. Do not preserve an old design
 when the brief is a rethink.
 
-Copy the Paste block from `claude-design-working-rules.md` — do not paraphrase it.
+Copy the Paste block below — do not paraphrase it.
+
+## Paste block
+
+```markdown
+### Claude Design — do this first (in order)
+
+Work **in place** on this board. Do not fork a parallel copy of the surface.
+- **Rethink** (this brief says replace): throw away the old frames. Do not keep a before/after to ship.
+- **Enhancement**: add to the existing frames. Do not start a second composer / graph / page.
+
+1. **Clear this board’s local design-system cache.** Claude Design keeps a stale pack; drawing against it invents local copies of kit controls.
+2. **Delete this board’s reference** to the design-system bundle.
+3. **Pull a fresh copy** of the Provenencia design system from the main project. Do not continue until the fetched kit lists current components. If the kit looks stale or empty, delete the cache and refetch. Do **not** draw a replacement kit locally.
+4. **Compose from that kit.** Instance existing components. Reach for a **bespoke / local** control only when the use is truly this domain. One call site is not a new design-system primitive.
+
+**Reach for (kit).** Instance these first. The **UI building-block inventory** later in this brief names the snowflakes and which kit piece each situation should use.
+
+| Situation | Use |
+| --- | --- |
+| Labeled value, textarea, or trailing control | Field + TextArea / Input |
+| Primary / secondary / ghost action | Button; icon-only → IconButton |
+| Choose one from a short list | Select |
+| Searchable pick | ComboBox |
+| Warning, error, or inline hint | Callout |
+| Page- or pane-level empty | EmptyState |
+| Confirm replace or destroy | Confirm (`item:` snapshot, not a Bool) |
+| Resource delete with inbound check | DeleteImpact recipe (S8-D9 / **S8-13**) — confirm if allowed, notice if blocked |
+| Short create / edit form | FormDialog |
+| Status / count / polarity mark | Badge; compact token → Chip |
+| Cover or file thumb | Thumbnail |
+| Grouping / raised or sunken row | Card |
+| Section title | SectionHeader |
+| Transient after-save notice | Toast |
+| Native menu of actions | ContextMenu |
+
+Do **not** invent a local Field, Button, Card, Select, Callout, or Confirm.
+```
 
 ## Inventory (binding)
 

@@ -8,7 +8,7 @@ Closed spikes under [`archive/`](archive/) keep **themes and decisions**. PR ord
 
 ## Current
 
-None — next spike not scoped. Dogfood leftovers: [`docs/dogfood/ux.md`](../dogfood/ux.md). Ideas: [`ideas/`](../ideas/). Claude Design working rules: [`claude-design-working-rules.md`](claude-design-working-rules.md).
+None — next spike not scoped. Dogfood leftovers: [`docs/dogfood/ux.md`](../dogfood/ux.md). Ideas: [`ideas/`](../ideas/). Claude Design briefs: [`add-design-brief`](../../.cursor/skills/add-design-brief/SKILL.md).
 
 ## Completed
 
