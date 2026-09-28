@@ -199,11 +199,7 @@ private struct SourcePageContent: View {
             EmptyView()
         }
         .pvDeleteImpact(
-            item: Binding(
-                get: { model.pendingImpact },
-                set: { model.pendingImpact = $0 }
-            ),
-            isRunning: model.isDeletingResource,
+            flow: model.deleteImpact,
             accessibilityIdentifierPrefix: "sources.page.deleteImpact",
             onConfirm: {
                 Task {

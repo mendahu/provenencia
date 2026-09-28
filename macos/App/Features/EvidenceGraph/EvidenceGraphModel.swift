@@ -39,10 +39,13 @@ final class EvidenceGraphModel {
         value: SourceGraphSnapshot
     )?
     /// Subject pending DeleteImpact confirm or notice.
-    var pendingImpact: PVDeleteImpactRequest?
-    var pendingDeleteID: String?
-    var isDeleting = false
-    var deleteError: String?
+    let deleteImpact = DeleteImpactFlow()
+    var pendingImpact: PVDeleteImpactRequest? {
+        get { deleteImpact.request }
+        set { deleteImpact.applyRequest(newValue) }
+    }
+    var isDeleting: Bool { deleteImpact.isRunning }
+    var deleteError: String? { deleteImpact.error }
     var pendingGridX: Int64 = 0
     var pendingGridY: Int64 = 0
     var draft = CreateDraft()
@@ -639,7 +642,6 @@ final class EvidenceGraphModel {
     /// Fetches Impact and presents the DeleteImpact recipe. The card never gates.
     func beginDelete(subjectID: String) async {
         let snapshot = currentSnapshot()
-        deleteError = nil
         let title: String
         let ref: String
         if let primary = primary(in: snapshot, id: subjectID) {
@@ -651,49 +653,30 @@ final class EvidenceGraphModel {
         } else {
             return
         }
-        do {
-            let report = try await store.getDeleteImpact(
-                projectDir: session.projectKey.projectDir,
+        await deleteImpact.ask(kind: "subject", id: subjectID, ref: ref, title: title) {
+            try await self.store.getDeleteImpact(
+                projectDir: self.session.projectKey.projectDir,
                 kind: "subject",
                 id: subjectID
             )
-            pendingDeleteID = subjectID
-            pendingImpact = PVDeleteImpactRequest(
-                target: PVDeleteImpactTarget(kind: "subject", ref: ref, title: title),
-                report: report
-            )
-        } catch {
-            deleteError = L10n.Errors.message(for: error)
         }
     }
 
     @discardableResult
     func confirmPendingImpact() async -> Bool {
-        guard let request = pendingImpact, request.report.allowed, let id = pendingDeleteID,
-              !isDeleting
-        else { return false }
-        isDeleting = true
-        deleteError = nil
-        defer { isDeleting = false }
-        do {
+        return await deleteImpact.confirm { target in
             try await store.deleteSubject(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
-                subjectID: id
+                subjectID: target.id
             )
-            session.apply(.mutatedSourceGraph(sourceId: sourceID))
-            if selectedSubjectID == id {
+            session.apply(.deletedSubject(sourceId: sourceID))
+            if selectedSubjectID == target.id {
                 selectSubject(id: nil)
             }
-            if activatedSubjectID == id {
+            if activatedSubjectID == target.id {
                 activatedSubjectID = nil
             }
-            pendingImpact = nil
-            pendingDeleteID = nil
-            return true
-        } catch {
-            deleteError = L10n.Errors.message(for: error)
-            return false
         }
     }
 

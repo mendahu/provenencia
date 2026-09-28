@@ -15,4 +15,4 @@ Follow `.cursor/skills/add-catalog-delete/SKILL.md` and `docs/catalog-deletes.md
 - New table in the same PR: classify the FK **and** register count + list probes + title/location projectors.
 - Facet / field writes (notes, `ClearSourceMetadata`, vocab join remove, `searchindex.Delete`) are not official Deletes.
 - FFI: preview is `GetDeleteImpact` (the only rich payload); `Delete*` re-runs Impact as a safety net and returns a generic code. Recipe owns `via` / `kind` L10n. The UI must not call `Delete` when preflight is blocked.
-- UI: DeleteImpact recipe (confirm if allowed, notice if blocked). Do not invent a second inbound query in Swift. `usedBy` must match Impact totals.
+- UI: DeleteImpact recipe + `DeleteImpactFlow` (confirm if allowed, notice if blocked). Confirm uses `target.id`; `*.in_use` refetches Impact. Do not invent a second inbound query in Swift. `usedBy` must match Impact totals. Subject erase applies `.deletedSubject(sourceId:)`.

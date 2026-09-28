@@ -17,6 +17,7 @@ import SwiftUI
 
 struct PVDeleteImpactTarget: Hashable {
     let kind: String
+    let id: String
     let ref: String
     let title: String
 }
@@ -25,7 +26,7 @@ struct PVDeleteImpactTarget: Hashable {
 struct PVDeleteImpactRequest: Identifiable {
     let target: PVDeleteImpactTarget
     let report: CatalogDeleteImpact
-    var id: String { "\(target.kind):\(target.ref)" }
+    var id: String { "\(target.kind):\(target.id)" }
 }
 
 // MARK: - Copy helpers (testable)
@@ -123,11 +124,15 @@ enum PVDeleteImpactControls {
 
     static func activate(
         _ listed: CatalogDeleteImpactListed,
-        onNavigate: (WorkspaceLocation) -> Void,
-        dismiss: () -> Void
+        onNavigate: @escaping (WorkspaceLocation) -> Void,
+        dismiss: () -> Void,
+        then: ((@escaping () -> Void) -> Void)? = nil
     ) {
-        onNavigate(listed.location)
         dismiss()
+        let schedule = then ?? { action in
+            Task { @MainActor in action() }
+        }
+        schedule { onNavigate(listed.location) }
     }
 }
 
@@ -277,6 +282,7 @@ extension View {
     func pvDeleteImpact(
         item: Binding<PVDeleteImpactRequest?>,
         isRunning: Bool = false,
+        error: String? = nil,
         accessibilityIdentifierPrefix: String? = PVDeleteImpactAccessibility.noticePrefix,
         onConfirm: @escaping () -> Void,
         onNavigate: @escaping (WorkspaceLocation) -> Void
@@ -313,6 +319,10 @@ extension View {
                             .foregroundStyle(PVColor.textPrimary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
+                    if let error, !error.isEmpty {
+                        PVCallout(tone: .danger, message: error)
+                            .accessibilityIdentifier("deleteImpact.confirmError")
+                    }
                     Text(L10n.DeleteImpact.nothingReferences)
                         .font(PVFont.body(size: PVTypeScale.caption))
                         .foregroundStyle(PVColor.textMuted)
@@ -328,6 +338,25 @@ extension View {
                 )
             }
     }
+
+    func pvDeleteImpact(
+        flow: DeleteImpactFlow,
+        accessibilityIdentifierPrefix: String? = PVDeleteImpactAccessibility.noticePrefix,
+        onConfirm: @escaping () -> Void,
+        onNavigate: @escaping (WorkspaceLocation) -> Void
+    ) -> some View {
+        pvDeleteImpact(
+            item: Binding(
+                get: { flow.request },
+                set: { flow.applyRequest($0) }
+            ),
+            isRunning: flow.isRunning,
+            error: flow.error,
+            accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
+            onConfirm: onConfirm,
+            onNavigate: onNavigate
+        )
+    }
 }
 
 // MARK: - Preview fixtures
@@ -335,31 +364,37 @@ extension View {
 enum PVDeleteImpactPreviewData {
     static let citation = PVDeleteImpactTarget(
         kind: "citation",
+        id: "cit-preview",
         ref: "CIT-7KD45",
         title: "1881 census, Leeds — RG11/4543 f.62 p.18"
     )
     static let subjectG2 = PVDeleteImpactTarget(
         kind: "subject",
+        id: "sub-preview-g2",
         ref: "CPR-2HX8V",
         title: "Thomas Hartley (b. c.1872)"
     )
     static let bridge = PVDeleteImpactTarget(
         kind: "subject",
+        id: "sub-preview-bridge",
         ref: "CPR-0PW4K",
         title: "Ellen Hartley → Thomas Hartley (son)"
     )
     static let observation = PVDeleteImpactTarget(
         kind: "observation",
+        id: "obs-preview",
         ref: "OBS-9M1TR",
         title: "Residence: 14 Back Nile Street, Leeds"
     )
     static let property = PVDeleteImpactTarget(
         kind: "property",
+        id: "prop-preview",
         ref: "PRP-EVTYP",
         title: "Event type"
     )
     static let user = PVDeleteImpactTarget(
         kind: "user",
+        id: "usr-preview",
         ref: "USR-4N2P0",
         title: "Jake Robins"
     )

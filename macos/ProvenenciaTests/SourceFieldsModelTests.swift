@@ -404,7 +404,9 @@ struct SourceFieldsModelTests {
         #expect(!deleted)
         #expect(model.fields.count == 1)
         #expect(model.pendingDeleteField?.id == "2")
-        #expect(model.deleteError != nil)
+        #expect(model.pendingImpact?.report.allowed == false)
+        #expect(model.pendingImpact?.report.gate == .inbound)
+        #expect(model.deleteError == nil)
     }
 
     @Test func syncSelectionAppliesFieldAfterWarm() async {

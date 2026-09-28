@@ -125,7 +125,7 @@ final class WorkspaceSession {
     private func refreshSourceGraphProgress(for mutation: CatalogMutation) {
         let sourceId: String
         switch mutation {
-        case .mutatedSourceGraph(let id), .savedCitation(let id):
+        case .mutatedSourceGraph(let id), .savedCitation(let id), .deletedSubject(let id):
             sourceId = id
         default:
             return

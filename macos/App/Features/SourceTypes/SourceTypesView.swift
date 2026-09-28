@@ -77,14 +77,7 @@ private struct SourceTypesContent: View {
         .background(PVColor.surfacePage)
         .vocabularyToastOverlay($model.toast, identifier: "sourceTypes.toast")
         .pvDeleteImpact(
-            item: Binding(
-                get: { model.pendingImpact },
-                set: { newValue in
-                    model.pendingImpact = newValue
-                    if newValue == nil { model.cancelDelete() }
-                }
-            ),
-            isRunning: model.isDeleting,
+            flow: model.deleteImpact,
             accessibilityIdentifierPrefix: "sourceTypes.deleteImpact",
             onConfirm: {
                 Task {

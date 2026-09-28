@@ -191,11 +191,7 @@ private struct EvidenceGraphContent: View {
             createForm
         }
         .pvDeleteImpact(
-            item: Binding(
-                get: { model.pendingImpact },
-                set: { model.pendingImpact = $0 }
-            ),
-            isRunning: model.isDeleting,
+            flow: model.deleteImpact,
             accessibilityIdentifierPrefix: "evidenceGraph.deleteImpact",
             onConfirm: {
                 Task { _ = await model.confirmPendingImpact() }
@@ -277,7 +273,7 @@ private struct EvidenceGraphContent: View {
             HStack(alignment: .top, spacing: PVSpacing.space5) {
                 EvidenceGraphPalette(model: model, focus: $focus)
                 Spacer(minLength: 0)
-                if let deleteError = model.deleteError {
+                if model.pendingImpact == nil, let deleteError = model.deleteError {
                     PVCallout(tone: .danger, message: deleteError)
                         .frame(width: 360, alignment: .trailing)
                 } else if !model.canCite {
