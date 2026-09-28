@@ -277,7 +277,7 @@ struct CatalogConnectRule: Sendable, Equatable {
     var refuse: Bool
     var edges: [CatalogConnectEdge] = []
 
-    /// FakeStore and unit-test double of `connectrules.Seed`.
+    /// FakeStore and unit-test double of `connectrules` product bridges / `All()`.
     /// Live connect reads `listConnectRules` only. When the Go registry changes, update this table in the same change.
     static let productMatrix: [CatalogConnectRule] = [
         CatalogConnectRule(
