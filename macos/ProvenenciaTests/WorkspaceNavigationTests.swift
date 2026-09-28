@@ -134,6 +134,60 @@ struct WorkspaceNavigationTests {
         #expect(navigation.currentLocation.typeId == "typ-9")
     }
 
+    @Test func subjectFieldsTwoLevelSelectionPushAndRestore() throws {
+        let (navigation, url) = try attachedNavigation()
+        navigation.go(to: .sectionRoot(.subjectFields))
+        navigation.go(to: WorkspaceLocation(section: .subjectFields, subjectTypeKey: "person", title: "Person"))
+        navigation.go(
+            to: WorkspaceLocation(
+                section: .subjectFields,
+                subjectTypeKey: "person",
+                propertyId: "prop-name",
+                title: "Name"
+            )
+        )
+        navigation.go(to: .sectionRoot(.sources))
+
+        navigation.goBack()
+        #expect(navigation.selectedSection == .subjectFields)
+        #expect(navigation.currentLocation.subjectTypeKey == "person")
+        #expect(navigation.currentLocation.propertyId == "prop-name")
+        navigation.goBack()
+        #expect(navigation.currentLocation.subjectTypeKey == "person")
+        #expect(navigation.currentLocation.propertyId == nil)
+        navigation.goBack()
+        #expect(navigation.currentLocation == .sectionRoot(.subjectFields))
+        navigation.goForward()
+        navigation.goForward()
+        #expect(navigation.currentLocation.propertyId == "prop-name")
+
+        // Category and property are both identity, so a strip change is its own entry
+        // and title fluff still coalesces.
+        #expect(
+            WorkspaceLocation(section: .subjectFields, subjectTypeKey: "person", propertyId: "prop-name")
+                != WorkspaceLocation(section: .subjectFields, propertyId: "prop-name")
+        )
+        #expect(
+            WorkspaceLocation(section: .subjectFields, subjectTypeKey: "person", propertyId: "prop-name", title: "A")
+                == WorkspaceLocation(section: .subjectFields, subjectTypeKey: "person", propertyId: "prop-name", title: "B")
+        )
+
+        let reloaded = WorkspaceNavigation()
+        reloaded.attachProject(uuid: projectUuid, fileURL: url)
+        #expect(reloaded.currentLocation.subjectTypeKey == "person")
+        #expect(reloaded.currentLocation.propertyId == "prop-name")
+    }
+
+    @Test func legacySubjectFieldsHistoryDecodesAsListRoot() throws {
+        let json = Data("""
+        {"section":"subject-fields"}
+        """.utf8)
+        let location = try JSONDecoder().decode(WorkspaceLocation.self, from: json)
+        #expect(location == .sectionRoot(.subjectFields))
+        #expect(location.subjectTypeKey == nil)
+        #expect(location.propertyId == nil)
+    }
+
     @Test func missingEntityPruneRewritesCurrentEntry() throws {
         let (navigation, url) = try attachedNavigation()
         navigation.go(to: WorkspaceLocation(section: .sources, sourceId: "gone", title: "Deleted"))

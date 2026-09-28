@@ -41,6 +41,10 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     var connectFromSubjectId: String?
     var connectToSubjectId: String?
     var connectBridgeTypeKey: String?
+    /// Subject Fields type-strip category when `section == .subjectFields`; nil is “All properties”.
+    var subjectTypeKey: String?
+    /// Subject Fields inspector row when `section == .subjectFields`.
+    var propertyId: String?
     /// Page vs Evidence graph vs composer when `section == .sources` and `sourceId` is set.
     /// Legacy history without this key decodes as `.page`.
     var sourceSurface: SourceSurface
@@ -56,6 +60,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     enum CodingKeys: String, CodingKey {
         case section, sourceId, fieldId, typeId, subjectId, citationId, artifactId, observationId
         case connectFromSubjectId, connectToSubjectId, connectBridgeTypeKey
+        case subjectTypeKey, propertyId
         case sourceSurface, ref, title, sourceTitle
     }
 
@@ -71,6 +76,8 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         connectFromSubjectId: String? = nil,
         connectToSubjectId: String? = nil,
         connectBridgeTypeKey: String? = nil,
+        subjectTypeKey: String? = nil,
+        propertyId: String? = nil,
         sourceSurface: SourceSurface = .page,
         ref: String? = nil,
         title: String? = nil,
@@ -87,6 +94,8 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         self.connectFromSubjectId = Self.nilIfEmpty(connectFromSubjectId)
         self.connectToSubjectId = Self.nilIfEmpty(connectToSubjectId)
         self.connectBridgeTypeKey = Self.nilIfEmpty(connectBridgeTypeKey)
+        self.subjectTypeKey = Self.nilIfEmpty(subjectTypeKey)
+        self.propertyId = Self.nilIfEmpty(propertyId)
         self.sourceSurface = sourceSurface
         self.ref = Self.nilIfEmpty(ref)
         self.title = Self.nilIfEmpty(title)
@@ -106,6 +115,8 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         connectFromSubjectId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .connectFromSubjectId))
         connectToSubjectId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .connectToSubjectId))
         connectBridgeTypeKey = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .connectBridgeTypeKey))
+        subjectTypeKey = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .subjectTypeKey))
+        propertyId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .propertyId))
         sourceSurface = try container.decodeIfPresent(SourceSurface.self, forKey: .sourceSurface) ?? .page
         ref = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .ref))
         title = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .title))
@@ -130,6 +141,8 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
             && lhs.connectFromSubjectId == rhs.connectFromSubjectId
             && lhs.connectToSubjectId == rhs.connectToSubjectId
             && lhs.connectBridgeTypeKey == rhs.connectBridgeTypeKey
+            && lhs.subjectTypeKey == rhs.subjectTypeKey
+            && lhs.propertyId == rhs.propertyId
             && lhs.sourceSurface == rhs.sourceSurface
     }
 
