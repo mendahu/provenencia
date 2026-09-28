@@ -21,7 +21,7 @@ Skills: [`add-catalog-delete`](../.cursor/skills/add-catalog-delete/SKILL.md), [
 | Predicate | Bucket | Blocks Impact? |
 | --- | --- | --- |
 | Ordinary / extra Observations on this subject | Resource inbound | Yes |
-| Edge-locked rows on this subject, plus the Connect rule’s disambiguation row (`role` / `relationship_type`) | `connectionFacet` | No — official `subjects.Delete` releases them first |
+| Edge-locked rows on this subject, plus each Connect rule’s `Disambiguation` property (from `core/connectrules.Seed`) | `connectionFacet` | No — official `subjects.Delete` releases them first |
 | `observations.value_subject_id` (this subject is an endpoint) | Resource inbound | Yes (G2) |
 
 Endpoints and the Citation stay. Extra Add-property rows on the bridge still block.
