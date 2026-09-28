@@ -37,6 +37,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var lastClosedCatalogProjectDir: String?
     /// Ordered store calls for composer / graph tests.
     var recordedCalls: [String] = []
+    /// Optional delay before each `createCitationWithObservations` (race tests).
+    var createCitationDelayNanoseconds: UInt64 = 0
     /// When set, `listSources` throws instead of returning the in-memory list.
     var listSourcesError: Error?
     var listSubjectsCalls = 0
@@ -1561,6 +1563,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         observations drafts: [CatalogObservationDraft]
     ) async throws -> (CatalogCitation, [CatalogObservation]) {
         recordedCalls.append("createCitationWithObservations observations=\(drafts.count)")
+        if createCitationDelayNanoseconds > 0 {
+            try await Task.sleep(nanoseconds: createCitationDelayNanoseconds)
+        }
         markCatalogSessionHeld(projectDir)
         let citation = CatalogCitation(
             id: UUID().uuidString.lowercased(),

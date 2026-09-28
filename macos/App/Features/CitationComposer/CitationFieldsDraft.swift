@@ -93,10 +93,6 @@ final class CitationFieldsDraft {
         isSaving = true
         defer { isSaving = false }
         error = nil
-        guard let artifactID = context.artifactID else {
-            error = String(localized: L10n.CitationComposer.needArtifact)
-            return
-        }
         do {
             if let citationID = context.citationID {
                 _ = try await context.store.updateCitation(
@@ -112,23 +108,10 @@ final class CitationFieldsDraft {
                 captureBaseline()
                 context.applySavedCitation()
             } else {
-                let created = try await context.store.createCitationWithObservations(
-                    projectDir: context.projectDir,
-                    userID: context.userID,
-                    artifactID: artifactID,
-                    locatorJSON: locator.encodeJSON(),
-                    transcription: transcription,
-                    description: description,
-                    transcriptionUncertain: transcriptionUncertain,
-                    transcriptionNote: transcriptionNote,
-                    citationNotes: [],
-                    observations: []
-                )
-                context.citationID = created.0.id
-                captureBaseline()
-                context.applySavedCitation()
-                await context.reloadListedCitations()
+                _ = try await context.ensureCitationID()
             }
+        } catch is CitationComposerNeedArtifact {
+            error = String(localized: L10n.CitationComposer.needArtifact)
         } catch {
             self.error = L10n.Errors.message(for: error)
         }
