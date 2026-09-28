@@ -38,35 +38,41 @@ Facet CASCADE is SQLite’s job. Official `Delete` still **registers** those FKs
 - [ ] Every live FK tagged; resource inbound edges have count + list probes
 - [ ] Title + location projectors registered on the blocker kind (domain package)
 - [ ] Proto kind / via keys; recipe L10n heading (unknown via still renders)
-- [ ] Domain `Delete`: load → extra gates → Impact in the same tx → DELETE parent → ReleaseOwned
-- [ ] Extra gates before Impact: missing row, edge_locked, infra, origin_locked
-- [ ] Bridge `subjects.Delete` releases connection facets (edges + disambiguation) before the parent; other `observations.Delete` stays `edge_locked`
+- [ ] Domain `Delete`: load → extra gates → Impact in the same tx → connection facets if any → `SnapshotOwned` if owned outbound → DELETE parent → `ReleaseSnapshot` → audit / FTS
+- [ ] Extra gates: domain `Delete` missing row → `ErrInvalid`; `GetDeleteImpact` missing → `not_found`; `edge_locked` / infra / `origin_locked` before or via Impact
+- [ ] Bridge `subjects.Delete` releases connection facets (seeded edges + disambiguation) before the parent; other `observations.Delete` stays `edge_locked`
 - [ ] FFI: GetDeleteImpact returns the report; Delete* refuse is a generic in_use / extra-gate code (no report on Error, no apperr ref params)
 - [ ] Audit + searchindex stay in the domain package
 - [ ] FFI: GetDeleteImpact works for this kind (UI or not)
-- [ ] Tests: empty → erase; inbound → listed + total; missing → not_found;
-        extra gates; pragma includes new FKs; Impact.allowed iff SQLite resource DELETE
-        would succeed; audit + FTS on the writer
+- [ ] Tests: empty → erase; inbound → listed + total; GetDeleteImpact missing → not_found;
+        domain Delete missing → ErrInvalid; extra gates; pragma includes new FKs;
+        Impact.allowed iff SQLite resource DELETE would succeed; audit + FTS on the writer
 ```
 
 ## Domain `Delete`
 
 ```go
 func Delete(c *database.Catalog, userID, id []byte) error {
-    // begin tx, load row — missing → not_found (do not run Impact as empty)
-    // extra gates (edge_locked, infra, …) before Impact
+    // load row — missing → ErrInvalid (do not run Impact as empty)
+    // begin tx
+    // extra gates (edge_locked, infra, …) before Impact when they are not already Impact gates
     report, err := deleteimpact.Impact(tx, deleteimpact.KindCitation, id)
     if err != nil { return err }
     if !report.Allowed {
         return ErrInUse // generic code — report already went out on GetDeleteImpact
     }
+    // connection facets (bridge subjects only): deleteimpact.ReleaseConnectionFacets
+    // owned outbound: snap, err := deleteimpact.SnapshotOwned(tx, kind, id)
     // DELETE parent
-    // deleteimpact.ReleaseOwned(tx, kind, id)
-    // audit.Record, searchindex.Delete
+    // deleteimpact.ReleaseSnapshot(tx, snap)
+    // audit.Record, searchindex.Delete / Reproject
 }
 ```
 
+`ReleaseOwned` snapshots then releases **while the parent row still exists**. After `DELETE` it cannot see owned columns — use `SnapshotOwned` → `DELETE` → `ReleaseSnapshot` instead. Writers with no owned outbound skip snapshot/release.
+
 - Preview and write share one **function**. UI calls `GetDeleteImpact` **before** confirm; `Delete` re-runs Impact in-tx. The proto is only on the fetch.
+- `GetDeleteImpact` on a missing id returns gate `not_found`. Domain `Delete` on a missing id returns `ErrInvalid`.
 - Keep domain sentinels (`citations.ErrInUse`) for `errors.Is`. Do not put refs in `apperr` params or on `Error`.
 - Do not `DELETE FROM observations WHERE citation_id = ?` as a cascade. Policy is refuse.
 - Writers with **no UI** still cut over in the registry PR (`propertyterms.Delete`). Do not leave `sqlInUse`.

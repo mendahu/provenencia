@@ -8,9 +8,9 @@ alwaysApply: false
 
 Follow `.cursor/skills/add-catalog-delete/SKILL.md` and `docs/catalog-deletes.md`.
 
-- **Resource / vocab `Delete`** must call `deleteimpact.Impact` in the same tx (after extra gates), then `DELETE` the parent, then owned-outbound release. Refuse is a generic `*.in_use` / extra-gate code — not the report on `Error`.
-- Load the row first. Missing → `not_found`. `edge_locked` / infra / `origin_locked` before Impact. Do not treat inbound-empty as allowed.
-- Bridge `subjects.Delete` releases connection facets (edges + disambiguation) first. `observations.Delete` of an edge stays `edge_locked`.
+- **Resource / vocab `Delete`** must call `deleteimpact.Impact` in the same tx (after extra gates). Then: connection facets if any, `SnapshotOwned` if the parent has owned outbound, `DELETE` the parent, `ReleaseSnapshot`. Do **not** call `ReleaseOwned` after `DELETE` — it reads the parent row and is a no-op. Refuse is a generic `*.in_use` / extra-gate code — not the report on `Error`.
+- Load the row first. Domain `Delete` missing → `ErrInvalid`. `GetDeleteImpact` missing → `not_found`. `edge_locked` / infra / `origin_locked` before or via Impact. Do not treat inbound-empty as allowed.
+- Bridge `subjects.Delete` releases connection facets (seeded edges + disambiguation) first. `observations.Delete` of an edge stays `edge_locked`.
 - Do **not** add `sqlInUse` / `SELECT 1 FROM … LIMIT 1` next to a resource `DELETE`. No-UI writers still cut over.
 - New table in the same PR: classify the FK **and** register count + list probes + title/location projectors.
 - Facet / field writes (notes, `ClearSourceMetadata`, vocab join remove, `searchindex.Delete`) are not official Deletes.
