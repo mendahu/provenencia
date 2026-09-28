@@ -99,7 +99,7 @@ struct PVDeleteImpactCopyTests {
         }
     }
 
-    @Test func activateNavigatesThenDismisses() {
+    @Test @MainActor func activateNavigatesThenDismisses() {
         var navigated: WorkspaceLocation?
         var dismissed = false
         let row = PVDeleteImpactPreviewData.listed(ref: "OBS-4Q2PA", title: "Name: Ellen Hartley")

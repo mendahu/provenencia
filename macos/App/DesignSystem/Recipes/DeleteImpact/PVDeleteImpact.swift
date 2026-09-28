@@ -122,6 +122,7 @@ enum PVDeleteImpactControls {
         }
     }
 
+    @MainActor
     static func activate(
         _ listed: CatalogDeleteImpactListed,
         onNavigate: @escaping (WorkspaceLocation) -> Void,
@@ -129,10 +130,14 @@ enum PVDeleteImpactControls {
         then: ((@escaping () -> Void) -> Void)? = nil
     ) {
         dismiss()
-        let schedule = then ?? { action in
-            Task { @MainActor in action() }
+        let location = listed.location
+        if let then {
+            then { onNavigate(location) }
+            return
         }
-        schedule { onNavigate(listed.location) }
+        Task { @MainActor in
+            onNavigate(location)
+        }
     }
 }
 
