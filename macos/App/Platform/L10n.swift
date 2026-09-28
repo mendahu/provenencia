@@ -3060,6 +3060,18 @@ enum L10n {
             comment: "Leaves the citation composer after catalog data failed to load"
         )
 
+        static let citationMissing = LocalizedStringResource(
+            "citationComposer.citationMissing",
+            defaultValue: "That citation no longer exists. It may have been deleted.",
+            comment: "Neutral callout when an edit link or history entry points at a missing citation"
+        )
+
+        static let catalogUnavailable = LocalizedStringResource(
+            "citationComposer.catalogUnavailable",
+            defaultValue: "The catalog did not finish loading. Go back to the evidence graph and try again.",
+            comment: "Load-failed callout when composer catalog query handles never became ready"
+        )
+
         static let fieldsDisabledHint = LocalizedStringResource(
             "citationComposer.fieldsDisabledHint",
             defaultValue: "Fields disabled until an artifact is attached",

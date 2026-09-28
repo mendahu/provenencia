@@ -7,14 +7,18 @@ enum EvidenceGraphPlacement {
 
     static var spacing: CGFloat { GraphCanvasGridMapping.defaultSpacing }
 
+    /// Keep in sync with `EvidenceSubjectCard.width` / `approximateHalfHeight`.
+    static let subjectCardWidth: CGFloat = 264
+    static let subjectCardHalfHeight: CGFloat = 36
+
     /// Clears the widest card plus one cell of gap.
     static var horizontalStep: Int64 {
-        Int64(ceil((EvidenceSubjectCard.width + spacing) / spacing))
+        Int64(ceil((subjectCardWidth + spacing) / spacing))
     }
 
     /// One new card plus room to grow.
     static var verticalStep: Int64 {
-        Int64(ceil((2 * EvidenceSubjectCard.approximateHalfHeight + 2 * spacing) / spacing))
+        Int64(ceil((2 * subjectCardHalfHeight + 2 * spacing) / spacing))
     }
 
     static var minCell: CatalogGridCell {

@@ -10566,6 +10566,30 @@
         }
       }
     },
+    "citationComposer.citationMissing": {
+      "comment": "Neutral callout when an edit link or history entry points at a missing citation",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That citation no longer exists. It may have been deleted."
+          }
+        }
+      }
+    },
+    "citationComposer.catalogUnavailable": {
+      "comment": "Load-failed callout when composer catalog query handles never became ready",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The catalog did not finish loading. Go back to the evidence graph and try again."
+          }
+        }
+      }
+    },
     "citationComposer.goToSourcePage": {
       "comment": "Recovery action from the no-Artifact cite gate",
       "extractionState": "manual",

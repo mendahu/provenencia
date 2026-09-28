@@ -392,18 +392,9 @@ struct CitationComposerModelTests {
         #expect(model.pendingImpact == nil)
     }
 
-    @Test func ghostCitationAndArtifactStayInComposer() async {
+    @Test func ghostArtifactResetsToANewCitation() async {
         let store = makeStore()
         seedArtifact(store)
-        let missing = makeModel(store: store, citationID: "cit-missing")
-        await missing.prepare()
-        #expect(missing.phase == .compose)
-        #expect(missing.activeCitationID == nil)
-        store.recordedCalls = []
-        await missing.fields.saveCitation()
-        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations") })
-        #expect(store.recordedCalls.contains { $0.hasPrefix("updateCitation") } == false)
-
         seedCitation(store)
         if var citation = store.citationsByID["cit-1"] {
             citation.artifactID = "art-gone"
@@ -901,6 +892,67 @@ struct CitationComposerModelTests {
             toSubjectID: eventID,
             bridgeTypeKey: "participation"
         ))
+    }
+
+    @Test func missingCitationShowsNeutralLoadFailed() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store, citationID: "cit-gone")
+        await model.prepare()
+        #expect(model.phase == .loadFailed)
+        #expect(model.loadFailureIsMissingCitation)
+        #expect(model.loadError == String(localized: L10n.CitationComposer.citationMissing))
+    }
+
+    @Test func missingSubjectFallsBackWithoutCompose() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store, subjectID: "sub-gone")
+        await model.prepare()
+        #expect(model.phase == .subjectMissing)
+    }
+
+    @Test func newSubjectOptionsComeFromPlaceableTypes() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        let values = Set(model.subjectOptions.map(\.value))
+        #expect(values.contains(CitationComposerModel.newSubjectPrefix + "person"))
+        #expect(values.contains(CitationComposerModel.newSubjectPrefix + "event"))
+        #expect(values.contains(CitationComposerModel.newSubjectPrefix + "place"))
+        #expect(!values.contains(where: { $0.hasSuffix("participation") }))
+        #expect(!values.contains(where: { $0.hasSuffix("relationship") }))
+    }
+
+    @Test func confirmCustomTermWritesTheTermAndClosesTheModal() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.beginAddObservation()
+        let rowID = model.observations[0].id
+        model.updateObservationProperty(id: rowID, propertyID: occupationPropertyID)
+        model.beginAddCustomTerm(rowID: rowID)
+        model.customTermDraft?.label = "Weaver"
+        await model.confirmCustomTerm()
+        #expect(model.customTermDraft == nil)
+        #expect(model.observations[0].valueTermID.isEmpty == false)
+        #expect(store.propertyTermsByProperty[occupationPropertyID]?.contains { $0.label == "Weaver" } == true)
+    }
+
+    @Test func presentingObservationClearsCustomTermModal() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.beginAddObservation()
+        let rowID = model.observations[0].id
+        model.beginAddCustomTerm(rowID: rowID)
+        #expect(model.customTermDraft != nil)
+        model.beginEditObservation(model.observations[0])
+        #expect(model.customTermDraft == nil)
+        #expect(model.observationDialog != nil)
     }
 
     private func type(id: String, key: String, label: String, prefix: String) -> CatalogSubjectType {

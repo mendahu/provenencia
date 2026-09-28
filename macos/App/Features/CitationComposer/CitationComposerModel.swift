@@ -81,6 +81,26 @@ final class CitationComposerModel {
         var isPaste: Bool { pastePage != nil }
     }
 
+    struct CustomTermDraft: Equatable {
+        var rowID: UUID
+        var label: String = ""
+        var error: String?
+        var isSaving = false
+    }
+
+    enum ComposerModal: Equatable {
+        case observation(ObservationDialogState)
+        case customTerm(CustomTermDraft)
+        case newSubject(NewSubjectDraft)
+        case deleteImpact
+        case leave(PendingLeave)
+        case transcription(PendingTranscriptionConfirm)
+    }
+
+    enum CatalogWarmError: Error {
+        case handleMissing
+    }
+
     struct GraphSubjectOption: Identifiable, Equatable {
         var id: String
         var label: String
@@ -98,11 +118,24 @@ final class CitationComposerModel {
     let context: CitationComposerContext
     @ObservationIgnored
     weak var navigation: WorkspaceNavigation?
-    var pendingLeave: PendingLeave?
+    var modal: ComposerModal?
+    var pendingLeave: PendingLeave? {
+        get {
+            if case .leave(let value) = modal { return value }
+            return nil
+        }
+        set {
+            if let newValue {
+                present(.leave(newValue))
+            } else if case .leave = modal {
+                present(nil)
+            }
+        }
+    }
     let deleteImpact = DeleteImpactFlow()
     var pendingImpact: PVDeleteImpactRequest? {
         get { deleteImpact.request }
-        set { deleteImpact.applyRequest(newValue) }
+        set { applyDeleteImpactRequest(newValue) }
     }
     var isDeletingResource: Bool { deleteImpact.isRunning }
     private var loadedCitationRef = ""
@@ -110,6 +143,7 @@ final class CitationComposerModel {
     let fields = CitationFieldsDraft()
     let observationRows = CitationObservationRows()
     let connections = CitationConnections()
+    let transcriptions: CitationTranscriptionModel
     var vocabulary: CitationComposerVocabulary { context.vocabulary }
 
     var sourceID: String { entry.sourceID }
@@ -134,14 +168,60 @@ final class CitationComposerModel {
 
     private(set) var identityAnnouncement: String = ""
     var landingColumn: Int64?
-    var observationDialog: ObservationDialogState?
-    var newSubjectDraft: NewSubjectDraft?
-    var termError: String?
-    var pendingCustomTermRowID: UUID?
-    var customTermLabel = ""
-    var showCustomTermDialog = false
+    var observationDialog: ObservationDialogState? {
+        get {
+            if case .observation(let value) = modal { return value }
+            return nil
+        }
+        set {
+            if let newValue {
+                present(.observation(newValue))
+            } else if case .observation = modal {
+                present(nil)
+            }
+        }
+    }
+    var newSubjectDraft: NewSubjectDraft? {
+        get {
+            if case .newSubject(let value) = modal { return value }
+            return nil
+        }
+        set {
+            if let newValue {
+                present(.newSubject(newValue))
+            } else if case .newSubject = modal {
+                present(nil)
+            }
+        }
+    }
+    var customTermDraft: CustomTermDraft? {
+        get {
+            if case .customTerm(let value) = modal { return value }
+            return nil
+        }
+        set {
+            if let newValue {
+                present(.customTerm(newValue))
+            } else if case .customTerm = modal {
+                present(nil)
+            }
+        }
+    }
+    var pendingTranscriptionConfirm: PendingTranscriptionConfirm? {
+        get {
+            if case .transcription(let value) = modal { return value }
+            return nil
+        }
+        set {
+            if let newValue {
+                present(.transcription(newValue))
+            } else if case .transcription = modal {
+                present(nil)
+            }
+        }
+    }
     private(set) var loadError: String?
-    private(set) var shouldFallbackToGraph = false
+    private(set) var loadFailureIsMissingCitation = false
     var selectedArtifactID: String? {
         get { context.artifactID }
         set { context.artifactID = newValue }
@@ -155,13 +235,8 @@ final class CitationComposerModel {
     var locatorCapabilities: ArtifactLocatorCapabilities {
         artifactViewer.locatorCapabilities
     }
-    private let ocrEngine: any OCREngine
-    var isTranscribing = false
-    var transcriptionOCRMessage: String?
-    var pendingTranscriptionConfirm: PendingTranscriptionConfirm?
-    private var lastPastePage: Int?
-    private var lastPasteText = ""
-    private var isApplyingPaste = false
+    var isTranscribing: Bool { transcriptions.isTranscribing }
+    var transcriptionOCRMessage: String? { transcriptions.ocrMessage }
 
     init(
         entry: CitationComposerEntry,
@@ -174,7 +249,6 @@ final class CitationComposerModel {
         self.session = session
         self.store = store
         self.userID = userID
-        self.ocrEngine = ocrEngine
         self.context = CitationComposerContext(
             store: store,
             session: session,
@@ -189,6 +263,11 @@ final class CitationComposerModel {
         fields.attach(context)
         observationRows.attach(context)
         connections.attach(context)
+        self.transcriptions = CitationTranscriptionModel(
+            fields: fields,
+            artifactViewer: artifactViewer,
+            ocrEngine: ocrEngine
+        )
     }
 
     var graphSubjects: [GraphSubjectOption] { vocabulary.graphSubjects }
@@ -201,13 +280,7 @@ final class CitationComposerModel {
     var transcription: String {
         get { fields.transcription }
         set {
-            if newValue != fields.transcription {
-                transcriptionOCRMessage = nil
-                if !isApplyingPaste {
-                    lastPastePage = nil
-                    lastPasteText = ""
-                }
-            }
+            transcriptions.noteUserEditedTranscription()
             fields.transcription = newValue
         }
     }
@@ -275,73 +348,17 @@ final class CitationComposerModel {
         hasUnsavedDocumentWork || connections.hasTouchedWork || isTranscribing
     }
 
-    /// Image raster only — PDF Artifacts use a live `PDFDocument`, not `displayImage`.
-    var imageRaster: NSImage? {
-        guard isImageArtifact else { return nil }
-        return artifactViewer.displayImage
-    }
+    var imageRaster: NSImage? { transcriptions.imageRaster }
 
-    var canAutoTranscribe: Bool {
-        imageRaster != nil && !isTranscribing
-    }
+    var canAutoTranscribe: Bool { transcriptions.canAutoTranscribe }
 
-    var canPasteTranscription: Bool {
-        isPDFArtifact
-            && artifactViewer.findHasTextLayer
-            && artifactViewer.hasUserSelection
-    }
+    var canPasteTranscription: Bool { transcriptions.canPasteTranscription }
 
-    var transcriptionActionHint: LocalizedStringResource {
-        if isPDFArtifact {
-            return pasteHint
-        }
-        return autoTranscribeHint
-    }
+    var transcriptionActionHint: LocalizedStringResource { transcriptions.actionHint }
 
-    var autoTranscribeHint: LocalizedStringResource {
-        switch artifactViewer.kind {
-        case .pdf:
-            return pasteHint
-        case .audio:
-            return L10n.CitationComposer.autoTranscribeHintAudio
-        case .video:
-            return L10n.CitationComposer.autoTranscribeHintVideo
-        case .unsupported:
-            return L10n.CitationComposer.autoTranscribeHintNoRaster
-        case .image:
-            break
-        }
-        if imageRaster == nil {
-            return artifactViewer.emptyReason == .missingFile
-                ? L10n.CitationComposer.autoTranscribeHintMissingFile
-                : L10n.CitationComposer.autoTranscribeHintNoRaster
-        }
-        if locator.hasRegion {
-            return L10n.CitationComposer.autoTranscribeHintRegion
-        }
-        return L10n.CitationComposer.autoTranscribeHintWholeImage
-    }
+    var autoTranscribeHint: LocalizedStringResource { transcriptions.autoTranscribeHint }
 
-    private var pasteHint: LocalizedStringResource {
-        if !artifactViewer.findHasTextLayer {
-            return L10n.CitationComposer.pasteHintNoTextLayer
-        }
-        if let page = lastPastePage, artifactViewer.userSelectionText == lastPasteText {
-            return L10n.CitationComposer.pasteHintAfter(page: page)
-        }
-        if artifactViewer.hasUserSelection, let page = artifactViewer.userSelectionPage {
-            return L10n.CitationComposer.pasteHintSelected(
-                lines: artifactViewer.userSelectionLineCount,
-                page: page
-            )
-        }
-        return L10n.CitationComposer.pasteHintSelect
-    }
-
-    var needsWholePageWarning: Bool {
-        guard let image = imageRaster, locator.region == nil else { return false }
-        return OCRImage.isOversized(image.size)
-    }
+    var needsWholePageWarning: Bool { transcriptions.needsWholePageWarning }
 
     var unsavedSummary: String {
         L10n.CitationComposer.unsavedSummary(
@@ -363,11 +380,11 @@ final class CitationComposerModel {
         let existing = vocabulary.graphSubjects.map {
             PVComboBoxOption(value: $0.id, label: $0.label, subtext: $0.ref)
         }
-        let news: [PVComboBoxOption] = ["person", "event", "place"].compactMap { key in
-            guard vocabulary.typesByID.values.contains(where: { $0.key == key }) else { return nil }
+        let news: [PVComboBoxOption] = fieldsSnapshot.typesInPaletteOrder.compactMap { type in
+            guard fieldsSnapshot.presentationsByKey[type.key]?.placeable == true else { return nil }
             return PVComboBoxOption(
-                value: Self.newSubjectPrefix + key,
-                label: L10n.CitationComposer.newSubject(typeKey: key)
+                value: Self.newSubjectPrefix + type.key,
+                label: L10n.CitationComposer.newSubject(typeKey: type.key)
             )
         }
         return existing + news
@@ -460,13 +477,12 @@ final class CitationComposerModel {
     func prepare() async {
         phase = .loading
         loadError = nil
-        shouldFallbackToGraph = false
+        loadFailureIsMissingCitation = false
         landingColumn = nil
         do {
             try await warmCatalogHandles()
             if entry.citationID == nil, entry.subjectID.isEmpty, !entry.isConnect {
                 phase = .subjectMissing
-                shouldFallbackToGraph = true
                 return
             }
             if !entry.subjectID.isEmpty,
@@ -474,7 +490,6 @@ final class CitationComposerModel {
                !entry.isConnect
             {
                 phase = .subjectMissing
-                shouldFallbackToGraph = true
                 return
             }
             if let existing = vocabulary.graphSubjects.first(where: { $0.id == entry.subjectID }) {
@@ -494,6 +509,10 @@ final class CitationComposerModel {
                     try await loadCitation(citationID)
                 } catch {
                     resetComposerIdentity(keepLocator: false)
+                    loadFailureIsMissingCitation = true
+                    loadError = String(localized: L10n.CitationComposer.citationMissing)
+                    phase = .loadFailed
+                    return
                 }
             } else {
                 resetComposerIdentity(keepLocator: false)
@@ -524,7 +543,12 @@ final class CitationComposerModel {
             }
             await reloadListedCitations()
             phase = .compose
+        } catch is CatalogWarmError {
+            loadFailureIsMissingCitation = false
+            loadError = String(localized: L10n.CitationComposer.catalogUnavailable)
+            phase = .loadFailed
         } catch {
+            loadFailureIsMissingCitation = false
             loadError = L10n.Errors.message(for: error)
             phase = .loadFailed
         }
@@ -579,6 +603,9 @@ final class CitationComposerModel {
         }
         if let message = deleteImpact.error {
             fields.error = message
+        }
+        if deleteImpact.request == nil, case .deleteImpact = modal {
+            modal = nil
         }
     }
 
@@ -638,37 +665,40 @@ final class CitationComposerModel {
     }
 
     func beginAddCustomTerm(rowID: UUID) {
-        termError = nil
-        pendingCustomTermRowID = rowID
-        customTermLabel = ""
-        showCustomTermDialog = true
+        present(.customTerm(CustomTermDraft(rowID: rowID)))
     }
 
     func cancelCustomTermDialog() {
-        showCustomTermDialog = false
-        pendingCustomTermRowID = nil
-        customTermLabel = ""
-        termError = nil
+        if case .customTerm = modal { present(nil) }
     }
 
-    func createCustomTerm(propertyID: String, label: String) async -> CatalogPropertyTerm? {
-        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
+    func confirmCustomTerm() async {
+        guard case .customTerm(var draft) = modal else { return }
+        guard let row = observationRows.rows.first(where: { $0.id == draft.rowID }) else {
+            present(nil)
+            return
+        }
+        let trimmed = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        draft.isSaving = true
+        draft.error = nil
+        present(.customTerm(draft))
         do {
             let term = try await store.createPropertyTerm(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
-                propertyID: propertyID,
+                propertyID: row.propertyID,
                 label: trimmed,
                 description: ""
             )
-            session.apply(.createdPropertyTerm(propertyId: propertyID))
-            await warmTerms(for: propertyID)
-            termError = nil
-            return term
+            session.apply(.createdPropertyTerm(propertyId: row.propertyID))
+            await warmTerms(for: row.propertyID)
+            updateObservationTerm(id: draft.rowID, termID: term.id)
+            present(nil)
         } catch {
-            termError = L10n.Errors.message(for: error)
-            return nil
+            draft.error = L10n.Errors.message(for: error)
+            draft.isSaving = false
+            present(.customTerm(draft))
         }
     }
 
@@ -721,96 +751,42 @@ final class CitationComposerModel {
 
     func requestAutoTranscribe() {
         guard canAutoTranscribe else { return }
-        transcriptionOCRMessage = nil
-        let hasText = !transcription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let wholePage = needsWholePageWarning
-        if hasText || wholePage {
-            pendingTranscriptionConfirm = PendingTranscriptionConfirm(
-                existingText: transcription,
-                includeWholePage: wholePage
-            )
+        if let pending = transcriptions.autoTranscribeConfirmIfNeeded() {
+            present(.transcription(pending))
             return
         }
-        Task { await runAutoTranscribe() }
+        Task { await transcriptions.runAutoTranscribe() }
     }
 
     func confirmAutoTranscribe() {
-        pendingTranscriptionConfirm = nil
-        Task { await runAutoTranscribe() }
+        present(nil)
+        Task { await transcriptions.runAutoTranscribe() }
     }
 
     func cancelAutoTranscribeConfirm() {
-        pendingTranscriptionConfirm = nil
+        if case .transcription = modal { present(nil) }
     }
 
     func requestPasteTranscription() {
         guard canPasteTranscription else { return }
-        let hasText = !transcription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        if hasText {
-            pendingTranscriptionConfirm = PendingTranscriptionConfirm(
-                existingText: transcription,
-                includeWholePage: false,
-                pastePage: artifactViewer.userSelectionPage,
-                pasteLineCount: artifactViewer.userSelectionLineCount
-            )
+        if let pending = transcriptions.pasteConfirmIfNeeded() {
+            present(.transcription(pending))
             return
         }
-        applyPasteTranscription()
+        transcriptions.applyPasteTranscription()
     }
 
     func confirmPasteTranscription() {
-        pendingTranscriptionConfirm = nil
-        applyPasteTranscription()
-    }
-
-    private func applyPasteTranscription() {
-        guard canPasteTranscription else { return }
-        let text = artifactViewer.userSelectionText
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
-        isApplyingPaste = true
-        lastPastePage = artifactViewer.userSelectionPage
-        lastPasteText = artifactViewer.userSelectionText
-        transcription = text
-        isApplyingPaste = false
-        transcriptionOCRMessage = nil
+        present(nil)
+        transcriptions.applyPasteTranscription()
     }
 
     func dismissTranscriptionOCRMessage() {
-        transcriptionOCRMessage = nil
+        transcriptions.dismissOCRMessage()
     }
 
     func runAutoTranscribe() async {
-        guard canAutoTranscribe, let nsImage = imageRaster else { return }
-        guard let cgImage = OCRImage.cgImage(from: nsImage) else {
-            transcriptionOCRMessage = String(localized: L10n.CitationComposer.autoTranscribeFailed)
-            return
-        }
-        let source: CGImage
-        if let region = locator.region, region.isValid {
-            let bounds = ArtifactRegionGeometry.boundingRect(of: region.points)
-            guard let cropped = OCRImage.crop(cgImage, normalizedRect: bounds) else {
-                transcriptionOCRMessage = String(localized: L10n.CitationComposer.autoTranscribeFailed)
-                return
-            }
-            source = cropped
-        } else {
-            source = cgImage
-        }
-        isTranscribing = true
-        defer { isTranscribing = false }
-        do {
-            let text = try await ocrEngine.recognizeText(in: source)
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            if text.isEmpty {
-                transcriptionOCRMessage = String(localized: L10n.CitationComposer.autoTranscribeNothingFound)
-                return
-            }
-            fields.transcription = text
-            transcriptionOCRMessage = nil
-        } catch {
-            transcriptionOCRMessage = String(localized: L10n.CitationComposer.autoTranscribeFailed)
-        }
+        await transcriptions.runAutoTranscribe()
     }
 
     func graphLocation() -> WorkspaceLocation {
@@ -865,8 +841,32 @@ final class CitationComposerModel {
         connections.clearSavedKeepingPending()
     }
 
+    private func present(_ next: ComposerModal?) {
+        let leavingDelete: Bool
+        if case .deleteImpact = modal { leavingDelete = true } else { leavingDelete = false }
+        let enteringDelete: Bool
+        if case .deleteImpact = next { enteringDelete = true } else { enteringDelete = false }
+        if leavingDelete && !enteringDelete {
+            deleteImpact.cancel()
+        }
+        if next != nil && !enteringDelete {
+            deleteImpact.cancel()
+        }
+        modal = next
+    }
+
+    func applyDeleteImpactRequest(_ value: PVDeleteImpactRequest?) {
+        deleteImpact.applyRequest(value)
+        if value == nil {
+            if case .deleteImpact = modal { modal = nil }
+        } else {
+            modal = .deleteImpact
+        }
+    }
+
     private func presentImpact(kind: String, id: String, ref: String, title: String) async {
         fields.error = nil
+        present(nil)
         await deleteImpact.ask(kind: kind, id: id, ref: ref, title: title) {
             try await self.store.getDeleteImpact(
                 projectDir: self.session.projectKey.projectDir,
@@ -874,7 +874,9 @@ final class CitationComposerModel {
                 id: id
             )
         }
-        if deleteImpact.request == nil, let message = deleteImpact.error {
+        if deleteImpact.request != nil {
+            modal = .deleteImpact
+        } else if let message = deleteImpact.error {
             fields.error = message
         }
     }
@@ -1064,8 +1066,7 @@ final class CitationComposerModel {
         _ = await session.readyValue(citationCountsKey) as [String: Int]?
         _ = await session.readyValue(connectRulesKey) as [CatalogConnectRule]?
         guard rows != nil, fieldsReady != nil, workspaceReady != nil else {
-            struct CatalogHandleMissing: Error {}
-            throw CatalogHandleMissing()
+            throw CatalogWarmError.handleMissing
         }
     }
 

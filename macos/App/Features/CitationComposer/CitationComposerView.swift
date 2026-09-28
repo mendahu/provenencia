@@ -71,9 +71,6 @@ struct CitationComposerView: View {
         .accessibilityHint(Text(verbatim: model.identityAnnouncement))
         .task(id: entry.identityKey) {
             await model.prepare()
-            if model.shouldFallbackToGraph {
-                navigation.go(to: model.graphLocation())
-            }
         }
         .pvFormDialog(
             isPresented: observationDialogBinding,
@@ -98,24 +95,13 @@ struct CitationComposerView: View {
                 confirm: L10n.CitationComposer.addTermConfirm,
                 cancel: L10n.CitationComposer.cancel
             ),
-            isRunning: false,
-            confirmDisabled: model.customTermLabel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+            isRunning: model.customTermDraft?.isSaving == true,
+            confirmDisabled: model.customTermDraft?.label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ?? true,
             accessibilityIdentifierPrefix: "citationComposer.term",
-            onConfirm: {
-                Task {
-                    guard let rowID = model.pendingCustomTermRowID,
-                          let row = model.observations.first(where: { $0.id == rowID })
-                    else { return }
-                    guard let term = await model.createCustomTerm(
-                        propertyID: row.propertyID,
-                        label: model.customTermLabel
-                    ) else { return }
-                    model.updateObservationTerm(id: rowID, termID: term.id)
-                    model.cancelCustomTermDialog()
-                }
-            }
+            onConfirm: { Task { await model.confirmCustomTerm() } }
         ) {
-            PVField(label: L10n.CitationComposer.addTermLabel, error: model.termError) {
+            PVField(label: L10n.CitationComposer.addTermLabel, error: model.customTermDraft?.error) {
                 PVInput(text: customTermLabelBinding, size: .sm)
                     .accessibilityIdentifier("citationComposer.term.label")
             }
@@ -146,7 +132,12 @@ struct CitationComposerView: View {
             }
         }
         .pvDeleteImpact(
-            flow: model.deleteImpact,
+            item: Binding(
+                get: { model.deleteImpact.request },
+                set: { model.applyDeleteImpactRequest($0) }
+            ),
+            isRunning: model.deleteImpact.isRunning,
+            error: model.deleteImpact.error,
             accessibilityIdentifierPrefix: "citationComposer.deleteImpact",
             onConfirm: { Task { await model.confirmPendingImpact() } },
             onNavigate: { location in
@@ -275,7 +266,10 @@ struct CitationComposerView: View {
     private var loadFailedGate: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space6) {
             if let loadError = model.loadError {
-                PVCallout(tone: .danger, message: loadError)
+                PVCallout(
+                    tone: model.loadFailureIsMissingCitation ? .neutral : .danger,
+                    message: loadError
+                )
                     .accessibilityIdentifier("citationComposer.loadFailed")
             }
             PVButton(L10n.CitationComposer.loadFailedBack, variant: .secondary) {
@@ -344,15 +338,15 @@ struct CitationComposerView: View {
 
     private var customTermDialogBinding: Binding<Bool> {
         Binding(
-            get: { model.showCustomTermDialog },
+            get: { model.customTermDraft != nil },
             set: { if !$0 { model.cancelCustomTermDialog() } }
         )
     }
 
     private var customTermLabelBinding: Binding<String> {
         Binding(
-            get: { model.customTermLabel },
-            set: { model.customTermLabel = $0 }
+            get: { model.customTermDraft?.label ?? "" },
+            set: { model.customTermDraft?.label = $0 }
         )
     }
 

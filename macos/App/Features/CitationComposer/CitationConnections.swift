@@ -1,6 +1,19 @@
 import Foundation
 import Observation
 
+enum ConnectionTermCopy {
+    static func label(disambiguationKey: String) -> String {
+        switch disambiguationKey {
+        case "relationship_type":
+            return String(localized: L10n.CitationComposer.connectionRelationship)
+        case "role":
+            return String(localized: L10n.CitationComposer.connectionRole)
+        default:
+            return String(localized: L10n.CitationComposer.connectionNoRole)
+        }
+    }
+}
+
 struct ConnectionRow: Identifiable, Equatable {
     var id: UUID
     var isPending: Bool
@@ -40,14 +53,7 @@ struct ConnectionRow: Identifiable, Equatable {
     }
 
     var termFieldLabel: String {
-        switch bridgeTypeKey {
-        case "relationship":
-            return String(localized: L10n.CitationComposer.connectionRelationship)
-        case "participation":
-            return String(localized: L10n.CitationComposer.connectionRole)
-        default:
-            return String(localized: L10n.CitationComposer.connectionNoRole)
-        }
+        ConnectionTermCopy.label(disambiguationKey: termProperty?.key ?? "")
     }
 
     var accessibilityLabel: String {
