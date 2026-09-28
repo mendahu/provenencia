@@ -2,6 +2,8 @@ package deleteimpact
 
 import (
 	"database/sql"
+
+	"github.com/mendahu/provenencia/core/connectrules"
 )
 
 const sqlSubjectObservations = `SELECT o.id, o.ref, o.value_date_id, o.value_name_id, st.key, p.key, p.origin
@@ -12,11 +14,27 @@ const sqlSubjectObservations = `SELECT o.id, o.ref, o.value_date_id, o.value_nam
 	WHERE o.subject_id = ?
 	ORDER BY o.ref COLLATE NOCASE`
 
+const sqlObservationNotes = `SELECT id, body FROM observation_notes WHERE observation_id = ? ORDER BY rowid`
+
 type subjectObsRow struct {
 	id, dateID, nameID []byte
 	ref                string
 	typeKey, propKey   string
 	origin             string
+}
+
+// ReleasedFacet is one connection-facet Observation deleted by
+// ReleaseConnectionFacets, plus notes that CASCADE with it.
+type ReleasedFacet struct {
+	ID, DateID, NameID []byte
+	Ref                string
+	Notes              []ReleasedNote
+}
+
+// ReleasedNote is one observation_notes row captured before CASCADE.
+type ReleasedNote struct {
+	ID   []byte
+	Body string
 }
 
 func subjectResourceInbound() inboundEdge {
@@ -79,39 +97,7 @@ func listSubjectObs(tx *sql.Tx, subjectID []byte) ([]subjectObsRow, error) {
 }
 
 func isConnectionFacet(r subjectObsRow) bool {
-	if r.origin != originProvenencia {
-		return false
-	}
-	if isEdgePair(r.typeKey, r.propKey) {
-		return true
-	}
-	return isDisambiguation(r.typeKey, r.propKey)
-}
-
-// Mirrors subjectvocab.EdgeEndpoint for seeded connect rules without importing
-// that package (propertyterms → deleteimpact would cycle).
-func isEdgePair(typeKey, propKey string) bool {
-	switch typeKey {
-	case "participation":
-		return propKey == "person" || propKey == "event"
-	case "relationship":
-		return propKey == "person" || propKey == "related_to"
-	case "location":
-		return propKey == "event" || propKey == "place"
-	default:
-		return false
-	}
-}
-
-func isDisambiguation(typeKey, propKey string) bool {
-	switch typeKey {
-	case "participation":
-		return propKey == "role"
-	case "relationship":
-		return propKey == "relationship_type"
-	default:
-		return false
-	}
+	return connectrules.IsConnectionFacet(r.typeKey, r.propKey, r.origin)
 }
 
 func isEdgeObservation(tx *sql.Tx, observationID []byte) (bool, error) {
@@ -130,33 +116,63 @@ func isEdgeObservation(tx *sql.Tx, observationID []byte) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return origin == originProvenencia && isEdgePair(typeKey, propKey), nil
+	return origin == connectrules.OriginProvenencia && connectrules.IsEdgePair(typeKey, propKey), nil
 }
 
 // ReleaseConnectionFacets deletes edge + disambiguation Observations on a
 // bridge subject, then releases their owned outbound values. Endpoints and the
 // Citation stay. Official subjects.Delete calls this before DELETE.
-func ReleaseConnectionFacets(tx *sql.Tx, subjectID []byte) error {
+func ReleaseConnectionFacets(tx *sql.Tx, subjectID []byte) ([]ReleasedFacet, error) {
 	if tx == nil || len(subjectID) != 16 {
-		return ErrInvalid
+		return nil, ErrInvalid
 	}
 	rows, err := listSubjectObs(tx, subjectID)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	var released []ReleasedFacet
 	for _, r := range rows {
 		if !isConnectionFacet(r) {
 			continue
 		}
+		notes, err := listObservationNotes(tx, r.id)
+		if err != nil {
+			return nil, err
+		}
 		if _, err := tx.Exec(`DELETE FROM observations WHERE id = ?`, r.id); err != nil {
-			return err
+			return nil, err
 		}
 		if err := deleteValueRow(tx, "date_values", r.dateID); err != nil {
-			return err
+			return nil, err
 		}
 		if err := deleteValueRow(tx, "name_values", r.nameID); err != nil {
-			return err
+			return nil, err
 		}
+		released = append(released, ReleasedFacet{
+			ID:     append([]byte(nil), r.id...),
+			DateID: append([]byte(nil), r.dateID...),
+			NameID: append([]byte(nil), r.nameID...),
+			Ref:    r.ref,
+			Notes:  notes,
+		})
 	}
-	return nil
+	return released, nil
+}
+
+func listObservationNotes(tx *sql.Tx, observationID []byte) ([]ReleasedNote, error) {
+	rows, err := tx.Query(sqlObservationNotes, observationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []ReleasedNote
+	for rows.Next() {
+		var n ReleasedNote
+		if err := rows.Scan(&n.ID, &n.Body); err != nil {
+			return nil, err
+		}
+		n.ID = append([]byte(nil), n.ID...)
+		out = append(out, n)
+	}
+	return out, rows.Err()
 }

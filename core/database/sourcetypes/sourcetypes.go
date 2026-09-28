@@ -50,9 +50,9 @@ const (
 			(SELECT COUNT(*) FROM sources s WHERE s.source_type_id = t.id),
 			(SELECT COUNT(*) FROM source_type_metadata_fields j WHERE j.source_type_id = t.id)
 		FROM source_types t ORDER BY t.label COLLATE NOCASE, t.origin, t.key`
-	sqlUpdate = `UPDATE source_types SET label = ?, description = ?, icon_key = ? WHERE id = ?`
-	sqlDelete = `DELETE FROM source_types WHERE id = ?`
-	sqlUsedBy = `SELECT COUNT(*) FROM sources WHERE source_type_id = ?`
+	sqlUpdate        = `UPDATE source_types SET label = ?, description = ?, icon_key = ? WHERE id = ?`
+	sqlDelete        = `DELETE FROM source_types WHERE id = ?`
+	sqlUsedBy        = `SELECT COUNT(*) FROM sources WHERE source_type_id = ?`
 	sqlCountByOrigin = `SELECT origin, COUNT(*) FROM source_types GROUP BY origin`
 )
 
@@ -331,9 +331,6 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	if err != nil {
 		return err
 	}
-	if strings.HasPrefix(prev.Origin, "plugin:") && len(prev.Origin) > len("plugin:") {
-		return ErrOriginLocked
-	}
 
 	db, err := c.DB()
 	if err != nil {
@@ -349,13 +346,12 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	if err != nil {
 		return err
 	}
-	if !report.Allowed {
-		return ErrInUse
-	}
-	if _, err := tx.Exec(sqlDelete, id); err != nil {
+	if err := deleteimpact.Refuse(report, deleteimpact.Codes{
+		InUse: ErrInUse, OriginLocked: ErrOriginLocked, NotFound: ErrInvalid,
+	}); err != nil {
 		return err
 	}
-	if err := deleteimpact.ReleaseOwned(tx, deleteimpact.KindSourceType, id); err != nil {
+	if _, err := tx.Exec(sqlDelete, id); err != nil {
 		return err
 	}
 	fields := map[string]audit.FieldDiff{

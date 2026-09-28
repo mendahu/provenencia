@@ -256,9 +256,6 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	if err != nil {
 		return err
 	}
-	if existing.Origin != OriginUser {
-		return ErrLocked
-	}
 
 	db, err := c.DB()
 	if err != nil {
@@ -274,8 +271,10 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	if err != nil {
 		return err
 	}
-	if !report.Allowed {
-		return ErrInUse
+	if err := deleteimpact.Refuse(report, deleteimpact.Codes{
+		InUse: ErrInUse, OriginLocked: ErrLocked, NotFound: ErrInvalid,
+	}); err != nil {
+		return err
 	}
 
 	if _, err := tx.Exec(sqlDelete, id); err != nil {

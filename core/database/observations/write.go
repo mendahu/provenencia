@@ -6,11 +6,11 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/project"
-	"github.com/mendahu/provenencia/core/database/subjectvocab"
 )
 
 // Update rewrites one Observation. Edge rows are always locked, including no-ops.
@@ -116,8 +116,10 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	if err != nil {
 		return err
 	}
-	if !report.Allowed {
-		return ErrInUse
+	if err := deleteimpact.Refuse(report, deleteimpact.Codes{
+		InUse: ErrInUse, EdgeLocked: ErrEdgeLocked, NotFound: ErrInvalid,
+	}); err != nil {
+		return err
 	}
 
 	notes, err := listNotesTx(tx, id)
@@ -176,7 +178,7 @@ func isEdgeTx(tx *sql.Tx, subjectID, propertyID []byte) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	_, ok := subjectvocab.EdgeEndpoint(typeKey, prop.Key)
+	_, ok := connectrules.Edge(typeKey, prop.Key)
 	return ok, nil
 }
 

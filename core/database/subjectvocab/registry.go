@@ -1,6 +1,7 @@
 package subjectvocab
 
 import (
+	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database/properties"
 )
 
@@ -14,9 +15,9 @@ const (
 	RoleBridge      = "bridge"
 	RoleReification = "reification"
 
-	DisambiguationNone             = "none"
-	DisambiguationRole             = "role"
-	DisambiguationRelationshipType = "relationship_type"
+	DisambiguationNone             = connectrules.DisambiguationNone
+	DisambiguationRole             = connectrules.DisambiguationRole
+	DisambiguationRelationshipType = connectrules.DisambiguationRelationshipType
 )
 
 type presentation struct {
@@ -51,14 +52,6 @@ type seedBinding struct {
 
 type seedTerm struct {
 	PropertyKey, Key, Label, Description string
-}
-
-type seedConnectRule struct {
-	FromTypeKey, ToTypeKey string
-	BridgeTypeKey          string
-	EdgePropertyKeys       []string
-	Disambiguation         string
-	Refuse                 bool
 }
 
 var seedTypes = []seedType{
@@ -223,42 +216,4 @@ var seedTerms = []seedTerm{
 	{PropertyKey: "relationship_type", Key: "nibling", Label: "Niece / nephew"},
 	{PropertyKey: "relationship_type", Key: "guardian", Label: "Guardian"},
 	{PropertyKey: "relationship_type", Key: "ward", Label: "Ward"},
-}
-
-// Connect matrix (interpretation-graph-ui / Spike 7). Omitted pairs refuse by default.
-var seedConnect = []seedConnectRule{
-	{
-		FromTypeKey: "person", ToTypeKey: "event",
-		BridgeTypeKey:    "participation",
-		EdgePropertyKeys: []string{"person", "event"},
-		Disambiguation:   DisambiguationRole,
-	},
-	{
-		FromTypeKey: "event", ToTypeKey: "person",
-		BridgeTypeKey:    "participation",
-		EdgePropertyKeys: []string{"person", "event"},
-		Disambiguation:   DisambiguationRole,
-	},
-	{
-		FromTypeKey: "person", ToTypeKey: "person",
-		BridgeTypeKey:    "relationship",
-		EdgePropertyKeys: []string{"person", "related_to"},
-		Disambiguation:   DisambiguationRelationshipType,
-	},
-	{
-		FromTypeKey: "event", ToTypeKey: "place",
-		BridgeTypeKey:    "location",
-		EdgePropertyKeys: []string{"event", "place"},
-		Disambiguation:   DisambiguationNone,
-	},
-	{
-		FromTypeKey: "place", ToTypeKey: "event",
-		BridgeTypeKey:    "location",
-		EdgePropertyKeys: []string{"event", "place"},
-		Disambiguation:   DisambiguationNone,
-	},
-	{FromTypeKey: "person", ToTypeKey: "place", Refuse: true},
-	{FromTypeKey: "place", ToTypeKey: "person", Refuse: true},
-	{FromTypeKey: "event", ToTypeKey: "event", Refuse: true},
-	{FromTypeKey: "place", ToTypeKey: "place", Refuse: true},
 }

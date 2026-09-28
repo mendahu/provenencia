@@ -413,9 +413,6 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	if err != nil {
 		return err
 	}
-	if prev.Origin == OriginProvenencia || (strings.HasPrefix(prev.Origin, "plugin:") && len(prev.Origin) > len("plugin:")) {
-		return ErrOriginLocked
-	}
 
 	db, err := c.DB()
 	if err != nil {
@@ -431,13 +428,12 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	if err != nil {
 		return err
 	}
-	if !report.Allowed {
-		return ErrInUse
-	}
-	if _, err := tx.Exec(sqlDelete, id); err != nil {
+	if err := deleteimpact.Refuse(report, deleteimpact.Codes{
+		InUse: ErrInUse, OriginLocked: ErrOriginLocked, NotFound: ErrInvalid,
+	}); err != nil {
 		return err
 	}
-	if err := deleteimpact.ReleaseOwned(tx, deleteimpact.KindProperty, id); err != nil {
+	if _, err := tx.Exec(sqlDelete, id); err != nil {
 		return err
 	}
 	fields := map[string]audit.FieldDiff{

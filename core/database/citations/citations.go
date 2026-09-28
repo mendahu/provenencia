@@ -438,8 +438,10 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	if err != nil {
 		return err
 	}
-	if !report.Allowed {
-		return ErrInUse
+	if err := deleteimpact.Refuse(report, deleteimpact.Codes{
+		InUse: ErrInUse, NotFound: ErrInvalid,
+	}); err != nil {
+		return err
 	}
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
 		return err

@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/mendahu/provenencia/core/apperr"
+	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -345,7 +346,7 @@ func LockedBinding(typeKey, propertyKey string) bool {
 func Connect(fromTypeKey, toTypeKey string) ConnectRule {
 	fromTypeKey = strings.TrimSpace(fromTypeKey)
 	toTypeKey = strings.TrimSpace(toTypeKey)
-	for _, r := range seedConnect {
+	for _, r := range connectrules.Seed {
 		if r.FromTypeKey == fromTypeKey && r.ToTypeKey == toTypeKey {
 			return ruleFromSeed(r)
 		}
@@ -359,14 +360,14 @@ func Connect(fromTypeKey, toTypeKey string) ConnectRule {
 
 // ListConnectRules returns the full seed connect matrix.
 func ListConnectRules() []ConnectRule {
-	out := make([]ConnectRule, 0, len(seedConnect))
-	for _, r := range seedConnect {
+	out := make([]ConnectRule, 0, len(connectrules.Seed))
+	for _, r := range connectrules.Seed {
 		out = append(out, ruleFromSeed(r))
 	}
 	return out
 }
 
-func ruleFromSeed(r seedConnectRule) ConnectRule {
+func ruleFromSeed(r connectrules.Rule) ConnectRule {
 	return ConnectRule{
 		FromTypeKey:      r.FromTypeKey,
 		ToTypeKey:        r.ToTypeKey,
@@ -393,22 +394,7 @@ func edgesFromKeys(keys []string) []ConnectEdge {
 // EdgeEndpoint returns the endpoint type a bridge edge property binds, if the
 // pair is a non-refused connect rule.
 func EdgeEndpoint(bridgeTypeKey, propertyKey string) (endpointTypeKey string, ok bool) {
-	bridgeTypeKey = strings.TrimSpace(bridgeTypeKey)
-	propertyKey = strings.TrimSpace(propertyKey)
-	if bridgeTypeKey == "" || propertyKey == "" {
-		return "", false
-	}
-	for _, r := range seedConnect {
-		if r.Refuse || r.BridgeTypeKey != bridgeTypeKey {
-			continue
-		}
-		for _, e := range edgesFromKeys(r.EdgePropertyKeys) {
-			if e.PropertyKey == propertyKey {
-				return e.EndpointTypeKey, true
-			}
-		}
-	}
-	return "", false
+	return connectrules.Edge(bridgeTypeKey, propertyKey)
 }
 
 // AllTypes returns every seeded type's registry info.

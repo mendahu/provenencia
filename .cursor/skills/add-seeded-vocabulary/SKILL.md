@@ -25,7 +25,7 @@ new Install into **`onboarding.createCatalog` only**.
 | --- | --- | --- |
 | `core/database/sourcevocab/` | `registry.go` (`seedTypes` / `seedFields` / `seedSuggestions`) | Source types, metadata fields, type→field suggestions (uses `sourcetypes` / `sourcefields`) |
 | `core/database/sourcecredibilitygrades/` | `registry.go` (`seedGrades`) | Credibility grades (`low_trust` / `standard` / `high_trust`) |
-| `core/database/subjectvocab/` | `registry.go` (`seedTypes` / `seedProperties` / `seedBindings` / `seedTerms` / `seedConnect`) | Interpretation Subject types, Properties, `subject_type_fields`, **`property_terms`** (S7-01b), plus compiled presentation / locked bindings / connect (uses `subjecttypes` / `properties`) |
+| `core/database/subjectvocab/` | `registry.go` (`seedTypes` / `seedProperties` / `seedBindings` / `seedTerms`) + `core/connectrules.Seed` | Interpretation Subject types, Properties, `subject_type_fields`, **`property_terms`** (S7-01b), plus compiled presentation / locked bindings / connect (uses `subjecttypes` / `properties`). Connect matrix is the `connectrules` leaf so `deleteimpact` can classify facets without importing `subjectvocab`. |
 
 ### Source vocabulary (`sourcevocab`)
 
@@ -54,10 +54,11 @@ Kind/edge Properties (`event_type`, `role`, `relationship_type`) use `term` + `p
 **`value_type = term` Properties are Install/registry only** (`origin=provenencia` or `plugin:<id>`). Researcher Create Property must refuse `term`.
 Researchers may still add `origin=user` **term rows** under those Properties via the composer picker.
 Capabilities, presentation tokens, locked bindings, and the connect matrix stay
-in the compiled `subjectvocab` registry (not SQL columns). `seedConnect` is the
-only product matrix. `CatalogConnectRule.productMatrix` in
+in the compiled `subjectvocab` registry (not SQL columns). `core/connectrules.Seed` is the
+only product matrix (`subjectvocab.Connect` / `ListConnectRules` wrap it; `deleteimpact`
+classifies connection facets from the same slice). `CatalogConnectRule.productMatrix` in
 `macos/App/Platform/GenealogyStore.swift` is the FakeStore / unit-test double —
-update it in the same change as `seedConnect`. Live Mac connect reads
+update it in the same change as `connectrules.Seed`. Live Mac connect reads
 `listConnectRules` and does not fall back to that table. Term capabilities
 (birthday facets, tree-edge roles, …) are deferred until a later PR.
 

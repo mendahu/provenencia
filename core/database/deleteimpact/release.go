@@ -36,9 +36,22 @@ func CollectFileObjects(tx *sql.Tx, snap OwnedSnapshot) ([]FileObject, error) {
 }
 
 // SnapshotOwned reads owned-outbound columns on the live parent row.
+// Missing parent returns ErrInvalid — after DELETE use a snapshot taken first.
 func SnapshotOwned(tx *sql.Tx, kind Kind, id []byte) (OwnedSnapshot, error) {
 	if tx == nil || len(id) != 16 {
 		return OwnedSnapshot{}, ErrInvalid
+	}
+	spec, ok := tableByKind(kind)
+	if !ok {
+		return OwnedSnapshot{}, ErrInvalid
+	}
+	var one int
+	err := tx.QueryRow(spec.Exists, id).Scan(&one)
+	if err == sql.ErrNoRows {
+		return OwnedSnapshot{}, ErrInvalid
+	}
+	if err != nil {
+		return OwnedSnapshot{}, err
 	}
 	snap := OwnedSnapshot{kind: kind, cols: map[string][]byte{}}
 	for _, rel := range ownedFor(kind) {
