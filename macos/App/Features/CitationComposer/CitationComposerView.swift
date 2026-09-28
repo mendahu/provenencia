@@ -317,7 +317,6 @@ struct CitationComposerView: View {
                 PVDivider(axis: .vertical, color: PVColor.borderDefault)
                 CitationComposerFormPane(
                     model: model,
-                    inert: false,
                     wide: wide
                 )
                 .frame(width: formWidth)

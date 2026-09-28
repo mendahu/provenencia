@@ -5,6 +5,7 @@ struct OnboardingFileChoice: View {
     let subtitle: LocalizedStringResource
     let icon: PVSymbol
     let selected: Bool
+    var accessibilityIdentifier: String = ""
     let action: () -> Void
 
     init(
@@ -12,12 +13,14 @@ struct OnboardingFileChoice: View {
         subtitle: LocalizedStringResource,
         icon: PVSymbol,
         selected: Bool,
+        accessibilityIdentifier: String = "",
         action: @escaping () -> Void
     ) {
         self.title = title
         self.subtitle = subtitle
         self.icon = icon
         self.selected = selected
+        self.accessibilityIdentifier = accessibilityIdentifier
         self.action = action
     }
 
@@ -50,6 +53,7 @@ struct OnboardingFileChoice: View {
             .pvShadow(selected ? PVElevation.sm : [])
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(accessibilityIdentifier)
     }
 
     private var titleText: some View {

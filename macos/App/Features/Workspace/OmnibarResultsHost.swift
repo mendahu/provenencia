@@ -114,11 +114,13 @@ private struct OmnibarResultsPanel: View {
                                 OmnibarHitRowView(
                                     hit: hit,
                                     projectDir: projectDir,
-                                    selected: index == results.selectedIndex
+                                    selected: false
                                 )
                             }
-                            .buttonStyle(OmnibarHitRowButtonStyle(
-                                onHover: { hovering in
+                            .buttonStyle(PVMenuRowButtonStyle(
+                                isSelected: index == results.selectedIndex,
+                                cornerRadius: PVRadius.xs,
+                                onHoverChange: { hovering in
                                     if hovering { results.selectedIndex = index }
                                 }
                             ))
@@ -238,16 +240,6 @@ private struct OmnibarHitRowView: View {
                 size: 40
             )
         }
-    }
-}
-
-private struct OmnibarHitRowButtonStyle: ButtonStyle {
-    var onHover: (Bool) -> Void
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .opacity(configuration.isPressed ? 0.92 : 1)
-            .onHover { onHover($0) }
     }
 }
 
