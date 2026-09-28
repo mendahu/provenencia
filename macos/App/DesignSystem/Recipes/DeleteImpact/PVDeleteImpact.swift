@@ -197,21 +197,7 @@ struct PVDeleteImpactNotice: View {
     }
 
     private var targetLine: some View {
-        HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space4) {
-            Text(verbatim: target.ref)
-                .font(PVFont.mono(size: PVTypeScale.micro))
-                .foregroundStyle(PVColor.textPrimary)
-                .padding(.horizontal, PVSpacing.space3)
-                .padding(.vertical, PVSpacing.space1)
-                .background(
-                    PVColor.surfaceSunken,
-                    in: RoundedRectangle(cornerRadius: PVRadius.xs, style: .continuous)
-                )
-            Text(verbatim: target.title)
-                .font(PVFont.body(size: PVTypeScale.bodySmall))
-                .foregroundStyle(PVColor.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
+        PVDeleteImpactTargetLine(target: target)
     }
 
     @ViewBuilder
@@ -232,7 +218,7 @@ struct PVDeleteImpactNotice: View {
             }
             VStack(spacing: 0) {
                 ForEach(Array(group.listed.enumerated()), id: \.element.id) { index, row in
-                    if index > 0 { Divider() }
+                    if index > 0 { PVDivider() }
                     Button {
                         PVDeleteImpactControls.activate(row, onNavigate: onNavigate, dismiss: onDismiss)
                     } label: {
@@ -254,11 +240,11 @@ struct PVDeleteImpactNotice: View {
                         .padding(.vertical, PVSpacing.space4)
                         .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PVMenuRowButtonStyle(cornerRadius: PVRadius.xs))
                     .accessibilityLabel(Text(verbatim: L10n.DeleteImpact.rowAccessibility(ref: row.ref, title: row.title)))
                 }
                 if rest > 0 {
-                    Divider()
+                    PVDivider()
                     Text(verbatim: PVDeleteImpactCopy.overflow(remainder: rest, kind: group.kind))
                         .font(PVFont.body(size: PVTypeScale.caption))
                         .foregroundStyle(PVColor.textMuted)
@@ -277,6 +263,35 @@ struct PVDeleteImpactNotice: View {
                     .strokeBorder(PVColor.borderSubtle)
             )
         }
+    }
+}
+
+private struct PVDeleteImpactTargetLine: View {
+    let target: PVDeleteImpactTarget
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space4) {
+            Text(verbatim: target.ref)
+                .font(PVFont.mono(size: PVTypeScale.micro))
+                .foregroundStyle(PVColor.textPrimary)
+                .padding(.horizontal, PVSpacing.space3)
+                .padding(.vertical, PVSpacing.space1)
+                .background(
+                    PVColor.surfaceSunken,
+                    in: RoundedRectangle(cornerRadius: PVRadius.xs, style: .continuous)
+                )
+            if showsTitle {
+                Text(verbatim: target.title)
+                    .font(PVFont.body(size: PVTypeScale.bodySmall))
+                    .foregroundStyle(PVColor.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private var showsTitle: Bool {
+        let title = target.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !title.isEmpty && title != target.ref
     }
 }
 
@@ -309,21 +324,7 @@ extension View {
                 onConfirm: onConfirm
             ) { request in
                 VStack(alignment: .leading, spacing: PVSpacing.space4) {
-                    HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space4) {
-                        Text(verbatim: request.target.ref)
-                            .font(PVFont.mono(size: PVTypeScale.micro))
-                            .foregroundStyle(PVColor.textPrimary)
-                            .padding(.horizontal, PVSpacing.space3)
-                            .padding(.vertical, PVSpacing.space1)
-                            .background(
-                                PVColor.surfaceSunken,
-                                in: RoundedRectangle(cornerRadius: PVRadius.xs, style: .continuous)
-                            )
-                        Text(verbatim: request.target.title)
-                            .font(PVFont.body(size: PVTypeScale.bodySmall))
-                            .foregroundStyle(PVColor.textPrimary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                    PVDeleteImpactTargetLine(target: request.target)
                     if let error, !error.isEmpty {
                         PVCallout(tone: .danger, message: error)
                             .accessibilityIdentifier("deleteImpact.confirmError")

@@ -38,13 +38,14 @@ type ReleasedNote struct {
 }
 
 func subjectResourceInbound() inboundEdge {
+	memo := &subjectObsMemo{}
 	return inboundEdge{
 		Parent: KindSubject,
 		Via:    "observations.subject_id",
 		Child:  KindObservation,
 		Bucket: BucketResource,
 		Count: func(tx *sql.Tx, parentID []byte) (int, error) {
-			rows, err := listSubjectObs(tx, parentID)
+			rows, err := memo.list(tx, parentID)
 			if err != nil {
 				return 0, err
 			}
@@ -57,7 +58,7 @@ func subjectResourceInbound() inboundEdge {
 			return n, nil
 		},
 		List: func(tx *sql.Tx, parentID []byte, limit int) ([]probeRow, error) {
-			rows, err := listSubjectObs(tx, parentID)
+			rows, err := memo.list(tx, parentID)
 			if err != nil {
 				return nil, err
 			}
@@ -74,6 +75,29 @@ func subjectResourceInbound() inboundEdge {
 			return out, nil
 		},
 	}
+}
+
+type subjectObsMemo struct {
+	tx     *sql.Tx
+	id     string
+	rows   []subjectObsRow
+	loaded bool
+}
+
+func (m *subjectObsMemo) list(tx *sql.Tx, parentID []byte) ([]subjectObsRow, error) {
+	key := string(parentID)
+	if m.loaded && m.tx == tx && m.id == key {
+		return m.rows, nil
+	}
+	rows, err := listSubjectObs(tx, parentID)
+	if err != nil {
+		return nil, err
+	}
+	m.tx = tx
+	m.id = key
+	m.rows = rows
+	m.loaded = true
+	return rows, nil
 }
 
 func listSubjectObs(tx *sql.Tx, subjectID []byte) ([]subjectObsRow, error) {

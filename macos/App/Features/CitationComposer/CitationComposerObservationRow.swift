@@ -9,7 +9,6 @@ struct CitationComposerObservationRow: View {
     let termOptions: [PVComboBoxOption]
     let summary: String
     var isFocused: Bool
-    var inert: Bool
     var onSubject: @MainActor (String) -> Void
     var onProperty: @MainActor (String) -> Void
     var onText: @MainActor (String) -> Void
@@ -38,7 +37,7 @@ struct CitationComposerObservationRow: View {
                         label: L10n.CitationComposer.subjectLabel,
                         accessibilityIdentifierPrefix: "citationComposer.observation.subject.\(row.id.uuidString)"
                     )
-                    .disabled(inert || isSaving)
+                    .disabled(isSaving)
                     PVComboBox(
                         selection: propertyBinding,
                         options: propertyOptions,
@@ -48,23 +47,21 @@ struct CitationComposerObservationRow: View {
                         label: L10n.CitationComposer.propertyLabel,
                         accessibilityIdentifierPrefix: "citationComposer.observation.property.\(row.id.uuidString)"
                     )
-                    .disabled(inert || isSaving)
+                    .disabled(isSaving)
                     statusBadge
-                    if !inert {
-                        PVIconButton(
-                            .ellipsis,
-                            label: L10n.CitationComposer.observationActions,
-                            size: .sm,
-                            action: toggleActionsMenu
-                        )
-                        .accessibilityIdentifier("citationComposer.observation.actions.\(row.id.uuidString)")
-                        .pvContextMenu(
-                            $actionsMenu,
-                            keyboard: $actionsKeyboard,
-                            dismissOnClickAway: true
-                        ) {
-                            actionsMenuPanel
-                        }
+                    PVIconButton(
+                        .ellipsis,
+                        label: L10n.CitationComposer.observationActions,
+                        size: .sm,
+                        action: toggleActionsMenu
+                    )
+                    .accessibilityIdentifier("citationComposer.observation.actions.\(row.id.uuidString)")
+                    .pvContextMenu(
+                        $actionsMenu,
+                        keyboard: $actionsKeyboard,
+                        dismissOnClickAway: true
+                    ) {
+                        actionsMenuPanel
                     }
                 }
                 if let error = row.propertyError {
@@ -80,7 +77,7 @@ struct CitationComposerObservationRow: View {
                     Spacer(minLength: 0)
                     if canRevert {
                         PVButton(L10n.CitationComposer.revertRow, variant: .ghost, size: .sm, action: onRevert)
-                            .disabled(inert || isSaving)
+                            .disabled(isSaving)
                     }
                     if row.canSave {
                         PVButton(
@@ -90,7 +87,6 @@ struct CitationComposerObservationRow: View {
                             loading: isSaving,
                             action: onSave
                         )
-                        .disabled(inert)
                     }
                 }
             }
@@ -155,11 +151,11 @@ struct CitationComposerObservationRow: View {
         switch property?.valueType {
         case PropertyValueType.text.rawValue:
             PVInput(text: textBinding, size: .sm)
-                .disabled(inert || isSaving)
+                .disabled(isSaving)
                 .accessibilityIdentifier("citationComposer.observation.text.\(row.id.uuidString)")
         case PropertyValueType.integer.rawValue:
             PVInput(text: integerBinding, size: .sm, mono: true)
-                .disabled(inert || isSaving)
+                .disabled(isSaving)
                 .accessibilityIdentifier("citationComposer.observation.integer.\(row.id.uuidString)")
         case PropertyValueType.term.rawValue:
             HStack(spacing: PVSpacing.space3) {
@@ -172,10 +168,8 @@ struct CitationComposerObservationRow: View {
                     label: L10n.CitationComposer.termLabel,
                     accessibilityIdentifierPrefix: "citationComposer.observation.term.\(row.id.uuidString)"
                 )
-                .disabled(inert || isSaving)
-                if !inert {
-                    PVButton(L10n.CitationComposer.addCustomTerm, variant: .ghost, size: .sm, action: onAddCustomTerm)
-                }
+                .disabled(isSaving)
+                PVButton(L10n.CitationComposer.addCustomTerm, variant: .ghost, size: .sm, action: onAddCustomTerm)
             }
         case PropertyValueType.name.rawValue, PropertyValueType.date.rawValue:
             Button(action: onEditValue) {
@@ -191,7 +185,7 @@ struct CitationComposerObservationRow: View {
                 }
             }
             .buttonStyle(.pv(.secondary, size: .sm))
-            .disabled(inert || isSaving)
+            .disabled(isSaving)
             .accessibilityLabel(Text(L10n.CitationComposer.editObservation))
             .accessibilityIdentifier("citationComposer.observation.edit.\(row.id.uuidString)")
         default:

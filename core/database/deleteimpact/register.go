@@ -1,6 +1,9 @@
 package deleteimpact
 
-import "database/sql"
+import (
+	"database/sql"
+	"sync"
+)
 
 type tableSpec struct {
 	Name   string
@@ -168,6 +171,10 @@ func inboundFor(kind Kind) []inboundEdge {
 }
 
 func inboundEdges() []inboundEdge {
+	return inboundEdgeList()
+}
+
+var inboundEdgeList = sync.OnceValue(func() []inboundEdge {
 	return []inboundEdge{
 		fkEdge(KindSource, "artifacts.source_id", KindArtifact, "artifacts", "source_id", "ref"),
 		fkEdge(KindSource, "subjects.source_id", KindSubject, "subjects", "source_id", "ref"),
@@ -195,11 +202,11 @@ func inboundEdges() []inboundEdge {
 			`SELECT id, key FROM property_terms WHERE property_id = ? ORDER BY key COLLATE NOCASE LIMIT ?`),
 		fkEdge(KindPropertyTerm, "observations.value_term_id", KindObservation, "observations", "value_term_id", "ref"),
 		fkEdge(KindFile, "artifacts.file_id", KindArtifact, "artifacts", "file_id", "ref"),
-		reservedStub(KindObservation, "sameness_claim_evidence.observation_id", KindSamenessClaim),
-		reservedStub(KindObservation, "reconciliation_claim_evidence.observation_id", KindReconciliationClaim),
-		reservedStub(KindObservation, "narrative.target", KindNarrative),
+		reservedStub(KindObservation, ViaSamenessEvidence, KindSamenessClaim),
+		reservedStub(KindObservation, ViaReconciliationEvidence, KindReconciliationClaim),
+		reservedStub(KindObservation, ViaNarrativeTarget, KindNarrative),
 	}
-}
+})
 
 func originRuleFor(kind Kind) (originRule, bool) {
 	for _, r := range originRules {

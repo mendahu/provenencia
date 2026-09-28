@@ -2536,6 +2536,11 @@ enum L10n {
             defaultValue: "Transcription",
             comment: "Label for the Citation transcription field"
         )
+        static let untitledCitation = LocalizedStringResource(
+            "citationComposer.untitledCitation",
+            defaultValue: "Untitled citation",
+            comment: "DeleteImpact title when the citation has no transcription"
+        )
 
         static let uncertainLabel = LocalizedStringResource(
             "citationComposer.uncertainLabel",
@@ -5885,9 +5890,14 @@ enum L10n {
                 pair = (nounUser, nounUsers)
             case "project":
                 pair = (nounProject, nounProjects)
+            case "file":
+                pair = (nounFile, nounFiles)
+            case "narrative":
+                pair = (nounNarrative, nounNarratives)
+            case "reconciliation_claim":
+                pair = (nounReconciliationClaim, nounReconciliationClaims)
             default:
-                let raw = kind.replacingOccurrences(of: "_", with: " ")
-                return count == 1 ? raw : raw + "s"
+                pair = (nounItem, nounItems)
             }
             return String(localized: count == 1 ? pair.0 : pair.1)
         }
@@ -6031,6 +6041,46 @@ enum L10n {
             "deleteImpact.kind.project.other",
             defaultValue: "projects",
             comment: "Plural infra Impact kind noun"
+        )
+        static let nounFile = LocalizedStringResource(
+            "deleteImpact.kind.file.one",
+            defaultValue: "file",
+            comment: "Singular Impact kind noun"
+        )
+        static let nounFiles = LocalizedStringResource(
+            "deleteImpact.kind.file.other",
+            defaultValue: "files",
+            comment: "Plural Impact kind noun"
+        )
+        static let nounNarrative = LocalizedStringResource(
+            "deleteImpact.kind.narrative.one",
+            defaultValue: "narrative",
+            comment: "Singular Impact kind noun"
+        )
+        static let nounNarratives = LocalizedStringResource(
+            "deleteImpact.kind.narrative.other",
+            defaultValue: "narratives",
+            comment: "Plural Impact kind noun"
+        )
+        static let nounReconciliationClaim = LocalizedStringResource(
+            "deleteImpact.kind.reconciliation_claim.one",
+            defaultValue: "reconciliation claim",
+            comment: "Singular Impact kind noun"
+        )
+        static let nounReconciliationClaims = LocalizedStringResource(
+            "deleteImpact.kind.reconciliation_claim.other",
+            defaultValue: "reconciliation claims",
+            comment: "Plural Impact kind noun"
+        )
+        static let nounItem = LocalizedStringResource(
+            "deleteImpact.kind.item.one",
+            defaultValue: "item",
+            comment: "Singular fallback Impact kind noun"
+        )
+        static let nounItems = LocalizedStringResource(
+            "deleteImpact.kind.item.other",
+            defaultValue: "items",
+            comment: "Plural fallback Impact kind noun"
         )
 
         static func confirmTitle(noun: String, ref: String) -> String {

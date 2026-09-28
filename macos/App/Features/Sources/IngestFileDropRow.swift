@@ -40,6 +40,7 @@ struct IngestFileDropRow: View {
                         onClear()
                     }
                     .disabled(isBusy)
+                    .accessibilityIdentifier("sources.page.ingest.clearFile")
                 } else {
                     Text(idleHint)
                         .font(PVFont.body(size: PVTypeScale.caption))

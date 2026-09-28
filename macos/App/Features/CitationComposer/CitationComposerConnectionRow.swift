@@ -4,7 +4,6 @@ import SwiftUI
 struct CitationComposerConnectionRow: View {
     let row: ConnectionRow
     let termOptions: [PVComboBoxOption]
-    var inert: Bool
     var onTerm: @MainActor (String) -> Void
     var onSave: @MainActor () -> Void
     var onDiscard: @MainActor () -> Void
@@ -35,7 +34,6 @@ struct CitationComposerConnectionRow: View {
                         label: termLabelResource,
                         accessibilityIdentifierPrefix: "citationComposer.connection.term.\(row.id.uuidString)"
                     )
-                    .disabled(inert)
                 }
                 if let error = row.error {
                     PVCallout(tone: .danger, message: error, compact: true)
@@ -44,7 +42,6 @@ struct CitationComposerConnectionRow: View {
                     Spacer(minLength: 0)
                     if row.isPending {
                         PVButton(L10n.CitationComposer.discardConnection, variant: .ghost, size: .sm, action: onDiscard)
-                            .disabled(inert)
                         PVButton(
                             L10n.CitationComposer.saveConnection,
                             variant: .primary,
@@ -52,10 +49,10 @@ struct CitationComposerConnectionRow: View {
                             loading: row.isSaving,
                             action: onSave
                         )
-                        .disabled(inert || !row.canSave)
+                        .disabled(!row.canSave)
                     } else if row.termProperty != nil {
                         PVButton(L10n.CitationComposer.revertRole, variant: .ghost, size: .sm, action: onRevertRole)
-                            .disabled(inert || !row.isTouched)
+                            .disabled(!row.isTouched)
                         PVButton(
                             L10n.CitationComposer.saveRole,
                             variant: .secondary,
@@ -63,7 +60,7 @@ struct CitationComposerConnectionRow: View {
                             loading: row.isSaving,
                             action: onCommitRole
                         )
-                        .disabled(inert || !row.canCommitRole)
+                        .disabled(!row.canCommitRole)
                     }
                 }
             }

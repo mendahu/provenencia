@@ -66,6 +66,52 @@ extension ButtonStyle where Self == PVButtonStyle {
     }
 }
 
+/// Hover / selected / pressed fill for overlay list rows (context menu, history
+/// jump, omnibar, DeleteImpact listed rows).
+struct PVMenuRowButtonStyle: ButtonStyle {
+    var isSelected: Bool = false
+    var cornerRadius: CGFloat = PVRadius.sm
+    var onHoverChange: ((Bool) -> Void)? = nil
+
+    func makeBody(configuration: Configuration) -> some View {
+        PVMenuRowButtonBody(
+            configuration: configuration,
+            isSelected: isSelected,
+            cornerRadius: cornerRadius,
+            onHoverChange: onHoverChange
+        )
+    }
+}
+
+private struct PVMenuRowButtonBody: View {
+    let configuration: ButtonStyleConfiguration
+    var isSelected: Bool
+    var cornerRadius: CGFloat
+    var onHoverChange: ((Bool) -> Void)?
+    @State private var hovering = false
+
+    var body: some View {
+        configuration.label
+            .background {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(rowFill)
+            }
+            .contentShape(Rectangle())
+            .onHover { inside in
+                hovering = inside
+                onHoverChange?(inside)
+            }
+            .pvAnimation(PVMotion.instantStandard, value: hovering)
+    }
+
+    private var rowFill: Color {
+        if configuration.isPressed { return PVColor.surfaceActive }
+        if isSelected { return PVColor.surfaceSelected }
+        if hovering { return PVColor.surfaceHover }
+        return .clear
+    }
+}
+
 /// A styled push button. Always takes a `LocalizedStringResource` label.
 ///
 /// `icon` prepends a leading glyph (`Button.jsx`'s `iconLeft`); `iconRight`

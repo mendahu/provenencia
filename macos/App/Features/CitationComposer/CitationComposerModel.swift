@@ -303,7 +303,6 @@ final class CitationComposerModel {
     var isEditingExisting: Bool { activeCitationID != nil }
     var showsArtifactSwitcher: Bool { artifacts.count > 1 }
     var hasNoArtifacts: Bool { phase == .compose && artifacts.isEmpty }
-    var formIsInert: Bool { hasNoArtifacts }
     var selectedArtifact: CatalogArtifact? {
         artifacts.first { $0.id == selectedArtifactID }
     }
@@ -564,11 +563,12 @@ final class CitationComposerModel {
 
     func askDeleteCitation() async {
         guard let id = activeCitationID else { return }
+        let snippet = fields.transcription.trimmingCharacters(in: .whitespacesAndNewlines)
         await presentImpact(
             kind: "citation",
             id: id,
             ref: activeCitationRef.isEmpty ? id : activeCitationRef,
-            title: activeCitationRef
+            title: snippet.isEmpty ? String(localized: L10n.CitationComposer.untitledCitation) : snippet
         )
     }
 
@@ -1123,14 +1123,6 @@ final class CitationComposerModel {
         }
         return leaders.first(where: { $0.file != nil && !$0.fileID.isEmpty })?.id
             ?? leaders.first?.id
-    }
-
-    static func isPDF(_ artifact: CatalogArtifact?) -> Bool {
-        (artifact?.file?.mediaType ?? "").localizedCaseInsensitiveContains("pdf")
-    }
-
-    static func isImage(_ artifact: CatalogArtifact?) -> Bool {
-        (artifact?.file?.mediaType ?? "").hasPrefix("image/")
     }
 }
 

@@ -59,6 +59,7 @@ struct OnboardingIdentifyView: View {
                                 displayName: user.displayName,
                                 ref: user.ref
                             ))
+                            .accessibilityIdentifier("onboarding.contributor.\(user.userID)")
                         }
                         OnboardingContributorRow(
                             title: String(localized: L10n.Onboarding.notListed),
@@ -67,6 +68,7 @@ struct OnboardingIdentifyView: View {
                         ) {
                             model.selectedContributorID = OnboardingModel.newContributorID
                         }
+                        .accessibilityIdentifier("onboarding.contributor.new")
                     }
                 }
                 .accessibilityElement(children: .contain)

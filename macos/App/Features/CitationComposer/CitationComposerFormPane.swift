@@ -3,12 +3,9 @@ import SwiftUI
 /// Right sidebar: identity line, citation fields, connections, observations, Done.
 struct CitationComposerFormPane: View {
     @Bindable var model: CitationComposerModel
-    var inert: Bool
     var wide: Bool = false
 
     @Environment(WorkspaceNavigation.self) private var navigation
-
-    static let sidebarWidth: CGFloat = 520
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -32,8 +29,6 @@ struct CitationComposerFormPane: View {
             }
             .padding(PVSpacing.space7)
         }
-        .disabled(inert)
-        .opacity(inert ? 0.55 : 1)
     }
 
     private var wideBody: some View {
@@ -56,8 +51,6 @@ struct CitationComposerFormPane: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
-        .disabled(inert)
-        .opacity(inert ? 0.55 : 1)
     }
 
     private var identityLine: some View {
@@ -88,7 +81,7 @@ struct CitationComposerFormPane: View {
             menuWidth: 320,
             fillsWidth: false,
             rowHeight: 52,
-            isDisabled: inert || model.identityMenusDisabled,
+            isDisabled: model.identityMenusDisabled,
             accessibilitySpokenLabel: L10n.CitationComposer.artifactMenuLabel(
                 title: model.selectedArtifact?.label ?? ""
             ),
@@ -117,7 +110,7 @@ struct CitationComposerFormPane: View {
             fillsWidth: false,
             maxVisibleRows: 8,
             rowHeight: 68,
-            isDisabled: inert || model.identityMenusDisabled,
+            isDisabled: model.identityMenusDisabled,
             accessibilitySpokenLabel: model.activeCitationRef.isEmpty
                 ? String(localized: L10n.CitationComposer.citationMenuNew)
                 : L10n.CitationComposer.citationMenuRef(
@@ -184,7 +177,7 @@ struct CitationComposerFormPane: View {
                             .font(PVFont.body(size: PVTypeScale.caption))
                     }
                     .toggleStyle(.checkbox)
-                    .disabled(inert || model.isTranscribing)
+                    .disabled(model.isTranscribing)
                     .accessibilityIdentifier("citationComposer.uncertain")
                     Spacer(minLength: 0)
                     if model.isPDFArtifact {
@@ -195,22 +188,21 @@ struct CitationComposerFormPane: View {
                 }
             }
             PVTextArea(text: $model.transcription, lineLimit: wide ? 6...8 : 2...6)
-                .disabled(inert || model.isTranscribing)
+                .disabled(model.isTranscribing)
                 .accessibilityIdentifier("citationComposer.transcription")
             if model.transcriptionUncertain {
                 PVField(label: L10n.CitationComposer.uncertainNoteLabel) {
                     PVTextArea(text: $model.transcriptionNote, lineLimit: 1...3)
-                        .disabled(inert)
                         .accessibilityIdentifier("citationComposer.uncertainNote")
                 }
             }
             PVField(label: L10n.CitationComposer.descriptionLabel) {
                 PVTextArea(text: $model.citationDescription, lineLimit: 1...4)
-                    .disabled(inert)
                     .accessibilityIdentifier("citationComposer.description")
             }
             if let error = model.fields.error {
                 PVCallout(tone: .danger, message: error, compact: true)
+                    .accessibilityIdentifier("citationComposer.saveError")
             }
             if let message = model.transcriptionOCRMessage {
                 PVCallout(tone: .warning, message: message, compact: true) {
@@ -238,7 +230,7 @@ struct CitationComposerFormPane: View {
                     ) {
                         Task { await model.askDeleteCitation() }
                     }
-                    .disabled(inert || model.isDeletingResource)
+                    .disabled(model.isDeletingResource)
                     .accessibilityLabel(
                         Text(verbatim: L10n.CitationComposer.deleteCitationAccessibility(
                             ref: model.activeCitationRef
@@ -254,7 +246,7 @@ struct CitationComposerFormPane: View {
                 ) {
                     Task { await model.fields.saveCitation() }
                 }
-                .disabled(inert || model.fields.isSaving || model.isTranscribing)
+                .disabled(model.fields.isSaving || model.isTranscribing)
                 .accessibilityIdentifier("citationComposer.saveCitation")
             }
         }
@@ -272,7 +264,7 @@ struct CitationComposerFormPane: View {
         ) {
             model.requestAutoTranscribe()
         }
-        .disabled(inert || !model.canAutoTranscribe)
+        .disabled(!model.canAutoTranscribe)
         .accessibilityIdentifier("citationComposer.autoTranscribe")
         .accessibilityLabel(
             model.locator.hasRegion
@@ -283,7 +275,7 @@ struct CitationComposerFormPane: View {
     }
 
     private var pasteTranscriptionButton: some View {
-        let enabled = !inert && model.canPasteTranscription
+        let enabled = model.canPasteTranscription
         return PVButton(
             L10n.CitationComposer.pasteTranscription,
             variant: .secondary,
@@ -309,7 +301,6 @@ struct CitationComposerFormPane: View {
                 CitationComposerConnectionRow(
                     row: row,
                     termOptions: row.termProperty.map { model.termOptions(for: $0.id) } ?? [],
-                    inert: inert,
                     onTerm: { model.connections.applyTerm(connectionID: row.id, termID: $0) },
                     onSave: { Task { await model.connections.saveConnection() } },
                     onDiscard: { model.connections.discard() },
@@ -335,7 +326,6 @@ struct CitationComposerFormPane: View {
                     termOptions: model.termOptions(for: row.propertyID),
                     summary: model.observationSummary(for: row),
                     isFocused: model.focusedObservationID == row.id,
-                    inert: inert,
                     onSubject: { model.updateObservationSubject(id: row.id, subjectID: $0) },
                     onProperty: { model.updateObservationProperty(id: row.id, propertyID: $0) },
                     onText: { model.updateObservationText(id: row.id, text: $0) },
@@ -350,12 +340,10 @@ struct CitationComposerFormPane: View {
                 )
             }
 
-            if !inert {
-                PVButton(L10n.CitationComposer.addObservation, variant: .ghost, size: .sm, icon: .plus) {
-                    model.beginAddObservation()
-                }
-                .accessibilityIdentifier("citationComposer.addObservation")
+            PVButton(L10n.CitationComposer.addObservation, variant: .ghost, size: .sm, icon: .plus) {
+                model.beginAddObservation()
             }
+            .accessibilityIdentifier("citationComposer.addObservation")
         }
     }
 

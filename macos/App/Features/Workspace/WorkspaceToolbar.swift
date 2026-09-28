@@ -545,42 +545,13 @@ private struct HistoryJumpMenuPanel: View {
                     .padding(.vertical, 6)
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(HistoryJumpRowButtonStyle(isSelected: offset == activeIndex))
+                .buttonStyle(PVMenuRowButtonStyle(
+                    isSelected: offset == activeIndex,
+                    cornerRadius: PVRadius.xs
+                ))
             }
         }
         .accessibilityLabel(Text(L10n.Workspace.jumpMenuAccessibilityLabel))
-    }
-}
-
-private struct HistoryJumpRowButtonStyle: ButtonStyle {
-    var isSelected: Bool = false
-
-    func makeBody(configuration: Configuration) -> some View {
-        HistoryJumpRowButtonBody(configuration: configuration, isSelected: isSelected)
-    }
-}
-
-private struct HistoryJumpRowButtonBody: View {
-    let configuration: ButtonStyleConfiguration
-    var isSelected: Bool
-    @State private var hovering = false
-
-    var body: some View {
-        configuration.label
-            .background {
-                RoundedRectangle(cornerRadius: PVRadius.xs, style: .continuous)
-                    .fill(rowFill)
-            }
-            .contentShape(Rectangle())
-            .onHover { hovering = $0 }
-            .pvAnimation(PVMotion.instantStandard, value: hovering)
-    }
-
-    private var rowFill: Color {
-        if configuration.isPressed { return PVColor.surfaceActive }
-        if isSelected { return PVColor.surfaceSelected }
-        if hovering { return PVColor.surfaceHover }
-        return .clear
     }
 }
 

@@ -218,7 +218,7 @@ struct PVContextMenuItem: View {
                 } label: {
                     label(showsCheck: showsSelectionMark && chrome.showsCheckmark)
                 }
-                .buttonStyle(PVContextMenuItemButtonStyle(isSelected: fillHighlight))
+                .buttonStyle(PVMenuRowButtonStyle(isSelected: fillHighlight))
                 .accessibilityAddIdentifiers(accessibilityIdentifier)
                 .accessibilityAddTraits(chrome.isSelectedTrait ? .isSelected : [])
             } else {
@@ -700,38 +700,6 @@ private final class PVContextMenuHostingView: NSHostingView<AnyView> {
     @MainActor
     required init(rootView: AnyView) {
         super.init(rootView: rootView)
-    }
-}
-
-private struct PVContextMenuItemButtonStyle: ButtonStyle {
-    var isSelected: Bool = false
-
-    func makeBody(configuration: Configuration) -> some View {
-        PVContextMenuItemButtonBody(configuration: configuration, isSelected: isSelected)
-    }
-}
-
-private struct PVContextMenuItemButtonBody: View {
-    let configuration: ButtonStyleConfiguration
-    var isSelected: Bool
-    @State private var hovering = false
-
-    var body: some View {
-        configuration.label
-            .background {
-                RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                    .fill(rowFill)
-            }
-            .contentShape(Rectangle())
-            .onHover { hovering = $0 }
-            .pvAnimation(PVMotion.instantStandard, value: hovering)
-    }
-
-    private var rowFill: Color {
-        if configuration.isPressed { return PVColor.surfaceActive }
-        if isSelected { return PVColor.surfaceSelected }
-        if hovering { return PVColor.surfaceHover }
-        return .clear
     }
 }
 

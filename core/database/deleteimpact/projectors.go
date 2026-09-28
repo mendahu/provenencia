@@ -181,7 +181,14 @@ func projectCitation(tx *sql.Tx, id []byte, ref string) (string, Location, error
 	if label := strings.TrimSpace(subLabel.String); label != "" {
 		locTitle = label
 	}
-	return listedSnippet(transcription.String, listedSnippetMaxRunes), Location{
+	title := listedSnippet(transcription.String, listedSnippetMaxRunes)
+	if title == "" {
+		title = locTitle
+	}
+	if title == "" {
+		title = ref
+	}
+	return title, Location{
 		Section:       sectionSources,
 		SourceID:      uuidString(srcID),
 		SubjectID:     uuidString(subID),

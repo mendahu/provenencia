@@ -1386,6 +1386,102 @@
         }
       }
     },
+    "deleteImpact.kind.file.one": {
+      "comment": "Singular Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "file"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.file.other": {
+      "comment": "Plural Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "files"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.item.one": {
+      "comment": "Singular fallback Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "item"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.item.other": {
+      "comment": "Plural fallback Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "items"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.narrative.one": {
+      "comment": "Singular Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "narrative"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.narrative.other": {
+      "comment": "Plural Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "narratives"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.reconciliation_claim.one": {
+      "comment": "Singular Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "reconciliation claim"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.reconciliation_claim.other": {
+      "comment": "Plural Impact kind noun",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "reconciliation claims"
+          }
+        }
+      }
+    },
     "deleteImpact.kind.credibilityGrade.one": {
       "comment": "Singular Impact kind noun",
       "extractionState": "manual",
@@ -10070,6 +10166,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Transcription"
+          }
+        }
+      }
+    },
+    "citationComposer.untitledCitation": {
+      "comment": "DeleteImpact title when the citation has no transcription",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Untitled citation"
           }
         }
       }
