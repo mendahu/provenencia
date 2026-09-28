@@ -93,6 +93,8 @@
 		AA0000000000000000000507 /* PVContextMenuTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000506 /* PVContextMenuTests.swift */; };
 		AA0000000000000000000620 /* PVDeleteImpact.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000621 /* PVDeleteImpact.swift */; };
 		AA0000000000000000000630 /* DeleteImpactFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000631 /* DeleteImpactFlow.swift */; };
+		AA0000000000000000000662 /* SubjectTypeChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000661 /* SubjectTypeChrome.swift */; };
+		AA0000000000000000000671 /* CitationTranscriptionModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000670 /* CitationTranscriptionModel.swift */; };
 		AA0000000000000000000622 /* PVDeleteImpactTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000623 /* PVDeleteImpactTests.swift */; };
 		01574F7767F9B0AF5550AFAD /* PVMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = C355704657FB6A572BF7FD6A /* PVMotion.swift */; };
 		AA0000000000000000000210 /* OriginMarkers.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000200 /* OriginMarkers.swift */; };
@@ -390,6 +392,8 @@
 		AA0000000000000000000506 /* PVContextMenuTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVContextMenuTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000621 /* PVDeleteImpact.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVDeleteImpact.swift; sourceTree = "<group>"; };
 		AA0000000000000000000631 /* DeleteImpactFlow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeleteImpactFlow.swift; sourceTree = "<group>"; };
+		AA0000000000000000000661 /* SubjectTypeChrome.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SubjectTypeChrome.swift; sourceTree = "<group>"; };
+		AA0000000000000000000670 /* CitationTranscriptionModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationTranscriptionModel.swift; sourceTree = "<group>"; };
 		AA0000000000000000000623 /* PVDeleteImpactTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVDeleteImpactTests.swift; sourceTree = "<group>"; };
 		11ADAF744C32587CD34CDD23 /* PVLogoMark.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVLogoMark.swift; sourceTree = "<group>"; };
 		164584B2DB70D89A55C4178F /* WorkspaceModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceModelTests.swift; sourceTree = "<group>"; };
@@ -606,10 +610,22 @@
 				AA0000000000000000000201 /* MetadataFieldBadges.swift */,
 				AA0000000000000000000380 /* CredibilityMarkers.swift */,
 				AA0000000000000000000382 /* SourceTypeMarkers.swift */,
+				AA0000000000000000000661 /* SubjectTypeChrome.swift */,
 				AA0000000000000000000253 /* CatalogCounts.swift */,
+				AA0000000000000000000660 /* Connect */,
 			);
 			name = Catalog;
 			path = Catalog;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000660 /* Connect */ = {
+			isa = PBXGroup;
+			children = (
+				A70900000000000000000009 /* EvidenceBridgeEdgeSummary.swift */,
+				A71A00000000000000000001 /* ConnectEndpointBinding.swift */,
+				A71700000000000000000001 /* EvidenceGraphPlacement.swift */,
+			);
+			path = Connect;
 			sourceTree = "<group>";
 		};
 		AA0000000000000000000280 /* CatalogVocabulary */ = {
@@ -902,9 +918,6 @@
 				A80600000000000000000001 /* EvidenceCitedPropertyMarks.swift */,
 				A80600000000000000000003 /* EvidenceCitedPropertyRow.swift */,
 				A70900000000000000000005 /* ObservationValueDisplay.swift */,
-				A70900000000000000000009 /* EvidenceBridgeEdgeSummary.swift */,
-				A71A00000000000000000001 /* ConnectEndpointBinding.swift */,
-				A71700000000000000000001 /* EvidenceGraphPlacement.swift */,
 				AA00000000000000000004A2 /* EvidenceBridgeCard.swift */,
 				AA00000000000000000004A4 /* EvidenceGraphEdgeLayer.swift */,
 				AA0000000000000000000490 /* EvidenceGraphModel.swift */,
@@ -959,6 +972,7 @@
 				A70800000000000000000003 /* CitationComposerModel.swift */,
 				A71900000000000000000001 /* CitationComposerContext.swift */,
 				A71200000000000000000001 /* CitationFieldsDraft.swift */,
+				AA0000000000000000000670 /* CitationTranscriptionModel.swift */,
 				A71300000000000000000001 /* CitationObservationRows.swift */,
 				A71400000000000000000001 /* CitationConnections.swift */,
 				A71500000000000000000001 /* CitationComposerVocabulary.swift */,
@@ -1565,6 +1579,7 @@
 				A71000000000000000000002 /* PropertyTermDisplay.swift in Sources */,
 				A71100000000000000000002 /* InterpretationValueKinds.swift in Sources */,
 				A71200000000000000000002 /* CitationFieldsDraft.swift in Sources */,
+				AA0000000000000000000671 /* CitationTranscriptionModel.swift in Sources */,
 				A71300000000000000000002 /* CitationObservationRows.swift in Sources */,
 				A71400000000000000000002 /* CitationConnections.swift in Sources */,
 				A71500000000000000000002 /* CitationComposerVocabulary.swift in Sources */,
@@ -1678,6 +1693,7 @@
 				AA0000000000000000000211 /* MetadataFieldBadges.swift in Sources */,
 				AA0000000000000000000381 /* CredibilityMarkers.swift in Sources */,
 				AA0000000000000000000383 /* SourceTypeMarkers.swift in Sources */,
+				AA0000000000000000000662 /* SubjectTypeChrome.swift in Sources */,
 				AA0000000000000000000260 /* VocabularyPane.swift in Sources */,
 				AA0000000000000000000261 /* VocabularyListPane.swift in Sources */,
 				AA0000000000000000000262 /* VocabularyChrome.swift in Sources */,

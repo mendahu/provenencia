@@ -1724,9 +1724,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         var presentationsByKey: [String: CatalogSubjectTypePresentation] = [:]
         for type in types {
             fieldsByTypeID[type.id] = subjectTypeFieldsByType[type.id] ?? []
-            if let presentation = subjectTypePresentations[type.key] {
-                presentationsByKey[type.key] = presentation
-            }
+            presentationsByKey[type.key] = subjectTypePresentations[type.key]
+                ?? Self.syntheticPresentation(typeKey: type.key)
         }
         return SubjectFieldsSnapshot(
             properties: propertiesByProject[projectDir] ?? [],
