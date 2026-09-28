@@ -52,6 +52,7 @@ const (
 	CodePropertiesInvalid            = "properties.invalid"
 	CodePropertiesDuplicateKey       = "properties.duplicate_key"
 	CodePropertiesInUse              = "properties.in_use"
+	CodePropertiesOriginLocked       = "properties.origin_locked"
 	CodePropertyTermsInvalid         = "propertyterms.invalid"
 	CodePropertyTermsDuplicateKey    = "propertyterms.duplicate_key"
 	CodePropertyTermsLocked          = "propertyterms.locked"

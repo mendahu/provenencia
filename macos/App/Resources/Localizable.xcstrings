@@ -2941,7 +2941,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "That property is still bound to one or more subject types."
+            "value": "That property is still used on observations or still has terms."
           }
         }
       }
@@ -8526,42 +8526,6 @@
         }
       }
     },
-    "subjectFields.delete.confirmMessage": {
-      "comment": "Confirm sheet message for deleting a user property",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This removes the property definition. It cannot be undone."
-          }
-        }
-      }
-    },
-    "subjectFields.delete.confirmTitle": {
-      "comment": "Confirm sheet title for deleting a user property",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete this property?"
-          }
-        }
-      }
-    },
-    "subjectFields.delete.keep": {
-      "comment": "Confirm sheet cancel for delete property",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keep"
-          }
-        }
-      }
-    },
     "subjectFields.inspector.accessibility": {
       "comment": "Accessibility label for the property inspector card",
       "extractionState": "manual",
@@ -8658,54 +8622,6 @@
         }
       }
     },
-    "subjectFields.inspector.delete": {
-      "comment": "Delete button in property inspector",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete property"
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.deleteInUse": {
-      "comment": "Why delete is disabled when usedBy > 0",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This property is still bound to one or more subject types."
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.deleteSeeded": {
-      "comment": "Why delete is disabled for provenencia-origin properties",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seeded properties cannot be deleted."
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.deleteUnused": {
-      "comment": "Inspector note when a user property can be deleted",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not in use. Deleting removes it from every type it is bound to."
-          }
-        }
-      }
-    },
     "subjectFields.inspector.empty": {
       "comment": "Inspector empty state",
       "extractionState": "manual",
@@ -8798,30 +8714,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Immutable after create"
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.valuesRecorded": {
-      "comment": "Inspector meta label: use / binding count from engine",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Values recorded"
-          }
-        }
-      }
-    },
-    "subjectFields.inspector.valuesRecordedCount": {
-      "comment": "Inspector values-recorded count",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld"
           }
         }
       }
@@ -13238,6 +13130,150 @@
           "stringUnit": {
             "state": "translated",
             "value": "This artifact still has citations."
+          }
+        }
+      }
+    },
+    "error.properties.origin_locked": {
+      "comment": "FFI error properties.origin_locked",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Provenencia-seeded and plugin properties cannot be deleted here."
+          }
+        }
+      }
+    },
+    "subjectFields.delete.action": {
+      "comment": "Tooltip on the Subject fields inspector trash",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete property"
+          }
+        }
+      }
+    },
+    "subjectFields.delete.accessibility": {
+      "comment": "VoiceOver for Subject fields trash; argument is the property label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete property %@"
+          }
+        }
+      }
+    },
+    "subjectFields.edit.action": {
+      "comment": "Tooltip on the Subject fields inspector pencil",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit label and description"
+          }
+        }
+      }
+    },
+    "subjectFields.edit.save": {
+      "comment": "Save tooltip for in-place property label/description edit",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
+          }
+        }
+      }
+    },
+    "subjectFields.edit.cancel": {
+      "comment": "Cancel tooltip for in-place property label/description edit",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel editing"
+          }
+        }
+      }
+    },
+    "subjectFields.edit.keyStays": {
+      "comment": "Lock line under the label input while editing; argument is the property key",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The key stays %@ — Observations already cite it"
+          }
+        }
+      }
+    },
+    "subjectFields.edit.descriptionPlaceholder": {
+      "comment": "Placeholder for the in-place property description textarea",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Say what this property records"
+          }
+        }
+      }
+    },
+    "subjectFields.toast.updatedTitle": {
+      "comment": "Success toast title after editing a property label or description",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Property updated"
+          }
+        }
+      }
+    },
+    "subjectFields.toast.updatedBody": {
+      "comment": "Success toast body after editing a property; arguments are label then key",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ — the key stays %@."
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.usedOn": {
+      "comment": "Inspector meta label: observation count for the selected property",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Used on"
+          }
+        }
+      }
+    },
+    "subjectFields.inspector.usedOnCount": {
+      "comment": "Inspector observation count; argument is UsedBy",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld observations"
           }
         }
       }

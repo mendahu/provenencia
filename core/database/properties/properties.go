@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
+	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/slug"
 )
@@ -23,8 +24,13 @@ var ErrDuplicateKey = apperr.New(apperr.CodePropertiesDuplicateKey, apperr.KindC
 // ErrLocked is returned by Update when the target is plugin-origin.
 var ErrLocked = apperr.New(apperr.CodePropertiesInvalid, apperr.KindUser)
 
-// ErrInUse is returned by Delete when subject_type_fields still references the Property.
+// ErrInUse is returned by Delete when observations or property terms still
+// reference the Property. Type bindings CASCADE and are not a blocker.
 var ErrInUse = apperr.New(apperr.CodePropertiesInUse, apperr.KindConflict)
+
+// ErrOriginLocked is returned by Delete when the Property is plugin-origin
+// or product-seeded (provenencia).
+var ErrOriginLocked = apperr.New(apperr.CodePropertiesOriginLocked, apperr.KindConflict)
 
 const (
 	OriginProvenencia = "provenencia"
@@ -48,16 +54,11 @@ const (
 	sqlGetByID = `SELECT id, key, origin, label, COALESCE(description, ''), value_type
 		FROM properties WHERE id = ?`
 	sqlList = `SELECT p.id, p.key, p.origin, p.label, COALESCE(p.description, ''), p.value_type,
-			(SELECT COUNT(*) FROM subject_type_fields j WHERE j.property_id = p.id)
+			(SELECT COUNT(*) FROM observations o WHERE o.property_id = p.id)
 		FROM properties p ORDER BY p.label COLLATE NOCASE, p.origin, p.key`
-	sqlUpdate = `UPDATE properties SET label = ?, description = ? WHERE id = ?`
-	sqlDelete = `DELETE FROM properties WHERE id = ?`
-	sqlInUse  = `SELECT 1 FROM (
-			SELECT 1 AS x FROM subject_type_fields WHERE property_id = ?
-			UNION ALL
-			SELECT 1 FROM observations WHERE property_id = ?
-		) LIMIT 1`
-	sqlUsedBy        = `SELECT COUNT(*) FROM subject_type_fields WHERE property_id = ?`
+	sqlUpdate        = `UPDATE properties SET label = ?, description = ? WHERE id = ?`
+	sqlDelete        = `DELETE FROM properties WHERE id = ?`
+	sqlUsedBy        = `SELECT COUNT(*) FROM observations WHERE property_id = ?`
 	sqlCountByOrigin = `SELECT origin, COUNT(*) FROM properties GROUP BY origin`
 )
 
@@ -69,8 +70,8 @@ type Property struct {
 	Label       string
 	Description string
 	ValueType   string
-	// UsedBy is how many subject_type_fields rows reference this Property.
-	// Only List and Update populate it; other readers leave it 0.
+	// UsedBy is how many observations reference this Property. Type bindings
+	// do not count. Only List and Update populate it; other readers leave it 0.
 	UsedBy int
 }
 
@@ -348,7 +349,7 @@ func List(c *database.Catalog) ([]Property, error) {
 	return out, rows.Err()
 }
 
-// UsedBy reports how many subject_type_fields rows reference the Property.
+// UsedBy reports how many observations reference the Property.
 func UsedBy(c *database.Catalog, id []byte) (int, error) {
 	db, err := c.DB()
 	if err != nil {
@@ -395,49 +396,59 @@ func CountByOrigin(c *database.Catalog) (OriginCounts, error) {
 	return out, nil
 }
 
-// Delete removes a Property by id when no subject_type_fields rows reference it.
+// Delete erases a user-origin Property when no observations or terms
+// reference it. Type bindings CASCADE. Seeded and plugin-origin rows are
+// origin_locked even when unused.
 func Delete(c *database.Catalog, userID, id []byte) error {
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return err
-	}
-	db, err := c.DB()
-	if err != nil {
 		return err
 	}
 	if len(id) != 16 {
 		return ErrInvalid
 	}
-	existing, err := GetByID(c, id)
+	prev, err := GetByID(c, id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrInvalid
+	}
 	if err != nil {
 		return err
 	}
-	var one int
-	err = db.QueryRow(sqlInUse, id, id).Scan(&one)
-	if err == nil {
-		return ErrInUse
-	}
-	if !errors.Is(err, sql.ErrNoRows) {
-		return err
+	if prev.Origin == OriginProvenencia || (strings.HasPrefix(prev.Origin, "plugin:") && len(prev.Origin) > len("plugin:")) {
+		return ErrOriginLocked
 	}
 
+	db, err := c.DB()
+	if err != nil {
+		return err
+	}
 	tx, err := db.Begin()
 	if err != nil {
 		return err
 	}
 	defer func() { _ = tx.Rollback() }()
 
+	report, err := deleteimpact.Impact(tx, deleteimpact.KindProperty, id)
+	if err != nil {
+		return err
+	}
+	if !report.Allowed {
+		return ErrInUse
+	}
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
+		return err
+	}
+	if err := deleteimpact.ReleaseOwned(tx, deleteimpact.KindProperty, id); err != nil {
 		return err
 	}
 	fields := map[string]audit.FieldDiff{
 		"id":         {Old: uuidString(id), New: nil},
-		"key":        {Old: existing.Key, New: nil},
-		"origin":     {Old: existing.Origin, New: nil},
-		"label":      {Old: existing.Label, New: nil},
-		"value_type": {Old: existing.ValueType, New: nil},
+		"key":        {Old: prev.Key, New: nil},
+		"origin":     {Old: prev.Origin, New: nil},
+		"label":      {Old: prev.Label, New: nil},
+		"value_type": {Old: prev.ValueType, New: nil},
 	}
-	if existing.Description != "" {
-		fields["description"] = audit.FieldDiff{Old: existing.Description, New: nil}
+	if prev.Description != "" {
+		fields["description"] = audit.FieldDiff{Old: prev.Description, New: nil}
 	}
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,

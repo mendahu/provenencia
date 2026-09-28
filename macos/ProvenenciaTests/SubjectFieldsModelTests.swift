@@ -188,26 +188,241 @@ struct SubjectFieldsModelTests {
         #expect(!model.isBound(propertyID: custom.id, typeID: person.id))
     }
 
-    @Test func deleteRefusesSeededProperty() async {
-        let (model, session, _) = makeModel(properties: [nameProperty()], types: [personType()])
-        await warm(model, session: session)
-        model.selectProperty(nameProperty().id)
-        #expect(!model.canDeleteSelected)
+    private func userProperty(
+        id: String = "prop-user",
+        usedBy: Int = 0
+    ) -> CatalogProperty {
+        CatalogProperty(
+            id: id,
+            key: "burial_ground",
+            origin: "user",
+            label: "Burial ground",
+            description: "Cemetery name",
+            valueType: "text",
+            usedBy: usedBy
+        )
     }
 
-    @Test func deleteRefusesInUseProperty() async {
-        let inUse = CatalogProperty(
-            id: "prop-in-use",
-            key: "custom",
-            origin: "user",
-            label: "Custom",
+    private func pluginProperty() -> CatalogProperty {
+        CatalogProperty(
+            id: "prop-plugin",
+            key: "plugin_fact",
+            origin: "plugin:acme",
+            label: "Plugin fact",
             description: "",
-            valueType: "text",
-            usedBy: 2
+            valueType: "text"
         )
-        let (model, session, _) = makeModel(properties: [inUse], types: [personType()])
+    }
+
+    private func observation(
+        id: String,
+        ref: String,
+        propertyID: String,
+        title: String
+    ) -> CatalogObservation {
+        CatalogObservation(
+            id: id,
+            ref: ref,
+            citationID: "cit-1",
+            subjectID: "sub-1",
+            propertyID: propertyID,
+            polarity: "positive",
+            valueText: title,
+            valueInteger: nil,
+            valueDateID: "",
+            valueNameID: "",
+            valueSubjectID: "",
+            valueTermID: "",
+            propertyKey: "outcome",
+            propertyLabel: "Outcome",
+            propertyValueType: "text"
+        )
+    }
+
+    @Test func trashIsOfferedWhenUsedBySeededOrPlugin() async {
+        let inUse = userProperty(id: "prop-used", usedBy: 2)
+        let (model, session, _) = makeModel(
+            properties: [userProperty(), nameProperty(), pluginProperty(), inUse],
+            types: [personType()]
+        )
         await warm(model, session: session)
+
+        model.selectProperty(userProperty().id)
+        #expect(model.canDeleteSelected)
+        #expect(model.showsDelete)
+        #expect(model.canEditSelected)
+        #expect(model.deleteTooltip == L10n.SubjectFields.deleteProperty)
+        #expect(
+            model.deleteAccessibilityLabel
+                == L10n.SubjectFields.deletePropertyAccessibility(label: "Burial ground")
+        )
+
+        model.selectProperty(nameProperty().id)
+        #expect(model.canDeleteSelected)
+        #expect(model.canEditSelected)
+
+        model.selectProperty(pluginProperty().id)
+        #expect(model.canDeleteSelected)
+        #expect(!model.canEditSelected)
+
         model.selectProperty(inUse.id)
-        #expect(!model.canDeleteSelected)
+        #expect(model.canDeleteSelected)
+    }
+
+    @Test func unusedUserPropertyConfirmDeletes() async {
+        let store = FakeStore()
+        let property = userProperty()
+        let (model, session, _) = makeModel(store: store, properties: [property], types: [personType()])
+        await warm(model, session: session)
+        model.selectProperty(property.id)
+        await model.askDelete()
+
+        #expect(model.pendingImpact?.report.allowed == true)
+        #expect(model.pendingImpact?.target.kind == "property")
+        #expect(await model.confirmPendingImpact())
+        #expect(store.propertiesByProject[projectDir]?.isEmpty == true)
+        #expect(model.selectedPropertyID == nil)
+    }
+
+    @Test func boundOnlyPropertyConfirmDeletes() async {
+        let store = FakeStore()
+        let property = userProperty()
+        let person = personType()
+        let (model, session, _) = makeModel(
+            store: store,
+            properties: [property],
+            types: [person],
+            fieldsByType: [
+                person.id: [CatalogSubjectTypeField(property: property, sortOrder: 0, locked: false)],
+            ]
+        )
+        await warm(model, session: session)
+        model.selectProperty(property.id)
+        await model.askDelete()
+
+        #expect(model.pendingImpact?.report.allowed == true)
+        #expect(await model.confirmPendingImpact())
+        #expect(store.propertiesByProject[projectDir]?.isEmpty == true)
+        #expect(store.subjectTypeFieldsByType[person.id]?.isEmpty == true)
+        #expect(model.selectedPropertyID == nil)
+    }
+
+    @Test func propertyUsedOnTwoObservationsShowsInboundNotice() async {
+        let store = FakeStore()
+        let property = userProperty(usedBy: 2)
+        store.observationsBySource["src-1"] = [
+            observation(id: "obs-1", ref: "OBS-AAAAA", propertyID: property.id, title: "accidental"),
+            observation(id: "obs-2", ref: "OBS-BBBBB", propertyID: property.id, title: "natural"),
+        ]
+        let (model, session, _) = makeModel(store: store, properties: [property], types: [personType()])
+        await warm(model, session: session)
+        model.selectProperty(property.id)
+        #expect(model.canDeleteSelected)
+        await model.askDelete()
+
+        let report = model.pendingImpact?.report
+        #expect(report?.allowed == false)
+        #expect(report?.gate == .inbound)
+        #expect(report?.groups.first?.via == "observations.property_id")
+        #expect(report?.groups.first?.total == 2)
+        #expect(report?.groups.first?.total == model.selectedProperty?.usedBy)
+        #expect(report?.groups.first?.listed.map(\.ref) == ["OBS-AAAAA", "OBS-BBBBB"])
+        #expect(await model.confirmPendingImpact() == false)
+        #expect(store.propertiesByProject[projectDir]?.map(\.id) == [property.id])
+        #expect(model.selectedPropertyID == property.id)
+    }
+
+    @Test func unusedTermsShowInboundNotice() async {
+        let store = FakeStore()
+        let property = userProperty()
+        store.propertyTermsByProperty[property.id] = [
+            CatalogPropertyTerm(
+                id: "term-1",
+                propertyID: property.id,
+                key: "lodger",
+                origin: "user",
+                label: "Lodger",
+                description: ""
+            ),
+        ]
+        let (model, session, _) = makeModel(store: store, properties: [property], types: [personType()])
+        await warm(model, session: session)
+        model.selectProperty(property.id)
+        await model.askDelete()
+
+        let report = model.pendingImpact?.report
+        #expect(report?.allowed == false)
+        #expect(report?.gate == .inbound)
+        #expect(report?.groups.first?.via == "property_terms.property_id")
+        #expect(report?.groups.first?.listed.map(\.ref) == ["lodger"])
+        #expect(await model.confirmPendingImpact() == false)
+        #expect(store.propertiesByProject[projectDir]?.map(\.id) == [property.id])
+    }
+
+    @Test func seededPropertyOriginLockedTrashStillOffered() async {
+        let store = FakeStore()
+        let (model, session, _) = makeModel(store: store, properties: [nameProperty()], types: [personType()])
+        await warm(model, session: session)
+        model.selectProperty(nameProperty().id)
+        #expect(model.canDeleteSelected)
+        await model.askDelete()
+
+        #expect(model.pendingImpact?.report.allowed == false)
+        #expect(model.pendingImpact?.report.gate == .originLocked)
+        #expect(await model.confirmPendingImpact() == false)
+        #expect(store.propertiesByProject[projectDir]?.map(\.id) == [nameProperty().id])
+    }
+
+    @Test func pluginPropertyOriginLockedTrashStillOffered() async {
+        let store = FakeStore()
+        let (model, session, _) = makeModel(store: store, properties: [pluginProperty()], types: [personType()])
+        await warm(model, session: session)
+        model.selectProperty(pluginProperty().id)
+        #expect(model.canDeleteSelected)
+        await model.askDelete()
+
+        #expect(model.pendingImpact?.report.allowed == false)
+        #expect(model.pendingImpact?.report.gate == .originLocked)
+        #expect(await model.confirmPendingImpact() == false)
+        #expect(store.propertiesByProject[projectDir]?.map(\.id) == [pluginProperty().id])
+    }
+
+    @Test func isDirtyTracksUnsavedEditsAndMatchingValuesClearThem() async {
+        let (model, session, _) = makeModel(properties: [userProperty()], types: [personType()])
+        await warm(model, session: session)
+        model.selectProperty(userProperty().id)
+        model.beginEdit()
+        #expect(!model.isEditDirty(label: "Burial ground", description: "Cemetery name"))
+        #expect(model.isEditDirty(label: "Changed", description: "Cemetery name"))
+        #expect(!model.isEditDirty(label: "Burial ground", description: "Cemetery name"))
+        #expect(!model.canSubmitEdit(label: "Burial ground", description: "Cemetery name"))
+    }
+
+    @Test func saveEditPersistsLabelAndDescriptionAndKeepsKey() async {
+        let store = FakeStore()
+        let property = userProperty()
+        let (model, session, _) = makeModel(store: store, properties: [property], types: [personType()])
+        await warm(model, session: session)
+        model.selectProperty(property.id)
+        model.beginEdit()
+        #expect(model.canSubmitEdit(label: "Cemetery", description: "Where they were buried"))
+        #expect(await model.submitEdit(label: "Cemetery", description: "Where they were buried"))
+        #expect(model.isEditingIdentity == false)
+        await warm(model, session: session)
+        #expect(store.propertiesByProject[projectDir]?.first?.label == "Cemetery")
+        #expect(store.propertiesByProject[projectDir]?.first?.description == "Where they were buried")
+        #expect(store.propertiesByProject[projectDir]?.first?.key == "burial_ground")
+        #expect(store.propertiesByProject[projectDir]?.first?.valueType == "text")
+        #expect(model.selectedPropertyID == property.id)
+    }
+
+    @Test func pluginHasNoEditControl() async {
+        let (model, session, _) = makeModel(properties: [pluginProperty()], types: [personType()])
+        await warm(model, session: session)
+        model.selectProperty(pluginProperty().id)
+        #expect(!model.canEditSelected)
+        model.beginEdit()
+        #expect(model.isEditingIdentity == false)
+        #expect(!model.canSubmitEdit(label: "Plugin fact", description: ""))
     }
 }

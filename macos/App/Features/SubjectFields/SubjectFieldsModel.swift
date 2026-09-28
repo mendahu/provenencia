@@ -37,11 +37,13 @@ final class SubjectFieldsModel {
     private(set) var selectedPropertyID: String?
     private(set) var createOpen = false
     var draft: Draft?
+    private(set) var isEditingIdentity = false
     private(set) var isSaving = false
     var formError: String?
     var toast: VocabularyToast?
     private(set) var lockedCallout: String?
     private(set) var pendingDeleteID: String?
+    var pendingImpact: PVDeleteImpactRequest?
     private(set) var isDeleting = false
     private(set) var deleteError: String?
     var searchFocused = false
@@ -134,10 +136,18 @@ final class SubjectFieldsModel {
     }
 
     var draftKey: String {
-        FieldSlug.kebab(draft?.label ?? "")
+        Self.draftKey(label: draft?.label ?? "")
+    }
+
+    static func draftKey(label: String) -> String {
+        FieldSlug.kebab(label)
     }
 
     var canSubmitCreate: Bool {
+        canSubmitCreate(draft)
+    }
+
+    func canSubmitCreate(_ draft: Draft?) -> Bool {
         guard let draft, !isSaving else { return false }
         let label = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
         return !label.isEmpty
@@ -145,9 +155,33 @@ final class SubjectFieldsModel {
             && SubjectPropertyValueType.researcherCreatable.contains(draft.valueType)
     }
 
-    var canDeleteSelected: Bool {
+    var showsDelete: Bool { selectedProperty != nil }
+    var canDeleteSelected: Bool { selectedProperty != nil }
+
+    var deleteTooltip: LocalizedStringResource { L10n.SubjectFields.deleteProperty }
+
+    var deleteAccessibilityLabel: String {
+        guard let property = selectedProperty else {
+            return String(localized: L10n.SubjectFields.deleteProperty)
+        }
+        return L10n.SubjectFields.deletePropertyAccessibility(label: property.label)
+    }
+
+    var canEditSelected: Bool {
         guard let property = selectedProperty else { return false }
-        return property.origin == CatalogOrigin.user && property.usedBy == 0
+        return !CatalogOrigin.isPlugin(property.origin)
+    }
+
+    func isEditDirty(label: String, description: String) -> Bool {
+        guard let property = selectedProperty else { return false }
+        return label.trimmingCharacters(in: .whitespacesAndNewlines) != property.label
+            || description.trimmingCharacters(in: .whitespacesAndNewlines) != property.description
+    }
+
+    func canSubmitEdit(label: String, description: String) -> Bool {
+        guard canEditSelected, !isSaving else { return false }
+        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !trimmed.isEmpty && isEditDirty(label: label, description: description)
     }
 
     var pendingDeleteProperty: CatalogProperty? {
@@ -167,6 +201,7 @@ final class SubjectFieldsModel {
     }
 
     func selectProperty(_ id: String?) {
+        cancelEdit()
         selectedPropertyID = id
         lockedCallout = nil
         formError = nil
@@ -208,16 +243,111 @@ final class SubjectFieldsModel {
         }
     }
 
-    func askDelete() {
-        guard canDeleteSelected, let property = selectedProperty else { return }
+    func beginEdit() {
+        guard canEditSelected else { return }
+        isEditingIdentity = true
+        formError = nil
+    }
+
+    func cancelEdit() {
+        isEditingIdentity = false
+        formError = nil
+    }
+
+    @discardableResult
+    func submitEdit(label: String, description: String) async -> Bool {
+        guard let property = selectedProperty, canSubmitEdit(label: label, description: description) else {
+            return false
+        }
+        let trimmedLabel = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
+        isSaving = true
+        formError = nil
+        defer { isSaving = false }
+        do {
+            let updated = try await store.updateProperty(
+                projectDir: session.projectKey.projectDir,
+                userID: userID,
+                propertyID: property.id,
+                label: trimmedLabel,
+                valueType: property.valueType,
+                description: trimmedDescription
+            )
+            session.apply(.updatedProperty)
+            isEditingIdentity = false
+            toast = VocabularyToast(
+                title: String(localized: L10n.SubjectFields.toastUpdatedTitle),
+                body: L10n.SubjectFields.toastUpdatedBody(label: updated.label, key: updated.key),
+                tone: .success
+            )
+            return true
+        } catch {
+            formError = L10n.Errors.message(for: error)
+            return false
+        }
+    }
+
+    func askDelete() async {
+        guard let property = selectedProperty else { return }
+        cancelEdit()
         deleteError = nil
-        pendingDeleteID = property.id
+        do {
+            let report = try await store.getDeleteImpact(
+                projectDir: session.projectKey.projectDir,
+                kind: "property",
+                id: property.id
+            )
+            pendingDeleteID = property.id
+            pendingImpact = PVDeleteImpactRequest(
+                target: PVDeleteImpactTarget(
+                    kind: "property",
+                    ref: property.key,
+                    title: property.label
+                ),
+                report: report
+            )
+        } catch {
+            deleteError = L10n.Errors.message(for: error)
+        }
     }
 
     func cancelDelete() {
         guard !isDeleting else { return }
         pendingDeleteID = nil
+        pendingImpact = nil
+    }
+
+    @discardableResult
+    func confirmPendingImpact() async -> Bool {
+        guard let request = pendingImpact, request.report.allowed, let property = pendingDeleteProperty,
+              !isDeleting
+        else { return false }
+        isDeleting = true
         deleteError = nil
+        defer { isDeleting = false }
+        do {
+            try await store.deleteProperty(
+                projectDir: session.projectKey.projectDir,
+                userID: userID,
+                propertyID: property.id
+            )
+            session.apply(.deletedProperty)
+            selectedPropertyID = nil
+            pendingDeleteID = nil
+            pendingImpact = nil
+            formError = nil
+            cancelEdit()
+            toast = VocabularyToast(
+                title: String(localized: L10n.SubjectFields.toastDeletedTitle),
+                body: L10n.SubjectFields.toastDeletedBody(label: property.label),
+                tone: .success
+            )
+            syncCatalogCounts()
+            return true
+        } catch {
+            deleteError = L10n.Errors.message(for: error)
+            return false
+        }
     }
 
     /// ComboBox picked an unbound property — bind it to the focused type.
@@ -232,36 +362,8 @@ final class SubjectFieldsModel {
     }
 
     @discardableResult
-    func confirmDelete() async -> Bool {
-        guard let property = pendingDeleteProperty, !isDeleting else { return false }
-        isDeleting = true
-        deleteError = nil
-        defer { isDeleting = false }
-        do {
-            try await store.deleteProperty(
-                projectDir: session.projectKey.projectDir,
-                userID: userID,
-                propertyID: property.id
-            )
-            session.apply(.deletedProperty)
-            selectedPropertyID = nil
-            pendingDeleteID = nil
-            toast = VocabularyToast(
-                title: String(localized: L10n.SubjectFields.toastDeletedTitle),
-                body: L10n.SubjectFields.toastDeletedBody(label: property.label),
-                tone: .success
-            )
-            syncCatalogCounts()
-            return true
-        } catch {
-            deleteError = L10n.Errors.message(for: error)
-            return false
-        }
-    }
-
-    @discardableResult
-    func submitCreate() async -> Bool {
-        guard let draft else { return false }
+    func submitCreate(_ incoming: Draft? = nil) async -> Bool {
+        guard let draft = incoming ?? draft else { return false }
         let label = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !label.isEmpty else {
             formError = String(localized: L10n.SubjectFields.errorLabelRequired)

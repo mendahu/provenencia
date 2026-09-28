@@ -35,7 +35,8 @@ enum CatalogMutation: Sendable, Equatable {
     /// (create, relabel, or delete).
     case mutatedSourceGraph(sourceId: String)
 
-    /// A Citation was created or updated for this Source (including cited-bridge).
+    /// A Citation was created or updated for this Source (including cited-bridge),
+    /// or an Observation on it was written. Also moves each Property's `usedBy`.
     case savedCitation(sourceId: String)
 
     case createdProperty

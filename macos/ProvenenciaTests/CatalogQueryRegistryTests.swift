@@ -552,6 +552,7 @@ struct CatalogQueryRegistryTests {
         #expect(registry.invalidations(by: .savedCitation(sourceId: "s1"), project: project) == [
             .key(.sourceGraph(project: project, sourceId: "s1")),
             .key(.citationCounts(project: project, sourceId: "s1")),
+            .key(.subjectFieldsWorkspace(project: project)),
             .allCached(.citationsByArtifact),
         ])
         #expect(registry.invalidations(by: .createdPropertyTerm(propertyId: "p1"), project: project) == [

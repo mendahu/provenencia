@@ -5108,16 +5108,16 @@ enum L10n {
             defaultValue: "Seeded by Provenencia",
             comment: "Inspector origin line for product-seeded properties"
         )
-        static let inspectorValuesRecorded = LocalizedStringResource(
-            "subjectFields.inspector.valuesRecorded",
-            defaultValue: "Values recorded",
-            comment: "Inspector meta label: use / binding count from engine"
+        static let inspectorUsedOn = LocalizedStringResource(
+            "subjectFields.inspector.usedOn",
+            defaultValue: "Used on",
+            comment: "Inspector meta label: observation count for the selected property"
         )
-        static func valuesRecordedCount(count: Int) -> String {
+        static func usedOnCount(count: Int) -> String {
             let format = String(localized: LocalizedStringResource(
-                "subjectFields.inspector.valuesRecordedCount",
-                defaultValue: "%lld",
-                comment: "Inspector values-recorded count"
+                "subjectFields.inspector.usedOnCount",
+                defaultValue: "%lld observations",
+                comment: "Inspector observation count; argument is UsedBy"
             ))
             return String(format: format, locale: .current, count)
         }
@@ -5145,24 +5145,45 @@ enum L10n {
             comment: "Inspector note for term-typed seeded properties"
         )
         static let deleteProperty = LocalizedStringResource(
-            "subjectFields.inspector.delete",
+            "subjectFields.delete.action",
             defaultValue: "Delete property",
-            comment: "Delete button in property inspector"
+            comment: "Tooltip on the Subject fields inspector trash"
         )
-        static let deleteInUse = LocalizedStringResource(
-            "subjectFields.inspector.deleteInUse",
-            defaultValue: "This property is still bound to one or more subject types.",
-            comment: "Why delete is disabled when usedBy > 0"
+        static func deletePropertyAccessibility(label: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "subjectFields.delete.accessibility",
+                defaultValue: "Delete property %@",
+                comment: "VoiceOver for Subject fields trash; argument is the property label"
+            ))
+            return String(format: format, locale: .current, label)
+        }
+        static let editAction = LocalizedStringResource(
+            "subjectFields.edit.action",
+            defaultValue: "Edit label and description",
+            comment: "Tooltip on the Subject fields inspector pencil"
         )
-        static let deleteSeeded = LocalizedStringResource(
-            "subjectFields.inspector.deleteSeeded",
-            defaultValue: "Seeded properties cannot be deleted.",
-            comment: "Why delete is disabled for provenencia-origin properties"
+        static let editSave = LocalizedStringResource(
+            "subjectFields.edit.save",
+            defaultValue: "Save",
+            comment: "Save tooltip for in-place property label/description edit"
         )
-        static let deleteUnused = LocalizedStringResource(
-            "subjectFields.inspector.deleteUnused",
-            defaultValue: "Not in use. Deleting removes it from every type it is bound to.",
-            comment: "Inspector note when a user property can be deleted"
+        static let editCancel = LocalizedStringResource(
+            "subjectFields.edit.cancel",
+            defaultValue: "Cancel editing",
+            comment: "Cancel tooltip for in-place property label/description edit"
+        )
+        static func editKeyStays(key: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "subjectFields.edit.keyStays",
+                defaultValue: "The key stays %@ — Observations already cite it",
+                comment: "Lock line under the label input while editing; argument is the property key"
+            ))
+            return String(format: format, locale: .current, key)
+        }
+        static let editDescriptionPlaceholder = LocalizedStringResource(
+            "subjectFields.edit.descriptionPlaceholder",
+            defaultValue: "Say what this property records",
+            comment: "Placeholder for the in-place property description textarea"
         )
         static func lockedBindingReason(typeLabel: String) -> String {
             let format = String(localized: LocalizedStringResource(
@@ -5303,21 +5324,19 @@ enum L10n {
             ))
             return String(format: format, locale: .current, label)
         }
-        static let deleteConfirmTitle = LocalizedStringResource(
-            "subjectFields.delete.confirmTitle",
-            defaultValue: "Delete this property?",
-            comment: "Confirm sheet title for deleting a user property"
+        static let toastUpdatedTitle = LocalizedStringResource(
+            "subjectFields.toast.updatedTitle",
+            defaultValue: "Property updated",
+            comment: "Success toast title after editing a property label or description"
         )
-        static let deleteConfirmMessage = LocalizedStringResource(
-            "subjectFields.delete.confirmMessage",
-            defaultValue: "This removes the property definition. It cannot be undone.",
-            comment: "Confirm sheet message for deleting a user property"
-        )
-        static let deleteKeep = LocalizedStringResource(
-            "subjectFields.delete.keep",
-            defaultValue: "Keep",
-            comment: "Confirm sheet cancel for delete property"
-        )
+        static func toastUpdatedBody(label: String, key: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "subjectFields.toast.updatedBody",
+                defaultValue: "%@ — the key stays %@.",
+                comment: "Success toast body after editing a property; arguments are label then key"
+            ))
+            return String(format: format, locale: .current, label, key)
+        }
     }
 
     /// Maps stable Go/FFI error codes to localized user-facing copy.
@@ -6882,8 +6901,13 @@ enum L10n {
         }
         static let propertiesInUse = LocalizedStringResource(
             "error.properties.in_use",
-            defaultValue: "That property is still bound to one or more subject types.",
+            defaultValue: "That property is still used on observations or still has terms.",
             comment: "FFI error properties.in_use"
+        )
+        static let propertiesOriginLocked = LocalizedStringResource(
+            "error.properties.origin_locked",
+            defaultValue: "Provenencia-seeded and plugin properties cannot be deleted here.",
+            comment: "FFI error properties.origin_locked"
         )
         static let propertyTermsInvalid = LocalizedStringResource(
             "error.propertyterms.invalid",
@@ -7119,6 +7143,8 @@ enum L10n {
                 return propertiesDuplicateKey(key: params.first ?? "?")
             case "properties.in_use":
                 return String(localized: propertiesInUse)
+            case "properties.origin_locked":
+                return String(localized: propertiesOriginLocked)
             case "propertyterms.invalid":
                 return String(localized: propertyTermsInvalid)
             case "propertyterms.duplicate_key":
