@@ -40,7 +40,7 @@ Facet CASCADE is SQLite’s job. Official `Delete` still **registers** those FKs
 - [ ] Proto kind / via keys; recipe L10n heading (unknown via still renders)
 - [ ] Domain `Delete`: load → extra gates → Impact in the same tx → DELETE parent → ReleaseOwned
 - [ ] Extra gates before Impact: missing row, edge_locked, infra, origin_locked
-- [ ] Bridge `subjects.Delete` releases connection facets (edges + disambiguation) before the parent; other `observations.Delete` stays `edge_locked`
+- [ ] Bridge `subjects.Delete` releases connection facets (loop `connectrules.All()` endpoints + `Disambiguation` matching property origin; do not hard-code `role` / `relationship_type`) before the parent; other `observations.Delete` stays `edge_locked`
 - [ ] FFI: GetDeleteImpact returns the report; Delete* refuse is a generic in_use / extra-gate code (no report on Error, no apperr ref params)
 - [ ] Audit + searchindex stay in the domain package
 - [ ] FFI: GetDeleteImpact works for this kind (UI or not)

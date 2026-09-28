@@ -67,6 +67,18 @@ plugin:<plugin_id>   -- reserved prefix for future plugin-contributed vocabulary
 
 There is no separate `builtin` boolean; `origin = 'provenencia'` replaces that flag.
 
+### Connect policy (Interpretation bridges)
+
+Bridge connect rules — which Properties on which bridge types are endpoints or
+disambiguation, and which from→to pairs are allowed — live in
+[`core/connectrules`](../core/connectrules). That package is the single policy
+table: Impact, edge-lock, Connect, and create-time bridge bindings all loop
+`All()` / `BridgeBindings()`. Product data is authored once per bridge
+(`productBridges`); directed pairs expand at load. Future `plugin:<id>` modules
+append via `Register` with their origin; they do not rewrite deleteimpact or
+edge-lock. Catalog row Install for types/properties/terms stays in
+`subjectvocab` (and peer vocab packages).
+
 ### Implementation (Source seed today)
 
 Product-seeded Source types/fields/suggestions live in a **code registry** (`core/database/sourcevocab/registry.go`) and are installed once by `sourcevocab.Install` at catalog **create** via `onboarding.createCatalog` (see `core/onboarding/ready.go`). Opens (`OpenCatalog`) do **not** re-install or heal deleted seed rows. Do not put seed rows in SQL migrations. The current create-time starter is a single `birth_certificate` type plus a few suggested fields — the §2 lists below remain a horizon catalog of suggested keys, not a ship commitment.

@@ -430,6 +430,103 @@ func TestImpactCitationAndSubject(t *testing.T) {
 			}
 		})
 	})
+
+	t.Run("user role property on person is inbound not a facet", func(t *testing.T) {
+		userRole, err := properties.Create(c, userID, "Role", properties.ValueTypeText, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if userRole.Key != "role" || userRole.Origin != properties.OriginUser {
+			t.Fatalf("user role %+v", userRole)
+		}
+		if err := subjectvocab.AppendBinding(c, personType.ID, userRole.ID); err != nil {
+			t.Fatal(err)
+		}
+		res, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
+			ArtifactID: art.ID, LocatorJSON: testLocator,
+		}, []observations.Input{{
+			SubjectID: alice.ID, PropertyID: userRole.ID, ValueText: "witness", HasText: true,
+		}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := mustImpact(t, c, deleteimpact.KindSubject, alice.ID)
+		if got.Allowed || got.Gate != deleteimpact.GateInbound {
+			t.Fatalf("alice %+v", got)
+		}
+		found := false
+		for _, g := range got.Groups {
+			if g.Via == "observations.subject_id" && g.Total >= 1 {
+				found = true
+				if len(g.Listed) == 0 || g.Listed[0].Ref != res.Observations[0].Ref {
+					t.Fatalf("listed %+v want %q", g.Listed, res.Observations[0].Ref)
+				}
+			}
+		}
+		if !found {
+			t.Fatalf("missing subject_id group %+v", got.Groups)
+		}
+		if err := subjects.Delete(c, userID, alice.ID); !errors.Is(err, subjects.ErrInUse) {
+			t.Fatalf("delete %v", err)
+		}
+		listed, err := observations.ListBySubject(c, alice.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(listed) == 0 {
+			t.Fatal("user role observation gone")
+		}
+	})
+
+	t.Run("seeded role bound to person is inbound not a facet", func(t *testing.T) {
+		roleProp, err := properties.Lookup(c, "role", properties.OriginProvenencia)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := subjectvocab.AppendBinding(c, personType.ID, roleProp.ID); err != nil {
+			t.Fatal(err)
+		}
+		roleTerm, err := propertyterms.Lookup(c, roleProp.ID, "witness", propertyterms.OriginProvenencia)
+		if err != nil {
+			t.Fatal(err)
+		}
+		bob, err := subjects.Create(c, userID, subjects.CreateInput{
+			SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Bob",
+		}, &subjects.Placement{GridX: 8, GridY: 0})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
+			ArtifactID: art.ID, LocatorJSON: testLocator,
+		}, []observations.Input{{
+			SubjectID: bob.ID, PropertyID: roleProp.ID, ValueTermID: roleTerm.ID,
+		}}); err != nil {
+			t.Fatal(err)
+		}
+		got := mustImpact(t, c, deleteimpact.KindSubject, bob.ID)
+		if got.Allowed || got.Gate != deleteimpact.GateInbound {
+			t.Fatalf("bob %+v", got)
+		}
+		found := false
+		for _, g := range got.Groups {
+			if g.Via == "observations.subject_id" && g.Total >= 1 {
+				found = true
+			}
+		}
+		if !found {
+			t.Fatalf("missing subject_id group %+v", got.Groups)
+		}
+		if err := subjects.Delete(c, userID, bob.ID); !errors.Is(err, subjects.ErrInUse) {
+			t.Fatalf("delete %v", err)
+		}
+		listed, err := observations.ListBySubject(c, bob.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(listed) == 0 {
+			t.Fatal("seeded role observation gone")
+		}
+	})
 }
 
 func TestSnapshotOwnedThenRelease(t *testing.T) {

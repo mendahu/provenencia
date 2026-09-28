@@ -25,7 +25,8 @@ new Install into **`onboarding.createCatalog` only**.
 | --- | --- | --- |
 | `core/database/sourcevocab/` | `registry.go` (`seedTypes` / `seedFields` / `seedSuggestions`) | Source types, metadata fields, type→field suggestions (uses `sourcetypes` / `sourcefields`) |
 | `core/database/sourcecredibilitygrades/` | `registry.go` (`seedGrades`) | Credibility grades (`low_trust` / `standard` / `high_trust`) |
-| `core/database/subjectvocab/` | `registry.go` (`seedTypes` / `seedProperties` / `seedBindings` / `seedTerms` / `seedConnect`) | Interpretation Subject types, Properties, `subject_type_fields`, **`property_terms`** (S7-01b), plus compiled presentation / locked bindings / connect (uses `subjecttypes` / `properties`) |
+| `core/connectrules/` | `productBridges` / `productRefusals` (`Bridge.Endpoints` + `Disambiguation` + `Pairs`); `All()` / `Register` | Product connect matrix: which Properties on which bridge types are endpoints or disambiguation. Impact, edge-lock, Connect, and Install bridge bindings loop `All()` / `BridgeBindings()`. Future plugins append via `Register`. |
+| `core/database/subjectvocab/` | `registry.go` (`seedTypes` / `seedProperties` / `seedBindings` / `seedTerms`) | Interpretation Subject types, Properties, non-bridge `subject_type_fields`, **`property_terms`** (S7-01b), plus compiled presentation. Bridge bindings are derived from `connectrules.BridgeBindings()` (product origin only at create). |
 
 ### Source vocabulary (`sourcevocab`)
 
@@ -53,11 +54,17 @@ Property value types: `text` \| `integer` \| `date` \| `name` \| `subject` \| **
 Kind/edge Properties (`event_type`, `role`, `relationship_type`) use `term` + `property_terms` (S7-01b) — not free-text Observation strings.
 **`value_type = term` Properties are Install/registry only** (`origin=provenencia` or `plugin:<id>`). Researcher Create Property must refuse `term`.
 Researchers may still add `origin=user` **term rows** under those Properties via the composer picker.
-Capabilities, presentation tokens, locked bindings, and the connect matrix stay
-in the compiled `subjectvocab` registry (not SQL columns). `seedConnect` is the
-only product matrix. `CatalogConnectRule.productMatrix` in
+Capabilities and presentation tokens stay in the compiled `subjectvocab`
+registry (not SQL columns). Non-bridge locked bindings stay in `seedBindings`.
+The connect matrix is **`core/connectrules` only** — author a `Bridge`
+(Endpoints, Disambiguation property key, Pairs) and Impact / edge-lock /
+Connect / Install bridge bindings pick it up. Add new property rows in
+`seedProperties` / `seedTerms` when the property is new. Do not hand-list
+bridge rows in `seedBindings`. `Register` is the extension seam for future
+`plugin:<id>` modules (no policy `case` changes).
+`CatalogConnectRule.productMatrix` in
 `macos/App/Platform/GenealogyStore.swift` is the FakeStore / unit-test double —
-update it in the same change as `seedConnect`. Live Mac connect reads
+update it in the same change as product bridges. Live Mac connect reads
 `listConnectRules` and does not fall back to that table. Term capabilities
 (birthday facets, tree-edge roles, …) are deferred until a later PR.
 
