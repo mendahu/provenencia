@@ -331,6 +331,7 @@ struct PVTable<Row: Identifiable, Content: View>: View {
         .onTapGesture { selection = row.id }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+        .accessibilityAction(.default) { selection = row.id }
         .accessibilityIdentifier(rowAccessibilityIdentifier?(row) ?? "")
     }
 

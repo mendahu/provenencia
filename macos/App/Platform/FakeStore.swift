@@ -23,7 +23,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var propertiesByProject: [String: [CatalogProperty]] = [:]
     var propertyTermsByProperty: [String: [CatalogPropertyTerm]] = [:]
     var subjectTypeFieldsByType: [String: [CatalogSubjectTypeField]] = [:]
-    var placeableSubjectTypes: [CatalogSubjectTypePresentation] = []
     var subjectTypePresentations: [String: CatalogSubjectTypePresentation] = [:]
     var connectRules: [CatalogConnectRule] = CatalogConnectRule.productMatrix
     var observationsBySource: [String: [CatalogObservation]] = [:]
@@ -589,21 +588,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         throw StoreBoom.boom
     }
 
-    func ensureFileThumbnail(
-        projectDir _: String,
-        fileID: String
-    ) async throws -> (relPath: String, skipped: Bool) {
-        for arts in artifactsBySource.values {
-            if let art = arts.first(where: { $0.fileID == fileID }) {
-                if art.thumbnailRelPath.isEmpty {
-                    return ("", true)
-                }
-                return (art.thumbnailRelPath, false)
-            }
-        }
-        throw StoreBoom.boom
-    }
-
     func listSourceCredibilityGrades(projectDir: String) async throws -> [CatalogCredibilityGrade] {
         if let grades = credibilityGradesByProject[projectDir], !grades.isEmpty {
             return grades
@@ -1160,11 +1144,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             }
     }
 
-    func listProperties(projectDir: String) async throws -> [CatalogProperty] {
-        markCatalogSessionHeld(projectDir)
-        return propertiesByProject[projectDir] ?? []
-    }
-
     func createProperty(
         projectDir: String,
         userID _: String,
@@ -1274,45 +1253,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         return term
     }
 
-    func updatePropertyTerm(
-        projectDir: String,
-        userID _: String,
-        termID: String,
-        label: String,
-        description: String
-    ) async throws -> CatalogPropertyTerm {
-        markCatalogSessionHeld(projectDir)
-        for (propertyID, var list) in propertyTermsByProperty {
-            guard let idx = list.firstIndex(where: { $0.id == termID }) else { continue }
-            if list[idx].origin != "user" {
-                throw CoreInvokeError.coded(status: 1, code: "propertyterms.locked", kind: .user, params: [])
-            }
-            list[idx].label = label
-            list[idx].description = description
-            propertyTermsByProperty[propertyID] = list
-            return list[idx]
-        }
-        throw CoreInvokeError.coded(status: 1, code: "propertyterms.invalid", kind: .user, params: [])
-    }
-
-    func deletePropertyTerm(projectDir: String, userID _: String, termID: String) async throws {
-        markCatalogSessionHeld(projectDir)
-        for (propertyID, list) in propertyTermsByProperty {
-            guard let term = list.first(where: { $0.id == termID }) else { continue }
-            if term.origin != "user" {
-                throw CoreInvokeError.coded(status: 1, code: "propertyterms.locked", kind: .user, params: [])
-            }
-            propertyTermsByProperty[propertyID]?.removeAll { $0.id == termID }
-            return
-        }
-        throw CoreInvokeError.coded(status: 1, code: "propertyterms.invalid", kind: .user, params: [])
-    }
-
-    func listSubjectTypeFields(projectDir: String, subjectTypeID: String) async throws -> [CatalogSubjectTypeField] {
-        markCatalogSessionHeld(projectDir)
-        return subjectTypeFieldsByType[subjectTypeID] ?? []
-    }
-
     func assignSubjectTypeField(
         projectDir: String,
         userID _: String,
@@ -1344,17 +1284,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             throw CoreInvokeError.coded(status: 1, code: "subjectvocab.locked", kind: .conflict, params: [])
         }
         subjectTypeFieldsByType[subjectTypeID]?.removeAll { $0.property.id == propertyID }
-    }
-
-    func listPlaceableSubjectTypes() async throws -> [CatalogSubjectTypePresentation] {
-        placeableSubjectTypes
-    }
-
-    func getSubjectTypePresentation(typeKey: String) async throws -> CatalogSubjectTypePresentation {
-        if let found = subjectTypePresentations[typeKey] {
-            return found
-        }
-        return Self.syntheticPresentation(typeKey: typeKey)
     }
 
     private static func syntheticPresentation(typeKey: String) -> CatalogSubjectTypePresentation {

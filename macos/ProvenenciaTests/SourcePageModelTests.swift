@@ -1050,6 +1050,34 @@ struct SourcePageModelTests {
         #expect(store.deleteArtifactCalls == 0)
     }
 
+    @Test func deletingSecondaryArtifactKeepsIdentityDraft() async {
+        let store = makeStore(
+            artifacts: [
+                CatalogArtifact(
+                    id: "a1", ref: "ART-AAAAA", sourceID: sourceID, fileID: "f1",
+                    label: "Cover scan", description: "", file: nil
+                ),
+                CatalogArtifact(
+                    id: "a2", ref: "ART-BBBBB", sourceID: sourceID, fileID: "f2",
+                    label: "Extra scan", description: "", file: nil
+                ),
+            ]
+        )
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        model.identity.beginEditTitle()
+        model.identity.titleDraft = "Unsaved title"
+        model.notes.draft = "Scratch note"
+        await model.askDeleteArtifact(id: "a2")
+        let left = await model.confirmResourceDelete()
+        #expect(!left)
+        #expect(store.deleteArtifactCalls == 1)
+        #expect(model.identity.editingTitle)
+        #expect(model.identity.titleDraft == "Unsaved title")
+        #expect(model.notes.draft == "Scratch note")
+        #expect(model.artifacts.items.map(\.id) == ["a1"])
+    }
+
     @Test func noteDeleteWaitsForConfirm() async throws {
         let store = makeStore()
         let model = makeModel(store: store)

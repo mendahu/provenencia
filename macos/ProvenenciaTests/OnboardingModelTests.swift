@@ -402,10 +402,6 @@ private struct ThrowingStore: GenealogyStore {
         artifactID _: String,
         path _: String
     ) async throws -> (artifact: CatalogArtifact, file: CatalogFileRef, reused: Bool) { throw StoreBoom.boom }
-    func ensureFileThumbnail(
-        projectDir _: String,
-        fileID _: String
-    ) async throws -> (relPath: String, skipped: Bool) { throw StoreBoom.boom }
     func listSourceCredibilityGrades(projectDir _: String) async throws -> [CatalogCredibilityGrade] {
         throw StoreBoom.boom
     }
@@ -514,7 +510,6 @@ private struct ThrowingStore: GenealogyStore {
     }
     func listSubjectPositions(projectDir _: String, sourceID _: String) async throws
         -> [CatalogSubjectPosition] { throw StoreBoom.boom }
-    func listProperties(projectDir _: String) async throws -> [CatalogProperty] { throw StoreBoom.boom }
     func createProperty(
         projectDir _: String,
         userID _: String,
@@ -543,18 +538,6 @@ private struct ThrowingStore: GenealogyStore {
         label _: String,
         description _: String
     ) async throws -> CatalogPropertyTerm { throw StoreBoom.boom }
-    func updatePropertyTerm(
-        projectDir _: String,
-        userID _: String,
-        termID _: String,
-        label _: String,
-        description _: String
-    ) async throws -> CatalogPropertyTerm { throw StoreBoom.boom }
-    func deletePropertyTerm(projectDir _: String, userID _: String, termID _: String) async throws {
-        throw StoreBoom.boom
-    }
-    func listSubjectTypeFields(projectDir _: String, subjectTypeID _: String) async throws
-        -> [CatalogSubjectTypeField] { throw StoreBoom.boom }
     func assignSubjectTypeField(
         projectDir _: String,
         userID _: String,
@@ -567,12 +550,6 @@ private struct ThrowingStore: GenealogyStore {
         subjectTypeID _: String,
         propertyID _: String
     ) async throws { throw StoreBoom.boom }
-    func listPlaceableSubjectTypes() async throws -> [CatalogSubjectTypePresentation] {
-        throw StoreBoom.boom
-    }
-    func getSubjectTypePresentation(typeKey _: String) async throws -> CatalogSubjectTypePresentation {
-        throw StoreBoom.boom
-    }
     func listConnectRules() async throws -> [CatalogConnectRule] { throw StoreBoom.boom }
     func createCitedBridge(
         projectDir _: String,

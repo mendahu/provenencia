@@ -49,6 +49,11 @@ const (
 
 	sqlLookupParts = `SELECT id, idx, value, type FROM name_value_parts
 		WHERE name_value_id = ? ORDER BY idx`
+
+	sqlLookupValueID = `SELECT id, form FROM name_values WHERE id IN (`
+
+	sqlLookupPartsByParents = `SELECT id, name_value_id, idx, value, type
+		FROM name_value_parts WHERE name_value_id IN (`
 )
 
 // Part is one ordered segment of a NameValue.
@@ -226,6 +231,76 @@ func LookupTx(q interface {
 		return Value{}, err
 	}
 	return v, nil
+}
+
+// LookupMany returns name_values rows and ordered parts for the given ids.
+// Missing ids are omitted. Empty ids returns an empty map.
+func LookupMany(c *database.Catalog, ids [][]byte) (map[string]Value, error) {
+	ids = database.UniqueBlobIDs(ids)
+	out := make(map[string]Value, len(ids))
+	if len(ids) == 0 {
+		return out, nil
+	}
+	db, err := c.DB()
+	if err != nil {
+		return nil, err
+	}
+	q := sqlLookupValueID + database.SQLInPlaceholders(len(ids)) + `)`
+	rows, err := db.Query(q, database.BlobArgs(ids)...)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var (
+			v  Value
+			id []byte
+		)
+		if err := rows.Scan(&id, &v.Form); err != nil {
+			_ = rows.Close()
+			return nil, err
+		}
+		v.ID = append([]byte(nil), id...)
+		out[string(v.ID)] = v
+	}
+	err = rows.Err()
+	_ = rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	if len(out) == 0 {
+		return out, nil
+	}
+	parentIDs := make([][]byte, 0, len(out))
+	for _, v := range out {
+		parentIDs = append(parentIDs, v.ID)
+	}
+	pq := sqlLookupPartsByParents + database.SQLInPlaceholders(len(parentIDs)) + `) ORDER BY name_value_id, idx`
+	prows, err := db.Query(pq, database.BlobArgs(parentIDs)...)
+	if err != nil {
+		return nil, err
+	}
+	defer prows.Close()
+	for prows.Next() {
+		var (
+			p        Part
+			parentID []byte
+			typ      sql.NullString
+			part     []byte
+		)
+		if err := prows.Scan(&part, &parentID, &p.Idx, &p.Value, &typ); err != nil {
+			return nil, err
+		}
+		p.ID = append([]byte(nil), part...)
+		p.Type = typ.String
+		k := string(parentID)
+		v := out[k]
+		v.Parts = append(v.Parts, p)
+		out[k] = v
+	}
+	if err := prows.Err(); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func validate(form string, parts []Part) error {

@@ -566,11 +566,6 @@ protocol GenealogyStore: Sendable {
         artifactID: String,
         path: String
     ) async throws -> (artifact: CatalogArtifact, file: CatalogFileRef, reused: Bool)
-    /// Lazily ensure a thumbnail derivative for a primary File; empty path when skipped.
-    func ensureFileThumbnail(
-        projectDir: String,
-        fileID: String
-    ) async throws -> (relPath: String, skipped: Bool)
     func listSourceCredibilityGrades(projectDir: String) async throws -> [CatalogCredibilityGrade]
     func upsertSourceCredibilityAssessment(
         projectDir: String,
@@ -690,7 +685,6 @@ protocol GenealogyStore: Sendable {
     func clearSubjectPosition(projectDir: String, subjectID: String) async throws
     func listSubjectPositions(projectDir: String, sourceID: String) async throws -> [CatalogSubjectPosition]
 
-    func listProperties(projectDir: String) async throws -> [CatalogProperty]
     func createProperty(
         projectDir: String,
         userID: String,
@@ -715,15 +709,6 @@ protocol GenealogyStore: Sendable {
         label: String,
         description: String
     ) async throws -> CatalogPropertyTerm
-    func updatePropertyTerm(
-        projectDir: String,
-        userID: String,
-        termID: String,
-        label: String,
-        description: String
-    ) async throws -> CatalogPropertyTerm
-    func deletePropertyTerm(projectDir: String, userID: String, termID: String) async throws
-    func listSubjectTypeFields(projectDir: String, subjectTypeID: String) async throws -> [CatalogSubjectTypeField]
     func assignSubjectTypeField(
         projectDir: String,
         userID: String,
@@ -736,8 +721,6 @@ protocol GenealogyStore: Sendable {
         subjectTypeID: String,
         propertyID: String
     ) async throws
-    func listPlaceableSubjectTypes() async throws -> [CatalogSubjectTypePresentation]
-    func getSubjectTypePresentation(typeKey: String) async throws -> CatalogSubjectTypePresentation
     func listConnectRules() async throws -> [CatalogConnectRule]
 
     func createCitedBridge(

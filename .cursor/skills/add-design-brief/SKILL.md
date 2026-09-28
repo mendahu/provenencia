@@ -2,7 +2,8 @@
 name: add-design-brief
 description: >-
   Authors a Provenencia Claude Design brief (S*-D* under
-  docs/deployment-plan/…/design/) with the working-rules ritual, kit reach-for
+  docs/deployment-plan/<open-spike>/design/, or docs/ideas/ when no spike is
+  open) with the working-rules ritual, kit reach-for
   list, and a binding UI building-block inventory. Use when adding or changing
   a design brief, Claude Design board prompt, S8-D7-style paste doc, design
   gate, or when the user asks to scope UI in Claude Design before a PR.
@@ -30,7 +31,7 @@ Layers / implementing chrome: [`add-ui-component`](../add-ui-component/SKILL.md)
 ## Checklist
 
 ```
-- [ ] Path: docs/deployment-plan/<spike>/design/S#-D#-<slug>.md
+- [ ] Path: docs/deployment-plan/<open-spike>/design/S#-D#-<slug>.md (or `docs/ideas/` when no spike is open)
 - [ ] Header: Kind, Spike, Implements later as, Depends on, Related, layers, skills
 - [ ] Paste line + **working-rules Paste block** (verbatim from this skill)
 - [ ] In-place note: rethink (replace frames) vs enhancement (extend frames)

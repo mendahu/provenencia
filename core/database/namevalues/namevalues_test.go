@@ -215,6 +215,42 @@ func TestInsertLookup(t *testing.T) {
 			},
 		},
 		{
+			name: "lookup many hydrates parts and skips missing",
+			run: func(t *testing.T, c *database.Catalog) {
+				id1, err := Insert(c, Value{
+					Form: "James K. Robins",
+					Parts: []Part{
+						{Idx: 0, Value: "James", Type: PartTypeGiven},
+						{Idx: 1, Value: "Robins", Type: PartTypeSurname},
+					},
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				id2, err := Insert(c, Value{Form: "蒋浩"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				missing := make([]byte, 16)
+				missing[0] = 0x99
+				got, err := LookupMany(c, [][]byte{id1, id2, missing, id1})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(got) != 2 {
+					t.Fatalf("len=%d", len(got))
+				}
+				a := got[string(id1)]
+				if a.Form != "James K. Robins" || len(a.Parts) != 2 {
+					t.Fatalf("id1 %+v", a)
+				}
+				b := got[string(id2)]
+				if b.Form != "蒋浩" || len(b.Parts) != 0 {
+					t.Fatalf("id2 %+v", b)
+				}
+			},
+		},
+		{
 			name: "rejects closed catalog",
 			run: func(t *testing.T, c *database.Catalog) {
 				c.Close()

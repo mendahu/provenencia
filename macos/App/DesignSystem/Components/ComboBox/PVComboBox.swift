@@ -506,6 +506,7 @@ struct PVComboBox<Row: View>: View {
         // pointer, so the gesture fires; the mouse monitor passes panel
         // clicks through untouched.
         .onTapGesture { commit(option) }
+        .accessibilityAction(.default) { commit(option) }
         .accessibilityAddTraits(option.value == selection ? [.isSelected] : [])
         .accessibilityIdentifier(identifier("option.\(option.value)") ?? "")
     }
