@@ -1,12 +1,14 @@
 package subjectvocab
 
 import (
+	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database/properties"
 )
 
 // Declarative provenencia Interpretation subject vocabulary (create-time starter).
-// Presentation, locked bindings, and connect rules live here —
-// Install writes only structural catalog rows (types, properties, terms, bindings).
+// Presentation and non-bridge locked bindings live here. The connect matrix
+// (bridge endpoints + disambiguation) lives in core/connectrules; Install
+// derives bridge bindings from connectrules.BridgeBindings().
 // Term capabilities (birthday facets, tree-edge roles, …) are deferred until a later PR.
 
 const (
@@ -14,9 +16,9 @@ const (
 	RoleBridge      = "bridge"
 	RoleReification = "reification"
 
-	DisambiguationNone             = "none"
-	DisambiguationRole             = "role"
-	DisambiguationRelationshipType = "relationship_type"
+	DisambiguationNone             = connectrules.DisambiguationNone
+	DisambiguationRole             = connectrules.DisambiguationRole
+	DisambiguationRelationshipType = connectrules.DisambiguationRelationshipType
 )
 
 type presentation struct {
@@ -51,14 +53,6 @@ type seedBinding struct {
 
 type seedTerm struct {
 	PropertyKey, Key, Label, Description string
-}
-
-type seedConnectRule struct {
-	FromTypeKey, ToTypeKey string
-	BridgeTypeKey          string
-	EdgePropertyKeys       []string
-	Disambiguation         string
-	Refuse                 bool
 }
 
 var seedTypes = []seedType{
@@ -159,8 +153,9 @@ var seedProperties = []seedProperty{
 	{Key: "toponym", Label: "Toponym", Description: "Place name as interpreted from a Source", ValueType: properties.ValueTypeText},
 }
 
-// Bindings from docs/seeded-vocabulary.md §3.3.
-// Locked = required for connect macros and/or Conclusion ordering (event dates).
+// Non-bridge bindings from docs/seeded-vocabulary.md §3.3.
+// Locked = required for Conclusion ordering (event dates), etc.
+// Bridge type bindings come from connectrules.BridgeBindings() at Install time.
 var seedBindings = []seedBinding{
 	{TypeKey: "person", PropertyKey: "name", SortOrder: 0},
 	{TypeKey: "person", PropertyKey: "sex_at_birth", SortOrder: 1},
@@ -171,17 +166,6 @@ var seedBindings = []seedBinding{
 	{TypeKey: "event", PropertyKey: "end_date", SortOrder: 3, Locked: true},
 
 	{TypeKey: "place", PropertyKey: "toponym", SortOrder: 0},
-
-	{TypeKey: "participation", PropertyKey: "person", SortOrder: 0, Locked: true},
-	{TypeKey: "participation", PropertyKey: "event", SortOrder: 1, Locked: true},
-	{TypeKey: "participation", PropertyKey: "role", SortOrder: 2},
-
-	{TypeKey: "location", PropertyKey: "event", SortOrder: 0, Locked: true},
-	{TypeKey: "location", PropertyKey: "place", SortOrder: 1, Locked: true},
-
-	{TypeKey: "relationship", PropertyKey: "person", SortOrder: 0, Locked: true},
-	{TypeKey: "relationship", PropertyKey: "related_to", SortOrder: 1, Locked: true},
-	{TypeKey: "relationship", PropertyKey: "relationship_type", SortOrder: 2},
 
 	{TypeKey: "source", PropertyKey: "mentions", SortOrder: 0},
 	{TypeKey: "source", PropertyKey: "remark", SortOrder: 1},
@@ -223,42 +207,4 @@ var seedTerms = []seedTerm{
 	{PropertyKey: "relationship_type", Key: "nibling", Label: "Niece / nephew"},
 	{PropertyKey: "relationship_type", Key: "guardian", Label: "Guardian"},
 	{PropertyKey: "relationship_type", Key: "ward", Label: "Ward"},
-}
-
-// Connect matrix (interpretation-graph-ui / Spike 7). Omitted pairs refuse by default.
-var seedConnect = []seedConnectRule{
-	{
-		FromTypeKey: "person", ToTypeKey: "event",
-		BridgeTypeKey:    "participation",
-		EdgePropertyKeys: []string{"person", "event"},
-		Disambiguation:   DisambiguationRole,
-	},
-	{
-		FromTypeKey: "event", ToTypeKey: "person",
-		BridgeTypeKey:    "participation",
-		EdgePropertyKeys: []string{"person", "event"},
-		Disambiguation:   DisambiguationRole,
-	},
-	{
-		FromTypeKey: "person", ToTypeKey: "person",
-		BridgeTypeKey:    "relationship",
-		EdgePropertyKeys: []string{"person", "related_to"},
-		Disambiguation:   DisambiguationRelationshipType,
-	},
-	{
-		FromTypeKey: "event", ToTypeKey: "place",
-		BridgeTypeKey:    "location",
-		EdgePropertyKeys: []string{"event", "place"},
-		Disambiguation:   DisambiguationNone,
-	},
-	{
-		FromTypeKey: "place", ToTypeKey: "event",
-		BridgeTypeKey:    "location",
-		EdgePropertyKeys: []string{"event", "place"},
-		Disambiguation:   DisambiguationNone,
-	},
-	{FromTypeKey: "person", ToTypeKey: "place", Refuse: true},
-	{FromTypeKey: "place", ToTypeKey: "person", Refuse: true},
-	{FromTypeKey: "event", ToTypeKey: "event", Refuse: true},
-	{FromTypeKey: "place", ToTypeKey: "place", Refuse: true},
 }

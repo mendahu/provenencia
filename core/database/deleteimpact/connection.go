@@ -2,6 +2,8 @@ package deleteimpact
 
 import (
 	"database/sql"
+
+	"github.com/mendahu/provenencia/core/connectrules"
 )
 
 const sqlSubjectObservations = `SELECT o.id, o.ref, o.value_date_id, o.value_name_id, st.key, p.key, p.origin
@@ -79,39 +81,7 @@ func listSubjectObs(tx *sql.Tx, subjectID []byte) ([]subjectObsRow, error) {
 }
 
 func isConnectionFacet(r subjectObsRow) bool {
-	if r.origin != originProvenencia {
-		return false
-	}
-	if isEdgePair(r.typeKey, r.propKey) {
-		return true
-	}
-	return isDisambiguation(r.typeKey, r.propKey)
-}
-
-// Mirrors subjectvocab.EdgeEndpoint for seeded connect rules without importing
-// that package (propertyterms → deleteimpact would cycle).
-func isEdgePair(typeKey, propKey string) bool {
-	switch typeKey {
-	case "participation":
-		return propKey == "person" || propKey == "event"
-	case "relationship":
-		return propKey == "person" || propKey == "related_to"
-	case "location":
-		return propKey == "event" || propKey == "place"
-	default:
-		return false
-	}
-}
-
-func isDisambiguation(typeKey, propKey string) bool {
-	switch typeKey {
-	case "participation":
-		return propKey == "role"
-	case "relationship":
-		return propKey == "relationship_type"
-	default:
-		return false
-	}
+	return connectrules.IsConnectionFacet(r.typeKey, r.propKey, r.origin)
 }
 
 func isEdgeObservation(tx *sql.Tx, observationID []byte) (bool, error) {
@@ -130,7 +100,7 @@ func isEdgeObservation(tx *sql.Tx, observationID []byte) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return origin == originProvenencia && isEdgePair(typeKey, propKey), nil
+	return connectrules.IsEdgePair(typeKey, propKey, origin), nil
 }
 
 // ReleaseConnectionFacets deletes edge + disambiguation Observations on a

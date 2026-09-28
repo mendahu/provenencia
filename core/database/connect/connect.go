@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/mendahu/provenencia/core/apperr"
+	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/citations"
@@ -274,7 +275,7 @@ func exactObservationInputs(
 }
 
 func needsDisambiguation(rule subjectvocab.ConnectRule) bool {
-	return rule.Disambiguation != "" && rule.Disambiguation != "none"
+	return connectrules.HasDisambiguation(rule.Disambiguation)
 }
 
 func citationFieldsZero(in citations.CreateInput) bool {

@@ -7,13 +7,13 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
+	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/properties"
-	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/ref"
 )
 
@@ -271,7 +271,7 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 		}
 		return Observation{}, nil, err
 	}
-	if _, ok := subjectvocab.EdgeEndpoint(typeKey, prop.Key); ok && !opts.AllowEdgeRows {
+	if _, ok := connectrules.Edge(typeKey, prop.Key); ok && !opts.AllowEdgeRows {
 		return Observation{}, nil, ErrEdgeLocked
 	}
 

@@ -3,10 +3,11 @@
 //
 // Install upserts shipped Subject types, Properties, and bindings once at
 // catalog create. Call it only from onboarding.createCatalog — not on open.
-// Capabilities (type-level), presentation tokens, locked bindings, and the connect matrix
-// live in the compiled registry and are exposed via lookup helpers (no SQLite
-// JSON). Term capabilities (birthday / tree-edge) are deferred. Future plugin:<id>
-// modules extend the same registry shape.
+// Capabilities (type-level), presentation tokens, and non-bridge locked bindings
+// live in this compiled registry. The connect matrix lives in core/connectrules;
+// Connect / ListConnectRules / EdgeEndpoint / Install bridge bindings loop All()
+// / BridgeBindings(). Term capabilities (birthday / tree-edge) are deferred.
+// Future plugin:<id> modules call connectrules.Register and extend the same shape.
 package subjectvocab
 
 import (
@@ -16,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/mendahu/provenencia/core/apperr"
+	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -269,7 +271,7 @@ func Install(c *database.Catalog) error {
 			return err
 		}
 	}
-	for _, b := range seedBindings {
+	for _, b := range allBindings() {
 		typeID := typeIDs[b.TypeKey]
 		propID := propIDs[b.PropertyKey]
 		if len(typeID) == 0 || len(propID) == 0 {
@@ -317,11 +319,12 @@ func PresentationFor(key string) (Presentation, bool) {
 	return info.Presentation, true
 }
 
-// BindingsForType returns seed bindings for a type key (compiled registry).
+// BindingsForType returns seed bindings for a type key (compiled registry +
+// connectrules-derived bridge bindings).
 func BindingsForType(typeKey string) []seedBinding {
 	typeKey = strings.TrimSpace(typeKey)
 	var out []seedBinding
-	for _, b := range seedBindings {
+	for _, b := range allBindings() {
 		if b.TypeKey == typeKey {
 			out = append(out, b)
 		}
@@ -333,7 +336,7 @@ func BindingsForType(typeKey string) []seedBinding {
 func LockedBinding(typeKey, propertyKey string) bool {
 	typeKey = strings.TrimSpace(typeKey)
 	propertyKey = strings.TrimSpace(propertyKey)
-	for _, b := range seedBindings {
+	for _, b := range allBindings() {
 		if b.TypeKey == typeKey && b.PropertyKey == propertyKey {
 			return b.Locked
 		}
@@ -341,11 +344,27 @@ func LockedBinding(typeKey, propertyKey string) bool {
 	return false
 }
 
+func allBindings() []seedBinding {
+	out := append([]seedBinding(nil), seedBindings...)
+	for _, b := range connectrules.BridgeBindings() {
+		// Create-time Install only materializes product-origin bridges.
+		// Plugin modules will Install their own rows when enabled.
+		if b.Origin != connectrules.OriginProvenencia {
+			continue
+		}
+		out = append(out, seedBinding{
+			TypeKey: b.TypeKey, PropertyKey: b.PropertyKey,
+			SortOrder: b.SortOrder, Locked: b.Locked,
+		})
+	}
+	return out
+}
+
 // Connect returns the connect rule for an ordered pair, or refuse-by-default.
 func Connect(fromTypeKey, toTypeKey string) ConnectRule {
 	fromTypeKey = strings.TrimSpace(fromTypeKey)
 	toTypeKey = strings.TrimSpace(toTypeKey)
-	for _, r := range seedConnect {
+	for _, r := range connectrules.All() {
 		if r.FromTypeKey == fromTypeKey && r.ToTypeKey == toTypeKey {
 			return ruleFromSeed(r)
 		}
@@ -359,33 +378,30 @@ func Connect(fromTypeKey, toTypeKey string) ConnectRule {
 
 // ListConnectRules returns the full seed connect matrix.
 func ListConnectRules() []ConnectRule {
-	out := make([]ConnectRule, 0, len(seedConnect))
-	for _, r := range seedConnect {
+	all := connectrules.All()
+	out := make([]ConnectRule, 0, len(all))
+	for _, r := range all {
 		out = append(out, ruleFromSeed(r))
 	}
 	return out
 }
 
-func ruleFromSeed(r seedConnectRule) ConnectRule {
+func ruleFromSeed(r connectrules.Rule) ConnectRule {
 	return ConnectRule{
 		FromTypeKey:      r.FromTypeKey,
 		ToTypeKey:        r.ToTypeKey,
 		BridgeTypeKey:    r.BridgeTypeKey,
-		EdgePropertyKeys: append([]string(nil), r.EdgePropertyKeys...),
-		Edges:            edgesFromKeys(r.EdgePropertyKeys),
+		EdgePropertyKeys: r.EdgePropertyKeys(),
+		Edges:            edgesFromRule(r),
 		Disambiguation:   r.Disambiguation,
 		Refuse:           r.Refuse,
 	}
 }
 
-func edgesFromKeys(keys []string) []ConnectEdge {
-	out := make([]ConnectEdge, 0, len(keys))
-	for _, key := range keys {
-		endpoint := key
-		if key == "related_to" {
-			endpoint = "person"
-		}
-		out = append(out, ConnectEdge{PropertyKey: key, EndpointTypeKey: endpoint})
+func edgesFromRule(r connectrules.Rule) []ConnectEdge {
+	out := make([]ConnectEdge, 0, len(r.Endpoints))
+	for _, e := range r.Endpoints {
+		out = append(out, ConnectEdge{PropertyKey: e.PropertyKey, EndpointTypeKey: e.TypeKey})
 	}
 	return out
 }
@@ -393,22 +409,7 @@ func edgesFromKeys(keys []string) []ConnectEdge {
 // EdgeEndpoint returns the endpoint type a bridge edge property binds, if the
 // pair is a non-refused connect rule.
 func EdgeEndpoint(bridgeTypeKey, propertyKey string) (endpointTypeKey string, ok bool) {
-	bridgeTypeKey = strings.TrimSpace(bridgeTypeKey)
-	propertyKey = strings.TrimSpace(propertyKey)
-	if bridgeTypeKey == "" || propertyKey == "" {
-		return "", false
-	}
-	for _, r := range seedConnect {
-		if r.Refuse || r.BridgeTypeKey != bridgeTypeKey {
-			continue
-		}
-		for _, e := range edgesFromKeys(r.EdgePropertyKeys) {
-			if e.PropertyKey == propertyKey {
-				return e.EndpointTypeKey, true
-			}
-		}
-	}
-	return "", false
+	return connectrules.Edge(bridgeTypeKey, propertyKey)
 }
 
 // AllTypes returns every seeded type's registry info.
