@@ -17,9 +17,12 @@ final class SourcePageModel {
 
     private(set) var isLoading = false
     var loadError: Error?
-    var pendingImpact: PVDeleteImpactRequest?
-    var isDeletingResource = false
-    private var pendingResourceID: String?
+    let deleteImpact = DeleteImpactFlow()
+    var pendingImpact: PVDeleteImpactRequest? {
+        get { deleteImpact.request }
+        set { deleteImpact.applyRequest(newValue) }
+    }
+    var isDeletingResource: Bool { deleteImpact.isRunning }
 
     /// Session contributor name for the note composer byline.
     let sessionDisplayName: String
@@ -168,33 +171,25 @@ final class SourcePageModel {
     /// Returns true when the Source itself was erased (leave the page).
     @discardableResult
     func confirmResourceDelete() async -> Bool {
-        guard let request = pendingImpact, request.report.allowed, let id = pendingResourceID else {
-            return false
-        }
-        guard !isDeletingResource else { return false }
-        isDeletingResource = true
-        defer { isDeletingResource = false }
-        context.clearPageError()
-        do {
-            if request.target.kind == "source" {
+        let kind = deleteImpact.request?.target.kind
+        let erasedSource = await deleteImpact.confirm { target in
+            if target.kind == "source" {
                 try await context.store.deleteSource(
                     projectDir: context.projectDir,
                     userID: context.userID,
-                    sourceID: id
+                    sourceID: target.id
                 )
-                context.session.apply(.deletedSource(id: id))
-                pendingImpact = nil
-                pendingResourceID = nil
-                return true
+                context.session.apply(.deletedSource(id: target.id))
+                return
             }
             try await context.store.deleteArtifact(
                 projectDir: context.projectDir,
                 userID: context.userID,
-                artifactID: id
+                artifactID: target.id
             )
             if var workspace = context.workspace {
-                workspace.artifacts.removeAll { $0.id == id }
-                if workspace.source.primaryArtifactID == id {
+                workspace.artifacts.removeAll { $0.id == target.id }
+                if workspace.source.primaryArtifactID == target.id {
                     workspace.source.primaryArtifactID = ""
                     workspace.source.coverMode = "type_icon"
                     workspace.source.thumbnailRelPath = ""
@@ -203,34 +198,25 @@ final class SourcePageModel {
             }
             context.toast = VocabularyToast(
                 title: String(localized: L10n.Sources.toastArtifactDeletedTitle),
-                body: L10n.Sources.toastArtifactDeletedBody(ref: request.target.ref),
+                body: L10n.Sources.toastArtifactDeletedBody(ref: target.ref),
                 tone: .success
             )
             context.notifyWorkspaceMutated()
-            pendingImpact = nil
-            pendingResourceID = nil
-            return false
-        } catch {
-            context.pageError = L10n.Errors.message(for: error)
-            return false
         }
+        return erasedSource && kind == "source"
     }
 
     private func presentImpact(kind: String, id: String, ref: String, title: String) async {
         context.clearPageError()
-        do {
-            let report = try await context.store.getDeleteImpact(
-                projectDir: context.projectDir,
+        await deleteImpact.ask(kind: kind, id: id, ref: ref, title: title) {
+            try await self.context.store.getDeleteImpact(
+                projectDir: self.context.projectDir,
                 kind: kind,
                 id: id
             )
-            pendingResourceID = id
-            pendingImpact = PVDeleteImpactRequest(
-                target: PVDeleteImpactTarget(kind: kind, ref: ref, title: title),
-                report: report
-            )
-        } catch {
-            context.pageError = L10n.Errors.message(for: error)
+        }
+        if deleteImpact.request == nil, let message = deleteImpact.error {
+            context.pageError = message
         }
     }
 

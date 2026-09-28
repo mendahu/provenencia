@@ -35,6 +35,10 @@ enum CatalogMutation: Sendable, Equatable {
     /// (create, relabel, or delete).
     case mutatedSourceGraph(sourceId: String)
 
+    /// A Subject (including a bridge) was erased. Releases connection facets
+    /// so Observation `usedBy` and citation lists must reload.
+    case deletedSubject(sourceId: String)
+
     /// A Citation was created or updated for this Source (including cited-bridge),
     /// or an Observation on it was written. Also moves each Property's `usedBy`.
     case savedCitation(sourceId: String)
@@ -64,6 +68,7 @@ enum CatalogMutationKind: Hashable, Sendable {
     case mutatedSourceWorkspace
     case mutatedSourceMetadata
     case mutatedSourceGraph
+    case deletedSubject
     case savedCitation
     case createdProperty
     case updatedProperty
@@ -106,6 +111,8 @@ extension CatalogMutation {
             return .mutatedSourceMetadata
         case .mutatedSourceGraph:
             return .mutatedSourceGraph
+        case .deletedSubject:
+            return .deletedSubject
         case .savedCitation:
             return .savedCitation
         case .createdProperty:

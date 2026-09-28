@@ -510,6 +510,8 @@ struct CatalogQueryRegistryTests {
         #expect(registry.invalidations(by: .deletedSource(id: "s1"), project: project) == [
             .key(.sourcesList(project: project)),
             .key(.sourceTypesList(project: project)),
+            .key(.sourceWorkspace(project: project, sourceId: "s1")),
+            .key(.sourceGraph(project: project, sourceId: "s1")),
         ])
         // Adding vocabulary touches only the list that owns it — the Source
         // page reads that list rather than carrying its own copy.
@@ -518,6 +520,10 @@ struct CatalogQueryRegistryTests {
         ])
         #expect(registry.invalidations(by: .createdSourceType, project: project) == [
             .key(.sourceTypesList(project: project)),
+        ])
+        #expect(registry.invalidations(by: .deletedSourceType(id: "t1"), project: project) == [
+            .key(.sourceTypesList(project: project)),
+            .allCached(.typeSuggestions),
         ])
         // Edits that restate a *derived* row still fan out, since the mutation
         // names no single page: metadata rows embed their field, and the row set
@@ -555,6 +561,12 @@ struct CatalogQueryRegistryTests {
             .key(.subjectFieldsWorkspace(project: project)),
             .allCached(.citationsByArtifact),
         ])
+        #expect(registry.invalidations(by: .deletedSubject(sourceId: "s1"), project: project) == [
+            .key(.sourceGraph(project: project, sourceId: "s1")),
+            .key(.citationCounts(project: project, sourceId: "s1")),
+            .key(.subjectFieldsWorkspace(project: project)),
+            .allCached(.citationsByArtifact),
+        ])
         #expect(registry.invalidations(by: .createdPropertyTerm(propertyId: "p1"), project: project) == [
             .key(.propertyTerms(project: project, propertyId: "p1")),
         ])
@@ -566,6 +578,7 @@ struct CatalogQueryRegistryTests {
             .assignedTypeSuggestion(typeId: "t1"), .removedTypeSuggestion(typeId: "t1"),
             .mutatedSourceWorkspace(sourceId: "s1"), .mutatedSourceMetadata(sourceId: "s1"),
             .mutatedSourceGraph(sourceId: "s1"),
+            .deletedSubject(sourceId: "s1"),
             .savedCitation(sourceId: "s1"),
             .createdPropertyTerm(propertyId: "p1"),
         ]

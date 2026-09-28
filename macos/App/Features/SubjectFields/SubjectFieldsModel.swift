@@ -42,10 +42,13 @@ final class SubjectFieldsModel {
     var formError: String?
     var toast: VocabularyToast?
     private(set) var lockedCallout: String?
-    private(set) var pendingDeleteID: String?
-    var pendingImpact: PVDeleteImpactRequest?
-    private(set) var isDeleting = false
-    private(set) var deleteError: String?
+    let deleteImpact = DeleteImpactFlow()
+    var pendingImpact: PVDeleteImpactRequest? {
+        get { deleteImpact.request }
+        set { deleteImpact.applyRequest(newValue) }
+    }
+    var isDeleting: Bool { deleteImpact.isRunning }
+    var deleteError: String? { deleteImpact.error }
     var searchFocused = false
 
     private let userID: String
@@ -185,8 +188,8 @@ final class SubjectFieldsModel {
     }
 
     var pendingDeleteProperty: CatalogProperty? {
-        guard let pendingDeleteID else { return nil }
-        return snapshot.properties.first { $0.id == pendingDeleteID }
+        guard let id = deleteImpact.request?.target.id else { return nil }
+        return snapshot.properties.first { $0.id == id }
     }
 
     func syncCatalogCounts() {
@@ -352,51 +355,35 @@ final class SubjectFieldsModel {
     func askDelete() async {
         guard let property = selectedProperty else { return }
         cancelEdit()
-        deleteError = nil
-        do {
-            let report = try await store.getDeleteImpact(
-                projectDir: session.projectKey.projectDir,
+        await deleteImpact.ask(
+            kind: "property",
+            id: property.id,
+            ref: property.key,
+            title: property.label
+        ) {
+            try await self.store.getDeleteImpact(
+                projectDir: self.session.projectKey.projectDir,
                 kind: "property",
                 id: property.id
             )
-            pendingDeleteID = property.id
-            pendingImpact = PVDeleteImpactRequest(
-                target: PVDeleteImpactTarget(
-                    kind: "property",
-                    ref: property.key,
-                    title: property.label
-                ),
-                report: report
-            )
-        } catch {
-            deleteError = L10n.Errors.message(for: error)
         }
     }
 
     func cancelDelete() {
-        guard !isDeleting else { return }
-        pendingDeleteID = nil
-        pendingImpact = nil
+        deleteImpact.cancel()
     }
 
     @discardableResult
     func confirmPendingImpact() async -> Bool {
-        guard let request = pendingImpact, request.report.allowed, let property = pendingDeleteProperty,
-              !isDeleting
-        else { return false }
-        isDeleting = true
-        deleteError = nil
-        defer { isDeleting = false }
-        do {
+        guard let property = pendingDeleteProperty else { return false }
+        return await deleteImpact.confirm { target in
             try await store.deleteProperty(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
-                propertyID: property.id
+                propertyID: target.id
             )
             session.apply(.deletedProperty)
             selectedPropertyID = nil
-            pendingDeleteID = nil
-            pendingImpact = nil
             formError = nil
             cancelEdit()
             toast = VocabularyToast(
@@ -405,10 +392,6 @@ final class SubjectFieldsModel {
                 tone: .success
             )
             syncCatalogCounts()
-            return true
-        } catch {
-            deleteError = L10n.Errors.message(for: error)
-            return false
         }
     }
 

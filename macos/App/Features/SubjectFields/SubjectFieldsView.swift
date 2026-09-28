@@ -75,14 +75,7 @@ private struct SubjectFieldsContent: View {
         .background(PVColor.surfacePage)
         .vocabularyToastOverlay($model.toast, identifier: "subjectFields.toast")
         .pvDeleteImpact(
-            item: Binding(
-                get: { model.pendingImpact },
-                set: { newValue in
-                    model.pendingImpact = newValue
-                    if newValue == nil { model.cancelDelete() }
-                }
-            ),
-            isRunning: model.isDeleting,
+            flow: model.deleteImpact,
             accessibilityIdentifierPrefix: "subjectFields.deleteImpact",
             onConfirm: {
                 Task {
@@ -462,7 +455,7 @@ private struct SubjectFieldsContent: View {
             SubjectFieldsIdentityEditor(property: property, model: model)
                 .id(property.id)
 
-            if let deleteError = model.deleteError {
+            if model.deleteImpact.request == nil, let deleteError = model.deleteError {
                 PVCallout(tone: .danger, message: deleteError)
                     .accessibilityIdentifier("subjectFields.deleteError")
             }

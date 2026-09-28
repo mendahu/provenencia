@@ -65,6 +65,7 @@ struct CatalogQueryRegistry: Sendable {
                 .mutatedSourceWorkspace, .mutatedSourceMetadata, .changedSourceType,
                 .updatedMetadataField, .deletedMetadataField,
                 .assignedTypeSuggestion, .removedTypeSuggestion,
+                .deletedSource,
             ]
         ),
         Spec(
@@ -75,17 +76,18 @@ struct CatalogQueryRegistry: Sendable {
             invalidateOn: [
                 .assignedTypeSuggestion, .removedTypeSuggestion,
                 .updatedMetadataField, .deletedMetadataField,
+                .deletedSourceType,
             ]
         ),
         Spec(
             kind: .sourceGraph,
             stalePolicy: .sessionFresh,
-            invalidateOn: [.mutatedSourceGraph, .savedCitation]
+            invalidateOn: [.mutatedSourceGraph, .savedCitation, .deletedSubject, .deletedSource]
         ),
         Spec(
             kind: .citationCounts,
             stalePolicy: .sessionFresh,
-            invalidateOn: [.savedCitation]
+            invalidateOn: [.savedCitation, .deletedSubject]
         ),
         Spec(
             kind: .subjectFieldsWorkspace,
@@ -94,7 +96,7 @@ struct CatalogQueryRegistry: Sendable {
             // travel as `savedCitation`, same as the composer graph payload.
             invalidateOn: [
                 .createdProperty, .updatedProperty, .deletedProperty,
-                .mutatedSubjectTypeFields, .savedCitation,
+                .mutatedSubjectTypeFields, .savedCitation, .deletedSubject,
             ]
         ),
         Spec(
@@ -111,7 +113,7 @@ struct CatalogQueryRegistry: Sendable {
         Spec(
             kind: .citationsByArtifact,
             stalePolicy: .sessionFresh,
-            invalidateOn: [.savedCitation]
+            invalidateOn: [.savedCitation, .deletedSubject]
         ),
         Spec(
             kind: .sourceGraphProgress,
@@ -212,7 +214,8 @@ private extension CatalogQueryKey.Kind {
             return .key(.credibilityGradesList(project: project))
         case .sourceWorkspace:
             switch mutation {
-            case .mutatedSourceWorkspace(let sourceId), .mutatedSourceMetadata(let sourceId):
+            case .mutatedSourceWorkspace(let sourceId), .mutatedSourceMetadata(let sourceId),
+                 .deletedSource(let sourceId):
                 return .key(.sourceWorkspace(project: project, sourceId: sourceId))
             case .changedSourceType(let source):
                 return .key(.sourceWorkspace(project: project, sourceId: source.id))
@@ -228,14 +231,15 @@ private extension CatalogQueryKey.Kind {
             }
         case .sourceGraph:
             switch mutation {
-            case .mutatedSourceGraph(let sourceId), .savedCitation(let sourceId):
+            case .mutatedSourceGraph(let sourceId), .savedCitation(let sourceId),
+                 .deletedSubject(let sourceId), .deletedSource(let sourceId):
                 return .key(.sourceGraph(project: project, sourceId: sourceId))
             default:
                 return .allCached(.sourceGraph)
             }
         case .citationCounts:
             switch mutation {
-            case .savedCitation(let sourceId):
+            case .savedCitation(let sourceId), .deletedSubject(let sourceId):
                 return .key(.citationCounts(project: project, sourceId: sourceId))
             default:
                 return .allCached(.citationCounts)

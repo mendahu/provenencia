@@ -99,9 +99,12 @@ final class CitationComposerModel {
     @ObservationIgnored
     weak var navigation: WorkspaceNavigation?
     var pendingLeave: PendingLeave?
-    var pendingImpact: PVDeleteImpactRequest?
-    var isDeletingResource = false
-    private var pendingObservationRowID: UUID?
+    let deleteImpact = DeleteImpactFlow()
+    var pendingImpact: PVDeleteImpactRequest? {
+        get { deleteImpact.request }
+        set { deleteImpact.applyRequest(newValue) }
+    }
+    var isDeletingResource: Bool { deleteImpact.isRunning }
     private var loadedCitationRef = ""
 
     let fields = CitationFieldsDraft()
@@ -537,7 +540,6 @@ final class CitationComposerModel {
 
     func askDeleteCitation() async {
         guard let id = activeCitationID else { return }
-        pendingObservationRowID = nil
         await presentImpact(
             kind: "citation",
             id: id,
@@ -550,40 +552,33 @@ final class CitationComposerModel {
         guard let row = observationRows.rows.first(where: { $0.id == rowID }),
               let persistedID = row.persistedID
         else { return }
-        pendingObservationRowID = rowID
         let ref = row.persistedRef ?? persistedID
         await presentImpact(kind: "observation", id: persistedID, ref: ref, title: ref)
     }
 
     func confirmPendingImpact() async {
-        guard let request = pendingImpact, request.report.allowed, !isDeletingResource else { return }
-        isDeletingResource = true
-        defer { isDeletingResource = false }
-        fields.error = nil
-        do {
-            if request.target.kind == "citation" {
-                guard let id = activeCitationID else { return }
+        _ = await deleteImpact.confirm { target in
+            if target.kind == "citation" {
                 try await store.deleteCitation(
                     projectDir: session.projectKey.projectDir,
                     userID: userID,
-                    citationID: id
+                    citationID: target.id
                 )
                 context.applySavedCitation()
-                pendingImpact = nil
-                pendingObservationRowID = nil
                 resetComposerIdentity(keepLocator: true)
                 await reloadListedCitations()
                 applyEntryFocus()
                 await presentAfterIdentityChange()
                 return
             }
-            if request.target.kind == "observation", let rowID = pendingObservationRowID {
+            if target.kind == "observation",
+               let rowID = observationRows.rows.first(where: { $0.persistedID == target.id })?.id
+            {
                 await observationRows.deletePersisted(rowID: rowID)
             }
-            pendingImpact = nil
-            pendingObservationRowID = nil
-        } catch {
-            fields.error = L10n.Errors.message(for: error)
+        }
+        if let message = deleteImpact.error {
+            fields.error = message
         }
     }
 
@@ -872,18 +867,15 @@ final class CitationComposerModel {
 
     private func presentImpact(kind: String, id: String, ref: String, title: String) async {
         fields.error = nil
-        do {
-            let report = try await store.getDeleteImpact(
-                projectDir: session.projectKey.projectDir,
+        await deleteImpact.ask(kind: kind, id: id, ref: ref, title: title) {
+            try await self.store.getDeleteImpact(
+                projectDir: self.session.projectKey.projectDir,
                 kind: kind,
                 id: id
             )
-            pendingImpact = PVDeleteImpactRequest(
-                target: PVDeleteImpactTarget(kind: kind, ref: ref, title: title),
-                report: report
-            )
-        } catch {
-            fields.error = L10n.Errors.message(for: error)
+        }
+        if deleteImpact.request == nil, let message = deleteImpact.error {
+            fields.error = message
         }
     }
 

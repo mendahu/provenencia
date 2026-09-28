@@ -34,10 +34,13 @@ final class SourceTypesModel {
     private(set) var isAssigning = false
     private(set) var removingFieldID: String?
 
-    private(set) var pendingDeleteID: String?
-    var pendingImpact: PVDeleteImpactRequest?
-    private(set) var isDeleting = false
-    private(set) var deleteError: String?
+    let deleteImpact = DeleteImpactFlow()
+    var pendingImpact: PVDeleteImpactRequest? {
+        get { deleteImpact.request }
+        set { deleteImpact.applyRequest(newValue) }
+    }
+    var isDeleting: Bool { deleteImpact.isRunning }
+    var deleteError: String? { deleteImpact.error }
 
     private let userID: String
     private let store: any GenealogyStore
@@ -220,8 +223,8 @@ final class SourceTypesModel {
     }
 
     var pendingDeleteType: CatalogSourceType? {
-        guard let pendingDeleteID else { return nil }
-        return types.first { $0.id == pendingDeleteID }
+        guard let id = deleteImpact.request?.target.id else { return nil }
+        return types.first { $0.id == id }
     }
 
     var countLine: String {
@@ -442,49 +445,33 @@ final class SourceTypesModel {
 
     func askDelete() async {
         guard let type = selectedType else { return }
-        deleteError = nil
-        do {
-            let report = try await store.getDeleteImpact(
-                projectDir: session.projectKey.projectDir,
+        await deleteImpact.ask(
+            kind: "source_type",
+            id: type.id,
+            ref: type.key,
+            title: type.label
+        ) {
+            try await self.store.getDeleteImpact(
+                projectDir: self.session.projectKey.projectDir,
                 kind: "source_type",
                 id: type.id
             )
-            pendingDeleteID = type.id
-            pendingImpact = PVDeleteImpactRequest(
-                target: PVDeleteImpactTarget(
-                    kind: "source_type",
-                    ref: type.key,
-                    title: type.label
-                ),
-                report: report
-            )
-        } catch {
-            deleteError = L10n.Errors.message(for: error)
         }
     }
 
     func cancelDelete() {
-        guard !isDeleting else { return }
-        pendingDeleteID = nil
-        pendingImpact = nil
+        deleteImpact.cancel()
     }
 
     @discardableResult
     func confirmPendingImpact() async -> Bool {
-        guard let request = pendingImpact, request.report.allowed, let type = pendingDeleteType,
-              !isDeleting
-        else { return false }
-        isDeleting = true
-        deleteError = nil
-        defer { isDeleting = false }
-        do {
+        guard let type = pendingDeleteType else { return false }
+        return await deleteImpact.confirm { target in
             try await store.deleteSourceType(
-                projectDir: session.projectKey.projectDir, userID: userID, typeID: type.id
+                projectDir: session.projectKey.projectDir, userID: userID, typeID: target.id
             )
-            session.apply(.deletedSourceType(id: type.id))
-            patchTypesList { rows in rows.removeAll { $0.id == type.id } }
-            pendingDeleteID = nil
-            pendingImpact = nil
+            session.apply(.deletedSourceType(id: target.id))
+            patchTypesList { rows in rows.removeAll { $0.id == target.id } }
             formError = nil
             suggestionError = nil
             mode = .empty
@@ -494,10 +481,6 @@ final class SourceTypesModel {
                 tone: .success
             )
             publishCounts()
-            return true
-        } catch {
-            deleteError = L10n.Errors.message(for: error)
-            return false
         }
     }
 

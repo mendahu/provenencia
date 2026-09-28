@@ -99,28 +99,112 @@ struct PVDeleteImpactCopyTests {
         }
     }
 
-    @Test func activateNavigatesThenDismisses() {
+    @Test @MainActor func activateNavigatesThenDismisses() {
         var navigated: WorkspaceLocation?
         var dismissed = false
         let row = PVDeleteImpactPreviewData.listed(ref: "OBS-4Q2PA", title: "Name: Ellen Hartley")
         PVDeleteImpactControls.activate(
             row,
             onNavigate: { navigated = $0 },
-            dismiss: { dismissed = true }
+            dismiss: { dismissed = true },
+            then: { $0() }
         )
-        #expect(navigated == row.location)
         #expect(dismissed)
+        #expect(navigated == row.location)
     }
 }
 
 @Suite
 struct PVDeleteImpactRequestTests {
-    @Test func identityCombinesKindAndRef() {
+    @Test func identityCombinesKindAndId() {
         let request = PVDeleteImpactRequest(
             target: PVDeleteImpactPreviewData.citation,
             report: PVDeleteImpactPreviewData.allowed
         )
-        #expect(request.id == "citation:CIT-7KD45")
+        #expect(request.id == "citation:cit-preview")
+        #expect(request.target.id == "cit-preview")
+    }
+}
+
+@Suite
+@MainActor
+struct DeleteImpactFlowTests {
+    @Test func askStoresCatalogIdOnTheRequest() async {
+        let flow = DeleteImpactFlow()
+        await flow.ask(kind: "citation", id: "cit-1", ref: "CIT-1", title: "Census") {
+            CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
+        }
+        #expect(flow.request?.target.id == "cit-1")
+        #expect(flow.request?.id == "citation:cit-1")
+        #expect(flow.error == nil)
+    }
+
+    @Test func confirmPerformsAgainstTheAskedId() async {
+        let flow = DeleteImpactFlow()
+        await flow.ask(kind: "observation", id: "obs-1", ref: "OBS-1", title: "Name") {
+            CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
+        }
+        var seen: String?
+        let ok = await flow.confirm { target in
+            seen = target.id
+        }
+        #expect(ok)
+        #expect(seen == "obs-1")
+        #expect(flow.request == nil)
+    }
+
+    @Test func inUseRefetchTurnsConfirmIntoNotice() async {
+        let flow = DeleteImpactFlow()
+        var fetches = 0
+        await flow.ask(kind: "citation", id: "cit-1", ref: "CIT-1", title: "Census") {
+            fetches += 1
+            if fetches == 1 {
+                return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
+            }
+            return CatalogDeleteImpact(
+                allowed: false,
+                gate: .inbound,
+                groups: [
+                    CatalogDeleteImpactGroup(
+                        via: "observations.citation_id",
+                        kind: "observation",
+                        total: 1,
+                        listed: []
+                    ),
+                ]
+            )
+        }
+        let ok = await flow.confirm { _ in
+            throw CoreInvokeError.coded(
+                status: 1,
+                code: "citations.in_use",
+                kind: .conflict,
+                params: []
+            )
+        }
+        #expect(!ok)
+        #expect(fetches == 2)
+        #expect(flow.request?.report.allowed == false)
+        #expect(flow.request?.report.gate == .inbound)
+        #expect(flow.error == nil)
+    }
+
+    @Test func otherConfirmErrorStaysOnTheSheet() async {
+        let flow = DeleteImpactFlow()
+        await flow.ask(kind: "citation", id: "cit-1", ref: "CIT-1", title: "Census") {
+            CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
+        }
+        let ok = await flow.confirm { _ in
+            throw CoreInvokeError.coded(
+                status: 1,
+                code: "internal",
+                kind: .internal,
+                params: []
+            )
+        }
+        #expect(!ok)
+        #expect(flow.request?.report.allowed == true)
+        #expect(flow.error != nil)
     }
 }
 

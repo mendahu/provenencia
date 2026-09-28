@@ -63,7 +63,7 @@ struct SourceTypesDetailPane: View {
     private func panel(isLocked: Bool) -> some View {
         VStack(alignment: .leading, spacing: PVSpacing.space7) {
             panelHeader
-            if let deleteError = model.deleteError {
+            if model.deleteImpact.request == nil, let deleteError = model.deleteError {
                 PVCallout(tone: .danger, message: deleteError)
                     .accessibilityIdentifier("sourceTypes.deleteError")
             }

@@ -28,10 +28,13 @@ final class SourceFieldsModel {
     var formError: String?
     var toast: VocabularyToast?
 
-    private(set) var pendingDeleteID: String?
-    var pendingImpact: PVDeleteImpactRequest?
-    private(set) var isDeleting = false
-    private(set) var deleteError: String?
+    let deleteImpact = DeleteImpactFlow()
+    var pendingImpact: PVDeleteImpactRequest? {
+        get { deleteImpact.request }
+        set { deleteImpact.applyRequest(newValue) }
+    }
+    var isDeleting: Bool { deleteImpact.isRunning }
+    var deleteError: String? { deleteImpact.error }
 
     private let userID: String
     private let store: any GenealogyStore
@@ -134,8 +137,8 @@ final class SourceFieldsModel {
     }
 
     var pendingDeleteField: CatalogMetadataField? {
-        guard let pendingDeleteID else { return nil }
-        return fields.first { $0.id == pendingDeleteID }
+        guard let id = deleteImpact.request?.target.id else { return nil }
+        return fields.first { $0.id == id }
     }
 
     var countLine: String {
@@ -218,51 +221,35 @@ final class SourceFieldsModel {
 
     func askDelete() async {
         guard let field = selectedField else { return }
-        deleteError = nil
-        do {
-            let report = try await store.getDeleteImpact(
-                projectDir: session.projectKey.projectDir,
+        await deleteImpact.ask(
+            kind: "source_field",
+            id: field.id,
+            ref: field.key,
+            title: field.label
+        ) {
+            try await self.store.getDeleteImpact(
+                projectDir: self.session.projectKey.projectDir,
                 kind: "source_field",
                 id: field.id
             )
-            pendingDeleteID = field.id
-            pendingImpact = PVDeleteImpactRequest(
-                target: PVDeleteImpactTarget(
-                    kind: "source_field",
-                    ref: field.key,
-                    title: field.label
-                ),
-                report: report
-            )
-        } catch {
-            deleteError = L10n.Errors.message(for: error)
         }
     }
 
     func cancelDelete() {
-        guard !isDeleting else { return }
-        pendingDeleteID = nil
-        pendingImpact = nil
+        deleteImpact.cancel()
     }
 
     @discardableResult
     func confirmPendingImpact() async -> Bool {
-        guard let request = pendingImpact, request.report.allowed, let field = pendingDeleteField,
-              !isDeleting
-        else { return false }
-        isDeleting = true
-        deleteError = nil
-        defer { isDeleting = false }
-        do {
+        guard let field = pendingDeleteField else { return false }
+        return await deleteImpact.confirm { target in
             try await store.deleteMetadataField(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
-                fieldID: field.id
+                fieldID: target.id
             )
-            session.apply(.deletedMetadataField(id: field.id))
-            patchFieldsList { rows in rows.removeAll { $0.id == field.id } }
-            pendingDeleteID = nil
-            pendingImpact = nil
+            session.apply(.deletedMetadataField(id: target.id))
+            patchFieldsList { rows in rows.removeAll { $0.id == target.id } }
             formError = nil
             mode = .empty
             toast = VocabularyToast(
@@ -271,10 +258,6 @@ final class SourceFieldsModel {
                 tone: .success
             )
             syncCatalogCounts()
-            return true
-        } catch {
-            deleteError = L10n.Errors.message(for: error)
-            return false
         }
     }
 

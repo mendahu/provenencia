@@ -44,6 +44,8 @@ Facet CASCADE is SQLite’s job. Official `Delete` still **registers** those FKs
 - [ ] FFI: GetDeleteImpact returns the report; Delete* refuse is a generic in_use / extra-gate code (no report on Error, no apperr ref params)
 - [ ] Audit + searchindex stay in the domain package
 - [ ] FFI: GetDeleteImpact works for this kind (UI or not)
+- [ ] Swift (when the screen ships): `DeleteImpactFlow` + recipe; confirm uses `target.id`;
+        `*.in_use` refetch; `.deletedSubject(sourceId:)` for subject erase
 - [ ] Tests: empty → erase; inbound → listed + total; GetDeleteImpact missing → not_found;
         domain Delete missing → ErrInvalid; extra gates; pragma includes new FKs;
         Impact.allowed iff SQLite resource DELETE would succeed; audit + FTS on the writer
@@ -87,6 +89,14 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 ## UI
 
 Resource delete chrome uses the **DeleteImpact** recipe ([`macos/App/DesignSystem/Recipes/DeleteImpact/`](../../../macos/App/DesignSystem/Recipes/DeleteImpact/)): confirm when `allowed`, notice when blocked. Recipe owns `via` / `kind` / overflow L10n. Do not hand-build a yes/no sheet that ignores the report. Official `Delete` for a screen lands **in that screen’s PR**, except no-UI writers (registry PR). `usedBy` is not the only gate and must match Impact totals that block.
+
+Shared Swift state is **`DeleteImpactFlow`** (next to the recipe). Models call `ask` / `confirm` / `cancel` and keep only post-delete side effects.
+
+- Confirm errors render **in the confirm sheet** (`deleteImpact.confirmError`). Pane callouts stay for fetch failures when `request == nil`.
+- On `*.in_use`, the flow refetches Impact so the same sheet becomes a notice instead of leaving a confirm that can no longer succeed.
+- Confirm deletes `request.target.id` (catalog id), never a live selection that may have moved (`activeCitationID`, selected row).
+- Listed-row `activate` dismisses first, then navigates on the next run loop (`then:` is injectable in tests).
+- Subject erase applies `.deletedSubject(sourceId:)` so Observation `usedBy` and citation lists reload; source erase also busts `sourceWorkspace` / `sourceGraph`; type erase busts `typeSuggestions`.
 
 ## Do not
 
