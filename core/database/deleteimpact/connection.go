@@ -4,7 +4,7 @@ import (
 	"database/sql"
 )
 
-const sqlSubjectObservations = `SELECT o.id, o.ref, o.value_date_id, o.value_name_id, st.key, p.key
+const sqlSubjectObservations = `SELECT o.id, o.ref, o.value_date_id, o.value_name_id, st.key, p.key, p.origin
 	FROM observations o
 	JOIN subjects s ON s.id = o.subject_id
 	JOIN subject_types st ON st.id = s.subject_type_id
@@ -16,6 +16,7 @@ type subjectObsRow struct {
 	id, dateID, nameID []byte
 	ref                string
 	typeKey, propKey   string
+	origin             string
 }
 
 func subjectResourceInbound() inboundEdge {
@@ -31,7 +32,7 @@ func subjectResourceInbound() inboundEdge {
 			}
 			n := 0
 			for _, r := range rows {
-				if !isConnectionFacet(r.typeKey, r.propKey) {
+				if !isConnectionFacet(r) {
 					n++
 				}
 			}
@@ -44,7 +45,7 @@ func subjectResourceInbound() inboundEdge {
 			}
 			var out []probeRow
 			for _, r := range rows {
-				if isConnectionFacet(r.typeKey, r.propKey) {
+				if isConnectionFacet(r) {
 					continue
 				}
 				out = append(out, probeRow{ID: r.id, Ref: r.ref})
@@ -67,7 +68,7 @@ func listSubjectObs(tx *sql.Tx, subjectID []byte) ([]subjectObsRow, error) {
 	for rows.Next() {
 		var r subjectObsRow
 		var dateID, nameID []byte
-		if err := rows.Scan(&r.id, &r.ref, &dateID, &nameID, &r.typeKey, &r.propKey); err != nil {
+		if err := rows.Scan(&r.id, &r.ref, &dateID, &nameID, &r.typeKey, &r.propKey, &r.origin); err != nil {
 			return nil, err
 		}
 		r.dateID = append([]byte(nil), dateID...)
@@ -77,11 +78,14 @@ func listSubjectObs(tx *sql.Tx, subjectID []byte) ([]subjectObsRow, error) {
 	return out, rows.Err()
 }
 
-func isConnectionFacet(typeKey, propKey string) bool {
-	if isEdgePair(typeKey, propKey) {
+func isConnectionFacet(r subjectObsRow) bool {
+	if r.origin != originProvenencia {
+		return false
+	}
+	if isEdgePair(r.typeKey, r.propKey) {
 		return true
 	}
-	return propKey == "role" || propKey == "relationship_type"
+	return isDisambiguation(r.typeKey, r.propKey)
 }
 
 // Mirrors subjectvocab.EdgeEndpoint for seeded connect rules without importing
@@ -99,23 +103,34 @@ func isEdgePair(typeKey, propKey string) bool {
 	}
 }
 
+func isDisambiguation(typeKey, propKey string) bool {
+	switch typeKey {
+	case "participation":
+		return propKey == "role"
+	case "relationship":
+		return propKey == "relationship_type"
+	default:
+		return false
+	}
+}
+
 func isEdgeObservation(tx *sql.Tx, observationID []byte) (bool, error) {
-	var typeKey, propKey string
+	var typeKey, propKey, origin string
 	err := tx.QueryRow(`
-		SELECT st.key, p.key
+		SELECT st.key, p.key, p.origin
 		FROM observations o
 		JOIN subjects s ON s.id = o.subject_id
 		JOIN subject_types st ON st.id = s.subject_type_id
 		JOIN properties p ON p.id = o.property_id
 		WHERE o.id = ?`, observationID,
-	).Scan(&typeKey, &propKey)
+	).Scan(&typeKey, &propKey, &origin)
 	if err == sql.ErrNoRows {
 		return false, nil
 	}
 	if err != nil {
 		return false, err
 	}
-	return isEdgePair(typeKey, propKey), nil
+	return origin == originProvenencia && isEdgePair(typeKey, propKey), nil
 }
 
 // ReleaseConnectionFacets deletes edge + disambiguation Observations on a
@@ -130,7 +145,7 @@ func ReleaseConnectionFacets(tx *sql.Tx, subjectID []byte) error {
 		return err
 	}
 	for _, r := range rows {
-		if !isConnectionFacet(r.typeKey, r.propKey) {
+		if !isConnectionFacet(r) {
 			continue
 		}
 		if _, err := tx.Exec(`DELETE FROM observations WHERE id = ?`, r.id); err != nil {
