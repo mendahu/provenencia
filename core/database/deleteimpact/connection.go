@@ -116,7 +116,7 @@ func isEdgeObservation(tx *sql.Tx, observationID []byte) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return origin == connectrules.OriginProvenencia && connectrules.IsEdgePair(typeKey, propKey), nil
+	return connectrules.IsEdgePair(typeKey, propKey, origin), nil
 }
 
 // ReleaseConnectionFacets deletes edge + disambiguation Observations on a
