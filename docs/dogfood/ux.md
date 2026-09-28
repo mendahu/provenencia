@@ -32,13 +32,13 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 - **Where:** Citation composer / Evidence graph
 - **Annoyance:** Even after transcription is filled, the researcher still retypes names, dates, and roles onto cards. Spike 8 only dumps text into **transcription**.
 - **Wanted:** Cheap field hints after there is a string (`NSDataDetector`, name/date patterns) and, later, guided extract. Not catalog writes.
-- **Still out of Spike 8:** PDF OCR / Vision on page rasters; Live Text / VisionKit; Foundation Models (`macOS 26+`, raise-the-floor). Pipeline if we ever did it: string → suggestions the researcher accepts → real Citation + Observations. Experiment: “obituary → draft cards,” not “obituary → catalog writes.”
+- **Still out:** PDF OCR / Vision on page rasters; Live Text / VisionKit; Foundation Models (`macOS 26+`, raise-the-floor). Pipeline if we ever did it: string → suggestions the researcher accepts → real Citation + Observations. Experiment: “obituary → draft cards,” not “obituary → catalog writes.”
 
 ## Done
 
 ### Pulled into Spike 8 (2026-09-24)
 
-- **Composer rethink** — Citation as the document; multi-subject rows; reuse / pinning; empty Save ([`S8-D7`](../deployment-plan/spike-8/design/archive/S8-D7-composer-rethink.md) / [`S8-10`](../deployment-plan/spike-8/deployment-plan.md))
+- **Composer rethink** — Citation as the document; multi-subject rows; reuse / pinning; empty Save ([Spike 8](../deployment-plan/archive/spike-8/))
 - Image **Auto Transcribe** (Vision → transcription)
 - PDF **Find** + **select** + **paste transcription**
 - Source page **Open Evidence graph** (was “graph starts blind”)

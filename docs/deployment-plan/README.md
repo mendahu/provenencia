@@ -8,14 +8,13 @@ Closed spikes under [`archive/`](archive/) keep **themes and decisions**. PR ord
 
 ## Current
 
-| Spike | Goal |
-| --- | --- |
-| [Spike 8](spike-8/) | **Pause and refine** data entry. Composer rethink first; then Auto Transcribe, PDF Find / paste, graph chrome, Source-page jump, list counts, delete paths. Dogfood: [`docs/dogfood/ux.md`](../dogfood/ux.md). Plan: [`spike-8/deployment-plan.md`](spike-8/deployment-plan.md). |
+None — next spike not scoped. Dogfood leftovers: [`docs/dogfood/ux.md`](../dogfood/ux.md). Ideas: [`ideas/`](../ideas/). Claude Design briefs: [`add-design-brief`](../../.cursor/skills/add-design-brief/SKILL.md).
 
 ## Completed
 
 | Spike | What we decided |
 | --- | --- |
+| [Spike 8](archive/spike-8/) | Pause-and-refine data entry. Citation is the document. Named delete via Impact. |
 | [Spike 7](archive/spike-7/) | Citation → Observation pipeline. Composer is a **place** (Option B). Subject types stay seeded. |
 | [Spike 6](archive/spike-6/) | Spatial Evidence graph is **Go**. Neutral `GraphCanvas`. Connect was provisional until Spike 7. |
 | [Spike 5](archive/spike-5/) | Interpretation data up to a graph stub. **No Subject UI.** One Sources family. |
@@ -23,9 +22,3 @@ Closed spikes under [`archive/`](archive/) keep **themes and decisions**. PR ord
 | [Spike 3](archive/spike-3/) | Persisted Back/Forward + omnibar (FTS5). Contracts: [`navigation-history.md`](archive/spike-3/navigation-history.md), [`omnibar-search.md`](archive/spike-3/omnibar-search.md). |
 | [Spike 2](archive/spike-2/) | Source catalog + workspace chrome. Audit on first mutation. Files list descoped. |
 | [Spike 1](archive/spike-1.md) | Local `*.provenencia` + install identity. cgo-SQLite-in-dylib risk retired. |
-
-Spike 8 (open):
-
-- [`spike-8/README.md`](spike-8/README.md)
-- [`spike-8/deployment-plan.md`](spike-8/deployment-plan.md)
-- [`spike-8/design/`](spike-8/design/) — Claude Design briefs. Working rules: [`claude-design-working-rules.md`](spike-8/design/claude-design-working-rules.md)

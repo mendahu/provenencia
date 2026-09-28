@@ -1,6 +1,6 @@
 # Catalog deletes
 
-Authoritative contract for official **resource** and **vocab** deletes. Spike 8 implements this (`S8-09`…`S8-19`). The table-by-table register lives in [`core/database/deleteimpact`](../core/database/deleteimpact) (policy list still in [`deployment-plan/spike-8/deployment-plan.md`](deployment-plan/spike-8/deployment-plan.md) §S8-09.3 until the spike archives).
+Authoritative contract for official **resource** and **vocab** deletes. The table-by-table register lives in [`core/database/deleteimpact`](../core/database/deleteimpact). Spike 8 shipped the first screens: [`archive/spike-8`](deployment-plan/archive/spike-8/).
 
 Skills: [`add-catalog-delete`](../.cursor/skills/add-catalog-delete/SKILL.md), [`add-catalog-migration`](../.cursor/skills/add-catalog-migration/SKILL.md).
 
@@ -38,7 +38,7 @@ Plugin rows are a future plugin manager, not researcher trash.
 
 ### Terms are resources
 
-`property_terms.property_id` is `NO ACTION`. A property with any term row is blocked until those terms are deleted. There is no Terms page this spike — that notice is honest. Type-bindings (`subject_type_fields`) CASCADE and do not block.
+`property_terms.property_id` is `NO ACTION`. A property with any term row is blocked until those terms are deleted. There is no Terms page — that notice is honest. Type-bindings (`subject_type_fields`) CASCADE and do not block.
 
 ## Impact report
 
