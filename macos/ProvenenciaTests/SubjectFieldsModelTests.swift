@@ -358,6 +358,11 @@ struct SubjectFieldsModelTests {
         #expect(report?.gate == .inbound)
         #expect(report?.groups.first?.via == "property_terms.property_id")
         #expect(report?.groups.first?.listed.map(\.ref) == ["lodger"])
+        // Term rows deep-link to the parent property's inspector row, as the Go projector does.
+        #expect(
+            report?.groups.first?.listed.first?.location
+                == WorkspaceLocation(section: .subjectFields, propertyId: property.id)
+        )
         #expect(await model.confirmPendingImpact() == false)
         #expect(store.propertiesByProject[projectDir]?.map(\.id) == [property.id])
     }

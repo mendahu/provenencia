@@ -2525,146 +2525,100 @@ public nonisolated struct Provenencia_Engine_V1_CloseCatalogSessionResponse: Sen
 
 /// WorkspaceLocation is the navigable place payload shared by search hits and
 /// (later) omnibar go(to:). Aligns with macOS WorkspaceLocation / WorkspaceSection.
-public nonisolated struct Provenencia_Engine_V1_WorkspaceLocation: Sendable {
+public nonisolated struct Provenencia_Engine_V1_WorkspaceLocation: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   /// sources | source-types | source-fields | subject-fields
-  public var section: String = String()
+  public var section: String {
+    get {_storage._section}
+    set {_uniqueStorage()._section = newValue}
+  }
 
-  public var sourceID: String = String()
+  public var sourceID: String {
+    get {_storage._sourceID}
+    set {_uniqueStorage()._sourceID = newValue}
+  }
 
-  public var fieldID: String = String()
+  public var fieldID: String {
+    get {_storage._fieldID}
+    set {_uniqueStorage()._fieldID = newValue}
+  }
 
-  public var typeID: String = String()
+  public var typeID: String {
+    get {_storage._typeID}
+    set {_uniqueStorage()._typeID = newValue}
+  }
 
   /// denormalized jump-menu cache
-  public var ref: String = String()
-
-  /// denormalized jump-menu cache
-  public var title: String = String()
-
-  public var subjectID: String = String()
-
-  public var citationID: String = String()
-
-  public var artifactID: String = String()
-
-  public var observationID: String = String()
-
-  /// page | graph | citationComposer
-  public var sourceSurface: String = String()
-
-  public var connectFromSubjectID: String = String()
-
-  public var connectToSubjectID: String = String()
-
-  public var connectBridgeTypeKey: String = String()
-
-  public var sourceTitle: String = String()
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-/// SearchCatalog finds navigable catalog roots for the omnibar (S3-07+).
-public nonisolated struct Provenencia_Engine_V1_SearchCatalogRequest: @unchecked Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var projectDir: String {
-    get {_storage._projectDir}
-    set {_uniqueStorage()._projectDir = newValue}
-  }
-
-  public var query: String {
-    get {_storage._query}
-    set {_uniqueStorage()._query = newValue}
-  }
-
-  /// current place; at least section for context boosts
-  public var location: Provenencia_Engine_V1_WorkspaceLocation {
-    get {_storage._location ?? Provenencia_Engine_V1_WorkspaceLocation()}
-    set {_uniqueStorage()._location = newValue}
-  }
-  /// Returns true if `location` has been explicitly set.
-  public var hasLocation: Bool {_storage._location != nil}
-  /// Clears the value of `location`. Subsequent reads from it will return its default value.
-  public mutating func clearLocation() {_uniqueStorage()._location = nil}
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-
-  fileprivate var _storage = _StorageClass.defaultInstance
-}
-
-public nonisolated struct Provenencia_Engine_V1_SearchHit: @unchecked Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  /// source | source_type | source_field
-  public var kind: String {
-    get {_storage._kind}
-    set {_uniqueStorage()._kind = newValue}
-  }
-
-  public var id: String {
-    get {_storage._id}
-    set {_uniqueStorage()._id = newValue}
-  }
-
   public var ref: String {
     get {_storage._ref}
     set {_uniqueStorage()._ref = newValue}
   }
 
+  /// denormalized jump-menu cache
   public var title: String {
     get {_storage._title}
     set {_uniqueStorage()._title = newValue}
   }
 
-  public var subtitle: String {
-    get {_storage._subtitle}
-    set {_uniqueStorage()._subtitle = newValue}
+  public var subjectID: String {
+    get {_storage._subjectID}
+    set {_uniqueStorage()._subjectID = newValue}
   }
 
-  /// Stable match field code (title|ref|label|key|notes|metadata|filename|description|fuzzy).
-  /// Not user-facing copy — Mac localizes via L10n.
-  public var matchReason: String {
-    get {_storage._matchReason}
-    set {_uniqueStorage()._matchReason = newValue}
+  public var citationID: String {
+    get {_storage._citationID}
+    set {_uniqueStorage()._citationID = newValue}
   }
 
-  public var location: Provenencia_Engine_V1_WorkspaceLocation {
-    get {_storage._location ?? Provenencia_Engine_V1_WorkspaceLocation()}
-    set {_uniqueStorage()._location = newValue}
-  }
-  /// Returns true if `location` has been explicitly set.
-  public var hasLocation: Bool {_storage._location != nil}
-  /// Clears the value of `location`. Subsequent reads from it will return its default value.
-  public mutating func clearLocation() {_uniqueStorage()._location = nil}
-
-  /// Display stubs for omnibar lead chrome (avoid a second full-list fetch).
-  public var thumbnailRelPath: String {
-    get {_storage._thumbnailRelPath}
-    set {_uniqueStorage()._thumbnailRelPath = newValue}
+  public var artifactID: String {
+    get {_storage._artifactID}
+    set {_uniqueStorage()._artifactID = newValue}
   }
 
-  /// Source type icon, or type hit icon; empty for fields
-  public var iconKey: String {
-    get {_storage._iconKey}
-    set {_uniqueStorage()._iconKey = newValue}
+  public var observationID: String {
+    get {_storage._observationID}
+    set {_uniqueStorage()._observationID = newValue}
   }
 
-  /// Optional raw snippet for body/rollup matches (notes/metadata/filename). No English prefix.
-  public var matchSnippet: String {
-    get {_storage._matchSnippet}
-    set {_uniqueStorage()._matchSnippet = newValue}
+  /// page | graph | citationComposer
+  public var sourceSurface: String {
+    get {_storage._sourceSurface}
+    set {_uniqueStorage()._sourceSurface = newValue}
+  }
+
+  public var connectFromSubjectID: String {
+    get {_storage._connectFromSubjectID}
+    set {_uniqueStorage()._connectFromSubjectID = newValue}
+  }
+
+  public var connectToSubjectID: String {
+    get {_storage._connectToSubjectID}
+    set {_uniqueStorage()._connectToSubjectID = newValue}
+  }
+
+  public var connectBridgeTypeKey: String {
+    get {_storage._connectBridgeTypeKey}
+    set {_uniqueStorage()._connectBridgeTypeKey = newValue}
+  }
+
+  public var sourceTitle: String {
+    get {_storage._sourceTitle}
+    set {_uniqueStorage()._sourceTitle = newValue}
+  }
+
+  /// Subject Fields type-strip category; empty = All properties
+  public var subjectTypeKey: String {
+    get {_storage._subjectTypeKey}
+    set {_uniqueStorage()._subjectTypeKey = newValue}
+  }
+
+  /// Subject Fields inspector row
+  public var propertyID: String {
+    get {_storage._propertyID}
+    set {_uniqueStorage()._propertyID = newValue}
   }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -2672,6 +2626,78 @@ public nonisolated struct Provenencia_Engine_V1_SearchHit: @unchecked Sendable {
   public init() {}
 
   fileprivate var _storage = _StorageClass.defaultInstance
+}
+
+/// SearchCatalog finds navigable catalog roots for the omnibar (S3-07+).
+public nonisolated struct Provenencia_Engine_V1_SearchCatalogRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var projectDir: String = String()
+
+  public var query: String = String()
+
+  /// current place; at least section for context boosts
+  public var location: Provenencia_Engine_V1_WorkspaceLocation {
+    get {_location ?? Provenencia_Engine_V1_WorkspaceLocation()}
+    set {_location = newValue}
+  }
+  /// Returns true if `location` has been explicitly set.
+  public var hasLocation: Bool {self._location != nil}
+  /// Clears the value of `location`. Subsequent reads from it will return its default value.
+  public mutating func clearLocation() {self._location = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _location: Provenencia_Engine_V1_WorkspaceLocation? = nil
+}
+
+public nonisolated struct Provenencia_Engine_V1_SearchHit: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// source | source_type | source_field
+  public var kind: String = String()
+
+  public var id: String = String()
+
+  public var ref: String = String()
+
+  public var title: String = String()
+
+  public var subtitle: String = String()
+
+  /// Stable match field code (title|ref|label|key|notes|metadata|filename|description|fuzzy).
+  /// Not user-facing copy — Mac localizes via L10n.
+  public var matchReason: String = String()
+
+  public var location: Provenencia_Engine_V1_WorkspaceLocation {
+    get {_location ?? Provenencia_Engine_V1_WorkspaceLocation()}
+    set {_location = newValue}
+  }
+  /// Returns true if `location` has been explicitly set.
+  public var hasLocation: Bool {self._location != nil}
+  /// Clears the value of `location`. Subsequent reads from it will return its default value.
+  public mutating func clearLocation() {self._location = nil}
+
+  /// Display stubs for omnibar lead chrome (avoid a second full-list fetch).
+  public var thumbnailRelPath: String = String()
+
+  /// Source type icon, or type hit icon; empty for fields
+  public var iconKey: String = String()
+
+  /// Optional raw snippet for body/rollup matches (notes/metadata/filename). No English prefix.
+  public var matchSnippet: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _location: Provenencia_Engine_V1_WorkspaceLocation? = nil
 }
 
 public nonisolated struct Provenencia_Engine_V1_SearchCatalogResponse: Sendable {
@@ -4426,40 +4452,31 @@ public nonisolated struct Provenencia_Engine_V1_DeleteImpactGroup: Sendable {
   public init() {}
 }
 
-public nonisolated struct Provenencia_Engine_V1_DeleteImpactListed: @unchecked Sendable {
+public nonisolated struct Provenencia_Engine_V1_DeleteImpactListed: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var id: String {
-    get {_storage._id}
-    set {_uniqueStorage()._id = newValue}
-  }
+  public var id: String = String()
 
-  public var ref: String {
-    get {_storage._ref}
-    set {_uniqueStorage()._ref = newValue}
-  }
+  public var ref: String = String()
 
-  public var title: String {
-    get {_storage._title}
-    set {_uniqueStorage()._title = newValue}
-  }
+  public var title: String = String()
 
   public var location: Provenencia_Engine_V1_WorkspaceLocation {
-    get {_storage._location ?? Provenencia_Engine_V1_WorkspaceLocation()}
-    set {_uniqueStorage()._location = newValue}
+    get {_location ?? Provenencia_Engine_V1_WorkspaceLocation()}
+    set {_location = newValue}
   }
   /// Returns true if `location` has been explicitly set.
-  public var hasLocation: Bool {_storage._location != nil}
+  public var hasLocation: Bool {self._location != nil}
   /// Clears the value of `location`. Subsequent reads from it will return its default value.
-  public mutating func clearLocation() {_uniqueStorage()._location = nil}
+  public mutating func clearLocation() {self._location = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
-  fileprivate var _storage = _StorageClass.defaultInstance
+  fileprivate var _location: Provenencia_Engine_V1_WorkspaceLocation? = nil
 }
 
 /// Error is the protobuf payload on provenencia_call status 1 (failure).
@@ -8738,99 +8755,177 @@ nonisolated extension Provenencia_Engine_V1_CloseCatalogSessionResponse: SwiftPr
 
 nonisolated extension Provenencia_Engine_V1_WorkspaceLocation: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WorkspaceLocation"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}section\0\u{3}source_id\0\u{3}field_id\0\u{3}type_id\0\u{1}ref\0\u{1}title\0\u{3}subject_id\0\u{3}citation_id\0\u{3}artifact_id\0\u{3}observation_id\0\u{3}source_surface\0\u{3}connect_from_subject_id\0\u{3}connect_to_subject_id\0\u{3}connect_bridge_type_key\0\u{3}source_title\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}section\0\u{3}source_id\0\u{3}field_id\0\u{3}type_id\0\u{1}ref\0\u{1}title\0\u{3}subject_id\0\u{3}citation_id\0\u{3}artifact_id\0\u{3}observation_id\0\u{3}source_surface\0\u{3}connect_from_subject_id\0\u{3}connect_to_subject_id\0\u{3}connect_bridge_type_key\0\u{3}source_title\0\u{3}subject_type_key\0\u{3}property_id\0")
+
+  fileprivate class _StorageClass {
+    var _section: String = String()
+    var _sourceID: String = String()
+    var _fieldID: String = String()
+    var _typeID: String = String()
+    var _ref: String = String()
+    var _title: String = String()
+    var _subjectID: String = String()
+    var _citationID: String = String()
+    var _artifactID: String = String()
+    var _observationID: String = String()
+    var _sourceSurface: String = String()
+    var _connectFromSubjectID: String = String()
+    var _connectToSubjectID: String = String()
+    var _connectBridgeTypeKey: String = String()
+    var _sourceTitle: String = String()
+    var _subjectTypeKey: String = String()
+    var _propertyID: String = String()
+
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _section = source._section
+      _sourceID = source._sourceID
+      _fieldID = source._fieldID
+      _typeID = source._typeID
+      _ref = source._ref
+      _title = source._title
+      _subjectID = source._subjectID
+      _citationID = source._citationID
+      _artifactID = source._artifactID
+      _observationID = source._observationID
+      _sourceSurface = source._sourceSurface
+      _connectFromSubjectID = source._connectFromSubjectID
+      _connectToSubjectID = source._connectToSubjectID
+      _connectBridgeTypeKey = source._connectBridgeTypeKey
+      _sourceTitle = source._sourceTitle
+      _subjectTypeKey = source._subjectTypeKey
+      _propertyID = source._propertyID
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.section) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.sourceID) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.fieldID) }()
-      case 4: try { try decoder.decodeSingularStringField(value: &self.typeID) }()
-      case 5: try { try decoder.decodeSingularStringField(value: &self.ref) }()
-      case 6: try { try decoder.decodeSingularStringField(value: &self.title) }()
-      case 7: try { try decoder.decodeSingularStringField(value: &self.subjectID) }()
-      case 8: try { try decoder.decodeSingularStringField(value: &self.citationID) }()
-      case 9: try { try decoder.decodeSingularStringField(value: &self.artifactID) }()
-      case 10: try { try decoder.decodeSingularStringField(value: &self.observationID) }()
-      case 11: try { try decoder.decodeSingularStringField(value: &self.sourceSurface) }()
-      case 12: try { try decoder.decodeSingularStringField(value: &self.connectFromSubjectID) }()
-      case 13: try { try decoder.decodeSingularStringField(value: &self.connectToSubjectID) }()
-      case 14: try { try decoder.decodeSingularStringField(value: &self.connectBridgeTypeKey) }()
-      case 15: try { try decoder.decodeSingularStringField(value: &self.sourceTitle) }()
-      default: break
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularStringField(value: &_storage._section) }()
+        case 2: try { try decoder.decodeSingularStringField(value: &_storage._sourceID) }()
+        case 3: try { try decoder.decodeSingularStringField(value: &_storage._fieldID) }()
+        case 4: try { try decoder.decodeSingularStringField(value: &_storage._typeID) }()
+        case 5: try { try decoder.decodeSingularStringField(value: &_storage._ref) }()
+        case 6: try { try decoder.decodeSingularStringField(value: &_storage._title) }()
+        case 7: try { try decoder.decodeSingularStringField(value: &_storage._subjectID) }()
+        case 8: try { try decoder.decodeSingularStringField(value: &_storage._citationID) }()
+        case 9: try { try decoder.decodeSingularStringField(value: &_storage._artifactID) }()
+        case 10: try { try decoder.decodeSingularStringField(value: &_storage._observationID) }()
+        case 11: try { try decoder.decodeSingularStringField(value: &_storage._sourceSurface) }()
+        case 12: try { try decoder.decodeSingularStringField(value: &_storage._connectFromSubjectID) }()
+        case 13: try { try decoder.decodeSingularStringField(value: &_storage._connectToSubjectID) }()
+        case 14: try { try decoder.decodeSingularStringField(value: &_storage._connectBridgeTypeKey) }()
+        case 15: try { try decoder.decodeSingularStringField(value: &_storage._sourceTitle) }()
+        case 16: try { try decoder.decodeSingularStringField(value: &_storage._subjectTypeKey) }()
+        case 17: try { try decoder.decodeSingularStringField(value: &_storage._propertyID) }()
+        default: break
+        }
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.section.isEmpty {
-      try visitor.visitSingularStringField(value: self.section, fieldNumber: 1)
-    }
-    if !self.sourceID.isEmpty {
-      try visitor.visitSingularStringField(value: self.sourceID, fieldNumber: 2)
-    }
-    if !self.fieldID.isEmpty {
-      try visitor.visitSingularStringField(value: self.fieldID, fieldNumber: 3)
-    }
-    if !self.typeID.isEmpty {
-      try visitor.visitSingularStringField(value: self.typeID, fieldNumber: 4)
-    }
-    if !self.ref.isEmpty {
-      try visitor.visitSingularStringField(value: self.ref, fieldNumber: 5)
-    }
-    if !self.title.isEmpty {
-      try visitor.visitSingularStringField(value: self.title, fieldNumber: 6)
-    }
-    if !self.subjectID.isEmpty {
-      try visitor.visitSingularStringField(value: self.subjectID, fieldNumber: 7)
-    }
-    if !self.citationID.isEmpty {
-      try visitor.visitSingularStringField(value: self.citationID, fieldNumber: 8)
-    }
-    if !self.artifactID.isEmpty {
-      try visitor.visitSingularStringField(value: self.artifactID, fieldNumber: 9)
-    }
-    if !self.observationID.isEmpty {
-      try visitor.visitSingularStringField(value: self.observationID, fieldNumber: 10)
-    }
-    if !self.sourceSurface.isEmpty {
-      try visitor.visitSingularStringField(value: self.sourceSurface, fieldNumber: 11)
-    }
-    if !self.connectFromSubjectID.isEmpty {
-      try visitor.visitSingularStringField(value: self.connectFromSubjectID, fieldNumber: 12)
-    }
-    if !self.connectToSubjectID.isEmpty {
-      try visitor.visitSingularStringField(value: self.connectToSubjectID, fieldNumber: 13)
-    }
-    if !self.connectBridgeTypeKey.isEmpty {
-      try visitor.visitSingularStringField(value: self.connectBridgeTypeKey, fieldNumber: 14)
-    }
-    if !self.sourceTitle.isEmpty {
-      try visitor.visitSingularStringField(value: self.sourceTitle, fieldNumber: 15)
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      if !_storage._section.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._section, fieldNumber: 1)
+      }
+      if !_storage._sourceID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._sourceID, fieldNumber: 2)
+      }
+      if !_storage._fieldID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._fieldID, fieldNumber: 3)
+      }
+      if !_storage._typeID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._typeID, fieldNumber: 4)
+      }
+      if !_storage._ref.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._ref, fieldNumber: 5)
+      }
+      if !_storage._title.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._title, fieldNumber: 6)
+      }
+      if !_storage._subjectID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._subjectID, fieldNumber: 7)
+      }
+      if !_storage._citationID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._citationID, fieldNumber: 8)
+      }
+      if !_storage._artifactID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._artifactID, fieldNumber: 9)
+      }
+      if !_storage._observationID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._observationID, fieldNumber: 10)
+      }
+      if !_storage._sourceSurface.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._sourceSurface, fieldNumber: 11)
+      }
+      if !_storage._connectFromSubjectID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._connectFromSubjectID, fieldNumber: 12)
+      }
+      if !_storage._connectToSubjectID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._connectToSubjectID, fieldNumber: 13)
+      }
+      if !_storage._connectBridgeTypeKey.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._connectBridgeTypeKey, fieldNumber: 14)
+      }
+      if !_storage._sourceTitle.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._sourceTitle, fieldNumber: 15)
+      }
+      if !_storage._subjectTypeKey.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._subjectTypeKey, fieldNumber: 16)
+      }
+      if !_storage._propertyID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._propertyID, fieldNumber: 17)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_WorkspaceLocation, rhs: Provenencia_Engine_V1_WorkspaceLocation) -> Bool {
-    if lhs.section != rhs.section {return false}
-    if lhs.sourceID != rhs.sourceID {return false}
-    if lhs.fieldID != rhs.fieldID {return false}
-    if lhs.typeID != rhs.typeID {return false}
-    if lhs.ref != rhs.ref {return false}
-    if lhs.title != rhs.title {return false}
-    if lhs.subjectID != rhs.subjectID {return false}
-    if lhs.citationID != rhs.citationID {return false}
-    if lhs.artifactID != rhs.artifactID {return false}
-    if lhs.observationID != rhs.observationID {return false}
-    if lhs.sourceSurface != rhs.sourceSurface {return false}
-    if lhs.connectFromSubjectID != rhs.connectFromSubjectID {return false}
-    if lhs.connectToSubjectID != rhs.connectToSubjectID {return false}
-    if lhs.connectBridgeTypeKey != rhs.connectBridgeTypeKey {return false}
-    if lhs.sourceTitle != rhs.sourceTitle {return false}
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._section != rhs_storage._section {return false}
+        if _storage._sourceID != rhs_storage._sourceID {return false}
+        if _storage._fieldID != rhs_storage._fieldID {return false}
+        if _storage._typeID != rhs_storage._typeID {return false}
+        if _storage._ref != rhs_storage._ref {return false}
+        if _storage._title != rhs_storage._title {return false}
+        if _storage._subjectID != rhs_storage._subjectID {return false}
+        if _storage._citationID != rhs_storage._citationID {return false}
+        if _storage._artifactID != rhs_storage._artifactID {return false}
+        if _storage._observationID != rhs_storage._observationID {return false}
+        if _storage._sourceSurface != rhs_storage._sourceSurface {return false}
+        if _storage._connectFromSubjectID != rhs_storage._connectFromSubjectID {return false}
+        if _storage._connectToSubjectID != rhs_storage._connectToSubjectID {return false}
+        if _storage._connectBridgeTypeKey != rhs_storage._connectBridgeTypeKey {return false}
+        if _storage._sourceTitle != rhs_storage._sourceTitle {return false}
+        if _storage._subjectTypeKey != rhs_storage._subjectTypeKey {return false}
+        if _storage._propertyID != rhs_storage._propertyID {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -8840,81 +8935,41 @@ nonisolated extension Provenencia_Engine_V1_SearchCatalogRequest: SwiftProtobuf.
   public static let protoMessageName: String = _protobuf_package + ".SearchCatalogRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{1}query\0\u{1}location\0")
 
-  fileprivate class _StorageClass {
-    var _projectDir: String = String()
-    var _query: String = String()
-    var _location: Provenencia_Engine_V1_WorkspaceLocation? = nil
-
-      // This property is used as the initial default value for new instances of the type.
-      // The type itself is protecting the reference to its storage via CoW semantics.
-      // This will force a copy to be made of this reference when the first mutation occurs;
-      // hence, it is safe to mark this as `nonisolated(unsafe)`.
-      static nonisolated(unsafe) let defaultInstance = _StorageClass()
-
-    private init() {}
-
-    init(copying source: _StorageClass) {
-      _projectDir = source._projectDir
-      _query = source._query
-      _location = source._location
-    }
-  }
-
-  fileprivate mutating func _uniqueStorage() -> _StorageClass {
-    if !isKnownUniquelyReferenced(&_storage) {
-      _storage = _StorageClass(copying: _storage)
-    }
-    return _storage
-  }
-
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    _ = _uniqueStorage()
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      while let fieldNumber = try decoder.nextFieldNumber() {
-        // The use of inline closures is to circumvent an issue where the compiler
-        // allocates stack space for every case branch when no optimizations are
-        // enabled. https://github.com/apple/swift-protobuf/issues/1034
-        switch fieldNumber {
-        case 1: try { try decoder.decodeSingularStringField(value: &_storage._projectDir) }()
-        case 2: try { try decoder.decodeSingularStringField(value: &_storage._query) }()
-        case 3: try { try decoder.decodeSingularMessageField(value: &_storage._location) }()
-        default: break
-        }
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.projectDir) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.query) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._location) }()
+      default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every if/case branch local when no optimizations
-      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-      // https://github.com/apple/swift-protobuf/issues/1182
-      if !_storage._projectDir.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._projectDir, fieldNumber: 1)
-      }
-      if !_storage._query.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._query, fieldNumber: 2)
-      }
-      try { if let v = _storage._location {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-      } }()
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.projectDir.isEmpty {
+      try visitor.visitSingularStringField(value: self.projectDir, fieldNumber: 1)
     }
+    if !self.query.isEmpty {
+      try visitor.visitSingularStringField(value: self.query, fieldNumber: 2)
+    }
+    try { if let v = self._location {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_SearchCatalogRequest, rhs: Provenencia_Engine_V1_SearchCatalogRequest) -> Bool {
-    if lhs._storage !== rhs._storage {
-      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
-        let _storage = _args.0
-        let rhs_storage = _args.1
-        if _storage._projectDir != rhs_storage._projectDir {return false}
-        if _storage._query != rhs_storage._query {return false}
-        if _storage._location != rhs_storage._location {return false}
-        return true
-      }
-      if !storagesAreEqual {return false}
-    }
+    if lhs.projectDir != rhs.projectDir {return false}
+    if lhs.query != rhs.query {return false}
+    if lhs._location != rhs._location {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -8924,130 +8979,76 @@ nonisolated extension Provenencia_Engine_V1_SearchHit: SwiftProtobuf.Message, Sw
   public static let protoMessageName: String = _protobuf_package + ".SearchHit"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}kind\0\u{1}id\0\u{1}ref\0\u{1}title\0\u{1}subtitle\0\u{3}match_reason\0\u{1}location\0\u{3}thumbnail_rel_path\0\u{3}icon_key\0\u{3}match_snippet\0")
 
-  fileprivate class _StorageClass {
-    var _kind: String = String()
-    var _id: String = String()
-    var _ref: String = String()
-    var _title: String = String()
-    var _subtitle: String = String()
-    var _matchReason: String = String()
-    var _location: Provenencia_Engine_V1_WorkspaceLocation? = nil
-    var _thumbnailRelPath: String = String()
-    var _iconKey: String = String()
-    var _matchSnippet: String = String()
-
-      // This property is used as the initial default value for new instances of the type.
-      // The type itself is protecting the reference to its storage via CoW semantics.
-      // This will force a copy to be made of this reference when the first mutation occurs;
-      // hence, it is safe to mark this as `nonisolated(unsafe)`.
-      static nonisolated(unsafe) let defaultInstance = _StorageClass()
-
-    private init() {}
-
-    init(copying source: _StorageClass) {
-      _kind = source._kind
-      _id = source._id
-      _ref = source._ref
-      _title = source._title
-      _subtitle = source._subtitle
-      _matchReason = source._matchReason
-      _location = source._location
-      _thumbnailRelPath = source._thumbnailRelPath
-      _iconKey = source._iconKey
-      _matchSnippet = source._matchSnippet
-    }
-  }
-
-  fileprivate mutating func _uniqueStorage() -> _StorageClass {
-    if !isKnownUniquelyReferenced(&_storage) {
-      _storage = _StorageClass(copying: _storage)
-    }
-    return _storage
-  }
-
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    _ = _uniqueStorage()
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      while let fieldNumber = try decoder.nextFieldNumber() {
-        // The use of inline closures is to circumvent an issue where the compiler
-        // allocates stack space for every case branch when no optimizations are
-        // enabled. https://github.com/apple/swift-protobuf/issues/1034
-        switch fieldNumber {
-        case 1: try { try decoder.decodeSingularStringField(value: &_storage._kind) }()
-        case 2: try { try decoder.decodeSingularStringField(value: &_storage._id) }()
-        case 3: try { try decoder.decodeSingularStringField(value: &_storage._ref) }()
-        case 4: try { try decoder.decodeSingularStringField(value: &_storage._title) }()
-        case 5: try { try decoder.decodeSingularStringField(value: &_storage._subtitle) }()
-        case 6: try { try decoder.decodeSingularStringField(value: &_storage._matchReason) }()
-        case 7: try { try decoder.decodeSingularMessageField(value: &_storage._location) }()
-        case 8: try { try decoder.decodeSingularStringField(value: &_storage._thumbnailRelPath) }()
-        case 9: try { try decoder.decodeSingularStringField(value: &_storage._iconKey) }()
-        case 10: try { try decoder.decodeSingularStringField(value: &_storage._matchSnippet) }()
-        default: break
-        }
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.kind) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.id) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.ref) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.title) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.subtitle) }()
+      case 6: try { try decoder.decodeSingularStringField(value: &self.matchReason) }()
+      case 7: try { try decoder.decodeSingularMessageField(value: &self._location) }()
+      case 8: try { try decoder.decodeSingularStringField(value: &self.thumbnailRelPath) }()
+      case 9: try { try decoder.decodeSingularStringField(value: &self.iconKey) }()
+      case 10: try { try decoder.decodeSingularStringField(value: &self.matchSnippet) }()
+      default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every if/case branch local when no optimizations
-      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-      // https://github.com/apple/swift-protobuf/issues/1182
-      if !_storage._kind.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._kind, fieldNumber: 1)
-      }
-      if !_storage._id.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._id, fieldNumber: 2)
-      }
-      if !_storage._ref.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._ref, fieldNumber: 3)
-      }
-      if !_storage._title.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._title, fieldNumber: 4)
-      }
-      if !_storage._subtitle.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._subtitle, fieldNumber: 5)
-      }
-      if !_storage._matchReason.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._matchReason, fieldNumber: 6)
-      }
-      try { if let v = _storage._location {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
-      } }()
-      if !_storage._thumbnailRelPath.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._thumbnailRelPath, fieldNumber: 8)
-      }
-      if !_storage._iconKey.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._iconKey, fieldNumber: 9)
-      }
-      if !_storage._matchSnippet.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._matchSnippet, fieldNumber: 10)
-      }
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.kind.isEmpty {
+      try visitor.visitSingularStringField(value: self.kind, fieldNumber: 1)
+    }
+    if !self.id.isEmpty {
+      try visitor.visitSingularStringField(value: self.id, fieldNumber: 2)
+    }
+    if !self.ref.isEmpty {
+      try visitor.visitSingularStringField(value: self.ref, fieldNumber: 3)
+    }
+    if !self.title.isEmpty {
+      try visitor.visitSingularStringField(value: self.title, fieldNumber: 4)
+    }
+    if !self.subtitle.isEmpty {
+      try visitor.visitSingularStringField(value: self.subtitle, fieldNumber: 5)
+    }
+    if !self.matchReason.isEmpty {
+      try visitor.visitSingularStringField(value: self.matchReason, fieldNumber: 6)
+    }
+    try { if let v = self._location {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+    } }()
+    if !self.thumbnailRelPath.isEmpty {
+      try visitor.visitSingularStringField(value: self.thumbnailRelPath, fieldNumber: 8)
+    }
+    if !self.iconKey.isEmpty {
+      try visitor.visitSingularStringField(value: self.iconKey, fieldNumber: 9)
+    }
+    if !self.matchSnippet.isEmpty {
+      try visitor.visitSingularStringField(value: self.matchSnippet, fieldNumber: 10)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_SearchHit, rhs: Provenencia_Engine_V1_SearchHit) -> Bool {
-    if lhs._storage !== rhs._storage {
-      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
-        let _storage = _args.0
-        let rhs_storage = _args.1
-        if _storage._kind != rhs_storage._kind {return false}
-        if _storage._id != rhs_storage._id {return false}
-        if _storage._ref != rhs_storage._ref {return false}
-        if _storage._title != rhs_storage._title {return false}
-        if _storage._subtitle != rhs_storage._subtitle {return false}
-        if _storage._matchReason != rhs_storage._matchReason {return false}
-        if _storage._location != rhs_storage._location {return false}
-        if _storage._thumbnailRelPath != rhs_storage._thumbnailRelPath {return false}
-        if _storage._iconKey != rhs_storage._iconKey {return false}
-        if _storage._matchSnippet != rhs_storage._matchSnippet {return false}
-        return true
-      }
-      if !storagesAreEqual {return false}
-    }
+    if lhs.kind != rhs.kind {return false}
+    if lhs.id != rhs.id {return false}
+    if lhs.ref != rhs.ref {return false}
+    if lhs.title != rhs.title {return false}
+    if lhs.subtitle != rhs.subtitle {return false}
+    if lhs.matchReason != rhs.matchReason {return false}
+    if lhs._location != rhs._location {return false}
+    if lhs.thumbnailRelPath != rhs.thumbnailRelPath {return false}
+    if lhs.iconKey != rhs.iconKey {return false}
+    if lhs.matchSnippet != rhs.matchSnippet {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -12836,88 +12837,46 @@ nonisolated extension Provenencia_Engine_V1_DeleteImpactListed: SwiftProtobuf.Me
   public static let protoMessageName: String = _protobuf_package + ".DeleteImpactListed"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}ref\0\u{1}title\0\u{1}location\0")
 
-  fileprivate class _StorageClass {
-    var _id: String = String()
-    var _ref: String = String()
-    var _title: String = String()
-    var _location: Provenencia_Engine_V1_WorkspaceLocation? = nil
-
-      // This property is used as the initial default value for new instances of the type.
-      // The type itself is protecting the reference to its storage via CoW semantics.
-      // This will force a copy to be made of this reference when the first mutation occurs;
-      // hence, it is safe to mark this as `nonisolated(unsafe)`.
-      static nonisolated(unsafe) let defaultInstance = _StorageClass()
-
-    private init() {}
-
-    init(copying source: _StorageClass) {
-      _id = source._id
-      _ref = source._ref
-      _title = source._title
-      _location = source._location
-    }
-  }
-
-  fileprivate mutating func _uniqueStorage() -> _StorageClass {
-    if !isKnownUniquelyReferenced(&_storage) {
-      _storage = _StorageClass(copying: _storage)
-    }
-    return _storage
-  }
-
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    _ = _uniqueStorage()
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      while let fieldNumber = try decoder.nextFieldNumber() {
-        // The use of inline closures is to circumvent an issue where the compiler
-        // allocates stack space for every case branch when no optimizations are
-        // enabled. https://github.com/apple/swift-protobuf/issues/1034
-        switch fieldNumber {
-        case 1: try { try decoder.decodeSingularStringField(value: &_storage._id) }()
-        case 2: try { try decoder.decodeSingularStringField(value: &_storage._ref) }()
-        case 3: try { try decoder.decodeSingularStringField(value: &_storage._title) }()
-        case 4: try { try decoder.decodeSingularMessageField(value: &_storage._location) }()
-        default: break
-        }
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.ref) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.title) }()
+      case 4: try { try decoder.decodeSingularMessageField(value: &self._location) }()
+      default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every if/case branch local when no optimizations
-      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-      // https://github.com/apple/swift-protobuf/issues/1182
-      if !_storage._id.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._id, fieldNumber: 1)
-      }
-      if !_storage._ref.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._ref, fieldNumber: 2)
-      }
-      if !_storage._title.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._title, fieldNumber: 3)
-      }
-      try { if let v = _storage._location {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
-      } }()
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.id.isEmpty {
+      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
     }
+    if !self.ref.isEmpty {
+      try visitor.visitSingularStringField(value: self.ref, fieldNumber: 2)
+    }
+    if !self.title.isEmpty {
+      try visitor.visitSingularStringField(value: self.title, fieldNumber: 3)
+    }
+    try { if let v = self._location {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_DeleteImpactListed, rhs: Provenencia_Engine_V1_DeleteImpactListed) -> Bool {
-    if lhs._storage !== rhs._storage {
-      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
-        let _storage = _args.0
-        let rhs_storage = _args.1
-        if _storage._id != rhs_storage._id {return false}
-        if _storage._ref != rhs_storage._ref {return false}
-        if _storage._title != rhs_storage._title {return false}
-        if _storage._location != rhs_storage._location {return false}
-        return true
-      }
-      if !storagesAreEqual {return false}
-    }
+    if lhs.id != rhs.id {return false}
+    if lhs.ref != rhs.ref {return false}
+    if lhs.title != rhs.title {return false}
+    if lhs._location != rhs._location {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
