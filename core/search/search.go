@@ -39,6 +39,8 @@ type WorkspaceLocation struct {
 	ConnectFromSubjectID string
 	ConnectToSubjectID   string
 	ConnectBridgeTypeKey string
+	SubjectTypeKey       string
+	PropertyID           string
 	SourceSurface        string
 	Ref                  string
 	Title                string

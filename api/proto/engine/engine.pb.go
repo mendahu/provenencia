@@ -6582,6 +6582,8 @@ type WorkspaceLocation struct {
 	ConnectToSubjectId   string                 `protobuf:"bytes,13,opt,name=connect_to_subject_id,json=connectToSubjectId,proto3" json:"connect_to_subject_id,omitempty"`
 	ConnectBridgeTypeKey string                 `protobuf:"bytes,14,opt,name=connect_bridge_type_key,json=connectBridgeTypeKey,proto3" json:"connect_bridge_type_key,omitempty"`
 	SourceTitle          string                 `protobuf:"bytes,15,opt,name=source_title,json=sourceTitle,proto3" json:"source_title,omitempty"`
+	SubjectTypeKey       string                 `protobuf:"bytes,16,opt,name=subject_type_key,json=subjectTypeKey,proto3" json:"subject_type_key,omitempty"` // Subject Fields type-strip category; empty = All properties
+	PropertyId           string                 `protobuf:"bytes,17,opt,name=property_id,json=propertyId,proto3" json:"property_id,omitempty"`               // Subject Fields inspector row
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -6717,6 +6719,20 @@ func (x *WorkspaceLocation) GetConnectBridgeTypeKey() string {
 func (x *WorkspaceLocation) GetSourceTitle() string {
 	if x != nil {
 		return x.SourceTitle
+	}
+	return ""
+}
+
+func (x *WorkspaceLocation) GetSubjectTypeKey() string {
+	if x != nil {
+		return x.SubjectTypeKey
+	}
+	return ""
+}
+
+func (x *WorkspaceLocation) GetPropertyId() string {
+	if x != nil {
+		return x.PropertyId
 	}
 	return ""
 }
@@ -13059,7 +13075,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x1aCloseCatalogSessionRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\"\x1d\n" +
-	"\x1bCloseCatalogSessionResponse\"\x99\x04\n" +
+	"\x1bCloseCatalogSessionResponse\"\xe4\x04\n" +
 	"\x11WorkspaceLocation\x12\x18\n" +
 	"\asection\x18\x01 \x01(\tR\asection\x12\x1b\n" +
 	"\tsource_id\x18\x02 \x01(\tR\bsourceId\x12\x19\n" +
@@ -13079,7 +13095,10 @@ const file_engine_proto_rawDesc = "" +
 	"\x17connect_from_subject_id\x18\f \x01(\tR\x14connectFromSubjectId\x121\n" +
 	"\x15connect_to_subject_id\x18\r \x01(\tR\x12connectToSubjectId\x125\n" +
 	"\x17connect_bridge_type_key\x18\x0e \x01(\tR\x14connectBridgeTypeKey\x12!\n" +
-	"\fsource_title\x18\x0f \x01(\tR\vsourceTitle\"\x93\x01\n" +
+	"\fsource_title\x18\x0f \x01(\tR\vsourceTitle\x12(\n" +
+	"\x10subject_type_key\x18\x10 \x01(\tR\x0esubjectTypeKey\x12\x1f\n" +
+	"\vproperty_id\x18\x11 \x01(\tR\n" +
+	"propertyId\"\x93\x01\n" +
 	"\x14SearchCatalogRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x14\n" +

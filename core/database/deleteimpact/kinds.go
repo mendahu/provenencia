@@ -95,10 +95,14 @@ type Location struct {
 	ConnectFromSubjectID string
 	ConnectToSubjectID   string
 	ConnectBridgeTypeKey string
-	SourceSurface        string
-	Ref                  string
-	Title                string
-	SourceTitle          string
+	// SubjectTypeKey is the Subject Fields type-strip category (empty = All properties).
+	SubjectTypeKey string
+	// PropertyID is the Subject Fields inspector row.
+	PropertyID    string
+	SourceSurface string
+	Ref           string
+	Title         string
+	SourceTitle   string
 }
 
 // Report is the speakable delete report (Impact is the function that builds it).

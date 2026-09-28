@@ -44,14 +44,14 @@ func projectKind(tx *sql.Tx, kind Kind, row probeRow) (string, Location, error) 
 		return projectVocab(tx, `SELECT label FROM source_metadata_fields WHERE id = ?`, row.ID, row.Ref, Location{
 			Section: sectionSourceFields, FieldID: uuidString(row.ID),
 		})
-	case KindProperty, KindPropertyTerm, KindSubjectType:
-		sqlLabel := `SELECT label FROM properties WHERE id = ?`
-		if kind == KindPropertyTerm {
-			sqlLabel = `SELECT label FROM property_terms WHERE id = ?`
-		} else if kind == KindSubjectType {
-			sqlLabel = `SELECT label FROM subject_types WHERE id = ?`
-		}
-		return projectVocab(tx, sqlLabel, row.ID, row.Ref, Location{Section: sectionSubjectFields})
+	case KindProperty:
+		return projectVocab(tx, `SELECT label FROM properties WHERE id = ?`, row.ID, row.Ref, Location{
+			Section: sectionSubjectFields, PropertyID: uuidString(row.ID),
+		})
+	case KindPropertyTerm:
+		return projectPropertyTerm(tx, row.ID, row.Ref)
+	case KindSubjectType:
+		return projectSubjectType(tx, row.ID, row.Ref)
 	case KindCredibilityGrade:
 		return projectVocab(tx, `SELECT label FROM source_credibility_grades WHERE id = ?`, row.ID, row.Ref, Location{
 			Section: sectionSources,
@@ -252,16 +252,51 @@ func projectSource(tx *sql.Tx, id []byte, ref string) (string, Location, error) 
 	}, nil
 }
 
+// projectPropertyTerm deep-links a term to its parent property's Subject Fields inspector row.
+func projectPropertyTerm(tx *sql.Tx, id []byte, ref string) (string, Location, error) {
+	var label sql.NullString
+	var propID []byte
+	err := tx.QueryRow(`SELECT label, property_id FROM property_terms WHERE id = ?`, id).Scan(&label, &propID)
+	if err != nil && err != sql.ErrNoRows {
+		return "", Location{}, err
+	}
+	return vocabTitle(label.String, ref), Location{
+		Section:    sectionSubjectFields,
+		PropertyID: uuidString(propID),
+		Ref:        ref,
+		Title:      vocabTitle(label.String, ref),
+	}, nil
+}
+
+// projectSubjectType deep-links a type to its Subject Fields type-strip category.
+func projectSubjectType(tx *sql.Tx, id []byte, ref string) (string, Location, error) {
+	var label, key sql.NullString
+	err := tx.QueryRow(`SELECT label, key FROM subject_types WHERE id = ?`, id).Scan(&label, &key)
+	if err != nil && err != sql.ErrNoRows {
+		return "", Location{}, err
+	}
+	return vocabTitle(label.String, ref), Location{
+		Section:        sectionSubjectFields,
+		SubjectTypeKey: key.String,
+		Ref:            ref,
+		Title:          vocabTitle(label.String, ref),
+	}, nil
+}
+
+func vocabTitle(label, ref string) string {
+	if title := strings.TrimSpace(label); title != "" {
+		return title
+	}
+	return ref
+}
+
 func projectVocab(tx *sql.Tx, q string, id []byte, ref string, loc Location) (string, Location, error) {
 	var label sql.NullString
 	err := tx.QueryRow(q, id).Scan(&label)
 	if err != nil && err != sql.ErrNoRows {
 		return "", Location{}, err
 	}
-	title := strings.TrimSpace(label.String)
-	if title == "" {
-		title = ref
-	}
+	title := vocabTitle(label.String, ref)
 	loc.Ref = ref
 	loc.Title = title
 	return title, loc, nil

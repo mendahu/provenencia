@@ -100,6 +100,8 @@ func locationFromImpact(loc deleteimpact.Location) *engine.WorkspaceLocation {
 		ConnectFromSubjectId: loc.ConnectFromSubjectID,
 		ConnectToSubjectId:   loc.ConnectToSubjectID,
 		ConnectBridgeTypeKey: loc.ConnectBridgeTypeKey,
+		SubjectTypeKey:       loc.SubjectTypeKey,
+		PropertyId:           loc.PropertyID,
 		SourceSurface:        loc.SourceSurface,
 		Ref:                  loc.Ref,
 		Title:                loc.Title,

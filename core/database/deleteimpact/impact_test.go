@@ -161,6 +161,17 @@ func TestImpactGates(t *testing.T) {
 		if len(got.Groups) != 1 || got.Groups[0].Via != "property_terms.property_id" || got.Groups[0].Total != 1 {
 			t.Fatalf("groups %+v", got.Groups)
 		}
+		// Term rows deep-link to the parent property's Subject Fields inspector row.
+		if len(got.Groups[0].Listed) != 1 {
+			t.Fatalf("listed %+v", got.Groups[0].Listed)
+		}
+		loc := got.Groups[0].Listed[0].Location
+		if loc.Section != "subject-fields" || loc.PropertyID != idString(propID) || loc.SubjectTypeKey != "" {
+			t.Fatalf("term location %+v", loc)
+		}
+		if loc.Title != "Grant" || got.Groups[0].Listed[0].Title != "Grant" {
+			t.Fatalf("term title %+v", got.Groups[0].Listed[0])
+		}
 	})
 
 	t.Run("plugin field origin_locked", func(t *testing.T) {
