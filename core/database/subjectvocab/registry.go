@@ -6,9 +6,9 @@ import (
 )
 
 // Declarative provenencia Interpretation subject vocabulary (create-time starter).
-// Presentation and locked bindings live here. The connect matrix (which
-// properties on which bridge types are endpoints or disambiguation) lives in
-// core/connectrules.Seed — Install writes only structural catalog rows.
+// Presentation and non-bridge locked bindings live here. The connect matrix
+// (bridge endpoints + disambiguation) lives in core/connectrules; Install
+// derives bridge bindings from connectrules.BridgeBindings().
 // Term capabilities (birthday facets, tree-edge roles, …) are deferred until a later PR.
 
 const (
@@ -153,10 +153,9 @@ var seedProperties = []seedProperty{
 	{Key: "toponym", Label: "Toponym", Description: "Place name as interpreted from a Source", ValueType: properties.ValueTypeText},
 }
 
-// Bindings from docs/seeded-vocabulary.md §3.3.
-// Locked = required for connect macros and/or Conclusion ordering (event dates).
-// Bridge endpoint keys here must match connectrules.Seed Endpoints; disambiguation
-// keys (role, relationship_type, …) stay unlocked.
+// Non-bridge bindings from docs/seeded-vocabulary.md §3.3.
+// Locked = required for Conclusion ordering (event dates), etc.
+// Bridge type bindings come from connectrules.BridgeBindings() at Install time.
 var seedBindings = []seedBinding{
 	{TypeKey: "person", PropertyKey: "name", SortOrder: 0},
 	{TypeKey: "person", PropertyKey: "sex_at_birth", SortOrder: 1},
@@ -167,17 +166,6 @@ var seedBindings = []seedBinding{
 	{TypeKey: "event", PropertyKey: "end_date", SortOrder: 3, Locked: true},
 
 	{TypeKey: "place", PropertyKey: "toponym", SortOrder: 0},
-
-	{TypeKey: "participation", PropertyKey: "person", SortOrder: 0, Locked: true},
-	{TypeKey: "participation", PropertyKey: "event", SortOrder: 1, Locked: true},
-	{TypeKey: "participation", PropertyKey: "role", SortOrder: 2},
-
-	{TypeKey: "location", PropertyKey: "event", SortOrder: 0, Locked: true},
-	{TypeKey: "location", PropertyKey: "place", SortOrder: 1, Locked: true},
-
-	{TypeKey: "relationship", PropertyKey: "person", SortOrder: 0, Locked: true},
-	{TypeKey: "relationship", PropertyKey: "related_to", SortOrder: 1, Locked: true},
-	{TypeKey: "relationship", PropertyKey: "relationship_type", SortOrder: 2},
 
 	{TypeKey: "source", PropertyKey: "mentions", SortOrder: 0},
 	{TypeKey: "source", PropertyKey: "remark", SortOrder: 1},
