@@ -317,9 +317,8 @@ final class CitationConnections {
         guard let pending = rows.first(where: \.isPending),
               let drafts = edgeDrafts(for: pending, vocabulary: context.vocabulary)
         else { return }
-        let values = context.citationValues()
         do {
-            let attachID = context.citationID
+            let citationID = try await context.ensureCitationID()
             let created = try await context.store.createCitedBridge(
                 projectDir: context.projectDir,
                 userID: context.userID,
@@ -328,20 +327,16 @@ final class CitationConnections {
                 toSubjectID: pending.toSubjectID,
                 bridgeTypeKey: pending.bridgeTypeKey,
                 description: "",
-                artifactID: attachID == nil ? (context.artifactID ?? "") : "",
-                locatorJSON: attachID == nil ? values.locator.encodeJSON() : "",
-                transcription: attachID == nil ? values.transcription : "",
-                citationDescription: attachID == nil ? values.description : "",
-                transcriptionUncertain: attachID == nil && values.transcriptionUncertain,
-                transcriptionNote: attachID == nil ? values.transcriptionNote : "",
+                artifactID: "",
+                locatorJSON: "",
+                transcription: "",
+                citationDescription: "",
+                transcriptionUncertain: false,
+                transcriptionNote: "",
                 citationNotes: [],
                 observations: drafts,
-                citationID: attachID
+                citationID: citationID
             )
-            if context.citationID == nil {
-                context.citationID = created.1.id
-                context.captureCitationBaseline()
-            }
             context.applySavedCitation()
             await context.waitForGraph()
             await context.reloadListedCitations()
@@ -370,6 +365,11 @@ final class CitationConnections {
                     isSaving: false,
                     error: nil
                 )
+            )
+        } catch is CitationComposerNeedArtifact {
+            markError(
+                connectionID: pending.id,
+                message: String(localized: L10n.CitationComposer.needArtifact)
             )
         } catch {
             markError(connectionID: pending.id, message: L10n.Errors.message(for: error))

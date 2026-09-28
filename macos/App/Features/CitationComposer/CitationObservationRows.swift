@@ -393,35 +393,9 @@ final class CitationObservationRows {
             return
         }
         guard let draft = draftOrNil else { return }
-        let values = context.citationValues()
         do {
-            if context.citationID == nil {
-                guard let artifactID = context.artifactID else {
-                    markError(rowID: rowID, message: String(localized: L10n.CitationComposer.needArtifact))
-                    return
-                }
-                let created = try await context.store.createCitationWithObservations(
-                    projectDir: context.projectDir,
-                    userID: context.userID,
-                    artifactID: artifactID,
-                    locatorJSON: values.locator.encodeJSON(),
-                    transcription: values.transcription,
-                    description: values.description,
-                    transcriptionUncertain: values.transcriptionUncertain,
-                    transcriptionNote: values.transcriptionNote,
-                    citationNotes: [],
-                    observations: [draft]
-                )
-                context.citationID = created.0.id
-                context.captureCitationBaseline()
-                if let written = created.1.first {
-                    markSaved(rowID: rowID, id: written.id, ref: written.ref)
-                } else {
-                    markError(rowID: rowID, message: String(localized: L10n.CitationComposer.rowStateError))
-                }
-                context.applySavedCitation()
-                await context.reloadListedCitations()
-            } else if row.persistedID == nil, let citationID = context.citationID {
+            let citationID = try await context.ensureCitationID()
+            if row.persistedID == nil {
                 let written = try await context.store.addObservationsToCitation(
                     projectDir: context.projectDir,
                     userID: context.userID,
@@ -434,7 +408,7 @@ final class CitationObservationRows {
                     markError(rowID: rowID, message: String(localized: L10n.CitationComposer.rowStateError))
                 }
                 context.applySavedCitation()
-            } else if let citationID = context.citationID {
+            } else {
                 let (observationOrNil, updateError) = row.asCatalogObservation(property: property)
                 if let updateError {
                     markError(rowID: rowID, message: updateError)
@@ -453,6 +427,8 @@ final class CitationObservationRows {
                     markError(rowID: rowID, message: String(localized: L10n.CitationComposer.rowStateError))
                 }
             }
+        } catch is CitationComposerNeedArtifact {
+            markError(rowID: rowID, message: String(localized: L10n.CitationComposer.needArtifact))
         } catch {
             markError(rowID: rowID, message: L10n.Errors.message(for: error))
         }
