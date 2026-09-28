@@ -8,7 +8,7 @@ alwaysApply: false
 
 Follow `.cursor/skills/add-catalog-delete/SKILL.md` and `docs/catalog-deletes.md`.
 
-- **Resource / vocab `Delete`** must call `deleteimpact.Impact` in the same tx (after extra gates). Then: connection facets if any, `SnapshotOwned` if the parent has owned outbound, `DELETE` the parent, `ReleaseSnapshot`. Do **not** call `ReleaseOwned` after `DELETE` — it reads the parent row and is a no-op. Refuse is a generic `*.in_use` / extra-gate code — not the report on `Error`.
+- **Resource / vocab `Delete`** must call `deleteimpact.Impact` in the same tx (after extra gates). Map the report with `deleteimpact.Refuse` (do not re-check origin before Impact). Then: connection facets if any, `SnapshotOwned` if the parent has owned outbound, `DELETE` the parent, `ReleaseSnapshot`. Do **not** call `ReleaseOwned` after `DELETE` — `SnapshotOwned` requires the parent row. Refuse is a generic `*.in_use` / extra-gate code — not the report on `Error`.
 - Load the row first. Domain `Delete` missing → `ErrInvalid`. `GetDeleteImpact` missing → `not_found`. `edge_locked` / infra / `origin_locked` before or via Impact. Do not treat inbound-empty as allowed.
 - Bridge `subjects.Delete` releases connection facets (seeded edges + disambiguation) first. `observations.Delete` of an edge stays `edge_locked`.
 - Do **not** add `sqlInUse` / `SELECT 1 FROM … LIMIT 1` next to a resource `DELETE`. No-UI writers still cut over.

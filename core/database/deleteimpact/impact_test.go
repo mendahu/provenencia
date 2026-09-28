@@ -379,7 +379,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 			if _, err := tx.Exec(`DELETE FROM subjects WHERE id = ?`, bridge.Subject.ID); err == nil {
 				t.Fatal("raw subject delete should fail while facets remain")
 			}
-			if err := deleteimpact.ReleaseConnectionFacets(tx, bridge.Subject.ID); err != nil {
+			if _, err := deleteimpact.ReleaseConnectionFacets(tx, bridge.Subject.ID); err != nil {
 				t.Fatal(err)
 			}
 			if _, err := tx.Exec(`DELETE FROM subjects WHERE id = ?`, bridge.Subject.ID); err != nil {
@@ -730,6 +730,59 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 			t.Fatalf("listed %+v", got.Groups[0].Listed)
 		}
 	})
+}
+
+func TestImpactAgreesWithSQLite(t *testing.T) {
+	c, userID := testCatalog(t)
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
+		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Deed"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("empty source raw delete matches Impact", func(t *testing.T) {
+		got := mustImpact(t, c, deleteimpact.KindSource, src.ID)
+		if !got.Allowed {
+			t.Fatalf("%+v", got)
+		}
+		if !rawDeleteOK(t, c, "sources", src.ID) {
+			t.Fatal("raw DELETE of unused source failed")
+		}
+	})
+
+	if _, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"}); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("inbound source raw delete matches Impact", func(t *testing.T) {
+		got := mustImpact(t, c, deleteimpact.KindSource, src.ID)
+		if got.Allowed {
+			t.Fatalf("%+v", got)
+		}
+		if rawDeleteOK(t, c, "sources", src.ID) {
+			t.Fatal("raw DELETE succeeded with artifact inbound")
+		}
+	})
+}
+
+func rawDeleteOK(t *testing.T, c *database.Catalog, table string, id []byte) bool {
+	t.Helper()
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback() }()
+	_, err = tx.Exec(`DELETE FROM `+table+` WHERE id = ?`, id)
+	return err == nil
 }
 
 func mustImpact(t *testing.T, c *database.Catalog, kind deleteimpact.Kind, id []byte) deleteimpact.Report {

@@ -1,6 +1,7 @@
 package deleteimpact
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -231,6 +232,28 @@ func TestCollectFileObjects(t *testing.T) {
 	}
 	if got[1].ChecksumSHA256 != sumDer || got[1].MediaType != "image/jpeg" {
 		t.Fatalf("derived %+v", got[1])
+	}
+}
+
+func TestSnapshotOwnedRequiresParent(t *testing.T) {
+	c := testCatalogInternal(t)
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	missing := make([]byte, 16)
+	missing[15] = 1
+	if _, err := SnapshotOwned(tx, KindArtifact, missing); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("snapshot missing parent %v", err)
+	}
+	if err := ReleaseOwned(tx, KindArtifact, missing); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("release missing parent %v", err)
 	}
 }
 

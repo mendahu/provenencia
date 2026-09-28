@@ -260,10 +260,13 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	if err != nil {
 		return err
 	}
-	if !report.Allowed {
-		return ErrInUse
+	if err := deleteimpact.Refuse(report, deleteimpact.Codes{
+		InUse: ErrInUse, NotFound: ErrInvalid,
+	}); err != nil {
+		return err
 	}
-	if err := deleteimpact.ReleaseConnectionFacets(tx, id); err != nil {
+	released, err := deleteimpact.ReleaseConnectionFacets(tx, id)
+	if err != nil {
 		return err
 	}
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
@@ -281,16 +284,48 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	if prev.Description != "" {
 		fields["description"] = audit.FieldDiff{Old: prev.Description, New: nil}
 	}
+	changes := make([]audit.Change, 0, 1+len(released)*2)
+	for _, facet := range released {
+		for _, note := range facet.Notes {
+			changes = append(changes, audit.Change{
+				EntityType: "observation_note",
+				EntityID:   note.ID,
+				Action:     audit.ActionDelete,
+				Fields: audit.DeletedRow(map[string]any{
+					"id":             uuidString(note.ID),
+					"observation_id": uuidString(facet.ID),
+					"body":           note.Body,
+				}),
+			})
+		}
+		obsFields := map[string]any{
+			"id":  uuidString(facet.ID),
+			"ref": facet.Ref,
+		}
+		if len(facet.DateID) == 16 {
+			obsFields["value_date_id"] = uuidString(facet.DateID)
+		}
+		if len(facet.NameID) == 16 {
+			obsFields["value_name_id"] = uuidString(facet.NameID)
+		}
+		changes = append(changes, audit.Change{
+			EntityType: "observation",
+			EntityID:   facet.ID,
+			Action:     audit.ActionDelete,
+			Fields:     audit.DeletedRow(obsFields),
+		})
+	}
+	changes = append(changes, audit.Change{
+		EntityType: "subject",
+		EntityID:   id,
+		Action:     audit.ActionDelete,
+		Fields:     fields,
+	})
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
 		ActionType: "delete_subject",
 		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
-			EntityType: "subject",
-			EntityID:   id,
-			Action:     audit.ActionDelete,
-			Fields:     fields,
-		}},
+		Changes:    changes,
 	}); err != nil {
 		return err
 	}

@@ -12,7 +12,7 @@ Skills: [`add-catalog-delete`](../.cursor/skills/add-catalog-delete/SKILL.md), [
 4. **No general cross-resource cascade.** Citation ↛ Observations. The one named exception is connection facets on a bridge subject.
 5. **Every official `Delete` calls `deleteimpact.Impact` in the same tx.** No private `sqlInUse`. Preview is `GetDeleteImpact`; the writer re-runs `Impact`. Writers with no UI still cut over when the registry lands.
 6. **Edge-lock is a gate on Observation writes.** `observations.Delete` / `Update` of an edge row stay `edge_locked`. The only writer that may remove an edge row is official `subjects.Delete` releasing connection facets.
-7. **The map stays honest.** Every live FK is in the register. CI fails if `PRAGMA foreign_key_list` shows an unregistered or mis-tagged FK, a resource edge without a list probe, or an owned-outbound column missing from the parent’s release list. `Impact.allowed` (inbound) iff a raw resource `DELETE` would succeed with FKs on, **or** the only remaining pointers are registered `connectionFacet` predicates.
+7. **The map stays honest.** Every live FK is in the register. Every catalog table (except `sqlite_%` / FTS shadows) is registered. CI fails if `PRAGMA foreign_key_list` shows an unregistered or mis-tagged FK, a resource edge without a list probe, an owned-outbound column missing from the parent’s release list, or an FK child column with no covering index. Resource/vocab kinds with an `Exists` check have a projector `Section`. `Impact.allowed` (inbound) iff a raw resource `DELETE` would succeed with FKs on, **or** the only remaining pointers are registered `connectionFacet` predicates.
 
 ### Connection facets (bridge subjects only)
 

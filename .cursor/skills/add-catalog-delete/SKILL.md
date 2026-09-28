@@ -39,7 +39,7 @@ Facet CASCADE is SQLite’s job. Official `Delete` still **registers** those FKs
 - [ ] Title + location projectors registered on the blocker kind (domain package)
 - [ ] Proto kind / via keys; recipe L10n heading (unknown via still renders)
 - [ ] Domain `Delete`: load → extra gates → Impact in the same tx → connection facets if any → `SnapshotOwned` if owned outbound → DELETE parent → `ReleaseSnapshot` → audit / FTS
-- [ ] Extra gates: domain `Delete` missing row → `ErrInvalid`; `GetDeleteImpact` missing → `not_found`; `edge_locked` / infra / `origin_locked` before or via Impact
+- [ ] Extra gates: domain `Delete` missing row → `ErrInvalid`; `GetDeleteImpact` missing → `not_found`; `edge_locked` / infra / `origin_locked` via Impact + `Refuse`
 - [ ] Bridge `subjects.Delete` releases connection facets (loop `connectrules.All()` endpoints + `Disambiguation` matching property origin; do not hard-code `role` / `relationship_type`) before the parent; other `observations.Delete` stays `edge_locked`
 - [ ] FFI: GetDeleteImpact returns the report; Delete* refuse is a generic in_use / extra-gate code (no report on Error, no apperr ref params)
 - [ ] Audit + searchindex stay in the domain package
@@ -58,18 +58,18 @@ func Delete(c *database.Catalog, userID, id []byte) error {
     // extra gates (edge_locked, infra, …) before Impact when they are not already Impact gates
     report, err := deleteimpact.Impact(tx, deleteimpact.KindCitation, id)
     if err != nil { return err }
-    if !report.Allowed {
-        return ErrInUse // generic code — report already went out on GetDeleteImpact
-    }
-    // connection facets (bridge subjects only): deleteimpact.ReleaseConnectionFacets
-    // owned outbound: snap, err := deleteimpact.SnapshotOwned(tx, kind, id)
+    if err := deleteimpact.Refuse(report, deleteimpact.Codes{
+        InUse: ErrInUse, NotFound: ErrInvalid, // OriginLocked / EdgeLocked when the kind has those gates
+    }); err != nil { return err }
+    // connection facets (bridge subjects only): released, err := deleteimpact.ReleaseConnectionFacets
+    // owned outbound: snap, err := deleteimpact.SnapshotOwned(tx, kind, id) — missing parent is ErrInvalid
     // DELETE parent
     // deleteimpact.ReleaseSnapshot(tx, snap)
-    // audit.Record, searchindex.Delete / Reproject
+    // audit.Record (include ReleasedFacet rows), searchindex.Delete / Reproject
 }
 ```
 
-`ReleaseOwned` snapshots then releases **while the parent row still exists**. After `DELETE` it cannot see owned columns — use `SnapshotOwned` → `DELETE` → `ReleaseSnapshot` instead. Writers with no owned outbound skip snapshot/release.
+`ReleaseOwned` snapshots then releases **while the parent row still exists** (`SnapshotOwned` errors if the parent is gone). After `DELETE` it cannot see owned columns — use `SnapshotOwned` → `DELETE` → `ReleaseSnapshot` instead. Writers with no owned outbound skip snapshot/release. Map Impact gates with `deleteimpact.Refuse` so origin/edge/inbound share one switch; do not re-check origin before Impact.
 
 - Preview and write share one **function**. UI calls `GetDeleteImpact` **before** confirm; `Delete` re-runs Impact in-tx. The proto is only on the fetch.
 - `GetDeleteImpact` on a missing id returns gate `not_found`. Domain `Delete` on a missing id returns `ErrInvalid`.

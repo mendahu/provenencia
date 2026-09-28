@@ -61,8 +61,9 @@ The connect matrix is **`core/connectrules` only** — author a `Bridge`
 Connect / Install bridge bindings pick it up. Add new property rows in
 `seedProperties` / `seedTerms` when the property is new. Do not hand-list
 bridge rows in `seedBindings`. `Register` is the extension seam for future
-`plugin:<id>` modules (no policy `case` changes).
-`CatalogConnectRule.productMatrix` in
+`plugin:<id>` modules (no policy `case` changes). The `connectrules` leaf
+also lets `deleteimpact` classify connection facets without importing
+`subjectvocab`. `CatalogConnectRule.productMatrix` in
 `macos/App/Platform/GenealogyStore.swift` is the FakeStore / unit-test double —
 update it in the same change as product bridges. Live Mac connect reads
 `listConnectRules` and does not fall back to that table. Term capabilities

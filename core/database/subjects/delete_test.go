@@ -158,6 +158,15 @@ func TestSubjectDelete(t *testing.T) {
 		if n != 0 {
 			t.Fatalf("facet rows left %d", n)
 		}
+		var deleted int
+		if err := db.QueryRow(
+			`SELECT COUNT(*) FROM audit_changes WHERE entity_type = 'observation' AND action = 'delete'`,
+		).Scan(&deleted); err != nil {
+			t.Fatal(err)
+		}
+		if deleted != 3 {
+			t.Fatalf("facet observation audit %d", deleted)
+		}
 	})
 
 	t.Run("G6 extra observation refuses", func(t *testing.T) {

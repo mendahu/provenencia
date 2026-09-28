@@ -116,8 +116,10 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	if err != nil {
 		return err
 	}
-	if !report.Allowed {
-		return ErrInUse
+	if err := deleteimpact.Refuse(report, deleteimpact.Codes{
+		InUse: ErrInUse, EdgeLocked: ErrEdgeLocked, NotFound: ErrInvalid,
+	}); err != nil {
+		return err
 	}
 
 	notes, err := listNotesTx(tx, id)

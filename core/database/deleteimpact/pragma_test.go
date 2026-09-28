@@ -1,6 +1,8 @@
 package deleteimpact
 
 import (
+	"database/sql"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -24,29 +26,39 @@ func TestPragmaHonesty(t *testing.T) {
 	}
 	resourceVias := resourceInboundVias()
 	owned := ownedColumns()
+	registeredTables := map[string]bool{}
+	for _, spec := range tables {
+		if spec.Name != "" {
+			registeredTables[spec.Name] = true
+		}
+	}
 
-	tables, err := db.Query(`SELECT name FROM sqlite_schema
+	tableRows, err := db.Query(`SELECT name FROM sqlite_schema
 		WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'catalog_search_fts%'
 		ORDER BY name`)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var names []string
-	for tables.Next() {
+	for tableRows.Next() {
 		var name string
-		if err := tables.Scan(&name); err != nil {
-			tables.Close()
+		if err := tableRows.Scan(&name); err != nil {
+			tableRows.Close()
 			t.Fatal(err)
 		}
 		names = append(names, name)
 	}
-	if err := tables.Err(); err != nil {
-		tables.Close()
+	if err := tableRows.Err(); err != nil {
+		tableRows.Close()
 		t.Fatal(err)
 	}
-	tables.Close()
+	tableRows.Close()
 	seen := map[string]bool{}
+	var fkCols [][2]string
 	for _, name := range names {
+		if !registeredTables[name] {
+			t.Errorf("unregistered table %s", name)
+		}
 		fks, err := db.Query(`PRAGMA foreign_key_list(` + name + `)`)
 		if err != nil {
 			t.Fatal(err)
@@ -59,6 +71,7 @@ func TestPragmaHonesty(t *testing.T) {
 			}
 			key := name + "." + fromCol
 			seen[key] = true
+			fkCols = append(fkCols, [2]string{name, fromCol})
 			spec, ok := registered[key]
 			if !ok {
 				t.Errorf("unregistered FK %s -> %s", key, toTable)
@@ -85,10 +98,115 @@ func TestPragmaHonesty(t *testing.T) {
 		}
 		fks.Close()
 	}
+	for _, pair := range fkCols {
+		name, fromCol := pair[0], pair[1]
+		if !leftmostIndexed(t, db, name, fromCol) {
+			t.Errorf("FK %s.%s has no covering index", name, fromCol)
+		}
+	}
 	for key := range registered {
 		if !seen[key] {
 			t.Errorf("registered FK %s is not live", key)
 		}
+	}
+}
+
+func TestPragmaHonestyProjectors(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	id := make([]byte, 16)
+	id[15] = 1
+	for _, spec := range tables {
+		if spec.Exists == "" {
+			continue
+		}
+		switch spec.Bucket {
+		case BucketInfra, BucketSkip, BucketPool:
+			continue
+		}
+		_, loc, err := projectKind(tx, spec.Kind, probeRow{ID: id, Ref: "REF-TEST"})
+		if err != nil {
+			t.Errorf("%s project %v", spec.Kind, err)
+			continue
+		}
+		if loc.Section == "" {
+			t.Errorf("%s projector missing Section", spec.Kind)
+		}
+	}
+}
+
+func leftmostIndexed(t *testing.T, db *sql.DB, table, col string) bool {
+	t.Helper()
+	indexes, err := db.Query(`PRAGMA index_list(` + table + `)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	names, err := pragmaColumn(indexes, 1)
+	indexes.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range names {
+		info, err := db.Query(`PRAGMA index_info("` + strings.ReplaceAll(name, `"`, `""`) + `")`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cols, err := pragmaColumn(info, 2)
+		info.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(cols) > 0 && cols[0] == col {
+			return true
+		}
+	}
+	return false
+}
+
+func pragmaColumn(rows *sql.Rows, idx int) ([]string, error) {
+	cols, err := rows.Columns()
+	if err != nil {
+		return nil, err
+	}
+	if idx < 0 || idx >= len(cols) {
+		return nil, fmt.Errorf("pragma column %d out of range", idx)
+	}
+	var out []string
+	for rows.Next() {
+		raw := make([]any, len(cols))
+		dest := make([]any, len(cols))
+		for i := range raw {
+			dest[i] = &raw[i]
+		}
+		if err := rows.Scan(dest...); err != nil {
+			return nil, err
+		}
+		out = append(out, asString(raw[idx]))
+	}
+	return out, rows.Err()
+}
+
+func asString(v any) string {
+	switch t := v.(type) {
+	case string:
+		return t
+	case []byte:
+		return string(t)
+	default:
+		return ""
 	}
 }
 
