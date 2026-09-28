@@ -7,7 +7,7 @@ Skills: [`add-catalog-delete`](../.cursor/skills/add-catalog-delete/SKILL.md), [
 ## Policy
 
 1. **Buckets are named on the FK.** Resource → resource is `NO ACTION`. Facet → parent is `ON DELETE CASCADE`. Owned outbound (parent column → child) stays `NO ACTION`; official `Delete` releases the child (`always` or `ifUnused`). `ifUnused` for `files` also unlinks `objects/` after commit when the `files` row is actually dropped. Optional back-pointers are `SET NULL`. **Connection facets** are a predicate split on `observations.subject_id` (below) — not SQLite `CASCADE`.
-2. **`Impact` explains the schema; it does not replace it.** A successful erase must be a transaction the FK graph would accept **after** official release of owned outbound and connection facets.
+2. **`Impact` explains the schema; it does not replace it.** A successful erase must be a transaction the FK graph would accept **after** official release of owned outbound and connection facets. Owned outbound cannot be looked up after the parent row is gone: take `SnapshotOwned` (and `CollectFileObjects` for files) **before** `DELETE`, then `ReleaseSnapshot`. `ReleaseOwned` is only valid while the parent still exists. Connection facets on a bridge subject are released **before** the parent `DELETE`.
 3. **Erase iff the target exists, extra gates pass, and inbound resources are empty.** Extra gates: `not_found`, `edge_locked`, `infra`, `origin_locked`.
 4. **No general cross-resource cascade.** Citation ↛ Observations. The one named exception is connection facets on a bridge subject.
 5. **Every official `Delete` calls `deleteimpact.Impact` in the same tx.** No private `sqlInUse`. Preview is `GetDeleteImpact`; the writer re-runs `Impact`. Writers with no UI still cut over when the registry lands.
@@ -62,9 +62,9 @@ Impact
 2. Register the table + probes + owned-outbound / connection-facet release in `core/database/deleteimpact`.
 3. Register title + location projectors.
 4. Add proto `kind` / `via` values. Recipe L10n gets a heading; unknown keys must still render.
-5. Domain `Delete`: load → extra gates → Impact → release connection facets / owned outbound as registered → `DELETE` parent → audit / FTS.
+5. Domain `Delete`: load → extra gates → Impact → connection facets if any → `SnapshotOwned` if owned outbound → `DELETE` parent → `ReleaseSnapshot` → audit / FTS.
 6. No UI yet: still register + cut over any existing `Delete`.
-7. Tests: empty → erase; inbound → listed + `total`; missing → `not_found`; extra gates; pragma; SQLite-agrees (with connection-facet carve-out); audit + searchindex.
+7. Tests: empty → erase; inbound → listed + `total`; `GetDeleteImpact` missing → `not_found`; domain `Delete` missing → `ErrInvalid`; extra gates; pragma; SQLite-agrees (with connection-facet carve-out); audit + searchindex.
 
 ## UI
 
