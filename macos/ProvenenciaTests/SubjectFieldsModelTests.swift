@@ -129,8 +129,11 @@ struct SubjectFieldsModelTests {
             description: "",
             bindTypeIDs: [person.id]
         )
-        let ok = await model.submitCreate()
-        #expect(ok)
+        let location = await model.submitCreate()
+        #expect(location?.section == .subjectFields)
+        #expect(location?.subjectTypeKey == "person")
+        #expect(location?.propertyId == model.selectedPropertyID)
+        #expect(location?.title == "Custom Fact")
         #expect(store.propertiesByProject[projectDir]?.contains { $0.key == "custom-fact" } == true)
         #expect(store.subjectTypeFieldsByType[person.id]?.contains { $0.property.key == "custom-fact" } == true)
         #expect(!(SubjectPropertyValueType.researcherCreatable.contains("term")))
@@ -414,6 +417,141 @@ struct SubjectFieldsModelTests {
         #expect(store.propertiesByProject[projectDir]?.first?.key == "burial_ground")
         #expect(store.propertiesByProject[projectDir]?.first?.valueType == "text")
         #expect(model.selectedPropertyID == property.id)
+    }
+
+    // MARK: History selection
+
+    private func makeBoundModel() -> (SubjectFieldsModel, WorkspaceSession) {
+        let person = personType()
+        let (model, session, _) = makeModel(
+            properties: [nameProperty(), eventTypeProperty()],
+            types: [person, eventType()],
+            fieldsByType: [
+                person.id: [CatalogSubjectTypeField(property: nameProperty(), sortOrder: 0, locked: true)],
+            ]
+        )
+        return (model, session)
+    }
+
+    @Test func syncSelectionRestoresCategoryAndProperty() async {
+        let (model, session) = makeBoundModel()
+        await warm(model, session: session)
+
+        let outcome = model.syncSelection(
+            from: WorkspaceLocation(section: .subjectFields, subjectTypeKey: "person", propertyId: "prop-name")
+        )
+        #expect(outcome == .applied)
+        #expect(model.selectedTypeKey == "person")
+        #expect(model.selectedPropertyID == "prop-name")
+        #expect(model.selectedProperty?.key == "name")
+
+        #expect(model.syncSelection(from: WorkspaceLocation(section: .subjectFields, subjectTypeKey: "event")) == .applied)
+        #expect(model.selectedTypeKey == "event")
+        #expect(model.selectedPropertyID == nil)
+
+        #expect(model.syncSelection(from: .sectionRoot(.subjectFields)) == .applied)
+        #expect(model.selectedTypeKey == nil)
+        #expect(model.selectedPropertyID == nil)
+    }
+
+    @Test func syncSelectionIgnoresOtherSectionsAndOpenCreate() async {
+        let (model, session) = makeBoundModel()
+        await warm(model, session: session)
+        model.selectType("person")
+        model.selectProperty("prop-name")
+
+        #expect(model.syncSelection(from: WorkspaceLocation(section: .sourceFields, fieldId: "fld-1")) == .ignored)
+        #expect(model.selectedTypeKey == "person")
+        #expect(model.selectedPropertyID == "prop-name")
+
+        model.openCreate()
+        #expect(model.syncSelection(from: .sectionRoot(.subjectFields)) == .ignored)
+        #expect(model.selectedPropertyID == "prop-name")
+    }
+
+    @Test func syncSelectionReportsMissingCategoryOrProperty() async {
+        let (model, session) = makeBoundModel()
+        await warm(model, session: session)
+
+        #expect(
+            model.syncSelection(
+                from: WorkspaceLocation(section: .subjectFields, subjectTypeKey: "person", propertyId: "gone")
+            ) == .missingDeepId
+        )
+        #expect(model.selectedTypeKey == "person")
+        #expect(model.selectedPropertyID == nil)
+
+        #expect(
+            model.syncSelection(
+                from: WorkspaceLocation(section: .subjectFields, subjectTypeKey: "ghost", propertyId: "prop-name")
+            ) == .missingDeepId
+        )
+        #expect(model.selectedTypeKey == nil)
+        #expect(model.selectedPropertyID == nil)
+    }
+
+    @Test func syncSelectionBeforeLoadIsIgnored() {
+        let (model, _) = makeBoundModel()
+        #expect(
+            model.syncSelection(from: WorkspaceLocation(section: .subjectFields, propertyId: "prop-name")) == .ignored
+        )
+        #expect(model.selectedPropertyID == nil)
+    }
+
+    @Test func reapplyingCurrentPlaceKeepsIdentityEdit() async {
+        let (model, session, _) = makeModel(properties: [userProperty()], types: [personType()])
+        await warm(model, session: session)
+        model.selectProperty(userProperty().id)
+        model.beginEdit()
+
+        let place = WorkspaceLocation(section: .subjectFields, propertyId: userProperty().id)
+        #expect(model.syncSelection(from: place) == .applied)
+        #expect(model.isEditingIdentity)
+
+        #expect(model.syncSelection(from: .sectionRoot(.subjectFields)) == .applied)
+        #expect(!model.isEditingIdentity)
+    }
+
+    @Test func locationBuildersCarryBothLevelsAndTitle() async {
+        let (model, session) = makeBoundModel()
+        await warm(model, session: session)
+
+        let category = model.location(afterPressingType: "person")
+        #expect(category == WorkspaceLocation(section: .subjectFields, subjectTypeKey: "person"))
+        #expect(category.title == "Person")
+        model.selectType("person")
+
+        let row = model.location(selectingProperty: "prop-name")
+        #expect(row == WorkspaceLocation(section: .subjectFields, subjectTypeKey: "person", propertyId: "prop-name"))
+        #expect(row.title == "Name")
+        model.selectProperty("prop-name")
+
+        // Pressing the focused type again clears the filter but keeps the inspector row.
+        let cleared = model.location(afterPressingType: "person")
+        #expect(cleared == WorkspaceLocation(section: .subjectFields, propertyId: "prop-name"))
+        #expect(cleared.title == "Name")
+    }
+
+    @Test func addPropertyFromComboReturnsRowPlace() async {
+        let person = personType()
+        let custom = CatalogProperty(
+            id: "prop-custom",
+            key: "custom",
+            origin: "user",
+            label: "Custom",
+            description: "",
+            valueType: "text"
+        )
+        let (model, session, store) = makeModel(properties: [custom], types: [person])
+        await warm(model, session: session)
+        model.selectType("person")
+        model.addPropertySelection = custom.id
+
+        let location = await model.addPropertyFromCombo()
+        #expect(location == WorkspaceLocation(section: .subjectFields, subjectTypeKey: "person", propertyId: custom.id))
+        #expect(model.selectedPropertyID == custom.id)
+        #expect(model.addPropertySelection.isEmpty)
+        #expect(store.subjectTypeFieldsByType[person.id]?.contains { $0.property.id == custom.id } == true)
     }
 
     @Test func pluginHasNoEditControl() async {
