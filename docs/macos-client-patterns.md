@@ -88,7 +88,7 @@ Destination view  →  reads QueryHandle(s)  →  patches / invalidates on mutat
 4. `setQueryValue` is an overlay (optimistic drag, list-row patch the write returned). It is not a substitute for `apply`.
 5. Views observe handles. Models keep form/interaction state only. Evidence graph cards are a **pure join** of `sourceGraph` (`SourceGraphRows`) and `subjectFieldsWorkspace` types — that join is not a third cache key.
 6. If a place reads a key, that key is in `PlaceRegistry.queryKeys`.
-7. `getCitation` is the exception: a one-shot into the composer `Document` draft. Do not cache the open citation.
+7. `getCitation` is the exception: a one-shot into the composer fields draft. Do not cache the open citation.
 
 **View rules (required):**
 

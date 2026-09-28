@@ -2850,6 +2850,18 @@
         }
       }
     },
+    "error.namevalues.invalid": {
+      "comment": "FFI error namevalues.invalid",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid name value."
+          }
+        }
+      }
+    },
     "error.observations.invalid": {
       "comment": "FFI error observations.invalid",
       "extractionState": "manual",

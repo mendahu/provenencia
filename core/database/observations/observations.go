@@ -672,19 +672,24 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 }
 
 func hydrateNameValues(c *database.Catalog, listed []Listed) ([]Listed, error) {
+	ids := make([][]byte, 0, len(listed))
 	for i := range listed {
-		if len(listed[i].ValueNameID) != 16 {
+		if len(listed[i].ValueNameID) == 16 {
+			ids = append(ids, listed[i].ValueNameID)
+		}
+	}
+	byID, err := namevalues.LookupMany(c, ids)
+	if err != nil {
+		return nil, err
+	}
+	for i := range listed {
+		v, ok := byID[string(listed[i].ValueNameID)]
+		if !ok {
 			continue
 		}
-		v, err := namevalues.Lookup(c, listed[i].ValueNameID)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				continue
-			}
-			return nil, err
-		}
-		listed[i].Name = &v
-		listed[i].ValueNameForm = v.Form
+		nv := v
+		listed[i].Name = &nv
+		listed[i].ValueNameForm = nv.Form
 	}
 	return listed, nil
 }

@@ -20,6 +20,8 @@ const (
 		VALUES (?, ?, ?, ?, ?)`
 	sqlLookup = `SELECT id, checksum_sha256, COALESCE(original_filename, ''), COALESCE(media_type, ''), byte_size
 		FROM files WHERE id = ?`
+	sqlLookupMany = `SELECT id, checksum_sha256, COALESCE(original_filename, ''), COALESCE(media_type, ''), byte_size
+		FROM files WHERE id IN (`
 	sqlLookupChecksum = `SELECT id, checksum_sha256, COALESCE(original_filename, ''), COALESCE(media_type, ''), byte_size
 		FROM files WHERE checksum_sha256 = ?`
 	sqlUpdateFilename = `UPDATE files SET original_filename = ? WHERE id = ?`
@@ -58,6 +60,33 @@ func Lookup(c *database.Catalog, id []byte) (File, error) {
 		return File{}, ErrInvalid
 	}
 	return scanFile(db.QueryRow(sqlLookup, id))
+}
+
+// LookupMany returns Files keyed by id string. Missing ids are omitted.
+func LookupMany(c *database.Catalog, ids [][]byte) (map[string]File, error) {
+	ids = database.UniqueBlobIDs(ids)
+	out := make(map[string]File, len(ids))
+	if len(ids) == 0 {
+		return out, nil
+	}
+	db, err := c.DB()
+	if err != nil {
+		return nil, err
+	}
+	q := sqlLookupMany + database.SQLInPlaceholders(len(ids)) + `)`
+	rows, err := db.Query(q, database.BlobArgs(ids)...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		f, err := scanFile(rows)
+		if err != nil {
+			return nil, err
+		}
+		out[string(f.ID)] = f
+	}
+	return out, rows.Err()
 }
 
 // LookupByChecksum returns a File by SHA-256 hex, or sql.ErrNoRows.

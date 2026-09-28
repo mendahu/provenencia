@@ -21,6 +21,8 @@ const (
 		VALUES (?, ?, ?, ?)`
 	sqlLookup = `SELECT id, source_file_id, derived_file_id, derivative_type
 		FROM file_derivatives WHERE source_file_id = ? AND derivative_type = ?`
+	sqlLookupMany = `SELECT id, source_file_id, derived_file_id, derivative_type
+		FROM file_derivatives WHERE derivative_type = ? AND source_file_id IN (`
 	sqlListBySource = `SELECT id, source_file_id, derived_file_id, derivative_type
 		FROM file_derivatives WHERE source_file_id = ?
 		ORDER BY derivative_type COLLATE NOCASE`
@@ -45,6 +47,36 @@ func Lookup(c *database.Catalog, sourceFileID []byte, derivativeType string) (Li
 		return Link{}, ErrInvalid
 	}
 	return scanLink(db.QueryRow(sqlLookup, sourceFileID, derivativeType))
+}
+
+// LookupMany returns derivative links for (sourceFileID, derivativeType) keyed
+// by source file id string. Missing ids are omitted.
+func LookupMany(c *database.Catalog, sourceFileIDs [][]byte, derivativeType string) (map[string]Link, error) {
+	ids := database.UniqueBlobIDs(sourceFileIDs)
+	out := make(map[string]Link, len(ids))
+	derivativeType = strings.TrimSpace(derivativeType)
+	if len(ids) == 0 || derivativeType == "" {
+		return out, nil
+	}
+	db, err := c.DB()
+	if err != nil {
+		return nil, err
+	}
+	args := append([]any{derivativeType}, database.BlobArgs(ids)...)
+	q := sqlLookupMany + database.SQLInPlaceholders(len(ids)) + `)`
+	rows, err := db.Query(q, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		link, err := scanLink(rows)
+		if err != nil {
+			return nil, err
+		}
+		out[string(link.SourceFileID)] = link
+	}
+	return out, rows.Err()
 }
 
 // Insert writes a new derivative link on tx.

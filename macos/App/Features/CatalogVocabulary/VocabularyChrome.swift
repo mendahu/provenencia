@@ -6,10 +6,12 @@ import SwiftUI
 struct VocabularyHeader: View {
     let title: LocalizedStringResource
     let description: LocalizedStringResource
-    let countLine: String
+    var countLine: String? = nil
     let addLabel: LocalizedStringResource
     let isAddDisabled: Bool
     let identifierPrefix: String
+    var descriptionItalic: Bool = false
+    var addSize: PVControlSize = .md
     let onAdd: () -> Void
 
     var body: some View {
@@ -19,17 +21,19 @@ struct VocabularyHeader: View {
                     .font(PVFont.display(size: PVTypeScale.h1))
                     .foregroundStyle(PVColor.textDisplay)
                 Text(description)
-                    .font(PVFont.body(size: PVTypeScale.bodySmall))
+                    .font(PVFont.body(size: PVTypeScale.bodySmall, italic: descriptionItalic))
                     .foregroundStyle(PVColor.textMuted)
                     .frame(maxWidth: PVSpacing.measureProse, alignment: .leading)
             }
             Spacer(minLength: PVSpacing.space6)
             HStack(spacing: PVSpacing.space6) {
-                Text(countLine)
-                    .font(PVFont.mono(size: PVTypeScale.micro))
-                    .foregroundStyle(PVColor.textMuted)
-                    .accessibilityIdentifier("\(identifierPrefix).countLine")
-                PVButton(addLabel, variant: .primary, icon: .plus) {
+                if let countLine {
+                    Text(countLine)
+                        .font(PVFont.mono(size: PVTypeScale.micro))
+                        .foregroundStyle(PVColor.textMuted)
+                        .accessibilityIdentifier("\(identifierPrefix).countLine")
+                }
+                PVButton(addLabel, variant: .primary, size: addSize, icon: .plus) {
                     onAdd()
                 }
                 .disabled(isAddDisabled)
@@ -91,8 +95,8 @@ struct VocabularyPanelHeader: View {
     /// The "used by N sources" line — only Source types carries one so far.
     var usageLine: String?
     let keyHint: LocalizedStringResource
-    /// Hidden when there is no selection. `canDelete` may still disable trash
-    /// on pages that have not cut over to DeleteImpact.
+    /// Hidden when there is no selection. `canDelete` still disables trash
+    /// when GetDeleteImpact reports the row is in use.
     let showsDelete: Bool
     let canDelete: Bool
     let deleteTooltip: LocalizedStringResource

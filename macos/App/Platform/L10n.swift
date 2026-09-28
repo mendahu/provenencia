@@ -7005,6 +7005,11 @@ enum L10n {
             defaultValue: "Invalid date value.",
             comment: "FFI error datevalues.invalid"
         )
+        static let nameValuesInvalid = LocalizedStringResource(
+            "error.namevalues.invalid",
+            defaultValue: "Invalid name value.",
+            comment: "FFI error namevalues.invalid"
+        )
         static let fileDerivativesInvalid = LocalizedStringResource(
             "error.filederivatives.invalid",
             defaultValue: "Invalid file derivative.",
@@ -7187,6 +7192,8 @@ enum L10n {
                 return String(localized: observationsInUse)
             case "datevalues.invalid":
                 return String(localized: dateValuesInvalid)
+            case "namevalues.invalid":
+                return String(localized: nameValuesInvalid)
             case "deleteimpact.invalid":
                 return String(localized: deleteImpactInvalid)
             case "filederivatives.invalid":

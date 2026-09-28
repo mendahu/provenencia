@@ -135,17 +135,73 @@ func sourceCoverThumbnail(c *database.Catalog, s sources.Source) (sourceCoverThu
 	return sourceCoverThumb{RelPath: rel}, nil
 }
 
-// listSourceProto fills ListSources rows: list SQL already has HasArtifact and
-// UpdatedRevision; cover thumbs are lookup-only (no EnsureThumbnail).
-func listSourceProto(c *database.Catalog, s sources.Source) (*engine.Source, error) {
-	sp := sourceProto(s)
-	cover, err := sourceCoverThumbnail(c, s)
+// sourceCoverThumbnails resolves lookup-only cover rasters for a ListSources
+// page in two IN-clause round trips instead of Get+Lookup per row.
+func sourceCoverThumbnails(c *database.Catalog, rows []sources.Source) (map[string]string, error) {
+	out := make(map[string]string, len(rows))
+	var artIDs [][]byte
+	need := make([]sources.Source, 0, len(rows))
+	for _, s := range rows {
+		if s.CoverMode != sources.CoverModeArtifact || len(s.PrimaryArtifactID) != 16 {
+			continue
+		}
+		need = append(need, s)
+		artIDs = append(artIDs, s.PrimaryArtifactID)
+	}
+	if len(artIDs) == 0 {
+		return out, nil
+	}
+	arts, err := artifacts.GetMany(c, artIDs)
 	if err != nil {
 		return nil, err
 	}
-	sp.ThumbnailRelPath = cover.RelPath
-	sp.HasArtifact = s.HasArtifact
-	return sp, nil
+	var fileIDs [][]byte
+	type coverNeed struct {
+		sourceID []byte
+		fileID   []byte
+	}
+	var covers []coverNeed
+	for _, s := range need {
+		a, ok := arts[string(s.PrimaryArtifactID)]
+		if !ok || len(a.FileID) != 16 {
+			continue
+		}
+		covers = append(covers, coverNeed{sourceID: s.ID, fileID: a.FileID})
+		fileIDs = append(fileIDs, a.FileID)
+	}
+	if len(fileIDs) == 0 {
+		return out, nil
+	}
+	links, err := filederivatives.LookupMany(c, fileIDs, filederivatives.TypeThumbnail)
+	if err != nil {
+		return nil, err
+	}
+	var derived [][]byte
+	for _, link := range links {
+		if len(link.DerivedFileID) == 16 {
+			derived = append(derived, link.DerivedFileID)
+		}
+	}
+	byFile, err := files.LookupMany(c, derived)
+	if err != nil {
+		return nil, err
+	}
+	for _, item := range covers {
+		link, ok := links[string(item.fileID)]
+		if !ok {
+			continue
+		}
+		f, ok := byFile[string(link.DerivedFileID)]
+		if !ok {
+			continue
+		}
+		rel, err := files.StorageRelPath(f.ChecksumSHA256, f.MediaType)
+		if err != nil {
+			continue
+		}
+		out[string(item.sourceID)] = rel
+	}
+	return out, nil
 }
 
 // enrichSourceProto fills identity + cover mode + resolved thumbnail fields +

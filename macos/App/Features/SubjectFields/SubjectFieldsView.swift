@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Subject fields workspace destination (S7-D2 / S7-05): type strip + dual cards
+/// Subject fields workspace destination: type strip + dual cards
 /// (property table + inspector). Chrome matches the board HTML.
 struct SubjectFieldsView: View {
     @Environment(WorkspaceSession.self) private var session
@@ -146,25 +146,16 @@ private struct SubjectFieldsContent: View {
     }
 
     private var header: some View {
-        HStack(alignment: .bottom, spacing: PVSpacing.space6) {
-            VStack(alignment: .leading, spacing: PVSpacing.space2) {
-                Text(L10n.Workspace.subjectFieldsTitle)
-                    .font(PVFont.display(size: PVTypeScale.h1))
-                    .foregroundStyle(PVColor.textDisplay)
-                Text(L10n.SubjectFields.description)
-                    .font(PVFont.body(size: PVTypeScale.bodySmall, italic: true))
-                    .foregroundStyle(PVColor.textMuted)
-                    .frame(maxWidth: PVSpacing.measureProse, alignment: .leading)
-            }
-            Spacer(minLength: PVSpacing.space6)
-            PVButton(L10n.SubjectFields.newProperty, variant: .primary, size: .sm, icon: .plus) {
-                model.openCreate()
-            }
-            .accessibilityIdentifier("subjectFields.add")
-        }
-        .padding(.horizontal, PVSpacing.gutterPage)
-        .padding(.top, PVSpacing.space8)
-        .padding(.bottom, PVSpacing.space6)
+        VocabularyHeader(
+            title: L10n.Workspace.subjectFieldsTitle,
+            description: L10n.SubjectFields.description,
+            addLabel: L10n.SubjectFields.newProperty,
+            isAddDisabled: false,
+            identifierPrefix: "subjectFields",
+            descriptionItalic: true,
+            addSize: .sm,
+            onAdd: { model.openCreate() }
+        )
     }
 
     private var typeStrip: some View {

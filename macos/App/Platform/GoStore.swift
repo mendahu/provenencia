@@ -404,20 +404,6 @@ struct GoStore: GenealogyStore {
         return (Self.mapArtifact(resp.artifact), Self.mapFile(resp.file), resp.reused)
     }
 
-    func ensureFileThumbnail(
-        projectDir: String,
-        fileID: String
-    ) async throws -> (relPath: String, skipped: Bool) {
-        var req = Provenencia_Engine_V1_EnsureFileThumbnailRequest()
-        req.projectDir = projectDir
-        req.fileID = fileID
-        let resp: Provenencia_Engine_V1_EnsureFileThumbnailResponse = try await provenenciaCall(
-            method: CoreMethod.ensureFileThumbnail,
-            request: req
-        )
-        return (resp.relPath, resp.skipped)
-    }
-
     func listSourceCredibilityGrades(projectDir: String) async throws -> [CatalogCredibilityGrade] {
         var req = Provenencia_Engine_V1_ListSourceCredibilityGradesRequest()
         req.projectDir = projectDir
@@ -778,16 +764,6 @@ struct GoStore: GenealogyStore {
         return resp.positions.map(Self.mapSubjectPosition)
     }
 
-    func listProperties(projectDir: String) async throws -> [CatalogProperty] {
-        var req = Provenencia_Engine_V1_ListPropertiesRequest()
-        req.projectDir = projectDir
-        let resp: Provenencia_Engine_V1_ListPropertiesResponse = try await provenenciaCall(
-            method: CoreMethod.listProperties,
-            request: req
-        )
-        return resp.properties.map(Self.mapProperty)
-    }
-
     func createProperty(
         projectDir: String,
         userID: String,
@@ -872,48 +848,6 @@ struct GoStore: GenealogyStore {
         return Self.mapPropertyTerm(resp.term)
     }
 
-    func updatePropertyTerm(
-        projectDir: String,
-        userID: String,
-        termID: String,
-        label: String,
-        description: String
-    ) async throws -> CatalogPropertyTerm {
-        var req = Provenencia_Engine_V1_UpdatePropertyTermRequest()
-        req.projectDir = projectDir
-        req.userID = userID
-        req.termID = termID
-        req.label = label
-        req.description_p = description
-        let resp: Provenencia_Engine_V1_UpdatePropertyTermResponse = try await provenenciaCall(
-            method: CoreMethod.updatePropertyTerm,
-            request: req
-        )
-        return Self.mapPropertyTerm(resp.term)
-    }
-
-    func deletePropertyTerm(projectDir: String, userID: String, termID: String) async throws {
-        var req = Provenencia_Engine_V1_DeletePropertyTermRequest()
-        req.projectDir = projectDir
-        req.userID = userID
-        req.termID = termID
-        let _: Provenencia_Engine_V1_DeletePropertyTermResponse = try await provenenciaCall(
-            method: CoreMethod.deletePropertyTerm,
-            request: req
-        )
-    }
-
-    func listSubjectTypeFields(projectDir: String, subjectTypeID: String) async throws -> [CatalogSubjectTypeField] {
-        var req = Provenencia_Engine_V1_ListSubjectTypeFieldsRequest()
-        req.projectDir = projectDir
-        req.subjectTypeID = subjectTypeID
-        let resp: Provenencia_Engine_V1_ListSubjectTypeFieldsResponse = try await provenenciaCall(
-            method: CoreMethod.listSubjectTypeFields,
-            request: req
-        )
-        return resp.fields.map(Self.mapSubjectTypeField)
-    }
-
     func assignSubjectTypeField(
         projectDir: String,
         userID: String,
@@ -946,25 +880,6 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.removeSubjectTypeField,
             request: req
         )
-    }
-
-    func listPlaceableSubjectTypes() async throws -> [CatalogSubjectTypePresentation] {
-        let req = Provenencia_Engine_V1_ListPlaceableSubjectTypesRequest()
-        let resp: Provenencia_Engine_V1_ListPlaceableSubjectTypesResponse = try await provenenciaCall(
-            method: CoreMethod.listPlaceableSubjectTypes,
-            request: req
-        )
-        return resp.types.map(Self.mapSubjectTypePresentation)
-    }
-
-    func getSubjectTypePresentation(typeKey: String) async throws -> CatalogSubjectTypePresentation {
-        var req = Provenencia_Engine_V1_GetSubjectTypePresentationRequest()
-        req.typeKey = typeKey
-        let resp: Provenencia_Engine_V1_GetSubjectTypePresentationResponse = try await provenenciaCall(
-            method: CoreMethod.getSubjectTypePresentation,
-            request: req
-        )
-        return Self.mapSubjectTypePresentation(resp.presentation)
     }
 
     func listConnectRules() async throws -> [CatalogConnectRule] {

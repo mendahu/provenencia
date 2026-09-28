@@ -36,6 +36,8 @@ const (
 		WHERE id = ?`
 	sqlGet = `SELECT id, ref, source_id, file_id, label, COALESCE(description, '')
 		FROM artifacts WHERE id = ?`
+	sqlGetMany = `SELECT id, ref, source_id, file_id, label, COALESCE(description, '')
+		FROM artifacts WHERE id IN (`
 	sqlGetByRef = `SELECT id, ref, source_id, file_id, label, COALESCE(description, '')
 		FROM artifacts WHERE ref = ?`
 	sqlListBySource = `SELECT id, ref, source_id, file_id, label, COALESCE(description, '')
@@ -366,6 +368,33 @@ func Get(c *database.Catalog, id []byte) (Artifact, error) {
 		return Artifact{}, ErrInvalid
 	}
 	return scanArtifact(db.QueryRow(sqlGet, id))
+}
+
+// GetMany returns Artifacts keyed by id string. Missing ids are omitted.
+func GetMany(c *database.Catalog, ids [][]byte) (map[string]Artifact, error) {
+	ids = database.UniqueBlobIDs(ids)
+	out := make(map[string]Artifact, len(ids))
+	if len(ids) == 0 {
+		return out, nil
+	}
+	db, err := c.DB()
+	if err != nil {
+		return nil, err
+	}
+	q := sqlGetMany + database.SQLInPlaceholders(len(ids)) + `)`
+	rows, err := db.Query(q, database.BlobArgs(ids)...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		a, err := scanArtifact(rows)
+		if err != nil {
+			return nil, err
+		}
+		out[string(a.ID)] = a
+	}
+	return out, rows.Err()
 }
 
 // getByRef returns an Artifact by ART-… ref, or sql.ErrNoRows.

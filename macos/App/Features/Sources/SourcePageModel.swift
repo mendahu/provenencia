@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// State for the individual Source page (S2-18): hydrates the workspace from
+/// State for the individual Source page: hydrates the workspace from
 /// `WorkspaceSession` and composes the section models (identity, credibility,
 /// metadata, notes, artifacts).
 @MainActor
@@ -28,8 +28,8 @@ final class SourcePageModel {
     let sessionDisplayName: String
 
     private let context: SourcePageContext
-    /// Skips redundant section resets when the handle republishes the same payload.
-    private var appliedWorkspaceFingerprint: String?
+    /// Last workspace applied to section drafts. Slice-equal fields keep in-progress edits.
+    private var appliedWorkspace: CatalogSourceWorkspace?
 
     init(
         sourceID: String,
@@ -110,7 +110,7 @@ final class SourcePageModel {
         context.sourceID = sourceID
         context.workspace = nil
         context.pageError = nil
-        appliedWorkspaceFingerprint = nil
+        appliedWorkspace = nil
         resetSections()
         isLoading = false
         loadError = nil
@@ -126,35 +126,29 @@ final class SourcePageModel {
             loadError = nil
         }
         guard let workspace = handle.value else { return }
-        let fingerprint = workspaceFingerprint(workspace)
-        if fingerprint == appliedWorkspaceFingerprint {
-            context.workspace = workspace
-            return
-        }
-        appliedWorkspaceFingerprint = fingerprint
         apply(workspace)
     }
 
     private func apply(_ workspace: CatalogSourceWorkspace) {
+        let previous = appliedWorkspace
         context.workspace = workspace
         context.pageError = nil
-        identity.reset()
-        credibility.resetDrafts()
-        metadata.resetDrafts()
-        notes.reset()
-        artifacts.seedDrafts()
-    }
-
-    private func workspaceFingerprint(_ workspace: CatalogSourceWorkspace) -> String {
-        [
-            workspace.source.id,
-            workspace.source.title,
-            workspace.source.coverMode,
-            workspace.source.primaryArtifactID,
-            String(workspace.metadata.count),
-            String(workspace.notes.count),
-            String(workspace.artifacts.count),
-        ].joined(separator: "|")
+        if previous?.source != workspace.source {
+            identity.reset()
+        }
+        if previous?.credibility != workspace.credibility {
+            credibility.resetDrafts()
+        }
+        if previous?.metadata != workspace.metadata {
+            metadata.resetDrafts()
+        }
+        if previous?.notes != workspace.notes {
+            notes.reset()
+        }
+        if previous?.artifacts != workspace.artifacts {
+            artifacts.seedDrafts()
+        }
+        appliedWorkspace = workspace
     }
 
     func askDeleteSource() async {
@@ -194,7 +188,14 @@ final class SourcePageModel {
                     workspace.source.coverMode = "type_icon"
                     workspace.source.thumbnailRelPath = ""
                 }
-                context.workspace = workspace
+                apply(workspace)
+                context.session.setQueryValue(
+                    CatalogQueryKey.sourceWorkspace(
+                        project: context.session.projectKey,
+                        sourceId: context.sourceID
+                    ),
+                    value: workspace
+                )
             }
             context.toast = VocabularyToast(
                 title: String(localized: L10n.Sources.toastArtifactDeletedTitle),

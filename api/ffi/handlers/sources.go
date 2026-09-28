@@ -25,11 +25,14 @@ func ListSources(in []byte) ([]byte, error) {
 			return err
 		}
 		out = &engine.ListSourcesResponse{}
+		covers, err := sourceCoverThumbnails(c, rows)
+		if err != nil {
+			return err
+		}
 		for _, s := range rows {
-			sp, err := listSourceProto(c, s)
-			if err != nil {
-				return err
-			}
+			sp := sourceProto(s)
+			sp.ThumbnailRelPath = covers[string(s.ID)]
+			sp.HasArtifact = s.HasArtifact
 			out.Sources = append(out.Sources, sp)
 		}
 		return nil
