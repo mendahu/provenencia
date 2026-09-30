@@ -62,7 +62,7 @@ A sentence in an essay does not create an Observation. A “hub” highlight on 
 | --- | --- |
 | **Source** | Researcher-authored composition is output, not acquired evidence. (An externally authored book ingested as a Source is still Source — your own essay while researching is Narrative.) |
 | **Interpretation** | No Observation shape; prose is not an atomic cited assertion backed by one Citation per sentence. |
-| **Conclusion** | No Sameness or Reconciliation Claims; narrative does not commit historical truth to the working tree. |
+| **Conclusion** | No Identity or Reconciliation Claims; narrative does not commit historical truth to the working tree. |
 
 Existing **notes** (`source_notes`, `citation_notes`, `observation_notes`, `canonical_entity_notes`) and Claim **`argument`** fields remain scoped commentary on a single object or decision. Narrative is **cross-cutting composition** at a different grain.
 
@@ -125,7 +125,7 @@ Narrative      default tree projection (often no rows)
                saved tree composition (when customized)
 ```
 
-**Conclusion owns:** who is related to whom, sameness, committed Property values, existence handles.
+**Conclusion owns:** who is related to whom, which subjects belong to which handles, committed Property values, existence handles.
 
 **Narrative owns:** how that structure is **shown** — root person, inclusion filters, collapse state, emphasis, labels for export, optional prose under subjects.
 

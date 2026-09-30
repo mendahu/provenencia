@@ -31,7 +31,7 @@ Authoritative reasoning is [`interpretation-graph-ui.md`](archive/interpretation
 | **Do not give Sources a `canonical_entities` row** | That would be a second canonical handle for a row that already has one. |
 | **Home the UI on the Source page** | A “what other Sources say about this one” section — inbound commentary *and* outbound mentions from this Source. |
 
-Cross-source Observations stay legal. Person reuse across Sources stays forbidden on the canvas (Sameness later). Those two facts are independent.
+Cross-source Observations stay legal. Person reuse across Sources stays forbidden on the canvas (Identity Claims later). Those two facts are independent.
 
 ## What this idea still owns
 

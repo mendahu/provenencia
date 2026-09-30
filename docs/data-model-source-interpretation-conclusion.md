@@ -40,7 +40,7 @@ The boundaries are intentional. Evidence should be preserved without forcing int
 
 ## 1.0 Rigorous science and a casual tree
 
-The data model is built so **good science is convenient**: Citations, Observation-sized assertions, sameness with exhibit, Reconciliation with a stored value and optional pins, provenencia badges on working subjects. Use-case write-ups in these docs often describe that path — how the author wants to do genealogy.
+The data model is built so **good science is convenient**: Citations, Observation-sized assertions, an Identity Claim with exhibit for each subject on a handle, Reconciliation with a stored value and optional pins, provenencia badges on working subjects. Use-case write-ups in these docs often describe that path — how the author wants to do genealogy.
 
 The same model must **allow a family tree with little or no evidence**. Empty canonical Persons, asserted Places, names typed only as Reconciliation, no Sources: that is a valid project. It will not withstand genealogical proof review. That is acceptable. The application should encourage and surface rigor (warnings, badges, “unlinked” filters, suggested Citations), not refuse to save a tree because the user skipped science.
 
@@ -131,22 +131,21 @@ Canonical does not mean complete, final, or universally authoritative. A Person 
 
 Interpretation keeps source-local Subjects separate for traceability: two Sources that mention the same historical person normally produce two `person` Subjects. The Conclusion layer gives the researcher a durable **working subject** (the canonical row). Creating that row is origination of the handle, not a third claim type.
 
-The two Conclusion **claims** are **sameness** (Subject co-reference) and **reconciliation** (committed Property values on a handle):
+The two Conclusion **claims** are **identity** (this Subject is this handle) and **reconciliation** (committed Property values on a handle):
 
 ```text
-Subject A ── sameness claim (same_as / distinct_from) ── Subject B
+Subject A ── identity claim (provisional | accepted | rejected) ──► canonical entity E
 
 canonical_entities E (kind = person)
-  identity_anchor_id → optional subject (live same_as cluster when set)
-  members(E) = ∅, or Subjects reachable from that anchor via accepted same_as
+  members(E) = Subjects with an accepted identity claim for E
   argument → optional existence rationale on the handle
 ```
 
-Sameness Claims are higher-order than Observations. An Observation says what a particular Source appears to assert about a subject. A Sameness Claim says the researcher concludes that two Subjects do or do not co-refer, with its own evidence chain. Exhibit pins do not retarget Observations.
+Identity Claims are higher-order than Observations. An Observation says what a particular Source appears to assert about a subject. An Identity Claim says the researcher concludes that this subject is a reading of this canonical entity, with its own evidence chain. Accepting the claim makes the subject a member. Two subjects are the same historical thing when both are accepted members of the same entity. A rejected claim means this subject is not that entity; absence of a claim is not a rejection. Exhibit pins do not retarget Observations. A confirmed match pins the existing Observations on the new Identity Claim and on the other member's claim; it does not create an Observation. See [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.1–§5.4. Promoting one subject does not promote its neighbors; a later UI may offer that walk.
 
 The same handle pattern applies across Subject types (`person`, `event`, `place`, `relationship`, `participation`, `location`). Domain payload is projected from member-subject Observations and overridden by Reconciliation Claims. For `value_type = 'subject'`, Reconciliation points at another **canonical** entity (`value_entity_id`), so a Place without Interpretation members can still be an association end.
 
-**Convention:** Places work best as thin features at one grain; Locations as M:N event–place membership; gazetteer packs as ordinary Sources; extra grains as additional Location handles rather than `same_as` between town and colony. The schema does not enforce grain. See [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §1 and §8.
+**Convention:** Places work best as thin features at one grain; Locations as M:N event–place membership; gazetteer packs as ordinary Sources; extra grains as additional Location handles rather than Identity Claims that put a town subject and a colony subject on one Place. The schema does not enforce grain. See [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §1 and §8.
 
 Authoritative schema: [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md).
 
@@ -158,7 +157,7 @@ The evidence trail answers what we possess, what a Source appears to say, and wh
 |---|---|---|
 | Source credibility | Interpretation assessment entity (not a `sources` column) | Three-point trust scale, baseline middle |
 | Citation transcription certainty | Columns on `citations` | Boolean uncertain flag + optional note (media-agnostic) |
-| Claim confidence | Sameness / Reconciliation Claims | Three-point confidence scale, baseline middle; orthogonal to claim `status` |
+| Claim confidence | Identity / Reconciliation Claims | Three-point confidence scale, baseline middle; orthogonal to claim `status` |
 
 Subject- and fact-level “likelihood” pills are **derived in the UI**, not stored. Observation polarity and competing Observations stay the Interpretation model for alternate readings — not a confidence score on one Observation row.
 
@@ -245,8 +244,9 @@ Testimony Source
   subject N2 (person, home Source = testimony)
 
 Conclusion
-  canonical_entities E1 (kind=person, identity_anchor_id = N1)
-  sameness_claim: N1 same_as N2 (accepted), with evidence Observations
+  canonical_entities E1 (kind=person)
+  identity_claim: N1 → E1 (accepted)
+  identity_claim: N2 → E1 (accepted), exhibit includes the testimony Observation
   members(E1) = {N1, N2}
 ```
 
@@ -264,8 +264,10 @@ Letter Source L
     person subject NL -- birth_date --> 1 JAN 1800 (polarity negative)
 
 Conclusion
-  sameness_claim: NC same_as NL (accepted), evidence cites both Sources' Observations
-  canonical_entities E (kind=person, identity_anchor → NC or NL); members = {NC, NL}
+  canonical_entities E (kind=person)
+  identity_claim: NC → E (accepted)
+  identity_claim: NL → E (accepted), exhibit cites both Sources' Observations
+  members(E) = {NC, NL}
   reconciliation_claim on E, property birth_date:
     value → DateValue(2 JAN 1800)   # researcher choice, or synthesized
     evidence → the birth_date Observations (and related letter Observations as needed)
@@ -284,8 +286,8 @@ Observations on person subject ND:
   match display name
 
 Conclusion
-  sameness_claims may later correlate ND with other person Subjects
-  canonical person entity created/extended via identity_anchor + accepted same_as closure
+  an identity claim may later make ND a member of a canonical person
+  that claim is explicit for ND; other members are not pulled in by a path through ND
 ```
 
 ---

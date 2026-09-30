@@ -501,21 +501,21 @@ Schema: [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md).
 
 Conclusion seeds are mostly workflow vocabularies, not large type catalogs.
 
-## 5.1 Sameness claim `status`
+## 5.1 Identity claim `status`
 
 Closed workflow vocabulary (not researcher-extensible like user-minted Property terms on `event_type`):
 
 ```text
-provisional       -- persisted; UI should distinguish from accepted; not in membership
-accepted          -- only accepted same_as participates in membership closure
-rejected          -- retained for audit; not in membership
+provisional       -- persisted candidate for that entity; not a member
+accepted          -- this subject is a member of that entity
+rejected          -- considered for that entity and refused; not a member
 ```
 
 `superseded` is omitted until a concrete workflow needs it. Changing a conclusion updates the existing claim row (and is audited) rather than inserting a successor claim.
 
 ## 5.2 Reconciliation claim `status`
 
-Same closed vocabulary as Sameness Claims:
+Same closed vocabulary as Identity Claims:
 
 ```text
 provisional       -- persisted working value; distinct UI; not the committed conclusion
@@ -529,13 +529,13 @@ Not used. Soft blends are display-only. A Reconciliation Claim is a researcher-p
 
 ## 5.4 Canonical handles
 
-There is no `origination_claims` table and no `representative_subject_id`. A `canonical_entities` row may have a nullable `identity_anchor_id` and optional `argument`. For subject-typed Reconciliation values, Conclusion uses `value_entity_id` (canonical), not Observation `value_subject_id`.
+There is no `origination_claims` table, no `representative_subject_id`, and no `identity_anchor_id`. Membership is accepted `identity_claims`. A `canonical_entities` row may have an optional `argument`. For subject-typed Reconciliation values, Conclusion uses `value_entity_id` (canonical), not Observation `value_subject_id`.
 
 Handle provenencia badges (from records / inferred / asserted / unlinked) are computed, not seeded workflow enums.
 
 ## 5.5 Claim confidence grades
 
-Open vocabulary for `sameness_claims.confidence_grade_id` and `reconciliation_claims.confidence_grade_id` (via `claim_confidence_grades`). Three-point scale with a baseline middle. **Do not** reuse Source credibility keys — same shape, different semantics ([`research-judgment-model.md`](research-judgment-model.md)).
+Open vocabulary for `identity_claims.confidence_grade_id` and `reconciliation_claims.confidence_grade_id` (via `claim_confidence_grades`). Three-point scale with a baseline middle. **Do not** reuse Source credibility keys — same shape, different semantics ([`research-judgment-model.md`](research-judgment-model.md)).
 
 ```text
 key                 sort_order    label (draft product copy)

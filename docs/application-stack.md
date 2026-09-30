@@ -60,7 +60,7 @@ query logic
 file ingest and derivatives
 typed-graph validation
 search
-sameness / membership closure
+identity claims / canonical merge
 canonical merge
 audit / revision history
 sync algorithms (future)
@@ -134,7 +134,7 @@ Linux      .so
 
 The platform applications call exported functions from that library. The FFI should be treated as a deliberate application boundary and should not expose the internal Go object graph directly.
 
-Avoid a very granular interface such as `getSourceTitle()`, `getArtifactMimeType()`, or (later) `getPersonBirthDate()`. Prefer application-level operations. The first slice is Source-layer, for example `createSource()`, `addArtifact()`, `ingestFile()`, `getSourceWorkspace()`, `listSources()`. Later slices add Interpretation and Conclusion operations (`createCitation()`, `createObservation()`, `createSamenessClaim()`, `getPersonWorkspace()`) without changing this granularity rule.
+Avoid a very granular interface such as `getSourceTitle()`, `getArtifactMimeType()`, or (later) `getPersonBirthDate()`. Prefer application-level operations. The first slice is Source-layer, for example `createSource()`, `addArtifact()`, `ingestFile()`, `getSourceWorkspace()`, `listSources()`. Later slices add Interpretation and Conclusion operations (`createCitation()`, `createObservation()`, `createIdentityClaim()`, `getPersonWorkspace()`) without changing this granularity rule.
 
 This minimizes coupling and reduces FFI chatter.
 
@@ -716,6 +716,6 @@ These are known tensions. Several are already constrained by §12 and §29 (no l
 
 6. **Project wrapper vs source of truth** — The directory is the format. No parallel `metadata.json` catalog. Optional Mac package icon must not hide or encrypt contents.
 
-7. **Sync of the research graph** — Replicating Observations, Sameness components, and identity anchors is much harder than syncing a person table. Shared Go structs on a PostgreSQL server do not by themselves define conflict semantics. Stay TBD until a real multi-device need exists.
+7. **Sync of the research graph** — Replicating Observations, Identity Claims, and Reconciliation Claims is much harder than syncing a person table. Shared Go structs on a PostgreSQL server do not by themselves define conflict semantics. Stay TBD until a real multi-device need exists.
 
 8. **First FFI surface** — **Not an architecture fork.** Implementation order only: add RPCs when a screen needs them. Coarse use-cases stay the rule (§7); the *list* of methods grows with the prototype.
