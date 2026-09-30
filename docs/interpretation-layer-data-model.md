@@ -569,7 +569,7 @@ CREATE TABLE subjects (
 
 `ref` is required. It is minted as `{candidate_ref_prefix}-{token}` from the subject's type. Users talk about a person subject as a candidate person (`CPR-…`), distinct from the canonical Person (`PER-…`).
 
-`UNIQUE (id, subject_type_id)` exists so Sameness Claims can use a composite foreign key that pins both endpoints to the same type. It is redundant with the primary key for uniqueness of `id`; it does not allow two types per subject.
+`UNIQUE (id, subject_type_id)` exists so Identity Claims can use a composite foreign key that pins the subject and the canonical entity to the same type. It is redundant with the primary key for uniqueness of `id`; it does not allow two types per subject.
 
 `subject_type_id` is immutable after insert. Correcting a wrong type means a new subject (and new `ref`), not an UPDATE of the type. The UUID remains the machine identity; the type (via `candidate_ref_prefix`) is part of the public identity encoded in `ref`.
 

@@ -30,7 +30,7 @@ Do **not** auto-multiply Source credibility × Citation certainty × Claim confi
 |---|---|---|
 | How much do I trust this evidence? | Source **credibility** | Dedicated Interpretation assessment row (not a column on `sources`) |
 | How faithfully does this Citation represent the cited media? | Citation **transcription certainty** | Light columns on `citations` |
-| How sure am I of this conclusion? | Claim **confidence** | Columns on Sameness and Reconciliation Claims |
+| How sure am I of this conclusion? | Claim **confidence** | Columns on Identity and Reconciliation Claims |
 
 These are related in research practice but must not share vocabulary keys. Credibility is about trusting evidence; confidence is about standing behind a conclusion. Both use a **three-point scale with a baseline middle**, with separate labels and grade tables.
 
@@ -38,12 +38,12 @@ These are related in research practice but must not share vocabulary keys. Credi
 
 - **No confidence score on Observations.** Competing or alternate readings are separate Observation rows (and polarity). See [`interpretation-layer-data-model.md`](interpretation-layer-data-model.md).
 - **No credibility column on `sources`.** The Source layer answers what evidence we possess. Judging evidentiary value is Interpretation. Putting a grade on the catalog row is a layer leak.
-- **No claim polarity.** Polarity (`positive` / `negative`) lives on Observations. Sameness uses `relation` (`same_as` / `distinct_from`). Reconciliation stores a concluded value.
+- **No claim polarity.** Polarity (`positive` / `negative`) lives on Observations. An Identity Claim's content is which entity a subject belongs to; refusal is `status = rejected` on that claim. Reconciliation stores a concluded value.
 - **Disputed / undocumented are not stored confidence grades.** Prefer derivation from exhibit conflict, empty pins, handle grounding badges, and claim `status`. An optional explicit conflict flag may be added later if derivation is too noisy; it remains separate from confidence.
 
 ## 1.4 Authorship and changing your mind
 
-Sameness Claims, Reconciliation Claims, Source credibility assessments, and Citation fields follow the existing **single working-state** pattern: one row per slot; updates change that row; [`audit-revision-history.md`](audit-revision-history.md) records who/when/old/new.
+Identity Claims, Reconciliation Claims, Source credibility assessments, and Citation fields follow the existing **single working-state** pattern: one row per slot; updates change that row; [`audit-revision-history.md`](audit-revision-history.md) records who/when/old/new.
 
 That covers one researcher revising a grade and sequential multi-contributor edits (last write wins for working state). It does **not** model concurrent live peer opinions (Alice high and Bob low both standing). Standing multi-opinion assessments are out of scope until a concrete collaboration workflow requires them; audit history is not a substitute for that domain concept.
 
@@ -140,7 +140,7 @@ Do **not** put a rich ordinal confidence ladder on Citations. A boolean (plus no
 
 ## 4.1 Role
 
-Records how sure the researcher is of **this** conclusion (this Sameness or Reconciliation Claim), given its exhibit and reasoning.
+Records how sure the researcher is of **this** conclusion (this Identity or Reconciliation Claim), given its exhibit and reasoning.
 
 Confidence is claim-relative by design. It is the primary structured epistemic field for Conclusions.
 
@@ -156,7 +156,7 @@ They are **not** the same thing. Valid combinations include accepted + low confi
 ## 4.3 Columns on Claims
 
 ```sql
--- additions to sameness_claims and reconciliation_claims
+-- additions to identity_claims and reconciliation_claims
 confidence_grade_id  BLOB REFERENCES claim_confidence_grades(id),  -- nullable
 ```
 
@@ -174,7 +174,7 @@ CREATE TABLE claim_confidence_grades (
 
 `confidence_grade_id` is **nullable** so casual trees and quick Claims need not set a grade. `argument` remains the free-text reasoning chain; confidence is the structured, filterable stance. Grade vocabulary uses `origin` namespaces ([`seeded-vocabulary.md`](seeded-vocabulary.md) §1.1).
 
-There remains at most one Sameness Claim per Node pair and one Reconciliation Claim per `(entity, property)`. Changing confidence updates that row (and is audited).
+There remains at most one Identity Claim per `(subject, entity)` and one Reconciliation Claim per `(entity, property)`. A subject has at most one accepted Identity Claim. Changing confidence updates that row (and is audited).
 
 ## 4.4 Three-point scale (separate vocabulary)
 
@@ -193,7 +193,7 @@ Same **shape** as Source credibility (below / baseline / above); **different key
 Observation polarity factors into Claims only through the exhibit and `argument`:
 
 - Mixed positive and negative pinned Observations may justify lower confidence and a contested UI badge.
-- Sameness `relation` (`same_as` / `distinct_from`) is the claim’s content stance for identity — not Observation polarity copied onto the claim.
+- An Identity Claim's stance is `status` on `(subject, entity)` — accepted membership, a provisional candidacy, or a rejection of that entity — not Observation polarity copied onto the claim.
 - Prefer **deriving** “disputed” / “contested exhibit” and “undocumented” (no pins) for display rather than storing them as confidence grades.
 
 ---
