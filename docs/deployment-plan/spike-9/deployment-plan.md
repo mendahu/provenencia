@@ -8,7 +8,7 @@ MVP for the **Conclusion layer**: assemble canonical Persons, Events, and Places
 
 > **Goal of this spike:** a researcher can promote Subjects off an Evidence graph into Persons, Events, and Places, and open a page for each that shows who or what it is — name and life dates, event and date, toponym — resolved from every member Subject.
 
-> **Foundation first.** The resolved-values cache (R3) is core infrastructure every Conclusion surface reads — lists, details, Promote, search, and later the tree. Build it properly. Work may land piecemeal, with stubs and temporarily broken UI along the way; no band-aid caches per screen.
+> **Foundation, grown in vertical slices.** The resolved-values cache (R3) is core infrastructure every Conclusion surface reads — lists, details, Promote, search, and later the tree. Build it properly, but grow it slice by slice so each layer is exercised in the app as soon as it lands. Stubs and temporarily incomplete UI along the way are fine; no band-aid caches per screen.
 
 ## Goal (dogfood bar)
 
@@ -281,394 +281,498 @@ The Conclusion pages read **across** Sources — every earlier place scoped to o
 
 **Every UI PR is gated by Claude Design briefs — one brief per view.** A PR that touches two views waits on two briefs. Briefs follow [`add-design-brief`](../../../.cursor/skills/add-design-brief/SKILL.md) and live in [`design/`](design/). **Each brief is designed alongside its feature**, just before the PR it gates — see the [PR sequence](#pr-sequence).
 
-| Brief | View | Covers | Gates |
+| Brief | View | Gates | Later PRs on the same view |
 | --- | --- | --- | --- |
-| **S9-D1** | Workspace sidebar | Conclusions group; Persons / Events / Places destinations; counts | **S9-18** |
-| **S9-D2** | Persons list | Row anatomy (thumbnail, name, life dates, birth / death place, ref); *mixed* and *+N* markers; sort; empty state pointing at Promote | **S9-19** |
-| **S9-D3** | Events list | Extends D2's row anatomy: title, date, place, ref | **S9-20** |
-| **S9-D4** | Places list | Extends D2's row anatomy: toponym, ref | **S9-21** |
-| **S9-D5** | Person detail | Header: thumbnail, name, life dates, places; value states (single / merged / mixed / empty); cluster list per field | **S9-22** |
-| **S9-D6** | Event detail | Extends D5: title, date, place(s) | **S9-23** |
-| **S9-D7** | Place detail | Extends D5: every toponym cluster | **S9-24** |
-| **S9-D8** | Evidence graph (subject card) | Promote control on primary-kind cards; member badge + link to handle on promoted cards | **S9-25** |
-| **S9-D9** | Promote — choose target | Promote shell (place vs sheet decided here); mint vs existing; header rows; suggestions; same-type filter | **S9-26** |
-| **S9-D10** | Promote — claim fields | Status dropdown (one option, laid out for three); confidence grade; argument; Next / Done | **S9-27** |
-| **S9-D11** | Promote — compare | Existing handle only: Property rows × members; pre-checked compatible pairs; accept-all per Property; skip | **S9-28** |
-| **S9-D12** | Promote — walk | Connected-subjects list after each save; bridge confirm; progress; Done off-ramp; leave guard | **S9-29** |
-| **S9-D13** | Omnibar results | Person / Event / Place hit rows from structured headers | **S9-30** |
+| **S9-D8** | Evidence graph subject card | **S9-04** | S9-09 (name on the membership row), S9-11 (Promote opens the flow) |
+| **S9-D1** | Workspace sidebar | **S9-08** | S9-23, S9-26 (Events / Places go live) |
+| **S9-D2** | Persons list | **S9-09** | S9-32 (life dates and places) |
+| **S9-D9** | Promote — choose target (+ shell) | **S9-11** | — |
+| **S9-D10** | Promote — claim fields | **S9-12** | — |
+| **S9-D5** | Person detail | **S9-16** | S9-32 (life dates and places) |
+| **S9-D11** | Promote — compare | **S9-19** | — |
+| **S9-D3** | Events list | **S9-23** | S9-32 (subject titles, places) |
+| **S9-D6** | Event detail | **S9-24** | S9-32 (subject titles, places) |
+| **S9-D4** | Places list | **S9-26** | — |
+| **S9-D7** | Place detail | **S9-27** | — |
+| **S9-D12** | Promote — walk | **S9-30** | — |
+| **S9-D13** | Omnibar results | **S9-35** | — |
+
+A brief covers its **whole** view, including cells a first PR leaves empty. Later PRs on the same view fill in designed frames and need no new brief.
 
 ---
 
 ## PR sequence
 
-Suggested order, top to bottom. **✎ = design brief**, run through Claude Design just before the PR it points at. Solid dependencies are shown in parentheses where they come from outside the arrow.
+**Vertical slices.** Every slice ends in something visible in the app, so a mistake in a lower layer (schema, resolver, cache) shows up in the slice that introduces it — not weeks later. The foundation is grown, not front-loaded: the resolver, cache, composers, and formatters each start small in the first slice that needs them and gain capability in later slices. Nothing is throwaway; each PR extends the last.
+
+**✎ = design brief**, run through Claude Design just before the PR it points at. **Check** = what you can verify in the app when the slice lands.
 
 ```text
-FOUNDATION
+SLICE 1 — Mint from the graph
   S9-01  Conclusion schema + stores
-    ├──▶ S9-02  Seed event_name
-    └──▶ S9-03  Delete Impact for Identity Claims
-  S9-04  Date auto-reconciler ──┐
-  S9-05  Name auto-reconciler ──┤
-                                ▼
-  S9-06  Resolver core
-                                ▼                               (+ S9-01)
-  S9-07  Resolved-values cache + rebuild
-                                ▼
-  S9-08  Cache upkeep + rebuild-equals-upkeep test
-    └──▶ S9-09  Deep fixture + timings
+  S9-02  Promote write v1: mint + claim; Subject delete names its handle
+  S9-03  Source graph carries membership
+  ✎ S9-D8 ──▶ S9-04  Graph card: Promote (confirm-and-mint) + membership (ref)
+  Check: Promote a person card → it shows PER-…; delete that subject → Impact names PER-….
 
-READS
-  S9-10  Header + detail composers                              (← S9-07, S9-02)
-    ├──▶ S9-11  Conclusion reads: FFI + Swift store + query keys
-    └──▶ S9-12  Swift Conclusion formatters
+SLICE 2 — Persons list
+  S9-05  Resolver core v1: clusters, states, stable order (pure Go)
+  S9-06  Resolved-values cache: table, loader, rebuild, upkeep, rebuild-equals-upkeep test
+  S9-07  Person header composer (name) + list read + Swift store / keys / name formatting
+  ✎ S9-D1 ──▶ S9-08  Sidebar Conclusions group (Events / Places stubbed)
+  ✎ S9-D2 ──▶ S9-09  Persons list (name + ref) + name on the card's membership row
+  Check: promoted Persons listed by name; edit a name Observation → the row updates.
 
-PAGES                                                            (all ← S9-11, S9-12)
-  ✎ S9-D1 ──▶ S9-18  Sidebar Conclusions group
-                ├──▶ ✎ S9-D2 ──▶ S9-19  Persons list ──▶ ✎ S9-D5 ──▶ S9-22  Person detail
-                ├──▶ ✎ S9-D3 ──▶ S9-20  Events list  ──▶ ✎ S9-D6 ──▶ S9-23  Event detail
-                └──▶ ✎ S9-D4 ──▶ S9-21  Places list  ──▶ ✎ S9-D7 ──▶ S9-24  Place detail
+SLICE 3 — Join an existing Person
+  S9-10  Promote write + reads: existing target, target suggestions
+  ✎ S9-D9  ──▶ S9-11  Promote shell + choose target (card Promote now opens it)
+  ✎ S9-D10 ──▶ S9-12  Claim fields + save
+  Check: two records on one Person → one list row; the second card shows the same PER-….
 
-PROMOTE
-  S9-13  Source graph carries membership                        (← S9-01)
-    └──▶ ✎ S9-D8 ──▶ S9-25  Graph card: Promote entry + membership
-  S9-15  Promote reads: target suggestions + comparison         (← S9-06, S9-10)
-    └──▶ ✎ S9-D9 ──▶ S9-26  Promote shell + choose target       (← S9-25)
-  S9-14  Promote step write                                     (← S9-01, S9-08)
-    └──▶ ✎ S9-D10 ─▶ S9-27  Promote claim fields + save         (← S9-26)
-                       ├──▶ ✎ S9-D11 ─▶ S9-28  Promote compare  (← S9-15)
-                       └──▶ S9-16  Promote read: neighborhood    (← S9-01)
-                              └──▶ ✎ S9-D12 ─▶ S9-29  Promote walk + off-ramp
+SLICE 4 — Person detail + name resolution
+  S9-13  Name auto-reconciler (pure Go, table-driven)
+  S9-14  Provenance ranking + polarity; upkeep on credibility / certainty changes
+  S9-15  Detail composer + detail read + value-state formatting
+  ✎ S9-D5 ──▶ S9-16  Person detail (name with states and clusters)
+  Check: J. Robins + James Robins → merged; James / Jim → mixed with alternates;
+         raising a Source's credibility reorders them.
 
-SEARCH
-  S9-17  Search kinds + reprojection                            (← S9-08, S9-10)
-    └──▶ ✎ S9-D13 ─▶ S9-30  Omnibar Conclusion hits             (← S9-12)
+SLICE 5 — Compare, pins, backfill
+  S9-17  Comparison read + pins + backfill in the Promote write
+  S9-18  Delete Impact: pinned Observations name their claims
+  ✎ S9-D11 ──▶ S9-19  Promote compare
+  Check: join with confirmed pairs → both claims pinned; delete a pinned Observation → blocked, claim named.
 
-S9-99  Dogfood close / docs
+SLICE 6 — Events
+  S9-20  Seed event_name
+  S9-21  Date auto-reconciler + date windows (pure Go, table-driven)
+  S9-22  Event composer (title precedence without subjects, date) + reads + title formatting
+  ✎ S9-D3 ──▶ S9-23  Events list (sidebar Events goes live)
+  ✎ S9-D6 ──▶ S9-24  Event detail
+  Check: promoted event cards list with titles; MAY 1985 + 14 MAY 1985 merge; APR vs MAY → mixed.
+
+SLICE 7 — Places
+  S9-25  Place composer + reads
+  ✎ S9-D4 ──▶ S9-26  Places list (sidebar Places goes live)
+  ✎ S9-D7 ──▶ S9-27  Place detail
+  Check: a Place with Upper Canada / U.C. shows both, ranked.
+
+SLICE 8 — Walk + bridges
+  S9-28  Edges: subject-valued resolution, bridge filing in the Promote write, inbound-end upkeep
+  S9-29  Neighborhood read
+  ✎ S9-D12 ──▶ S9-30  Promote walk + off-ramp
+  Check: walk a birth record → Participation + Location handles filed; bridges wait for both ends; Done keeps saved steps.
+
+SLICE 9 — Derived values across the graph
+  S9-31  Composer walks: life dates + places, subject titles (et al., unnamed person), event places; header dependents
+  S9-32  Fill derived cells in Persons / Events lists and Person / Event detail (designed in D2 / D3 / D5 / D6)
+  S9-33  Deep fixture + timings
+  Check: "Birth of James Robins"; James shows 1817 – 1880 · York → Toronto; timings in the ledger.
+
+SLICE 10 — Search
+  S9-34  Search kinds + documents + reprojection
+  ✎ S9-D13 ──▶ S9-35  Omnibar Conclusion hits
+  Check: PER-7KD45, Jim Robins, Birth of James, a toponym → each finds its handle; a name edit updates the hit.
+
+CLOSE
+  S9-99  Dogfood close / docs
 ```
 
-- **Why pages before Promote.** S9-09's fixture seeds realistic handles, so the lists and details prove the cache and composers visually before the write flow is built on them. Promote can move ahead of Pages if real data matters more; nothing in Pages blocks it.
-- **Persons first within Pages.** S9-D3 / D4 extend S9-D2's row, and S9-D6 / D7 extend S9-D5's page, so design the Persons pair before the others.
-- **Can run side by side:** S9-02, S9-03, S9-04, S9-05 with S9-01; S9-09 with S9-10; S9-13 and S9-15 with the Pages work; S9-17 any time after S9-10.
-- **Churn is expected.** Stub destinations, placeholder rows, and a Promote shell with one working step are fine between PRs.
+- **Slices run in order.** Within a slice, PRs run top to bottom; the Go PRs at the top of a slice can usually go side by side (S9-13 / S9-14; S9-20 / S9-21).
+- **Slices 6 and 7 can swap or run beside slices 4–5**; they need only slices 1–3.
+- **The cache is honest from slice 2.** S9-06 ships the rebuild-equals-upkeep test; every later PR that adds a write path or trigger adds to it.
+- **Churn is expected.** A confirm-and-mint Promote button (slice 1), stubbed sidebar items, and empty life-date cells are fine between slices.
 
 ### Dependencies at a glance
 
 | PR | Brief | Depends on |
 | --- | --- | --- |
 | S9-01 Conclusion schema + stores | — | — |
-| S9-02 Seed `event_name` | — | — |
-| S9-03 Delete Impact for Identity Claims | — | S9-01 |
-| S9-04 Date auto-reconciler | — | — |
-| S9-05 Name auto-reconciler | — | — |
-| S9-06 Resolver core | — | S9-04, S9-05 |
-| S9-07 Resolved-values cache + rebuild | — | S9-01, S9-06 |
-| S9-08 Cache upkeep | — | S9-07 |
-| S9-09 Deep fixture + timings | — | S9-08 |
-| S9-10 Header + detail composers | — | S9-07, S9-02 |
-| S9-11 Conclusion reads | — | S9-10 |
-| S9-12 Swift formatters | — | S9-10 |
-| S9-13 Source graph carries membership | — | S9-01 |
-| S9-14 Promote step write | — | S9-01, S9-08 |
-| S9-15 Promote reads: targets + comparison | — | S9-06, S9-10 |
-| S9-16 Promote read: neighborhood | — | S9-01 |
-| S9-17 Search kinds + reprojection | — | S9-08, S9-10 |
-| S9-18 Sidebar | **S9-D1** | S9-11 |
-| S9-19 Persons list | **S9-D2** | S9-11, S9-12, S9-18 |
-| S9-20 Events list | **S9-D3** (extends D2) | S9-11, S9-12, S9-18 |
-| S9-21 Places list | **S9-D4** (extends D2) | S9-11, S9-12, S9-18 |
-| S9-22 Person detail | **S9-D5** | S9-11, S9-12 |
-| S9-23 Event detail | **S9-D6** (extends D5) | S9-11, S9-12 |
-| S9-24 Place detail | **S9-D7** (extends D5) | S9-11, S9-12 |
-| S9-25 Graph card | **S9-D8** | S9-13 |
-| S9-26 Promote shell + target | **S9-D9** | S9-15, S9-25 |
-| S9-27 Promote claim fields + save | **S9-D10** (extends D9) | S9-14, S9-26 |
-| S9-28 Promote compare | **S9-D11** (extends D9) | S9-15, S9-27 |
-| S9-29 Promote walk | **S9-D12** (extends D9) | S9-16, S9-27 |
-| S9-30 Omnibar hits | **S9-D13** | S9-12, S9-17 |
+| S9-02 Promote write v1 | — | S9-01 |
+| S9-03 Source graph carries membership | — | S9-01 |
+| S9-04 Graph card: Promote + membership | **S9-D8** | S9-02, S9-03 |
+| S9-05 Resolver core v1 | — | — |
+| S9-06 Resolved-values cache | — | S9-01, S9-05 |
+| S9-07 Person header + list read | — | S9-06 |
+| S9-08 Sidebar | **S9-D1** | S9-07 |
+| S9-09 Persons list | **S9-D2** | S9-07, S9-08 |
+| S9-10 Promote write + reads: existing target | — | S9-06 |
+| S9-11 Promote shell + choose target | **S9-D9** | S9-04, S9-10 |
+| S9-12 Claim fields + save | **S9-D10** | S9-11 |
+| S9-13 Name auto-reconciler | — | S9-05 |
+| S9-14 Provenance ranking | — | S9-06 |
+| S9-15 Detail composer + read | — | S9-07 |
+| S9-16 Person detail | **S9-D5** | S9-13, S9-14, S9-15 |
+| S9-17 Compare read + pins + backfill | — | S9-12, S9-13 |
+| S9-18 Delete Impact for pins | — | S9-17 |
+| S9-19 Promote compare | **S9-D11** | S9-17 |
+| S9-20 Seed `event_name` | — | — |
+| S9-21 Date auto-reconciler | — | S9-05 |
+| S9-22 Event composer + reads | — | S9-15, S9-20, S9-21 |
+| S9-23 Events list | **S9-D3** (extends D2) | S9-09, S9-22 |
+| S9-24 Event detail | **S9-D6** (extends D5) | S9-16, S9-22 |
+| S9-25 Place composer + reads | — | S9-15 |
+| S9-26 Places list | **S9-D4** (extends D2) | S9-09, S9-25 |
+| S9-27 Place detail | **S9-D7** (extends D5) | S9-16, S9-25 |
+| S9-28 Edges + bridge filing | — | S9-12 |
+| S9-29 Neighborhood read | — | S9-28 |
+| S9-30 Promote walk | **S9-D12** (extends D9) | S9-29 |
+| S9-31 Composer walks | — | S9-22, S9-25, S9-28 |
+| S9-32 Fill derived cells | (D2 / D3 / D5 / D6) | S9-31, S9-23, S9-24 |
+| S9-33 Deep fixture + timings | — | S9-31 |
+| S9-34 Search kinds + reprojection | — | S9-31 |
+| S9-35 Omnibar hits | **S9-D13** | S9-34 |
 | S9-99 Dogfood close | — | all |
-
-### Milestones
-
-| After | The app can… |
-| --- | --- |
-| S9-09 | Rebuild the cache on a deep fixture; timings in the ledger (bar 9) |
-| S9-19…24 | Browse fixture Persons / Events / Places and open their pages (bar 3–6) |
-| S9-27 | Mint a new handle from a graph card — first real data (bar 1, partial; bar 7) |
-| S9-28 | Join a second record with pinned comparisons and backfill (bar 2) |
-| S9-29 | Walk the neighborhood with a Done off-ramp (bar 1) |
-| S9-30 | Find handles in the omnibar (bar 8) |
 
 ---
 
 ## Checklist
 
-In suggested order; each brief sits just above the PR it gates.
+In order; each brief sits just above the PR it gates.
 
 - [ ] S9-01 — Conclusion schema + stores
-- [ ] S9-02 — Seed `event_name`
-- [ ] S9-03 — Delete Impact for Identity Claims
-- [ ] S9-04 — Date auto-reconciler + windows
-- [ ] S9-05 — Name auto-reconciler
-- [ ] S9-06 — Resolver core
-- [ ] S9-07 — Resolved-values cache + rebuild
-- [ ] S9-08 — Cache upkeep + rebuild-equals-upkeep test
-- [ ] S9-09 — Deep fixture + timings
-- [ ] S9-10 — Header and detail composers
-- [ ] S9-11 — Conclusion reads: FFI + Swift store + query keys
-- [ ] S9-12 — Swift Conclusion formatters
-- [ ] ✎ S9-D1 — Design: workspace sidebar
-- [ ] S9-18 — Sidebar Conclusions group
-- [ ] ✎ S9-D2 — Design: Persons list
-- [ ] S9-19 — Persons list
-- [ ] ✎ S9-D5 — Design: Person detail
-- [ ] S9-22 — Person detail
-- [ ] ✎ S9-D3 — Design: Events list
-- [ ] S9-20 — Events list
-- [ ] ✎ S9-D6 — Design: Event detail
-- [ ] S9-23 — Event detail
-- [ ] ✎ S9-D4 — Design: Places list
-- [ ] S9-21 — Places list
-- [ ] ✎ S9-D7 — Design: Place detail
-- [ ] S9-24 — Place detail
-- [ ] S9-13 — Source graph carries membership
+- [ ] S9-02 — Promote write v1
+- [ ] S9-03 — Source graph carries membership
 - [ ] ✎ S9-D8 — Design: graph subject card
-- [ ] S9-25 — Graph card: Promote entry + membership
-- [ ] S9-15 — Promote reads: target suggestions + comparison
+- [ ] S9-04 — Graph card: Promote + membership
+- [ ] S9-05 — Resolver core v1
+- [ ] S9-06 — Resolved-values cache
+- [ ] S9-07 — Person header composer + list read
+- [ ] ✎ S9-D1 — Design: workspace sidebar
+- [ ] S9-08 — Sidebar Conclusions group
+- [ ] ✎ S9-D2 — Design: Persons list
+- [ ] S9-09 — Persons list
+- [ ] S9-10 — Promote write + reads: existing target
 - [ ] ✎ S9-D9 — Design: Promote shell + choose target
-- [ ] S9-26 — Promote shell + choose target
-- [ ] S9-14 — Promote step write
+- [ ] S9-11 — Promote shell + choose target
 - [ ] ✎ S9-D10 — Design: Promote claim fields
-- [ ] S9-27 — Promote claim fields + save step
+- [ ] S9-12 — Promote claim fields + save
+- [ ] S9-13 — Name auto-reconciler
+- [ ] S9-14 — Provenance ranking + polarity
+- [ ] S9-15 — Detail composer + detail read
+- [ ] ✎ S9-D5 — Design: Person detail
+- [ ] S9-16 — Person detail
+- [ ] S9-17 — Compare read + pins + backfill
+- [ ] S9-18 — Delete Impact for pins
 - [ ] ✎ S9-D11 — Design: Promote compare
-- [ ] S9-28 — Promote compare
-- [ ] S9-16 — Promote read: neighborhood
+- [ ] S9-19 — Promote compare
+- [ ] S9-20 — Seed `event_name`
+- [ ] S9-21 — Date auto-reconciler + windows
+- [ ] S9-22 — Event composer + reads
+- [ ] ✎ S9-D3 — Design: Events list
+- [ ] S9-23 — Events list
+- [ ] ✎ S9-D6 — Design: Event detail
+- [ ] S9-24 — Event detail
+- [ ] S9-25 — Place composer + reads
+- [ ] ✎ S9-D4 — Design: Places list
+- [ ] S9-26 — Places list
+- [ ] ✎ S9-D7 — Design: Place detail
+- [ ] S9-27 — Place detail
+- [ ] S9-28 — Edges + bridge filing
+- [ ] S9-29 — Neighborhood read
 - [ ] ✎ S9-D12 — Design: Promote walk
-- [ ] S9-29 — Promote walk + off-ramp
-- [ ] S9-17 — Search kinds + reprojection
+- [ ] S9-30 — Promote walk + off-ramp
+- [ ] S9-31 — Composer walks + header dependents
+- [ ] S9-32 — Fill derived cells in lists and details
+- [ ] S9-33 — Deep fixture + timings
+- [ ] S9-34 — Search kinds + reprojection
 - [ ] ✎ S9-D13 — Design: omnibar hits
-- [ ] S9-30 — Omnibar Conclusion hits
+- [ ] S9-35 — Omnibar Conclusion hits
 - [ ] S9-99 — Dogfood close / docs
 
 ---
 
 ## PRs
 
-### S9-01 — Conclusion schema + stores
+### Slice 1 — Mint from the graph
+
+#### S9-01 — Conclusion schema + stores
 
 | | |
 | --- | --- |
-| **In** | Migration: `claim_confidence_grades` (+ seed §5.5), `canonical_entities`, `identity_claims` (composite FKs, `UNIQUE (subject_id, entity_id)`, one-accepted partial index), `identity_claim_evidence`. Canonical ref minting from `subject_types.ref_prefix`. Go stores: create entity, create claim (+ pins), get / list by kind, membership lookups both ways. Audit on every write. |
-| **Out** | FFI; Promote orchestration (S9-14); cache (S9-07); Reconciliation tables. |
-| **Testable** | Type mismatch rejected by FK; second accepted claim for a subject rejected; ref format; audit rows written; membership queries. |
+| **In** | Migration: `claim_confidence_grades` (+ seed §5.5), `canonical_entities`, `identity_claims` (composite FKs, `UNIQUE (subject_id, entity_id)`, one-accepted partial index), `identity_claim_evidence`. Canonical ref minting from `subject_types.ref_prefix`. Go stores: create entity, create claim, get / list by kind, membership lookups both ways. Audit on every write. |
+| **Out** | FFI (S9-02); cache (S9-06); Reconciliation tables. |
+| **Testable** | Type mismatch rejected by FK; second accepted claim rejected; ref format; audit rows. |
 | **Depends on** | — |
 
-### S9-02 — Seed `event_name`
+#### S9-02 — Promote write v1
 
 | | |
 | --- | --- |
-| **In** | `event_name` (`text`) Property bound to `event`: Install seed + migration for existing projects. Seeded-vocabulary doc. |
-| **Out** | Any resolver or title use (S9-10). |
-| **Testable** | New and migrated projects both have the Property and binding; Subject Fields shows it on events. |
-| **Depends on** | — |
-
-### S9-03 — Delete Impact for Identity Claims
-
-| | |
-| --- | --- |
-| **In** | Register `identity_claim_evidence.observation_id` as an inbound via (replaces stale `ViaSamenessEvidence`); Observation delete names the pinning claim(s); Subject delete Impact names the handle it would leave. L10n kind strings. |
-| **Out** | Cache dependents on delete (S9-08). |
-| **Testable** | Pinned Observation blocked with the claim named; Subject delete lists the handle; unpinned paths unchanged. |
+| **In** | FFI + Go: mint a handle of the subject's type and write an accepted Identity Claim, one transaction. Refuses already-member subjects. Swift `GenealogyStore` + FakeStore. Subject delete Impact names the handle the subject would leave (claim CASCADEs). |
+| **Out** | Existing targets (S9-10); pins (S9-17); cache (S9-06). |
+| **Testable** | Mint writes both rows; second promote of the same subject refused; Subject delete Impact lists the handle. |
 | **Depends on** | S9-01 |
 
-### S9-04 — Date auto-reconciler + windows
+#### S9-03 — Source graph carries membership
 
 | | |
 | --- | --- |
-| **In** | Pure Go: n DateValues (ranked) → one DateValue + state (exact / merged / mixed) + contributing inputs. `date_lo` / `date_hi` window per DateValue (qualifiers, ranges, partial components). Table-driven tests as the spec (~50+). |
-| **Out** | Candidate loading; ranking (inputs arrive ranked). |
-| **Testable** | Precision containment; overlap merge; range widening vs shared-precision drop; `ABT` / `BEF` / `AFT`; disjoint → mixed; missing components never zero. |
+| **In** | Source-graph read includes each subject's accepted handle (id, ref, kind) or none. Swift model field. Promote mutation invalidates that Source's graph. |
+| **Testable** | Promoted / unpromoted subjects reported correctly. |
+| **Depends on** | S9-01 |
+
+#### S9-04 — Graph card: Promote + membership
+
+| | |
+| --- | --- |
+| **In** | Per **S9-D8**: Promote control on unpromoted person / event / place cards. **v1:** a Confirm (*Create a new Person from CPR-…?*) then mint via S9-02. Membership row shows the handle ref (name arrives in S9-09). Canvas action targets + VoiceOver actions. |
+| **Out** | The Promote flow (S9-11 reroutes the button to it). |
+| **Check** | Promote a card; it shows PER-… and no longer offers Promote. |
+| **Depends on** | **S9-D8**, S9-02, S9-03 |
+
+### Slice 2 — Persons list
+
+#### S9-05 — Resolver core v1
+
+| | |
+| --- | --- |
+| **In** | Pure Go. Candidates in → ranked clusters out with states (single / merged / mixed). v1 clustering: exact-equal values (names by normalized `form`, text, terms); stable order by support then Observation id. Optional concluded input. |
+| **Out** | Name / date reconcilers (S9-13, S9-21); provenance ranking (S9-14); subject-valued mapping (S9-28). |
+| **Testable** | Clustering, states, stable order, concluded input wins. |
 | **Depends on** | — |
 
-### S9-05 — Name auto-reconciler
+#### S9-06 — Resolved-values cache
 
 | | |
 | --- | --- |
-| **In** | Pure Go: n NameValues (ranked) → one NameValue + state + contributing inputs. Surname merge, initial expansion, case / punctuation normalization, disagreeing-given-name stream, `form` fallback for untyped parts. Table-driven tests (~50+). |
-| **Out** | Name format profiles. |
-| **Testable** | Each rule plus combinations; untyped-only inputs; single input passes through. |
-| **Depends on** | — |
+| **In** | Migration: `conclusion_resolved_values` (R3 shape, all columns and indexes up front) + version row. Batched loader (members, Observations, provenance in a fixed number of queries per batch). Full rebuild; version check on Open. Upkeep in the write transaction for the write paths that exist now: Promote (claim create), Observation save / delete, Subject delete (dependents computed before CASCADE). **Rebuild-equals-upkeep randomized test.** |
+| **Out** | Credibility / certainty triggers (S9-14); inbound-end trigger (S9-28). |
+| **Testable** | Rebuild matches hand-computed rows; version mismatch rebuilds; randomized equivalence; loader query count constant. |
+| **Depends on** | S9-01, S9-05 |
 
-### S9-06 — Resolver core
-
-| | |
-| --- | --- |
-| **In** | Candidate model with provenance (Source credibility, Citation certainty, member claim confidence, polarity). Ranking (R2 order), clustering, three states, optional concluded input. Dispatch: date → S9-04, name → S9-05, subject-valued → map to handle / drop unpromoted, everything else → distinct ranked. Output: ranked clusters. |
-| **Out** | Database access (candidates are passed in). |
-| **Testable** | Ranking order and defaults; negative polarity excluded and counted against; subject-valued mapping; concluded input wins; stable tiebreak. |
-| **Depends on** | S9-04, S9-05 |
-
-### S9-07 — Resolved-values cache + rebuild
+#### S9-07 — Person header composer + list read
 
 | | |
 | --- | --- |
-| **In** | Migration: `conclusion_resolved_values` (R3 shape, indexes) + version row. Batched candidate loader (members, Observations, provenance in a fixed number of set-based queries per batch). Full rebuild; version check on Open. Protobuf value columns and `date_lo` / `date_hi`. |
-| **Out** | Incremental upkeep (S9-08). |
-| **Testable** | Rebuild on a small fixture matches hand-computed rows; version mismatch triggers rebuild; loader query count is constant per batch. |
-| **Depends on** | S9-01, S9-06 |
+| **In** | Go Person header (resolved name, fallback label → ref) from the cache; set-based list composition; list + count FFI; Swift store, FakeStore, `CatalogQueryKey` + `PlaceRegistry` for Persons (stub view); invalidation (bust all Conclusion keys; evict details). Name formatting from NameValue structures. |
+| **Testable** | Header fallbacks; list query count constant; a trigger mutation stales the key. |
+| **Depends on** | S9-06 |
 
-### S9-08 — Cache upkeep + rebuild-equals-upkeep test
+#### S9-08 — Sidebar Conclusions group
 
 | | |
 | --- | --- |
-| **In** | Affected-handles function. Triggers (R3 table) wired into Observation save / delete, Identity Claim create, Subject delete (computed **before** CASCADE), confidence / credibility / certainty changes — each in the write transaction. Randomized test: write sequences, then incremental == full rebuild. |
-| **Out** | Search reprojection (S9-17); Swift invalidation (S9-11). |
-| **Testable** | Each trigger individually; randomized equivalence; delete paths leave no stale rows. |
+| **In** | Per **S9-D1**: Conclusions group with Persons live; Events / Places present but stubbed until S9-23 / S9-26. Counts. |
+| **Check** | Persons count matches promoted Persons. |
+| **Depends on** | **S9-D1**, S9-07 |
+
+#### S9-09 — Persons list
+
+| | |
+| --- | --- |
+| **In** | Per **S9-D2**: rows with thumbnail placeholder, name, ref; empty state. Life-date and place cells render empty until S9-32. The graph card's membership row shows the resolved name. |
+| **Check** | Promoted Persons listed by name; edit a name Observation on a member → row updates. |
+| **Depends on** | **S9-D2**, S9-07, S9-08 |
+
+### Slice 3 — Join an existing Person
+
+#### S9-10 — Promote write + reads: existing target
+
+| | |
+| --- | --- |
+| **In** | Promote write accepts an existing handle of the same type (claim only; cache upkeep). Target-suggestion read: same-type handles as headers, resemblance via cache `sort_key`. Confidence grade + argument on the claim. |
+| **Out** | Pins / backfill (S9-17); related-first suggestions during a walk (S9-29). |
+| **Testable** | Join writes a claim onto the existing handle; cache recomputed; suggestions filtered by type. |
+| **Depends on** | S9-06 |
+
+#### S9-11 — Promote shell + choose target
+
+| | |
+| --- | --- |
+| **In** | Per **S9-D9**: the Promote place (or sheet) with step navigation and leave guard; choose target (new vs existing, suggestions). The card's Promote now opens it (replaces the S9-04 confirm). |
+| **Depends on** | **S9-D9**, S9-04, S9-10 |
+
+#### S9-12 — Promote claim fields + save
+
+| | |
+| --- | --- |
+| **In** | Per **S9-D10**: Status dropdown (one option), confidence, argument; Save writes the step; Done exits. |
+| **Check** | Promote a second census person onto an existing Person → one list row, both cards show the same PER-…. |
+| **Depends on** | **S9-D10**, S9-11 |
+
+### Slice 4 — Person detail + name resolution
+
+#### S9-13 — Name auto-reconciler
+
+| | |
+| --- | --- |
+| **In** | Pure Go, table-driven (~50+ cases): surname merge, initial expansion, normalization, given-name stream, `form` fallback. Plugged into the resolver for `name` values; cache version bump. |
+| **Depends on** | S9-05 |
+
+#### S9-14 — Provenance ranking + polarity
+
+| | |
+| --- | --- |
+| **In** | Resolver ranking by Source credibility → Citation certainty → member claim confidence → agreement → id; negative polarity excluded and counted against. Upkeep triggers for credibility, transcription-certainty, and claim-confidence changes; extend the randomized test. Cache version bump. |
+| **Depends on** | S9-06 |
+
+#### S9-15 — Detail composer + detail read
+
+| | |
+| --- | --- |
+| **In** | Go detail composer (fields with states and all clusters, support counts); detail FFI; Swift store + detail key (stub view); value-state formatting (single / merged / mixed / empty, *+N*). |
 | **Depends on** | S9-07 |
 
-### S9-09 — Deep fixture + timings
+#### S9-16 — Person detail
 
 | | |
 | --- | --- |
-| **In** | Seeded project generator: a Person on ~10 Sources, multi-member birth / death / marriage events with Locations, relationships; scaled to a few hundred handles. Benchmarks: rebuild, one-write upkeep, one Promote step (once S9-14 lands), list and detail composition (once S9-10 lands). Ledger rows. |
-| **Out** | Optimization. |
-| **Testable** | Fixture is deterministic; benchmarks run in CI-less `go test -bench`. |
-| **Depends on** | S9-08 (extends as S9-10 / S9-14 land) |
+| **In** | Per **S9-D5**: header with name, states, clusters; life-date and place rows render empty until S9-32. |
+| **Check** | *J. Robins* + *James Robins* → merged; *James* / *Jim* → mixed with alternates; raising one Source's credibility reorders them. |
+| **Depends on** | **S9-D5**, S9-13, S9-14, S9-15 |
 
-### S9-10 — Header and detail composers
+### Slice 5 — Compare, pins, backfill
 
-| | |
-| --- | --- |
-| **In** | Go composers per kind: headers (list rows, pickers, search) and details (fields with states and clusters). Canonical walks via R3 reverse index (`role = subject`, birth / death, Locations → Places). Event title parts per R4 precedence (`event_name` → subjects → label → type / place → ref). Set-based list composition. Protobuf messages for headers, details, and title parts — structures only, no display strings. |
-| **Out** | FFI handlers (S9-11); text formatting (Swift, S9-12). |
-| **Testable** | Each walk; `et al.` ordering; unnamed person; no-subject titles; list composition query count constant in list length. |
-| **Depends on** | S9-07 (S9-02 for `event_name`) |
-
-### S9-11 — Conclusion reads: FFI + Swift store + query keys
+#### S9-17 — Compare read + pins + backfill
 
 | | |
 | --- | --- |
-| **In** | FFI: list by kind, detail by id, counts. `GenealogyStore` + FakeStore. `CatalogQueryKey`s and `PlaceRegistry` entries for the six places (stub views are fine). Invalidation: bust all Conclusion keys on the R3 trigger mutations; evict details, revalidate visible. `macos-client-patterns.md` note. |
-| **Out** | Any real view (S9-18+). |
-| **Testable** | Handler round-trips; FakeStore parity; a mutation marks Conclusion keys stale and evicts details. |
-| **Depends on** | S9-10 |
+| **In** | Comparison read: incoming Observations × each member's per Property, compatibility from the resolver. Promote write takes confirmed pairs: pins on the new claim **and** backfill onto the member's claim, same transaction. |
+| **Testable** | Pins on both claims; older `argument` untouched; compatible pairs flagged. |
+| **Depends on** | S9-12, S9-13 |
 
-### S9-12 — Swift Conclusion formatters
-
-| | |
-| --- | --- |
-| **In** | Extend `DateValueDisplay` / `NameValueDisplay` for resolved values; event-title formatter from title parts via L10n templates (matrix in R4); value-state model (single / merged / mixed / empty, *+N*). Unit tests only. |
-| **Out** | Views. |
-| **Testable** | Every matrix row; `et al.`; *Unspecified {type}*; *unnamed person*; localization keys present. |
-| **Depends on** | S9-10 (proto shapes) |
-
-### S9-13 — Source graph carries membership
+#### S9-18 — Delete Impact for pins
 
 | | |
 | --- | --- |
-| **In** | The source-graph read includes each subject's accepted handle (id, ref, kind) or none. Swift model field. |
-| **Out** | Card UI (S9-25). |
-| **Testable** | Promoted / unpromoted subjects reported correctly; graph cache invalidated on claim create. |
-| **Depends on** | S9-01 |
+| **In** | Register `identity_claim_evidence.observation_id` (replaces stale `ViaSamenessEvidence`); a pinned Observation's delete names its claim(s). L10n. |
+| **Depends on** | S9-17 |
 
-### S9-14 — Promote step write
+#### S9-19 — Promote compare
 
 | | |
 | --- | --- |
-| **In** | One FFI call per step: mint (or target existing) handle + accepted Identity Claim + pins + backfill onto compared members' claims + R3 recompute, one transaction. Rejects type mismatch and already-member subjects. Bridge subjects file onto an existing association or mint one. |
-| **Out** | Status other than `accepted` (Q7). |
-| **Testable** | Mint path (zero pins); join path with backfill on both claims; race on one-accepted index fails only that step; cache rows updated in the same transaction. |
-| **Depends on** | S9-01, S9-08 |
+| **In** | Per **S9-D11**: compare step for existing handles with members, between target and claim fields. |
+| **Check** | Join with two confirmed pairs → both claims pinned; delete a pinned Observation → blocked with the claim named. |
+| **Depends on** | **S9-D11**, S9-17 |
 
-### S9-15 — Promote reads: target suggestions + comparison
+### Slice 6 — Events
 
-| | |
-| --- | --- |
-| **In** | Target suggestions for a subject: related handles (during a walk) first, then resemblance via R3 `sort_key` and headers. Comparison rows: incoming Observations × each member's Observations per Property, with resolver-driven compatibility pre-check. |
-| **Out** | UI. |
-| **Testable** | Same-type filter; related-first ordering; compatible pairs flagged; members with several Observations per Property give one row each. |
-| **Depends on** | S9-06, S9-10 |
-
-### S9-16 — Promote read: neighborhood
+#### S9-20 — Seed `event_name`
 
 | | |
 | --- | --- |
-| **In** | For a just-filed subject: unpromoted Interpretation neighbors; queue rules (not handled, not members of the target, not neighbors of other members); bridge readiness (both ends have handles) and the association the ends already share, if any. |
-| **Out** | Queue persistence (none, by design). |
-| **Testable** | Birth-record walk shape from the model (§5.4); skip does not reach through; bridges wait for both ends. |
-| **Depends on** | S9-01 |
+| **In** | `event_name` (`text`) bound to `event`: Install seed + migration. |
+| **Depends on** | — |
 
-### S9-17 — Search kinds + reprojection
+#### S9-21 — Date auto-reconciler + windows
 
 | | |
 | --- | --- |
-| **In** | Registry kinds `person` / `event` / `place`; location mapping; documents built from S9-10 headers (match text only); header-dependent reprojection in the write transaction; `SearchHit` carries the structured header; `ProjectionVersion` bump; FakeStore. |
-| **Out** | Hit row UI (S9-30). |
-| **Testable** | Ref, name, alternate (*Jim*), event title, toponym hits; a member name edit updates the Person and its subject Events' documents; rebuild matches incremental. |
-| **Depends on** | S9-08, S9-10 |
+| **In** | Pure Go, table-driven (~50+ cases): containment, overlap, range widening vs shared precision, qualifiers, disjoint → mixed. `date_lo` / `date_hi` computed and stored. Cache version bump. |
+| **Depends on** | S9-05 |
 
-### S9-18 — Sidebar Conclusions group
+#### S9-22 — Event composer + reads
 
 | | |
 | --- | --- |
-| **In** | Per **S9-D1**: Conclusions group in `WorkspaceSidebar` with Persons / Events / Places and counts. Destinations open stub pages until S9-19…21. |
-| **Depends on** | S9-D1, S9-11 |
+| **In** | Event header + detail: title precedence without subjects (`event_name` → label → *Unspecified {type}* → ref), date (else span). List / detail / count FFI and keys. Swift event-title formatter (L10n templates, full matrix so S9-31 only supplies parts). |
+| **Depends on** | S9-15, S9-20, S9-21 |
 
-### S9-19 / S9-20 / S9-21 — Persons, Events, Places lists
-
-| | |
-| --- | --- |
-| **In** | One PR per list, per **S9-D2 / D3 / D4**. Rows from headers via S9-12 formatters; default sort; *mixed* / *+N*; empty state. |
-| **Depends on** | Its brief, S9-11, S9-12, S9-18 |
-
-### S9-22 / S9-23 / S9-24 — Person, Event, Place detail
+#### S9-23 — Events list
 
 | | |
 | --- | --- |
-| **In** | One PR per detail, per **S9-D5 / D6 / D7**. Header fields with states; cluster list per field; superset of the list row (Q11). Read-only. |
-| **Depends on** | Its brief, S9-11, S9-12 |
+| **In** | Per **S9-D3**; sidebar Events goes live. Place cell empty until S9-32. |
+| **Check** | Promoted event cards list with titles; `MAY 1985` + `14 MAY 1985` merge; `APR` vs `MAY` → mixed. |
+| **Depends on** | **S9-D3**, S9-09, S9-22 |
 
-### S9-25 — Graph card: Promote entry + membership
-
-| | |
-| --- | --- |
-| **In** | Per **S9-D8**: Promote control on unpromoted primary-kind cards (opens the S9-26 shell, stubbed until then); member badge + link on promoted cards. |
-| **Depends on** | S9-D8, S9-13 |
-
-### S9-26 — Promote shell + choose target
+#### S9-24 — Event detail
 
 | | |
 | --- | --- |
-| **In** | Per **S9-D9**: the Promote place (or sheet, per the board) with step navigation; choose target (mint vs existing, header rows, suggestions). Leave guard on the step in progress. |
-| **Depends on** | S9-D9, S9-15, S9-25 |
+| **In** | Per **S9-D6**. Places empty until S9-32. |
+| **Depends on** | **S9-D6**, S9-16, S9-22 |
 
-### S9-27 — Promote claim fields + save step
+### Slice 7 — Places
 
-| | |
-| --- | --- |
-| **In** | Per **S9-D10**: Status dropdown (one option), confidence, argument; Next saves via S9-14; Done exits. First end-to-end: mint from a graph card. |
-| **Depends on** | S9-D10, S9-14, S9-26 |
-
-### S9-28 — Promote compare
+#### S9-25 — Place composer + reads
 
 | | |
 | --- | --- |
-| **In** | Per **S9-D11**: comparison step for existing handles, inserted between target and claim fields; pins and backfill flow into S9-14. |
-| **Depends on** | S9-D11, S9-15, S9-27 |
+| **In** | Place header + detail (toponym clusters); list / detail / count FFI and keys. |
+| **Depends on** | S9-15 |
 
-### S9-29 — Promote walk + off-ramp
-
-| | |
-| --- | --- |
-| **In** | Per **S9-D12**: after each save, connected subjects list; picking one loops the steps; bridge confirm; Done off-ramp. |
-| **Depends on** | S9-D12, S9-16, S9-27 |
-
-### S9-30 — Omnibar Conclusion hits
+#### S9-26 — Places list
 
 | | |
 | --- | --- |
-| **In** | Per **S9-D13**: `PVOmnibarHitRow` for the three kinds, formatted from structured headers (S9-12). |
-| **Depends on** | S9-D13, S9-12, S9-17 |
+| **In** | Per **S9-D4**; sidebar Places goes live. |
+| **Depends on** | **S9-D4**, S9-09, S9-25 |
+
+#### S9-27 — Place detail
+
+| | |
+| --- | --- |
+| **In** | Per **S9-D7**. |
+| **Check** | A Place with *Upper Canada* / *U.C.* shows both, ranked, mixed. |
+| **Depends on** | **S9-D7**, S9-16, S9-25 |
+
+### Slice 8 — Walk + bridges
+
+#### S9-28 — Edges + bridge filing
+
+| | |
+| --- | --- |
+| **In** | Resolver: subject-valued Properties map to the target's handle (unpromoted drop out) — the canonical graph. Upkeep: a claim create / remove recomputes handles whose members' Observations point at that subject. Promote write files bridge subjects onto the association the ends already share, or mints one. Extend the randomized test. |
+| **Depends on** | S9-12 |
+
+#### S9-29 — Neighborhood read
+
+| | |
+| --- | --- |
+| **In** | Unpromoted neighbors of a just-filed subject; queue rules; bridge readiness and shared association. Related-first target suggestions during a walk. |
+| **Depends on** | S9-28 |
+
+#### S9-30 — Promote walk + off-ramp
+
+| | |
+| --- | --- |
+| **In** | Per **S9-D12**: connected subjects after each save; loop; bridge confirm; Done. |
+| **Check** | Walk a birth record: person → event → place → participation → location; bridges wait for both ends; Done keeps saved steps. |
+| **Depends on** | **S9-D12**, S9-29 |
+
+### Slice 9 — Derived values across the graph
+
+#### S9-31 — Composer walks + header dependents
+
+| | |
+| --- | --- |
+| **In** | Person birth / death date and place; Event subject titles (*Birth of …*, marriage, *et al.*, *unnamed person*, *{Type} at {toponym}*) and places. Header-dependents function (reverse walk) for later reprojection. |
+| **Depends on** | S9-22, S9-25, S9-28 |
+
+#### S9-32 — Fill derived cells
+
+| | |
+| --- | --- |
+| **In** | Persons / Events lists and Person / Event detail render the new cells — already designed in **S9-D2 / D3 / D5 / D6**; no new brief. |
+| **Check** | *Birth of James Robins*; James shows *1817 – 1880 · York → Toronto*. |
+| **Depends on** | S9-31, S9-23, S9-24 |
+
+#### S9-33 — Deep fixture + timings
+
+| | |
+| --- | --- |
+| **In** | Seeded project generator (a Person on ~10 Sources, multi-member events with Locations, relationships; a few hundred handles). Benchmarks: rebuild, one-write upkeep, one Promote step, list and detail composition. Ledger rows. |
+| **Depends on** | S9-31 |
+
+### Slice 10 — Search
+
+#### S9-34 — Search kinds + reprojection
+
+| | |
+| --- | --- |
+| **In** | Registry kinds `person` / `event` / `place`; location mapping; documents from headers (match text only); reprojection of the handle and its header dependents in the write transaction; `SearchHit` carries the structured header; `ProjectionVersion` bump; FakeStore. Existing hit rows render a fallback until S9-35. |
+| **Depends on** | S9-31 |
+
+#### S9-35 — Omnibar Conclusion hits
+
+| | |
+| --- | --- |
+| **In** | Per **S9-D13**. |
+| **Check** | `PER-7KD45`, *Jim Robins*, *Birth of James*, a toponym → each finds its handle; a member name edit updates the hit. |
+| **Depends on** | **S9-D13**, S9-34 |
 
 ### S9-99 — Dogfood close / docs
 

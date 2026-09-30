@@ -3,8 +3,8 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 9 (canonical entities MVP)  
 **View:** Promote flow — claim fields step  
-**Implements later as:** PR **S9-27**  
-**Depends on:** S9-D9 (shell); S9-14 (step write)  
+**Implements later as:** PR **S9-12**  
+**Depends on:** S9-D9 (shell); S9-10 (write with confidence + argument)  
 **Related:** S9-D11 precedes this step on the join path; research-judgment model §4  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
 **Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
@@ -94,9 +94,9 @@ Step 2 of 2 · Claim
 
 ---
 
-## 3. Implementation gate (S9-27)
+## 3. Implementation gate (S9-12)
 
-| Ships in **S9-27** | Does **not** ship there |
+| Ships in **S9-12** | Does **not** ship there |
 | --- | --- |
 | Claim fields + Save / Done + failure state | Provisional / rejected options |
 
@@ -156,4 +156,4 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 
 1. Archive this brief under `archive/` when the board is agreed.
 2. Record in [`../completed.md`](../completed.md).
-3. Implement **S9-27** against the board and inventory (kit first).
+3. Implement **S9-12** against the board and inventory (kit first).

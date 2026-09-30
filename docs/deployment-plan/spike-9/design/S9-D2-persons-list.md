@@ -3,8 +3,8 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 9 (canonical entities MVP)  
 **View:** Persons list page  
-**Implements later as:** PR **S9-19**  
-**Depends on:** S9-11 (list reads), S9-12 (formatters), S9-18 (destination)  
+**Implements later as:** PR **S9-09** (later on this view: S9-32 fills life dates and places)  
+**Depends on:** S9-07 (list read + name formatting), S9-08 (destination)  
 **Related:** S9-D3 / S9-D4 extend this row anatomy; S9-D5 (Person detail); precedent [`SourcesListView`](../../../../macos/App/Features/Sources/SourcesListView.swift)  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
 **Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md); [`add-workspace-place`](../../../../.cursor/skills/add-workspace-place/SKILL.md)
@@ -97,11 +97,11 @@ Fields: **thumbnail slot · name · birth date – death date · birth place · 
 
 ---
 
-## 3. Implementation gate (S9-19)
+## 3. Implementation gate (S9-09)
 
-| Ships in **S9-19** | Does **not** ship there |
+| Ships in **S9-09** | Does **not** ship there |
 | --- | --- |
-| Persons list: rows, markers, empty state, loading | Sort / filter controls |
+| Persons list: rows, markers, empty state, loading. Name + ref populated; life-date and place cells render empty | Filling life dates and places (S9-32 — design them fully here anyway); sort / filter controls |
 | Row → Person detail navigation | Row actions (merge, delete, edit) |
 
 ---
@@ -167,4 +167,4 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 
 1. Archive this brief under `archive/` when the board is agreed.
 2. Record in [`../completed.md`](../completed.md).
-3. Implement **S9-19** against the board and inventory (kit first).
+3. Implement **S9-09** against the board and inventory (kit first).

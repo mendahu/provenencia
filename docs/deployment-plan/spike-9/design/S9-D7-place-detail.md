@@ -3,8 +3,8 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 9 (canonical entities MVP)  
 **View:** Place detail page  
-**Implements later as:** PR **S9-24**  
-**Depends on:** S9-D5 (page + value states); S9-11, S9-12  
+**Implements later as:** PR **S9-27**  
+**Depends on:** S9-D5 (page + value states); S9-25 (place reads)  
 **Related:** S9-D4 (row it expands)  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
 **Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
@@ -78,9 +78,9 @@ The page for one Place: **thumbnail slot, toponym(s), ref**. Every distinct topo
 
 ---
 
-## 3. Implementation gate (S9-24)
+## 3. Implementation gate (S9-27)
 
-| Ships in **S9-24** | Does **not** ship there |
+| Ships in **S9-27** | Does **not** ship there |
 | --- | --- |
 | Place header + toponym list using S9-D5 rows | Maps, events-at-this-place |
 
@@ -133,4 +133,4 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 
 1. Archive this brief under `archive/` when the board is agreed.
 2. Record in [`../completed.md`](../completed.md).
-3. Implement **S9-24** against the board and inventory (kit first).
+3. Implement **S9-27** against the board and inventory (kit first).

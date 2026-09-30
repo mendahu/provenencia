@@ -3,8 +3,8 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 9 (canonical entities MVP)  
 **View:** Workspace sidebar (`WorkspaceSidebar`)  
-**Implements later as:** PR **S9-18**  
-**Depends on:** S9-11 (Conclusion counts + stub destinations); shipped sidebar ([`WorkspaceSidebar`](../../../../macos/App/Features/Workspace/WorkspaceSidebar.swift), [`PVSidebarNav`](../../../../macos/App/DesignSystem/Components/SidebarNav/PVSidebarNav.swift))  
+**Implements later as:** PR **S9-08** (later on this view: S9-23 / S9-26 turn Events and Places live)  
+**Depends on:** S9-07 (Persons list read + counts); shipped sidebar ([`WorkspaceSidebar`](../../../../macos/App/Features/Workspace/WorkspaceSidebar.swift), [`PVSidebarNav`](../../../../macos/App/DesignSystem/Components/SidebarNav/PVSidebarNav.swift))  
 **Related:** S9-D2…D4 (the lists these open); [`deployment-plan.md`](../deployment-plan.md) R5  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
 **Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md); [`add-workspace-place`](../../../../.cursor/skills/add-workspace-place/SKILL.md)
@@ -95,11 +95,11 @@ Grouping label, order relative to Sources, and whether Conclusions is a disclosu
 
 ---
 
-## 3. Implementation gate (S9-18)
+## 3. Implementation gate (S9-08)
 
-| Ships in **S9-18** | Does **not** ship there |
+| Ships in **S9-08** | Does **not** ship there |
 | --- | --- |
-| Conclusions group + three destinations + counts + rail icons | List page content (stubs until S9-19…21) |
+| Conclusions group + three destinations + rail icons; Persons live with its count | Events / Places pages (stubbed until S9-23 / S9-26); list content |
 | L10n + VoiceOver labels | Association-kind destinations |
 
 ---
@@ -160,4 +160,4 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 
 1. Archive this brief under `archive/` when the board is agreed.
 2. Record in [`../completed.md`](../completed.md).
-3. Implement **S9-18** against the board and inventory (kit first).
+3. Implement **S9-08** against the board and inventory (kit first).

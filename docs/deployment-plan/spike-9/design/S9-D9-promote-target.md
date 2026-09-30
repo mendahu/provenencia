@@ -3,8 +3,8 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 9 (canonical entities MVP)  
 **View:** Promote flow — choose target step (and the flow shell)  
-**Implements later as:** PR **S9-26**  
-**Depends on:** S9-15 (target suggestions), S9-25 (entry)  
+**Implements later as:** PR **S9-11**  
+**Depends on:** S9-10 (existing-target write + suggestions), S9-04 (card entry point)  
 **Related:** S9-D10…D12 extend this shell; conclusion model §5.3–5.4; [`deployment-plan.md`](../deployment-plan.md) R7  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
 **Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md); [`add-workspace-place`](../../../../.cursor/skills/add-workspace-place/SKILL.md)
@@ -102,11 +102,11 @@ Step 1 of 3 · Choose a Person
 
 ---
 
-## 3. Implementation gate (S9-26)
+## 3. Implementation gate (S9-11)
 
-| Ships in **S9-26** | Does **not** ship there |
+| Ships in **S9-11** | Does **not** ship there |
 | --- | --- |
-| Promote shell (place or sheet) + choose-target step + leave guard | Claim fields save (S9-27), compare (S9-28), walk (S9-29) |
+| Promote shell (place or sheet) + choose-target step + leave guard; card Promote opens it | Claim fields save (S9-12), compare (S9-19), walk (S9-30); related-first suggestions (S9-29) |
 
 ---
 
@@ -168,4 +168,4 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 
 1. Archive this brief under `archive/` when the board is agreed.
 2. Record in [`../completed.md`](../completed.md).
-3. Implement **S9-26** against the board and inventory (kit first).
+3. Implement **S9-11** against the board and inventory (kit first).

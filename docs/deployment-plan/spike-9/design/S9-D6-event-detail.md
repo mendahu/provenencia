@@ -3,8 +3,8 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 9 (canonical entities MVP)  
 **View:** Event detail page  
-**Implements later as:** PR **S9-23**  
-**Depends on:** S9-D5 (page + value states); S9-11, S9-12  
+**Implements later as:** PR **S9-24** (later on this view: S9-32 fills subject titles and places)  
+**Depends on:** S9-D5 (page + value states); S9-22 (event reads)  
 **Related:** S9-D3 (row it expands)  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
 **Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
@@ -87,11 +87,11 @@ The page for one Event: **thumbnail slot, title, date, place(s), ref**, using S9
 
 ---
 
-## 3. Implementation gate (S9-23)
+## 3. Implementation gate (S9-24)
 
-| Ships in **S9-23** | Does **not** ship there |
+| Ships in **S9-24** | Does **not** ship there |
 | --- | --- |
-| Event header + date + places using S9-D5 rows | Participant management |
+| Event header + date using S9-D5 rows; place rows empty | Subject titles and places (S9-32 — design them here); participant management |
 
 ---
 
@@ -125,7 +125,7 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 | --- | --- | --- | --- | --- |
 | Event detail | Snowflake | **New** | `Features/Conclusions/EventDetailView.swift` | |
 | Value-state field row | Snowflake | Ship (from D5) | `Features/Conclusions/ResolvedValueRow.swift` | |
-| Event title formatter | Snowflake | Ship (S9-12) | `Features/Conclusions/` | |
+| Event title formatter | Snowflake | Ship (S9-22) | `Features/Conclusions/` | |
 
 ### Explicit non-goals
 
@@ -146,4 +146,4 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 
 1. Archive this brief under `archive/` when the board is agreed.
 2. Record in [`../completed.md`](../completed.md).
-3. Implement **S9-23** against the board and inventory (kit first).
+3. Implement **S9-24** against the board and inventory (kit first).

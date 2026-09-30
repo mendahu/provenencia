@@ -3,8 +3,8 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 9 (canonical entities MVP)  
 **View:** Promote flow — walk step (connected subjects)  
-**Implements later as:** PR **S9-29**  
-**Depends on:** S9-D9 (shell), S9-D10 (save); S9-16 (neighborhood)  
+**Implements later as:** PR **S9-30**  
+**Depends on:** S9-D9 (shell), S9-D10 (save); S9-28 (bridge filing), S9-29 (neighborhood)  
 **Related:** conclusion model §5.4 (neighborhood walk)  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
 **Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
@@ -92,9 +92,9 @@ Connected to this record
 
 ---
 
-## 3. Implementation gate (S9-29)
+## 3. Implementation gate (S9-30)
 
-| Ships in **S9-29** | Does **not** ship there |
+| Ships in **S9-30** | Does **not** ship there |
 | --- | --- |
 | Walk list, bridge confirm, progress, Done | Queue persistence, bulk actions |
 
@@ -154,4 +154,4 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 
 1. Archive this brief under `archive/` when the board is agreed.
 2. Record in [`../completed.md`](../completed.md).
-3. Implement **S9-29** against the board and inventory (kit first).
+3. Implement **S9-30** against the board and inventory (kit first).

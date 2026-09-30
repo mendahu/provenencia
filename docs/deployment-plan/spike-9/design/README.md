@@ -6,21 +6,21 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 
 ## Open
 
-| Step | Brief | Feeds | Notes |
+| Step | Brief | Feeds (later PRs on the view) | Notes |
 | --- | --- | --- | --- |
-| S9-D1 | [Workspace sidebar](S9-D1-sidebar.md) | **S9-18** | Conclusions group + counts |
-| S9-D2 | [Persons list](S9-D2-persons-list.md) | **S9-19** | Row anatomy the other lists extend |
-| S9-D3 | [Events list](S9-D3-events-list.md) | **S9-20** | Extends D2 |
-| S9-D4 | [Places list](S9-D4-places-list.md) | **S9-21** | Extends D2 |
-| S9-D5 | [Person detail](S9-D5-person-detail.md) | **S9-22** | Value states + clusters the other details extend |
-| S9-D6 | [Event detail](S9-D6-event-detail.md) | **S9-23** | Extends D5 |
-| S9-D7 | [Place detail](S9-D7-place-detail.md) | **S9-24** | Extends D5 |
-| S9-D8 | [Evidence graph subject card](S9-D8-graph-subject-card.md) | **S9-25** | Promote control + membership badge (enhancement) |
-| S9-D9 | [Promote — choose target](S9-D9-promote-target.md) | **S9-26** | Decides place vs sheet; defines the Promote shell |
-| S9-D10 | [Promote — claim fields](S9-D10-promote-claim-fields.md) | **S9-27** | Status dropdown laid out for three |
-| S9-D11 | [Promote — compare](S9-D11-promote-compare.md) | **S9-28** | Existing handle only |
-| S9-D12 | [Promote — walk](S9-D12-promote-walk.md) | **S9-29** | Connected subjects, bridge confirm, Done |
-| S9-D13 | [Omnibar results](S9-D13-omnibar-hits.md) | **S9-30** | Hit rows for three kinds (enhancement) |
+| S9-D1 | [Workspace sidebar](S9-D1-sidebar.md) | **S9-08** | Conclusions group + counts |
+| S9-D2 | [Persons list](S9-D2-persons-list.md) | **S9-09** (S9-32) | Row anatomy the other lists extend |
+| S9-D3 | [Events list](S9-D3-events-list.md) | **S9-23** (S9-32) | Extends D2 |
+| S9-D4 | [Places list](S9-D4-places-list.md) | **S9-26** | Extends D2 |
+| S9-D5 | [Person detail](S9-D5-person-detail.md) | **S9-16** (S9-32) | Value states + clusters the other details extend |
+| S9-D6 | [Event detail](S9-D6-event-detail.md) | **S9-24** (S9-32) | Extends D5 |
+| S9-D7 | [Place detail](S9-D7-place-detail.md) | **S9-27** | Extends D5 |
+| S9-D8 | [Evidence graph subject card](S9-D8-graph-subject-card.md) | **S9-04** (S9-09, S9-11) | Promote control + membership badge (enhancement) |
+| S9-D9 | [Promote — choose target](S9-D9-promote-target.md) | **S9-11** | Decides place vs sheet; defines the Promote shell |
+| S9-D10 | [Promote — claim fields](S9-D10-promote-claim-fields.md) | **S9-12** | Status dropdown laid out for three |
+| S9-D11 | [Promote — compare](S9-D11-promote-compare.md) | **S9-19** | Existing handle only |
+| S9-D12 | [Promote — walk](S9-D12-promote-walk.md) | **S9-30** | Connected subjects, bridge confirm, Done |
+| S9-D13 | [Omnibar results](S9-D13-omnibar-hits.md) | **S9-35** | Hit rows for three kinds (enhancement) |
 
 Design each brief alongside its feature, just before the PR it gates. Order and dependencies: [PR sequence](../deployment-plan.md#pr-sequence).
 

@@ -3,8 +3,8 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 9 (canonical entities MVP)  
 **View:** Events list page  
-**Implements later as:** PR **S9-20**  
-**Depends on:** S9-D2 (row anatomy); S9-11, S9-12, S9-18  
+**Implements later as:** PR **S9-23** (later on this view: S9-32 fills subject titles and places)  
+**Depends on:** S9-D2 (row anatomy); S9-22 (event reads + title formatting), S9-08 (destination)  
 **Related:** S9-D6 (Event detail); naming matrix in [`deployment-plan.md`](../deployment-plan.md) R4  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
 **Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
@@ -96,11 +96,11 @@ A list of every Event. Row: **thumbnail slot · event title · event date · eve
 
 ---
 
-## 3. Implementation gate (S9-20)
+## 3. Implementation gate (S9-23)
 
-| Ships in **S9-20** | Does **not** ship there |
+| Ships in **S9-23** | Does **not** ship there |
 | --- | --- |
-| Events list per the S9-D2 row anatomy | Timeline / grouping by year |
+| Events list per the S9-D2 row anatomy; titles without subjects (`event_name` → label → *Unspecified {type}* → ref); dates | Subject titles and places (S9-32 — design all title cases here anyway); timeline |
 
 ---
 
@@ -134,7 +134,7 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 | --- | --- | --- | --- | --- |
 | Events list | Snowflake | **New** | `Features/Conclusions/EventsListView.swift` | |
 | Conclusion list row | Snowflake | Ship (from D2) | `Features/Conclusions/ConclusionListRow.swift` | Same row. |
-| Event title formatter | Snowflake | Ship (S9-12) | `Features/Conclusions/` | Title parts → text via L10n. |
+| Event title formatter | Snowflake | Ship (S9-22) | `Features/Conclusions/` | Title parts → text via L10n. |
 | Thumbnail / EmptyState / markers | Component | Ship | kit | As D2. |
 
 ### Explicit non-goals
@@ -156,4 +156,4 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 
 1. Archive this brief under `archive/` when the board is agreed.
 2. Record in [`../completed.md`](../completed.md).
-3. Implement **S9-20** against the board and inventory (kit first).
+3. Implement **S9-23** against the board and inventory (kit first).

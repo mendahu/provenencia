@@ -3,8 +3,8 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 9 (canonical entities MVP)  
 **View:** Promote flow — compare step (existing handle only)  
-**Implements later as:** PR **S9-28**  
-**Depends on:** S9-D9 (shell), S9-D10 (next step); S9-15 (comparison rows)  
+**Implements later as:** PR **S9-19**  
+**Depends on:** S9-D9 (shell), S9-D10 (next step); S9-17 (comparison read + pins + backfill)  
 **Related:** conclusion model §5.1 (confirmed matches, backfill), §5.3  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
 **Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
@@ -96,9 +96,9 @@ Step 2 of 3 · Compare with PER-7KD45 · James Robins (2 records)
 
 ---
 
-## 3. Implementation gate (S9-28)
+## 3. Implementation gate (S9-19)
 
-| Ships in **S9-28** | Does **not** ship there |
+| Ships in **S9-19** | Does **not** ship there |
 | --- | --- |
 | Compare step: rows, bulk accept per Property, skip | Reconciliation, Observation edits |
 
@@ -160,4 +160,4 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 
 1. Archive this brief under `archive/` when the board is agreed.
 2. Record in [`../completed.md`](../completed.md).
-3. Implement **S9-28** against the board and inventory (kit first).
+3. Implement **S9-19** against the board and inventory (kit first).

@@ -3,8 +3,8 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 9 (canonical entities MVP)  
 **View:** Omnibar results dropdown  
-**Implements later as:** PR **S9-30**  
-**Depends on:** S9-17 (search kinds), S9-12 (formatters); shipped [`PVOmnibarHitRow`](../../../../macos/App/DesignSystem/Recipes/OmnibarHitRow/PVOmnibarHitRow.swift)  
+**Implements later as:** PR **S9-35**  
+**Depends on:** S9-34 (search kinds + structured headers); shipped [`PVOmnibarHitRow`](../../../../macos/App/DesignSystem/Recipes/OmnibarHitRow/PVOmnibarHitRow.swift)  
 **Related:** Omnibar contract [`omnibar-search.md`](../../../deployment-plan/archive/spike-3/omnibar-search.md); S9-D2 (row these should echo)  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
 **Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md); [`add-searchable-kind`](../../../../.cursor/skills/add-searchable-kind/SKILL.md)
@@ -87,9 +87,9 @@ Add Person, Event, and Place hits to the omnibar results. They use the shipped `
 
 ---
 
-## 3. Implementation gate (S9-30)
+## 3. Implementation gate (S9-35)
 
-| Ships in **S9-30** | Does **not** ship there |
+| Ships in **S9-35** | Does **not** ship there |
 | --- | --- |
 | Three hit kinds in the shipped row | New row layout, facets |
 
@@ -144,4 +144,4 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 
 1. Archive this brief under `archive/` when the board is agreed.
 2. Record in [`../completed.md`](../completed.md).
-3. Implement **S9-30** against the board and inventory (kit first).
+3. Implement **S9-35** against the board and inventory (kit first).

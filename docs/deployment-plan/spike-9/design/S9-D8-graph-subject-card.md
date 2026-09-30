@@ -3,8 +3,8 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 9 (canonical entities MVP)  
 **View:** Evidence graph subject card (`EvidenceSubjectCard`)  
-**Implements later as:** PR **S9-25**  
-**Depends on:** S9-13 (graph read carries membership); shipped card ([`EvidenceSubjectCard`](../../../../macos/App/Features/EvidenceGraph/EvidenceSubjectCard.swift)) and Spike 8 graph chrome  
+**Implements later as:** PR **S9-04** (later on this view: S9-09 adds the name to the membership row; S9-11 routes Promote to the flow)  
+**Depends on:** S9-02 (Promote write v1), S9-03 (graph read carries membership); shipped card ([`EvidenceSubjectCard`](../../../../macos/App/Features/EvidenceGraph/EvidenceSubjectCard.swift)) and Spike 8 graph chrome  
 **Related:** S9-D9 (Promote opens there); conclusion model §5.3–5.4  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
 **Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
@@ -63,7 +63,7 @@ Do **not** invent a local Field, Button, Card, Select, Callout, or Confirm.
 
 Two additions to the **primary-kind** subject cards (person, event, place):
 
-1. **Promote** — a control at the **bottom** of an unpromoted card that starts the Promote flow (S9-D9).
+1. **Promote** — a control at the **bottom** of an unpromoted card. It will start the Promote flow (S9-D9). **First version (S9-04):** before that flow exists, Promote asks a Confirm — *Create a new Person from CPR-2AB91?* — and mints a new handle directly.
 2. **Membership** — a promoted card shows the handle it belongs to (`PER-7KD45` + resolved name) and links to its page. Promote is not offered again.
 
 ```text
@@ -95,11 +95,11 @@ Two additions to the **primary-kind** subject cards (person, event, place):
 
 ---
 
-## 3. Implementation gate (S9-25)
+## 3. Implementation gate (S9-04)
 
-| Ships in **S9-25** | Does **not** ship there |
+| Ships in **S9-04** | Does **not** ship there |
 | --- | --- |
-| Promote control + membership row on primary cards; bridge membership if cheap | Promote flow screens |
+| Promote control (v1: Confirm then mint) + membership row with the ref; bridge membership if cheap | Name on the membership row (S9-09); opening the Promote flow (S9-11) |
 | Action target ids + accessibility actions | Card redesign |
 
 ---
@@ -114,12 +114,14 @@ Two additions to the **primary-kind** subject cards (person, event, place):
 | GC-4 | Both are canvas action targets with stable ids and VoiceOver actions (*Promote*, *Open James Robins*). |
 | GC-5 | Card height grows by a fixed row; edges still attach correctly. |
 | GC-6 | Bridge cards: no Promote; board decides whether filed bridges show a small membership mark. |
+| GC-7 | v1 Promote Confirm (S9-04): kit Confirm naming the subject and the kind of handle it will create; Cancel leaves the card untouched. Swapping it for the flow later (S9-11) must not change the card. |
 
 ---
 
 ## 5. Suggested frames
 
 1. Unpromoted person card with Promote.
+1. v1 Promote Confirm (*Create a new Person from CPR-2AB91?*).
 2. Promoted person card with membership row.
 3. Event and place variants.
 4. Bridge card unchanged (or with a small filed mark).
@@ -137,6 +139,7 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 | Subject card | Snowflake | **Extend** | `Features/EvidenceGraph/EvidenceSubjectCard.swift` | New row + action targets. |
 | Canvas pointer controller | Snowflake | **Extend** | `Features/GraphCanvas/` | New action ids. |
 | Button | Component | Ship | kit | Promote (ghost / secondary). |
+| Confirm | Component | Ship | `.pvConfirm(item:)` | v1 Promote confirm (S9-04). |
 | Chip / Badge | Component | Ship | kit | Membership ref mark. |
 | Kind style | Snowflake | Ship | `Features/EvidenceGraph/EvidenceSubjectKindStyle.swift` | Do not tint membership with kind color. |
 
@@ -160,4 +163,4 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 
 1. Archive this brief under `archive/` when the board is agreed.
 2. Record in [`../completed.md`](../completed.md).
-3. Implement **S9-25** against the board and inventory (kit first).
+3. Implement **S9-04** against the board and inventory (kit first).

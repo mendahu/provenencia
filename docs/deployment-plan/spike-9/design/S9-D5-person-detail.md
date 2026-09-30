@@ -3,8 +3,8 @@
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 9 (canonical entities MVP)  
 **View:** Person detail page  
-**Implements later as:** PR **S9-22**  
-**Depends on:** S9-11 (detail read), S9-12 (formatters)  
+**Implements later as:** PR **S9-16** (later on this view: S9-32 fills life dates and places)  
+**Depends on:** S9-15 (detail read + value-state formatting), S9-13 (name reconciler), S9-14 (ranking)  
 **Related:** S9-D6 / S9-D7 extend this page; S9-D2 (the row it expands)  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
 **Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md); [`add-workspace-place`](../../../../.cursor/skills/add-workspace-place/SKILL.md)
@@ -95,11 +95,11 @@ This board defines the **value-state vocabulary** (single / merged / mixed / emp
 
 ---
 
-## 3. Implementation gate (S9-22)
+## 3. Implementation gate (S9-16)
 
-| Ships in **S9-22** | Does **not** ship there |
+| Ships in **S9-16** | Does **not** ship there |
 | --- | --- |
-| Header, value states, cluster disclosure, empty states | Edit / reconcile / merge controls |
+| Header, value states, cluster disclosure, empty states; name populated, life-date and place rows empty | Filling life dates and places (S9-32 — design them fully here); edit / reconcile / merge controls |
 | Optional member list if the board keeps it | Tree, timeline, map |
 
 ---
@@ -164,4 +164,4 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 
 1. Archive this brief under `archive/` when the board is agreed.
 2. Record in [`../completed.md`](../completed.md).
-3. Implement **S9-22** against the board and inventory (kit first).
+3. Implement **S9-16** against the board and inventory (kit first).
