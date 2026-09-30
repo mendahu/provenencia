@@ -279,7 +279,7 @@ The Conclusion pages read **across** Sources — every earlier place scoped to o
 
 ## Design track
 
-**Every UI PR is gated by Claude Design briefs — one brief per view.** A PR that touches two views waits on two briefs. Briefs follow [`add-design-brief`](../../../.cursor/skills/add-design-brief/SKILL.md) and live in [`design/`](design/). All briefs can be designed in parallel with the Go lanes; none depends on shipped code.
+**Every UI PR is gated by Claude Design briefs — one brief per view.** A PR that touches two views waits on two briefs. Briefs follow [`add-design-brief`](../../../.cursor/skills/add-design-brief/SKILL.md) and live in [`design/`](design/). **Each brief is designed alongside its feature**, just before the PR it gates — see the [PR sequence](#pr-sequence).
 
 | Brief | View | Covers | Gates |
 | --- | --- | --- | --- |
@@ -297,45 +297,96 @@ The Conclusion pages read **across** Sources — every earlier place scoped to o
 | **S9-D12** | Promote — walk | Connected-subjects list after each save; bridge confirm; progress; Done off-ramp; leave guard | **S9-29** |
 | **S9-D13** | Omnibar results | Person / Event / Place hit rows from structured headers | **S9-30** |
 
-Suggested design order: **D9 → D10 → D8** first (Promote shell and the minimal mint path are the riskiest and unblock dogfood data), then D11, D12, D2, D5, the rest.
-
 ---
 
 ## PR sequence
 
-Small PRs, grouped into lanes. Lanes run in parallel once their dependencies land. Go lanes need no design; UI PRs wait on their brief **and** their Go dependencies.
+Suggested order, top to bottom. **✎ = design brief**, run through Claude Design just before the PR it points at. Solid dependencies are shown in parentheses where they come from outside the arrow.
 
 ```text
- lane         PRs (→ = depends on)
- ─────────────────────────────────────────────────────────────────────────────
- schema       S9-01 schema+stores ── S9-03 delete impact
-              S9-02 event_name seed                      (independent)
- resolver     S9-04 date reconciler ─┐
-              S9-05 name reconciler ─┴─ S9-06 resolver core
- cache        S9-01 + S9-06 ── S9-07 cache+rebuild ── S9-08 upkeep ── S9-09 fixture+timings
- compose      S9-07 ── S9-10 composers ── S9-11 reads FFI+Swift store
-                                     └─── S9-12 Swift formatters
- promote-go   S9-01 ── S9-13 graph membership
-              S9-01 + S9-08 ── S9-14 promote write
-              S9-10 + S9-06 ── S9-15 target + compare reads
-              S9-01 ── S9-16 neighborhood read
- search-go    S9-10 + S9-08 ── S9-17 search kinds + reprojection
+FOUNDATION
+  S9-01  Conclusion schema + stores
+    ├──▶ S9-02  Seed event_name
+    └──▶ S9-03  Delete Impact for Identity Claims
+  S9-04  Date auto-reconciler ──┐
+  S9-05  Name auto-reconciler ──┤
+                                ▼
+  S9-06  Resolver core
+                                ▼                               (+ S9-01)
+  S9-07  Resolved-values cache + rebuild
+                                ▼
+  S9-08  Cache upkeep + rebuild-equals-upkeep test
+    └──▶ S9-09  Deep fixture + timings
 
- UI (each also waits on its brief)
-              S9-11 ── S9-18 sidebar ── S9-19 Persons list ── S9-22 Person detail
-                                   ├── S9-20 Events list  ── S9-23 Event detail
-                                   └── S9-21 Places list  ── S9-24 Place detail
-              S9-13 ── S9-25 graph card ── S9-26 promote target ── S9-27 claim fields+save
-                                                                   ├─ S9-28 compare
-                                                                   └─ S9-29 walk
-              S9-17 ── S9-30 omnibar hits
-                                                                   S9-99 close
+READS
+  S9-10  Header + detail composers                              (← S9-07, S9-02)
+    ├──▶ S9-11  Conclusion reads: FFI + Swift store + query keys
+    └──▶ S9-12  Swift Conclusion formatters
+
+PAGES                                                            (all ← S9-11, S9-12)
+  ✎ S9-D1 ──▶ S9-18  Sidebar Conclusions group
+                ├──▶ ✎ S9-D2 ──▶ S9-19  Persons list ──▶ ✎ S9-D5 ──▶ S9-22  Person detail
+                ├──▶ ✎ S9-D3 ──▶ S9-20  Events list  ──▶ ✎ S9-D6 ──▶ S9-23  Event detail
+                └──▶ ✎ S9-D4 ──▶ S9-21  Places list  ──▶ ✎ S9-D7 ──▶ S9-24  Place detail
+
+PROMOTE
+  S9-13  Source graph carries membership                        (← S9-01)
+    └──▶ ✎ S9-D8 ──▶ S9-25  Graph card: Promote entry + membership
+  S9-15  Promote reads: target suggestions + comparison         (← S9-06, S9-10)
+    └──▶ ✎ S9-D9 ──▶ S9-26  Promote shell + choose target       (← S9-25)
+  S9-14  Promote step write                                     (← S9-01, S9-08)
+    └──▶ ✎ S9-D10 ─▶ S9-27  Promote claim fields + save         (← S9-26)
+                       ├──▶ ✎ S9-D11 ─▶ S9-28  Promote compare  (← S9-15)
+                       └──▶ S9-16  Promote read: neighborhood    (← S9-01)
+                              └──▶ ✎ S9-D12 ─▶ S9-29  Promote walk + off-ramp
+
+SEARCH
+  S9-17  Search kinds + reprojection                            (← S9-08, S9-10)
+    └──▶ ✎ S9-D13 ─▶ S9-30  Omnibar Conclusion hits             (← S9-12)
+
+S9-99  Dogfood close / docs
 ```
 
-- **Day-one parallel:** S9-01, S9-02, S9-04, S9-05, and every design brief.
-- **Critical path:** S9-04/05 → S9-06 → S9-07 → S9-08 → S9-14 → S9-27. Promote cannot save until the cache it recomputes exists (R3: upkeep is in the write transaction).
-- **Unblocking dogfood early:** S9-09's fixture seeds realistic handles, so lists and details (S9-19…24) can be built and reviewed before Promote UI lands.
+- **Why pages before Promote.** S9-09's fixture seeds realistic handles, so the lists and details prove the cache and composers visually before the write flow is built on them. Promote can move ahead of Pages if real data matters more; nothing in Pages blocks it.
+- **Persons first within Pages.** S9-D3 / D4 extend S9-D2's row, and S9-D6 / D7 extend S9-D5's page, so design the Persons pair before the others.
+- **Can run side by side:** S9-02, S9-03, S9-04, S9-05 with S9-01; S9-09 with S9-10; S9-13 and S9-15 with the Pages work; S9-17 any time after S9-10.
 - **Churn is expected.** Stub destinations, placeholder rows, and a Promote shell with one working step are fine between PRs.
+
+### Dependencies at a glance
+
+| PR | Brief | Depends on |
+| --- | --- | --- |
+| S9-01 Conclusion schema + stores | — | — |
+| S9-02 Seed `event_name` | — | — |
+| S9-03 Delete Impact for Identity Claims | — | S9-01 |
+| S9-04 Date auto-reconciler | — | — |
+| S9-05 Name auto-reconciler | — | — |
+| S9-06 Resolver core | — | S9-04, S9-05 |
+| S9-07 Resolved-values cache + rebuild | — | S9-01, S9-06 |
+| S9-08 Cache upkeep | — | S9-07 |
+| S9-09 Deep fixture + timings | — | S9-08 |
+| S9-10 Header + detail composers | — | S9-07, S9-02 |
+| S9-11 Conclusion reads | — | S9-10 |
+| S9-12 Swift formatters | — | S9-10 |
+| S9-13 Source graph carries membership | — | S9-01 |
+| S9-14 Promote step write | — | S9-01, S9-08 |
+| S9-15 Promote reads: targets + comparison | — | S9-06, S9-10 |
+| S9-16 Promote read: neighborhood | — | S9-01 |
+| S9-17 Search kinds + reprojection | — | S9-08, S9-10 |
+| S9-18 Sidebar | **S9-D1** | S9-11 |
+| S9-19 Persons list | **S9-D2** | S9-11, S9-12, S9-18 |
+| S9-20 Events list | **S9-D3** (extends D2) | S9-11, S9-12, S9-18 |
+| S9-21 Places list | **S9-D4** (extends D2) | S9-11, S9-12, S9-18 |
+| S9-22 Person detail | **S9-D5** | S9-11, S9-12 |
+| S9-23 Event detail | **S9-D6** (extends D5) | S9-11, S9-12 |
+| S9-24 Place detail | **S9-D7** (extends D5) | S9-11, S9-12 |
+| S9-25 Graph card | **S9-D8** | S9-13 |
+| S9-26 Promote shell + target | **S9-D9** | S9-15, S9-25 |
+| S9-27 Promote claim fields + save | **S9-D10** (extends D9) | S9-14, S9-26 |
+| S9-28 Promote compare | **S9-D11** (extends D9) | S9-15, S9-27 |
+| S9-29 Promote walk | **S9-D12** (extends D9) | S9-16, S9-27 |
+| S9-30 Omnibar hits | **S9-D13** | S9-12, S9-17 |
+| S9-99 Dogfood close | — | all |
 
 ### Milestones
 
@@ -352,7 +403,8 @@ Small PRs, grouped into lanes. Lanes run in parallel once their dependencies lan
 
 ## Checklist
 
-- [ ] S9-D1 … S9-D13 — Design briefs (one per view) → [`completed.md`](completed.md)
+In suggested order; each brief sits just above the PR it gates.
+
 - [ ] S9-01 — Conclusion schema + stores
 - [ ] S9-02 — Seed `event_name`
 - [ ] S9-03 — Delete Impact for Identity Claims
@@ -365,24 +417,37 @@ Small PRs, grouped into lanes. Lanes run in parallel once their dependencies lan
 - [ ] S9-10 — Header and detail composers
 - [ ] S9-11 — Conclusion reads: FFI + Swift store + query keys
 - [ ] S9-12 — Swift Conclusion formatters
+- [ ] ✎ S9-D1 — Design: workspace sidebar
+- [ ] S9-18 — Sidebar Conclusions group
+- [ ] ✎ S9-D2 — Design: Persons list
+- [ ] S9-19 — Persons list
+- [ ] ✎ S9-D5 — Design: Person detail
+- [ ] S9-22 — Person detail
+- [ ] ✎ S9-D3 — Design: Events list
+- [ ] S9-20 — Events list
+- [ ] ✎ S9-D6 — Design: Event detail
+- [ ] S9-23 — Event detail
+- [ ] ✎ S9-D4 — Design: Places list
+- [ ] S9-21 — Places list
+- [ ] ✎ S9-D7 — Design: Place detail
+- [ ] S9-24 — Place detail
 - [ ] S9-13 — Source graph carries membership
-- [ ] S9-14 — Promote step write
+- [ ] ✎ S9-D8 — Design: graph subject card
+- [ ] S9-25 — Graph card: Promote entry + membership
 - [ ] S9-15 — Promote reads: target suggestions + comparison
+- [ ] ✎ S9-D9 — Design: Promote shell + choose target
+- [ ] S9-26 — Promote shell + choose target
+- [ ] S9-14 — Promote step write
+- [ ] ✎ S9-D10 — Design: Promote claim fields
+- [ ] S9-27 — Promote claim fields + save step
+- [ ] ✎ S9-D11 — Design: Promote compare
+- [ ] S9-28 — Promote compare
 - [ ] S9-16 — Promote read: neighborhood
+- [ ] ✎ S9-D12 — Design: Promote walk
+- [ ] S9-29 — Promote walk + off-ramp
 - [ ] S9-17 — Search kinds + reprojection
-- [ ] S9-18 — Sidebar Conclusions group (D1)
-- [ ] S9-19 — Persons list (D2)
-- [ ] S9-20 — Events list (D3)
-- [ ] S9-21 — Places list (D4)
-- [ ] S9-22 — Person detail (D5)
-- [ ] S9-23 — Event detail (D6)
-- [ ] S9-24 — Place detail (D7)
-- [ ] S9-25 — Graph card: Promote entry + membership (D8)
-- [ ] S9-26 — Promote shell + choose target (D9)
-- [ ] S9-27 — Promote claim fields + save step (D10)
-- [ ] S9-28 — Promote compare (D11)
-- [ ] S9-29 — Promote walk + off-ramp (D12)
-- [ ] S9-30 — Omnibar Conclusion hits (D13)
+- [ ] ✎ S9-D13 — Design: omnibar hits
+- [ ] S9-30 — Omnibar Conclusion hits
 - [ ] S9-99 — Dogfood close / docs
 
 ---

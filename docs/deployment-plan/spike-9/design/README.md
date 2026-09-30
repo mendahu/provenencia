@@ -22,7 +22,7 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 | S9-D12 | [Promote — walk](S9-D12-promote-walk.md) | **S9-29** | Connected subjects, bridge confirm, Done |
 | S9-D13 | [Omnibar results](S9-D13-omnibar-hits.md) | **S9-30** | Hit rows for three kinds (enhancement) |
 
-Suggested order: D9 → D10 → D8, then D11, D12, D2, D5, and the rest.
+Design each brief alongside its feature, just before the PR it gates. Order and dependencies: [PR sequence](../deployment-plan.md#pr-sequence).
 
 ## Shared product facts (all briefs)
 
