@@ -37,6 +37,8 @@ canonical entity   {PREFIX}-{TOKEN}    e.g. PER-7KD45   (canonical_entities)
 candidate subject     {PREFIX}-{TOKEN}    e.g. CPR-7KD45   (subjects)
 ```
 
+Canonical refs are minted by `canonicalentities.InsertTx` from `ref_prefix`; Subject refs by `subjects.InsertTx` from `candidate_ref_prefix`.
+
 A Subject type therefore carries **two** prefixes — `subject_types.ref_prefix` for the Conclusion handle and `subject_types.candidate_ref_prefix` for the Interpretation subject — because `canonical_entities` and `subjects` share the same `subject_types` vocabulary. Seeded pairs are in [`seeded-vocabulary.md`](seeded-vocabulary.md) §3.1.
 
 Candidate prefixes conventionally start with `C` (`CPR`, `CEV`, `CPL`, …), but that is **not enforced**. Both columns validate identically through `ref.ValidatePrefix`, and nothing in the format tells you which layer a prefix belongs to — that is a registry lookup. The consequence to keep in mind: all Subject type prefixes, canonical and candidate, share one three-letter namespace and must be unique across **both** columns. That is an application rule; no single SQL `UNIQUE` expresses it.

@@ -24,8 +24,12 @@ const (
 	KindUser             Kind = "user"
 	KindProject          Kind = "project"
 
+	// Conclusion kinds: registered for inbound probes; no delete path or
+	// projector section until their pages ship.
+	KindCanonicalEntity      Kind = "canonical_entity"
+	KindClaimConfidenceGrade Kind = "claim_confidence_grade"
+
 	// Reserved child kinds for stub inbound probes (tables not in the catalog yet).
-	KindSamenessClaim       Kind = "sameness_claim"
 	KindReconciliationClaim Kind = "reconciliation_claim"
 	KindNarrative           Kind = "narrative"
 )

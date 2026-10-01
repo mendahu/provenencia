@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
@@ -93,6 +94,41 @@ func TestCreateCatalogSeedsCredibilityGrades(t *testing.T) {
 	list, err := sourcecredibilitygrades.List(c)
 	if err != nil || len(list) != 3 {
 		t.Fatalf("%v len=%d", err, len(list))
+	}
+}
+
+func TestCreateCatalogSeedsClaimConfidenceGrades(t *testing.T) {
+	ident := t.TempDir()
+	parent := t.TempDir()
+	created, err := Complete(ident, parent, "Jake", "Claim Seed")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err := OpenCatalog(created.ProjectDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	list, err := claimconfidencegrades.List(c)
+	if err != nil || len(list) != 3 {
+		t.Fatalf("%v len=%d", err, len(list))
+	}
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`DELETE FROM claim_confidence_grades WHERE id = ?`, list[0].ID); err != nil {
+		t.Fatal(err)
+	}
+	c.Close()
+
+	c, err = OpenCatalog(created.ProjectDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	_, err = claimconfidencegrades.Lookup(c, list[0].Key, claimconfidencegrades.OriginProvenencia)
+	if !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("open healed claim confidence grade: %v", err)
 	}
 }
 
