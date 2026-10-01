@@ -52,13 +52,29 @@ enum PVDeleteImpactCopy {
         L10n.DeleteImpact.isKnownVia(via)
     }
 
-    static func confirmCopy(for target: PVDeleteImpactTarget) -> PVConfirmCopy {
+    static func confirmCopy(for target: PVDeleteImpactTarget, report: CatalogDeleteImpact? = nil) -> PVConfirmCopy {
         let noun = noun(target.kind)
+        var message = String(localized: L10n.DeleteImpact.confirmMessage)
+        if let leaves = leavesLine(report) {
+            message += "\n\n" + leaves
+        }
         return PVConfirmCopy(
             title: L10n.DeleteImpact.confirmTitle(noun: noun, ref: target.ref),
-            message: String(localized: L10n.DeleteImpact.confirmMessage),
+            message: message,
             confirmLabel: L10n.DeleteImpact.deleteAction(noun: noun),
             cancelLabel: L10n.DeleteImpact.keepAction(noun: noun)
+        )
+    }
+
+    /// Non-blocking cascades the confirm names: a promoted Subject leaves its handle.
+    static func leavesLine(_ report: CatalogDeleteImpact?) -> String? {
+        let refs = (report?.cascades ?? [])
+            .filter { $0.via == "identity_claims.subject_id" }
+            .flatMap(\.listed)
+            .map(\.ref)
+        guard !refs.isEmpty else { return nil }
+        return L10n.DeleteImpact.leavesHandle(
+            handleRefs: refs.formatted(.list(type: .and))
         )
     }
 
@@ -318,7 +334,7 @@ extension View {
         return self
             .pvConfirm(
                 item: confirmItem,
-                copy: { PVDeleteImpactCopy.confirmCopy(for: $0.target) },
+                copy: { PVDeleteImpactCopy.confirmCopy(for: $0.target, report: $0.report) },
                 isRunning: isRunning,
                 accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
                 onConfirm: onConfirm
@@ -419,6 +435,19 @@ enum PVDeleteImpactPreviewData {
     }
 
     static let allowed = CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
+    static let promotedSubject = CatalogDeleteImpact(
+        allowed: true,
+        gate: .ok,
+        groups: [],
+        cascades: [
+            CatalogDeleteImpactGroup(
+                via: "identity_claims.subject_id",
+                kind: "canonical_entity",
+                total: 1,
+                listed: [listed(ref: "PER-7KD45", title: "PER-7KD45")]
+            ),
+        ]
+    )
 
     static let blockedCitation = CatalogDeleteImpact(
         allowed: false,
@@ -554,6 +583,20 @@ enum PVDeleteImpactPreviewData {
         onCancel: {}
     ) {
         Text(verbatim: PVDeleteImpactPreviewData.citation.title)
+    }
+    .background(PVColor.surfaceCard)
+}
+
+#Preview("Promoted subject leaves its Person") {
+    PVConfirmContent(
+        copy: PVDeleteImpactCopy.confirmCopy(
+            for: PVDeleteImpactPreviewData.subjectG2,
+            report: PVDeleteImpactPreviewData.promotedSubject
+        ),
+        onConfirm: {},
+        onCancel: {}
+    ) {
+        Text(verbatim: PVDeleteImpactPreviewData.subjectG2.title)
     }
     .background(PVColor.surfaceCard)
 }

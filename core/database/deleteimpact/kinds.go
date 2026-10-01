@@ -114,6 +114,9 @@ type Report struct {
 	Allowed bool
 	Gate    Gate
 	Groups  []Group
+	// Cascades names rows that go with the target on erase without blocking it
+	// (facet CASCADEs worth telling the researcher about). Refuse ignores them.
+	Cascades []Group
 }
 
 // Group is one inbound resource edge.

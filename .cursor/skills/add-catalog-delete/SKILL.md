@@ -29,7 +29,7 @@ Rule: [`.cursor/rules/catalog-deletes.mdc`](../../rules/catalog-deletes.mdc).
 | Later Claim / Narrative resources | `searchindex.Delete` (FTS doc only) |
 | Existing `Delete` with no UI this spike | Owned-outbound child SQL that the register already walks |
 
-Facet CASCADE is SQLite’s job. Official `Delete` still **registers** those FKs as `facet` so the pragma test stays honest.
+Facet CASCADE is SQLite’s job. Official `Delete` still **registers** those FKs as `facet` so the pragma test stays honest. When a CASCADE removes something the researcher would want named on the confirm (a Subject leaving its handle), add a non-blocking entry to `cascadeEdges` — it fills `Report.Cascades` and never gates.
 
 ## Checklist (same PR as the table or the writer)
 

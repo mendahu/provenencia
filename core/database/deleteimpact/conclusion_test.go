@@ -9,6 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
@@ -81,6 +82,36 @@ func TestImpactConclusion(t *testing.T) {
 		}
 	})
 
+	t.Run("blocked promoted subject reports groups and the handle it leaves", func(t *testing.T) {
+		got := mustImpact(t, c, deleteimpact.KindSubject, york.ID)
+		if got.Allowed || len(got.Groups) == 0 {
+			t.Fatalf("%+v", got)
+		}
+		assertLeaves(t, got, plc.Ref)
+	})
+
+	t.Run("allowed promoted subject still names the handle it leaves", func(t *testing.T) {
+		leeds, err := subjects.Create(c, userID, subjects.CreateInput{
+			SourceID: src.ID, SubjectTypeID: place.ID, Label: "Leeds",
+		}, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := mustImpact(t, c, deleteimpact.KindSubject, leeds.ID)
+		if !got.Allowed || len(got.Cascades) != 0 {
+			t.Fatalf("unpromoted %+v", got)
+		}
+		res, err := promote.Save(c, userID, promote.Input{SubjectID: leeds.ID})
+		if err != nil {
+			t.Fatal(err)
+		}
+		got = mustImpact(t, c, deleteimpact.KindSubject, leeds.ID)
+		if !got.Allowed || len(got.Groups) != 0 {
+			t.Fatalf("%+v", got)
+		}
+		assertLeaves(t, got, res.Entity.Ref)
+	})
+
 	t.Run("pinned observation names the handle its claim files onto", func(t *testing.T) {
 		db, err := c.DB()
 		if err != nil {
@@ -102,6 +133,18 @@ func TestImpactConclusion(t *testing.T) {
 			t.Fatal("raw DELETE succeeded with a pin inbound")
 		}
 	})
+}
+
+func assertLeaves(t *testing.T, r deleteimpact.Report, handleRef string) {
+	t.Helper()
+	if len(r.Cascades) != 1 {
+		t.Fatalf("cascades %+v", r.Cascades)
+	}
+	g := r.Cascades[0]
+	if g.Via != "identity_claims.subject_id" || g.Kind != deleteimpact.KindCanonicalEntity ||
+		g.Total != 1 || len(g.Listed) != 1 || g.Listed[0].Ref != handleRef {
+		t.Fatalf("%+v", g)
+	}
 }
 
 func findGroup(t *testing.T, r deleteimpact.Report, via string) deleteimpact.Group {

@@ -258,6 +258,8 @@ The review in §5.2 is the other half of this UI: when a member leaves or a pinn
 
 ## 5.4 Neighborhood walk (future UI)
 
+> **Shipped so far (Spike 9, S9-02):** a grounding Promote is one transaction that mints the handle and an accepted Identity Claim with zero pins (`promote.Save`). The walk below is still future UI.
+
 Promoting one subject does not promote the subjects it is connected to. After the Identity Claim in §5.3 is accepted, the UI may continue with the unpromoted interpretation neighborhood of **the subject just filed**. That walk is a checklist the researcher can leave at any time. Whatever is left stays on the evidence graph, unconcluded.
 
 The queue appends. It does not walk the canonical entity the subject was filed onto. That entity's existing relationships are a source of **suggested targets** only.

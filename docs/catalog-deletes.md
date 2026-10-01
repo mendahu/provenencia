@@ -50,7 +50,10 @@ Impact
   gate             enum     // ok | inbound | not_found | edge_locked | infra | origin_locked
   groups[]                  // inbound only; empty when gate ≠ inbound
     via, kind, total, listed[] { id, ref, title, location }
+  cascades[]                // non-blocking; same shape; rows that go with the target
 ```
+
+- **Cascades never gate.** They name facet rows a delete removes by `CASCADE` that the researcher should still hear about. They are registered as `cascadeEdges` beside the blocking inbound edges, filled whenever the target exists and no extra gate fired, and ignored by `Refuse`. The first one is a promoted Subject's accepted Identity Claim (`identity_claims.subject_id` → the handle ref). The confirm appends a line naming the handle it leaves; the handle itself stays.
 
 - Missing id → `not_found`, never allowed.
 - Infra / skip tables → `infra`.

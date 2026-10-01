@@ -9,6 +9,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | Step | Kind | One-liner |
 | --- | --- | --- |
 | S9-01 | PR | Conclusion schema + stores |
+| S9-02 | PR | Promote write v1 |
 
 ## Steps
 
@@ -31,3 +32,21 @@ Shipped the Conclusion tables and the Go stores Promote writes through. No FFI, 
 - Resolved-values cache (**S9-06**)
 - Reconciliation tables, `canonical_entity_notes`, merge behavior
 - Grade backfill for projects created before S9-01
+
+### S9-02 — Promote write v1
+
+Shipped the first callable Conclusion write: mint a handle from a Subject and file an accepted Identity Claim, one transaction, over FFI and from Swift. Subject delete now names the handle it would leave.
+
+**What shipped**
+
+- `core/database/promote`: `Save` mints a handle of the Subject's type plus an accepted claim (zero pins), audited as one `promote_subject` revision. Refuses members (`identityclaims.already_member`) and, in v1, non-primary kinds (`promote.unsupported_type`)
+- FFI `METHOD_PROMOTE_SUBJECT` (`PromoteSubjectRequest` → `CanonicalEntity` + `IdentityClaim`); Swift `promoteSubject` on `GenealogyStore` / `GoStore` / `FakeStore` (`membershipBySubject` for S9-03 / S9-04)
+- Delete Impact `cascades`: a non-blocking list (`cascadeEdges`) through Go, proto and Swift. A promoted Subject reports `identity_claims.subject_id` → its handle; the DeleteImpact confirm appends "It will no longer belong to PER-…. That record stays."
+- L10n: error copy for the identity-claim, canonical-entity and promote codes; `canonical_entity` Impact kind noun
+
+**What stayed out**
+
+- Existing targets and suggestions (**S9-10**); pins and backfill (**S9-17**)
+- Resolved-values cache and upkeep on claim create / Subject delete (**S9-06**)
+- Graph membership read (**S9-03**) and the card's Promote control (**S9-04**)
+- Bridge filing (**S9-28**); the Swift `sameness_claim` leftovers (**S9-18**)

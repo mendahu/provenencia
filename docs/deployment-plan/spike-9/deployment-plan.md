@@ -431,7 +431,7 @@ CLOSE
 In order; each brief sits just above the PR it gates.
 
 - [x] S9-01 — Conclusion schema + stores → [`completed.md`](completed.md)
-- [ ] S9-02 — Promote write v1
+- [x] S9-02 — Promote write v1 → [`completed.md`](completed.md)
 - [ ] S9-03 — Source graph carries membership
 - [ ] ✎ S9-D8 — Design: graph subject card
 - [ ] S9-04 — Graph card: Promote + membership
@@ -498,6 +498,8 @@ In order; each brief sits just above the PR it gates.
 | **Depends on** | — |
 
 #### S9-02 — Promote write v1
+
+**Done.** See [`completed.md`](completed.md#s9-02--promote-write-v1). v1 refuses non-primary kinds (`promote.unsupported_type`); **S9-28** relaxes that when bridge filing lands.
 
 | | |
 | --- | --- |
@@ -717,7 +719,7 @@ In order; each brief sits just above the PR it gates.
 
 | | |
 | --- | --- |
-| **In** | Resolver: subject-valued Properties map to the target's handle (unpromoted drop out) — the canonical graph. Upkeep: a claim create / remove recomputes handles whose members' Observations point at that subject. Promote write files bridge subjects onto the association the ends already share, or mints one. Extend the randomized test. |
+| **In** | Resolver: subject-valued Properties map to the target's handle (unpromoted drop out) — the canonical graph. Upkeep: a claim create / remove recomputes handles whose members' Observations point at that subject. Promote write files bridge subjects onto the association the ends already share, or mints one (lift the S9-02 primary-kinds guard in `promote.Save`). Extend the randomized test. |
 | **Depends on** | S9-12 |
 
 #### S9-29 — Neighborhood read

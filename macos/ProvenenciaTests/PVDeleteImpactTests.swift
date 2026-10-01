@@ -13,6 +13,21 @@ struct PVDeleteImpactCopyTests {
         #expect(PVDeleteImpactControls.showsDestructiveAction(PVDeleteImpactPreviewData.allowed))
     }
 
+    @Test func promotedSubjectConfirmNamesTheHandleItLeaves() {
+        let plain = PVDeleteImpactCopy.confirmCopy(
+            for: PVDeleteImpactPreviewData.subjectG2,
+            report: PVDeleteImpactPreviewData.allowed
+        )
+        #expect(!plain.message.contains("PER-"))
+        let promoted = PVDeleteImpactCopy.confirmCopy(
+            for: PVDeleteImpactPreviewData.subjectG2,
+            report: PVDeleteImpactPreviewData.promotedSubject
+        )
+        #expect(promoted.message.contains("erased"))
+        #expect(promoted.message.contains(L10n.DeleteImpact.leavesHandle(handleRefs: "PER-7KD45")))
+        #expect(PVDeleteImpactControls.showsDestructiveAction(PVDeleteImpactPreviewData.promotedSubject))
+    }
+
     @Test func blockedCitationListsThreeObservations() {
         let report = PVDeleteImpactPreviewData.blockedCitation
         #expect(!PVDeleteImpactControls.showsDestructiveAction(report))

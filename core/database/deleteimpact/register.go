@@ -238,6 +238,36 @@ var inboundEdgeList = sync.OnceValue(func() []inboundEdge {
 	}
 })
 
+// cascadeEdges are non-blocking: facet rows a delete removes by CASCADE that
+// the confirm should still name. They never gate Impact.
+var cascadeEdges = sync.OnceValue(func() []inboundEdge {
+	return []inboundEdge{
+		// A promoted Subject leaves its handle; only accepted claims are membership.
+		{
+			Parent: KindSubject,
+			Via:    "identity_claims.subject_id",
+			Child:  KindCanonicalEntity,
+			Bucket: BucketFacet,
+			Count: countSQLFn(`SELECT COUNT(*) FROM identity_claims
+				WHERE subject_id = ? AND status = 'accepted'`),
+			List: listSQLFn(`SELECT e.id, e.ref FROM identity_claims ic
+				JOIN canonical_entities e ON e.id = ic.entity_id
+				WHERE ic.subject_id = ? AND ic.status = 'accepted'
+				ORDER BY e.ref COLLATE NOCASE LIMIT ?`),
+		},
+	}
+})
+
+func cascadesFor(kind Kind) []inboundEdge {
+	var out []inboundEdge
+	for _, e := range cascadeEdges() {
+		if e.Parent == kind {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
 func originRuleFor(kind Kind) (originRule, bool) {
 	for _, r := range originRules {
 		if r.Kind == kind {

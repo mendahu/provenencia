@@ -78,6 +78,56 @@ struct SubjectStoreTests {
         #expect(cleared.isEmpty)
     }
 
+    private func storeWithPersonType() -> FakeStore {
+        let store = FakeStore()
+        store.subjectTypesByProject[projectDir] = [
+            CatalogSubjectType(
+                id: typeID,
+                key: "person",
+                origin: "provenencia",
+                label: "Person",
+                description: "",
+                refPrefix: "PER",
+                candidateRefPrefix: "CPR"
+            ),
+        ]
+        return store
+    }
+
+    @Test func promoteMintsHandleOnceThenRefuses() async throws {
+        let store = storeWithPersonType()
+        let subject = try await store.createSubject(
+            projectDir: projectDir, userID: "user-1", sourceID: sourceID,
+            subjectTypeID: typeID, label: "James", description: "", placement: nil
+        )
+        let result = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: subject.id)
+        #expect(result.entity.ref.hasPrefix("PER-"))
+        #expect(result.claim.status == "accepted")
+        #expect(result.claim.entityID == result.entity.id)
+        #expect(store.membershipBySubject[subject.id] == result.entity)
+
+        await #expect(throws: CoreInvokeError.self) {
+            _ = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: subject.id)
+        }
+    }
+
+    @Test func deletingPromotedSubjectNamesHandleThenClearsMembership() async throws {
+        let store = storeWithPersonType()
+        let subject = try await store.createSubject(
+            projectDir: projectDir, userID: "user-1", sourceID: sourceID,
+            subjectTypeID: typeID, label: "James", description: "", placement: nil
+        )
+        let result = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: subject.id)
+
+        let report = try await store.getDeleteImpact(projectDir: projectDir, kind: "subject", id: subject.id)
+        #expect(report.allowed)
+        #expect(report.cascades.first?.via == "identity_claims.subject_id")
+        #expect(report.cascades.first?.listed.map(\.ref) == [result.entity.ref])
+
+        try await store.deleteSubject(projectDir: projectDir, userID: "user-1", subjectID: subject.id)
+        #expect(store.membershipBySubject[subject.id] == nil)
+    }
+
     @Test func listSubjectTypesReturnsSeededRows() async throws {
         let store = FakeStore()
         store.subjectTypesByProject[projectDir] = [

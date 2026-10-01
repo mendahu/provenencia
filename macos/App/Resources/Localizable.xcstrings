@@ -13421,6 +13421,114 @@
           }
         }
       }
+    },
+    "error.identityclaims.invalid": {
+      "comment": "FFI error identityclaims.invalid",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid identity claim."
+          }
+        }
+      }
+    },
+    "error.identityclaims.already_member": {
+      "comment": "FFI error identityclaims.already_member when Promote targets a subject that already has an accepted claim",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This subject already belongs to a person, event, or place."
+          }
+        }
+      }
+    },
+    "error.identityclaims.type_mismatch": {
+      "comment": "FFI error identityclaims.type_mismatch when the handle's type differs from the subject's",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A subject can only join a record of its own kind."
+          }
+        }
+      }
+    },
+    "error.canonicalentities.invalid": {
+      "comment": "FFI error canonicalentities.invalid",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid person, event, or place record."
+          }
+        }
+      }
+    },
+    "error.promote.invalid": {
+      "comment": "FFI error promote.invalid",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This subject can’t be promoted."
+          }
+        }
+      }
+    },
+    "error.promote.unsupported_type": {
+      "comment": "FFI error promote.unsupported_type for bridge subjects",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only people, events, and places can be promoted."
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.canonicalEntity.one": {
+      "comment": "Singular Impact kind noun for a Conclusion handle (PER-…, EVT-…, PLC-…)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "person, event, or place"
+          }
+        }
+      }
+    },
+    "deleteImpact.kind.canonicalEntity.other": {
+      "comment": "Plural Impact kind noun for Conclusion handles",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "people, events, or places"
+          }
+        }
+      }
+    },
+    "deleteImpact.confirm.leavesHandle": {
+      "comment": "Allowed Subject delete confirm, appended after the consequence; argument is the handle ref(s), e.g. PER-7KD45",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It will no longer belong to %@. That record stays."
+          }
+        }
+      }
     }
   },
   "version": "1.1"
