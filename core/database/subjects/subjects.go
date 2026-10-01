@@ -11,7 +11,6 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
-	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
@@ -266,13 +265,9 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	}); err != nil {
 		return err
 	}
-	// Explicit, audited removal of pins on this Subject's Observations and of
-	// its own claims; the handles stay. Schema CASCADE is only the backstop.
-	conclusion, err := identityclaims.ReleaseSubjectTx(tx, id)
-	if err != nil {
-		return err
-	}
-	released, err := deleteimpact.ReleaseConnectionFacets(tx, id)
+	// Claims (with their pins) and connection-facet Observations (with their
+	// notes, pins, and owned values) are released and audited first.
+	released, err := deleteimpact.ReleaseFacets(tx, deleteimpact.KindSubject, id)
 	if err != nil {
 		return err
 	}
@@ -291,39 +286,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	if prev.Description != "" {
 		fields["description"] = audit.FieldDiff{Old: prev.Description, New: nil}
 	}
-	changes := make([]audit.Change, 0, 1+len(conclusion)+len(released)*2)
-	changes = append(changes, conclusion...)
-	for _, facet := range released {
-		for _, note := range facet.Notes {
-			changes = append(changes, audit.Change{
-				EntityType: "observation_note",
-				EntityID:   note.ID,
-				Action:     audit.ActionDelete,
-				Fields: audit.DeletedRow(map[string]any{
-					"id":             uuidString(note.ID),
-					"observation_id": uuidString(facet.ID),
-					"body":           note.Body,
-				}),
-			})
-		}
-		obsFields := map[string]any{
-			"id":  uuidString(facet.ID),
-			"ref": facet.Ref,
-		}
-		if len(facet.DateID) == 16 {
-			obsFields["value_date_id"] = uuidString(facet.DateID)
-		}
-		if len(facet.NameID) == 16 {
-			obsFields["value_name_id"] = uuidString(facet.NameID)
-		}
-		changes = append(changes, audit.Change{
-			EntityType: "observation",
-			EntityID:   facet.ID,
-			Action:     audit.ActionDelete,
-			Fields:     audit.DeletedRow(obsFields),
-		})
-	}
-	changes = append(changes, audit.Change{
+	changes := append(released.Changes, audit.Change{
 		EntityType: "subject",
 		EntityID:   id,
 		Action:     audit.ActionDelete,

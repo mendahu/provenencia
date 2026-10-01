@@ -540,7 +540,7 @@ In order; each brief sits just above the PR it gates.
 
 | | |
 | --- | --- |
-| **In** | Migration: `conclusion_resolved_values` (R3 shape, all columns and indexes up front) + version row. Batched loader (members, Observations, provenance in a fixed number of queries per batch). Full rebuild; version check on Open. Upkeep in the write transaction for the write paths that exist now: Promote (claim create), Observation save / delete, Subject delete (dependents computed before CASCADE). **Rebuild-equals-upkeep randomized test.** |
+| **In** | Migration: `conclusion_resolved_values` (R3 shape, all columns and indexes up front) + version row. Batched loader (members, Observations, provenance in a fixed number of queries per batch). Full rebuild; version check on Open. Upkeep in the write transaction for the write paths that exist now: Promote (claim create), Observation save / delete, Subject delete (affected handles from `deleteimpact.ReleaseFacets` → `Released.Handles`, computed before anything is gone; a member Observation's save / delete recomputes its Subject's handle directly — `Released.Handles` only covers membership and evidence changes). **Rebuild-equals-upkeep randomized test.** |
 | **Out** | Credibility / certainty triggers (S9-14); inbound-end trigger (S9-28). |
 | **Testable** | Rebuild matches hand-computed rows; version mismatch rebuilds; randomized equivalence; loader query count constant. |
 | **Depends on** | S9-01, S9-05 |
@@ -640,7 +640,7 @@ In order; each brief sits just above the PR it gates.
 
 | | |
 | --- | --- |
-| **Already shipped** | S9-02 made pins a non-blocking cascade: migration `000033` (`observation_id … ON DELETE CASCADE` as backstop), audited explicit removal in `observations.Delete` / `subjects.Delete`, and the confirm sentence naming the handles. |
+| **Already shipped** | S9-02 made pins a non-blocking, **Named** facet release: migration `000033` (`observation_id … ON DELETE CASCADE` as backstop), audited removal through `deleteimpact.ReleaseFacets`, and the confirm sentence naming the handles. |
 | **In** | With real pins from S9-17: composer row delete and Subject delete through the shipped confirm; FakeStore models pins so Swift tests cover it; drop the Swift `sameness_claim` leftovers. Confirm the audit trail reads back per claim. |
 | **Check** | Delete a pinned Observation from the composer → allowed; confirm names PER-…; both claims keep their other pins; audit shows the removed pins. |
 | **Depends on** | S9-17 |
@@ -721,7 +721,7 @@ In order; each brief sits just above the PR it gates.
 
 | | |
 | --- | --- |
-| **In** | Resolver: subject-valued Properties map to the target's handle (unpromoted drop out) — the canonical graph. Upkeep: a claim create / remove recomputes handles whose members' Observations point at that subject. Promote write files bridge subjects onto the association the ends already share, or mints one (lift the S9-02 primary-kinds guard in `promote.Save`). Extend the randomized test. Once bridge edge Observations can be pinned, test `identityclaims.ReleaseSubjectTx` step 1 (pins on the deleted Subject's own Observations — only connection facets reach it) so a bridge delete removes those pins audited instead of via the CASCADE backstop. |
+| **In** | Resolver: subject-valued Properties map to the target's handle (unpromoted drop out) — the canonical graph. Upkeep: a claim create / remove recomputes handles whose members' Observations point at that subject. Promote write files bridge subjects onto the association the ends already share, or mints one (lift the S9-02 primary-kinds guard in `promote.Save`). Extend the randomized test. Once bridge edge Observations can be pinned, test that deleting a bridge Subject releases those pins audited: its connection-facet release erases each edge Observation through `ReleaseFacets(KindObservation)`, which takes the pins first. |
 | **Depends on** | S9-12 |
 
 #### S9-29 — Neighborhood read
@@ -769,7 +769,7 @@ In order; each brief sits just above the PR it gates.
 
 | | |
 | --- | --- |
-| **In** | Registry kinds `person` / `event` / `place`; location mapping; documents from headers (match text only); reprojection of the handle and its header dependents in the write transaction; `SearchHit` carries the structured header; `ProjectionVersion` bump; FakeStore. Existing hit rows render a fallback until S9-35. |
+| **In** | Registry kinds `person` / `event` / `place`; location mapping; documents from headers (match text only); reprojection of the handle and its header dependents in the write transaction (deletes feed it `Released.Handles`); `SearchHit` carries the structured header; `ProjectionVersion` bump; FakeStore. Existing hit rows render a fallback until S9-35. |
 | **Depends on** | S9-31 |
 
 #### S9-35 — Omnibar Conclusion hits
@@ -811,7 +811,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 3. **The cache is not truth.** Nothing references `conclusion_resolved_values`; synthesized dates and merged names live only there, serialized. No claim, DateValue, or NameValue row is written by resolution ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) §5.3).
 4. **No vocabulary-named columns** in any derived table. If a screen needs a new concept, it is a composer change or a `property_id` row — never a column.
 5. **Upkeep misses are silent.** A trigger the affected-handles function forgets leaves a stale row nobody notices. The rebuild-equals-upkeep test is the guard; every new write path adds its trigger and a test sequence.
-6. **Cascades bypass Go — so Go doesn't rely on them.** `subjects.Delete` and `observations.Delete` remove claims and pins explicitly (audited) before the parent `DELETE`; the schema `CASCADE`s are backstops. Cache upkeep (S9-06) hooks those same release calls to learn the affected handles **before** anything is gone. Any new writer that deletes Subjects or Observations must call them too.
+6. **Cascades bypass Go — so Go doesn't rely on them.** Every official delete calls `deleteimpact.ReleaseFacets`, which removes and audits claims, pins, notes, and connection facets before the parent `DELETE` and fails if anything is left for the `CASCADE` backstop. Its `Released.Handles` is how cache upkeep (S9-06) and handle search reprojection (S9-34) learn which handles a delete touched — computed before anything is gone. A new delete path gets this by calling `ReleaseFacets`, not by hand-wiring helpers.
 7. **Promoting a subject can change other handles.** Its Observations' targets and inbound subject-valued Observations re-map; R3's claim trigger covers the second hop.
 8. **One accepted claim per Subject** is a partial unique index. Promote must hide or refuse subjects that are already members, and a step that loses a race fails alone — earlier steps stay saved.
 9. **Composite FKs** carry `subject_type_id` on the claim. A person Subject cannot be claimed onto a Place; the target picker filters by type so the researcher never sees that error.

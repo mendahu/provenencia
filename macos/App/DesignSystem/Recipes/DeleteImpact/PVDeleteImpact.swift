@@ -66,25 +66,26 @@ enum PVDeleteImpactCopy {
         )
     }
 
-    /// Non-blocking cascades the confirm names, one sentence per known via:
-    /// a promoted Subject leaves its handle; a pinned Observation leaves the
-    /// evidence of the claims that pinned it. Unknown vias are not spoken.
+    /// One sentence per non-blocking cascade group, in report order. Known vias
+    /// get specific copy; any other via still names its kind and refs, so a new
+    /// Go cascade is never silently dropped from the confirm.
     static func cascadeLines(_ report: CatalogDeleteImpact?) -> [String] {
-        func refs(_ via: String) -> String? {
-            let refs = (report?.cascades ?? [])
-                .filter { $0.via == via }
-                .flatMap(\.listed)
-                .map(\.ref)
-            return refs.isEmpty ? nil : refs.formatted(.list(type: .and))
+        (report?.cascades ?? []).compactMap { group in
+            let refs = group.listed.map(\.ref)
+            guard !refs.isEmpty else { return nil }
+            let joined = refs.formatted(.list(type: .and))
+            switch group.via {
+            case "identity_claims.subject_id":
+                return L10n.DeleteImpact.leavesHandle(handleRefs: joined)
+            case "identity_claim_evidence.observation_id":
+                return L10n.DeleteImpact.leavesEvidence(handleRefs: joined)
+            default:
+                return L10n.DeleteImpact.alsoAffects(
+                    noun: noun(group.kind, count: group.total),
+                    refs: joined
+                )
+            }
         }
-        var lines: [String] = []
-        if let handles = refs("identity_claims.subject_id") {
-            lines.append(L10n.DeleteImpact.leavesHandle(handleRefs: handles))
-        }
-        if let handles = refs("identity_claim_evidence.observation_id") {
-            lines.append(L10n.DeleteImpact.leavesEvidence(handleRefs: handles))
-        }
-        return lines
     }
 
     static func noticeTitle(for target: PVDeleteImpactTarget) -> String {

@@ -6108,10 +6108,20 @@ enum L10n {
         static func leavesHandle(handleRefs: String) -> String {
             let format = String(localized: LocalizedStringResource(
                 "deleteImpact.confirm.leavesHandle",
-                defaultValue: "It will no longer belong to %@. That record stays.",
+                defaultValue: "It’s removed from %@. That record stays.",
                 comment: "Allowed Subject delete confirm, appended after the consequence; argument is the handle ref(s), e.g. PER-7KD45"
             ))
             return String(format: format, locale: .current, handleRefs)
+        }
+
+        /// Fallback for a cascade via the Mac has no specific copy for. Arguments: kind noun, refs.
+        static func alsoAffects(noun: String, refs: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "deleteImpact.confirm.alsoAffects",
+                defaultValue: "This also changes %1$@ %2$@.",
+                comment: "Allowed-delete confirm line for a non-blocking cascade without specific copy; arguments are kind noun and ref list"
+            ))
+            return String(format: format, locale: .current, noun, refs)
         }
 
         /// Allowed Observation delete: the handle(s) whose claims pinned it. Arguments: handle refs (joined).

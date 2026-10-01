@@ -246,3 +246,68 @@ func normalizeOnDelete(s string) string {
 	}
 	return s
 }
+
+// TestFacetReleaseHonesty: every CASCADE FK says whether its rows are audited
+// research; audited ones have exactly one facetRelease on the right parent
+// (unless that parent has no official delete yet), and silent ones have none.
+func TestFacetReleaseHonesty(t *testing.T) {
+	releases := map[string]facetRelease{}
+	for _, f := range facetReleases() {
+		if _, dup := releases[f.Via]; dup {
+			t.Errorf("duplicate facet release %s", f.Via)
+		}
+		releases[f.Via] = f
+	}
+	fks := map[string]fkSpec{}
+	for _, fk := range foreignKeys {
+		fks[fk.FromTable+"."+fk.FromCol] = fk
+	}
+	tableKind := map[string]Kind{}
+	deletable := map[string]bool{}
+	for _, spec := range tables {
+		if spec.Kind != "" {
+			tableKind[spec.Name] = spec.Kind
+		}
+		deletable[spec.Name] = spec.Exists != ""
+	}
+
+	for key, fk := range fks {
+		_, has := releases[key]
+		if normalizeOnDelete(fk.OnDelete) != "CASCADE" {
+			if fk.Audited {
+				t.Errorf("%s is Audited but not CASCADE", key)
+			}
+			continue
+		}
+		switch {
+		case fk.Audited && !has && deletable[fk.ToTable]:
+			t.Errorf("audited CASCADE %s has no facet release (parent %s is deletable)", key, fk.ToTable)
+		case !fk.Audited && has:
+			t.Errorf("silent CASCADE %s has a facet release; mark it Audited", key)
+		}
+	}
+	for via, f := range releases {
+		fk, ok := fks[via]
+		if !ok {
+			t.Errorf("facet release %s is not a registered FK", via)
+			continue
+		}
+		if tableKind[fk.ToTable] != f.Parent {
+			t.Errorf("facet release %s parent %s, FK points at %s", via, f.Parent, fk.ToTable)
+		}
+		if normalizeOnDelete(fk.OnDelete) == "CASCADE" {
+			if !fk.Audited {
+				t.Errorf("facet release %s covers a CASCADE not marked Audited", via)
+			}
+			if f.Remaining == "" {
+				t.Errorf("facet release %s needs a Remaining check (it has a CASCADE backstop)", via)
+			}
+		}
+		if f.Release == nil {
+			t.Errorf("facet release %s has no Release", via)
+		}
+		if f.Named && (f.Count == nil || f.List == nil || f.Child == "") {
+			t.Errorf("named facet release %s needs Count, List, and Child", via)
+		}
+	}
+}

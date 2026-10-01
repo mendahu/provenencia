@@ -10,7 +10,6 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
-	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/project"
 )
 
@@ -123,27 +122,13 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 		return err
 	}
 
-	// Pins leave with the Observation; the claims that pinned it stay, weaker.
-	changes, err := identityclaims.ReleaseObservationPinsTx(tx, id)
+	// Notes and pins are released and audited first; claims that pinned this
+	// Observation stay, weaker (model §5.2).
+	released, err := deleteimpact.ReleaseFacets(tx, deleteimpact.KindObservation, id)
 	if err != nil {
 		return err
 	}
-	notes, err := listNotesTx(tx, id)
-	if err != nil {
-		return err
-	}
-	for _, note := range notes {
-		changes = append(changes, audit.Change{
-			EntityType: "observation_note",
-			EntityID:   note.id,
-			Action:     audit.ActionDelete,
-			Fields: audit.DeletedRow(map[string]any{
-				"id":             uuidJSON(note.id),
-				"observation_id": uuidJSON(id),
-				"body":           note.body,
-			}),
-		})
-	}
+	changes := released.Changes
 	snap, err := deleteimpact.SnapshotOwned(tx, deleteimpact.KindObservation, id)
 	if err != nil {
 		return err

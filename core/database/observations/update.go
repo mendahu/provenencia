@@ -18,10 +18,6 @@ const (
 		value_date_id = ?, value_name_id = ?, value_subject_id = ?, value_term_id = ?
 		WHERE id = ? AND citation_id = ?`
 
-	sqlDeleteObservation = `DELETE FROM observations WHERE id = ? AND citation_id = ?`
-
-	sqlDeleteObservationNotes = `DELETE FROM observation_notes WHERE observation_id = ?`
-
 	sqlCountDateRefs = `SELECT COUNT(*) FROM observations WHERE value_date_id = ?`
 
 	sqlCountNameRefs = `SELECT COUNT(*) FROM observations WHERE value_name_id = ?`

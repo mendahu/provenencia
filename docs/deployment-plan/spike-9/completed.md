@@ -35,15 +35,20 @@ Shipped the Conclusion tables and the Go stores Promote writes through. No FFI, 
 
 ### S9-02 — Promote write v1
 
-Shipped the first callable Conclusion write: mint a handle from a Subject and file an accepted Identity Claim, one transaction, over FFI and from Swift. Subject and Observation deletes now name the handles they affect, never refuse because of Conclusion, and audit what they remove.
+Shipped the first callable Conclusion write: mint a handle from a Subject and file an accepted Identity Claim, one transaction, over FFI and from Swift. Deletes now release their facets through one audited registry: they name the handles they affect, never refuse because of Conclusion, and audit everything they remove.
 
 **What shipped**
 
 - `core/database/promote`: `Save` mints a handle of the Subject's type plus an accepted claim (zero pins), audited as one `promote_subject` revision. Refuses members (`identityclaims.already_member`) and, in v1, non-primary kinds (`promote.unsupported_type`)
 - FFI `METHOD_PROMOTE_SUBJECT` (`PromoteSubjectRequest` → `CanonicalEntity` + `IdentityClaim`); Swift `promoteSubject` on `GenealogyStore` / `GoStore` / `FakeStore` (`membershipBySubject` for S9-03 / S9-04)
-- Delete Impact `cascades`: a non-blocking list (`cascadeEdges`) through Go, proto and Swift. A promoted Subject reports `identity_claims.subject_id` → its handle; the DeleteImpact confirm appends "It will no longer belong to PER-…. That record stays."
-- L10n: error copy for the identity-claim, canonical-entity and promote codes; `canonical_entity` Impact kind noun
-- **Pins never block deletes.** Migration `000033` rebuilds `identity_claim_evidence` with `observation_id … ON DELETE CASCADE` (backstop only). `observations.Delete` removes the Observation's pins and `subjects.Delete` removes its claims and the pins on its Observations **explicitly**, audited in the same revision (`identityclaims.ReleaseObservationPinsTx` / `ReleaseSubjectTx`). A pinned Observation's confirm says it leaves the evidence for PER-…; the S9-01 blocking evidence probe is gone
+- **Facet release** (`deleteimpact/facets.go`): every audited `CASCADE` facet is one registry entry. The entry defines its FK, its `Release` (delete plus audit), a `Remaining` check that fails the delete if the backstop would fire, and, when **Named**, the `Report.Cascades` probe drawn from the same predicate.
+  - Domain deletes make one call, `ReleaseFacets`: Subject, Observation, Citation, Source and Source Field. Releases compose: claims take their pins; connection Observations take their notes, pins and owned values.
+  - `Released.Handles` is the seam for S9-06 and S9-34.
+  - `TestFacetReleaseHonesty` makes every CASCADE FK declare itself audited or silent.
+- **Newly audited:** Source notes, metadata, credibility and layout; Citation notes; layout rows on Source Field delete. Connection-facet Observations are now audited as full rows. All of these were previously deleted silently by the schema.
+- **Pins never block deletes.** Migration `000033` rebuilds `identity_claim_evidence` with `observation_id … ON DELETE CASCADE` as a backstop only. The S9-01 blocking evidence probe is gone.
+- **Confirm lines.** A Subject delete names the handles it leaves ("It's removed from PER-…"). A pinned Observation delete names the evidence it leaves. Any other cascade gets a generic "This also changes {kind} {refs}" line, so none is dropped.
+- L10n: error copy for the identity-claim, canonical-entity and promote codes; `canonical_entity` Impact kind noun; the three confirm lines
 - Future UI: weak-claim review alert written into model §5.2 and [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md) (Spike 10)
 
 **What stayed out**

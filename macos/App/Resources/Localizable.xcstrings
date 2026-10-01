@@ -13525,7 +13525,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "It will no longer belong to %@. That record stays."
+            "value": "It’s removed from %@. That record stays."
           }
         }
       }
@@ -13538,6 +13538,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "It’s also removed from the evidence for %@. Those claims stay, with less evidence."
+          }
+        }
+      }
+    },
+    "deleteImpact.confirm.alsoAffects": {
+      "comment": "Allowed-delete confirm line for a non-blocking cascade without specific copy; arguments are kind noun and ref list",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This also changes %1$@ %2$@."
           }
         }
       }

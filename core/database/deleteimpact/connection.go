@@ -14,27 +14,11 @@ const sqlSubjectObservations = `SELECT o.id, o.ref, o.value_date_id, o.value_nam
 	WHERE o.subject_id = ?
 	ORDER BY o.ref COLLATE NOCASE`
 
-const sqlObservationNotes = `SELECT id, body FROM observation_notes WHERE observation_id = ? ORDER BY rowid`
-
 type subjectObsRow struct {
 	id, dateID, nameID []byte
 	ref                string
 	typeKey, propKey   string
 	origin             string
-}
-
-// ReleasedFacet is one connection-facet Observation deleted by
-// ReleaseConnectionFacets, plus notes that CASCADE with it.
-type ReleasedFacet struct {
-	ID, DateID, NameID []byte
-	Ref                string
-	Notes              []ReleasedNote
-}
-
-// ReleasedNote is one observation_notes row captured before CASCADE.
-type ReleasedNote struct {
-	ID   []byte
-	Body string
 }
 
 func subjectResourceInbound() inboundEdge {
@@ -141,62 +125,4 @@ func isEdgeObservation(tx *sql.Tx, observationID []byte) (bool, error) {
 		return false, err
 	}
 	return connectrules.IsEdgePair(typeKey, propKey, origin), nil
-}
-
-// ReleaseConnectionFacets deletes edge + disambiguation Observations on a
-// bridge subject, then releases their owned outbound values. Endpoints and the
-// Citation stay. Official subjects.Delete calls this before DELETE.
-func ReleaseConnectionFacets(tx *sql.Tx, subjectID []byte) ([]ReleasedFacet, error) {
-	if tx == nil || len(subjectID) != 16 {
-		return nil, ErrInvalid
-	}
-	rows, err := listSubjectObs(tx, subjectID)
-	if err != nil {
-		return nil, err
-	}
-	var released []ReleasedFacet
-	for _, r := range rows {
-		if !isConnectionFacet(r) {
-			continue
-		}
-		notes, err := listObservationNotes(tx, r.id)
-		if err != nil {
-			return nil, err
-		}
-		if _, err := tx.Exec(`DELETE FROM observations WHERE id = ?`, r.id); err != nil {
-			return nil, err
-		}
-		if err := deleteValueRow(tx, "date_values", r.dateID); err != nil {
-			return nil, err
-		}
-		if err := deleteValueRow(tx, "name_values", r.nameID); err != nil {
-			return nil, err
-		}
-		released = append(released, ReleasedFacet{
-			ID:     append([]byte(nil), r.id...),
-			DateID: append([]byte(nil), r.dateID...),
-			NameID: append([]byte(nil), r.nameID...),
-			Ref:    r.ref,
-			Notes:  notes,
-		})
-	}
-	return released, nil
-}
-
-func listObservationNotes(tx *sql.Tx, observationID []byte) ([]ReleasedNote, error) {
-	rows, err := tx.Query(sqlObservationNotes, observationID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var out []ReleasedNote
-	for rows.Next() {
-		var n ReleasedNote
-		if err := rows.Scan(&n.ID, &n.Body); err != nil {
-			return nil, err
-		}
-		n.ID = append([]byte(nil), n.ID...)
-		out = append(out, n)
-	}
-	return out, rows.Err()
 }

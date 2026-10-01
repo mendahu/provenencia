@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/database"
+
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
@@ -20,7 +22,19 @@ import (
 // A Subject emptied of its own Observations can be deleted while its claim
 // still pins another member's evidence (a confirmed comparison). Those pins
 // are removed explicitly and audited; the other member's claim keeps its own.
-func TestSubjectDeleteReleasesOwnClaimPins(t *testing.T) {
+type conclusionFixture struct {
+	c                *database.Catalog
+	userID           []byte
+	a, b             subjects.Subject
+	obsA, obsB       []byte
+	entityID, ca, cb []byte
+}
+
+// newConclusionFixture: Subjects A and B on one Place, each with a toponym
+// Observation, and a confirmed comparison with backfill — both Observations
+// pinned on both claims.
+func newConclusionFixture(t *testing.T) conclusionFixture {
+	t.Helper()
 	c, userID := testCatalog(t)
 	if err := subjectvocab.Install(c); err != nil {
 		t.Fatal(err)
@@ -94,6 +108,13 @@ func TestSubjectDeleteReleasesOwnClaimPins(t *testing.T) {
 			}
 		}
 	}
+	return conclusionFixture{c: c, userID: userID, a: a, b: b, obsA: obsA, obsB: obsB,
+		entityID: grounding.Entity.ID, ca: ca, cb: cb}
+}
+
+func TestSubjectDeleteReleasesOwnClaimPins(t *testing.T) {
+	f := newConclusionFixture(t)
+	c, userID, b, obsA, obsB, ca, cb := f.c, f.userID, f.b, f.obsA, f.obsB, f.ca, f.cb
 	pins := func(claimID, obsID []byte) int {
 		return countRows(t, c, `SELECT COUNT(*) FROM identity_claim_evidence
 			WHERE identity_claim_id = ? AND observation_id = ?`, claimID, obsID)
@@ -127,7 +148,7 @@ func TestSubjectDeleteReleasesOwnClaimPins(t *testing.T) {
 	if n := countRows(t, c, `SELECT COUNT(*) FROM observations WHERE id = ?`, obsA); n != 1 {
 		t.Fatal("obsA should be untouched")
 	}
-	members, err := identityclaims.AcceptedMembers(c, grounding.Entity.ID)
+	members, err := identityclaims.AcceptedMembers(c, f.entityID)
 	if err != nil || len(members) != 1 || string(members[0].ID) != string(ca) {
 		t.Fatalf("%v %+v", err, members)
 	}
