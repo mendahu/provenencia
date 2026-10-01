@@ -111,7 +111,7 @@ func TestGetDeleteImpactPromotedSubject(t *testing.T) {
 func TestListSubjectMemberships(t *testing.T) {
 	// fixture: one promoted and one unpromoted person Subject on a Source.
 	type fixture struct {
-		dir, sourceID, promotedID, plainID, handleRef string
+		dir, sourceID, promotedID, plainID, handleRef, claimID string
 	}
 	setup := func(t *testing.T) fixture {
 		t.Helper()
@@ -141,6 +141,7 @@ func TestListSubjectMemberships(t *testing.T) {
 			t.Fatal(err)
 		}
 		f.handleRef = promoted.Entity.GetRef()
+		f.claimID = promoted.Claim.GetId()
 		return f
 	}
 
@@ -160,7 +161,7 @@ func TestListSubjectMemberships(t *testing.T) {
 			t.Fatalf("%+v", resp.Memberships)
 		}
 		m := resp.Memberships[0]
-		if m.GetSubjectId() != f.promotedID || m.GetKind() != "person" ||
+		if m.GetSubjectId() != f.promotedID || m.GetKind() != "person" || m.GetClaimId() != f.claimID ||
 			m.Entity.GetRef() != f.handleRef || !strings.HasPrefix(f.handleRef, "PER-") {
 			t.Fatalf("%+v", m)
 		}

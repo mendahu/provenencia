@@ -913,12 +913,14 @@ message PromoteSubjectResponse {
   IdentityClaim claim = 2;
 }
 
-// SubjectMembership is one promoted Subject's accepted handle. kind is the
-// subject type key (person, event, place, …).
+// SubjectMembership is a view of one Subject's accepted Identity Claim: the
+// claim id and the handle it files the Subject onto. kind is the handle's
+// subject type key (person, event, place, …). Not provisional / rejected claims.
 message SubjectMembership {
   string subject_id = 1;
   CanonicalEntity entity = 2;
   string kind = 3;
+  string claim_id = 4;
 }
 
 // ListSubjectMemberships returns the handle of every promoted Subject on one

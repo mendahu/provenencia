@@ -15,8 +15,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var sourceTypesByProject: [String: [CatalogSourceType]] = [:]
     var subjectTypesByProject: [String: [CatalogSubjectType]] = [:]
     var subjectsBySource: [String: [CatalogSubject]] = [:]
-    /// Accepted Identity Claim per Subject id (Promote). The handle the Subject belongs to.
-    var membershipBySubject: [String: CatalogCanonicalEntity] = [:]
+    /// Accepted Identity Claim per Subject id (Promote): the claim and its handle.
+    var membershipBySubject: [String: CatalogSubjectMembership] = [:]
     var subjectPositionsBySubject: [String: CatalogSubjectPosition] = [:]
     /// Type↔field suggestion joins, keyed by source type id and held in the
     /// order they were assigned — the engine's `sort_order`.
@@ -1083,27 +1083,25 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             subjectTypeID: type.id,
             label: ""
         )
-        membershipBySubject[subjectID] = entity
-        return CatalogPromoteResult(
-            entity: entity,
-            claim: CatalogIdentityClaim(
-                id: UUID().uuidString.lowercased(),
-                subjectID: subjectID,
-                entityID: entity.id,
-                status: "accepted"
-            )
+        let claim = CatalogIdentityClaim(
+            id: UUID().uuidString.lowercased(),
+            subjectID: subjectID,
+            entityID: entity.id,
+            status: "accepted"
         )
+        membershipBySubject[subjectID] = CatalogSubjectMembership(
+            subjectID: subjectID,
+            claimID: claim.id,
+            entity: entity,
+            kind: type.key
+        )
+        return CatalogPromoteResult(entity: entity, claim: claim)
     }
 
     func listSubjectMemberships(projectDir: String, sourceID: String) async throws -> [CatalogSubjectMembership] {
         markCatalogSessionHeld(projectDir)
         recordedCalls.append("listSubjectMemberships source=\(sourceID)")
-        let types = subjectTypesByProject[projectDir] ?? []
-        return (subjectsBySource[sourceID] ?? []).compactMap { subject in
-            guard let entity = membershipBySubject[subject.id] else { return nil }
-            let kind = types.first(where: { $0.id == entity.subjectTypeID })?.key ?? ""
-            return CatalogSubjectMembership(subjectID: subject.id, entity: entity, kind: kind)
-        }
+        return (subjectsBySource[sourceID] ?? []).compactMap { membershipBySubject[$0.id] }
     }
 
     func deleteSubject(projectDir: String, userID _: String, subjectID: String) async throws {
@@ -2067,7 +2065,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             groups.append(observationImpactGroup(via: "observations.value_subject_id", observations: asEndpoint))
         }
         var cascades: [CatalogDeleteImpactGroup] = []
-        if let entity = membershipBySubject[id] {
+        if let entity = membershipBySubject[id]?.entity {
             cascades.append(
                 CatalogDeleteImpactGroup(
                     via: "identity_claims.subject_id",

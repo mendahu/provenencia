@@ -334,8 +334,10 @@ func mustEntity(t *testing.T, c *database.Catalog, typeID []byte) canonicalentit
 
 func TestMembershipsBySource(t *testing.T) {
 	f := newFixture(t)
-	mustClaim(t, f, f.james, f.per1, identityclaims.StatusAccepted)
-	mustClaim(t, f, f.jim, f.per1, identityclaims.StatusAccepted)
+	claimByLabel := map[string][]byte{
+		"James": mustClaim(t, f, f.james, f.per1, identityclaims.StatusAccepted).ID,
+		"Jim":   mustClaim(t, f, f.jim, f.per1, identityclaims.StatusAccepted).ID,
+	}
 	mustClaim(t, f, f.york, f.plc1, identityclaims.StatusProvisional)
 
 	got, err := identityclaims.MembershipsBySource(f.c, f.james.SourceID)
@@ -348,7 +350,8 @@ func TestMembershipsBySource(t *testing.T) {
 	}
 	for _, s := range []subjects.Subject{f.james, f.jim} {
 		m, ok := bySubject[string(s.ID)]
-		if !ok || string(m.Entity.ID) != string(f.per1.ID) || m.Entity.Ref != f.per1.Ref || m.Kind != "person" {
+		if !ok || string(m.Entity.ID) != string(f.per1.ID) || m.Entity.Ref != f.per1.Ref || m.Kind != "person" ||
+			string(m.ClaimID) != string(claimByLabel[s.Label]) {
 			t.Fatalf("%s: %+v", s.Label, m)
 		}
 	}

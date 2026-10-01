@@ -104,7 +104,8 @@ struct SubjectStoreTests {
         #expect(result.entity.ref.hasPrefix("PER-"))
         #expect(result.claim.status == "accepted")
         #expect(result.claim.entityID == result.entity.id)
-        #expect(store.membershipBySubject[subject.id] == result.entity)
+        #expect(store.membershipBySubject[subject.id]?.entity == result.entity)
+        #expect(store.membershipBySubject[subject.id]?.claimID == result.claim.id)
 
         await #expect(throws: CoreInvokeError.self) {
             _ = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: subject.id)

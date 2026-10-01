@@ -7915,13 +7915,15 @@ func (x *PromoteSubjectResponse) GetClaim() *IdentityClaim {
 	return nil
 }
 
-// SubjectMembership is one promoted Subject's accepted handle. kind is the
-// subject type key (person, event, place, …).
+// SubjectMembership is a view of one Subject's accepted Identity Claim: the
+// claim id and the handle it files the Subject onto. kind is the handle's
+// subject type key (person, event, place, …). Not provisional / rejected claims.
 type SubjectMembership struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SubjectId     string                 `protobuf:"bytes,1,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
 	Entity        *CanonicalEntity       `protobuf:"bytes,2,opt,name=entity,proto3" json:"entity,omitempty"`
 	Kind          string                 `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
+	ClaimId       string                 `protobuf:"bytes,4,opt,name=claim_id,json=claimId,proto3" json:"claim_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -7973,6 +7975,13 @@ func (x *SubjectMembership) GetEntity() *CanonicalEntity {
 func (x *SubjectMembership) GetKind() string {
 	if x != nil {
 		return x.Kind
+	}
+	return ""
+}
+
+func (x *SubjectMembership) GetClaimId() string {
+	if x != nil {
+		return x.ClaimId
 	}
 	return ""
 }
@@ -13620,12 +13629,13 @@ const file_engine_proto_rawDesc = "" +
 	"subject_id\x18\x03 \x01(\tR\tsubjectId\"\x94\x01\n" +
 	"\x16PromoteSubjectResponse\x12>\n" +
 	"\x06entity\x18\x01 \x01(\v2&.provenencia.engine.v1.CanonicalEntityR\x06entity\x12:\n" +
-	"\x05claim\x18\x02 \x01(\v2$.provenencia.engine.v1.IdentityClaimR\x05claim\"\x86\x01\n" +
+	"\x05claim\x18\x02 \x01(\v2$.provenencia.engine.v1.IdentityClaimR\x05claim\"\xa1\x01\n" +
 	"\x11SubjectMembership\x12\x1d\n" +
 	"\n" +
 	"subject_id\x18\x01 \x01(\tR\tsubjectId\x12>\n" +
 	"\x06entity\x18\x02 \x01(\v2&.provenencia.engine.v1.CanonicalEntityR\x06entity\x12\x12\n" +
-	"\x04kind\x18\x03 \x01(\tR\x04kind\"]\n" +
+	"\x04kind\x18\x03 \x01(\tR\x04kind\x12\x19\n" +
+	"\bclaim_id\x18\x04 \x01(\tR\aclaimId\"]\n" +
 	"\x1dListSubjectMembershipsRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x1b\n" +

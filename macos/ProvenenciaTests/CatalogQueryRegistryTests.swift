@@ -323,6 +323,7 @@ struct CatalogQueryRegistryTests {
         let bob = snapshot.subjects.first { $0.id == "sub-2" }
         #expect(alice?.membership?.entity.ref == promoted.entity.ref)
         #expect(alice?.membership?.kind == "person")
+        #expect(alice?.membership?.claimID == promoted.claim.id)
         #expect(bob != nil && bob?.membership == nil)
     }
 

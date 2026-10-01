@@ -171,10 +171,14 @@ struct CatalogIdentityClaim: Sendable, Equatable, Identifiable {
     var status: String
 }
 
-/// One promoted Subject's accepted handle. `kind` is the subject type key
-/// (person, event, place, …). Unpromoted Subjects have no membership row.
+/// A view of one Subject's **accepted Identity Claim**: the claim and the handle
+/// it files the Subject onto. "Membership" is the data model's word for that
+/// relation (§6); it is never stored on its own, and provisional / rejected
+/// claims are not memberships. `kind` is the handle's subject type key
+/// (person, event, place, …). Unpromoted Subjects have none.
 struct CatalogSubjectMembership: Sendable, Equatable {
     var subjectID: String
+    var claimID: String
     var entity: CatalogCanonicalEntity
     var kind: String
 }

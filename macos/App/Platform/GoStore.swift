@@ -745,6 +745,7 @@ struct GoStore: GenealogyStore {
         return resp.memberships.map { m in
             CatalogSubjectMembership(
                 subjectID: m.subjectID,
+                claimID: m.claimID,
                 entity: Self.mapCanonicalEntity(m.entity),
                 kind: m.kind
             )

@@ -395,8 +395,8 @@ struct SourceGraphSnapshotTests {
             ],
             types: [personType, locationType],
             memberships: [
-                CatalogSubjectMembership(subjectID: alice.id, entity: handle, kind: "person"),
-                CatalogSubjectMembership(subjectID: bridge.id, entity: association, kind: "location"),
+                CatalogSubjectMembership(subjectID: alice.id, claimID: "c-1", entity: handle, kind: "person"),
+                CatalogSubjectMembership(subjectID: bridge.id, claimID: "c-2", entity: association, kind: "location"),
             ]
         )
         #expect(snapshot.subjects.first { $0.id == alice.id }?.membership?.entity.ref == "PER-7KD45")
@@ -407,6 +407,7 @@ struct SourceGraphSnapshotTests {
     @Test func positionUpdateKeepsMemberships() {
         let membership = CatalogSubjectMembership(
             subjectID: "s-alice",
+            claimID: "c-1",
             entity: CatalogCanonicalEntity(id: "e-1", ref: "PER-7KD45", subjectTypeID: personType.id, label: ""),
             kind: "person"
         )

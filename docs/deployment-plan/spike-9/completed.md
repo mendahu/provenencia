@@ -65,8 +65,9 @@ The Evidence graph now knows which Subjects are promoted and onto which handle. 
 
 **What shipped**
 
+- **Membership** = a read-only view of a Subject's **accepted Identity Claim** (model §6's "member"), never a row of its own. It carries the claim id so later claim management (Spike 10) can act on it from the card. Provisional / rejected claims are not memberships; when they reach cards they get their own claims read.
 - `identityclaims.MembershipsBySource`: one indexed query (Source's Subjects → accepted claim → handle → type key). Unpromoted Subjects have no row.
-- FFI `METHOD_LIST_SUBJECT_MEMBERSHIPS` (`SubjectMembership { subject_id, CanonicalEntity entity, kind }`).
+- FFI `METHOD_LIST_SUBJECT_MEMBERSHIPS` (`SubjectMembership { subject_id, claim_id, CanonicalEntity entity, kind }`).
 - Swift `listSubjectMemberships` on `GenealogyStore` / `GoStore` / `FakeStore`, loaded as the fourth parallel read of the `sourceGraph` key. `CatalogSubject` stays Interpretation-only.
 - `SourceGraphRows.memberships` → `SourceGraphPlacedSubject.membership` / `SourceGraphPlacedBridge.membership` (`nil` = unpromoted). The membership survives position patches.
 - `CatalogMutation.promotedSubject(sourceId:)` invalidates exactly that Source's graph key.

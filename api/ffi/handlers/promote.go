@@ -59,6 +59,7 @@ func ListSubjectMemberships(in []byte) ([]byte, error) {
 		for _, m := range rows {
 			out.Memberships = append(out.Memberships, &engine.SubjectMembership{
 				SubjectId: uuidString(m.SubjectID),
+				ClaimId:   uuidString(m.ClaimID),
 				Entity:    canonicalEntityProto(m.Entity),
 				Kind:      m.Kind,
 			})
