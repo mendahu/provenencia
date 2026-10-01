@@ -31,6 +31,9 @@ final class EvidenceGraphModel {
     private(set) var pendingComposerHandoff: WorkspaceLocation?
     private var positionGeneration: [String: Int] = [:]
     private var confirmedPositions: [String: CatalogGridCell] = [:]
+    /// Store write started by the latest `commitDrag`; tests await it instead of sleeping.
+    @ObservationIgnored
+    private(set) var lastPositionWrite: Task<Void, Never>?
     @ObservationIgnored
     private var snapshotMemo: (
         rows: SourceGraphRows,
@@ -786,8 +789,8 @@ final class EvidenceGraphModel {
         let cell = GraphCanvasGridMapping.gridCell(contentPoint: dropped)
         let generation = bumpPositionGeneration(subjectID: subjectID)
         applyPositionPatch(subjectID: subjectID, gridX: cell.gridX, gridY: cell.gridY)
-        Task {
-            await persistPositionOrRevert(
+        lastPositionWrite = Task {
+            _ = await persistPositionOrRevert(
                 subjectID: subjectID,
                 generation: generation,
                 gridX: cell.gridX,
