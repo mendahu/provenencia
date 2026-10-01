@@ -62,3 +62,42 @@ struct GraphCanvasPointerHitTestingTests {
         #expect(GraphCanvasPointerHitTesting.action(at: CGPoint(x: 20, y: 20), in: target) == nil)
     }
 }
+
+@Suite
+@MainActor
+struct GraphCanvasPointerPressTests {
+    private func controller() -> GraphCanvasPointerController {
+        let pointer = GraphCanvasPointerController()
+        pointer.hitTargets = [
+            GraphCanvasHitTarget(
+                id: "card",
+                frame: CGRect(x: 0, y: 0, width: 100, height: 100),
+                acceptsConnect: true,
+                actions: [GraphCanvasActionTarget(id: "promote", frame: CGRect(x: 0, y: 56, width: 100, height: 44))]
+            ),
+        ]
+        return pointer
+    }
+
+    @Test func pressOnActionIsHeldUntilRelease() {
+        let pointer = controller()
+        pointer.mouseDown(documentPoint: CGPoint(x: 10, y: 70), windowPoint: .zero)
+        #expect(pointer.pressedCardAction?.cardID == "card")
+        #expect(pointer.pressedCardAction?.actionID == "promote")
+        pointer.mouseUp(documentPoint: CGPoint(x: 10, y: 70), windowPoint: .zero)
+        #expect(pointer.pressedCardAction == nil)
+    }
+
+    @Test func pressOffAnActionIsNotHeld() {
+        let pointer = controller()
+        pointer.mouseDown(documentPoint: CGPoint(x: 10, y: 10), windowPoint: .zero)
+        #expect(pointer.pressedCardAction == nil)
+    }
+
+    @Test func dragClearsThePress() {
+        let pointer = controller()
+        pointer.mouseDown(documentPoint: CGPoint(x: 10, y: 70), windowPoint: .zero)
+        pointer.mouseDragged(documentPoint: CGPoint(x: 40, y: 70), windowPoint: .zero)
+        #expect(pointer.pressedCardAction == nil)
+    }
+}

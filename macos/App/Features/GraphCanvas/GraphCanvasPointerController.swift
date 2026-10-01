@@ -19,6 +19,9 @@ final class GraphCanvasPointerController {
     private(set) var pointerInside = false
     /// Idle hover over a nested card action (`cardID`, `actionID`), for paint.
     private(set) var hoveredCardAction: (cardID: String, actionID: String)?
+    /// Idle press held on a nested card action, for pressed paint. Cleared on
+    /// release and when the press becomes a card drag.
+    private(set) var pressedCardAction: (cardID: String, actionID: String)?
 
     weak var viewport: GraphCanvasViewportController?
 
@@ -82,6 +85,9 @@ final class GraphCanvasPointerController {
         case .idle:
             let hit = GraphCanvasPointerHitTesting.topmostTarget(at: documentPoint, in: hitTargets)
             gesture = .pendingClick(start: documentPoint, targetID: hit?.id)
+            if let hit, let action = GraphCanvasPointerHitTesting.action(at: documentPoint, in: hit) {
+                pressedCardAction = (hit.id, action.id)
+            }
         }
     }
 
@@ -98,6 +104,7 @@ final class GraphCanvasPointerController {
         case .pendingClick(let start, let targetID):
             guard GraphCanvasPointerHitTesting.isDrag(from: start, to: documentPoint) else { return }
             if mode == .idle, let targetID {
+                pressedCardAction = nil
                 gesture = .draggingCard(id: targetID, start: start)
                 let offset = CGSize(
                     width: documentPoint.x - start.x,
@@ -128,6 +135,7 @@ final class GraphCanvasPointerController {
 
     func mouseUp(documentPoint: CGPoint, windowPoint: CGPoint) {
         _ = windowPoint
+        pressedCardAction = nil
         switch gesture {
         case .backgroundPanning:
             popPanCursor()

@@ -1,15 +1,16 @@
 # S9-D8 — Evidence graph subject card: Promote + membership
 
 **Kind:** Claude Design board  
+**Status:** Agreed — implemented in **S9-04**. Board: Claude Design project `2239e965-3b09-4c13-b85a-d54316ffd8fb`, `Evidence graph canvas.dc.html`, Frame 14.  
 **Spike:** Provenencia Spike 9 (canonical entities MVP)  
 **View:** Evidence graph subject card (`EvidenceSubjectCard`)  
 **Implements later as:** PR **S9-04** (later on this view: S9-09 adds the name to the membership row; S9-11 routes Promote to the flow)  
-**Depends on:** S9-02 (Promote write v1), S9-03 (graph read carries membership); shipped card ([`EvidenceSubjectCard`](../../../../macos/App/Features/EvidenceGraph/EvidenceSubjectCard.swift)) and Spike 8 graph chrome  
+**Depends on:** S9-02 (Promote write v1), S9-03 (graph read carries membership); shipped card ([`EvidenceSubjectCard`](../../../../../macos/App/Features/EvidenceGraph/EvidenceSubjectCard.swift)) and Spike 8 graph chrome  
 **Related:** S9-D9 (Promote opens there); conclusion model §5.3–5.4  
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
-**Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)  
+**Skill:** [`add-design-brief`](../../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.cursor/skills/add-ui-component/SKILL.md)
 
-Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](README.md) first.
+Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](../README.md) first.
 
 This brief is an **enhancement** of a shipped surface: extend its existing frames.
 
@@ -162,5 +163,5 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 ## 8. Handoff
 
 1. Archive this brief under `archive/` when the board is agreed.
-2. Record in [`../completed.md`](../completed.md).
+2. Record in [`../completed.md`](../../completed.md).
 3. Implement **S9-04** against the board and inventory (kit first).

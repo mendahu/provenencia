@@ -200,7 +200,28 @@ private struct EvidenceGraphContent: View {
                 navigation.go(to: location)
             }
         )
+        .pvConfirm(
+            item: $model.pendingPromote,
+            copy: { $0.confirmCopy },
+            tone: .irreversible,
+            isRunning: model.isPromoting,
+            accessibilityIdentifierPrefix: "evidenceGraph.promote",
+            onConfirm: {
+                Task { _ = await model.confirmPromote() }
+            }
+        ) { request in
+            VStack(alignment: .leading, spacing: PVSpacing.space4) {
+                PVConfirmKeyChip(
+                    label: L10n.EvidenceGraph.promoteFirstMember,
+                    value: request.ref
+                )
+                if let error = model.promoteError {
+                    PVCallout(tone: .danger, message: error)
+                }
+            }
+        }
     }
+
     private var accessibilityGraphLabel: Text {
         if model.armedConnect {
             Text(model.connectArmedHint)
@@ -696,6 +717,9 @@ private struct EvidenceGraphDocumentBody: View {
             dragOffset: drag,
             hoveredActionID: pointer.hoveredCardAction?.cardID == placed.id
                 ? pointer.hoveredCardAction?.actionID
+                : nil,
+            pressedActionID: pointer.pressedCardAction?.cardID == placed.id
+                ? pointer.pressedCardAction?.actionID
                 : nil
         )
         .accessibilityAction(named: Text(L10n.EvidenceGraph.editAccessibility)) {
@@ -703,6 +727,13 @@ private struct EvidenceGraphDocumentBody: View {
         }
         .accessibilityAction(named: Text(addPropertyActionName)) {
             if let location = model.composerLocation(for: placed.id) {
+                navigation.go(to: location)
+            }
+        }
+        .accessibilityAction(named: Text(verbatim: EvidenceSubjectCard.footerAccessibilityActionName(for: placed))) {
+            if placed.membership == nil {
+                model.beginPromote(subjectID: placed.id)
+            } else if let location = model.openHandle(subjectID: placed.id) {
                 navigation.go(to: location)
             }
         }

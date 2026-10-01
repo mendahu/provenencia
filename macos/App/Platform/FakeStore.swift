@@ -1099,8 +1099,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     func listSubjectMemberships(projectDir: String, sourceID: String) async throws -> [CatalogSubjectMembership] {
+        // Reads do not append to `recordedCalls`: graph reads run as parallel
+        // `async let`s beside position writes that log under a lock.
         markCatalogSessionHeld(projectDir)
-        recordedCalls.append("listSubjectMemberships source=\(sourceID)")
         return (subjectsBySource[sourceID] ?? []).compactMap { membershipBySubject[$0.id] }
     }
 

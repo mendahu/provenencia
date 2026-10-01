@@ -1183,6 +1183,176 @@ enum L10n {
             comment: "VoiceOver when Add property is disabled because the Source has no Artifact"
         )
 
+        // MARK: Promote + membership footer (S9-D8 / S9-04)
+
+        static let promote = LocalizedStringResource(
+            "evidenceGraph.subject.promote",
+            defaultValue: "Promote",
+            comment: "Footer button on an unpromoted primary card that creates its Person, Event or Place"
+        )
+
+        static let promoteCancel = LocalizedStringResource(
+            "evidenceGraph.promote.cancel",
+            defaultValue: "Leave unpromoted",
+            comment: "Cancel on the v1 Promote confirm; nothing is written"
+        )
+
+        static let promoteFirstMember = LocalizedStringResource(
+            "evidenceGraph.promote.firstMember",
+            defaultValue: "First member",
+            comment: "Key-chip label on the Promote confirm naming the subject that grounds the new handle"
+        )
+
+        static func promoteAccessibility(label: String, ref: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "evidenceGraph.subject.promoteAccessibility",
+                defaultValue: "Promote %1$@, %2$@",
+                comment: "VoiceOver for the Promote footer; arguments are the subject label and its candidate ref"
+            ))
+            return String(format: format, locale: .current, label, ref)
+        }
+
+        static func promoteHelp(kind: EvidencePrimaryKind) -> LocalizedStringResource {
+            switch kind {
+            case .person:
+                LocalizedStringResource(
+                    "evidenceGraph.subject.promoteHelp.person",
+                    defaultValue: "Promote to a person",
+                    comment: "Tooltip on the Promote footer button"
+                )
+            case .event:
+                LocalizedStringResource(
+                    "evidenceGraph.subject.promoteHelp.event",
+                    defaultValue: "Promote to an event",
+                    comment: "Tooltip on the Promote footer button"
+                )
+            case .place:
+                LocalizedStringResource(
+                    "evidenceGraph.subject.promoteHelp.place",
+                    defaultValue: "Promote to a place",
+                    comment: "Tooltip on the Promote footer button"
+                )
+            }
+        }
+
+        static func promoteConfirmTitle(kind: EvidencePrimaryKind, ref: String) -> String {
+            let resource: LocalizedStringResource = switch kind {
+            case .person:
+                LocalizedStringResource(
+                    "evidenceGraph.promote.title.person",
+                    defaultValue: "Create a new Person from %@?",
+                    comment: "v1 Promote confirm title; argument is the subject candidate ref"
+                )
+            case .event:
+                LocalizedStringResource(
+                    "evidenceGraph.promote.title.event",
+                    defaultValue: "Create a new Event from %@?",
+                    comment: "v1 Promote confirm title; argument is the subject candidate ref"
+                )
+            case .place:
+                LocalizedStringResource(
+                    "evidenceGraph.promote.title.place",
+                    defaultValue: "Create a new Place from %@?",
+                    comment: "v1 Promote confirm title; argument is the subject candidate ref"
+                )
+            }
+            return String(format: String(localized: resource), locale: .current, ref)
+        }
+
+        static func promoteConfirmMessage(kind: EvidencePrimaryKind, label: String, refPrefix: String) -> String {
+            let resource: LocalizedStringResource = switch kind {
+            case .person:
+                LocalizedStringResource(
+                    "evidenceGraph.promote.message.person",
+                    defaultValue: "%1$@ becomes the first member of a new Person, and its %2$@- ref is minted when you create it. The subject, its properties and its observations stay exactly as they are.",
+                    comment: "v1 Promote confirm consequence; arguments are the subject label and the new handle ref prefix (PER)"
+                )
+            case .event:
+                LocalizedStringResource(
+                    "evidenceGraph.promote.message.event",
+                    defaultValue: "%1$@ becomes the first member of a new Event, and its %2$@- ref is minted when you create it. The subject, its properties and its observations stay exactly as they are.",
+                    comment: "v1 Promote confirm consequence; arguments are the subject label and the new handle ref prefix (PER)"
+                )
+            case .place:
+                LocalizedStringResource(
+                    "evidenceGraph.promote.message.place",
+                    defaultValue: "%1$@ becomes the first member of a new Place, and its %2$@- ref is minted when you create it. The subject, its properties and its observations stay exactly as they are.",
+                    comment: "v1 Promote confirm consequence; arguments are the subject label and the new handle ref prefix (PER)"
+                )
+            }
+            return String(format: String(localized: resource), locale: .current, label, refPrefix)
+        }
+
+        static func promoteConfirmAction(kind: EvidencePrimaryKind) -> LocalizedStringResource {
+            switch kind {
+            case .person:
+                LocalizedStringResource(
+                    "evidenceGraph.promote.confirm.person",
+                    defaultValue: "Create Person",
+                    comment: "Confirm button on the v1 Promote confirm"
+                )
+            case .event:
+                LocalizedStringResource(
+                    "evidenceGraph.promote.confirm.event",
+                    defaultValue: "Create Event",
+                    comment: "Confirm button on the v1 Promote confirm"
+                )
+            case .place:
+                LocalizedStringResource(
+                    "evidenceGraph.promote.confirm.place",
+                    defaultValue: "Create Place",
+                    comment: "Confirm button on the v1 Promote confirm"
+                )
+            }
+        }
+
+        static func openHandlePage(kind: EvidencePrimaryKind) -> LocalizedStringResource {
+            switch kind {
+            case .person:
+                LocalizedStringResource(
+                    "evidenceGraph.subject.openHandlePage.person",
+                    defaultValue: "Open person page",
+                    comment: "Membership row text beside the handle ref until the resolved name lands (S9-09)"
+                )
+            case .event:
+                LocalizedStringResource(
+                    "evidenceGraph.subject.openHandlePage.event",
+                    defaultValue: "Open event page",
+                    comment: "Membership row text beside the handle ref until the resolved name lands (S9-09)"
+                )
+            case .place:
+                LocalizedStringResource(
+                    "evidenceGraph.subject.openHandlePage.place",
+                    defaultValue: "Open place page",
+                    comment: "Membership row text beside the handle ref until the resolved name lands (S9-09)"
+                )
+            }
+        }
+
+        static func openHandleAccessibility(kind: EvidencePrimaryKind, ref: String) -> String {
+            let resource: LocalizedStringResource = switch kind {
+            case .person:
+                LocalizedStringResource(
+                    "evidenceGraph.subject.openHandleAccessibility.person",
+                    defaultValue: "Open person %@",
+                    comment: "VoiceOver action on a promoted card that opens its handle page; argument is the handle ref"
+                )
+            case .event:
+                LocalizedStringResource(
+                    "evidenceGraph.subject.openHandleAccessibility.event",
+                    defaultValue: "Open event %@",
+                    comment: "VoiceOver action on a promoted card that opens its handle page; argument is the handle ref"
+                )
+            case .place:
+                LocalizedStringResource(
+                    "evidenceGraph.subject.openHandleAccessibility.place",
+                    defaultValue: "Open place %@",
+                    comment: "VoiceOver action on a promoted card that opens its handle page; argument is the handle ref"
+                )
+            }
+            return String(format: String(localized: resource), locale: .current, ref)
+        }
+
         static let jumpToSourcePage = LocalizedStringResource(
             "evidenceGraph.header.jumpToSourcePage",
             defaultValue: "Jump to Source page",

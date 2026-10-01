@@ -13553,6 +13553,270 @@
           }
         }
       }
+    },
+    "evidenceGraph.subject.promote": {
+      "comment": "Footer button on an unpromoted primary card that creates its Person, Event or Place",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Promote"
+          }
+        }
+      }
+    },
+    "evidenceGraph.promote.cancel": {
+      "comment": "Cancel on the v1 Promote confirm; nothing is written",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leave unpromoted"
+          }
+        }
+      }
+    },
+    "evidenceGraph.promote.firstMember": {
+      "comment": "Key-chip label on the Promote confirm naming the subject that grounds the new handle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "First member"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.promoteAccessibility": {
+      "comment": "VoiceOver for the Promote footer; arguments are the subject label and its candidate ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Promote %1$@, %2$@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.promoteHelp.person": {
+      "comment": "Tooltip on the Promote footer button",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Promote to a person"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.promoteHelp.event": {
+      "comment": "Tooltip on the Promote footer button",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Promote to an event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.promoteHelp.place": {
+      "comment": "Tooltip on the Promote footer button",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Promote to a place"
+          }
+        }
+      }
+    },
+    "evidenceGraph.promote.title.person": {
+      "comment": "v1 Promote confirm title; argument is the subject candidate ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create a new Person from %@?"
+          }
+        }
+      }
+    },
+    "evidenceGraph.promote.title.event": {
+      "comment": "v1 Promote confirm title; argument is the subject candidate ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create a new Event from %@?"
+          }
+        }
+      }
+    },
+    "evidenceGraph.promote.title.place": {
+      "comment": "v1 Promote confirm title; argument is the subject candidate ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create a new Place from %@?"
+          }
+        }
+      }
+    },
+    "evidenceGraph.promote.message.person": {
+      "comment": "v1 Promote confirm consequence; arguments are the subject label and the new handle ref prefix (PER)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ becomes the first member of a new Person, and its %2$@- ref is minted when you create it. The subject, its properties and its observations stay exactly as they are."
+          }
+        }
+      }
+    },
+    "evidenceGraph.promote.message.event": {
+      "comment": "v1 Promote confirm consequence; arguments are the subject label and the new handle ref prefix (PER)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ becomes the first member of a new Event, and its %2$@- ref is minted when you create it. The subject, its properties and its observations stay exactly as they are."
+          }
+        }
+      }
+    },
+    "evidenceGraph.promote.message.place": {
+      "comment": "v1 Promote confirm consequence; arguments are the subject label and the new handle ref prefix (PER)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ becomes the first member of a new Place, and its %2$@- ref is minted when you create it. The subject, its properties and its observations stay exactly as they are."
+          }
+        }
+      }
+    },
+    "evidenceGraph.promote.confirm.person": {
+      "comment": "Confirm button on the v1 Promote confirm",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create Person"
+          }
+        }
+      }
+    },
+    "evidenceGraph.promote.confirm.event": {
+      "comment": "Confirm button on the v1 Promote confirm",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create Event"
+          }
+        }
+      }
+    },
+    "evidenceGraph.promote.confirm.place": {
+      "comment": "Confirm button on the v1 Promote confirm",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create Place"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.openHandlePage.person": {
+      "comment": "Membership row text beside the handle ref until the resolved name lands (S9-09)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open person page"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.openHandlePage.event": {
+      "comment": "Membership row text beside the handle ref until the resolved name lands (S9-09)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open event page"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.openHandlePage.place": {
+      "comment": "Membership row text beside the handle ref until the resolved name lands (S9-09)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open place page"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.openHandleAccessibility.person": {
+      "comment": "VoiceOver action on a promoted card that opens its handle page; argument is the handle ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open person %@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.openHandleAccessibility.event": {
+      "comment": "VoiceOver action on a promoted card that opens its handle page; argument is the handle ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open event %@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.openHandleAccessibility.place": {
+      "comment": "VoiceOver action on a promoted card that opens its handle page; argument is the handle ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open place %@"
+          }
+        }
+      }
     }
   },
   "version": "1.1"
