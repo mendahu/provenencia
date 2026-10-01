@@ -3,6 +3,7 @@ package identityclaims_test
 import (
 	"database/sql"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -329,4 +330,75 @@ func mustEntity(t *testing.T, c *database.Catalog, typeID []byte) canonicalentit
 		t.Fatal(err)
 	}
 	return e
+}
+
+func TestMembershipsBySource(t *testing.T) {
+	f := newFixture(t)
+	mustClaim(t, f, f.james, f.per1, identityclaims.StatusAccepted)
+	mustClaim(t, f, f.jim, f.per1, identityclaims.StatusAccepted)
+	mustClaim(t, f, f.york, f.plc1, identityclaims.StatusProvisional)
+
+	got, err := identityclaims.MembershipsBySource(f.c, f.james.SourceID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bySubject := map[string]identityclaims.Membership{}
+	for _, m := range got {
+		bySubject[string(m.SubjectID)] = m
+	}
+	for _, s := range []subjects.Subject{f.james, f.jim} {
+		m, ok := bySubject[string(s.ID)]
+		if !ok || string(m.Entity.ID) != string(f.per1.ID) || m.Entity.Ref != f.per1.Ref || m.Kind != "person" {
+			t.Fatalf("%s: %+v", s.Label, m)
+		}
+	}
+	if _, ok := bySubject[string(f.york.ID)]; ok || len(got) != 2 {
+		t.Fatalf("provisional-only subject listed: %+v", got)
+	}
+
+	t.Run("other source and bad id", func(t *testing.T) {
+		typeID, err := sourcetypes.Upsert(f.c, sourcetypes.Type{
+			Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		other, err := sources.Create(f.c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Other"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		list, err := identityclaims.MembershipsBySource(f.c, other.ID)
+		if err != nil || len(list) != 0 {
+			t.Fatalf("%v %+v", err, list)
+		}
+		if _, err := identityclaims.MembershipsBySource(f.c, []byte{1}); !errors.Is(err, identityclaims.ErrInvalid) {
+			t.Fatalf("got %v", err)
+		}
+	})
+
+	t.Run("query uses indexes, no full scans", func(t *testing.T) {
+		db, err := f.c.DB()
+		if err != nil {
+			t.Fatal(err)
+		}
+		rows, err := db.Query(`EXPLAIN QUERY PLAN SELECT s.id FROM subjects s
+			JOIN identity_claims ic ON ic.subject_id = s.id AND ic.status = 'accepted'
+			JOIN canonical_entities e ON e.id = ic.entity_id
+			JOIN subject_types st ON st.id = e.subject_type_id
+			WHERE s.source_id = ?`, f.james.SourceID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var id, parent, notUsed int
+			var detail string
+			if err := rows.Scan(&id, &parent, &notUsed, &detail); err != nil {
+				t.Fatal(err)
+			}
+			if strings.HasPrefix(detail, "SCAN ") {
+				t.Fatalf("full scan: %s", detail)
+			}
+		}
+	})
 }

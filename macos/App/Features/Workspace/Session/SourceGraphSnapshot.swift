@@ -26,6 +26,8 @@ struct SourceGraphPlacedSubject: Identifiable, Sendable, Equatable {
     var isCited: Bool
     /// Observations about this subject (property summaries for card rows).
     var observations: [CatalogObservation] = []
+    /// The handle this subject belongs to (accepted Identity Claim), or nil.
+    var membership: CatalogSubjectMembership?
 }
 
 /// A bridge subject with position and provisional endpoint ids (S6-04).
@@ -43,6 +45,8 @@ struct SourceGraphPlacedBridge: Identifiable, Sendable, Equatable {
     /// Provisional A/B endpoint subject ids (app-local until Citations exist).
     var endpointAID: String?
     var endpointBID: String?
+    /// The association handle this bridge belongs to, or nil (filed from S9-28).
+    var membership: CatalogSubjectMembership?
 }
 
 /// Catalog rows for one Source's Evidence graph. Types stay on
@@ -52,17 +56,21 @@ struct SourceGraphRows: Sendable, Equatable {
     var subjects: [CatalogSubject]
     var positions: [CatalogSubjectPosition]
     var observations: [CatalogObservation]
+    /// Accepted handles of promoted subjects; absent subjects are unpromoted.
+    var memberships: [CatalogSubjectMembership]
 
     init(
         sourceId: String,
         subjects: [CatalogSubject] = [],
         positions: [CatalogSubjectPosition] = [],
-        observations: [CatalogObservation] = []
+        observations: [CatalogObservation] = [],
+        memberships: [CatalogSubjectMembership] = []
     ) {
         self.sourceId = sourceId
         self.subjects = subjects
         self.positions = positions
         self.observations = observations
+        self.memberships = memberships
     }
 
     /// Returns a copy with one subject's grid cell updated.
@@ -78,7 +86,8 @@ struct SourceGraphRows: Sendable, Equatable {
             sourceId: sourceId,
             subjects: subjects,
             positions: next,
-            observations: observations
+            observations: observations,
+            memberships: memberships
         )
     }
 }
@@ -113,6 +122,7 @@ struct SourceGraphSnapshot: Sendable, Equatable {
             positions: rows.positions,
             types: types,
             observations: rows.observations,
+            memberships: rows.memberships,
             rules: rules
         )
     }
@@ -131,9 +141,14 @@ struct SourceGraphSnapshot: Sendable, Equatable {
         positions: [CatalogSubjectPosition],
         types: [CatalogSubjectType],
         observations: [CatalogObservation] = [],
+        memberships: [CatalogSubjectMembership] = [],
         rules: [CatalogConnectRule] = []
     ) -> SourceGraphSnapshot {
         let typeByID = Dictionary(uniqueKeysWithValues: types.map { ($0.id, $0) })
+        let membershipBySubject = Dictionary(
+            memberships.map { ($0.subjectID, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
         let positionBySubject = Dictionary(uniqueKeysWithValues: positions.map { ($0.subjectID, $0) })
         let observationsBySubject = Dictionary(grouping: observations, by: \.subjectID)
 
@@ -160,7 +175,8 @@ struct SourceGraphSnapshot: Sendable, Equatable {
                         gridX: position.gridX,
                         gridY: position.gridY,
                         isCited: !subjectObservations.isEmpty,
-                        observations: subjectObservations
+                        observations: subjectObservations,
+                        membership: membershipBySubject[subject.id]
                     )
                 )
             } else if let kind = EvidenceBridgeKind(rawValue: type.key) {
@@ -181,7 +197,8 @@ struct SourceGraphSnapshot: Sendable, Equatable {
                         isCited: !subjectObservations.isEmpty,
                         observations: subjectObservations,
                         endpointAID: ends.a,
-                        endpointBID: ends.b
+                        endpointBID: ends.b,
+                        membership: membershipBySubject[subject.id]
                     )
                 )
             }

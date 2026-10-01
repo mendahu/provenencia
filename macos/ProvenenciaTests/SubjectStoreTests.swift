@@ -124,8 +124,12 @@ struct SubjectStoreTests {
         #expect(report.cascades.first?.via == "identity_claims.subject_id")
         #expect(report.cascades.first?.listed.map(\.ref) == [result.entity.ref])
 
+        #expect(try await store.listSubjectMemberships(projectDir: projectDir, sourceID: sourceID).map(\.entity.ref)
+            == [result.entity.ref])
+
         try await store.deleteSubject(projectDir: projectDir, userID: "user-1", subjectID: subject.id)
         #expect(store.membershipBySubject[subject.id] == nil)
+        #expect(try await store.listSubjectMemberships(projectDir: projectDir, sourceID: sourceID).isEmpty)
     }
 
     @Test func listSubjectTypesReturnsSeededRows() async throws {

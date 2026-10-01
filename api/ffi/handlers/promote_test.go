@@ -107,3 +107,79 @@ func TestGetDeleteImpactPromotedSubject(t *testing.T) {
 		t.Fatalf("%+v", g)
 	}
 }
+
+func TestListSubjectMemberships(t *testing.T) {
+	// fixture: one promoted and one unpromoted person Subject on a Source.
+	type fixture struct {
+		dir, sourceID, promotedID, plainID, handleRef string
+	}
+	setup := func(t *testing.T) fixture {
+		t.Helper()
+		dir, userID, sourceID, typeID := subjectFixture(t)
+		create := func(label string) string {
+			out, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
+				ProjectDir: dir, UserId: userID, SourceId: sourceID, SubjectTypeId: typeID, Label: label,
+			}))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var created engine.CreateSubjectResponse
+			if err := proto.Unmarshal(out, &created); err != nil {
+				t.Fatal(err)
+			}
+			return created.Subject.GetId()
+		}
+		f := fixture{dir: dir, sourceID: sourceID, promotedID: create("James"), plainID: create("Jim")}
+		out, err := PromoteSubject(marshalProto(t, &engine.PromoteSubjectRequest{
+			ProjectDir: dir, UserId: userID, SubjectId: f.promotedID,
+		}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var promoted engine.PromoteSubjectResponse
+		if err := proto.Unmarshal(out, &promoted); err != nil {
+			t.Fatal(err)
+		}
+		f.handleRef = promoted.Entity.GetRef()
+		return f
+	}
+
+	t.Run("promoted listed with handle and kind, unpromoted absent", func(t *testing.T) {
+		f := setup(t)
+		out, err := ListSubjectMemberships(marshalProto(t, &engine.ListSubjectMembershipsRequest{
+			ProjectDir: f.dir, SourceId: f.sourceID,
+		}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var resp engine.ListSubjectMembershipsResponse
+		if err := proto.Unmarshal(out, &resp); err != nil {
+			t.Fatal(err)
+		}
+		if len(resp.Memberships) != 1 {
+			t.Fatalf("%+v", resp.Memberships)
+		}
+		m := resp.Memberships[0]
+		if m.GetSubjectId() != f.promotedID || m.GetKind() != "person" ||
+			m.Entity.GetRef() != f.handleRef || !strings.HasPrefix(f.handleRef, "PER-") {
+			t.Fatalf("%+v", m)
+		}
+		for _, other := range resp.Memberships {
+			if other.GetSubjectId() == f.plainID {
+				t.Fatal("unpromoted subject listed")
+			}
+		}
+	})
+
+	runRPC(t, ListSubjectMemberships, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "bad source id",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _, _, _ := subjectFixture(t)
+				return &engine.ListSubjectMembershipsRequest{ProjectDir: dir, SourceId: "nope"}
+			},
+			wantErr: true,
+		},
+	})
+}

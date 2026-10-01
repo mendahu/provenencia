@@ -171,6 +171,14 @@ struct CatalogIdentityClaim: Sendable, Equatable, Identifiable {
     var status: String
 }
 
+/// One promoted Subject's accepted handle. `kind` is the subject type key
+/// (person, event, place, …). Unpromoted Subjects have no membership row.
+struct CatalogSubjectMembership: Sendable, Equatable {
+    var subjectID: String
+    var entity: CatalogCanonicalEntity
+    var kind: String
+}
+
 /// One saved Promote step: the handle and the claim it wrote.
 struct CatalogPromoteResult: Sendable, Equatable {
     var entity: CatalogCanonicalEntity
@@ -701,6 +709,8 @@ protocol GenealogyStore: Sendable {
     func deleteSubject(projectDir: String, userID: String, subjectID: String) async throws
     /// Promote v1: mint a handle of the Subject's type and file an accepted claim (one transaction).
     func promoteSubject(projectDir: String, userID: String, subjectID: String) async throws -> CatalogPromoteResult
+    /// Accepted handle of every promoted Subject on one Source's Evidence graph.
+    func listSubjectMemberships(projectDir: String, sourceID: String) async throws -> [CatalogSubjectMembership]
     func listSubjects(projectDir: String, sourceID: String) async throws -> [CatalogSubject]
     func setSubjectPosition(
         projectDir: String,

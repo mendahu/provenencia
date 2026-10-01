@@ -40,6 +40,37 @@ func PromoteSubject(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
+func ListSubjectMemberships(in []byte) ([]byte, error) {
+	var req engine.ListSubjectMembershipsRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("list_subject_memberships", err)
+	}
+	sourceID, err := parseID(req.GetSourceId())
+	if err != nil {
+		return nil, err
+	}
+	var out *engine.ListSubjectMembershipsResponse
+	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		rows, err := identityclaims.MembershipsBySource(c, sourceID)
+		if err != nil {
+			return err
+		}
+		out = &engine.ListSubjectMembershipsResponse{}
+		for _, m := range rows {
+			out.Memberships = append(out.Memberships, &engine.SubjectMembership{
+				SubjectId: uuidString(m.SubjectID),
+				Entity:    canonicalEntityProto(m.Entity),
+				Kind:      m.Kind,
+			})
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
+}
+
 func canonicalEntityProto(e canonicalentities.Entity) *engine.CanonicalEntity {
 	return &engine.CanonicalEntity{
 		Id:            uuidString(e.ID),

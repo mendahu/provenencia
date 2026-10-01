@@ -1095,6 +1095,17 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         )
     }
 
+    func listSubjectMemberships(projectDir: String, sourceID: String) async throws -> [CatalogSubjectMembership] {
+        markCatalogSessionHeld(projectDir)
+        recordedCalls.append("listSubjectMemberships source=\(sourceID)")
+        let types = subjectTypesByProject[projectDir] ?? []
+        return (subjectsBySource[sourceID] ?? []).compactMap { subject in
+            guard let entity = membershipBySubject[subject.id] else { return nil }
+            let kind = types.first(where: { $0.id == entity.subjectTypeID })?.key ?? ""
+            return CatalogSubjectMembership(subjectID: subject.id, entity: entity, kind: kind)
+        }
+    }
+
     func deleteSubject(projectDir: String, userID _: String, subjectID: String) async throws {
         markCatalogSessionHeld(projectDir)
         recordedCalls.append("deleteSubject id=\(subjectID)")

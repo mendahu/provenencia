@@ -43,6 +43,11 @@ enum CatalogMutation: Sendable, Equatable {
     /// or an Observation on it was written. Also moves each Property's `usedBy`.
     case savedCitation(sourceId: String)
 
+    /// A Subject on this Source was promoted (an Identity Claim filed it onto a
+    /// handle), so its graph card's membership changed. The S9-04 card
+    /// dispatches it after `promoteSubject` succeeds.
+    case promotedSubject(sourceId: String)
+
     case createdProperty
     case updatedProperty
     case deletedProperty
@@ -70,6 +75,7 @@ enum CatalogMutationKind: Hashable, Sendable {
     case mutatedSourceGraph
     case deletedSubject
     case savedCitation
+    case promotedSubject
     case createdProperty
     case updatedProperty
     case deletedProperty
@@ -115,6 +121,8 @@ extension CatalogMutation {
             return .deletedSubject
         case .savedCitation:
             return .savedCitation
+        case .promotedSubject:
+            return .promotedSubject
         case .createdProperty:
             return .createdProperty
         case .updatedProperty:

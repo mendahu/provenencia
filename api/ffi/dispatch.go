@@ -93,6 +93,7 @@ const (
 	MethodDeleteArtifact                    = int32(engine.Method_METHOD_DELETE_ARTIFACT)
 	MethodDeleteCitation                    = int32(engine.Method_METHOD_DELETE_CITATION)
 	MethodPromoteSubject                    = int32(engine.Method_METHOD_PROMOTE_SUBJECT)
+	MethodListSubjectMemberships            = int32(engine.Method_METHOD_LIST_SUBJECT_MEMBERSHIPS)
 )
 
 // Call routes one coarse FFI operation to api/ffi/handlers.
@@ -264,6 +265,8 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.DeleteCitation(in)
 	case MethodPromoteSubject:
 		return handlers.PromoteSubject(in)
+	case MethodListSubjectMemberships:
+		return handlers.ListSubjectMemberships(in)
 	default:
 		return nil, apperr.New(apperr.CodeInternalUnknownMethod, apperr.KindInternal, strconv.Itoa(int(method)))
 	}

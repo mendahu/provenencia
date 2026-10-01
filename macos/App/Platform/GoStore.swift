@@ -724,12 +724,7 @@ struct GoStore: GenealogyStore {
             request: req
         )
         return CatalogPromoteResult(
-            entity: CatalogCanonicalEntity(
-                id: resp.entity.id,
-                ref: resp.entity.ref,
-                subjectTypeID: resp.entity.subjectTypeID,
-                label: resp.entity.label
-            ),
+            entity: Self.mapCanonicalEntity(resp.entity),
             claim: CatalogIdentityClaim(
                 id: resp.claim.id,
                 subjectID: resp.claim.subjectID,
@@ -737,6 +732,27 @@ struct GoStore: GenealogyStore {
                 status: resp.claim.status
             )
         )
+    }
+
+    func listSubjectMemberships(projectDir: String, sourceID: String) async throws -> [CatalogSubjectMembership] {
+        var req = Provenencia_Engine_V1_ListSubjectMembershipsRequest()
+        req.projectDir = projectDir
+        req.sourceID = sourceID
+        let resp: Provenencia_Engine_V1_ListSubjectMembershipsResponse = try await provenenciaCall(
+            method: CoreMethod.listSubjectMemberships,
+            request: req
+        )
+        return resp.memberships.map { m in
+            CatalogSubjectMembership(
+                subjectID: m.subjectID,
+                entity: Self.mapCanonicalEntity(m.entity),
+                kind: m.kind
+            )
+        }
+    }
+
+    private static func mapCanonicalEntity(_ e: Provenencia_Engine_V1_CanonicalEntity) -> CatalogCanonicalEntity {
+        CatalogCanonicalEntity(id: e.id, ref: e.ref, subjectTypeID: e.subjectTypeID, label: e.label)
     }
 
     func listSubjects(projectDir: String, sourceID: String) async throws -> [CatalogSubject] {
