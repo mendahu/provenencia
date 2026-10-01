@@ -11,6 +11,8 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-01 | PR | Conclusion schema + stores |
 | S9-02 | PR | Promote write v1 |
 | S9-03 | PR | Source graph carries membership |
+| S9-D8 | Design | Graph subject card: Promote + membership |
+| S9-04 | PR | Graph card: Promote + membership |
 
 ## Steps
 
@@ -77,3 +79,68 @@ The Evidence graph now knows which Subjects are promoted and onto which handle. 
 - The card's Promote control, membership row, and dispatching `.promotedSubject` (**S9-04**)
 - The handle's resolved name on the card (**S9-09**)
 - Busting other Conclusion keys on Promote (lists arrive in **S9-07**)
+
+### S9-D8 — Design: graph subject card
+
+**Board pick (Frame 14, earlier frames amended in place):**
+- **One fixed 44pt footer** on every primary card, below Add property. It shows **Promote** until the Subject has an accepted Identity Claim, then the **membership row**.
+  - Both states are the same height, so `contentHeight(for:)` adds one constant and promoting never moves an edge or a hit rect.
+  - On cited cards the footer is the ruled stack's last row. On uncited cards it bleeds to the edges under a dashed rule.
+- **Promote** is a kit secondary small Button with a leading ↗, on the kind wash, because it is still an action on this Subject.
+- **The membership row is a Conclusion link:** paper fill, an accent `PER-` badge, an accent chevron, and no kind pigment or micro-caps label.
+  - S9-04 shows *Open person page*; S9-09 puts the resolved name in the same slot.
+  - Hover tints with the accent, press scales .985, and keyboard focus is an inset accent ring.
+- **v1 Promote** is a kit irreversible Confirm: *Create a new Person from CPR-…?*, a *First member* key chip, *Create Person* / *Leave unpromoted*, with focus on cancel.
+- **Bridges are unchanged:** no Promote, and no filed mark until S9-D12.
+
+**Rev 1 (designer revision, shipped in S9-04).** This supersedes the footer styling above; the structure and behaviour are unchanged.
+- **Size and band:** the footer is **36pt**. It sits on the **kind chip** under a **1px kind-line** rule.
+- **Promote:** a kit **ghost** Button. Its inset is 8pt less than the card padding, so the label lines up with the content above.
+- **Membership row:**
+  - The ref is a **neutral outline Badge** with kind-ink text, and the link text and chevron are in kind ink.
+  - Hover is the chip mixed with 10% kind ink; pressed is 18% plus the .985 scale. The keyboard focus spec is unchanged.
+- **Why:** the secondary button and paper band lost contrast on the kind washes in dark mode, and the accent band merged into person cards, which share the accent hue.
+- **Accepted deviation from the brief:** the membership row now takes the kind colour. It is told apart from Observation rows by shape: no micro-caps label, an outline mono ref, the name, and a disclosure chevron.
+
+**Rev 2 (light-mode footer colour, shipped in S9-04).**
+- **New alias** `subject-{kind}-band` (`PVColor.subject{Person,Event,Place}Band`, the `band` role on `EvidenceSubjectKindStyle`). The footer fill and its 10% / 18% hover and pressed mixes move from the chip to the band.
+- **Light mode:** OKLab 300 at 45% into 100, so person `#B9CED8`, event `#F2CBB2`, place `#B7D8C9`.
+- **Dark mode:** equals the kind chip, so dark is unchanged.
+- **Shipped as specified, with a known contrast gap.** Kind-ink text on the band is 5.88:1 for Person, but **4.30:1** for Event and **4.44:1** for Place, just under the brief's own 4.5:1 check. The ghost Promote label passes everywhere (≥4.6:1). This is left for the designers to revisit; the options are a 900-step ink on the band (~7.5:1) or lighter bands.
+
+Brief archived: [`design/archive/S9-D8-graph-subject-card.md`](design/archive/S9-D8-graph-subject-card.md).
+
+### S9-04 — Graph card: Promote + membership
+
+Primary graph cards can now be promoted from the canvas, and promoted cards show their handle.
+
+**What shipped**
+
+- **`EvidenceSubjectCard` footer:**
+  - Two new targets, `promote` and `openHandle`, each the full footer rect.
+  - The footer's height is one constant (`footerHeight`, 36pt after rev 1), shared by paint, hits and edges.
+  - The uncited Add property hit is re-anchored above the footer.
+  - Promote ignores the no-Artifact gate.
+- **Kit:**
+  - `.pvHostInteraction(hovered:pressed:)` lets paint-only hosts drive `PVHoverEffect`, so `PVButton` shows hover and press on the canvas.
+  - `PVBadge(text:…, foreground:)` recolours the text only (kind ink on a neutral outline). The tone still owns the fill and the line.
+  - `GraphCanvasPointerController.pressedCardAction` supplies the press.
+  - Documented in the DesignSystem README under *Host-owned pointer*.
+- **Measured card geometry:**
+  - Before this, hit targets and edge anchors on both card kinds were worked out from row-height constants. They drifted 3–30pt from the paint (wrapped titles and values, taller rows), and the bottom-anchored footer made that visible.
+  - Cards now tag their actionable pieces (`.evidenceCardHitRegion`) and report an `EvidenceCardLayout`. An `EvidenceCardLayoutStore` per graph feeds hit targets, edges and the connect rubber band, so each hit moves with the piece it belongs to. The constants are only the first-frame fallback.
+  - `EvidenceCardLayoutTests` checks the measured layout against the drawn pixels, the footer, row bands and the bridge card.
+- **Model:**
+  - `beginPromote` builds a `PromoteRequest`.
+  - `confirmPromote` mints via `promoteSubject`, then applies `.promotedSubject(sourceId:)` so the graph reloads with membership. Errors keep the sheet open with a Callout.
+  - `openHandle` returns `nil` until a handle page exists.
+- **VoiceOver:** a footer action named *Promote James Robins, CPR-…* or *Open person PER-…*.
+- **Copy:** per-kind strings (person / event / place) for the tooltip, the Confirm title, message and action, the link text, and the VoiceOver open action.
+
+**What stayed out**
+
+- Routing *Open person page* (S9-16 / S9-24 / S9-27)
+- The resolved name on the row (S9-09)
+- The Promote flow (S9-11)
+- A filed mark on bridges (S9-D12)
+- A keyboard focus ring on the footer: the canvas has no per-control keyboard focus yet, and VoiceOver actions are the keyboard path

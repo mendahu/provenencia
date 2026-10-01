@@ -10,6 +10,31 @@ final class EvidenceGraphModel {
         var description: String = ""
     }
 
+    /// Snapshot of the subject a v1 Promote confirm names (`.pvConfirm(item:)`).
+    struct PromoteRequest: Identifiable, Equatable {
+        /// Subject id.
+        var id: String
+        var ref: String
+        var label: String
+        var kind: EvidencePrimaryKind
+        /// The new handle's ref prefix (`PER`), from the subject type.
+        var handleRefPrefix: String
+
+        /// v1 Promote confirm copy (S9-D8): names the subject and the kind of handle it creates.
+        var confirmCopy: PVConfirmCopy {
+            PVConfirmCopy(
+                title: L10n.EvidenceGraph.promoteConfirmTitle(kind: kind, ref: ref),
+                message: L10n.EvidenceGraph.promoteConfirmMessage(
+                    kind: kind,
+                    label: label,
+                    refPrefix: handleRefPrefix
+                ),
+                confirmLabel: String(localized: L10n.EvidenceGraph.promoteConfirmAction(kind: kind)),
+                cancelLabel: String(localized: L10n.EvidenceGraph.promoteCancel)
+            )
+        }
+    }
+
     let sourceID: String
     let session: WorkspaceSession
     let store: any GenealogyStore
@@ -49,6 +74,10 @@ final class EvidenceGraphModel {
     }
     var isDeleting: Bool { deleteImpact.isRunning }
     var deleteError: String? { deleteImpact.error }
+    /// v1 Promote confirm open for this subject (S9-04). S9-11 replaces it with the flow.
+    var pendingPromote: PromoteRequest?
+    var isPromoting = false
+    var promoteError: String?
     var pendingGridX: Int64 = 0
     var pendingGridY: Int64 = 0
     var draft = CreateDraft()
@@ -344,6 +373,11 @@ final class EvidenceGraphModel {
             return nil
         case EvidenceSubjectCard.addPropertyActionID:
             return composerLocation(for: subjectID)
+        case EvidenceSubjectCard.promoteActionID:
+            beginPromote(subjectID: subjectID)
+            return nil
+        case EvidenceSubjectCard.openHandleActionID:
+            return openHandle(subjectID: subjectID)
         default:
             guard let observationID = EvidenceSubjectCard.observationID(fromEditPropertyAction: actionID)
             else { return nil }
@@ -663,6 +697,57 @@ final class EvidenceGraphModel {
                 id: subjectID
             )
         }
+    }
+
+    // MARK: Promote (S9-04 v1)
+
+    /// Opens the v1 Promote confirm for an unpromoted primary. S9-11 swaps this
+    /// for the Promote flow; the card and its `promote` target stay the same.
+    func beginPromote(subjectID: String) {
+        guard let placed = primary(in: currentSnapshot(), id: subjectID),
+              placed.membership == nil
+        else { return }
+        let prefix = fieldsSnapshot?.types.first(where: { $0.id == placed.subject.subjectTypeID })?.refPrefix ?? ""
+        let label = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
+        promoteError = nil
+        pendingPromote = PromoteRequest(
+            id: placed.id,
+            ref: placed.subject.ref,
+            label: label.isEmpty ? placed.subject.ref : label,
+            kind: placed.kind,
+            handleRefPrefix: prefix
+        )
+    }
+
+    /// Mints the handle and accepted claim, then reloads this Source's graph so
+    /// the card's footer becomes its membership row. Errors keep the sheet open.
+    @discardableResult
+    func confirmPromote() async -> Bool {
+        guard let request = pendingPromote, !isPromoting else { return false }
+        isPromoting = true
+        defer { isPromoting = false }
+        do {
+            _ = try await store.promoteSubject(
+                projectDir: session.projectKey.projectDir,
+                userID: userID,
+                subjectID: request.id
+            )
+            session.apply(.promotedSubject(sourceId: sourceID))
+            promoteError = nil
+            pendingPromote = nil
+            return true
+        } catch {
+            promoteError = L10n.Errors.message(for: error)
+            return false
+        }
+    }
+
+    /// Location of a promoted subject's handle page. No Person / Event / Place
+    /// page exists yet, so this is `nil` (no navigation); S9-16, S9-24 and
+    /// S9-27 route it once each page lands.
+    func openHandle(subjectID: String) -> WorkspaceLocation? {
+        _ = subjectID
+        return nil
     }
 
     @discardableResult

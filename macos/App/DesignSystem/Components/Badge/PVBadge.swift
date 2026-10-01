@@ -26,6 +26,8 @@ struct PVBadge: View {
     private let subtle: Bool
     /// Only set for the icon-only badge, which has no text to read out.
     private let iconLabel: LocalizedStringResource?
+    /// Text / glyph colour override; the tone still owns fill and outline.
+    private var foreground: Color?
 
     /// For fixed UI copy (e.g. "provenencia", "you").
     init(_ titleKey: LocalizedStringResource, tone: PVBadgeTone = .neutral, icon: PVSymbol? = nil, subtle: Bool = false) {
@@ -37,12 +39,21 @@ struct PVBadge: View {
     }
 
     /// For badge content that is data, not UI copy (e.g. a raw `plugin:…` origin id).
-    init(text: String, tone: PVBadgeTone = .neutral, icon: PVSymbol? = nil, subtle: Bool = false) {
+    /// `foreground` recolours the text and glyph only (a graph card's kind ink on a
+    /// neutral outline), leaving the tone's fill and line.
+    init(
+        text: String,
+        tone: PVBadgeTone = .neutral,
+        icon: PVSymbol? = nil,
+        subtle: Bool = false,
+        foreground: Color? = nil
+    ) {
         label = Text(text)
         self.tone = tone
         self.icon = icon
         self.subtle = subtle
         iconLabel = nil
+        self.foreground = foreground
     }
 
     /// Glyph-only pill — `PVIcon` is `accessibilityHidden`, so `label` carries
@@ -66,7 +77,7 @@ struct PVBadge: View {
                 .textCase(.uppercase)
         }
         .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
-        .foregroundStyle(colors.foreground)
+        .foregroundStyle(foreground ?? colors.foreground)
         .padding(.horizontal, label == nil ? PVSpacing.space2 : PVSpacing.space4)
         .padding(.vertical, PVSpacing.space1)
         .background(subtle ? Color.clear : colors.background)

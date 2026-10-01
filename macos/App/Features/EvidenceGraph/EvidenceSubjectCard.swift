@@ -26,10 +26,26 @@ struct EvidenceSubjectCard: View {
     static let propertyRowHeight: CGFloat = 46
     static let addPropertyInStackHeight: CGFloat = 32
     static let stackHairline: CGFloat = 1
+    /// S9-D8 footer slot: Promote (unpromoted) or the membership row
+    /// (promoted). Both are this height, so promoting never moves an edge.
+    static let footerHeight: CGFloat = 36
+    /// Horizontal inset for the ghost Promote: 8pt less than the card's padding,
+    /// so the borderless button's label lines up with the content above (S9-D8 rev 1).
+    static let promoteInset: CGFloat = shellPaddingX - 8
+    /// Uncited cards: the footer sits this far below the quiet Add property
+    /// row (on top of the stack gap), under a 1pt dashed rule.
+    static let uncitedFooterTopMargin: CGFloat = 2
+    static let uncitedFooterRule: CGFloat = 1
+    /// Painted height of the quiet (uncited) Add property row.
+    static let addPropertyQuietHeight: CGFloat = 26
 
     static let editActionID = "edit"
     static let deleteActionID = "delete"
     static let addPropertyActionID = "addProperty"
+    /// Footer on an unpromoted card. v1 opens a Confirm; S9-11 routes it to the flow.
+    static let promoteActionID = "promote"
+    /// Footer on a promoted card: open the handle's page.
+    static let openHandleActionID = "openHandle"
 
     static func editPropertyActionID(observationID: String) -> String {
         "editProperty.\(observationID)"
@@ -42,28 +58,40 @@ struct EvidenceSubjectCard: View {
         return id.isEmpty ? nil : id
     }
 
+    /// Document-space top-leading corner of the painted card.
+    static func origin(for placed: SourceGraphPlacedSubject, dragOffset: CGSize = .zero) -> CGPoint {
+        let offset = topLeadingOffset(gridX: placed.gridX, gridY: placed.gridY)
+        return CGPoint(x: offset.width + dragOffset.width, y: offset.height + dragOffset.height)
+    }
+
     /// Document-space frame used for edge attachment and AppKit hit targets.
+    /// Uses the card's measured `layout` when it has reported one; the
+    /// constant-based ``contentHeight(for:)`` is only the first-frame fallback.
     static func edgeFrame(
         for placed: SourceGraphPlacedSubject,
-        dragOffset: CGSize = .zero
+        dragOffset: CGSize = .zero,
+        layout: EvidenceCardLayout? = nil
     ) -> CGRect {
-        let center = contentCenter(gridX: placed.gridX, gridY: placed.gridY)
-        let height = contentHeight(for: placed)
-        return CGRect(
-            x: center.x - width / 2 + dragOffset.width,
-            y: center.y - approximateHalfHeight + dragOffset.height,
-            width: width,
-            height: height
-        )
+        let origin = origin(for: placed, dragOffset: dragOffset)
+        if let layout {
+            return layout.cardFrame(origin: origin)
+        }
+        return CGRect(origin: origin, size: CGSize(width: width, height: contentHeight(for: placed)))
     }
 
     /// Nested action frames in document space (same coordinate as ``edgeFrame``).
+    /// With a measured `layout`, every row / Add property / footer target is the
+    /// painted band of the piece it belongs to, so hits move with the paint.
     static func actionTargets(
         for placed: SourceGraphPlacedSubject,
         canCite: Bool,
-        dragOffset: CGSize = .zero
+        dragOffset: CGSize = .zero,
+        layout: EvidenceCardLayout? = nil
     ) -> [GraphCanvasActionTarget] {
-        let frame = edgeFrame(for: placed, dragOffset: dragOffset)
+        let frame = edgeFrame(for: placed, dragOffset: dragOffset, layout: layout)
+        if let layout {
+            return measuredActionTargets(for: placed, canCite: canCite, frame: frame, layout: layout)
+        }
         let headerHits = EvidenceCardHeaderActionHits.frames(
             cardFrame: frame,
             paddingX: shellPaddingX,
@@ -100,31 +128,94 @@ struct EvidenceSubjectCard: View {
         }
 
         if canCite {
-            let addY: CGFloat
+            let addFrame: CGRect
             if placed.isCited {
                 let rows = CGFloat(placed.observations.count)
-                addY = stackTop
+                let addY = stackTop
                     + stackHairline
                     + rows * (propertyRowHeight + stackHairline)
+                addFrame = CGRect(x: frame.minX, y: addY, width: frame.width, height: addPropertyInStackHeight)
             } else {
-                addY = frame.maxY - addPropertyInStackHeight - 4
-            }
-            actions.append(
-                GraphCanvasActionTarget(
-                    id: addPropertyActionID,
-                    frame: CGRect(
-                        x: frame.minX,
-                        y: addY,
-                        width: frame.width,
-                        height: placed.isCited ? addPropertyInStackHeight : 30
-                    )
+                // Quiet row sits above the footer block; its hit stays clear of the footer.
+                let footerTop = frame.maxY - uncitedFooterBlockHeight
+                addFrame = CGRect(
+                    x: frame.minX,
+                    y: footerTop - addPropertyQuietHeight - 2,
+                    width: frame.width,
+                    height: addPropertyQuietHeight + 2
                 )
+            }
+            actions.append(GraphCanvasActionTarget(id: addPropertyActionID, frame: addFrame))
+        }
+
+        // Promote needs no Artifact, so it ignores `canCite`.
+        actions.append(
+            GraphCanvasActionTarget(
+                id: placed.membership == nil ? promoteActionID : openHandleActionID,
+                frame: footerFrame(cardFrame: frame)
             )
+        )
+        return actions
+    }
+
+    /// Header icons stay on fixed top-anchored metrics; everything below them
+    /// comes from the measured bands.
+    private static func measuredActionTargets(
+        for placed: SourceGraphPlacedSubject,
+        canCite: Bool,
+        frame: CGRect,
+        layout: EvidenceCardLayout
+    ) -> [GraphCanvasActionTarget] {
+        let origin = frame.origin
+        let headerHits = EvidenceCardHeaderActionHits.frames(
+            cardFrame: frame,
+            paddingX: shellPaddingX,
+            paddingTop: shellPaddingTop,
+            hitHeight: headerHeight,
+            showDelete: true
+        )
+        var actions: [GraphCanvasActionTarget] = [
+            GraphCanvasActionTarget(id: editActionID, frame: headerHits.edit),
+        ]
+        if let deleteFrame = headerHits.delete {
+            actions.append(GraphCanvasActionTarget(id: deleteActionID, frame: deleteFrame))
+        }
+        if placed.isCited {
+            for observation in placed.observations {
+                let id = editPropertyActionID(observationID: observation.id)
+                if let band = layout.band(id, origin: origin) {
+                    actions.append(GraphCanvasActionTarget(id: id, frame: band))
+                }
+            }
+        }
+        if canCite, let band = layout.band(addPropertyActionID, origin: origin) {
+            actions.append(GraphCanvasActionTarget(id: addPropertyActionID, frame: band))
+        }
+        let footerID = placed.membership == nil ? promoteActionID : openHandleActionID
+        if let band = layout.band(footerID, origin: origin) {
+            actions.append(GraphCanvasActionTarget(id: footerID, frame: band))
         }
         return actions
     }
 
-    /// Approximate painted height so edges / hits track cited-row growth.
+    /// Footer hit / paint rect: full card width × ``footerHeight``, bottom-anchored.
+    static func footerFrame(cardFrame: CGRect) -> CGRect {
+        CGRect(
+            x: cardFrame.minX,
+            y: cardFrame.maxY - footerHeight,
+            width: cardFrame.width,
+            height: footerHeight
+        )
+    }
+
+    /// Uncited cards: stack gap + margin + dashed rule + footer, replacing the bottom padding.
+    static var uncitedFooterBlockHeight: CGFloat {
+        headerToBodyGap + uncitedFooterTopMargin + uncitedFooterRule + footerHeight
+    }
+
+    /// Constant-based height estimate: the first-frame fallback before the card
+    /// reports its measured ``EvidenceCardLayout``. Hits and edges use the
+    /// measured layout once it exists; do not tune this to chase paint.
     static func contentHeight(for placed: SourceGraphPlacedSubject) -> CGFloat {
         var height = shellPaddingTop + headerHeight
         let hasDescription = !placed.subject.description
@@ -136,13 +227,15 @@ struct EvidenceSubjectCard: View {
         if placed.isCited {
             height += headerToBodyGap
             let rows = CGFloat(max(placed.observations.count, 0))
-            // Top hairline + N property rows with inter-hairlines + Add property.
+            // Top hairline + N property rows with inter-hairlines + Add property,
+            // then a hairline and the footer as the stack's last row.
             height += stackHairline
                 + rows * (propertyRowHeight + stackHairline)
                 + addPropertyInStackHeight
+                + stackHairline + footerHeight
         } else {
-            height += headerToBodyGap + 26 // quiet Add property under body
-            height += shellPaddingBottom
+            height += headerToBodyGap + addPropertyQuietHeight // quiet Add property under body
+            height += uncitedFooterBlockHeight // footer replaces the bottom padding
         }
         return max(edgeLayoutHeight, height)
     }
@@ -173,6 +266,10 @@ struct EvidenceSubjectCard: View {
     var dragOffset: CGSize = .zero
     /// Nested action id currently under the pointer (idle hover), if any.
     var hoveredActionID: String? = nil
+    /// Nested action id held down by the pointer, if any (pressed paint).
+    var pressedActionID: String? = nil
+    /// Receives the painted layout (card size + tagged hit regions) for hit targets and edges.
+    var onLayout: ((EvidenceCardLayout) -> Void)? = nil
 
     private var isDragging: Bool {
         dragOffset != .zero
@@ -187,8 +284,10 @@ struct EvidenceSubjectCard: View {
             isDragging: isDragging,
             isConnectingFrom: isConnectingFrom,
             canCite: canCite,
-            hoveredActionID: hoveredActionID
+            hoveredActionID: hoveredActionID,
+            pressedActionID: pressedActionID
         )
+        .reportsEvidenceCardLayout(onLayout)
         .opacity(ghostOpacity)
         .offset(dragOffset)
         .zIndex(isDragging || isActivated ? 1 : 0)
@@ -211,7 +310,8 @@ struct EvidenceSubjectCard: View {
             isDragging: false,
             isConnectingFrom: false,
             canCite: true,
-            hoveredActionID: nil
+            hoveredActionID: nil,
+            pressedActionID: nil
         )
         .opacity(0.62)
         .accessibilityHidden(true)
@@ -245,6 +345,18 @@ struct EvidenceSubjectCard: View {
         return "\(placed.typeLabel), \(ref), \(name), \(citation)"
     }
 
+    /// VoiceOver name for the footer action: "Promote James Robins, CPR-…" or "Open person PER-…".
+    static func footerAccessibilityActionName(for placed: SourceGraphPlacedSubject) -> String {
+        if let membership = placed.membership {
+            return L10n.EvidenceGraph.openHandleAccessibility(kind: placed.kind, ref: membership.entity.ref)
+        }
+        let label = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
+        return L10n.EvidenceGraph.promoteAccessibility(
+            label: label.isEmpty ? placed.subject.ref : label,
+            ref: placed.subject.ref
+        )
+    }
+
     private var ghostOpacity: Double {
         if isDragging { return 0.92 }
         return placed.isCited ? 1 : 0.76
@@ -261,6 +373,9 @@ private struct EvidenceSubjectCardChrome: View {
     var isConnectingFrom: Bool
     var canCite: Bool
     var hoveredActionID: String?
+    var pressedActionID: String?
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var style: EvidenceSubjectKindStyle {
         EvidenceSubjectKindStyle.resolve(typeKey: placed.kind.rawValue, presentation: presentation)
@@ -289,11 +404,11 @@ private struct EvidenceSubjectCardChrome: View {
                 citedPropertyStack
             } else {
                 addPropertyQuietRow
+                uncitedFooter
             }
         }
         .padding(.horizontal, EvidenceSubjectCard.shellPaddingX)
         .padding(.top, EvidenceSubjectCard.shellPaddingTop)
-        .padding(.bottom, placed.isCited ? 0 : EvidenceSubjectCard.shellPaddingBottom)
         .frame(width: EvidenceSubjectCard.width, alignment: .leading)
         .background(cardBackground)
         .overlay(cardBorder)
@@ -346,7 +461,11 @@ private struct EvidenceSubjectCardChrome: View {
             style: style,
             hoveredActionID: hoveredActionID
         ) {
-            addPropertyStackRow
+            // The footer is the stack's last row, one hairline below Add property.
+            VStack(spacing: EvidenceSubjectCard.stackHairline) {
+                addPropertyStackRow
+                cardFooter
+            }
         }
         .padding(.top, EvidenceSubjectCard.stackHairline)
         .background(style.line)
@@ -377,6 +496,7 @@ private struct EvidenceSubjectCardChrome: View {
         .padding(.top, 9)
         .padding(.bottom, 11)
         .background(hovered && canCite ? style.chip : style.tint)
+        .evidenceCardHitRegion(EvidenceSubjectCard.addPropertyActionID)
         .accessibilityHidden(true)
     }
 
@@ -393,6 +513,95 @@ private struct EvidenceSubjectCardChrome: View {
                 : PVColor.textFaint
         )
         .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: EvidenceSubjectCard.addPropertyQuietHeight, alignment: .topLeading)
+        .evidenceCardHitRegion(EvidenceSubjectCard.addPropertyActionID)
+        .accessibilityHidden(true)
+    }
+
+    // MARK: Footer (S9-D8)
+
+    /// Uncited: the footer bleeds to the card edges under a 1pt kind-line rule
+    /// (cited cards get the same rule from the ruled stack's hairline).
+    private var uncitedFooter: some View {
+        VStack(spacing: 0) {
+            Rectangle()
+                .fill(style.line)
+                .frame(height: EvidenceSubjectCard.uncitedFooterRule)
+            cardFooter
+        }
+        .padding(.top, EvidenceSubjectCard.uncitedFooterTopMargin)
+        .padding(.horizontal, -EvidenceSubjectCard.shellPaddingX)
+    }
+
+    /// One fixed slot: Promote until the subject has an accepted Identity
+    /// Claim, then the membership row. Paint only — AppKit owns the hits.
+    @ViewBuilder
+    private var cardFooter: some View {
+        if let membership = placed.membership {
+            membershipRow(membership)
+        } else {
+            promoteFooter
+        }
+    }
+
+    /// Kit ghost Button on the kind band: still an action on this subject.
+    private var promoteFooter: some View {
+        HStack(spacing: 0) {
+            Button {} label: {
+                HStack(spacing: PVSpacing.space3) {
+                    PVIcon(.arrowUpRight, size: PVControlSize.sm.iconGlyphSize)
+                    Text(L10n.EvidenceGraph.promote)
+                }
+            }
+            .buttonStyle(.pv(.ghost, size: .sm))
+            .pvHostInteraction(
+                hovered: hoveredActionID == EvidenceSubjectCard.promoteActionID,
+                pressed: pressedActionID == EvidenceSubjectCard.promoteActionID
+            )
+            .allowsHitTesting(false)
+            .help(Text(L10n.EvidenceGraph.promoteHelp(kind: placed.kind)))
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, EvidenceSubjectCard.promoteInset)
+        .frame(maxWidth: .infinity, minHeight: EvidenceSubjectCard.footerHeight,
+               maxHeight: EvidenceSubjectCard.footerHeight, alignment: .leading)
+        .background(style.band)
+        .evidenceCardHitRegion(EvidenceSubjectCard.promoteActionID)
+        .accessibilityHidden(true)
+    }
+
+    /// Conclusion link on the kind band (S9-D8 rev 1 / rev 2). Told apart from the
+    /// Observation rows by shape — outline mono ref, no micro-caps label,
+    /// disclosure chevron — while keeping the card's colour identity.
+    private func membershipRow(_ membership: CatalogSubjectMembership) -> some View {
+        let hovered = hoveredActionID == EvidenceSubjectCard.openHandleActionID
+        let pressed = pressedActionID == EvidenceSubjectCard.openHandleActionID
+        return HStack(spacing: 8) {
+            PVBadge(text: membership.entity.ref, tone: .neutral, subtle: true, foreground: style.ink)
+            // S9-09 swaps this for the handle's resolved name, same slot.
+            Text(L10n.EvidenceGraph.openHandlePage(kind: placed.kind))
+                .font(PVFont.body(size: 12.5))
+                .italic()
+                .foregroundStyle(style.ink)
+                .lineLimit(1)
+            Spacer(minLength: 0)
+            PVIcon(.chevronForward, size: 14)
+                .foregroundStyle(style.ink)
+        }
+        .scaleEffect(pressed && !reduceMotion ? PVMotion.pressScale : 1)
+        .padding(.horizontal, EvidenceSubjectCard.shellPaddingX)
+        .frame(maxWidth: .infinity, minHeight: EvidenceSubjectCard.footerHeight,
+               maxHeight: EvidenceSubjectCard.footerHeight, alignment: .leading)
+        .background {
+            // Kind band, mixed with kind ink at 10% (hover) / 18% (pressed).
+            // One always-present layer; only its opacity follows the state.
+            style.ink
+                .opacity(pressed ? 0.18 : (hovered ? 0.10 : 0))
+                .background(style.band)
+        }
+        .pvAnimation(PVMotion.instantStandard, value: pressed)
+        .pvAnimation(PVMotion.instantStandard, value: hovered)
+        .evidenceCardHitRegion(EvidenceSubjectCard.openHandleActionID)
         .accessibilityHidden(true)
     }
 
