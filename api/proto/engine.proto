@@ -95,6 +95,7 @@ enum Method {
   METHOD_DELETE_ARTIFACT = 83;
   METHOD_DELETE_CITATION = 84;
   METHOD_PROMOTE_SUBJECT = 85;
+  METHOD_LIST_SUBJECT_MEMBERSHIPS = 86;
 }
 
 message PingRequest {
@@ -910,6 +911,27 @@ message PromoteSubjectRequest {
 message PromoteSubjectResponse {
   CanonicalEntity entity = 1;
   IdentityClaim claim = 2;
+}
+
+// SubjectMembership is a view of one Subject's accepted Identity Claim: the
+// claim id and the handle it files the Subject onto. kind is the handle's
+// subject type key (person, event, place, …). Not provisional / rejected claims.
+message SubjectMembership {
+  string subject_id = 1;
+  CanonicalEntity entity = 2;
+  string kind = 3;
+  string claim_id = 4;
+}
+
+// ListSubjectMemberships returns the handle of every promoted Subject on one
+// Source's Evidence graph. Unpromoted Subjects are absent.
+message ListSubjectMembershipsRequest {
+  string project_dir = 1;
+  string source_id = 2;
+}
+
+message ListSubjectMembershipsResponse {
+  repeated SubjectMembership memberships = 1;
 }
 
 message ListSubjectsRequest {

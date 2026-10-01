@@ -10,6 +10,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | --- | --- | --- |
 | S9-01 | PR | Conclusion schema + stores |
 | S9-02 | PR | Promote write v1 |
+| S9-03 | PR | Source graph carries membership |
 
 ## Steps
 
@@ -57,3 +58,22 @@ Shipped the first callable Conclusion write: mint a handle from a Subject and fi
 - Resolved-values cache and upkeep on claim create / Subject delete (**S9-06**)
 - Graph membership read (**S9-03**) and the card's Promote control (**S9-04**)
 - Bridge filing (**S9-28**); the Swift `sameness_claim` leftovers (**S9-18**)
+
+### S9-03 — Source graph carries membership
+
+The Evidence graph now knows which Subjects are promoted and onto which handle. This is data only; the card UI is S9-04.
+
+**What shipped**
+
+- **Membership** = a read-only view of a Subject's **accepted Identity Claim** (model §6's "member"), never a row of its own. It carries the claim id so later claim management (Spike 10) can act on it from the card. Provisional / rejected claims are not memberships; when they reach cards they get their own claims read.
+- `identityclaims.MembershipsBySource`: one indexed query (Source's Subjects → accepted claim → handle → type key). Unpromoted Subjects have no row.
+- FFI `METHOD_LIST_SUBJECT_MEMBERSHIPS` (`SubjectMembership { subject_id, claim_id, CanonicalEntity entity, kind }`).
+- Swift `listSubjectMemberships` on `GenealogyStore` / `GoStore` / `FakeStore`, loaded as the fourth parallel read of the `sourceGraph` key. `CatalogSubject` stays Interpretation-only.
+- `SourceGraphRows.memberships` → `SourceGraphPlacedSubject.membership` / `SourceGraphPlacedBridge.membership` (`nil` = unpromoted). The membership survives position patches.
+- `CatalogMutation.promotedSubject(sourceId:)` invalidates exactly that Source's graph key.
+
+**What stayed out**
+
+- The card's Promote control, membership row, and dispatching `.promotedSubject` (**S9-04**)
+- The handle's resolved name on the card (**S9-09**)
+- Busting other Conclusion keys on Promote (lists arrive in **S9-07**)

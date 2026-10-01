@@ -286,6 +286,45 @@ struct CatalogQueryRegistryTests {
         #expect(snapshot.subjects.first?.kind == .person)
         #expect(snapshot.bridges.count == 1)
         #expect(snapshot.bridges.first?.kind == .location)
+        #expect(snapshot.subjects.first?.membership == nil)
+    }
+
+    @Test func sourceGraphLoadsMembershipOfPromotedSubjects() async throws {
+        let store = FakeStore()
+        seedStore(store)
+        store.subjectTypesByProject[projectDir] = [
+            CatalogSubjectType(
+                id: "type-person", key: "person", origin: "provenencia", label: "Person",
+                description: "", refPrefix: "PER", candidateRefPrefix: "CPR"
+            ),
+        ]
+        store.subjectsBySource["s1"] = [
+            CatalogSubject(id: "sub-1", ref: "CPR-1", sourceID: "s1", subjectTypeID: "type-person", label: "Alice", description: ""),
+            CatalogSubject(id: "sub-2", ref: "CPR-2", sourceID: "s1", subjectTypeID: "type-person", label: "Bob", description: ""),
+        ]
+        for (id, x) in [("sub-1", Int64(1)), ("sub-2", Int64(4))] {
+            store.subjectPositionsBySubject[id] = CatalogSubjectPosition(subjectID: id, gridX: x, gridY: 1)
+        }
+        let promoted = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-1")
+
+        let session = makeSession(store: store)
+        let handle: QueryHandle<SourceGraphRows> = session.query(
+            CatalogQueryKey.sourceGraph(project: session.projectKey, sourceId: "s1")
+        )
+        await waitForFetchComplete(handle)
+
+        #expect(handle.value?.memberships.map(\.subjectID) == ["sub-1"])
+        let snapshot = SourceGraphSnapshot.build(
+            rows: handle.value ?? SourceGraphRows(sourceId: "s1"),
+            types: store.subjectTypesByProject[projectDir] ?? [],
+            rules: []
+        )
+        let alice = snapshot.subjects.first { $0.id == "sub-1" }
+        let bob = snapshot.subjects.first { $0.id == "sub-2" }
+        #expect(alice?.membership?.entity.ref == promoted.entity.ref)
+        #expect(alice?.membership?.kind == "person")
+        #expect(alice?.membership?.claimID == promoted.claim.id)
+        #expect(bob != nil && bob?.membership == nil)
     }
 
     @Test func registryBackedQueryDoesNotRecallLoader() async {
@@ -567,6 +606,10 @@ struct CatalogQueryRegistryTests {
             .key(.subjectFieldsWorkspace(project: project)),
             .allCached(.citationsByArtifact),
         ])
+        // A Promote changes only that Source's graph cards (their membership row).
+        #expect(registry.invalidations(by: .promotedSubject(sourceId: "s1"), project: project) == [
+            .key(.sourceGraph(project: project, sourceId: "s1")),
+        ])
         #expect(registry.invalidations(by: .createdPropertyTerm(propertyId: "p1"), project: project) == [
             .key(.propertyTerms(project: project, propertyId: "p1")),
         ])
@@ -580,6 +623,7 @@ struct CatalogQueryRegistryTests {
             .mutatedSourceGraph(sourceId: "s1"),
             .deletedSubject(sourceId: "s1"),
             .savedCitation(sourceId: "s1"),
+            .promotedSubject(sourceId: "s1"),
             .createdPropertyTerm(propertyId: "p1"),
         ]
         #expect(everyMutation.allSatisfy { mutation in

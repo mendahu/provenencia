@@ -372,4 +372,47 @@ struct SourceGraphSnapshotTests {
         let label = EvidenceSubjectCard.accessibilityLabel(for: placed)
         #expect(label.contains(String(localized: L10n.EvidenceGraph.citedAccessibility)))
     }
+
+    @Test func buildAttachesMembershipToPrimariesAndBridges() {
+        let alice = CatalogSubject(
+            id: "s-alice", ref: "CPR-A", sourceID: "src-1", subjectTypeID: personType.id, label: "Alice", description: ""
+        )
+        let bob = CatalogSubject(
+            id: "s-bob", ref: "CPR-B", sourceID: "src-1", subjectTypeID: personType.id, label: "Bob", description: ""
+        )
+        let bridge = CatalogSubject(
+            id: "s-loc", ref: "CLO-A", sourceID: "src-1", subjectTypeID: locationType.id, label: "There", description: ""
+        )
+        let handle = CatalogCanonicalEntity(id: "e-1", ref: "PER-7KD45", subjectTypeID: personType.id, label: "")
+        let association = CatalogCanonicalEntity(id: "e-2", ref: "LOC-3TX9Q", subjectTypeID: locationType.id, label: "")
+        let snapshot = SourceGraphSnapshot.build(
+            sourceId: "src-1",
+            subjects: [alice, bob, bridge],
+            positions: [
+                CatalogSubjectPosition(subjectID: alice.id, gridX: 0, gridY: 0),
+                CatalogSubjectPosition(subjectID: bob.id, gridX: 4, gridY: 0),
+                CatalogSubjectPosition(subjectID: bridge.id, gridX: 2, gridY: 2),
+            ],
+            types: [personType, locationType],
+            memberships: [
+                CatalogSubjectMembership(subjectID: alice.id, claimID: "c-1", entity: handle, kind: "person"),
+                CatalogSubjectMembership(subjectID: bridge.id, claimID: "c-2", entity: association, kind: "location"),
+            ]
+        )
+        #expect(snapshot.subjects.first { $0.id == alice.id }?.membership?.entity.ref == "PER-7KD45")
+        #expect(snapshot.subjects.first { $0.id == bob.id }?.membership == nil)
+        #expect(snapshot.bridges.first?.membership?.entity.ref == "LOC-3TX9Q")
+    }
+
+    @Test func positionUpdateKeepsMemberships() {
+        let membership = CatalogSubjectMembership(
+            subjectID: "s-alice",
+            claimID: "c-1",
+            entity: CatalogCanonicalEntity(id: "e-1", ref: "PER-7KD45", subjectTypeID: personType.id, label: ""),
+            kind: "person"
+        )
+        let rows = SourceGraphRows(sourceId: "src-1", memberships: [membership])
+            .updatingPosition(subjectID: "s-alice", gridX: 3, gridY: 3)
+        #expect(rows.memberships == [membership])
+    }
 }

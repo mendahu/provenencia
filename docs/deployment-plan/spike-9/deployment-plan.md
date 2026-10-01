@@ -432,7 +432,7 @@ In order; each brief sits just above the PR it gates.
 
 - [x] S9-01 — Conclusion schema + stores → [`completed.md`](completed.md)
 - [x] S9-02 — Promote write v1 → [`completed.md`](completed.md)
-- [ ] S9-03 — Source graph carries membership
+- [x] S9-03 — Source graph carries membership → [`completed.md`](completed.md)
 - [ ] ✎ S9-D8 — Design: graph subject card
 - [ ] S9-04 — Graph card: Promote + membership
 - [ ] S9-05 — Resolver core v1
@@ -510,6 +510,8 @@ In order; each brief sits just above the PR it gates.
 
 #### S9-03 — Source graph carries membership
 
+**Done.** See [`completed.md`](completed.md#s9-03--source-graph-carries-membership). Nothing dispatches `.promotedSubject(sourceId:)` yet — **S9-04** must, after `promoteSubject` succeeds.
+
 | | |
 | --- | --- |
 | **In** | Source-graph read includes each subject's accepted handle (id, ref, kind) or none. Swift model field. Promote mutation invalidates that Source's graph. |
@@ -520,7 +522,7 @@ In order; each brief sits just above the PR it gates.
 
 | | |
 | --- | --- |
-| **In** | Per **S9-D8**: Promote control on unpromoted person / event / place cards. **v1:** a Confirm (*Create a new Person from CPR-…?*) then mint via S9-02. Membership row shows the handle ref (name arrives in S9-09). Canvas action targets + VoiceOver actions. |
+| **In** | Per **S9-D8**: Promote control on unpromoted person / event / place cards (`SourceGraphPlacedSubject.membership == nil`). **v1:** a Confirm (*Create a new Person from CPR-…?*) then mint via S9-02 and apply `.promotedSubject(sourceId:)`. Membership row shows the handle ref from `membership.entity.ref` (name arrives in S9-09). Canvas action targets + VoiceOver actions. |
 | **Out** | The Promote flow (S9-11 reroutes the button to it). |
 | **Check** | Promote a card; it shows PER-… and no longer offers Promote. |
 | **Depends on** | **S9-D8**, S9-02, S9-03 |

@@ -82,7 +82,7 @@ struct CatalogQueryRegistry: Sendable {
         Spec(
             kind: .sourceGraph,
             stalePolicy: .sessionFresh,
-            invalidateOn: [.mutatedSourceGraph, .savedCitation, .deletedSubject, .deletedSource]
+            invalidateOn: [.mutatedSourceGraph, .savedCitation, .deletedSubject, .deletedSource, .promotedSubject]
         ),
         Spec(
             kind: .citationCounts,
@@ -160,11 +160,16 @@ struct CatalogQueryRegistry: Sendable {
                 projectDir: project.projectDir,
                 sourceID: sourceId
             )
+            async let memberships = store.listSubjectMemberships(
+                projectDir: project.projectDir,
+                sourceID: sourceId
+            )
             return SourceGraphRows(
                 sourceId: sourceId,
                 subjects: try await subjects,
                 positions: try await positions,
-                observations: try await observations
+                observations: try await observations,
+                memberships: try await memberships
             )
         case .connectRules:
             return try await store.listConnectRules()
@@ -232,7 +237,8 @@ private extension CatalogQueryKey.Kind {
         case .sourceGraph:
             switch mutation {
             case .mutatedSourceGraph(let sourceId), .savedCitation(let sourceId),
-                 .deletedSubject(let sourceId), .deletedSource(let sourceId):
+                 .deletedSubject(let sourceId), .deletedSource(let sourceId),
+                 .promotedSubject(let sourceId):
                 return .key(.sourceGraph(project: project, sourceId: sourceId))
             default:
                 return .allCached(.sourceGraph)
