@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/project"
 )
 
@@ -122,11 +123,15 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 		return err
 	}
 
+	// Pins leave with the Observation; the claims that pinned it stay, weaker.
+	changes, err := identityclaims.ReleaseObservationPinsTx(tx, id)
+	if err != nil {
+		return err
+	}
 	notes, err := listNotesTx(tx, id)
 	if err != nil {
 		return err
 	}
-	changes := make([]audit.Change, 0, 1+len(notes))
 	for _, note := range notes {
 		changes = append(changes, audit.Change{
 			EntityType: "observation_note",

@@ -211,11 +211,13 @@ Evidence rows are pointers to Observations that participate in the claim's exhib
 ```sql
 CREATE TABLE identity_claim_evidence (
     identity_claim_id   BLOB NOT NULL REFERENCES identity_claims(id) ON DELETE CASCADE,
-    observation_id      BLOB NOT NULL REFERENCES observations(id),
+    observation_id      BLOB NOT NULL REFERENCES observations(id) ON DELETE CASCADE,
 
     PRIMARY KEY (identity_claim_id, observation_id)
 ) STRICT;
 ```
+
+A pin is a facet of **both** its claim and its Observation. Deleting a pinned Observation is allowed: its pins go with it, and every claim that pinned it stays, with a weaker exhibit (§5.2). Deleting a claim (or the Subject that carries it) drops that claim's pins. The application removes pins and claims **explicitly** in the same transaction so each removal is audited; the `CASCADE` is only a backstop for a writer that forgets. The delete confirm names the handles whose claims lose evidence.
 
 Pin every relevant Observation here; write the conclusion and inference in `identity_claims.argument`. Exhibit pins are **Observations only** — not Citations, Sources, or other Claims. A confirmed match pins Observations that already exist on the two subjects (§5.1). Broader exhibit types can wait until a concrete workflow needs them.
 
@@ -239,7 +241,9 @@ Rejecting, deleting, or moving an accepted Identity Claim does not change any ot
 
 A claim that still pins another remaining member has a live comparison. A claim whose only comparison pins were the departing subject has an exhibit that no longer explains membership. Both are shown. Neither is evicted. The researcher re-pins against a member who is still there, accepts the claim again with no exhibit, or rejects it.
 
-The same review applies when a pinned Observation is deleted or its value changes materially.
+The same review applies when a pinned Observation is deleted or its value changes materially. Deleting a pinned Observation is never refused (§5); the claims it supported are left for this review instead.
+
+**Weak claims (review alert, future UI).** A claim is surfaced for review when it is accepted, has **zero pins**, and its handle has **more than one** accepted member — it explains membership with no confirmed comparison. A handle's only member (a grounding claim, §5.1) is not flagged. No column stores this; it is a query over `identity_claims` and `identity_claim_evidence`. The audit history of `identity_claim_evidence` (removals are recorded under the claim's id) says *why* a claim is weak: never pinned, or evidence removed when an Observation or member was deleted. The alert offers the same three actions as above — re-pin against a remaining member, accept as-is, or reject — and never acts on its own. Planned with claim management (Spike 10); see [`ideas/identity-claim-review.md`](ideas/identity-claim-review.md).
 
 ## 5.3 Promote comparison (future UI)
 

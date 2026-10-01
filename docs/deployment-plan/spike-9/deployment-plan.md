@@ -63,7 +63,7 @@ The Conclusion tables do not exist yet. Ship the subset this spike writes.
 | --- | --- |
 | **In** | `claim_confidence_grades` (+ seed §5.5); `canonical_entities`; `identity_claims` (composite FKs on `subject_type_id`, `UNIQUE (subject_id, entity_id)`, partial unique index on one accepted claim per subject); `identity_claim_evidence`. Canonical refs minted from `subject_types.ref_prefix`. Seed Property `event_name` (`text`) bound to `event` (Q13) — in the Install seed and via migration for existing projects. Audit on every write. Go packages + FFI handlers for create / read / list. |
 | **Out** | `reconciliation_claims` and its evidence table; `canonical_entity_notes`; merge re-pointing; `project_settings` / `name_format_profiles`. |
-| **Delete Impact** | An Observation pinned by `identity_claim_evidence` names that claim. A Subject with an Identity Claim names the handle it would leave (the claim itself CASCADEs per the model). Replace the stale `ViaSamenessEvidence` reservation with the identity-evidence via. |
+| **Delete Impact** | Non-blocking `cascades`: a Subject with an Identity Claim names the handle it would leave; a pinned Observation names the handles whose claims lose it. Neither delete is refused. Claims and pins are removed **explicitly** in the delete transaction and audited; the schema `CASCADE`s are backstops. Weakened claims go to the review alert (model §5.2, Spike 10). Replace the stale `ViaSamenessEvidence` reservation. |
 | **Derived** | The resolved-values cache (R3) and search documents (R8). |
 
 Skills: [`add-catalog-migration`](../../../.cursor/skills/add-catalog-migration/SKILL.md), [`add-catalog-ref`](../../../.cursor/skills/add-catalog-ref/SKILL.md), [`add-seeded-vocabulary`](../../../.cursor/skills/add-seeded-vocabulary/SKILL.md), [`add-ffi-handler`](../../../.cursor/skills/add-ffi-handler/SKILL.md), [`add-catalog-delete`](../../../.cursor/skills/add-catalog-delete/SKILL.md).
@@ -339,9 +339,9 @@ SLICE 4 — Person detail + name resolution
 
 SLICE 5 — Compare, pins, backfill
   S9-17  Comparison read + pins + backfill in the Promote write
-  S9-18  Delete Impact: pinned Observations name their claims
+  S9-18  Pinned-Observation delete end to end (composer confirm names the evidence it leaves)
   ✎ S9-D11 ──▶ S9-19  Promote compare
-  Check: join with confirmed pairs → both claims pinned; delete a pinned Observation → blocked, claim named.
+  Check: join with confirmed pairs → both claims pinned; delete a pinned Observation → allowed, confirm names the handle, pins audited away.
 
 SLICE 6 — Events
   S9-20  Seed event_name
@@ -404,7 +404,7 @@ CLOSE
 | S9-15 Detail composer + read | — | S9-07 |
 | S9-16 Person detail | **S9-D5** | S9-13, S9-14, S9-15 |
 | S9-17 Compare read + pins + backfill | — | S9-12, S9-13 |
-| S9-18 Delete Impact for pins | — | S9-17 |
+| S9-18 Pinned-Observation delete end to end | — | S9-17 |
 | S9-19 Promote compare | **S9-D11** | S9-17 |
 | S9-20 Seed `event_name` | — | — |
 | S9-21 Date auto-reconciler | — | S9-05 |
@@ -453,7 +453,7 @@ In order; each brief sits just above the PR it gates.
 - [ ] ✎ S9-D5 — Design: Person detail
 - [ ] S9-16 — Person detail
 - [ ] S9-17 — Compare read + pins + backfill
-- [ ] S9-18 — Delete Impact for pins
+- [ ] S9-18 — Pinned-Observation delete end to end
 - [ ] ✎ S9-D11 — Design: Promote compare
 - [ ] S9-19 — Promote compare
 - [ ] S9-20 — Seed `event_name`
@@ -636,11 +636,13 @@ In order; each brief sits just above the PR it gates.
 | **Testable** | Pins on both claims; older `argument` untouched; compatible pairs flagged. |
 | **Depends on** | S9-12, S9-13 |
 
-#### S9-18 — Delete Impact for pins
+#### S9-18 — Pinned-Observation delete end to end
 
 | | |
 | --- | --- |
-| **In** | Probe already registered in S9-01 (`identity_claim_evidence.observation_id`, names the handle; `ViaSamenessEvidence` removed). This PR: L10n for the `canonical_entity` kind and via, drop the Swift `sameness_claim` leftovers, end-to-end Impact through the composer. |
+| **Already shipped** | S9-02 made pins a non-blocking cascade: migration `000033` (`observation_id … ON DELETE CASCADE` as backstop), audited explicit removal in `observations.Delete` / `subjects.Delete`, and the confirm sentence naming the handles. |
+| **In** | With real pins from S9-17: composer row delete and Subject delete through the shipped confirm; FakeStore models pins so Swift tests cover it; drop the Swift `sameness_claim` leftovers. Confirm the audit trail reads back per claim. |
+| **Check** | Delete a pinned Observation from the composer → allowed; confirm names PER-…; both claims keep their other pins; audit shows the removed pins. |
 | **Depends on** | S9-17 |
 
 #### S9-19 — Promote compare
@@ -648,7 +650,7 @@ In order; each brief sits just above the PR it gates.
 | | |
 | --- | --- |
 | **In** | Per **S9-D11**: compare step for existing handles with members, between target and claim fields. |
-| **Check** | Join with two confirmed pairs → both claims pinned; delete a pinned Observation → blocked with the claim named. |
+| **Check** | Join with two confirmed pairs → both claims pinned. |
 | **Depends on** | **S9-D11**, S9-17 |
 
 ### Slice 6 — Events
@@ -797,7 +799,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 | Promote writes `accepted` claims | `provisional` / `rejected` in Promote (later spike) |
 | Person / Event / Place lists and details | Association-kind pages; tree / timeline / map |
 | Thumbnail **slot** with placeholder | Likeness / depiction value type |
-| Delete Impact naming Identity Claims | Review queue for claims whose comparison member left (§5.2) |
+| Delete Impact naming Identity Claims (non-blocking cascades, audited removal) | Review queue / weak-claim alert for claims whose evidence or comparison member left (§5.2, Spike 10) |
 | Omnibar search for Persons / Events / Places (ref + full text on resolved values) | Subjects as hits; cross-root association search |
 
 ---
@@ -809,13 +811,14 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 3. **The cache is not truth.** Nothing references `conclusion_resolved_values`; synthesized dates and merged names live only there, serialized. No claim, DateValue, or NameValue row is written by resolution ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) §5.3).
 4. **No vocabulary-named columns** in any derived table. If a screen needs a new concept, it is a composer change or a `property_id` row — never a column.
 5. **Upkeep misses are silent.** A trigger the affected-handles function forgets leaves a stale row nobody notices. The rebuild-equals-upkeep test is the guard; every new write path adds its trigger and a test sequence.
-6. **Cascades bypass Go.** `ON DELETE CASCADE` (Subject → Identity Claims) removes rows without a Go write path. The Go delete must compute affected handles **before** deleting.
+6. **Cascades bypass Go — so Go doesn't rely on them.** `subjects.Delete` and `observations.Delete` remove claims and pins explicitly (audited) before the parent `DELETE`; the schema `CASCADE`s are backstops. Cache upkeep (S9-06) hooks those same release calls to learn the affected handles **before** anything is gone. Any new writer that deletes Subjects or Observations must call them too.
 7. **Promoting a subject can change other handles.** Its Observations' targets and inbound subject-valued Observations re-map; R3's claim trigger covers the second hop.
 8. **One accepted claim per Subject** is a partial unique index. Promote must hide or refuse subjects that are already members, and a step that loses a race fails alone — earlier steps stay saved.
 9. **Composite FKs** carry `subject_type_id` on the claim. A person Subject cannot be claimed onto a Place; the target picker filters by type so the researcher never sees that error.
 10. **Backfill is symmetric.** A confirmed pair pins both Observations on the incoming claim **and** the existing member's claim. The older claim's `argument` is not rewritten.
 11. **Pins are Observations only.** Not Citations, Subjects, or Sources. Confirming a match creates no Observation.
-12. ~~**Stale reservation.**~~ Go side retired in S9-01 (`identity_claim_evidence.observation_id` is a live probe). Swift still carries `sameness_claim` L10n / preview until S9-18.
+12. ~~**Stale reservation.**~~ Go side retired in S9-01. Swift still carries `sameness_claim` L10n / preview until S9-18.
+15. **Pins never block.** A pinned Observation (or a Subject whose Observations are pinned on other members' claims) deletes freely; the claims stay with a weaker exhibit. Do not reintroduce a blocking evidence probe — weak claims are the §5.2 review alert's job.
 13. **Candidate vs canonical refs.** Subjects are `CPR-…`; handles are `PER-…`. Both prefixes already exist on `subject_types`.
 14. **Cross-Source reads** run on the serialized catalog session. Keep rebuild off the open path's critical section if it gets long.
 
@@ -848,7 +851,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 - [`research-judgment-model.md`](../../research-judgment-model.md) §1.1: cached rank order is derived, not stored judgment.
 - [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §5.5: mark claim confidence grades as seeded. §3.5: `subject` = the event's principal(s), possibly several; marriage uses two `subject` Participations; `spouse` is a principal's spouse on another event. §3.2 / §3.3: `event_name` (text) bound to `event`.
 - [`catalog-refs.md`](../../catalog-refs.md): canonical ref minting.
-- [`catalog-deletes.md`](../../catalog-deletes.md): Identity Claim / evidence Impact; compute cache dependents before CASCADE.
+- [`catalog-deletes.md`](../../catalog-deletes.md): Identity Claim / evidence Impact (done in S9-02: non-blocking cascades, explicit audited release); hook cache dependents into the release calls (S9-06).
 - [`macos-client-patterns.md`](../../macos-client-patterns.md): Conclusion query keys and their invalidation rule; Go returns structures (DateValue, NameValue, title parts), Swift formats text.
 - [`omnibar-search.md`](../archive/spike-3/omnibar-search.md): new kinds, location mapping, composed documents and header-dependent reprojection.
 

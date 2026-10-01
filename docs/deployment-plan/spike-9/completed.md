@@ -35,7 +35,7 @@ Shipped the Conclusion tables and the Go stores Promote writes through. No FFI, 
 
 ### S9-02 — Promote write v1
 
-Shipped the first callable Conclusion write: mint a handle from a Subject and file an accepted Identity Claim, one transaction, over FFI and from Swift. Subject delete now names the handle it would leave.
+Shipped the first callable Conclusion write: mint a handle from a Subject and file an accepted Identity Claim, one transaction, over FFI and from Swift. Subject and Observation deletes now name the handles they affect, never refuse because of Conclusion, and audit what they remove.
 
 **What shipped**
 
@@ -43,6 +43,8 @@ Shipped the first callable Conclusion write: mint a handle from a Subject and fi
 - FFI `METHOD_PROMOTE_SUBJECT` (`PromoteSubjectRequest` → `CanonicalEntity` + `IdentityClaim`); Swift `promoteSubject` on `GenealogyStore` / `GoStore` / `FakeStore` (`membershipBySubject` for S9-03 / S9-04)
 - Delete Impact `cascades`: a non-blocking list (`cascadeEdges`) through Go, proto and Swift. A promoted Subject reports `identity_claims.subject_id` → its handle; the DeleteImpact confirm appends "It will no longer belong to PER-…. That record stays."
 - L10n: error copy for the identity-claim, canonical-entity and promote codes; `canonical_entity` Impact kind noun
+- **Pins never block deletes.** Migration `000033` rebuilds `identity_claim_evidence` with `observation_id … ON DELETE CASCADE` (backstop only). `observations.Delete` removes the Observation's pins and `subjects.Delete` removes its claims and the pins on its Observations **explicitly**, audited in the same revision (`identityclaims.ReleaseObservationPinsTx` / `ReleaseSubjectTx`). A pinned Observation's confirm says it leaves the evidence for PER-…; the S9-01 blocking evidence probe is gone
+- Future UI: weak-claim review alert written into model §5.2 and [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md) (Spike 10)
 
 **What stayed out**
 

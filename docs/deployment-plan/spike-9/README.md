@@ -35,7 +35,7 @@ Authoritative model: [`conclusion-layer-data-model.md`](../../conclusion-layer-d
 ## Out of scope (for this spike)
 
 - Reconciliation Claims (schema, UI, and the `name_format` claim)
-- Managing Identity Claims after Promote: removing a member, removing or editing a claim, adding evidence later (Spike 10)
+- Managing Identity Claims after Promote: removing a member, removing or editing a claim, adding evidence later, and the **weak-claim review alert** for claims whose evidence was deleted (Spike 10; model §5.2, [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md))
 - Canonical merge (`merged_into_id` behavior)
 - Stub handles created without a Subject (asserted / inferred Places, "Mother of James")
 - `canonical_entity_notes`

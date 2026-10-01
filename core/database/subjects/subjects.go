@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
@@ -265,6 +266,12 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	}); err != nil {
 		return err
 	}
+	// Explicit, audited removal of pins on this Subject's Observations and of
+	// its own claims; the handles stay. Schema CASCADE is only the backstop.
+	conclusion, err := identityclaims.ReleaseSubjectTx(tx, id)
+	if err != nil {
+		return err
+	}
 	released, err := deleteimpact.ReleaseConnectionFacets(tx, id)
 	if err != nil {
 		return err
@@ -284,7 +291,8 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	if prev.Description != "" {
 		fields["description"] = audit.FieldDiff{Old: prev.Description, New: nil}
 	}
-	changes := make([]audit.Change, 0, 1+len(released)*2)
+	changes := make([]audit.Change, 0, 1+len(conclusion)+len(released)*2)
+	changes = append(changes, conclusion...)
 	for _, facet := range released {
 		for _, note := range facet.Notes {
 			changes = append(changes, audit.Change{

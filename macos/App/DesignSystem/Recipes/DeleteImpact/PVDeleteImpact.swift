@@ -55,8 +55,8 @@ enum PVDeleteImpactCopy {
     static func confirmCopy(for target: PVDeleteImpactTarget, report: CatalogDeleteImpact? = nil) -> PVConfirmCopy {
         let noun = noun(target.kind)
         var message = String(localized: L10n.DeleteImpact.confirmMessage)
-        if let leaves = leavesLine(report) {
-            message += "\n\n" + leaves
+        for line in cascadeLines(report) {
+            message += "\n\n" + line
         }
         return PVConfirmCopy(
             title: L10n.DeleteImpact.confirmTitle(noun: noun, ref: target.ref),
@@ -66,16 +66,25 @@ enum PVDeleteImpactCopy {
         )
     }
 
-    /// Non-blocking cascades the confirm names: a promoted Subject leaves its handle.
-    static func leavesLine(_ report: CatalogDeleteImpact?) -> String? {
-        let refs = (report?.cascades ?? [])
-            .filter { $0.via == "identity_claims.subject_id" }
-            .flatMap(\.listed)
-            .map(\.ref)
-        guard !refs.isEmpty else { return nil }
-        return L10n.DeleteImpact.leavesHandle(
-            handleRefs: refs.formatted(.list(type: .and))
-        )
+    /// Non-blocking cascades the confirm names, one sentence per known via:
+    /// a promoted Subject leaves its handle; a pinned Observation leaves the
+    /// evidence of the claims that pinned it. Unknown vias are not spoken.
+    static func cascadeLines(_ report: CatalogDeleteImpact?) -> [String] {
+        func refs(_ via: String) -> String? {
+            let refs = (report?.cascades ?? [])
+                .filter { $0.via == via }
+                .flatMap(\.listed)
+                .map(\.ref)
+            return refs.isEmpty ? nil : refs.formatted(.list(type: .and))
+        }
+        var lines: [String] = []
+        if let handles = refs("identity_claims.subject_id") {
+            lines.append(L10n.DeleteImpact.leavesHandle(handleRefs: handles))
+        }
+        if let handles = refs("identity_claim_evidence.observation_id") {
+            lines.append(L10n.DeleteImpact.leavesEvidence(handleRefs: handles))
+        }
+        return lines
     }
 
     static func noticeTitle(for target: PVDeleteImpactTarget) -> String {
@@ -435,6 +444,19 @@ enum PVDeleteImpactPreviewData {
     }
 
     static let allowed = CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
+    static let pinnedObservation = CatalogDeleteImpact(
+        allowed: true,
+        gate: .ok,
+        groups: [],
+        cascades: [
+            CatalogDeleteImpactGroup(
+                via: "identity_claim_evidence.observation_id",
+                kind: "canonical_entity",
+                total: 1,
+                listed: [listed(ref: "PER-7KD45", title: "PER-7KD45")]
+            ),
+        ]
+    )
     static let promotedSubject = CatalogDeleteImpact(
         allowed: true,
         gate: .ok,

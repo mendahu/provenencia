@@ -140,7 +140,7 @@ var foreignKeys = []fkSpec{
 	{FromTable: "identity_claims", FromCol: "entity_id", FromCols: []string{"entity_id", "subject_type_id"}, ToTable: "canonical_entities", OnDelete: "CASCADE", Bucket: BucketFacet},
 	{FromTable: "identity_claims", FromCol: "confidence_grade_id", ToTable: "claim_confidence_grades", OnDelete: "NO ACTION", Bucket: BucketResource},
 	{FromTable: "identity_claim_evidence", FromCol: "identity_claim_id", ToTable: "identity_claims", OnDelete: "CASCADE", Bucket: BucketFacet},
-	{FromTable: "identity_claim_evidence", FromCol: "observation_id", ToTable: "observations", OnDelete: "NO ACTION", Bucket: BucketResource},
+	{FromTable: "identity_claim_evidence", FromCol: "observation_id", ToTable: "observations", OnDelete: "CASCADE", Bucket: BucketFacet},
 }
 
 var originRules = []originRule{
@@ -224,15 +224,6 @@ var inboundEdgeList = sync.OnceValue(func() []inboundEdge {
 				JOIN canonical_entities e ON e.id = ic.entity_id
 				WHERE ic.confidence_grade_id = ?
 				ORDER BY e.ref COLLATE NOCASE LIMIT ?`),
-		joinEdge(KindObservation, "identity_claim_evidence.observation_id", KindCanonicalEntity,
-			`SELECT COUNT(DISTINCT ic.entity_id) FROM identity_claim_evidence ev
-				JOIN identity_claims ic ON ic.id = ev.identity_claim_id
-				WHERE ev.observation_id = ?`,
-			`SELECT DISTINCT e.id, e.ref FROM identity_claim_evidence ev
-				JOIN identity_claims ic ON ic.id = ev.identity_claim_id
-				JOIN canonical_entities e ON e.id = ic.entity_id
-				WHERE ev.observation_id = ?
-				ORDER BY e.ref COLLATE NOCASE LIMIT ?`),
 		reservedStub(KindObservation, ViaReconciliationEvidence, KindReconciliationClaim),
 		reservedStub(KindObservation, ViaNarrativeTarget, KindNarrative),
 	}
@@ -253,6 +244,22 @@ var cascadeEdges = sync.OnceValue(func() []inboundEdge {
 			List: listSQLFn(`SELECT e.id, e.ref FROM identity_claims ic
 				JOIN canonical_entities e ON e.id = ic.entity_id
 				WHERE ic.subject_id = ? AND ic.status = 'accepted'
+				ORDER BY e.ref COLLATE NOCASE LIMIT ?`),
+		},
+		// A pinned Observation leaves the exhibit of every claim that pinned it
+		// (any status). Named by handle; the claims stay, weaker (§5.2 review).
+		{
+			Parent: KindObservation,
+			Via:    "identity_claim_evidence.observation_id",
+			Child:  KindCanonicalEntity,
+			Bucket: BucketFacet,
+			Count: countSQLFn(`SELECT COUNT(DISTINCT ic.entity_id) FROM identity_claim_evidence ev
+				JOIN identity_claims ic ON ic.id = ev.identity_claim_id
+				WHERE ev.observation_id = ?`),
+			List: listSQLFn(`SELECT DISTINCT e.id, e.ref FROM identity_claim_evidence ev
+				JOIN identity_claims ic ON ic.id = ev.identity_claim_id
+				JOIN canonical_entities e ON e.id = ic.entity_id
+				WHERE ev.observation_id = ?
 				ORDER BY e.ref COLLATE NOCASE LIMIT ?`),
 		},
 	}

@@ -6114,6 +6114,16 @@ enum L10n {
             return String(format: format, locale: .current, handleRefs)
         }
 
+        /// Allowed Observation delete: the handle(s) whose claims pinned it. Arguments: handle refs (joined).
+        static func leavesEvidence(handleRefs: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "deleteImpact.confirm.leavesEvidence",
+                defaultValue: "It’s also removed from the evidence for %@. Those claims stay, with less evidence.",
+                comment: "Allowed Observation delete confirm, appended after the consequence; argument is the handle ref(s) whose Identity Claims pinned it"
+            ))
+            return String(format: format, locale: .current, handleRefs)
+        }
+
         static let confirmMessage = LocalizedStringResource(
             "deleteImpact.confirm.message",
             defaultValue: "It’s erased from the catalog. This can’t be undone.",
