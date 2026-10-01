@@ -23,6 +23,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`depictions-and-likenesses.md`](depictions-and-likenesses.md)
 - [`share-packages.md`](share-packages.md)
 - [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md)
+- [`identity-claim-review.md`](identity-claim-review.md)
 
 ## Archived
 

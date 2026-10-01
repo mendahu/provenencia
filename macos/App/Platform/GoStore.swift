@@ -714,6 +714,31 @@ struct GoStore: GenealogyStore {
         )
     }
 
+    func promoteSubject(projectDir: String, userID: String, subjectID: String) async throws -> CatalogPromoteResult {
+        var req = Provenencia_Engine_V1_PromoteSubjectRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.subjectID = subjectID
+        let resp: Provenencia_Engine_V1_PromoteSubjectResponse = try await provenenciaCall(
+            method: CoreMethod.promoteSubject,
+            request: req
+        )
+        return CatalogPromoteResult(
+            entity: CatalogCanonicalEntity(
+                id: resp.entity.id,
+                ref: resp.entity.ref,
+                subjectTypeID: resp.entity.subjectTypeID,
+                label: resp.entity.label
+            ),
+            claim: CatalogIdentityClaim(
+                id: resp.claim.id,
+                subjectID: resp.claim.subjectID,
+                entityID: resp.claim.entityID,
+                status: resp.claim.status
+            )
+        )
+    }
+
     func listSubjects(projectDir: String, sourceID: String) async throws -> [CatalogSubject] {
         var req = Provenencia_Engine_V1_ListSubjectsRequest()
         req.projectDir = projectDir
@@ -1051,19 +1076,22 @@ struct GoStore: GenealogyStore {
         return CatalogDeleteImpact(
             allowed: resp.allowed,
             gate: Self.mapDeleteImpactGate(resp.gate),
-            groups: resp.groups.map { g in
-                CatalogDeleteImpactGroup(
-                    via: g.via,
-                    kind: g.kind,
-                    total: Int(g.total),
-                    listed: g.listed.map { item in
-                        CatalogDeleteImpactListed(
-                            id: item.id,
-                            ref: item.ref,
-                            title: item.title,
-                            location: Self.mapWorkspaceLocationFromProto(item.location)
-                        )
-                    }
+            groups: resp.groups.map(Self.mapDeleteImpactGroup),
+            cascades: resp.cascades.map(Self.mapDeleteImpactGroup)
+        )
+    }
+
+    private static func mapDeleteImpactGroup(_ g: Provenencia_Engine_V1_DeleteImpactGroup) -> CatalogDeleteImpactGroup {
+        CatalogDeleteImpactGroup(
+            via: g.via,
+            kind: g.kind,
+            total: Int(g.total),
+            listed: g.listed.map { item in
+                CatalogDeleteImpactListed(
+                    id: item.id,
+                    ref: item.ref,
+                    title: item.title,
+                    location: Self.mapWorkspaceLocationFromProto(item.location)
                 )
             }
         )

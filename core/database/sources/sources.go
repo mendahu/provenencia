@@ -377,6 +377,11 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	}); err != nil {
 		return err
 	}
+	// Notes, metadata, credibility, and layout are released and audited first.
+	released, err := deleteimpact.ReleaseFacets(tx, deleteimpact.KindSource, id)
+	if err != nil {
+		return err
+	}
 
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
 		return err
@@ -395,12 +400,12 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 		UserID:     userID,
 		ActionType: "delete_source",
 		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
+		Changes: append(released.Changes, audit.Change{
 			EntityType: "source",
 			EntityID:   id,
 			Action:     audit.ActionDelete,
 			Fields:     fields,
-		}},
+		}),
 	}); err != nil {
 		return err
 	}

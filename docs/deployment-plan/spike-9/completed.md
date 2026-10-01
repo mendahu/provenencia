@@ -9,6 +9,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | Step | Kind | One-liner |
 | --- | --- | --- |
 | S9-01 | PR | Conclusion schema + stores |
+| S9-02 | PR | Promote write v1 |
 
 ## Steps
 
@@ -31,3 +32,28 @@ Shipped the Conclusion tables and the Go stores Promote writes through. No FFI, 
 - Resolved-values cache (**S9-06**)
 - Reconciliation tables, `canonical_entity_notes`, merge behavior
 - Grade backfill for projects created before S9-01
+
+### S9-02 — Promote write v1
+
+Shipped the first callable Conclusion write: mint a handle from a Subject and file an accepted Identity Claim, one transaction, over FFI and from Swift. Deletes now release their facets through one audited registry: they name the handles they affect, never refuse because of Conclusion, and audit everything they remove.
+
+**What shipped**
+
+- `core/database/promote`: `Save` mints a handle of the Subject's type plus an accepted claim (zero pins), audited as one `promote_subject` revision. Refuses members (`identityclaims.already_member`) and, in v1, non-primary kinds (`promote.unsupported_type`)
+- FFI `METHOD_PROMOTE_SUBJECT` (`PromoteSubjectRequest` → `CanonicalEntity` + `IdentityClaim`); Swift `promoteSubject` on `GenealogyStore` / `GoStore` / `FakeStore` (`membershipBySubject` for S9-03 / S9-04)
+- **Facet release** (`deleteimpact/facets.go`): every audited `CASCADE` facet is one registry entry. The entry defines its FK, its `Release` (delete plus audit), a `Remaining` check that fails the delete if the backstop would fire, and, when **Named**, the `Report.Cascades` probe drawn from the same predicate.
+  - Domain deletes make one call, `ReleaseFacets`: Subject, Observation, Citation, Source and Source Field. Releases compose: claims take their pins; connection Observations take their notes, pins and owned values.
+  - `Released.Handles` is the seam for S9-06 and S9-34.
+  - `TestFacetReleaseHonesty` makes every CASCADE FK declare itself audited or silent.
+- **Newly audited:** Source notes, metadata, credibility and layout; Citation notes; layout rows on Source Field delete. Connection-facet Observations are now audited as full rows. All of these were previously deleted silently by the schema.
+- **Pins never block deletes.** Migration `000033` rebuilds `identity_claim_evidence` with `observation_id … ON DELETE CASCADE` as a backstop only. The S9-01 blocking evidence probe is gone.
+- **Confirm lines.** A Subject delete names the handles it leaves ("It's removed from PER-…"). A pinned Observation delete names the evidence it leaves. Any other cascade gets a generic "This also changes {kind} {refs}" line, so none is dropped.
+- L10n: error copy for the identity-claim, canonical-entity and promote codes; `canonical_entity` Impact kind noun; the three confirm lines
+- Future UI: weak-claim review alert written into model §5.2 and [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md) (Spike 10)
+
+**What stayed out**
+
+- Existing targets and suggestions (**S9-10**); pins and backfill (**S9-17**)
+- Resolved-values cache and upkeep on claim create / Subject delete (**S9-06**)
+- Graph membership read (**S9-03**) and the card's Promote control (**S9-04**)
+- Bridge filing (**S9-28**); the Swift `sameness_claim` leftovers (**S9-18**)

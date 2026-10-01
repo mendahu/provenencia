@@ -443,6 +443,10 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	}); err != nil {
 		return err
 	}
+	released, err := deleteimpact.ReleaseFacets(tx, deleteimpact.KindCitation, id)
+	if err != nil {
+		return err
+	}
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
 		return err
 	}
@@ -461,12 +465,12 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 		UserID:     userID,
 		ActionType: "delete_citation",
 		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
+		Changes: append(released.Changes, audit.Change{
 			EntityType: "citation",
 			EntityID:   id,
 			Action:     audit.ActionDelete,
 			Fields:     fields,
-		}},
+		}),
 	}); err != nil {
 		return err
 	}

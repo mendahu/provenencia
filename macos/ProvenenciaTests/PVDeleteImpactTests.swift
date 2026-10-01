@@ -13,6 +13,52 @@ struct PVDeleteImpactCopyTests {
         #expect(PVDeleteImpactControls.showsDestructiveAction(PVDeleteImpactPreviewData.allowed))
     }
 
+    @Test func promotedSubjectConfirmNamesTheHandleItLeaves() {
+        let plain = PVDeleteImpactCopy.confirmCopy(
+            for: PVDeleteImpactPreviewData.subjectG2,
+            report: PVDeleteImpactPreviewData.allowed
+        )
+        #expect(!plain.message.contains("PER-"))
+        let promoted = PVDeleteImpactCopy.confirmCopy(
+            for: PVDeleteImpactPreviewData.subjectG2,
+            report: PVDeleteImpactPreviewData.promotedSubject
+        )
+        #expect(promoted.message.contains("erased"))
+        #expect(promoted.message.contains(L10n.DeleteImpact.leavesHandle(handleRefs: "PER-7KD45")))
+        #expect(PVDeleteImpactControls.showsDestructiveAction(PVDeleteImpactPreviewData.promotedSubject))
+    }
+
+    @Test func unknownCascadeStillNamesKindAndRefs() {
+        let report = CatalogDeleteImpact(
+            allowed: true,
+            gate: .ok,
+            groups: [],
+            cascades: [
+                CatalogDeleteImpactGroup(
+                    via: "future_table.parent_id",
+                    kind: "canonical_entity",
+                    total: 1,
+                    listed: [PVDeleteImpactPreviewData.listed(ref: "PLC-3TX9Q", title: "PLC-3TX9Q")]
+                ),
+            ]
+        )
+        let lines = PVDeleteImpactCopy.cascadeLines(report)
+        #expect(lines == [L10n.DeleteImpact.alsoAffects(
+            noun: PVDeleteImpactCopy.noun("canonical_entity", count: 1),
+            refs: "PLC-3TX9Q"
+        )])
+    }
+
+    @Test func pinnedObservationConfirmNamesTheEvidenceItLeaves() {
+        let copy = PVDeleteImpactCopy.confirmCopy(
+            for: PVDeleteImpactPreviewData.observation,
+            report: PVDeleteImpactPreviewData.pinnedObservation
+        )
+        #expect(copy.message.contains(L10n.DeleteImpact.leavesEvidence(handleRefs: "PER-7KD45")))
+        #expect(!copy.message.contains(L10n.DeleteImpact.leavesHandle(handleRefs: "PER-7KD45")))
+        #expect(PVDeleteImpactControls.showsDestructiveAction(PVDeleteImpactPreviewData.pinnedObservation))
+    }
+
     @Test func blockedCitationListsThreeObservations() {
         let report = PVDeleteImpactPreviewData.blockedCitation
         #expect(!PVDeleteImpactControls.showsDestructiveAction(report))

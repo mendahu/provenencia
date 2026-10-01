@@ -28,6 +28,9 @@ const (
 	// projector section until their pages ship.
 	KindCanonicalEntity      Kind = "canonical_entity"
 	KindClaimConfidenceGrade Kind = "claim_confidence_grade"
+	// KindIdentityClaim parents facet releases (its pins) only; claims have no
+	// ref and no delete of their own yet.
+	KindIdentityClaim Kind = "identity_claim"
 
 	// Reserved child kinds for stub inbound probes (tables not in the catalog yet).
 	KindReconciliationClaim Kind = "reconciliation_claim"
@@ -114,6 +117,9 @@ type Report struct {
 	Allowed bool
 	Gate    Gate
 	Groups  []Group
+	// Cascades names rows that go with the target on erase without blocking it
+	// (facet CASCADEs worth telling the researcher about). Refuse ignores them.
+	Cascades []Group
 }
 
 // Group is one inbound resource edge.

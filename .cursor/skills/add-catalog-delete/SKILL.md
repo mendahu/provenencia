@@ -29,7 +29,15 @@ Rule: [`.cursor/rules/catalog-deletes.mdc`](../../rules/catalog-deletes.mdc).
 | Later Claim / Narrative resources | `searchindex.Delete` (FTS doc only) |
 | Existing `Delete` with no UI this spike | Owned-outbound child SQL that the register already walks |
 
-Facet CASCADE is SQLite’s job. Official `Delete` still **registers** those FKs as `facet` so the pragma test stays honest.
+Every facet `CASCADE` FK is registered as `facet` and classified:
+
+- **Silent**: the rows are never audited (layout, vocab joins, value parts). SQLite does the work.
+- **`Audited: true`**: the rows are research. Add exactly one `facetRelease` entry in `core/database/deleteimpact/facets.go`:
+  - `rowFacet(...)` for plain rows.
+  - A custom `Release` when the row has facets of its own.
+  - `Named: true` with `Count` / `List` / `Child` when the confirm should name what's affected. That fills `Report.Cascades` and never gates.
+
+`TestFacetReleaseHonesty` enforces the classification. `ReleaseFacets` fails a delete whose release leaves rows behind for the backstop. See [`docs/catalog-deletes.md`](../../../docs/catalog-deletes.md) § Facet release.
 
 ## Checklist (same PR as the table or the writer)
 
@@ -63,11 +71,13 @@ func Delete(c *database.Catalog, userID, id []byte) error {
     if err := deleteimpact.Refuse(report, deleteimpact.Codes{
         InUse: ErrInUse, NotFound: ErrInvalid, // OriginLocked / EdgeLocked when the kind has those gates
     }); err != nil { return err }
-    // connection facets (bridge subjects only): released, err := deleteimpact.ReleaseConnectionFacets
+    released, err := deleteimpact.ReleaseFacets(tx, deleteimpact.KindCitation, id) // audited facets, connection facets, claims, pins
+    if err != nil { return err }
     // owned outbound: snap, err := deleteimpact.SnapshotOwned(tx, kind, id) — missing parent is ErrInvalid
     // DELETE parent
     // deleteimpact.ReleaseSnapshot(tx, snap)
-    // audit.Record (include ReleasedFacet rows), searchindex.Delete / Reproject
+    // audit.Record(Changes: append(released.Changes, parentChange)), searchindex.Delete / Reproject
+    // released.Handles → derived-data upkeep (resolved values, handle search docs) once those exist
 }
 ```
 

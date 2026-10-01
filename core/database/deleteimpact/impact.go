@@ -55,14 +55,30 @@ func Impact(tx *sql.Tx, kind Kind, id []byte) (Report, error) {
 		return Report{Allowed: false, Gate: gate}, nil
 	}
 
+	groups, err := collectGroups(tx, inboundFor(kind), id)
+	if err != nil {
+		return Report{}, err
+	}
+	cascades, err := collectGroups(tx, cascadesFor(kind), id)
+	if err != nil {
+		return Report{}, err
+	}
+	if len(groups) > 0 {
+		return Report{Allowed: false, Gate: GateInbound, Groups: groups, Cascades: cascades}, nil
+	}
+	return Report{Allowed: true, Gate: GateOK, Cascades: cascades}, nil
+}
+
+// collectGroups counts and lists each edge with rows for id; empty edges are skipped.
+func collectGroups(tx *sql.Tx, edges []inboundEdge, id []byte) ([]Group, error) {
 	var groups []Group
-	for _, edge := range inboundFor(kind) {
+	for _, edge := range edges {
 		if edge.Count == nil {
 			continue
 		}
 		total, err := edge.Count(tx, id)
 		if err != nil {
-			return Report{}, err
+			return nil, err
 		}
 		if total == 0 {
 			continue
@@ -71,22 +87,19 @@ func Impact(tx *sql.Tx, kind Kind, id []byte) (Report, error) {
 		if edge.List != nil {
 			rows, err := edge.List(tx, id, listedCap)
 			if err != nil {
-				return Report{}, err
+				return nil, err
 			}
 			for _, row := range rows {
 				listed, err := projectListed(tx, edge.Child, row)
 				if err != nil {
-					return Report{}, err
+					return nil, err
 				}
 				g.Listed = append(g.Listed, listed)
 			}
 		}
 		groups = append(groups, g)
 	}
-	if len(groups) > 0 {
-		return Report{Allowed: false, Gate: GateInbound, Groups: groups}, nil
-	}
-	return Report{Allowed: true, Gate: GateOK}, nil
+	return groups, nil
 }
 
 func originGate(tx *sql.Tx, kind Kind, id []byte) (Gate, error) {

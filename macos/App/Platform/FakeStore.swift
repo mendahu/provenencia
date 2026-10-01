@@ -15,6 +15,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var sourceTypesByProject: [String: [CatalogSourceType]] = [:]
     var subjectTypesByProject: [String: [CatalogSubjectType]] = [:]
     var subjectsBySource: [String: [CatalogSubject]] = [:]
+    /// Accepted Identity Claim per Subject id (Promote). The handle the Subject belongs to.
+    var membershipBySubject: [String: CatalogCanonicalEntity] = [:]
     var subjectPositionsBySubject: [String: CatalogSubjectPosition] = [:]
     /// Type↔field suggestion joins, keyed by source type id and held in the
     /// order they were assigned — the engine's `sort_order`.
@@ -1058,6 +1060,38 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         throw StoreBoom.boom
     }
 
+    func promoteSubject(projectDir: String, userID _: String, subjectID: String) async throws -> CatalogPromoteResult {
+        markCatalogSessionHeld(projectDir)
+        recordedCalls.append("promoteSubject id=\(subjectID)")
+        guard let subject = subjectsBySource.values.flatMap({ $0 }).first(where: { $0.id == subjectID }),
+              let type = subjectTypesByProject[projectDir]?.first(where: { $0.id == subject.subjectTypeID })
+        else {
+            throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
+        }
+        guard ["person", "event", "place"].contains(type.key) else {
+            throw CoreInvokeError.coded(status: 1, code: "promote.unsupported_type", kind: .user, params: [])
+        }
+        if membershipBySubject[subjectID] != nil {
+            throw CoreInvokeError.coded(status: 1, code: "identityclaims.already_member", kind: .conflict, params: [])
+        }
+        let entity = CatalogCanonicalEntity(
+            id: UUID().uuidString.lowercased(),
+            ref: "\(type.refPrefix)-FAKE\(membershipBySubject.count + 1)",
+            subjectTypeID: type.id,
+            label: ""
+        )
+        membershipBySubject[subjectID] = entity
+        return CatalogPromoteResult(
+            entity: entity,
+            claim: CatalogIdentityClaim(
+                id: UUID().uuidString.lowercased(),
+                subjectID: subjectID,
+                entityID: entity.id,
+                status: "accepted"
+            )
+        )
+    }
+
     func deleteSubject(projectDir: String, userID _: String, subjectID: String) async throws {
         markCatalogSessionHeld(projectDir)
         recordedCalls.append("deleteSubject id=\(subjectID)")
@@ -1088,6 +1122,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             list.remove(at: idx)
             subjectsBySource[sourceID] = list
             subjectPositionsBySubject[subjectID] = nil
+            membershipBySubject[subjectID] = nil
             return
         }
         throw StoreBoom.boom
@@ -2002,10 +2037,28 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         if !asEndpoint.isEmpty {
             groups.append(observationImpactGroup(via: "observations.value_subject_id", observations: asEndpoint))
         }
-        if groups.isEmpty {
-            return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
+        var cascades: [CatalogDeleteImpactGroup] = []
+        if let entity = membershipBySubject[id] {
+            cascades.append(
+                CatalogDeleteImpactGroup(
+                    via: "identity_claims.subject_id",
+                    kind: "canonical_entity",
+                    total: 1,
+                    listed: [
+                        CatalogDeleteImpactListed(
+                            id: entity.id,
+                            ref: entity.ref,
+                            title: entity.ref,
+                            location: WorkspaceLocation(section: .sources, ref: entity.ref, title: entity.ref)
+                        ),
+                    ]
+                )
+            )
         }
-        return CatalogDeleteImpact(allowed: false, gate: .inbound, groups: groups)
+        if groups.isEmpty {
+            return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [], cascades: cascades)
+        }
+        return CatalogDeleteImpact(allowed: false, gate: .inbound, groups: groups, cascades: cascades)
     }
 
     private func observationImpactGroup(

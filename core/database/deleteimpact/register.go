@@ -17,9 +17,13 @@ type fkSpec struct {
 	FromTable string
 	FromCol   string   // leading column; the honesty key
 	FromCols  []string // full column list for a composite FK (nil = FromCol only)
-	ToTable   string
-	OnDelete  string
-	Bucket    Bucket
+	// Audited CASCADE facets are research rows: official deletes remove and
+	// audit them through a facetRelease, and the CASCADE is only a backstop.
+	// Unaudited CASCADEs (layout, vocab joins, value parts) stay silent.
+	Audited  bool
+	ToTable  string
+	OnDelete string
+	Bucket   Bucket
 }
 
 type inboundEdge struct {
@@ -63,7 +67,7 @@ var tables = []tableSpec{
 	{Name: "subject_types", PK: "id", Kind: KindSubjectType, Bucket: BucketVocab, Exists: `SELECT 1 FROM subject_types WHERE id = ?`},
 	{Name: "properties", PK: "id", Kind: KindProperty, Bucket: BucketVocab, Exists: `SELECT 1 FROM properties WHERE id = ?`},
 	{Name: "property_terms", PK: "id", Kind: KindPropertyTerm, Bucket: BucketVocab, Exists: `SELECT 1 FROM property_terms WHERE id = ?`},
-	{Name: "canonical_entities", Bucket: BucketResource},
+	{Name: "canonical_entities", Kind: KindCanonicalEntity, Bucket: BucketResource},
 	{Name: "claim_confidence_grades", Bucket: BucketVocab},
 	{Name: "files", PK: "id", Kind: KindFile, Bucket: BucketPool, Exists: `SELECT 1 FROM files WHERE id = ?`},
 	{Name: "users", PK: "id", Kind: KindUser, Bucket: BucketInfra, Exists: `SELECT 1 FROM users WHERE id = ?`},
@@ -78,7 +82,7 @@ var tables = []tableSpec{
 	{Name: "subject_positions", Bucket: BucketFacet},
 	{Name: "subject_type_fields", Bucket: BucketFacet},
 	{Name: "name_value_parts", Bucket: BucketFacet},
-	{Name: "identity_claims", Bucket: BucketFacet},
+	{Name: "identity_claims", Kind: KindIdentityClaim, Bucket: BucketFacet},
 	{Name: "identity_claim_evidence", Bucket: BucketFacet},
 	{Name: "date_values", Bucket: BucketOwnedOutbound},
 	{Name: "name_values", Bucket: BucketOwnedOutbound},
@@ -97,13 +101,13 @@ var foreignKeys = []fkSpec{
 
 	{FromTable: "sources", FromCol: "source_type_id", ToTable: "source_types", OnDelete: "NO ACTION", Bucket: BucketResource},
 	{FromTable: "sources", FromCol: "primary_artifact_id", ToTable: "artifacts", OnDelete: "SET NULL", Bucket: BucketOptional},
-	{FromTable: "source_notes", FromCol: "source_id", ToTable: "sources", OnDelete: "CASCADE", Bucket: BucketFacet},
-	{FromTable: "source_metadata", FromCol: "source_id", ToTable: "sources", OnDelete: "CASCADE", Bucket: BucketFacet},
+	{FromTable: "source_notes", FromCol: "source_id", ToTable: "sources", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
+	{FromTable: "source_metadata", FromCol: "source_id", ToTable: "sources", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
 	{FromTable: "source_metadata", FromCol: "field_id", ToTable: "source_metadata_fields", OnDelete: "NO ACTION", Bucket: BucketResource},
-	{FromTable: "source_credibility_assessments", FromCol: "source_id", ToTable: "sources", OnDelete: "CASCADE", Bucket: BucketFacet},
+	{FromTable: "source_credibility_assessments", FromCol: "source_id", ToTable: "sources", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
 	{FromTable: "source_credibility_assessments", FromCol: "credibility_grade_id", ToTable: "source_credibility_grades", OnDelete: "NO ACTION", Bucket: BucketResource},
-	{FromTable: "source_metadata_layout", FromCol: "source_id", ToTable: "sources", OnDelete: "CASCADE", Bucket: BucketFacet},
-	{FromTable: "source_metadata_layout", FromCol: "field_id", ToTable: "source_metadata_fields", OnDelete: "CASCADE", Bucket: BucketFacet},
+	{FromTable: "source_metadata_layout", FromCol: "source_id", ToTable: "sources", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
+	{FromTable: "source_metadata_layout", FromCol: "field_id", ToTable: "source_metadata_fields", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
 	{FromTable: "source_type_metadata_fields", FromCol: "source_type_id", ToTable: "source_types", OnDelete: "CASCADE", Bucket: BucketFacet},
 	{FromTable: "source_type_metadata_fields", FromCol: "field_id", ToTable: "source_metadata_fields", OnDelete: "CASCADE", Bucket: BucketFacet},
 
@@ -114,7 +118,7 @@ var foreignKeys = []fkSpec{
 	{FromTable: "file_derivatives", FromCol: "derived_file_id", ToTable: "files", OnDelete: "NO ACTION", Bucket: BucketOwnedOutbound},
 
 	{FromTable: "citations", FromCol: "artifact_id", ToTable: "artifacts", OnDelete: "NO ACTION", Bucket: BucketResource},
-	{FromTable: "citation_notes", FromCol: "citation_id", ToTable: "citations", OnDelete: "CASCADE", Bucket: BucketFacet},
+	{FromTable: "citation_notes", FromCol: "citation_id", ToTable: "citations", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
 
 	{FromTable: "observations", FromCol: "citation_id", ToTable: "citations", OnDelete: "NO ACTION", Bucket: BucketResource},
 	{FromTable: "observations", FromCol: "subject_id", ToTable: "subjects", OnDelete: "NO ACTION", Bucket: BucketResource},
@@ -123,7 +127,7 @@ var foreignKeys = []fkSpec{
 	{FromTable: "observations", FromCol: "value_name_id", ToTable: "name_values", OnDelete: "NO ACTION", Bucket: BucketOwnedOutbound},
 	{FromTable: "observations", FromCol: "value_subject_id", ToTable: "subjects", OnDelete: "NO ACTION", Bucket: BucketResource},
 	{FromTable: "observations", FromCol: "value_term_id", ToTable: "property_terms", OnDelete: "NO ACTION", Bucket: BucketResource},
-	{FromTable: "observation_notes", FromCol: "observation_id", ToTable: "observations", OnDelete: "CASCADE", Bucket: BucketFacet},
+	{FromTable: "observation_notes", FromCol: "observation_id", ToTable: "observations", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
 
 	{FromTable: "subjects", FromCol: "source_id", ToTable: "sources", OnDelete: "NO ACTION", Bucket: BucketResource},
 	{FromTable: "subjects", FromCol: "subject_type_id", ToTable: "subject_types", OnDelete: "NO ACTION", Bucket: BucketResource},
@@ -136,11 +140,11 @@ var foreignKeys = []fkSpec{
 
 	{FromTable: "canonical_entities", FromCol: "subject_type_id", ToTable: "subject_types", OnDelete: "NO ACTION", Bucket: BucketResource},
 	{FromTable: "canonical_entities", FromCol: "merged_into_id", ToTable: "canonical_entities", OnDelete: "NO ACTION", Bucket: BucketResource},
-	{FromTable: "identity_claims", FromCol: "subject_id", FromCols: []string{"subject_id", "subject_type_id"}, ToTable: "subjects", OnDelete: "CASCADE", Bucket: BucketFacet},
-	{FromTable: "identity_claims", FromCol: "entity_id", FromCols: []string{"entity_id", "subject_type_id"}, ToTable: "canonical_entities", OnDelete: "CASCADE", Bucket: BucketFacet},
+	{FromTable: "identity_claims", FromCol: "subject_id", FromCols: []string{"subject_id", "subject_type_id"}, ToTable: "subjects", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
+	{FromTable: "identity_claims", FromCol: "entity_id", FromCols: []string{"entity_id", "subject_type_id"}, ToTable: "canonical_entities", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
 	{FromTable: "identity_claims", FromCol: "confidence_grade_id", ToTable: "claim_confidence_grades", OnDelete: "NO ACTION", Bucket: BucketResource},
-	{FromTable: "identity_claim_evidence", FromCol: "identity_claim_id", ToTable: "identity_claims", OnDelete: "CASCADE", Bucket: BucketFacet},
-	{FromTable: "identity_claim_evidence", FromCol: "observation_id", ToTable: "observations", OnDelete: "NO ACTION", Bucket: BucketResource},
+	{FromTable: "identity_claim_evidence", FromCol: "identity_claim_id", ToTable: "identity_claims", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
+	{FromTable: "identity_claim_evidence", FromCol: "observation_id", ToTable: "observations", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
 }
 
 var originRules = []originRule{
@@ -223,15 +227,6 @@ var inboundEdgeList = sync.OnceValue(func() []inboundEdge {
 			`SELECT DISTINCT e.id, e.ref FROM identity_claims ic
 				JOIN canonical_entities e ON e.id = ic.entity_id
 				WHERE ic.confidence_grade_id = ?
-				ORDER BY e.ref COLLATE NOCASE LIMIT ?`),
-		joinEdge(KindObservation, "identity_claim_evidence.observation_id", KindCanonicalEntity,
-			`SELECT COUNT(DISTINCT ic.entity_id) FROM identity_claim_evidence ev
-				JOIN identity_claims ic ON ic.id = ev.identity_claim_id
-				WHERE ev.observation_id = ?`,
-			`SELECT DISTINCT e.id, e.ref FROM identity_claim_evidence ev
-				JOIN identity_claims ic ON ic.id = ev.identity_claim_id
-				JOIN canonical_entities e ON e.id = ic.entity_id
-				WHERE ev.observation_id = ?
 				ORDER BY e.ref COLLATE NOCASE LIMIT ?`),
 		reservedStub(KindObservation, ViaReconciliationEvidence, KindReconciliationClaim),
 		reservedStub(KindObservation, ViaNarrativeTarget, KindNarrative),

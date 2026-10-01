@@ -94,6 +94,7 @@ enum Method {
   METHOD_DELETE_SOURCE = 82;
   METHOD_DELETE_ARTIFACT = 83;
   METHOD_DELETE_CITATION = 84;
+  METHOD_PROMOTE_SUBJECT = 85;
 }
 
 message PingRequest {
@@ -882,6 +883,35 @@ message DeleteSubjectRequest {
 
 message DeleteSubjectResponse {}
 
+// CanonicalEntity is a Conclusion handle (PER-…, EVT-…, PLC-…).
+message CanonicalEntity {
+  string id = 1;
+  string ref = 2;
+  string subject_type_id = 3;
+  string label = 4;
+}
+
+// IdentityClaim files one Subject onto one handle; accepted claims are members.
+message IdentityClaim {
+  string id = 1;
+  string subject_id = 2;
+  string entity_id = 3;
+  string status = 4; // provisional | accepted | rejected
+}
+
+// PromoteSubject v1 mints a handle of the Subject's type and files an
+// accepted claim, one transaction. Refuses members and non-primary kinds.
+message PromoteSubjectRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string subject_id = 3;
+}
+
+message PromoteSubjectResponse {
+  CanonicalEntity entity = 1;
+  IdentityClaim claim = 2;
+}
+
 message ListSubjectsRequest {
   string project_dir = 1;
   string source_id = 2;
@@ -1357,6 +1387,8 @@ message GetDeleteImpactResponse {
   bool allowed = 1;
   DeleteImpactGate gate = 2;
   repeated DeleteImpactGroup groups = 3;
+  // Non-blocking: rows that go with the target on erase (a Subject's handle membership).
+  repeated DeleteImpactGroup cascades = 4;
 }
 
 message DeleteImpactGroup {

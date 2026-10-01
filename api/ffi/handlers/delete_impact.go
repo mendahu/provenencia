@@ -49,7 +49,14 @@ func reportToProto(r deleteimpact.Report) *engine.GetDeleteImpactResponse {
 		Allowed: r.Allowed,
 		Gate:    gateToProto(r.Gate),
 	}
-	for _, g := range r.Groups {
+	out.Groups = groupsToProto(r.Groups)
+	out.Cascades = groupsToProto(r.Cascades)
+	return out
+}
+
+func groupsToProto(groups []deleteimpact.Group) []*engine.DeleteImpactGroup {
+	var out []*engine.DeleteImpactGroup
+	for _, g := range groups {
 		pg := &engine.DeleteImpactGroup{
 			Via:   g.Via,
 			Kind:  string(g.Kind),
@@ -63,7 +70,7 @@ func reportToProto(r deleteimpact.Report) *engine.GetDeleteImpactResponse {
 				Location: locationFromImpact(item.Location),
 			})
 		}
-		out.Groups = append(out.Groups, pg)
+		out = append(out, pg)
 	}
 	return out
 }

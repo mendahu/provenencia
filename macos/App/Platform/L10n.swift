@@ -5884,6 +5884,8 @@ enum L10n {
                 pair = (nounProperty, nounProperties)
             case "property_term":
                 pair = (nounPropertyTerm, nounPropertyTerms)
+            case "canonical_entity":
+                pair = (nounCanonicalEntity, nounCanonicalEntities)
             case "sameness_claim":
                 pair = (nounSamenessClaim, nounSamenessClaims)
             case "user":
@@ -6012,6 +6014,16 @@ enum L10n {
             defaultValue: "property terms",
             comment: "Plural Impact kind noun"
         )
+        static let nounCanonicalEntity = LocalizedStringResource(
+            "deleteImpact.kind.canonicalEntity.one",
+            defaultValue: "person, event, or place",
+            comment: "Singular Impact kind noun for a Conclusion handle (PER-…, EVT-…, PLC-…)"
+        )
+        static let nounCanonicalEntities = LocalizedStringResource(
+            "deleteImpact.kind.canonicalEntity.other",
+            defaultValue: "people, events, or places",
+            comment: "Plural Impact kind noun for Conclusion handles"
+        )
         static let nounSamenessClaim = LocalizedStringResource(
             "deleteImpact.kind.samenessClaim.one",
             defaultValue: "sameness claim",
@@ -6090,6 +6102,36 @@ enum L10n {
                 comment: "Allowed-delete confirm title; arguments are kind noun and ref"
             ))
             return String(format: format, locale: .current, noun, ref)
+        }
+
+        /// Allowed Subject delete: the handle(s) the Subject leaves. Arguments: handle refs (joined).
+        static func leavesHandle(handleRefs: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "deleteImpact.confirm.leavesHandle",
+                defaultValue: "It’s removed from %@. That record stays.",
+                comment: "Allowed Subject delete confirm, appended after the consequence; argument is the handle ref(s), e.g. PER-7KD45"
+            ))
+            return String(format: format, locale: .current, handleRefs)
+        }
+
+        /// Fallback for a cascade via the Mac has no specific copy for. Arguments: kind noun, refs.
+        static func alsoAffects(noun: String, refs: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "deleteImpact.confirm.alsoAffects",
+                defaultValue: "This also changes %1$@ %2$@.",
+                comment: "Allowed-delete confirm line for a non-blocking cascade without specific copy; arguments are kind noun and ref list"
+            ))
+            return String(format: format, locale: .current, noun, refs)
+        }
+
+        /// Allowed Observation delete: the handle(s) whose claims pinned it. Arguments: handle refs (joined).
+        static func leavesEvidence(handleRefs: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "deleteImpact.confirm.leavesEvidence",
+                defaultValue: "It’s also removed from the evidence for %@. Those claims stay, with less evidence.",
+                comment: "Allowed Observation delete confirm, appended after the consequence; argument is the handle ref(s) whose Identity Claims pinned it"
+            ))
+            return String(format: format, locale: .current, handleRefs)
         }
 
         static let confirmMessage = LocalizedStringResource(
@@ -6587,6 +6629,36 @@ enum L10n {
             "error.subjects.in_use",
             defaultValue: "This subject still has citations or is used as a property value.",
             comment: "FFI error subjects.in_use when Observations still reference the subject"
+        )
+        static let identityClaimsInvalid = LocalizedStringResource(
+            "error.identityclaims.invalid",
+            defaultValue: "Invalid identity claim.",
+            comment: "FFI error identityclaims.invalid"
+        )
+        static let identityClaimsAlreadyMember = LocalizedStringResource(
+            "error.identityclaims.already_member",
+            defaultValue: "This subject already belongs to a person, event, or place.",
+            comment: "FFI error identityclaims.already_member when Promote targets a subject that already has an accepted claim"
+        )
+        static let identityClaimsTypeMismatch = LocalizedStringResource(
+            "error.identityclaims.type_mismatch",
+            defaultValue: "A subject can only join a record of its own kind.",
+            comment: "FFI error identityclaims.type_mismatch when the handle's type differs from the subject's"
+        )
+        static let canonicalEntitiesInvalid = LocalizedStringResource(
+            "error.canonicalentities.invalid",
+            defaultValue: "Invalid person, event, or place record.",
+            comment: "FFI error canonicalentities.invalid"
+        )
+        static let promoteInvalid = LocalizedStringResource(
+            "error.promote.invalid",
+            defaultValue: "This subject can’t be promoted.",
+            comment: "FFI error promote.invalid"
+        )
+        static let promoteUnsupportedType = LocalizedStringResource(
+            "error.promote.unsupported_type",
+            defaultValue: "Only people, events, and places can be promoted.",
+            comment: "FFI error promote.unsupported_type for bridge subjects"
         )
         static let subjectPositionsInvalid = LocalizedStringResource(
             "error.subjectpositions.invalid",
@@ -7144,6 +7216,18 @@ enum L10n {
                 return String(localized: subjectsInvalid)
             case "subjects.in_use":
                 return String(localized: subjectsInUse)
+            case "identityclaims.invalid":
+                return String(localized: identityClaimsInvalid)
+            case "identityclaims.already_member":
+                return String(localized: identityClaimsAlreadyMember)
+            case "identityclaims.type_mismatch":
+                return String(localized: identityClaimsTypeMismatch)
+            case "canonicalentities.invalid":
+                return String(localized: canonicalEntitiesInvalid)
+            case "promote.invalid":
+                return String(localized: promoteInvalid)
+            case "promote.unsupported_type":
+                return String(localized: promoteUnsupportedType)
             case "subjectpositions.invalid":
                 return String(localized: subjectPositionsInvalid)
             case "subjecttypes.invalid":

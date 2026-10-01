@@ -100,6 +100,8 @@ struct CatalogDeleteImpact: Sendable, Equatable {
     var allowed: Bool
     var gate: CatalogDeleteImpactGate
     var groups: [CatalogDeleteImpactGroup]
+    /// Non-blocking: rows that go with the target on erase (a Subject's handle membership).
+    var cascades: [CatalogDeleteImpactGroup] = []
 }
 
 struct CatalogDeleteImpactGroup: Sendable, Equatable {
@@ -151,6 +153,28 @@ struct CatalogSubject: Sendable, Equatable, Identifiable {
     var subjectTypeID: String
     var label: String
     var description: String
+}
+
+/// A Conclusion handle (PER-…, EVT-…, PLC-…).
+struct CatalogCanonicalEntity: Sendable, Equatable, Identifiable {
+    var id: String
+    var ref: String
+    var subjectTypeID: String
+    var label: String
+}
+
+/// Files one Subject onto one handle; accepted claims are members.
+struct CatalogIdentityClaim: Sendable, Equatable, Identifiable {
+    var id: String
+    var subjectID: String
+    var entityID: String
+    var status: String
+}
+
+/// One saved Promote step: the handle and the claim it wrote.
+struct CatalogPromoteResult: Sendable, Equatable {
+    var entity: CatalogCanonicalEntity
+    var claim: CatalogIdentityClaim
 }
 
 struct CatalogSubjectPosition: Sendable, Equatable {
@@ -675,6 +699,8 @@ protocol GenealogyStore: Sendable {
         description: String
     ) async throws -> CatalogSubject
     func deleteSubject(projectDir: String, userID: String, subjectID: String) async throws
+    /// Promote v1: mint a handle of the Subject's type and file an accepted claim (one transaction).
+    func promoteSubject(projectDir: String, userID: String, subjectID: String) async throws -> CatalogPromoteResult
     func listSubjects(projectDir: String, sourceID: String) async throws -> [CatalogSubject]
     func setSubjectPosition(
         projectDir: String,

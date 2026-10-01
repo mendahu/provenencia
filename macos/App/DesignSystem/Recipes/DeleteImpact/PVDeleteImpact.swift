@@ -52,14 +52,40 @@ enum PVDeleteImpactCopy {
         L10n.DeleteImpact.isKnownVia(via)
     }
 
-    static func confirmCopy(for target: PVDeleteImpactTarget) -> PVConfirmCopy {
+    static func confirmCopy(for target: PVDeleteImpactTarget, report: CatalogDeleteImpact? = nil) -> PVConfirmCopy {
         let noun = noun(target.kind)
+        var message = String(localized: L10n.DeleteImpact.confirmMessage)
+        for line in cascadeLines(report) {
+            message += "\n\n" + line
+        }
         return PVConfirmCopy(
             title: L10n.DeleteImpact.confirmTitle(noun: noun, ref: target.ref),
-            message: String(localized: L10n.DeleteImpact.confirmMessage),
+            message: message,
             confirmLabel: L10n.DeleteImpact.deleteAction(noun: noun),
             cancelLabel: L10n.DeleteImpact.keepAction(noun: noun)
         )
+    }
+
+    /// One sentence per non-blocking cascade group, in report order. Known vias
+    /// get specific copy; any other via still names its kind and refs, so a new
+    /// Go cascade is never silently dropped from the confirm.
+    static func cascadeLines(_ report: CatalogDeleteImpact?) -> [String] {
+        (report?.cascades ?? []).compactMap { group in
+            let refs = group.listed.map(\.ref)
+            guard !refs.isEmpty else { return nil }
+            let joined = refs.formatted(.list(type: .and))
+            switch group.via {
+            case "identity_claims.subject_id":
+                return L10n.DeleteImpact.leavesHandle(handleRefs: joined)
+            case "identity_claim_evidence.observation_id":
+                return L10n.DeleteImpact.leavesEvidence(handleRefs: joined)
+            default:
+                return L10n.DeleteImpact.alsoAffects(
+                    noun: noun(group.kind, count: group.total),
+                    refs: joined
+                )
+            }
+        }
     }
 
     static func noticeTitle(for target: PVDeleteImpactTarget) -> String {
@@ -318,7 +344,7 @@ extension View {
         return self
             .pvConfirm(
                 item: confirmItem,
-                copy: { PVDeleteImpactCopy.confirmCopy(for: $0.target) },
+                copy: { PVDeleteImpactCopy.confirmCopy(for: $0.target, report: $0.report) },
                 isRunning: isRunning,
                 accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
                 onConfirm: onConfirm
@@ -419,6 +445,32 @@ enum PVDeleteImpactPreviewData {
     }
 
     static let allowed = CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
+    static let pinnedObservation = CatalogDeleteImpact(
+        allowed: true,
+        gate: .ok,
+        groups: [],
+        cascades: [
+            CatalogDeleteImpactGroup(
+                via: "identity_claim_evidence.observation_id",
+                kind: "canonical_entity",
+                total: 1,
+                listed: [listed(ref: "PER-7KD45", title: "PER-7KD45")]
+            ),
+        ]
+    )
+    static let promotedSubject = CatalogDeleteImpact(
+        allowed: true,
+        gate: .ok,
+        groups: [],
+        cascades: [
+            CatalogDeleteImpactGroup(
+                via: "identity_claims.subject_id",
+                kind: "canonical_entity",
+                total: 1,
+                listed: [listed(ref: "PER-7KD45", title: "PER-7KD45")]
+            ),
+        ]
+    )
 
     static let blockedCitation = CatalogDeleteImpact(
         allowed: false,
@@ -554,6 +606,20 @@ enum PVDeleteImpactPreviewData {
         onCancel: {}
     ) {
         Text(verbatim: PVDeleteImpactPreviewData.citation.title)
+    }
+    .background(PVColor.surfaceCard)
+}
+
+#Preview("Promoted subject leaves its Person") {
+    PVConfirmContent(
+        copy: PVDeleteImpactCopy.confirmCopy(
+            for: PVDeleteImpactPreviewData.subjectG2,
+            report: PVDeleteImpactPreviewData.promotedSubject
+        ),
+        onConfirm: {},
+        onCancel: {}
+    ) {
+        Text(verbatim: PVDeleteImpactPreviewData.subjectG2.title)
     }
     .background(PVColor.surfaceCard)
 }

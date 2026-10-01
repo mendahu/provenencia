@@ -379,7 +379,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 			if _, err := tx.Exec(`DELETE FROM subjects WHERE id = ?`, bridge.Subject.ID); err == nil {
 				t.Fatal("raw subject delete should fail while facets remain")
 			}
-			if _, err := deleteimpact.ReleaseConnectionFacets(tx, bridge.Subject.ID); err != nil {
+			if _, err := deleteimpact.ReleaseFacets(tx, deleteimpact.KindSubject, bridge.Subject.ID); err != nil {
 				t.Fatal(err)
 			}
 			if _, err := tx.Exec(`DELETE FROM subjects WHERE id = ?`, bridge.Subject.ID); err != nil {

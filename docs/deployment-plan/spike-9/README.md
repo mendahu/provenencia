@@ -2,7 +2,7 @@
 
 ## Status
 
-**Open.** Requirements, design track (13 briefs, one per view), and PR sequence in vertical slices (S9-01…S9-35): [`deployment-plan.md`](deployment-plan.md). Finished steps: [`completed.md`](completed.md) — S9-01 landed.
+**Open.** Requirements, design track (13 briefs, one per view), and PR sequence in vertical slices (S9-01…S9-35): [`deployment-plan.md`](deployment-plan.md). Finished steps: [`completed.md`](completed.md) — S9-01, S9-02 landed.
 
 Spikes 5–8 built the Interpretation layer: Sources → Citations → Observations on Subjects, drawn on an Evidence graph. Nothing yet says *these three census lines are the same James*. Spike 9 opens the **Conclusion layer**: canonical Persons, Events, and Places assembled from Subjects through **Identity Claims**, with read-only pages that project their values.
 
@@ -35,7 +35,7 @@ Authoritative model: [`conclusion-layer-data-model.md`](../../conclusion-layer-d
 ## Out of scope (for this spike)
 
 - Reconciliation Claims (schema, UI, and the `name_format` claim)
-- Managing Identity Claims after Promote: removing a member, removing or editing a claim, adding evidence later (Spike 10)
+- Managing Identity Claims after Promote: removing a member, removing or editing a claim, adding evidence later, and the **weak-claim review alert** for claims whose evidence was deleted (Spike 10; model §5.2, [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md))
 - Canonical merge (`merged_into_id` behavior)
 - Stub handles created without a Subject (asserted / inferred Places, "Mother of James")
 - `canonical_entity_notes`
