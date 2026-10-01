@@ -42,7 +42,9 @@ func ReleaseObservationPinsTx(tx *sql.Tx, observationID []byte) ([]audit.Change,
 
 // ReleaseSubjectTx removes everything Conclusion holds on a Subject about to be
 // deleted: pins on its Observations (on any claim), then its own claims with
-// their remaining pins. The handles stay.
+// their remaining pins. The handles stay. A Subject delete is refused while it
+// owns non-connection Observations, so the first step only ever finds pins on
+// bridge edge Observations (reachable once bridges are filed, S9-28).
 func ReleaseSubjectTx(tx *sql.Tx, subjectID []byte) ([]audit.Change, error) {
 	if len(subjectID) != 16 {
 		return nil, ErrInvalid

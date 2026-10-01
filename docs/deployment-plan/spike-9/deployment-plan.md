@@ -721,7 +721,7 @@ In order; each brief sits just above the PR it gates.
 
 | | |
 | --- | --- |
-| **In** | Resolver: subject-valued Properties map to the target's handle (unpromoted drop out) — the canonical graph. Upkeep: a claim create / remove recomputes handles whose members' Observations point at that subject. Promote write files bridge subjects onto the association the ends already share, or mints one (lift the S9-02 primary-kinds guard in `promote.Save`). Extend the randomized test. |
+| **In** | Resolver: subject-valued Properties map to the target's handle (unpromoted drop out) — the canonical graph. Upkeep: a claim create / remove recomputes handles whose members' Observations point at that subject. Promote write files bridge subjects onto the association the ends already share, or mints one (lift the S9-02 primary-kinds guard in `promote.Save`). Extend the randomized test. Once bridge edge Observations can be pinned, test `identityclaims.ReleaseSubjectTx` step 1 (pins on the deleted Subject's own Observations — only connection facets reach it) so a bridge delete removes those pins audited instead of via the CASCADE backstop. |
 | **Depends on** | S9-12 |
 
 #### S9-29 — Neighborhood read
