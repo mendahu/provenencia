@@ -165,3 +165,25 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 1. Archive this brief under `archive/` when the board is agreed.
 2. Record in [`../completed.md`](../../completed.md).
 3. Implement **S9-04** against the board and inventory (kit first).
+
+---
+
+## Rev 1: card footer revision (accepted, shipped in S9-04)
+
+This revision is visual only. Action ids, VoiceOver actions, the v1 Confirm and bridge behaviour are unchanged.
+
+| | Original | Revised |
+| --- | --- | --- |
+| Footer height (both states) | 44pt | **36pt**, still one constant in `contentHeight(for:)` |
+| Footer fill | Paper | **Kind chip** |
+| Footer top rule | none | **1px kind line** |
+| Promote | `PVButton` secondary sm | **`PVButton` ghost sm**, inset 8pt less than the card padding |
+| Membership ref | `PVBadge` accent | **`PVBadge` neutral, subtle**, ref text in kind ink |
+| Name + chevron | text-primary / accent | **Kind ink** |
+| Hover / pressed | accent-soft mix / accent-soft | Chip + **10%** / **18%** kind ink (pressed also scales to .985) |
+| Keyboard focus | inset 2pt accent ring | unchanged |
+
+**Why.** The secondary button and paper band lost contrast on the kind washes in dark mode, and the accent band merged into person cards, which share the accent hue. With this revision the footer keeps the card's colour identity.
+
+**Deviation from §6, accepted.** §6 said "Do not tint membership with kind color", and the researcher reversed that. The membership row is told apart from Observation rows by shape: no micro-caps label, an outline mono ref, the name, and a disclosure chevron.
+

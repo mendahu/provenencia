@@ -93,6 +93,15 @@ The Evidence graph now knows which Subjects are promoted and onto which handle. 
 - **v1 Promote** is a kit irreversible Confirm: *Create a new Person from CPR-…?*, a *First member* key chip, *Create Person* / *Leave unpromoted*, with focus on cancel.
 - **Bridges are unchanged:** no Promote, and no filed mark until S9-D12.
 
+**Rev 1 (designer revision, shipped in S9-04).** This supersedes the footer styling above; the structure and behaviour are unchanged.
+- **Size and band:** the footer is **36pt**. It sits on the **kind chip** under a **1px kind-line** rule.
+- **Promote:** a kit **ghost** Button. Its inset is 8pt less than the card padding, so the label lines up with the content above.
+- **Membership row:**
+  - The ref is a **neutral outline Badge** with kind-ink text, and the link text and chevron are in kind ink.
+  - Hover is the chip mixed with 10% kind ink; pressed is 18% plus the .985 scale. The keyboard focus spec is unchanged.
+- **Why:** the secondary button and paper band lost contrast on the kind washes in dark mode, and the accent band merged into person cards, which share the accent hue.
+- **Accepted deviation from the brief:** the membership row now takes the kind colour. It is told apart from Observation rows by shape: no micro-caps label, an outline mono ref, the name, and a disclosure chevron.
+
 Brief archived: [`design/archive/S9-D8-graph-subject-card.md`](design/archive/S9-D8-graph-subject-card.md).
 
 ### S9-04 — Graph card: Promote + membership
@@ -103,11 +112,12 @@ Primary graph cards can now be promoted from the canvas, and promoted cards show
 
 - **`EvidenceSubjectCard` footer:**
   - Two new targets, `promote` and `openHandle`, each the full footer rect.
-  - The footer's height is one constant (`footerHeight`), shared by paint, hits and edges.
+  - The footer's height is one constant (`footerHeight`, 36pt after rev 1), shared by paint, hits and edges.
   - The uncited Add property hit is re-anchored above the footer.
   - Promote ignores the no-Artifact gate.
 - **Kit:**
   - `.pvHostInteraction(hovered:pressed:)` lets paint-only hosts drive `PVHoverEffect`, so `PVButton` shows hover and press on the canvas.
+  - `PVBadge(text:…, foreground:)` recolours the text only (kind ink on a neutral outline). The tone still owns the fill and the line.
   - `GraphCanvasPointerController.pressedCardAction` supplies the press.
   - Documented in the DesignSystem README under *Host-owned pointer*.
 - **Model:**

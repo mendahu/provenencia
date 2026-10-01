@@ -25,7 +25,7 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 
 | Step | Brief | Shipped in | Notes |
 | --- | --- | --- | --- |
-| S9-D8 | [Evidence graph subject card](archive/S9-D8-graph-subject-card.md) | **S9-04** (S9-09 name, S9-11 flow) | One 44pt footer: Promote, then the membership link |
+| S9-D8 | [Evidence graph subject card](archive/S9-D8-graph-subject-card.md) | **S9-04** (S9-09 name, S9-11 flow) | One 36pt kind-chip footer (rev 1): Promote, then the membership link |
 
 Design each brief alongside its feature, just before the PR it gates. Order and dependencies: [PR sequence](../deployment-plan.md#pr-sequence).
 

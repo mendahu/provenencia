@@ -60,7 +60,10 @@ struct EvidenceSubjectCardFooterTests {
         let frame = EvidenceSubjectCard.edgeFrame(for: card)
         let targets = EvidenceSubjectCard.actionTargets(for: card, canCite: true)
         let promote = targets.first { $0.id == EvidenceSubjectCard.promoteActionID }
-        #expect(promote?.frame == CGRect(x: frame.minX, y: frame.maxY - 44, width: EvidenceSubjectCard.width, height: 44))
+        #expect(EvidenceSubjectCard.footerHeight == 36)
+        #expect(promote?.frame == CGRect(
+            x: frame.minX, y: frame.maxY - 36, width: EvidenceSubjectCard.width, height: 36
+        ))
         #expect(!targets.contains { $0.id == EvidenceSubjectCard.openHandleActionID })
         // Add property stays clear of the footer.
         let add = targets.first { $0.id == EvidenceSubjectCard.addPropertyActionID }

@@ -28,7 +28,10 @@ struct EvidenceSubjectCard: View {
     static let stackHairline: CGFloat = 1
     /// S9-D8 footer slot: Promote (unpromoted) or the membership row
     /// (promoted). Both are this height, so promoting never moves an edge.
-    static let footerHeight: CGFloat = 44
+    static let footerHeight: CGFloat = 36
+    /// Horizontal inset for the ghost Promote: 8pt less than the card's padding,
+    /// so the borderless button's label lines up with the content above (S9-D8 rev 1).
+    static let promoteInset: CGFloat = shellPaddingX - 8
     /// Uncited cards: the footer sits this far below the quiet Add property
     /// row (on top of the stack gap), under a 1pt dashed rule.
     static let uncitedFooterTopMargin: CGFloat = 2
@@ -458,17 +461,13 @@ private struct EvidenceSubjectCardChrome: View {
 
     // MARK: Footer (S9-D8)
 
-    /// Uncited: the footer bleeds to the card edges under a dashed rule.
+    /// Uncited: the footer bleeds to the card edges under a 1pt kind-line rule
+    /// (cited cards get the same rule from the ruled stack's hairline).
     private var uncitedFooter: some View {
         VStack(spacing: 0) {
             Rectangle()
-                .fill(.clear)
+                .fill(style.line)
                 .frame(height: EvidenceSubjectCard.uncitedFooterRule)
-                .overlay(alignment: .top) {
-                    Line()
-                        .stroke(PVColor.borderDefault, style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
-                        .frame(height: EvidenceSubjectCard.uncitedFooterRule)
-                }
             cardFooter
         }
         .padding(.top, EvidenceSubjectCard.uncitedFooterTopMargin)
@@ -486,7 +485,7 @@ private struct EvidenceSubjectCardChrome: View {
         }
     }
 
-    /// Kit secondary Button on the kind wash: still an action on this subject.
+    /// Kit ghost Button on the kind chip band: still an action on this subject.
     private var promoteFooter: some View {
         HStack(spacing: 0) {
             Button {} label: {
@@ -495,7 +494,7 @@ private struct EvidenceSubjectCardChrome: View {
                     Text(L10n.EvidenceGraph.promote)
                 }
             }
-            .buttonStyle(.pv(.secondary, size: .sm))
+            .buttonStyle(.pv(.ghost, size: .sm))
             .pvHostInteraction(
                 hovered: hoveredActionID == EvidenceSubjectCard.promoteActionID,
                 pressed: pressedActionID == EvidenceSubjectCard.promoteActionID
@@ -504,39 +503,41 @@ private struct EvidenceSubjectCardChrome: View {
             .help(Text(L10n.EvidenceGraph.promoteHelp(kind: placed.kind)))
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, EvidenceSubjectCard.shellPaddingX)
+        .padding(.horizontal, EvidenceSubjectCard.promoteInset)
         .frame(maxWidth: .infinity, minHeight: EvidenceSubjectCard.footerHeight,
                maxHeight: EvidenceSubjectCard.footerHeight, alignment: .leading)
-        .background(style.tint)
+        .background(style.chip)
         .accessibilityHidden(true)
     }
 
-    /// Conclusion link: paper fill, accent ref badge and chevron — never the
-    /// kind pigment, which stays on the evidence rows above.
+    /// Conclusion link on the kind chip band (S9-D8 rev 1). Told apart from the
+    /// Observation rows by shape — outline mono ref, no micro-caps label,
+    /// disclosure chevron — while keeping the card's colour identity.
     private func membershipRow(_ membership: CatalogSubjectMembership) -> some View {
         let hovered = hoveredActionID == EvidenceSubjectCard.openHandleActionID
         let pressed = pressedActionID == EvidenceSubjectCard.openHandleActionID
         return HStack(spacing: 8) {
-            PVBadge(text: membership.entity.ref, tone: .accent)
+            PVBadge(text: membership.entity.ref, tone: .neutral, subtle: true, foreground: style.ink)
             // S9-09 swaps this for the handle's resolved name, same slot.
             Text(L10n.EvidenceGraph.openHandlePage(kind: placed.kind))
                 .font(PVFont.body(size: 12.5))
                 .italic()
-                .foregroundStyle(PVColor.textSecondary)
+                .foregroundStyle(style.ink)
                 .lineLimit(1)
             Spacer(minLength: 0)
             PVIcon(.chevronForward, size: 14)
-                .foregroundStyle(PVColor.accent)
+                .foregroundStyle(style.ink)
         }
         .scaleEffect(pressed && !reduceMotion ? PVMotion.pressScale : 1)
         .padding(.horizontal, EvidenceSubjectCard.shellPaddingX)
         .frame(maxWidth: .infinity, minHeight: EvidenceSubjectCard.footerHeight,
                maxHeight: EvidenceSubjectCard.footerHeight, alignment: .leading)
         .background {
-            // One always-present wash; only its opacity follows hover / press.
-            PVColor.accentSoft
-                .opacity(pressed ? 1 : (hovered ? 0.55 : 0))
-                .background(PVColor.surfaceCard)
+            // Kind chip, mixed with kind ink at 10% (hover) / 18% (pressed).
+            // One always-present layer; only its opacity follows the state.
+            style.ink
+                .opacity(pressed ? 0.18 : (hovered ? 0.10 : 0))
+                .background(style.chip)
         }
         .pvAnimation(PVMotion.instantStandard, value: pressed)
         .pvAnimation(PVMotion.instantStandard, value: hovered)
@@ -691,15 +692,5 @@ enum EvidenceCardHeaderActionHits {
             width: hitSize,
             height: hitHeight
         )
-    }
-}
-
-/// Horizontal hairline path for dashed rules.
-private struct Line: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.minX, y: rect.midY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
-        return path
     }
 }
