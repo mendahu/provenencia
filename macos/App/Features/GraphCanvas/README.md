@@ -43,7 +43,14 @@ Audit bar: zero Evidence / catalog / store types under `GraphCanvas/`.
 
 AppKit owns **all** canvas mouse sequences. Hosted SwiftUI is paint-only
 (`.allowsHitTesting(false)`). Product hosts publish `hitTargets` and wire
-callbacks on `GraphCanvasPointerController`. Do not attach SwiftUI
+callbacks on `GraphCanvasPointerController`.
+
+**Derive hit rects from measured paint, not constants.** A host's rects must
+come from the laid-out views they cover, or they drift as text wraps. The
+Evidence graph tags actionable pieces with `.evidenceCardHitRegion(_:)`, each
+card reports an `EvidenceCardLayout`, and hit targets / edge anchors are built
+from it (constants only before the first report). Verify against drawn pixels,
+not `fittingSize`, which over-reports wrapped text. Do not attach SwiftUI
 `DragGesture` / `.onTapGesture` / `.focusable()` to cards — that fought
 first-responder and cancelled mid-drag under magnification.
 

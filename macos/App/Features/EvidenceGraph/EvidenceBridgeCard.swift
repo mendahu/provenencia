@@ -35,6 +35,8 @@ struct EvidenceBridgeCard: View {
     var hoveredActionID: String? = nil
     /// When false (no Artifact), the citation pencil is omitted.
     var canCite: Bool = false
+    /// Receives the painted layout (card size + tagged hit regions) for hit targets and edges.
+    var onLayout: ((EvidenceCardLayout) -> Void)? = nil
 
     private var isDragging: Bool {
         dragOffset != .zero
@@ -50,6 +52,7 @@ struct EvidenceBridgeCard: View {
             hoveredActionID: hoveredActionID,
             canCite: canCite
         )
+        .reportsEvidenceCardLayout(onLayout)
         .offset(dragOffset)
         .zIndex(isDragging || isActivated ? 1 : 0)
         .accessibilityElement(children: .contain)
@@ -70,13 +73,21 @@ struct EvidenceBridgeCard: View {
     }
 
     /// Document-space frame used for edge attachment and AppKit hit targets.
-    /// Height follows the wrapped body so lines and hits stay on the painted card.
+    /// Uses the card's measured `layout` when it has reported one; the wrapped-text
+    /// estimate below is only the first-frame fallback.
     static func contentFrame(
         for placed: SourceGraphPlacedBridge,
         in snapshot: SourceGraphSnapshot,
-        dragOffset: CGSize = .zero
+        dragOffset: CGSize = .zero,
+        layout: EvidenceCardLayout? = nil
     ) -> CGRect {
         let center = contentCenter(gridX: placed.gridX, gridY: placed.gridY)
+        if let layout {
+            return layout.cardFrame(origin: CGPoint(
+                x: center.x - width / 2 + dragOffset.width,
+                y: center.y - approximateHalfHeight + dragOffset.height
+            ))
+        }
         return CGRect(
             x: center.x - width / 2 + dragOffset.width,
             y: center.y - approximateHalfHeight + dragOffset.height,
@@ -152,9 +163,10 @@ struct EvidenceBridgeCard: View {
         for placed: SourceGraphPlacedBridge,
         in snapshot: SourceGraphSnapshot,
         canCite: Bool,
-        dragOffset: CGSize = .zero
+        dragOffset: CGSize = .zero,
+        layout: EvidenceCardLayout? = nil
     ) -> [GraphCanvasActionTarget] {
-        let frame = contentFrame(for: placed, in: snapshot, dragOffset: dragOffset)
+        let frame = contentFrame(for: placed, in: snapshot, dragOffset: dragOffset, layout: layout)
         let headerHits = EvidenceCardHeaderActionHits.frames(
             cardFrame: frame,
             paddingX: shellPaddingX,
@@ -165,6 +177,36 @@ struct EvidenceBridgeCard: View {
         var actions: [GraphCanvasActionTarget] = [
             GraphCanvasActionTarget(id: editActionID, frame: headerHits.edit),
         ]
+        if let layout {
+            // Measured: the edit-citation pencil column spans the painted body;
+            // rows and Add property are their painted bands.
+            if canCite, let body = layout.band(editCitationActionID, origin: frame.origin) {
+                actions.append(GraphCanvasActionTarget(
+                    id: editCitationActionID,
+                    frame: CGRect(
+                        x: headerHits.edit.minX,
+                        y: body.minY,
+                        width: headerHits.edit.width,
+                        height: max(body.height, bodyActionHitHeight)
+                    )
+                ))
+            }
+            if placed.isCited {
+                for observation in extraObservations(for: placed) {
+                    let id = EvidenceSubjectCard.editPropertyActionID(observationID: observation.id)
+                    if let band = layout.band(id, origin: frame.origin) {
+                        actions.append(GraphCanvasActionTarget(id: id, frame: band))
+                    }
+                }
+            }
+            if canCite, let band = layout.band(EvidenceSubjectCard.addPropertyActionID, origin: frame.origin) {
+                actions.append(GraphCanvasActionTarget(id: EvidenceSubjectCard.addPropertyActionID, frame: band))
+            }
+            if let deleteFrame = headerHits.delete {
+                actions.append(GraphCanvasActionTarget(id: deleteActionID, frame: deleteFrame))
+            }
+            return actions
+        }
         let headerHeight = placed.isCited ? headerContentHeightCited : headerContentHeightUncited
         let bodyTop = frame.minY + shellPaddingTop + headerHeight + headerToBodySpacing
         if canCite {
@@ -386,6 +428,7 @@ private struct EvidenceBridgeCardChrome: View {
                 }
             }
         }
+        .evidenceCardHitRegion(EvidenceBridgeCard.editCitationActionID)
     }
 
     private var extraPropertyStack: some View {
@@ -425,6 +468,7 @@ private struct EvidenceBridgeCardChrome: View {
         .padding(.top, 9)
         .padding(.bottom, 11)
         .background(hovered && canCite ? PVColor.surfaceHover : PVColor.surfaceCard)
+        .evidenceCardHitRegion(EvidenceSubjectCard.addPropertyActionID)
         .accessibilityHidden(true)
     }
 
@@ -441,6 +485,7 @@ private struct EvidenceBridgeCardChrome: View {
                 : PVColor.textFaint
         )
         .frame(maxWidth: .infinity, alignment: .leading)
+        .evidenceCardHitRegion(EvidenceSubjectCard.addPropertyActionID)
         .accessibilityHidden(true)
     }
 

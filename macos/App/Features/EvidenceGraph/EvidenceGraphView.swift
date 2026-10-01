@@ -514,6 +514,8 @@ private struct EvidenceGraphDocumentBody: View {
     let contentSize: CGSize
     let navigation: WorkspaceNavigation
     @Bindable var pointer: GraphCanvasPointerController
+    /// Painted card layouts; hit targets and edges follow these, not constants.
+    @State private var cardLayouts = EvidenceCardLayoutStore()
 
     private var snapshot: SourceGraphSnapshot {
         model.displaySnapshot(rows: graphHandle.value, types: fieldsHandle.value?.types ?? [])
@@ -545,7 +547,8 @@ private struct EvidenceGraphDocumentBody: View {
             EvidenceGraphEdgesHost(
                 pointer: pointer,
                 snapshot: snapshot,
-                selectedBridgeID: selectedBridgeID
+                selectedBridgeID: selectedBridgeID,
+                layouts: cardLayouts.layouts
             )
             .frame(width: contentSize.width, height: contentSize.height)
 
@@ -554,7 +557,11 @@ private struct EvidenceGraphDocumentBody: View {
                let origin = subjects.first(where: { $0.id == originID }),
                let cursor = model.connectHoverPoint
             {
-                EvidenceGraphConnectRubberBand(origin: origin, cursor: cursor)
+                EvidenceGraphConnectRubberBand(
+                    origin: origin,
+                    cursor: cursor,
+                    layout: cardLayouts.layout(for: origin.id)
+                )
                     .frame(width: contentSize.width, height: contentSize.height)
             }
 
@@ -591,6 +598,11 @@ private struct EvidenceGraphDocumentBody: View {
             publishHitTargets()
         }
         .onChange(of: EvidenceGraphHitRefresh.token(subjects: subjects, bridges: bridges)) { _, _ in
+            cardLayouts.retain(only: Set(subjects.map(\.id) + bridges.map(\.id)))
+            publishHitTargets()
+        }
+        // A card's painted layout moved (wrap, new row, footer swap): re-anchor its hits.
+        .onChange(of: cardLayouts.layouts) { _, _ in
             publishHitTargets()
         }
     }
@@ -673,14 +685,16 @@ private struct EvidenceGraphDocumentBody: View {
                     frame: EvidenceBridgeCard.contentFrame(
                         for: placed,
                         in: snapshot,
-                        dragOffset: offset
+                        dragOffset: offset,
+                        layout: cardLayouts.layout(for: placed.id)
                     ),
                     acceptsConnect: false,
                     actions: EvidenceBridgeCard.actionTargets(
                         for: placed,
                         in: snapshot,
                         canCite: model.canCite,
-                        dragOffset: offset
+                        dragOffset: offset,
+                        layout: cardLayouts.layout(for: placed.id)
                     )
                 )
             )
@@ -690,12 +704,17 @@ private struct EvidenceGraphDocumentBody: View {
             targets.append(
                 GraphCanvasHitTarget(
                     id: placed.id,
-                    frame: EvidenceSubjectCard.edgeFrame(for: placed, dragOffset: offset),
+                    frame: EvidenceSubjectCard.edgeFrame(
+                        for: placed,
+                        dragOffset: offset,
+                        layout: cardLayouts.layout(for: placed.id)
+                    ),
                     acceptsConnect: true,
                     actions: EvidenceSubjectCard.actionTargets(
                         for: placed,
                         canCite: model.canCite,
-                        dragOffset: offset
+                        dragOffset: offset,
+                        layout: cardLayouts.layout(for: placed.id)
                     )
                 )
             )
@@ -720,7 +739,8 @@ private struct EvidenceGraphDocumentBody: View {
                 : nil,
             pressedActionID: pointer.pressedCardAction?.cardID == placed.id
                 ? pointer.pressedCardAction?.actionID
-                : nil
+                : nil,
+            onLayout: { [cardLayouts] in cardLayouts.record($0, for: placed.id) }
         )
         .accessibilityAction(named: Text(L10n.EvidenceGraph.editAccessibility)) {
             model.beginEdit(subjectID: placed.id)
@@ -770,7 +790,8 @@ private struct EvidenceGraphDocumentBody: View {
             hoveredActionID: pointer.hoveredCardAction?.cardID == placed.id
                 ? pointer.hoveredCardAction?.actionID
                 : nil,
-            canCite: model.canCite
+            canCite: model.canCite,
+            onLayout: { [cardLayouts] in cardLayouts.record($0, for: placed.id) }
         )
         .accessibilityAction(named: Text(L10n.EvidenceGraph.editAccessibility)) {
             model.beginEdit(subjectID: placed.id)

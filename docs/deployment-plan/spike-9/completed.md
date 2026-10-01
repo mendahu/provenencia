@@ -120,6 +120,10 @@ Primary graph cards can now be promoted from the canvas, and promoted cards show
   - `PVBadge(text:…, foreground:)` recolours the text only (kind ink on a neutral outline). The tone still owns the fill and the line.
   - `GraphCanvasPointerController.pressedCardAction` supplies the press.
   - Documented in the DesignSystem README under *Host-owned pointer*.
+- **Measured card geometry:**
+  - Before this, hit targets and edge anchors on both card kinds were worked out from row-height constants. They drifted 3–30pt from the paint (wrapped titles and values, taller rows), and the bottom-anchored footer made that visible.
+  - Cards now tag their actionable pieces (`.evidenceCardHitRegion`) and report an `EvidenceCardLayout`. An `EvidenceCardLayoutStore` per graph feeds hit targets, edges and the connect rubber band, so each hit moves with the piece it belongs to. The constants are only the first-frame fallback.
+  - `EvidenceCardLayoutTests` checks the measured layout against the drawn pixels, the footer, row bands and the bridge card.
 - **Model:**
   - `beginPromote` builds a `PromoteRequest`.
   - `confirmPromote` mints via `promoteSubject`, then applies `.promotedSubject(sourceId:)` so the graph reloads with membership. Errors keep the sheet open with a Callout.

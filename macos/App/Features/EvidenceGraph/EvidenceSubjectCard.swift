@@ -58,28 +58,40 @@ struct EvidenceSubjectCard: View {
         return id.isEmpty ? nil : id
     }
 
+    /// Document-space top-leading corner of the painted card.
+    static func origin(for placed: SourceGraphPlacedSubject, dragOffset: CGSize = .zero) -> CGPoint {
+        let offset = topLeadingOffset(gridX: placed.gridX, gridY: placed.gridY)
+        return CGPoint(x: offset.width + dragOffset.width, y: offset.height + dragOffset.height)
+    }
+
     /// Document-space frame used for edge attachment and AppKit hit targets.
+    /// Uses the card's measured `layout` when it has reported one; the
+    /// constant-based ``contentHeight(for:)`` is only the first-frame fallback.
     static func edgeFrame(
         for placed: SourceGraphPlacedSubject,
-        dragOffset: CGSize = .zero
+        dragOffset: CGSize = .zero,
+        layout: EvidenceCardLayout? = nil
     ) -> CGRect {
-        let center = contentCenter(gridX: placed.gridX, gridY: placed.gridY)
-        let height = contentHeight(for: placed)
-        return CGRect(
-            x: center.x - width / 2 + dragOffset.width,
-            y: center.y - approximateHalfHeight + dragOffset.height,
-            width: width,
-            height: height
-        )
+        let origin = origin(for: placed, dragOffset: dragOffset)
+        if let layout {
+            return layout.cardFrame(origin: origin)
+        }
+        return CGRect(origin: origin, size: CGSize(width: width, height: contentHeight(for: placed)))
     }
 
     /// Nested action frames in document space (same coordinate as ``edgeFrame``).
+    /// With a measured `layout`, every row / Add property / footer target is the
+    /// painted band of the piece it belongs to, so hits move with the paint.
     static func actionTargets(
         for placed: SourceGraphPlacedSubject,
         canCite: Bool,
-        dragOffset: CGSize = .zero
+        dragOffset: CGSize = .zero,
+        layout: EvidenceCardLayout? = nil
     ) -> [GraphCanvasActionTarget] {
-        let frame = edgeFrame(for: placed, dragOffset: dragOffset)
+        let frame = edgeFrame(for: placed, dragOffset: dragOffset, layout: layout)
+        if let layout {
+            return measuredActionTargets(for: placed, canCite: canCite, frame: frame, layout: layout)
+        }
         let headerHits = EvidenceCardHeaderActionHits.frames(
             cardFrame: frame,
             paddingX: shellPaddingX,
@@ -146,6 +158,46 @@ struct EvidenceSubjectCard: View {
         return actions
     }
 
+    /// Header icons stay on fixed top-anchored metrics; everything below them
+    /// comes from the measured bands.
+    private static func measuredActionTargets(
+        for placed: SourceGraphPlacedSubject,
+        canCite: Bool,
+        frame: CGRect,
+        layout: EvidenceCardLayout
+    ) -> [GraphCanvasActionTarget] {
+        let origin = frame.origin
+        let headerHits = EvidenceCardHeaderActionHits.frames(
+            cardFrame: frame,
+            paddingX: shellPaddingX,
+            paddingTop: shellPaddingTop,
+            hitHeight: headerHeight,
+            showDelete: true
+        )
+        var actions: [GraphCanvasActionTarget] = [
+            GraphCanvasActionTarget(id: editActionID, frame: headerHits.edit),
+        ]
+        if let deleteFrame = headerHits.delete {
+            actions.append(GraphCanvasActionTarget(id: deleteActionID, frame: deleteFrame))
+        }
+        if placed.isCited {
+            for observation in placed.observations {
+                let id = editPropertyActionID(observationID: observation.id)
+                if let band = layout.band(id, origin: origin) {
+                    actions.append(GraphCanvasActionTarget(id: id, frame: band))
+                }
+            }
+        }
+        if canCite, let band = layout.band(addPropertyActionID, origin: origin) {
+            actions.append(GraphCanvasActionTarget(id: addPropertyActionID, frame: band))
+        }
+        let footerID = placed.membership == nil ? promoteActionID : openHandleActionID
+        if let band = layout.band(footerID, origin: origin) {
+            actions.append(GraphCanvasActionTarget(id: footerID, frame: band))
+        }
+        return actions
+    }
+
     /// Footer hit / paint rect: full card width × ``footerHeight``, bottom-anchored.
     static func footerFrame(cardFrame: CGRect) -> CGRect {
         CGRect(
@@ -161,7 +213,9 @@ struct EvidenceSubjectCard: View {
         headerToBodyGap + uncitedFooterTopMargin + uncitedFooterRule + footerHeight
     }
 
-    /// Approximate painted height so edges / hits track cited-row growth.
+    /// Constant-based height estimate: the first-frame fallback before the card
+    /// reports its measured ``EvidenceCardLayout``. Hits and edges use the
+    /// measured layout once it exists; do not tune this to chase paint.
     static func contentHeight(for placed: SourceGraphPlacedSubject) -> CGFloat {
         var height = shellPaddingTop + headerHeight
         let hasDescription = !placed.subject.description
@@ -214,6 +268,8 @@ struct EvidenceSubjectCard: View {
     var hoveredActionID: String? = nil
     /// Nested action id held down by the pointer, if any (pressed paint).
     var pressedActionID: String? = nil
+    /// Receives the painted layout (card size + tagged hit regions) for hit targets and edges.
+    var onLayout: ((EvidenceCardLayout) -> Void)? = nil
 
     private var isDragging: Bool {
         dragOffset != .zero
@@ -231,6 +287,7 @@ struct EvidenceSubjectCard: View {
             hoveredActionID: hoveredActionID,
             pressedActionID: pressedActionID
         )
+        .reportsEvidenceCardLayout(onLayout)
         .opacity(ghostOpacity)
         .offset(dragOffset)
         .zIndex(isDragging || isActivated ? 1 : 0)
@@ -439,6 +496,7 @@ private struct EvidenceSubjectCardChrome: View {
         .padding(.top, 9)
         .padding(.bottom, 11)
         .background(hovered && canCite ? style.chip : style.tint)
+        .evidenceCardHitRegion(EvidenceSubjectCard.addPropertyActionID)
         .accessibilityHidden(true)
     }
 
@@ -456,6 +514,7 @@ private struct EvidenceSubjectCardChrome: View {
         )
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(height: EvidenceSubjectCard.addPropertyQuietHeight, alignment: .topLeading)
+        .evidenceCardHitRegion(EvidenceSubjectCard.addPropertyActionID)
         .accessibilityHidden(true)
     }
 
@@ -507,6 +566,7 @@ private struct EvidenceSubjectCardChrome: View {
         .frame(maxWidth: .infinity, minHeight: EvidenceSubjectCard.footerHeight,
                maxHeight: EvidenceSubjectCard.footerHeight, alignment: .leading)
         .background(style.chip)
+        .evidenceCardHitRegion(EvidenceSubjectCard.promoteActionID)
         .accessibilityHidden(true)
     }
 
@@ -541,6 +601,7 @@ private struct EvidenceSubjectCardChrome: View {
         }
         .pvAnimation(PVMotion.instantStandard, value: pressed)
         .pvAnimation(PVMotion.instantStandard, value: hovered)
+        .evidenceCardHitRegion(EvidenceSubjectCard.openHandleActionID)
         .accessibilityHidden(true)
     }
 
