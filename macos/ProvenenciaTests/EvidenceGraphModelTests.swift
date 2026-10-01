@@ -9,6 +9,18 @@ struct EvidenceGraphModelTests {
     private let sourceID = "src-1"
     private let personTypeID = "type-person"
 
+    private func waitUntil(
+        timeout: Duration = .seconds(5),
+        _ predicate: () -> Bool
+    ) async -> Bool {
+        let deadline = ContinuousClock.now + timeout
+        while ContinuousClock.now < deadline {
+            if predicate() { return true }
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        return predicate()
+    }
+
     private func makeStore() -> FakeStore {
         let store = FakeStore()
         store.subjectTypesByProject[projectDir] = [
@@ -597,7 +609,7 @@ struct EvidenceGraphModelTests {
         #expect(store.subjectsBySource[sourceID]?.first?.description == "New note")
     }
 
-    @Test func failedOlderDragDoesNotRevertNewerMove() async {
+    @Test func failedOlderDragDoesNotRevertNewerMove() async throws {
         let store = makeStore()
         let subject = CatalogSubject(
             id: "s1",
@@ -622,32 +634,39 @@ struct EvidenceGraphModelTests {
                 positions: [CatalogSubjectPosition(subjectID: "s1", gridX: 1, gridY: 2)]
             )
         )
-        store.setSubjectPositionDelayNanoseconds = 80_000_000
         store.setSubjectPositionErrors = [
             CoreInvokeError.coded(status: 1, code: "internal.unknown", kind: .internal, params: []),
             nil,
         ]
+        store.holdsSetSubjectPosition = true
         _ = model.commitDrag(
             subjectID: "s1",
             originGridX: 1,
             originGridY: 2,
             documentDelta: CGSize(width: 160, height: 0)
         )
-        try? await Task.sleep(nanoseconds: 10_000_000)
+        let olderWrite = model.lastPositionWrite
+        try #require(await waitUntil { store.heldSetSubjectPositionCount == 1 })
         _ = model.commitDrag(
             subjectID: "s1",
             originGridX: 5,
             originGridY: 2,
             documentDelta: CGSize(width: 160, height: 0)
         )
-        try? await Task.sleep(nanoseconds: 150_000_000)
+        let newerWrite = model.lastPositionWrite
+        try #require(await waitUntil { store.heldSetSubjectPositionCount == 2 })
+        // Settle the older write (fails) before the newer one (succeeds).
+        store.releaseSetSubjectPosition()
+        await olderWrite?.value
+        store.releaseSetSubjectPosition()
+        await newerWrite?.value
         let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
         #expect(handle?.value?.positions.first?.gridX == 9)
         #expect(handle?.value?.positions.first?.gridY == 2)
         #expect(store.subjectPositionsBySubject["s1"]?.gridX == 9)
     }
 
-    @Test func successfulOlderDragIsConfirmedWhenNewerFails() async {
+    @Test func successfulOlderDragIsConfirmedWhenNewerFails() async throws {
         let store = makeStore()
         let subject = CatalogSubject(
             id: "s1",
@@ -672,25 +691,32 @@ struct EvidenceGraphModelTests {
                 positions: [CatalogSubjectPosition(subjectID: "s1", gridX: 1, gridY: 2)]
             )
         )
-        store.setSubjectPositionDelayNanoseconds = 80_000_000
         store.setSubjectPositionErrors = [
             nil,
             CoreInvokeError.coded(status: 1, code: "internal.unknown", kind: .internal, params: []),
         ]
+        store.holdsSetSubjectPosition = true
         _ = model.commitDrag(
             subjectID: "s1",
             originGridX: 1,
             originGridY: 2,
             documentDelta: CGSize(width: 160, height: 0)
         )
-        try? await Task.sleep(nanoseconds: 10_000_000)
+        let olderWrite = model.lastPositionWrite
+        try #require(await waitUntil { store.heldSetSubjectPositionCount == 1 })
         _ = model.commitDrag(
             subjectID: "s1",
             originGridX: 5,
             originGridY: 2,
             documentDelta: CGSize(width: 160, height: 0)
         )
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        let newerWrite = model.lastPositionWrite
+        try #require(await waitUntil { store.heldSetSubjectPositionCount == 2 })
+        // Settle the older write (succeeds) before the newer one (fails).
+        store.releaseSetSubjectPosition()
+        await olderWrite?.value
+        store.releaseSetSubjectPosition()
+        await newerWrite?.value
         let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
         #expect(handle?.value?.positions.first?.gridX == 5)
         #expect(handle?.value?.positions.first?.gridY == 2)

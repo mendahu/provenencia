@@ -67,11 +67,14 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var reorderSourceMetadataError: Error?
     /// When set, `setSubjectPosition` throws (Evidence graph drag should revert).
     var setSubjectPositionError: Error?
-    /// Optional delay before each `setSubjectPosition` (generation-guard tests).
-    var setSubjectPositionDelayNanoseconds: UInt64 = 0
-    /// Per-call errors consumed in order; `nil` means that call succeeds.
+    /// When true, each `setSubjectPosition` suspends until `releaseSetSubjectPosition()`
+    /// so generation-guard tests can order completions without sleeping.
+    var holdsSetSubjectPosition = false
+    /// Per-call errors assigned in call order; `nil` means that call succeeds.
     var setSubjectPositionErrors: [Error?] = []
     private var setSubjectPositionCallIndex = 0
+    private let setSubjectPositionLock = NSLock()
+    private var heldSetSubjectPositions: [CheckedContinuation<Void, Never>] = []
     var listSubjectsError: Error?
     var listConnectRulesError: Error?
     var createPropertyTermError: Error?
@@ -1145,22 +1148,37 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     ) async throws -> CatalogSubjectPosition {
         markCatalogSessionHeld(projectDir)
         recordedCalls.append("setSubjectPosition subjectID=\(subjectID) \(gridX),\(gridY)")
-        if setSubjectPositionDelayNanoseconds > 0 {
-            try await Task.sleep(nanoseconds: setSubjectPositionDelayNanoseconds)
-        }
+        let error: Error?
         if setSubjectPositionCallIndex < setSubjectPositionErrors.count {
-            let error = setSubjectPositionErrors[setSubjectPositionCallIndex]
-            setSubjectPositionCallIndex += 1
-            if let error { throw error }
+            error = setSubjectPositionErrors[setSubjectPositionCallIndex]
         } else {
-            setSubjectPositionCallIndex += 1
-            if let setSubjectPositionError {
-                throw setSubjectPositionError
+            error = setSubjectPositionError
+        }
+        setSubjectPositionCallIndex += 1
+        if holdsSetSubjectPosition {
+            await withCheckedContinuation { continuation in
+                setSubjectPositionLock.withLock {
+                    heldSetSubjectPositions.append(continuation)
+                }
             }
         }
+        if let error { throw error }
         let position = CatalogSubjectPosition(subjectID: subjectID, gridX: gridX, gridY: gridY)
         subjectPositionsBySubject[subjectID] = position
         return position
+    }
+
+    /// Number of `setSubjectPosition` calls suspended by `holdsSetSubjectPosition`.
+    var heldSetSubjectPositionCount: Int {
+        setSubjectPositionLock.withLock { heldSetSubjectPositions.count }
+    }
+
+    /// Resumes the oldest held `setSubjectPosition` call.
+    func releaseSetSubjectPosition() {
+        let continuation = setSubjectPositionLock.withLock {
+            heldSetSubjectPositions.isEmpty ? nil : heldSetSubjectPositions.removeFirst()
+        }
+        continuation?.resume()
     }
 
     func clearSubjectPosition(projectDir: String, subjectID: String) async throws {
