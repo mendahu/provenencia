@@ -544,7 +544,7 @@ private struct EvidenceSubjectCardChrome: View {
         }
     }
 
-    /// Kit ghost Button on the kind chip band: still an action on this subject.
+    /// Kit ghost Button on the kind band: still an action on this subject.
     private var promoteFooter: some View {
         HStack(spacing: 0) {
             Button {} label: {
@@ -565,12 +565,12 @@ private struct EvidenceSubjectCardChrome: View {
         .padding(.horizontal, EvidenceSubjectCard.promoteInset)
         .frame(maxWidth: .infinity, minHeight: EvidenceSubjectCard.footerHeight,
                maxHeight: EvidenceSubjectCard.footerHeight, alignment: .leading)
-        .background(style.chip)
+        .background(style.band)
         .evidenceCardHitRegion(EvidenceSubjectCard.promoteActionID)
         .accessibilityHidden(true)
     }
 
-    /// Conclusion link on the kind chip band (S9-D8 rev 1). Told apart from the
+    /// Conclusion link on the kind band (S9-D8 rev 1 / rev 2). Told apart from the
     /// Observation rows by shape — outline mono ref, no micro-caps label,
     /// disclosure chevron — while keeping the card's colour identity.
     private func membershipRow(_ membership: CatalogSubjectMembership) -> some View {
@@ -593,11 +593,11 @@ private struct EvidenceSubjectCardChrome: View {
         .frame(maxWidth: .infinity, minHeight: EvidenceSubjectCard.footerHeight,
                maxHeight: EvidenceSubjectCard.footerHeight, alignment: .leading)
         .background {
-            // Kind chip, mixed with kind ink at 10% (hover) / 18% (pressed).
+            // Kind band, mixed with kind ink at 10% (hover) / 18% (pressed).
             // One always-present layer; only its opacity follows the state.
             style.ink
                 .opacity(pressed ? 0.18 : (hovered ? 0.10 : 0))
-                .background(style.chip)
+                .background(style.band)
         }
         .pvAnimation(PVMotion.instantStandard, value: pressed)
         .pvAnimation(PVMotion.instantStandard, value: hovered)

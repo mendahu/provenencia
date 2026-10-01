@@ -144,6 +144,13 @@ enum PVColor {
     static let subjectPlaceLine = Color.pvDynamic(light: PVPalette.hex("#88BEA8"), dark: PVPalette.hex("#254739"))
     static let subjectPlaceChip = Color.pvDynamic(light: PVPalette.hex("#FFFDF9"), dark: PVPalette.hex("#101914"))
 
+    // Card footer band (S9-D8 rev 2): a mid-tone of the kind's own pigment, one
+    // step deeper than the card wash. Light = OKLab mix of 300 at 45% into 100;
+    // dark = the kind chip.
+    static let subjectPersonBand = Color.pvDynamic(light: PVPalette.hex("#B9CED8"), dark: PVPalette.hex("#141B20"))
+    static let subjectEventBand = Color.pvDynamic(light: PVPalette.hex("#F2CBB2"), dark: PVPalette.hex("#1D1510"))
+    static let subjectPlaceBand = Color.pvDynamic(light: PVPalette.hex("#B7D8C9"), dark: PVPalette.hex("#101914"))
+
     /// Selection halo behind an Evidence graph card (`--graph-ring`).
     static let graphRing = Color.pvDynamic(
         light: Color(.sRGB, red: 62.0 / 255, green: 110.0 / 255, blue: 133.0 / 255, opacity: 0.28),

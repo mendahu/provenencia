@@ -102,6 +102,12 @@ The Evidence graph now knows which Subjects are promoted and onto which handle. 
 - **Why:** the secondary button and paper band lost contrast on the kind washes in dark mode, and the accent band merged into person cards, which share the accent hue.
 - **Accepted deviation from the brief:** the membership row now takes the kind colour. It is told apart from Observation rows by shape: no micro-caps label, an outline mono ref, the name, and a disclosure chevron.
 
+**Rev 2 (light-mode footer colour, shipped in S9-04).**
+- **New alias** `subject-{kind}-band` (`PVColor.subject{Person,Event,Place}Band`, the `band` role on `EvidenceSubjectKindStyle`). The footer fill and its 10% / 18% hover and pressed mixes move from the chip to the band.
+- **Light mode:** OKLab 300 at 45% into 100, so person `#B9CED8`, event `#F2CBB2`, place `#B7D8C9`.
+- **Dark mode:** equals the kind chip, so dark is unchanged.
+- **Shipped as specified, with a known contrast gap.** Kind-ink text on the band is 5.88:1 for Person, but **4.30:1** for Event and **4.44:1** for Place, just under the brief's own 4.5:1 check. The ghost Promote label passes everywhere (≥4.6:1). This is left for the designers to revisit; the options are a 900-step ink on the band (~7.5:1) or lighter bands.
+
 Brief archived: [`design/archive/S9-D8-graph-subject-card.md`](design/archive/S9-D8-graph-subject-card.md).
 
 ### S9-04 — Graph card: Promote + membership

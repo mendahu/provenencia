@@ -187,3 +187,28 @@ This revision is visual only. Action ids, VoiceOver actions, the v1 Confirm and 
 
 **Deviation from §6, accepted.** §6 said "Do not tint membership with kind color", and the researcher reversed that. The membership row is told apart from Observation rows by shape: no micro-caps label, an outline mono ref, the name, and a disclosure chevron.
 
+---
+
+## Rev 2: light-mode footer colour (accepted, shipped in S9-04)
+
+This builds on rev 1. It adds one colour alias and changes light mode only; dark mode, layout, height, controls and actions are unchanged.
+
+A new theme-flipping alias, `subject-{kind}-band`, replaces the chip for the footer fill and its hover / pressed mixes:
+
+| Kind | Light (OKLab mix) | Dark |
+| --- | --- | --- |
+| Person | `iron-300` 45% + `iron-100` = `#B9CED8` | = `subject-person-chip` |
+| Event | `copper-300` 45% + `copper-100` = `#F2CBB2` | = `subject-event-chip` |
+| Place | `verdigris-300` 45% + `verdigris-100` = `#B7D8C9` | = `subject-place-chip` |
+
+**Why.** Rev 1's light fill read as white and lost the card's colour identity.
+
+**Contrast in light mode.** Measured on the band:
+
+| | Person | Event | Place |
+| --- | --- | --- | --- |
+| Kind ink | 5.88:1 | **4.30:1** | **4.44:1** |
+| Ghost Promote label | 4.62:1 | 5.00:1 | 4.90:1 |
+
+Event and Place ink fall just short of 4.5:1. They shipped as specified, for the designers to revisit. The 900-step ink would reach about 7.5:1 on these bands. Lightening the bands to pass would leave copper almost the same as the event wash.
+

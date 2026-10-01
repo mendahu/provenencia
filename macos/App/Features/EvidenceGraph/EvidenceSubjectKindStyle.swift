@@ -7,6 +7,8 @@ struct EvidenceSubjectKindStyle: Sendable {
     var tint: Color
     var line: Color
     var chip: Color
+    /// Card footer band (S9-D8 rev 2): deeper than the wash in light mode, the chip in dark.
+    var band: Color
 
     static func forKind(_ kind: EvidencePrimaryKind) -> EvidenceSubjectKindStyle {
         resolve(typeKey: kind.rawValue, presentation: nil)
@@ -20,12 +22,29 @@ struct EvidenceSubjectKindStyle: Sendable {
             ink: SubjectFieldsTypeChrome.ink(typeKey: typeKey, presentation: presentation),
             tint: color(token: presentation?.tintToken, fallbackTypeKey: typeKey, role: .tint),
             line: color(token: presentation?.lineToken, fallbackTypeKey: typeKey, role: .line),
-            chip: color(token: presentation?.chipToken, fallbackTypeKey: typeKey, role: .chip)
+            chip: color(token: presentation?.chipToken, fallbackTypeKey: typeKey, role: .chip),
+            band: band(chipToken: presentation?.chipToken, fallbackTypeKey: typeKey)
         )
     }
 
     private enum TokenRole {
         case tint, line, chip
+    }
+
+    /// The band follows the kind family named by the chip token (presentation
+    /// carries no band token of its own), else the type key.
+    private static func band(chipToken: String?, fallbackTypeKey: String) -> Color {
+        switch chipToken ?? "" {
+        case "subjectPersonChip": return PVColor.subjectPersonBand
+        case "subjectEventChip": return PVColor.subjectEventBand
+        case "subjectPlaceChip": return PVColor.subjectPlaceBand
+        default:
+            switch fallbackTypeKey {
+            case "event", "participation": return PVColor.subjectEventBand
+            case "place", "location": return PVColor.subjectPlaceBand
+            default: return PVColor.subjectPersonBand
+            }
+        }
     }
 
     private static func color(
