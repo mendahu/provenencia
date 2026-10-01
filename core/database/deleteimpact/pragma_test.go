@@ -63,12 +63,35 @@ func TestPragmaHonesty(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		// PRAGMA returns one row per column; a composite FK is keyed by its
+		// leading (seq 0) column and registers the rest in FromCols.
+		type liveFK struct {
+			toTable, onDelete string
+			cols              []string
+		}
+		var order []int
+		live := map[int]*liveFK{}
 		for fks.Next() {
 			var id, seq int
 			var toTable, fromCol, toCol, onUpdate, onDelete, match string
 			if err := fks.Scan(&id, &seq, &toTable, &fromCol, &toCol, &onUpdate, &onDelete, &match); err != nil {
 				t.Fatal(err)
 			}
+			fk, ok := live[id]
+			if !ok {
+				fk = &liveFK{toTable: toTable, onDelete: onDelete}
+				live[id] = fk
+				order = append(order, id)
+			}
+			for len(fk.cols) <= seq {
+				fk.cols = append(fk.cols, "")
+			}
+			fk.cols[seq] = fromCol
+		}
+		fks.Close()
+		for _, id := range order {
+			fk := live[id]
+			fromCol, toTable, onDelete := fk.cols[0], fk.toTable, fk.onDelete
 			key := name + "." + fromCol
 			seen[key] = true
 			fkCols = append(fkCols, [2]string{name, fromCol})
@@ -76,6 +99,13 @@ func TestPragmaHonesty(t *testing.T) {
 			if !ok {
 				t.Errorf("unregistered FK %s -> %s", key, toTable)
 				continue
+			}
+			wantCols := spec.FromCols
+			if len(wantCols) == 0 {
+				wantCols = []string{spec.FromCol}
+			}
+			if strings.Join(wantCols, ",") != strings.Join(fk.cols, ",") {
+				t.Errorf("%s cols=%v registered=%v", key, fk.cols, wantCols)
 			}
 			gotAction := normalizeOnDelete(onDelete)
 			wantAction := normalizeOnDelete(spec.OnDelete)
@@ -96,7 +126,6 @@ func TestPragmaHonesty(t *testing.T) {
 				}
 			}
 		}
-		fks.Close()
 	}
 	for _, pair := range fkCols {
 		name, fromCol := pair[0], pair[1]

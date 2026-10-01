@@ -15,7 +15,8 @@ type tableSpec struct {
 
 type fkSpec struct {
 	FromTable string
-	FromCol   string
+	FromCol   string   // leading column; the honesty key
+	FromCols  []string // full column list for a composite FK (nil = FromCol only)
 	ToTable   string
 	OnDelete  string
 	Bucket    Bucket
@@ -62,6 +63,8 @@ var tables = []tableSpec{
 	{Name: "subject_types", PK: "id", Kind: KindSubjectType, Bucket: BucketVocab, Exists: `SELECT 1 FROM subject_types WHERE id = ?`},
 	{Name: "properties", PK: "id", Kind: KindProperty, Bucket: BucketVocab, Exists: `SELECT 1 FROM properties WHERE id = ?`},
 	{Name: "property_terms", PK: "id", Kind: KindPropertyTerm, Bucket: BucketVocab, Exists: `SELECT 1 FROM property_terms WHERE id = ?`},
+	{Name: "canonical_entities", Bucket: BucketResource},
+	{Name: "claim_confidence_grades", Bucket: BucketVocab},
 	{Name: "files", PK: "id", Kind: KindFile, Bucket: BucketPool, Exists: `SELECT 1 FROM files WHERE id = ?`},
 	{Name: "users", PK: "id", Kind: KindUser, Bucket: BucketInfra, Exists: `SELECT 1 FROM users WHERE id = ?`},
 	{Name: "project", PK: "id", Kind: KindProject, Bucket: BucketSkip, Exists: `SELECT 1 FROM project WHERE id = ?`},
@@ -75,6 +78,8 @@ var tables = []tableSpec{
 	{Name: "subject_positions", Bucket: BucketFacet},
 	{Name: "subject_type_fields", Bucket: BucketFacet},
 	{Name: "name_value_parts", Bucket: BucketFacet},
+	{Name: "identity_claims", Bucket: BucketFacet},
+	{Name: "identity_claim_evidence", Bucket: BucketFacet},
 	{Name: "date_values", Bucket: BucketOwnedOutbound},
 	{Name: "name_values", Bucket: BucketOwnedOutbound},
 	{Name: "file_derivatives", Bucket: BucketOwnedOutbound},
@@ -128,6 +133,14 @@ var foreignKeys = []fkSpec{
 
 	{FromTable: "property_terms", FromCol: "property_id", ToTable: "properties", OnDelete: "NO ACTION", Bucket: BucketResource},
 	{FromTable: "name_value_parts", FromCol: "name_value_id", ToTable: "name_values", OnDelete: "CASCADE", Bucket: BucketFacet},
+
+	{FromTable: "canonical_entities", FromCol: "subject_type_id", ToTable: "subject_types", OnDelete: "NO ACTION", Bucket: BucketResource},
+	{FromTable: "canonical_entities", FromCol: "merged_into_id", ToTable: "canonical_entities", OnDelete: "NO ACTION", Bucket: BucketResource},
+	{FromTable: "identity_claims", FromCol: "subject_id", FromCols: []string{"subject_id", "subject_type_id"}, ToTable: "subjects", OnDelete: "CASCADE", Bucket: BucketFacet},
+	{FromTable: "identity_claims", FromCol: "entity_id", FromCols: []string{"entity_id", "subject_type_id"}, ToTable: "canonical_entities", OnDelete: "CASCADE", Bucket: BucketFacet},
+	{FromTable: "identity_claims", FromCol: "confidence_grade_id", ToTable: "claim_confidence_grades", OnDelete: "NO ACTION", Bucket: BucketResource},
+	{FromTable: "identity_claim_evidence", FromCol: "identity_claim_id", ToTable: "identity_claims", OnDelete: "CASCADE", Bucket: BucketFacet},
+	{FromTable: "identity_claim_evidence", FromCol: "observation_id", ToTable: "observations", OnDelete: "NO ACTION", Bucket: BucketResource},
 }
 
 var originRules = []originRule{
@@ -202,7 +215,24 @@ var inboundEdgeList = sync.OnceValue(func() []inboundEdge {
 			`SELECT id, key FROM property_terms WHERE property_id = ? ORDER BY key COLLATE NOCASE LIMIT ?`),
 		fkEdge(KindPropertyTerm, "observations.value_term_id", KindObservation, "observations", "value_term_id", "ref"),
 		fkEdge(KindFile, "artifacts.file_id", KindArtifact, "artifacts", "file_id", "ref"),
-		reservedStub(KindObservation, ViaSamenessEvidence, KindSamenessClaim),
+		fkEdge(KindSubjectType, "canonical_entities.subject_type_id", KindCanonicalEntity, "canonical_entities", "subject_type_id", "ref"),
+		fkEdge(KindCanonicalEntity, "canonical_entities.merged_into_id", KindCanonicalEntity, "canonical_entities", "merged_into_id", "ref"),
+		// Claims have no ref; name the handle each claim files onto.
+		joinEdge(KindClaimConfidenceGrade, "identity_claims.confidence_grade_id", KindCanonicalEntity,
+			`SELECT COUNT(DISTINCT entity_id) FROM identity_claims WHERE confidence_grade_id = ?`,
+			`SELECT DISTINCT e.id, e.ref FROM identity_claims ic
+				JOIN canonical_entities e ON e.id = ic.entity_id
+				WHERE ic.confidence_grade_id = ?
+				ORDER BY e.ref COLLATE NOCASE LIMIT ?`),
+		joinEdge(KindObservation, "identity_claim_evidence.observation_id", KindCanonicalEntity,
+			`SELECT COUNT(DISTINCT ic.entity_id) FROM identity_claim_evidence ev
+				JOIN identity_claims ic ON ic.id = ev.identity_claim_id
+				WHERE ev.observation_id = ?`,
+			`SELECT DISTINCT e.id, e.ref FROM identity_claim_evidence ev
+				JOIN identity_claims ic ON ic.id = ev.identity_claim_id
+				JOIN canonical_entities e ON e.id = ic.entity_id
+				WHERE ev.observation_id = ?
+				ORDER BY e.ref COLLATE NOCASE LIMIT ?`),
 		reservedStub(KindObservation, ViaReconciliationEvidence, KindReconciliationClaim),
 		reservedStub(KindObservation, ViaNarrativeTarget, KindNarrative),
 	}

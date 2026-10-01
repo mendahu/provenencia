@@ -546,6 +546,8 @@ high_confidence     3             High confidence
 
 `confidence_grade_id` is nullable. Claim `status` remains the separate workflow vocabulary in §5.1–5.2.
 
+**Seeded** (Spike 9, S9-01): `claimconfidencegrades.Install` at catalog create, alongside Source credibility grades. Existing projects are not backfilled.
+
 ---
 
 # 6. Documentation ownership

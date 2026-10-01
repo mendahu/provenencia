@@ -82,7 +82,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 ## New table
 
 1. Classify the FKs in the migration skill (`NO ACTION` / `CASCADE` / `SET NULL` / owned outbound).
-2. Add register rows + probes + projectors in `core/database/deleteimpact` **in the same PR**.
+2. Add register rows + probes + projectors in `core/database/deleteimpact` **in the same PR**. A composite FK registers once, under its leading column, with the full tuple in `FromCols`.
 3. If researchers can delete the row, add `Delete` in the domain package using the pattern above.
 4. If this spike has no UI, still register + cut over any existing `Delete`.
 

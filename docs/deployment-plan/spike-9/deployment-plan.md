@@ -430,7 +430,7 @@ CLOSE
 
 In order; each brief sits just above the PR it gates.
 
-- [ ] S9-01 — Conclusion schema + stores
+- [x] S9-01 — Conclusion schema + stores → [`completed.md`](completed.md)
 - [ ] S9-02 — Promote write v1
 - [ ] S9-03 — Source graph carries membership
 - [ ] ✎ S9-D8 — Design: graph subject card
@@ -487,6 +487,8 @@ In order; each brief sits just above the PR it gates.
 ### Slice 1 — Mint from the graph
 
 #### S9-01 — Conclusion schema + stores
+
+**Done.** See [`completed.md`](completed.md#s9-01--conclusion-schema--stores).
 
 | | |
 | --- | --- |
@@ -636,7 +638,7 @@ In order; each brief sits just above the PR it gates.
 
 | | |
 | --- | --- |
-| **In** | Register `identity_claim_evidence.observation_id` (replaces stale `ViaSamenessEvidence`); a pinned Observation's delete names its claim(s). L10n. |
+| **In** | Probe already registered in S9-01 (`identity_claim_evidence.observation_id`, names the handle; `ViaSamenessEvidence` removed). This PR: L10n for the `canonical_entity` kind and via, drop the Swift `sameness_claim` leftovers, end-to-end Impact through the composer. |
 | **Depends on** | S9-17 |
 
 #### S9-19 — Promote compare
@@ -811,7 +813,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 9. **Composite FKs** carry `subject_type_id` on the claim. A person Subject cannot be claimed onto a Place; the target picker filters by type so the researcher never sees that error.
 10. **Backfill is symmetric.** A confirmed pair pins both Observations on the incoming claim **and** the existing member's claim. The older claim's `argument` is not rewritten.
 11. **Pins are Observations only.** Not Citations, Subjects, or Sources. Confirming a match creates no Observation.
-12. **Stale reservation.** [`deleteimpact/reserved.go`](../../../core/database/deleteimpact/reserved.go) still names `sameness_claim_evidence` — superseded by `identity_claim_evidence`.
+12. ~~**Stale reservation.**~~ Go side retired in S9-01 (`identity_claim_evidence.observation_id` is a live probe). Swift still carries `sameness_claim` L10n / preview until S9-18.
 13. **Candidate vs canonical refs.** Subjects are `CPR-…`; handles are `PER-…`. Both prefixes already exist on `subject_types`.
 14. **Cross-Source reads** run on the serialized catalog session. Keep rebuild off the open path's critical section if it gets long.
 
