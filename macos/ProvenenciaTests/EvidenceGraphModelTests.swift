@@ -1343,4 +1343,87 @@ struct EvidenceGraphModelTests {
         #expect(location.ref == "SRC-1")
         #expect(location.sourceSurface != .graph)
     }
+
+    // MARK: Promote (S9-04)
+
+    private func promotableModel(storeHasSubject: Bool = true) async -> (FakeStore, EvidenceGraphModel) {
+        let store = makeStore()
+        let subject = CatalogSubject(
+            id: "s-james", ref: "CPR-2AB91", sourceID: sourceID, subjectTypeID: personTypeID,
+            label: "James Robins", description: ""
+        )
+        if storeHasSubject {
+            store.subjectsBySource[sourceID] = [subject]
+        }
+        store.subjectPositionsBySubject["s-james"] = CatalogSubjectPosition(subjectID: "s-james", gridX: 1, gridY: 1)
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.session.setQueryValue(
+            CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID),
+            value: graphRows(
+                sourceId: sourceID,
+                subjects: [subject],
+                positions: [CatalogSubjectPosition(subjectID: "s-james", gridX: 1, gridY: 1)]
+            )
+        )
+        return (store, model)
+    }
+
+    @Test func promoteActionOpensConfirmNamingSubjectAndHandleKind() async {
+        let (store, model) = await promotableModel()
+        store.recordedCalls = []
+        let location = model.performCardAction(subjectID: "s-james", actionID: EvidenceSubjectCard.promoteActionID)
+        #expect(location == nil)
+        #expect(model.pendingPromote == EvidenceGraphModel.PromoteRequest(
+            id: "s-james", ref: "CPR-2AB91", label: "James Robins", kind: .person, handleRefPrefix: "PER"
+        ))
+        // Opening the confirm writes nothing; Cancel is just clearing the item.
+        model.pendingPromote = nil
+        #expect(!store.recordedCalls.contains { $0.hasPrefix("promoteSubject") })
+    }
+
+    @Test func confirmPromoteMintsAndReloadsGraphWithMembership() async {
+        let (store, model) = await promotableModel()
+        model.beginPromote(subjectID: "s-james")
+        let ok = await model.confirmPromote()
+        #expect(ok)
+        #expect(model.pendingPromote == nil)
+        #expect(store.recordedCalls.contains("promoteSubject id=s-james"))
+        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let reloaded = await waitUntil {
+            let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+            return handle?.value?.memberships.first?.subjectID == "s-james"
+        }
+        #expect(reloaded)
+        let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+        let snapshot = SourceGraphSnapshot.build(
+            rows: handle?.value ?? SourceGraphRows(sourceId: sourceID),
+            types: store.subjectTypesByProject[projectDir] ?? [],
+            rules: []
+        )
+        let card = snapshot.subjects.first { $0.id == "s-james" }
+        #expect(card?.membership?.entity.ref.hasPrefix("PER-") == true)
+        let ids = card.map { EvidenceSubjectCard.actionTargets(for: $0, canCite: true).map(\.id) } ?? []
+        #expect(ids.contains(EvidenceSubjectCard.openHandleActionID))
+        // Promote is not offered again.
+        model.beginPromote(subjectID: "s-james")
+        #expect(model.pendingPromote == nil)
+    }
+
+    @Test func promoteFailureKeepsConfirmOpenWithError() async {
+        // The graph shows a subject the store no longer has, so the write fails.
+        let (_, model) = await promotableModel(storeHasSubject: false)
+        model.beginPromote(subjectID: "s-james")
+        let ok = await model.confirmPromote()
+        #expect(!ok)
+        #expect(model.pendingPromote?.id == "s-james")
+        #expect(model.promoteError?.isEmpty == false)
+        #expect(model.isPromoting == false)
+    }
+
+    @Test func openHandleHasNoPageYet() async {
+        let (_, model) = await promotableModel()
+        #expect(model.performCardAction(subjectID: "s-james", actionID: EvidenceSubjectCard.openHandleActionID) == nil)
+        #expect(model.pendingPromote == nil)
+    }
 }

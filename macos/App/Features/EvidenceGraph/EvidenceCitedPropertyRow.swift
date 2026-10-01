@@ -156,6 +156,7 @@ struct EvidenceCitedPropertyStack<Footer: View>: View {
                         isHovered: hoveredActionID
                             == EvidenceSubjectCard.editPropertyActionID(observationID: observation.id)
                     )
+                    .evidenceCardHitRegion(EvidenceSubjectCard.editPropertyActionID(observationID: observation.id))
                 }
                 footer()
             }

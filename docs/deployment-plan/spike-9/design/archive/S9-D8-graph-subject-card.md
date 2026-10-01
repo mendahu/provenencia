@@ -1,15 +1,16 @@
 # S9-D8 — Evidence graph subject card: Promote + membership
 
 **Kind:** Claude Design board  
+**Status:** Agreed — implemented in **S9-04**. Board: Claude Design project `2239e965-3b09-4c13-b85a-d54316ffd8fb`, `Evidence graph canvas.dc.html`, Frame 14.  
 **Spike:** Provenencia Spike 9 (canonical entities MVP)  
 **View:** Evidence graph subject card (`EvidenceSubjectCard`)  
 **Implements later as:** PR **S9-04** (later on this view: S9-09 adds the name to the membership row; S9-11 routes Promote to the flow)  
-**Depends on:** S9-02 (Promote write v1), S9-03 (graph read carries membership); shipped card ([`EvidenceSubjectCard`](../../../../macos/App/Features/EvidenceGraph/EvidenceSubjectCard.swift)) and Spike 8 graph chrome  
+**Depends on:** S9-02 (Promote write v1), S9-03 (graph read carries membership); shipped card ([`EvidenceSubjectCard`](../../../../../macos/App/Features/EvidenceGraph/EvidenceSubjectCard.swift)) and Spike 8 graph chrome  
 **Related:** S9-D9 (Promote opens there); conclusion model §5.3–5.4  
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
-**Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)  
+**Skill:** [`add-design-brief`](../../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.cursor/skills/add-ui-component/SKILL.md)
 
-Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](README.md) first.
+Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](../README.md) first.
 
 This brief is an **enhancement** of a shipped surface: extend its existing frames.
 
@@ -162,5 +163,52 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 ## 8. Handoff
 
 1. Archive this brief under `archive/` when the board is agreed.
-2. Record in [`../completed.md`](../completed.md).
+2. Record in [`../completed.md`](../../completed.md).
 3. Implement **S9-04** against the board and inventory (kit first).
+
+---
+
+## Rev 1: card footer revision (accepted, shipped in S9-04)
+
+This revision is visual only. Action ids, VoiceOver actions, the v1 Confirm and bridge behaviour are unchanged.
+
+| | Original | Revised |
+| --- | --- | --- |
+| Footer height (both states) | 44pt | **36pt**, still one constant in `contentHeight(for:)` |
+| Footer fill | Paper | **Kind chip** |
+| Footer top rule | none | **1px kind line** |
+| Promote | `PVButton` secondary sm | **`PVButton` ghost sm**, inset 8pt less than the card padding |
+| Membership ref | `PVBadge` accent | **`PVBadge` neutral, subtle**, ref text in kind ink |
+| Name + chevron | text-primary / accent | **Kind ink** |
+| Hover / pressed | accent-soft mix / accent-soft | Chip + **10%** / **18%** kind ink (pressed also scales to .985) |
+| Keyboard focus | inset 2pt accent ring | unchanged |
+
+**Why.** The secondary button and paper band lost contrast on the kind washes in dark mode, and the accent band merged into person cards, which share the accent hue. With this revision the footer keeps the card's colour identity.
+
+**Deviation from §6, accepted.** §6 said "Do not tint membership with kind color", and the researcher reversed that. The membership row is told apart from Observation rows by shape: no micro-caps label, an outline mono ref, the name, and a disclosure chevron.
+
+---
+
+## Rev 2: light-mode footer colour (accepted, shipped in S9-04)
+
+This builds on rev 1. It adds one colour alias and changes light mode only; dark mode, layout, height, controls and actions are unchanged.
+
+A new theme-flipping alias, `subject-{kind}-band`, replaces the chip for the footer fill and its hover / pressed mixes:
+
+| Kind | Light (OKLab mix) | Dark |
+| --- | --- | --- |
+| Person | `iron-300` 45% + `iron-100` = `#B9CED8` | = `subject-person-chip` |
+| Event | `copper-300` 45% + `copper-100` = `#F2CBB2` | = `subject-event-chip` |
+| Place | `verdigris-300` 45% + `verdigris-100` = `#B7D8C9` | = `subject-place-chip` |
+
+**Why.** Rev 1's light fill read as white and lost the card's colour identity.
+
+**Contrast in light mode.** Measured on the band:
+
+| | Person | Event | Place |
+| --- | --- | --- | --- |
+| Kind ink | 5.88:1 | **4.30:1** | **4.44:1** |
+| Ghost Promote label | 4.62:1 | 5.00:1 | 4.90:1 |
+
+Event and Place ink fall just short of 4.5:1. They shipped as specified, for the designers to revisit. The 900-step ink would reach about 7.5:1 on these bands. Lightening the bands to pass would leave copper almost the same as the event wash.
+
