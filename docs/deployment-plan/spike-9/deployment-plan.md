@@ -123,7 +123,7 @@ conclusion_resolved_values
   entity_id        BLOB  → canonical_entities (CASCADE)
   property_id      BLOB  → properties         -- vocabulary as a row, never a column
   rank             INT   -- 1 = displayed value; 2..n = other distinct clusters
-  state            TEXT  -- single | merged | mixed   (later: concluded)
+  state            TEXT  -- single | merged | mixed   (later: concluded) — derivable; see below
   value_text / value_integer / value_term_id / value_entity_id
   value_date       BLOB  -- protobuf DateValue (may be synthesized; never a date_values row)
   value_name       BLOB  -- protobuf NameValue (same)
@@ -139,6 +139,7 @@ conclusion_resolved_values
 
 - **Useful for sorting, querying, and resolving (Q12).** Structured values are stored whole as the protobuf messages FFI already uses (`DateValueInput` / `NameValueInput` in [`engine.proto`](../../../api/proto/engine.proto); renaming them to plain value messages is optional cleanup). SQL never decodes them: ordering uses `sort_key`, date range queries use `date_lo` / `date_hi` (the window the date resolver already computes to merge), and the resolver and composers decode in Go. Resolver output is never written to `date_values` / `name_values`.
 
+- **State is the shape of the clusters.** The resolver (S9-05) returns a list of clusters plus a *concluded* flag; `single` / `merged` / `mixed` are read off it (one cluster of support 1, one of support > 1, several). S9-06 decides whether `state` is stored for query convenience or derived at read from rank 2's existence and rank 1's `support`.
 - **Edges are resolved values.** A Participation's `person` end is its resolved `person` Property with `value_entity_id`. The canonical graph is this table plus its reverse index; there is no separate edges table.
 - **Every cluster is kept**, not just the winner: lists get *+N*, search gets alternates (*Jim*), Promote compares against every value, details render clusters without re-resolving.
 - **No vocabulary in the schema.** No `birth_date` columns, no per-kind tables. Genealogical concepts live in Go (resolver, composers, registry of recognized keys) and in `property_id` rows. Labels are not stored (term **ids** are), so relabels need no recompute.
@@ -435,7 +436,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-03 — Source graph carries membership → [`completed.md`](completed.md)
 - [x] ✎ S9-D8 — Design: graph subject card → [`completed.md`](completed.md)
 - [x] S9-04 — Graph card: Promote + membership → [`completed.md`](completed.md)
-- [ ] S9-05 — Resolver core v1
+- [x] S9-05 — Resolver core v1 → [`completed.md`](completed.md)
 - [ ] S9-06 — Resolved-values cache
 - [ ] S9-07 — Person header composer + list read
 - [ ] ✎ S9-D1 — Design: workspace sidebar
@@ -532,6 +533,8 @@ In order; each brief sits just above the PR it gates.
 ### Slice 2 — Persons list
 
 #### S9-05 — Resolver core v1
+
+**Done.** See [`completed.md`](completed.md#s9-05--resolver-core-v1). `core/resolve.Resolve(valueType, candidates, concluded)` → `Result{Clusters, Concluded}`; state is `Result.State()`. S9-13 / S9-21 replace the per-type cluster key (`key` in `resolve.go`); S9-14 puts provenance ahead of support in the order.
 
 | | |
 | --- | --- |
