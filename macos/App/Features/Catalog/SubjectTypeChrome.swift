@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// Strip / chip chrome for Subject types — TYPES + VT_COLOR tables shared by
-/// Subject Fields, Evidence graph, and the composer.
-enum SubjectFieldsTypeChrome {
+/// Properties, Evidence graph, and the composer.
+enum PropertiesTypeChrome {
     static func sortIndex(_ key: String) -> Int {
         switch key {
         case "person": return 0

@@ -547,13 +547,13 @@ private struct ThrowingStore: GenealogyStore {
         label _: String,
         description _: String
     ) async throws -> CatalogPropertyTerm { throw StoreBoom.boom }
-    func assignSubjectTypeField(
+    func assignSubjectTypeProperty(
         projectDir _: String,
         userID _: String,
         subjectTypeID _: String,
         propertyID _: String
     ) async throws { throw StoreBoom.boom }
-    func removeSubjectTypeField(
+    func removeSubjectTypeProperty(
         projectDir _: String,
         userID _: String,
         subjectTypeID _: String,
@@ -615,7 +615,7 @@ private struct ThrowingStore: GenealogyStore {
     func deleteCitation(projectDir _: String, userID _: String, citationID _: String) async throws {
         throw StoreBoom.boom
     }
-    func getSubjectFieldsWorkspace(projectDir _: String) async throws -> SubjectFieldsSnapshot {
+    func getPropertiesWorkspace(projectDir _: String) async throws -> PropertiesSnapshot {
         throw StoreBoom.boom
     }
     func addObservationsToCitation(

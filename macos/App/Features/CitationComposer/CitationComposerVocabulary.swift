@@ -27,14 +27,14 @@ struct CitationComposerVocabulary: Equatable {
     )
 
     static func make(
-        fields: SubjectFieldsSnapshot,
+        fields: PropertiesSnapshot,
         snapshot: SourceGraphSnapshot,
         rules: [CatalogConnectRule],
         termsByPropertyID: [String: [CatalogPropertyTerm]]
     ) -> CitationComposerVocabulary {
         var propertiesByID = Dictionary(uniqueKeysWithValues: fields.properties.map { ($0.id, $0) })
         var propertiesByTypeID: [String: [CatalogProperty]] = [:]
-        for (typeID, typeFields) in fields.fieldsByTypeID {
+        for (typeID, typeFields) in fields.propertiesByTypeID {
             propertiesByTypeID[typeID] = typeFields.map(\.property)
             for field in typeFields {
                 propertiesByID[field.property.id] = field.property

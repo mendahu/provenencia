@@ -496,7 +496,7 @@ struct SourceTypesModelTests {
         // The suggestion join cascades; the field vocabulary row does not.
         #expect(store.fieldsByProject[projectDir]?.map(\.id) == ["f1"])
         #expect(counts.sourceTypes?.total == 0)
-        #expect(counts.sourceFields?.total == 1)
+        #expect(counts.metadata?.total == 1)
     }
 
     @Test func syncSelectionAppliesTypeAfterWarm() async {

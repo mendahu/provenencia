@@ -46,12 +46,12 @@ struct PVConfirmControlsTests {
 struct PVConfirmAccessibilityTests {
     @Test func mintsPrefixedIdentifiers() {
         #expect(
-            PVConfirmAccessibility.identifier(prefix: "sourceFields.delete", suffix: "confirm")
-                == "sourceFields.delete.confirm"
+            PVConfirmAccessibility.identifier(prefix: "metadata.delete", suffix: "confirm")
+                == "metadata.delete.confirm"
         )
         #expect(
-            PVConfirmAccessibility.identifier(prefix: "sourceFields.delete", suffix: "cancel")
-                == "sourceFields.delete.cancel"
+            PVConfirmAccessibility.identifier(prefix: "metadata.delete", suffix: "cancel")
+                == "metadata.delete.cancel"
         )
     }
 

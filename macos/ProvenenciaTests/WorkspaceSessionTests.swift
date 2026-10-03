@@ -450,9 +450,9 @@ struct WorkspaceSessionTests {
         #expect(handle.value?.map(\.entity.ref) == [promoted.entity.ref])
     }
 
-    /// `usedBy` on the Subject Fields inspector counts Observations, and it
+    /// `usedBy` on the Properties inspector counts Observations, and it
     /// moves whenever a citation save creates or deletes one.
-    @Test func applySavedCitationInvalidatesSubjectFieldsUsedBy() async {
+    @Test func applySavedCitationInvalidatesPropertiesUsedBy() async {
         let store = FakeStore()
         seedStore(store)
         store.propertiesByProject[projectDir] = [
@@ -467,15 +467,15 @@ struct WorkspaceSessionTests {
             ),
         ]
         let session = makeSession(store: store)
-        let fieldsKey = CatalogQueryKey.subjectFieldsWorkspace(project: session.projectKey)
-        let fields: QueryHandle<SubjectFieldsSnapshot> = session.query(fieldsKey)
+        let fieldsKey = CatalogQueryKey.propertiesWorkspace(project: session.projectKey)
+        let fields: QueryHandle<PropertiesSnapshot> = session.query(fieldsKey)
         await waitForFetchComplete(fields)
         #expect(fields.value?.properties.first?.usedBy == 2)
 
         store.propertiesByProject[projectDir]?[0].usedBy = 1
         session.apply(.savedCitation(sourceId: "s1"))
 
-        let _: QueryHandle<SubjectFieldsSnapshot> = session.query(fieldsKey)
+        let _: QueryHandle<PropertiesSnapshot> = session.query(fieldsKey)
         await waitForFetchComplete(fields)
         #expect(fields.value?.properties.first?.usedBy == 1)
     }

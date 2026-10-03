@@ -625,7 +625,7 @@ struct GoStore: GenealogyStore {
         return WorkspaceNavCounts(
             sources: Int(resp.sources),
             sourceTypes: Self.mapOriginCounts(resp.sourceTypes),
-            sourceFields: Self.mapOriginCounts(resp.sourceFields),
+            metadataFields: Self.mapOriginCounts(resp.metadataFields),
             persons: Int(resp.persons)
         )
     }
@@ -911,36 +911,36 @@ struct GoStore: GenealogyStore {
         return Self.mapPropertyTerm(resp.term)
     }
 
-    func assignSubjectTypeField(
+    func assignSubjectTypeProperty(
         projectDir: String,
         userID: String,
         subjectTypeID: String,
         propertyID: String
     ) async throws {
-        var req = Provenencia_Engine_V1_AssignSubjectTypeFieldRequest()
+        var req = Provenencia_Engine_V1_AssignSubjectTypePropertyRequest()
         req.projectDir = projectDir
         req.userID = userID
         req.subjectTypeID = subjectTypeID
         req.propertyID = propertyID
-        let _: Provenencia_Engine_V1_AssignSubjectTypeFieldResponse = try await provenenciaCall(
-            method: CoreMethod.assignSubjectTypeField,
+        let _: Provenencia_Engine_V1_AssignSubjectTypePropertyResponse = try await provenenciaCall(
+            method: CoreMethod.assignSubjectTypeProperty,
             request: req
         )
     }
 
-    func removeSubjectTypeField(
+    func removeSubjectTypeProperty(
         projectDir: String,
         userID: String,
         subjectTypeID: String,
         propertyID: String
     ) async throws {
-        var req = Provenencia_Engine_V1_RemoveSubjectTypeFieldRequest()
+        var req = Provenencia_Engine_V1_RemoveSubjectTypePropertyRequest()
         req.projectDir = projectDir
         req.userID = userID
         req.subjectTypeID = subjectTypeID
         req.propertyID = propertyID
-        let _: Provenencia_Engine_V1_RemoveSubjectTypeFieldResponse = try await provenenciaCall(
-            method: CoreMethod.removeSubjectTypeField,
+        let _: Provenencia_Engine_V1_RemoveSubjectTypePropertyResponse = try await provenenciaCall(
+            method: CoreMethod.removeSubjectTypeProperty,
             request: req
         )
     }
@@ -1221,26 +1221,26 @@ struct GoStore: GenealogyStore {
         )
     }
 
-    func getSubjectFieldsWorkspace(projectDir: String) async throws -> SubjectFieldsSnapshot {
-        var req = Provenencia_Engine_V1_GetSubjectFieldsWorkspaceRequest()
+    func getPropertiesWorkspace(projectDir: String) async throws -> PropertiesSnapshot {
+        var req = Provenencia_Engine_V1_GetPropertiesWorkspaceRequest()
         req.projectDir = projectDir
-        let resp: Provenencia_Engine_V1_GetSubjectFieldsWorkspaceResponse = try await provenenciaCall(
-            method: CoreMethod.getSubjectFieldsWorkspace,
+        let resp: Provenencia_Engine_V1_GetPropertiesWorkspaceResponse = try await provenenciaCall(
+            method: CoreMethod.getPropertiesWorkspace,
             request: req
         )
-        var fieldsByTypeID: [String: [CatalogSubjectTypeField]] = [:]
+        var propertiesByTypeID: [String: [CatalogSubjectTypeProperty]] = [:]
         var presentationsByKey: [String: CatalogSubjectTypePresentation] = [:]
         for group in resp.groups {
-            fieldsByTypeID[group.subjectTypeID] = group.fields.map(Self.mapSubjectTypeField)
+            propertiesByTypeID[group.subjectTypeID] = group.properties.map(Self.mapSubjectTypeProperty)
             if group.hasPresentation {
                 let presentation = Self.mapSubjectTypePresentation(group.presentation)
                 presentationsByKey[presentation.typeKey] = presentation
             }
         }
-        return SubjectFieldsSnapshot(
+        return PropertiesSnapshot(
             properties: resp.properties.map(Self.mapProperty),
             types: resp.types.map(Self.mapSubjectType),
-            fieldsByTypeID: fieldsByTypeID,
+            propertiesByTypeID: propertiesByTypeID,
             presentationsByKey: presentationsByKey
         )
     }
@@ -1296,11 +1296,12 @@ struct GoStore: GenealogyStore {
         return p
     }
 
-    private static func mapWorkspaceLocationFromProto(
+    /// Internal (not private) so tests can feed it engine section ids.
+    static func mapWorkspaceLocationFromProto(
         _ p: Provenencia_Engine_V1_WorkspaceLocation
     ) -> WorkspaceLocation {
         WorkspaceLocation(
-            section: WorkspaceSection(rawValue: p.section) ?? .sources,
+            section: WorkspaceSection(id: p.section) ?? .sources,
             sourceId: p.sourceID,
             fieldId: p.fieldID,
             typeId: p.typeID,
@@ -1496,8 +1497,8 @@ struct GoStore: GenealogyStore {
         )
     }
 
-    private static func mapSubjectTypeField(_ f: Provenencia_Engine_V1_SubjectTypeField) -> CatalogSubjectTypeField {
-        CatalogSubjectTypeField(
+    private static func mapSubjectTypeProperty(_ f: Provenencia_Engine_V1_SubjectTypeProperty) -> CatalogSubjectTypeProperty {
+        CatalogSubjectTypeProperty(
             property: Self.mapProperty(f.property),
             sortOrder: Int(f.sortOrder),
             locked: f.locked

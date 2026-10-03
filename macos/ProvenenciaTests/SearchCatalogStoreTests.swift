@@ -94,9 +94,9 @@ struct SearchCatalogStoreTests {
         let fieldHits = try await store.searchCatalog(
             projectDir: projectDir,
             query: "Publication",
-            location: .sectionRoot(.sourceFields)
+            location: .sectionRoot(.metadata)
         )
-        #expect(fieldHits.contains { $0.kind == "source_field" && $0.location.fieldId == "f1" })
+        #expect(fieldHits.contains { $0.kind == "metadata_field" && $0.location.fieldId == "f1" })
     }
 
     @Test func findsSourceByRef() async throws {

@@ -1,24 +1,24 @@
 import Foundation
 import SwiftUI
 
-/// Session-cached Subject fields destination payload.
-struct SubjectFieldsSnapshot: Sendable, Equatable {
+/// Session-cached Properties destination payload.
+struct PropertiesSnapshot: Sendable, Equatable {
     var properties: [CatalogProperty]
     var types: [CatalogSubjectType]
-    var fieldsByTypeID: [String: [CatalogSubjectTypeField]]
+    var propertiesByTypeID: [String: [CatalogSubjectTypeProperty]]
     var presentationsByKey: [String: CatalogSubjectTypePresentation]
 
-    static let empty = SubjectFieldsSnapshot(
+    static let empty = PropertiesSnapshot(
         properties: [],
         types: [],
-        fieldsByTypeID: [:],
+        propertiesByTypeID: [:],
         presentationsByKey: [:]
     )
 
     /// Board TYPES order: Person → Event → Place → Relationship → Participation → Location → Source.
     var typesInPaletteOrder: [CatalogSubjectType] {
         types.sorted {
-            SubjectFieldsTypeChrome.sortIndex($0.key) < SubjectFieldsTypeChrome.sortIndex($1.key)
+            PropertiesTypeChrome.sortIndex($0.key) < PropertiesTypeChrome.sortIndex($1.key)
         }
     }
 
@@ -28,23 +28,23 @@ struct SubjectFieldsSnapshot: Sendable, Equatable {
 
     func boundTypes(for propertyID: String) -> [CatalogSubjectType] {
         typesInPaletteOrder.filter { type in
-            fieldsByTypeID[type.id]?.contains { $0.property.id == propertyID } == true
+            propertiesByTypeID[type.id]?.contains { $0.property.id == propertyID } == true
         }
     }
 
-    func binding(propertyID: String, typeID: String) -> CatalogSubjectTypeField? {
-        fieldsByTypeID[typeID]?.first { $0.property.id == propertyID }
+    func binding(propertyID: String, typeID: String) -> CatalogSubjectTypeProperty? {
+        propertiesByTypeID[typeID]?.first { $0.property.id == propertyID }
     }
 
     func propertyCount(forTypeID typeID: String) -> Int {
-        fieldsByTypeID[typeID]?.count ?? 0
+        propertiesByTypeID[typeID]?.count ?? 0
     }
 }
 
 // MARK: - Board bind control (16×16 filled box — not a native checkbox)
 
 /// Matches the board `box(on, locked)` control used in On column + inspector binds.
-struct SubjectFieldsBindBox: View {
+struct PropertiesBindBox: View {
     var on: Bool
     var locked: Bool
 
@@ -76,14 +76,14 @@ struct SubjectFieldsBindBox: View {
     }
 }
 
-struct SubjectFieldsValueTypePill: View {
+struct PropertiesValueTypePill: View {
     let valueType: String
 
     var body: some View {
         // Board shows the raw value-type key in mono + VT_COLOR, not a title-cased label.
         Text(verbatim: valueType)
             .font(PVFont.mono(size: PVTypeScale.micro))
-            .foregroundStyle(SubjectFieldsTypeChrome.valueTypeForeground(valueType))
+            .foregroundStyle(PropertiesTypeChrome.valueTypeForeground(valueType))
             .padding(.horizontal, 6)
             .frame(height: 18)
             .background(PVColor.surfaceSunken)
@@ -97,18 +97,18 @@ struct SubjectFieldsValueTypePill: View {
 }
 
 /// Board origin column: warning badge for user; accent dot + “seeded” for provenencia.
-struct SubjectFieldsOriginCell: View {
+struct PropertiesOriginCell: View {
     let origin: String
 
     var body: some View {
         if origin == CatalogOrigin.user {
-            PVBadge(L10n.SubjectFields.originUserShort, tone: .warning, subtle: true)
+            PVBadge(L10n.Properties.originUserShort, tone: .warning, subtle: true)
         } else if origin == CatalogOrigin.provenencia {
             HStack(spacing: 5) {
                 Circle()
                     .fill(PVColor.accentLine)
                     .frame(width: 5, height: 5)
-                Text(L10n.SubjectFields.originSeededShort)
+                Text(L10n.Properties.originSeededShort)
                     .font(PVFont.body(size: PVTypeScale.caption))
                     .foregroundStyle(PVColor.textMuted)
             }
@@ -118,7 +118,7 @@ struct SubjectFieldsOriginCell: View {
     }
 }
 
-struct SubjectFieldsBoundChip: View {
+struct PropertiesBoundChip: View {
     let label: String
     let locked: Bool
     var emphasized: Bool = false

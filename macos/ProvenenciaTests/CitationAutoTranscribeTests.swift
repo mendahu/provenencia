@@ -406,8 +406,8 @@ struct CitationAutoTranscribeTests {
                 description: "", valueType: "name"
             ),
         ]
-        store.subjectTypeFieldsByType[personTypeID] = [
-            CatalogSubjectTypeField(
+        store.subjectTypePropertiesByType[personTypeID] = [
+            CatalogSubjectTypeProperty(
                 property: store.propertiesByProject[projectDir]![0],
                 sortOrder: 0,
                 locked: false

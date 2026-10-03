@@ -118,7 +118,7 @@ struct CatalogDeleteImpactListed: Sendable, Equatable, Identifiable {
     var location: WorkspaceLocation
 }
 
-/// One omnibar / SearchCatalog hit (stable kinds: source, source_type, source_field).
+/// One omnibar / SearchCatalog hit (stable kinds: source, source_type, metadata_field).
 struct CatalogSearchHit: Sendable, Equatable, Identifiable {
     var kind: String
     var id: String
@@ -289,7 +289,7 @@ struct CatalogPropertyTerm: Sendable, Equatable, Identifiable {
     var description: String
 }
 
-struct CatalogSubjectTypeField: Sendable, Equatable, Identifiable {
+struct CatalogSubjectTypeProperty: Sendable, Equatable, Identifiable {
     var property: CatalogProperty
     var sortOrder: Int
     var locked: Bool
@@ -460,7 +460,7 @@ struct CatalogMetadataField: Sendable, Equatable, Identifiable {
     var description: String
     /// How many sources already carry a value for this field. Deleting is
     /// only allowed at 0 — the engine refuses otherwise
-    /// (`sourcefields.in_use`). Only `listMetadataFields` and
+    /// (`metadatafields.in_use`). Only `listMetadataFields` and
     /// `updateMetadataField` populate it.
     var usedBy: Int = 0
 }
@@ -521,7 +521,7 @@ struct WorkspaceNavOriginCounts: Sendable, Equatable {
 struct WorkspaceNavCounts: Sendable, Equatable {
     var sources: Int
     var sourceTypes: WorkspaceNavOriginCounts
-    var sourceFields: WorkspaceNavOriginCounts
+    var metadataFields: WorkspaceNavOriginCounts
     /// Unmerged Person handles.
     var persons: Int = 0
 }
@@ -775,13 +775,13 @@ protocol GenealogyStore: Sendable {
         label: String,
         description: String
     ) async throws -> CatalogPropertyTerm
-    func assignSubjectTypeField(
+    func assignSubjectTypeProperty(
         projectDir: String,
         userID: String,
         subjectTypeID: String,
         propertyID: String
     ) async throws
-    func removeSubjectTypeField(
+    func removeSubjectTypeProperty(
         projectDir: String,
         userID: String,
         subjectTypeID: String,
@@ -846,7 +846,7 @@ protocol GenealogyStore: Sendable {
     func deleteObservation(projectDir: String, userID: String, observationID: String) async throws
     func deleteCitation(projectDir: String, userID: String, citationID: String) async throws
 
-    func getSubjectFieldsWorkspace(projectDir: String) async throws -> SubjectFieldsSnapshot
+    func getPropertiesWorkspace(projectDir: String) async throws -> PropertiesSnapshot
 
     func addObservationsToCitation(
         projectDir: String,

@@ -29,7 +29,7 @@ struct PlaceRegistry: Sendable {
                 guard let sourceId = location.sourceId else { return [] }
                 var keys: [CatalogQueryKey] = [
                     .sourceGraph(project: project, sourceId: sourceId),
-                    .subjectFieldsWorkspace(project: project),
+                    .propertiesWorkspace(project: project),
                     .sourcesList(project: project),
                     .connectRules(project: project),
                     .sourceWorkspace(project: project, sourceId: sourceId),
@@ -54,7 +54,7 @@ struct PlaceRegistry: Sendable {
                 guard let sourceId = location.sourceId else { return [] }
                 return [
                     .sourceGraph(project: project, sourceId: sourceId),
-                    .subjectFieldsWorkspace(project: project),
+                    .propertiesWorkspace(project: project),
                     .sourcesList(project: project),
                     .connectRules(project: project),
                 ]
@@ -98,22 +98,22 @@ struct PlaceRegistry: Sendable {
             deepId: { $0.typeId }
         ),
         Spec(
-            id: .sourceFields,
-            presentation: .sourceFields,
+            id: .metadata,
+            presentation: .metadata,
             priority: 80,
-            matches: { $0.section == .sourceFields },
+            matches: { $0.section == .metadata },
             queryKeys: { project, _ in
                 [.metadataFieldsList(project: project)]
             },
             deepId: { $0.fieldId }
         ),
         Spec(
-            id: .subjectFields,
-            presentation: .subjectFields,
+            id: .properties,
+            presentation: .properties,
             priority: 80,
-            matches: { $0.section == .subjectFields },
+            matches: { $0.section == .properties },
             queryKeys: { project, _ in
-                [.subjectFieldsWorkspace(project: project)]
+                [.propertiesWorkspace(project: project)]
             },
             deepId: { _ in nil }
         ),

@@ -220,10 +220,10 @@
 		537CBAF612C54F4F04ADA683 /* PVSpacing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BEB8D3B3D1A6C08B3733B13 /* PVSpacing.swift */; };
 		563FA9B6FA344585CE32B2A7 /* PVIconButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68425DFE8D1974D7A4AC5BF8 /* PVIconButton.swift */; };
 		56FF85A0EB2688B0B226A023 /* PVTypography.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2789221068BF64015C43CA5 /* PVTypography.swift */; };
-		57420D5CDD1330745ACC33FD /* SourceFieldsDetailPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAA7D6A46A5016665371A2C5 /* SourceFieldsDetailPane.swift */; };
+		57420D5CDD1330745ACC33FD /* MetadataDetailPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAA7D6A46A5016665371A2C5 /* MetadataDetailPane.swift */; };
 		60591A4DC996FC9EB9F29023 /* PVColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4094CD05F31CFF0AA37C888A /* PVColor.swift */; };
 		6227C44524E2C4EB3DE4AAD7 /* WorkspaceSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1FE31A30B665829ECF16A6F /* WorkspaceSidebar.swift */; };
-		6422592F5C31D8F535B03C6A /* SourceFieldsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 950877B33DC4E16E5BA8B5D6 /* SourceFieldsView.swift */; };
+		6422592F5C31D8F535B03C6A /* MetadataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 950877B33DC4E16E5BA8B5D6 /* MetadataView.swift */; };
 		6D245285E4AB8AAFDE78E313 /* PVIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36412B0A6A6851ADB45A7AA8 /* PVIcon.swift */; };
 		6F7945720B05D7777BFA79A2 /* WorkspaceModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F03B00F6F0D021AFCDAD2DEB /* WorkspaceModel.swift */; };
 		826574F8CA8D24BE551A88BF /* WorkspaceModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 164584B2DB70D89A55C4178F /* WorkspaceModelTests.swift */; };
@@ -268,16 +268,16 @@
 		AA0000000000000000000107 /* OnboardingContributorRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000106 /* OnboardingContributorRow.swift */; };
 		B2C3D4E5F60718293A4B5C6D /* WindowDragRegion.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5C /* WindowDragRegion.swift */; };
 		327D9751467546DCB56EC478 /* WindowSizing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F69681C808F487B9BD6E7AA /* WindowSizing.swift */; };
-		BD1582FF721A5711F38C97A0 /* SourceFieldsModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B7791238B5C7C6F0C5BE388 /* SourceFieldsModel.swift */; };
-		A70500000000000000000005 /* SubjectFieldsModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70500000000000000000001 /* SubjectFieldsModel.swift */; };
-		A70500000000000000000006 /* SubjectFieldsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70500000000000000000002 /* SubjectFieldsView.swift */; };
-		A70500000000000000000007 /* SubjectFieldsSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70500000000000000000003 /* SubjectFieldsSnapshot.swift */; };
-		A70500000000000000000008 /* SubjectFieldsModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70500000000000000000004 /* SubjectFieldsModelTests.swift */; };
+		BD1582FF721A5711F38C97A0 /* MetadataModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B7791238B5C7C6F0C5BE388 /* MetadataModel.swift */; };
+		A70500000000000000000005 /* PropertiesModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70500000000000000000001 /* PropertiesModel.swift */; };
+		A70500000000000000000006 /* PropertiesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70500000000000000000002 /* PropertiesView.swift */; };
+		A70500000000000000000007 /* PropertiesSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70500000000000000000003 /* PropertiesSnapshot.swift */; };
+		A70500000000000000000008 /* PropertiesModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70500000000000000000004 /* PropertiesModelTests.swift */; };
 		BE57602FF7EBA86C1DEE63FF /* PVBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3E732F3D44BB89512758F85 /* PVBadge.swift */; };
 		A1B2C3D4E5F60718293A4B5E /* PVDivider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F60718293A4B5E01 /* PVDivider.swift */; };
 		CA918E2A0BCB420DA8CD87E5 /* PVButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0AE6B1748FA280F95478205 /* PVButton.swift */; };
-		CE7E43F00CA602E2794E0ADA /* SourceFieldsModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F0CB87F6EC5759DF8D0A7AF /* SourceFieldsModelTests.swift */; };
-		D0D0E4841104F1836736A7CD /* SourceFieldsListPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E4ED11C20279A6A4CE40A64 /* SourceFieldsListPane.swift */; };
+		CE7E43F00CA602E2794E0ADA /* MetadataModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F0CB87F6EC5759DF8D0A7AF /* MetadataModelTests.swift */; };
+		D0D0E4841104F1836736A7CD /* MetadataListPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E4ED11C20279A6A4CE40A64 /* MetadataListPane.swift */; };
 		DA26E3BA97D438A7561ED96D /* WorkspaceContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48B417D5E38F11219198BF91 /* WorkspaceContent.swift */; };
 		DC8E6C8D157C17756D4C2AC8 /* Fonts in Resources */ = {isa = PBXBuildFile; fileRef = 1B183C69AA74C2C22006FC05 /* Fonts */; };
 		E3D046BD80595D1F07691D1F /* PVHoverEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEC485E7480EE58A01EA9A85 /* PVHoverEffect.swift */; };
@@ -519,23 +519,23 @@
 		AA0000000000000000000204 /* SourceTypesListPane.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTypesListPane.swift; sourceTree = "<group>"; };
 		AA0000000000000000000205 /* SourceTypesDetailPane.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTypesDetailPane.swift; sourceTree = "<group>"; };
 		AA0000000000000000000206 /* SourceTypesModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTypesModelTests.swift; sourceTree = "<group>"; };
-		3B7791238B5C7C6F0C5BE388 /* SourceFieldsModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceFieldsModel.swift; sourceTree = "<group>"; };
-		A70500000000000000000001 /* SubjectFieldsModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SubjectFieldsModel.swift; sourceTree = "<group>"; };
-		A70500000000000000000002 /* SubjectFieldsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SubjectFieldsView.swift; sourceTree = "<group>"; };
-		A70500000000000000000003 /* SubjectFieldsSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SubjectFieldsSnapshot.swift; sourceTree = "<group>"; };
-		A70500000000000000000004 /* SubjectFieldsModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SubjectFieldsModelTests.swift; sourceTree = "<group>"; };
+		3B7791238B5C7C6F0C5BE388 /* MetadataModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MetadataModel.swift; sourceTree = "<group>"; };
+		A70500000000000000000001 /* PropertiesModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PropertiesModel.swift; sourceTree = "<group>"; };
+		A70500000000000000000002 /* PropertiesView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PropertiesView.swift; sourceTree = "<group>"; };
+		A70500000000000000000003 /* PropertiesSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PropertiesSnapshot.swift; sourceTree = "<group>"; };
+		A70500000000000000000004 /* PropertiesModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PropertiesModelTests.swift; sourceTree = "<group>"; };
 		4094CD05F31CFF0AA37C888A /* PVColor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVColor.swift; sourceTree = "<group>"; };
 		40F72A548E04F25E0AA30CDB /* PVInput.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVInput.swift; sourceTree = "<group>"; };
 		48B417D5E38F11219198BF91 /* WorkspaceContent.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceContent.swift; sourceTree = "<group>"; };
-		4F0CB87F6EC5759DF8D0A7AF /* SourceFieldsModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceFieldsModelTests.swift; sourceTree = "<group>"; };
+		4F0CB87F6EC5759DF8D0A7AF /* MetadataModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MetadataModelTests.swift; sourceTree = "<group>"; };
 		68425DFE8D1974D7A4AC5BF8 /* PVIconButton.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVIconButton.swift; sourceTree = "<group>"; };
 		6AAC04817D6F4CCC9CDC9B17 /* README.md */ = {isa = PBXFileReference; includeInIndex = 1; path = README.md; sourceTree = "<group>"; };
 		8291342170CC4CB42EFA814C /* FieldSlugTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FieldSlugTests.swift; sourceTree = "<group>"; };
 		AA00000000000000000000C5 /* PVTableTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVTableTests.swift; sourceTree = "<group>"; };
 		85C0991FB99984CAEB385DA4 /* TrafficLights.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TrafficLights.swift; sourceTree = "<group>"; };
-		8E4ED11C20279A6A4CE40A64 /* SourceFieldsListPane.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceFieldsListPane.swift; sourceTree = "<group>"; };
+		8E4ED11C20279A6A4CE40A64 /* MetadataListPane.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MetadataListPane.swift; sourceTree = "<group>"; };
 		8FC0B0A893C7248A08303738 /* PVToast.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVToast.swift; sourceTree = "<group>"; };
-		950877B33DC4E16E5BA8B5D6 /* SourceFieldsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceFieldsView.swift; sourceTree = "<group>"; };
+		950877B33DC4E16E5BA8B5D6 /* MetadataView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MetadataView.swift; sourceTree = "<group>"; };
 		9A63753F8D90991976A28F13 /* PVElevation.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVElevation.swift; sourceTree = "<group>"; };
 		9BEB8D3B3D1A6C08B3733B13 /* PVSpacing.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSpacing.swift; sourceTree = "<group>"; };
 		A0AE6B1748FA280F95478205 /* PVButton.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVButton.swift; sourceTree = "<group>"; };
@@ -579,7 +579,7 @@
 		C9B9D94DAB5FD1587C260FE3 /* PVCallout.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVCallout.swift; sourceTree = "<group>"; };
 		CEC485E7480EE58A01EA9A85 /* PVHoverEffect.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVHoverEffect.swift; sourceTree = "<group>"; };
 		D8F65C4577481FF5F505271F /* WorkspaceView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceView.swift; sourceTree = "<group>"; };
-		DAA7D6A46A5016665371A2C5 /* SourceFieldsDetailPane.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceFieldsDetailPane.swift; sourceTree = "<group>"; };
+		DAA7D6A46A5016665371A2C5 /* MetadataDetailPane.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MetadataDetailPane.swift; sourceTree = "<group>"; };
 		E07E52EC527189A4A377F9AD /* FieldSlug.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FieldSlug.swift; sourceTree = "<group>"; };
 		E2789221068BF64015C43CA5 /* PVTypography.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVTypography.swift; sourceTree = "<group>"; };
 		E98DA667F92287934B46B640 /* PVSidebarNav.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSidebarNav.swift; sourceTree = "<group>"; };
@@ -691,27 +691,27 @@
 			path = SourceTypes;
 			sourceTree = "<group>";
 		};
-		423C55925CCDB8118E02BF19 /* SourceFields */ = {
+		423C55925CCDB8118E02BF19 /* Metadata */ = {
 			isa = PBXGroup;
 			children = (
-				3B7791238B5C7C6F0C5BE388 /* SourceFieldsModel.swift */,
-				950877B33DC4E16E5BA8B5D6 /* SourceFieldsView.swift */,
-				8E4ED11C20279A6A4CE40A64 /* SourceFieldsListPane.swift */,
-				DAA7D6A46A5016665371A2C5 /* SourceFieldsDetailPane.swift */,
+				3B7791238B5C7C6F0C5BE388 /* MetadataModel.swift */,
+				950877B33DC4E16E5BA8B5D6 /* MetadataView.swift */,
+				8E4ED11C20279A6A4CE40A64 /* MetadataListPane.swift */,
+				DAA7D6A46A5016665371A2C5 /* MetadataDetailPane.swift */,
 			);
-			name = SourceFields;
-			path = SourceFields;
+			name = Metadata;
+			path = Metadata;
 			sourceTree = "<group>";
 		};
-		A70500000000000000000009 /* SubjectFields */ = {
+		A70500000000000000000009 /* Properties */ = {
 			isa = PBXGroup;
 			children = (
-				A70500000000000000000001 /* SubjectFieldsModel.swift */,
-				A70500000000000000000002 /* SubjectFieldsView.swift */,
-				A70500000000000000000003 /* SubjectFieldsSnapshot.swift */,
+				A70500000000000000000001 /* PropertiesModel.swift */,
+				A70500000000000000000002 /* PropertiesView.swift */,
+				A70500000000000000000003 /* PropertiesSnapshot.swift */,
 			);
-			name = SubjectFields;
-			path = SubjectFields;
+			name = Properties;
+			path = Properties;
 			sourceTree = "<group>";
 		};
 
@@ -887,8 +887,8 @@
 				A71D0000000000000000000B /* OCR */,
 				AA000000000000000000047C /* GraphCanvas */,
 				AA000000000000000000047D /* EvidenceGraph */,
-				423C55925CCDB8118E02BF19 /* SourceFields */,
-				A70500000000000000000009 /* SubjectFields */,
+				423C55925CCDB8118E02BF19 /* Metadata */,
+				A70500000000000000000009 /* Properties */,
 				AA0000000000000000000221 /* SourceTypes */,
 				AA0000000000000000000220 /* Catalog */,
 				AA0000000000000000000280 /* CatalogVocabulary */,
@@ -1070,8 +1070,8 @@
 				AA0000000000000000000610 /* PVSelectSessionTests.swift */,
 				AA0000000000000000000612 /* PVSelectPlacementTests.swift */,
 				AA0000000000000000000616 /* DateValueSelectTests.swift */,
-				4F0CB87F6EC5759DF8D0A7AF /* SourceFieldsModelTests.swift */,
-				A70500000000000000000004 /* SubjectFieldsModelTests.swift */,
+				4F0CB87F6EC5759DF8D0A7AF /* MetadataModelTests.swift */,
+				A70500000000000000000004 /* PropertiesModelTests.swift */,
 				AA0000000000000000000206 /* SourceTypesModelTests.swift */,
 				AA0000000000000000000312 /* SourcesModelTests.swift */,
 				AA000000000000000000046A /* SourcesListNavigationTests.swift */,
@@ -1711,10 +1711,10 @@
 				AA00000000000000000000C6 /* PVConfirm.swift in Sources */,
 				AA00000000000000000000C1 /* PVTable.swift in Sources */,
 				A62122AE913D5F5B8B72D083 /* PVCallout.swift in Sources */,
-				BD1582FF721A5711F38C97A0 /* SourceFieldsModel.swift in Sources */,
-				A70500000000000000000005 /* SubjectFieldsModel.swift in Sources */,
-				A70500000000000000000006 /* SubjectFieldsView.swift in Sources */,
-				A70500000000000000000007 /* SubjectFieldsSnapshot.swift in Sources */,
+				BD1582FF721A5711F38C97A0 /* MetadataModel.swift in Sources */,
+				A70500000000000000000005 /* PropertiesModel.swift in Sources */,
+				A70500000000000000000006 /* PropertiesView.swift in Sources */,
+				A70500000000000000000007 /* PropertiesSnapshot.swift in Sources */,
 				AA0000000000000000000210 /* OriginMarkers.swift in Sources */,
 				AA0000000000000000000240 /* PVComboBox.swift in Sources */,
 				AA0000000000000000000211 /* MetadataFieldBadges.swift in Sources */,
@@ -1729,9 +1729,9 @@
 				AA0000000000000000000213 /* SourceTypesView.swift in Sources */,
 				AA0000000000000000000214 /* SourceTypesListPane.swift in Sources */,
 				AA0000000000000000000215 /* SourceTypesDetailPane.swift in Sources */,
-				6422592F5C31D8F535B03C6A /* SourceFieldsView.swift in Sources */,
-				D0D0E4841104F1836736A7CD /* SourceFieldsListPane.swift in Sources */,
-				57420D5CDD1330745ACC33FD /* SourceFieldsDetailPane.swift in Sources */,
+				6422592F5C31D8F535B03C6A /* MetadataView.swift in Sources */,
+				D0D0E4841104F1836736A7CD /* MetadataListPane.swift in Sources */,
+				57420D5CDD1330745ACC33FD /* MetadataDetailPane.swift in Sources */,
 				AA0000000000000000000301 /* PVThumbnail.swift in Sources */,
 				AA00000000000000000003B1 /* PVMark.swift in Sources */,
 				AA000000000000000000031F /* PVReorderableList.swift in Sources */,
@@ -1826,8 +1826,8 @@
 				AA0000000000000000000611 /* PVSelectSessionTests.swift in Sources */,
 				AA0000000000000000000613 /* PVSelectPlacementTests.swift in Sources */,
 				AA0000000000000000000617 /* DateValueSelectTests.swift in Sources */,
-				CE7E43F00CA602E2794E0ADA /* SourceFieldsModelTests.swift in Sources */,
-				A70500000000000000000008 /* SubjectFieldsModelTests.swift in Sources */,
+				CE7E43F00CA602E2794E0ADA /* MetadataModelTests.swift in Sources */,
+				A70500000000000000000008 /* PropertiesModelTests.swift in Sources */,
 				AA0000000000000000000216 /* SourceTypesModelTests.swift in Sources */,
 				AA0000000000000000000242 /* PVComboBoxTests.swift in Sources */,
 				AA0000000000000000000313 /* SourcesModelTests.swift in Sources */,

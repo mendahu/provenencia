@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// Subject fields workspace destination: type strip + dual cards
+/// Properties workspace destination: type strip + dual cards
 /// (property table + inspector). Chrome matches the board HTML.
-struct SubjectFieldsView: View {
+struct PropertiesView: View {
     @Environment(WorkspaceSession.self) private var session
-    @State private var model: SubjectFieldsModel
+    @State private var model: PropertiesModel
 
     private let inspectorWidth: CGFloat = PVSpacing.widthInspector
 
@@ -15,7 +15,7 @@ struct SubjectFieldsView: View {
         catalogCounts: CatalogCounts? = nil
     ) {
         _model = State(
-            initialValue: SubjectFieldsModel(
+            initialValue: PropertiesModel(
                 session: session,
                 userID: userID,
                 store: store,
@@ -26,10 +26,10 @@ struct SubjectFieldsView: View {
 
     var body: some View {
         Group {
-            if let handle: QueryHandle<SubjectFieldsSnapshot> = session.queryHandle(
-                SubjectFieldsModel.workspaceKey(for: session)
+            if let handle: QueryHandle<PropertiesSnapshot> = session.queryHandle(
+                PropertiesModel.workspaceKey(for: session)
             ) {
-                SubjectFieldsContent(handle: handle, model: model, inspectorWidth: inspectorWidth)
+                PropertiesContent(handle: handle, model: model, inspectorWidth: inspectorWidth)
             } else {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -41,9 +41,9 @@ struct SubjectFieldsView: View {
     }
 }
 
-private struct SubjectFieldsContent: View {
-    @Bindable var handle: QueryHandle<SubjectFieldsSnapshot>
-    @Bindable var model: SubjectFieldsModel
+private struct PropertiesContent: View {
+    @Bindable var handle: QueryHandle<PropertiesSnapshot>
+    @Bindable var model: PropertiesModel
     let inspectorWidth: CGFloat
     @Environment(WorkspaceNavigation.self) private var navigation
     @FocusState private var searchFocused: Bool
@@ -73,10 +73,10 @@ private struct SubjectFieldsContent: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(PVColor.surfacePage)
-        .vocabularyToastOverlay($model.toast, identifier: "subjectFields.toast")
+        .vocabularyToastOverlay($model.toast, identifier: "properties.toast")
         .pvDeleteImpact(
             flow: model.deleteImpact,
-            accessibilityIdentifierPrefix: "subjectFields.deleteImpact",
+            accessibilityIdentifierPrefix: "properties.deleteImpact",
             onConfirm: {
                 Task {
                     if await model.confirmPendingImpact() {
@@ -117,7 +117,7 @@ private struct SubjectFieldsContent: View {
             if handle.status == .ready { model.syncCatalogCounts() }
         }
         .background {
-            SubjectFieldsCreateHost(model: model)
+            PropertiesCreateHost(model: model)
             Button(action: { model.focusSearch() }) { EmptyView() }
                 .keyboardShortcut("f", modifiers: .command)
                 .opacity(0)
@@ -134,7 +134,7 @@ private struct SubjectFieldsContent: View {
             Task { await model.toggleFocusedTypeBinding() }
             return .handled
         }
-        .accessibilityIdentifier("subjectFields")
+        .accessibilityIdentifier("properties")
     }
 
     private func reconcileSelection(for location: WorkspaceLocation) {
@@ -147,11 +147,11 @@ private struct SubjectFieldsContent: View {
 
     private var header: some View {
         VocabularyHeader(
-            title: L10n.Workspace.subjectFieldsTitle,
-            description: L10n.SubjectFields.description,
-            addLabel: L10n.SubjectFields.newProperty,
+            title: L10n.Workspace.propertiesTitle,
+            description: L10n.Properties.description,
+            addLabel: L10n.Properties.newProperty,
             isAddDisabled: false,
-            identifierPrefix: "subjectFields",
+            identifierPrefix: "properties",
             descriptionItalic: true,
             addSize: .sm,
             onAdd: { model.openCreate() }
@@ -162,7 +162,7 @@ private struct SubjectFieldsContent: View {
         HStack(spacing: PVSpacing.space4) {
             typeCard(
                 key: nil,
-                title: Text(L10n.SubjectFields.allProperties),
+                title: Text(L10n.Properties.allProperties),
                 count: model.snapshot.properties.count,
                 selected: model.selectedTypeKey == nil,
                 bridge: false,
@@ -176,15 +176,15 @@ private struct SubjectFieldsContent: View {
                     title: Text(verbatim: type.label),
                     count: model.snapshot.propertyCount(forTypeID: type.id),
                     selected: model.selectedTypeKey == type.key,
-                    bridge: SubjectFieldsTypeChrome.showsBridgeLabel(typeKey: type.key),
-                    ink: SubjectFieldsTypeChrome.ink(typeKey: type.key, presentation: presentation),
-                    mark: SubjectFieldsTypeChrome.stripMarkKey(typeKey: type.key)
+                    bridge: PropertiesTypeChrome.showsBridgeLabel(typeKey: type.key),
+                    ink: PropertiesTypeChrome.ink(typeKey: type.key, presentation: presentation),
+                    mark: PropertiesTypeChrome.stripMarkKey(typeKey: type.key)
                 )
             }
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text(L10n.SubjectFields.typeStripAccessibility))
+        .accessibilityLabel(Text(L10n.Properties.typeStripAccessibility))
     }
 
     private func typeCard(
@@ -212,7 +212,7 @@ private struct SubjectFieldsContent: View {
                     }
                     Spacer(minLength: 0)
                     if bridge {
-                        Text(L10n.SubjectFields.bridgeRole)
+                        Text(L10n.Properties.bridgeRole)
                             .font(PVFont.mono(size: 10))
                             .tracking(1)
                             .textCase(.uppercase)
@@ -224,7 +224,7 @@ private struct SubjectFieldsContent: View {
                     .foregroundStyle(PVColor.textPrimary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
-                Text(verbatim: L10n.SubjectFields.stripFieldCount(count: count))
+                Text(verbatim: L10n.Properties.stripFieldCount(count: count))
                     .font(PVFont.mono(size: PVTypeScale.micro))
                     .foregroundStyle(PVColor.textMuted)
             }
@@ -258,7 +258,7 @@ private struct SubjectFieldsContent: View {
             PVInput(
                 text: $model.searchQuery,
                 size: .sm,
-                prompt: L10n.SubjectFields.searchPlaceholder,
+                prompt: L10n.Properties.searchPlaceholder,
                 icon: .search,
                 focused: $searchFocused
             )
@@ -269,10 +269,10 @@ private struct SubjectFieldsContent: View {
                     selection: $model.addPropertySelection,
                     options: model.addPropertyOptions,
                     size: .sm,
-                    placeholder: L10n.SubjectFields.addPropertyPlaceholder(typeLabel: type.label),
-                    emptyLabel: L10n.SubjectFields.addPropertyEmpty,
-                    label: L10n.SubjectFields.addPropertyPlaceholder(typeLabel: type.label),
-                    accessibilityIdentifierPrefix: "subjectFields.addCombo"
+                    placeholder: L10n.Properties.addPropertyPlaceholder(typeLabel: type.label),
+                    emptyLabel: L10n.Properties.addPropertyEmpty,
+                    label: L10n.Properties.addPropertyPlaceholder(typeLabel: type.label),
+                    accessibilityIdentifierPrefix: "properties.addCombo"
                 )
                 .frame(width: 330)
             }
@@ -285,10 +285,10 @@ private struct SubjectFieldsContent: View {
         Group {
             if model.visibleProperties.isEmpty {
                 VStack(spacing: PVSpacing.space3) {
-                    Text(verbatim: L10n.SubjectFields.emptySearchTitle(query: model.searchQuery))
+                    Text(verbatim: L10n.Properties.emptySearchTitle(query: model.searchQuery))
                         .font(PVFont.display(size: PVTypeScale.h4))
                         .foregroundStyle(PVColor.textSecondary)
-                    Text(L10n.SubjectFields.emptySearch)
+                    Text(L10n.Properties.emptySearch)
                         .font(PVFont.body(size: PVTypeScale.bodySmall, italic: true))
                         .foregroundStyle(PVColor.textMuted)
                 }
@@ -307,8 +307,8 @@ private struct SubjectFieldsContent: View {
                     ),
                     primaryText: { $0.label },
                     density: .compact,
-                    label: L10n.Workspace.subjectFieldsTitle,
-                    rowAccessibilityIdentifier: { "subjectFields.row.\($0.id)" },
+                    label: L10n.Workspace.propertiesTitle,
+                    rowAccessibilityIdentifier: { "properties.row.\($0.id)" },
                     content: { EmptyView() }
                 )
             }
@@ -319,13 +319,13 @@ private struct SubjectFieldsContent: View {
         var columns: [PVTableColumn<CatalogProperty>] = []
         if model.selectedType != nil {
             columns.append(
-                PVTableColumn(id: "on", title: L10n.SubjectFields.columnOn, width: 36) { property in
+                PVTableColumn(id: "on", title: L10n.Properties.columnOn, width: 36) { property in
                     onCell(for: property)
                 }
             )
         }
         columns.append(contentsOf: [
-            PVTableColumn(id: "property", title: L10n.SubjectFields.columnProperty) { property in
+            PVTableColumn(id: "property", title: L10n.Properties.columnProperty) { property in
                 VStack(alignment: .leading, spacing: 1) {
                     Text(verbatim: property.label)
                         .font(PVFont.body(size: PVTypeScale.body))
@@ -339,13 +339,13 @@ private struct SubjectFieldsContent: View {
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(rowAccessibilityLabel(property))
             },
-            PVTableColumn(id: "valueType", title: L10n.SubjectFields.columnValueType, width: 96) { property in
-                SubjectFieldsValueTypePill(valueType: property.valueType)
+            PVTableColumn(id: "valueType", title: L10n.Properties.columnValueType, width: 96) { property in
+                PropertiesValueTypePill(valueType: property.valueType)
             },
-            PVTableColumn(id: "origin", title: L10n.SubjectFields.columnOrigin, width: 76) { property in
-                SubjectFieldsOriginCell(origin: property.origin)
+            PVTableColumn(id: "origin", title: L10n.Properties.columnOrigin, width: 76) { property in
+                PropertiesOriginCell(origin: property.origin)
             },
-            PVTableColumn(id: "boundTo", title: L10n.SubjectFields.columnBoundTo, width: 226) { property in
+            PVTableColumn(id: "boundTo", title: L10n.Properties.columnBoundTo, width: 226) { property in
                 boundToCell(for: property)
             },
         ])
@@ -363,7 +363,7 @@ private struct SubjectFieldsContent: View {
                 model.selectProperty(property.id)
                 Task { await model.toggleBinding(to: type) }
             } label: {
-                SubjectFieldsBindBox(on: bound, locked: locked)
+                PropertiesBindBox(on: bound, locked: locked)
             }
             .buttonStyle(.plain)
             .disabled(locked)
@@ -379,11 +379,11 @@ private struct SubjectFieldsContent: View {
     ) -> String {
         var parts = [property.label]
         parts.append(bound
-            ? String(localized: L10n.SubjectFields.bindingBound)
-            : String(localized: L10n.SubjectFields.bindingNotBound))
+            ? String(localized: L10n.Properties.bindingBound)
+            : String(localized: L10n.Properties.bindingNotBound))
         parts.append(type.label)
         if locked {
-            parts.append(String(localized: L10n.SubjectFields.bindingLocked))
+            parts.append(String(localized: L10n.Properties.bindingLocked))
         }
         return parts.joined(separator: ", ")
     }
@@ -398,14 +398,14 @@ private struct SubjectFieldsContent: View {
             } else {
                 HStack(spacing: 4) {
                     ForEach(bound.prefix(3)) { type in
-                        SubjectFieldsBoundChip(
+                        PropertiesBoundChip(
                             label: type.label,
                             locked: model.bindingLocked(propertyID: property.id, typeID: type.id),
                             emphasized: model.selectedTypeKey == type.key
                         )
                     }
                     if bound.count > 3 {
-                        Text(verbatim: L10n.SubjectFields.boundOverflow(count: bound.count - 3))
+                        Text(verbatim: L10n.Properties.boundOverflow(count: bound.count - 3))
                             .font(PVFont.mono(size: PVTypeScale.micro))
                             .foregroundStyle(PVColor.textFaint)
                     }
@@ -417,7 +417,7 @@ private struct SubjectFieldsContent: View {
     private func rowAccessibilityLabel(_ property: CatalogProperty) -> String {
         let bound = model.snapshot.boundTypes(for: property.id)
         let valueType = String(localized: SubjectPropertyValueType.label(property.valueType))
-        let boundText = L10n.SubjectFields.rowBoundAnnouncement(count: bound.count)
+        let boundText = L10n.Properties.rowBoundAnnouncement(count: bound.count)
         return "\(property.label), \(valueType), \(property.origin), \(boundText)"
     }
 
@@ -430,7 +430,7 @@ private struct SubjectFieldsContent: View {
                             .padding(16)
                     }
                 } else {
-                    Text(L10n.SubjectFields.inspectorEmpty)
+                    Text(L10n.Properties.inspectorEmpty)
                         .font(PVFont.body(size: PVTypeScale.bodySmall))
                         .foregroundStyle(PVColor.textMuted)
                         .padding(16)
@@ -438,36 +438,36 @@ private struct SubjectFieldsContent: View {
                 }
             }
         }
-        .accessibilityLabel(Text(L10n.SubjectFields.inspectorAccessibility))
+        .accessibilityLabel(Text(L10n.Properties.inspectorAccessibility))
     }
 
     private func inspectorBody(_ property: CatalogProperty) -> some View {
         VStack(alignment: .leading, spacing: PVSpacing.space6) {
-            SubjectFieldsIdentityEditor(property: property, model: model)
+            PropertiesIdentityEditor(property: property, model: model)
                 .id(property.id)
 
             if model.deleteImpact.request == nil, let deleteError = model.deleteError {
                 PVCallout(tone: .danger, message: deleteError)
-                    .accessibilityIdentifier("subjectFields.deleteError")
+                    .accessibilityIdentifier("properties.deleteError")
             }
 
             VStack(spacing: PVSpacing.space4) {
-                inspectorMetaRow(label: L10n.SubjectFields.inspectorValueType) {
+                inspectorMetaRow(label: L10n.Properties.inspectorValueType) {
                     HStack(spacing: 6) {
-                        SubjectFieldsValueTypePill(valueType: property.valueType)
+                        PropertiesValueTypePill(valueType: property.valueType)
                         Image(systemName: "lock.fill")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(PVColor.textFaint)
-                            .accessibilityLabel(Text(L10n.SubjectFields.valueTypeImmutable))
+                            .accessibilityLabel(Text(L10n.Properties.valueTypeImmutable))
                     }
                 }
-                inspectorMetaRow(label: L10n.SubjectFields.inspectorOrigin) {
+                inspectorMetaRow(label: L10n.Properties.inspectorOrigin) {
                     Group {
                         switch property.origin {
                         case CatalogOrigin.user:
-                            Text(L10n.SubjectFields.inspectorOriginUser)
+                            Text(L10n.Properties.inspectorOriginUser)
                         case CatalogOrigin.provenencia:
-                            Text(L10n.SubjectFields.inspectorOriginSeeded)
+                            Text(L10n.Properties.inspectorOriginSeeded)
                         default:
                             Text(verbatim: property.origin)
                         }
@@ -475,15 +475,15 @@ private struct SubjectFieldsContent: View {
                     .font(PVFont.body(size: PVTypeScale.bodySmall))
                     .foregroundStyle(PVColor.textPrimary)
                 }
-                inspectorMetaRow(label: L10n.SubjectFields.inspectorUsedOn) {
-                    Text(verbatim: L10n.SubjectFields.usedOnCount(count: property.usedBy))
+                inspectorMetaRow(label: L10n.Properties.inspectorUsedOn) {
+                    Text(verbatim: L10n.Properties.usedOnCount(count: property.usedBy))
                         .font(PVFont.mono(size: PVTypeScale.bodySmall))
                         .foregroundStyle(PVColor.textPrimary)
                 }
             }
 
             if property.valueType == "term" {
-                Text(L10n.SubjectFields.termNote)
+                Text(L10n.Properties.termNote)
                     .font(PVFont.body(size: PVTypeScale.caption, italic: true))
                     .foregroundStyle(PVColor.textMuted)
             }
@@ -498,13 +498,13 @@ private struct SubjectFieldsContent: View {
 
             VStack(alignment: .leading, spacing: PVSpacing.space5) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text(L10n.SubjectFields.bindingsSection)
+                    Text(L10n.Properties.bindingsSection)
                         .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
                         .foregroundStyle(PVColor.textMuted)
                         .tracking(PVTypeScale.micro * PVTracking.caps)
                         .textCase(.uppercase)
                     Spacer()
-                    Text(verbatim: L10n.SubjectFields.bindCount(
+                    Text(verbatim: L10n.Properties.bindCount(
                         bound: model.snapshot.boundTypes(for: property.id).count,
                         total: model.types.count
                     ))
@@ -518,7 +518,7 @@ private struct SubjectFieldsContent: View {
                     }
                 }
                 .accessibilityElement(children: .contain)
-                .accessibilityLabel(Text(L10n.SubjectFields.bindingsAccessibility))
+                .accessibilityLabel(Text(L10n.Properties.bindingsAccessibility))
             }
 
         }
@@ -541,13 +541,13 @@ private struct SubjectFieldsContent: View {
         let bound = model.isBound(propertyID: property.id, typeID: type.id)
         let locked = model.bindingLocked(propertyID: property.id, typeID: type.id)
         let presentation = model.snapshot.presentation(for: type)
-        let ink = SubjectFieldsTypeChrome.ink(typeKey: type.key, presentation: presentation)
+        let ink = PropertiesTypeChrome.ink(typeKey: type.key, presentation: presentation)
         return Button {
             Task { await model.toggleBinding(to: type) }
         } label: {
             HStack(spacing: PVSpacing.space5) {
-                SubjectFieldsBindBox(on: bound, locked: locked)
-                if let mark = SubjectFieldsTypeChrome.stripMarkKey(typeKey: type.key) {
+                PropertiesBindBox(on: bound, locked: locked)
+                if let mark = PropertiesTypeChrome.stripMarkKey(typeKey: type.key) {
                     PVMark(mark, size: 14)
                         .foregroundStyle(ink)
                 }
@@ -556,7 +556,7 @@ private struct SubjectFieldsContent: View {
                     .foregroundStyle(locked ? PVColor.textSecondary : PVColor.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if locked {
-                    Text(L10n.SubjectFields.bindingRegistry)
+                    Text(L10n.Properties.bindingRegistry)
                         .font(PVFont.body(size: PVTypeScale.micro, italic: true))
                         .foregroundStyle(PVColor.textMuted)
                 }
@@ -567,16 +567,16 @@ private struct SubjectFieldsContent: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(
-            "\(type.label), \(bound ? String(localized: L10n.SubjectFields.bindingBound) : String(localized: L10n.SubjectFields.bindingNotBound))"
-            + (locked ? ", \(String(localized: L10n.SubjectFields.bindingLocked))" : "")
+            "\(type.label), \(bound ? String(localized: L10n.Properties.bindingBound) : String(localized: L10n.Properties.bindingNotBound))"
+            + (locked ? ", \(String(localized: L10n.Properties.bindingLocked))" : "")
         )
     }
 }
 
 /// Local drafts so inspector keystrokes don't rebuild the type strip and table.
-private struct SubjectFieldsIdentityEditor: View {
+private struct PropertiesIdentityEditor: View {
     let property: CatalogProperty
-    @Bindable var model: SubjectFieldsModel
+    @Bindable var model: PropertiesModel
     @State private var labelDraft = ""
     @State private var descriptionDraft = ""
 
@@ -586,14 +586,14 @@ private struct SubjectFieldsIdentityEditor: View {
                 isEditing: model.isEditingIdentity,
                 isSaving: model.isSaving,
                 error: model.isEditingIdentity ? model.formError : nil,
-                saveLabel: L10n.SubjectFields.editSave,
-                cancelLabel: L10n.SubjectFields.editCancel,
-                editLabel: L10n.SubjectFields.editAction,
+                saveLabel: L10n.Properties.editSave,
+                cancelLabel: L10n.Properties.editCancel,
+                editLabel: L10n.Properties.editAction,
                 saveDisabled: !model.canSubmitEdit(label: labelDraft, description: descriptionDraft),
                 showsEditControl: model.canEditSelected,
                 axis: .horizontal,
                 actionsStyle: .iconRow,
-                accessibilityIdentifierPrefix: "subjectFields.identity",
+                accessibilityIdentifierPrefix: "properties.identity",
                 onEdit: {
                     seedDrafts()
                     model.beginEdit()
@@ -620,7 +620,7 @@ private struct SubjectFieldsIdentityEditor: View {
                             isInvalid: labelDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                             activateOnAppear: true
                         )
-                        .accessibilityIdentifier("subjectFields.identity.label")
+                        .accessibilityIdentifier("properties.identity.label")
                         Text(verbatim: property.key)
                             .font(PVFont.mono(size: PVTypeScale.caption))
                             .foregroundStyle(PVColor.textMuted)
@@ -638,7 +638,7 @@ private struct SubjectFieldsIdentityEditor: View {
                         }
                         .disabled(!model.canDeleteSelected)
                         .accessibilityLabel(Text(verbatim: model.deleteAccessibilityLabel))
-                        .accessibilityIdentifier("subjectFields.delete")
+                        .accessibilityIdentifier("properties.delete")
                     }
                 },
                 editingTrailing: { EmptyView() }
@@ -647,10 +647,10 @@ private struct SubjectFieldsIdentityEditor: View {
                 PVTextArea(
                     text: $descriptionDraft,
                     lineLimit: 2...6,
-                    prompt: L10n.SubjectFields.editDescriptionPlaceholder
+                    prompt: L10n.Properties.editDescriptionPlaceholder
                 )
-                .accessibilityIdentifier("subjectFields.identity.description")
-                Text(L10n.SubjectFields.editKeyStays(key: property.key))
+                .accessibilityIdentifier("properties.identity.description")
+                Text(L10n.Properties.editKeyStays(key: property.key))
                     .font(PVFont.body(size: PVTypeScale.caption, italic: true))
                     .foregroundStyle(PVColor.textMuted)
             } else if !property.description.isEmpty {
@@ -672,10 +672,10 @@ private struct SubjectFieldsIdentityEditor: View {
 }
 
 /// Local create drafts so dialog keystrokes don't rebuild the destination.
-private struct SubjectFieldsCreateHost: View {
-    @Bindable var model: SubjectFieldsModel
+private struct PropertiesCreateHost: View {
+    @Bindable var model: PropertiesModel
     @Environment(WorkspaceNavigation.self) private var navigation
-    @State private var draft: SubjectFieldsModel.Draft?
+    @State private var draft: PropertiesModel.Draft?
 
     var body: some View {
         Color.clear
@@ -684,14 +684,14 @@ private struct SubjectFieldsCreateHost: View {
             .pvFormDialog(
                 isPresented: createOpenBinding,
                 copy: PVFormDialogCopy(
-                    title: L10n.SubjectFields.createTitle,
-                    subtitle: L10n.SubjectFields.createOriginNote,
-                    confirm: L10n.SubjectFields.createSubmit,
-                    cancel: L10n.SubjectFields.createCancel
+                    title: L10n.Properties.createTitle,
+                    subtitle: L10n.Properties.createOriginNote,
+                    confirm: L10n.Properties.createSubmit,
+                    cancel: L10n.Properties.createCancel
                 ),
                 isRunning: model.isSaving,
                 confirmDisabled: !model.canSubmitCreate(draft),
-                accessibilityIdentifierPrefix: "subjectFields.create",
+                accessibilityIdentifierPrefix: "properties.create",
                 onConfirm: {
                     Task {
                         if let location = await model.submitCreate(draft) {
@@ -722,12 +722,12 @@ private struct SubjectFieldsCreateHost: View {
         VStack(alignment: .leading, spacing: PVSpacing.space6) {
             if let formError = model.formError {
                 PVCallout(tone: .danger, message: formError)
-                    .accessibilityIdentifier("subjectFields.create.error")
+                    .accessibilityIdentifier("properties.create.error")
             }
 
             PVField(
-                label: L10n.SubjectFields.createLabel,
-                hint: L10n.SubjectFields.createLabelHint,
+                label: L10n.Properties.createLabel,
+                hint: L10n.Properties.createLabelHint,
                 required: true
             ) {
                 PVInput(
@@ -735,42 +735,42 @@ private struct SubjectFieldsCreateHost: View {
                         get: { draft?.label ?? "" },
                         set: { draft?.label = $0 }
                     ),
-                    prompt: L10n.SubjectFields.createLabelPlaceholder
+                    prompt: L10n.Properties.createLabelPlaceholder
                 )
-                .accessibilityIdentifier("subjectFields.create.label")
+                .accessibilityIdentifier("properties.create.label")
             }
 
             PVField(
-                label: L10n.SubjectFields.createKey,
-                hint: L10n.SubjectFields.createKeyHint
+                label: L10n.Properties.createKey,
+                hint: L10n.Properties.createKeyHint
             ) {
                 PVInput(
                     text: Binding(
-                        get: { SubjectFieldsModel.draftKey(label: draft?.label ?? "") },
+                        get: { PropertiesModel.draftKey(label: draft?.label ?? "") },
                         set: { _ in }
                     ),
                     mono: true,
                     isReadOnly: true,
-                    prompt: L10n.SubjectFields.createKeyPlaceholder
+                    prompt: L10n.Properties.createKeyPlaceholder
                 )
-                .accessibilityIdentifier("subjectFields.create.key")
+                .accessibilityIdentifier("properties.create.key")
             }
 
-            PVField(label: L10n.SubjectFields.createDescription) {
+            PVField(label: L10n.Properties.createDescription) {
                 PVTextArea(
                     text: Binding(
                         get: { draft?.description ?? "" },
                         set: { draft?.description = $0 }
                     ),
                     lineLimit: 2...4,
-                    prompt: L10n.SubjectFields.createDescriptionPlaceholder
+                    prompt: L10n.Properties.createDescriptionPlaceholder
                 )
-                .accessibilityIdentifier("subjectFields.create.description")
+                .accessibilityIdentifier("properties.create.description")
             }
 
             PVField(
-                label: L10n.SubjectFields.createValueType,
-                hint: L10n.SubjectFields.createValueTypeHint,
+                label: L10n.Properties.createValueType,
+                hint: L10n.Properties.createValueTypeHint,
                 required: true
             ) {
                 PVChipGroup(style: .segmented) {
@@ -782,14 +782,14 @@ private struct SubjectFieldsCreateHost: View {
                             selectionLift: true,
                             action: { draft?.valueType = vt }
                         )
-                        .accessibilityIdentifier("subjectFields.create.valueType.\(vt)")
+                        .accessibilityIdentifier("properties.create.valueType.\(vt)")
                     }
                 }
-                .accessibilityLabel(Text(L10n.SubjectFields.createValueType))
+                .accessibilityLabel(Text(L10n.Properties.createValueType))
             }
 
             VStack(alignment: .leading, spacing: PVSpacing.space4) {
-                Text(L10n.SubjectFields.createBindSection)
+                Text(L10n.Properties.createBindSection)
                     .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
                     .foregroundStyle(PVColor.textMuted)
                     .tracking(PVTypeScale.micro * PVTracking.caps)
@@ -807,21 +807,21 @@ private struct SubjectFieldsCreateHost: View {
                     }
                 }
                 .accessibilityElement(children: .contain)
-                .accessibilityLabel(Text(L10n.SubjectFields.createBindSection))
+                .accessibilityLabel(Text(L10n.Properties.createBindSection))
             }
         }
     }
 
     private func createBindRow(_ type: CatalogSubjectType) -> some View {
         let presentation = model.snapshot.presentation(for: type)
-        let ink = SubjectFieldsTypeChrome.ink(typeKey: type.key, presentation: presentation)
+        let ink = PropertiesTypeChrome.ink(typeKey: type.key, presentation: presentation)
         let on = draft?.bindTypeIDs.contains(type.id) == true
         return Button {
             toggleBind(typeID: type.id)
         } label: {
             HStack(spacing: PVSpacing.space5) {
-                SubjectFieldsBindBox(on: on, locked: false)
-                if let mark = SubjectFieldsTypeChrome.stripMarkKey(typeKey: type.key) {
+                PropertiesBindBox(on: on, locked: false)
+                if let mark = PropertiesTypeChrome.stripMarkKey(typeKey: type.key) {
                     PVMark(mark, size: 14)
                         .foregroundStyle(ink)
                 }
@@ -837,7 +837,7 @@ private struct SubjectFieldsCreateHost: View {
         .buttonStyle(.plain)
         .accessibilityLabel(type.label)
         .accessibilityAddTraits(on ? [.isSelected] : [])
-        .accessibilityIdentifier("subjectFields.create.bind.\(type.key)")
+        .accessibilityIdentifier("properties.create.bind.\(type.key)")
     }
 
     private func toggleBind(typeID: String) {

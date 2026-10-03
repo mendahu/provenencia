@@ -676,7 +676,7 @@ struct SourcePageModelTests {
         #expect(model.metadata.entries.contains { $0.field.id == author.id && $0.valueText == "Eliza" })
     }
 
-    /// A field added on the Source Fields page reaches the Add-metadata dropdown
+    /// A field added on the Metadata page reaches the Add-metadata dropdown
     /// without the page reloading: the dropdown reads the shared field list.
     @Test func addMetadataDropdownSeesFieldCreatedElsewhere() async throws {
         let store = makeStore(fields: [authorField()])

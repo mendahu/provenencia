@@ -8,21 +8,21 @@ enum SubjectPropertyValueType {
 
     static func label(_ valueType: String) -> LocalizedStringResource {
         switch valueType {
-        case "text": return L10n.SubjectFields.valueTypeText
-        case "integer": return L10n.SubjectFields.valueTypeInteger
-        case "date": return L10n.SubjectFields.valueTypeDate
-        case "name": return L10n.SubjectFields.valueTypeName
-        case "subject": return L10n.SubjectFields.valueTypeSubject
-        case "term": return L10n.SubjectFields.valueTypeTerm
-        default: return L10n.SubjectFields.valueTypeText
+        case "text": return L10n.Properties.valueTypeText
+        case "integer": return L10n.Properties.valueTypeInteger
+        case "date": return L10n.Properties.valueTypeDate
+        case "name": return L10n.Properties.valueTypeName
+        case "subject": return L10n.Properties.valueTypeSubject
+        case "term": return L10n.Properties.valueTypeTerm
+        default: return L10n.Properties.valueTypeText
         }
     }
 }
 
-/// State for the **Subject fields** workspace destination (S7-D2 board / S7-05).
+/// State for the **Properties** workspace destination (S7-D2 board / S7-05).
 @MainActor
 @Observable
-final class SubjectFieldsModel {
+final class PropertiesModel {
     struct Draft: Equatable {
         var label: String
         var valueType: String
@@ -69,26 +69,26 @@ final class SubjectFieldsModel {
     }
 
     static func workspaceKey(for session: WorkspaceSession) -> CatalogQueryKey {
-        .subjectFieldsWorkspace(project: session.projectKey)
+        .propertiesWorkspace(project: session.projectKey)
     }
 
     func warmWorkspaceQuery() {
-        let _: QueryHandle<SubjectFieldsSnapshot> = session.query(Self.workspaceKey(for: session))
+        let _: QueryHandle<PropertiesSnapshot> = session.query(Self.workspaceKey(for: session))
     }
 
-    var snapshot: SubjectFieldsSnapshot {
+    var snapshot: PropertiesSnapshot {
         session.queryHandle(Self.workspaceKey(for: session))?.value ?? .empty
     }
 
     var isLoading: Bool {
-        guard let handle: QueryHandle<SubjectFieldsSnapshot> = session.queryHandle(Self.workspaceKey(for: session))
+        guard let handle: QueryHandle<PropertiesSnapshot> = session.queryHandle(Self.workspaceKey(for: session))
         else { return true }
         return handle.status == .loading && snapshot.properties.isEmpty
     }
 
     var loadError: Error? {
         guard snapshot.properties.isEmpty else { return nil }
-        let handle: QueryHandle<SubjectFieldsSnapshot>? = session.queryHandle(Self.workspaceKey(for: session))
+        let handle: QueryHandle<PropertiesSnapshot>? = session.queryHandle(Self.workspaceKey(for: session))
         return handle?.error
     }
 
@@ -106,7 +106,7 @@ final class SubjectFieldsModel {
             .filter { property in
                 if let selectedTypeKey,
                    let type = snapshot.types.first(where: { $0.key == selectedTypeKey }) {
-                    let bound = snapshot.fieldsByTypeID[type.id]?.contains { $0.property.id == property.id } == true
+                    let bound = snapshot.propertiesByTypeID[type.id]?.contains { $0.property.id == property.id } == true
                     if !bound { return false }
                 }
                 if !q.isEmpty {
@@ -161,13 +161,13 @@ final class SubjectFieldsModel {
     var showsDelete: Bool { selectedProperty != nil }
     var canDeleteSelected: Bool { selectedProperty != nil }
 
-    var deleteTooltip: LocalizedStringResource { L10n.SubjectFields.deleteProperty }
+    var deleteTooltip: LocalizedStringResource { L10n.Properties.deleteProperty }
 
     var deleteAccessibilityLabel: String {
         guard let property = selectedProperty else {
-            return String(localized: L10n.SubjectFields.deleteProperty)
+            return String(localized: L10n.Properties.deleteProperty)
         }
-        return L10n.SubjectFields.deletePropertyAccessibility(label: property.label)
+        return L10n.Properties.deletePropertyAccessibility(label: property.label)
     }
 
     var canEditSelected: Bool {
@@ -193,7 +193,7 @@ final class SubjectFieldsModel {
     }
 
     func syncCatalogCounts() {
-        catalogCounts?.publishSubjectFields(.from(snapshot.properties))
+        catalogCounts?.publishProperties(.from(snapshot.properties))
     }
 
     // MARK: Selection
@@ -202,8 +202,8 @@ final class SubjectFieldsModel {
     /// Both levels are history identity; a missing type key or property id prunes to the list root.
     @discardableResult
     func syncSelection(from location: WorkspaceLocation) -> WorkspaceLocationReconcile {
-        guard location.section == .subjectFields else { return .ignored }
-        guard let handle: QueryHandle<SubjectFieldsSnapshot> = session.queryHandle(Self.workspaceKey(for: session)),
+        guard location.section == .properties else { return .ignored }
+        guard let handle: QueryHandle<PropertiesSnapshot> = session.queryHandle(Self.workspaceKey(for: session)),
               handle.status == .ready || !snapshot.properties.isEmpty else { return .ignored }
         if createOpen { return .ignored }
         if let key = location.subjectTypeKey, !snapshot.types.contains(where: { $0.key == key }) {
@@ -232,7 +232,7 @@ final class SubjectFieldsModel {
         let property = propertyID.flatMap { id in snapshot.properties.first { $0.id == id } }
         let type = typeKey.flatMap { key in snapshot.types.first { $0.key == key } }
         return WorkspaceLocation(
-            section: .subjectFields,
+            section: .properties,
             subjectTypeKey: typeKey,
             propertyId: propertyID,
             title: property?.label ?? type?.label
@@ -341,8 +341,8 @@ final class SubjectFieldsModel {
             session.apply(.updatedProperty)
             isEditingIdentity = false
             toast = VocabularyToast(
-                title: String(localized: L10n.SubjectFields.toastUpdatedTitle),
-                body: L10n.SubjectFields.toastUpdatedBody(label: updated.label, key: updated.key),
+                title: String(localized: L10n.Properties.toastUpdatedTitle),
+                body: L10n.Properties.toastUpdatedBody(label: updated.label, key: updated.key),
                 tone: .success
             )
             return true
@@ -387,8 +387,8 @@ final class SubjectFieldsModel {
             formError = nil
             cancelEdit()
             toast = VocabularyToast(
-                title: String(localized: L10n.SubjectFields.toastDeletedTitle),
-                body: L10n.SubjectFields.toastDeletedBody(label: property.label),
+                title: String(localized: L10n.Properties.toastDeletedTitle),
+                body: L10n.Properties.toastDeletedBody(label: property.label),
                 tone: .success
             )
             syncCatalogCounts()
@@ -415,11 +415,11 @@ final class SubjectFieldsModel {
         guard let draft = incoming ?? draft else { return nil }
         let label = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !label.isEmpty else {
-            formError = String(localized: L10n.SubjectFields.errorLabelRequired)
+            formError = String(localized: L10n.Properties.errorLabelRequired)
             return nil
         }
         guard SubjectPropertyValueType.researcherCreatable.contains(draft.valueType) else {
-            formError = String(localized: L10n.SubjectFields.errorValueType)
+            formError = String(localized: L10n.Properties.errorValueType)
             return nil
         }
         isSaving = true
@@ -434,7 +434,7 @@ final class SubjectFieldsModel {
                 description: draft.description
             )
             for typeID in draft.bindTypeIDs {
-                try await store.assignSubjectTypeField(
+                try await store.assignSubjectTypeProperty(
                     projectDir: session.projectKey.projectDir,
                     userID: userID,
                     subjectTypeID: typeID,
@@ -444,18 +444,18 @@ final class SubjectFieldsModel {
             if draft.bindTypeIDs.isEmpty {
                 session.apply(.createdProperty)
             } else {
-                session.apply(.mutatedSubjectTypeFields)
+                session.apply(.mutatedSubjectTypeProperties)
             }
             closeCreate()
             selectedPropertyID = created.id
             toast = VocabularyToast(
-                title: String(localized: L10n.SubjectFields.toastCreatedTitle),
-                body: L10n.SubjectFields.toastCreatedBody(label: created.label),
+                title: String(localized: L10n.Properties.toastCreatedTitle),
+                body: L10n.Properties.toastCreatedBody(label: created.label),
                 tone: .success
             )
             syncCatalogCounts()
             return WorkspaceLocation(
-                section: .subjectFields,
+                section: .properties,
                 subjectTypeKey: selectedTypeKey,
                 propertyId: created.id,
                 title: created.label
@@ -471,30 +471,30 @@ final class SubjectFieldsModel {
         lockedCallout = nil
         if let existing = snapshot.binding(propertyID: property.id, typeID: type.id) {
             if existing.locked {
-                lockedCallout = L10n.SubjectFields.lockedBindingReason(typeLabel: type.label)
+                lockedCallout = L10n.Properties.lockedBindingReason(typeLabel: type.label)
                 return
             }
             do {
-                try await store.removeSubjectTypeField(
+                try await store.removeSubjectTypeProperty(
                     projectDir: session.projectKey.projectDir,
                     userID: userID,
                     subjectTypeID: type.id,
                     propertyID: property.id
                 )
-                session.apply(.mutatedSubjectTypeFields)
+                session.apply(.mutatedSubjectTypeProperties)
             } catch {
                 formError = L10n.Errors.message(for: error)
             }
             return
         }
         do {
-            try await store.assignSubjectTypeField(
+            try await store.assignSubjectTypeProperty(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
                 subjectTypeID: type.id,
                 propertyID: property.id
             )
-            session.apply(.mutatedSubjectTypeFields)
+            session.apply(.mutatedSubjectTypeProperties)
         } catch {
             formError = L10n.Errors.message(for: error)
         }

@@ -76,7 +76,7 @@ extension PVEmptyState where Action == EmptyView {
     VStack(spacing: PVSpacing.space9) {
         PVEmptyState(
             icon: .tag,
-            title: "No source fields yet",
+            title: "No metadata fields yet",
             message: "This project has no metadata vocabulary. Add the fields your records actually carry."
         )
         PVEmptyState(

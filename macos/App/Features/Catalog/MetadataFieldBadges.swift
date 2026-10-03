@@ -1,9 +1,9 @@
 import SwiftUI
 
 /// `CatalogMetadataField.dataType` namespace — mirrors
-/// `core/database/sourcefields`'s `DataType…` constants (the FFI layer
+/// `core/database/metadatafields`'s `DataType…` constants (the FFI layer
 /// carries these as plain strings, not an enum). Shared Catalog shelf for
-/// Source fields, Source types, and the Source page — not owned by any one
+/// Metadata, Source types, and the Source page — not owned by any one
 /// destination.
 enum CatalogFieldDataType {
     static let text = "text"
@@ -15,11 +15,11 @@ enum CatalogFieldDataType {
     static func label(for dataType: String) -> LocalizedStringResource {
         switch dataType {
         case date:
-            return L10n.SourceFields.dataTypeDate
+            return L10n.Metadata.dataTypeDate
         case url:
-            return L10n.SourceFields.dataTypeUrl
+            return L10n.Metadata.dataTypeUrl
         default:
-            return L10n.SourceFields.dataTypeText
+            return L10n.Metadata.dataTypeText
         }
     }
 
@@ -44,11 +44,11 @@ struct CatalogFieldDataTypeBadge: View {
     var body: some View {
         switch dataType {
         case CatalogFieldDataType.date:
-            PVBadge(L10n.SourceFields.dataTypeDate, tone: .info, icon: .calendar, subtle: true)
+            PVBadge(L10n.Metadata.dataTypeDate, tone: .info, icon: .calendar, subtle: true)
         case CatalogFieldDataType.url:
-            PVBadge(L10n.SourceFields.dataTypeUrl, tone: .info, icon: .externalLink, subtle: true)
+            PVBadge(L10n.Metadata.dataTypeUrl, tone: .info, icon: .externalLink, subtle: true)
         default:
-            PVBadge(L10n.SourceFields.dataTypeText, tone: .neutral, icon: .textType, subtle: true)
+            PVBadge(L10n.Metadata.dataTypeText, tone: .neutral, icon: .textType, subtle: true)
         }
     }
 }

@@ -1,14 +1,14 @@
 import Foundation
 import Observation
 
-/// State for the **Source fields** workspace destination (S2-02 board /
+/// State for the **Metadata** workspace destination (S2-02 board /
 /// S2-15 PR): browse/search/sort the project's `source_metadata_fields`
 /// vocabulary, and create or edit project rows (`user` and create-time
 /// `provenencia` starters). Plugin-origin rows stay view-only — see
 /// `isSelectedFieldLocked`.
 @MainActor
 @Observable
-final class SourceFieldsModel {
+final class MetadataModel {
     /// The add/edit form's in-progress values. `key` is never part of this —
     /// it's minted server-side from `label` (`FieldSlug.kebab` mirrors the
     /// preview client-side; the engine is the source of truth).
@@ -127,13 +127,13 @@ final class SourceFieldsModel {
 
     var canDeleteSelectedField: Bool { selectedField != nil }
 
-    var deleteTooltip: LocalizedStringResource { L10n.SourceFields.deleteField }
+    var deleteTooltip: LocalizedStringResource { L10n.Metadata.deleteField }
 
     var deleteAccessibilityLabel: String {
         guard let field = selectedField else {
-            return String(localized: L10n.SourceFields.deleteField)
+            return String(localized: L10n.Metadata.deleteField)
         }
-        return L10n.SourceFields.deleteFieldAccessibility(label: field.label)
+        return L10n.Metadata.deleteFieldAccessibility(label: field.label)
     }
 
     var pendingDeleteField: CatalogMetadataField? {
@@ -142,13 +142,13 @@ final class SourceFieldsModel {
     }
 
     var countLine: String {
-        let summary = catalogCounts?.sourceFields ?? .from(fields)
+        let summary = catalogCounts?.metadata ?? .from(fields)
         if summary.plugin > 0 {
-            return L10n.SourceFields.countLineWithPlugin(
+            return L10n.Metadata.countLineWithPlugin(
                 total: summary.total, seeded: summary.seeded, user: summary.user, plugin: summary.plugin
             )
         }
-        return L10n.SourceFields.countLine(total: summary.total, seeded: summary.seeded, user: summary.user)
+        return L10n.Metadata.countLine(total: summary.total, seeded: summary.seeded, user: summary.user)
     }
 
     // MARK: Selection
@@ -156,7 +156,7 @@ final class SourceFieldsModel {
     /// Reconciles list/detail state to `location` when rows are already cached.
     @discardableResult
     func syncSelection(from location: WorkspaceLocation) -> WorkspaceLocationReconcile {
-        guard location.section == .sourceFields else { return .ignored }
+        guard location.section == .metadata else { return .ignored }
         guard let handle: QueryHandle<[CatalogMetadataField]> = session.queryHandle(Self.fieldsListKey(for: session)),
               handle.status == .ready || !fields.isEmpty else { return .ignored }
         if isAdding { return .ignored }
@@ -222,14 +222,14 @@ final class SourceFieldsModel {
     func askDelete() async {
         guard let field = selectedField else { return }
         await deleteImpact.ask(
-            kind: "source_field",
+            kind: "metadata_field",
             id: field.id,
             ref: field.key,
             title: field.label
         ) {
             try await self.store.getDeleteImpact(
                 projectDir: self.session.projectKey.projectDir,
-                kind: "source_field",
+                kind: "metadata_field",
                 id: field.id
             )
         }
@@ -253,8 +253,8 @@ final class SourceFieldsModel {
             formError = nil
             mode = .empty
             toast = VocabularyToast(
-                title: String(localized: L10n.SourceFields.toastDeletedTitle),
-                body: L10n.SourceFields.toastDeletedBody(label: field.label),
+                title: String(localized: L10n.Metadata.toastDeletedTitle),
+                body: L10n.Metadata.toastDeletedBody(label: field.label),
                 tone: .success
             )
             syncCatalogCounts()
@@ -266,11 +266,11 @@ final class SourceFieldsModel {
         guard let draft else { return nil }
         let label = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !label.isEmpty else {
-            formError = String(localized: L10n.SourceFields.errorLabelRequired)
+            formError = String(localized: L10n.Metadata.errorLabelRequired)
             return nil
         }
         if isAdding && FieldSlug.kebab(label).isEmpty {
-            formError = String(localized: L10n.SourceFields.errorUnslugifiable)
+            formError = String(localized: L10n.Metadata.errorUnslugifiable)
             return nil
         }
         isSaving = true
@@ -288,13 +288,13 @@ final class SourceFieldsModel {
                 mode = .editing(id: created.id)
                 self.draft = Draft(label: created.label, dataType: created.dataType, description: created.description)
                 toast = VocabularyToast(
-                    title: String(localized: L10n.SourceFields.toastAddedTitle),
-                    body: L10n.SourceFields.toastAddedBody(label: created.label, key: created.key),
+                    title: String(localized: L10n.Metadata.toastAddedTitle),
+                    body: L10n.Metadata.toastAddedBody(label: created.label, key: created.key),
                     tone: .success
                 )
                 syncCatalogCounts()
                 return WorkspaceLocation(
-                    section: .sourceFields,
+                    section: .metadata,
                     fieldId: created.id,
                     title: created.label
                 )
@@ -312,8 +312,8 @@ final class SourceFieldsModel {
                 mode = .editing(id: updated.id)
                 self.draft = Draft(label: updated.label, dataType: updated.dataType, description: updated.description)
                 toast = VocabularyToast(
-                    title: String(localized: L10n.SourceFields.toastUpdatedTitle),
-                    body: L10n.SourceFields.toastUpdatedBody(label: updated.label, key: updated.key),
+                    title: String(localized: L10n.Metadata.toastUpdatedTitle),
+                    body: L10n.Metadata.toastUpdatedBody(label: updated.label, key: updated.key),
                     tone: .success
                 )
                 return nil
@@ -327,7 +327,7 @@ final class SourceFieldsModel {
     }
 
     func syncCatalogCounts() {
-        catalogCounts?.publishSourceFields(.from(fields))
+        catalogCounts?.publishMetadata(.from(fields))
     }
 
     private func patchFieldsList(_ mutate: (inout [CatalogMetadataField]) -> Void) {

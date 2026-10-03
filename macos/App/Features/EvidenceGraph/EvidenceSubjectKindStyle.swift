@@ -19,7 +19,7 @@ struct EvidenceSubjectKindStyle: Sendable {
         presentation: CatalogSubjectTypePresentation?
     ) -> EvidenceSubjectKindStyle {
         EvidenceSubjectKindStyle(
-            ink: SubjectFieldsTypeChrome.ink(typeKey: typeKey, presentation: presentation),
+            ink: PropertiesTypeChrome.ink(typeKey: typeKey, presentation: presentation),
             tint: color(token: presentation?.tintToken, fallbackTypeKey: typeKey, role: .tint),
             line: color(token: presentation?.lineToken, fallbackTypeKey: typeKey, role: .line),
             chip: color(token: presentation?.chipToken, fallbackTypeKey: typeKey, role: .chip),

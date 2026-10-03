@@ -6,7 +6,7 @@ import Observation
 @Observable
 final class CitationComposerContext {
     private struct MemoKey: Equatable {
-        var fields: SubjectFieldsSnapshot
+        var fields: PropertiesSnapshot
         var rows: SourceGraphRows
         var rules: [CatalogConnectRule]
         var terms: [String: [CatalogPropertyTerm]]
@@ -47,11 +47,11 @@ final class CitationComposerContext {
 
     var projectDir: String { session.projectKey.projectDir }
     var graphKey: CatalogQueryKey { .sourceGraph(project: session.projectKey, sourceId: sourceID) }
-    var fieldsKey: CatalogQueryKey { .subjectFieldsWorkspace(project: session.projectKey) }
+    var fieldsKey: CatalogQueryKey { .propertiesWorkspace(project: session.projectKey) }
     var connectRulesKey: CatalogQueryKey { .connectRules(project: session.projectKey) }
 
-    var fieldsSnapshot: SubjectFieldsSnapshot {
-        let handle: QueryHandle<SubjectFieldsSnapshot>? = session.queryHandle(fieldsKey)
+    var fieldsSnapshot: PropertiesSnapshot {
+        let handle: QueryHandle<PropertiesSnapshot>? = session.queryHandle(fieldsKey)
         return handle?.value ?? .empty
     }
 

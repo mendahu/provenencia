@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// The left pane of `SourceFieldsView` (F-1/F-2/F-4/F-5): the shared
+/// The left pane of `MetadataView` (F-1/F-2/F-4/F-5): the shared
 /// `VocabularyListPane` chrome around this destination's columns — label
 /// with origin pill, mono key, data-type badge — sorted by label only.
-struct SourceFieldsListPane: View {
-    @Bindable var model: SourceFieldsModel
+struct MetadataListPane: View {
+    @Bindable var model: MetadataModel
     @Environment(WorkspaceNavigation.self) private var navigation
 
     /// Column widths live only here; `PVTable` shares them between the
@@ -27,19 +27,19 @@ struct SourceFieldsListPane: View {
             ),
             onSortChange: { _ in model.toggleLabelSort() },
             strings: VocabularyListStrings(
-                tableLabel: L10n.Workspace.sourceFieldsTitle,
+                tableLabel: L10n.Workspace.metadataTitle,
                 emptyIcon: .tag,
-                emptyTitle: L10n.SourceFields.emptyProjectTitle,
-                emptyBody: L10n.SourceFields.emptyProjectBody,
-                resultLine: { L10n.SourceFields.resultLine(shown: $0, total: $1) }
+                emptyTitle: L10n.Metadata.emptyProjectTitle,
+                emptyBody: L10n.Metadata.emptyProjectBody,
+                resultLine: { L10n.Metadata.resultLine(shown: $0, total: $1) }
             ),
-            identifierPrefix: "sourceFields"
+            identifierPrefix: "metadata"
         )
     }
 
     private var columns: [PVTableColumn<CatalogMetadataField>] {
         [
-            PVTableColumn(id: Self.labelColumnID, title: L10n.SourceFields.columnLabel, sortable: true) { field in
+            PVTableColumn(id: Self.labelColumnID, title: L10n.Metadata.columnLabel, sortable: true) { field in
                 HStack(spacing: PVSpacing.space2) {
                     Text(field.label)
                         .font(PVFont.body(size: PVTypeScale.bodySmall))
@@ -48,14 +48,14 @@ struct SourceFieldsListPane: View {
                     OriginPill(origin: field.origin)
                 }
             },
-            PVTableColumn(id: "key", title: L10n.SourceFields.columnKey, width: Self.keyColumnWidth) { field in
+            PVTableColumn(id: "key", title: L10n.Metadata.columnKey, width: Self.keyColumnWidth) { field in
                 Text(field.key)
                     .font(PVFont.mono(size: PVTypeScale.micro))
                     .foregroundStyle(PVColor.textMuted)
                     .lineLimit(1)
                     .truncationMode(.middle)
             },
-            PVTableColumn(id: "dataType", title: L10n.SourceFields.columnDataType, width: Self.dataTypeColumnWidth) { field in
+            PVTableColumn(id: "dataType", title: L10n.Metadata.columnDataType, width: Self.dataTypeColumnWidth) { field in
                 CatalogFieldDataTypeBadge(dataType: field.dataType)
             },
         ]
@@ -69,7 +69,7 @@ struct SourceFieldsListPane: View {
                 guard let id else { return }
                 let field = model.fields.first(where: { $0.id == id })
                 navigation.go(to: WorkspaceLocation(
-                    section: .sourceFields,
+                    section: .metadata,
                     fieldId: id,
                     title: field?.label
                 ))

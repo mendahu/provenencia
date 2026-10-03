@@ -6,7 +6,7 @@ enum OmnibarHitPresentation {
         switch kind {
         case "source": L10n.Workspace.omnibarKindSource
         case "source_type": L10n.Workspace.omnibarKindType
-        case "source_field": L10n.Workspace.omnibarKindField
+        case "metadata_field": L10n.Workspace.omnibarKindMetadataField
         default: L10n.Workspace.omnibarKindSource
         }
     }
@@ -71,7 +71,7 @@ enum OmnibarHitPresentation {
         switch kind {
         case "source": .scrollText
         case "source_type": .library
-        case "source_field": .tag
+        case "metadata_field": .tag
         default: .search
         }
     }

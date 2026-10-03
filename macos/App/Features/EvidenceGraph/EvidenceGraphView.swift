@@ -23,7 +23,7 @@ struct EvidenceGraphView: View {
     }
 
     private var fieldsKey: CatalogQueryKey {
-        CatalogQueryKey.subjectFieldsWorkspace(project: session.projectKey)
+        CatalogQueryKey.propertiesWorkspace(project: session.projectKey)
     }
 
     init(
@@ -49,7 +49,7 @@ struct EvidenceGraphView: View {
     var body: some View {
         Group {
             if let graphHandle: QueryHandle<SourceGraphRows> = session.queryHandle(graphKey),
-               let fieldsHandle: QueryHandle<SubjectFieldsSnapshot> = session.queryHandle(fieldsKey)
+               let fieldsHandle: QueryHandle<PropertiesSnapshot> = session.queryHandle(fieldsKey)
             {
                 EvidenceGraphContent(
                     graphHandle: graphHandle,
@@ -97,7 +97,7 @@ struct EvidenceGraphView: View {
 
 private struct EvidenceGraphContent: View {
     @Bindable var graphHandle: QueryHandle<SourceGraphRows>
-    @Bindable var fieldsHandle: QueryHandle<SubjectFieldsSnapshot>
+    @Bindable var fieldsHandle: QueryHandle<PropertiesSnapshot>
     @Bindable var model: EvidenceGraphModel
     let sourceID: String
     let sourceTitle: String
@@ -480,7 +480,7 @@ private struct EvidenceGraphContent: View {
 
 private struct EvidenceGraphDocument: View {
     @Bindable var graphHandle: QueryHandle<SourceGraphRows>
-    @Bindable var fieldsHandle: QueryHandle<SubjectFieldsSnapshot>
+    @Bindable var fieldsHandle: QueryHandle<PropertiesSnapshot>
     @Bindable var model: EvidenceGraphModel
     let contentSize: CGSize
     let navigation: WorkspaceNavigation
@@ -509,7 +509,7 @@ private struct EvidenceGraphDocument: View {
 /// Observes ``GraphCanvasPointerController`` so live drag offsets refresh paint.
 private struct EvidenceGraphDocumentBody: View {
     @Bindable var graphHandle: QueryHandle<SourceGraphRows>
-    @Bindable var fieldsHandle: QueryHandle<SubjectFieldsSnapshot>
+    @Bindable var fieldsHandle: QueryHandle<PropertiesSnapshot>
     @Bindable var model: EvidenceGraphModel
     let contentSize: CGSize
     let navigation: WorkspaceNavigation

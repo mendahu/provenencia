@@ -34,13 +34,13 @@ struct CatalogCountsTests {
         #expect(counts.sourceTypes?.seeded == 1)
         #expect(counts.sourceTypes?.user == 1)
         #expect(counts.sourceTypes?.plugin == 1)
-        #expect(counts.sourceFields?.total == 2)
-        #expect(counts.sourceFields?.seeded == 1)
-        #expect(counts.sourceFields?.user == 1)
-        #expect(counts.sourceFields?.plugin == 0)
+        #expect(counts.metadata?.total == 2)
+        #expect(counts.metadata?.seeded == 1)
+        #expect(counts.metadata?.user == 1)
+        #expect(counts.metadata?.plugin == 0)
         #expect(counts.badge(for: .sources) == 2)
         #expect(counts.badge(for: .sourceTypes) == 3)
-        #expect(counts.badge(for: .sourceFields) == 2)
+        #expect(counts.badge(for: .metadata) == 2)
     }
 
     @Test func refreshAllCountsPromotedPersons() async throws {
@@ -68,7 +68,7 @@ struct CatalogCountsTests {
         await counts.refreshAll()
         #expect(counts.sources == 0)
         #expect(counts.sourceTypes?.total == 0)
-        #expect(counts.sourceFields?.total == 0)
+        #expect(counts.metadata?.total == 0)
         #expect(counts.persons == 0)
         #expect(counts.lastRefreshError == nil)
     }
@@ -84,7 +84,7 @@ struct CatalogCountsTests {
         #expect(counts.lastRefreshError == String(localized: L10n.Errors.unknown))
         #expect(counts.sources == nil)
         #expect(counts.sourceTypes == nil)
-        #expect(counts.sourceFields == nil)
+        #expect(counts.metadata == nil)
         #expect(counts.badge(for: .sources) == nil)
     }
 
@@ -104,11 +104,11 @@ struct CatalogCountsTests {
 
     @Test func publishReplacesVocabularySummariesWithoutStoreRoundTrip() {
         let counts = makeCounts()
-        counts.publishSourceFields(CatalogCountSummary(total: 5, seeded: 2, user: 2, plugin: 1))
+        counts.publishMetadata(CatalogCountSummary(total: 5, seeded: 2, user: 2, plugin: 1))
         counts.publishSourceTypes(CatalogCountSummary(total: 3, seeded: 1, user: 2, plugin: 0))
         counts.publishSources(7)
-        #expect(counts.badge(for: .sourceFields) == 5)
-        #expect(counts.sourceFields?.plugin == 1)
+        #expect(counts.badge(for: .metadata) == 5)
+        #expect(counts.metadata?.plugin == 1)
         #expect(counts.badge(for: .sourceTypes) == 3)
         #expect(counts.sourceTypes?.user == 2)
         #expect(counts.badge(for: .sources) == 7)

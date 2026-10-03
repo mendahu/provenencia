@@ -4,8 +4,8 @@ import Testing
 
 @Suite
 @MainActor
-struct SubjectFieldsModelTests {
-    private let projectDir = "/tmp/subject-fields.provenencia"
+struct PropertiesModelTests {
+    private let projectDir = "/tmp/properties.provenencia"
     private let userID = "00000000-0000-7000-8000-000000000001"
 
     private func personType() -> CatalogSubjectType {
@@ -59,13 +59,13 @@ struct SubjectFieldsModelTests {
         store: FakeStore = FakeStore(),
         properties: [CatalogProperty] = [],
         types: [CatalogSubjectType] = [],
-        fieldsByType: [String: [CatalogSubjectTypeField]] = [:]
-    ) -> (SubjectFieldsModel, WorkspaceSession, FakeStore) {
+        fieldsByType: [String: [CatalogSubjectTypeProperty]] = [:]
+    ) -> (PropertiesModel, WorkspaceSession, FakeStore) {
         store.propertiesByProject[projectDir] = properties
         store.subjectTypesByProject[projectDir] = types
-        store.subjectTypeFieldsByType = fieldsByType
+        store.subjectTypePropertiesByType = fieldsByType
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
-        let model = SubjectFieldsModel(session: session, userID: userID, store: store)
+        let model = PropertiesModel(session: session, userID: userID, store: store)
         return (model, session, store)
     }
 
@@ -80,10 +80,10 @@ struct SubjectFieldsModelTests {
         }
     }
 
-    private func warm(_ model: SubjectFieldsModel, session: WorkspaceSession) async {
+    private func warm(_ model: PropertiesModel, session: WorkspaceSession) async {
         model.warmWorkspaceQuery()
-        if let handle: QueryHandle<SubjectFieldsSnapshot> = session.queryHandle(
-            SubjectFieldsModel.workspaceKey(for: session)
+        if let handle: QueryHandle<PropertiesSnapshot> = session.queryHandle(
+            PropertiesModel.workspaceKey(for: session)
         ) {
             await waitForQuery(handle)
         }
@@ -95,7 +95,7 @@ struct SubjectFieldsModelTests {
             properties: [nameProperty(), eventTypeProperty()],
             types: [person, eventType()],
             fieldsByType: [
-                person.id: [CatalogSubjectTypeField(property: nameProperty(), sortOrder: 0, locked: false)],
+                person.id: [CatalogSubjectTypeProperty(property: nameProperty(), sortOrder: 0, locked: false)],
             ]
         )
         await warm(model, session: session)
@@ -109,7 +109,7 @@ struct SubjectFieldsModelTests {
             properties: [nameProperty(), eventTypeProperty()],
             types: [person, eventType()],
             fieldsByType: [
-                person.id: [CatalogSubjectTypeField(property: nameProperty(), sortOrder: 0, locked: false)],
+                person.id: [CatalogSubjectTypeProperty(property: nameProperty(), sortOrder: 0, locked: false)],
             ]
         )
         await warm(model, session: session)
@@ -123,19 +123,19 @@ struct SubjectFieldsModelTests {
         await warm(model, session: session)
         model.selectType("person")
         model.openCreate()
-        model.draft = SubjectFieldsModel.Draft(
+        model.draft = PropertiesModel.Draft(
             label: "Custom Fact",
             valueType: "text",
             description: "",
             bindTypeIDs: [person.id]
         )
         let location = await model.submitCreate()
-        #expect(location?.section == .subjectFields)
+        #expect(location?.section == .properties)
         #expect(location?.subjectTypeKey == "person")
         #expect(location?.propertyId == model.selectedPropertyID)
         #expect(location?.title == "Custom Fact")
         #expect(store.propertiesByProject[projectDir]?.contains { $0.key == "custom-fact" } == true)
-        #expect(store.subjectTypeFieldsByType[person.id]?.contains { $0.property.key == "custom-fact" } == true)
+        #expect(store.subjectTypePropertiesByType[person.id]?.contains { $0.property.key == "custom-fact" } == true)
         #expect(!(SubjectPropertyValueType.researcherCreatable.contains("term")))
     }
 
@@ -154,7 +154,7 @@ struct SubjectFieldsModelTests {
             properties: [name],
             types: [person],
             fieldsByType: [
-                person.id: [CatalogSubjectTypeField(property: name, sortOrder: 0, locked: true)],
+                person.id: [CatalogSubjectTypeProperty(property: name, sortOrder: 0, locked: true)],
             ]
         )
         await warm(model, session: session)
@@ -181,13 +181,13 @@ struct SubjectFieldsModelTests {
         await warm(model, session: session)
         model.selectProperty(custom.id)
         await model.toggleBinding(to: person)
-        #expect(store.subjectTypeFieldsByType[person.id]?.contains { $0.property.id == custom.id } == true)
+        #expect(store.subjectTypePropertiesByType[person.id]?.contains { $0.property.id == custom.id } == true)
         await warm(model, session: session)
         #expect(model.isBound(propertyID: custom.id, typeID: person.id))
         model.selectProperty(custom.id)
         await model.toggleBinding(to: person)
         await warm(model, session: session)
-        #expect(store.subjectTypeFieldsByType[person.id]?.contains { $0.property.id == custom.id } != true)
+        #expect(store.subjectTypePropertiesByType[person.id]?.contains { $0.property.id == custom.id } != true)
         #expect(!model.isBound(propertyID: custom.id, typeID: person.id))
     }
 
@@ -254,10 +254,10 @@ struct SubjectFieldsModelTests {
         #expect(model.canDeleteSelected)
         #expect(model.showsDelete)
         #expect(model.canEditSelected)
-        #expect(model.deleteTooltip == L10n.SubjectFields.deleteProperty)
+        #expect(model.deleteTooltip == L10n.Properties.deleteProperty)
         #expect(
             model.deleteAccessibilityLabel
-                == L10n.SubjectFields.deletePropertyAccessibility(label: "Burial ground")
+                == L10n.Properties.deletePropertyAccessibility(label: "Burial ground")
         )
 
         model.selectProperty(nameProperty().id)
@@ -296,7 +296,7 @@ struct SubjectFieldsModelTests {
             properties: [property],
             types: [person],
             fieldsByType: [
-                person.id: [CatalogSubjectTypeField(property: property, sortOrder: 0, locked: false)],
+                person.id: [CatalogSubjectTypeProperty(property: property, sortOrder: 0, locked: false)],
             ]
         )
         await warm(model, session: session)
@@ -306,7 +306,7 @@ struct SubjectFieldsModelTests {
         #expect(model.pendingImpact?.report.allowed == true)
         #expect(await model.confirmPendingImpact())
         #expect(store.propertiesByProject[projectDir]?.isEmpty == true)
-        #expect(store.subjectTypeFieldsByType[person.id]?.isEmpty == true)
+        #expect(store.subjectTypePropertiesByType[person.id]?.isEmpty == true)
         #expect(model.selectedPropertyID == nil)
     }
 
@@ -361,7 +361,7 @@ struct SubjectFieldsModelTests {
         // Term rows deep-link to the parent property's inspector row, as the Go projector does.
         #expect(
             report?.groups.first?.listed.first?.location
-                == WorkspaceLocation(section: .subjectFields, propertyId: property.id)
+                == WorkspaceLocation(section: .properties, propertyId: property.id)
         )
         #expect(await model.confirmPendingImpact() == false)
         #expect(store.propertiesByProject[projectDir]?.map(\.id) == [property.id])
@@ -426,13 +426,13 @@ struct SubjectFieldsModelTests {
 
     // MARK: History selection
 
-    private func makeBoundModel() -> (SubjectFieldsModel, WorkspaceSession) {
+    private func makeBoundModel() -> (PropertiesModel, WorkspaceSession) {
         let person = personType()
         let (model, session, _) = makeModel(
             properties: [nameProperty(), eventTypeProperty()],
             types: [person, eventType()],
             fieldsByType: [
-                person.id: [CatalogSubjectTypeField(property: nameProperty(), sortOrder: 0, locked: true)],
+                person.id: [CatalogSubjectTypeProperty(property: nameProperty(), sortOrder: 0, locked: true)],
             ]
         )
         return (model, session)
@@ -443,18 +443,18 @@ struct SubjectFieldsModelTests {
         await warm(model, session: session)
 
         let outcome = model.syncSelection(
-            from: WorkspaceLocation(section: .subjectFields, subjectTypeKey: "person", propertyId: "prop-name")
+            from: WorkspaceLocation(section: .properties, subjectTypeKey: "person", propertyId: "prop-name")
         )
         #expect(outcome == .applied)
         #expect(model.selectedTypeKey == "person")
         #expect(model.selectedPropertyID == "prop-name")
         #expect(model.selectedProperty?.key == "name")
 
-        #expect(model.syncSelection(from: WorkspaceLocation(section: .subjectFields, subjectTypeKey: "event")) == .applied)
+        #expect(model.syncSelection(from: WorkspaceLocation(section: .properties, subjectTypeKey: "event")) == .applied)
         #expect(model.selectedTypeKey == "event")
         #expect(model.selectedPropertyID == nil)
 
-        #expect(model.syncSelection(from: .sectionRoot(.subjectFields)) == .applied)
+        #expect(model.syncSelection(from: .sectionRoot(.properties)) == .applied)
         #expect(model.selectedTypeKey == nil)
         #expect(model.selectedPropertyID == nil)
     }
@@ -465,12 +465,12 @@ struct SubjectFieldsModelTests {
         model.selectType("person")
         model.selectProperty("prop-name")
 
-        #expect(model.syncSelection(from: WorkspaceLocation(section: .sourceFields, fieldId: "fld-1")) == .ignored)
+        #expect(model.syncSelection(from: WorkspaceLocation(section: .metadata, fieldId: "fld-1")) == .ignored)
         #expect(model.selectedTypeKey == "person")
         #expect(model.selectedPropertyID == "prop-name")
 
         model.openCreate()
-        #expect(model.syncSelection(from: .sectionRoot(.subjectFields)) == .ignored)
+        #expect(model.syncSelection(from: .sectionRoot(.properties)) == .ignored)
         #expect(model.selectedPropertyID == "prop-name")
     }
 
@@ -480,7 +480,7 @@ struct SubjectFieldsModelTests {
 
         #expect(
             model.syncSelection(
-                from: WorkspaceLocation(section: .subjectFields, subjectTypeKey: "person", propertyId: "gone")
+                from: WorkspaceLocation(section: .properties, subjectTypeKey: "person", propertyId: "gone")
             ) == .missingDeepId
         )
         #expect(model.selectedTypeKey == "person")
@@ -488,7 +488,7 @@ struct SubjectFieldsModelTests {
 
         #expect(
             model.syncSelection(
-                from: WorkspaceLocation(section: .subjectFields, subjectTypeKey: "ghost", propertyId: "prop-name")
+                from: WorkspaceLocation(section: .properties, subjectTypeKey: "ghost", propertyId: "prop-name")
             ) == .missingDeepId
         )
         #expect(model.selectedTypeKey == nil)
@@ -498,7 +498,7 @@ struct SubjectFieldsModelTests {
     @Test func syncSelectionBeforeLoadIsIgnored() {
         let (model, _) = makeBoundModel()
         #expect(
-            model.syncSelection(from: WorkspaceLocation(section: .subjectFields, propertyId: "prop-name")) == .ignored
+            model.syncSelection(from: WorkspaceLocation(section: .properties, propertyId: "prop-name")) == .ignored
         )
         #expect(model.selectedPropertyID == nil)
     }
@@ -509,11 +509,11 @@ struct SubjectFieldsModelTests {
         model.selectProperty(userProperty().id)
         model.beginEdit()
 
-        let place = WorkspaceLocation(section: .subjectFields, propertyId: userProperty().id)
+        let place = WorkspaceLocation(section: .properties, propertyId: userProperty().id)
         #expect(model.syncSelection(from: place) == .applied)
         #expect(model.isEditingIdentity)
 
-        #expect(model.syncSelection(from: .sectionRoot(.subjectFields)) == .applied)
+        #expect(model.syncSelection(from: .sectionRoot(.properties)) == .applied)
         #expect(!model.isEditingIdentity)
     }
 
@@ -522,18 +522,18 @@ struct SubjectFieldsModelTests {
         await warm(model, session: session)
 
         let category = model.location(afterPressingType: "person")
-        #expect(category == WorkspaceLocation(section: .subjectFields, subjectTypeKey: "person"))
+        #expect(category == WorkspaceLocation(section: .properties, subjectTypeKey: "person"))
         #expect(category.title == "Person")
         model.selectType("person")
 
         let row = model.location(selectingProperty: "prop-name")
-        #expect(row == WorkspaceLocation(section: .subjectFields, subjectTypeKey: "person", propertyId: "prop-name"))
+        #expect(row == WorkspaceLocation(section: .properties, subjectTypeKey: "person", propertyId: "prop-name"))
         #expect(row.title == "Name")
         model.selectProperty("prop-name")
 
         // Pressing the focused type again clears the filter but keeps the inspector row.
         let cleared = model.location(afterPressingType: "person")
-        #expect(cleared == WorkspaceLocation(section: .subjectFields, propertyId: "prop-name"))
+        #expect(cleared == WorkspaceLocation(section: .properties, propertyId: "prop-name"))
         #expect(cleared.title == "Name")
     }
 
@@ -553,10 +553,10 @@ struct SubjectFieldsModelTests {
         model.addPropertySelection = custom.id
 
         let location = await model.addPropertyFromCombo()
-        #expect(location == WorkspaceLocation(section: .subjectFields, subjectTypeKey: "person", propertyId: custom.id))
+        #expect(location == WorkspaceLocation(section: .properties, subjectTypeKey: "person", propertyId: custom.id))
         #expect(model.selectedPropertyID == custom.id)
         #expect(model.addPropertySelection.isEmpty)
-        #expect(store.subjectTypeFieldsByType[person.id]?.contains { $0.property.id == custom.id } == true)
+        #expect(store.subjectTypePropertiesByType[person.id]?.contains { $0.property.id == custom.id } == true)
     }
 
     @Test func pluginHasNoEditControl() async {

@@ -23,9 +23,9 @@ struct PlaceRegistryTests {
             .sourceGraphProgress(project: project),
         ])
 
-        let fields = resolve(.sectionRoot(.sourceFields))
-        #expect(fields?.placeID == .sourceFields)
-        #expect(fields?.presentation == .sourceFields)
+        let fields = resolve(.sectionRoot(.metadata))
+        #expect(fields?.placeID == .metadata)
+        #expect(fields?.presentation == .metadata)
         #expect(fields?.queryKeys == [.metadataFieldsList(project: project)])
 
         let types = resolve(.sectionRoot(.sourceTypes))
@@ -36,11 +36,11 @@ struct PlaceRegistryTests {
             .metadataFieldsList(project: project),
         ])
 
-        let subjectFields = resolve(.sectionRoot(.subjectFields))
-        #expect(subjectFields?.placeID == .subjectFields)
-        #expect(subjectFields?.presentation == .subjectFields)
-        #expect(subjectFields?.queryKeys == [
-            .subjectFieldsWorkspace(project: project),
+        let properties = resolve(.sectionRoot(.properties))
+        #expect(properties?.placeID == .properties)
+        #expect(properties?.presentation == .properties)
+        #expect(properties?.queryKeys == [
+            .propertiesWorkspace(project: project),
         ])
     }
 
@@ -73,7 +73,7 @@ struct PlaceRegistryTests {
         #expect(graphPlace?.deepId == "src-1")
         #expect(graphPlace?.queryKeys == [
             .sourceGraph(project: project, sourceId: "src-1"),
-            .subjectFieldsWorkspace(project: project),
+            .propertiesWorkspace(project: project),
             .sourcesList(project: project),
             .connectRules(project: project),
         ])
@@ -92,12 +92,12 @@ struct PlaceRegistryTests {
         ])
     }
 
-    @Test func sourceFieldsRowSamePlaceAsRoot() {
-        let root = resolve(.sectionRoot(.sourceFields))
-        let row = resolve(WorkspaceLocation(section: .sourceFields, fieldId: "fld-1", title: "Author"))
+    @Test func metadataRowSamePlaceAsRoot() {
+        let root = resolve(.sectionRoot(.metadata))
+        let row = resolve(WorkspaceLocation(section: .metadata, fieldId: "fld-1", title: "Author"))
 
-        #expect(root?.placeID == .sourceFields)
-        #expect(row?.placeID == .sourceFields)
+        #expect(root?.placeID == .metadata)
+        #expect(row?.placeID == .metadata)
         #expect(root?.presentation == row?.presentation)
         #expect(root?.queryKeys == row?.queryKeys)
         #expect(root?.deepId == nil)
@@ -106,12 +106,12 @@ struct PlaceRegistryTests {
 
     @Test func ignoresCrossSectionDeepIds() {
         let location = WorkspaceLocation(
-            section: .sourceFields,
+            section: .metadata,
             sourceId: "src-stray",
             fieldId: "fld-1"
         )
         let place = resolve(location)
-        #expect(place?.placeID == .sourceFields)
+        #expect(place?.placeID == .metadata)
         #expect(place?.deepId == "fld-1")
         #expect(place?.queryKeys == [.metadataFieldsList(project: project)])
     }
@@ -142,7 +142,7 @@ struct PlaceRegistryTests {
                 .sourceGraph,
                 [
                     .sourceGraph(project: project, sourceId: "s1"),
-                    .subjectFieldsWorkspace(project: project),
+                    .propertiesWorkspace(project: project),
                     .sourcesList(project: project),
                     .connectRules(project: project),
                 ]
@@ -157,7 +157,7 @@ struct PlaceRegistryTests {
                 .sourceCitationComposer,
                 [
                     .sourceGraph(project: project, sourceId: "s1"),
-                    .subjectFieldsWorkspace(project: project),
+                    .propertiesWorkspace(project: project),
                     .sourcesList(project: project),
                     .connectRules(project: project),
                     .sourceWorkspace(project: project, sourceId: "s1"),
@@ -166,8 +166,8 @@ struct PlaceRegistryTests {
                 ]
             ),
             (
-                .sectionRoot(.sourceFields),
-                .sourceFields,
+                .sectionRoot(.metadata),
+                .metadata,
                 [.metadataFieldsList(project: project)]
             ),
             (
@@ -185,9 +185,9 @@ struct PlaceRegistryTests {
                 ]
             ),
             (
-                .sectionRoot(.subjectFields),
-                .subjectFields,
-                [.subjectFieldsWorkspace(project: project)]
+                .sectionRoot(.properties),
+                .properties,
+                [.propertiesWorkspace(project: project)]
             ),
         ]
 
@@ -213,10 +213,10 @@ struct PlaceRegistryTests {
                     subjectId: "sub-1",
                     sourceSurface: .citationComposer
                 )
-            case .sourceFields: .sectionRoot(.sourceFields)
+            case .metadata: .sectionRoot(.metadata)
             case .sourceTypes: .sectionRoot(.sourceTypes)
             case .sourceTypesDetail: WorkspaceLocation(section: .sourceTypes, typeId: "t1")
-            case .subjectFields: .sectionRoot(.subjectFields)
+            case .properties: .sectionRoot(.properties)
             case .personsList: .sectionRoot(.persons)
             }
             let place = resolve(location)

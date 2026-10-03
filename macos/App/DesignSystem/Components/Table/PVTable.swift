@@ -458,7 +458,7 @@ private struct PVTablePreviewRow: Identifiable {
                         direction: sort.columnID == id && sort.direction == .ascending ? .descending : .ascending
                     )
                 },
-                label: "Source fields",
+                label: "Metadata",
                 rowAccessibilityIdentifier: { "pvTable.row.\($0.id)" },
                 sortAccessibilityIdentifier: { "pvTable.sortBy.\($0)" }
             )

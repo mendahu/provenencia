@@ -447,7 +447,7 @@ final class CitationComposerModel {
     var graphKey: CatalogQueryKey { .sourceGraph(project: session.projectKey, sourceId: sourceID) }
     var workspaceKey: CatalogQueryKey { .sourceWorkspace(project: session.projectKey, sourceId: sourceID) }
     var citationCountsKey: CatalogQueryKey { .citationCounts(project: session.projectKey, sourceId: sourceID) }
-    var fieldsKey: CatalogQueryKey { .subjectFieldsWorkspace(project: session.projectKey) }
+    var fieldsKey: CatalogQueryKey { .propertiesWorkspace(project: session.projectKey) }
     var connectRulesKey: CatalogQueryKey { .connectRules(project: session.projectKey) }
     var sourceTypesKey: CatalogQueryKey { .sourceTypesList(project: session.projectKey) }
 
@@ -469,7 +469,7 @@ final class CitationComposerModel {
         return handle?.value ?? []
     }
 
-    private var fieldsSnapshot: SubjectFieldsSnapshot { context.fieldsSnapshot }
+    private var fieldsSnapshot: PropertiesSnapshot { context.fieldsSnapshot }
 
     var graphSnapshot: SourceGraphSnapshot { context.graphSnapshot }
 
@@ -1054,13 +1054,13 @@ final class CitationComposerModel {
 
     private func warmCatalogHandles() async throws {
         let _: QueryHandle<SourceGraphRows> = session.query(graphKey)
-        let _: QueryHandle<SubjectFieldsSnapshot> = session.query(fieldsKey)
+        let _: QueryHandle<PropertiesSnapshot> = session.query(fieldsKey)
         let _: QueryHandle<CatalogSourceWorkspace> = session.query(workspaceKey)
         let _: QueryHandle<[CatalogSourceType]> = session.query(sourceTypesKey)
         let _: QueryHandle<[String: Int]> = session.query(citationCountsKey)
         let _: QueryHandle<[CatalogConnectRule]> = session.query(connectRulesKey)
         let rows: SourceGraphRows? = await session.readyValue(graphKey)
-        let fieldsReady: SubjectFieldsSnapshot? = await session.readyValue(fieldsKey)
+        let fieldsReady: PropertiesSnapshot? = await session.readyValue(fieldsKey)
         let workspaceReady: CatalogSourceWorkspace? = await session.readyValue(workspaceKey)
         _ = await session.readyValue(sourceTypesKey) as [CatalogSourceType]?
         _ = await session.readyValue(citationCountsKey) as [String: Int]?
