@@ -321,7 +321,8 @@ SLICE 2 — Persons list
   S9-05  Resolver core v1: clusters, states, stable order (pure Go)
   S9-06  Resolved-values cache: table, loader, rebuild, upkeep, rebuild-equals-upkeep test
   S9-07  Person header composer (name) + list read + Swift store / keys / name formatting
-  ✎ S9-D1 ──▶ S9-08  Sidebar Conclusions group (Events / Places stubbed)
+  S9-07b Rename configuration: Source fields → Metadata, Subject fields → Properties (app, Go, FFI, tables)
+  ✎ S9-D1 ──▶ S9-08  Sidebar: Conclusions group (Events / Places stubbed); configuration bottom-aligned
   ✎ S9-D2 ──▶ S9-09  Persons list (name + ref) + name on the card's membership row
   Check: promoted Persons listed by name; edit a name Observation → the row updates.
 
@@ -396,7 +397,8 @@ CLOSE
 | S9-05 Resolver core v1 | — | — |
 | S9-06 Resolved-values cache | — | S9-01, S9-05 |
 | S9-07 Person header + list read | — | S9-06 |
-| S9-08 Sidebar | **S9-D1** | S9-07 |
+| S9-07b Rename configuration views | — | — |
+| S9-08 Sidebar | **S9-D1** | S9-07, S9-07b |
 | S9-09 Persons list | **S9-D2** | S9-07, S9-08 |
 | S9-10 Promote write + reads: existing target | — | S9-06 |
 | S9-11 Promote shell + choose target | **S9-D9** | S9-04, S9-10 |
@@ -441,7 +443,8 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-06 — Resolved-values cache → [`completed.md`](completed.md)
 - [ ] S9-07 — Person header composer + list read
 - [ ] ✎ S9-D1 — Design: workspace sidebar
-- [ ] S9-08 — Sidebar Conclusions group
+- [ ] S9-07b — Rename configuration: Metadata, Properties
+- [ ] S9-08 — Sidebar Conclusions group + configuration at the bottom
 - [ ] ✎ S9-D2 — Design: Persons list
 - [ ] S9-09 — Persons list
 - [ ] S9-10 — Promote write + reads: existing target
@@ -563,13 +566,30 @@ In order; each brief sits just above the PR it gates.
 | **Testable** | Header fallbacks; list query count constant; a trigger mutation stales the key. |
 | **Depends on** | S9-06 |
 
-#### S9-08 — Sidebar Conclusions group
+#### S9-07b — Rename configuration: Metadata, Properties
+
+Researcher's decision while revising **S9-D1**: two configuration views get plain names, renamed **all the way down** so code, wire, and tables say what the UI says. **Source types** keeps its name (a table or page called just "types" would not say what it holds).
+
+| Today | Becomes |
+| --- | --- |
+| Source fields | **Metadata** (one row: a *metadata field*) |
+| Subject fields | **Properties** (Properties and their bindings to Subject types) |
 
 | | |
 | --- | --- |
-| **In** | Per **S9-D1**: Conclusions group with Persons live; Events / Places present but stubbed until S9-23 / S9-26. Counts. |
-| **Check** | Persons count matches promoted Persons. |
-| **Depends on** | **S9-D1**, S9-07 |
+| **In** | **App:** labels, page titles, VoiceOver, L10n keys and values; `WorkspaceSection` cases and history ids (`metadata`, `properties`; the old `source-fields` / `subject-fields` ids still decode, like the retired `files` id); `Features/SourceFields` → `Features/Metadata`, `Features/SubjectFields` → `Features/Properties`, and their types (`SourceFieldsView` → `MetadataView`, `SubjectFieldsModel` → `PropertiesModel`, …); FakeStore and tests. **Go / FFI:** `sourcefields` package → `metadatafields`, `SourceField` types, delete-Impact kinds, FFI methods and proto messages (`SourceField` → `MetadataField`), search kinds (with a `ProjectionVersion` bump). **Tables:** a migration renaming the subject-type binding table `subject_type_fields` → `subject_type_properties` (and any other table whose name still says *source field* / *subject field*; `source_metadata_fields` already reads right), with the delete-Impact register and its honesty tests following. **Docs and skills** that name these views. |
+| **Decide at the start** | Strings already persisted or on the wire: audit `entity_type` / `action_type` values in existing catalogs, `apperr` codes ("permanent once shipped"), and search kind ids. Default: rename the identifiers, keep reading the old persisted strings (alias on read) rather than rewriting audit history; apperr codes get new codes with the old ones retired, not reused. List each in the PR. |
+| **Out** | The sidebar layout (S9-08). Renaming Source types. Any change to what the pages do. |
+| **Testable** | Old navigation history decodes to the renamed sections; an existing catalog migrates and still opens (schema hash, Impact honesty); search finds metadata fields and Properties after the rebuild; no remaining `SourceField` / `SubjectField` identifiers outside migrations and legacy decoders (a grep check in the PR). |
+| **Depends on** | — (independent; lands before S9-08 so the sidebar is built on the new names) |
+
+#### S9-08 — Sidebar Conclusions group + configuration at the bottom
+
+| | |
+| --- | --- |
+| **In** | Per **S9-D1**: Sources and the Conclusions group (Persons live; Events / Places present but stubbed until S9-23 / S9-26) top-aligned, with counts. The configuration section — **Source types**, **Metadata**, **Properties** (names from S9-07b) — bottom-aligned directly above the session footer, separated by space; on a short window the column scrolls as one (W-5b). Rail icons for both sections. |
+| **Check** | Persons count matches promoted Persons; configuration sits above the footer on a tall window and follows the research section on a short one. |
+| **Depends on** | **S9-D1**, S9-07, S9-07b |
 
 #### S9-09 — Persons list
 
