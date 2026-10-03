@@ -123,7 +123,6 @@ conclusion_resolved_values
   entity_id        BLOB  → canonical_entities (CASCADE)
   property_id      BLOB  → properties         -- vocabulary as a row, never a column
   rank             INT   -- 1 = displayed value; 2..n = other distinct clusters
-  state            TEXT  -- single | merged | mixed   (later: concluded) — derivable; see below
   value_text / value_integer / value_term_id / value_entity_id
   value_date       BLOB  -- protobuf DateValue (may be synthesized; never a date_values row)
   value_name       BLOB  -- protobuf NameValue (same)
@@ -139,7 +138,7 @@ conclusion_resolved_values
 
 - **Useful for sorting, querying, and resolving (Q12).** Structured values are stored whole as the protobuf messages FFI already uses (`DateValueInput` / `NameValueInput` in [`engine.proto`](../../../api/proto/engine.proto); renaming them to plain value messages is optional cleanup). SQL never decodes them: ordering uses `sort_key`, date range queries use `date_lo` / `date_hi` (the window the date resolver already computes to merge), and the resolver and composers decode in Go. Resolver output is never written to `date_values` / `name_values`.
 
-- **State is the shape of the clusters.** The resolver (S9-05) returns a list of clusters plus a *concluded* flag; `single` / `merged` / `mixed` are read off it (one cluster of support 1, one of support > 1, several). S9-06 decides whether `state` is stored for query convenience or derived at read from rank 2's existence and rank 1's `support`.
+- **State is the shape of the clusters, never stored.** The resolver (S9-05) returns a list of clusters plus a *concluded* flag; readers derive `single` / `merged` / `mixed` from the rows (rank 2 exists → mixed; else rank 1's `support` 1 → single, more → merged). A `concluded` flag column arrives with Reconciliation.
 - **Edges are resolved values.** A Participation's `person` end is its resolved `person` Property with `value_entity_id`. The canonical graph is this table plus its reverse index; there is no separate edges table.
 - **Every cluster is kept**, not just the winner: lists get *+N*, search gets alternates (*Jim*), Promote compares against every value, details render clusters without re-resolving.
 - **No vocabulary in the schema.** No `birth_date` columns, no per-kind tables. Genealogical concepts live in Go (resolver, composers, registry of recognized keys) and in `property_id` rows. Labels are not stored (term **ids** are), so relabels need no recompute.
@@ -147,14 +146,16 @@ conclusion_resolved_values
 
   | Write | Recompute |
   | --- | --- |
-  | Observation save / delete on subject S, Property P | (S's handle, P) |
+  | Observation save / delete on subject S, Property P | S's handle (every Property — see below) |
   | Identity Claim S → E created (Promote) or removed (Subject delete CASCADE) | every Property of E; plus (E′, P′) for handles whose members' Observations point at S (their end now maps differently) |
   | Identity Claim confidence change | every Property of that handle |
   | Citation certainty / Source credibility change | handles with member Observations under it |
   | Reconciliation Claim (later) | (E, P) → `concluded` |
   | Term relabel | nothing |
 
-- **Rebuildable.** A version row (like `catalog_search_meta`); a mismatch on Open rebuilds from truth tables. A Go rebuild command for development.
+  Recompute is **per handle** for now: a trigger rewrites all of the handle's Properties through the same batched loader as rebuild. Narrowing to (E, P) waits for timings that call for it (S9-33).
+
+- **Rebuildable.** A version row (`conclusion_resolved_meta.cache_version` against `resolvedvalues.CacheVersion`, like `catalog_search_meta`); a mismatch on Open rebuilds from truth tables. Bumping the version is the development rebuild — there is no separate command.
 - **Proven.** A randomized test applies write sequences, then checks incremental upkeep equals a full rebuild. Ships in the same PR as the cache.
 - **Batched loading.** The resolver's inputs (members, candidates, provenance) load in a fixed number of set-based queries per batch of handles — no per-Property or per-member loops. The same loader serves rebuild and incremental upkeep.
 
@@ -437,7 +438,7 @@ In order; each brief sits just above the PR it gates.
 - [x] ✎ S9-D8 — Design: graph subject card → [`completed.md`](completed.md)
 - [x] S9-04 — Graph card: Promote + membership → [`completed.md`](completed.md)
 - [x] S9-05 — Resolver core v1 → [`completed.md`](completed.md)
-- [ ] S9-06 — Resolved-values cache
+- [x] S9-06 — Resolved-values cache → [`completed.md`](completed.md)
 - [ ] S9-07 — Person header composer + list read
 - [ ] ✎ S9-D1 — Design: workspace sidebar
 - [ ] S9-08 — Sidebar Conclusions group
@@ -544,6 +545,8 @@ In order; each brief sits just above the PR it gates.
 | **Depends on** | — |
 
 #### S9-06 — Resolved-values cache
+
+**Done.** See [`completed.md`](completed.md#s9-06--resolved-values-cache). Package `core/database/resolvedvalues`: `RecomputeTx` / `RecomputeSubjectsTx` are the upkeep calls a new write path adds (and an operation in `TestRebuildEqualsUpkeep`); a resolution change bumps `CacheVersion`. Still NULL: `date_lo` / `date_hi` and date `sort_key` (**S9-21**), `value_entity_id` — subject-valued Properties are not cached yet (**S9-28**). The loader reads no provenance until **S9-14**. Dates and names are protobuf via `core/valuecodec`.
 
 | | |
 | --- | --- |

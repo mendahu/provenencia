@@ -194,3 +194,28 @@ func TestNormalizeForm(t *testing.T) {
 		}
 	}
 }
+
+func TestSortKey(t *testing.T) {
+	k, ok := SortKey(properties.ValueTypeName, Value{Name: &namevalues.Value{Form: "  O'Brien,  Mary "}})
+	if !ok || k != "obrien mary" {
+		t.Fatalf("name %q %v", k, ok)
+	}
+	k, ok = SortKey(properties.ValueTypeText, Value{Text: " Upper Canada ", HasText: true})
+	if !ok || k != "upper canada" {
+		t.Fatalf("text %q %v", k, ok)
+	}
+	ints := []int64{-1 << 63, -100, -1, 0, 1, 9, 10, 1<<63 - 1}
+	prev := ""
+	for i, n := range ints {
+		k, ok := SortKey(properties.ValueTypeInteger, Value{Integer: n, HasInteger: true})
+		if !ok || (i > 0 && k <= prev) {
+			t.Fatalf("integer %d key %q not after %q", n, k, prev)
+		}
+		prev = k
+	}
+	for _, vt := range []string{properties.ValueTypeDate, properties.ValueTypeTerm, properties.ValueTypeSubject} {
+		if _, ok := SortKey(vt, Value{TermID: []byte("x"), SubjectID: []byte("x"), Date: &datevalues.Value{}}); ok {
+			t.Fatalf("%s has no sort key yet", vt)
+		}
+	}
+}

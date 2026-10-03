@@ -14,6 +14,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-D8 | Design | Graph subject card: Promote + membership |
 | S9-04 | PR | Graph card: Promote + membership |
 | S9-05 | PR | Resolver core v1 |
+| S9-06 | PR | Resolved-values cache |
 
 ## Steps
 
@@ -166,3 +167,29 @@ The first piece of value resolution (R2): a handle's candidate values for one Pr
 - Provenance ranking and negative polarity (**S9-14**) — callers pass positive candidates only
 - Subject values mapped to handles (**S9-28**)
 - The cache, its `state` column decision, and any FFI or Swift (**S9-06** onward)
+
+### S9-06 — Resolved-values cache
+
+The resolver's output now lives in one derived table, rewritten in the transaction of every write that can change it and rebuilt on open when stale. Nothing reads it yet; S9-07 composes the Persons list from it.
+
+**What shipped**
+
+- Migration `000034`: `conclusion_resolved_values` (R3 shape minus `state`; PK `(entity_id, property_id, rank)`; edge, sort, and date-window indexes) and `conclusion_resolved_meta` (cache version). Registered in delete Impact as skipped tables with silent `CASCADE` backstops.
+- **No `state` column.** Readers derive single / merged / mixed from the rows, as `resolve.Result.State()` does.
+- `core/database/resolvedvalues`:
+  - `RecomputeTx(q, entityIDs)` / `RecomputeSubjectsTx(q, subjectIDs)`: delete and rewrite whole handles. Recompute is per handle, not per (handle, Property).
+  - Batched loader: candidates, date values, name values, name parts — four queries per batch of up to 500 handles, tested constant.
+  - `Rebuild`, `NeedsRebuild`, `StoredVersion`, `EnsureCatalog`; `CacheVersion = 1`. Bumping it is the dev rebuild.
+- **Upkeep hooks:** `promote.Save`; `observations.InsertManyTx` (so `AddToCitation`, `citations.CreateWithObservations`, `connect.CreateCitedBridge`); `observations.Update` (old and new Subject); `observations.Delete` (its Subject's handle plus `Released.Handles`); `subjects.Delete` (`Released.Handles`).
+- **Open:** `resolvedvalues.EnsureCatalog` beside `searchindex.EnsureCatalog` in `catalogsession` and both `onboarding` paths.
+- `core/valuecodec`: the date and name proto converters moved out of the FFI handlers, plus Marshal / Unmarshal pairs. Dates and names are stored as `DateValueInput` / `NameValueInput` bytes (Q12). This is core's first import of `api/proto/engine`.
+- `datevalues.LookupManyTx`, `namevalues.LookupManyTx` (querier variants; Catalog readers deadlock inside a write tx). `resolve.SortKey`: normalized form for names, case-folded text, order-preserving integers.
+- **Tests:** hand-computed rows per value type; each hook; stale version rebuilds; loader query count; **rebuild equals upkeep** over random write sequences (4 seeds × 200 steps). Removing any live hook fails it.
+
+**What stayed out**
+
+- Provenance in the loader and its triggers (**S9-14**)
+- `date_lo` / `date_hi` and a date `sort_key` (**S9-21**)
+- Subject-valued Properties and `value_entity_id`, plus the inbound-end trigger (**S9-28**). Until then the Subject-delete hook cannot change rows (a Subject with Observations is refused), so the randomized test exercises it without being able to catch its absence.
+- Narrowing upkeep to (handle, Property); timings (**S9-33**)
+- Readers, FFI, Swift (**S9-07**)

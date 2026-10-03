@@ -68,6 +68,14 @@ const (
 		end_hour, end_minute, end_second, end_millisecond, end_tz,
 		phrase
 		FROM date_values WHERE id = ?`
+
+	sqlLookupMany = `SELECT id, kind, qualifier, calendar,
+		start_year, start_month, start_day,
+		start_hour, start_minute, start_second, start_millisecond, start_tz,
+		end_year, end_month, end_day,
+		end_hour, end_minute, end_second, end_millisecond, end_tz,
+		phrase
+		FROM date_values WHERE id IN (`
 )
 
 // Value is one date_values row.
@@ -214,6 +222,33 @@ func Lookup(c *database.Catalog, id []byte) (Value, error) {
 	return LookupTx(db, id)
 }
 
+// LookupManyTx returns date_values rows for the given ids in one query, keyed
+// by string(id). Missing ids are omitted.
+func LookupManyTx(q interface {
+	Query(query string, args ...any) (*sql.Rows, error)
+}, ids [][]byte) (map[string]Value, error) {
+	ids = database.UniqueBlobIDs(ids)
+	out := make(map[string]Value, len(ids))
+	if len(ids) == 0 {
+		return out, nil
+	}
+	rows, err := q.Query(sqlLookupMany+database.SQLInPlaceholders(len(ids))+`)`, database.BlobArgs(ids)...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id []byte
+		v, err := scanValue(rows, &id)
+		if err != nil {
+			return nil, err
+		}
+		v.ID = append([]byte(nil), id...)
+		out[string(v.ID)] = v
+	}
+	return out, rows.Err()
+}
+
 // LookupTx returns the date_values row for id on an existing connection or transaction.
 func LookupTx(q interface {
 	QueryRow(query string, args ...any) *sql.Row
@@ -221,45 +256,11 @@ func LookupTx(q interface {
 	if q == nil || len(id) != 16 {
 		return Value{}, ErrInvalid
 	}
-	var (
-		v                                                         Value
-		qual, cal, phrase, startTZ, endTZ                         sql.NullString
-		startY, startM, startD, startH, startMin, startS, startMs sql.NullInt64
-		endY, endM, endD, endH, endMin, endS, endMs               sql.NullInt64
-	)
-	v.ID = append([]byte(nil), id...)
-	err := q.QueryRow(sqlLookup, id).Scan(
-		&v.Kind,
-		&qual,
-		&cal,
-		&startY, &startM, &startD,
-		&startH, &startMin, &startS, &startMs, &startTZ,
-		&endY, &endM, &endD,
-		&endH, &endMin, &endS, &endMs, &endTZ,
-		&phrase,
-	)
+	v, err := scanValue(q.QueryRow(sqlLookup, id))
 	if err != nil {
 		return Value{}, err
 	}
-	v.Qualifier = qual.String
-	v.Calendar = cal.String
-	v.Phrase = phrase.String
-	v.StartTZ = startTZ.String
-	v.EndTZ = endTZ.String
-	v.StartYear = intPtr(startY)
-	v.StartMonth = intPtr(startM)
-	v.StartDay = intPtr(startD)
-	v.StartHour = intPtr(startH)
-	v.StartMinute = intPtr(startMin)
-	v.StartSecond = intPtr(startS)
-	v.StartMillisecond = intPtr(startMs)
-	v.EndYear = intPtr(endY)
-	v.EndMonth = intPtr(endM)
-	v.EndDay = intPtr(endD)
-	v.EndHour = intPtr(endH)
-	v.EndMinute = intPtr(endMin)
-	v.EndSecond = intPtr(endS)
-	v.EndMillisecond = intPtr(endMs)
+	v.ID = append([]byte(nil), id...)
 	return v, nil
 }
 
@@ -401,4 +402,47 @@ func intPtr(n sql.NullInt64) *int {
 	}
 	v := int(n.Int64)
 	return &v
+}
+
+// scanValue reads the sqlLookup column list, after any leading columns.
+func scanValue(row interface{ Scan(dest ...any) error }, lead ...any) (Value, error) {
+	var (
+		v                                                         Value
+		qual, cal, phrase, startTZ, endTZ                         sql.NullString
+		startY, startM, startD, startH, startMin, startS, startMs sql.NullInt64
+		endY, endM, endD, endH, endMin, endS, endMs               sql.NullInt64
+	)
+	dest := append(lead,
+		&v.Kind,
+		&qual,
+		&cal,
+		&startY, &startM, &startD,
+		&startH, &startMin, &startS, &startMs, &startTZ,
+		&endY, &endM, &endD,
+		&endH, &endMin, &endS, &endMs, &endTZ,
+		&phrase,
+	)
+	if err := row.Scan(dest...); err != nil {
+		return Value{}, err
+	}
+	v.Qualifier = qual.String
+	v.Calendar = cal.String
+	v.Phrase = phrase.String
+	v.StartTZ = startTZ.String
+	v.EndTZ = endTZ.String
+	v.StartYear = intPtr(startY)
+	v.StartMonth = intPtr(startM)
+	v.StartDay = intPtr(startD)
+	v.StartHour = intPtr(startH)
+	v.StartMinute = intPtr(startMin)
+	v.StartSecond = intPtr(startS)
+	v.StartMillisecond = intPtr(startMs)
+	v.EndYear = intPtr(endY)
+	v.EndMonth = intPtr(endM)
+	v.EndDay = intPtr(endD)
+	v.EndHour = intPtr(endH)
+	v.EndMinute = intPtr(endMin)
+	v.EndSecond = intPtr(endS)
+	v.EndMillisecond = intPtr(endMs)
+	return v, nil
 }

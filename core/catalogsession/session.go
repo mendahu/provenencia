@@ -14,6 +14,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/project"
+	"github.com/mendahu/provenencia/core/database/resolvedvalues"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/users"
 )
@@ -53,6 +54,10 @@ func openResearcher(projectDir string) (*database.Catalog, error) {
 		return nil, err
 	}
 	if err := searchindex.EnsureCatalog(c); err != nil {
+		_ = c.Close()
+		return nil, err
+	}
+	if err := resolvedvalues.EnsureCatalog(c); err != nil {
 		_ = c.Close()
 		return nil, err
 	}

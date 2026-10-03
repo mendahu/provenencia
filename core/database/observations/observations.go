@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/resolvedvalues"
 	"github.com/mendahu/provenencia/core/ref"
 )
 
@@ -179,15 +180,9 @@ func AddToCitation(c *database.Catalog, userID, citationID []byte, inputs []Inpu
 		return nil, err
 	}
 
-	out := make([]Observation, 0, len(inputs))
-	changes := make([]audit.Change, 0, len(inputs))
-	for _, in := range inputs {
-		obs, chs, err := insertOne(tx, citationID, in, InsertOptions{AllowEdgeRows: false})
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, obs)
-		changes = append(changes, chs...)
+	out, changes, err := InsertManyTx(tx, citationID, inputs, InsertOptions{AllowEdgeRows: false})
+	if err != nil {
+		return nil, err
 	}
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
@@ -203,7 +198,8 @@ func AddToCitation(c *database.Catalog, userID, citationID []byte, inputs []Inpu
 	return out, nil
 }
 
-// InsertManyTx inserts Observations for citationID inside an existing transaction.
+// InsertManyTx inserts Observations for citationID inside an existing transaction
+// and recomputes the resolved values of any handle their Subjects belong to.
 // Returns rows and audit Changes (caller records the revision).
 func InsertManyTx(tx *sql.Tx, citationID []byte, inputs []Input, opts InsertOptions) ([]Observation, []audit.Change, error) {
 	if tx == nil || len(citationID) != 16 || len(inputs) == 0 {
@@ -218,6 +214,13 @@ func InsertManyTx(tx *sql.Tx, citationID []byte, inputs []Input, opts InsertOpti
 		}
 		out = append(out, obs)
 		changes = append(changes, chs...)
+	}
+	subjectIDs := make([][]byte, len(out))
+	for i, o := range out {
+		subjectIDs[i] = o.SubjectID
+	}
+	if err := resolvedvalues.RecomputeSubjectsTx(tx, subjectIDs); err != nil {
+		return nil, nil, err
 	}
 	return out, changes, nil
 }

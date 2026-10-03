@@ -236,14 +236,22 @@ func LookupTx(q interface {
 // LookupMany returns name_values rows and ordered parts for the given ids.
 // Missing ids are omitted. Empty ids returns an empty map.
 func LookupMany(c *database.Catalog, ids [][]byte) (map[string]Value, error) {
+	db, err := c.DB()
+	if err != nil {
+		return nil, err
+	}
+	return LookupManyTx(db, ids)
+}
+
+// LookupManyTx is LookupMany on an existing connection or transaction: two
+// queries whatever the number of ids.
+func LookupManyTx(db interface {
+	Query(query string, args ...any) (*sql.Rows, error)
+}, ids [][]byte) (map[string]Value, error) {
 	ids = database.UniqueBlobIDs(ids)
 	out := make(map[string]Value, len(ids))
 	if len(ids) == 0 {
 		return out, nil
-	}
-	db, err := c.DB()
-	if err != nil {
-		return nil, err
 	}
 	q := sqlLookupValueID + database.SQLInPlaceholders(len(ids)) + `)`
 	rows, err := db.Query(q, database.BlobArgs(ids)...)
