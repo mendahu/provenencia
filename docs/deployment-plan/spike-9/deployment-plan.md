@@ -442,9 +442,9 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-05 — Resolver core v1 → [`completed.md`](completed.md)
 - [x] S9-06 — Resolved-values cache → [`completed.md`](completed.md)
 - [x] S9-07 — Person header composer + list read → [`completed.md`](completed.md)
-- [ ] ✎ S9-D1 — Design: workspace sidebar
+- [x] ✎ S9-D1 — Design: workspace sidebar → [`completed.md`](completed.md)
 - [x] S9-07b — Rename configuration: Metadata, Properties → [`completed.md`](completed.md)
-- [ ] S9-08 — Sidebar sections: Source, Conclude, Configure
+- [x] S9-08 — Sidebar sections: Source, Conclude, Configure → [`completed.md`](completed.md)
 - [ ] ✎ S9-D2 — Design: Persons list
 - [ ] S9-09 — Persons list
 - [ ] S9-10 — Promote write + reads: existing target
@@ -588,6 +588,8 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 | **Depends on** | — (independent; lands before S9-08 so the sidebar is built on the new names) |
 
 #### S9-08 — Sidebar sections: Source, Conclude, Configure
+
+**Done.** See [`completed.md`](completed.md#s9-08--sidebar-sections-source-conclude-configure). Brief archived: [`design/archive/S9-D1-sidebar.md`](design/archive/S9-D1-sidebar.md). The sidebar is built from `WorkspaceSidebarSections`; Narrate's slot is marked there. For **S9-09 / S9-23 / S9-26**: the `persons` / `events` / `places` places exist with `queryKeys: []` and `ConclusionStubView`, and their counts come from nav counts; give each place its list key and replace the stub.
 
 | | |
 | --- | --- |

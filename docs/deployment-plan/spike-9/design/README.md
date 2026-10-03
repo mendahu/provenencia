@@ -8,7 +8,6 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 
 | Step | Brief | Feeds (later PRs on the view) | Notes |
 | --- | --- | --- | --- |
-| S9-D1 | [Workspace sidebar](S9-D1-sidebar.md) | **S9-08** | Source / Conclude / Configure sections; Conclude destinations + counts; Configure at the bottom |
 | S9-D2 | [Persons list](S9-D2-persons-list.md) | **S9-09** (S9-32) | Row anatomy the other lists extend |
 | S9-D3 | [Events list](S9-D3-events-list.md) | **S9-23** (S9-32) | Extends D2 |
 | S9-D4 | [Places list](S9-D4-places-list.md) | **S9-26** | Extends D2 |
@@ -25,6 +24,7 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 
 | Step | Brief | Shipped in | Notes |
 | --- | --- | --- | --- |
+| S9-D1 | [Workspace sidebar](archive/S9-D1-sidebar.md) | **S9-08** (S9-23 / S9-26 go live) | Titled Source / Conclude / Configure groups; Configure bottom-aligned behind space + hairline, no counts |
 | S9-D8 | [Evidence graph subject card](archive/S9-D8-graph-subject-card.md) | **S9-04** (S9-09 name, S9-11 flow) | One 36pt kind-chip footer (rev 1): Promote, then the membership link |
 
 Design each brief alongside its feature, just before the PR it gates. Order and dependencies: [PR sequence](../deployment-plan.md#pr-sequence).
