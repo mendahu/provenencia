@@ -744,6 +744,8 @@ message GetWorkspaceNavCountsResponse {
   reserved 4;
   reserved "files";
   int32 persons = 5; // unmerged Person handles
+  int32 events = 6;  // unmerged Event handles
+  int32 places = 7;  // unmerged Place handles
 }
 
 // EnsureFileThumbnail lazily creates (or returns) the default thumbnail

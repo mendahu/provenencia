@@ -9,10 +9,12 @@ import (
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -108,9 +110,33 @@ func TestListPersonHeaders(t *testing.T) {
 	})
 }
 
-func TestWorkspaceNavCountsPersons(t *testing.T) {
+func TestWorkspaceNavCountsConclusionHandles(t *testing.T) {
 	dir, _ := namedPerson(t)
 	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	// One event and two place handles, minted directly: the count is of
+	// handles, whatever their members.
+	if err := withProjectCatalog(dir, func(c *database.Catalog) error {
+		db, err := c.DB()
+		if err != nil {
+			return err
+		}
+		var userID []byte
+		if err := db.QueryRow(`SELECT id FROM users LIMIT 1`).Scan(&userID); err != nil {
+			return err
+		}
+		for _, key := range []string{"event", "place", "place"} {
+			st, err := subjecttypes.Lookup(c, key, subjecttypes.OriginProvenencia)
+			if err != nil {
+				return err
+			}
+			if _, err := canonicalentities.Create(c, userID, canonicalentities.CreateInput{SubjectTypeID: st.ID}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
 	out, err := GetWorkspaceNavCounts(marshalProto(t, &engine.GetWorkspaceNavCountsRequest{ProjectDir: dir}))
 	if err != nil {
 		t.Fatal(err)
@@ -119,7 +145,7 @@ func TestWorkspaceNavCountsPersons(t *testing.T) {
 	if err := proto.Unmarshal(out, &resp); err != nil {
 		t.Fatal(err)
 	}
-	if resp.GetPersons() != 1 {
-		t.Fatalf("persons %d", resp.GetPersons())
+	if resp.GetPersons() != 1 || resp.GetEvents() != 1 || resp.GetPlaces() != 2 {
+		t.Fatalf("persons %d events %d places %d", resp.GetPersons(), resp.GetEvents(), resp.GetPlaces())
 	}
 }

@@ -33,11 +33,21 @@ func GetWorkspaceNavCounts(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
+		events, err := canonicalentities.CountByTypeKey(c, "event")
+		if err != nil {
+			return err
+		}
+		places, err := canonicalentities.CountByTypeKey(c, "place")
+		if err != nil {
+			return err
+		}
 		out = &engine.GetWorkspaceNavCountsResponse{
 			Sources:        int32(sourceCount),
 			SourceTypes:    typeOriginProto(types),
 			MetadataFields: fieldOriginProto(fields),
 			Persons:        int32(persons),
+			Events:         int32(events),
+			Places:         int32(places),
 		}
 		return nil
 	})
