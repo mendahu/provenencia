@@ -4,6 +4,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/project"
+	"github.com/mendahu/provenencia/core/database/resolvedvalues"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sourcevocab"
@@ -50,6 +51,10 @@ func createCatalog(parent, folder string) (*database.Catalog, error) {
 		_ = c.Close()
 		return nil, err
 	}
+	if err := resolvedvalues.EnsureCatalog(c); err != nil {
+		_ = c.Close()
+		return nil, err
+	}
 	return c, nil
 }
 
@@ -70,6 +75,10 @@ func OpenCatalog(projectDir string) (*database.Catalog, error) {
 		return nil, err
 	}
 	if err := searchindex.EnsureCatalog(c); err != nil {
+		_ = c.Close()
+		return nil, err
+	}
+	if err := resolvedvalues.EnsureCatalog(c); err != nil {
 		_ = c.Close()
 		return nil, err
 	}

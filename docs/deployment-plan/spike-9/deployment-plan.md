@@ -123,7 +123,6 @@ conclusion_resolved_values
   entity_id        BLOB  → canonical_entities (CASCADE)
   property_id      BLOB  → properties         -- vocabulary as a row, never a column
   rank             INT   -- 1 = displayed value; 2..n = other distinct clusters
-  state            TEXT  -- single | merged | mixed   (later: concluded) — derivable; see below
   value_text / value_integer / value_term_id / value_entity_id
   value_date       BLOB  -- protobuf DateValue (may be synthesized; never a date_values row)
   value_name       BLOB  -- protobuf NameValue (same)
@@ -139,7 +138,7 @@ conclusion_resolved_values
 
 - **Useful for sorting, querying, and resolving (Q12).** Structured values are stored whole as the protobuf messages FFI already uses (`DateValueInput` / `NameValueInput` in [`engine.proto`](../../../api/proto/engine.proto); renaming them to plain value messages is optional cleanup). SQL never decodes them: ordering uses `sort_key`, date range queries use `date_lo` / `date_hi` (the window the date resolver already computes to merge), and the resolver and composers decode in Go. Resolver output is never written to `date_values` / `name_values`.
 
-- **State is the shape of the clusters.** The resolver (S9-05) returns a list of clusters plus a *concluded* flag; `single` / `merged` / `mixed` are read off it (one cluster of support 1, one of support > 1, several). S9-06 decides whether `state` is stored for query convenience or derived at read from rank 2's existence and rank 1's `support`.
+- **State is the shape of the clusters, never stored.** The resolver (S9-05) returns a list of clusters plus a *concluded* flag; readers derive `single` / `merged` / `mixed` from the rows (rank 2 exists → mixed; else rank 1's `support` 1 → single, more → merged). A `concluded` flag column arrives with Reconciliation.
 - **Edges are resolved values.** A Participation's `person` end is its resolved `person` Property with `value_entity_id`. The canonical graph is this table plus its reverse index; there is no separate edges table.
 - **Every cluster is kept**, not just the winner: lists get *+N*, search gets alternates (*Jim*), Promote compares against every value, details render clusters without re-resolving.
 - **No vocabulary in the schema.** No `birth_date` columns, no per-kind tables. Genealogical concepts live in Go (resolver, composers, registry of recognized keys) and in `property_id` rows. Labels are not stored (term **ids** are), so relabels need no recompute.
@@ -147,15 +146,17 @@ conclusion_resolved_values
 
   | Write | Recompute |
   | --- | --- |
-  | Observation save / delete on subject S, Property P | (S's handle, P) |
+  | Observation save / delete on subject S, Property P | S's handle (every Property — see below) |
   | Identity Claim S → E created (Promote) or removed (Subject delete CASCADE) | every Property of E; plus (E′, P′) for handles whose members' Observations point at S (their end now maps differently) |
   | Identity Claim confidence change | every Property of that handle |
   | Citation certainty / Source credibility change | handles with member Observations under it |
   | Reconciliation Claim (later) | (E, P) → `concluded` |
   | Term relabel | nothing |
 
-- **Rebuildable.** A version row (like `catalog_search_meta`); a mismatch on Open rebuilds from truth tables. A Go rebuild command for development.
-- **Proven.** A randomized test applies write sequences, then checks incremental upkeep equals a full rebuild. Ships in the same PR as the cache.
+  Recompute is **per handle** for now: a trigger rewrites all of the handle's Properties through the same batched loader as rebuild. Narrowing to (E, P) waits for timings that call for it (S9-33).
+
+- **Rebuildable.** A version row (`conclusion_resolved_meta.cache_version` against `resolvedvalues.CacheVersion`, like `catalog_search_meta`); a mismatch on Open rebuilds from truth tables. Bumping the version is the development rebuild — there is no separate command.
+- **Proven.** Rebuild-equals-upkeep tests apply write sequences through the real write APIs, then check incremental upkeep equals a full rebuild: long sequences generated from **fixed** seeds (deterministic; a failure names its seed and step) plus named hand-written scenarios. A failure a seed finds is shrunk into a scenario. Ships in the same PR as the cache.
 - **Batched loading.** The resolver's inputs (members, candidates, provenance) load in a fixed number of set-based queries per batch of handles — no per-Property or per-member loops. The same loader serves rebuild and incremental upkeep.
 
 ### R4 — Composers (headers, walks, derived values)
@@ -204,7 +205,7 @@ Each hop is an indexed lookup on R3. List composers run set-based over the whole
 
 ### R5 — List pages (Persons, Events, Places)
 
-Three sidebar destinations under a new Conclusions group, with counts ([`CatalogCounts`](../../../macos/App/Features/Catalog/CatalogCounts.swift)). Rows come from the R4 header composers (Q6).
+Three sidebar destinations under a new **Conclude** section (sidebar sections: Source, Conclude, Narrate later, Configure — S9-D1), with counts ([`CatalogCounts`](../../../macos/App/Features/Catalog/CatalogCounts.swift)). Rows come from the R4 header composers (Q6).
 
 | List | Row |
 | --- | --- |
@@ -320,7 +321,8 @@ SLICE 2 — Persons list
   S9-05  Resolver core v1: clusters, states, stable order (pure Go)
   S9-06  Resolved-values cache: table, loader, rebuild, upkeep, rebuild-equals-upkeep test
   S9-07  Person header composer (name) + list read + Swift store / keys / name formatting
-  ✎ S9-D1 ──▶ S9-08  Sidebar Conclusions group (Events / Places stubbed)
+  S9-07b Rename configuration: Source fields → Metadata, Subject fields → Properties (app, Go, FFI, tables)
+  ✎ S9-D1 ──▶ S9-08  Sidebar: Source / Conclude sections (Events / Places stubbed); Configure bottom-aligned
   ✎ S9-D2 ──▶ S9-09  Persons list (name + ref) + name on the card's membership row
   Check: promoted Persons listed by name; edit a name Observation → the row updates.
 
@@ -395,7 +397,8 @@ CLOSE
 | S9-05 Resolver core v1 | — | — |
 | S9-06 Resolved-values cache | — | S9-01, S9-05 |
 | S9-07 Person header + list read | — | S9-06 |
-| S9-08 Sidebar | **S9-D1** | S9-07 |
+| S9-07b Rename configuration views | — | — |
+| S9-08 Sidebar | **S9-D1** | S9-07, S9-07b |
 | S9-09 Persons list | **S9-D2** | S9-07, S9-08 |
 | S9-10 Promote write + reads: existing target | — | S9-06 |
 | S9-11 Promote shell + choose target | **S9-D9** | S9-04, S9-10 |
@@ -437,10 +440,11 @@ In order; each brief sits just above the PR it gates.
 - [x] ✎ S9-D8 — Design: graph subject card → [`completed.md`](completed.md)
 - [x] S9-04 — Graph card: Promote + membership → [`completed.md`](completed.md)
 - [x] S9-05 — Resolver core v1 → [`completed.md`](completed.md)
-- [ ] S9-06 — Resolved-values cache
+- [x] S9-06 — Resolved-values cache → [`completed.md`](completed.md)
 - [ ] S9-07 — Person header composer + list read
 - [ ] ✎ S9-D1 — Design: workspace sidebar
-- [ ] S9-08 — Sidebar Conclusions group
+- [ ] S9-07b — Rename configuration: Metadata, Properties
+- [ ] S9-08 — Sidebar sections: Source, Conclude, Configure
 - [ ] ✎ S9-D2 — Design: Persons list
 - [ ] S9-09 — Persons list
 - [ ] S9-10 — Promote write + reads: existing target
@@ -545,11 +549,13 @@ In order; each brief sits just above the PR it gates.
 
 #### S9-06 — Resolved-values cache
 
+**Done.** See [`completed.md`](completed.md#s9-06--resolved-values-cache). Package `core/database/resolvedvalues`: `RecomputeTx` / `RecomputeSubjectsTx` are the upkeep calls a new write path adds (and an operation in `TestRebuildEqualsUpkeep_SeededSequences`, plus a scenario in `TestRebuildEqualsUpkeep_Scenarios` where it has a characteristic sequence); a resolution change bumps `CacheVersion`. Still NULL: `date_lo` / `date_hi` and date `sort_key` (**S9-21**), `value_entity_id` — subject-valued Properties are not cached yet (**S9-28**). The loader reads no provenance until **S9-14**. Dates and names are protobuf via `core/valuecodec`.
+
 | | |
 | --- | --- |
-| **In** | Migration: `conclusion_resolved_values` (R3 shape, all columns and indexes up front) + version row. Batched loader (members, Observations, provenance in a fixed number of queries per batch). Full rebuild; version check on Open. Upkeep in the write transaction for the write paths that exist now: Promote (claim create), Observation save / delete, Subject delete (affected handles from `deleteimpact.ReleaseFacets` → `Released.Handles`, computed before anything is gone; a member Observation's save / delete recomputes its Subject's handle directly — `Released.Handles` only covers membership and evidence changes). **Rebuild-equals-upkeep randomized test.** |
+| **In** | Migration: `conclusion_resolved_values` (R3 shape, all columns and indexes up front) + version row. Batched loader (members, Observations, provenance in a fixed number of queries per batch). Full rebuild; version check on Open. Upkeep in the write transaction for the write paths that exist now: Promote (claim create), Observation save / delete, Subject delete (affected handles from `deleteimpact.ReleaseFacets` → `Released.Handles`, computed before anything is gone; a member Observation's save / delete recomputes its Subject's handle directly — `Released.Handles` only covers membership and evidence changes). **Rebuild-equals-upkeep test** (fixed-seed sequences + named scenarios). |
 | **Out** | Credibility / certainty triggers (S9-14); inbound-end trigger (S9-28). |
-| **Testable** | Rebuild matches hand-computed rows; version mismatch rebuilds; randomized equivalence; loader query count constant. |
+| **Testable** | Rebuild matches hand-computed rows; version mismatch rebuilds; rebuild-equals-upkeep equivalence; loader query count constant. |
 | **Depends on** | S9-01, S9-05 |
 
 #### S9-07 — Person header composer + list read
@@ -560,13 +566,30 @@ In order; each brief sits just above the PR it gates.
 | **Testable** | Header fallbacks; list query count constant; a trigger mutation stales the key. |
 | **Depends on** | S9-06 |
 
-#### S9-08 — Sidebar Conclusions group
+#### S9-07b — Rename configuration: Metadata, Properties
+
+Researcher's decision while revising **S9-D1**: two configuration views get plain names, renamed **all the way down** so code, wire, and tables say what the UI says. **Source types** keeps its name (a table or page called just "types" would not say what it holds).
+
+| Today | Becomes |
+| --- | --- |
+| Source fields | **Metadata** (one row: a *metadata field*) |
+| Subject fields | **Properties** (Properties and their bindings to Subject types) |
 
 | | |
 | --- | --- |
-| **In** | Per **S9-D1**: Conclusions group with Persons live; Events / Places present but stubbed until S9-23 / S9-26. Counts. |
-| **Check** | Persons count matches promoted Persons. |
-| **Depends on** | **S9-D1**, S9-07 |
+| **In** | **App:** labels, page titles, VoiceOver, L10n keys and values; `WorkspaceSection` cases and history ids (`metadata`, `properties`; the old `source-fields` / `subject-fields` ids still decode, like the retired `files` id); `Features/SourceFields` → `Features/Metadata`, `Features/SubjectFields` → `Features/Properties`, and their types (`SourceFieldsView` → `MetadataView`, `SubjectFieldsModel` → `PropertiesModel`, …); FakeStore and tests. **Go / FFI:** `sourcefields` package → `metadatafields`, `SourceField` types, delete-Impact kinds, FFI methods and proto messages (`SourceField` → `MetadataField`), search kinds (with a `ProjectionVersion` bump). **Tables:** a migration renaming the subject-type binding table `subject_type_fields` → `subject_type_properties` (and any other table whose name still says *source field* / *subject field*; `source_metadata_fields` already reads right), with the delete-Impact register and its honesty tests following. **Docs and skills** that name these views. |
+| **Decide at the start** | Strings already persisted or on the wire: audit `entity_type` / `action_type` values in existing catalogs, `apperr` codes ("permanent once shipped"), and search kind ids. Default: rename the identifiers, keep reading the old persisted strings (alias on read) rather than rewriting audit history; apperr codes get new codes with the old ones retired, not reused. List each in the PR. |
+| **Out** | The sidebar layout (S9-08). Renaming Source types. Any change to what the pages do. |
+| **Testable** | Old navigation history decodes to the renamed sections; an existing catalog migrates and still opens (schema hash, Impact honesty); search finds metadata fields and Properties after the rebuild; no remaining `SourceField` / `SubjectField` identifiers outside migrations and legacy decoders (a grep check in the PR). |
+| **Depends on** | — (independent; lands before S9-08 so the sidebar is built on the new names) |
+
+#### S9-08 — Sidebar sections: Source, Conclude, Configure
+
+| | |
+| --- | --- |
+| **In** | Per **S9-D1**: titled sections. **Source** (Sources) and **Conclude** (Persons live; Events / Places present but stubbed until S9-23 / S9-26) top-aligned, with counts. **Configure** — **Source types**, **Metadata**, **Properties** (names from S9-07b) — bottom-aligned directly above the session footer, separated by space; on a short window the column scrolls as one (W-5b). Rail icons. **Narrate** is reserved after Conclude but hidden (Narrative layer, later spike). Sections don't collapse; the configuration destinations stop being children of Sources and become Configure's own rows. |
+| **Check** | Persons count matches promoted Persons; configuration sits above the footer on a tall window and follows the research section on a short one. |
+| **Depends on** | **S9-D1**, S9-07, S9-07b |
 
 #### S9-09 — Persons list
 
@@ -615,7 +638,7 @@ In order; each brief sits just above the PR it gates.
 
 | | |
 | --- | --- |
-| **In** | Resolver ranking by Source credibility → Citation certainty → member claim confidence → agreement → id; negative polarity excluded and counted against. Upkeep triggers for credibility, transcription-certainty, and claim-confidence changes; extend the randomized test. Cache version bump. |
+| **In** | Resolver ranking by Source credibility → Citation certainty → member claim confidence → agreement → id; negative polarity excluded and counted against. Upkeep triggers for credibility, transcription-certainty, and claim-confidence changes; extend the rebuild-equals-upkeep tests. Cache version bump. |
 | **Depends on** | S9-06 |
 
 #### S9-15 — Detail composer + detail read
@@ -728,7 +751,7 @@ In order; each brief sits just above the PR it gates.
 
 | | |
 | --- | --- |
-| **In** | Resolver: subject-valued Properties map to the target's handle (unpromoted drop out) — the canonical graph. Upkeep: a claim create / remove recomputes handles whose members' Observations point at that subject. Promote write files bridge subjects onto the association the ends already share, or mints one (lift the S9-02 primary-kinds guard in `promote.Save`). Extend the randomized test. Once bridge edge Observations can be pinned, test that deleting a bridge Subject releases those pins audited: its connection-facet release erases each edge Observation through `ReleaseFacets(KindObservation)`, which takes the pins first. |
+| **In** | Resolver: subject-valued Properties map to the target's handle (unpromoted drop out) — the canonical graph. Upkeep: a claim create / remove recomputes handles whose members' Observations point at that subject. Promote write files bridge subjects onto the association the ends already share, or mints one (lift the S9-02 primary-kinds guard in `promote.Save`). Extend the rebuild-equals-upkeep tests. Once bridge edge Observations can be pinned, test that deleting a bridge Subject releases those pins audited: its connection-facet release erases each edge Observation through `ReleaseFacets(KindObservation)`, which takes the pins first. |
 | **Depends on** | S9-12 |
 
 #### S9-29 — Neighborhood read

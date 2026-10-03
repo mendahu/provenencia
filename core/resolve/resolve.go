@@ -221,6 +221,32 @@ func key(valueType string, v Value) (string, error) {
 	return "", ErrUnknownValueType
 }
 
+// SortKey is the text a cluster sorts by within its Property (the cache's
+// sort_key): normalized form for names, case-folded text, and an
+// order-preserving encoding for integers. Other value types have no sort key
+// here (ok = false): dates sort by their window (S9-21), terms by label.
+func SortKey(valueType string, v Value) (key string, ok bool) {
+	switch valueType {
+	case properties.ValueTypeName:
+		if v.Name == nil {
+			return "", false
+		}
+		return normalizeForm(v.Name.Form), true
+	case properties.ValueTypeText:
+		if !v.HasText {
+			return "", false
+		}
+		return strings.ToLower(strings.TrimSpace(v.Text)), true
+	case properties.ValueTypeInteger:
+		if !v.HasInteger {
+			return "", false
+		}
+		// Offset into uint64 so byte order matches numeric order, negatives included.
+		return fmt.Sprintf("%020d", uint64(v.Integer)^(1<<63)), true
+	}
+	return "", false
+}
+
 // normalizeForm ignores case, punctuation, and whitespace differences.
 func normalizeForm(form string) string {
 	var b strings.Builder

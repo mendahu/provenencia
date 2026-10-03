@@ -91,6 +91,8 @@ var tables = []tableSpec{
 	{Name: "audit_changes", Bucket: BucketSkip},
 	{Name: "catalog_search_docs", Bucket: BucketSkip},
 	{Name: "catalog_search_meta", Bucket: BucketSkip},
+	{Name: "conclusion_resolved_values", Bucket: BucketSkip},
+	{Name: "conclusion_resolved_meta", Bucket: BucketSkip},
 }
 
 // Every live catalog FK. Honesty tests compare this to PRAGMA foreign_key_list.
@@ -145,6 +147,9 @@ var foreignKeys = []fkSpec{
 	{FromTable: "identity_claims", FromCol: "confidence_grade_id", ToTable: "claim_confidence_grades", OnDelete: "NO ACTION", Bucket: BucketResource},
 	{FromTable: "identity_claim_evidence", FromCol: "identity_claim_id", ToTable: "identity_claims", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
 	{FromTable: "identity_claim_evidence", FromCol: "observation_id", ToTable: "observations", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
+	// Derived resolved-values cache: silent backstops; upkeep rewrites the rows.
+	{FromTable: "conclusion_resolved_values", FromCol: "entity_id", ToTable: "canonical_entities", OnDelete: "CASCADE", Bucket: BucketSkip},
+	{FromTable: "conclusion_resolved_values", FromCol: "property_id", ToTable: "properties", OnDelete: "CASCADE", Bucket: BucketSkip},
 }
 
 var originRules = []originRule{

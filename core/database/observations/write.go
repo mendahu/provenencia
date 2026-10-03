@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/project"
+	"github.com/mendahu/provenencia/core/database/resolvedvalues"
 )
 
 // Update rewrites one Observation. Edge rows are always locked, including no-ops.
@@ -56,6 +57,9 @@ func Update(c *database.Catalog, userID []byte, in Input) (Listed, error) {
 
 	_, changes, err := updateOne(tx, prev.CitationID, prev, in)
 	if err != nil {
+		return Listed{}, err
+	}
+	if err := resolvedvalues.RecomputeSubjectsTx(tx, [][]byte{prev.SubjectID, in.SubjectID}); err != nil {
 		return Listed{}, err
 	}
 	if len(changes) > 0 {
@@ -137,6 +141,14 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 		return err
 	}
 	if err := deleteimpact.ReleaseSnapshot(tx, snap); err != nil {
+		return err
+	}
+	// The Subject's own handle loses a candidate; handles whose claims pinned
+	// this Observation are not necessarily that handle.
+	if err := resolvedvalues.RecomputeSubjectsTx(tx, [][]byte{prev.SubjectID}); err != nil {
+		return err
+	}
+	if err := resolvedvalues.RecomputeTx(tx, released.Handles); err != nil {
 		return err
 	}
 	changes = append(changes, audit.Change{
