@@ -70,6 +70,9 @@ struct WorkspaceDestinationHost: View {
                 catalogCounts: catalogCounts
             )
             .accessibilityIdentifier("workspace.destination.subjectFields")
+        case .personsList:
+            PersonsListView()
+                .accessibilityIdentifier("workspace.destination.persons")
         }
     }
 
@@ -93,6 +96,8 @@ struct WorkspaceDestinationHost: View {
             return .sourceTypes
         case .subjectFields:
             return .subjectFields
+        case .personsList:
+            return .persons
         }
     }
 }
@@ -103,4 +108,5 @@ enum WorkspaceDestinationKind: Equatable {
     case sourceFields
     case sourceTypes
     case subjectFields
+    case persons
 }

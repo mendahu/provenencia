@@ -499,6 +499,9 @@ private struct ThrowingStore: GenealogyStore {
     func listSubjectMemberships(projectDir _: String, sourceID _: String) async throws -> [CatalogSubjectMembership] {
         throw StoreBoom.boom
     }
+    func listPersonHeaders(projectDir _: String) async throws -> [CatalogPersonHeader] {
+        throw StoreBoom.boom
+    }
     func deleteSubject(projectDir _: String, userID _: String, subjectID _: String) async throws {
         throw StoreBoom.boom
     }

@@ -8,6 +8,8 @@ enum WorkspaceSection: String, Sendable, CaseIterable, Codable {
     case sourceTypes = "source-types"
     case sourceFields = "source-fields"
     case subjectFields = "subject-fields"
+    /// Conclude: canonical Persons (S9-07). The sidebar row arrives in S9-08.
+    case persons
 
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
@@ -31,6 +33,7 @@ enum WorkspaceSection: String, Sendable, CaseIterable, Codable {
         case .sourceTypes: L10n.Workspace.sourceTypesTitle
         case .sourceFields: L10n.Workspace.sourceFieldsTitle
         case .subjectFields: L10n.Workspace.subjectFieldsTitle
+        case .persons: L10n.Workspace.personsTitle
         }
     }
 
@@ -40,6 +43,7 @@ enum WorkspaceSection: String, Sendable, CaseIterable, Codable {
         case .sourceTypes: .tag
         case .sourceFields: .list
         case .subjectFields: .listTree
+        case .persons: .person
         }
     }
 }

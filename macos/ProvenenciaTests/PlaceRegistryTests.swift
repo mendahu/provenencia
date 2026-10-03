@@ -217,11 +217,19 @@ struct PlaceRegistryTests {
             case .sourceTypes: .sectionRoot(.sourceTypes)
             case .sourceTypesDetail: WorkspaceLocation(section: .sourceTypes, typeId: "t1")
             case .subjectFields: .sectionRoot(.subjectFields)
+            case .personsList: .sectionRoot(.persons)
             }
             let place = resolve(location)
             #expect(place?.placeID == id)
             #expect(place != nil)
         }
+    }
+
+    @Test func personsStubResolvesWithNoQueryKeys() {
+        let place = resolve(.sectionRoot(.persons))
+        #expect(place?.placeID == .personsList)
+        #expect(place?.presentation == .personsList)
+        #expect(place?.queryKeys == [])
     }
 
     @Test func citationJumpResolvesComposerWithoutSubjectId() {

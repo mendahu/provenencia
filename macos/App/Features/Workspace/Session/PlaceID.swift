@@ -10,4 +10,5 @@ enum PlaceID: Hashable, Sendable, CaseIterable {
     case sourceTypes
     case sourceTypesDetail
     case subjectFields
+    case personsList
 }

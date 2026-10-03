@@ -90,6 +90,12 @@ Destination view  →  reads QueryHandle(s)  →  patches / invalidates on mutat
 6. If a place reads a key, that key is in `PlaceRegistry.queryKeys`.
 7. `getCitation` is the exception: a one-shot into the composer fields draft. Do not cache the open citation.
 
+**Conclusion keys (Spike 9):**
+
+- Every Conclusion key (Persons list today; Events, Places, and details later) invalidates on one set, `CatalogQueryRegistry.conclusionTriggers`. Go's resolved-values cache recomputes on the same writes, so busting them all together is cheap and never misses a dependency between handles.
+- **Planned exception to rule 2 (S9-15):** Conclusion *detail* keys that aren't on screen are evicted rather than revalidated, so a trigger doesn't reload every Person page the researcher has visited. The visible page revalidates as usual. List keys follow rule 2.
+- **Go returns structures; Swift makes text.** Payloads carry NameValues, DateValues, term ids, and title parts — never display strings. Formatting lives in the app (`NameValueDisplay`, `PersonHeaderDisplay`, later the event-title templates).
+
 **View rules (required):**
 
 - Warm loads in `.task { model.warm…Queries() }` or rely on navigation `apply(location:)` — not in `body`.

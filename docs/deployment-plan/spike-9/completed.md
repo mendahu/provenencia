@@ -15,6 +15,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-04 | PR | Graph card: Promote + membership |
 | S9-05 | PR | Resolver core v1 |
 | S9-06 | PR | Resolved-values cache |
+| S9-07 | PR | Person header composer + list read |
 
 ## Steps
 
@@ -193,3 +194,25 @@ The resolver's output now lives in one derived table, rewritten in the transacti
 - Subject-valued Properties and `value_entity_id`, plus the inbound-end trigger (**S9-28**). Until then the Subject-delete hook cannot change rows (a Subject with Observations is refused), so the rebuild-equals-upkeep tests exercise it without being able to catch its absence.
 - Narrowing upkeep to (handle, Property); timings (**S9-33**)
 - Readers, FFI, Swift (**S9-07**)
+
+### S9-07 — Person header composer + list read
+
+The first reader of the resolved-values cache: Go composes every Person's row header in one query, the app loads it behind a Conclusion query key, and a stub Persons place is registered. Nothing new is reachable in the app until the sidebar row (S9-08).
+
+**What shipped**
+
+- `core/database/conclusionheaders.ListPersons`: unmerged Person handles with the rank-1 resolved name (NameValue) and the name cluster count, ordered by name `sort_key`, then ref. One query for the whole list (tested constant for 1 and 51 Persons). Structures only; mixed is derived (cluster count > 1).
+- `canonicalentities.CountByTypeKey` (excludes merged handles).
+- FFI `METHOD_LIST_PERSON_HEADERS` (`PersonHeader { entity, name, name_cluster_count }`); `GetWorkspaceNavCountsResponse.persons`.
+- Swift: `CatalogPersonHeader` / `CatalogNameValue`; `listPersonHeaders` on `GenealogyStore` / `GoStore` / `FakeStore` (FakeStore clusters member name Observations by case-folded form).
+- **Text in the app:** `NameValueDisplay.string(for:)` (form, else parts in order) and `PersonHeaderDisplay.title` (name → label → ref).
+- `CatalogQueryKey.personsList` on `CatalogQueryRegistry.conclusionTriggers` — `savedCitation`, `deletedSubject`, `promotedSubject`, `deletedSource`, `mutatedSourceWorkspace` (credibility; over-busts on notes / artifacts / metadata, accepted).
+- Place: `WorkspaceSection.persons` (history id `persons`), `PlaceID` / presentation `personsList`, `PersonsListView` (kit EmptyState), `PVSymbol.person`, L10n. Not in the sidebar.
+- `CatalogCounts.persons` from `refreshAll()`.
+- `macos-client-patterns.md`: Conclusion keys, the planned eviction exception, structures-vs-text.
+
+**What stayed out**
+
+- Sidebar row and re-publishing the count after Promote (**S9-08**); the designed list and the place's query key (**S9-09**)
+- Eviction of non-visible detail keys and visible-place tracking (**S9-15**, with the first detail key)
+- A certainty mutation and a dedicated credibility mutation (**S9-14**)

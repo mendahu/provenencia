@@ -57,6 +57,8 @@ final class CatalogCounts {
     private(set) var sourceFields: CatalogCountSummary?
     private(set) var sourceTypes: CatalogCountSummary?
     private(set) var subjectFields: CatalogCountSummary?
+    /// Unmerged Person handles.
+    private(set) var persons: Int?
     /// Set when `refreshAll` fails; cleared on the next successful refresh.
     private(set) var lastRefreshError: String?
 
@@ -79,6 +81,7 @@ final class CatalogCounts {
         case .sourceTypes: sourceTypes?.total
         case .sourceFields: sourceFields?.total
         case .subjectFields: subjectFields?.total
+        case .persons: persons
         }
     }
 
@@ -112,6 +115,7 @@ final class CatalogCounts {
             sources = nav.sources
             sourceTypes = CatalogCountSummary(nav.sourceTypes)
             sourceFields = CatalogCountSummary(nav.sourceFields)
+            persons = nav.persons
             lastRefreshError = nil
         } catch {
             lastRefreshError = L10n.Errors.message(for: error)

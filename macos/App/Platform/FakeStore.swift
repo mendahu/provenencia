@@ -950,7 +950,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             return WorkspaceNavCounts(
                 sources: (sourcesByProject[projectDir] ?? []).count,
                 sourceTypes: Self.originCounts(from: types.map(\.origin)),
-                sourceFields: Self.originCounts(from: fields.map(\.origin))
+                sourceFields: Self.originCounts(from: fields.map(\.origin)),
+                persons: Set(membershipBySubject.values.filter { $0.kind == "person" }.map(\.entity.id)).count
             )
         }
     }
@@ -1204,6 +1205,45 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         return withState {
             markCatalogSessionHeld(projectDir)
             return (subjectsBySource[sourceID] ?? []).compactMap { membershipBySubject[$0.id] }
+        }
+    }
+
+    func listPersonHeaders(projectDir: String) async throws -> [CatalogPersonHeader] {
+        // A read: no `recordedCalls`. Mirrors the Go composer closely enough for
+        // UI tests: members' name Observations cluster by case-folded form, the
+        // most-supported cluster (then the earliest) is rank 1, and named
+        // Persons sort by name before unnamed ones by ref.
+        return withState {
+            markCatalogSessionHeld(projectDir)
+            let members = membershipBySubject.values.filter { $0.kind == "person" }
+            let byEntity = Dictionary(grouping: members, by: \.entity.id)
+            let nameObservations = observationsBySource.values.flatMap { $0 }.filter { $0.propertyKey == "name" }
+            let headers = byEntity.values.compactMap { group -> CatalogPersonHeader? in
+                guard let entity = group.first?.entity else { return nil }
+                let memberIDs = Set(group.map(\.subjectID))
+                var clusters: [(key: String, name: CatalogNameValue, support: Int)] = []
+                for o in nameObservations where memberIDs.contains(o.subjectID) && !o.nameForm.isEmpty {
+                    let key = o.nameForm.lowercased().trimmingCharacters(in: .whitespaces)
+                    if let i = clusters.firstIndex(where: { $0.key == key }) {
+                        clusters[i].support += 1
+                    } else {
+                        clusters.append((key, CatalogNameValue(form: o.nameForm, parts: o.nameParts), 1))
+                    }
+                }
+                let top = clusters.enumerated().max { a, b in
+                    a.element.support != b.element.support ? a.element.support < b.element.support : a.offset > b.offset
+                }?.element
+                return CatalogPersonHeader(entity: entity, name: top?.name, nameClusterCount: clusters.count)
+            }
+            return headers.sorted { a, b in
+                switch (a.name, b.name) {
+                case let (x?, y?) where x.form.lowercased() != y.form.lowercased():
+                    return x.form.lowercased() < y.form.lowercased()
+                case (.some, .none): return true
+                case (.none, .some): return false
+                default: return a.entity.ref.localizedCaseInsensitiveCompare(b.entity.ref) == .orderedAscending
+                }
+            }
         }
     }
 

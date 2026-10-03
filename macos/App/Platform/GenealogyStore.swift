@@ -219,6 +219,28 @@ struct CatalogNameValuePart: Sendable, Equatable {
     var type: String
 }
 
+/// A structured NameValue: the full-form reading plus optional ordered parts.
+struct CatalogNameValue: Sendable, Equatable {
+    var form: String
+    var parts: [CatalogNameValuePart] = []
+}
+
+/// One Person as a row, composed by Go from the resolved-values cache (S9-07).
+/// Structures only; `PersonHeaderDisplay` formats the title.
+struct CatalogPersonHeader: Sendable, Equatable, Identifiable {
+    var entity: CatalogCanonicalEntity
+    /// Rank-1 resolved name; `nil` when no member names the Person.
+    var name: CatalogNameValue?
+    /// Distinct resolved names across members.
+    var nameClusterCount: Int
+
+    var id: String { entity.id }
+    /// Members disagree on the name; the top-ranked one is shown.
+    var isNameMixed: Bool { nameClusterCount > 1 }
+    /// The list's *+N*: resolved names beyond the one shown.
+    var additionalNameCount: Int { max(0, nameClusterCount - 1) }
+}
+
 /// One Observation row with Property summary (graph / card payloads).
 struct CatalogObservation: Sendable, Equatable, Identifiable {
     var id: String
@@ -500,6 +522,8 @@ struct WorkspaceNavCounts: Sendable, Equatable {
     var sources: Int
     var sourceTypes: WorkspaceNavOriginCounts
     var sourceFields: WorkspaceNavOriginCounts
+    /// Unmerged Person handles.
+    var persons: Int = 0
 }
 
 protocol GenealogyStore: Sendable {
@@ -715,6 +739,8 @@ protocol GenealogyStore: Sendable {
     func promoteSubject(projectDir: String, userID: String, subjectID: String) async throws -> CatalogPromoteResult
     /// Accepted handle of every promoted Subject on one Source's Evidence graph.
     func listSubjectMemberships(projectDir: String, sourceID: String) async throws -> [CatalogSubjectMembership]
+    /// Every unmerged Person as a row header, in list order (named by name, then by ref).
+    func listPersonHeaders(projectDir: String) async throws -> [CatalogPersonHeader]
     func listSubjects(projectDir: String, sourceID: String) async throws -> [CatalogSubject]
     func setSubjectPosition(
         projectDir: String,

@@ -43,12 +43,33 @@ struct CatalogCountsTests {
         #expect(counts.badge(for: .sourceFields) == 2)
     }
 
+    @Test func refreshAllCountsPromotedPersons() async throws {
+        let store = FakeStore()
+        store.subjectTypesByProject[projectDir] = [
+            CatalogSubjectType(
+                id: "type-person", key: "person", origin: "provenencia", label: "Person",
+                description: "", refPrefix: "PER", candidateRefPrefix: "CPR"
+            ),
+        ]
+        store.subjectsBySource["s1"] = [
+            CatalogSubject(id: "sub-1", ref: "CPR-1", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
+            CatalogSubject(id: "sub-2", ref: "CPR-2", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
+        ]
+        _ = try await store.promoteSubject(projectDir: projectDir, userID: "u", subjectID: "sub-1")
+        _ = try await store.promoteSubject(projectDir: projectDir, userID: "u", subjectID: "sub-2")
+        let counts = makeCounts(store: store)
+        await counts.refreshAll()
+        #expect(counts.persons == 2)
+        #expect(counts.badge(for: .persons) == 2)
+    }
+
     @Test func refreshAllOnEmptyProjectYieldsZero() async {
         let counts = makeCounts()
         await counts.refreshAll()
         #expect(counts.sources == 0)
         #expect(counts.sourceTypes?.total == 0)
         #expect(counts.sourceFields?.total == 0)
+        #expect(counts.persons == 0)
         #expect(counts.lastRefreshError == nil)
     }
 

@@ -425,6 +425,31 @@ struct WorkspaceSessionTests {
         #expect(handle.value?.observations.count == 1)
     }
 
+    /// Conclusion keys reload from Go's resolved-values cache on any trigger:
+    /// a Promote revalidates a warmed Persons list without a second query.
+    @Test func applyPromoteRevalidatesWarmedPersonsList() async throws {
+        let store = FakeStore()
+        seedStore(store)
+        store.subjectTypesByProject[projectDir] = [
+            CatalogSubjectType(
+                id: "type-person", key: "person", origin: "provenencia", label: "Person",
+                description: "", refPrefix: "PER", candidateRefPrefix: "CPR"
+            ),
+        ]
+        store.subjectsBySource["s1"] = [
+            CatalogSubject(id: "sub-1", ref: "CPR-1", sourceID: "s1", subjectTypeID: "type-person", label: "Alice", description: ""),
+        ]
+        let session = makeSession(store: store)
+        let handle: QueryHandle<[CatalogPersonHeader]> = session.query(.personsList(project: session.projectKey))
+        await waitForFetchComplete(handle)
+        #expect(handle.value?.isEmpty == true)
+
+        let promoted = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-1")
+        session.apply(.promotedSubject(sourceId: "s1"))
+        await waitForFetchComplete(handle)
+        #expect(handle.value?.map(\.entity.ref) == [promoted.entity.ref])
+    }
+
     /// `usedBy` on the Subject Fields inspector counts Observations, and it
     /// moves whenever a citation save creates or deletes one.
     @Test func applySavedCitationInvalidatesSubjectFieldsUsedBy() async {

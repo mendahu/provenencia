@@ -16,6 +16,16 @@ enum CatalogQueryInvalidation: Hashable, Sendable {
 struct CatalogQueryRegistry: Sendable {
     static let standard = CatalogQueryRegistry()
 
+    /// Writes that can change any Conclusion value (Spike 9 Q5). Every
+    /// Conclusion key — lists now, details from S9-15 — invalidates on this
+    /// one set, because Go's resolved-values cache recomputes on the same
+    /// writes and reloading from it is cheap. `mutatedSourceWorkspace` carries
+    /// credibility changes and over-busts on notes, artifacts, and metadata.
+    /// Certainty joins with S9-14.
+    static let conclusionTriggers: Set<CatalogMutationKind> = [
+        .savedCitation, .deletedSubject, .promotedSubject, .deletedSource, .mutatedSourceWorkspace,
+    ]
+
     private struct Spec {
         let kind: CatalogQueryKey.Kind
         let stalePolicy: CatalogQueryStalePolicy
@@ -122,6 +132,11 @@ struct CatalogQueryRegistry: Sendable {
             // restale the project-wide map (or sourcesList).
             invalidateOn: []
         ),
+        Spec(
+            kind: .personsList,
+            stalePolicy: .sessionFresh,
+            invalidateOn: CatalogQueryRegistry.conclusionTriggers
+        ),
     ]
 
     func stalePolicy(for key: CatalogQueryKey) -> CatalogQueryStalePolicy {
@@ -192,6 +207,8 @@ struct CatalogQueryRegistry: Sendable {
             return map
         case .subjectFieldsWorkspace(let project):
             return try await store.getSubjectFieldsWorkspace(projectDir: project.projectDir)
+        case .personsList(let project):
+            return try await store.listPersonHeaders(projectDir: project.projectDir)
         }
     }
 
@@ -265,6 +282,8 @@ private extension CatalogQueryKey.Kind {
             return .allCached(.citationsByArtifact)
         case .sourceGraphProgress:
             return .key(.sourceGraphProgress(project: project))
+        case .personsList:
+            return .key(.personsList(project: project))
         }
     }
 }

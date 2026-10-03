@@ -272,8 +272,8 @@ The Conclusion pages read **across** Sources — every earlier place scoped to o
 - **Go composes; Swift renders.** Swift asks for "Persons list" or "Person X" and displays the payload. It never assembles members or walks ([`macos-client-patterns.md`](../../macos-client-patterns.md) *One cache owns each list*).
 - **Query keys:** one list key per kind, one detail key per handle, and the Promote reads (target suggestions, comparison rows for a subject × entity, the neighborhood of a subject). The Promote draft is interaction state, not a cache key.
 - **Swift invalidation: bust all Conclusion keys (Q5).** Any Interpretation or Conclusion write that R3 recomputes marks every cached Conclusion key stale — cheap, because reloading reads R3.
-  - **Triggers:** Observation save / delete, Subject delete, bridge create / delete, Source delete, credibility / certainty changes, and each Promote step.
-  - **Evict, don't revalidate.** Detail keys are dropped and reload when next visited; the visible page revalidates. A deliberate exception to cache contract rule 2; note it in [`macos-client-patterns.md`](../../macos-client-patterns.md).
+  - **Triggers:** Observation save / delete, Subject delete, bridge create / delete, Source delete, credibility / certainty changes, and each Promote step. Shipped in S9-07 as one set, `CatalogQueryRegistry.conclusionTriggers` (`savedCitation`, `deletedSubject`, `promotedSubject`, `deletedSource`, `mutatedSourceWorkspace` — the last carries credibility and over-busts on notes / artifacts / metadata). Certainty joins in S9-14.
+  - **Evict, don't revalidate.** Detail keys are dropped and reload when next visited; the visible page revalidates. A deliberate exception to cache contract rule 2, noted in [`macos-client-patterns.md`](../../macos-client-patterns.md). **Built in S9-15** with the first detail key: the session can't evict or tell which place is visible yet, and list keys (S9-07) follow rule 2 as usual.
   - Narrowing later can reuse R3's affected-handles set; not needed while reloads are cheap.
 - **Measure.** Build the deep fixture (a Person on ~10 Sources; birth, death, marriage events each multi-member, with Locations; a few relationships; scaled to a few hundred handles) and time: rebuild, a single write's upkeep, list composition, detail composition. Record in the [performance ledger](performance-ledger.md).
 
@@ -441,7 +441,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-04 — Graph card: Promote + membership → [`completed.md`](completed.md)
 - [x] S9-05 — Resolver core v1 → [`completed.md`](completed.md)
 - [x] S9-06 — Resolved-values cache → [`completed.md`](completed.md)
-- [ ] S9-07 — Person header composer + list read
+- [x] S9-07 — Person header composer + list read → [`completed.md`](completed.md)
 - [ ] ✎ S9-D1 — Design: workspace sidebar
 - [ ] S9-07b — Rename configuration: Metadata, Properties
 - [ ] S9-08 — Sidebar sections: Source, Conclude, Configure
@@ -560,6 +560,8 @@ In order; each brief sits just above the PR it gates.
 
 #### S9-07 — Person header composer + list read
 
+**Done.** See [`completed.md`](completed.md#s9-07--person-header-composer--list-read). For **S9-08**: `WorkspaceSection.persons` and its place exist but the sidebar doesn't list it; `CatalogCounts.persons` is filled by `refreshAll()` (nav counts carry `persons`) — re-publishing it after a Promote is S9-08's job. For **S9-09**: the place's `queryKeys` is empty and `PersonsListView` is an EmptyState; add `.personsList` to the place and render `CatalogPersonHeader` rows titled by `PersonHeaderDisplay.title`.
+
 | | |
 | --- | --- |
 | **In** | Go Person header (resolved name, fallback label → ref) from the cache; set-based list composition; list + count FFI; Swift store, FakeStore, `CatalogQueryKey` + `PlaceRegistry` for Persons (stub view); invalidation (bust all Conclusion keys; evict details). Name formatting from NameValue structures. |
@@ -638,14 +640,14 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 
 | | |
 | --- | --- |
-| **In** | Resolver ranking by Source credibility → Citation certainty → member claim confidence → agreement → id; negative polarity excluded and counted against. Upkeep triggers for credibility, transcription-certainty, and claim-confidence changes; extend the rebuild-equals-upkeep tests. Cache version bump. |
+| **In** | Resolver ranking by Source credibility → Citation certainty → member claim confidence → agreement → id; negative polarity excluded and counted against. Upkeep triggers for credibility, transcription-certainty, and claim-confidence changes; extend the rebuild-equals-upkeep tests. Cache version bump. **Swift:** a certainty mutation joins `conclusionTriggers`; split a dedicated credibility mutation out of `mutatedSourceWorkspace` if its over-bust shows up. |
 | **Depends on** | S9-06 |
 
 #### S9-15 — Detail composer + detail read
 
 | | |
 | --- | --- |
-| **In** | Go detail composer (fields with states and all clusters, support counts); detail FFI; Swift store + detail key (stub view); value-state formatting (single / merged / mixed / empty, *+N*). |
+| **In** | Go detail composer (fields with states and all clusters, support counts); detail FFI; Swift store + detail key (stub view); value-state formatting (single / merged / mixed / empty, *+N*). **Eviction:** `WorkspaceSession` learns the visible place and evicts non-visible Conclusion detail keys on a Conclusion trigger (the rule-2 exception, deferred from S9-07). |
 | **Depends on** | S9-07 |
 
 #### S9-16 — Person detail

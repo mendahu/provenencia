@@ -327,6 +327,50 @@ struct CatalogQueryRegistryTests {
         #expect(bob != nil && bob?.membership == nil)
     }
 
+    @Test func personsListLoadsHeadersOfPromotedPersons() async throws {
+        let store = FakeStore()
+        seedStore(store)
+        store.subjectTypesByProject[projectDir] = [
+            CatalogSubjectType(
+                id: "type-person", key: "person", origin: "provenencia", label: "Person",
+                description: "", refPrefix: "PER", candidateRefPrefix: "CPR"
+            ),
+        ]
+        store.subjectsBySource["s1"] = [
+            CatalogSubject(id: "sub-1", ref: "CPR-1", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
+            CatalogSubject(id: "sub-2", ref: "CPR-2", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
+        ]
+        store.observationsBySource["s1"] = [
+            nameObservation(id: "o1", subjectID: "sub-1", form: "James Robins"),
+            nameObservation(id: "o2", subjectID: "sub-1", form: "Jim Robins"),
+            nameObservation(id: "o3", subjectID: "sub-1", form: "james robins"),
+        ]
+        let james = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-1")
+        let bare = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-2")
+
+        let session = makeSession(store: store)
+        let handle: QueryHandle<[CatalogPersonHeader]> = session.query(
+            CatalogQueryKey.personsList(project: session.projectKey)
+        )
+        await waitForFetchComplete(handle)
+
+        let headers = try #require(handle.value)
+        #expect(headers.map(\.entity.ref) == [james.entity.ref, bare.entity.ref])
+        #expect(headers[0].name?.form == "James Robins")
+        #expect(headers[0].isNameMixed && headers[0].additionalNameCount == 1)
+        #expect(headers[1].name == nil && PersonHeaderDisplay.title(headers[1]) == bare.entity.ref)
+        #expect(store.heldCatalogProjectDir == projectDir)
+    }
+
+    private func nameObservation(id: String, subjectID: String, form: String) -> CatalogObservation {
+        CatalogObservation(
+            id: id, ref: "OBS-\(id)", citationID: "c1", subjectID: subjectID, propertyID: "p-name",
+            polarity: "positive", valueText: form, valueInteger: nil, valueDateID: "",
+            valueNameID: "n-\(id)", nameForm: form, valueSubjectID: "", valueTermID: "",
+            propertyKey: "name", propertyLabel: "Name", propertyValueType: "name"
+        )
+    }
+
     @Test func registryBackedQueryDoesNotRecallLoader() async {
         let store = FakeStore()
         seedStore(store)
@@ -551,6 +595,7 @@ struct CatalogQueryRegistryTests {
             .key(.sourceTypesList(project: project)),
             .key(.sourceWorkspace(project: project, sourceId: "s1")),
             .key(.sourceGraph(project: project, sourceId: "s1")),
+            .key(.personsList(project: project)),
         ])
         // Adding vocabulary touches only the list that owns it — the Source
         // page reads that list rather than carrying its own copy.
@@ -599,16 +644,20 @@ struct CatalogQueryRegistryTests {
             .key(.citationCounts(project: project, sourceId: "s1")),
             .key(.subjectFieldsWorkspace(project: project)),
             .allCached(.citationsByArtifact),
+            .key(.personsList(project: project)),
         ])
         #expect(registry.invalidations(by: .deletedSubject(sourceId: "s1"), project: project) == [
             .key(.sourceGraph(project: project, sourceId: "s1")),
             .key(.citationCounts(project: project, sourceId: "s1")),
             .key(.subjectFieldsWorkspace(project: project)),
             .allCached(.citationsByArtifact),
+            .key(.personsList(project: project)),
         ])
-        // A Promote changes only that Source's graph cards (their membership row).
+        // A Promote changes that Source's graph cards (their membership row)
+        // and every Conclusion key.
         #expect(registry.invalidations(by: .promotedSubject(sourceId: "s1"), project: project) == [
             .key(.sourceGraph(project: project, sourceId: "s1")),
+            .key(.personsList(project: project)),
         ])
         #expect(registry.invalidations(by: .createdPropertyTerm(propertyId: "p1"), project: project) == [
             .key(.propertyTerms(project: project, propertyId: "p1")),
@@ -631,9 +680,20 @@ struct CatalogQueryRegistryTests {
                 .key(.credibilityGradesList(project: project))
             )
         })
-        // Writes that name their source stay narrow.
+        // Writes that name their source stay narrow — except that a Source
+        // workspace write may be a credibility change, a Conclusion trigger.
         #expect(registry.invalidations(by: .mutatedSourceWorkspace(sourceId: "s1"), project: project) == [
             .key(.sourceWorkspace(project: project, sourceId: "s1")),
+            .key(.personsList(project: project)),
+        ])
+        // Every Conclusion trigger stales the Persons list; nothing else does.
+        for mutation in everyMutation {
+            let stales = registry.invalidations(by: mutation, project: project).contains(.key(.personsList(project: project)))
+            let isTrigger = mutation.invalidationKind.map { CatalogQueryRegistry.conclusionTriggers.contains($0) } ?? false
+            #expect(stales == isTrigger, "\(mutation)")
+        }
+        #expect(CatalogQueryRegistry.conclusionTriggers == [
+            .savedCitation, .deletedSubject, .promotedSubject, .deletedSource, .mutatedSourceWorkspace,
         ])
         #expect(registry.invalidations(by: .mutatedSourceMetadata(sourceId: "s1"), project: project) == [
             .key(.metadataFieldsList(project: project)),
