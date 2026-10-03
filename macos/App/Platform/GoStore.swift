@@ -625,7 +625,8 @@ struct GoStore: GenealogyStore {
         return WorkspaceNavCounts(
             sources: Int(resp.sources),
             sourceTypes: Self.mapOriginCounts(resp.sourceTypes),
-            sourceFields: Self.mapOriginCounts(resp.sourceFields)
+            sourceFields: Self.mapOriginCounts(resp.sourceFields),
+            persons: Int(resp.persons)
         )
     }
 
@@ -750,6 +751,26 @@ struct GoStore: GenealogyStore {
                 kind: m.kind
             )
         }
+    }
+
+    func listPersonHeaders(projectDir: String) async throws -> [CatalogPersonHeader] {
+        var req = Provenencia_Engine_V1_ListPersonHeadersRequest()
+        req.projectDir = projectDir
+        let resp: Provenencia_Engine_V1_ListPersonHeadersResponse = try await provenenciaCall(
+            method: CoreMethod.listPersonHeaders,
+            request: req
+        )
+        return resp.headers.map { h in
+            CatalogPersonHeader(
+                entity: Self.mapCanonicalEntity(h.entity),
+                name: h.hasName ? Self.mapNameValue(h.name) : nil,
+                nameClusterCount: Int(h.nameClusterCount)
+            )
+        }
+    }
+
+    private static func mapNameValue(_ n: Provenencia_Engine_V1_NameValueInput) -> CatalogNameValue {
+        CatalogNameValue(form: n.form, parts: n.parts.map { CatalogNameValuePart(value: $0.value, type: $0.type) })
     }
 
     private static func mapCanonicalEntity(_ e: Provenencia_Engine_V1_CanonicalEntity) -> CatalogCanonicalEntity {

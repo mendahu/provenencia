@@ -98,6 +98,11 @@ struct WorkspaceDestinationHostTests {
         #expect(WorkspaceDestinationHost.destinationKind(for: .sourceCitationComposer) == .sources)
     }
 
+    @Test func personsPresentationHasOwnKind() {
+        #expect(presentation(for: .sectionRoot(.persons)) == .personsList)
+        #expect(WorkspaceDestinationHost.destinationKind(for: .personsList) == .persons)
+    }
+
     @Test func subjectFieldsPresentationHasOwnKind() {
         #expect(WorkspaceDestinationHost.destinationKind(for: .subjectFields) == .subjectFields)
     }
@@ -120,6 +125,7 @@ struct WorkspaceDestinationHostTests {
             .sectionRoot(.sourceTypes),
             WorkspaceLocation(section: .sourceTypes, typeId: "t1"),
             .sectionRoot(.subjectFields),
+            .sectionRoot(.persons),
         ]
         let known = Set(WorkspacePresentationID.allCases)
         for location in locations {
@@ -129,6 +135,6 @@ struct WorkspaceDestinationHostTests {
             }
             #expect(known.contains(place.presentation))
         }
-        #expect(known.count == 7)
+        #expect(known.count == 8)
     }
 }

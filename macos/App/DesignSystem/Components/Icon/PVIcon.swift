@@ -33,6 +33,7 @@ enum PVSymbol: String {
     /// Subject fields — properties hanging off a subject kind (S5-D3 `list-tree`).
     case listTree = "list.bullet.indent"
     case account = "person.crop.circle"
+    case person = "person"
     case sidebarToggle = "sidebar.left"
     case search = "magnifyingglass"
     case searchEmpty = "text.magnifyingglass"

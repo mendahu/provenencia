@@ -144,6 +144,15 @@ struct PlaceRegistry: Sendable {
             },
             deepId: { _ in nil }
         ),
+        Spec(
+            id: .personsList,
+            presentation: .personsList,
+            priority: 10,
+            matches: { $0.section == .persons },
+            // Stub page: reads nothing until S9-09 renders `.personsList`.
+            queryKeys: { _, _ in [] },
+            deepId: { _ in nil }
+        ),
     ]
 
     private var orderedSpecs: [Spec] {

@@ -96,6 +96,7 @@ enum Method {
   METHOD_DELETE_CITATION = 84;
   METHOD_PROMOTE_SUBJECT = 85;
   METHOD_LIST_SUBJECT_MEMBERSHIPS = 86;
+  METHOD_LIST_PERSON_HEADERS = 87;
 }
 
 message PingRequest {
@@ -742,6 +743,7 @@ message GetWorkspaceNavCountsResponse {
   VocabularyOriginCounts source_fields = 3;
   reserved 4;
   reserved "files";
+  int32 persons = 5; // unmerged Person handles
 }
 
 // EnsureFileThumbnail lazily creates (or returns) the default thumbnail
@@ -932,6 +934,27 @@ message ListSubjectMembershipsRequest {
 
 message ListSubjectMembershipsResponse {
   repeated SubjectMembership memberships = 1;
+}
+
+// PersonHeader is one Person as a row, composed from the resolved-values
+// cache. Structures only: the app formats the title (name, else entity
+// label, else ref). name is the rank-1 resolved name cluster, absent when no
+// member names the Person; name_cluster_count > 1 means the members disagree
+// (mixed), and the extra clusters are the list's +N.
+message PersonHeader {
+  CanonicalEntity entity = 1;
+  NameValueInput name = 2;
+  int32 name_cluster_count = 3;
+}
+
+// ListPersonHeaders returns every unmerged Person in list order: named
+// Persons by resolved name, then the rest by ref.
+message ListPersonHeadersRequest {
+  string project_dir = 1;
+}
+
+message ListPersonHeadersResponse {
+  repeated PersonHeader headers = 1;
 }
 
 message ListSubjectsRequest {

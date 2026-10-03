@@ -113,6 +113,7 @@ enum CoreMethod {
     static let deleteCitation = Int32(Provenencia_Engine_V1_Method.deleteCitation.rawValue)
     static let promoteSubject = Int32(Provenencia_Engine_V1_Method.promoteSubject.rawValue)
     static let listSubjectMemberships = Int32(Provenencia_Engine_V1_Method.listSubjectMemberships.rawValue)
+    static let listPersonHeaders = Int32(Provenencia_Engine_V1_Method.listPersonHeaders.rawValue)
 }
 
 func provenenciaInvoke(method: Int32, request: Data) throws -> Data {

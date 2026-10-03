@@ -9486,6 +9486,30 @@
         }
       }
     },
+    "workspace.section.persons.stubMessage": {
+      "comment": "Placeholder body on the Persons page until the list ships",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Persons list is on its way. Promoted people will be listed here."
+          }
+        }
+      }
+    },
+    "workspace.section.persons.title": {
+      "comment": "Workspace sidebar destination and page title: Persons (Conclude section)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Persons"
+          }
+        }
+      }
+    },
     "workspace.section.sourceFields.title": {
       "comment": "Workspace sidebar destination and page title: Source fields",
       "extractionState": "manual",

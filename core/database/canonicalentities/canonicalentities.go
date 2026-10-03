@@ -27,6 +27,10 @@ const (
 		WHERE subject_type_id = ?
 		ORDER BY ref COLLATE NOCASE`
 	sqlTypePrefix = `SELECT ref_prefix FROM subject_types WHERE id = ?`
+	// Merged handles are folded into their target and never counted.
+	sqlCountByTypeKey = `SELECT COUNT(*) FROM canonical_entities e
+		JOIN subject_types st ON st.id = e.subject_type_id
+		WHERE st.key = ? AND st.origin = 'provenencia' AND e.merged_into_id IS NULL`
 	maxRefRetries = 8
 )
 
@@ -196,6 +200,22 @@ func ListByType(c *database.Catalog, subjectTypeID []byte) ([]Entity, error) {
 		out = append(out, e)
 	}
 	return out, rows.Err()
+}
+
+// CountByTypeKey counts unmerged handles of a product Subject type (person,
+// event, place).
+func CountByTypeKey(c *database.Catalog, typeKey string) (int, error) {
+	db, err := c.DB()
+	if err != nil {
+		return 0, err
+	}
+	typeKey = strings.TrimSpace(typeKey)
+	if typeKey == "" {
+		return 0, ErrInvalid
+	}
+	var n int
+	err = db.QueryRow(sqlCountByTypeKey, typeKey).Scan(&n)
+	return n, err
 }
 
 type rowScanner interface {

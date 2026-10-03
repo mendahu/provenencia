@@ -43,6 +43,9 @@
 		A70D00000000000000000008 /* NameValueFormDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70D00000000000000000007 /* NameValueFormDialog.swift */; };
 		A70D0000000000000000000A /* NameValueHostControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70D00000000000000000009 /* NameValueHostControl.swift */; };
 		A70D0000000000000000000C /* NameValueDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70D0000000000000000000B /* NameValueDisplay.swift */; };
+		A90700000000000000000006 /* PersonHeaderDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90700000000000000000005 /* PersonHeaderDisplayTests.swift */; };
+		A90700000000000000000004 /* PersonsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90700000000000000000003 /* PersonsListView.swift */; };
+		A90700000000000000000002 /* PersonHeaderDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90700000000000000000001 /* PersonHeaderDisplay.swift */; };
 		A70D0000000000000000000E /* NameValueDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70D0000000000000000000D /* NameValueDraftTests.swift */; };
 		A70900000000000000000002 /* DateValueDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70900000000000000000001 /* DateValueDisplay.swift */; };
 		A70900000000000000000004 /* DateValueDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70900000000000000000003 /* DateValueDisplayTests.swift */; };
@@ -345,6 +348,9 @@
 		A70D00000000000000000007 /* NameValueFormDialog.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NameValueFormDialog.swift; sourceTree = "<group>"; };
 		A70D00000000000000000009 /* NameValueHostControl.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NameValueHostControl.swift; sourceTree = "<group>"; };
 		A70D0000000000000000000B /* NameValueDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NameValueDisplay.swift; sourceTree = "<group>"; };
+		A90700000000000000000005 /* PersonHeaderDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersonHeaderDisplayTests.swift; sourceTree = "<group>"; };
+		A90700000000000000000003 /* PersonsListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersonsListView.swift; sourceTree = "<group>"; };
+		A90700000000000000000001 /* PersonHeaderDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersonHeaderDisplay.swift; sourceTree = "<group>"; };
 		A70D0000000000000000000D /* NameValueDraftTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NameValueDraftTests.swift; sourceTree = "<group>"; };
 		A70900000000000000000001 /* DateValueDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueDisplay.swift; sourceTree = "<group>"; };
 		A70900000000000000000003 /* DateValueDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueDisplayTests.swift; sourceTree = "<group>"; };
@@ -875,6 +881,7 @@
 				AA0000000000000000000316 /* Sources */,
 				AA0000000000000000000334 /* Dates */,
 				A70D00000000000000000010 /* Names */,
+				A90700000000000000000010 /* Persons */,
 				A70B0000000000000000000D /* ArtifactViewer */,
 				A70800000000000000000007 /* CitationComposer */,
 				A71D0000000000000000000B /* OCR */,
@@ -942,6 +949,15 @@
 				AA0000000000000000000336 /* DateValueEditorForm.swift */,
 			);
 			path = Dates;
+			sourceTree = "<group>";
+		};
+		A90700000000000000000010 /* Persons */ = {
+			isa = PBXGroup;
+			children = (
+				A90700000000000000000001 /* PersonHeaderDisplay.swift */,
+				A90700000000000000000003 /* PersonsListView.swift */,
+			);
+			path = Persons;
 			sourceTree = "<group>";
 		};
 		A70D00000000000000000010 /* Names */ = {
@@ -1086,6 +1102,7 @@
 				AA00000000000000000003B2 /* PVFileTypeGlyphTests.swift */,
 				AA0000000000000000000332 /* DateValueDraftTests.swift */,
 				A70D0000000000000000000D /* NameValueDraftTests.swift */,
+				A90700000000000000000005 /* PersonHeaderDisplayTests.swift */,
 				A70900000000000000000003 /* DateValueDisplayTests.swift */,
 				A70900000000000000000007 /* ObservationValueDisplayTests.swift */,
 				A7090000000000000000000B /* EvidenceBridgeEdgeSummaryTests.swift */,
@@ -1747,6 +1764,8 @@
 				A70D00000000000000000008 /* NameValueFormDialog.swift in Sources */,
 				A70D0000000000000000000A /* NameValueHostControl.swift in Sources */,
 				A70D0000000000000000000C /* NameValueDisplay.swift in Sources */,
+				A90700000000000000000004 /* PersonsListView.swift in Sources */,
+				A90700000000000000000002 /* PersonHeaderDisplay.swift in Sources */,
 				A70B00000000000000000002 /* ArtifactViewerKind.swift in Sources */,
 				A70B00000000000000000004 /* ArtifactViewerContent.swift in Sources */,
 				A70B00000000000000000006 /* ArtifactViewerModel.swift in Sources */,
@@ -1840,6 +1859,7 @@
 				AA00000000000000000003B3 /* PVFileTypeGlyphTests.swift in Sources */,
 				AA0000000000000000000333 /* DateValueDraftTests.swift in Sources */,
 				A70D0000000000000000000E /* NameValueDraftTests.swift in Sources */,
+				A90700000000000000000006 /* PersonHeaderDisplayTests.swift in Sources */,
 				A70900000000000000000004 /* DateValueDisplayTests.swift in Sources */,
 				A70900000000000000000008 /* ObservationValueDisplayTests.swift in Sources */,
 				A7090000000000000000000C /* EvidenceBridgeEdgeSummaryTests.swift in Sources */,

@@ -44,6 +44,39 @@ func TestCanonicalEntities(t *testing.T) {
 			},
 		},
 		{
+			name: "count by type key excludes other types and merged handles",
+			run: func(t *testing.T, c *database.Catalog) {
+				person, place := lookupType(t, c, "person"), lookupType(t, c, "place")
+				var persons []canonicalentities.Entity
+				for i := 0; i < 3; i++ {
+					e, err := canonicalentities.Create(c, userID, canonicalentities.CreateInput{SubjectTypeID: person.ID})
+					if err != nil {
+						t.Fatal(err)
+					}
+					persons = append(persons, e)
+				}
+				if _, err := canonicalentities.Create(c, userID, canonicalentities.CreateInput{SubjectTypeID: place.ID}); err != nil {
+					t.Fatal(err)
+				}
+				db, err := c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := db.Exec(`UPDATE canonical_entities SET merged_into_id = ? WHERE id = ?`, persons[0].ID, persons[2].ID); err != nil {
+					t.Fatal(err)
+				}
+				if n, err := canonicalentities.CountByTypeKey(c, "person"); err != nil || n != 2 {
+					t.Fatalf("persons %d %v", n, err)
+				}
+				if n, err := canonicalentities.CountByTypeKey(c, "event"); err != nil || n != 0 {
+					t.Fatalf("events %d %v", n, err)
+				}
+				if _, err := canonicalentities.CountByTypeKey(c, " "); err == nil {
+					t.Fatal("blank key accepted")
+				}
+			},
+		},
+		{
 			name: "create records one audit change",
 			run: func(t *testing.T, c *database.Catalog) {
 				place := lookupType(t, c, "place")

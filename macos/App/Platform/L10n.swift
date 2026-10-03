@@ -793,6 +793,18 @@ enum L10n {
             comment: "Workspace sidebar destination and page title: Subject fields"
         )
 
+        static let personsTitle = LocalizedStringResource(
+            "workspace.section.persons.title",
+            defaultValue: "Persons",
+            comment: "Workspace sidebar destination and page title: Persons (Conclude section)"
+        )
+
+        static let personsStubMessage = LocalizedStringResource(
+            "workspace.section.persons.stubMessage",
+            defaultValue: "The Persons list is on its way. Promoted people will be listed here.",
+            comment: "Placeholder body on the Persons page until the list ships"
+        )
+
         static let evidenceGraphTitle = LocalizedStringResource(
             "workspace.section.evidenceGraph.title",
             defaultValue: "Evidence graph",
