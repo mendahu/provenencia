@@ -205,7 +205,7 @@ Each hop is an indexed lookup on R3. List composers run set-based over the whole
 
 ### R5 — List pages (Persons, Events, Places)
 
-Three sidebar destinations under a new Conclusions group, with counts ([`CatalogCounts`](../../../macos/App/Features/Catalog/CatalogCounts.swift)). Rows come from the R4 header composers (Q6).
+Three sidebar destinations under a new **Conclude** section (sidebar sections: Source, Conclude, Narrate later, Configure — S9-D1), with counts ([`CatalogCounts`](../../../macos/App/Features/Catalog/CatalogCounts.swift)). Rows come from the R4 header composers (Q6).
 
 | List | Row |
 | --- | --- |
@@ -322,7 +322,7 @@ SLICE 2 — Persons list
   S9-06  Resolved-values cache: table, loader, rebuild, upkeep, rebuild-equals-upkeep test
   S9-07  Person header composer (name) + list read + Swift store / keys / name formatting
   S9-07b Rename configuration: Source fields → Metadata, Subject fields → Properties (app, Go, FFI, tables)
-  ✎ S9-D1 ──▶ S9-08  Sidebar: Conclusions group (Events / Places stubbed); configuration bottom-aligned
+  ✎ S9-D1 ──▶ S9-08  Sidebar: Source / Conclude sections (Events / Places stubbed); Configure bottom-aligned
   ✎ S9-D2 ──▶ S9-09  Persons list (name + ref) + name on the card's membership row
   Check: promoted Persons listed by name; edit a name Observation → the row updates.
 
@@ -444,7 +444,7 @@ In order; each brief sits just above the PR it gates.
 - [ ] S9-07 — Person header composer + list read
 - [ ] ✎ S9-D1 — Design: workspace sidebar
 - [ ] S9-07b — Rename configuration: Metadata, Properties
-- [ ] S9-08 — Sidebar Conclusions group + configuration at the bottom
+- [ ] S9-08 — Sidebar sections: Source, Conclude, Configure
 - [ ] ✎ S9-D2 — Design: Persons list
 - [ ] S9-09 — Persons list
 - [ ] S9-10 — Promote write + reads: existing target
@@ -583,11 +583,11 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 | **Testable** | Old navigation history decodes to the renamed sections; an existing catalog migrates and still opens (schema hash, Impact honesty); search finds metadata fields and Properties after the rebuild; no remaining `SourceField` / `SubjectField` identifiers outside migrations and legacy decoders (a grep check in the PR). |
 | **Depends on** | — (independent; lands before S9-08 so the sidebar is built on the new names) |
 
-#### S9-08 — Sidebar Conclusions group + configuration at the bottom
+#### S9-08 — Sidebar sections: Source, Conclude, Configure
 
 | | |
 | --- | --- |
-| **In** | Per **S9-D1**: Sources and the Conclusions group (Persons live; Events / Places present but stubbed until S9-23 / S9-26) top-aligned, with counts. The configuration section — **Source types**, **Metadata**, **Properties** (names from S9-07b) — bottom-aligned directly above the session footer, separated by space; on a short window the column scrolls as one (W-5b). Rail icons for both sections. |
+| **In** | Per **S9-D1**: titled sections. **Source** (Sources) and **Conclude** (Persons live; Events / Places present but stubbed until S9-23 / S9-26) top-aligned, with counts. **Configure** — **Source types**, **Metadata**, **Properties** (names from S9-07b) — bottom-aligned directly above the session footer, separated by space; on a short window the column scrolls as one (W-5b). Rail icons. **Narrate** is reserved after Conclude but not rendered (Narrative layer, later spike). |
 | **Check** | Persons count matches promoted Persons; configuration sits above the footer on a tall window and follows the research section on a short one. |
 | **Depends on** | **S9-D1**, S9-07, S9-07b |
 
