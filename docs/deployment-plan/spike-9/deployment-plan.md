@@ -156,7 +156,7 @@ conclusion_resolved_values
   Recompute is **per handle** for now: a trigger rewrites all of the handle's Properties through the same batched loader as rebuild. Narrowing to (E, P) waits for timings that call for it (S9-33).
 
 - **Rebuildable.** A version row (`conclusion_resolved_meta.cache_version` against `resolvedvalues.CacheVersion`, like `catalog_search_meta`); a mismatch on Open rebuilds from truth tables. Bumping the version is the development rebuild — there is no separate command.
-- **Proven.** A randomized test applies write sequences, then checks incremental upkeep equals a full rebuild. Ships in the same PR as the cache.
+- **Proven.** Rebuild-equals-upkeep tests apply write sequences through the real write APIs, then check incremental upkeep equals a full rebuild: long sequences generated from **fixed** seeds (deterministic; a failure names its seed and step) plus named hand-written scenarios. A failure a seed finds is shrunk into a scenario. Ships in the same PR as the cache.
 - **Batched loading.** The resolver's inputs (members, candidates, provenance) load in a fixed number of set-based queries per batch of handles — no per-Property or per-member loops. The same loader serves rebuild and incremental upkeep.
 
 ### R4 — Composers (headers, walks, derived values)
@@ -546,13 +546,13 @@ In order; each brief sits just above the PR it gates.
 
 #### S9-06 — Resolved-values cache
 
-**Done.** See [`completed.md`](completed.md#s9-06--resolved-values-cache). Package `core/database/resolvedvalues`: `RecomputeTx` / `RecomputeSubjectsTx` are the upkeep calls a new write path adds (and an operation in `TestRebuildEqualsUpkeep`); a resolution change bumps `CacheVersion`. Still NULL: `date_lo` / `date_hi` and date `sort_key` (**S9-21**), `value_entity_id` — subject-valued Properties are not cached yet (**S9-28**). The loader reads no provenance until **S9-14**. Dates and names are protobuf via `core/valuecodec`.
+**Done.** See [`completed.md`](completed.md#s9-06--resolved-values-cache). Package `core/database/resolvedvalues`: `RecomputeTx` / `RecomputeSubjectsTx` are the upkeep calls a new write path adds (and an operation in `TestRebuildEqualsUpkeep_SeededSequences`, plus a scenario in `TestRebuildEqualsUpkeep_Scenarios` where it has a characteristic sequence); a resolution change bumps `CacheVersion`. Still NULL: `date_lo` / `date_hi` and date `sort_key` (**S9-21**), `value_entity_id` — subject-valued Properties are not cached yet (**S9-28**). The loader reads no provenance until **S9-14**. Dates and names are protobuf via `core/valuecodec`.
 
 | | |
 | --- | --- |
-| **In** | Migration: `conclusion_resolved_values` (R3 shape, all columns and indexes up front) + version row. Batched loader (members, Observations, provenance in a fixed number of queries per batch). Full rebuild; version check on Open. Upkeep in the write transaction for the write paths that exist now: Promote (claim create), Observation save / delete, Subject delete (affected handles from `deleteimpact.ReleaseFacets` → `Released.Handles`, computed before anything is gone; a member Observation's save / delete recomputes its Subject's handle directly — `Released.Handles` only covers membership and evidence changes). **Rebuild-equals-upkeep randomized test.** |
+| **In** | Migration: `conclusion_resolved_values` (R3 shape, all columns and indexes up front) + version row. Batched loader (members, Observations, provenance in a fixed number of queries per batch). Full rebuild; version check on Open. Upkeep in the write transaction for the write paths that exist now: Promote (claim create), Observation save / delete, Subject delete (affected handles from `deleteimpact.ReleaseFacets` → `Released.Handles`, computed before anything is gone; a member Observation's save / delete recomputes its Subject's handle directly — `Released.Handles` only covers membership and evidence changes). **Rebuild-equals-upkeep test** (fixed-seed sequences + named scenarios). |
 | **Out** | Credibility / certainty triggers (S9-14); inbound-end trigger (S9-28). |
-| **Testable** | Rebuild matches hand-computed rows; version mismatch rebuilds; randomized equivalence; loader query count constant. |
+| **Testable** | Rebuild matches hand-computed rows; version mismatch rebuilds; rebuild-equals-upkeep equivalence; loader query count constant. |
 | **Depends on** | S9-01, S9-05 |
 
 #### S9-07 — Person header composer + list read
@@ -618,7 +618,7 @@ In order; each brief sits just above the PR it gates.
 
 | | |
 | --- | --- |
-| **In** | Resolver ranking by Source credibility → Citation certainty → member claim confidence → agreement → id; negative polarity excluded and counted against. Upkeep triggers for credibility, transcription-certainty, and claim-confidence changes; extend the randomized test. Cache version bump. |
+| **In** | Resolver ranking by Source credibility → Citation certainty → member claim confidence → agreement → id; negative polarity excluded and counted against. Upkeep triggers for credibility, transcription-certainty, and claim-confidence changes; extend the rebuild-equals-upkeep tests. Cache version bump. |
 | **Depends on** | S9-06 |
 
 #### S9-15 — Detail composer + detail read
@@ -731,7 +731,7 @@ In order; each brief sits just above the PR it gates.
 
 | | |
 | --- | --- |
-| **In** | Resolver: subject-valued Properties map to the target's handle (unpromoted drop out) — the canonical graph. Upkeep: a claim create / remove recomputes handles whose members' Observations point at that subject. Promote write files bridge subjects onto the association the ends already share, or mints one (lift the S9-02 primary-kinds guard in `promote.Save`). Extend the randomized test. Once bridge edge Observations can be pinned, test that deleting a bridge Subject releases those pins audited: its connection-facet release erases each edge Observation through `ReleaseFacets(KindObservation)`, which takes the pins first. |
+| **In** | Resolver: subject-valued Properties map to the target's handle (unpromoted drop out) — the canonical graph. Upkeep: a claim create / remove recomputes handles whose members' Observations point at that subject. Promote write files bridge subjects onto the association the ends already share, or mints one (lift the S9-02 primary-kinds guard in `promote.Save`). Extend the rebuild-equals-upkeep tests. Once bridge edge Observations can be pinned, test that deleting a bridge Subject releases those pins audited: its connection-facet release erases each edge Observation through `ReleaseFacets(KindObservation)`, which takes the pins first. |
 | **Depends on** | S9-12 |
 
 #### S9-29 — Neighborhood read

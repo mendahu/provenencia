@@ -184,12 +184,12 @@ The resolver's output now lives in one derived table, rewritten in the transacti
 - **Open:** `resolvedvalues.EnsureCatalog` beside `searchindex.EnsureCatalog` in `catalogsession` and both `onboarding` paths.
 - `core/valuecodec`: the date and name proto converters moved out of the FFI handlers, plus Marshal / Unmarshal pairs. Dates and names are stored as `DateValueInput` / `NameValueInput` bytes (Q12). This is core's first import of `api/proto/engine`.
 - `datevalues.LookupManyTx`, `namevalues.LookupManyTx` (querier variants; Catalog readers deadlock inside a write tx). `resolve.SortKey`: normalized form for names, case-folded text, order-preserving integers.
-- **Tests:** hand-computed rows per value type; each hook; stale version rebuilds; loader query count; **rebuild equals upkeep** over random write sequences (4 seeds × 200 steps). Removing any live hook fails it.
+- **Tests:** hand-computed rows per value type; each hook; stale version rebuilds; loader query count; **rebuild equals upkeep**, two ways: `TestRebuildEqualsUpkeep_SeededSequences` (generated sequences from fixed seeds, 4 × 200 steps; deterministic, failures name seed and step) and `TestRebuildEqualsUpkeep_Scenarios` (named hand-written sequences; a failure a seed finds is shrunk into one). Removing any live hook fails the sequences.
 
 **What stayed out**
 
 - Provenance in the loader and its triggers (**S9-14**)
 - `date_lo` / `date_hi` and a date `sort_key` (**S9-21**)
-- Subject-valued Properties and `value_entity_id`, plus the inbound-end trigger (**S9-28**). Until then the Subject-delete hook cannot change rows (a Subject with Observations is refused), so the randomized test exercises it without being able to catch its absence.
+- Subject-valued Properties and `value_entity_id`, plus the inbound-end trigger (**S9-28**). Until then the Subject-delete hook cannot change rows (a Subject with Observations is refused), so the rebuild-equals-upkeep tests exercise it without being able to catch its absence.
 - Narrowing upkeep to (handle, Property); timings (**S9-33**)
 - Readers, FFI, Swift (**S9-07**)

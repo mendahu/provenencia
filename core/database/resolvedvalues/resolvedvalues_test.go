@@ -298,9 +298,7 @@ func TestResolvedValues(t *testing.T) {
 		}
 	})
 
-	if got, want := f.rows(), f.rebuiltSnapshot(); !reflect.DeepEqual(got, want) {
-		t.Fatalf("upkeep != rebuild\n got %d rows\nwant %d rows", len(got), len(want))
-	}
+	f.assertUpkeepEqualsRebuild("TestResolvedValues")
 }
 
 func TestEnsureCatalogRebuildsStaleVersion(t *testing.T) {
@@ -354,15 +352,82 @@ func TestLoaderQueryCountIsConstant(t *testing.T) {
 	}
 }
 
-// TestRebuildEqualsUpkeep applies random write sequences through the real
-// write APIs and checks the incrementally maintained table against a full
-// rebuild. A new write path or trigger adds its operation here.
+// assertUpkeepEqualsRebuild fails when the incrementally maintained table
+// differs from a full rebuild (taken in a rolled-back transaction).
+func (f *fixture) assertUpkeepEqualsRebuild(at string) {
+	f.t.Helper()
+	if got, want := f.rows(), f.rebuiltSnapshot(); !reflect.DeepEqual(got, want) {
+		f.t.Fatalf("%s: upkeep has %d rows, rebuild %d", at, len(got), len(want))
+	}
+}
+
+// Rebuild-equals-upkeep is the guard against silent upkeep misses (Gotcha 5).
+// Two tests share it:
+//
+//   - TestRebuildEqualsUpkeep_SeededSequences generates long mixed write
+//     sequences from FIXED seeds. It is deterministic: the same seed applies
+//     the same operations in the same order on every run and machine, and a
+//     failure names its seed and step. Never seed from time or add seeds
+//     that vary per run; to explore new seeds, try them locally and promote
+//     any failure as below.
+//   - TestRebuildEqualsUpkeep_Scenarios holds named, hand-written sequences.
+//     When a seed finds a bug, shrink its operations to the shortest sequence
+//     that still fails and add it here, so the regression reads on its own and
+//     does not depend on the generator.
+//
+// A new write path or trigger adds its operation to the generator and, where
+// it has a characteristic sequence, a scenario.
 //
 // Subject delete is exercised but cannot yet change rows: Impact refuses a
 // Subject that still has Observations, and pins don't feed resolution until
 // S9-14 (claim confidence) / S9-28 (subject-valued ends). Its hook is in place
-// so those PRs only extend this sequence.
-func TestRebuildEqualsUpkeep(t *testing.T) {
+// so those PRs only extend these sequences.
+
+func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
+	scenarios := []struct {
+		name string
+		run  func(f *fixture)
+	}{
+		{"edit moves the rank-1 cluster, then its last member is deleted", func(f *fixture) {
+			p := f.subject("person")
+			obs := f.cite(nameIn(p, f.props["name"], "James Robins"), nameIn(p, f.props["name"], "Jim Robins"))
+			f.promote(p)
+			_, err := observations.Update(f.c, userID, observations.Input{
+				ID: obs[1].ID, SubjectID: p.ID, PropertyID: f.props["name"].ID, Name: &namevalues.Value{Form: "james robins"},
+			})
+			must(f.t, err)
+			f.assertUpkeepEqualsRebuild("after update")
+			must(f.t, observations.Delete(f.c, userID, obs[0].ID))
+		}},
+		{"observations added before and after promote on two members", func(f *fixture) {
+			a, b := f.subject("place"), f.subject("place")
+			f.cite(textIn(a, f.props["toponym"], "York"))
+			h := f.promote(a)
+			f.cite(textIn(a, f.props["toponym"], "york"), textIn(b, f.props["toponym"], "Toronto"))
+			f.promote(b)
+			f.assertUpkeepEqualsRebuild("two handles")
+			if len(rowsFor(f.rows(), h, f.props["toponym"].ID)) != 2 {
+				f.t.Fatal("York / york should be two clusters")
+			}
+		}},
+		{"emptied member subject deleted", func(f *fixture) {
+			p := f.subject("event")
+			obs := f.cite(dateIn(p, f.props["date"], 1985, ip(5), nil))
+			f.promote(p)
+			must(f.t, observations.Delete(f.c, userID, obs[0].ID))
+			must(f.t, subjects.Delete(f.c, userID, p.ID))
+		}},
+	}
+	for _, sc := range scenarios {
+		t.Run(sc.name, func(t *testing.T) {
+			f := newFixture(t)
+			sc.run(f)
+			f.assertUpkeepEqualsRebuild("end")
+		})
+	}
+}
+
+func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 	for _, seed := range []int64{1, 2, 3, 4} {
 		t.Run(fmt.Sprint("seed ", seed), func(t *testing.T) {
 			f := newFixture(t)
@@ -438,9 +503,7 @@ func TestRebuildEqualsUpkeep(t *testing.T) {
 					}
 				}
 				if step%10 == 0 {
-					if got, want := f.rows(), f.rebuiltSnapshot(); !reflect.DeepEqual(got, want) {
-						t.Fatalf("step %d: upkeep has %d rows, rebuild %d", step, len(got), len(want))
-					}
+					f.assertUpkeepEqualsRebuild(fmt.Sprintf("seed %d step %d", seed, step))
 				}
 			}
 			if len(f.rows()) == 0 {

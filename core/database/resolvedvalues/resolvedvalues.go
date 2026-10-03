@@ -5,7 +5,8 @@
 // values recomputes the affected handles inside its own transaction
 // (RecomputeTx / RecomputeSubjectsTx); EnsureCatalog rebuilds everything on
 // open when CacheVersion moves. Rebuild and upkeep share one batched loader,
-// and a randomized test holds them equal — an upkeep miss is otherwise silent.
+// and the rebuild-equals-upkeep tests (fixed-seed sequences plus named
+// scenarios) hold them equal — an upkeep miss is otherwise silent.
 //
 // Recompute is per handle: all of a handle's Properties are rewritten together.
 // Narrowing to (handle, Property) waits for timings that need it.
