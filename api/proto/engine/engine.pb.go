@@ -82,9 +82,9 @@ const (
 	Method_METHOD_CREATE_PROPERTY                      Method = 54
 	Method_METHOD_UPDATE_PROPERTY                      Method = 55
 	Method_METHOD_DELETE_PROPERTY                      Method = 56
-	Method_METHOD_LIST_SUBJECT_TYPE_FIELDS             Method = 57
-	Method_METHOD_ASSIGN_SUBJECT_TYPE_FIELD            Method = 58
-	Method_METHOD_REMOVE_SUBJECT_TYPE_FIELD            Method = 59
+	Method_METHOD_LIST_SUBJECT_TYPE_PROPERTIES         Method = 57
+	Method_METHOD_ASSIGN_SUBJECT_TYPE_PROPERTY         Method = 58
+	Method_METHOD_REMOVE_SUBJECT_TYPE_PROPERTY         Method = 59
 	Method_METHOD_LIST_PLACEABLE_SUBJECT_TYPES         Method = 60
 	Method_METHOD_GET_SUBJECT_TYPE_PRESENTATION        Method = 61
 	Method_METHOD_LIST_CONNECT_RULES                   Method = 62
@@ -102,7 +102,7 @@ const (
 	Method_METHOD_UPDATE_CITATION                      Method = 75
 	Method_METHOD_UPDATE_OBSERVATION                   Method = 76
 	Method_METHOD_DELETE_OBSERVATION                   Method = 77
-	Method_METHOD_GET_SUBJECT_FIELDS_WORKSPACE         Method = 78
+	Method_METHOD_GET_PROPERTIES_WORKSPACE             Method = 78
 	Method_METHOD_LIST_SOURCE_GRAPH_PROGRESS           Method = 79
 	Method_METHOD_GET_SOURCE_GRAPH_PROGRESS            Method = 80
 	Method_METHOD_GET_DELETE_IMPACT                    Method = 81
@@ -173,9 +173,9 @@ var (
 		54: "METHOD_CREATE_PROPERTY",
 		55: "METHOD_UPDATE_PROPERTY",
 		56: "METHOD_DELETE_PROPERTY",
-		57: "METHOD_LIST_SUBJECT_TYPE_FIELDS",
-		58: "METHOD_ASSIGN_SUBJECT_TYPE_FIELD",
-		59: "METHOD_REMOVE_SUBJECT_TYPE_FIELD",
+		57: "METHOD_LIST_SUBJECT_TYPE_PROPERTIES",
+		58: "METHOD_ASSIGN_SUBJECT_TYPE_PROPERTY",
+		59: "METHOD_REMOVE_SUBJECT_TYPE_PROPERTY",
 		60: "METHOD_LIST_PLACEABLE_SUBJECT_TYPES",
 		61: "METHOD_GET_SUBJECT_TYPE_PRESENTATION",
 		62: "METHOD_LIST_CONNECT_RULES",
@@ -193,7 +193,7 @@ var (
 		75: "METHOD_UPDATE_CITATION",
 		76: "METHOD_UPDATE_OBSERVATION",
 		77: "METHOD_DELETE_OBSERVATION",
-		78: "METHOD_GET_SUBJECT_FIELDS_WORKSPACE",
+		78: "METHOD_GET_PROPERTIES_WORKSPACE",
 		79: "METHOD_LIST_SOURCE_GRAPH_PROGRESS",
 		80: "METHOD_GET_SOURCE_GRAPH_PROGRESS",
 		81: "METHOD_GET_DELETE_IMPACT",
@@ -261,9 +261,9 @@ var (
 		"METHOD_CREATE_PROPERTY":                      54,
 		"METHOD_UPDATE_PROPERTY":                      55,
 		"METHOD_DELETE_PROPERTY":                      56,
-		"METHOD_LIST_SUBJECT_TYPE_FIELDS":             57,
-		"METHOD_ASSIGN_SUBJECT_TYPE_FIELD":            58,
-		"METHOD_REMOVE_SUBJECT_TYPE_FIELD":            59,
+		"METHOD_LIST_SUBJECT_TYPE_PROPERTIES":         57,
+		"METHOD_ASSIGN_SUBJECT_TYPE_PROPERTY":         58,
+		"METHOD_REMOVE_SUBJECT_TYPE_PROPERTY":         59,
 		"METHOD_LIST_PLACEABLE_SUBJECT_TYPES":         60,
 		"METHOD_GET_SUBJECT_TYPE_PRESENTATION":        61,
 		"METHOD_LIST_CONNECT_RULES":                   62,
@@ -281,7 +281,7 @@ var (
 		"METHOD_UPDATE_CITATION":                      75,
 		"METHOD_UPDATE_OBSERVATION":                   76,
 		"METHOD_DELETE_OBSERVATION":                   77,
-		"METHOD_GET_SUBJECT_FIELDS_WORKSPACE":         78,
+		"METHOD_GET_PROPERTIES_WORKSPACE":             78,
 		"METHOD_LIST_SOURCE_GRAPH_PROGRESS":           79,
 		"METHOD_GET_SOURCE_GRAPH_PROGRESS":            80,
 		"METHOD_GET_DELETE_IMPACT":                    81,
@@ -2407,7 +2407,7 @@ type MetadataField struct {
 	DataType    string                 `protobuf:"bytes,5,opt,name=data_type,json=dataType,proto3" json:"data_type,omitempty"` // text | url
 	Description string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
 	// How many source_metadata rows reference this field. Deleting is only
-	// allowed at 0 (see sourcefields.ErrInUse); the client uses the count to
+	// allowed at 0 (see metadatafields.ErrInUse); the client uses the count to
 	// disable its delete affordance and say what is holding the field.
 	UsedBy        int32 `protobuf:"varint,7,opt,name=used_by,json=usedBy,proto3" json:"used_by,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -6327,13 +6327,13 @@ func (x *GetWorkspaceNavCountsRequest) GetProjectDir() string {
 }
 
 type GetWorkspaceNavCountsResponse struct {
-	state         protoimpl.MessageState  `protogen:"open.v1"`
-	Sources       int32                   `protobuf:"varint,1,opt,name=sources,proto3" json:"sources,omitempty"`
-	SourceTypes   *VocabularyOriginCounts `protobuf:"bytes,2,opt,name=source_types,json=sourceTypes,proto3" json:"source_types,omitempty"`
-	SourceFields  *VocabularyOriginCounts `protobuf:"bytes,3,opt,name=source_fields,json=sourceFields,proto3" json:"source_fields,omitempty"`
-	Persons       int32                   `protobuf:"varint,5,opt,name=persons,proto3" json:"persons,omitempty"` // unmerged Person handles
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState  `protogen:"open.v1"`
+	Sources        int32                   `protobuf:"varint,1,opt,name=sources,proto3" json:"sources,omitempty"`
+	SourceTypes    *VocabularyOriginCounts `protobuf:"bytes,2,opt,name=source_types,json=sourceTypes,proto3" json:"source_types,omitempty"`
+	MetadataFields *VocabularyOriginCounts `protobuf:"bytes,3,opt,name=metadata_fields,json=metadataFields,proto3" json:"metadata_fields,omitempty"`
+	Persons        int32                   `protobuf:"varint,5,opt,name=persons,proto3" json:"persons,omitempty"` // unmerged Person handles
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *GetWorkspaceNavCountsResponse) Reset() {
@@ -6380,9 +6380,9 @@ func (x *GetWorkspaceNavCountsResponse) GetSourceTypes() *VocabularyOriginCounts
 	return nil
 }
 
-func (x *GetWorkspaceNavCountsResponse) GetSourceFields() *VocabularyOriginCounts {
+func (x *GetWorkspaceNavCountsResponse) GetMetadataFields() *VocabularyOriginCounts {
 	if x != nil {
-		return x.SourceFields
+		return x.MetadataFields
 	}
 	return nil
 }
@@ -6584,7 +6584,7 @@ func (*CloseCatalogSessionResponse) Descriptor() ([]byte, []int) {
 // (later) omnibar go(to:). Aligns with macOS WorkspaceLocation / WorkspaceSection.
 type WorkspaceLocation struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
-	Section              string                 `protobuf:"bytes,1,opt,name=section,proto3" json:"section,omitempty"` // sources | source-types | source-fields | subject-fields
+	Section              string                 `protobuf:"bytes,1,opt,name=section,proto3" json:"section,omitempty"` // sources | source-types | metadata | properties | persons
 	SourceId             string                 `protobuf:"bytes,2,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
 	FieldId              string                 `protobuf:"bytes,3,opt,name=field_id,json=fieldId,proto3" json:"field_id,omitempty"`
 	TypeId               string                 `protobuf:"bytes,4,opt,name=type_id,json=typeId,proto3" json:"type_id,omitempty"`
@@ -6599,8 +6599,8 @@ type WorkspaceLocation struct {
 	ConnectToSubjectId   string                 `protobuf:"bytes,13,opt,name=connect_to_subject_id,json=connectToSubjectId,proto3" json:"connect_to_subject_id,omitempty"`
 	ConnectBridgeTypeKey string                 `protobuf:"bytes,14,opt,name=connect_bridge_type_key,json=connectBridgeTypeKey,proto3" json:"connect_bridge_type_key,omitempty"`
 	SourceTitle          string                 `protobuf:"bytes,15,opt,name=source_title,json=sourceTitle,proto3" json:"source_title,omitempty"`
-	SubjectTypeKey       string                 `protobuf:"bytes,16,opt,name=subject_type_key,json=subjectTypeKey,proto3" json:"subject_type_key,omitempty"` // Subject Fields type-strip category; empty = All properties
-	PropertyId           string                 `protobuf:"bytes,17,opt,name=property_id,json=propertyId,proto3" json:"property_id,omitempty"`               // Subject Fields inspector row
+	SubjectTypeKey       string                 `protobuf:"bytes,16,opt,name=subject_type_key,json=subjectTypeKey,proto3" json:"subject_type_key,omitempty"` // Properties type-strip category; empty = All properties
+	PropertyId           string                 `protobuf:"bytes,17,opt,name=property_id,json=propertyId,proto3" json:"property_id,omitempty"`               // Properties inspector row
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -6817,7 +6817,7 @@ func (x *SearchCatalogRequest) GetLocation() *WorkspaceLocation {
 
 type SearchHit struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
-	Kind     string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"` // source | source_type | source_field
+	Kind     string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"` // source | source_type | metadata_field
 	Id       string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
 	Ref      string                 `protobuf:"bytes,3,opt,name=ref,proto3" json:"ref,omitempty"`
 	Title    string                 `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
@@ -8651,7 +8651,7 @@ type Property struct {
 	Label         string                 `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
 	Description   string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
 	ValueType     string                 `protobuf:"bytes,6,opt,name=value_type,json=valueType,proto3" json:"value_type,omitempty"` // text | integer | date | name | subject | term
-	UsedBy        int32                  `protobuf:"varint,7,opt,name=used_by,json=usedBy,proto3" json:"used_by,omitempty"`         // subject_type_fields references; delete only at 0
+	UsedBy        int32                  `protobuf:"varint,7,opt,name=used_by,json=usedBy,proto3" json:"used_by,omitempty"`         // subject_type_properties references; delete only at 0
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -8820,7 +8820,7 @@ func (x *PropertyTerm) GetDescription() string {
 	return ""
 }
 
-type SubjectTypeField struct {
+type SubjectTypeProperty struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Property      *Property              `protobuf:"bytes,1,opt,name=property,proto3" json:"property,omitempty"`
 	SortOrder     int32                  `protobuf:"varint,2,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
@@ -8829,20 +8829,20 @@ type SubjectTypeField struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SubjectTypeField) Reset() {
-	*x = SubjectTypeField{}
+func (x *SubjectTypeProperty) Reset() {
+	*x = SubjectTypeProperty{}
 	mi := &file_engine_proto_msgTypes[139]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SubjectTypeField) String() string {
+func (x *SubjectTypeProperty) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SubjectTypeField) ProtoMessage() {}
+func (*SubjectTypeProperty) ProtoMessage() {}
 
-func (x *SubjectTypeField) ProtoReflect() protoreflect.Message {
+func (x *SubjectTypeProperty) ProtoReflect() protoreflect.Message {
 	mi := &file_engine_proto_msgTypes[139]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -8854,26 +8854,26 @@ func (x *SubjectTypeField) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SubjectTypeField.ProtoReflect.Descriptor instead.
-func (*SubjectTypeField) Descriptor() ([]byte, []int) {
+// Deprecated: Use SubjectTypeProperty.ProtoReflect.Descriptor instead.
+func (*SubjectTypeProperty) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{139}
 }
 
-func (x *SubjectTypeField) GetProperty() *Property {
+func (x *SubjectTypeProperty) GetProperty() *Property {
 	if x != nil {
 		return x.Property
 	}
 	return nil
 }
 
-func (x *SubjectTypeField) GetSortOrder() int32 {
+func (x *SubjectTypeProperty) GetSortOrder() int32 {
 	if x != nil {
 		return x.SortOrder
 	}
 	return 0
 }
 
-func (x *SubjectTypeField) GetLocked() bool {
+func (x *SubjectTypeProperty) GetLocked() bool {
 	if x != nil {
 		return x.Locked
 	}
@@ -9604,7 +9604,7 @@ func (*DeletePropertyResponse) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{150}
 }
 
-type ListSubjectTypeFieldsRequest struct {
+type ListSubjectTypePropertiesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
 	SubjectTypeId string                 `protobuf:"bytes,2,opt,name=subject_type_id,json=subjectTypeId,proto3" json:"subject_type_id,omitempty"`
@@ -9612,20 +9612,20 @@ type ListSubjectTypeFieldsRequest struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ListSubjectTypeFieldsRequest) Reset() {
-	*x = ListSubjectTypeFieldsRequest{}
+func (x *ListSubjectTypePropertiesRequest) Reset() {
+	*x = ListSubjectTypePropertiesRequest{}
 	mi := &file_engine_proto_msgTypes[151]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListSubjectTypeFieldsRequest) String() string {
+func (x *ListSubjectTypePropertiesRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListSubjectTypeFieldsRequest) ProtoMessage() {}
+func (*ListSubjectTypePropertiesRequest) ProtoMessage() {}
 
-func (x *ListSubjectTypeFieldsRequest) ProtoReflect() protoreflect.Message {
+func (x *ListSubjectTypePropertiesRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_engine_proto_msgTypes[151]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -9637,46 +9637,46 @@ func (x *ListSubjectTypeFieldsRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListSubjectTypeFieldsRequest.ProtoReflect.Descriptor instead.
-func (*ListSubjectTypeFieldsRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ListSubjectTypePropertiesRequest.ProtoReflect.Descriptor instead.
+func (*ListSubjectTypePropertiesRequest) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{151}
 }
 
-func (x *ListSubjectTypeFieldsRequest) GetProjectDir() string {
+func (x *ListSubjectTypePropertiesRequest) GetProjectDir() string {
 	if x != nil {
 		return x.ProjectDir
 	}
 	return ""
 }
 
-func (x *ListSubjectTypeFieldsRequest) GetSubjectTypeId() string {
+func (x *ListSubjectTypePropertiesRequest) GetSubjectTypeId() string {
 	if x != nil {
 		return x.SubjectTypeId
 	}
 	return ""
 }
 
-type ListSubjectTypeFieldsResponse struct {
+type ListSubjectTypePropertiesResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Fields        []*SubjectTypeField    `protobuf:"bytes,1,rep,name=fields,proto3" json:"fields,omitempty"`
+	Properties    []*SubjectTypeProperty `protobuf:"bytes,1,rep,name=properties,proto3" json:"properties,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ListSubjectTypeFieldsResponse) Reset() {
-	*x = ListSubjectTypeFieldsResponse{}
+func (x *ListSubjectTypePropertiesResponse) Reset() {
+	*x = ListSubjectTypePropertiesResponse{}
 	mi := &file_engine_proto_msgTypes[152]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListSubjectTypeFieldsResponse) String() string {
+func (x *ListSubjectTypePropertiesResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListSubjectTypeFieldsResponse) ProtoMessage() {}
+func (*ListSubjectTypePropertiesResponse) ProtoMessage() {}
 
-func (x *ListSubjectTypeFieldsResponse) ProtoReflect() protoreflect.Message {
+func (x *ListSubjectTypePropertiesResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_engine_proto_msgTypes[152]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -9688,19 +9688,19 @@ func (x *ListSubjectTypeFieldsResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListSubjectTypeFieldsResponse.ProtoReflect.Descriptor instead.
-func (*ListSubjectTypeFieldsResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use ListSubjectTypePropertiesResponse.ProtoReflect.Descriptor instead.
+func (*ListSubjectTypePropertiesResponse) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{152}
 }
 
-func (x *ListSubjectTypeFieldsResponse) GetFields() []*SubjectTypeField {
+func (x *ListSubjectTypePropertiesResponse) GetProperties() []*SubjectTypeProperty {
 	if x != nil {
-		return x.Fields
+		return x.Properties
 	}
 	return nil
 }
 
-type AssignSubjectTypeFieldRequest struct {
+type AssignSubjectTypePropertyRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
 	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
@@ -9710,20 +9710,20 @@ type AssignSubjectTypeFieldRequest struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *AssignSubjectTypeFieldRequest) Reset() {
-	*x = AssignSubjectTypeFieldRequest{}
+func (x *AssignSubjectTypePropertyRequest) Reset() {
+	*x = AssignSubjectTypePropertyRequest{}
 	mi := &file_engine_proto_msgTypes[153]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *AssignSubjectTypeFieldRequest) String() string {
+func (x *AssignSubjectTypePropertyRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*AssignSubjectTypeFieldRequest) ProtoMessage() {}
+func (*AssignSubjectTypePropertyRequest) ProtoMessage() {}
 
-func (x *AssignSubjectTypeFieldRequest) ProtoReflect() protoreflect.Message {
+func (x *AssignSubjectTypePropertyRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_engine_proto_msgTypes[153]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -9735,59 +9735,59 @@ func (x *AssignSubjectTypeFieldRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use AssignSubjectTypeFieldRequest.ProtoReflect.Descriptor instead.
-func (*AssignSubjectTypeFieldRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use AssignSubjectTypePropertyRequest.ProtoReflect.Descriptor instead.
+func (*AssignSubjectTypePropertyRequest) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{153}
 }
 
-func (x *AssignSubjectTypeFieldRequest) GetProjectDir() string {
+func (x *AssignSubjectTypePropertyRequest) GetProjectDir() string {
 	if x != nil {
 		return x.ProjectDir
 	}
 	return ""
 }
 
-func (x *AssignSubjectTypeFieldRequest) GetUserId() string {
+func (x *AssignSubjectTypePropertyRequest) GetUserId() string {
 	if x != nil {
 		return x.UserId
 	}
 	return ""
 }
 
-func (x *AssignSubjectTypeFieldRequest) GetSubjectTypeId() string {
+func (x *AssignSubjectTypePropertyRequest) GetSubjectTypeId() string {
 	if x != nil {
 		return x.SubjectTypeId
 	}
 	return ""
 }
 
-func (x *AssignSubjectTypeFieldRequest) GetPropertyId() string {
+func (x *AssignSubjectTypePropertyRequest) GetPropertyId() string {
 	if x != nil {
 		return x.PropertyId
 	}
 	return ""
 }
 
-type AssignSubjectTypeFieldResponse struct {
+type AssignSubjectTypePropertyResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *AssignSubjectTypeFieldResponse) Reset() {
-	*x = AssignSubjectTypeFieldResponse{}
+func (x *AssignSubjectTypePropertyResponse) Reset() {
+	*x = AssignSubjectTypePropertyResponse{}
 	mi := &file_engine_proto_msgTypes[154]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *AssignSubjectTypeFieldResponse) String() string {
+func (x *AssignSubjectTypePropertyResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*AssignSubjectTypeFieldResponse) ProtoMessage() {}
+func (*AssignSubjectTypePropertyResponse) ProtoMessage() {}
 
-func (x *AssignSubjectTypeFieldResponse) ProtoReflect() protoreflect.Message {
+func (x *AssignSubjectTypePropertyResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_engine_proto_msgTypes[154]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -9799,12 +9799,12 @@ func (x *AssignSubjectTypeFieldResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use AssignSubjectTypeFieldResponse.ProtoReflect.Descriptor instead.
-func (*AssignSubjectTypeFieldResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use AssignSubjectTypePropertyResponse.ProtoReflect.Descriptor instead.
+func (*AssignSubjectTypePropertyResponse) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{154}
 }
 
-type RemoveSubjectTypeFieldRequest struct {
+type RemoveSubjectTypePropertyRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
 	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
@@ -9814,20 +9814,20 @@ type RemoveSubjectTypeFieldRequest struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RemoveSubjectTypeFieldRequest) Reset() {
-	*x = RemoveSubjectTypeFieldRequest{}
+func (x *RemoveSubjectTypePropertyRequest) Reset() {
+	*x = RemoveSubjectTypePropertyRequest{}
 	mi := &file_engine_proto_msgTypes[155]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RemoveSubjectTypeFieldRequest) String() string {
+func (x *RemoveSubjectTypePropertyRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RemoveSubjectTypeFieldRequest) ProtoMessage() {}
+func (*RemoveSubjectTypePropertyRequest) ProtoMessage() {}
 
-func (x *RemoveSubjectTypeFieldRequest) ProtoReflect() protoreflect.Message {
+func (x *RemoveSubjectTypePropertyRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_engine_proto_msgTypes[155]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -9839,59 +9839,59 @@ func (x *RemoveSubjectTypeFieldRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RemoveSubjectTypeFieldRequest.ProtoReflect.Descriptor instead.
-func (*RemoveSubjectTypeFieldRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use RemoveSubjectTypePropertyRequest.ProtoReflect.Descriptor instead.
+func (*RemoveSubjectTypePropertyRequest) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{155}
 }
 
-func (x *RemoveSubjectTypeFieldRequest) GetProjectDir() string {
+func (x *RemoveSubjectTypePropertyRequest) GetProjectDir() string {
 	if x != nil {
 		return x.ProjectDir
 	}
 	return ""
 }
 
-func (x *RemoveSubjectTypeFieldRequest) GetUserId() string {
+func (x *RemoveSubjectTypePropertyRequest) GetUserId() string {
 	if x != nil {
 		return x.UserId
 	}
 	return ""
 }
 
-func (x *RemoveSubjectTypeFieldRequest) GetSubjectTypeId() string {
+func (x *RemoveSubjectTypePropertyRequest) GetSubjectTypeId() string {
 	if x != nil {
 		return x.SubjectTypeId
 	}
 	return ""
 }
 
-func (x *RemoveSubjectTypeFieldRequest) GetPropertyId() string {
+func (x *RemoveSubjectTypePropertyRequest) GetPropertyId() string {
 	if x != nil {
 		return x.PropertyId
 	}
 	return ""
 }
 
-type RemoveSubjectTypeFieldResponse struct {
+type RemoveSubjectTypePropertyResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RemoveSubjectTypeFieldResponse) Reset() {
-	*x = RemoveSubjectTypeFieldResponse{}
+func (x *RemoveSubjectTypePropertyResponse) Reset() {
+	*x = RemoveSubjectTypePropertyResponse{}
 	mi := &file_engine_proto_msgTypes[156]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RemoveSubjectTypeFieldResponse) String() string {
+func (x *RemoveSubjectTypePropertyResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RemoveSubjectTypeFieldResponse) ProtoMessage() {}
+func (*RemoveSubjectTypePropertyResponse) ProtoMessage() {}
 
-func (x *RemoveSubjectTypeFieldResponse) ProtoReflect() protoreflect.Message {
+func (x *RemoveSubjectTypePropertyResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_engine_proto_msgTypes[156]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -9903,8 +9903,8 @@ func (x *RemoveSubjectTypeFieldResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RemoveSubjectTypeFieldResponse.ProtoReflect.Descriptor instead.
-func (*RemoveSubjectTypeFieldResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use RemoveSubjectTypePropertyResponse.ProtoReflect.Descriptor instead.
+func (*RemoveSubjectTypePropertyResponse) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{156}
 }
 
@@ -12454,27 +12454,27 @@ func (*DeleteObservationResponse) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{197}
 }
 
-type GetSubjectFieldsWorkspaceRequest struct {
+type GetPropertiesWorkspaceRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetSubjectFieldsWorkspaceRequest) Reset() {
-	*x = GetSubjectFieldsWorkspaceRequest{}
+func (x *GetPropertiesWorkspaceRequest) Reset() {
+	*x = GetPropertiesWorkspaceRequest{}
 	mi := &file_engine_proto_msgTypes[198]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetSubjectFieldsWorkspaceRequest) String() string {
+func (x *GetPropertiesWorkspaceRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetSubjectFieldsWorkspaceRequest) ProtoMessage() {}
+func (*GetPropertiesWorkspaceRequest) ProtoMessage() {}
 
-func (x *GetSubjectFieldsWorkspaceRequest) ProtoReflect() protoreflect.Message {
+func (x *GetPropertiesWorkspaceRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_engine_proto_msgTypes[198]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -12486,41 +12486,41 @@ func (x *GetSubjectFieldsWorkspaceRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetSubjectFieldsWorkspaceRequest.ProtoReflect.Descriptor instead.
-func (*GetSubjectFieldsWorkspaceRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetPropertiesWorkspaceRequest.ProtoReflect.Descriptor instead.
+func (*GetPropertiesWorkspaceRequest) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{198}
 }
 
-func (x *GetSubjectFieldsWorkspaceRequest) GetProjectDir() string {
+func (x *GetPropertiesWorkspaceRequest) GetProjectDir() string {
 	if x != nil {
 		return x.ProjectDir
 	}
 	return ""
 }
 
-type SubjectTypeFieldsGroup struct {
+type SubjectTypePropertiesGroup struct {
 	state         protoimpl.MessageState   `protogen:"open.v1"`
 	SubjectTypeId string                   `protobuf:"bytes,1,opt,name=subject_type_id,json=subjectTypeId,proto3" json:"subject_type_id,omitempty"`
-	Fields        []*SubjectTypeField      `protobuf:"bytes,2,rep,name=fields,proto3" json:"fields,omitempty"`
+	Properties    []*SubjectTypeProperty   `protobuf:"bytes,2,rep,name=properties,proto3" json:"properties,omitempty"`
 	Presentation  *SubjectTypePresentation `protobuf:"bytes,3,opt,name=presentation,proto3" json:"presentation,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SubjectTypeFieldsGroup) Reset() {
-	*x = SubjectTypeFieldsGroup{}
+func (x *SubjectTypePropertiesGroup) Reset() {
+	*x = SubjectTypePropertiesGroup{}
 	mi := &file_engine_proto_msgTypes[199]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SubjectTypeFieldsGroup) String() string {
+func (x *SubjectTypePropertiesGroup) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SubjectTypeFieldsGroup) ProtoMessage() {}
+func (*SubjectTypePropertiesGroup) ProtoMessage() {}
 
-func (x *SubjectTypeFieldsGroup) ProtoReflect() protoreflect.Message {
+func (x *SubjectTypePropertiesGroup) ProtoReflect() protoreflect.Message {
 	mi := &file_engine_proto_msgTypes[199]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -12532,55 +12532,55 @@ func (x *SubjectTypeFieldsGroup) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SubjectTypeFieldsGroup.ProtoReflect.Descriptor instead.
-func (*SubjectTypeFieldsGroup) Descriptor() ([]byte, []int) {
+// Deprecated: Use SubjectTypePropertiesGroup.ProtoReflect.Descriptor instead.
+func (*SubjectTypePropertiesGroup) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{199}
 }
 
-func (x *SubjectTypeFieldsGroup) GetSubjectTypeId() string {
+func (x *SubjectTypePropertiesGroup) GetSubjectTypeId() string {
 	if x != nil {
 		return x.SubjectTypeId
 	}
 	return ""
 }
 
-func (x *SubjectTypeFieldsGroup) GetFields() []*SubjectTypeField {
+func (x *SubjectTypePropertiesGroup) GetProperties() []*SubjectTypeProperty {
 	if x != nil {
-		return x.Fields
+		return x.Properties
 	}
 	return nil
 }
 
-func (x *SubjectTypeFieldsGroup) GetPresentation() *SubjectTypePresentation {
+func (x *SubjectTypePropertiesGroup) GetPresentation() *SubjectTypePresentation {
 	if x != nil {
 		return x.Presentation
 	}
 	return nil
 }
 
-type GetSubjectFieldsWorkspaceResponse struct {
-	state         protoimpl.MessageState    `protogen:"open.v1"`
-	Properties    []*Property               `protobuf:"bytes,1,rep,name=properties,proto3" json:"properties,omitempty"`
-	Types         []*SubjectType            `protobuf:"bytes,2,rep,name=types,proto3" json:"types,omitempty"`
-	Groups        []*SubjectTypeFieldsGroup `protobuf:"bytes,3,rep,name=groups,proto3" json:"groups,omitempty"`
+type GetPropertiesWorkspaceResponse struct {
+	state         protoimpl.MessageState        `protogen:"open.v1"`
+	Properties    []*Property                   `protobuf:"bytes,1,rep,name=properties,proto3" json:"properties,omitempty"`
+	Types         []*SubjectType                `protobuf:"bytes,2,rep,name=types,proto3" json:"types,omitempty"`
+	Groups        []*SubjectTypePropertiesGroup `protobuf:"bytes,3,rep,name=groups,proto3" json:"groups,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetSubjectFieldsWorkspaceResponse) Reset() {
-	*x = GetSubjectFieldsWorkspaceResponse{}
+func (x *GetPropertiesWorkspaceResponse) Reset() {
+	*x = GetPropertiesWorkspaceResponse{}
 	mi := &file_engine_proto_msgTypes[200]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetSubjectFieldsWorkspaceResponse) String() string {
+func (x *GetPropertiesWorkspaceResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetSubjectFieldsWorkspaceResponse) ProtoMessage() {}
+func (*GetPropertiesWorkspaceResponse) ProtoMessage() {}
 
-func (x *GetSubjectFieldsWorkspaceResponse) ProtoReflect() protoreflect.Message {
+func (x *GetPropertiesWorkspaceResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_engine_proto_msgTypes[200]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -12592,26 +12592,26 @@ func (x *GetSubjectFieldsWorkspaceResponse) ProtoReflect() protoreflect.Message 
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetSubjectFieldsWorkspaceResponse.ProtoReflect.Descriptor instead.
-func (*GetSubjectFieldsWorkspaceResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetPropertiesWorkspaceResponse.ProtoReflect.Descriptor instead.
+func (*GetPropertiesWorkspaceResponse) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{200}
 }
 
-func (x *GetSubjectFieldsWorkspaceResponse) GetProperties() []*Property {
+func (x *GetPropertiesWorkspaceResponse) GetProperties() []*Property {
 	if x != nil {
 		return x.Properties
 	}
 	return nil
 }
 
-func (x *GetSubjectFieldsWorkspaceResponse) GetTypes() []*SubjectType {
+func (x *GetPropertiesWorkspaceResponse) GetTypes() []*SubjectType {
 	if x != nil {
 		return x.Types
 	}
 	return nil
 }
 
-func (x *GetSubjectFieldsWorkspaceResponse) GetGroups() []*SubjectTypeFieldsGroup {
+func (x *GetPropertiesWorkspaceResponse) GetGroups() []*SubjectTypePropertiesGroup {
 	if x != nil {
 		return x.Groups
 	}
@@ -13662,11 +13662,11 @@ const file_engine_proto_rawDesc = "" +
 	"\x06plugin\x18\x04 \x01(\x05R\x06plugin\"?\n" +
 	"\x1cGetWorkspaceNavCountsRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
-	"projectDir\"\x86\x02\n" +
+	"projectDir\"\x8a\x02\n" +
 	"\x1dGetWorkspaceNavCountsResponse\x12\x18\n" +
 	"\asources\x18\x01 \x01(\x05R\asources\x12P\n" +
-	"\fsource_types\x18\x02 \x01(\v2-.provenencia.engine.v1.VocabularyOriginCountsR\vsourceTypes\x12R\n" +
-	"\rsource_fields\x18\x03 \x01(\v2-.provenencia.engine.v1.VocabularyOriginCountsR\fsourceFields\x12\x18\n" +
+	"\fsource_types\x18\x02 \x01(\v2-.provenencia.engine.v1.VocabularyOriginCountsR\vsourceTypes\x12V\n" +
+	"\x0fmetadata_fields\x18\x03 \x01(\v2-.provenencia.engine.v1.VocabularyOriginCountsR\x0emetadataFields\x12\x18\n" +
 	"\apersons\x18\x05 \x01(\x05R\apersonsJ\x04\b\x04\x10\x05R\x05files\"V\n" +
 	"\x1aEnsureFileThumbnailRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
@@ -13861,8 +13861,8 @@ const file_engine_proto_rawDesc = "" +
 	"\x03key\x18\x03 \x01(\tR\x03key\x12\x16\n" +
 	"\x06origin\x18\x04 \x01(\tR\x06origin\x12\x14\n" +
 	"\x05label\x18\x05 \x01(\tR\x05label\x12 \n" +
-	"\vdescription\x18\x06 \x01(\tR\vdescription\"\x86\x01\n" +
-	"\x10SubjectTypeField\x12;\n" +
+	"\vdescription\x18\x06 \x01(\tR\vdescription\"\x89\x01\n" +
+	"\x13SubjectTypeProperty\x12;\n" +
 	"\bproperty\x18\x01 \x01(\v2\x1f.provenencia.engine.v1.PropertyR\bproperty\x12\x1d\n" +
 	"\n" +
 	"sort_order\x18\x02 \x01(\x05R\tsortOrder\x12\x16\n" +
@@ -13933,29 +13933,31 @@ const file_engine_proto_rawDesc = "" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1f\n" +
 	"\vproperty_id\x18\x03 \x01(\tR\n" +
 	"propertyId\"\x18\n" +
-	"\x16DeletePropertyResponse\"g\n" +
-	"\x1cListSubjectTypeFieldsRequest\x12\x1f\n" +
+	"\x16DeletePropertyResponse\"k\n" +
+	" ListSubjectTypePropertiesRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12&\n" +
-	"\x0fsubject_type_id\x18\x02 \x01(\tR\rsubjectTypeId\"`\n" +
-	"\x1dListSubjectTypeFieldsResponse\x12?\n" +
-	"\x06fields\x18\x01 \x03(\v2'.provenencia.engine.v1.SubjectTypeFieldR\x06fields\"\xa2\x01\n" +
-	"\x1dAssignSubjectTypeFieldRequest\x12\x1f\n" +
+	"\x0fsubject_type_id\x18\x02 \x01(\tR\rsubjectTypeId\"o\n" +
+	"!ListSubjectTypePropertiesResponse\x12J\n" +
+	"\n" +
+	"properties\x18\x01 \x03(\v2*.provenencia.engine.v1.SubjectTypePropertyR\n" +
+	"properties\"\xa5\x01\n" +
+	" AssignSubjectTypePropertyRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12&\n" +
 	"\x0fsubject_type_id\x18\x03 \x01(\tR\rsubjectTypeId\x12\x1f\n" +
 	"\vproperty_id\x18\x04 \x01(\tR\n" +
-	"propertyId\" \n" +
-	"\x1eAssignSubjectTypeFieldResponse\"\xa2\x01\n" +
-	"\x1dRemoveSubjectTypeFieldRequest\x12\x1f\n" +
+	"propertyId\"#\n" +
+	"!AssignSubjectTypePropertyResponse\"\xa5\x01\n" +
+	" RemoveSubjectTypePropertyRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12&\n" +
 	"\x0fsubject_type_id\x18\x03 \x01(\tR\rsubjectTypeId\x12\x1f\n" +
 	"\vproperty_id\x18\x04 \x01(\tR\n" +
-	"propertyId\" \n" +
-	"\x1eRemoveSubjectTypeFieldResponse\"\"\n" +
+	"propertyId\"#\n" +
+	"!RemoveSubjectTypePropertyResponse\"\"\n" +
 	" ListPlaceableSubjectTypesRequest\"i\n" +
 	"!ListPlaceableSubjectTypesResponse\x12D\n" +
 	"\x05types\x18\x01 \x03(\v2..provenencia.engine.v1.SubjectTypePresentationR\x05types\">\n" +
@@ -14168,20 +14170,22 @@ const file_engine_proto_rawDesc = "" +
 	"projectDir\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12%\n" +
 	"\x0eobservation_id\x18\x03 \x01(\tR\robservationId\"\x1b\n" +
-	"\x19DeleteObservationResponse\"C\n" +
-	" GetSubjectFieldsWorkspaceRequest\x12\x1f\n" +
+	"\x19DeleteObservationResponse\"@\n" +
+	"\x1dGetPropertiesWorkspaceRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
-	"projectDir\"\xd5\x01\n" +
-	"\x16SubjectTypeFieldsGroup\x12&\n" +
-	"\x0fsubject_type_id\x18\x01 \x01(\tR\rsubjectTypeId\x12?\n" +
-	"\x06fields\x18\x02 \x03(\v2'.provenencia.engine.v1.SubjectTypeFieldR\x06fields\x12R\n" +
-	"\fpresentation\x18\x03 \x01(\v2..provenencia.engine.v1.SubjectTypePresentationR\fpresentation\"\xe5\x01\n" +
-	"!GetSubjectFieldsWorkspaceResponse\x12?\n" +
+	"projectDir\"\xe4\x01\n" +
+	"\x1aSubjectTypePropertiesGroup\x12&\n" +
+	"\x0fsubject_type_id\x18\x01 \x01(\tR\rsubjectTypeId\x12J\n" +
+	"\n" +
+	"properties\x18\x02 \x03(\v2*.provenencia.engine.v1.SubjectTypePropertyR\n" +
+	"properties\x12R\n" +
+	"\fpresentation\x18\x03 \x01(\v2..provenencia.engine.v1.SubjectTypePresentationR\fpresentation\"\xe6\x01\n" +
+	"\x1eGetPropertiesWorkspaceResponse\x12?\n" +
 	"\n" +
 	"properties\x18\x01 \x03(\v2\x1f.provenencia.engine.v1.PropertyR\n" +
 	"properties\x128\n" +
-	"\x05types\x18\x02 \x03(\v2\".provenencia.engine.v1.SubjectTypeR\x05types\x12E\n" +
-	"\x06groups\x18\x03 \x03(\v2-.provenencia.engine.v1.SubjectTypeFieldsGroupR\x06groups\"\x99\x01\n" +
+	"\x05types\x18\x02 \x03(\v2\".provenencia.engine.v1.SubjectTypeR\x05types\x12I\n" +
+	"\x06groups\x18\x03 \x03(\v21.provenencia.engine.v1.SubjectTypePropertiesGroupR\x06groups\"\x99\x01\n" +
 	"\x13SourceGraphProgress\x12\x1b\n" +
 	"\tsource_id\x18\x01 \x01(\tR\bsourceId\x12#\n" +
 	"\rsubject_count\x18\x02 \x01(\x05R\fsubjectCount\x12+\n" +
@@ -14220,7 +14224,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x05Error\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x124\n" +
 	"\x04kind\x18\x02 \x01(\x0e2 .provenencia.engine.v1.ErrorKindR\x04kind\x12\x16\n" +
-	"\x06params\x18\x03 \x03(\tR\x06params*\xa3\x16\n" +
+	"\x06params\x18\x03 \x03(\tR\x06params*\xa9\x16\n" +
 	"\x06Method\x12\x16\n" +
 	"\x12METHOD_UNSPECIFIED\x10\x00\x12\x0f\n" +
 	"\vMETHOD_PING\x10\x01\x12\x16\n" +
@@ -14278,10 +14282,10 @@ const file_engine_proto_rawDesc = "" +
 	"\x16METHOD_LIST_PROPERTIES\x105\x12\x1a\n" +
 	"\x16METHOD_CREATE_PROPERTY\x106\x12\x1a\n" +
 	"\x16METHOD_UPDATE_PROPERTY\x107\x12\x1a\n" +
-	"\x16METHOD_DELETE_PROPERTY\x108\x12#\n" +
-	"\x1fMETHOD_LIST_SUBJECT_TYPE_FIELDS\x109\x12$\n" +
-	" METHOD_ASSIGN_SUBJECT_TYPE_FIELD\x10:\x12$\n" +
-	" METHOD_REMOVE_SUBJECT_TYPE_FIELD\x10;\x12'\n" +
+	"\x16METHOD_DELETE_PROPERTY\x108\x12'\n" +
+	"#METHOD_LIST_SUBJECT_TYPE_PROPERTIES\x109\x12'\n" +
+	"#METHOD_ASSIGN_SUBJECT_TYPE_PROPERTY\x10:\x12'\n" +
+	"#METHOD_REMOVE_SUBJECT_TYPE_PROPERTY\x10;\x12'\n" +
 	"#METHOD_LIST_PLACEABLE_SUBJECT_TYPES\x10<\x12(\n" +
 	"$METHOD_GET_SUBJECT_TYPE_PRESENTATION\x10=\x12\x1d\n" +
 	"\x19METHOD_LIST_CONNECT_RULES\x10>\x12\x1e\n" +
@@ -14298,8 +14302,8 @@ const file_engine_proto_rawDesc = "" +
 	"!METHOD_LIST_CITATIONS_BY_ARTIFACT\x10J\x12\x1a\n" +
 	"\x16METHOD_UPDATE_CITATION\x10K\x12\x1d\n" +
 	"\x19METHOD_UPDATE_OBSERVATION\x10L\x12\x1d\n" +
-	"\x19METHOD_DELETE_OBSERVATION\x10M\x12'\n" +
-	"#METHOD_GET_SUBJECT_FIELDS_WORKSPACE\x10N\x12%\n" +
+	"\x19METHOD_DELETE_OBSERVATION\x10M\x12#\n" +
+	"\x1fMETHOD_GET_PROPERTIES_WORKSPACE\x10N\x12%\n" +
 	"!METHOD_LIST_SOURCE_GRAPH_PROGRESS\x10O\x12$\n" +
 	" METHOD_GET_SOURCE_GRAPH_PROGRESS\x10P\x12\x1c\n" +
 	"\x18METHOD_GET_DELETE_IMPACT\x10Q\x12\x18\n" +
@@ -14481,7 +14485,7 @@ var file_engine_proto_goTypes = []any{
 	(*ListSubjectPositionsResponse)(nil),              // 139: provenencia.engine.v1.ListSubjectPositionsResponse
 	(*Property)(nil),                                  // 140: provenencia.engine.v1.Property
 	(*PropertyTerm)(nil),                              // 141: provenencia.engine.v1.PropertyTerm
-	(*SubjectTypeField)(nil),                          // 142: provenencia.engine.v1.SubjectTypeField
+	(*SubjectTypeProperty)(nil),                       // 142: provenencia.engine.v1.SubjectTypeProperty
 	(*SubjectTypePresentation)(nil),                   // 143: provenencia.engine.v1.SubjectTypePresentation
 	(*ConnectRule)(nil),                               // 144: provenencia.engine.v1.ConnectRule
 	(*ConnectEdge)(nil),                               // 145: provenencia.engine.v1.ConnectEdge
@@ -14493,12 +14497,12 @@ var file_engine_proto_goTypes = []any{
 	(*UpdatePropertyResponse)(nil),                    // 151: provenencia.engine.v1.UpdatePropertyResponse
 	(*DeletePropertyRequest)(nil),                     // 152: provenencia.engine.v1.DeletePropertyRequest
 	(*DeletePropertyResponse)(nil),                    // 153: provenencia.engine.v1.DeletePropertyResponse
-	(*ListSubjectTypeFieldsRequest)(nil),              // 154: provenencia.engine.v1.ListSubjectTypeFieldsRequest
-	(*ListSubjectTypeFieldsResponse)(nil),             // 155: provenencia.engine.v1.ListSubjectTypeFieldsResponse
-	(*AssignSubjectTypeFieldRequest)(nil),             // 156: provenencia.engine.v1.AssignSubjectTypeFieldRequest
-	(*AssignSubjectTypeFieldResponse)(nil),            // 157: provenencia.engine.v1.AssignSubjectTypeFieldResponse
-	(*RemoveSubjectTypeFieldRequest)(nil),             // 158: provenencia.engine.v1.RemoveSubjectTypeFieldRequest
-	(*RemoveSubjectTypeFieldResponse)(nil),            // 159: provenencia.engine.v1.RemoveSubjectTypeFieldResponse
+	(*ListSubjectTypePropertiesRequest)(nil),          // 154: provenencia.engine.v1.ListSubjectTypePropertiesRequest
+	(*ListSubjectTypePropertiesResponse)(nil),         // 155: provenencia.engine.v1.ListSubjectTypePropertiesResponse
+	(*AssignSubjectTypePropertyRequest)(nil),          // 156: provenencia.engine.v1.AssignSubjectTypePropertyRequest
+	(*AssignSubjectTypePropertyResponse)(nil),         // 157: provenencia.engine.v1.AssignSubjectTypePropertyResponse
+	(*RemoveSubjectTypePropertyRequest)(nil),          // 158: provenencia.engine.v1.RemoveSubjectTypePropertyRequest
+	(*RemoveSubjectTypePropertyResponse)(nil),         // 159: provenencia.engine.v1.RemoveSubjectTypePropertyResponse
 	(*ListPlaceableSubjectTypesRequest)(nil),          // 160: provenencia.engine.v1.ListPlaceableSubjectTypesRequest
 	(*ListPlaceableSubjectTypesResponse)(nil),         // 161: provenencia.engine.v1.ListPlaceableSubjectTypesResponse
 	(*GetSubjectTypePresentationRequest)(nil),         // 162: provenencia.engine.v1.GetSubjectTypePresentationRequest
@@ -14540,9 +14544,9 @@ var file_engine_proto_goTypes = []any{
 	(*UpdateObservationResponse)(nil),                 // 198: provenencia.engine.v1.UpdateObservationResponse
 	(*DeleteObservationRequest)(nil),                  // 199: provenencia.engine.v1.DeleteObservationRequest
 	(*DeleteObservationResponse)(nil),                 // 200: provenencia.engine.v1.DeleteObservationResponse
-	(*GetSubjectFieldsWorkspaceRequest)(nil),          // 201: provenencia.engine.v1.GetSubjectFieldsWorkspaceRequest
-	(*SubjectTypeFieldsGroup)(nil),                    // 202: provenencia.engine.v1.SubjectTypeFieldsGroup
-	(*GetSubjectFieldsWorkspaceResponse)(nil),         // 203: provenencia.engine.v1.GetSubjectFieldsWorkspaceResponse
+	(*GetPropertiesWorkspaceRequest)(nil),             // 201: provenencia.engine.v1.GetPropertiesWorkspaceRequest
+	(*SubjectTypePropertiesGroup)(nil),                // 202: provenencia.engine.v1.SubjectTypePropertiesGroup
+	(*GetPropertiesWorkspaceResponse)(nil),            // 203: provenencia.engine.v1.GetPropertiesWorkspaceResponse
 	(*SourceGraphProgress)(nil),                       // 204: provenencia.engine.v1.SourceGraphProgress
 	(*ListSourceGraphProgressRequest)(nil),            // 205: provenencia.engine.v1.ListSourceGraphProgressRequest
 	(*ListSourceGraphProgressResponse)(nil),           // 206: provenencia.engine.v1.ListSourceGraphProgressResponse
@@ -14592,7 +14596,7 @@ var file_engine_proto_depIdxs = []int32{
 	34,  // 34: provenencia.engine.v1.AssignTypeFieldResponse.suggestions:type_name -> provenencia.engine.v1.TypeSuggestion
 	34,  // 35: provenencia.engine.v1.RemoveTypeFieldResponse.suggestions:type_name -> provenencia.engine.v1.TypeSuggestion
 	100, // 36: provenencia.engine.v1.GetWorkspaceNavCountsResponse.source_types:type_name -> provenencia.engine.v1.VocabularyOriginCounts
-	100, // 37: provenencia.engine.v1.GetWorkspaceNavCountsResponse.source_fields:type_name -> provenencia.engine.v1.VocabularyOriginCounts
+	100, // 37: provenencia.engine.v1.GetWorkspaceNavCountsResponse.metadata_fields:type_name -> provenencia.engine.v1.VocabularyOriginCounts
 	107, // 38: provenencia.engine.v1.SearchCatalogRequest.location:type_name -> provenencia.engine.v1.WorkspaceLocation
 	107, // 39: provenencia.engine.v1.SearchHit.location:type_name -> provenencia.engine.v1.WorkspaceLocation
 	109, // 40: provenencia.engine.v1.SearchCatalogResponse.hits:type_name -> provenencia.engine.v1.SearchHit
@@ -14609,12 +14613,12 @@ var file_engine_proto_depIdxs = []int32{
 	112, // 51: provenencia.engine.v1.ListSubjectsResponse.subjects:type_name -> provenencia.engine.v1.Subject
 	113, // 52: provenencia.engine.v1.SetSubjectPositionResponse.position:type_name -> provenencia.engine.v1.SubjectPosition
 	113, // 53: provenencia.engine.v1.ListSubjectPositionsResponse.positions:type_name -> provenencia.engine.v1.SubjectPosition
-	140, // 54: provenencia.engine.v1.SubjectTypeField.property:type_name -> provenencia.engine.v1.Property
+	140, // 54: provenencia.engine.v1.SubjectTypeProperty.property:type_name -> provenencia.engine.v1.Property
 	145, // 55: provenencia.engine.v1.ConnectRule.edges:type_name -> provenencia.engine.v1.ConnectEdge
 	140, // 56: provenencia.engine.v1.ListPropertiesResponse.properties:type_name -> provenencia.engine.v1.Property
 	140, // 57: provenencia.engine.v1.CreatePropertyResponse.property:type_name -> provenencia.engine.v1.Property
 	140, // 58: provenencia.engine.v1.UpdatePropertyResponse.property:type_name -> provenencia.engine.v1.Property
-	142, // 59: provenencia.engine.v1.ListSubjectTypeFieldsResponse.fields:type_name -> provenencia.engine.v1.SubjectTypeField
+	142, // 59: provenencia.engine.v1.ListSubjectTypePropertiesResponse.properties:type_name -> provenencia.engine.v1.SubjectTypeProperty
 	143, // 60: provenencia.engine.v1.ListPlaceableSubjectTypesResponse.types:type_name -> provenencia.engine.v1.SubjectTypePresentation
 	143, // 61: provenencia.engine.v1.GetSubjectTypePresentationResponse.presentation:type_name -> provenencia.engine.v1.SubjectTypePresentation
 	144, // 62: provenencia.engine.v1.ListConnectRulesResponse.rules:type_name -> provenencia.engine.v1.ConnectRule
@@ -14644,11 +14648,11 @@ var file_engine_proto_depIdxs = []int32{
 	176, // 86: provenencia.engine.v1.UpdateCitationResponse.citation:type_name -> provenencia.engine.v1.Citation
 	177, // 87: provenencia.engine.v1.UpdateObservationRequest.observation:type_name -> provenencia.engine.v1.Observation
 	177, // 88: provenencia.engine.v1.UpdateObservationResponse.observation:type_name -> provenencia.engine.v1.Observation
-	142, // 89: provenencia.engine.v1.SubjectTypeFieldsGroup.fields:type_name -> provenencia.engine.v1.SubjectTypeField
-	143, // 90: provenencia.engine.v1.SubjectTypeFieldsGroup.presentation:type_name -> provenencia.engine.v1.SubjectTypePresentation
-	140, // 91: provenencia.engine.v1.GetSubjectFieldsWorkspaceResponse.properties:type_name -> provenencia.engine.v1.Property
-	111, // 92: provenencia.engine.v1.GetSubjectFieldsWorkspaceResponse.types:type_name -> provenencia.engine.v1.SubjectType
-	202, // 93: provenencia.engine.v1.GetSubjectFieldsWorkspaceResponse.groups:type_name -> provenencia.engine.v1.SubjectTypeFieldsGroup
+	142, // 89: provenencia.engine.v1.SubjectTypePropertiesGroup.properties:type_name -> provenencia.engine.v1.SubjectTypeProperty
+	143, // 90: provenencia.engine.v1.SubjectTypePropertiesGroup.presentation:type_name -> provenencia.engine.v1.SubjectTypePresentation
+	140, // 91: provenencia.engine.v1.GetPropertiesWorkspaceResponse.properties:type_name -> provenencia.engine.v1.Property
+	111, // 92: provenencia.engine.v1.GetPropertiesWorkspaceResponse.types:type_name -> provenencia.engine.v1.SubjectType
+	202, // 93: provenencia.engine.v1.GetPropertiesWorkspaceResponse.groups:type_name -> provenencia.engine.v1.SubjectTypePropertiesGroup
 	204, // 94: provenencia.engine.v1.ListSourceGraphProgressResponse.rows:type_name -> provenencia.engine.v1.SourceGraphProgress
 	204, // 95: provenencia.engine.v1.GetSourceGraphProgressResponse.progress:type_name -> provenencia.engine.v1.SourceGraphProgress
 	1,   // 96: provenencia.engine.v1.GetDeleteImpactResponse.gate:type_name -> provenencia.engine.v1.DeleteImpactGate

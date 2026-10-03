@@ -71,11 +71,11 @@ struct WorkspaceDestinationHostTests {
         )
     }
 
-    @Test func presentationSourceFieldsRootAndRow() {
-        #expect(presentation(for: .sectionRoot(.sourceFields)) == .sourceFields)
+    @Test func presentationMetadataRootAndRow() {
+        #expect(presentation(for: .sectionRoot(.metadata)) == .metadata)
         #expect(
-            presentation(for: WorkspaceLocation(section: .sourceFields, fieldId: "fld-1", title: "Author"))
-                == .sourceFields
+            presentation(for: WorkspaceLocation(section: .metadata, fieldId: "fld-1", title: "Author"))
+                == .metadata
         )
     }
 
@@ -87,8 +87,8 @@ struct WorkspaceDestinationHostTests {
         )
     }
 
-    @Test func presentationSubjectFields() {
-        #expect(presentation(for: .sectionRoot(.subjectFields)) == .subjectFields)
+    @Test func presentationProperties() {
+        #expect(presentation(for: .sectionRoot(.properties)) == .properties)
     }
 
     @Test func sourceFamilyPresentationsUseSourcesDestination() {
@@ -103,8 +103,8 @@ struct WorkspaceDestinationHostTests {
         #expect(WorkspaceDestinationHost.destinationKind(for: .personsList) == .persons)
     }
 
-    @Test func subjectFieldsPresentationHasOwnKind() {
-        #expect(WorkspaceDestinationHost.destinationKind(for: .subjectFields) == .subjectFields)
+    @Test func propertiesPresentationHasOwnKind() {
+        #expect(WorkspaceDestinationHost.destinationKind(for: .properties) == .properties)
     }
 
     @Test func registryPresentationsAreKnown() {
@@ -120,11 +120,11 @@ struct WorkspaceDestinationHostTests {
                 subjectId: "sub-1",
                 sourceSurface: .citationComposer
             ),
-            .sectionRoot(.sourceFields),
-            WorkspaceLocation(section: .sourceFields, fieldId: "f1"),
+            .sectionRoot(.metadata),
+            WorkspaceLocation(section: .metadata, fieldId: "f1"),
             .sectionRoot(.sourceTypes),
             WorkspaceLocation(section: .sourceTypes, typeId: "t1"),
-            .sectionRoot(.subjectFields),
+            .sectionRoot(.properties),
             .sectionRoot(.persons),
         ]
         let known = Set(WorkspacePresentationID.allCases)

@@ -62,7 +62,7 @@ var tables = []tableSpec{
 	{Name: "observations", PK: "id", Kind: KindObservation, Bucket: BucketResource, Exists: `SELECT 1 FROM observations WHERE id = ?`},
 	{Name: "subjects", PK: "id", Kind: KindSubject, Bucket: BucketResource, Exists: `SELECT 1 FROM subjects WHERE id = ?`},
 	{Name: "source_types", PK: "id", Kind: KindSourceType, Bucket: BucketVocab, Exists: `SELECT 1 FROM source_types WHERE id = ?`},
-	{Name: "source_metadata_fields", PK: "id", Kind: KindSourceField, Bucket: BucketVocab, Exists: `SELECT 1 FROM source_metadata_fields WHERE id = ?`},
+	{Name: "source_metadata_fields", PK: "id", Kind: KindMetadataField, Bucket: BucketVocab, Exists: `SELECT 1 FROM source_metadata_fields WHERE id = ?`},
 	{Name: "source_credibility_grades", PK: "id", Kind: KindCredibilityGrade, Bucket: BucketVocab, Exists: `SELECT 1 FROM source_credibility_grades WHERE id = ?`},
 	{Name: "subject_types", PK: "id", Kind: KindSubjectType, Bucket: BucketVocab, Exists: `SELECT 1 FROM subject_types WHERE id = ?`},
 	{Name: "properties", PK: "id", Kind: KindProperty, Bucket: BucketVocab, Exists: `SELECT 1 FROM properties WHERE id = ?`},
@@ -80,7 +80,7 @@ var tables = []tableSpec{
 	{Name: "citation_notes", Bucket: BucketFacet},
 	{Name: "observation_notes", Bucket: BucketFacet},
 	{Name: "subject_positions", Bucket: BucketFacet},
-	{Name: "subject_type_fields", Bucket: BucketFacet},
+	{Name: "subject_type_properties", Bucket: BucketFacet},
 	{Name: "name_value_parts", Bucket: BucketFacet},
 	{Name: "identity_claims", Kind: KindIdentityClaim, Bucket: BucketFacet},
 	{Name: "identity_claim_evidence", Bucket: BucketFacet},
@@ -134,8 +134,8 @@ var foreignKeys = []fkSpec{
 	{FromTable: "subjects", FromCol: "source_id", ToTable: "sources", OnDelete: "NO ACTION", Bucket: BucketResource},
 	{FromTable: "subjects", FromCol: "subject_type_id", ToTable: "subject_types", OnDelete: "NO ACTION", Bucket: BucketResource},
 	{FromTable: "subject_positions", FromCol: "subject_id", ToTable: "subjects", OnDelete: "CASCADE", Bucket: BucketFacet},
-	{FromTable: "subject_type_fields", FromCol: "subject_type_id", ToTable: "subject_types", OnDelete: "CASCADE", Bucket: BucketFacet},
-	{FromTable: "subject_type_fields", FromCol: "property_id", ToTable: "properties", OnDelete: "CASCADE", Bucket: BucketFacet},
+	{FromTable: "subject_type_properties", FromCol: "subject_type_id", ToTable: "subject_types", OnDelete: "CASCADE", Bucket: BucketFacet},
+	{FromTable: "subject_type_properties", FromCol: "property_id", ToTable: "properties", OnDelete: "CASCADE", Bucket: BucketFacet},
 
 	{FromTable: "property_terms", FromCol: "property_id", ToTable: "properties", OnDelete: "NO ACTION", Bucket: BucketResource},
 	{FromTable: "name_value_parts", FromCol: "name_value_id", ToTable: "name_values", OnDelete: "CASCADE", Bucket: BucketFacet},
@@ -154,7 +154,7 @@ var foreignKeys = []fkSpec{
 
 var originRules = []originRule{
 	{Kind: KindSourceType, OriginSQL: `SELECT origin FROM source_types WHERE id = ?`, PluginNever: true},
-	{Kind: KindSourceField, OriginSQL: `SELECT origin FROM source_metadata_fields WHERE id = ?`, PluginNever: true},
+	{Kind: KindMetadataField, OriginSQL: `SELECT origin FROM source_metadata_fields WHERE id = ?`, PluginNever: true},
 	{Kind: KindProperty, OriginSQL: `SELECT origin FROM properties WHERE id = ?`, PluginNever: true, SeededLocked: true},
 	{Kind: KindPropertyTerm, OriginSQL: `SELECT origin FROM property_terms WHERE id = ?`, PluginNever: true, SeededLocked: true},
 	{Kind: KindSubjectType, OriginSQL: `SELECT origin FROM subject_types WHERE id = ?`, PluginNever: true},
@@ -205,7 +205,7 @@ var inboundEdgeList = sync.OnceValue(func() []inboundEdge {
 		subjectResourceInbound(),
 		fkEdge(KindSubject, "observations.value_subject_id", KindObservation, "observations", "value_subject_id", "ref"),
 		fkEdge(KindSourceType, "sources.source_type_id", KindSource, "sources", "source_type_id", "ref"),
-		joinEdge(KindSourceField, "source_metadata.field_id", KindSource,
+		joinEdge(KindMetadataField, "source_metadata.field_id", KindSource,
 			`SELECT COUNT(DISTINCT source_id) FROM source_metadata WHERE field_id = ?`,
 			`SELECT s.id, s.ref FROM source_metadata m
 				JOIN sources s ON s.id = m.source_id

@@ -642,14 +642,14 @@ struct CatalogQueryRegistryTests {
         #expect(registry.invalidations(by: .savedCitation(sourceId: "s1"), project: project) == [
             .key(.sourceGraph(project: project, sourceId: "s1")),
             .key(.citationCounts(project: project, sourceId: "s1")),
-            .key(.subjectFieldsWorkspace(project: project)),
+            .key(.propertiesWorkspace(project: project)),
             .allCached(.citationsByArtifact),
             .key(.personsList(project: project)),
         ])
         #expect(registry.invalidations(by: .deletedSubject(sourceId: "s1"), project: project) == [
             .key(.sourceGraph(project: project, sourceId: "s1")),
             .key(.citationCounts(project: project, sourceId: "s1")),
-            .key(.subjectFieldsWorkspace(project: project)),
+            .key(.propertiesWorkspace(project: project)),
             .allCached(.citationsByArtifact),
             .key(.personsList(project: project)),
         ])
@@ -816,7 +816,7 @@ struct CatalogQueryRegistryTests {
         #expect(secondHandle.value?.first?.field.label == "Author name")
     }
 
-    /// `usedBy` gates Delete on the Source Fields page, and it moves whenever a
+    /// `usedBy` gates Delete on the Metadata page, and it moves whenever a
     /// source gains or loses a value.
     @Test func sourceMetadataWriteInvalidatesFieldsList() async {
         let store = FakeStore()

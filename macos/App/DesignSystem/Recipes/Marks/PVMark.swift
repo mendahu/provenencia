@@ -54,7 +54,7 @@ enum PVMarkKey: String, CaseIterable, Sendable {
     case typePostcard = "type_postcard"
     case typePassport = "type_passport"
 
-    // Subject kinds (graph + Subject fields)
+    // Subject kinds (graph + Properties)
     case subjectPerson = "subject_person"
     case subjectEvent = "subject_event"
     case subjectPlace = "subject_place"

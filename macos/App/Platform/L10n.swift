@@ -781,16 +781,16 @@ enum L10n {
             comment: "Workspace sidebar destination and page title: Source types"
         )
 
-        static let sourceFieldsTitle = LocalizedStringResource(
-            "workspace.section.sourceFields.title",
-            defaultValue: "Source fields",
-            comment: "Workspace sidebar destination and page title: Source fields"
+        static let metadataTitle = LocalizedStringResource(
+            "workspace.section.metadata.title",
+            defaultValue: "Metadata",
+            comment: "Workspace sidebar destination and page title: Metadata"
         )
 
-        static let subjectFieldsTitle = LocalizedStringResource(
-            "workspace.section.subjectFields.title",
-            defaultValue: "Subject fields",
-            comment: "Workspace sidebar destination and page title: Subject fields"
+        static let propertiesTitle = LocalizedStringResource(
+            "workspace.section.properties.title",
+            defaultValue: "Properties",
+            comment: "Workspace sidebar destination and page title: Properties"
         )
 
         static let personsTitle = LocalizedStringResource(
@@ -910,10 +910,10 @@ enum L10n {
             comment: "Kind chip on an omnibar hit for a source type"
         )
 
-        static let omnibarKindField = LocalizedStringResource(
-            "workspace.omnibar.kind.field",
-            defaultValue: "Field",
-            comment: "Kind chip on an omnibar hit for a source field"
+        static let omnibarKindMetadataField = LocalizedStringResource(
+            "workspace.omnibar.kind.metadataField",
+            defaultValue: "Metadata field",
+            comment: "Kind chip on an omnibar hit for a metadata field"
         )
 
         static func omnibarNoMatchesTitle(query: String) -> String {
@@ -4823,151 +4823,151 @@ enum L10n {
         ))
     }
 
-    enum SourceFields {
+    enum Metadata {
         static let description = LocalizedStringResource(
-            "sourceFields.list.description",
+            "metadata.list.description",
             defaultValue: "The metadata a source can carry in this project. Provenencia seeds the common fields; you add the ones your records actually use.",
-            comment: "Explanatory copy under the Source fields page title"
+            comment: "Explanatory copy under the Metadata page title"
         )
 
         static func countLine(total: Int, seeded: Int, user: Int) -> String {
             let format = String(localized: LocalizedStringResource(
-                "sourceFields.list.countLine",
+                "metadata.list.countLine",
                 defaultValue: "%lld fields · %lld seeded · %lld yours",
-                comment: "Source fields count summary; arguments are total, seeded (provenencia), and user field counts"
+                comment: "Metadata count summary; arguments are total, seeded (provenencia), and user field counts"
             ))
             return String(format: format, locale: .current, total, seeded, user)
         }
 
         static func countLineWithPlugin(total: Int, seeded: Int, user: Int, plugin: Int) -> String {
             let format = String(localized: LocalizedStringResource(
-                "sourceFields.list.countLineWithPlugin",
+                "metadata.list.countLineWithPlugin",
                 defaultValue: "%lld fields · %lld seeded · %lld yours · %lld plugin",
-                comment: "Source fields count summary including plugin-origin fields; arguments are total, seeded, user, and plugin field counts"
+                comment: "Metadata count summary including plugin-origin fields; arguments are total, seeded, user, and plugin field counts"
             ))
             return String(format: format, locale: .current, total, seeded, user, plugin)
         }
 
         static let addField = LocalizedStringResource(
-            "sourceFields.list.addField",
+            "metadata.list.addField",
             defaultValue: "Add field",
-            comment: "Button: add a new Source field (toolbar, empty state, and add-form submit)"
+            comment: "Button: add a new Metadata field (toolbar, empty state, and add-form submit)"
         )
 
         static let columnLabel = LocalizedStringResource(
-            "sourceFields.list.columnLabel",
+            "metadata.list.columnLabel",
             defaultValue: "Label",
-            comment: "Source fields list column header: label"
+            comment: "Metadata list column header: label"
         )
 
         static let columnKey = LocalizedStringResource(
-            "sourceFields.list.columnKey",
+            "metadata.list.columnKey",
             defaultValue: "Key",
-            comment: "Source fields list column header: key"
+            comment: "Metadata list column header: key"
         )
 
         static let columnDataType = LocalizedStringResource(
-            "sourceFields.list.columnDataType",
+            "metadata.list.columnDataType",
             defaultValue: "Data type",
-            comment: "Source fields list column header: data type"
+            comment: "Metadata list column header: data type"
         )
 
         static let dataTypeText = LocalizedStringResource(
-            "sourceFields.dataType.text",
+            "metadata.dataType.text",
             defaultValue: "text",
-            comment: "Source field data type badge/option: text"
+            comment: "Metadata field data type badge/option: text"
         )
 
         static let dataTypeDate = LocalizedStringResource(
-            "sourceFields.dataType.date",
+            "metadata.dataType.date",
             defaultValue: "date",
-            comment: "Source field data type badge/option: date"
+            comment: "Metadata field data type badge/option: date"
         )
 
         static let dataTypeUrl = LocalizedStringResource(
-            "sourceFields.dataType.url",
+            "metadata.dataType.url",
             defaultValue: "url",
-            comment: "Source field data type badge/option: url"
+            comment: "Metadata field data type badge/option: url"
         )
 
         static let deleteField = LocalizedStringResource(
-            "sourceFields.delete.action",
+            "metadata.delete.action",
             defaultValue: "Delete field",
-            comment: "Tooltip on the Source fields inspector trash"
+            comment: "Tooltip on the Metadata inspector trash"
         )
 
         static func deleteFieldAccessibility(label: String) -> String {
             let format = String(localized: LocalizedStringResource(
-                "sourceFields.delete.accessibility",
+                "metadata.delete.accessibility",
                 defaultValue: "Delete field %@",
-                comment: "VoiceOver for Source fields trash; argument is the field label"
+                comment: "VoiceOver for Metadata trash; argument is the field label"
             ))
             return String(format: format, locale: .current, label)
         }
 
         static let toastDeletedTitle = LocalizedStringResource(
-            "sourceFields.toast.deletedTitle",
+            "metadata.toast.deletedTitle",
             defaultValue: "Field deleted",
-            comment: "Toast title after a source field is deleted"
+            comment: "Toast title after a metadata field is deleted"
         )
 
         static func toastDeletedBody(label: String) -> String {
             let format = String(localized: LocalizedStringResource(
-                "sourceFields.toast.deletedBody",
+                "metadata.toast.deletedBody",
                 defaultValue: "%@ is no longer in this project's vocabulary.",
-                comment: "Toast body after a source field is deleted; argument is the field label"
+                comment: "Toast body after a metadata field is deleted; argument is the field label"
             ))
             return String(format: format, locale: .current, label)
         }
 
         static let emptyProjectTitle = LocalizedStringResource(
-            "sourceFields.emptyProject.title",
-            defaultValue: "No source fields yet",
+            "metadata.emptyProject.title",
+            defaultValue: "No metadata fields yet",
             comment: "Title of the empty state when the project has zero metadata fields"
         )
 
         static let emptyProjectBody = LocalizedStringResource(
-            "sourceFields.emptyProject.body",
+            "metadata.emptyProject.body",
             defaultValue: "This project has no metadata vocabulary. Add the fields your records actually carry — a certificate number, a photographer, an album code.",
             comment: "Body of the empty state when the project has zero metadata fields"
         )
 
         static func resultLine(shown: Int, total: Int) -> String {
             let format = String(localized: LocalizedStringResource(
-                "sourceFields.list.resultLineAll",
+                "metadata.list.resultLineAll",
                 defaultValue: "%lld fields",
-                comment: "Footer result count for the Source fields list; argument is the total"
+                comment: "Footer result count for the Metadata list; argument is the total"
             ))
             return String(format: format, locale: .current, total)
         }
 
         static let detailEyebrowField = LocalizedStringResource(
-            "sourceFields.detail.eyebrowField",
+            "metadata.detail.eyebrowField",
             defaultValue: "Field",
             comment: "Eyebrow label above an existing field's detail panel"
         )
 
         static let detailEyebrowNewField = LocalizedStringResource(
-            "sourceFields.detail.eyebrowNewField",
+            "metadata.detail.eyebrowNewField",
             defaultValue: "New field",
             comment: "Eyebrow label above the add-field panel"
         )
 
         static let keyHintAdd = LocalizedStringResource(
-            "sourceFields.detail.keyHintAdd",
+            "metadata.detail.keyHintAdd",
             defaultValue: "Provenencia mints the key from the label when the field is added",
             comment: "Hint under the live key preview while adding a field"
         )
 
         static let keyHintEdit = LocalizedStringResource(
-            "sourceFields.detail.keyHintEdit",
+            "metadata.detail.keyHintEdit",
             defaultValue: "The key is minted once from the label and never changes — renaming the field keeps existing sources attached",
             comment: "Hint under the key on an existing field's detail panel"
         )
 
         static func lockedNotePlugin(pluginID: String) -> String {
             let format = String(localized: LocalizedStringResource(
-                "sourceFields.detail.lockedNotePlugin",
+                "metadata.detail.lockedNotePlugin",
                 defaultValue: "Supplied by the %@ plugin. The plugin owns this definition — Provenencia will not edit it.",
                 comment: "Callout explaining why a plugin-origin field can't be edited; argument is the plugin id"
             ))
@@ -4975,252 +4975,252 @@ enum L10n {
         }
 
         static let dataTypeSectionLabel = LocalizedStringResource(
-            "sourceFields.detail.dataTypeSectionLabel",
+            "metadata.detail.dataTypeSectionLabel",
             defaultValue: "Data type",
             comment: "Section label above the read-only data type line on a locked field's detail"
         )
 
         static let descriptionSectionLabel = LocalizedStringResource(
-            "sourceFields.detail.descriptionSectionLabel",
+            "metadata.detail.descriptionSectionLabel",
             defaultValue: "Description",
             comment: "Section label above the read-only description on a locked field's detail"
         )
 
         static let descriptionEmptyPlaceholder = LocalizedStringResource(
-            "sourceFields.detail.descriptionEmptyPlaceholder",
+            "metadata.detail.descriptionEmptyPlaceholder",
             defaultValue: "—",
             comment: "Shown in place of a locked field's description when it has none"
         )
 
         static let panelEmptyTitle = LocalizedStringResource(
-            "sourceFields.detail.panelEmptyTitle",
+            "metadata.detail.panelEmptyTitle",
             defaultValue: "No field selected",
             comment: "Title of the empty state shown in the detail panel before any field is selected"
         )
 
         static let panelEmptyBody = LocalizedStringResource(
-            "sourceFields.detail.panelEmptyBody",
+            "metadata.detail.panelEmptyBody",
             defaultValue: "Select a field to read or edit its definition. Fields supplied by a plugin are read-only; the rest of this project's vocabulary stays editable.",
             comment: "Body of the empty state shown in the detail panel before any field is selected"
         )
 
         static let formLabel = LocalizedStringResource(
-            "sourceFields.form.label",
+            "metadata.form.label",
             defaultValue: "Label",
             comment: "Add/edit form field: label"
         )
 
         static let formLabelPlaceholder = LocalizedStringResource(
-            "sourceFields.form.labelPlaceholder",
+            "metadata.form.labelPlaceholder",
             defaultValue: "Grandma’s album code",
             comment: "Placeholder text for the add-field label input"
         )
 
         static let formDataType = LocalizedStringResource(
-            "sourceFields.form.dataType",
+            "metadata.form.dataType",
             defaultValue: "Data type",
             comment: "Add/edit form field: data type picker"
         )
 
         static let formDataTypeHint = LocalizedStringResource(
-            "sourceFields.form.dataTypeHint",
+            "metadata.form.dataTypeHint",
             defaultValue: "Text or url — chosen at create and immutable afterward",
             comment: "Hint under the data type picker on add"
         )
 
         static let formDataTypeImmutableHint = LocalizedStringResource(
-            "sourceFields.form.dataTypeImmutableHint",
+            "metadata.form.dataTypeImmutableHint",
             defaultValue: "Data type is fixed when the field is created so existing values stay valid.",
             comment: "Hint under the read-only data type on edit"
         )
 
         static let formDescription = LocalizedStringResource(
-            "sourceFields.form.description",
+            "metadata.form.description",
             defaultValue: "Description",
             comment: "Add/edit form field: description"
         )
 
         static let formDescriptionHint = LocalizedStringResource(
-            "sourceFields.form.descriptionHint",
+            "metadata.form.descriptionHint",
             defaultValue: "What a researcher should put in this field, in your own words",
             comment: "Hint under the description field"
         )
 
         static let formDescriptionPlaceholder = LocalizedStringResource(
-            "sourceFields.form.descriptionPlaceholder",
+            "metadata.form.descriptionPlaceholder",
             defaultValue: "Pencil code on the back of prints from the album",
             comment: "Placeholder text for the add-field description input"
         )
 
         static let errorLabelRequired = LocalizedStringResource(
-            "sourceFields.form.errorLabelRequired",
+            "metadata.form.errorLabelRequired",
             defaultValue: "A label is required — it is how the field reads on a source.",
             comment: "Inline validation error when the label is blank"
         )
 
         static let errorUnslugifiable = LocalizedStringResource(
-            "sourceFields.form.errorUnslugifiable",
+            "metadata.form.errorUnslugifiable",
             defaultValue: "That label cannot be turned into a key. Use at least one letter or number.",
             comment: "Inline validation error when the label has no letters or digits to slug"
         )
 
         static let saveSaving = LocalizedStringResource(
-            "sourceFields.form.saveSaving",
+            "metadata.form.saveSaving",
             defaultValue: "Saving",
-            comment: "Primary button label while a Source field add/edit is in flight"
+            comment: "Primary button label while a Metadata field add/edit is in flight"
         )
 
         static let saveChanges = LocalizedStringResource(
-            "sourceFields.form.saveChanges",
+            "metadata.form.saveChanges",
             defaultValue: "Save changes",
             comment: "Primary button label for committing an edit to an existing field"
         )
 
         static let cancel = LocalizedStringResource(
-            "sourceFields.form.cancel",
+            "metadata.form.cancel",
             defaultValue: "Cancel",
             comment: "Secondary button label that dismisses the add-field form"
         )
 
         static let revert = LocalizedStringResource(
-            "sourceFields.form.revert",
+            "metadata.form.revert",
             defaultValue: "Revert",
             comment: "Secondary button label that discards unsaved edits to an existing field"
         )
 
         static let toastAddedTitle = LocalizedStringResource(
-            "sourceFields.toast.addedTitle",
+            "metadata.toast.addedTitle",
             defaultValue: "Field added",
-            comment: "Success toast title after creating a Source field"
+            comment: "Success toast title after creating a Metadata field"
         )
 
         static func toastAddedBody(label: String, key: String) -> String {
             let format = String(localized: LocalizedStringResource(
-                "sourceFields.toast.addedBody",
+                "metadata.toast.addedBody",
                 defaultValue: "%@ is in this project’s vocabulary as %@.",
-                comment: "Success toast body after creating a Source field; arguments are label then minted key"
+                comment: "Success toast body after creating a Metadata field; arguments are label then minted key"
             ))
             return String(format: format, locale: .current, label, key)
         }
 
         static let toastUpdatedTitle = LocalizedStringResource(
-            "sourceFields.toast.updatedTitle",
+            "metadata.toast.updatedTitle",
             defaultValue: "Field updated",
-            comment: "Success toast title after editing a Source field"
+            comment: "Success toast title after editing a Metadata field"
         )
 
         static func toastUpdatedBody(label: String, key: String) -> String {
             let format = String(localized: LocalizedStringResource(
-                "sourceFields.toast.updatedBody",
+                "metadata.toast.updatedBody",
                 defaultValue: "%@ — the key stays %@.",
-                comment: "Success toast body after editing a Source field; arguments are label then key"
+                comment: "Success toast body after editing a Metadata field; arguments are label then key"
             ))
             return String(format: format, locale: .current, label, key)
         }
     }
 
-    enum SubjectFields {
+    enum Properties {
         static let description = LocalizedStringResource(
-            "subjectFields.list.description",
+            "properties.list.description",
             defaultValue: "The properties a subject can carry, and which of the seven subject types carry them.",
-            comment: "Explanatory copy under the Subject fields page title"
+            comment: "Explanatory copy under the Properties page title"
         )
         static let allProperties = LocalizedStringResource(
-            "subjectFields.strip.all",
+            "properties.strip.all",
             defaultValue: "All properties",
             comment: "Type strip card that clears the subject-type filter"
         )
         static let bridgeRole = LocalizedStringResource(
-            "subjectFields.strip.bridge",
+            "properties.strip.bridge",
             defaultValue: "bridge",
             comment: "Micro-label on bridge subject-type strip cards; rendered uppercase (BRIDGE)"
         )
         static let typeStripAccessibility = LocalizedStringResource(
-            "subjectFields.strip.accessibility",
+            "properties.strip.accessibility",
             defaultValue: "Subject types",
             comment: "Accessibility label for the type strip pressed-button group"
         )
         static func stripFieldCount(count: Int) -> String {
             let format = String(localized: LocalizedStringResource(
-                "subjectFields.strip.fieldCount",
+                "properties.strip.fieldCount",
                 defaultValue: "%lld fields",
                 comment: "Type strip count under a subject type; argument is binding count"
             ))
             return String(format: format, locale: .current, count)
         }
         static let searchPlaceholder = LocalizedStringResource(
-            "subjectFields.search.placeholder",
+            "properties.search.placeholder",
             defaultValue: "Search properties",
-            comment: "List-card search field placeholder on Subject fields"
+            comment: "List-card search field placeholder on Properties"
         )
         static let originUserShort = LocalizedStringResource(
-            "subjectFields.table.originUser",
+            "properties.table.originUser",
             defaultValue: "user",
             comment: "Table origin column for researcher-created properties"
         )
         static let originSeededShort = LocalizedStringResource(
-            "subjectFields.table.originSeeded",
+            "properties.table.originSeeded",
             defaultValue: "seeded",
             comment: "Table origin column for Provenencia-seeded properties"
         )
         static let valueTypeText = LocalizedStringResource(
-            "subjectFields.valueType.text",
+            "properties.valueType.text",
             defaultValue: "Text",
             comment: "Property value type label: text"
         )
         static let valueTypeInteger = LocalizedStringResource(
-            "subjectFields.valueType.integer",
+            "properties.valueType.integer",
             defaultValue: "Integer",
             comment: "Property value type label: integer"
         )
         static let valueTypeDate = LocalizedStringResource(
-            "subjectFields.valueType.date",
+            "properties.valueType.date",
             defaultValue: "Date",
             comment: "Property value type label: date"
         )
         static let valueTypeName = LocalizedStringResource(
-            "subjectFields.valueType.name",
+            "properties.valueType.name",
             defaultValue: "Name",
             comment: "Property value type label: name"
         )
         static let valueTypeSubject = LocalizedStringResource(
-            "subjectFields.valueType.subject",
+            "properties.valueType.subject",
             defaultValue: "Subject",
             comment: "Property value type label: subject"
         )
         static let valueTypeTerm = LocalizedStringResource(
-            "subjectFields.valueType.term",
+            "properties.valueType.term",
             defaultValue: "Term",
             comment: "Property value type label: term (registry-only)"
         )
         static let columnOn = LocalizedStringResource(
-            "subjectFields.table.columnOn",
+            "properties.table.columnOn",
             defaultValue: "On",
-            comment: "Subject fields table column: binding toggle for the focused type"
+            comment: "Properties table column: binding toggle for the focused type"
         )
         static let columnProperty = LocalizedStringResource(
-            "subjectFields.table.columnProperty",
+            "properties.table.columnProperty",
             defaultValue: "Property",
-            comment: "Subject fields table column: property label"
+            comment: "Properties table column: property label"
         )
         static let columnValueType = LocalizedStringResource(
-            "subjectFields.table.columnValueType",
+            "properties.table.columnValueType",
             defaultValue: "Value type",
-            comment: "Subject fields table column: value type"
+            comment: "Properties table column: value type"
         )
         static let columnOrigin = LocalizedStringResource(
-            "subjectFields.table.columnOrigin",
+            "properties.table.columnOrigin",
             defaultValue: "Origin",
-            comment: "Subject fields table column: origin"
+            comment: "Properties table column: origin"
         )
         static let columnBoundTo = LocalizedStringResource(
-            "subjectFields.table.columnBoundTo",
+            "properties.table.columnBoundTo",
             defaultValue: "Bound to",
-            comment: "Subject fields table column: bound subject types"
+            comment: "Properties table column: bound subject types"
         )
         static func boundOverflow(count: Int) -> String {
             let format = String(localized: LocalizedStringResource(
-                "subjectFields.table.boundOverflow",
+                "properties.table.boundOverflow",
                 defaultValue: "+%lld",
                 comment: "Overflow when more than three Bound-to chips; argument is remaining count"
             ))
@@ -5228,7 +5228,7 @@ enum L10n {
         }
         static func rowBoundAnnouncement(count: Int) -> String {
             let format = String(localized: LocalizedStringResource(
-                "subjectFields.table.rowBoundAnnouncement",
+                "properties.table.rowBoundAnnouncement",
                 defaultValue: "bound to %lld types",
                 comment: "VoiceOver fragment for how many types a property is bound to"
             ))
@@ -5238,299 +5238,299 @@ enum L10n {
             let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
             if trimmed.isEmpty {
                 return String(localized: LocalizedStringResource(
-                    "subjectFields.table.emptySearchTitle",
+                    "properties.table.emptySearchTitle",
                     defaultValue: "No properties match",
                     comment: "Empty table title when no properties are visible"
                 ))
             }
             let format = String(localized: LocalizedStringResource(
-                "subjectFields.table.emptySearchTitleQuery",
+                "properties.table.emptySearchTitleQuery",
                 defaultValue: "No property matches “%@”",
                 comment: "Empty table title when search matches nothing; argument is the query"
             ))
             return String(format: format, locale: .current, trimmed)
         }
         static let emptySearch = LocalizedStringResource(
-            "subjectFields.table.emptySearch",
+            "properties.table.emptySearch",
             defaultValue: "Clear the search, or create it as a user property",
             comment: "Empty state when search/filter matches no properties"
         )
         static let newProperty = LocalizedStringResource(
-            "subjectFields.toolbar.newProperty",
+            "properties.toolbar.newProperty",
             defaultValue: "New property",
             comment: "Toolbar button to open create Property sheet"
         )
         static func addPropertyPlaceholder(typeLabel: String) -> LocalizedStringResource {
             LocalizedStringResource(
-                "subjectFields.toolbar.addPropertyPlaceholder",
+                "properties.toolbar.addPropertyPlaceholder",
                 defaultValue: "Add a property to \(typeLabel)",
                 comment: "ComboBox placeholder when a subject type is focused; argument is type label"
             )
         }
         static let addPropertyEmpty = LocalizedStringResource(
-            "subjectFields.toolbar.addPropertyEmpty",
+            "properties.toolbar.addPropertyEmpty",
             defaultValue: "No unbound property matches that name",
             comment: "ComboBox empty state when binding an existing property to the focused type"
         )
         static let inspectorAccessibility = LocalizedStringResource(
-            "subjectFields.inspector.accessibility",
+            "properties.inspector.accessibility",
             defaultValue: "Property inspector",
             comment: "Accessibility label for the property inspector card"
         )
         static let inspectorEmpty = LocalizedStringResource(
-            "subjectFields.inspector.empty",
+            "properties.inspector.empty",
             defaultValue: "Select a property to see its description and bindings.",
             comment: "Inspector empty state"
         )
         static let inspectorValueType = LocalizedStringResource(
-            "subjectFields.inspector.valueType",
+            "properties.inspector.valueType",
             defaultValue: "Value type",
             comment: "Inspector meta label: value type"
         )
         static let valueTypeImmutable = LocalizedStringResource(
-            "subjectFields.inspector.valueTypeImmutable",
+            "properties.inspector.valueTypeImmutable",
             defaultValue: "Immutable after create",
             comment: "Accessibility label for the lock beside value type in the inspector"
         )
         static let inspectorOrigin = LocalizedStringResource(
-            "subjectFields.inspector.origin",
+            "properties.inspector.origin",
             defaultValue: "Origin",
             comment: "Inspector meta label: origin"
         )
         static let inspectorOriginUser = LocalizedStringResource(
-            "subjectFields.inspector.originUser",
+            "properties.inspector.originUser",
             defaultValue: "User — you created this",
             comment: "Inspector origin line for researcher-created properties"
         )
         static let inspectorOriginSeeded = LocalizedStringResource(
-            "subjectFields.inspector.originSeeded",
+            "properties.inspector.originSeeded",
             defaultValue: "Seeded by Provenencia",
             comment: "Inspector origin line for product-seeded properties"
         )
         static let inspectorUsedOn = LocalizedStringResource(
-            "subjectFields.inspector.usedOn",
+            "properties.inspector.usedOn",
             defaultValue: "Used on",
             comment: "Inspector meta label: observation count for the selected property"
         )
         static func usedOnCount(count: Int) -> String {
             let format = String(localized: LocalizedStringResource(
-                "subjectFields.inspector.usedOnCount",
+                "properties.inspector.usedOnCount",
                 defaultValue: "%lld observations",
                 comment: "Inspector observation count; argument is UsedBy"
             ))
             return String(format: format, locale: .current, count)
         }
         static let bindingsSection = LocalizedStringResource(
-            "subjectFields.inspector.bindings",
+            "properties.inspector.bindings",
             defaultValue: "Bound to",
             comment: "Inspector section label for bindings list"
         )
         static let bindingsAccessibility = LocalizedStringResource(
-            "subjectFields.inspector.bindingsAccessibility",
+            "properties.inspector.bindingsAccessibility",
             defaultValue: "Subject type bindings",
             comment: "Accessibility label for the Bound-to checkbox list"
         )
         static func bindCount(bound: Int, total: Int) -> String {
             let format = String(localized: LocalizedStringResource(
-                "subjectFields.inspector.bindCount",
+                "properties.inspector.bindCount",
                 defaultValue: "%lld of %lld",
                 comment: "Inspector bound-type count beside Bound to; bound, then total types"
             ))
             return String(format: format, locale: .current, bound, total)
         }
         static let termNote = LocalizedStringResource(
-            "subjectFields.inspector.termNote",
+            "properties.inspector.termNote",
             defaultValue: "Values come from the product vocabulary. You choose one when citing this property.",
             comment: "Inspector note for term-typed seeded properties"
         )
         static let deleteProperty = LocalizedStringResource(
-            "subjectFields.delete.action",
+            "properties.delete.action",
             defaultValue: "Delete property",
-            comment: "Tooltip on the Subject fields inspector trash"
+            comment: "Tooltip on the Properties inspector trash"
         )
         static func deletePropertyAccessibility(label: String) -> String {
             let format = String(localized: LocalizedStringResource(
-                "subjectFields.delete.accessibility",
+                "properties.delete.accessibility",
                 defaultValue: "Delete property %@",
-                comment: "VoiceOver for Subject fields trash; argument is the property label"
+                comment: "VoiceOver for Properties trash; argument is the property label"
             ))
             return String(format: format, locale: .current, label)
         }
         static let editAction = LocalizedStringResource(
-            "subjectFields.edit.action",
+            "properties.edit.action",
             defaultValue: "Edit label and description",
-            comment: "Tooltip on the Subject fields inspector pencil"
+            comment: "Tooltip on the Properties inspector pencil"
         )
         static let editSave = LocalizedStringResource(
-            "subjectFields.edit.save",
+            "properties.edit.save",
             defaultValue: "Save",
             comment: "Save tooltip for in-place property label/description edit"
         )
         static let editCancel = LocalizedStringResource(
-            "subjectFields.edit.cancel",
+            "properties.edit.cancel",
             defaultValue: "Cancel editing",
             comment: "Cancel tooltip for in-place property label/description edit"
         )
         static func editKeyStays(key: String) -> String {
             let format = String(localized: LocalizedStringResource(
-                "subjectFields.edit.keyStays",
+                "properties.edit.keyStays",
                 defaultValue: "The key stays %@ — Observations already cite it",
                 comment: "Lock line under the label input while editing; argument is the property key"
             ))
             return String(format: format, locale: .current, key)
         }
         static let editDescriptionPlaceholder = LocalizedStringResource(
-            "subjectFields.edit.descriptionPlaceholder",
+            "properties.edit.descriptionPlaceholder",
             defaultValue: "Say what this property records",
             comment: "Placeholder for the in-place property description textarea"
         )
         static func lockedBindingReason(typeLabel: String) -> String {
             let format = String(localized: LocalizedStringResource(
-                "subjectFields.inspector.lockedBinding",
+                "properties.inspector.lockedBinding",
                 defaultValue: "The Interpretation subject registry requires this property on %@. The binding cannot be removed.",
                 comment: "Callout when activating a locked binding; argument is subject type label"
             ))
             return String(format: format, locale: .current, typeLabel)
         }
         static let bindingLocked = LocalizedStringResource(
-            "subjectFields.inspector.bindingLocked",
+            "properties.inspector.bindingLocked",
             defaultValue: "Locked",
             comment: "Accessibility / badge for a locked subject-type binding"
         )
         static let bindingBound = LocalizedStringResource(
-            "subjectFields.inspector.bindingBound",
+            "properties.inspector.bindingBound",
             defaultValue: "Bound",
             comment: "Accessibility label for an active unbound-able binding"
         )
         static let bindingNotBound = LocalizedStringResource(
-            "subjectFields.inspector.bindingNotBound",
+            "properties.inspector.bindingNotBound",
             defaultValue: "not bound",
             comment: "Accessibility label for an inactive binding checkbox"
         )
         static let bindingRegistry = LocalizedStringResource(
-            "subjectFields.inspector.bindingRegistry",
+            "properties.inspector.bindingRegistry",
             defaultValue: "registry",
             comment: "Micro-label beside a locked Bound-to row (registry-held)"
         )
         static let createTitle = LocalizedStringResource(
-            "subjectFields.create.title",
+            "properties.create.title",
             defaultValue: "New property",
             comment: "Create property sheet title"
         )
         static let createOriginNote = LocalizedStringResource(
-            "subjectFields.create.originNote",
+            "properties.create.originNote",
             defaultValue: "Origin is recorded as user — seeded properties come from Provenencia",
             comment: "Create property sheet note about origin"
         )
         static let createBindSection = LocalizedStringResource(
-            "subjectFields.create.bindSection",
+            "properties.create.bindSection",
             defaultValue: "Bind to subject types",
             comment: "Create property sheet: bind checklist section"
         )
         static let createLabel = LocalizedStringResource(
-            "subjectFields.create.label",
+            "properties.create.label",
             defaultValue: "Label",
             comment: "Create property form: label field"
         )
         static let createLabelHint = LocalizedStringResource(
-            "subjectFields.create.labelHint",
+            "properties.create.labelHint",
             defaultValue: "What a researcher sees on the subject",
             comment: "Hint under create property label"
         )
         static let createLabelPlaceholder = LocalizedStringResource(
-            "subjectFields.create.labelPlaceholder",
+            "properties.create.labelPlaceholder",
             defaultValue: "Burial ground",
             comment: "Placeholder for create property label field"
         )
         static let createKey = LocalizedStringResource(
-            "subjectFields.create.key",
+            "properties.create.key",
             defaultValue: "Key",
             comment: "Create property form: machine key field"
         )
         static let createKeyHint = LocalizedStringResource(
-            "subjectFields.create.keyHint",
+            "properties.create.keyHint",
             defaultValue: "Generated from the label",
             comment: "Hint under create property key; key is minted server-side from label"
         )
         static let createKeyPlaceholder = LocalizedStringResource(
-            "subjectFields.create.keyPlaceholder",
+            "properties.create.keyPlaceholder",
             defaultValue: "burial-ground",
             comment: "Placeholder for create property key preview"
         )
         static let createValueType = LocalizedStringResource(
-            "subjectFields.create.valueType",
+            "properties.create.valueType",
             defaultValue: "Value type",
             comment: "Create property form: value type picker"
         )
         static let createValueTypeHint = LocalizedStringResource(
-            "subjectFields.create.valueTypeHint",
+            "properties.create.valueTypeHint",
             defaultValue: "Cannot be changed once the property exists",
             comment: "Hint under create property value type chips"
         )
         static let createDescription = LocalizedStringResource(
-            "subjectFields.create.description",
+            "properties.create.description",
             defaultValue: "Description",
             comment: "Create property form: description"
         )
         static let createDescriptionPlaceholder = LocalizedStringResource(
-            "subjectFields.create.descriptionPlaceholder",
+            "properties.create.descriptionPlaceholder",
             defaultValue: "How the value should be read from the record",
             comment: "Placeholder for create property description"
         )
         static let createCancel = LocalizedStringResource(
-            "subjectFields.create.cancel",
+            "properties.create.cancel",
             defaultValue: "Cancel",
             comment: "Create property sheet cancel"
         )
         static let createSubmit = LocalizedStringResource(
-            "subjectFields.create.submit",
+            "properties.create.submit",
             defaultValue: "Create property",
             comment: "Create property sheet primary action"
         )
         static let errorLabelRequired = LocalizedStringResource(
-            "subjectFields.create.errorLabelRequired",
+            "properties.create.errorLabelRequired",
             defaultValue: "Enter a label for this property.",
             comment: "Validation when create label is empty"
         )
         static let errorValueType = LocalizedStringResource(
-            "subjectFields.create.errorValueType",
+            "properties.create.errorValueType",
             defaultValue: "Choose a researcher value type. Term properties are product vocabulary only.",
             comment: "Validation when create value type is invalid"
         )
         static let toastCreatedTitle = LocalizedStringResource(
-            "subjectFields.toast.createdTitle",
+            "properties.toast.createdTitle",
             defaultValue: "Property created",
             comment: "Success toast title after creating a property"
         )
         static func toastCreatedBody(label: String) -> String {
             let format = String(localized: LocalizedStringResource(
-                "subjectFields.toast.createdBody",
+                "properties.toast.createdBody",
                 defaultValue: "%@ is ready to bind.",
                 comment: "Success toast body after creating a property; argument is label"
             ))
             return String(format: format, locale: .current, label)
         }
         static let toastDeletedTitle = LocalizedStringResource(
-            "subjectFields.toast.deletedTitle",
+            "properties.toast.deletedTitle",
             defaultValue: "Property deleted",
             comment: "Success toast title after deleting a property"
         )
         static func toastDeletedBody(label: String) -> String {
             let format = String(localized: LocalizedStringResource(
-                "subjectFields.toast.deletedBody",
+                "properties.toast.deletedBody",
                 defaultValue: "%@ was removed from this project.",
                 comment: "Success toast body after deleting a property; argument is label"
             ))
             return String(format: format, locale: .current, label)
         }
         static let toastUpdatedTitle = LocalizedStringResource(
-            "subjectFields.toast.updatedTitle",
+            "properties.toast.updatedTitle",
             defaultValue: "Property updated",
             comment: "Success toast title after editing a property label or description"
         )
         static func toastUpdatedBody(label: String, key: String) -> String {
             let format = String(localized: LocalizedStringResource(
-                "subjectFields.toast.updatedBody",
+                "properties.toast.updatedBody",
                 defaultValue: "%@ — the key stays %@.",
                 comment: "Success toast body after editing a property; arguments are label then key"
             ))
@@ -5873,13 +5873,13 @@ enum L10n {
 
         static let assignNoMatch = LocalizedStringResource(
             "sourceTypes.suggested.assignNoMatch",
-            defaultValue: "No field in the vocabulary matches that — add it in Source fields first",
+            defaultValue: "No field in the vocabulary matches that — add it in Metadata first",
             comment: "Shown inside the assign-field combo box list when the typed query matches no field"
         )
 
         static let assignFieldLabel = LocalizedStringResource(
             "sourceTypes.suggested.assignFieldLabel",
-            defaultValue: "Source field to assign",
+            defaultValue: "Metadata field to assign",
             comment: "Accessibility label for the assign-field combo box"
         )
 
@@ -5919,7 +5919,7 @@ enum L10n {
 
         static let poolHint = LocalizedStringResource(
             "sourceTypes.suggested.poolHint",
-            defaultValue: "The pool is the Source fields vocabulary — add a new field there first if it is missing",
+            defaultValue: "The pool is the Metadata vocabulary — add a new field there first if it is missing",
             comment: "Hint under the assign-field picker naming where the pool comes from"
         )
 
@@ -6056,8 +6056,8 @@ enum L10n {
                 pair = (nounSubject, nounSubjects)
             case "source_type":
                 pair = (nounSourceType, nounSourceTypes)
-            case "source_field":
-                pair = (nounSourceField, nounSourceFields)
+            case "metadata_field":
+                pair = (nounMetadataField, nounMetadata)
             case "source_credibility_grade":
                 pair = (nounCredibilityGrade, nounCredibilityGrades)
             case "subject_type":
@@ -6146,14 +6146,14 @@ enum L10n {
             defaultValue: "source types",
             comment: "Plural Impact kind noun"
         )
-        static let nounSourceField = LocalizedStringResource(
-            "deleteImpact.kind.sourceField.one",
-            defaultValue: "source field",
+        static let nounMetadataField = LocalizedStringResource(
+            "deleteImpact.kind.metadataField.one",
+            defaultValue: "metadata field",
             comment: "Singular Impact kind noun"
         )
-        static let nounSourceFields = LocalizedStringResource(
-            "deleteImpact.kind.sourceField.other",
-            defaultValue: "source fields",
+        static let nounMetadata = LocalizedStringResource(
+            "deleteImpact.kind.metadataField.other",
+            defaultValue: "metadata fields",
             comment: "Plural Impact kind noun"
         )
         static let nounCredibilityGrade = LocalizedStringResource(
@@ -7174,28 +7174,28 @@ enum L10n {
             ))
             return String(format: format, locale: .current, key)
         }
-        static let sourceFieldsInvalid = LocalizedStringResource(
-            "error.sourcefields.invalid",
+        static let metadataInvalid = LocalizedStringResource(
+            "error.metadatafields.invalid",
             defaultValue: "Invalid metadata field.",
-            comment: "FFI error sourcefields.invalid"
+            comment: "FFI error metadatafields.invalid"
         )
-        static func sourceFieldsDuplicateKey(key: String) -> String {
+        static func metadataDuplicateKey(key: String) -> String {
             let format = String(localized: LocalizedStringResource(
-                "error.sourcefields.duplicate_key",
+                "error.metadatafields.duplicate_key",
                 defaultValue: "You already have a field with the key %@. Give this one a different label.",
-                comment: "FFI error sourcefields.duplicate_key; argument is the colliding key"
+                comment: "FFI error metadatafields.duplicate_key; argument is the colliding key"
             ))
             return String(format: format, locale: .current, key)
         }
-        static let sourceFieldsInUse = LocalizedStringResource(
-            "error.sourcefields.in_use",
+        static let metadataInUse = LocalizedStringResource(
+            "error.metadatafields.in_use",
             defaultValue: "That metadata field is still used on one or more sources.",
-            comment: "FFI error sourcefields.in_use"
+            comment: "FFI error metadatafields.in_use"
         )
-        static let sourceFieldsOriginLocked = LocalizedStringResource(
-            "error.sourcefields.origin_locked",
-            defaultValue: "A plugin owns that source field, so it cannot be deleted.",
-            comment: "FFI error sourcefields.origin_locked"
+        static let metadataOriginLocked = LocalizedStringResource(
+            "error.metadatafields.origin_locked",
+            defaultValue: "A plugin owns that metadata field, so it cannot be deleted.",
+            comment: "FFI error metadatafields.origin_locked"
         )
         static let sourceVocabInvalid = LocalizedStringResource(
             "error.sourcevocab.invalid",
@@ -7460,14 +7460,14 @@ enum L10n {
                 return String(localized: sourceTypesOriginLocked)
             case "sourcetypes.duplicate_key":
                 return sourceTypesDuplicateKey(key: params.first ?? "?")
-            case "sourcefields.invalid":
-                return String(localized: sourceFieldsInvalid)
-            case "sourcefields.duplicate_key":
-                return sourceFieldsDuplicateKey(key: params.first ?? "?")
-            case "sourcefields.in_use":
-                return String(localized: sourceFieldsInUse)
-            case "sourcefields.origin_locked":
-                return String(localized: sourceFieldsOriginLocked)
+            case "metadatafields.invalid":
+                return String(localized: metadataInvalid)
+            case "metadatafields.duplicate_key":
+                return metadataDuplicateKey(key: params.first ?? "?")
+            case "metadatafields.in_use":
+                return String(localized: metadataInUse)
+            case "metadatafields.origin_locked":
+                return String(localized: metadataOriginLocked)
             case "sourcevocab.invalid":
                 return String(localized: sourceVocabInvalid)
             case "properties.invalid":

@@ -111,7 +111,7 @@ struct AddArtifactSheet: View { /* custom scrim, footer, buttons */ }
 
 ```swift
 // ❌ BAD — preemptive recipe with one caller
-enum VocabularyDeleteDialog { static func sheet(…) }  // only SourceFields uses it
+enum VocabularyDeleteDialog { static func sheet(…) }  // only Metadata uses it
 
 // ✅ GOOD — wait for second call site; use .pvConfirm at the view today
 ```

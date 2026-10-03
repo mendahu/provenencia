@@ -46,7 +46,7 @@ final class SourcePageContext {
     // MARK: Shared vocabulary
 
     // Read from the shared list caches rather than the page payload: one cache
-    // owns each list, so adding a field on the Source Fields page shows up here
+    // owns each list, so adding a field on the Metadata page shows up here
     // without busting the page. Empty until the list loads — `PlaceRegistry`
     // warms all three alongside the workspace.
 

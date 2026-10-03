@@ -1,18 +1,18 @@
 import SwiftUI
 
-/// The right pane of `SourceFieldsView`: the add-field form, a selected
+/// The right pane of `MetadataView`: the add-field form, a selected
 /// field's detail (editable for `user` / `provenencia`, locked read-only for
 /// `plugin:…`), or an empty prompt when nothing is selected — S2-02 §3.2/3.3.
-struct SourceFieldsDetailPane: View {
+struct MetadataDetailPane: View {
     @Environment(WorkspaceNavigation.self) private var navigation
-    @Bindable var model: SourceFieldsModel
+    @Bindable var model: MetadataModel
 
     var body: some View {
         ScrollView {
             content
         }
         .background(PVColor.surfaceCard)
-        .accessibilityIdentifier("sourceFields.detail")
+        .accessibilityIdentifier("metadata.detail")
     }
 
     @ViewBuilder
@@ -24,8 +24,8 @@ struct SourceFieldsDetailPane: View {
         } else {
             PVEmptyState(
                 icon: .tag,
-                title: L10n.SourceFields.panelEmptyTitle,
-                message: String(localized: L10n.SourceFields.panelEmptyBody),
+                title: L10n.Metadata.panelEmptyTitle,
+                message: String(localized: L10n.Metadata.panelEmptyBody),
                 compact: true
             )
             .padding(PVSpacing.space9)
@@ -37,7 +37,7 @@ struct SourceFieldsDetailPane: View {
             panelHeader
             if model.deleteImpact.request == nil, let deleteError = model.deleteError {
                 PVCallout(tone: .danger, message: deleteError)
-                    .accessibilityIdentifier("sourceFields.deleteError")
+                    .accessibilityIdentifier("metadata.deleteError")
             }
             if isLocked {
                 lockedBody
@@ -65,16 +65,16 @@ struct SourceFieldsDetailPane: View {
 
     private var panelHeader: some View {
         VocabularyPanelHeader(
-            eyebrow: model.isAdding ? L10n.SourceFields.detailEyebrowNewField : L10n.SourceFields.detailEyebrowField,
+            eyebrow: model.isAdding ? L10n.Metadata.detailEyebrowNewField : L10n.Metadata.detailEyebrowField,
             title: panelTitle,
             origin: model.isAdding ? CatalogOrigin.user : (model.selectedField?.origin ?? CatalogOrigin.user),
             keyText: panelKey,
-            keyHint: model.isAdding ? L10n.SourceFields.keyHintAdd : L10n.SourceFields.keyHintEdit,
+            keyHint: model.isAdding ? L10n.Metadata.keyHintAdd : L10n.Metadata.keyHintEdit,
             showsDelete: model.showsDelete,
             canDelete: model.canDeleteSelectedField,
             deleteTooltip: model.deleteTooltip,
             deleteAccessibilityLabel: model.deleteAccessibilityLabel,
-            identifierPrefix: "sourceFields",
+            identifierPrefix: "metadata",
             onDelete: { Task { await model.askDelete() } }
         )
     }
@@ -82,7 +82,7 @@ struct SourceFieldsDetailPane: View {
     private var panelTitle: String {
         if model.isAdding {
             let label = model.draft?.label.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            return label.isEmpty ? String(localized: L10n.SourceFields.detailEyebrowNewField) : label
+            return label.isEmpty ? String(localized: L10n.Metadata.detailEyebrowNewField) : label
         }
         return model.selectedField?.label ?? ""
     }
@@ -102,13 +102,13 @@ struct SourceFieldsDetailPane: View {
         if let field = model.selectedField {
             VStack(alignment: .leading, spacing: PVSpacing.space7) {
                 PVCallout(tone: .neutral, icon: .lock, message: lockedNote(for: field), compact: true)
-                VocabularyLabeledSection(label: L10n.SourceFields.dataTypeSectionLabel) {
+                VocabularyLabeledSection(label: L10n.Metadata.dataTypeSectionLabel) {
                     Text(CatalogFieldDataType.label(for: field.dataType))
                         .font(PVFont.body(size: PVTypeScale.bodySmall))
                         .foregroundStyle(PVColor.textPrimary)
                 }
-                VocabularyLabeledSection(label: L10n.SourceFields.descriptionSectionLabel) {
-                    Text(field.description.isEmpty ? String(localized: L10n.SourceFields.descriptionEmptyPlaceholder) : field.description)
+                VocabularyLabeledSection(label: L10n.Metadata.descriptionSectionLabel) {
+                    Text(field.description.isEmpty ? String(localized: L10n.Metadata.descriptionEmptyPlaceholder) : field.description)
                         .font(PVFont.body(size: PVTypeScale.bodySmall))
                         .foregroundStyle(PVColor.textSecondary)
                 }
@@ -121,15 +121,15 @@ struct SourceFieldsDetailPane: View {
     }
 
     private func lockedNote(for field: CatalogMetadataField) -> String {
-        L10n.SourceFields.lockedNotePlugin(pluginID: CatalogOrigin.pluginID(from: field.origin))
+        L10n.Metadata.lockedNotePlugin(pluginID: CatalogOrigin.pluginID(from: field.origin))
     }
 
     // MARK: Add / editable form
 
     private var dataTypeOptions: [PVSelectOption] {
         [
-            PVSelectOption(value: CatalogFieldDataType.text, label: String(localized: L10n.SourceFields.dataTypeText)),
-            PVSelectOption(value: CatalogFieldDataType.url, label: String(localized: L10n.SourceFields.dataTypeUrl)),
+            PVSelectOption(value: CatalogFieldDataType.text, label: String(localized: L10n.Metadata.dataTypeText)),
+            PVSelectOption(value: CatalogFieldDataType.url, label: String(localized: L10n.Metadata.dataTypeUrl)),
         ]
     }
 
@@ -140,28 +140,28 @@ struct SourceFieldsDetailPane: View {
     private var form: some View {
         if let draft = Binding($model.draft) {
             VStack(alignment: .leading, spacing: PVSpacing.space7) {
-                PVField(label: L10n.SourceFields.formLabel, error: model.formError, required: true) {
+                PVField(label: L10n.Metadata.formLabel, error: model.formError, required: true) {
                     PVInput(
                         text: draft.label,
-                        prompt: model.isAdding ? L10n.SourceFields.formLabelPlaceholder : nil,
+                        prompt: model.isAdding ? L10n.Metadata.formLabelPlaceholder : nil,
                         isInvalid: model.formError != nil
                     )
-                    .accessibilityIdentifier("sourceFields.form.label")
+                    .accessibilityIdentifier("metadata.form.label")
                 }
-                PVField(label: L10n.SourceFields.formDataType, hint: model.isAdding ? L10n.SourceFields.formDataTypeHint : L10n.SourceFields.formDataTypeImmutableHint) {
+                PVField(label: L10n.Metadata.formDataType, hint: model.isAdding ? L10n.Metadata.formDataTypeHint : L10n.Metadata.formDataTypeImmutableHint) {
                     if model.isAdding {
                         PVSelect(selection: draft.dataType, options: dataTypeOptions)
-                            .accessibilityIdentifier("sourceFields.form.dataType")
+                            .accessibilityIdentifier("metadata.form.dataType")
                     } else {
                         Text(CatalogFieldDataType.label(for: draft.wrappedValue.dataType))
                             .font(PVFont.body(size: PVTypeScale.body))
                             .foregroundStyle(PVColor.textPrimary)
-                            .accessibilityIdentifier("sourceFields.form.dataType.readonly")
+                            .accessibilityIdentifier("metadata.form.dataType.readonly")
                     }
                 }
-                PVField(label: L10n.SourceFields.formDescription, hint: L10n.SourceFields.formDescriptionHint) {
-                    PVInput(text: draft.description, prompt: model.isAdding ? L10n.SourceFields.formDescriptionPlaceholder : nil)
-                        .accessibilityIdentifier("sourceFields.form.description")
+                PVField(label: L10n.Metadata.formDescription, hint: L10n.Metadata.formDescriptionHint) {
+                    PVInput(text: draft.description, prompt: model.isAdding ? L10n.Metadata.formDescriptionPlaceholder : nil)
+                        .accessibilityIdentifier("metadata.form.description")
                 }
                 VocabularyFormActions(
                     primaryLabel: primaryLabel,
@@ -169,7 +169,7 @@ struct SourceFieldsDetailPane: View {
                     isSaving: model.isSaving,
                     canSubmit: model.canSubmit,
                     isSecondaryDisabled: model.isSaving || (!model.isAdding && !model.isDirty),
-                    identifierPrefix: "sourceFields",
+                    identifierPrefix: "metadata",
                     onPrimary: {
                         Task {
                             if let location = await model.submit() {
@@ -188,12 +188,12 @@ struct SourceFieldsDetailPane: View {
     }
 
     private var primaryLabel: LocalizedStringResource {
-        if model.isSaving { return L10n.SourceFields.saveSaving }
-        return model.isAdding ? L10n.SourceFields.addField : L10n.SourceFields.saveChanges
+        if model.isSaving { return L10n.Metadata.saveSaving }
+        return model.isAdding ? L10n.Metadata.addField : L10n.Metadata.saveChanges
     }
 
     private var secondaryLabel: LocalizedStringResource {
-        model.isAdding ? L10n.SourceFields.cancel : L10n.SourceFields.revert
+        model.isAdding ? L10n.Metadata.cancel : L10n.Metadata.revert
     }
 
     private func secondaryAction() {

@@ -20,9 +20,9 @@ Audience: someone comfortable with JavaScript and Go, new to Apple platforms.
 | `Features/Onboarding/` | File vs new, then contributor or names; home stub; relaunch uses active project. | `OnboardingView` |
 | `Features/Workspace/` | Sidebar, toolbar, navigation history, session cache, place registry. | `WorkspaceView`, `WorkspaceSession` |
 | `Features/Sources/` | Sources list and source page. | `SourcePageView`, `SourcesListView` |
-| `Features/SourceFields/` | Source metadata-field vocabulary. | `SourceFieldsView` |
+| `Features/Metadata/` | Source metadata-field vocabulary (the Metadata page). | `MetadataView` |
 | `Features/SourceTypes/` | Source-type vocabulary. | `SourceTypesView` |
-| `Features/SubjectFields/` | Subject-field vocabulary. | `SubjectFieldsView` |
+| `Features/Properties/` | Properties and their Subject-type bindings (the Properties page). | `PropertiesView` |
 | `Features/EvidenceGraph/` | Evidence graph for one source: cards, connect, composer handoff. | `EvidenceGraphView` |
 | `Features/GraphCanvas/` | Product-agnostic pan/zoom canvas used by the evidence graph. | `GraphCanvasScrollView` |
 | `Features/CitationComposer/` | Citation place: artifact, locator, observations. | `CitationComposerView` |
@@ -86,7 +86,7 @@ Destination view  →  reads QueryHandle(s)  →  patches / invalidates on mutat
 2. `session.apply(mutation)` patches if the mutation says so, then invalidates and **revalidates every already-warmed key**. Features never `session.query` after `apply`.
 3. `readyValue` waits out in-flight work, then returns `nil` if the key is still stale.
 4. `setQueryValue` is an overlay (optimistic drag, list-row patch the write returned). It is not a substitute for `apply`.
-5. Views observe handles. Models keep form/interaction state only. Evidence graph cards are a **pure join** of `sourceGraph` (`SourceGraphRows`) and `subjectFieldsWorkspace` types — that join is not a third cache key.
+5. Views observe handles. Models keep form/interaction state only. Evidence graph cards are a **pure join** of `sourceGraph` (`SourceGraphRows`) and `propertiesWorkspace` types — that join is not a third cache key.
 6. If a place reads a key, that key is in `PlaceRegistry.queryKeys`.
 7. `getCitation` is the exception: a one-shot into the composer fields draft. Do not cache the open citation.
 
@@ -108,7 +108,7 @@ Destination view  →  reads QueryHandle(s)  →  patches / invalidates on mutat
 be invalidated whenever that data changes anywhere, which is a bust with no
 natural scope. `GetSourceWorkspace` used to fold in the source-type, credibility-grade,
 and metadata-field vocabulary to save catalog opens; once `catalogsession` held the
-catalog open, that saved nothing and only meant a field added on the Source Fields
+catalog open, that saved nothing and only meant a field added on the Metadata
 page left every open Source page stale. The page now reads those three lists from
 their own keys (warmed together by `PlaceRegistry`), so adding vocabulary
 invalidates one list and no pages.

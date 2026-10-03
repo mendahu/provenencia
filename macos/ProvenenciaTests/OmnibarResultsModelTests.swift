@@ -118,17 +118,17 @@ struct OmnibarResultsModelTests {
 
     @Test func accessibilityLabelOmitsEmptyOptionalParts() {
         let hit = CatalogSearchHit(
-            kind: "source_field",
+            kind: "metadata_field",
             id: "f1",
             ref: "",
             title: "Citation",
             subtitle: "",
             matchReason: "title",
-            location: .sectionRoot(.sourceFields)
+            location: .sectionRoot(.metadata)
         )
         let label = OmnibarHitPresentation.accessibilityLabel(for: hit)
         #expect(label.contains("Citation"))
-        #expect(label.contains(String(localized: L10n.Workspace.omnibarKindField)))
+        #expect(label.contains(String(localized: L10n.Workspace.omnibarKindMetadataField)))
         #expect(!label.contains("Note:"))
         #expect(!label.contains("Metadata:"))
     }
@@ -193,7 +193,7 @@ struct OmnibarResultsModelTests {
         model.query = "Author"
         model.scheduleSearch(
             projectDir: projectDir,
-            location: .sectionRoot(.sourceFields),
+            location: .sectionRoot(.metadata),
             store: store
         )
         for _ in 0..<80 {
@@ -209,7 +209,7 @@ struct OmnibarResultsModelTests {
         model.activate(hit, navigation: navigation)
 
         #expect(navigation.currentLocation.fieldId == "f9")
-        #expect(navigation.selectedSection == .sourceFields)
+        #expect(navigation.selectedSection == .metadata)
         #expect(model.query.isEmpty)
     }
 

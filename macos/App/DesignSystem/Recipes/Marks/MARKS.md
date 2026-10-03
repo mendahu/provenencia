@@ -10,7 +10,7 @@ Curated research artwork for Provenencia — not SF Symbols. One recipe:
 | --- | --- | --- |
 | `file_*` | MIME / extension stand-in when a File has no raster derivative | Resolved client-side via `PVFileTypeGlyph` |
 | `type_*` | What a **Source type** is as a record (register, reel, headstone, …) | `source_types.icon_key` |
-| `subject_*` | What a **node** is in the evidence graph / Subject fields | Registry `IconSymbol` (product-fixed) |
+| `subject_*` | What a **node** is in the evidence graph / Properties | Registry `IconSymbol` (product-fixed) |
 
 **Do not confuse** `type_*` with `subject_source`. `type_*` names a held Source type;
 `subject_source` is the reified source **kind** on the graph (folio mark from Subject
@@ -45,7 +45,7 @@ Fallback / new custom type default: `type_evidence` (`PVMarkKey.fallback` /
 | `subject_relationship` | bridge | S6 Evidence graph board |
 | `subject_participation` | bridge | S6 Evidence graph board |
 | `subject_location` | bridge | S6 Evidence graph board |
-| `subject_source` | reification | S7-D2 Subject fields board (`SourceMark`) |
+| `subject_source` | reification | S7-D2 Properties board, then Subject fields (`SourceMark`) |
 
 ## Tint / color
 
@@ -59,7 +59,7 @@ baked into mark assets. Do not enable multicolor “original” rendering.
 | Preset | pt | Typical use |
 | --- | --- | --- |
 | `PVMarkSize.inline` | 16 | Compact chrome |
-| raw ~12–17 | — | Graph cards (~12–15), palette (~17), Subject fields strip (~14–16) |
+| raw ~12–17 | — | Graph cards (~12–15), palette (~17), Properties strip (~14–16) |
 | `PVMarkSize.row` | 24 | List rows |
 | `PVMarkSize.tile` | 40 | Pickers / form tiles |
 
@@ -68,11 +68,11 @@ File mono labels show by default at ≥22pt (`showLabel:` overrides).
 ## Accessibility
 
 Match decorative vs named: when an adjacent label already names the kind (graph
-card title, Subject fields strip), pass `decorative: true`. When the mark is the
+card title, Properties strip), pass `decorative: true`. When the mark is the
 sole affordance (picker cell), leave decorative false so `accessibilityName` is
 spoken.
 
 ## Board links (art SoT)
 
 - Evidence graph: https://claude.ai/design/p/2239e965-3b09-4c13-b85a-d54316ffd8fb?via=share
-- Subject fields (source folio): https://claude.ai/design/p/6dceb4b9-d08a-40ad-a46f-430651ea9b3c?via=share
+- Properties, then Subject fields (source folio): https://claude.ai/design/p/6dceb4b9-d08a-40ad-a46f-430651ea9b3c?via=share

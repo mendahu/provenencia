@@ -9,9 +9,9 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/sourcecredibility"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
-	"github.com/mendahu/provenencia/core/database/sourcefields"
 	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
@@ -34,14 +34,14 @@ func TestFacetReleaseAuditsSourceSide(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fieldID, err := sourcefields.Upsert(c, sourcefields.Field{
-		Key: "shelfmark", Origin: sourcefields.OriginUser, Label: "Shelfmark", DataType: "text",
+	fieldID, err := metadatafields.Upsert(c, metadatafields.Field{
+		Key: "shelfmark", Origin: metadatafields.OriginUser, Label: "Shelfmark", DataType: "text",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	other, err := sourcefields.Upsert(c, sourcefields.Field{
-		Key: "box", Origin: sourcefields.OriginUser, Label: "Box", DataType: "text",
+	other, err := metadatafields.Upsert(c, metadatafields.Field{
+		Key: "box", Origin: metadatafields.OriginUser, Label: "Box", DataType: "text",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -84,7 +84,7 @@ func TestFacetReleaseAuditsSourceSide(t *testing.T) {
 		}
 	})
 
-	t.Run("source field delete audits per-source layout rows", func(t *testing.T) {
+	t.Run("metadata field delete audits per-source layout rows", func(t *testing.T) {
 		src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Will"})
 		if err != nil {
 			t.Fatal(err)
@@ -92,11 +92,11 @@ func TestFacetReleaseAuditsSourceSide(t *testing.T) {
 		if err := sourcemetadata.DismissSuggestion(c, userID, src.ID, other); err != nil {
 			t.Fatal(err)
 		}
-		if err := sourcefields.Delete(c, userID, other); err != nil {
+		if err := metadatafields.Delete(c, userID, other); err != nil {
 			t.Fatal(err)
 		}
 		action, types := lastRevision(t, c)
-		if action != "delete_source_field" || strings.Join(types, ",") != "source_metadata_layout,source_field" {
+		if action != "delete_metadata_field" || strings.Join(types, ",") != "source_metadata_layout,metadata_field" {
 			t.Fatalf("%s %v", action, types)
 		}
 	})

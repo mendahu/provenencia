@@ -44,7 +44,7 @@ Applies to (authoritative schemas in the linked docs):
 | `claim_confidence_grades` | [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md), [`research-judgment-model.md`](research-judgment-model.md) |
 | `name_format_profiles` | [`structured-name-model.md`](structured-name-model.md) |
 
-Does **not** apply to join/suggestion tables (`source_type_metadata_fields`, `subject_type_fields`, `name_format_profile_parts`), domain instance rows, or NameValue part `type` keys (compiled product registry, not `property_terms`).
+Does **not** apply to join/suggestion tables (`source_type_metadata_fields`, `subject_type_properties`, `name_format_profile_parts`), domain instance rows, or NameValue part `type` keys (compiled product registry, not `property_terms`).
 
 ### Reserved `origin` values
 
@@ -339,11 +339,11 @@ Target Subject type hints are application-only (not SQL allow-lists). See the In
 
 Create-time Install seeds the full §3.2 matrix, including kind/edge and person term Properties as `value_type = term` with `property_terms` (§3.4–3.7).
 
-Event date Properties (`date`, `start_date`, `end_date`) are locked on `event`: Conclusion ordering and timelines may key into them; Subject fields must not unbind. **Coexistence:** use `date` for a single point (birth, death, marriage day); use `start_date` / `end_date` when the event spans time (residence, service, voyage). Instantaneous events leave start/end empty; spanned events may leave `date` empty when only the range is known.
+Event date Properties (`date`, `start_date`, `end_date`) are locked on `event`: Conclusion ordering and timelines may key into them; the Properties page must not unbind them. **Coexistence:** use `date` for a single point (birth, death, marriage day); use `start_date` / `end_date` when the event spans time (residence, service, voyage). Instantaneous events leave start/end empty; spanned events may leave `date` empty when only the range is known.
 
 Additional Properties may be seeded as workflows need them (shared DNA, predicted relationship, and similar). Treat those as **TBD** until a concrete UI requires them.
 
-## 3.3 `subject_type_fields`
+## 3.3 `subject_type_properties`
 
 ```text
 subject_type    property

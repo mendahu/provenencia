@@ -100,13 +100,13 @@ struct CatalogQueryRegistry: Sendable {
             invalidateOn: [.savedCitation, .deletedSubject]
         ),
         Spec(
-            kind: .subjectFieldsWorkspace,
+            kind: .propertiesWorkspace,
             stalePolicy: .sessionFresh,
             // `usedBy` counts Observations per property. Observation writes
             // travel as `savedCitation`, same as the composer graph payload.
             invalidateOn: [
                 .createdProperty, .updatedProperty, .deletedProperty,
-                .mutatedSubjectTypeFields, .savedCitation, .deletedSubject,
+                .mutatedSubjectTypeProperties, .savedCitation, .deletedSubject,
             ]
         ),
         Spec(
@@ -205,8 +205,8 @@ struct CatalogQueryRegistry: Sendable {
                 map[row.sourceId] = row
             }
             return map
-        case .subjectFieldsWorkspace(let project):
-            return try await store.getSubjectFieldsWorkspace(projectDir: project.projectDir)
+        case .propertiesWorkspace(let project):
+            return try await store.getPropertiesWorkspace(projectDir: project.projectDir)
         case .personsList(let project):
             return try await store.listPersonHeaders(projectDir: project.projectDir)
         }
@@ -267,8 +267,8 @@ private extension CatalogQueryKey.Kind {
             default:
                 return .allCached(.citationCounts)
             }
-        case .subjectFieldsWorkspace:
-            return .key(.subjectFieldsWorkspace(project: project))
+        case .propertiesWorkspace:
+            return .key(.propertiesWorkspace(project: project))
         case .connectRules:
             return .key(.connectRules(project: project))
         case .propertyTerms:

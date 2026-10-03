@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/sourcefields"
+	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/sourcevocab"
@@ -44,9 +44,9 @@ func TestSourceMetadata(t *testing.T) {
 		}
 		return s
 	}
-	mustField := func(t *testing.T, c *database.Catalog, key string) sourcefields.Field {
+	mustField := func(t *testing.T, c *database.Catalog, key string) metadatafields.Field {
 		t.Helper()
-		f, err := sourcefields.Lookup(c, key, sourcefields.OriginProvenencia)
+		f, err := metadatafields.Lookup(c, key, metadatafields.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -167,7 +167,7 @@ func TestSourceMetadata(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				src := mustSeededSource(t, c)
-				field, err := sourcefields.Create(c, "Landing page", sourcefields.DataTypeURL, "")
+				field, err := metadatafields.Create(c, "Landing page", metadatafields.DataTypeURL, "")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -212,7 +212,7 @@ func TestSourceMetadata(t *testing.T) {
 				mustUser(t, c)
 				src := mustSeededSource(t, c)
 				rec := mustField(t, c, "record_date")
-				if rec.DataType != sourcefields.DataTypeText {
+				if rec.DataType != metadatafields.DataTypeText {
 					t.Fatalf("record_date type %q", rec.DataType)
 				}
 				row, err := Set(c, userID, Input{
@@ -281,8 +281,8 @@ func TestSourceMetadata(t *testing.T) {
 				if _, err := Set(c, userID, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "12345"}); err != nil {
 					t.Fatal(err)
 				}
-				extraID, err := sourcefields.Upsert(c, sourcefields.Field{
-					Key: "shelf_mark", Origin: sourcefields.OriginUser, Label: "Shelf mark", DataType: sourcefields.DataTypeText,
+				extraID, err := metadatafields.Upsert(c, metadatafields.Field{
+					Key: "shelf_mark", Origin: metadatafields.OriginUser, Label: "Shelf mark", DataType: metadatafields.DataTypeText,
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -463,8 +463,8 @@ func TestSourceMetadata(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				src := mustSeededSource(t, c)
-				extraID, err := sourcefields.Upsert(c, sourcefields.Field{
-					Key: "shelf_mark", Origin: sourcefields.OriginUser, Label: "Shelf mark", DataType: sourcefields.DataTypeText,
+				extraID, err := metadatafields.Upsert(c, metadatafields.Field{
+					Key: "shelf_mark", Origin: metadatafields.OriginUser, Label: "Shelf mark", DataType: metadatafields.DataTypeText,
 				})
 				if err != nil {
 					t.Fatal(err)

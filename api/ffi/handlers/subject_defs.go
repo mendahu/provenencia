@@ -112,24 +112,24 @@ func DeleteProperty(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-func ListSubjectTypeFields(in []byte) ([]byte, error) {
-	var req engine.ListSubjectTypeFieldsRequest
+func ListSubjectTypeProperties(in []byte) ([]byte, error) {
+	var req engine.ListSubjectTypePropertiesRequest
 	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("list_subject_type_fields", err)
+		return nil, unmarshalErr("list_subject_type_properties", err)
 	}
 	typeID, err := parseID(req.GetSubjectTypeId())
 	if err != nil {
 		return nil, err
 	}
-	var out *engine.ListSubjectTypeFieldsResponse
+	var out *engine.ListSubjectTypePropertiesResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		rows, err := subjectvocab.ListBindings(c, typeID)
 		if err != nil {
 			return err
 		}
-		out = &engine.ListSubjectTypeFieldsResponse{}
+		out = &engine.ListSubjectTypePropertiesResponse{}
 		for _, b := range rows {
-			out.Fields = append(out.Fields, &engine.SubjectTypeField{
+			out.Properties = append(out.Properties, &engine.SubjectTypeProperty{
 				Property:  propertyProto(b.Property),
 				SortOrder: int32(b.SortOrder),
 				Locked:    b.Locked,
@@ -143,10 +143,10 @@ func ListSubjectTypeFields(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-func AssignSubjectTypeField(in []byte) ([]byte, error) {
-	var req engine.AssignSubjectTypeFieldRequest
+func AssignSubjectTypeProperty(in []byte) ([]byte, error) {
+	var req engine.AssignSubjectTypePropertyRequest
 	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("assign_subject_type_field", err)
+		return nil, unmarshalErr("assign_subject_type_property", err)
 	}
 	if _, err := parseUserID(req.GetUserId()); err != nil {
 		return nil, err
@@ -159,12 +159,12 @@ func AssignSubjectTypeField(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	var out *engine.AssignSubjectTypeFieldResponse
+	var out *engine.AssignSubjectTypePropertyResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		if err := subjectvocab.AppendBinding(c, typeID, propertyID); err != nil {
 			return err
 		}
-		out = &engine.AssignSubjectTypeFieldResponse{}
+		out = &engine.AssignSubjectTypePropertyResponse{}
 		return nil
 	})
 	if err != nil {
@@ -173,10 +173,10 @@ func AssignSubjectTypeField(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-func RemoveSubjectTypeField(in []byte) ([]byte, error) {
-	var req engine.RemoveSubjectTypeFieldRequest
+func RemoveSubjectTypeProperty(in []byte) ([]byte, error) {
+	var req engine.RemoveSubjectTypePropertyRequest
 	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("remove_subject_type_field", err)
+		return nil, unmarshalErr("remove_subject_type_property", err)
 	}
 	if _, err := parseUserID(req.GetUserId()); err != nil {
 		return nil, err
@@ -189,12 +189,12 @@ func RemoveSubjectTypeField(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	var out *engine.RemoveSubjectTypeFieldResponse
+	var out *engine.RemoveSubjectTypePropertyResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		if err := subjectvocab.DeleteBinding(c, typeID, propertyID); err != nil {
 			return err
 		}
-		out = &engine.RemoveSubjectTypeFieldResponse{}
+		out = &engine.RemoveSubjectTypePropertyResponse{}
 		return nil
 	})
 	if err != nil {
@@ -256,12 +256,12 @@ func ListConnectRules(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-func GetSubjectFieldsWorkspace(in []byte) ([]byte, error) {
-	var req engine.GetSubjectFieldsWorkspaceRequest
+func GetPropertiesWorkspace(in []byte) ([]byte, error) {
+	var req engine.GetPropertiesWorkspaceRequest
 	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("get_subject_fields_workspace", err)
+		return nil, unmarshalErr("get_properties_workspace", err)
 	}
-	var out *engine.GetSubjectFieldsWorkspaceResponse
+	var out *engine.GetPropertiesWorkspaceResponse
 	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		props, err := properties.List(c)
 		if err != nil {
@@ -271,7 +271,7 @@ func GetSubjectFieldsWorkspace(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.GetSubjectFieldsWorkspaceResponse{}
+		out = &engine.GetPropertiesWorkspaceResponse{}
 		for _, p := range props {
 			out.Properties = append(out.Properties, propertyProto(p))
 		}
@@ -281,9 +281,9 @@ func GetSubjectFieldsWorkspace(in []byte) ([]byte, error) {
 			if err != nil {
 				return err
 			}
-			group := &engine.SubjectTypeFieldsGroup{SubjectTypeId: uuidString(typ.ID)}
+			group := &engine.SubjectTypePropertiesGroup{SubjectTypeId: uuidString(typ.ID)}
 			for _, b := range bindings {
-				group.Fields = append(group.Fields, &engine.SubjectTypeField{
+				group.Properties = append(group.Properties, &engine.SubjectTypeProperty{
 					Property:  propertyProto(b.Property),
 					SortOrder: int32(b.SortOrder),
 					Locked:    b.Locked,

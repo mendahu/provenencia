@@ -291,16 +291,16 @@ private extension View {
             accessibilityIdentifier: "preview.nav.sourceTypes"
         ),
         PVSidebarNavItem(
-            id: "source-fields",
-            label: L10n.Workspace.sourceFieldsTitle,
+            id: "metadata",
+            label: L10n.Workspace.metadataTitle,
             icon: .list,
-            accessibilityIdentifier: "preview.nav.sourceFields"
+            accessibilityIdentifier: "preview.nav.metadataFields"
         ),
         PVSidebarNavItem(
-            id: "subject-fields",
-            label: L10n.Workspace.subjectFieldsTitle,
+            id: "properties",
+            label: L10n.Workspace.propertiesTitle,
             icon: .listTree,
-            accessibilityIdentifier: "preview.nav.subjectFields"
+            accessibilityIdentifier: "preview.nav.properties"
         ),
     ]
     let items = [
@@ -316,7 +316,7 @@ private extension View {
     return HStack(alignment: .top, spacing: PVSpacing.space9) {
         PVSidebarNav(items: items, selection: "sources", collapsed: false, onSelect: { _ in })
             .frame(width: 220)
-        PVSidebarNav(items: items, selection: "subject-fields", collapsed: true, onSelect: { _ in })
+        PVSidebarNav(items: items, selection: "properties", collapsed: true, onSelect: { _ in })
             .frame(width: 78)
     }
     .padding(PVSpacing.space9)

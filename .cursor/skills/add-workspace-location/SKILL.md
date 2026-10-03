@@ -87,7 +87,7 @@ commits navigation.
 
 ### 4. Apply location → UI
 
-In the destination view (pattern: `SourcesListView`, `SourceFieldsView`):
+In the destination view (pattern: `SourcesListView`, `MetadataView`):
 
 1. Take `@Environment(WorkspaceNavigation.self) private var navigation`.
 2. On `onAppear` + `onChange(of: navigation.currentLocation)` (+ `onChange` on query

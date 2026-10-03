@@ -41,9 +41,9 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     var connectFromSubjectId: String?
     var connectToSubjectId: String?
     var connectBridgeTypeKey: String?
-    /// Subject Fields type-strip category when `section == .subjectFields`; nil is “All properties”.
+    /// Properties type-strip category when `section == .properties`; nil is “All properties”.
     var subjectTypeKey: String?
-    /// Subject Fields inspector row when `section == .subjectFields`.
+    /// Properties inspector row when `section == .properties`.
     var propertyId: String?
     /// Page vs Evidence graph vs composer when `section == .sources` and `sourceId` is set.
     /// Legacy history without this key decodes as `.page`.

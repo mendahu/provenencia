@@ -1650,26 +1650,26 @@
         }
       }
     },
-    "deleteImpact.kind.sourceField.one": {
+    "deleteImpact.kind.metadataField.one": {
       "comment": "Singular Impact kind noun",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "source field"
+            "value": "metadata field"
           }
         }
       }
     },
-    "deleteImpact.kind.sourceField.other": {
+    "deleteImpact.kind.metadataField.other": {
       "comment": "Plural Impact kind noun",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "source fields"
+            "value": "metadata fields"
           }
         }
       }
@@ -3126,8 +3126,8 @@
         }
       }
     },
-    "error.sourcefields.duplicate_key": {
-      "comment": "FFI error sourcefields.duplicate_key; argument is the colliding key",
+    "error.metadatafields.duplicate_key": {
+      "comment": "FFI error metadatafields.duplicate_key; argument is the colliding key",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -3138,8 +3138,8 @@
         }
       }
     },
-    "error.sourcefields.in_use": {
-      "comment": "FFI error sourcefields.in_use",
+    "error.metadatafields.in_use": {
+      "comment": "FFI error metadatafields.in_use",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -3150,8 +3150,8 @@
         }
       }
     },
-    "error.sourcefields.invalid": {
-      "comment": "FFI error sourcefields.invalid",
+    "error.metadatafields.invalid": {
+      "comment": "FFI error metadatafields.invalid",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -3162,14 +3162,14 @@
         }
       }
     },
-    "error.sourcefields.origin_locked": {
-      "comment": "FFI error sourcefields.origin_locked",
+    "error.metadatafields.origin_locked": {
+      "comment": "FFI error metadatafields.origin_locked",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "A plugin owns that source field, so it cannot be deleted."
+            "value": "A plugin owns that metadata field, so it cannot be deleted."
           }
         }
       }
@@ -4554,8 +4554,8 @@
         }
       }
     },
-    "sourceFields.dataType.date": {
-      "comment": "Source field data type badge/option: date",
+    "metadata.dataType.date": {
+      "comment": "Metadata field data type badge/option: date",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -4566,8 +4566,8 @@
         }
       }
     },
-    "sourceFields.dataType.text": {
-      "comment": "Source field data type badge/option: text",
+    "metadata.dataType.text": {
+      "comment": "Metadata field data type badge/option: text",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -4578,8 +4578,8 @@
         }
       }
     },
-    "sourceFields.dataType.url": {
-      "comment": "Source field data type badge/option: url",
+    "metadata.dataType.url": {
+      "comment": "Metadata field data type badge/option: url",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -4590,8 +4590,8 @@
         }
       }
     },
-    "sourceFields.delete.action": {
-      "comment": "Tooltip on the Source fields inspector trash",
+    "metadata.delete.action": {
+      "comment": "Tooltip on the Metadata inspector trash",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -4602,8 +4602,8 @@
         }
       }
     },
-    "sourceFields.delete.accessibility": {
-      "comment": "VoiceOver for Source fields trash; argument is the field label",
+    "metadata.delete.accessibility": {
+      "comment": "VoiceOver for Metadata trash; argument is the field label",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -4614,7 +4614,7 @@
         }
       }
     },
-    "sourceFields.detail.dataTypeSectionLabel": {
+    "metadata.detail.dataTypeSectionLabel": {
       "comment": "Section label above the read-only data type line on a locked field's detail",
       "extractionState": "manual",
       "localizations": {
@@ -4626,7 +4626,7 @@
         }
       }
     },
-    "sourceFields.detail.descriptionEmptyPlaceholder": {
+    "metadata.detail.descriptionEmptyPlaceholder": {
       "comment": "Shown in place of a locked field's description when it has none",
       "extractionState": "manual",
       "localizations": {
@@ -4638,7 +4638,7 @@
         }
       }
     },
-    "sourceFields.detail.descriptionSectionLabel": {
+    "metadata.detail.descriptionSectionLabel": {
       "comment": "Section label above the read-only description on a locked field's detail",
       "extractionState": "manual",
       "localizations": {
@@ -4650,7 +4650,7 @@
         }
       }
     },
-    "sourceFields.detail.eyebrowField": {
+    "metadata.detail.eyebrowField": {
       "comment": "Eyebrow label above an existing field's detail panel",
       "extractionState": "manual",
       "localizations": {
@@ -4662,7 +4662,7 @@
         }
       }
     },
-    "sourceFields.detail.eyebrowNewField": {
+    "metadata.detail.eyebrowNewField": {
       "comment": "Eyebrow label above the add-field panel",
       "extractionState": "manual",
       "localizations": {
@@ -4674,7 +4674,7 @@
         }
       }
     },
-    "sourceFields.detail.keyHintAdd": {
+    "metadata.detail.keyHintAdd": {
       "comment": "Hint under the live key preview while adding a field",
       "extractionState": "manual",
       "localizations": {
@@ -4686,7 +4686,7 @@
         }
       }
     },
-    "sourceFields.detail.keyHintEdit": {
+    "metadata.detail.keyHintEdit": {
       "comment": "Hint under the key on an existing field's detail panel",
       "extractionState": "manual",
       "localizations": {
@@ -4698,7 +4698,7 @@
         }
       }
     },
-    "sourceFields.detail.lockedNotePlugin": {
+    "metadata.detail.lockedNotePlugin": {
       "comment": "Callout explaining why a plugin-origin field can't be edited; argument is the plugin id",
       "extractionState": "manual",
       "localizations": {
@@ -4710,7 +4710,7 @@
         }
       }
     },
-    "sourceFields.detail.panelEmptyBody": {
+    "metadata.detail.panelEmptyBody": {
       "comment": "Body of the empty state shown in the detail panel before any field is selected",
       "extractionState": "manual",
       "localizations": {
@@ -4722,7 +4722,7 @@
         }
       }
     },
-    "sourceFields.detail.panelEmptyTitle": {
+    "metadata.detail.panelEmptyTitle": {
       "comment": "Title of the empty state shown in the detail panel before any field is selected",
       "extractionState": "manual",
       "localizations": {
@@ -4734,7 +4734,7 @@
         }
       }
     },
-    "sourceFields.emptyProject.body": {
+    "metadata.emptyProject.body": {
       "comment": "Body of the empty state when the project has zero metadata fields",
       "extractionState": "manual",
       "localizations": {
@@ -4746,19 +4746,19 @@
         }
       }
     },
-    "sourceFields.emptyProject.title": {
+    "metadata.emptyProject.title": {
       "comment": "Title of the empty state when the project has zero metadata fields",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No source fields yet"
+            "value": "No metadata fields yet"
           }
         }
       }
     },
-    "sourceFields.form.cancel": {
+    "metadata.form.cancel": {
       "comment": "Secondary button label that dismisses the add-field form",
       "extractionState": "manual",
       "localizations": {
@@ -4770,7 +4770,7 @@
         }
       }
     },
-    "sourceFields.form.dataType": {
+    "metadata.form.dataType": {
       "comment": "Add/edit form field: data type picker",
       "extractionState": "manual",
       "localizations": {
@@ -4782,7 +4782,7 @@
         }
       }
     },
-    "sourceFields.form.dataTypeHint": {
+    "metadata.form.dataTypeHint": {
       "comment": "Hint under the data type picker on add",
       "extractionState": "manual",
       "localizations": {
@@ -4794,7 +4794,7 @@
         }
       }
     },
-    "sourceFields.form.dataTypeImmutableHint": {
+    "metadata.form.dataTypeImmutableHint": {
       "comment": "Hint under the read-only data type on edit",
       "extractionState": "manual",
       "localizations": {
@@ -4806,7 +4806,7 @@
         }
       }
     },
-    "sourceFields.form.description": {
+    "metadata.form.description": {
       "comment": "Add/edit form field: description",
       "extractionState": "manual",
       "localizations": {
@@ -4818,7 +4818,7 @@
         }
       }
     },
-    "sourceFields.form.descriptionHint": {
+    "metadata.form.descriptionHint": {
       "comment": "Hint under the description field",
       "extractionState": "manual",
       "localizations": {
@@ -4830,7 +4830,7 @@
         }
       }
     },
-    "sourceFields.form.descriptionPlaceholder": {
+    "metadata.form.descriptionPlaceholder": {
       "comment": "Placeholder text for the add-field description input",
       "extractionState": "manual",
       "localizations": {
@@ -4842,7 +4842,7 @@
         }
       }
     },
-    "sourceFields.form.errorLabelRequired": {
+    "metadata.form.errorLabelRequired": {
       "comment": "Inline validation error when the label is blank",
       "extractionState": "manual",
       "localizations": {
@@ -4854,7 +4854,7 @@
         }
       }
     },
-    "sourceFields.form.errorUnslugifiable": {
+    "metadata.form.errorUnslugifiable": {
       "comment": "Inline validation error when the label has no letters or digits to slug",
       "extractionState": "manual",
       "localizations": {
@@ -4866,7 +4866,7 @@
         }
       }
     },
-    "sourceFields.form.label": {
+    "metadata.form.label": {
       "comment": "Add/edit form field: label",
       "extractionState": "manual",
       "localizations": {
@@ -4878,7 +4878,7 @@
         }
       }
     },
-    "sourceFields.form.labelPlaceholder": {
+    "metadata.form.labelPlaceholder": {
       "comment": "Placeholder text for the add-field label input",
       "extractionState": "manual",
       "localizations": {
@@ -4890,7 +4890,7 @@
         }
       }
     },
-    "sourceFields.form.revert": {
+    "metadata.form.revert": {
       "comment": "Secondary button label that discards unsaved edits to an existing field",
       "extractionState": "manual",
       "localizations": {
@@ -4902,7 +4902,7 @@
         }
       }
     },
-    "sourceFields.form.saveChanges": {
+    "metadata.form.saveChanges": {
       "comment": "Primary button label for committing an edit to an existing field",
       "extractionState": "manual",
       "localizations": {
@@ -4914,8 +4914,8 @@
         }
       }
     },
-    "sourceFields.form.saveSaving": {
-      "comment": "Primary button label while a Source field add/edit is in flight",
+    "metadata.form.saveSaving": {
+      "comment": "Primary button label while a Metadata field add/edit is in flight",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -4926,8 +4926,8 @@
         }
       }
     },
-    "sourceFields.list.addField": {
-      "comment": "Button: add a new Source field (toolbar, empty state, and add-form submit)",
+    "metadata.list.addField": {
+      "comment": "Button: add a new Metadata field (toolbar, empty state, and add-form submit)",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -4938,8 +4938,8 @@
         }
       }
     },
-    "sourceFields.list.columnDataType": {
-      "comment": "Source fields list column header: data type",
+    "metadata.list.columnDataType": {
+      "comment": "Metadata list column header: data type",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -4950,8 +4950,8 @@
         }
       }
     },
-    "sourceFields.list.columnKey": {
-      "comment": "Source fields list column header: key",
+    "metadata.list.columnKey": {
+      "comment": "Metadata list column header: key",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -4962,8 +4962,8 @@
         }
       }
     },
-    "sourceFields.list.columnLabel": {
-      "comment": "Source fields list column header: label",
+    "metadata.list.columnLabel": {
+      "comment": "Metadata list column header: label",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -4974,8 +4974,8 @@
         }
       }
     },
-    "sourceFields.list.countLine": {
-      "comment": "Source fields count summary; arguments are total, seeded (provenencia), and user field counts",
+    "metadata.list.countLine": {
+      "comment": "Metadata count summary; arguments are total, seeded (provenencia), and user field counts",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -4986,8 +4986,8 @@
         }
       }
     },
-    "sourceFields.list.countLineWithPlugin": {
-      "comment": "Source fields count summary including plugin-origin fields; arguments are total, seeded, user, and plugin field counts",
+    "metadata.list.countLineWithPlugin": {
+      "comment": "Metadata count summary including plugin-origin fields; arguments are total, seeded, user, and plugin field counts",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -4998,8 +4998,8 @@
         }
       }
     },
-    "sourceFields.list.description": {
-      "comment": "Explanatory copy under the Source fields page title",
+    "metadata.list.description": {
+      "comment": "Explanatory copy under the Metadata page title",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -5010,8 +5010,8 @@
         }
       }
     },
-    "sourceFields.list.resultLineAll": {
-      "comment": "Footer result count when no search/filter narrows the Source fields list; argument is the total",
+    "metadata.list.resultLineAll": {
+      "comment": "Footer result count when no search/filter narrows the Metadata list; argument is the total",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -5022,8 +5022,8 @@
         }
       }
     },
-    "sourceFields.toast.addedBody": {
-      "comment": "Success toast body after creating a Source field; arguments are label then minted key",
+    "metadata.toast.addedBody": {
+      "comment": "Success toast body after creating a Metadata field; arguments are label then minted key",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -5034,8 +5034,8 @@
         }
       }
     },
-    "sourceFields.toast.addedTitle": {
-      "comment": "Success toast title after creating a Source field",
+    "metadata.toast.addedTitle": {
+      "comment": "Success toast title after creating a Metadata field",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -5046,8 +5046,8 @@
         }
       }
     },
-    "sourceFields.toast.deletedBody": {
-      "comment": "Toast body after a source field is deleted; argument is the field label",
+    "metadata.toast.deletedBody": {
+      "comment": "Toast body after a metadata field is deleted; argument is the field label",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -5058,8 +5058,8 @@
         }
       }
     },
-    "sourceFields.toast.deletedTitle": {
-      "comment": "Toast title after a source field is deleted",
+    "metadata.toast.deletedTitle": {
+      "comment": "Toast title after a metadata field is deleted",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -5070,8 +5070,8 @@
         }
       }
     },
-    "sourceFields.toast.updatedBody": {
-      "comment": "Success toast body after editing a Source field; arguments are label then key",
+    "metadata.toast.updatedBody": {
+      "comment": "Success toast body after editing a Metadata field; arguments are label then key",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -5082,8 +5082,8 @@
         }
       }
     },
-    "sourceFields.toast.updatedTitle": {
-      "comment": "Success toast title after editing a Source field",
+    "metadata.toast.updatedTitle": {
+      "comment": "Success toast title after editing a Metadata field",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -5665,7 +5665,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Source field to assign"
+            "value": "Metadata field to assign"
           }
         }
       }
@@ -5689,7 +5689,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No field in the vocabulary matches that — add it in Source fields first"
+            "value": "No field in the vocabulary matches that — add it in Metadata first"
           }
         }
       }
@@ -5797,7 +5797,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The pool is the Source fields vocabulary — add a new field there first if it is missing"
+            "value": "The pool is the Metadata vocabulary — add a new field there first if it is missing"
           }
         }
       }
@@ -8430,7 +8430,7 @@
         }
       }
     },
-    "subjectFields.create.bindSection": {
+    "properties.create.bindSection": {
       "comment": "Create property sheet: bind checklist section",
       "extractionState": "manual",
       "localizations": {
@@ -8442,7 +8442,7 @@
         }
       }
     },
-    "subjectFields.create.cancel": {
+    "properties.create.cancel": {
       "comment": "Create property sheet cancel",
       "extractionState": "manual",
       "localizations": {
@@ -8454,7 +8454,7 @@
         }
       }
     },
-    "subjectFields.create.description": {
+    "properties.create.description": {
       "comment": "Create property form: description",
       "extractionState": "manual",
       "localizations": {
@@ -8466,7 +8466,7 @@
         }
       }
     },
-    "subjectFields.create.descriptionPlaceholder": {
+    "properties.create.descriptionPlaceholder": {
       "comment": "Placeholder for create property description",
       "extractionState": "manual",
       "localizations": {
@@ -8478,7 +8478,7 @@
         }
       }
     },
-    "subjectFields.create.errorLabelRequired": {
+    "properties.create.errorLabelRequired": {
       "comment": "Validation when create label is empty",
       "extractionState": "manual",
       "localizations": {
@@ -8490,7 +8490,7 @@
         }
       }
     },
-    "subjectFields.create.errorValueType": {
+    "properties.create.errorValueType": {
       "comment": "Validation when create value type is invalid",
       "extractionState": "manual",
       "localizations": {
@@ -8502,7 +8502,7 @@
         }
       }
     },
-    "subjectFields.create.key": {
+    "properties.create.key": {
       "comment": "Create property form: machine key field",
       "extractionState": "manual",
       "localizations": {
@@ -8514,7 +8514,7 @@
         }
       }
     },
-    "subjectFields.create.keyHint": {
+    "properties.create.keyHint": {
       "comment": "Hint under create property key; key is minted server-side from label",
       "extractionState": "manual",
       "localizations": {
@@ -8526,7 +8526,7 @@
         }
       }
     },
-    "subjectFields.create.keyPlaceholder": {
+    "properties.create.keyPlaceholder": {
       "comment": "Placeholder for create property key preview",
       "extractionState": "manual",
       "localizations": {
@@ -8538,7 +8538,7 @@
         }
       }
     },
-    "subjectFields.create.label": {
+    "properties.create.label": {
       "comment": "Create property form: label field",
       "extractionState": "manual",
       "localizations": {
@@ -8550,7 +8550,7 @@
         }
       }
     },
-    "subjectFields.create.labelHint": {
+    "properties.create.labelHint": {
       "comment": "Hint under create property label",
       "extractionState": "manual",
       "localizations": {
@@ -8562,7 +8562,7 @@
         }
       }
     },
-    "subjectFields.create.labelPlaceholder": {
+    "properties.create.labelPlaceholder": {
       "comment": "Placeholder for create property label field",
       "extractionState": "manual",
       "localizations": {
@@ -8574,7 +8574,7 @@
         }
       }
     },
-    "subjectFields.create.originNote": {
+    "properties.create.originNote": {
       "comment": "Create property sheet note about origin",
       "extractionState": "manual",
       "localizations": {
@@ -8586,7 +8586,7 @@
         }
       }
     },
-    "subjectFields.create.submit": {
+    "properties.create.submit": {
       "comment": "Create property sheet primary action",
       "extractionState": "manual",
       "localizations": {
@@ -8598,7 +8598,7 @@
         }
       }
     },
-    "subjectFields.create.title": {
+    "properties.create.title": {
       "comment": "Create property sheet title",
       "extractionState": "manual",
       "localizations": {
@@ -8610,7 +8610,7 @@
         }
       }
     },
-    "subjectFields.create.valueType": {
+    "properties.create.valueType": {
       "comment": "Create property form: value type picker",
       "extractionState": "manual",
       "localizations": {
@@ -8622,7 +8622,7 @@
         }
       }
     },
-    "subjectFields.create.valueTypeHint": {
+    "properties.create.valueTypeHint": {
       "comment": "Hint under create property value type chips",
       "extractionState": "manual",
       "localizations": {
@@ -8634,7 +8634,7 @@
         }
       }
     },
-    "subjectFields.inspector.accessibility": {
+    "properties.inspector.accessibility": {
       "comment": "Accessibility label for the property inspector card",
       "extractionState": "manual",
       "localizations": {
@@ -8646,7 +8646,7 @@
         }
       }
     },
-    "subjectFields.inspector.bindCount": {
+    "properties.inspector.bindCount": {
       "comment": "Inspector bound-type count beside Bound to; bound, then total types",
       "extractionState": "manual",
       "localizations": {
@@ -8658,7 +8658,7 @@
         }
       }
     },
-    "subjectFields.inspector.bindingBound": {
+    "properties.inspector.bindingBound": {
       "comment": "Accessibility label for an active unbound-able binding",
       "extractionState": "manual",
       "localizations": {
@@ -8670,7 +8670,7 @@
         }
       }
     },
-    "subjectFields.inspector.bindingLocked": {
+    "properties.inspector.bindingLocked": {
       "comment": "Accessibility / badge for a locked subject-type binding",
       "extractionState": "manual",
       "localizations": {
@@ -8682,7 +8682,7 @@
         }
       }
     },
-    "subjectFields.inspector.bindingNotBound": {
+    "properties.inspector.bindingNotBound": {
       "comment": "Accessibility label for an inactive binding checkbox",
       "extractionState": "manual",
       "localizations": {
@@ -8694,7 +8694,7 @@
         }
       }
     },
-    "subjectFields.inspector.bindingRegistry": {
+    "properties.inspector.bindingRegistry": {
       "comment": "Micro-label beside a locked Bound-to row (registry-held)",
       "extractionState": "manual",
       "localizations": {
@@ -8706,7 +8706,7 @@
         }
       }
     },
-    "subjectFields.inspector.bindings": {
+    "properties.inspector.bindings": {
       "comment": "Inspector section label for bindings list",
       "extractionState": "manual",
       "localizations": {
@@ -8718,7 +8718,7 @@
         }
       }
     },
-    "subjectFields.inspector.bindingsAccessibility": {
+    "properties.inspector.bindingsAccessibility": {
       "comment": "Accessibility label for the Bound-to checkbox list",
       "extractionState": "manual",
       "localizations": {
@@ -8730,7 +8730,7 @@
         }
       }
     },
-    "subjectFields.inspector.empty": {
+    "properties.inspector.empty": {
       "comment": "Inspector empty state",
       "extractionState": "manual",
       "localizations": {
@@ -8742,7 +8742,7 @@
         }
       }
     },
-    "subjectFields.inspector.lockedBinding": {
+    "properties.inspector.lockedBinding": {
       "comment": "Callout when activating a locked binding; argument is subject type label",
       "extractionState": "manual",
       "localizations": {
@@ -8754,7 +8754,7 @@
         }
       }
     },
-    "subjectFields.inspector.origin": {
+    "properties.inspector.origin": {
       "comment": "Inspector meta label: origin",
       "extractionState": "manual",
       "localizations": {
@@ -8766,7 +8766,7 @@
         }
       }
     },
-    "subjectFields.inspector.originSeeded": {
+    "properties.inspector.originSeeded": {
       "comment": "Inspector origin line for product-seeded properties",
       "extractionState": "manual",
       "localizations": {
@@ -8778,7 +8778,7 @@
         }
       }
     },
-    "subjectFields.inspector.originUser": {
+    "properties.inspector.originUser": {
       "comment": "Inspector origin line for researcher-created properties",
       "extractionState": "manual",
       "localizations": {
@@ -8790,7 +8790,7 @@
         }
       }
     },
-    "subjectFields.inspector.termNote": {
+    "properties.inspector.termNote": {
       "comment": "Inspector note for term-typed seeded properties",
       "extractionState": "manual",
       "localizations": {
@@ -8802,7 +8802,7 @@
         }
       }
     },
-    "subjectFields.inspector.valueType": {
+    "properties.inspector.valueType": {
       "comment": "Inspector meta label: value type",
       "extractionState": "manual",
       "localizations": {
@@ -8814,7 +8814,7 @@
         }
       }
     },
-    "subjectFields.inspector.valueTypeImmutable": {
+    "properties.inspector.valueTypeImmutable": {
       "comment": "Accessibility label for the lock beside value type in the inspector",
       "extractionState": "manual",
       "localizations": {
@@ -8826,8 +8826,8 @@
         }
       }
     },
-    "subjectFields.list.description": {
-      "comment": "Explanatory copy under the Subject fields page title",
+    "properties.list.description": {
+      "comment": "Explanatory copy under the Properties page title",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -8838,8 +8838,8 @@
         }
       }
     },
-    "subjectFields.search.placeholder": {
-      "comment": "Search field placeholder on Subject fields",
+    "properties.search.placeholder": {
+      "comment": "Search field placeholder on Properties",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -8850,7 +8850,7 @@
         }
       }
     },
-    "subjectFields.strip.accessibility": {
+    "properties.strip.accessibility": {
       "comment": "Accessibility label for the type strip pressed-button group",
       "extractionState": "manual",
       "localizations": {
@@ -8862,7 +8862,7 @@
         }
       }
     },
-    "subjectFields.strip.all": {
+    "properties.strip.all": {
       "comment": "Type strip card that clears the subject-type filter",
       "extractionState": "manual",
       "localizations": {
@@ -8874,7 +8874,7 @@
         }
       }
     },
-    "subjectFields.strip.bridge": {
+    "properties.strip.bridge": {
       "comment": "Micro-label on bridge subject-type strip cards; rendered uppercase (BRIDGE)",
       "extractionState": "manual",
       "localizations": {
@@ -8886,7 +8886,7 @@
         }
       }
     },
-    "subjectFields.strip.fieldCount": {
+    "properties.strip.fieldCount": {
       "comment": "Type strip count under a subject type; argument is binding count",
       "extractionState": "manual",
       "localizations": {
@@ -8898,7 +8898,7 @@
         }
       }
     },
-    "subjectFields.table.boundOverflow": {
+    "properties.table.boundOverflow": {
       "comment": "Overflow when more than three Bound-to chips; argument is remaining count",
       "extractionState": "manual",
       "localizations": {
@@ -8910,8 +8910,8 @@
         }
       }
     },
-    "subjectFields.table.columnBoundTo": {
-      "comment": "Subject fields table column: bound subject types",
+    "properties.table.columnBoundTo": {
+      "comment": "Properties table column: bound subject types",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -8922,8 +8922,8 @@
         }
       }
     },
-    "subjectFields.table.columnOn": {
-      "comment": "Subject fields table column: binding toggle for the focused type",
+    "properties.table.columnOn": {
+      "comment": "Properties table column: binding toggle for the focused type",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -8934,8 +8934,8 @@
         }
       }
     },
-    "subjectFields.table.columnOrigin": {
-      "comment": "Subject fields table column: origin",
+    "properties.table.columnOrigin": {
+      "comment": "Properties table column: origin",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -8946,8 +8946,8 @@
         }
       }
     },
-    "subjectFields.table.columnProperty": {
-      "comment": "Subject fields table column: property label",
+    "properties.table.columnProperty": {
+      "comment": "Properties table column: property label",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -8958,8 +8958,8 @@
         }
       }
     },
-    "subjectFields.table.columnValueType": {
-      "comment": "Subject fields table column: value type",
+    "properties.table.columnValueType": {
+      "comment": "Properties table column: value type",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -8970,7 +8970,7 @@
         }
       }
     },
-    "subjectFields.table.emptySearch": {
+    "properties.table.emptySearch": {
       "comment": "Empty state when search/filter matches no properties",
       "extractionState": "manual",
       "localizations": {
@@ -8982,7 +8982,7 @@
         }
       }
     },
-    "subjectFields.table.emptySearchTitle": {
+    "properties.table.emptySearchTitle": {
       "comment": "Empty table title when no properties are visible",
       "extractionState": "manual",
       "localizations": {
@@ -8994,7 +8994,7 @@
         }
       }
     },
-    "subjectFields.table.emptySearchTitleQuery": {
+    "properties.table.emptySearchTitleQuery": {
       "comment": "Empty table title when search matches nothing; argument is the query",
       "extractionState": "manual",
       "localizations": {
@@ -9006,7 +9006,7 @@
         }
       }
     },
-    "subjectFields.table.originSeeded": {
+    "properties.table.originSeeded": {
       "comment": "Table origin column for Provenencia-seeded properties",
       "extractionState": "manual",
       "localizations": {
@@ -9018,7 +9018,7 @@
         }
       }
     },
-    "subjectFields.table.originUser": {
+    "properties.table.originUser": {
       "comment": "Table origin column for researcher-created properties",
       "extractionState": "manual",
       "localizations": {
@@ -9030,7 +9030,7 @@
         }
       }
     },
-    "subjectFields.table.rowBoundAnnouncement": {
+    "properties.table.rowBoundAnnouncement": {
       "comment": "VoiceOver fragment for how many types a property is bound to",
       "extractionState": "manual",
       "localizations": {
@@ -9042,7 +9042,7 @@
         }
       }
     },
-    "subjectFields.toast.createdBody": {
+    "properties.toast.createdBody": {
       "comment": "Success toast body after creating a property; argument is label",
       "extractionState": "manual",
       "localizations": {
@@ -9054,7 +9054,7 @@
         }
       }
     },
-    "subjectFields.toast.createdTitle": {
+    "properties.toast.createdTitle": {
       "comment": "Success toast title after creating a property",
       "extractionState": "manual",
       "localizations": {
@@ -9066,7 +9066,7 @@
         }
       }
     },
-    "subjectFields.toast.deletedBody": {
+    "properties.toast.deletedBody": {
       "comment": "Success toast body after deleting a property; argument is label",
       "extractionState": "manual",
       "localizations": {
@@ -9078,7 +9078,7 @@
         }
       }
     },
-    "subjectFields.toast.deletedTitle": {
+    "properties.toast.deletedTitle": {
       "comment": "Success toast title after deleting a property",
       "extractionState": "manual",
       "localizations": {
@@ -9090,7 +9090,7 @@
         }
       }
     },
-    "subjectFields.toolbar.addPropertyEmpty": {
+    "properties.toolbar.addPropertyEmpty": {
       "comment": "ComboBox empty state when binding an existing property to the focused type",
       "extractionState": "manual",
       "localizations": {
@@ -9102,7 +9102,7 @@
         }
       }
     },
-    "subjectFields.toolbar.addPropertyPlaceholder": {
+    "properties.toolbar.addPropertyPlaceholder": {
       "comment": "ComboBox placeholder when a subject type is focused; argument is type label",
       "extractionState": "manual",
       "localizations": {
@@ -9114,7 +9114,7 @@
         }
       }
     },
-    "subjectFields.toolbar.newProperty": {
+    "properties.toolbar.newProperty": {
       "comment": "Toolbar button to open create Property sheet",
       "extractionState": "manual",
       "localizations": {
@@ -9126,7 +9126,7 @@
         }
       }
     },
-    "subjectFields.valueType.date": {
+    "properties.valueType.date": {
       "comment": "Property value type label: date",
       "extractionState": "manual",
       "localizations": {
@@ -9138,7 +9138,7 @@
         }
       }
     },
-    "subjectFields.valueType.integer": {
+    "properties.valueType.integer": {
       "comment": "Property value type label: integer",
       "extractionState": "manual",
       "localizations": {
@@ -9150,7 +9150,7 @@
         }
       }
     },
-    "subjectFields.valueType.name": {
+    "properties.valueType.name": {
       "comment": "Property value type label: name",
       "extractionState": "manual",
       "localizations": {
@@ -9162,7 +9162,7 @@
         }
       }
     },
-    "subjectFields.valueType.subject": {
+    "properties.valueType.subject": {
       "comment": "Property value type label: subject",
       "extractionState": "manual",
       "localizations": {
@@ -9174,7 +9174,7 @@
         }
       }
     },
-    "subjectFields.valueType.term": {
+    "properties.valueType.term": {
       "comment": "Property value type label: term (registry-only)",
       "extractionState": "manual",
       "localizations": {
@@ -9186,7 +9186,7 @@
         }
       }
     },
-    "subjectFields.valueType.text": {
+    "properties.valueType.text": {
       "comment": "Property value type label: text",
       "extractionState": "manual",
       "localizations": {
@@ -9318,14 +9318,14 @@
         }
       }
     },
-    "workspace.omnibar.kind.field": {
-      "comment": "Kind chip on an omnibar hit for a source field",
+    "workspace.omnibar.kind.metadataField": {
+      "comment": "Kind chip on an omnibar hit for a metadata field",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Field"
+            "value": "Metadata field"
           }
         }
       }
@@ -9510,14 +9510,14 @@
         }
       }
     },
-    "workspace.section.sourceFields.title": {
-      "comment": "Workspace sidebar destination and page title: Source fields",
+    "workspace.section.metadata.title": {
+      "comment": "Workspace sidebar destination and page title: Metadata",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Source fields"
+            "value": "Metadata"
           }
         }
       }
@@ -9546,14 +9546,14 @@
         }
       }
     },
-    "workspace.section.subjectFields.title": {
-      "comment": "Workspace sidebar destination and page title: Subject fields",
+    "workspace.section.properties.title": {
+      "comment": "Workspace sidebar destination and page title: Properties",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Subject fields"
+            "value": "Properties"
           }
         }
       }
@@ -13314,8 +13314,8 @@
         }
       }
     },
-    "subjectFields.delete.action": {
-      "comment": "Tooltip on the Subject fields inspector trash",
+    "properties.delete.action": {
+      "comment": "Tooltip on the Properties inspector trash",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -13326,8 +13326,8 @@
         }
       }
     },
-    "subjectFields.delete.accessibility": {
-      "comment": "VoiceOver for Subject fields trash; argument is the property label",
+    "properties.delete.accessibility": {
+      "comment": "VoiceOver for Properties trash; argument is the property label",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -13338,8 +13338,8 @@
         }
       }
     },
-    "subjectFields.edit.action": {
-      "comment": "Tooltip on the Subject fields inspector pencil",
+    "properties.edit.action": {
+      "comment": "Tooltip on the Properties inspector pencil",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -13350,7 +13350,7 @@
         }
       }
     },
-    "subjectFields.edit.save": {
+    "properties.edit.save": {
       "comment": "Save tooltip for in-place property label/description edit",
       "extractionState": "manual",
       "localizations": {
@@ -13362,7 +13362,7 @@
         }
       }
     },
-    "subjectFields.edit.cancel": {
+    "properties.edit.cancel": {
       "comment": "Cancel tooltip for in-place property label/description edit",
       "extractionState": "manual",
       "localizations": {
@@ -13374,7 +13374,7 @@
         }
       }
     },
-    "subjectFields.edit.keyStays": {
+    "properties.edit.keyStays": {
       "comment": "Lock line under the label input while editing; argument is the property key",
       "extractionState": "manual",
       "localizations": {
@@ -13386,7 +13386,7 @@
         }
       }
     },
-    "subjectFields.edit.descriptionPlaceholder": {
+    "properties.edit.descriptionPlaceholder": {
       "comment": "Placeholder for the in-place property description textarea",
       "extractionState": "manual",
       "localizations": {
@@ -13398,7 +13398,7 @@
         }
       }
     },
-    "subjectFields.toast.updatedTitle": {
+    "properties.toast.updatedTitle": {
       "comment": "Success toast title after editing a property label or description",
       "extractionState": "manual",
       "localizations": {
@@ -13410,7 +13410,7 @@
         }
       }
     },
-    "subjectFields.toast.updatedBody": {
+    "properties.toast.updatedBody": {
       "comment": "Success toast body after editing a property; arguments are label then key",
       "extractionState": "manual",
       "localizations": {
@@ -13422,7 +13422,7 @@
         }
       }
     },
-    "subjectFields.inspector.usedOn": {
+    "properties.inspector.usedOn": {
       "comment": "Inspector meta label: observation count for the selected property",
       "extractionState": "manual",
       "localizations": {
@@ -13434,7 +13434,7 @@
         }
       }
     },
-    "subjectFields.inspector.usedOnCount": {
+    "properties.inspector.usedOnCount": {
       "comment": "Inspector observation count; argument is UsedBy",
       "extractionState": "manual",
       "localizations": {

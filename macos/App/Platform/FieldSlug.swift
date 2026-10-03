@@ -1,8 +1,8 @@
 import Foundation
 
-/// Mirrors Go `core/slug.Kebab` for the Source fields add-flow's live key
+/// Mirrors Go `core/slug.Kebab` for the Metadata add-flow's live key
 /// preview. Empty / unslugifiable labels return `""` (Go returns `""` too —
-/// the FFI call then fails with `sourcefields.invalid`).
+/// the FFI call then fails with `metadatafields.invalid`).
 enum FieldSlug {
     /// Shared success cases with `core/slug.TestKebab` (keep in sync).
     static let fixtures: [(label: String, key: String)] = [

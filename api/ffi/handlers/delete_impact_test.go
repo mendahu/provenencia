@@ -163,7 +163,7 @@ func TestGetDeleteImpact(t *testing.T) {
 	})
 }
 
-func TestLocationFromImpactSubjectFields(t *testing.T) {
+func TestLocationFromImpactProperties(t *testing.T) {
 	tests := []struct {
 		name string
 		in   deleteimpact.Location
@@ -172,25 +172,25 @@ func TestLocationFromImpactSubjectFields(t *testing.T) {
 		{
 			name: "property term deep-links to parent property",
 			in: deleteimpact.Location{
-				Section: "subject-fields", PropertyID: "prop-1", Ref: "lodger", Title: "Lodger",
+				Section: "properties", PropertyID: "prop-1", Ref: "lodger", Title: "Lodger",
 			},
 			want: &engine.WorkspaceLocation{
-				Section: "subject-fields", PropertyId: "prop-1", Ref: "lodger", Title: "Lodger",
+				Section: "properties", PropertyId: "prop-1", Ref: "lodger", Title: "Lodger",
 			},
 		},
 		{
 			name: "subject type deep-links to strip category",
 			in: deleteimpact.Location{
-				Section: "subject-fields", SubjectTypeKey: "person", Ref: "person", Title: "Person",
+				Section: "properties", SubjectTypeKey: "person", Ref: "person", Title: "Person",
 			},
 			want: &engine.WorkspaceLocation{
-				Section: "subject-fields", SubjectTypeKey: "person", Ref: "person", Title: "Person",
+				Section: "properties", SubjectTypeKey: "person", Ref: "person", Title: "Person",
 			},
 		},
 		{
 			name: "section root stays empty",
-			in:   deleteimpact.Location{Section: "subject-fields"},
-			want: &engine.WorkspaceLocation{Section: "subject-fields"},
+			in:   deleteimpact.Location{Section: "properties"},
+			want: &engine.WorkspaceLocation{Section: "properties"},
 		},
 	}
 	for _, tt := range tests {

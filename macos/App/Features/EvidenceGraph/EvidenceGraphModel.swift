@@ -144,7 +144,7 @@ final class EvidenceGraphModel {
     }
 
     private var fieldsKey: CatalogQueryKey {
-        CatalogQueryKey.subjectFieldsWorkspace(project: session.projectKey)
+        CatalogQueryKey.propertiesWorkspace(project: session.projectKey)
     }
 
     private var sourcesListKey: CatalogQueryKey {
@@ -155,8 +155,8 @@ final class EvidenceGraphModel {
         CatalogQueryKey.connectRules(project: session.projectKey)
     }
 
-    private var fieldsSnapshot: SubjectFieldsSnapshot? {
-        let handle: QueryHandle<SubjectFieldsSnapshot>? = session.queryHandle(fieldsKey)
+    private var fieldsSnapshot: PropertiesSnapshot? {
+        let handle: QueryHandle<PropertiesSnapshot>? = session.queryHandle(fieldsKey)
         return handle?.value
     }
 
@@ -207,10 +207,10 @@ final class EvidenceGraphModel {
     func prepare() async {
         let _: QueryHandle<SourceGraphRows> = session.query(graphKey)
         let rules: QueryHandle<[CatalogConnectRule]> = session.query(connectRulesKey)
-        let _: QueryHandle<SubjectFieldsSnapshot> = session.query(fieldsKey)
+        let _: QueryHandle<PropertiesSnapshot> = session.query(fieldsKey)
         let _: QueryHandle<[CatalogSource]> = session.query(sourcesListKey)
         _ = await session.readyValue(graphKey) as SourceGraphRows?
-        _ = await session.readyValue(fieldsKey) as SubjectFieldsSnapshot?
+        _ = await session.readyValue(fieldsKey) as PropertiesSnapshot?
         _ = await session.readyValue(connectRulesKey) as [CatalogConnectRule]?
         _ = await session.readyValue(sourcesListKey) as [CatalogSource]?
         if rules.status == .error, let message = connectRulesError {

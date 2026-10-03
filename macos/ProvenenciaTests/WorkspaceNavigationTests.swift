@@ -38,9 +38,9 @@ struct WorkspaceNavigationTests {
 
     @Test func goPushesAndCoalescesIdentical() throws {
         let (navigation, _) = try attachedNavigation()
-        navigation.go(to: .sectionRoot(.sourceFields))
+        navigation.go(to: .sectionRoot(.metadata))
         #expect(navigation.canGoBack)
-        navigation.go(to: .sectionRoot(.sourceFields))
+        navigation.go(to: .sectionRoot(.metadata))
         // Identical to current — no second push; still one step back to Sources.
         #expect(navigation.canGoBack)
         #expect(!navigation.canGoForward)
@@ -51,30 +51,30 @@ struct WorkspaceNavigationTests {
         navigation.go(to: WorkspaceLocation(section: .sources, sourceId: "src-1", title: "Renamed"))
         // Title fluff must not push a second identical place.
         navigation.goBack()
-        #expect(navigation.currentLocation == .sectionRoot(.sourceFields))
+        #expect(navigation.currentLocation == .sectionRoot(.metadata))
     }
 
     @Test func goTruncatesForwardFromMiddle() throws {
         let (navigation, _) = try attachedNavigation()
-        navigation.go(to: .sectionRoot(.sourceFields))
+        navigation.go(to: .sectionRoot(.metadata))
         navigation.go(to: .sectionRoot(.sourceTypes))
         navigation.go(to: .sectionRoot(.sources))
         navigation.goBack()
         navigation.goBack()
-        #expect(navigation.currentLocation == .sectionRoot(.sourceFields))
+        #expect(navigation.currentLocation == .sectionRoot(.metadata))
         #expect(navigation.canGoForward)
 
         navigation.go(to: WorkspaceLocation(section: .sources, sourceId: "src-9"))
         #expect(!navigation.canGoForward)
         #expect(navigation.currentLocation.sourceId == "src-9")
         navigation.goBack()
-        #expect(navigation.currentLocation == .sectionRoot(.sourceFields))
+        #expect(navigation.currentLocation == .sectionRoot(.metadata))
     }
 
     @Test func backForwardAndJumpIndex() throws {
         let (navigation, _) = try attachedNavigation()
-        navigation.go(to: .sectionRoot(.sourceFields))
-        navigation.go(to: WorkspaceLocation(section: .sourceFields, fieldId: "fld-1", title: "Author"))
+        navigation.go(to: .sectionRoot(.metadata))
+        navigation.go(to: WorkspaceLocation(section: .metadata, fieldId: "fld-1", title: "Author"))
         navigation.go(to: .sectionRoot(.sourceTypes))
 
         #expect(navigation.canGoBack)
@@ -120,8 +120,8 @@ struct WorkspaceNavigationTests {
 
     @Test func vocabularySelectionPushAndRestore() throws {
         let (navigation, _) = try attachedNavigation()
-        navigation.go(to: .sectionRoot(.sourceFields))
-        navigation.go(to: WorkspaceLocation(section: .sourceFields, fieldId: "fld-9", title: "Place"))
+        navigation.go(to: .sectionRoot(.metadata))
+        navigation.go(to: WorkspaceLocation(section: .metadata, fieldId: "fld-9", title: "Place"))
         navigation.go(to: .sectionRoot(.sourceTypes))
         navigation.go(to: WorkspaceLocation(section: .sourceTypes, typeId: "typ-9", title: "Will"))
 
@@ -134,13 +134,13 @@ struct WorkspaceNavigationTests {
         #expect(navigation.currentLocation.typeId == "typ-9")
     }
 
-    @Test func subjectFieldsTwoLevelSelectionPushAndRestore() throws {
+    @Test func propertiesTwoLevelSelectionPushAndRestore() throws {
         let (navigation, url) = try attachedNavigation()
-        navigation.go(to: .sectionRoot(.subjectFields))
-        navigation.go(to: WorkspaceLocation(section: .subjectFields, subjectTypeKey: "person", title: "Person"))
+        navigation.go(to: .sectionRoot(.properties))
+        navigation.go(to: WorkspaceLocation(section: .properties, subjectTypeKey: "person", title: "Person"))
         navigation.go(
             to: WorkspaceLocation(
-                section: .subjectFields,
+                section: .properties,
                 subjectTypeKey: "person",
                 propertyId: "prop-name",
                 title: "Name"
@@ -149,14 +149,14 @@ struct WorkspaceNavigationTests {
         navigation.go(to: .sectionRoot(.sources))
 
         navigation.goBack()
-        #expect(navigation.selectedSection == .subjectFields)
+        #expect(navigation.selectedSection == .properties)
         #expect(navigation.currentLocation.subjectTypeKey == "person")
         #expect(navigation.currentLocation.propertyId == "prop-name")
         navigation.goBack()
         #expect(navigation.currentLocation.subjectTypeKey == "person")
         #expect(navigation.currentLocation.propertyId == nil)
         navigation.goBack()
-        #expect(navigation.currentLocation == .sectionRoot(.subjectFields))
+        #expect(navigation.currentLocation == .sectionRoot(.properties))
         navigation.goForward()
         navigation.goForward()
         #expect(navigation.currentLocation.propertyId == "prop-name")
@@ -164,12 +164,12 @@ struct WorkspaceNavigationTests {
         // Category and property are both identity, so a strip change is its own entry
         // and title fluff still coalesces.
         #expect(
-            WorkspaceLocation(section: .subjectFields, subjectTypeKey: "person", propertyId: "prop-name")
-                != WorkspaceLocation(section: .subjectFields, propertyId: "prop-name")
+            WorkspaceLocation(section: .properties, subjectTypeKey: "person", propertyId: "prop-name")
+                != WorkspaceLocation(section: .properties, propertyId: "prop-name")
         )
         #expect(
-            WorkspaceLocation(section: .subjectFields, subjectTypeKey: "person", propertyId: "prop-name", title: "A")
-                == WorkspaceLocation(section: .subjectFields, subjectTypeKey: "person", propertyId: "prop-name", title: "B")
+            WorkspaceLocation(section: .properties, subjectTypeKey: "person", propertyId: "prop-name", title: "A")
+                == WorkspaceLocation(section: .properties, subjectTypeKey: "person", propertyId: "prop-name", title: "B")
         )
 
         let reloaded = WorkspaceNavigation()
@@ -178,14 +178,55 @@ struct WorkspaceNavigationTests {
         #expect(reloaded.currentLocation.propertyId == "prop-name")
     }
 
-    @Test func legacySubjectFieldsHistoryDecodesAsListRoot() throws {
+    @Test(arguments: [
+        ("files", WorkspaceSection.sources),
+        ("source-fields", WorkspaceSection.metadata),
+        ("subject-fields", WorkspaceSection.properties),
+    ])
+    func retiredSectionIdsDecodeToTheirSection(id: String, section: WorkspaceSection) throws {
         let json = Data("""
-        {"section":"subject-fields"}
+        {"section":"\(id)"}
         """.utf8)
         let location = try JSONDecoder().decode(WorkspaceLocation.self, from: json)
-        #expect(location == .sectionRoot(.subjectFields))
+        #expect(location == .sectionRoot(section))
         #expect(location.subjectTypeKey == nil)
         #expect(location.propertyId == nil)
+        #expect(WorkspaceSection(id: id) == section)
+    }
+
+    @Test func currentSectionIdsRoundTrip() throws {
+        for section in WorkspaceSection.allCases {
+            #expect(WorkspaceSection(id: section.rawValue) == section)
+            let data = try JSONEncoder().encode(WorkspaceLocation.sectionRoot(section))
+            #expect(try JSONDecoder().decode(WorkspaceLocation.self, from: data) == .sectionRoot(section))
+        }
+        #expect(WorkspaceSection(id: "nope") == nil)
+    }
+
+    /// A history file saved before S9-07b keeps its entries and raises no
+    /// "history couldn't load" reset.
+    @Test func historyWithRetiredSectionIdsLoadsIntact() throws {
+        let url = try tempNavigationFile()
+        let json = """
+        {"v":1,"projectUuid":"\(projectUuid)","index":1,"entries":[{"section":"source-fields"},{"section":"subject-fields"}]}
+        """
+        try Data(json.utf8).write(to: url)
+        let (navigation, _) = try attachedNavigation(fileURL: url)
+        #expect(navigation.lastHistoryIssue == nil)
+        #expect(navigation.currentLocation == .sectionRoot(.properties))
+        navigation.goBack()
+        #expect(navigation.currentLocation == .sectionRoot(.metadata))
+    }
+
+    @Test func engineLocationWithRetiredSectionIdResolves() {
+        var proto = Provenencia_Engine_V1_WorkspaceLocation()
+        proto.section = "source-fields"
+        proto.fieldID = "fld-1"
+        let location = GoStore.mapWorkspaceLocationFromProto(proto)
+        #expect(location.section == .metadata)
+        #expect(location.fieldId == "fld-1")
+        proto.section = "metadata"
+        #expect(GoStore.mapWorkspaceLocationFromProto(proto).section == .metadata)
     }
 
     @Test func missingEntityPruneRewritesCurrentEntry() throws {
@@ -315,7 +356,7 @@ struct WorkspaceNavigationTests {
     @Test func backJumpItemsNearestFirstAndCapped() throws {
         let (navigation, _) = try attachedNavigation()
         // indices: 0 sources, 1 fields, 2 types, 3 source detail, 4 deep source — current at 4
-        navigation.go(to: .sectionRoot(.sourceFields))
+        navigation.go(to: .sectionRoot(.metadata))
         navigation.go(to: .sectionRoot(.sourceTypes))
         navigation.go(to: WorkspaceLocation(section: .sources, sourceId: "src-0"))
         navigation.go(to: WorkspaceLocation(section: .sources, sourceId: "src-1", title: "Deep"))
@@ -331,13 +372,13 @@ struct WorkspaceNavigationTests {
 
     @Test func forwardJumpItemsStackOrderAndCapped() throws {
         let (navigation, _) = try attachedNavigation()
-        navigation.go(to: .sectionRoot(.sourceFields))
+        navigation.go(to: .sectionRoot(.metadata))
         navigation.go(to: .sectionRoot(.sourceTypes))
         navigation.go(to: WorkspaceLocation(section: .sources, sourceId: "src-0"))
         navigation.goBack()
         navigation.goBack()
-        // current at sourceFields (index 1); forward: types (2), source detail (3)
-        #expect(navigation.currentLocation == .sectionRoot(.sourceFields))
+        // current at metadata (index 1); forward: types (2), source detail (3)
+        #expect(navigation.currentLocation == .sectionRoot(.metadata))
 
         let forward = navigation.forwardJumpItems(limit: 1)
         #expect(forward.map(\.index) == [2])
@@ -353,7 +394,7 @@ struct WorkspaceNavigationTests {
         #expect(navigation.backJumpItems().isEmpty)
         #expect(navigation.forwardJumpItems().isEmpty)
 
-        navigation.go(to: .sectionRoot(.sourceFields))
+        navigation.go(to: .sectionRoot(.metadata))
         #expect(navigation.forwardJumpItems().isEmpty)
         #expect(navigation.backJumpItems().map(\.index) == [0])
     }
@@ -397,8 +438,8 @@ struct WorkspaceNavigationTests {
         #expect(navigation.lastHistoryIssue == nil)
 
         // In-memory navigation still works; further writes keep reporting.
-        navigation.go(to: .sectionRoot(.sourceFields))
-        #expect(navigation.currentLocation == .sectionRoot(.sourceFields))
+        navigation.go(to: .sectionRoot(.metadata))
+        #expect(navigation.currentLocation == .sectionRoot(.metadata))
         #expect(navigation.lastHistoryIssue == .persistFailed)
     }
 
@@ -413,8 +454,8 @@ struct WorkspaceNavigationTests {
         var committed: [WorkspaceLocation] = []
         navigation.onLocationCommit = { committed.append($0) }
 
-        navigation.go(to: .sectionRoot(.sourceFields))
-        #expect(committed == [.sectionRoot(.sourceFields)])
+        navigation.go(to: .sectionRoot(.metadata))
+        #expect(committed == [.sectionRoot(.metadata)])
     }
 
     @Test func locationCommitOnAttachProjectRestore() throws {
@@ -437,12 +478,12 @@ struct WorkspaceNavigationTests {
         var committed: [WorkspaceLocation] = []
         navigation.onLocationCommit = { committed.append($0) }
 
-        navigation.go(to: .sectionRoot(.sourceFields))
+        navigation.go(to: .sectionRoot(.metadata))
         navigation.go(to: .sectionRoot(.sourceTypes))
         committed.removeAll()
 
         navigation.goBack()
-        #expect(committed.last == .sectionRoot(.sourceFields))
+        #expect(committed.last == .sectionRoot(.metadata))
 
         navigation.goForward()
         #expect(committed.last == .sectionRoot(.sourceTypes))
@@ -456,24 +497,24 @@ struct WorkspaceNavigationTests {
         let (navigation, _) = try attachedNavigation()
         let guardBox = HoldGuard()
         navigation.leaveGuard = guardBox
-        navigation.go(to: .sectionRoot(.sourceFields))
+        navigation.go(to: .sectionRoot(.metadata))
         #expect(navigation.currentLocation == .sectionRoot(.sources))
-        #expect(navigation.heldNavigation == .location(.sectionRoot(.sourceFields)))
+        #expect(navigation.heldNavigation == .location(.sectionRoot(.metadata)))
         navigation.resumeHeldNavigation()
-        #expect(navigation.currentLocation == .sectionRoot(.sourceFields))
+        #expect(navigation.currentLocation == .sectionRoot(.metadata))
         #expect(navigation.heldNavigation == nil)
     }
 
     @Test func leaveGuardCancelKeepsPlace() throws {
         let (navigation, _) = try attachedNavigation()
-        navigation.go(to: .sectionRoot(.sourceFields))
+        navigation.go(to: .sectionRoot(.metadata))
         let guardBox = HoldGuard()
         navigation.leaveGuard = guardBox
         navigation.goBack()
-        #expect(navigation.currentLocation == .sectionRoot(.sourceFields))
+        #expect(navigation.currentLocation == .sectionRoot(.metadata))
         #expect(navigation.heldNavigation == .back)
         navigation.cancelHeldNavigation()
-        #expect(navigation.currentLocation == .sectionRoot(.sourceFields))
+        #expect(navigation.currentLocation == .sectionRoot(.metadata))
         #expect(navigation.heldNavigation == nil)
     }
 

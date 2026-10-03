@@ -1,11 +1,11 @@
 import SwiftUI
 
-/// The **Source fields** workspace destination (S2-02 board / S2-15 PR):
+/// The **Metadata** workspace destination (S2-02 board / S2-15 PR):
 /// browse and create/edit the project's `source_metadata_fields`
 /// vocabulary. Mounts inside the existing S2-01 workspace content host.
-struct SourceFieldsView: View {
+struct MetadataView: View {
     @Environment(WorkspaceSession.self) private var session
-    @State private var model: SourceFieldsModel
+    @State private var model: MetadataModel
 
     private let detailPaneWidth: CGFloat = 380
 
@@ -16,7 +16,7 @@ struct SourceFieldsView: View {
         catalogCounts: CatalogCounts? = nil
     ) {
         _model = State(
-            initialValue: SourceFieldsModel(
+            initialValue: MetadataModel(
                 session: session,
                 userID: userID,
                 store: store,
@@ -28,9 +28,9 @@ struct SourceFieldsView: View {
     var body: some View {
         Group {
             if let fieldsHandle: QueryHandle<[CatalogMetadataField]> = session.queryHandle(
-                SourceFieldsModel.fieldsListKey(for: session)
+                MetadataModel.fieldsListKey(for: session)
             ) {
-                SourceFieldsContent(
+                MetadataContent(
                     fieldsHandle: fieldsHandle,
                     model: model,
                     detailPaneWidth: detailPaneWidth
@@ -46,10 +46,10 @@ struct SourceFieldsView: View {
     }
 }
 
-private struct SourceFieldsContent: View {
+private struct MetadataContent: View {
     @Environment(WorkspaceNavigation.self) private var navigation
     @Bindable var fieldsHandle: QueryHandle<[CatalogMetadataField]>
-    @Bindable var model: SourceFieldsModel
+    @Bindable var model: MetadataModel
     let detailPaneWidth: CGFloat
 
     var body: some View {
@@ -61,13 +61,13 @@ private struct SourceFieldsContent: View {
                     .padding(.horizontal, PVSpacing.gutterPage)
                     .padding(.top, PVSpacing.space8)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                    .accessibilityIdentifier("sourceFields.loadError")
+                    .accessibilityIdentifier("metadata.loadError")
             } else {
                 HStack(spacing: 0) {
-                    SourceFieldsListPane(model: model)
+                    MetadataListPane(model: model)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     PVDivider(axis: .vertical)
-                    SourceFieldsDetailPane(model: model)
+                    MetadataDetailPane(model: model)
                         .frame(width: detailPaneWidth)
                         .frame(maxHeight: .infinity)
                 }
@@ -75,10 +75,10 @@ private struct SourceFieldsContent: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(PVColor.surfacePage)
-        .vocabularyToastOverlay($model.toast, identifier: "sourceFields.toast")
+        .vocabularyToastOverlay($model.toast, identifier: "metadata.toast")
         .pvDeleteImpact(
             flow: model.deleteImpact,
-            accessibilityIdentifierPrefix: "sourceFields.deleteImpact",
+            accessibilityIdentifierPrefix: "metadata.deleteImpact",
             onConfirm: {
                 Task {
                     if await model.confirmPendingImpact() {
@@ -106,7 +106,7 @@ private struct SourceFieldsContent: View {
                 model.syncCatalogCounts()
             }
         }
-        .accessibilityIdentifier("sourceFields")
+        .accessibilityIdentifier("metadata")
     }
 
     private func reconcileSelection(for location: WorkspaceLocation) {
@@ -119,12 +119,12 @@ private struct SourceFieldsContent: View {
 
     private var header: some View {
         VocabularyHeader(
-            title: L10n.Workspace.sourceFieldsTitle,
-            description: L10n.SourceFields.description,
+            title: L10n.Workspace.metadataTitle,
+            description: L10n.Metadata.description,
             countLine: model.countLine,
-            addLabel: L10n.SourceFields.addField,
+            addLabel: L10n.Metadata.addField,
             isAddDisabled: model.isAdding,
-            identifierPrefix: "sourceFields",
+            identifierPrefix: "metadata",
             onAdd: { model.openAdd() }
         )
     }
@@ -141,7 +141,7 @@ private struct SourceFieldsContent: View {
         CatalogMetadataField(id: "4", key: "memorial-id", origin: "plugin:findagrave", label: "Memorial id", dataType: "text", description: "Numeric memorial identifier."),
     ]
     let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
-    return SourceFieldsView(
+    return MetadataView(
         session: session,
         userID: "00000000-0000-7000-8000-000000000001",
         store: store

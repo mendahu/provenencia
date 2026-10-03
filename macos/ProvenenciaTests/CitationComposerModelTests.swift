@@ -50,27 +50,27 @@ struct CitationComposerModelTests {
                 valueType: "term"
             ),
         ]
-        store.subjectTypeFieldsByType[personTypeID] = [
+        store.subjectTypePropertiesByType[personTypeID] = [
             field(store.propertiesByProject[projectDir]![0], 0),
             field(store.propertiesByProject[projectDir]![1], 1),
         ]
-        store.subjectTypeFieldsByType[eventTypeID] = [
+        store.subjectTypePropertiesByType[eventTypeID] = [
             field(store.propertiesByProject[projectDir]![3], 0),
         ]
-        store.subjectTypeFieldsByType[placeTypeID] = [
+        store.subjectTypePropertiesByType[placeTypeID] = [
             field(store.propertiesByProject[projectDir]![4], 0),
         ]
-        store.subjectTypeFieldsByType[participationTypeID] = [
+        store.subjectTypePropertiesByType[participationTypeID] = [
             field(store.propertiesByProject[projectDir]![2], 0),
             field(store.propertiesByProject[projectDir]![3], 1),
             field(store.propertiesByProject[projectDir]![6], 2),
         ]
-        store.subjectTypeFieldsByType[relationshipTypeID] = [
+        store.subjectTypePropertiesByType[relationshipTypeID] = [
             field(store.propertiesByProject[projectDir]![2], 0),
             field(store.propertiesByProject[projectDir]![5], 1),
             field(store.propertiesByProject[projectDir]![7], 2),
         ]
-        store.subjectTypeFieldsByType[locationTypeID] = [
+        store.subjectTypePropertiesByType[locationTypeID] = [
             field(store.propertiesByProject[projectDir]![3], 0),
             field(store.propertiesByProject[projectDir]![4], 1),
         ]
@@ -968,8 +968,8 @@ struct CitationComposerModelTests {
         )
     }
 
-    private func field(_ property: CatalogProperty, _ order: Int) -> CatalogSubjectTypeField {
-        CatalogSubjectTypeField(property: property, sortOrder: order, locked: false)
+    private func field(_ property: CatalogProperty, _ order: Int) -> CatalogSubjectTypeProperty {
+        CatalogSubjectTypeProperty(property: property, sortOrder: order, locked: false)
     }
 
     private func subject(id: String, typeID: String, ref: String, label: String) -> CatalogSubject {

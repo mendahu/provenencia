@@ -488,7 +488,7 @@ final class SourceTypesModel {
 
     private func publishCounts() {
         catalogCounts?.publishSourceTypes(.from(types))
-        catalogCounts?.publishSourceFields(.from(fields))
+        catalogCounts?.publishMetadata(.from(fields))
     }
 
     private func patchTypesList(_ mutate: (inout [CatalogSourceType]) -> Void) {

@@ -65,9 +65,9 @@ const (
 	MethodCreateProperty                    = int32(engine.Method_METHOD_CREATE_PROPERTY)
 	MethodUpdateProperty                    = int32(engine.Method_METHOD_UPDATE_PROPERTY)
 	MethodDeleteProperty                    = int32(engine.Method_METHOD_DELETE_PROPERTY)
-	MethodListSubjectTypeFields             = int32(engine.Method_METHOD_LIST_SUBJECT_TYPE_FIELDS)
-	MethodAssignSubjectTypeField            = int32(engine.Method_METHOD_ASSIGN_SUBJECT_TYPE_FIELD)
-	MethodRemoveSubjectTypeField            = int32(engine.Method_METHOD_REMOVE_SUBJECT_TYPE_FIELD)
+	MethodListSubjectTypeProperties         = int32(engine.Method_METHOD_LIST_SUBJECT_TYPE_PROPERTIES)
+	MethodAssignSubjectTypeProperty         = int32(engine.Method_METHOD_ASSIGN_SUBJECT_TYPE_PROPERTY)
+	MethodRemoveSubjectTypeProperty         = int32(engine.Method_METHOD_REMOVE_SUBJECT_TYPE_PROPERTY)
 	MethodListPlaceableSubjectTypes         = int32(engine.Method_METHOD_LIST_PLACEABLE_SUBJECT_TYPES)
 	MethodGetSubjectTypePresentation        = int32(engine.Method_METHOD_GET_SUBJECT_TYPE_PRESENTATION)
 	MethodListConnectRules                  = int32(engine.Method_METHOD_LIST_CONNECT_RULES)
@@ -85,7 +85,7 @@ const (
 	MethodUpdateCitation                    = int32(engine.Method_METHOD_UPDATE_CITATION)
 	MethodUpdateObservation                 = int32(engine.Method_METHOD_UPDATE_OBSERVATION)
 	MethodDeleteObservation                 = int32(engine.Method_METHOD_DELETE_OBSERVATION)
-	MethodGetSubjectFieldsWorkspace         = int32(engine.Method_METHOD_GET_SUBJECT_FIELDS_WORKSPACE)
+	MethodGetPropertiesWorkspace            = int32(engine.Method_METHOD_GET_PROPERTIES_WORKSPACE)
 	MethodListSourceGraphProgress           = int32(engine.Method_METHOD_LIST_SOURCE_GRAPH_PROGRESS)
 	MethodGetSourceGraphProgress            = int32(engine.Method_METHOD_GET_SOURCE_GRAPH_PROGRESS)
 	MethodGetDeleteImpact                   = int32(engine.Method_METHOD_GET_DELETE_IMPACT)
@@ -210,12 +210,12 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.UpdateProperty(in)
 	case MethodDeleteProperty:
 		return handlers.DeleteProperty(in)
-	case MethodListSubjectTypeFields:
-		return handlers.ListSubjectTypeFields(in)
-	case MethodAssignSubjectTypeField:
-		return handlers.AssignSubjectTypeField(in)
-	case MethodRemoveSubjectTypeField:
-		return handlers.RemoveSubjectTypeField(in)
+	case MethodListSubjectTypeProperties:
+		return handlers.ListSubjectTypeProperties(in)
+	case MethodAssignSubjectTypeProperty:
+		return handlers.AssignSubjectTypeProperty(in)
+	case MethodRemoveSubjectTypeProperty:
+		return handlers.RemoveSubjectTypeProperty(in)
 	case MethodListPlaceableSubjectTypes:
 		return handlers.ListPlaceableSubjectTypes(in)
 	case MethodGetSubjectTypePresentation:
@@ -250,8 +250,8 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.UpdateObservation(in)
 	case MethodDeleteObservation:
 		return handlers.DeleteObservation(in)
-	case MethodGetSubjectFieldsWorkspace:
-		return handlers.GetSubjectFieldsWorkspace(in)
+	case MethodGetPropertiesWorkspace:
+		return handlers.GetPropertiesWorkspace(in)
 	case MethodListSourceGraphProgress:
 		return handlers.ListSourceGraphProgress(in)
 	case MethodGetSourceGraphProgress:

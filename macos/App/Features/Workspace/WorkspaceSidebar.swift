@@ -35,7 +35,7 @@ struct WorkspaceSidebar: View {
 
     private var items: [PVSidebarNavItem] {
         let configSections: [WorkspaceSection] = [
-            .sourceTypes, .sourceFields, .subjectFields,
+            .sourceTypes, .metadata, .properties,
         ]
         let configChildren = configSections.map { section in
             PVSidebarNavItem(
@@ -67,7 +67,7 @@ struct WorkspaceSidebar: View {
                         selection: navigation.selectedSection.rawValue,
                         collapsed: workspace.isSidebarCollapsed,
                         onSelect: { id in
-                            guard let section = WorkspaceSection(rawValue: id) else { return }
+                            guard let section = WorkspaceSection(id: id) else { return }
                             navigation.go(to: .sectionRoot(section))
                         }
                     )

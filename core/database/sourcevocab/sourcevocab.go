@@ -12,7 +12,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/sourcefields"
+	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 )
 
@@ -41,7 +41,7 @@ const (
 
 // Suggestion is one ordered field attached to a source type.
 type Suggestion struct {
-	Field     sourcefields.Field
+	Field     metadatafields.Field
 	SortOrder int
 }
 
@@ -78,7 +78,7 @@ func AppendSuggestion(c *database.Catalog, typeID, fieldID []byte) error {
 		}
 		return err
 	}
-	if _, err := sourcefields.GetByID(c, fieldID); err != nil {
+	if _, err := metadatafields.GetByID(c, fieldID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrInvalid
 		}
@@ -158,9 +158,9 @@ func Install(c *database.Catalog) error {
 	}
 	fieldIDs := make(map[string][]byte, len(seedFields))
 	for _, f := range seedFields {
-		id, err := sourcefields.Upsert(c, sourcefields.Field{
+		id, err := metadatafields.Upsert(c, metadatafields.Field{
 			Key:         f.Key,
-			Origin:      sourcefields.OriginProvenencia,
+			Origin:      metadatafields.OriginProvenencia,
 			Label:       f.Label,
 			DataType:    f.DataType,
 			Description: f.Description,

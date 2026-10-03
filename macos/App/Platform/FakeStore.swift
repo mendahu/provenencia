@@ -30,7 +30,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var fieldsByProject: [String: [CatalogMetadataField]] = [:]
     var propertiesByProject: [String: [CatalogProperty]] = [:]
     var propertyTermsByProperty: [String: [CatalogPropertyTerm]] = [:]
-    var subjectTypeFieldsByType: [String: [CatalogSubjectTypeField]] = [:]
+    var subjectTypePropertiesByType: [String: [CatalogSubjectTypeProperty]] = [:]
     var subjectTypePresentations: [String: CatalogSubjectTypePresentation] = [:]
     var connectRules: [CatalogConnectRule] = CatalogConnectRule.productMatrix
     var observationsBySource: [String: [CatalogObservation]] = [:]
@@ -864,7 +864,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             if (fieldsByProject[projectDir] ?? []).contains(where: { $0.origin == "user" && $0.key == key }) {
                 throw CoreInvokeError.coded(
                     status: 1,
-                    code: "sourcefields.duplicate_key",
+                    code: "metadatafields.duplicate_key",
                     kind: .conflict,
                     params: [key]
                 )
@@ -922,7 +922,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             if CatalogOrigin.isPlugin(field.origin) {
                 throw CoreInvokeError.coded(
                     status: 1,
-                    code: "sourcefields.origin_locked",
+                    code: "metadatafields.origin_locked",
                     kind: .conflict,
                     params: []
                 )
@@ -931,7 +931,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             if !inbound.isEmpty || field.usedBy > 0 {
                 throw CoreInvokeError.coded(
                     status: 1,
-                    code: "sourcefields.in_use",
+                    code: "metadatafields.in_use",
                     kind: .conflict,
                     params: []
                 )
@@ -950,7 +950,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             return WorkspaceNavCounts(
                 sources: (sourcesByProject[projectDir] ?? []).count,
                 sourceTypes: Self.originCounts(from: types.map(\.origin)),
-                sourceFields: Self.originCounts(from: fields.map(\.origin)),
+                metadataFields: Self.originCounts(from: fields.map(\.origin)),
                 persons: Set(membershipBySubject.values.filter { $0.kind == "person" }.map(\.entity.id)).count
             )
         }
@@ -1072,17 +1072,17 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         tokens: tokens
                     )
                     guard score > 0 else { continue }
-                    let boost = location.section == .sourceFields ? 2.0 : 1.0
+                    let boost = location.section == .metadata ? 2.0 : 1.0
                     scored.append((
                         CatalogSearchHit(
-                            kind: "source_field",
+                            kind: "metadata_field",
                             id: field.id,
                             ref: "",
                             title: field.label,
                             subtitle: field.key,
                             matchReason: reason,
                             location: WorkspaceLocation(
-                                section: .sourceFields,
+                                section: .metadata,
                                 fieldId: field.id,
                                 title: field.label
                             )
@@ -1439,8 +1439,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             }
             propertiesByProject[projectDir]?.removeAll { $0.id == propertyID }
             propertyTermsByProperty[propertyID] = nil
-            for (typeID, list) in subjectTypeFieldsByType {
-                subjectTypeFieldsByType[typeID] = list.filter { $0.property.id != propertyID }
+            for (typeID, list) in subjectTypePropertiesByType {
+                subjectTypePropertiesByType[typeID] = list.filter { $0.property.id != propertyID }
             }
         }
     }
@@ -1481,7 +1481,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    func assignSubjectTypeField(
+    func assignSubjectTypeProperty(
         projectDir: String,
         userID _: String,
         subjectTypeID: String,
@@ -1494,14 +1494,14 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     id: propertyID, key: "prop", origin: "user", label: "Prop",
                     description: "", valueType: "text"
                 )
-            var list = subjectTypeFieldsByType[subjectTypeID] ?? []
+            var list = subjectTypePropertiesByType[subjectTypeID] ?? []
             guard !list.contains(where: { $0.property.id == propertyID }) else { return }
-            list.append(CatalogSubjectTypeField(property: property, sortOrder: list.count, locked: false))
-            subjectTypeFieldsByType[subjectTypeID] = list
+            list.append(CatalogSubjectTypeProperty(property: property, sortOrder: list.count, locked: false))
+            subjectTypePropertiesByType[subjectTypeID] = list
         }
     }
 
-    func removeSubjectTypeField(
+    func removeSubjectTypeProperty(
         projectDir: String,
         userID _: String,
         subjectTypeID: String,
@@ -1509,12 +1509,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     ) async throws {
         try withState {
             markCatalogSessionHeld(projectDir)
-            if let field = subjectTypeFieldsByType[subjectTypeID]?.first(where: { $0.property.id == propertyID }),
+            if let field = subjectTypePropertiesByType[subjectTypeID]?.first(where: { $0.property.id == propertyID }),
                field.locked
             {
                 throw CoreInvokeError.coded(status: 1, code: "subjectvocab.locked", kind: .conflict, params: [])
             }
-            subjectTypeFieldsByType[subjectTypeID]?.removeAll { $0.property.id == propertyID }
+            subjectTypePropertiesByType[subjectTypeID]?.removeAll { $0.property.id == propertyID }
         }
     }
 
@@ -1904,21 +1904,21 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    func getSubjectFieldsWorkspace(projectDir: String) async throws -> SubjectFieldsSnapshot {
+    func getPropertiesWorkspace(projectDir: String) async throws -> PropertiesSnapshot {
         return withState {
             markCatalogSessionHeld(projectDir)
             let types = subjectTypesByProject[projectDir] ?? []
-            var fieldsByTypeID: [String: [CatalogSubjectTypeField]] = [:]
+            var propertiesByTypeID: [String: [CatalogSubjectTypeProperty]] = [:]
             var presentationsByKey: [String: CatalogSubjectTypePresentation] = [:]
             for type in types {
-                fieldsByTypeID[type.id] = subjectTypeFieldsByType[type.id] ?? []
+                propertiesByTypeID[type.id] = subjectTypePropertiesByType[type.id] ?? []
                 presentationsByKey[type.key] = subjectTypePresentations[type.key]
                     ?? Self.syntheticPresentation(typeKey: type.key)
             }
-            return SubjectFieldsSnapshot(
+            return PropertiesSnapshot(
                 properties: propertiesByProject[projectDir] ?? [],
                 types: types,
-                fieldsByTypeID: fieldsByTypeID,
+                propertiesByTypeID: propertiesByTypeID,
                 presentationsByKey: presentationsByKey
             )
         }
@@ -2074,8 +2074,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             if kind == "source_type" {
                 return sourceTypeDeleteImpact(projectDir: projectDir, id: id)
             }
-            if kind == "source_field" {
-                return sourceFieldDeleteImpact(projectDir: projectDir, id: id)
+            if kind == "metadata_field" {
+                return metadataFieldDeleteImpact(projectDir: projectDir, id: id)
             }
             if kind == "property" {
                 return propertyDeleteImpact(projectDir: projectDir, id: id)
@@ -2130,7 +2130,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                             ref: $0.key,
                             title: $0.label.isEmpty ? $0.key : $0.label,
                             location: WorkspaceLocation(
-                                section: .subjectFields,
+                                section: .properties,
                                 propertyId: id,
                                 ref: $0.key,
                                 title: $0.label.isEmpty ? $0.key : $0.label
@@ -2152,7 +2152,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    private func sourceFieldDeleteImpact(projectDir: String, id: String) -> CatalogDeleteImpact {
+    private func metadataFieldDeleteImpact(projectDir: String, id: String) -> CatalogDeleteImpact {
         guard let field = (fieldsByProject[projectDir] ?? []).first(where: { $0.id == id }) else {
             return CatalogDeleteImpact(allowed: false, gate: .notFound, groups: [])
         }

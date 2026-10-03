@@ -4,7 +4,7 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
-	"github.com/mendahu/provenencia/core/database/sourcefields"
+	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"google.golang.org/protobuf/proto"
@@ -25,7 +25,7 @@ func GetWorkspaceNavCounts(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		fields, err := sourcefields.CountByOrigin(c)
+		fields, err := metadatafields.CountByOrigin(c)
 		if err != nil {
 			return err
 		}
@@ -34,10 +34,10 @@ func GetWorkspaceNavCounts(in []byte) ([]byte, error) {
 			return err
 		}
 		out = &engine.GetWorkspaceNavCountsResponse{
-			Sources:      int32(sourceCount),
-			SourceTypes:  typeOriginProto(types),
-			SourceFields: fieldOriginProto(fields),
-			Persons:      int32(persons),
+			Sources:        int32(sourceCount),
+			SourceTypes:    typeOriginProto(types),
+			MetadataFields: fieldOriginProto(fields),
+			Persons:        int32(persons),
 		}
 		return nil
 	})
@@ -56,7 +56,7 @@ func typeOriginProto(c sourcetypes.OriginCounts) *engine.VocabularyOriginCounts 
 	}
 }
 
-func fieldOriginProto(c sourcefields.OriginCounts) *engine.VocabularyOriginCounts {
+func fieldOriginProto(c metadatafields.OriginCounts) *engine.VocabularyOriginCounts {
 	return &engine.VocabularyOriginCounts{
 		Total:  int32(c.Total),
 		Seeded: int32(c.Seeded),

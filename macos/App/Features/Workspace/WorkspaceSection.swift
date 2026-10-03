@@ -6,33 +6,47 @@ import SwiftUI
 enum WorkspaceSection: String, Sendable, CaseIterable, Codable {
     case sources
     case sourceTypes = "source-types"
-    case sourceFields = "source-fields"
-    case subjectFields = "subject-fields"
+    case metadata
+    case properties
     /// Conclude: canonical Persons (S9-07). The sidebar row arrives in S9-08.
     case persons
+
+    /// Retired section ids still found in saved navigation history (and
+    /// accepted from any caller) mapped to their current section.
+    static let legacyIDs: [String: WorkspaceSection] = [
+        "files": .sources, // descoped Files destination
+        "source-fields": .metadata, // renamed in S9-07b
+        "subject-fields": .properties, // renamed in S9-07b
+    ]
+
+    /// Parses a section id from history, the engine, or the sidebar. Use this
+    /// rather than `init(rawValue:)` so retired ids keep resolving.
+    init?(id: String) {
+        if let section = WorkspaceSection(rawValue: id) ?? Self.legacyIDs[id] {
+            self = section
+        } else {
+            return nil
+        }
+    }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let raw = try container.decode(String.self)
-        // Descoped Files destination — restore old history entries to Sources.
-        if raw == "files" {
-            self = .sources
-        } else if let section = WorkspaceSection(rawValue: raw) {
-            self = section
-        } else {
+        guard let section = WorkspaceSection(id: raw) else {
             throw DecodingError.dataCorruptedError(
                 in: container,
                 debugDescription: "Unknown workspace section: \(raw)"
             )
         }
+        self = section
     }
 
     var label: LocalizedStringResource {
         switch self {
         case .sources: L10n.Workspace.sourcesTitle
         case .sourceTypes: L10n.Workspace.sourceTypesTitle
-        case .sourceFields: L10n.Workspace.sourceFieldsTitle
-        case .subjectFields: L10n.Workspace.subjectFieldsTitle
+        case .metadata: L10n.Workspace.metadataTitle
+        case .properties: L10n.Workspace.propertiesTitle
         case .persons: L10n.Workspace.personsTitle
         }
     }
@@ -41,8 +55,8 @@ enum WorkspaceSection: String, Sendable, CaseIterable, Codable {
         switch self {
         case .sources: .library
         case .sourceTypes: .tag
-        case .sourceFields: .list
-        case .subjectFields: .listTree
+        case .metadata: .list
+        case .properties: .listTree
         case .persons: .person
         }
     }

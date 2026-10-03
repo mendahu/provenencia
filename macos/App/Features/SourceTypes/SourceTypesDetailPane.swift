@@ -415,7 +415,7 @@ struct SourceTypesDetailPane: View {
         }
     }
 
-    /// The pool is the Source fields vocabulary and nothing else — no inline
+    /// The pool is the Metadata vocabulary and nothing else — no inline
     /// field creation (S2-03 T-9); the hint says where to add one instead.
     ///
     /// A combo box rather than a popup menu: the vocabulary grows without

@@ -51,7 +51,7 @@ enum CatalogMutation: Sendable, Equatable {
     case createdProperty
     case updatedProperty
     case deletedProperty
-    case mutatedSubjectTypeFields
+    case mutatedSubjectTypeProperties
 
     /// A term was added to one Property's vocabulary.
     case createdPropertyTerm(propertyId: String)
@@ -79,7 +79,7 @@ enum CatalogMutationKind: Hashable, Sendable {
     case createdProperty
     case updatedProperty
     case deletedProperty
-    case mutatedSubjectTypeFields
+    case mutatedSubjectTypeProperties
     case createdPropertyTerm
 }
 
@@ -129,8 +129,8 @@ extension CatalogMutation {
             return .updatedProperty
         case .deletedProperty:
             return .deletedProperty
-        case .mutatedSubjectTypeFields:
-            return .mutatedSubjectTypeFields
+        case .mutatedSubjectTypeProperties:
+            return .mutatedSubjectTypeProperties
         case .createdPropertyTerm:
             return .createdPropertyTerm
         }

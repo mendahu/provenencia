@@ -80,9 +80,9 @@ public nonisolated enum Provenencia_Engine_V1_Method: SwiftProtobuf.Enum, Swift.
   case createProperty // = 54
   case updateProperty // = 55
   case deleteProperty // = 56
-  case listSubjectTypeFields // = 57
-  case assignSubjectTypeField // = 58
-  case removeSubjectTypeField // = 59
+  case listSubjectTypeProperties // = 57
+  case assignSubjectTypeProperty // = 58
+  case removeSubjectTypeProperty // = 59
   case listPlaceableSubjectTypes // = 60
   case getSubjectTypePresentation // = 61
   case listConnectRules // = 62
@@ -100,7 +100,7 @@ public nonisolated enum Provenencia_Engine_V1_Method: SwiftProtobuf.Enum, Swift.
   case updateCitation // = 75
   case updateObservation // = 76
   case deleteObservation // = 77
-  case getSubjectFieldsWorkspace // = 78
+  case getPropertiesWorkspace // = 78
   case listSourceGraphProgress // = 79
   case getSourceGraphProgress // = 80
   case getDeleteImpact // = 81
@@ -174,9 +174,9 @@ public nonisolated enum Provenencia_Engine_V1_Method: SwiftProtobuf.Enum, Swift.
     case 54: self = .createProperty
     case 55: self = .updateProperty
     case 56: self = .deleteProperty
-    case 57: self = .listSubjectTypeFields
-    case 58: self = .assignSubjectTypeField
-    case 59: self = .removeSubjectTypeField
+    case 57: self = .listSubjectTypeProperties
+    case 58: self = .assignSubjectTypeProperty
+    case 59: self = .removeSubjectTypeProperty
     case 60: self = .listPlaceableSubjectTypes
     case 61: self = .getSubjectTypePresentation
     case 62: self = .listConnectRules
@@ -194,7 +194,7 @@ public nonisolated enum Provenencia_Engine_V1_Method: SwiftProtobuf.Enum, Swift.
     case 75: self = .updateCitation
     case 76: self = .updateObservation
     case 77: self = .deleteObservation
-    case 78: self = .getSubjectFieldsWorkspace
+    case 78: self = .getPropertiesWorkspace
     case 79: self = .listSourceGraphProgress
     case 80: self = .getSourceGraphProgress
     case 81: self = .getDeleteImpact
@@ -266,9 +266,9 @@ public nonisolated enum Provenencia_Engine_V1_Method: SwiftProtobuf.Enum, Swift.
     case .createProperty: return 54
     case .updateProperty: return 55
     case .deleteProperty: return 56
-    case .listSubjectTypeFields: return 57
-    case .assignSubjectTypeField: return 58
-    case .removeSubjectTypeField: return 59
+    case .listSubjectTypeProperties: return 57
+    case .assignSubjectTypeProperty: return 58
+    case .removeSubjectTypeProperty: return 59
     case .listPlaceableSubjectTypes: return 60
     case .getSubjectTypePresentation: return 61
     case .listConnectRules: return 62
@@ -286,7 +286,7 @@ public nonisolated enum Provenencia_Engine_V1_Method: SwiftProtobuf.Enum, Swift.
     case .updateCitation: return 75
     case .updateObservation: return 76
     case .deleteObservation: return 77
-    case .getSubjectFieldsWorkspace: return 78
+    case .getPropertiesWorkspace: return 78
     case .listSourceGraphProgress: return 79
     case .getSourceGraphProgress: return 80
     case .getDeleteImpact: return 81
@@ -358,9 +358,9 @@ public nonisolated enum Provenencia_Engine_V1_Method: SwiftProtobuf.Enum, Swift.
     .createProperty,
     .updateProperty,
     .deleteProperty,
-    .listSubjectTypeFields,
-    .assignSubjectTypeField,
-    .removeSubjectTypeField,
+    .listSubjectTypeProperties,
+    .assignSubjectTypeProperty,
+    .removeSubjectTypeProperty,
     .listPlaceableSubjectTypes,
     .getSubjectTypePresentation,
     .listConnectRules,
@@ -378,7 +378,7 @@ public nonisolated enum Provenencia_Engine_V1_Method: SwiftProtobuf.Enum, Swift.
     .updateCitation,
     .updateObservation,
     .deleteObservation,
-    .getSubjectFieldsWorkspace,
+    .getPropertiesWorkspace,
     .listSourceGraphProgress,
     .getSourceGraphProgress,
     .getDeleteImpact,
@@ -1101,7 +1101,7 @@ public nonisolated struct Provenencia_Engine_V1_MetadataField: Sendable {
   public var description_p: String = String()
 
   /// How many source_metadata rows reference this field. Deleting is only
-  /// allowed at 0 (see sourcefields.ErrInUse); the client uses the count to
+  /// allowed at 0 (see metadatafields.ErrInUse); the client uses the count to
   /// disable its delete affordance and say what is holding the field.
   public var usedBy: Int32 = 0
 
@@ -2463,14 +2463,14 @@ public nonisolated struct Provenencia_Engine_V1_GetWorkspaceNavCountsResponse: S
   /// Clears the value of `sourceTypes`. Subsequent reads from it will return its default value.
   public mutating func clearSourceTypes() {self._sourceTypes = nil}
 
-  public var sourceFields: Provenencia_Engine_V1_VocabularyOriginCounts {
-    get {_sourceFields ?? Provenencia_Engine_V1_VocabularyOriginCounts()}
-    set {_sourceFields = newValue}
+  public var metadataFields: Provenencia_Engine_V1_VocabularyOriginCounts {
+    get {_metadataFields ?? Provenencia_Engine_V1_VocabularyOriginCounts()}
+    set {_metadataFields = newValue}
   }
-  /// Returns true if `sourceFields` has been explicitly set.
-  public var hasSourceFields: Bool {self._sourceFields != nil}
-  /// Clears the value of `sourceFields`. Subsequent reads from it will return its default value.
-  public mutating func clearSourceFields() {self._sourceFields = nil}
+  /// Returns true if `metadataFields` has been explicitly set.
+  public var hasMetadataFields: Bool {self._metadataFields != nil}
+  /// Clears the value of `metadataFields`. Subsequent reads from it will return its default value.
+  public mutating func clearMetadataFields() {self._metadataFields = nil}
 
   /// unmerged Person handles
   public var persons: Int32 = 0
@@ -2480,7 +2480,7 @@ public nonisolated struct Provenencia_Engine_V1_GetWorkspaceNavCountsResponse: S
   public init() {}
 
   fileprivate var _sourceTypes: Provenencia_Engine_V1_VocabularyOriginCounts? = nil
-  fileprivate var _sourceFields: Provenencia_Engine_V1_VocabularyOriginCounts? = nil
+  fileprivate var _metadataFields: Provenencia_Engine_V1_VocabularyOriginCounts? = nil
 }
 
 /// EnsureFileThumbnail lazily creates (or returns) the default thumbnail
@@ -2545,7 +2545,7 @@ public nonisolated struct Provenencia_Engine_V1_WorkspaceLocation: @unchecked Se
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// sources | source-types | source-fields | subject-fields
+  /// sources | source-types | metadata | properties | persons
   public var section: String {
     get {_storage._section}
     set {_uniqueStorage()._section = newValue}
@@ -2624,13 +2624,13 @@ public nonisolated struct Provenencia_Engine_V1_WorkspaceLocation: @unchecked Se
     set {_uniqueStorage()._sourceTitle = newValue}
   }
 
-  /// Subject Fields type-strip category; empty = All properties
+  /// Properties type-strip category; empty = All properties
   public var subjectTypeKey: String {
     get {_storage._subjectTypeKey}
     set {_uniqueStorage()._subjectTypeKey = newValue}
   }
 
-  /// Subject Fields inspector row
+  /// Properties inspector row
   public var propertyID: String {
     get {_storage._propertyID}
     set {_uniqueStorage()._propertyID = newValue}
@@ -2675,7 +2675,7 @@ public nonisolated struct Provenencia_Engine_V1_SearchHit: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// source | source_type | source_field
+  /// source | source_type | metadata_field
   public var kind: String = String()
 
   public var id: String = String()
@@ -3276,7 +3276,7 @@ public nonisolated struct Provenencia_Engine_V1_Property: Sendable {
   /// text | integer | date | name | subject | term
   public var valueType: String = String()
 
-  /// subject_type_fields references; delete only at 0
+  /// subject_type_properties references; delete only at 0
   public var usedBy: Int32 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -3307,7 +3307,7 @@ public nonisolated struct Provenencia_Engine_V1_PropertyTerm: Sendable {
   public init() {}
 }
 
-public nonisolated struct Provenencia_Engine_V1_SubjectTypeField: Sendable {
+public nonisolated struct Provenencia_Engine_V1_SubjectTypeProperty: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -3546,7 +3546,7 @@ public nonisolated struct Provenencia_Engine_V1_DeletePropertyResponse: Sendable
   public init() {}
 }
 
-public nonisolated struct Provenencia_Engine_V1_ListSubjectTypeFieldsRequest: Sendable {
+public nonisolated struct Provenencia_Engine_V1_ListSubjectTypePropertiesRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -3560,47 +3560,19 @@ public nonisolated struct Provenencia_Engine_V1_ListSubjectTypeFieldsRequest: Se
   public init() {}
 }
 
-public nonisolated struct Provenencia_Engine_V1_ListSubjectTypeFieldsResponse: Sendable {
+public nonisolated struct Provenencia_Engine_V1_ListSubjectTypePropertiesResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var fields: [Provenencia_Engine_V1_SubjectTypeField] = []
+  public var properties: [Provenencia_Engine_V1_SubjectTypeProperty] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 }
 
-public nonisolated struct Provenencia_Engine_V1_AssignSubjectTypeFieldRequest: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var projectDir: String = String()
-
-  public var userID: String = String()
-
-  public var subjectTypeID: String = String()
-
-  public var propertyID: String = String()
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public nonisolated struct Provenencia_Engine_V1_AssignSubjectTypeFieldResponse: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public nonisolated struct Provenencia_Engine_V1_RemoveSubjectTypeFieldRequest: Sendable {
+public nonisolated struct Provenencia_Engine_V1_AssignSubjectTypePropertyRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -3618,7 +3590,35 @@ public nonisolated struct Provenencia_Engine_V1_RemoveSubjectTypeFieldRequest: S
   public init() {}
 }
 
-public nonisolated struct Provenencia_Engine_V1_RemoveSubjectTypeFieldResponse: Sendable {
+public nonisolated struct Provenencia_Engine_V1_AssignSubjectTypePropertyResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Provenencia_Engine_V1_RemoveSubjectTypePropertyRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var projectDir: String = String()
+
+  public var userID: String = String()
+
+  public var subjectTypeID: String = String()
+
+  public var propertyID: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Provenencia_Engine_V1_RemoveSubjectTypePropertyResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -4498,7 +4498,7 @@ public nonisolated struct Provenencia_Engine_V1_DeleteObservationResponse: Senda
   public init() {}
 }
 
-public nonisolated struct Provenencia_Engine_V1_GetSubjectFieldsWorkspaceRequest: Sendable {
+public nonisolated struct Provenencia_Engine_V1_GetPropertiesWorkspaceRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -4510,14 +4510,14 @@ public nonisolated struct Provenencia_Engine_V1_GetSubjectFieldsWorkspaceRequest
   public init() {}
 }
 
-public nonisolated struct Provenencia_Engine_V1_SubjectTypeFieldsGroup: Sendable {
+public nonisolated struct Provenencia_Engine_V1_SubjectTypePropertiesGroup: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   public var subjectTypeID: String = String()
 
-  public var fields: [Provenencia_Engine_V1_SubjectTypeField] = []
+  public var properties: [Provenencia_Engine_V1_SubjectTypeProperty] = []
 
   public var presentation: Provenencia_Engine_V1_SubjectTypePresentation {
     get {_presentation ?? Provenencia_Engine_V1_SubjectTypePresentation()}
@@ -4535,7 +4535,7 @@ public nonisolated struct Provenencia_Engine_V1_SubjectTypeFieldsGroup: Sendable
   fileprivate var _presentation: Provenencia_Engine_V1_SubjectTypePresentation? = nil
 }
 
-public nonisolated struct Provenencia_Engine_V1_GetSubjectFieldsWorkspaceResponse: Sendable {
+public nonisolated struct Provenencia_Engine_V1_GetPropertiesWorkspaceResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -4544,7 +4544,7 @@ public nonisolated struct Provenencia_Engine_V1_GetSubjectFieldsWorkspaceRespons
 
   public var types: [Provenencia_Engine_V1_SubjectType] = []
 
-  public var groups: [Provenencia_Engine_V1_SubjectTypeFieldsGroup] = []
+  public var groups: [Provenencia_Engine_V1_SubjectTypePropertiesGroup] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -4732,7 +4732,7 @@ public nonisolated struct Provenencia_Engine_V1_Error: Sendable {
 fileprivate nonisolated let _protobuf_package = "provenencia.engine.v1"
 
 nonisolated extension Provenencia_Engine_V1_Method: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0METHOD_UNSPECIFIED\0\u{1}METHOD_PING\0\u{1}METHOD_GET_VERSION\0\u{1}METHOD_GET_INSTALL_IDENTITY\0\u{1}METHOD_COMPLETE_ONBOARDING\0\u{1}METHOD_REMOVE_INSTALL_IDENTITY\0\u{1}METHOD_GET_ACTIVE_PROJECT\0\u{1}METHOD_OPEN_PROJECT\0\u{1}METHOD_REMOVE_ACTIVE_PROJECT\0\u{1}METHOD_LIST_PROJECT_USERS\0\u{1}METHOD_SIGN_OUT\0\u{1}METHOD_GET_PROJECT_INFO\0\u{1}METHOD_LIST_SOURCES\0\u{1}METHOD_GET_SOURCE_WORKSPACE\0\u{1}METHOD_CREATE_SOURCE\0\u{1}METHOD_UPDATE_SOURCE\0\u{1}METHOD_ADD_SOURCE_NOTE\0\u{1}METHOD_UPDATE_SOURCE_NOTE\0\u{1}METHOD_DELETE_SOURCE_NOTE\0\u{1}METHOD_SET_SOURCE_METADATA\0\u{1}METHOD_CLEAR_SOURCE_METADATA\0\u{1}METHOD_CREATE_ARTIFACT\0\u{1}METHOD_INGEST_ARTIFACT_FILE\0\u{1}METHOD_LIST_SOURCE_TYPES\0\u{1}METHOD_CREATE_SOURCE_TYPE\0\u{1}METHOD_LIST_METADATA_FIELDS\0\u{1}METHOD_CREATE_METADATA_FIELD\0\u{2}\u{2}METHOD_UPDATE_METADATA_FIELD\0\u{1}METHOD_DELETE_SOURCE_TYPE\0\u{1}METHOD_DELETE_METADATA_FIELD\0\u{1}METHOD_UPDATE_SOURCE_TYPE\0\u{1}METHOD_LIST_TYPE_SUGGESTIONS\0\u{1}METHOD_ASSIGN_TYPE_FIELD\0\u{1}METHOD_REMOVE_TYPE_FIELD\0\u{1}METHOD_GET_WORKSPACE_NAV_COUNTS\0\u{1}METHOD_UPDATE_ARTIFACT\0\u{1}METHOD_LIST_SOURCE_CREDIBILITY_GRADES\0\u{1}METHOD_UPSERT_SOURCE_CREDIBILITY_ASSESSMENT\0\u{1}METHOD_DISMISS_SOURCE_METADATA_SUGGESTION\0\u{1}METHOD_REORDER_SOURCE_METADATA\0\u{1}METHOD_ENSURE_FILE_THUMBNAIL\0\u{1}METHOD_CLOSE_CATALOG_SESSION\0\u{1}METHOD_SET_SOURCE_COVER\0\u{1}METHOD_SEARCH_CATALOG\0\u{1}METHOD_LIST_SUBJECT_TYPES\0\u{1}METHOD_CREATE_SUBJECT\0\u{1}METHOD_UPDATE_SUBJECT\0\u{1}METHOD_DELETE_SUBJECT\0\u{1}METHOD_LIST_SUBJECTS\0\u{1}METHOD_SET_SUBJECT_POSITION\0\u{1}METHOD_CLEAR_SUBJECT_POSITION\0\u{1}METHOD_LIST_SUBJECT_POSITIONS\0\u{1}METHOD_LIST_PROPERTIES\0\u{1}METHOD_CREATE_PROPERTY\0\u{1}METHOD_UPDATE_PROPERTY\0\u{1}METHOD_DELETE_PROPERTY\0\u{1}METHOD_LIST_SUBJECT_TYPE_FIELDS\0\u{1}METHOD_ASSIGN_SUBJECT_TYPE_FIELD\0\u{1}METHOD_REMOVE_SUBJECT_TYPE_FIELD\0\u{1}METHOD_LIST_PLACEABLE_SUBJECT_TYPES\0\u{1}METHOD_GET_SUBJECT_TYPE_PRESENTATION\0\u{1}METHOD_LIST_CONNECT_RULES\0\u{1}METHOD_LIST_PROPERTY_TERMS\0\u{1}METHOD_CREATE_PROPERTY_TERM\0\u{1}METHOD_UPDATE_PROPERTY_TERM\0\u{1}METHOD_DELETE_PROPERTY_TERM\0\u{1}METHOD_CREATE_CITATION_WITH_OBSERVATIONS\0\u{1}METHOD_ADD_OBSERVATIONS_TO_CITATION\0\u{1}METHOD_LIST_OBSERVATIONS_BY_SOURCE\0\u{1}METHOD_GET_CITATION\0\u{2}\u{2}METHOD_CREATE_CITED_BRIDGE\0\u{1}METHOD_CITATION_COUNTS_BY_SOURCE\0\u{1}METHOD_LIST_CITATIONS_BY_ARTIFACT\0\u{1}METHOD_UPDATE_CITATION\0\u{1}METHOD_UPDATE_OBSERVATION\0\u{1}METHOD_DELETE_OBSERVATION\0\u{1}METHOD_GET_SUBJECT_FIELDS_WORKSPACE\0\u{1}METHOD_LIST_SOURCE_GRAPH_PROGRESS\0\u{1}METHOD_GET_SOURCE_GRAPH_PROGRESS\0\u{1}METHOD_GET_DELETE_IMPACT\0\u{1}METHOD_DELETE_SOURCE\0\u{1}METHOD_DELETE_ARTIFACT\0\u{1}METHOD_DELETE_CITATION\0\u{1}METHOD_PROMOTE_SUBJECT\0\u{1}METHOD_LIST_SUBJECT_MEMBERSHIPS\0\u{1}METHOD_LIST_PERSON_HEADERS\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0METHOD_UNSPECIFIED\0\u{1}METHOD_PING\0\u{1}METHOD_GET_VERSION\0\u{1}METHOD_GET_INSTALL_IDENTITY\0\u{1}METHOD_COMPLETE_ONBOARDING\0\u{1}METHOD_REMOVE_INSTALL_IDENTITY\0\u{1}METHOD_GET_ACTIVE_PROJECT\0\u{1}METHOD_OPEN_PROJECT\0\u{1}METHOD_REMOVE_ACTIVE_PROJECT\0\u{1}METHOD_LIST_PROJECT_USERS\0\u{1}METHOD_SIGN_OUT\0\u{1}METHOD_GET_PROJECT_INFO\0\u{1}METHOD_LIST_SOURCES\0\u{1}METHOD_GET_SOURCE_WORKSPACE\0\u{1}METHOD_CREATE_SOURCE\0\u{1}METHOD_UPDATE_SOURCE\0\u{1}METHOD_ADD_SOURCE_NOTE\0\u{1}METHOD_UPDATE_SOURCE_NOTE\0\u{1}METHOD_DELETE_SOURCE_NOTE\0\u{1}METHOD_SET_SOURCE_METADATA\0\u{1}METHOD_CLEAR_SOURCE_METADATA\0\u{1}METHOD_CREATE_ARTIFACT\0\u{1}METHOD_INGEST_ARTIFACT_FILE\0\u{1}METHOD_LIST_SOURCE_TYPES\0\u{1}METHOD_CREATE_SOURCE_TYPE\0\u{1}METHOD_LIST_METADATA_FIELDS\0\u{1}METHOD_CREATE_METADATA_FIELD\0\u{2}\u{2}METHOD_UPDATE_METADATA_FIELD\0\u{1}METHOD_DELETE_SOURCE_TYPE\0\u{1}METHOD_DELETE_METADATA_FIELD\0\u{1}METHOD_UPDATE_SOURCE_TYPE\0\u{1}METHOD_LIST_TYPE_SUGGESTIONS\0\u{1}METHOD_ASSIGN_TYPE_FIELD\0\u{1}METHOD_REMOVE_TYPE_FIELD\0\u{1}METHOD_GET_WORKSPACE_NAV_COUNTS\0\u{1}METHOD_UPDATE_ARTIFACT\0\u{1}METHOD_LIST_SOURCE_CREDIBILITY_GRADES\0\u{1}METHOD_UPSERT_SOURCE_CREDIBILITY_ASSESSMENT\0\u{1}METHOD_DISMISS_SOURCE_METADATA_SUGGESTION\0\u{1}METHOD_REORDER_SOURCE_METADATA\0\u{1}METHOD_ENSURE_FILE_THUMBNAIL\0\u{1}METHOD_CLOSE_CATALOG_SESSION\0\u{1}METHOD_SET_SOURCE_COVER\0\u{1}METHOD_SEARCH_CATALOG\0\u{1}METHOD_LIST_SUBJECT_TYPES\0\u{1}METHOD_CREATE_SUBJECT\0\u{1}METHOD_UPDATE_SUBJECT\0\u{1}METHOD_DELETE_SUBJECT\0\u{1}METHOD_LIST_SUBJECTS\0\u{1}METHOD_SET_SUBJECT_POSITION\0\u{1}METHOD_CLEAR_SUBJECT_POSITION\0\u{1}METHOD_LIST_SUBJECT_POSITIONS\0\u{1}METHOD_LIST_PROPERTIES\0\u{1}METHOD_CREATE_PROPERTY\0\u{1}METHOD_UPDATE_PROPERTY\0\u{1}METHOD_DELETE_PROPERTY\0\u{1}METHOD_LIST_SUBJECT_TYPE_PROPERTIES\0\u{1}METHOD_ASSIGN_SUBJECT_TYPE_PROPERTY\0\u{1}METHOD_REMOVE_SUBJECT_TYPE_PROPERTY\0\u{1}METHOD_LIST_PLACEABLE_SUBJECT_TYPES\0\u{1}METHOD_GET_SUBJECT_TYPE_PRESENTATION\0\u{1}METHOD_LIST_CONNECT_RULES\0\u{1}METHOD_LIST_PROPERTY_TERMS\0\u{1}METHOD_CREATE_PROPERTY_TERM\0\u{1}METHOD_UPDATE_PROPERTY_TERM\0\u{1}METHOD_DELETE_PROPERTY_TERM\0\u{1}METHOD_CREATE_CITATION_WITH_OBSERVATIONS\0\u{1}METHOD_ADD_OBSERVATIONS_TO_CITATION\0\u{1}METHOD_LIST_OBSERVATIONS_BY_SOURCE\0\u{1}METHOD_GET_CITATION\0\u{2}\u{2}METHOD_CREATE_CITED_BRIDGE\0\u{1}METHOD_CITATION_COUNTS_BY_SOURCE\0\u{1}METHOD_LIST_CITATIONS_BY_ARTIFACT\0\u{1}METHOD_UPDATE_CITATION\0\u{1}METHOD_UPDATE_OBSERVATION\0\u{1}METHOD_DELETE_OBSERVATION\0\u{1}METHOD_GET_PROPERTIES_WORKSPACE\0\u{1}METHOD_LIST_SOURCE_GRAPH_PROGRESS\0\u{1}METHOD_GET_SOURCE_GRAPH_PROGRESS\0\u{1}METHOD_GET_DELETE_IMPACT\0\u{1}METHOD_DELETE_SOURCE\0\u{1}METHOD_DELETE_ARTIFACT\0\u{1}METHOD_DELETE_CITATION\0\u{1}METHOD_PROMOTE_SUBJECT\0\u{1}METHOD_LIST_SUBJECT_MEMBERSHIPS\0\u{1}METHOD_LIST_PERSON_HEADERS\0")
 }
 
 nonisolated extension Provenencia_Engine_V1_DeleteImpactGate: SwiftProtobuf._ProtoNameProviding {
@@ -8820,7 +8820,7 @@ nonisolated extension Provenencia_Engine_V1_GetWorkspaceNavCountsRequest: SwiftP
 
 nonisolated extension Provenencia_Engine_V1_GetWorkspaceNavCountsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GetWorkspaceNavCountsResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}sources\0\u{3}source_types\0\u{3}source_fields\0\u{2}\u{2}persons\0\u{b}files\0\u{c}\u{4}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}sources\0\u{3}source_types\0\u{3}metadata_fields\0\u{2}\u{2}persons\0\u{b}files\0\u{c}\u{4}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -8830,7 +8830,7 @@ nonisolated extension Provenencia_Engine_V1_GetWorkspaceNavCountsResponse: Swift
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularInt32Field(value: &self.sources) }()
       case 2: try { try decoder.decodeSingularMessageField(value: &self._sourceTypes) }()
-      case 3: try { try decoder.decodeSingularMessageField(value: &self._sourceFields) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._metadataFields) }()
       case 5: try { try decoder.decodeSingularInt32Field(value: &self.persons) }()
       default: break
       }
@@ -8848,7 +8848,7 @@ nonisolated extension Provenencia_Engine_V1_GetWorkspaceNavCountsResponse: Swift
     try { if let v = self._sourceTypes {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
     } }()
-    try { if let v = self._sourceFields {
+    try { if let v = self._metadataFields {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
     } }()
     if self.persons != 0 {
@@ -8860,7 +8860,7 @@ nonisolated extension Provenencia_Engine_V1_GetWorkspaceNavCountsResponse: Swift
   public static func ==(lhs: Provenencia_Engine_V1_GetWorkspaceNavCountsResponse, rhs: Provenencia_Engine_V1_GetWorkspaceNavCountsResponse) -> Bool {
     if lhs.sources != rhs.sources {return false}
     if lhs._sourceTypes != rhs._sourceTypes {return false}
-    if lhs._sourceFields != rhs._sourceFields {return false}
+    if lhs._metadataFields != rhs._metadataFields {return false}
     if lhs.persons != rhs.persons {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -10544,8 +10544,8 @@ nonisolated extension Provenencia_Engine_V1_PropertyTerm: SwiftProtobuf.Message,
   }
 }
 
-nonisolated extension Provenencia_Engine_V1_SubjectTypeField: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".SubjectTypeField"
+nonisolated extension Provenencia_Engine_V1_SubjectTypeProperty: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SubjectTypeProperty"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}property\0\u{3}sort_order\0\u{1}locked\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -10579,7 +10579,7 @@ nonisolated extension Provenencia_Engine_V1_SubjectTypeField: SwiftProtobuf.Mess
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenencia_Engine_V1_SubjectTypeField, rhs: Provenencia_Engine_V1_SubjectTypeField) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_SubjectTypeProperty, rhs: Provenencia_Engine_V1_SubjectTypeProperty) -> Bool {
     if lhs._property != rhs._property {return false}
     if lhs.sortOrder != rhs.sortOrder {return false}
     if lhs.locked != rhs.locked {return false}
@@ -11070,8 +11070,8 @@ nonisolated extension Provenencia_Engine_V1_DeletePropertyResponse: SwiftProtobu
   }
 }
 
-nonisolated extension Provenencia_Engine_V1_ListSubjectTypeFieldsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".ListSubjectTypeFieldsRequest"
+nonisolated extension Provenencia_Engine_V1_ListSubjectTypePropertiesRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ListSubjectTypePropertiesRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}subject_type_id\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -11097,7 +11097,7 @@ nonisolated extension Provenencia_Engine_V1_ListSubjectTypeFieldsRequest: SwiftP
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenencia_Engine_V1_ListSubjectTypeFieldsRequest, rhs: Provenencia_Engine_V1_ListSubjectTypeFieldsRequest) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_ListSubjectTypePropertiesRequest, rhs: Provenencia_Engine_V1_ListSubjectTypePropertiesRequest) -> Bool {
     if lhs.projectDir != rhs.projectDir {return false}
     if lhs.subjectTypeID != rhs.subjectTypeID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -11105,9 +11105,9 @@ nonisolated extension Provenencia_Engine_V1_ListSubjectTypeFieldsRequest: SwiftP
   }
 }
 
-nonisolated extension Provenencia_Engine_V1_ListSubjectTypeFieldsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".ListSubjectTypeFieldsResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}fields\0")
+nonisolated extension Provenencia_Engine_V1_ListSubjectTypePropertiesResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ListSubjectTypePropertiesResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}properties\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -11115,28 +11115,28 @@ nonisolated extension Provenencia_Engine_V1_ListSubjectTypeFieldsResponse: Swift
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.fields) }()
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.properties) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.fields.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.fields, fieldNumber: 1)
+    if !self.properties.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.properties, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenencia_Engine_V1_ListSubjectTypeFieldsResponse, rhs: Provenencia_Engine_V1_ListSubjectTypeFieldsResponse) -> Bool {
-    if lhs.fields != rhs.fields {return false}
+  public static func ==(lhs: Provenencia_Engine_V1_ListSubjectTypePropertiesResponse, rhs: Provenencia_Engine_V1_ListSubjectTypePropertiesResponse) -> Bool {
+    if lhs.properties != rhs.properties {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Provenencia_Engine_V1_AssignSubjectTypeFieldRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".AssignSubjectTypeFieldRequest"
+nonisolated extension Provenencia_Engine_V1_AssignSubjectTypePropertyRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".AssignSubjectTypePropertyRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}subject_type_id\0\u{3}property_id\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -11170,7 +11170,7 @@ nonisolated extension Provenencia_Engine_V1_AssignSubjectTypeFieldRequest: Swift
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenencia_Engine_V1_AssignSubjectTypeFieldRequest, rhs: Provenencia_Engine_V1_AssignSubjectTypeFieldRequest) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_AssignSubjectTypePropertyRequest, rhs: Provenencia_Engine_V1_AssignSubjectTypePropertyRequest) -> Bool {
     if lhs.projectDir != rhs.projectDir {return false}
     if lhs.userID != rhs.userID {return false}
     if lhs.subjectTypeID != rhs.subjectTypeID {return false}
@@ -11180,8 +11180,8 @@ nonisolated extension Provenencia_Engine_V1_AssignSubjectTypeFieldRequest: Swift
   }
 }
 
-nonisolated extension Provenencia_Engine_V1_AssignSubjectTypeFieldResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".AssignSubjectTypeFieldResponse"
+nonisolated extension Provenencia_Engine_V1_AssignSubjectTypePropertyResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".AssignSubjectTypePropertyResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -11193,14 +11193,14 @@ nonisolated extension Provenencia_Engine_V1_AssignSubjectTypeFieldResponse: Swif
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenencia_Engine_V1_AssignSubjectTypeFieldResponse, rhs: Provenencia_Engine_V1_AssignSubjectTypeFieldResponse) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_AssignSubjectTypePropertyResponse, rhs: Provenencia_Engine_V1_AssignSubjectTypePropertyResponse) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Provenencia_Engine_V1_RemoveSubjectTypeFieldRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".RemoveSubjectTypeFieldRequest"
+nonisolated extension Provenencia_Engine_V1_RemoveSubjectTypePropertyRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".RemoveSubjectTypePropertyRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}subject_type_id\0\u{3}property_id\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -11234,7 +11234,7 @@ nonisolated extension Provenencia_Engine_V1_RemoveSubjectTypeFieldRequest: Swift
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenencia_Engine_V1_RemoveSubjectTypeFieldRequest, rhs: Provenencia_Engine_V1_RemoveSubjectTypeFieldRequest) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_RemoveSubjectTypePropertyRequest, rhs: Provenencia_Engine_V1_RemoveSubjectTypePropertyRequest) -> Bool {
     if lhs.projectDir != rhs.projectDir {return false}
     if lhs.userID != rhs.userID {return false}
     if lhs.subjectTypeID != rhs.subjectTypeID {return false}
@@ -11244,8 +11244,8 @@ nonisolated extension Provenencia_Engine_V1_RemoveSubjectTypeFieldRequest: Swift
   }
 }
 
-nonisolated extension Provenencia_Engine_V1_RemoveSubjectTypeFieldResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".RemoveSubjectTypeFieldResponse"
+nonisolated extension Provenencia_Engine_V1_RemoveSubjectTypePropertyResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".RemoveSubjectTypePropertyResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -11257,7 +11257,7 @@ nonisolated extension Provenencia_Engine_V1_RemoveSubjectTypeFieldResponse: Swif
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenencia_Engine_V1_RemoveSubjectTypeFieldResponse, rhs: Provenencia_Engine_V1_RemoveSubjectTypeFieldResponse) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_RemoveSubjectTypePropertyResponse, rhs: Provenencia_Engine_V1_RemoveSubjectTypePropertyResponse) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -13045,8 +13045,8 @@ nonisolated extension Provenencia_Engine_V1_DeleteObservationResponse: SwiftProt
   }
 }
 
-nonisolated extension Provenencia_Engine_V1_GetSubjectFieldsWorkspaceRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".GetSubjectFieldsWorkspaceRequest"
+nonisolated extension Provenencia_Engine_V1_GetPropertiesWorkspaceRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GetPropertiesWorkspaceRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -13068,16 +13068,16 @@ nonisolated extension Provenencia_Engine_V1_GetSubjectFieldsWorkspaceRequest: Sw
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenencia_Engine_V1_GetSubjectFieldsWorkspaceRequest, rhs: Provenencia_Engine_V1_GetSubjectFieldsWorkspaceRequest) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_GetPropertiesWorkspaceRequest, rhs: Provenencia_Engine_V1_GetPropertiesWorkspaceRequest) -> Bool {
     if lhs.projectDir != rhs.projectDir {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Provenencia_Engine_V1_SubjectTypeFieldsGroup: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".SubjectTypeFieldsGroup"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}subject_type_id\0\u{1}fields\0\u{1}presentation\0")
+nonisolated extension Provenencia_Engine_V1_SubjectTypePropertiesGroup: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SubjectTypePropertiesGroup"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}subject_type_id\0\u{1}properties\0\u{1}presentation\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -13086,7 +13086,7 @@ nonisolated extension Provenencia_Engine_V1_SubjectTypeFieldsGroup: SwiftProtobu
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.subjectTypeID) }()
-      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.fields) }()
+      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.properties) }()
       case 3: try { try decoder.decodeSingularMessageField(value: &self._presentation) }()
       default: break
       }
@@ -13101,8 +13101,8 @@ nonisolated extension Provenencia_Engine_V1_SubjectTypeFieldsGroup: SwiftProtobu
     if !self.subjectTypeID.isEmpty {
       try visitor.visitSingularStringField(value: self.subjectTypeID, fieldNumber: 1)
     }
-    if !self.fields.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.fields, fieldNumber: 2)
+    if !self.properties.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.properties, fieldNumber: 2)
     }
     try { if let v = self._presentation {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
@@ -13110,17 +13110,17 @@ nonisolated extension Provenencia_Engine_V1_SubjectTypeFieldsGroup: SwiftProtobu
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenencia_Engine_V1_SubjectTypeFieldsGroup, rhs: Provenencia_Engine_V1_SubjectTypeFieldsGroup) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_SubjectTypePropertiesGroup, rhs: Provenencia_Engine_V1_SubjectTypePropertiesGroup) -> Bool {
     if lhs.subjectTypeID != rhs.subjectTypeID {return false}
-    if lhs.fields != rhs.fields {return false}
+    if lhs.properties != rhs.properties {return false}
     if lhs._presentation != rhs._presentation {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Provenencia_Engine_V1_GetSubjectFieldsWorkspaceResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".GetSubjectFieldsWorkspaceResponse"
+nonisolated extension Provenencia_Engine_V1_GetPropertiesWorkspaceResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GetPropertiesWorkspaceResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}properties\0\u{1}types\0\u{1}groups\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -13150,7 +13150,7 @@ nonisolated extension Provenencia_Engine_V1_GetSubjectFieldsWorkspaceResponse: S
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenencia_Engine_V1_GetSubjectFieldsWorkspaceResponse, rhs: Provenencia_Engine_V1_GetSubjectFieldsWorkspaceResponse) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_GetPropertiesWorkspaceResponse, rhs: Provenencia_Engine_V1_GetPropertiesWorkspaceResponse) -> Bool {
     if lhs.properties != rhs.properties {return false}
     if lhs.types != rhs.types {return false}
     if lhs.groups != rhs.groups {return false}

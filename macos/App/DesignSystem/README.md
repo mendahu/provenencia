@@ -148,7 +148,7 @@ host stays the only hit path. Do not fork a control to fake its states.
 The components the **Onboarding Flow** board actually uses, plus `Toast`
 (added when onboarding needed a way to surface errors that wasn't an inline
 red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
-**Source fields** board — see `Features/SourceFields/`):
+**Metadata** board, then called Source fields — see `Features/Metadata/`):
 
 | Component | File | 
 |---|---|
@@ -165,11 +165,11 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 | Divider | `Components/Divider/PVDivider.swift` (1pt hairline; horizontal/vertical) |
 | EmptyState | `Components/EmptyState/PVEmptyState.swift` (added for S2-02's empty/no-match states; the web spec's `action` slot isn't ported — see the file's header comment) |
 | Callout | `Components/Callout/PVCallout.swift` (tone / icon / title / body / compact; optional `@ViewBuilder` actions under the body — call-site `PVButton`s; `onDismiss` / `detail` / `plain` deferred) |
-| Table | `Components/Table/PVTable.swift` (added for S2-22, extracted from the Source fields list; see "The table tradeoff" below) |
+| Table | `Components/Table/PVTable.swift` (added for S2-22, extracted from the Metadata (then Source fields) list; see "The table tradeoff" below) |
 | Confirm | `Components/Confirm/PVConfirm.swift` (added for S2-22's delete confirmation; the macOS answer to `ConfirmDialog.jsx`, which the web spec says not to port — see "Confirmations are system chrome" below) |
 | Panel | `Components/Panel/PVPanel.swift` (sheet content shell: title / subtitle / body / optional footer; no window chrome) |
 | FormDialog | `Components/FormDialog/PVFormDialog.swift` (short create/edit form sheet on `PVPanel`; optional `width`, default 480 — see note below) |
-| ComboBox | `Components/ComboBox/PVComboBox.swift` (added for S2-16's assign-field control, where the pool is the whole Source fields vocabulary; single-select subset only — see "The combo box subset" below) |
+| ComboBox | `Components/ComboBox/PVComboBox.swift` (added for S2-16's assign-field control, where the pool is the whole Metadata vocabulary; single-select subset only — see "The combo box subset" below) |
 | Thumbnail | `Components/Thumbnail/PVThumbnail.swift` (added for S2-17 Sources list rows; image / mark / SF glyph / empty / loading tile) |
 | Card | `Components/Card/PVCard.swift` (surface container: tone / border / radius / optional elevation + padding; mirrors web `Card.jsx`; no header/footer slots yet — compose those outside) |
 | Marks | `Recipes/Marks/PVMark.swift` (`file_*` + `type_*` + `subject_*`; see colocated `MARKS.md`; not SF Symbols) |
@@ -469,7 +469,7 @@ and cancel names the safe outcome ("Keep field"). **Focus starts on cancel**,
 so Return cannot complete a destructive action by reflex.
 
 Two further rules from the spec: a blocked action never reaches a confirmation
-— disable the control and explain why in its tooltip, the way Source fields'
+— disable the control and explain why in its tooltip, the way Metadata's
 delete button does. And a *reversible* action should not confirm at all: act,
 then offer undo in a `PVToast`.
 

@@ -122,17 +122,17 @@ struct EvidenceGraphModelTests {
 
     private func seedFields(_ session: WorkspaceSession, store: FakeStore) {
         session.setQueryValue(
-            CatalogQueryKey.subjectFieldsWorkspace(project: session.projectKey),
-            value: SubjectFieldsSnapshot(
+            CatalogQueryKey.propertiesWorkspace(project: session.projectKey),
+            value: PropertiesSnapshot(
                 properties: store.propertiesByProject[projectDir] ?? [],
                 types: store.subjectTypesByProject[projectDir] ?? [],
-                fieldsByTypeID: store.subjectTypeFieldsByType,
+                propertiesByTypeID: store.subjectTypePropertiesByType,
                 presentationsByKey: [:]
             )
         )
     }
 
-    /// Session graph payload. `types` is ignored — vocabulary lives on `subjectFieldsWorkspace`.
+    /// Session graph payload. `types` is ignored — vocabulary lives on `propertiesWorkspace`.
     private func graphRows(
         sourceId: String,
         subjects: [CatalogSubject],

@@ -13,9 +13,9 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
+	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/searchindex"
-	"github.com/mendahu/provenencia/core/database/sourcefields"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcevocab"
 	"github.com/mendahu/provenencia/core/urlshape"
@@ -75,7 +75,7 @@ type Input struct {
 
 // WorkspaceEntry is a suggested or extra field for Source edit UI.
 type WorkspaceEntry struct {
-	Field     sourcefields.Field
+	Field     metadatafields.Field
 	Value     *Row // nil when suggested but unset
 	Suggested bool
 	// SortOrder is the position ListWorkspace returned the entry in: the
@@ -562,9 +562,9 @@ func normalizeValue(dataType, valueText string) (string, error) {
 		return "", ErrInvalid
 	}
 	switch dataType {
-	case sourcefields.DataTypeText:
+	case metadatafields.DataTypeText:
 		return valueText, nil
-	case sourcefields.DataTypeURL:
+	case metadatafields.DataTypeURL:
 		canon, err := urlshape.Canonical(valueText)
 		if err != nil {
 			return "", ErrInvalid
@@ -601,28 +601,28 @@ func getLayoutTx(tx *sql.Tx, sourceID, fieldID []byte) (layout, error) {
 	return l, nil
 }
 
-func getFieldTx(tx *sql.Tx, fieldID []byte) (sourcefields.Field, error) {
-	var f sourcefields.Field
+func getFieldTx(tx *sql.Tx, fieldID []byte) (metadatafields.Field, error) {
+	var f metadatafields.Field
 	err := tx.QueryRow(sqlFieldGet, fieldID).Scan(
 		&f.ID, &f.Key, &f.Origin, &f.Label, &f.DataType, &f.Description,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
-		return sourcefields.Field{}, ErrInvalid
+		return metadatafields.Field{}, ErrInvalid
 	}
 	return f, err
 }
 
-func lookupField(c *database.Catalog, fieldID []byte) (sourcefields.Field, error) {
+func lookupField(c *database.Catalog, fieldID []byte) (metadatafields.Field, error) {
 	db, err := c.DB()
 	if err != nil {
-		return sourcefields.Field{}, err
+		return metadatafields.Field{}, err
 	}
-	var f sourcefields.Field
+	var f metadatafields.Field
 	err = db.QueryRow(sqlFieldGet, fieldID).Scan(
 		&f.ID, &f.Key, &f.Origin, &f.Label, &f.DataType, &f.Description,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
-		return sourcefields.Field{}, ErrInvalid
+		return metadatafields.Field{}, ErrInvalid
 	}
 	return f, err
 }

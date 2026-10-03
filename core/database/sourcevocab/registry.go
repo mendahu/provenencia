@@ -1,7 +1,7 @@
 package sourcevocab
 
 import (
-	"github.com/mendahu/provenencia/core/database/sourcefields"
+	"github.com/mendahu/provenencia/core/database/metadatafields"
 )
 
 // Declarative provenencia seed registry (create-time starter for new catalogs).
@@ -29,9 +29,9 @@ var seedTypes = []seedType{
 }
 
 var seedFields = []seedField{
-	{Key: "document_number", Label: "Document number", DataType: sourcefields.DataTypeText},
-	{Key: "record_date", Label: "Record date", DataType: sourcefields.DataTypeText},
-	{Key: "issue_date", Label: "Issue date", DataType: sourcefields.DataTypeText},
+	{Key: "document_number", Label: "Document number", DataType: metadatafields.DataTypeText},
+	{Key: "record_date", Label: "Record date", DataType: metadatafields.DataTypeText},
+	{Key: "issue_date", Label: "Issue date", DataType: metadatafields.DataTypeText},
 }
 
 var seedSuggestions = []seedSuggestion{

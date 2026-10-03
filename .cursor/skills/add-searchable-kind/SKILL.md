@@ -20,7 +20,7 @@ Authoritative behavior: [`docs/deployment-plan/archive/spike-3/omnibar-search.md
 ## Checklist
 
 ```
-- [ ] Kind id string stable (`source`, `source_type`, `source_field`, …)
+- [ ] Kind id string stable (`source`, `source_type`, `metadata_field`, …)
 - [ ] Registry entry: fields + weights (title/ref/label ≫ description ≫ body)
 - [ ] Location mapper → WorkspaceLocation (section + deep id)
 - [ ] DefaultInEverything / ContextSections for ranking boosts
@@ -66,7 +66,7 @@ Every hit must carry a navigable `WorkspaceLocation` so S3-10 can
 | --- | --- | --- |
 | `source` | `sources` | `source_id` |
 | `source_type` | `source-types` | `type_id` |
-| `source_field` | `source-fields` | `field_id` |
+| `metadata_field` | `metadata` | `field_id` |
 
 Child text (notes, metadata values, artifact filenames) should **roll into** a
 navigable root hit — do not invent note/metadata hit kinds without a

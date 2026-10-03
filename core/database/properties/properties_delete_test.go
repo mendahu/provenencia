@@ -66,7 +66,7 @@ func TestDelete(t *testing.T) {
 					t.Fatal(err)
 				}
 				if _, err := db.Exec(
-					`INSERT INTO subject_type_fields (subject_type_id, property_id, sort_order) VALUES (?, ?, 0)`,
+					`INSERT INTO subject_type_properties (subject_type_id, property_id, sort_order) VALUES (?, ?, 0)`,
 					typeID, got.ID,
 				); err != nil {
 					t.Fatal(err)
@@ -83,7 +83,7 @@ func TestDelete(t *testing.T) {
 				}
 				var joins int
 				if err := db.QueryRow(
-					`SELECT COUNT(*) FROM subject_type_fields WHERE property_id = ?`, got.ID,
+					`SELECT COUNT(*) FROM subject_type_properties WHERE property_id = ?`, got.ID,
 				).Scan(&joins); err != nil || joins != 0 {
 					t.Fatalf("binding leftover %d %v", joins, err)
 				}
@@ -255,7 +255,7 @@ func insertObservationOn(t *testing.T, c *database.Catalog, userID, propertyID [
 		t.Fatal(err)
 	}
 	if _, err := db.Exec(
-		`INSERT OR IGNORE INTO subject_type_fields (subject_type_id, property_id, sort_order) VALUES (?, ?, 0)`,
+		`INSERT OR IGNORE INTO subject_type_properties (subject_type_id, property_id, sort_order) VALUES (?, ?, 0)`,
 		placeType.ID, propertyID,
 	); err != nil {
 		t.Fatal(err)
@@ -310,7 +310,7 @@ func TestUsedByCountsObservationsNotBindings(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := db.Exec(
-		`INSERT INTO subject_type_fields (subject_type_id, property_id, sort_order) VALUES (?, ?, 0)`,
+		`INSERT INTO subject_type_properties (subject_type_id, property_id, sort_order) VALUES (?, ?, 0)`,
 		typeID, prop.ID,
 	); err != nil {
 		t.Fatal(err)

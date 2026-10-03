@@ -10,17 +10,17 @@ import (
 
 // Kind identifiers for SearchHit.kind (stable across retrieval backends).
 const (
-	KindSource      = "source"
-	KindSourceType  = "source_type"
-	KindSourceField = "source_field"
+	KindSource        = "source"
+	KindSourceType    = "source_type"
+	KindMetadataField = "metadata_field"
 )
 
 // Section values match macOS WorkspaceSection raw values.
 const (
-	SectionSources      = "sources"
-	SectionSourceTypes  = "source-types"
-	SectionSourceFields = "source-fields"
-	SectionFiles        = "files"
+	SectionSources     = "sources"
+	SectionSourceTypes = "source-types"
+	SectionMetadata    = "metadata"
+	SectionFiles       = "files"
 )
 
 // DefaultHitLimit caps SearchCatalog responses.

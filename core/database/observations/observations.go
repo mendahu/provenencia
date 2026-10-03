@@ -52,7 +52,7 @@ const (
 	sqlDeleteNote             = `DELETE FROM observation_notes WHERE id = ?`
 	sqlDeleteObservationByID  = `DELETE FROM observations WHERE id = ?`
 	sqlSubjectExists          = `SELECT 1 FROM subjects WHERE id = ?`
-	sqlBindingExists          = `SELECT 1 FROM subject_type_fields WHERE subject_type_id = ? AND property_id = ?`
+	sqlBindingExists          = `SELECT 1 FROM subject_type_properties WHERE subject_type_id = ? AND property_id = ?`
 	sqlTermOnProperty         = `SELECT 1 FROM property_terms WHERE id = ? AND property_id = ?`
 	sqlPropertyGet            = `SELECT id, key, origin, label, COALESCE(description, ''), value_type
 		FROM properties WHERE id = ?`

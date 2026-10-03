@@ -2,7 +2,7 @@ import SwiftUI
 
 /// The `origin` namespace shared by every catalog vocabulary row
 /// (`source_types`, `source_metadata_fields`) — mirrors the `Origin…`
-/// constants in `core/database/sourcetypes` and `…/sourcefields`. The FFI
+/// constants in `core/database/sourcetypes` and `…/metadatafields`. The FFI
 /// layer carries origin as a plain string, not an enum, and the vocabulary
 /// is open: anything that is neither seeded nor researcher-authored belongs
 /// to a plugin.
@@ -25,7 +25,7 @@ enum CatalogOrigin {
     }
 }
 
-/// The full origin badge shown on a detail panel, for source fields and
+/// The full origin badge shown on a detail panel, for metadata fields and
 /// source types alike. The client styles only the two values it knows and
 /// passes anything else (a `plugin:…` id) through as raw text.
 struct OriginBadge: View {

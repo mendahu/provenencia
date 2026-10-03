@@ -1,6 +1,6 @@
 ---
 description: Product-seeded vocabulary uses registries + create-time Install
-globs: core/database/sourcevocab/**,core/database/sourcetypes/**,core/database/sourcefields/**,core/database/subjecttypes/**,core/database/sourcecredibilitygrades/**,core/onboarding/ready.go,docs/seeded-vocabulary.md
+globs: core/database/sourcevocab/**,core/database/sourcetypes/**,core/database/metadatafields/**,core/database/subjecttypes/**,core/database/sourcecredibilitygrades/**,core/onboarding/ready.go,docs/seeded-vocabulary.md
 alwaysApply: false
 ---
 

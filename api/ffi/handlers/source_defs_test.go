@@ -6,7 +6,7 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/sourcefields"
+	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"google.golang.org/protobuf/proto"
 )
@@ -151,7 +151,7 @@ func TestCreateMetadataFieldMintsKeyFromLabel(t *testing.T) {
 			},
 			calls:     2,
 			wantErr:   true,
-			wantErrIs: sourcefields.ErrDuplicateKey,
+			wantErrIs: metadatafields.ErrDuplicateKey,
 		},
 	})
 }
@@ -255,8 +255,8 @@ func TestUpdateMetadataField(t *testing.T) {
 				var id []byte
 				err := catalogsession.Do(dir, func(c *database.Catalog) error {
 					var err error
-					id, err = sourcefields.Upsert(c, sourcefields.Field{
-						Key: "memorial_id", Origin: "plugin:findagrave", Label: "Memorial id", DataType: sourcefields.DataTypeText,
+					id, err = metadatafields.Upsert(c, metadatafields.Field{
+						Key: "memorial_id", Origin: "plugin:findagrave", Label: "Memorial id", DataType: metadatafields.DataTypeText,
 					})
 					return err
 				})
@@ -375,7 +375,7 @@ func TestDeleteMetadataField(t *testing.T) {
 			want: &engine.DeleteMetadataFieldResponse{},
 			after: func(t *testing.T, _ []byte, req proto.Message) {
 				dr := req.(*engine.DeleteMetadataFieldRequest)
-				assertLatestAuditAction(t, dr.ProjectDir, "delete_source_field")
+				assertLatestAuditAction(t, dr.ProjectDir, "delete_metadata_field")
 			},
 		},
 		{
@@ -413,7 +413,7 @@ func TestDeleteMetadataField(t *testing.T) {
 				}
 			},
 			wantErr:   true,
-			wantErrIs: sourcefields.ErrInUse,
+			wantErrIs: metadatafields.ErrInUse,
 		},
 		{
 			name: "refuses unused plugin field",
@@ -422,9 +422,9 @@ func TestDeleteMetadataField(t *testing.T) {
 				var id []byte
 				err := catalogsession.Do(dir, func(c *database.Catalog) error {
 					var err error
-					id, err = sourcefields.Upsert(c, sourcefields.Field{
+					id, err = metadatafields.Upsert(c, metadatafields.Field{
 						Key: "memorial_id", Origin: "plugin:findagrave", Label: "Memorial id",
-						DataType: sourcefields.DataTypeText,
+						DataType: metadatafields.DataTypeText,
 					})
 					return err
 				})
@@ -436,7 +436,7 @@ func TestDeleteMetadataField(t *testing.T) {
 				}
 			},
 			wantErr:   true,
-			wantErrIs: sourcefields.ErrOriginLocked,
+			wantErrIs: metadatafields.ErrOriginLocked,
 		},
 	})
 }

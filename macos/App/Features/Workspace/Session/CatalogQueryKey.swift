@@ -11,7 +11,7 @@ enum CatalogQueryKey: Hashable, Sendable {
     case sourceGraph(project: ProjectKey, sourceId: String)
     case citationCounts(project: ProjectKey, sourceId: String)
     case typeSuggestions(project: ProjectKey, typeId: String)
-    case subjectFieldsWorkspace(project: ProjectKey)
+    case propertiesWorkspace(project: ProjectKey)
     case connectRules(project: ProjectKey)
     case propertyTerms(project: ProjectKey, propertyId: String)
     case citationsByArtifact(project: ProjectKey, artifactId: String)
@@ -29,7 +29,7 @@ enum CatalogQueryKey: Hashable, Sendable {
         case sourceGraph
         case citationCounts
         case typeSuggestions
-        case subjectFieldsWorkspace
+        case propertiesWorkspace
         case connectRules
         case propertyTerms
         case citationsByArtifact
@@ -55,8 +55,8 @@ enum CatalogQueryKey: Hashable, Sendable {
             return .citationCounts
         case .typeSuggestions:
             return .typeSuggestions
-        case .subjectFieldsWorkspace:
-            return .subjectFieldsWorkspace
+        case .propertiesWorkspace:
+            return .propertiesWorkspace
         case .connectRules:
             return .connectRules
         case .propertyTerms:
@@ -80,7 +80,7 @@ enum CatalogQueryKey: Hashable, Sendable {
              .sourceGraph(let project, _),
              .citationCounts(let project, _),
              .typeSuggestions(let project, _),
-             .subjectFieldsWorkspace(let project),
+             .propertiesWorkspace(let project),
              .connectRules(let project),
              .propertyTerms(let project, _),
              .citationsByArtifact(let project, _),

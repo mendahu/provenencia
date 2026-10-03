@@ -2,7 +2,7 @@ import Foundation
 import Observation
 
 /// Origin split for a vocabulary destination. The sidebar badge uses
-/// `total`; Source fields / Source types headers use the same numbers for
+/// `total`; Metadata / Source types headers use the same numbers for
 /// their "N · seeded · yours · plugin" line. `total` is always
 /// `seeded + user + plugin`.
 struct CatalogCountSummary: Equatable {
@@ -54,9 +54,9 @@ final class CatalogCounts {
     /// Absent until a refresh or publish succeeds for that section —
     /// the sidebar treats absence as "no badge" rather than `0`.
     private(set) var sources: Int?
-    private(set) var sourceFields: CatalogCountSummary?
+    private(set) var metadata: CatalogCountSummary?
     private(set) var sourceTypes: CatalogCountSummary?
-    private(set) var subjectFields: CatalogCountSummary?
+    private(set) var properties: CatalogCountSummary?
     /// Unmerged Person handles.
     private(set) var persons: Int?
     /// Set when `refreshAll` fails; cleared on the next successful refresh.
@@ -79,24 +79,24 @@ final class CatalogCounts {
         switch section {
         case .sources: sources
         case .sourceTypes: sourceTypes?.total
-        case .sourceFields: sourceFields?.total
-        case .subjectFields: subjectFields?.total
+        case .metadata: metadata?.total
+        case .properties: properties?.total
         case .persons: persons
         }
     }
 
     /// Writes a vocabulary summary the feature model already computed
     /// from its in-memory rows (after load, create, or delete).
-    func publishSourceFields(_ summary: CatalogCountSummary) {
-        sourceFields = summary
+    func publishMetadata(_ summary: CatalogCountSummary) {
+        metadata = summary
     }
 
     func publishSourceTypes(_ summary: CatalogCountSummary) {
         sourceTypes = summary
     }
 
-    func publishSubjectFields(_ summary: CatalogCountSummary) {
-        subjectFields = summary
+    func publishProperties(_ summary: CatalogCountSummary) {
+        properties = summary
     }
 
     /// Writes the Sources total the feature model already knows from its
@@ -114,7 +114,7 @@ final class CatalogCounts {
             let nav = try await store.workspaceNavCounts(projectDir: projectDir)
             sources = nav.sources
             sourceTypes = CatalogCountSummary(nav.sourceTypes)
-            sourceFields = CatalogCountSummary(nav.sourceFields)
+            metadata = CatalogCountSummary(nav.metadataFields)
             persons = nav.persons
             lastRefreshError = nil
         } catch {

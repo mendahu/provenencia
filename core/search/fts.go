@@ -316,7 +316,7 @@ func fieldValuesForKind(kind, title, refCol, secondary, body string) map[string]
 			"metadata":    metadata,
 			"filename":    filename,
 		}
-	case KindSourceType, KindSourceField:
+	case KindSourceType, KindMetadataField:
 		return map[string]string{
 			"label":       title,
 			"key":         secondary,
@@ -357,8 +357,8 @@ func locationFor(kind, id, refCol, title string) WorkspaceLocation {
 		return WorkspaceLocation{Section: SectionSources, SourceID: id, Ref: refCol, Title: title}
 	case KindSourceType:
 		return WorkspaceLocation{Section: SectionSourceTypes, TypeID: id, Title: title}
-	case KindSourceField:
-		return WorkspaceLocation{Section: SectionSourceFields, FieldID: id, Title: title}
+	case KindMetadataField:
+		return WorkspaceLocation{Section: SectionMetadata, FieldID: id, Title: title}
 	default:
 		return WorkspaceLocation{}
 	}

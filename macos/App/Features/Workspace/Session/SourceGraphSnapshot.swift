@@ -50,7 +50,7 @@ struct SourceGraphPlacedBridge: Identifiable, Sendable, Equatable {
 }
 
 /// Catalog rows for one Source's Evidence graph. Types stay on
-/// `subjectFieldsWorkspace` so a citation save does not reload vocabulary.
+/// `propertiesWorkspace` so a citation save does not reload vocabulary.
 struct SourceGraphRows: Sendable, Equatable {
     var sourceId: String
     var subjects: [CatalogSubject]

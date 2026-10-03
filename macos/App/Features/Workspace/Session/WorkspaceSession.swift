@@ -248,8 +248,8 @@ final class WorkspaceSession {
             let _: QueryHandle<SourceGraphRows> = query(key)
         case .citationCounts:
             let _: QueryHandle<[String: Int]> = query(key)
-        case .subjectFieldsWorkspace:
-            let _: QueryHandle<SubjectFieldsSnapshot> = query(key)
+        case .propertiesWorkspace:
+            let _: QueryHandle<PropertiesSnapshot> = query(key)
         case .connectRules:
             let _: QueryHandle<[CatalogConnectRule]> = query(key)
         case .propertyTerms:

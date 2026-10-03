@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/sourcefields"
+	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
@@ -27,7 +27,7 @@ func TestInstall(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				fields, err := sourcefields.List(c)
+				fields, err := metadatafields.List(c)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -114,7 +114,7 @@ func TestInstall(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				field, err := sourcefields.Lookup(c, "issue_date", sourcefields.OriginProvenencia)
+				field, err := metadatafields.Lookup(c, "issue_date", metadatafields.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -183,7 +183,7 @@ func TestAppendSuggestion(t *testing.T) {
 				}
 				var fieldIDs [][]byte
 				for _, label := range []string{"Author", "Publisher"} {
-					f, err := sourcefields.Create(c, label, sourcefields.DataTypeText, "")
+					f, err := metadatafields.Create(c, label, metadatafields.DataTypeText, "")
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -218,7 +218,7 @@ func TestAppendSuggestion(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				f, err := sourcefields.Create(c, "Author", sourcefields.DataTypeText, "")
+				f, err := metadatafields.Create(c, "Author", metadatafields.DataTypeText, "")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -232,7 +232,7 @@ func TestAppendSuggestion(t *testing.T) {
 				if err != nil || len(got) != 0 {
 					t.Fatalf("suggestions %+v %v", got, err)
 				}
-				if _, err := sourcefields.GetByID(c, f.ID); err != nil {
+				if _, err := metadatafields.GetByID(c, f.ID); err != nil {
 					t.Fatalf("field should survive: %v", err)
 				}
 			},

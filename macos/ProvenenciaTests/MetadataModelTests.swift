@@ -4,7 +4,7 @@ import Testing
 
 @Suite
 @MainActor
-struct SourceFieldsModelTests {
+struct MetadataModelTests {
     private let projectDir = "/tmp/fields.provenencia"
     private let userID = "00000000-0000-7000-8000-000000000001"
 
@@ -24,10 +24,10 @@ struct SourceFieldsModelTests {
         store: FakeStore = FakeStore(),
         fields: [CatalogMetadataField] = [],
         catalogCounts: CatalogCounts? = nil
-    ) -> (SourceFieldsModel, WorkspaceSession) {
+    ) -> (MetadataModel, WorkspaceSession) {
         store.fieldsByProject[projectDir] = fields
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
-        let model = SourceFieldsModel(
+        let model = MetadataModel(
             session: session,
             userID: userID,
             store: store,
@@ -47,10 +47,10 @@ struct SourceFieldsModelTests {
         }
     }
 
-    private func warm(_ model: SourceFieldsModel, session: WorkspaceSession) async {
+    private func warm(_ model: MetadataModel, session: WorkspaceSession) async {
         model.warmFieldsQuery()
         if let fieldsHandle: QueryHandle<[CatalogMetadataField]> = session.queryHandle(
-            SourceFieldsModel.fieldsListKey(for: session)
+            MetadataModel.fieldsListKey(for: session)
         ) {
             await waitForQuery(fieldsHandle)
         }
@@ -104,7 +104,7 @@ struct SourceFieldsModelTests {
         #expect(model.fields.first?.label == "Author renamed")
         #expect(model.fields.first?.key == "author")
         #expect(model.fields.first?.origin == "provenencia")
-        #expect(model.toast?.title == String(localized: L10n.SourceFields.toastUpdatedTitle))
+        #expect(model.toast?.title == String(localized: L10n.Metadata.toastUpdatedTitle))
     }
 
     @Test func seededAndUserFieldsAreEditedTheSameWay() async {
@@ -139,7 +139,7 @@ struct SourceFieldsModelTests {
         model.select("2")
         model.openAdd()
         #expect(model.selectedField == nil)
-        #expect(model.draft == SourceFieldsModel.Draft(label: "", dataType: "text", description: ""))
+        #expect(model.draft == MetadataModel.Draft(label: "", dataType: "text", description: ""))
     }
 
     @Test func cancelAddResumesPriorSelection() async {
@@ -162,11 +162,11 @@ struct SourceFieldsModelTests {
         #expect(model.fields.count == 1)
         #expect(model.fields.first?.key == "grandmas-album-code")
         #expect(model.fields.first?.origin == "user")
-        #expect(model.toast?.title == String(localized: L10n.SourceFields.toastAddedTitle))
+        #expect(model.toast?.title == String(localized: L10n.Metadata.toastAddedTitle))
         #expect(model.selectedField?.key == "grandmas-album-code")
-        #expect(counts.sourceFields?.total == 1)
-        #expect(counts.sourceFields?.user == 1)
-        #expect(location?.section == .sourceFields)
+        #expect(counts.metadata?.total == 1)
+        #expect(counts.metadata?.user == 1)
+        #expect(location?.section == .metadata)
         #expect(location?.fieldId == model.fields.first?.id)
         #expect(location?.title == "Grandma's album code")
     }
@@ -197,7 +197,7 @@ struct SourceFieldsModelTests {
         model.openAdd()
         model.draft?.label = "Album  Code!"
         await model.submit()
-        #expect(model.formError == L10n.Errors.sourceFieldsDuplicateKey(key: "album-code"))
+        #expect(model.formError == L10n.Errors.metadataDuplicateKey(key: "album-code"))
         #expect(model.fields.count == 1)
     }
 
@@ -205,7 +205,7 @@ struct SourceFieldsModelTests {
         let counts = CatalogCounts(projectDir: projectDir, store: FakeStore())
         let (model, session) = makeModel(fields: [userField()], catalogCounts: counts)
         await warm(model, session: session)
-        let totalBefore = counts.sourceFields?.total
+        let totalBefore = counts.metadata?.total
         model.select("2")
         model.draft?.label = "Grandma's photo album code"
         model.draft?.description = "Updated."
@@ -213,8 +213,8 @@ struct SourceFieldsModelTests {
         #expect(model.formError == nil)
         #expect(model.fields.first?.label == "Grandma's photo album code")
         #expect(model.fields.first?.key == "grandmas-album-code")
-        #expect(model.toast?.title == String(localized: L10n.SourceFields.toastUpdatedTitle))
-        #expect(counts.sourceFields?.total == totalBefore)
+        #expect(model.toast?.title == String(localized: L10n.Metadata.toastUpdatedTitle))
+        #expect(counts.metadata?.total == totalBefore)
     }
 
     @Test func isDirtyTracksUnsavedEditsAndRevertClearsThem() async {
@@ -267,20 +267,20 @@ struct SourceFieldsModelTests {
 
         model.select("2")
         #expect(model.canDeleteSelectedField)
-        #expect(model.deleteTooltip == L10n.SourceFields.deleteField)
-        #expect(model.deleteAccessibilityLabel == L10n.SourceFields.deleteFieldAccessibility(label: "Grandma's album code"))
+        #expect(model.deleteTooltip == L10n.Metadata.deleteField)
+        #expect(model.deleteAccessibilityLabel == L10n.Metadata.deleteFieldAccessibility(label: "Grandma's album code"))
 
         model.select("1")
         #expect(model.canDeleteSelectedField)
-        #expect(model.deleteTooltip == L10n.SourceFields.deleteField)
+        #expect(model.deleteTooltip == L10n.Metadata.deleteField)
 
         model.select("3")
         #expect(model.canDeleteSelectedField)
-        #expect(model.deleteTooltip == L10n.SourceFields.deleteField)
+        #expect(model.deleteTooltip == L10n.Metadata.deleteField)
 
         model.select("4")
         #expect(model.canDeleteSelectedField)
-        #expect(model.deleteTooltip == L10n.SourceFields.deleteField)
+        #expect(model.deleteTooltip == L10n.Metadata.deleteField)
     }
 
     @Test func unusedUserFieldConfirmDeletes() async {
@@ -291,7 +291,7 @@ struct SourceFieldsModelTests {
         await model.askDelete()
 
         #expect(model.pendingImpact?.report.allowed == true)
-        #expect(model.pendingImpact?.target.kind == "source_field")
+        #expect(model.pendingImpact?.target.kind == "metadata_field")
         #expect(await model.confirmPendingImpact())
         #expect(model.fields.isEmpty)
         #expect(model.mode == .empty)
@@ -374,7 +374,7 @@ struct SourceFieldsModelTests {
         let counts = CatalogCounts(projectDir: projectDir, store: store)
         let (model, session) = makeModel(store: store, fields: [seededField(), userField()], catalogCounts: counts)
         await warm(model, session: session)
-        #expect(counts.sourceFields?.total == 2)
+        #expect(counts.metadata?.total == 2)
         model.select("2")
         await model.askDelete()
         #expect(model.pendingImpact?.report.allowed == true)
@@ -386,10 +386,10 @@ struct SourceFieldsModelTests {
         #expect(model.selectedField == nil)
         #expect(model.pendingDeleteField == nil)
         #expect(!model.isDeleting)
-        #expect(model.toast?.title == String(localized: L10n.SourceFields.toastDeletedTitle))
-        #expect(counts.sourceFields?.total == 1)
-        #expect(counts.sourceFields?.seeded == 1)
-        #expect(counts.sourceFields?.user == 0)
+        #expect(model.toast?.title == String(localized: L10n.Metadata.toastDeletedTitle))
+        #expect(counts.metadata?.total == 1)
+        #expect(counts.metadata?.seeded == 1)
+        #expect(counts.metadata?.user == 0)
     }
 
     @Test func confirmPendingImpactKeepsTheSheetOpenWhenTheStoreRefuses() async {
@@ -413,7 +413,7 @@ struct SourceFieldsModelTests {
         let (model, session) = makeModel(fields: [seededField(id: "1", label: "Author")])
         await warm(model, session: session)
         let outcome = model.syncSelection(
-            from: WorkspaceLocation(section: .sourceFields, fieldId: "1", title: "Author")
+            from: WorkspaceLocation(section: .metadata, fieldId: "1", title: "Author")
         )
         #expect(outcome == .applied)
         #expect(model.selectedField?.id == "1")
@@ -423,7 +423,7 @@ struct SourceFieldsModelTests {
         let (model, session) = makeModel(fields: [seededField(id: "1")])
         await warm(model, session: session)
         let outcome = model.syncSelection(
-            from: WorkspaceLocation(section: .sourceFields, fieldId: "gone", title: "Missing")
+            from: WorkspaceLocation(section: .metadata, fieldId: "gone", title: "Missing")
         )
         #expect(outcome == .missingDeepId)
         #expect(model.selectedField == nil)
@@ -433,7 +433,7 @@ struct SourceFieldsModelTests {
         let (model, session) = makeModel(fields: [seededField(id: "1")])
         await warm(model, session: session)
         model.select("1")
-        let outcome = model.syncSelection(from: .sectionRoot(.sourceFields))
+        let outcome = model.syncSelection(from: .sectionRoot(.metadata))
         #expect(outcome == .applied)
         #expect(model.selectedField == nil)
     }
@@ -443,7 +443,7 @@ struct SourceFieldsModelTests {
         await warm(model, session: session)
         model.openAdd()
         let outcome = model.syncSelection(
-            from: WorkspaceLocation(section: .sourceFields, fieldId: "1", title: "Author")
+            from: WorkspaceLocation(section: .metadata, fieldId: "1", title: "Author")
         )
         #expect(outcome == .ignored)
         #expect(model.isAdding)
@@ -456,7 +456,7 @@ struct SourceFieldsModelTests {
         let url = dir.appendingPathComponent("history.json")
         let navigation = WorkspaceNavigation()
         navigation.attachProject(uuid: "00000000-0000-7000-8000-0000000000bb", fileURL: url)
-        navigation.go(to: .sectionRoot(.sourceFields))
+        navigation.go(to: .sectionRoot(.metadata))
 
         let (model, session) = makeModel()
         await warm(model, session: session)
@@ -471,7 +471,7 @@ struct SourceFieldsModelTests {
         await model.askDelete()
         #expect(await model.confirmPendingImpact())
         navigation.fallbackToSectionRoot()
-        #expect(navigation.currentLocation == .sectionRoot(.sourceFields))
+        #expect(navigation.currentLocation == .sectionRoot(.metadata))
         #expect(navigation.currentLocation.fieldId == nil)
     }
 

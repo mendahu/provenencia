@@ -35,32 +35,32 @@ struct WorkspaceToolbarBreadcrumbTests {
 
     @Test func deepLeafFallsBackToTitleThenEllipsis() {
         let titled = WorkspaceToolbar.breadcrumbItems(
-            for: WorkspaceLocation(section: .sourceFields, fieldId: "f1", title: "Author"),
+            for: WorkspaceLocation(section: .metadata, fieldId: "f1", title: "Author"),
             goTo: { _ in }
         )
         #expect(titled.last?.label == "Author")
 
         let bare = WorkspaceToolbar.breadcrumbItems(
-            for: WorkspaceLocation(section: .sourceFields, fieldId: "f1"),
+            for: WorkspaceLocation(section: .metadata, fieldId: "f1"),
             goTo: { _ in }
         )
         #expect(bare.last?.label == "…")
     }
 
-    @Test func subjectFieldsCategoryAndPropertyAreDeep() {
+    @Test func propertiesCategoryAndPropertyAreDeep() {
         var wentTo: WorkspaceLocation?
         let category = WorkspaceToolbar.breadcrumbItems(
-            for: WorkspaceLocation(section: .subjectFields, subjectTypeKey: "person", title: "Person"),
+            for: WorkspaceLocation(section: .properties, subjectTypeKey: "person", title: "Person"),
             goTo: { wentTo = $0 }
         )
         #expect(category.count == 2)
         #expect(category.last?.label == "Person")
         category[0].action?()
-        #expect(wentTo == .sectionRoot(.subjectFields))
+        #expect(wentTo == .sectionRoot(.properties))
 
         let property = WorkspaceToolbar.breadcrumbItems(
             for: WorkspaceLocation(
-                section: .subjectFields,
+                section: .properties,
                 subjectTypeKey: "person",
                 propertyId: "prop-1",
                 title: "Name"

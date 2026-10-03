@@ -48,8 +48,8 @@ struct WorkspaceDestinationHost: View {
                 )
                 .id(entry.identityKey)
             }
-        case .sourceFields:
-            SourceFieldsView(
+        case .metadata:
+            MetadataView(
                 session: session,
                 userID: userID,
                 store: store,
@@ -62,14 +62,14 @@ struct WorkspaceDestinationHost: View {
                 store: store,
                 catalogCounts: catalogCounts
             )
-        case .subjectFields:
-            SubjectFieldsView(
+        case .properties:
+            PropertiesView(
                 session: session,
                 userID: userID,
                 store: store,
                 catalogCounts: catalogCounts
             )
-            .accessibilityIdentifier("workspace.destination.subjectFields")
+            .accessibilityIdentifier("workspace.destination.properties")
         case .personsList:
             PersonsListView()
                 .accessibilityIdentifier("workspace.destination.persons")
@@ -90,12 +90,12 @@ struct WorkspaceDestinationHost: View {
         switch presentation {
         case .sourcesList, .sourcePage, .sourceGraph, .sourceCitationComposer:
             return .sources
-        case .sourceFields:
-            return .sourceFields
+        case .metadata:
+            return .metadata
         case .sourceTypes:
             return .sourceTypes
-        case .subjectFields:
-            return .subjectFields
+        case .properties:
+            return .properties
         case .personsList:
             return .persons
         }
@@ -105,8 +105,8 @@ struct WorkspaceDestinationHost: View {
 /// Top-level destination view mounted by `WorkspaceDestinationHost`.
 enum WorkspaceDestinationKind: Equatable {
     case sources
-    case sourceFields
+    case metadata
     case sourceTypes
-    case subjectFields
+    case properties
     case persons
 }
