@@ -68,7 +68,7 @@ Do **not** call `session.query()` from view `body` or from model computed proper
 that `body` reads every frame — that starves the MainActor and breaks observation.
 
 Do **not** fold a shared list into a page payload (`sourceGraph` is subjects +
-positions + observations; types live on `subjectFieldsWorkspace`). Do **not**
+positions + observations; types live on `propertiesWorkspace`). Do **not**
 copy catalog lists onto a feature model — observe the handle.
 
 ## Steps

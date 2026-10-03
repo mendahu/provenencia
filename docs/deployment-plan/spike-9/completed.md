@@ -16,6 +16,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-05 | PR | Resolver core v1 |
 | S9-06 | PR | Resolved-values cache |
 | S9-07 | PR | Person header composer + list read |
+| S9-07b | PR | Rename configuration: Metadata, Properties |
 
 ## Steps
 
@@ -216,3 +217,21 @@ The first reader of the resolved-values cache: Go composes every Person's row he
 - Sidebar row and re-publishing the count after Promote (**S9-08**); the designed list and the place's query key (**S9-09**)
 - Eviction of non-visible detail keys and visible-place tracking (**S9-15**, with the first detail key)
 - A certainty mutation and a dedicated credibility mutation (**S9-14**)
+
+### S9-07b — Rename configuration: Metadata, Properties
+
+Two configuration views took plain names, all the way down: **Source fields → Metadata** (a row is a *metadata field*) and **Subject fields → Properties**. Source types kept its name. No behavior changed.
+
+**What shipped**
+
+- **Storage:** migration `000035` renames `subject_type_fields` → `subject_type_properties` (indexes too; nothing had an FK into it) and rewrites the stored audit strings `source_field` → `metadata_field` and `delete_source_field` → `delete_metadata_field`. A test upgrades a version-34 catalog and checks the result hashes like a fresh one.
+- **Go:** package `sourcefields` → `metadatafields`; kinds `source_field` → `metadata_field` (search, search index, delete Impact) with search `ProjectionVersion` 5; section ids `source-fields` / `subject-fields` → `metadata` / `properties`; `apperr` `sourcefields.*` → `metadatafields.*`; `searchindex.ReprojectMetadataField`.
+- **Proto / FFI:** `SubjectTypeField` → `SubjectTypeProperty` (and its List / Assign / Remove RPCs), `GetSubjectFieldsWorkspace` → `GetPropertiesWorkspace`, `SubjectTypeFieldsGroup` → `SubjectTypePropertiesGroup` (its `fields` → `properties`), nav counts `source_fields` → `metadata_fields`. Method and field numbers unchanged.
+- **App:** `Features/Metadata`, `Features/Properties` and every type, case, query key (`propertiesWorkspace`), store method, count, L10n key and value, accessibility id, and preview that said the old names. Omnibar chip "Field" → "Metadata field".
+- **Old ids still work:** `WorkspaceSection(id:)` maps `files`, `source-fields` and `subject-fields`; history decoding, engine locations (`GoStore.mapWorkspaceLocationFromProto`) and the sidebar all parse through it, so saved history keeps its entries without a load-failure reset.
+- **Docs and skills** that describe the live code use the new names. Archives and earlier `completed.md` entries keep the names of their time.
+
+**What stayed out**
+
+- The sidebar layout and section titles (**S9-08**)
+- Renaming Source types, or `source_metadata_fields` / `source_type_metadata_fields` (already "metadata")

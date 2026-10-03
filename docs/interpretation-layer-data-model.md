@@ -614,7 +614,7 @@ CREATE TABLE properties (
 
 `origin` and `UNIQUE (key, origin)` follow [`seeded-vocabulary.md`](seeded-vocabulary.md) §1.1. Observations and Reconciliation Claims reference `properties.id`, not bare `key`.
 
-A Property's `value_type` is intrinsic to the Property. Seeded Properties (for example `name`, `event_type`, `role`, `person`, `mentions`, `remark`) and their `subject_type_fields` bindings are listed in [`seeded-vocabulary.md`](seeded-vocabulary.md).
+A Property's `value_type` is intrinsic to the Property. Seeded Properties (for example `name`, `event_type`, `role`, `person`, `mentions`, `remark`) and their `subject_type_properties` bindings are listed in [`seeded-vocabulary.md`](seeded-vocabulary.md).
 
 Product value types are **`text`**, **`integer`**, **`date`**, **`name`**, **`subject`**, and **`term`**. `real` and `boolean` are not used.
 
@@ -628,7 +628,7 @@ The semantic vocabulary is open, but the primitive value system is intentionally
 
 `value_type = 'name'` always means the shared structured NameValue model in [`structured-name-model.md`](structured-name-model.md), not a single undifferentiated text string. A NameValue always has a full-form `form` and may optionally include ordered parts with product-registry part types for search and reconciliation.
 
-`name_format` is primarily a Conclusion Property (Reconciliation Claim on a person entity). It need not appear in `subject_type_fields` for Interpretation unless a Source itself asserts a naming convention.
+`name_format` is primarily a Conclusion Property (Reconciliation Claim on a person entity). It need not appear in `subject_type_properties` for Interpretation unless a Source itself asserts a naming convention.
 
 Application semantics attach to stable `key` values within an origin, matching `subject_types`. Seeded Properties may receive first-class application behavior. User-defined Properties remain first-class persisted data and can be generically displayed, searched, audited, synced, and referenced. Plugins may add specialized semantics for additional Properties later under `plugin:<plugin_id>` origins.
 
@@ -666,12 +666,12 @@ remark     -> text   # free-text commentary about a source subject
 
 A book that merely cites a marriage certificate can record `BookSource -- mentions --> CertificateSource` with no remark. A letter that challenges a certificate can add text `remark` Observations and, when needed, ordinary person-level Observations as well. Structured Properties beyond this may be added later only if a concrete workflow requires them. First-class credibility grades: §5.3.
 
-## 5.2 `subject_type_fields`
+## 5.2 `subject_type_properties`
 
 This table defines which Properties are valid for which Subject types. It is a join table with no `origin` of its own.
 
 ```sql
-CREATE TABLE subject_type_fields (
+CREATE TABLE subject_type_properties (
     subject_type_id BLOB NOT NULL REFERENCES subject_types(id) ON DELETE CASCADE,
     property_id     BLOB NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
     sort_order      INTEGER NOT NULL,
@@ -680,7 +680,7 @@ CREATE TABLE subject_type_fields (
 ) STRICT;
 ```
 
-`sort_order` orders Add-property menus and Subject fields lists. Locked bindings (cannot unbind while required for connect macros, Conclusion ordering, or other product integrity) live in the compiled Interpretation subject registry (`subjectvocab`), not as a column here.
+`sort_order` orders Add-property menus and Properties lists. Locked bindings (cannot unbind while required for connect macros, Conclusion ordering, or other product integrity) live in the compiled Interpretation subject registry (`subjectvocab`), not as a column here.
 
 For example (full matrix in [`seeded-vocabulary.md`](seeded-vocabulary.md)):
 

@@ -23,11 +23,11 @@ new Install into **`onboarding.createCatalog` only**.
 
 | Package | Registry | What it seeds |
 | --- | --- | --- |
-| `core/database/sourcevocab/` | `registry.go` (`seedTypes` / `seedFields` / `seedSuggestions`) | Source types, metadata fields, type→field suggestions (uses `sourcetypes` / `sourcefields`) |
+| `core/database/sourcevocab/` | `registry.go` (`seedTypes` / `seedFields` / `seedSuggestions`) | Source types, metadata fields, type→field suggestions (uses `sourcetypes` / `metadatafields`) |
 | `core/database/sourcecredibilitygrades/` | `registry.go` (`seedGrades`) | Credibility grades (`low_trust` / `standard` / `high_trust`) |
 | `core/database/claimconfidencegrades/` | `registry.go` (`seedGrades`) | Claim confidence grades (`low_confidence` / `moderate` / `high_confidence`) for Identity (later Reconciliation) Claims |
 | `core/connectrules/` | `productBridges` / `productRefusals` (`Bridge.Endpoints` + `Disambiguation` + `Pairs`); `All()` / `Register` | Product connect matrix: which Properties on which bridge types are endpoints or disambiguation. Impact, edge-lock, Connect, and Install bridge bindings loop `All()` / `BridgeBindings()`. Future plugins append via `Register`. |
-| `core/database/subjectvocab/` | `registry.go` (`seedTypes` / `seedProperties` / `seedBindings` / `seedTerms`) | Interpretation Subject types, Properties, non-bridge `subject_type_fields`, **`property_terms`** (S7-01b), plus compiled presentation. Bridge bindings are derived from `connectrules.BridgeBindings()` (product origin only at create). |
+| `core/database/subjectvocab/` | `registry.go` (`seedTypes` / `seedProperties` / `seedBindings` / `seedTerms`) | Interpretation Subject types, Properties, non-bridge `subject_type_properties`, **`property_terms`** (S7-01b), plus compiled presentation. Bridge bindings are derived from `connectrules.BridgeBindings()` (product origin only at create). |
 
 ### Source vocabulary (`sourcevocab`)
 

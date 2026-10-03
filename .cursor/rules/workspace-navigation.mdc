@@ -1,6 +1,6 @@
 ---
 description: New workspace places must go through WorkspaceNavigation + go(to:) history
-globs: macos/App/Features/Workspace/**/*.swift,macos/App/Features/Sources/**/*.swift,macos/App/Features/SourceFields/**/*.swift,macos/App/Features/SourceTypes/**/*.swift
+globs: macos/App/Features/Workspace/**/*.swift,macos/App/Features/Sources/**/*.swift,macos/App/Features/Metadata/**/*.swift,macos/App/Features/SourceTypes/**/*.swift
 alwaysApply: false
 ---
 

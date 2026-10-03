@@ -19,7 +19,7 @@ A one-button **share** action that packages a chosen subsection of the project i
 Starting scope that matches today’s Source layer:
 
 - Source title, type, description, notes
-- Source fields / descriptive metadata
+- Metadata fields / descriptive metadata
 - Artifacts under that Source (including fileless placeholders)
 - Associated Files (bytes + enough metadata to reopen or re-ingest)
 

@@ -443,7 +443,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-06 — Resolved-values cache → [`completed.md`](completed.md)
 - [x] S9-07 — Person header composer + list read → [`completed.md`](completed.md)
 - [ ] ✎ S9-D1 — Design: workspace sidebar
-- [ ] S9-07b — Rename configuration: Metadata, Properties
+- [x] S9-07b — Rename configuration: Metadata, Properties → [`completed.md`](completed.md)
 - [ ] S9-08 — Sidebar sections: Source, Conclude, Configure
 - [ ] ✎ S9-D2 — Design: Persons list
 - [ ] S9-09 — Persons list
@@ -570,6 +570,8 @@ In order; each brief sits just above the PR it gates.
 
 #### S9-07b — Rename configuration: Metadata, Properties
 
+**Done.** See [`completed.md`](completed.md#s9-07b--rename-configuration-metadata-properties). Section ids are now `metadata` / `properties`; parse any section id with `WorkspaceSection(id:)`, which still maps `files`, `source-fields` and `subject-fields`. S9-08 builds the sidebar on `.metadata` / `.properties`.
+
 Researcher's decision while revising **S9-D1**: two configuration views get plain names, renamed **all the way down** so code, wire, and tables say what the UI says. **Source types** keeps its name (a table or page called just "types" would not say what it holds).
 
 | Today | Becomes |
@@ -580,7 +582,7 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 | | |
 | --- | --- |
 | **In** | **App:** labels, page titles, VoiceOver, L10n keys and values; `WorkspaceSection` cases and history ids (`metadata`, `properties`; the old `source-fields` / `subject-fields` ids still decode, like the retired `files` id); `Features/SourceFields` → `Features/Metadata`, `Features/SubjectFields` → `Features/Properties`, and their types (`SourceFieldsView` → `MetadataView`, `SubjectFieldsModel` → `PropertiesModel`, …); FakeStore and tests. **Go / FFI:** `sourcefields` package → `metadatafields`, `SourceField` types, delete-Impact kinds, FFI methods and proto messages (`SourceField` → `MetadataField`), search kinds (with a `ProjectionVersion` bump). **Tables:** a migration renaming the subject-type binding table `subject_type_fields` → `subject_type_properties` (and any other table whose name still says *source field* / *subject field*; `source_metadata_fields` already reads right), with the delete-Impact register and its honesty tests following. **Docs and skills** that name these views. |
-| **Decide at the start** | Strings already persisted or on the wire: audit `entity_type` / `action_type` values in existing catalogs, `apperr` codes ("permanent once shipped"), and search kind ids. Default: rename the identifiers, keep reading the old persisted strings (alias on read) rather than rewriting audit history; apperr codes get new codes with the old ones retired, not reused. List each in the PR. |
+| **Decided** | Rename everything, the table included. Migration `000035` renames `subject_type_fields` → `subject_type_properties` (and its indexes) and rewrites the two stored audit strings (`source_field` → `metadata_field`, `delete_source_field` → `delete_metadata_field`); bindings were never audited. `apperr` codes `sourcefields.*` → `metadatafields.*` outright (never stored; app and engine ship together). Search / Impact kind `source_field` → `metadata_field`, with search `ProjectionVersion` 5 rebuilding stored docs. Old section ids decode everywhere a section id is parsed (history, engine locations, sidebar). |
 | **Out** | The sidebar layout (S9-08). Renaming Source types. Any change to what the pages do. |
 | **Testable** | Old navigation history decodes to the renamed sections; an existing catalog migrates and still opens (schema hash, Impact honesty); search finds metadata fields and Properties after the rebuild; no remaining `SourceField` / `SubjectField` identifiers outside migrations and legacy decoders (a grep check in the PR). |
 | **Depends on** | — (independent; lands before S9-08 so the sidebar is built on the new names) |
