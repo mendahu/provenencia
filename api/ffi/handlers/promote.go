@@ -6,6 +6,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/valuecodec"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -57,12 +58,16 @@ func ListSubjectMemberships(in []byte) ([]byte, error) {
 		}
 		out = &engine.ListSubjectMembershipsResponse{}
 		for _, m := range rows {
-			out.Memberships = append(out.Memberships, &engine.SubjectMembership{
+			sm := &engine.SubjectMembership{
 				SubjectId: uuidString(m.SubjectID),
 				ClaimId:   uuidString(m.ClaimID),
 				Entity:    canonicalEntityProto(m.Entity),
 				Kind:      m.Kind,
-			})
+			}
+			if m.Name != nil {
+				sm.Name = valuecodec.NameToProto(*m.Name)
+			}
+			out.Memberships = append(out.Memberships, sm)
 		}
 		return nil
 	})

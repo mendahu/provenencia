@@ -11,6 +11,8 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
+	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -18,6 +20,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
 var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
@@ -358,6 +361,36 @@ func TestMembershipsBySource(t *testing.T) {
 	if _, ok := bySubject[string(f.york.ID)]; ok || len(got) != 2 {
 		t.Fatalf("provisional-only subject listed: %+v", got)
 	}
+
+	t.Run("carries the handle's rank-1 resolved name", func(t *testing.T) {
+		db, err := f.c.DB()
+		if err != nil {
+			t.Fatal(err)
+		}
+		name, err := properties.Lookup(f.c, "name", properties.OriginProvenencia)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for rank, form := range []string{"James Robins", "Jim Robins"} {
+			blob, err := valuecodec.MarshalName(namevalues.Value{Form: form})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := db.Exec(`INSERT INTO conclusion_resolved_values (entity_id, property_id, rank, value_name, support)
+				VALUES (?, ?, ?, ?, 1)`, f.per1.ID, name.ID, rank+1, blob); err != nil {
+				t.Fatal(err)
+			}
+		}
+		got, err := identityclaims.MembershipsBySource(f.c, f.james.SourceID)
+		if err != nil || len(got) != 2 {
+			t.Fatalf("%v %+v", err, got)
+		}
+		for _, m := range got {
+			if m.Name == nil || m.Name.Form != "James Robins" {
+				t.Fatalf("name %+v", m.Name)
+			}
+		}
+	})
 
 	t.Run("other source and bad id", func(t *testing.T) {
 		typeID, err := sourcetypes.Upsert(f.c, sourcetypes.Type{

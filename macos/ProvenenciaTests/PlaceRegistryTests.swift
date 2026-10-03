@@ -218,6 +218,7 @@ struct PlaceRegistryTests {
             case .sourceTypesDetail: WorkspaceLocation(section: .sourceTypes, typeId: "t1")
             case .properties: .sectionRoot(.properties)
             case .personsList: .sectionRoot(.persons)
+            case .personDetail: .personDetail(entityId: "e1", ref: "PER-1", title: nil)
             case .eventsList: .sectionRoot(.events)
             case .placesList: .sectionRoot(.places)
             }
@@ -228,7 +229,7 @@ struct PlaceRegistryTests {
     }
 
     @Test func conclusionStubsResolveWithNoQueryKeys() {
-        for (section, id) in [(WorkspaceSection.persons, PlaceID.personsList), (.events, .eventsList), (.places, .placesList)] {
+        for (section, id) in [(WorkspaceSection.events, PlaceID.eventsList), (.places, .placesList)] {
             let place = resolve(.sectionRoot(section))
             #expect(place?.placeID == id)
             #expect(place?.queryKeys == [])

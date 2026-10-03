@@ -148,10 +148,18 @@ struct PlaceRegistry: Sendable {
             id: .personsList,
             presentation: .personsList,
             priority: 10,
-            matches: { $0.section == .persons },
-            // Stub page: reads nothing until S9-09 renders `.personsList`.
-            queryKeys: { _, _ in [] },
+            matches: { $0.section == .persons && $0.entityId == nil },
+            queryKeys: { project, _ in [.personsList(project: project)] },
             deepId: { _ in nil }
+        ),
+        Spec(
+            id: .personDetail,
+            presentation: .personDetail,
+            priority: 20,
+            matches: { $0.section == .persons && $0.entityId != nil },
+            // Stub page: reads nothing until S9-15 adds the detail key.
+            queryKeys: { _, _ in [] },
+            deepId: { $0.entityId }
         ),
         Spec(
             id: .eventsList,

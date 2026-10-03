@@ -1134,6 +1134,18 @@
         }
       }
     },
+    "designSystem.list.loading": {
+      "comment": "Accessibility label for a PVList skeleton shown on first load",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loading"
+          }
+        }
+      }
+    },
     "designSystem.thumbnail.loading": {
       "comment": "Accessibility label for a PVThumbnail in the loading state",
       "extractionState": "manual",
@@ -9482,6 +9494,90 @@
           "stringUnit": {
             "state": "translated",
             "value": "Evidence graph"
+          }
+        }
+      }
+    },
+    "workspace.persons.countOne": {
+      "comment": "Persons list header meta when there is exactly one Person",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 person"
+          }
+        }
+      }
+    },
+    "workspace.persons.countOther": {
+      "comment": "Persons list header meta; argument is how many Persons are listed",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld persons"
+          }
+        }
+      }
+    },
+    "workspace.persons.countRefreshing": {
+      "comment": "Persons list header meta while the list reloads; argument is the person count text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · refreshing"
+          }
+        }
+      }
+    },
+    "workspace.persons.detailStubMessage": {
+      "comment": "Placeholder body on a Person detail page until it ships; argument is the Person ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The page for %@ is on its way. It will show this Person's name, life dates and places, and the evidence behind them."
+          }
+        }
+      }
+    },
+    "workspace.persons.emptyMessage": {
+      "comment": "Persons list empty state body; explains Promote",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Person is created when you promote a subject from a card on an Evidence graph. Promoted subjects appear here, one row per Person."
+          }
+        }
+      }
+    },
+    "workspace.persons.emptyTitle": {
+      "comment": "Persons list empty state title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No persons yet"
+          }
+        }
+      }
+    },
+    "workspace.persons.rowAccessibility": {
+      "comment": "VoiceOver label for a Persons list row; arguments are the title and the ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@"
           }
         }
       }

@@ -10,6 +10,7 @@ enum WorkspacePresentationID: Hashable, Sendable, CaseIterable {
     case sourceTypes
     case properties
     case personsList
+    case personDetail
     case eventsList
     case placesList
 }

@@ -181,6 +181,8 @@ struct CatalogSubjectMembership: Sendable, Equatable {
     var claimID: String
     var entity: CatalogCanonicalEntity
     var kind: String
+    /// The handle's rank-1 resolved name (S9-09); nil when it has none.
+    var name: CatalogNameValue? = nil
 }
 
 /// One saved Promote step: the handle and the claim it wrote.

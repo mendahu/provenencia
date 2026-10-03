@@ -192,7 +192,7 @@ struct WorkspaceToolbar: View {
     ) -> [PVBreadcrumbItem] {
         let sectionLabel = String(localized: location.section.label)
         let isDeep = location.sourceId != nil || location.fieldId != nil || location.typeId != nil
-            || location.subjectTypeKey != nil || location.propertyId != nil
+            || location.subjectTypeKey != nil || location.propertyId != nil || location.entityId != nil
         if !isDeep {
             return [
                 PVBreadcrumbItem(id: "section-\(location.section.rawValue)", label: sectionLabel, action: nil),

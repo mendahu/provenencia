@@ -3049,11 +3049,22 @@ public nonisolated struct Provenencia_Engine_V1_SubjectMembership: Sendable {
 
   public var claimID: String = String()
 
+  /// handle's rank-1 resolved name; absent when none
+  public var name: Provenencia_Engine_V1_NameValueInput {
+    get {_name ?? Provenencia_Engine_V1_NameValueInput()}
+    set {_name = newValue}
+  }
+  /// Returns true if `name` has been explicitly set.
+  public var hasName: Bool {self._name != nil}
+  /// Clears the value of `name`. Subsequent reads from it will return its default value.
+  public mutating func clearName() {self._name = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
   fileprivate var _entity: Provenencia_Engine_V1_CanonicalEntity? = nil
+  fileprivate var _name: Provenencia_Engine_V1_NameValueInput? = nil
 }
 
 /// ListSubjectMemberships returns the handle of every promoted Subject on one
@@ -9966,7 +9977,7 @@ nonisolated extension Provenencia_Engine_V1_PromoteSubjectResponse: SwiftProtobu
 
 nonisolated extension Provenencia_Engine_V1_SubjectMembership: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SubjectMembership"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}subject_id\0\u{1}entity\0\u{1}kind\0\u{3}claim_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}subject_id\0\u{1}entity\0\u{1}kind\0\u{3}claim_id\0\u{1}name\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -9978,6 +9989,7 @@ nonisolated extension Provenencia_Engine_V1_SubjectMembership: SwiftProtobuf.Mes
       case 2: try { try decoder.decodeSingularMessageField(value: &self._entity) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.kind) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.claimID) }()
+      case 5: try { try decoder.decodeSingularMessageField(value: &self._name) }()
       default: break
       }
     }
@@ -10000,6 +10012,9 @@ nonisolated extension Provenencia_Engine_V1_SubjectMembership: SwiftProtobuf.Mes
     if !self.claimID.isEmpty {
       try visitor.visitSingularStringField(value: self.claimID, fieldNumber: 4)
     }
+    try { if let v = self._name {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -10008,6 +10023,7 @@ nonisolated extension Provenencia_Engine_V1_SubjectMembership: SwiftProtobuf.Mes
     if lhs._entity != rhs._entity {return false}
     if lhs.kind != rhs.kind {return false}
     if lhs.claimID != rhs.claimID {return false}
+    if lhs._name != rhs._name {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

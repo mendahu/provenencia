@@ -348,13 +348,22 @@ struct EvidenceSubjectCard: View {
     /// VoiceOver name for the footer action: "Promote James Robins, CPR-…" or "Open person PER-…".
     static func footerAccessibilityActionName(for placed: SourceGraphPlacedSubject) -> String {
         if let membership = placed.membership {
-            return L10n.EvidenceGraph.openHandleAccessibility(kind: placed.kind, ref: membership.entity.ref)
+            let target = membershipName(membership).map { "\($0), \(membership.entity.ref)" } ?? membership.entity.ref
+            return L10n.EvidenceGraph.openHandleAccessibility(kind: placed.kind, ref: target)
         }
         let label = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
         return L10n.EvidenceGraph.promoteAccessibility(
             label: label.isEmpty ? placed.subject.ref : label,
             ref: placed.subject.ref
         )
+    }
+
+    /// The handle's resolved name for the membership row (S9-09), or nil when
+    /// it has none — the row then keeps its *Open … page* copy.
+    static func membershipName(_ membership: CatalogSubjectMembership) -> String? {
+        guard let name = membership.name else { return nil }
+        let text = NameValueDisplay.string(for: name)
+        return text.isEmpty ? nil : text
     }
 
     private var ghostOpacity: Double {
@@ -578,12 +587,19 @@ private struct EvidenceSubjectCardChrome: View {
         let pressed = pressedActionID == EvidenceSubjectCard.openHandleActionID
         return HStack(spacing: 8) {
             PVBadge(text: membership.entity.ref, tone: .neutral, subtle: true, foreground: style.ink)
-            // S9-09 swaps this for the handle's resolved name, same slot.
-            Text(L10n.EvidenceGraph.openHandlePage(kind: placed.kind))
-                .font(PVFont.body(size: 12.5))
-                .italic()
-                .foregroundStyle(style.ink)
-                .lineLimit(1)
+            // The handle's resolved name (S9-09) in the slot the link copy holds
+            // until a name exists — same slot, so promoting never relayouts.
+            Group {
+                if let name = EvidenceSubjectCard.membershipName(membership) {
+                    Text(verbatim: name)
+                } else {
+                    Text(L10n.EvidenceGraph.openHandlePage(kind: placed.kind)).italic()
+                }
+            }
+            .font(PVFont.body(size: 12.5))
+            .foregroundStyle(style.ink)
+            .lineLimit(1)
+            .truncationMode(.tail)
             Spacer(minLength: 0)
             PVIcon(.chevronForward, size: 14)
                 .foregroundStyle(style.ink)

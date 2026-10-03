@@ -10,6 +10,8 @@
 		AA00000000000000000003B1 /* PVMark.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003B0 /* PVMark.swift */; };
 		AA00000000000000000003B3 /* PVFileTypeGlyphTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003B2 /* PVFileTypeGlyphTests.swift */; };
 		AA0000000000000000000301 /* PVThumbnail.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000300 /* PVThumbnail.swift */; };
+		A90900000000000000000004 /* PVListTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90900000000000000000003 /* PVListTests.swift */; };
+		A90900000000000000000002 /* PVList.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90900000000000000000001 /* PVList.swift */; };
 		AA000000000000000000031F /* PVReorderableList.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000320 /* PVReorderableList.swift */; };
 		AA0000000000000000000305 /* PVFormDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000304 /* PVFormDialog.swift */; };
 		AA0000000000000000000501 /* PVPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000500 /* PVPanel.swift */; };
@@ -225,6 +227,9 @@
 		A90800000000000000000006 /* WorkspaceSidebarSectionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90800000000000000000005 /* WorkspaceSidebarSectionsTests.swift */; };
 		A90800000000000000000004 /* WorkspaceSidebarSections.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90800000000000000000003 /* WorkspaceSidebarSections.swift */; };
 		A90800000000000000000002 /* ConclusionStubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90800000000000000000001 /* ConclusionStubView.swift */; };
+		A90900000000000000000016 /* PersonsListTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90900000000000000000015 /* PersonsListTests.swift */; };
+		A90900000000000000000014 /* PersonsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90900000000000000000013 /* PersonsListView.swift */; };
+		A90900000000000000000012 /* ConclusionListRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90900000000000000000011 /* ConclusionListRow.swift */; };
 		6422592F5C31D8F535B03C6A /* MetadataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 950877B33DC4E16E5BA8B5D6 /* MetadataView.swift */; };
 		6D245285E4AB8AAFDE78E313 /* PVIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36412B0A6A6851ADB45A7AA8 /* PVIcon.swift */; };
 		6F7945720B05D7777BFA79A2 /* WorkspaceModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F03B00F6F0D021AFCDAD2DEB /* WorkspaceModel.swift */; };
@@ -317,6 +322,8 @@
 		AA00000000000000000003B0 /* PVMark.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVMark.swift; sourceTree = "<group>"; };
 		AA00000000000000000003B2 /* PVFileTypeGlyphTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVFileTypeGlyphTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000300 /* PVThumbnail.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVThumbnail.swift; sourceTree = "<group>"; };
+		A90900000000000000000003 /* PVListTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVListTests.swift; sourceTree = "<group>"; };
+		A90900000000000000000001 /* PVList.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVList.swift; sourceTree = "<group>"; };
 		AA0000000000000000000320 /* PVReorderableList.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVReorderableList.swift; sourceTree = "<group>"; };
 		AA0000000000000000000304 /* PVFormDialog.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVFormDialog.swift; sourceTree = "<group>"; };
 		AA0000000000000000000500 /* PVPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVPanel.swift; sourceTree = "<group>"; };
@@ -579,6 +586,9 @@
 		A90800000000000000000005 /* WorkspaceSidebarSectionsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceSidebarSectionsTests.swift; sourceTree = "<group>"; };
 		A90800000000000000000003 /* WorkspaceSidebarSections.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceSidebarSections.swift; sourceTree = "<group>"; };
 		A90800000000000000000001 /* ConclusionStubView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConclusionStubView.swift; sourceTree = "<group>"; };
+		A90900000000000000000015 /* PersonsListTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersonsListTests.swift; sourceTree = "<group>"; };
+		A90900000000000000000013 /* PersonsListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersonsListView.swift; sourceTree = "<group>"; };
+		A90900000000000000000011 /* ConclusionListRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConclusionListRow.swift; sourceTree = "<group>"; };
 		C355704657FB6A572BF7FD6A /* PVMotion.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVMotion.swift; sourceTree = "<group>"; };
 		C9B9D94DAB5FD1587C260FE3 /* PVCallout.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVCallout.swift; sourceTree = "<group>"; };
 		CEC485E7480EE58A01EA9A85 /* PVHoverEffect.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVHoverEffect.swift; sourceTree = "<group>"; };
@@ -961,6 +971,8 @@
 			isa = PBXGroup;
 			children = (
 				A90800000000000000000001 /* ConclusionStubView.swift */,
+				A90900000000000000000013 /* PersonsListView.swift */,
+				A90900000000000000000011 /* ConclusionListRow.swift */,
 			);
 			path = Conclusions;
 			sourceTree = "<group>";
@@ -1115,6 +1127,8 @@
 				AA00000000000000000003B2 /* PVFileTypeGlyphTests.swift */,
 				AA0000000000000000000332 /* DateValueDraftTests.swift */,
 				A70D0000000000000000000D /* NameValueDraftTests.swift */,
+				A90900000000000000000015 /* PersonsListTests.swift */,
+				A90900000000000000000003 /* PVListTests.swift */,
 				A90800000000000000000005 /* WorkspaceSidebarSectionsTests.swift */,
 				A90700000000000000000005 /* PersonHeaderDisplayTests.swift */,
 				A70900000000000000000003 /* DateValueDisplayTests.swift */,
@@ -1191,6 +1205,15 @@
 			);
 			name = Divider;
 			path = Divider;
+			sourceTree = "<group>";
+		};
+		A90900000000000000000010 /* List */ = {
+			isa = PBXGroup;
+			children = (
+				A90900000000000000000001 /* PVList.swift */,
+			);
+			name = List;
+			path = List;
 			sourceTree = "<group>";
 		};
 		D5C00000000000000000001A /* Thumbnail */ = {
@@ -1433,6 +1456,7 @@
 				D5C000000000000000000008 /* Badge */,
 				D5C00000000000000000000C /* Divider */,
 				D5C00000000000000000001A /* Thumbnail */,
+				A90900000000000000000010 /* List */,
 				D5C000000000000000000007 /* Card */,
 				D5C00000000000000000000D /* SectionHeader */,
 				D5C000000000000000000012 /* ContextMenu */,
@@ -1688,6 +1712,8 @@
 				6227C44524E2C4EB3DE4AAD7 /* WorkspaceSidebar.swift in Sources */,
 				A90800000000000000000004 /* WorkspaceSidebarSections.swift in Sources */,
 				A90800000000000000000002 /* ConclusionStubView.swift in Sources */,
+				A90900000000000000000014 /* PersonsListView.swift in Sources */,
+				A90900000000000000000012 /* ConclusionListRow.swift in Sources */,
 				DA26E3BA97D438A7561ED96D /* WorkspaceContent.swift in Sources */,
 				AA0000000000000000000430 /* WorkspaceDestinationHost.swift in Sources */,
 				AA0000000000000000000471 /* GraphCanvasCamera.swift in Sources */,
@@ -1749,6 +1775,7 @@
 				D0D0E4841104F1836736A7CD /* MetadataListPane.swift in Sources */,
 				57420D5CDD1330745ACC33FD /* MetadataDetailPane.swift in Sources */,
 				AA0000000000000000000301 /* PVThumbnail.swift in Sources */,
+				A90900000000000000000002 /* PVList.swift in Sources */,
 				AA00000000000000000003B1 /* PVMark.swift in Sources */,
 				AA000000000000000000031F /* PVReorderableList.swift in Sources */,
 				AA0000000000000000000305 /* PVFormDialog.swift in Sources */,
@@ -1874,6 +1901,8 @@
 				AA00000000000000000003B3 /* PVFileTypeGlyphTests.swift in Sources */,
 				AA0000000000000000000333 /* DateValueDraftTests.swift in Sources */,
 				A70D0000000000000000000E /* NameValueDraftTests.swift in Sources */,
+				A90900000000000000000016 /* PersonsListTests.swift in Sources */,
+				A90900000000000000000004 /* PVListTests.swift in Sources */,
 				A90800000000000000000006 /* WorkspaceSidebarSectionsTests.swift in Sources */,
 				A90700000000000000000006 /* PersonHeaderDisplayTests.swift in Sources */,
 				A70900000000000000000004 /* DateValueDisplayTests.swift in Sources */,

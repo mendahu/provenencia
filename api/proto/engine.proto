@@ -925,6 +925,7 @@ message SubjectMembership {
   CanonicalEntity entity = 2;
   string kind = 3;
   string claim_id = 4;
+  NameValueInput name = 5; // handle's rank-1 resolved name; absent when none
 }
 
 // ListSubjectMemberships returns the handle of every promoted Subject on one

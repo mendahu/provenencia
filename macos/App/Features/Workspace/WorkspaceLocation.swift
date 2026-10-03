@@ -45,6 +45,8 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     var subjectTypeKey: String?
     /// Properties inspector row when `section == .properties`.
     var propertyId: String?
+    /// Canonical handle (Person / Event / Place) for a Conclude detail place.
+    var entityId: String?
     /// Page vs Evidence graph vs composer when `section == .sources` and `sourceId` is set.
     /// Legacy history without this key decodes as `.page`.
     var sourceSurface: SourceSurface
@@ -60,7 +62,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     enum CodingKeys: String, CodingKey {
         case section, sourceId, fieldId, typeId, subjectId, citationId, artifactId, observationId
         case connectFromSubjectId, connectToSubjectId, connectBridgeTypeKey
-        case subjectTypeKey, propertyId
+        case subjectTypeKey, propertyId, entityId
         case sourceSurface, ref, title, sourceTitle
     }
 
@@ -78,6 +80,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         connectBridgeTypeKey: String? = nil,
         subjectTypeKey: String? = nil,
         propertyId: String? = nil,
+        entityId: String? = nil,
         sourceSurface: SourceSurface = .page,
         ref: String? = nil,
         title: String? = nil,
@@ -96,6 +99,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         self.connectBridgeTypeKey = Self.nilIfEmpty(connectBridgeTypeKey)
         self.subjectTypeKey = Self.nilIfEmpty(subjectTypeKey)
         self.propertyId = Self.nilIfEmpty(propertyId)
+        self.entityId = Self.nilIfEmpty(entityId)
         self.sourceSurface = sourceSurface
         self.ref = Self.nilIfEmpty(ref)
         self.title = Self.nilIfEmpty(title)
@@ -117,6 +121,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         connectBridgeTypeKey = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .connectBridgeTypeKey))
         subjectTypeKey = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .subjectTypeKey))
         propertyId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .propertyId))
+        entityId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .entityId))
         sourceSurface = try container.decodeIfPresent(SourceSurface.self, forKey: .sourceSurface) ?? .page
         ref = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .ref))
         title = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .title))
@@ -126,6 +131,11 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     /// Section list root (no deep id).
     static func sectionRoot(_ section: WorkspaceSection) -> WorkspaceLocation {
         WorkspaceLocation(section: section)
+    }
+
+    /// One Person's page (S9-09 stub; the page itself is S9-16).
+    static func personDetail(entityId: String, ref: String, title: String?) -> WorkspaceLocation {
+        WorkspaceLocation(section: .persons, entityId: entityId, ref: ref, title: title)
     }
 
     /// Identity used for coalesce / equality of navigation — deep ids only.
@@ -143,6 +153,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
             && lhs.connectBridgeTypeKey == rhs.connectBridgeTypeKey
             && lhs.subjectTypeKey == rhs.subjectTypeKey
             && lhs.propertyId == rhs.propertyId
+            && lhs.entityId == rhs.entityId
             && lhs.sourceSurface == rhs.sourceSurface
     }
 

@@ -149,3 +149,35 @@ func TestWorkspaceNavCountsConclusionHandles(t *testing.T) {
 		t.Fatalf("persons %d events %d places %d", resp.GetPersons(), resp.GetEvents(), resp.GetPlaces())
 	}
 }
+
+func TestListSubjectMembershipsCarriesResolvedName(t *testing.T) {
+	dir, ref := namedPerson(t)
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	var sourceID string
+	if err := withProjectCatalog(dir, func(c *database.Catalog) error {
+		db, err := c.DB()
+		if err != nil {
+			return err
+		}
+		var id []byte
+		if err := db.QueryRow(`SELECT source_id FROM subjects LIMIT 1`).Scan(&id); err != nil {
+			return err
+		}
+		sourceID = uuidString(id)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	out, err := ListSubjectMemberships(marshalProto(t, &engine.ListSubjectMembershipsRequest{ProjectDir: dir, SourceId: sourceID}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var resp engine.ListSubjectMembershipsResponse
+	if err := proto.Unmarshal(out, &resp); err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.Memberships) != 1 || resp.Memberships[0].Entity.GetRef() != ref ||
+		resp.Memberships[0].GetName().GetForm() != "James Robins" {
+		t.Fatalf("%+v", resp.Memberships)
+	}
+}
