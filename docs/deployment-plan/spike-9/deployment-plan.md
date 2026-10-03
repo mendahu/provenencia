@@ -213,7 +213,7 @@ Three sidebar destinations under a new **Conclude** section (sidebar sections: S
 | **Events** | thumbnail slot · event title (R4 precedence) · event date · event place · ref (`EVT-…`) |
 | **Places** | thumbnail slot · toponym · ref (`PLC-…`) |
 
-- **One value per cell.** The rank-1 value. A *mixed* indicator when its state is mixed; a *+N* count when there are more clusters (toponyms, Locations).
+- **One value per cell.** The rank-1 value, with a *+N* count when there are more clusters (toponyms, Locations). **No *mixed* marker in rows** (S9-D2 decision): a mixed value shows its top-ranked value, and disagreement is surfaced on the detail page.
 - Name / toponym fall back to `label` → `ref`. Missing dates and places are empty, not "Unknown."
 - Sort: Persons by name, Events by date, Places by toponym (R3 `sort_key`; default only, no sort controls this spike).
 - Only `person`, `event`, and `place` get pages. Association handles exist but are not listed.
@@ -445,8 +445,8 @@ In order; each brief sits just above the PR it gates.
 - [x] ✎ S9-D1 — Design: workspace sidebar → [`completed.md`](completed.md)
 - [x] S9-07b — Rename configuration: Metadata, Properties → [`completed.md`](completed.md)
 - [x] S9-08 — Sidebar sections: Source, Conclude, Configure → [`completed.md`](completed.md)
-- [ ] ✎ S9-D2 — Design: Persons list
-- [ ] S9-09 — Persons list
+- [x] ✎ S9-D2 — Design: Persons list → [`completed.md`](completed.md)
+- [x] S9-09 — Persons list → [`completed.md`](completed.md)
 - [ ] S9-10 — Promote write + reads: existing target
 - [ ] ✎ S9-D9 — Design: Promote shell + choose target
 - [ ] S9-11 — Promote shell + choose target
@@ -599,6 +599,8 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 
 #### S9-09 — Persons list
 
+**Done.** See [`completed.md`](completed.md#s9-09--persons-list). Brief archived: [`design/archive/S9-D2-persons-list.md`](design/archive/S9-D2-persons-list.md). For **S9-23 / S9-26**: build on kit `PVList` and `ConclusionListRow` (swap the mark; no mixed marker). For **S9-32**: the secondary line slot is empty — fill it with the b. / d. event groups. For **S9-16**: the Person-detail place exists as a stub (`WorkspaceLocation.entityId`, `PlaceID.personDetail`); rows and the card's membership row already open it.
+
 | | |
 | --- | --- |
 | **In** | Per **S9-D2**: rows with thumbnail placeholder, name, ref; empty state. Life-date and place cells render empty until S9-32. The graph card's membership row shows the resolved name. The graph card's membership row swaps *Open person page* for the handle's resolved name — same slot, no relayout (S9-D8). |
@@ -658,7 +660,7 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 
 | | |
 | --- | --- |
-| **In** | Per **S9-D5**: header with name, states, clusters; life-date and place rows render empty until S9-32. Route the graph card's `.openHandle` target (`EvidenceGraphModel.openHandle`) to this page for persons. |
+| **In** | Per **S9-D5**: header with name, states, clusters; life-date and place rows render empty until S9-32. Replace the Person-detail stub place from S9-09 (`ConclusionStubView` on `PlaceID.personDetail`) and give it the detail key; list rows and the graph card's `.openHandle` already route there. |
 | **Check** | *J. Robins* + *James Robins* → merged; *James* / *Jim* → mixed with alternates; raising one Source's credibility reorders them. |
 | **Depends on** | **S9-D5**, S9-13, S9-14, S9-15 |
 

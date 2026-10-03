@@ -84,7 +84,7 @@ A list of every Event. Row: **thumbnail slot · event title · event date · eve
 | Events are rarely named | Titles are **composed**: recorded `event_name` → *{Type} of {subject}* → working label → *{Type} at {place}* / *Unspecified {type}* → ref. Show every case. |
 | Several subjects | *Marriage of A and B*; otherwise *{Type} of {first} et al.* |
 | Unnamed subject | *Birth of unnamed person*. |
-| Date | Resolved `date`, else start–end span. Mixed ⇒ marker. |
+| Date | Resolved `date`, else start–end span. Mixed ⇒ top-ranked value, unmarked (S9-D2 decision: no mixed marker in rows). |
 | Place | From the Event's Locations; several ⇒ first + *+N*. |
 | Sort | By date (undated last). |
 
@@ -111,7 +111,7 @@ A list of every Event. Row: **thumbnail slot · event title · event date · eve
 | EL-1 | Reuse the S9-D2 row; title slot holds the composed title. |
 | EL-2 | Show each title case from the naming precedence so long titles and *et al.* are designed, not discovered. |
 | EL-3 | Date cell supports points, ranges, qualifiers, and spans. |
-| EL-4 | *Mixed* and *+N* markers behave as in S9-D2. |
+| EL-4 | *+N* behaves as in S9-D2. No *mixed* marker in rows (S9-D2 decision); disagreement shows on Event detail. |
 | EL-5 | Empty state points at Promote. |
 | EL-6 | Event placeholder thumbnail distinct from Person / Place. |
 
@@ -120,7 +120,7 @@ A list of every Event. Row: **thumbnail slot · event title · event date · eve
 ## 5. Suggested frames
 
 1. Typical list across title cases.
-2. Mixed date; multi-place row.
+2. A date whose members disagree (top-ranked value shown, unmarked); multi-place row.
 3. Undated events sorting last.
 4. Empty state.
 

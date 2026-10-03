@@ -19,6 +19,8 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-07b | PR | Rename configuration: Metadata, Properties |
 | S9-D1 | Design | Workspace sidebar: Source / Conclude / Configure |
 | S9-08 | PR | Sidebar sections: Source, Conclude, Configure |
+| S9-D2 | Design | Persons list |
+| S9-09 | PR | Persons list |
 
 ## Steps
 
@@ -268,3 +270,39 @@ The sidebar now reads as the research workflow: titled Source and Conclude secti
 
 - The Persons list (**S9-09**), Events and Places pages (**S9-23**, **S9-26**)
 - Narrate (Narrative layer, later spike)
+
+### S9-D2 — Design: Persons list
+
+**Board:** Claude Design project *Persons List* (`5c00cb55-8261-4579-b0e6-bc571ab23f78`), `Persons List.dc.html`, frames 01–07.
+
+- **Rows are kit `PVList`** with the feature snowflake `ConclusionListRow` supplying the slots. The anatomy is shared by Events (S9-D3) and Places (S9-D4):
+
+  | Slot | Rule |
+  | --- | --- |
+  | thumbnail | Generic. 44pt tile, always reserved; the kind's `subject_*` mark. Never implies a photo. |
+  | title | Generic. Resolved value → *italic* working label → mono ref. Truncates. |
+  | secondary line | Per kind. Person: `b.` group · `d.` group (label · mono date · *italic* place, +N). An empty group is omitted; all empty ⇒ the line is omitted. Filled in S9-32. |
+  | ref | Generic. Trailing mono ref, always shown — even when it is also the title. |
+  | VoiceOver | One button; the app composes "James Robins, born 14 May 1817 in York, Upper Canada, died 2 January 1880 in Toronto, PER-7KD45". |
+
+- **Frames:** typical list (S9-32 complete), row anatomy, the S9-09 ship state (no secondary line; the tile holds row height), narrow truncation (places give way first, then the title), empty (no count, no action — Promote lives on the graph card), first load (static skeleton, rows inert), refreshing (stale rows live, header meta "· refreshing").
+- **No *mixed* marker in rows** — a deliberate deviation from the brief's PL-2, confirmed by the researcher: a mixed value shows its top-ranked value, unmarked, and disagreement is surfaced on the detail page. The S9-D3 / S9-D4 briefs and R5 were updated to match.
+
+Brief archived: [`design/archive/S9-D2-persons-list.md`](design/archive/S9-D2-persons-list.md).
+
+### S9-09 — Persons list
+
+The Persons page now lists every Person, one row per handle, and each row opens that Person's page.
+
+**What shipped**
+
+- **Kit `PVList`** (`DesignSystem/Components/List/PVList.swift`), ported from the design system's React `PVList`: thumbnail slot, title, optional secondary line, trailing mono ref, chevron; rows are buttons (hover, pressed, focus ring), one focus stop with ↑/↓ (⌥ to the ends), Home/End, Page Up/Down, Return/Space; `PVListSkeleton` for first load. Key handling is pure (`PVListKeyboard`) and unit-tested.
+- **`PersonsListView`** reads `.personsList` (now the place's query key): `PVSectionHeader` "Persons" with "N persons" / "· refreshing" meta; skeleton on first load; `PVEmptyState` explaining Promote when empty. `ConclusionListRow` gives the `subject_person` tile, the name → *italic* label → mono ref title (`PersonHeaderDisplay.titleSource`), and the trailing ref. No secondary line yet.
+- **Person-detail stub place:** `WorkspaceLocation.entityId` (persisted; old history still decodes), `PlaceID` / presentation `personDetail`, breadcrumb `Persons › PER-…`. Rows and the Evidence graph card's membership row (`EvidenceGraphModel.openHandle`, persons only) open it.
+- **Card membership row shows the resolved name** in the *Open person page* slot (same slot, no relayout). `identityclaims.MembershipsBySource` joins the rank-1 name from the resolved-values cache; `SubjectMembership.name` carries it.
+
+**What stayed out**
+
+- Life dates and places in rows (**S9-32**); the Person page itself (**S9-16**); Events and Places lists (**S9-23**, **S9-26**)
+- Mixed markers in rows (descoped, see S9-D2)
+- **Known limit:** the card's name comes with that Source's graph load. A name edit made on *another* Source reaches this card when its graph next reloads, because the graph key is per Source.

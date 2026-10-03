@@ -5,11 +5,11 @@
 **View:** Persons list page  
 **Implements later as:** PR **S9-09** (later on this view: S9-32 fills life dates and places)  
 **Depends on:** S9-07 (list read + name formatting), S9-08 (destination)  
-**Related:** S9-D3 / S9-D4 extend this row anatomy; S9-D5 (Person detail); precedent [`SourcesListView`](../../../../macos/App/Features/Sources/SourcesListView.swift)  
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
-**Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md); [`add-workspace-place`](../../../../.cursor/skills/add-workspace-place/SKILL.md)
+**Related:** S9-D3 / S9-D4 extend this row anatomy; S9-D5 (Person detail); precedent [`SourcesListView`](../../../../../macos/App/Features/Sources/SourcesListView.swift)  
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)  
+**Skill:** [`add-design-brief`](../../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.cursor/skills/add-ui-component/SKILL.md); [`add-workspace-place`](../../../../../.cursor/skills/add-workspace-place/SKILL.md)
 
-Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](README.md) first.
+Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](../README.md) first.
 
 This brief designs a **new** surface. Establish its frames here; later Spike 9 briefs extend them.
 
@@ -166,5 +166,5 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 ## 8. Handoff
 
 1. Archive this brief under `archive/` when the board is agreed.
-2. Record in [`../completed.md`](../completed.md).
+2. Record in [`../completed.md`](../../completed.md).
 3. Implement **S9-09** against the board and inventory (kit first).

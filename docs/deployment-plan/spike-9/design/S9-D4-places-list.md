@@ -76,7 +76,7 @@ A list of every Place. Row: **thumbnail slot · toponym · ref**. Default sort b
 | Fact | UI implication |
 | --- | --- |
 | Toponyms differ by record | *Upper Canada*, *U.C.*, *Canada West* can all be one Place. Show the top-ranked one; *+N* for the rest. |
-| Toponym is text, not reconciled | No merge; ranked distinct values. *Mixed* marker when they disagree. |
+| Toponym is text, not reconciled | No merge; ranked distinct values. The top-ranked toponym shows with *+N*; no mixed marker in rows (S9-D2 decision). |
 | Fallback | toponym → label → ref. |
 | No geography | No map, coordinates, or containment this spike. |
 
@@ -100,7 +100,7 @@ A list of every Place. Row: **thumbnail slot · toponym · ref**. Default sort b
 | ID | Requirement |
 | --- | --- |
 | PLL-1 | Reuse the S9-D2 row with title + ref only; decide whether the secondary line is empty or omitted. |
-| PLL-2 | *+N* and *mixed* markers as in S9-D2. |
+| PLL-2 | *+N* as in S9-D2. No *mixed* marker in rows (S9-D2 decision); disagreement shows on Place detail. |
 | PLL-3 | Empty state points at Promote. |
 | PLL-4 | Place placeholder thumbnail. |
 
