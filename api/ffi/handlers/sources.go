@@ -6,7 +6,6 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -543,107 +542,4 @@ func fileRefProto(f files.File, relPath string) *engine.SourceFileRef {
 		MediaType:        f.MediaType,
 		ByteSize:         f.ByteSize,
 	}
-}
-
-// dateValueProto is the inverse of dateValueFromProto: it carries a stored
-// DateValue's components back to the client (Observation.date).
-func dateValueProto(v datevalues.Value) *engine.DateValueInput {
-	d := &engine.DateValueInput{
-		Kind:      v.Kind,
-		Qualifier: v.Qualifier,
-		Calendar:  v.Calendar,
-		StartTz:   v.StartTZ,
-		EndTz:     v.EndTZ,
-		Phrase:    v.Phrase,
-	}
-	toInt32 := func(p *int) *int32 {
-		if p == nil {
-			return nil
-		}
-		n := int32(*p)
-		return &n
-	}
-	d.StartYear = toInt32(v.StartYear)
-	d.StartMonth = toInt32(v.StartMonth)
-	d.StartDay = toInt32(v.StartDay)
-	d.StartHour = toInt32(v.StartHour)
-	d.StartMinute = toInt32(v.StartMinute)
-	d.StartSecond = toInt32(v.StartSecond)
-	d.StartMillisecond = toInt32(v.StartMillisecond)
-	d.EndYear = toInt32(v.EndYear)
-	d.EndMonth = toInt32(v.EndMonth)
-	d.EndDay = toInt32(v.EndDay)
-	d.EndHour = toInt32(v.EndHour)
-	d.EndMinute = toInt32(v.EndMinute)
-	d.EndSecond = toInt32(v.EndSecond)
-	d.EndMillisecond = toInt32(v.EndMillisecond)
-	return d
-}
-
-func dateValueFromProto(d *engine.DateValueInput) datevalues.Value {
-	v := datevalues.Value{
-		Kind:      d.GetKind(),
-		Qualifier: d.GetQualifier(),
-		Calendar:  d.GetCalendar(),
-		StartTZ:   d.GetStartTz(),
-		EndTZ:     d.GetEndTz(),
-		Phrase:    d.GetPhrase(),
-	}
-	if d.StartYear != nil {
-		y := int(d.GetStartYear())
-		v.StartYear = &y
-	}
-	if d.StartMonth != nil {
-		m := int(d.GetStartMonth())
-		v.StartMonth = &m
-	}
-	if d.StartDay != nil {
-		day := int(d.GetStartDay())
-		v.StartDay = &day
-	}
-	if d.StartHour != nil {
-		h := int(d.GetStartHour())
-		v.StartHour = &h
-	}
-	if d.StartMinute != nil {
-		m := int(d.GetStartMinute())
-		v.StartMinute = &m
-	}
-	if d.StartSecond != nil {
-		s := int(d.GetStartSecond())
-		v.StartSecond = &s
-	}
-	if d.StartMillisecond != nil {
-		ms := int(d.GetStartMillisecond())
-		v.StartMillisecond = &ms
-	}
-	if d.EndYear != nil {
-		y := int(d.GetEndYear())
-		v.EndYear = &y
-	}
-	if d.EndMonth != nil {
-		m := int(d.GetEndMonth())
-		v.EndMonth = &m
-	}
-	if d.EndDay != nil {
-		day := int(d.GetEndDay())
-		v.EndDay = &day
-	}
-	if d.EndHour != nil {
-		h := int(d.GetEndHour())
-		v.EndHour = &h
-	}
-	if d.EndMinute != nil {
-		m := int(d.GetEndMinute())
-		v.EndMinute = &m
-	}
-	if d.EndSecond != nil {
-		s := int(d.GetEndSecond())
-		v.EndSecond = &s
-	}
-	if d.EndMillisecond != nil {
-		ms := int(d.GetEndMillisecond())
-		v.EndMillisecond = &ms
-	}
-	return v
 }

@@ -5,8 +5,8 @@ import (
 
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/valuecodec"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -261,7 +261,7 @@ func valueInput(
 		in.HasInteger = true
 	}
 	if date != nil && strings.TrimSpace(date.GetKind()) != "" {
-		v := dateValueFromProto(date)
+		v := valuecodec.DateFromProto(date)
 		in.Date = &v
 	}
 	if dateID, err := optionalID(valueDateID); err != nil {
@@ -270,7 +270,7 @@ func valueInput(
 		in.ValueDateID = dateID
 	}
 	if name != nil && strings.TrimSpace(name.GetForm()) != "" {
-		v := nameValueFromProto(name)
+		v := valuecodec.NameFromProto(name)
 		in.Name = &v
 	}
 	if nameID, err := optionalID(valueNameID); err != nil {
@@ -322,10 +322,10 @@ func listedObservationProto(l observations.Listed) *engine.Observation {
 	o.PropertyLabel = l.PropertyLabel
 	o.PropertyValueType = l.PropertyValueType
 	if l.Date != nil {
-		o.Date = dateValueProto(*l.Date)
+		o.Date = valuecodec.DateToProto(*l.Date)
 	}
 	if l.Name != nil {
-		o.Name = nameValueProto(*l.Name)
+		o.Name = valuecodec.NameToProto(*l.Name)
 	} else if l.ValueNameForm != "" {
 		o.Name = &engine.NameValueInput{Form: l.ValueNameForm}
 	}
@@ -337,27 +337,4 @@ func optionalInt64(has bool, v int64) *int64 {
 		return nil
 	}
 	return &v
-}
-
-func nameValueFromProto(n *engine.NameValueInput) namevalues.Value {
-	v := namevalues.Value{Form: strings.TrimSpace(n.GetForm())}
-	for i, p := range n.GetParts() {
-		v.Parts = append(v.Parts, namevalues.Part{
-			Idx:   i,
-			Value: strings.TrimSpace(p.GetValue()),
-			Type:  strings.TrimSpace(p.GetType()),
-		})
-	}
-	return v
-}
-
-func nameValueProto(v namevalues.Value) *engine.NameValueInput {
-	out := &engine.NameValueInput{Form: v.Form}
-	for _, p := range v.Parts {
-		out.Parts = append(out.Parts, &engine.NameValuePartInput{
-			Value: p.Value,
-			Type:  p.Type,
-		})
-	}
-	return out
 }
