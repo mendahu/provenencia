@@ -224,7 +224,7 @@ Two configuration views took plain names, all the way down: **Source fields → 
 
 **What shipped**
 
-- **Storage:** migration `000035` renames `subject_type_fields` → `subject_type_properties` (indexes too; nothing had an FK into it) and rewrites the stored audit strings `source_field` → `metadata_field` and `delete_source_field` → `delete_metadata_field`. A test upgrades a version-34 catalog and checks the result hashes like a fresh one.
+- **Storage:** migration `000035` renames `subject_type_fields` → `subject_type_properties` (indexes too; nothing had an FK into it) and rewrites the stored audit strings `source_field` → `metadata_field` and `delete_source_field` → `delete_metadata_field`.
 - **Go:** package `sourcefields` → `metadatafields`; kinds `source_field` → `metadata_field` (search, search index, delete Impact) with search `ProjectionVersion` 5; section ids `source-fields` / `subject-fields` → `metadata` / `properties`; `apperr` `sourcefields.*` → `metadatafields.*`; `searchindex.ReprojectMetadataField`.
 - **Proto / FFI:** `SubjectTypeField` → `SubjectTypeProperty` (and its List / Assign / Remove RPCs), `GetSubjectFieldsWorkspace` → `GetPropertiesWorkspace`, `SubjectTypeFieldsGroup` → `SubjectTypePropertiesGroup` (its `fields` → `properties`), nav counts `source_fields` → `metadata_fields`. Method and field numbers unchanged.
 - **App:** `Features/Metadata`, `Features/Properties` and every type, case, query key (`propertiesWorkspace`), store method, count, L10n key and value, accessibility id, and preview that said the old names. Omnibar chip "Field" → "Metadata field".
