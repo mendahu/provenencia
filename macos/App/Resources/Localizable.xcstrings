@@ -1134,6 +1134,18 @@
         }
       }
     },
+    "designSystem.list.loading": {
+      "comment": "Accessibility label for a PVList skeleton shown on first load",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loading"
+          }
+        }
+      }
+    },
     "designSystem.thumbnail.loading": {
       "comment": "Accessibility label for a PVThumbnail in the loading state",
       "extractionState": "manual",

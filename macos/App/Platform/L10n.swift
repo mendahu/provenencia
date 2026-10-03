@@ -95,6 +95,12 @@ enum L10n {
             comment: "Accessibility label for an empty PVThumbnail placeholder"
         )
 
+        static let listLoading = LocalizedStringResource(
+            "designSystem.list.loading",
+            defaultValue: "Loading",
+            comment: "Accessibility label for a PVList skeleton shown on first load"
+        )
+
         static let thumbnailLoading = LocalizedStringResource(
             "designSystem.thumbnail.loading",
             defaultValue: "Loading preview",
