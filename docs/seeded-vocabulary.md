@@ -474,6 +474,8 @@ description = GEDCOM-aligned spoken/display order
 
 ## 4.3 `name_format_profile_parts` (`western`)
 
+Natural style (spoken / display order):
+
 ```text
 idx   part_type
 0     prefix
@@ -482,6 +484,20 @@ idx   part_type
 3     nick
 4     surname_prefix
 5     surname
+6     suffix
+```
+
+Sorted style (list order; separator `", "` after the surname group — *Robins, James*). Proposed, to be settled with the name-format work ([`structured-name-model.md`](structured-name-model.md) §4.5):
+
+```text
+idx   part_type
+0     surname_prefix
+1     surname
+—     ", "
+2     prefix
+3     given
+4     initial
+5     nick
 6     suffix
 ```
 

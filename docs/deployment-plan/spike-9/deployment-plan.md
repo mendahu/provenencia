@@ -215,7 +215,7 @@ Three sidebar destinations under a new **Conclude** section (sidebar sections: S
 
 - **One value per cell.** The rank-1 value, with a *+N* count when there are more clusters (toponyms, Locations). **No *mixed* marker in rows** (S9-D2 decision): a mixed value shows its top-ranked value, and disagreement is surfaced on the detail page.
 - Name / toponym fall back to `label` → `ref`. Missing dates and places are empty, not "Unknown."
-- Sort: Persons by name, Events by date, Places by toponym (R3 `sort_key`; default only, no sort controls this spike).
+- Sort: Persons by name, Events by date, Places by toponym (R3 `sort_key`; default only, no sort controls this spike). Persons sort by the normalized `form` this spike (*James Robins* files under J); surname-first sorting and the *Robins, James* list style come with name format profiles ([`structured-name-model.md`](../../structured-name-model.md) §4.5).
 - Only `person`, `event`, and `place` get pages. Association handles exist but are not listed.
 - Skills: [`add-workspace-place`](../../../.cursor/skills/add-workspace-place/SKILL.md), [`add-catalog-query`](../../../.cursor/skills/add-catalog-query/SKILL.md).
 
@@ -829,6 +829,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 | In | Out |
 | --- | --- |
 | Canonical entities, Identity Claims, evidence pins | Reconciliation Claims, `name_format` |
+| Names display as recorded `form`; lists sort by normalized `form` | Name display styles (natural / sorted), surname-first sort, profiles — decided in [`structured-name-model.md`](../../structured-name-model.md) §4.5 for a later spike |
 | Resolver: states, provenance ranking, name / date auto-reconcilers | Persisted "auto" claims; ranking stored as catalog truth |
 | Resolved-values cache with upkeep, rebuild, and rebuild-equals-upkeep test | Per-screen caches; stored derived values (life dates, event names); resident in-memory graph (only if timings demand) |
 | Header composers shared by lists, Promote, search | — |

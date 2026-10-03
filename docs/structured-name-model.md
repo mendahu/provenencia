@@ -115,6 +115,14 @@ CREATE TABLE name_format_profile_parts (
 
 `idx` is the preferred assembly / entry order for parts of the given `part_type`. Types not listed in a profile may still appear on a NameValue; the profile guides UI and display assembly when parts are present.
 
+Every profile defines **two** orders — *natural* and *sorted* (§4.5) — so this table carries a style column alongside `idx` (sketch; final DDL lands with the feature):
+
+```sql
+    style           TEXT NOT NULL,             -- natural | sorted
+    PRIMARY KEY (profile_id, style, idx),
+    CHECK (style IN ('natural', 'sorted'))
+```
+
 ### Seeded Western profile
 
 New projects should include at least the `western` profile (`origin = 'provenencia'`). The authoritative profile key, labels, and part order are in [`seeded-vocabulary.md`](seeded-vocabulary.md).
@@ -160,6 +168,30 @@ Evidence pins on a `name_format` claim are optional (the choice is often a resea
 
 The profile does not replace `NameValue.form` or cited Observations. It tells the application how to present and edit structured parts for that Person (and how to suggest ordering when capturing new name evidence). Reconciliation Claims themselves are defined in [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md).
 
+## 4.5 Display styles: natural and sorted
+
+**Decision (Spike 9 planning, implementation deferred to the name-format work).** Two separate questions decide how a name reads, and they are kept apart:
+
+| | Decided by | Example |
+| --- | --- | --- |
+| **Culture order** — what order a name's parts go in | The **profile** (data): the Person's `name_format` claim, else the project default | Western: given then surname. Other cultures: surname first, patronymics, dual surnames |
+| **Display style** — which of the profile's orders to use here | The **call site** (a display parameter) | A profile page reads *James Robins*; a list reads *Robins, James* |
+
+Every profile therefore defines **both** styles:
+
+- **Natural** — how the name is spoken and written in running text. Used on detail / profile pages, Evidence graph cards, breadcrumbs, and anywhere a name reads as prose.
+- **Sorted** — how the name is filed in a list: the parts that lead an alphabetical sort come first, with the profile's separator after them. Used in list rows and pickers that are sorted by name. Western: *Robins, James*. A surname-first culture may read the same both ways, with no separator.
+
+Requirements for the implementation:
+
+1. **One name display entry point** with a style parameter (`natural` / `sorted`). Call sites choose the style; they never assemble parts themselves.
+2. **The sort key comes from the sorted style** (normalized), so a list's order and its rows' text can never disagree. The resolved-values cache `sort_key` for `name` (Spike 9 R3) is that key; changing it is a cache version bump.
+3. **Untyped names fall back to `form`** in both styles, and sort by normalized `form`.
+4. **`form` is never rewritten.** Styles are presentation over typed parts; the recorded full form stays authoritative.
+5. Each profile stores its sorted order and the separator (for Western, `", "` after the surname group). Open details for that work: where `prefix` / `suffix` sit in the sorted Western order (*Robins, Rev. James, Jr.*), and whether `surname_prefix` leads the sort (*van Gogh* under V or G varies by culture — a per-profile rule).
+
+**Until then (Spike 9 behaviour):** names display as `form` (parts joined in stored order when `form` is blank), with no reordering or commas, and lists sort by the normalized `form` — so *James Robins* files under **J**. No style parameter exists yet; when it lands, list rows switch to `sorted` and detail pages use `natural`.
+
 ---
 
 # 5. Cross-layer use
@@ -194,7 +226,7 @@ Canonical entity `label` is a researcher working identifier, not a genealogical 
 2. Personal names are not reduced to a single undifferentiated string when structure is known and useful.
 3. A full-form `form` is always required; parts are optional.
 4. Part `type` is a product registry key (or empty for untyped), not free text and not a culture-specific closed schema; user-minted types are deferred.
-5. Name format profiles define cultural display/entry ordering; they are seeded rows with `origin` namespaces, not enums.
+5. Name format profiles define cultural display/entry ordering; they are seeded rows with `origin` namespaces, not enums. Each profile defines both a natural and a sorted order; call sites pick the style (§4.5).
 6. Projects have a default name format; each Person may override it via a `name_format` Reconciliation Claim.
 7. One cited name assertion is one NameValue, not one Observation per token.
 8. Multiple name Observations on the same person Node remain valid (alternate forms, nicknames asserted separately, name changes over time, and so on).
