@@ -3,7 +3,7 @@ package handlers
 import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/sourcefields"
+	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/sourcevocab"
 	"google.golang.org/protobuf/proto"
@@ -205,7 +205,7 @@ func ListMetadataFields(in []byte) ([]byte, error) {
 	}
 	var out *engine.ListMetadataFieldsResponse
 	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		rows, err := sourcefields.List(c)
+		rows, err := metadatafields.List(c)
 		if err != nil {
 			return err
 		}
@@ -231,7 +231,7 @@ func CreateMetadataField(in []byte) ([]byte, error) {
 	}
 	var out *engine.CreateMetadataFieldResponse
 	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		got, err := sourcefields.Create(c, req.GetLabel(), req.GetDataType(), req.GetDescription())
+		got, err := metadatafields.Create(c, req.GetLabel(), req.GetDataType(), req.GetDescription())
 		if err != nil {
 			return err
 		}
@@ -258,11 +258,11 @@ func UpdateMetadataField(in []byte) ([]byte, error) {
 	}
 	var out *engine.UpdateMetadataFieldResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		got, err := sourcefields.Update(c, fieldID, req.GetLabel(), req.GetDataType(), req.GetDescription())
+		got, err := metadatafields.Update(c, fieldID, req.GetLabel(), req.GetDataType(), req.GetDescription())
 		if err != nil {
 			return err
 		}
-		if got.UsedBy, err = sourcefields.UsedBy(c, fieldID); err != nil {
+		if got.UsedBy, err = metadatafields.UsedBy(c, fieldID); err != nil {
 			return err
 		}
 		out = &engine.UpdateMetadataFieldResponse{Field: metadataFieldProto(got)}
@@ -316,7 +316,7 @@ func DeleteMetadataField(in []byte) ([]byte, error) {
 	}
 	var out *engine.DeleteMetadataFieldResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if err := sourcefields.Delete(c, userID, fieldID); err != nil {
+		if err := metadatafields.Delete(c, userID, fieldID); err != nil {
 			return err
 		}
 		out = &engine.DeleteMetadataFieldResponse{}
@@ -341,7 +341,7 @@ func sourceTypeProto(t sourcetypes.Type) *engine.SourceType {
 	}
 }
 
-func metadataFieldProto(f sourcefields.Field) *engine.MetadataField {
+func metadataFieldProto(f metadatafields.Field) *engine.MetadataField {
 	return &engine.MetadataField{
 		Id:          uuidString(f.ID),
 		Key:         f.Key,

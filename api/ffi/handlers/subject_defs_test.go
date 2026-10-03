@@ -83,7 +83,7 @@ func TestCreateUpdateDeleteProperty(t *testing.T) {
 	})
 }
 
-func TestSubjectTypeFieldsAndRegistry(t *testing.T) {
+func TestSubjectTypePropertiesAndRegistry(t *testing.T) {
 	runRPC(t, ListSubjectTypes, []rpcTest{
 		{
 			name: "bindings locked placeable connect",
@@ -107,18 +107,18 @@ func TestSubjectTypeFieldsAndRegistry(t *testing.T) {
 					t.Fatal("missing participation")
 				}
 				dir := req.(*engine.ListSubjectTypesRequest).ProjectDir
-				bout, err := ListSubjectTypeFields(marshalProto(t, &engine.ListSubjectTypeFieldsRequest{
+				bout, err := ListSubjectTypeProperties(marshalProto(t, &engine.ListSubjectTypePropertiesRequest{
 					ProjectDir: dir, SubjectTypeId: participationID,
 				}))
 				if err != nil {
 					t.Fatal(err)
 				}
-				var fields engine.ListSubjectTypeFieldsResponse
+				var fields engine.ListSubjectTypePropertiesResponse
 				if err := proto.Unmarshal(bout, &fields); err != nil {
 					t.Fatal(err)
 				}
 				locked := 0
-				for _, f := range fields.Fields {
+				for _, f := range fields.Properties {
 					if f.GetLocked() {
 						locked++
 					}
@@ -163,17 +163,17 @@ func TestSubjectTypeFieldsAndRegistry(t *testing.T) {
 	})
 }
 
-func TestGetSubjectFieldsWorkspace(t *testing.T) {
-	runRPC(t, GetSubjectFieldsWorkspace, []rpcTest{
+func TestGetPropertiesWorkspace(t *testing.T) {
+	runRPC(t, GetPropertiesWorkspace, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 		{
 			name: "loads properties types and groups",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _, _, _ := subjectFixture(t)
-				return &engine.GetSubjectFieldsWorkspaceRequest{ProjectDir: dir}
+				return &engine.GetPropertiesWorkspaceRequest{ProjectDir: dir}
 			},
 			after: func(t *testing.T, out []byte, _ proto.Message) {
-				var got engine.GetSubjectFieldsWorkspaceResponse
+				var got engine.GetPropertiesWorkspaceResponse
 				if err := proto.Unmarshal(out, &got); err != nil {
 					t.Fatal(err)
 				}

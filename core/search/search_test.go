@@ -8,8 +8,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/searchindex"
-	"github.com/mendahu/provenencia/core/database/sourcefields"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -120,7 +120,7 @@ func TestSearchFindsTypesAndFields(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	field, err := sourcefields.Create(c, "Publication date", "text", "when published")
+	field, err := metadatafields.Create(c, "Publication date", "text", "when published")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +154,7 @@ func TestSearchFindsTypesAndFields(t *testing.T) {
 	}
 	foundField := false
 	for _, h := range fieldHits {
-		if h.Kind == KindSourceField && h.ID == uuidString(field.ID) {
+		if h.Kind == KindMetadataField && h.ID == uuidString(field.ID) {
 			foundField = true
 			if h.Location.FieldID != h.ID {
 				t.Fatalf("field location %+v", h.Location)
@@ -177,7 +177,7 @@ func TestContextBoostPrefersMatchingSection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	field, err := sourcefields.Create(c, "SharedToken Field", "text", "")
+	field, err := metadatafields.Create(c, "SharedToken Field", "text", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -200,12 +200,12 @@ func TestContextBoostPrefersMatchingSection(t *testing.T) {
 
 	onFields, err := DefaultEngine().Search(context.Background(), c, Query{
 		Text:     "SharedToken",
-		Location: WorkspaceLocation{Section: SectionSourceFields},
+		Location: WorkspaceLocation{Section: SectionMetadata},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if onFields[0].Kind != KindSourceField {
+	if onFields[0].Kind != KindMetadataField {
 		t.Fatalf("expected field first under fields context, got %s", onFields[0].Kind)
 	}
 }
@@ -328,7 +328,7 @@ func TestSourcesContextFloatsSourceAboveVocab(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	field, err := sourcefields.Create(c, "SharedToken Field", "text", "")
+	field, err := metadatafields.Create(c, "SharedToken Field", "text", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -359,7 +359,7 @@ func TestSourcesContextFloatsSourceAboveVocab(t *testing.T) {
 		if h.Kind == KindSourceType {
 			sawType = true
 		}
-		if h.Kind == KindSourceField {
+		if h.Kind == KindMetadataField {
 			sawField = true
 		}
 	}

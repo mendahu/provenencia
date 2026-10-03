@@ -1,4 +1,4 @@
-package sourcefields
+package metadatafields
 
 import (
 	"database/sql"
@@ -143,7 +143,7 @@ func TestDelete(t *testing.T) {
 				if err := Delete(c, userID, id); err != nil {
 					t.Fatal(err)
 				}
-				if latestAction(t, c) != "delete_source_field" {
+				if latestAction(t, c) != "delete_metadata_field" {
 					t.Fatalf("action %q", latestAction(t, c))
 				}
 				_, err = Lookup(c, "author", OriginProvenencia)

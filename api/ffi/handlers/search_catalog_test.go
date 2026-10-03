@@ -127,7 +127,7 @@ func TestSearchCatalog(t *testing.T) {
 				return &engine.SearchCatalogRequest{
 					ProjectDir: dir,
 					Query:      fields.Fields[0].GetLabel(),
-					Location:   &engine.WorkspaceLocation{Section: search.SectionSourceFields},
+					Location:   &engine.WorkspaceLocation{Section: search.SectionMetadata},
 				}
 			},
 			after: func(t *testing.T, out []byte, _ proto.Message) {
@@ -138,13 +138,13 @@ func TestSearchCatalog(t *testing.T) {
 				}
 				found := false
 				for _, h := range resp.Hits {
-					if h.GetKind() == search.KindSourceField && h.GetLocation().GetFieldId() != "" {
+					if h.GetKind() == search.KindMetadataField && h.GetLocation().GetFieldId() != "" {
 						found = true
 						break
 					}
 				}
 				if !found {
-					t.Fatalf("no source_field hit in %+v", resp.Hits)
+					t.Fatalf("no metadata_field hit in %+v", resp.Hits)
 				}
 			},
 		},
@@ -189,14 +189,14 @@ func TestSearchLocationProtoRoundTrip(t *testing.T) {
 		in   search.WorkspaceLocation
 	}{
 		{
-			name: "subject fields category and property",
+			name: "properties category and property",
 			in: search.WorkspaceLocation{
-				Section: "subject-fields", SubjectTypeKey: "person", PropertyID: "prop-1", Title: "Name",
+				Section: "properties", SubjectTypeKey: "person", PropertyID: "prop-1", Title: "Name",
 			},
 		},
 		{
-			name: "source field",
-			in:   search.WorkspaceLocation{Section: search.SectionSourceFields, FieldID: "fld-1", Title: "Author"},
+			name: "metadata field",
+			in:   search.WorkspaceLocation{Section: search.SectionMetadata, FieldID: "fld-1", Title: "Author"},
 		},
 	}
 	for _, tt := range tests {

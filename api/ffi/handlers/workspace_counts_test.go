@@ -22,7 +22,7 @@ func TestGetWorkspaceNavCounts(t *testing.T) {
 				SourceTypes: &engine.VocabularyOriginCounts{
 					Total: 1, Seeded: 1,
 				},
-				SourceFields: &engine.VocabularyOriginCounts{
+				MetadataFields: &engine.VocabularyOriginCounts{
 					Total: 3, Seeded: 3,
 				},
 			},
@@ -76,7 +76,7 @@ func TestGetWorkspaceNavCounts(t *testing.T) {
 				SourceTypes: &engine.VocabularyOriginCounts{
 					Total: 2, Seeded: 1, User: 1,
 				},
-				SourceFields: &engine.VocabularyOriginCounts{
+				MetadataFields: &engine.VocabularyOriginCounts{
 					Total: 4, Seeded: 3, User: 1,
 				},
 			},

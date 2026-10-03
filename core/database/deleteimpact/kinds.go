@@ -15,7 +15,7 @@ const (
 	KindObservation      Kind = "observation"
 	KindSubject          Kind = "subject"
 	KindSourceType       Kind = "source_type"
-	KindSourceField      Kind = "source_field"
+	KindMetadataField    Kind = "metadata_field"
 	KindCredibilityGrade Kind = "source_credibility_grade"
 	KindSubjectType      Kind = "subject_type"
 	KindProperty         Kind = "property"
@@ -63,10 +63,10 @@ const (
 const (
 	listedCap = 20
 
-	sectionSources       = "sources"
-	sectionSourceTypes   = "source-types"
-	sectionSourceFields  = "source-fields"
-	sectionSubjectFields = "subject-fields"
+	sectionSources     = "sources"
+	sectionSourceTypes = "source-types"
+	sectionMetadata    = "metadata"
+	sectionProperties  = "properties"
 
 	surfacePage             = "page"
 	surfaceGraph            = "graph"
@@ -102,9 +102,9 @@ type Location struct {
 	ConnectFromSubjectID string
 	ConnectToSubjectID   string
 	ConnectBridgeTypeKey string
-	// SubjectTypeKey is the Subject Fields type-strip category (empty = All properties).
+	// SubjectTypeKey is the Properties type-strip category (empty = All properties).
 	SubjectTypeKey string
-	// PropertyID is the Subject Fields inspector row.
+	// PropertyID is the Properties inspector row.
 	PropertyID    string
 	SourceSurface string
 	Ref           string

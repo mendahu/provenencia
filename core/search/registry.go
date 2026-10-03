@@ -92,9 +92,9 @@ var Registry = []KindSpec{
 		},
 	},
 	{
-		Kind:                KindSourceField,
+		Kind:                KindMetadataField,
 		DefaultInEverything: true,
-		ContextSections:     []string{SectionSourceFields},
+		ContextSections:     []string{SectionMetadata},
 		ContextBoost:        2.0,
 		Fields: []FieldWeight{
 			{Name: "label", Weight: 10},

@@ -15,14 +15,14 @@ import (
 
 // Kind ids must match core/search constants (wire SearchHit.kind).
 const (
-	KindSource      = "source"
-	KindSourceType  = "source_type"
-	KindSourceField = "source_field"
+	KindSource        = "source"
+	KindSourceType    = "source_type"
+	KindMetadataField = "metadata_field"
 )
 
 // ProjectionVersion is the Go-side projector shape. Bump when rollup columns
 // or document layout change so Open heals old indexes.
-const ProjectionVersion = 4
+const ProjectionVersion = 5
 
 // Tagged body line prefixes for Source rollups (parsed by core/search for
 // match field codes + snippets).
@@ -342,8 +342,8 @@ func ReprojectSourceType(q Querier, typeID []byte) error {
 	})
 }
 
-// ReprojectSourceField indexes one source_metadata_fields root.
-func ReprojectSourceField(q Querier, fieldID []byte) error {
+// ReprojectMetadataField indexes one source_metadata_fields root.
+func ReprojectMetadataField(q Querier, fieldID []byte) error {
 	if len(fieldID) != 16 {
 		return nil
 	}
@@ -352,13 +352,13 @@ func ReprojectSourceField(q Querier, fieldID []byte) error {
 		SELECT key, label, COALESCE(description, '') FROM source_metadata_fields WHERE id = ?`, fieldID,
 	).Scan(&key, &label, &description)
 	if err == sql.ErrNoRows {
-		return Delete(q, KindSourceField, uuidString(fieldID))
+		return Delete(q, KindMetadataField, uuidString(fieldID))
 	}
 	if err != nil {
 		return err
 	}
 	return Upsert(q, Document{
-		Kind:            KindSourceField,
+		Kind:            KindMetadataField,
 		EntityID:        uuidString(fieldID),
 		DisplayTitle:    label,
 		DisplaySubtitle: key,
@@ -386,7 +386,7 @@ func RebuildAll(q Querier) error {
 		return err
 	}
 	for _, id := range fieldIDs {
-		if err := ReprojectSourceField(q, id); err != nil {
+		if err := ReprojectMetadataField(q, id); err != nil {
 			return err
 		}
 	}

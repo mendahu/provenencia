@@ -30,21 +30,21 @@ var ErrInvalid = apperr.New(apperr.CodeSubjectVocabInvalid, apperr.KindUser)
 var ErrLocked = apperr.New(apperr.CodeSubjectVocabLocked, apperr.KindConflict)
 
 const (
-	sqlEnsureBinding = `INSERT INTO subject_type_fields (subject_type_id, property_id, sort_order)
+	sqlEnsureBinding = `INSERT INTO subject_type_properties (subject_type_id, property_id, sort_order)
 		VALUES (?, ?, ?)
 		ON CONFLICT(subject_type_id, property_id) DO UPDATE SET sort_order = excluded.sort_order`
 	sqlListBindings = `SELECT p.id, p.key, p.origin, p.label, COALESCE(p.description, ''), p.value_type, j.sort_order
-		FROM subject_type_fields j
+		FROM subject_type_properties j
 		JOIN properties p ON p.id = j.property_id
 		WHERE j.subject_type_id = ?
 		ORDER BY j.sort_order ASC, p.label COLLATE NOCASE, p.key`
-	sqlDeleteBinding = `DELETE FROM subject_type_fields
+	sqlDeleteBinding = `DELETE FROM subject_type_properties
 		WHERE subject_type_id = ? AND property_id = ?`
-	sqlAppendBinding = `INSERT INTO subject_type_fields (subject_type_id, property_id, sort_order)
+	sqlAppendBinding = `INSERT INTO subject_type_properties (subject_type_id, property_id, sort_order)
 		SELECT ?, ?, COALESCE(MAX(sort_order), -1) + 1
-		FROM subject_type_fields WHERE subject_type_id = ?
+		FROM subject_type_properties WHERE subject_type_id = ?
 		ON CONFLICT(subject_type_id, property_id) DO NOTHING`
-	sqlCountBindings = `SELECT COUNT(*) FROM subject_type_fields WHERE subject_type_id = ?`
+	sqlCountBindings = `SELECT COUNT(*) FROM subject_type_properties WHERE subject_type_id = ?`
 )
 
 // Binding is one ordered Property attached to a Subject type.

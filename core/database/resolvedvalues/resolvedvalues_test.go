@@ -80,7 +80,7 @@ func newFixture(t *testing.T) *fixture {
 	f.props["age"] = properties.Property{ID: ageID, Key: "age", ValueType: properties.ValueTypeInteger}
 	db, err := c.DB()
 	must(t, err)
-	_, err = db.Exec(`INSERT INTO subject_type_fields (subject_type_id, property_id, sort_order) VALUES (?, ?, 99)`, f.types["person"].ID, ageID)
+	_, err = db.Exec(`INSERT INTO subject_type_properties (subject_type_id, property_id, sort_order) VALUES (?, ?, 99)`, f.types["person"].ID, ageID)
 	must(t, err)
 	for _, k := range []string{"female", "male"} {
 		term, err := propertyterms.Lookup(c, f.props["sex_at_birth"].ID, k, propertyterms.OriginProvenencia)

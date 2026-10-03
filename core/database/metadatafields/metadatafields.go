@@ -1,5 +1,5 @@
-// Package sourcefields accesses the source_metadata_fields vocabulary table.
-package sourcefields
+// Package metadatafields accesses the source_metadata_fields vocabulary table.
+package metadatafields
 
 import (
 	"database/sql"
@@ -16,21 +16,21 @@ import (
 	"github.com/mendahu/provenencia/core/slug"
 )
 
-var ErrInvalid = apperr.New(apperr.CodeSourceFieldsInvalid, apperr.KindUser)
+var ErrInvalid = apperr.New(apperr.CodeMetadataFieldsInvalid, apperr.KindUser)
 
 // ErrDuplicateKey is returned by Create when the label-derived key already
 // names a user-origin field. Carries the colliding key as a param.
-var ErrDuplicateKey = apperr.New(apperr.CodeSourceFieldsDuplicateKey, apperr.KindConflict)
+var ErrDuplicateKey = apperr.New(apperr.CodeMetadataFieldsDuplicateKey, apperr.KindConflict)
 
 // ErrLocked is returned by Update when the target field is plugin-origin
 // (project fields — user and provenencia starters — are editable).
-var ErrLocked = apperr.New(apperr.CodeSourceFieldsInvalid, apperr.KindUser)
+var ErrLocked = apperr.New(apperr.CodeMetadataFieldsInvalid, apperr.KindUser)
 
 // ErrInUse is returned by Delete when source_metadata still references the field.
-var ErrInUse = apperr.New(apperr.CodeSourceFieldsInUse, apperr.KindConflict)
+var ErrInUse = apperr.New(apperr.CodeMetadataFieldsInUse, apperr.KindConflict)
 
 // ErrOriginLocked is returned by Delete when the field is plugin-origin.
-var ErrOriginLocked = apperr.New(apperr.CodeSourceFieldsOriginLocked, apperr.KindConflict)
+var ErrOriginLocked = apperr.New(apperr.CodeMetadataFieldsOriginLocked, apperr.KindConflict)
 
 const (
 	OriginProvenencia = "provenencia"
@@ -120,7 +120,7 @@ func Upsert(c *database.Catalog, f Field) ([]byte, error) {
 	if _, err := db.Exec(sqlUpsert, id, f.Key, f.Origin, f.Label, f.DataType, desc); err != nil {
 		return nil, err
 	}
-	if err := searchindex.ReprojectSourceField(db, id); err != nil {
+	if err := searchindex.ReprojectMetadataField(db, id); err != nil {
 		return nil, err
 	}
 	return append([]byte(nil), id...), nil
@@ -182,7 +182,7 @@ func Update(c *database.Catalog, id []byte, label, dataType, description string)
 	if _, err := db.Exec(sqlUpdate, label, desc, id); err != nil {
 		return Field{}, err
 	}
-	if err := searchindex.ReprojectSourceField(db, id); err != nil {
+	if err := searchindex.ReprojectMetadataField(db, id); err != nil {
 		return Field{}, err
 	}
 	return GetByID(c, id)
@@ -326,7 +326,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	report, err := deleteimpact.Impact(tx, deleteimpact.KindSourceField, id)
+	report, err := deleteimpact.Impact(tx, deleteimpact.KindMetadataField, id)
 	if err != nil {
 		return err
 	}
@@ -336,7 +336,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 		return err
 	}
 	// Per-Source layout rows (order, dismissed suggestions) are released and audited.
-	released, err := deleteimpact.ReleaseFacets(tx, deleteimpact.KindSourceField, id)
+	released, err := deleteimpact.ReleaseFacets(tx, deleteimpact.KindMetadataField, id)
 	if err != nil {
 		return err
 	}
@@ -355,10 +355,10 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	}
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
-		ActionType: "delete_source_field",
+		ActionType: "delete_metadata_field",
 		CreatedAt:  project.NowUTC(),
 		Changes: append(released.Changes, audit.Change{
-			EntityType: "source_field",
+			EntityType: "metadata_field",
 			EntityID:   id,
 			Action:     audit.ActionDelete,
 			Fields:     fields,
@@ -366,7 +366,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	}); err != nil {
 		return err
 	}
-	if err := searchindex.Delete(tx, searchindex.KindSourceField, uuidString(id)); err != nil {
+	if err := searchindex.Delete(tx, searchindex.KindMetadataField, uuidString(id)); err != nil {
 		return err
 	}
 	return tx.Commit()

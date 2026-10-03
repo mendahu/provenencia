@@ -12,11 +12,11 @@ import (
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/files"
+	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
-	"github.com/mendahu/provenencia/core/database/sourcefields"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -161,12 +161,12 @@ func TestImpactGates(t *testing.T) {
 		if len(got.Groups) != 1 || got.Groups[0].Via != "property_terms.property_id" || got.Groups[0].Total != 1 {
 			t.Fatalf("groups %+v", got.Groups)
 		}
-		// Term rows deep-link to the parent property's Subject Fields inspector row.
+		// Term rows deep-link to the parent property's Properties inspector row.
 		if len(got.Groups[0].Listed) != 1 {
 			t.Fatalf("listed %+v", got.Groups[0].Listed)
 		}
 		loc := got.Groups[0].Listed[0].Location
-		if loc.Section != "subject-fields" || loc.PropertyID != idString(propID) || loc.SubjectTypeKey != "" {
+		if loc.Section != "properties" || loc.PropertyID != idString(propID) || loc.SubjectTypeKey != "" {
 			t.Fatalf("term location %+v", loc)
 		}
 		if loc.Title != "Grant" || got.Groups[0].Listed[0].Title != "Grant" {
@@ -175,13 +175,13 @@ func TestImpactGates(t *testing.T) {
 	})
 
 	t.Run("plugin field origin_locked", func(t *testing.T) {
-		id, err := sourcefields.Upsert(c, sourcefields.Field{
-			Key: "plug_author", Origin: "plugin:acme", Label: "Plug author", DataType: sourcefields.DataTypeText,
+		id, err := metadatafields.Upsert(c, metadatafields.Field{
+			Key: "plug_author", Origin: "plugin:acme", Label: "Plug author", DataType: metadatafields.DataTypeText,
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := mustImpact(t, c, deleteimpact.KindSourceField, id)
+		got := mustImpact(t, c, deleteimpact.KindMetadataField, id)
 		if got.Allowed || got.Gate != deleteimpact.GateOriginLocked {
 			t.Fatalf("%+v", got)
 		}

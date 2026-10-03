@@ -40,13 +40,13 @@ func projectKind(tx *sql.Tx, kind Kind, row probeRow) (string, Location, error) 
 		return projectVocab(tx, `SELECT label FROM source_types WHERE id = ?`, row.ID, row.Ref, Location{
 			Section: sectionSourceTypes, TypeID: uuidString(row.ID),
 		})
-	case KindSourceField:
+	case KindMetadataField:
 		return projectVocab(tx, `SELECT label FROM source_metadata_fields WHERE id = ?`, row.ID, row.Ref, Location{
-			Section: sectionSourceFields, FieldID: uuidString(row.ID),
+			Section: sectionMetadata, FieldID: uuidString(row.ID),
 		})
 	case KindProperty:
 		return projectVocab(tx, `SELECT label FROM properties WHERE id = ?`, row.ID, row.Ref, Location{
-			Section: sectionSubjectFields, PropertyID: uuidString(row.ID),
+			Section: sectionProperties, PropertyID: uuidString(row.ID),
 		})
 	case KindPropertyTerm:
 		return projectPropertyTerm(tx, row.ID, row.Ref)
@@ -259,7 +259,7 @@ func projectSource(tx *sql.Tx, id []byte, ref string) (string, Location, error) 
 	}, nil
 }
 
-// projectPropertyTerm deep-links a term to its parent property's Subject Fields inspector row.
+// projectPropertyTerm deep-links a term to its parent property's Properties inspector row.
 func projectPropertyTerm(tx *sql.Tx, id []byte, ref string) (string, Location, error) {
 	var label sql.NullString
 	var propID []byte
@@ -268,14 +268,14 @@ func projectPropertyTerm(tx *sql.Tx, id []byte, ref string) (string, Location, e
 		return "", Location{}, err
 	}
 	return vocabTitle(label.String, ref), Location{
-		Section:    sectionSubjectFields,
+		Section:    sectionProperties,
 		PropertyID: uuidString(propID),
 		Ref:        ref,
 		Title:      vocabTitle(label.String, ref),
 	}, nil
 }
 
-// projectSubjectType deep-links a type to its Subject Fields type-strip category.
+// projectSubjectType deep-links a type to its Properties type-strip category.
 func projectSubjectType(tx *sql.Tx, id []byte, ref string) (string, Location, error) {
 	var label, key sql.NullString
 	err := tx.QueryRow(`SELECT label, key FROM subject_types WHERE id = ?`, id).Scan(&label, &key)
@@ -283,7 +283,7 @@ func projectSubjectType(tx *sql.Tx, id []byte, ref string) (string, Location, er
 		return "", Location{}, err
 	}
 	return vocabTitle(label.String, ref), Location{
-		Section:        sectionSubjectFields,
+		Section:        sectionProperties,
 		SubjectTypeKey: key.String,
 		Ref:            ref,
 		Title:          vocabTitle(label.String, ref),

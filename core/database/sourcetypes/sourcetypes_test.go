@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/sourcefields"
+	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
@@ -208,8 +208,8 @@ func TestDelete(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				fieldID, err := sourcefields.Upsert(c, sourcefields.Field{
-					Key: "author", Origin: sourcefields.OriginUser, Label: "Author", DataType: sourcefields.DataTypeText,
+				fieldID, err := metadatafields.Upsert(c, metadatafields.Field{
+					Key: "author", Origin: metadatafields.OriginUser, Label: "Author", DataType: metadatafields.DataTypeText,
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -236,7 +236,7 @@ func TestDelete(t *testing.T) {
 				).Scan(&joins); err != nil || joins != 0 {
 					t.Fatalf("joins leftover %d %v", joins, err)
 				}
-				if _, err := sourcefields.GetByID(c, fieldID); err != nil {
+				if _, err := metadatafields.GetByID(c, fieldID); err != nil {
 					t.Fatalf("field should survive: %v", err)
 				}
 			},
@@ -466,8 +466,8 @@ func TestCreateUpdateGetByID(t *testing.T) {
 				if _, err := Upsert(c, Type{Key: "letter", Origin: OriginUser, Label: "Letter"}); err != nil {
 					t.Fatal(err)
 				}
-				fieldID, err := sourcefields.Upsert(c, sourcefields.Field{
-					Key: "author", Origin: sourcefields.OriginUser, Label: "Author", DataType: sourcefields.DataTypeText,
+				fieldID, err := metadatafields.Upsert(c, metadatafields.Field{
+					Key: "author", Origin: metadatafields.OriginUser, Label: "Author", DataType: metadatafields.DataTypeText,
 				})
 				if err != nil {
 					t.Fatal(err)

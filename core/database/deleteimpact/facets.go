@@ -193,7 +193,7 @@ func buildFacetReleases() []facetRelease {
 		// Layout rows are audited under field_id (sourcemetadata precedent).
 		rowFacet(KindSource, "source_metadata_layout", "source_id", "source_metadata_layout", "field_id",
 			col{"source_id", colUUID}, col{"field_id", colUUID}, col{"sort_order", colInt}, col{"dismissed", colBool}),
-		rowFacet(KindSourceField, "source_metadata_layout", "field_id", "source_metadata_layout", "field_id",
+		rowFacet(KindMetadataField, "source_metadata_layout", "field_id", "source_metadata_layout", "field_id",
 			col{"source_id", colUUID}, col{"field_id", colUUID}, col{"sort_order", colInt}, col{"dismissed", colBool}),
 	}
 }

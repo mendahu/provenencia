@@ -67,9 +67,9 @@ enum Method {
   METHOD_CREATE_PROPERTY = 54;
   METHOD_UPDATE_PROPERTY = 55;
   METHOD_DELETE_PROPERTY = 56;
-  METHOD_LIST_SUBJECT_TYPE_FIELDS = 57;
-  METHOD_ASSIGN_SUBJECT_TYPE_FIELD = 58;
-  METHOD_REMOVE_SUBJECT_TYPE_FIELD = 59;
+  METHOD_LIST_SUBJECT_TYPE_PROPERTIES = 57;
+  METHOD_ASSIGN_SUBJECT_TYPE_PROPERTY = 58;
+  METHOD_REMOVE_SUBJECT_TYPE_PROPERTY = 59;
   METHOD_LIST_PLACEABLE_SUBJECT_TYPES = 60;
   METHOD_GET_SUBJECT_TYPE_PRESENTATION = 61;
   METHOD_LIST_CONNECT_RULES = 62;
@@ -87,7 +87,7 @@ enum Method {
   METHOD_UPDATE_CITATION = 75;
   METHOD_UPDATE_OBSERVATION = 76;
   METHOD_DELETE_OBSERVATION = 77;
-  METHOD_GET_SUBJECT_FIELDS_WORKSPACE = 78;
+  METHOD_GET_PROPERTIES_WORKSPACE = 78;
   METHOD_LIST_SOURCE_GRAPH_PROGRESS = 79;
   METHOD_GET_SOURCE_GRAPH_PROGRESS = 80;
   METHOD_GET_DELETE_IMPACT = 81;
@@ -322,7 +322,7 @@ message MetadataField {
   string data_type = 5; // text | url
   string description = 6;
   // How many source_metadata rows reference this field. Deleting is only
-  // allowed at 0 (see sourcefields.ErrInUse); the client uses the count to
+  // allowed at 0 (see metadatafields.ErrInUse); the client uses the count to
   // disable its delete affordance and say what is holding the field.
   int32 used_by = 7;
 }
@@ -740,7 +740,7 @@ message GetWorkspaceNavCountsRequest {
 message GetWorkspaceNavCountsResponse {
   int32 sources = 1;
   VocabularyOriginCounts source_types = 2;
-  VocabularyOriginCounts source_fields = 3;
+  VocabularyOriginCounts metadata_fields = 3;
   reserved 4;
   reserved "files";
   int32 persons = 5; // unmerged Person handles
@@ -767,7 +767,7 @@ message CloseCatalogSessionResponse {}
 // WorkspaceLocation is the navigable place payload shared by search hits and
 // (later) omnibar go(to:). Aligns with macOS WorkspaceLocation / WorkspaceSection.
 message WorkspaceLocation {
-  string section = 1;    // sources | source-types | source-fields | subject-fields
+  string section = 1;    // sources | source-types | metadata | properties | persons
   string source_id = 2;
   string field_id = 3;
   string type_id = 4;
@@ -782,8 +782,8 @@ message WorkspaceLocation {
   string connect_to_subject_id = 13;
   string connect_bridge_type_key = 14;
   string source_title = 15;
-  string subject_type_key = 16; // Subject Fields type-strip category; empty = All properties
-  string property_id = 17;      // Subject Fields inspector row
+  string subject_type_key = 16; // Properties type-strip category; empty = All properties
+  string property_id = 17;      // Properties inspector row
 }
 
 // SearchCatalog finds navigable catalog roots for the omnibar (S3-07+).
@@ -794,7 +794,7 @@ message SearchCatalogRequest {
 }
 
 message SearchHit {
-  string kind = 1;         // source | source_type | source_field
+  string kind = 1;         // source | source_type | metadata_field
   string id = 2;
   string ref = 3;
   string title = 4;
@@ -1001,7 +1001,7 @@ message Property {
   string label = 4;
   string description = 5;
   string value_type = 6; // text | integer | date | name | subject | term
-  int32 used_by = 7; // subject_type_fields references; delete only at 0
+  int32 used_by = 7; // subject_type_properties references; delete only at 0
 }
 
 // PropertyTerm is one categorical value for a term-typed Property.
@@ -1014,7 +1014,7 @@ message PropertyTerm {
   string description = 6;
 }
 
-message SubjectTypeField {
+message SubjectTypeProperty {
   Property property = 1;
   int32 sort_order = 2;
   bool locked = 3; // registry-locked; client must not offer remove
@@ -1095,32 +1095,32 @@ message DeletePropertyRequest {
 
 message DeletePropertyResponse {}
 
-message ListSubjectTypeFieldsRequest {
+message ListSubjectTypePropertiesRequest {
   string project_dir = 1;
   string subject_type_id = 2;
 }
 
-message ListSubjectTypeFieldsResponse {
-  repeated SubjectTypeField fields = 1;
+message ListSubjectTypePropertiesResponse {
+  repeated SubjectTypeProperty properties = 1;
 }
 
-message AssignSubjectTypeFieldRequest {
+message AssignSubjectTypePropertyRequest {
   string project_dir = 1;
   string user_id = 2;
   string subject_type_id = 3;
   string property_id = 4;
 }
 
-message AssignSubjectTypeFieldResponse {}
+message AssignSubjectTypePropertyResponse {}
 
-message RemoveSubjectTypeFieldRequest {
+message RemoveSubjectTypePropertyRequest {
   string project_dir = 1;
   string user_id = 2;
   string subject_type_id = 3;
   string property_id = 4;
 }
 
-message RemoveSubjectTypeFieldResponse {}
+message RemoveSubjectTypePropertyResponse {}
 
 message ListPlaceableSubjectTypesRequest {}
 
@@ -1375,16 +1375,16 @@ message DeleteObservationRequest {
 }
 message DeleteObservationResponse {}
 
-message GetSubjectFieldsWorkspaceRequest { string project_dir = 1; }
-message SubjectTypeFieldsGroup {
+message GetPropertiesWorkspaceRequest { string project_dir = 1; }
+message SubjectTypePropertiesGroup {
   string subject_type_id = 1;
-  repeated SubjectTypeField fields = 2;
+  repeated SubjectTypeProperty properties = 2;
   SubjectTypePresentation presentation = 3;
 }
-message GetSubjectFieldsWorkspaceResponse {
+message GetPropertiesWorkspaceResponse {
   repeated Property properties = 1;
   repeated SubjectType types = 2;
-  repeated SubjectTypeFieldsGroup groups = 3;
+  repeated SubjectTypePropertiesGroup groups = 3;
 }
 
 message SourceGraphProgress {
