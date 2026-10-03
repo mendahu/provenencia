@@ -1,12 +1,19 @@
 import SwiftUI
 
-/// Placeholder page for a Conclude destination whose list hasn't shipped:
-/// Persons until S9-09, Events until S9-23, Places until S9-26. Reads nothing.
+/// Placeholder page for a Conclude destination that hasn't shipped: the
+/// Events list until S9-23, Places until S9-26, and Person detail until
+/// S9-16. Reads nothing.
 struct ConclusionStubView: View {
     let section: WorkspaceSection
+    /// Set for a detail page stub (one handle), nil for a list stub.
+    var detailRef: String?
 
     var body: some View {
-        PVEmptyState(icon: section.icon, title: section.label, message: Self.message(for: section))
+        PVEmptyState(
+            icon: section.icon,
+            title: section.label,
+            message: detailRef.map { L10n.Workspace.personDetailStubMessage(ref: $0) } ?? Self.message(for: section)
+        )
             .frame(maxWidth: 480)
             .padding(PVSpacing.space9)
             .frame(maxWidth: .infinity, maxHeight: .infinity)

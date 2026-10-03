@@ -1386,6 +1386,38 @@ struct EvidenceGraphModelTests {
         #expect(!store.recordedCalls.contains { $0.hasPrefix("promoteSubject") })
     }
 
+    /// A promoted person's membership row opens its Person page (S9-09 stub)
+    /// and shows the handle's resolved name.
+    @Test func promotedPersonOpensItsPageAndShowsItsName() async {
+        let (store, model) = await promotableModel()
+        store.observationsBySource[sourceID] = [
+            CatalogObservation(
+                id: "o-name", ref: "OBS-1", citationID: "c1", subjectID: "s-james", propertyID: "p-name",
+                polarity: "positive", valueText: "James Robins", valueInteger: nil, valueDateID: "",
+                valueNameID: "n1", nameForm: "James Robins", valueSubjectID: "", valueTermID: "",
+                propertyKey: "name", propertyLabel: "Name", propertyValueType: "name"
+            ),
+        ]
+        #expect(model.openHandle(subjectID: "s-james") == nil)
+        model.beginPromote(subjectID: "s-james")
+        #expect(await model.confirmPromote())
+        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let loaded = await waitUntil {
+            let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+            return handle?.value?.memberships.first?.name != nil
+        }
+        #expect(loaded)
+        let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+        let membership = handle?.value?.memberships.first
+        #expect(membership.flatMap(EvidenceSubjectCard.membershipName) == "James Robins")
+
+        let location = model.openHandle(subjectID: "s-james")
+        #expect(location?.section == .persons)
+        #expect(location?.entityId == membership?.entity.id)
+        #expect(location?.ref == membership?.entity.ref)
+        #expect(location?.title == "James Robins")
+    }
+
     /// The sidebar's Conclude counts are recounted after a Promote (S9-08).
     @Test func confirmPromoteRefreshesSidebarCounts() async {
         var counts: CatalogCounts?

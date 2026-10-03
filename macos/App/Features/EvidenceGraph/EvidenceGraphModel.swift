@@ -748,12 +748,18 @@ final class EvidenceGraphModel {
         }
     }
 
-    /// Location of a promoted subject's handle page. No Person / Event / Place
-    /// page exists yet, so this is `nil` (no navigation); S9-16, S9-24 and
-    /// S9-27 route it once each page lands.
+    /// Location of a promoted subject's handle page. Persons open their page
+    /// (a stub until S9-16); Events and Places have none yet (`nil`) until
+    /// S9-24 / S9-27.
     func openHandle(subjectID: String) -> WorkspaceLocation? {
-        _ = subjectID
-        return nil
+        guard let membership = primary(in: currentSnapshot(), id: subjectID)?.membership,
+              membership.kind == "person"
+        else { return nil }
+        return .personDetail(
+            entityId: membership.entity.id,
+            ref: membership.entity.ref,
+            title: EvidenceSubjectCard.membershipName(membership)
+        )
     }
 
     @discardableResult

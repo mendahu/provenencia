@@ -750,7 +750,8 @@ struct GoStore: GenealogyStore {
                 subjectID: m.subjectID,
                 claimID: m.claimID,
                 entity: Self.mapCanonicalEntity(m.entity),
-                kind: m.kind
+                kind: m.kind,
+                name: m.hasName ? Self.mapNameValue(m.name) : nil
             )
         }
     }

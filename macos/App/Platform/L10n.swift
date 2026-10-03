@@ -841,6 +841,62 @@ enum L10n {
             comment: "Sidebar section title above Source types, Metadata and Properties"
         )
 
+        /// Persons list header meta: "1 person" / "N persons".
+        static func personCount(_ count: Int) -> LocalizedStringResource {
+            count == 1
+                ? LocalizedStringResource(
+                    "workspace.persons.countOne",
+                    defaultValue: "1 person",
+                    comment: "Persons list header meta when there is exactly one Person"
+                )
+                : LocalizedStringResource(
+                    "workspace.persons.countOther",
+                    defaultValue: "\(count) persons",
+                    comment: "Persons list header meta; argument is how many Persons are listed"
+                )
+        }
+
+        /// Header meta while a stale list reloads: "N persons · refreshing".
+        static func personCountRefreshing(_ count: Int) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "workspace.persons.countRefreshing",
+                defaultValue: "%@ · refreshing",
+                comment: "Persons list header meta while the list reloads; argument is the person count text"
+            ))
+            return String(format: format, locale: .current, String(localized: personCount(count)))
+        }
+
+        static let personsEmptyTitle = LocalizedStringResource(
+            "workspace.persons.emptyTitle",
+            defaultValue: "No persons yet",
+            comment: "Persons list empty state title"
+        )
+
+        static let personsEmptyMessage = LocalizedStringResource(
+            "workspace.persons.emptyMessage",
+            defaultValue: "A Person is created when you promote a subject from a card on an Evidence graph. Promoted subjects appear here, one row per Person.",
+            comment: "Persons list empty state body; explains Promote"
+        )
+
+        /// VoiceOver label for one Persons row: "James Robins, PER-7KD45".
+        static func personRowAccessibility(title: String, ref: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "workspace.persons.rowAccessibility",
+                defaultValue: "%1$@, %2$@",
+                comment: "VoiceOver label for a Persons list row; arguments are the title and the ref"
+            ))
+            return String(format: format, locale: .current, title, ref)
+        }
+
+        static func personDetailStubMessage(ref: String) -> String {
+            let format = String(localized: LocalizedStringResource(
+                "workspace.persons.detailStubMessage",
+                defaultValue: "The page for %@ is on its way. It will show this Person's name, life dates and places, and the evidence behind them.",
+                comment: "Placeholder body on a Person detail page until it ships; argument is the Person ref"
+            ))
+            return String(format: format, locale: .current, ref)
+        }
+
         static let personsStubMessage = LocalizedStringResource(
             "workspace.section.persons.stubMessage",
             defaultValue: "The Persons list is on its way. Promoted people will be listed here.",
