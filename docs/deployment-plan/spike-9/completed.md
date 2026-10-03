@@ -13,6 +13,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-03 | PR | Source graph carries membership |
 | S9-D8 | Design | Graph subject card: Promote + membership |
 | S9-04 | PR | Graph card: Promote + membership |
+| S9-05 | PR | Resolver core v1 |
 
 ## Steps
 
@@ -144,3 +145,24 @@ Primary graph cards can now be promoted from the canvas, and promoted cards show
 - The Promote flow (S9-11)
 - A filed mark on bridges (S9-D12)
 - A keyboard focus ring on the footer: the canvas has no per-control keyboard focus yet, and VoiceOver actions are the keyboard path
+
+### S9-05 — Resolver core v1
+
+The first piece of value resolution (R2): a handle's candidate values for one Property go in as a list and come out as ranked clusters. Pure Go; nothing calls it until the cache (S9-06).
+
+**What shipped**
+
+- `core/resolve`: `Resolve(valueType, candidates, concluded) (Result, error)`. No catalog access, no writes. Reuses `namevalues.Value` / `datevalues.Value` and the `properties.ValueType*` set.
+- **Lists in, lists out.** Zero, one, or many candidates → zero, one, or many `Cluster`s (representative value, member Observation ids, support). `Clusters[0]` is rank 1.
+- **State is derived, not stored.** `Result.State()` reads it off the shape: empty, `single` (one cluster, support 1), `merged` (one cluster, support > 1), `mixed` (several), `concluded` (the one flag the shape can't carry).
+- **v1 clustering is exact equality:** names by normalized `form` (case, punctuation, whitespace ignored); text trimmed but otherwise exact (*York* ≠ *york*); integers, terms, subjects by value; dates on every structured field (`MAY 1985` ≠ `14 MAY 1985` yet).
+- **Order:** support descending, then each cluster's lowest Observation id; independent of input order. The representative is the lowest-id member's value.
+- **Concluded input** always takes rank 1: it absorbs the cluster it equals, or leads with support 0.
+- Unknown value types and values missing their type's field are errors (`ErrUnknownValueType`, `ErrValueMismatch`).
+
+**What stayed out**
+
+- Name and date auto-reconcilers (**S9-13**, **S9-21**) — they replace the cluster key for those types
+- Provenance ranking and negative polarity (**S9-14**) — callers pass positive candidates only
+- Subject values mapped to handles (**S9-28**)
+- The cache, its `state` column decision, and any FFI or Swift (**S9-06** onward)
