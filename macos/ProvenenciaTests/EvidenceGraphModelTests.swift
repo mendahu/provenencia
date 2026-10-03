@@ -149,7 +149,7 @@ struct EvidenceGraphModelTests {
         )
     }
 
-    private func makeModel(store: FakeStore) -> EvidenceGraphModel {
+    private func makeModel(store: FakeStore, catalogCounts: CatalogCounts? = nil) -> EvidenceGraphModel {
         let session = WorkspaceSession(
             projectKey: ProjectKey(projectDir: projectDir),
             store: store
@@ -158,7 +158,8 @@ struct EvidenceGraphModelTests {
             sourceID: sourceID,
             session: session,
             store: store,
-            userID: "user-1"
+            userID: "user-1",
+            catalogCounts: catalogCounts
         )
     }
 
@@ -1346,7 +1347,10 @@ struct EvidenceGraphModelTests {
 
     // MARK: Promote (S9-04)
 
-    private func promotableModel(storeHasSubject: Bool = true) async -> (FakeStore, EvidenceGraphModel) {
+    private func promotableModel(
+        storeHasSubject: Bool = true,
+        counts: ((FakeStore) -> CatalogCounts)? = nil
+    ) async -> (FakeStore, EvidenceGraphModel) {
         let store = makeStore()
         let subject = CatalogSubject(
             id: "s-james", ref: "CPR-2AB91", sourceID: sourceID, subjectTypeID: personTypeID,
@@ -1356,7 +1360,7 @@ struct EvidenceGraphModelTests {
             store.subjectsBySource[sourceID] = [subject]
         }
         store.subjectPositionsBySubject["s-james"] = CatalogSubjectPosition(subjectID: "s-james", gridX: 1, gridY: 1)
-        let model = makeModel(store: store)
+        let model = makeModel(store: store, catalogCounts: counts?(store))
         await model.prepare()
         model.session.setQueryValue(
             CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID),
@@ -1380,6 +1384,21 @@ struct EvidenceGraphModelTests {
         // Opening the confirm writes nothing; Cancel is just clearing the item.
         model.pendingPromote = nil
         #expect(!store.recordedCalls.contains { $0.hasPrefix("promoteSubject") })
+    }
+
+    /// The sidebar's Conclude counts are recounted after a Promote (S9-08).
+    @Test func confirmPromoteRefreshesSidebarCounts() async {
+        var counts: CatalogCounts?
+        let (_, model) = await promotableModel(counts: { store in
+            let made = CatalogCounts(projectDir: projectDir, store: store)
+            counts = made
+            return made
+        })
+        await counts?.refreshAll()
+        #expect(counts?.persons == 0)
+        model.beginPromote(subjectID: "s-james")
+        #expect(await model.confirmPromote())
+        #expect(counts?.persons == 1)
     }
 
     @Test func confirmPromoteMintsAndReloadsGraphWithMembership() async {

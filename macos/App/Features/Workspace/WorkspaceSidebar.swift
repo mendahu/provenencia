@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// The workspace's leading sidebar: brand mark, primary nav destinations,
-/// and a session-identity + collapse-toggle footer.
+/// The workspace's leading sidebar: brand mark, titled nav sections (S9-D1:
+/// Source and Conclude at the top, Configure bottom-aligned above the
+/// footer), and a session-identity + collapse-toggle footer.
 /// Workspace chrome: `docs/deployment-plan/archive/spike-2/README.md`.
 ///
 /// The whole column (brand row, nav, footer) sits in one `ScrollView` so a
@@ -33,45 +34,31 @@ struct WorkspaceSidebar: View {
     /// sits behind them — see Frame 7).
     private let trafficLightLeadingInset: CGFloat = 100
 
-    private var items: [PVSidebarNavItem] {
-        let configSections: [WorkspaceSection] = [
-            .sourceTypes, .metadata, .properties,
-        ]
-        let configChildren = configSections.map { section in
-            PVSidebarNavItem(
-                id: section.rawValue,
-                label: section.label,
-                icon: section.icon,
-                accessibilityIdentifier: "workspace.nav.\(section.rawValue)"
-            )
-        }
-        return [
-            PVSidebarNavItem(
-                id: WorkspaceSection.sources.rawValue,
-                label: WorkspaceSection.sources.label,
-                icon: WorkspaceSection.sources.icon,
-                accessibilityIdentifier: "workspace.nav.sources",
-                count: catalogCounts.badge(for: .sources),
-                children: configChildren
-            ),
-        ]
+    private var sections: [WorkspaceSidebarSection] {
+        WorkspaceSidebarSections.make(counts: catalogCounts)
     }
+
+    /// Minimum gap between the research sections and Configure (S9-D1): the
+    /// flexible space collapses to this on a short window.
+    private let sectionGapFloor: CGFloat = 24
 
     var body: some View {
         GeometryReader { geometry in
             ScrollView {
                 VStack(spacing: 0) {
                     brandHeader
-                    PVSidebarNav(
-                        items: items,
-                        selection: navigation.selectedSection.rawValue,
-                        collapsed: workspace.isSidebarCollapsed,
-                        onSelect: { id in
-                            guard let section = WorkspaceSection(id: id) else { return }
-                            navigation.go(to: .sectionRoot(section))
+                    let top = sections.filter { $0.placement == .top }
+                    ForEach(Array(top.enumerated()), id: \.element.id) { index, section in
+                        if index > 0 && workspace.isSidebarCollapsed {
+                            sectionRule
                         }
-                    )
-                    Spacer(minLength: 0)
+                        nav(section)
+                    }
+                    Spacer(minLength: sectionGapFloor)
+                    ForEach(sections.filter { $0.placement == .bottom }, id: \.id) { section in
+                        sectionRule
+                        nav(section)
+                    }
                     footer
                 }
                 .frame(minHeight: geometry.size.height)
@@ -84,6 +71,40 @@ struct WorkspaceSidebar: View {
         }
         .pvAnimation(PVMotion.easeStandard, value: workspace.isSidebarCollapsed)
         .accessibilityIdentifier("workspace.sidebar")
+    }
+
+    private func nav(_ section: WorkspaceSidebarSection) -> some View {
+        PVSidebarNav(
+            groupLabel: section.title,
+            items: section.items,
+            selection: navigation.selectedSection.rawValue,
+            collapsed: workspace.isSidebarCollapsed,
+            onSelect: { id in
+                guard let section = WorkspaceSection(id: id) else { return }
+                navigation.go(to: .sectionRoot(section))
+            }
+        )
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text(section.title))
+        .accessibilityIdentifier("workspace.sidebar.section.\(section.id)")
+    }
+
+    /// The hairline between sections (S9-D1): inset to the rows when
+    /// expanded, a short 24pt mark centred on the collapsed rail, where it
+    /// stands in for the dropped titles.
+    @ViewBuilder
+    private var sectionRule: some View {
+        if workspace.isSidebarCollapsed {
+            PVDivider()
+                .frame(width: 24)
+                .padding(.vertical, PVSpacing.space1)
+                .frame(maxWidth: .infinity)
+                .accessibilityHidden(true)
+        } else {
+            PVDivider()
+                .padding(.horizontal, PVSpacing.space5)
+                .accessibilityHidden(true)
+        }
     }
 
     @ViewBuilder

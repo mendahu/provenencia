@@ -522,8 +522,10 @@ struct WorkspaceNavCounts: Sendable, Equatable {
     var sources: Int
     var sourceTypes: WorkspaceNavOriginCounts
     var metadataFields: WorkspaceNavOriginCounts
-    /// Unmerged Person handles.
+    /// Unmerged Person, Event, and Place handles.
     var persons: Int = 0
+    var events: Int = 0
+    var places: Int = 0
 }
 
 protocol GenealogyStore: Sendable {

@@ -34,6 +34,7 @@ enum PVSymbol: String {
     case listTree = "list.bullet.indent"
     case account = "person.crop.circle"
     case person = "person"
+    case mapPin = "mappin"
     case sidebarToggle = "sidebar.left"
     case search = "magnifyingglass"
     case searchEmpty = "text.magnifyingglass"

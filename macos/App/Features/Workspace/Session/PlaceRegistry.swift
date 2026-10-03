@@ -153,6 +153,24 @@ struct PlaceRegistry: Sendable {
             queryKeys: { _, _ in [] },
             deepId: { _ in nil }
         ),
+        Spec(
+            id: .eventsList,
+            presentation: .eventsList,
+            priority: 10,
+            matches: { $0.section == .events },
+            // Stub page until S9-23.
+            queryKeys: { _, _ in [] },
+            deepId: { _ in nil }
+        ),
+        Spec(
+            id: .placesList,
+            presentation: .placesList,
+            priority: 10,
+            matches: { $0.section == .places },
+            // Stub page until S9-26.
+            queryKeys: { _, _ in [] },
+            deepId: { _ in nil }
+        ),
     ]
 
     private var orderedSpecs: [Spec] {

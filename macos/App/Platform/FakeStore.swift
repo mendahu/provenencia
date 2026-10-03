@@ -951,7 +951,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 sources: (sourcesByProject[projectDir] ?? []).count,
                 sourceTypes: Self.originCounts(from: types.map(\.origin)),
                 metadataFields: Self.originCounts(from: fields.map(\.origin)),
-                persons: Set(membershipBySubject.values.filter { $0.kind == "person" }.map(\.entity.id)).count
+                persons: Self.handleCount(membershipBySubject, kind: "person"),
+                events: Self.handleCount(membershipBySubject, kind: "event"),
+                places: Self.handleCount(membershipBySubject, kind: "place")
             )
         }
     }
@@ -1206,6 +1208,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             markCatalogSessionHeld(projectDir)
             return (subjectsBySource[sourceID] ?? []).compactMap { membershipBySubject[$0.id] }
         }
+    }
+
+    private static func handleCount(_ memberships: [String: CatalogSubjectMembership], kind: String) -> Int {
+        Set(memberships.values.filter { $0.kind == kind }.map(\.entity.id)).count
     }
 
     func listPersonHeaders(projectDir: String) async throws -> [CatalogPersonHeader] {
