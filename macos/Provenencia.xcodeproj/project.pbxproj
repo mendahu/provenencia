@@ -44,7 +44,6 @@
 		A70D0000000000000000000A /* NameValueHostControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70D00000000000000000009 /* NameValueHostControl.swift */; };
 		A70D0000000000000000000C /* NameValueDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70D0000000000000000000B /* NameValueDisplay.swift */; };
 		A90700000000000000000006 /* PersonHeaderDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90700000000000000000005 /* PersonHeaderDisplayTests.swift */; };
-		A90700000000000000000004 /* PersonsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90700000000000000000003 /* PersonsListView.swift */; };
 		A90700000000000000000002 /* PersonHeaderDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90700000000000000000001 /* PersonHeaderDisplay.swift */; };
 		A70D0000000000000000000E /* NameValueDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70D0000000000000000000D /* NameValueDraftTests.swift */; };
 		A70900000000000000000002 /* DateValueDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70900000000000000000001 /* DateValueDisplay.swift */; };
@@ -223,6 +222,9 @@
 		57420D5CDD1330745ACC33FD /* MetadataDetailPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAA7D6A46A5016665371A2C5 /* MetadataDetailPane.swift */; };
 		60591A4DC996FC9EB9F29023 /* PVColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4094CD05F31CFF0AA37C888A /* PVColor.swift */; };
 		6227C44524E2C4EB3DE4AAD7 /* WorkspaceSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1FE31A30B665829ECF16A6F /* WorkspaceSidebar.swift */; };
+		A90800000000000000000006 /* WorkspaceSidebarSectionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90800000000000000000005 /* WorkspaceSidebarSectionsTests.swift */; };
+		A90800000000000000000004 /* WorkspaceSidebarSections.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90800000000000000000003 /* WorkspaceSidebarSections.swift */; };
+		A90800000000000000000002 /* ConclusionStubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90800000000000000000001 /* ConclusionStubView.swift */; };
 		6422592F5C31D8F535B03C6A /* MetadataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 950877B33DC4E16E5BA8B5D6 /* MetadataView.swift */; };
 		6D245285E4AB8AAFDE78E313 /* PVIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36412B0A6A6851ADB45A7AA8 /* PVIcon.swift */; };
 		6F7945720B05D7777BFA79A2 /* WorkspaceModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F03B00F6F0D021AFCDAD2DEB /* WorkspaceModel.swift */; };
@@ -349,7 +351,6 @@
 		A70D00000000000000000009 /* NameValueHostControl.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NameValueHostControl.swift; sourceTree = "<group>"; };
 		A70D0000000000000000000B /* NameValueDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NameValueDisplay.swift; sourceTree = "<group>"; };
 		A90700000000000000000005 /* PersonHeaderDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersonHeaderDisplayTests.swift; sourceTree = "<group>"; };
-		A90700000000000000000003 /* PersonsListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersonsListView.swift; sourceTree = "<group>"; };
 		A90700000000000000000001 /* PersonHeaderDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersonHeaderDisplay.swift; sourceTree = "<group>"; };
 		A70D0000000000000000000D /* NameValueDraftTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NameValueDraftTests.swift; sourceTree = "<group>"; };
 		A70900000000000000000001 /* DateValueDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueDisplay.swift; sourceTree = "<group>"; };
@@ -575,6 +576,9 @@
 		AA0000000000000000000106 /* OnboardingContributorRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingContributorRow.swift; sourceTree = "<group>"; };
 		B567080CA23230E18488F894 /* TrafficLightsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TrafficLightsTests.swift; sourceTree = "<group>"; };
 		C1FE31A30B665829ECF16A6F /* WorkspaceSidebar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceSidebar.swift; sourceTree = "<group>"; };
+		A90800000000000000000005 /* WorkspaceSidebarSectionsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceSidebarSectionsTests.swift; sourceTree = "<group>"; };
+		A90800000000000000000003 /* WorkspaceSidebarSections.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceSidebarSections.swift; sourceTree = "<group>"; };
+		A90800000000000000000001 /* ConclusionStubView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConclusionStubView.swift; sourceTree = "<group>"; };
 		C355704657FB6A572BF7FD6A /* PVMotion.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVMotion.swift; sourceTree = "<group>"; };
 		C9B9D94DAB5FD1587C260FE3 /* PVCallout.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVCallout.swift; sourceTree = "<group>"; };
 		CEC485E7480EE58A01EA9A85 /* PVHoverEffect.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVHoverEffect.swift; sourceTree = "<group>"; };
@@ -778,6 +782,7 @@
 				B8C9D0E1F203948576A1B2C1 /* WorkspaceLocation.swift */,
 				C9D0E1F203948576A1B2C3D2 /* NavigationHistoryStore.swift */,
 				C1FE31A30B665829ECF16A6F /* WorkspaceSidebar.swift */,
+				A90800000000000000000003 /* WorkspaceSidebarSections.swift */,
 				48B417D5E38F11219198BF91 /* WorkspaceContent.swift */,
 				AA000000000000000000042F /* WorkspaceDestinationHost.swift */,
 				D8F65C4577481FF5F505271F /* WorkspaceView.swift */,
@@ -882,6 +887,7 @@
 				AA0000000000000000000334 /* Dates */,
 				A70D00000000000000000010 /* Names */,
 				A90700000000000000000010 /* Persons */,
+				A90800000000000000000010 /* Conclusions */,
 				A70B0000000000000000000D /* ArtifactViewer */,
 				A70800000000000000000007 /* CitationComposer */,
 				A71D0000000000000000000B /* OCR */,
@@ -951,11 +957,18 @@
 			path = Dates;
 			sourceTree = "<group>";
 		};
+		A90800000000000000000010 /* Conclusions */ = {
+			isa = PBXGroup;
+			children = (
+				A90800000000000000000001 /* ConclusionStubView.swift */,
+			);
+			path = Conclusions;
+			sourceTree = "<group>";
+		};
 		A90700000000000000000010 /* Persons */ = {
 			isa = PBXGroup;
 			children = (
 				A90700000000000000000001 /* PersonHeaderDisplay.swift */,
-				A90700000000000000000003 /* PersonsListView.swift */,
 			);
 			path = Persons;
 			sourceTree = "<group>";
@@ -1102,6 +1115,7 @@
 				AA00000000000000000003B2 /* PVFileTypeGlyphTests.swift */,
 				AA0000000000000000000332 /* DateValueDraftTests.swift */,
 				A70D0000000000000000000D /* NameValueDraftTests.swift */,
+				A90800000000000000000005 /* WorkspaceSidebarSectionsTests.swift */,
 				A90700000000000000000005 /* PersonHeaderDisplayTests.swift */,
 				A70900000000000000000003 /* DateValueDisplayTests.swift */,
 				A70900000000000000000007 /* ObservationValueDisplayTests.swift */,
@@ -1672,6 +1686,8 @@
 				B8C9D0E1F203948576A1B2C3 /* WorkspaceLocation.swift in Sources */,
 				C9D0E1F203948576A1B2C3D4 /* NavigationHistoryStore.swift in Sources */,
 				6227C44524E2C4EB3DE4AAD7 /* WorkspaceSidebar.swift in Sources */,
+				A90800000000000000000004 /* WorkspaceSidebarSections.swift in Sources */,
+				A90800000000000000000002 /* ConclusionStubView.swift in Sources */,
 				DA26E3BA97D438A7561ED96D /* WorkspaceContent.swift in Sources */,
 				AA0000000000000000000430 /* WorkspaceDestinationHost.swift in Sources */,
 				AA0000000000000000000471 /* GraphCanvasCamera.swift in Sources */,
@@ -1764,7 +1780,6 @@
 				A70D00000000000000000008 /* NameValueFormDialog.swift in Sources */,
 				A70D0000000000000000000A /* NameValueHostControl.swift in Sources */,
 				A70D0000000000000000000C /* NameValueDisplay.swift in Sources */,
-				A90700000000000000000004 /* PersonsListView.swift in Sources */,
 				A90700000000000000000002 /* PersonHeaderDisplay.swift in Sources */,
 				A70B00000000000000000002 /* ArtifactViewerKind.swift in Sources */,
 				A70B00000000000000000004 /* ArtifactViewerContent.swift in Sources */,
@@ -1859,6 +1874,7 @@
 				AA00000000000000000003B3 /* PVFileTypeGlyphTests.swift in Sources */,
 				AA0000000000000000000333 /* DateValueDraftTests.swift in Sources */,
 				A70D0000000000000000000E /* NameValueDraftTests.swift in Sources */,
+				A90800000000000000000006 /* WorkspaceSidebarSectionsTests.swift in Sources */,
 				A90700000000000000000006 /* PersonHeaderDisplayTests.swift in Sources */,
 				A70900000000000000000004 /* DateValueDisplayTests.swift in Sources */,
 				A70900000000000000000008 /* ObservationValueDisplayTests.swift in Sources */,

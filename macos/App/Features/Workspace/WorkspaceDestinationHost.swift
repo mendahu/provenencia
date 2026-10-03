@@ -35,7 +35,8 @@ struct WorkspaceDestinationHost: View {
                     sourceID: sourceID,
                     session: session,
                     store: store,
-                    userID: userID
+                    userID: userID,
+                    catalogCounts: catalogCounts
                 )
             }
         case .sourceCitationComposer:
@@ -71,8 +72,14 @@ struct WorkspaceDestinationHost: View {
             )
             .accessibilityIdentifier("workspace.destination.properties")
         case .personsList:
-            PersonsListView()
+            ConclusionStubView(section: .persons)
                 .accessibilityIdentifier("workspace.destination.persons")
+        case .eventsList:
+            ConclusionStubView(section: .events)
+                .accessibilityIdentifier("workspace.destination.events")
+        case .placesList:
+            ConclusionStubView(section: .places)
+                .accessibilityIdentifier("workspace.destination.places")
         }
     }
 
@@ -98,6 +105,10 @@ struct WorkspaceDestinationHost: View {
             return .properties
         case .personsList:
             return .persons
+        case .eventsList:
+            return .events
+        case .placesList:
+            return .places
         }
     }
 }
@@ -109,4 +120,6 @@ enum WorkspaceDestinationKind: Equatable {
     case sourceTypes
     case properties
     case persons
+    case events
+    case places
 }

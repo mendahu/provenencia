@@ -9486,6 +9486,90 @@
         }
       }
     },
+    "workspace.section.events.stubMessage": {
+      "comment": "Placeholder body on the Events page until the list ships",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Events list is on its way. Promoted events will be listed here."
+          }
+        }
+      }
+    },
+    "workspace.section.events.title": {
+      "comment": "Workspace sidebar destination and page title: Events (Conclude section)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Events"
+          }
+        }
+      }
+    },
+    "workspace.section.places.stubMessage": {
+      "comment": "Placeholder body on the Places page until the list ships",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Places list is on its way. Promoted places will be listed here."
+          }
+        }
+      }
+    },
+    "workspace.section.places.title": {
+      "comment": "Workspace sidebar destination and page title: Places (Conclude section)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Places"
+          }
+        }
+      }
+    },
+    "workspace.sidebar.section.conclude": {
+      "comment": "Sidebar section title above Persons, Events and Places (workflow stage)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conclude"
+          }
+        }
+      }
+    },
+    "workspace.sidebar.section.configure": {
+      "comment": "Sidebar section title above Source types, Metadata and Properties",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configure"
+          }
+        }
+      }
+    },
+    "workspace.sidebar.section.source": {
+      "comment": "Sidebar section title above Sources (workflow stage)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source"
+          }
+        }
+      }
+    },
     "workspace.section.persons.stubMessage": {
       "comment": "Placeholder body on the Persons page until the list ships",
       "extractionState": "manual",
@@ -9578,18 +9662,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Show labels"
-          }
-        }
-      }
-    },
-    "workspace.sidebar.navGroupLabel": {
-      "comment": "Eyebrow label above the workspace sidebar's nav destinations",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Source layer"
           }
         }
       }

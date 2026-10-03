@@ -626,7 +626,9 @@ struct GoStore: GenealogyStore {
             sources: Int(resp.sources),
             sourceTypes: Self.mapOriginCounts(resp.sourceTypes),
             metadataFields: Self.mapOriginCounts(resp.metadataFields),
-            persons: Int(resp.persons)
+            persons: Int(resp.persons),
+            events: Int(resp.events),
+            places: Int(resp.places)
         )
     }
 

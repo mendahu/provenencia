@@ -283,41 +283,62 @@ private extension View {
 }
 
 #Preview {
-    let config = [
+    // Workspace sections (S9-D1): a titled group per section, each a plain
+    // list of top-level rows. Children remain supported but unused.
+    let source = [
         PVSidebarNavItem(
-            id: "source-types",
-            label: L10n.Workspace.sourceTypesTitle,
-            icon: .tag,
+            id: "sources", label: L10n.Workspace.sourcesTitle, icon: .library,
+            accessibilityIdentifier: "preview.nav.sources", count: 12
+        ),
+    ]
+    let conclude = [
+        PVSidebarNavItem(
+            id: "persons", label: L10n.Workspace.personsTitle, icon: .person,
+            accessibilityIdentifier: "preview.nav.persons", count: 42
+        ),
+        PVSidebarNavItem(
+            id: "events", label: L10n.Workspace.eventsTitle, icon: .calendar,
+            accessibilityIdentifier: "preview.nav.events", count: 0
+        ),
+        PVSidebarNavItem(
+            id: "places", label: L10n.Workspace.placesTitle, icon: .mapPin,
+            accessibilityIdentifier: "preview.nav.places", count: 19
+        ),
+    ]
+    let configure = [
+        PVSidebarNavItem(
+            id: "source-types", label: L10n.Workspace.sourceTypesTitle, icon: .tag,
             accessibilityIdentifier: "preview.nav.sourceTypes"
         ),
         PVSidebarNavItem(
-            id: "metadata",
-            label: L10n.Workspace.metadataTitle,
-            icon: .list,
-            accessibilityIdentifier: "preview.nav.metadataFields"
+            id: "metadata", label: L10n.Workspace.metadataTitle, icon: .list,
+            accessibilityIdentifier: "preview.nav.metadata"
         ),
         PVSidebarNavItem(
-            id: "properties",
-            label: L10n.Workspace.propertiesTitle,
-            icon: .listTree,
+            id: "properties", label: L10n.Workspace.propertiesTitle, icon: .listTree,
             accessibilityIdentifier: "preview.nav.properties"
         ),
     ]
-    let items = [
-        PVSidebarNavItem(
-            id: "sources",
-            label: L10n.Workspace.sourcesTitle,
-            icon: .library,
-            accessibilityIdentifier: "preview.nav.sources",
-            count: 12,
-            children: config
-        ),
+    let groups: [(LocalizedStringResource, [PVSidebarNavItem])] = [
+        (L10n.Workspace.sidebarSourceTitle, source),
+        (L10n.Workspace.sidebarConcludeTitle, conclude),
+        (L10n.Workspace.sidebarConfigureTitle, configure),
     ]
     return HStack(alignment: .top, spacing: PVSpacing.space9) {
-        PVSidebarNav(items: items, selection: "sources", collapsed: false, onSelect: { _ in })
-            .frame(width: 220)
-        PVSidebarNav(items: items, selection: "properties", collapsed: true, onSelect: { _ in })
-            .frame(width: 78)
+        ForEach([false, true], id: \.self) { collapsed in
+            VStack(spacing: 0) {
+                ForEach(groups.indices, id: \.self) { index in
+                    PVSidebarNav(
+                        groupLabel: groups[index].0,
+                        items: groups[index].1,
+                        selection: collapsed ? "properties" : "persons",
+                        collapsed: collapsed,
+                        onSelect: { _ in }
+                    )
+                }
+            }
+            .frame(width: collapsed ? 78 : 220)
+        }
     }
     .padding(PVSpacing.space9)
     .background(PVColor.surfaceCard)

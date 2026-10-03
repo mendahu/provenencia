@@ -57,8 +57,10 @@ final class CatalogCounts {
     private(set) var metadata: CatalogCountSummary?
     private(set) var sourceTypes: CatalogCountSummary?
     private(set) var properties: CatalogCountSummary?
-    /// Unmerged Person handles.
+    /// Unmerged Person, Event, and Place handles.
     private(set) var persons: Int?
+    private(set) var events: Int?
+    private(set) var places: Int?
     /// Set when `refreshAll` fails; cleared on the next successful refresh.
     private(set) var lastRefreshError: String?
 
@@ -82,6 +84,8 @@ final class CatalogCounts {
         case .metadata: metadata?.total
         case .properties: properties?.total
         case .persons: persons
+        case .events: events
+        case .places: places
         }
     }
 
@@ -108,7 +112,9 @@ final class CatalogCounts {
     /// Full badge refresh via `GetWorkspaceNavCounts`. Safe to overlap with
     /// destination `load()` — Go `catalogsession` serializes catalog ops.
     /// Failures set `lastRefreshError` and leave badges unchanged (absent until
-    /// a later success). Mutations use `publish*` instead of recounting.
+    /// a later success). Vocabulary mutations use `publish*` instead of
+    /// recounting; Conclusion handle counts have no loaded list to publish
+    /// from, so a Promote recounts through here.
     func refreshAll() async {
         do {
             let nav = try await store.workspaceNavCounts(projectDir: projectDir)
@@ -116,6 +122,8 @@ final class CatalogCounts {
             sourceTypes = CatalogCountSummary(nav.sourceTypes)
             metadata = CatalogCountSummary(nav.metadataFields)
             persons = nav.persons
+            events = nav.events
+            places = nav.places
             lastRefreshError = nil
         } catch {
             lastRefreshError = L10n.Errors.message(for: error)

@@ -70,6 +70,8 @@ struct CatalogCountsTests {
         #expect(counts.sourceTypes?.total == 0)
         #expect(counts.metadata?.total == 0)
         #expect(counts.persons == 0)
+        #expect(counts.events == 0)
+        #expect(counts.places == 0)
         #expect(counts.lastRefreshError == nil)
     }
 

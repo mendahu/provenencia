@@ -90,6 +90,8 @@ Destination view  →  reads QueryHandle(s)  →  patches / invalidates on mutat
 6. If a place reads a key, that key is in `PlaceRegistry.queryKeys`.
 7. `getCitation` is the exception: a one-shot into the composer fields draft. Do not cache the open citation.
 
+**Sidebar sections (S9-D1):** the sidebar is built from `WorkspaceSidebarSections` — titled `PVSidebarNav` groups, **Source** and **Conclude** at the top, **Configure** bottom-aligned above the footer. Research rows carry counts; Configure rows carry none. Every destination is a top-level row; a new destination goes into its section's list there, not into the view.
+
 **Conclusion keys (Spike 9):**
 
 - Every Conclusion key (Persons list today; Events, Places, and details later) invalidates on one set, `CatalogQueryRegistry.conclusionTriggers`. Go's resolved-values cache recomputes on the same writes, so busting them all together is cheap and never misses a dependency between handles.

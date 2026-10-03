@@ -8,8 +8,11 @@ enum WorkspaceSection: String, Sendable, CaseIterable, Codable {
     case sourceTypes = "source-types"
     case metadata
     case properties
-    /// Conclude: canonical Persons (S9-07). The sidebar row arrives in S9-08.
+    /// Conclude: canonical handles. Persons since S9-07; Events and Places
+    /// are stub pages until S9-23 / S9-26.
     case persons
+    case events
+    case places
 
     /// Retired section ids still found in saved navigation history (and
     /// accepted from any caller) mapped to their current section.
@@ -48,6 +51,8 @@ enum WorkspaceSection: String, Sendable, CaseIterable, Codable {
         case .metadata: L10n.Workspace.metadataTitle
         case .properties: L10n.Workspace.propertiesTitle
         case .persons: L10n.Workspace.personsTitle
+        case .events: L10n.Workspace.eventsTitle
+        case .places: L10n.Workspace.placesTitle
         }
     }
 
@@ -58,6 +63,8 @@ enum WorkspaceSection: String, Sendable, CaseIterable, Codable {
         case .metadata: .list
         case .properties: .listTree
         case .persons: .person
+        case .events: .calendar
+        case .places: .mapPin
         }
     }
 }

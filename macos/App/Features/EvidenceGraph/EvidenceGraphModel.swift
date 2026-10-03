@@ -172,16 +172,21 @@ final class EvidenceGraphModel {
         }
     }
 
+    /// Sidebar counts; a Promote can add a Person, Event, or Place handle.
+    let catalogCounts: CatalogCounts?
+
     init(
         sourceID: String,
         session: WorkspaceSession,
         store: any GenealogyStore,
-        userID: String
+        userID: String,
+        catalogCounts: CatalogCounts? = nil
     ) {
         self.sourceID = sourceID
         self.session = session
         self.store = store
         self.userID = userID
+        self.catalogCounts = catalogCounts
     }
 
     /// Snapshot as loaded. Edges come from cited observations.
@@ -735,6 +740,7 @@ final class EvidenceGraphModel {
             session.apply(.promotedSubject(sourceId: sourceID))
             promoteError = nil
             pendingPromote = nil
+            await catalogCounts?.refreshAll()
             return true
         } catch {
             promoteError = L10n.Errors.message(for: error)

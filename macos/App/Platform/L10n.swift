@@ -763,12 +763,6 @@ enum L10n {
     }
 
     enum Workspace {
-        static let navGroupLabel = LocalizedStringResource(
-            "workspace.sidebar.navGroupLabel",
-            defaultValue: "Source layer",
-            comment: "Eyebrow label above the workspace sidebar's nav destinations"
-        )
-
         static let sourcesTitle = LocalizedStringResource(
             "workspace.section.sources.title",
             defaultValue: "Sources",
@@ -797,6 +791,48 @@ enum L10n {
             "workspace.section.persons.title",
             defaultValue: "Persons",
             comment: "Workspace sidebar destination and page title: Persons (Conclude section)"
+        )
+
+        static let eventsTitle = LocalizedStringResource(
+            "workspace.section.events.title",
+            defaultValue: "Events",
+            comment: "Workspace sidebar destination and page title: Events (Conclude section)"
+        )
+
+        static let placesTitle = LocalizedStringResource(
+            "workspace.section.places.title",
+            defaultValue: "Places",
+            comment: "Workspace sidebar destination and page title: Places (Conclude section)"
+        )
+
+        static let eventsStubMessage = LocalizedStringResource(
+            "workspace.section.events.stubMessage",
+            defaultValue: "The Events list is on its way. Promoted events will be listed here.",
+            comment: "Placeholder body on the Events page until the list ships"
+        )
+
+        static let placesStubMessage = LocalizedStringResource(
+            "workspace.section.places.stubMessage",
+            defaultValue: "The Places list is on its way. Promoted places will be listed here.",
+            comment: "Placeholder body on the Places page until the list ships"
+        )
+
+        static let sidebarSourceTitle = LocalizedStringResource(
+            "workspace.sidebar.section.source",
+            defaultValue: "Source",
+            comment: "Sidebar section title above Sources (workflow stage)"
+        )
+
+        static let sidebarConcludeTitle = LocalizedStringResource(
+            "workspace.sidebar.section.conclude",
+            defaultValue: "Conclude",
+            comment: "Sidebar section title above Persons, Events and Places (workflow stage)"
+        )
+
+        static let sidebarConfigureTitle = LocalizedStringResource(
+            "workspace.sidebar.section.configure",
+            defaultValue: "Configure",
+            comment: "Sidebar section title above Source types, Metadata and Properties"
         )
 
         static let personsStubMessage = LocalizedStringResource(

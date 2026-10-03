@@ -17,6 +17,8 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-06 | PR | Resolved-values cache |
 | S9-07 | PR | Person header composer + list read |
 | S9-07b | PR | Rename configuration: Metadata, Properties |
+| S9-D1 | Design | Workspace sidebar: Source / Conclude / Configure |
+| S9-08 | PR | Sidebar sections: Source, Conclude, Configure |
 
 ## Steps
 
@@ -235,3 +237,34 @@ Two configuration views took plain names, all the way down: **Source fields → 
 
 - The sidebar layout and section titles (**S9-08**)
 - Renaming Source types, or `source_metadata_fields` / `source_type_metadata_fields` (already "metadata")
+
+### S9-D1 — Design: workspace sidebar
+
+**Board:** Claude Design project *Main Application Layout* (`fb7b3e33-1683-4961-aec1-90e6e19f8214`), `Workspace Chrome.dc.html`, Part 2 (Frames 6–11 and Findings). Part 1 is the earlier S2-01 chrome.
+
+- **Sections:** **Source** (Sources) and **Conclude** (Persons, Events, Places) top-aligned; **Configure** (Source types, Metadata, Properties) bottom-aligned above the session footer. Every destination is a top-level row; nothing discloses or collapses.
+- **Titles** are `PVSidebarNav`'s own group heading (micro caps, `--text-faint`), localized data — no new component.
+- **Research vs Configure**, in order of strength: flexible space (24pt floor), a hairline above Configure inset to the rows, and no counts on Configure rows. Research rows always carry a count; zero reads `0`.
+- **Collapsed rail:** titles drop; a 24pt hairline stands in for each, so the rail shows the same three blocks.
+- **Short window:** the column scrolls as one (W-5b); the space shrinks to its floor and Configure follows Conclude.
+- **Narrate** is reserved after Conclude (Frame 11, not shipped) and takes its height from the space.
+- **Icons:** Persons `person`, Events `calendar`, Places `mappin`.
+- The board's destination table predates S9-07b and lists `source-fields` / `subject-fields`; the shipped ids are `metadata` / `properties`.
+
+Brief archived: [`design/archive/S9-D1-sidebar.md`](design/archive/S9-D1-sidebar.md).
+
+### S9-08 — Sidebar sections: Source, Conclude, Configure
+
+The sidebar now reads as the research workflow: titled Source and Conclude sections at the top, Configure at the bottom.
+
+**What shipped**
+
+- `WorkspaceSidebarSections`: the sections as data (title, top/bottom placement, rows, counts). `WorkspaceSidebar` renders one `PVSidebarNav` per section in the existing scroll column, with `Spacer(minLength: 24)` and a hairline before Configure, and a 24pt hairline between every section on the collapsed rail. The Configure destinations are no longer children of Sources.
+- **Conclude:** Persons, Events, Places, each with a count. `WorkspaceSection.events` / `.places`, their places and presentations, and `ConclusionStubView` (one EmptyState stub for all three; replaces S9-07's `PersonsListView`). `PVSymbol.mapPin`.
+- **Counts:** nav counts gain `events` / `places` (`canonicalentities.CountByTypeKey`); `CatalogCounts` exposes them. A Promote recounts the sidebar (`EvidenceGraphModel.confirmPromote` → `CatalogCounts.refreshAll`), so a new handle shows at once.
+- L10n: section titles Source / Conclude / Configure, Events / Places titles and stub copy. The unused "Source layer" eyebrow is gone.
+
+**What stayed out**
+
+- The Persons list (**S9-09**), Events and Places pages (**S9-23**, **S9-26**)
+- Narrate (Narrative layer, later spike)

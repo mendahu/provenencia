@@ -6332,6 +6332,8 @@ type GetWorkspaceNavCountsResponse struct {
 	SourceTypes    *VocabularyOriginCounts `protobuf:"bytes,2,opt,name=source_types,json=sourceTypes,proto3" json:"source_types,omitempty"`
 	MetadataFields *VocabularyOriginCounts `protobuf:"bytes,3,opt,name=metadata_fields,json=metadataFields,proto3" json:"metadata_fields,omitempty"`
 	Persons        int32                   `protobuf:"varint,5,opt,name=persons,proto3" json:"persons,omitempty"` // unmerged Person handles
+	Events         int32                   `protobuf:"varint,6,opt,name=events,proto3" json:"events,omitempty"`   // unmerged Event handles
+	Places         int32                   `protobuf:"varint,7,opt,name=places,proto3" json:"places,omitempty"`   // unmerged Place handles
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -6390,6 +6392,20 @@ func (x *GetWorkspaceNavCountsResponse) GetMetadataFields() *VocabularyOriginCou
 func (x *GetWorkspaceNavCountsResponse) GetPersons() int32 {
 	if x != nil {
 		return x.Persons
+	}
+	return 0
+}
+
+func (x *GetWorkspaceNavCountsResponse) GetEvents() int32 {
+	if x != nil {
+		return x.Events
+	}
+	return 0
+}
+
+func (x *GetWorkspaceNavCountsResponse) GetPlaces() int32 {
+	if x != nil {
+		return x.Places
 	}
 	return 0
 }
@@ -13662,12 +13678,14 @@ const file_engine_proto_rawDesc = "" +
 	"\x06plugin\x18\x04 \x01(\x05R\x06plugin\"?\n" +
 	"\x1cGetWorkspaceNavCountsRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
-	"projectDir\"\x8a\x02\n" +
+	"projectDir\"\xba\x02\n" +
 	"\x1dGetWorkspaceNavCountsResponse\x12\x18\n" +
 	"\asources\x18\x01 \x01(\x05R\asources\x12P\n" +
 	"\fsource_types\x18\x02 \x01(\v2-.provenencia.engine.v1.VocabularyOriginCountsR\vsourceTypes\x12V\n" +
 	"\x0fmetadata_fields\x18\x03 \x01(\v2-.provenencia.engine.v1.VocabularyOriginCountsR\x0emetadataFields\x12\x18\n" +
-	"\apersons\x18\x05 \x01(\x05R\apersonsJ\x04\b\x04\x10\x05R\x05files\"V\n" +
+	"\apersons\x18\x05 \x01(\x05R\apersons\x12\x16\n" +
+	"\x06events\x18\x06 \x01(\x05R\x06events\x12\x16\n" +
+	"\x06places\x18\a \x01(\x05R\x06placesJ\x04\b\x04\x10\x05R\x05files\"V\n" +
 	"\x1aEnsureFileThumbnailRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +

@@ -30,7 +30,8 @@ struct EvidenceGraphView: View {
         sourceID: String,
         session: WorkspaceSession,
         store: any GenealogyStore,
-        userID: String
+        userID: String,
+        catalogCounts: CatalogCounts? = nil
     ) {
         self.sourceID = sourceID
         self.session = session
@@ -41,7 +42,8 @@ struct EvidenceGraphView: View {
                 sourceID: sourceID,
                 session: session,
                 store: store,
-                userID: userID
+                userID: userID,
+                catalogCounts: catalogCounts
             )
         )
     }

@@ -2475,6 +2475,12 @@ public nonisolated struct Provenencia_Engine_V1_GetWorkspaceNavCountsResponse: S
   /// unmerged Person handles
   public var persons: Int32 = 0
 
+  /// unmerged Event handles
+  public var events: Int32 = 0
+
+  /// unmerged Place handles
+  public var places: Int32 = 0
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -8820,7 +8826,7 @@ nonisolated extension Provenencia_Engine_V1_GetWorkspaceNavCountsRequest: SwiftP
 
 nonisolated extension Provenencia_Engine_V1_GetWorkspaceNavCountsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GetWorkspaceNavCountsResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}sources\0\u{3}source_types\0\u{3}metadata_fields\0\u{2}\u{2}persons\0\u{b}files\0\u{c}\u{4}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}sources\0\u{3}source_types\0\u{3}metadata_fields\0\u{2}\u{2}persons\0\u{1}events\0\u{1}places\0\u{b}files\0\u{c}\u{4}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -8832,6 +8838,8 @@ nonisolated extension Provenencia_Engine_V1_GetWorkspaceNavCountsResponse: Swift
       case 2: try { try decoder.decodeSingularMessageField(value: &self._sourceTypes) }()
       case 3: try { try decoder.decodeSingularMessageField(value: &self._metadataFields) }()
       case 5: try { try decoder.decodeSingularInt32Field(value: &self.persons) }()
+      case 6: try { try decoder.decodeSingularInt32Field(value: &self.events) }()
+      case 7: try { try decoder.decodeSingularInt32Field(value: &self.places) }()
       default: break
       }
     }
@@ -8854,6 +8862,12 @@ nonisolated extension Provenencia_Engine_V1_GetWorkspaceNavCountsResponse: Swift
     if self.persons != 0 {
       try visitor.visitSingularInt32Field(value: self.persons, fieldNumber: 5)
     }
+    if self.events != 0 {
+      try visitor.visitSingularInt32Field(value: self.events, fieldNumber: 6)
+    }
+    if self.places != 0 {
+      try visitor.visitSingularInt32Field(value: self.places, fieldNumber: 7)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -8862,6 +8876,8 @@ nonisolated extension Provenencia_Engine_V1_GetWorkspaceNavCountsResponse: Swift
     if lhs._sourceTypes != rhs._sourceTypes {return false}
     if lhs._metadataFields != rhs._metadataFields {return false}
     if lhs.persons != rhs.persons {return false}
+    if lhs.events != rhs.events {return false}
+    if lhs.places != rhs.places {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -4,12 +4,12 @@
 **Spike:** Provenencia Spike 9 (canonical entities MVP)  
 **View:** Workspace sidebar (`WorkspaceSidebar`)  
 **Implements later as:** PR **S9-08** (later on this view: S9-23 / S9-26 turn Events and Places live). The configuration renames ship first, in **S9-07b**.  
-**Depends on:** S9-07 (Persons list read + counts); shipped sidebar ([`WorkspaceSidebar`](../../../../macos/App/Features/Workspace/WorkspaceSidebar.swift), [`PVSidebarNav`](../../../../macos/App/DesignSystem/Components/SidebarNav/PVSidebarNav.swift))  
-**Related:** S9-D2…D4 (the lists these open); [`deployment-plan.md`](../deployment-plan.md) R5  
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
-**Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md); [`add-workspace-place`](../../../../.cursor/skills/add-workspace-place/SKILL.md)
+**Depends on:** S9-07 (Persons list read + counts); shipped sidebar ([`WorkspaceSidebar`](../../../../../macos/App/Features/Workspace/WorkspaceSidebar.swift), [`PVSidebarNav`](../../../../../macos/App/DesignSystem/Components/SidebarNav/PVSidebarNav.swift))  
+**Related:** S9-D2…D4 (the lists these open); [`deployment-plan.md`](../../deployment-plan.md) R5  
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)  
+**Skill:** [`add-design-brief`](../../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.cursor/skills/add-ui-component/SKILL.md); [`add-workspace-place`](../../../../../.cursor/skills/add-workspace-place/SKILL.md)
 
-Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](README.md) first.
+Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](../README.md) first.
 
 This brief is an **enhancement** of a shipped surface: extend its existing frames.
 
@@ -197,5 +197,5 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 ## 8. Handoff
 
 1. Archive this brief under `archive/` when the board is agreed.
-2. Record in [`../completed.md`](../completed.md).
+2. Record in [`../completed.md`](../../completed.md).
 3. Implement **S9-08** against the board and inventory (kit first).
