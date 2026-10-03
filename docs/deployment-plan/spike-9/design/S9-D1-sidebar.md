@@ -100,7 +100,7 @@ Empty space between the top sections and Configure is what separates research fr
   └──────────────────────────────┘
 ```
 
-Section titles are fixed: **Source**, **Conclude**, **Narrate**, **Configure** (verbs for the workflow stage, not nouns for the content). Board findings: the title treatment (it must survive the collapsed rail, where titles drop and only spacing or a rule separates sections), whether a section can collapse, and how research and Configure read as separate beyond the space between them. Keep the shipped sidebar chrome (brand row, footer, collapse rail).
+Section titles are fixed: **Source**, **Conclude**, **Narrate**, **Configure** (verbs for the workflow stage, not nouns for the content). **Sections do not collapse.** Every section is always open, and every destination is a top-level row in its section. Today the configuration destinations are nested as children under Sources; they move out to be Configure's own rows, and nothing in the sidebar uses disclosure. Board findings: the title treatment (it must survive the collapsed rail, where titles drop and only spacing or a rule separates sections), and how research and Configure read as separate beyond the space between them. Keep the shipped sidebar chrome (brand row, footer, collapse rail).
 
 ---
 
@@ -139,7 +139,8 @@ Section titles are fixed: **Source**, **Conclude**, **Narrate**, **Configure** (
 
 | ID | Requirement |
 | --- | --- |
-| SB-0 | Sections are titled **Source**, **Conclude**, **Configure** (L10n). **Narrate** is reserved after Conclude but not rendered until it has a destination. |
+| SB-0 | Sections are titled **Source**, **Conclude**, **Configure** (L10n). **Narrate** is reserved after Conclude but hidden until it has a destination. |
+| SB-0b | Sections are not collapsible: no disclosure control on titles or rows. Configuration destinations are top-level rows under Configure, no longer children of Sources. |
 | SB-1 | Sidebar shows Persons, Events, Places in the Conclude section, each with a count (`PVSidebarNav` item count slot). |
 | SB-2 | Source then Conclude are top-aligned. Configure (Source types, Metadata, Properties, in that order) is bottom-aligned directly above the session footer. |
 | SB-2b | When the window is too short for both sections plus spare space, the column scrolls as one (W-5b) with Configure after the top sections; nothing overlaps or clips. |

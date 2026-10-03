@@ -587,7 +587,7 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 
 | | |
 | --- | --- |
-| **In** | Per **S9-D1**: titled sections. **Source** (Sources) and **Conclude** (Persons live; Events / Places present but stubbed until S9-23 / S9-26) top-aligned, with counts. **Configure** — **Source types**, **Metadata**, **Properties** (names from S9-07b) — bottom-aligned directly above the session footer, separated by space; on a short window the column scrolls as one (W-5b). Rail icons. **Narrate** is reserved after Conclude but not rendered (Narrative layer, later spike). |
+| **In** | Per **S9-D1**: titled sections. **Source** (Sources) and **Conclude** (Persons live; Events / Places present but stubbed until S9-23 / S9-26) top-aligned, with counts. **Configure** — **Source types**, **Metadata**, **Properties** (names from S9-07b) — bottom-aligned directly above the session footer, separated by space; on a short window the column scrolls as one (W-5b). Rail icons. **Narrate** is reserved after Conclude but hidden (Narrative layer, later spike). Sections don't collapse; the configuration destinations stop being children of Sources and become Configure's own rows. |
 | **Check** | Persons count matches promoted Persons; configuration sits above the footer on a tall window and follows the research section on a short one. |
 | **Depends on** | **S9-D1**, S9-07, S9-07b |
 
