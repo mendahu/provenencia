@@ -25,15 +25,17 @@ struct CitationComposerConnectionRow: View {
                         .font(PVFont.body(size: PVTypeScale.caption))
                         .foregroundStyle(PVColor.textMuted)
                 } else if let _ = row.termProperty {
-                    PVComboBox(
-                        selection: termBinding,
-                        options: termOptions,
-                        size: .sm,
-                        placeholder: L10n.CitationComposer.termPlaceholder,
-                        emptyLabel: L10n.CitationComposer.termEmpty,
-                        label: termLabelResource,
-                        accessibilityIdentifierPrefix: "citationComposer.connection.term.\(row.id.uuidString)"
-                    )
+                    PVField(label: termLabelResource) {
+                        PVComboBox(
+                            selection: termBinding,
+                            options: termOptions,
+                            size: .sm,
+                            placeholder: L10n.CitationComposer.termPlaceholder,
+                            emptyLabel: L10n.CitationComposer.termEmpty,
+                            label: termLabelResource,
+                            accessibilityIdentifierPrefix: "citationComposer.connection.term.\(row.id.uuidString)"
+                        )
+                    }
                 }
                 if let error = row.error {
                     PVCallout(tone: .danger, message: error, compact: true)
