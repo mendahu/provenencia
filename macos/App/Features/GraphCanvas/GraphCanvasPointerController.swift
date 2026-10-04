@@ -4,7 +4,10 @@ import Observation
 /// Owns canvas pointer policy: hit-test, select, drag, empty-canvas pan, place, connect.
 ///
 /// Product hosts publish ``hitTargets`` and tool ``mode``, and wire the callbacks.
-/// Live drag offsets live here so SwiftUI paint can follow without owning gestures.
+/// Live drag offsets live here; ``GraphCanvasDocumentView`` applies them to item
+/// views directly. Observation is per property, so views that only need to know
+/// *whether* something is dragging read ``draggingItemID``, which changes at
+/// drag start and end — reading ``offsets`` re-runs a view on every pointer event.
 @MainActor
 @Observable
 final class GraphCanvasPointerController {
@@ -14,7 +17,10 @@ final class GraphCanvasPointerController {
     var mode: GraphCanvasPointerToolMode = .idle
 
     /// Mid-gesture card offsets (document space), keyed by hit target id.
+    /// Changes on every pointer event during a drag.
     private(set) var offsets: [String: CGSize] = [:]
+    /// The item being dragged, if any. Changes only at drag start and end.
+    private(set) var draggingItemID: String?
     /// Pointer is inside the document (hover for place/connect).
     private(set) var pointerInside = false
     /// Idle hover over a nested card action (`cardID`, `actionID`), for paint.
@@ -106,6 +112,7 @@ final class GraphCanvasPointerController {
             if mode == .idle, let targetID {
                 pressedCardAction = nil
                 gesture = .draggingCard(id: targetID, start: start)
+                draggingItemID = targetID
                 let offset = CGSize(
                     width: documentPoint.x - start.x,
                     height: documentPoint.y - start.y
@@ -177,6 +184,7 @@ final class GraphCanvasPointerController {
                 height: documentPoint.y - start.y
             )
             clearOffset(id)
+            draggingItemID = nil
             onDragEnded?(id, delta)
             gesture = .none
 

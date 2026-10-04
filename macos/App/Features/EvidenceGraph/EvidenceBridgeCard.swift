@@ -30,18 +30,15 @@ struct EvidenceBridgeCard: View {
     let text: EvidenceCardText
     var isSelected: Bool
     var isActivated: Bool
-    /// Live document-space drag offset from AppKit pointer ownership.
-    var dragOffset: CGSize = .zero
+    /// Being dragged: lifted paint. AppKit moves the card's view; the card
+    /// never offsets itself.
+    var isDragging: Bool = false
     /// Nested action id under the pointer (idle hover), if any.
     var hoveredActionID: String? = nil
     /// When false (no Artifact), the citation pencil is omitted.
     var canCite: Bool = false
     /// Receives the painted layout (card size + tagged hit regions) for hit targets and edges.
     var onLayout: ((EvidenceCardLayout) -> Void)? = nil
-
-    private var isDragging: Bool {
-        dragOffset != .zero
-    }
 
     var body: some View {
         EvidenceBridgeCardChrome(
@@ -54,8 +51,6 @@ struct EvidenceBridgeCard: View {
             canCite: canCite
         )
         .reportsEvidenceCardLayout(onLayout)
-        .offset(dragOffset)
-        .zIndex(isDragging || isActivated ? 1 : 0)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(verbatim: text.accessibilityLabel))
         .accessibilityIdentifier("evidenceGraph.bridge.\(placed.id)")

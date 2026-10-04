@@ -26,6 +26,8 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
     /// Stable identity for the document (e.g. source id). Changing it resets
     /// magnification; keeping it stable preserves zoom.
     var contentID: AnyHashable
+    /// VoiceOver name for the canvas group that holds the items and their rotors.
+    var accessibilityLabel: String = ""
     @ViewBuilder var content: () -> Content
 
     func makeCoordinator() -> Coordinator {
@@ -53,7 +55,8 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
             pointer: coordinator.pointer,
             frame: CGRect(origin: .zero, size: contentSize)
         )
-        document.installHostingRoot(hostedRoot(context: context))
+        document.setAccessibilityLabel(accessibilityLabel)
+        document.installHostingRoot(hostedRoot(context: context, items: document.items))
         scrollView.documentView = document
         coordinator.documentView = document
         coordinator.installedContentID = contentID
@@ -77,7 +80,10 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
         coordinator.installedContentSize = contentSize
 
         // Paint updates every representable pass — safe now that AppKit owns gestures.
-        coordinator.documentView?.installHostingRoot(hostedRoot(context: context))
+        if let document = coordinator.documentView {
+            document.setAccessibilityLabel(accessibilityLabel)
+            document.installHostingRoot(hostedRoot(context: context, items: document.items))
+        }
 
         if sizeChanged {
             coordinator.documentView?.resizeDocument(to: contentSize)
@@ -90,11 +96,12 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
         }
     }
 
-    private func hostedRoot(context: Context) -> AnyView {
+    private func hostedRoot(context: Context, items: GraphCanvasItemLayer) -> AnyView {
         AnyView(
             content()
                 .environment(\.graphCanvasViewport, context.coordinator.viewport)
                 .environment(\.graphCanvasPointer, context.coordinator.pointer)
+                .environment(\.graphCanvasItems, items)
                 .allowsHitTesting(false)
         )
     }
@@ -299,6 +306,10 @@ private struct GraphCanvasPointerKey: EnvironmentKey {
     static let defaultValue: GraphCanvasPointerController? = nil
 }
 
+private struct GraphCanvasItemsKey: EnvironmentKey {
+    static let defaultValue: GraphCanvasItemLayer? = nil
+}
+
 extension EnvironmentValues {
     var graphCanvasViewport: GraphCanvasViewportController? {
         get { self[GraphCanvasViewportKey.self] }
@@ -308,5 +319,11 @@ extension EnvironmentValues {
     var graphCanvasPointer: GraphCanvasPointerController? {
         get { self[GraphCanvasPointerKey.self] }
         set { self[GraphCanvasPointerKey.self] = newValue }
+    }
+
+    /// The canvas item layer, so the host's base view can push its items.
+    var graphCanvasItems: GraphCanvasItemLayer? {
+        get { self[GraphCanvasItemsKey.self] }
+        set { self[GraphCanvasItemsKey.self] = newValue }
     }
 }

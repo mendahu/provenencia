@@ -3,10 +3,15 @@ import SwiftUI
 
 /// Scroll document that owns canvas mouse sequences and hosts paint-only SwiftUI.
 ///
-/// Hit-testing always returns this view so the nested `NSHostingView` never
-/// steals pointer events. Empty-canvas drag pans via ``GraphCanvasPointerController``.
+/// Hit-testing always returns this view so nested `NSHostingView`s never
+/// steal pointer events. Empty-canvas drag pans via ``GraphCanvasPointerController``.
+///
+/// Two layers of content: the host's base SwiftUI view (grid, edges, overlays)
+/// at the bottom, and ``items`` — one hosting view per card — above it. A card
+/// drag moves its item view directly; no SwiftUI runs per pointer event.
 final class GraphCanvasDocumentView: NSView {
     let pointer: GraphCanvasPointerController
+    private(set) lazy var items = GraphCanvasItemLayer(container: self)
     private var hostingView: NSHostingView<AnyView>?
     private var trackingArea: NSTrackingArea?
 
@@ -34,7 +39,7 @@ final class GraphCanvasDocumentView: NSView {
         let hosting = NSHostingView(rootView: root)
         hosting.frame = bounds
         hosting.autoresizingMask = [.width, .height]
-        addSubview(hosting)
+        addSubview(hosting, positioned: .below, relativeTo: nil)
         hostingView = hosting
     }
 
@@ -78,11 +83,15 @@ final class GraphCanvasDocumentView: NSView {
     override func mouseDragged(with event: NSEvent) {
         let doc = convert(event.locationInWindow, from: nil)
         pointer.mouseDragged(documentPoint: doc, windowPoint: event.locationInWindow)
+        items.applyDragOffsets(pointer.offsets)
     }
 
     override func mouseUp(with event: NSEvent) {
         let doc = convert(event.locationInWindow, from: nil)
         pointer.mouseUp(documentPoint: doc, windowPoint: event.locationInWindow)
+        // The dropped item returns to its pushed origin; the host's drop
+        // handler pushes the new origin in the same update.
+        items.applyDragOffsets(pointer.offsets)
     }
 
     override func mouseMoved(with event: NSEvent) {
@@ -97,4 +106,20 @@ final class GraphCanvasDocumentView: NSView {
     override func mouseExited(with event: NSEvent) {
         pointer.mouseExited()
     }
+
+    // MARK: - Accessibility
+
+    /// A group named by the host, so VoiceOver can interact with the canvas
+    /// and use its item rotors.
+    override func isAccessibilityElement() -> Bool { true }
+
+    override func accessibilityRole() -> NSAccessibility.Role? { .group }
+
+    override func accessibilityCustomRotors() -> [NSAccessibilityCustomRotor] {
+        rotorSearches = items.rotorNames.map { GraphCanvasRotorSearch(name: $0, layer: items) }
+        return rotorSearches.map { NSAccessibilityCustomRotor(label: $0.name, itemSearchDelegate: $0) }
+    }
+
+    /// Rotors hold their search delegate weakly; keep the current ones alive.
+    private var rotorSearches: [GraphCanvasRotorSearch] = []
 }
