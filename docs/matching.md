@@ -44,46 +44,64 @@ A candidate is returned when its total reaches `MinScore`. Results are sorted by
 | `DateComparer` | date | Same day 1. Same month 0.9. Same year 0.8, or 0.6 if both months are known and differ. Up to `Tolerance` years apart (default 2) falls off linearly. Beyond that it scores 0. ABT/BEF/AFT on either side doubles the tolerance. |
 | `IntegerComparer` | integer | Equal scores 1. Within `Tolerance` falls off linearly. Beyond it scores 0. |
 
-### Names are compared by parts, not by `form`
+### Names: part types are data, not gates
 
-`form` is the name as written, closer to a transcription. Typed parts are what can be computed on ([`structured-name-model.md`](structured-name-model.md)). When both names have typed parts, `NameComparer` compares them by role:
+`form` is the name as written, closer to a transcription. Typed parts are what can be computed on ([`structured-name-model.md`](structured-name-model.md)). `NameComparer` compares names **word by word**, and uses each word's part type as data:
 
-| Role | Parts | Rule |
-| --- | --- | --- |
-| Surname | `surname` | Best-paired word overlap, so dual surnames partly match. `surname_prefix` ("van") is not compared. |
-| Given | `given`, `initial`, plus `nick` as an alternative first name | The first given name (or a nickname, on either side) counts 70%; the whole given set, initials included, counts 30%. |
-| Suffix | `suffix` | Both present and different (Jr. vs Sr.) multiplies the score by `SuffixConflict` (0.3). |
+- **Roles.** Each part type maps to a role through `PartRoles`. The default is `WesternPartRoles`; a name format profile can supply its own map, for a patronymic or a maternal surname.
 
-- **Blending:** the surname is `SurnameShare` (0.6) of the score and the given name the rest. A role only one side has gets half credit. A role neither side has is left out, so "James" vs "James" scores 1.
-- **Surnames that share nothing:** the given-name match counts at `GivenOnlyFactor` (0.5). A surname can change at marriage, but a shared "James" alone is weak.
+  | Role | Default part types | Word weight |
+  | --- | --- | --- |
+  | family | `surname` | 1.5 |
+  | given | `given`, `initial` | 1 for the first, 0.5 for the rest |
+  | nick | `nick` | 0.3 |
+  | untyped | `undetermined`, untyped, or a word of `form` | 1 |
+  | generation | `suffix` | compared separately (below) |
+  | ignored | `prefix` (titles), `surname_prefix` ("van") | — |
+
+- **Any word can pair with any word** of the other name, one-to-one, using the exact best pairing (so scores are symmetric).
+- **A pair earns** word similarity × role affinity × the two words' weights. The score is the earned share of both names' total weight, so an unmatched word costs its weight.
+- **Role affinity:**
+  - the same role: 1;
+  - a nickname against a given name: 0.9;
+  - a typed word against an untyped one: 0.8;
+  - any other mismatch, such as a surname against a given name: 0.5.
+
+  **Names entered in different formats still connect,** just lower. Types never block a pairing.
+- **Surnames that share nothing:** when both names have family words and none resembles any word of the other name, the score is scaled by `GivenOnlyFactor` (0.5). A surname can change at marriage, but a shared "James" alone is weak. Swapped types are not a conflict.
+- **Generations:** when both names carry suffixes and share none (Jr. vs Sr.), the score is scaled by `SuffixConflict` (0.3).
 - **Words** match when equal (1), as an initial and the word it begins (0.5), or as a near spelling at or above `FuzzyFloor` (0.8, edit-distance ratio).
-- **Initials** are lone cased letters ("J"). A lone character in an uncased script (蒋, 王) is a whole word, so single-character names match only themselves.
-- **Pairing:** word lists are paired by the exact best one-to-one pairing, so scores are symmetric.
-- **Titles and untyped parts** (`prefix`, `undetermined`, no type) carry no role.
-- **When it falls back to `form`:** a name with no surname or given part on either side.
+  - An initial is a lone cased letter ("J").
+  - A lone character in an uncased script (蒋, 王) is a whole word.
+- **No parts:** a name whose parts give no comparable word is read from its `form` as untyped words. This is the same rule, not a separate fallback.
 
-Worked examples, all scored by parts:
+Every weight and affinity is a `NameComparer` field.
+
+Worked examples:
 
 | Pair | Score |
 | --- | --- |
 | James Robins vs James Robins (forms "ROBINS, Jas." and "James Robins") | 1 |
-| Robins (surname only) vs James Robins | 0.8 |
 | J. Robins vs James Robins | 0.8 |
+| typed James Robins vs the form "James Robins" | 0.8 |
+| Robins (surname only) vs James Robins | 0.75 |
 | Mary Robins vs James Robins | 0.6 |
+| surname "James", given "Robins" (types swapped) vs James Robins | 0.5 |
 | James Robins Jr. vs James Robins Sr. | 0.3 |
 | James Smith vs James Robins | 0.2 |
 
 Tests: [`core/match/names_test.go`](../core/match/names_test.go) has three layers:
-- **Exact scores per rule:** identity and normalization, surname, given, a surname conflict, suffix, role-less parts, the form fallback, and the tuning knobs.
+- **Exact scores per rule:** identity and normalization, surname, given, cross-format pairs (swapped types, typed vs untyped, profile-supplied roles), a surname conflict, suffix, ignored parts, names read from `form`, and the tuning knobs. Expected values are written as the weighted arithmetic.
 - **Ladders:** which name must outrank which, so they hold when weights are retuned.
 - **Generated permutations from fixed seeds**, checked for:
   - symmetry;
   - a score between 0 and 1;
   - every name matching itself at 1;
-  - the form not mattering once both names have parts;
+  - the form not mattering once both names have comparable parts;
   - the order of parts across roles not mattering;
   - a suffix conflict never raising a score;
-  - titles and untyped parts never moving a score.
+  - titles and surname particles never moving a score;
+  - the same words with their types cleared still connecting (above 0, never above 1).
 
 When a seed finds a bug, shrink it into an exact-score case.
 

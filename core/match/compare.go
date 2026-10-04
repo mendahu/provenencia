@@ -36,35 +36,43 @@ func ComparerFor(valueType string) Comparer {
 
 // Defaults applied when a comparer's field is zero.
 const (
-	defaultNamePartial   = 0.8
 	defaultTextPartial   = 0.7
 	defaultFuzzyFloor    = 0.8
 	defaultDateTolerance = 2
 )
 
-// NameComparer compares NameValues by their typed parts when both have
-// them (see compareStructured in names.go): surname against surname, given
-// names (with initials and nicknames) against given names, suffix against
-// suffix. form is a reading of the name as written, closer to a
-// transcription, so it is only the fallback for a name with no typed surname
-// or given part: the same normalized form is 1, otherwise shared words
-// (initials and near spellings included) scaled by Partial.
+// NameComparer compares NameValues word by word, using part types as data
+// rather than as gates (compareNames in names.go). Each word carries a role
+// (from PartRoles) and a weight; any word may pair with any word of the other
+// name, discounted when their roles differ, so names entered in different
+// formats still connect. A name with no typed parts is read from its form as
+// untyped words.
 //
-// Word matching throughout: an equal word is 1, an initial against a word it
-// begins ("J." ~ "James") 0.5, a near spelling ("Robins" ~ "Robbins") its
+// Word matching: an equal word is 1, an initial against a word it begins
+// ("J." ~ "James") 0.5, a near spelling ("Robins" ~ "Robbins") its
 // edit-distance ratio when at least FuzzyFloor.
+//
+// Zero fields take their defaults.
 type NameComparer struct {
-	// SurnameShare is the surname's part of a structured score; the given
-	// name has the rest. Default 0.6.
-	SurnameShare float64
-	// GivenOnlyFactor scales the given-name match when both surnames are
-	// known and share nothing. Default 0.5.
+	// PartRoles maps part types to roles. Default WesternPartRoles; a name
+	// format profile may supply its own.
+	PartRoles map[string]NameRole
+
+	// Word weights by role. Defaults: family 1.5, first given 1, other given
+	// (middle names, initials) 0.5, nick 0.3, untyped 1.
+	FamilyWeight, FirstGivenWeight, OtherGivenWeight, NickWeight, UntypedWeight float64
+
+	// Role affinities for pairs whose roles differ. Defaults: a typed word
+	// against an untyped one 0.8, a nickname against a given name 0.9, any
+	// other mismatch (a surname against a given name) 0.5.
+	UntypedAffinity, NickAffinity, CrossRole float64
+
+	// GivenOnlyFactor scales the score when both names have family words and
+	// none resembles any word of the other name. Default 0.5.
 	GivenOnlyFactor float64
-	// SuffixConflict scales a structured score when both names carry
-	// suffixes and they differ (Jr. vs Sr.). Default 0.3.
+	// SuffixConflict scales the score when both names carry generation words
+	// (Jr., Sr.) and share none. Default 0.3.
 	SuffixConflict float64
-	// Partial caps a non-identical form in the fallback, 0…1. Default 0.8.
-	Partial float64
 	// FuzzyFloor is the least edit-distance ratio two words need to count as
 	// a spelling variant, 0…1. Default 0.8 (Robins ~ Robbins, not Mary ~ Mark);
 	// 1 turns fuzzy matching off.
@@ -75,11 +83,7 @@ func (c NameComparer) Compare(a, b Value) (float64, bool) {
 	if a.Name == nil || b.Name == nil {
 		return 0, false
 	}
-	floor := orDefault(c.FuzzyFloor, defaultFuzzyFloor)
-	if sim, ok := c.compareStructured(a.Name, b.Name, floor); ok {
-		return sim, true
-	}
-	return compareForms(a.Name.Form, b.Name.Form, orDefault(c.Partial, defaultNamePartial), floor, true)
+	return c.compareNames(a.Name, b.Name)
 }
 
 // TextComparer compares free text the way names are compared, without

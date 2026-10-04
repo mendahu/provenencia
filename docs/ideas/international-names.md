@@ -7,7 +7,7 @@
 Names are compared, clustered, sorted and displayed with assumptions that hold mainly for Western, Latin-script names:
 
 - **Accents break matches.** "José" vs "Jose" and "Müller" vs "Muller" don't match. `resolve.NormalizeForm` keeps diacritics, and short words fall below the near-spelling floor. Records disagree on accents all the time: clerks, transcribers and OCR drop or add them.
-- **Matching roles are hard-coded.** `core/match` treats every name the same way: `surname` is the family name, the first `given` leads, and `suffix` separates generations. That is right for "James K. Robins" and wrong or incomplete for many others (below).
+- **Only Western roles exist.** `core/match` compares names word by word with part types as data (S9-10). Mismatched types discount, they don't block. But the only role map is `WesternPartRoles`. That's right for "James K. Robins" and incomplete for many others (below).
 - **Only one profile exists.** Name format profiles are designed to carry culture, but only `western` is seeded, and nothing reads a profile yet.
 
 ## Part 1: accent and character folding
@@ -18,9 +18,9 @@ Fold for **comparison**, never for **display**, and don't use one fold for **sor
   - Decompose text (Unicode NFD) and drop combining marks: é→e, ü→u, ñ→n, å→a.
   - A small table for letters that don't decompose: ß→ss, æ→ae, œ→oe, ø→o, ł→l, đ→d, þ→th, ı→i.
   - Needs `golang.org/x/text` (`unicode/norm`) or a hand-written table.
-- **Where:** in one shared normalizer, so the cluster key, the cache `sort_key`, search, and matching can't disagree. Today that normalizer is `resolve.NormalizeForm`; folding there changes cached keys, so it needs a cache version bump.
+- **Where (decided): matching only.** "José" and "Jose" match in suggestions but stay separate groupings on a Person's page. The auto-reconciler may grow an accent rule later, but merging them is left to manual reconciliation. Folding therefore lives in `core/match`'s word comparison, not in `resolve.NormalizeForm`: cluster keys and the cache `sort_key` don't change, and no cache bump is needed.
 - **Exact still beats folded.** "José" vs "José" should outrank "José" vs "Jose". One option: a folded-only match scores 0.95 in `wordSimilarity`, so an accent difference is a near-match, not identity.
-- **Sorting is a different problem.** Folding for sort order is wrong in some languages: Swedish files å, ä, ö after z, and Spanish once filed ch and ll as letters. List order wants locale collation (CLDR, via `x/text/collate`), chosen by the project or the Person's name format, not the comparison fold.
+- **Sorting is a different problem.** Folding for sort order is wrong in some languages: Swedish files å, ä, ö after z, and Spanish once filed ch and ll as letters. List order wants locale collation (CLDR, via `x/text/collate`), not the comparison fold. **Decided:** the project picks the collation locale (a project setting).
 - **Display never folds.** `form` and part values stay exactly as recorded.
 
 ## Part 2: non-Western name structures
@@ -38,10 +38,15 @@ Matching should take its roles from the Person's **name format profile**, not fr
 | Name changes | Married names, religious names, anglicized immigrant names | Not a comparer rule. They're multiple name Observations, and matching already takes the best pair. A "known as" relationship could help later. |
 | Single names | Mononyms; enslaved people recorded by given name only | Work today: a role neither name has is left out. Context (owner, place, date) must carry more of the weight; that belongs in the profile, not the name. |
 
-Sketch:
-- **Profiles also define roles.** Each name format profile maps part types to roles: family (with an order or weight), given, lineage (patronymic), generation (suffix), ignored.
-- **The comparer takes roles.** `NameComparer` receives the role map from the candidate's profile instead of the Western grouping hard-coded in `rolesOf`. A Western default keeps today's behaviour.
-- **New part types** (`patronymic`, perhaps `maternal_surname`) go through the compiled `namevalues` registry and [`seeded-vocabulary.md`](../seeded-vocabulary.md) §4.1. GEDCOM has no patronymic type, so export needs a mapping.
+**Decided: types are data, not locks.** Comparison must work across name formats. A surname in one name that matches a given name in another still connects, just scored lower because the types differ. S9-10 already compares this way (see [`docs/matching.md`](../matching.md)):
+- part types map to roles;
+- any word can pair with any word;
+- role affinity discounts mismatched types.
+
+What's left here:
+- **Profiles supply the role map.** Each name format profile maps part types to roles (family, given, lineage, generation, ignored) and can tune weights, for example a maternal surname weighing less. `NameComparer.PartRoles` already takes the map; `WesternPartRoles` is the default.
+- **Which profile applies** when the two names have different formats: each name's words take roles from its own profile, so no single profile has to win.
+- **New part types** (`patronymic`, perhaps `maternal_surname`) go through the compiled `namevalues` registry and [`seeded-vocabulary.md`](../seeded-vocabulary.md) §4.1. GEDCOM has no patronymic type, so export needs a mapping. A `lineage` role might pair a patronymic with the father's given name, at a discount.
 
 ## Part 3: scripts, transliteration, sound-alikes
 
@@ -51,14 +56,18 @@ Sketch:
 
 ## Order of work (rough)
 
-1. Accent folding in the shared normalizer, with the 0.95 folded-match tier and a cache version bump. This is small and has the highest payoff.
-2. Profiles carry roles; `NameComparer` reads them; a `patronymic` part type; a second seeded profile (Spanish dual surname, or Icelandic).
-3. Locale collation for sorted lists, alongside the name-format display styles.
+1. Accent folding in matching's word comparison, with the 0.95 folded-match tier. This is small, has the highest payoff, and needs no cache change.
+2. Name format profiles carry role maps (and weights); `NameComparer` reads each name's own profile; a `patronymic` part type; a second seeded profile (Spanish dual surname, or Icelandic).
+3. Locale collation for sorted lists, with the locale as a project setting, alongside the name-format display styles.
 4. Nickname tables, then phonetics, then transliteration.
+
+## Decisions
+
+- **Accent variants match in suggestions only.** On a Person's page they stay separate groupings. Manual reconciliation merges them; the auto-reconciler may add a rule later.
+- **Types are data.** Names in different formats compare word by word, and mismatched types discount rather than block. This shipped in S9-10.
+- **The project picks the sorting locale.**
 
 ## Open questions
 
-- Is the matching profile the **candidate's** name format (its Person), the **probe's**, or the project default when they differ?
-- Does accent folding belong in `resolve.NormalizeForm` (affecting clustering), or only in matching, so that "José" and "Jose" stay separate clusters on a Person's page and merge only when suggested?
-- Who chooses the collation locale: the project, the viewer's system locale, or the Person's name format?
 - Should a patronymic link actually use the father's handle, once family edges exist (S9-28)?
+- Does a viewer ever need a locale other than the project's, for example a shared tree read abroad?

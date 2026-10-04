@@ -31,13 +31,12 @@ func TestComparers(t *testing.T) {
 		comparable bool
 	}{
 		{"name: same normalized form", NameComparer{}, name("James Robins"), name("james  robins."), 1, true},
-		{"name: same words reordered", NameComparer{}, name("Robins, James"), name("James Robins"), 0.8, true},
-		{"name: shared surname", NameComparer{}, name("Mary Robins"), name("James Robins"), 0.4, true},
-		{"name: initial is half a word", NameComparer{}, name("J. Robins"), name("James Robins"), 0.8 * 2 * 1.5 / 4, true},
-		{"name: spelling variant", NameComparer{}, name("James Robbins"), name("James Robins"), 0.8 * 2 * (1 + 6.0/7) / 4, true},
+		{"name: same words reordered", NameComparer{}, name("Robins, James"), name("James Robins"), 1, true},
+		{"name: shared surname", NameComparer{}, name("Mary Robins"), name("James Robins"), 0.5, true},
+		{"name: initial is half a word", NameComparer{}, name("J. Robins"), name("James Robins"), 2 * 1.5 / 4, true},
+		{"name: spelling variant", NameComparer{}, name("James Robbins"), name("James Robins"), 2 * (1 + 6.0/7) / 4, true},
 		{"name: not a variant", NameComparer{}, name("Mary"), name("Mark"), 0, true},
 		{"name: fuzzy off", NameComparer{FuzzyFloor: 1}, name("Robbins"), name("Robins"), 0, true},
-		{"name: custom partial", NameComparer{Partial: 0.5}, name("Mary Robins"), name("James Robins"), 0.25, true},
 		{"name: missing", NameComparer{}, name("James"), Value{}, 0, false},
 
 		{"text: same", TextComparer{}, text("York"), text("york"), 1, true},
@@ -117,13 +116,13 @@ func TestRankPersons(t *testing.T) {
 	candidates := []Candidate{
 		person("PER-B", []string{"Jim Robins", "James Robins"}, "male"), // best cluster wins: 10 + 1
 		person("PER-A", []string{"James Robins"}, ""),                   // no sex to compare: 10
-		person("PER-C", []string{"Mary Robins"}, "unknown"),             // neutral sex: 4
+		person("PER-C", []string{"Mary Robins"}, "unknown"),             // neutral sex: 5
 		person("PER-D", []string{"James Robins"}, "female"),             // 10 − 8 = 2, below MinScore
 		person("PER-E", []string{"Ada Lovelace"}, "male"),               // 0 + 1, below
 		person("PER-F", nil, "male"),                                    // no name: 1, below
 	}
 	got := Rank(p, probe, candidates, 0)
-	if want := "[PER-B=11.0 PER-A=10.0 PER-C=4.0]"; refs(got) != want {
+	if want := "[PER-B=11.0 PER-A=10.0 PER-C=5.0]"; refs(got) != want {
 		t.Fatalf("got %s, want %s", refs(got), want)
 	}
 	if r := got[0].Reasons; len(r) != 2 || r[0].Property.Key != "name" || r[0].Similarity != 1 || r[1].Contribution != 1 {
@@ -162,7 +161,7 @@ func TestRankPersons(t *testing.T) {
 			t.Fatal("With must replace in a copy")
 		}
 		got := Rank(lenient, probe, candidates, 0)
-		if want := "[PER-B=11.0 PER-A=10.0 PER-D=10.0 PER-C=4.0 PER-E=1.0 PER-F=1.0]"; refs(got) != want {
+		if want := "[PER-B=11.0 PER-A=10.0 PER-D=10.0 PER-C=5.0 PER-E=1.0 PER-F=1.0]"; refs(got) != want {
 			t.Fatalf("got %s, want %s", refs(got), want)
 		}
 	})

@@ -319,7 +319,7 @@ Promote can now file a Subject onto an existing handle, carry a confidence grade
 - **Rebuild equals upkeep:** the seeded sequences join same-kind handles (and fail if a seed never joins); scenario *joining a second member merges its name, then disagrees*.
 - **Matching** ([`docs/matching.md`](../../matching.md)), built as its own module for Promote, merge hints and later surfaces:
   - `core/match` (pure): per-kind **Profiles** of **Features** (Property, Comparer, Weight, Contradiction, plus MinScore), with additive scores and per-Feature **reasons**.
-  - **Names are compared by typed parts:** surname against surname; given against given, with initials and nicknames; and suffix (Jr. vs Sr.). `form`, the name as written, is only the fallback for untyped names.
+  - **Names are compared word by word, with part types as data:** each word has a role (family, given, nick, untyped) and a weight. Any word can pair with any word of the other name, discounted when roles differ, so names in different formats still connect. A surname conflict and a suffix conflict (Jr. vs Sr.) scale the score. Roles come from a part-type → role map that a name format profile can supply. A name with no typed parts is read from `form` as untyped words.
   - Other comparers: text, term (with neutral terms), date (year / month / day, tolerance, ABT widening) and integer.
   - Default profiles for person (name, sex at birth), event (type, date, start / end) and place (toponym). They are tunable per call through `Profile.With`, or in `profiles.go`.
   - `resolve.NormalizeForm` is exported so names compare exactly as the cache keys them.

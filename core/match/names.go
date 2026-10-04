@@ -9,44 +9,119 @@ import (
 	"github.com/mendahu/provenencia/core/resolve"
 )
 
-// Defaults for NameComparer's structured comparison.
+// NameRole is what a name part means for matching. Part types map to roles
+// through NameComparer.PartRoles, so a name format profile can supply its
+// own mapping (a patronymic, a maternal surname) without new comparer code.
+// Roles never stop two words from pairing; they only weigh and discount.
+type NameRole string
+
 const (
-	defaultSurnameShare    = 0.6
-	defaultGivenOnlyFactor = 0.5
-	defaultSuffixConflict  = 0.3
-	unknownRoleCredit      = 0.5
-	firstGivenShare        = 0.7
+	RoleFamily     NameRole = "family"     // surname
+	RoleGiven      NameRole = "given"      // given names and initials, in order
+	RoleNick       NameRole = "nick"       // an alternative given name
+	RoleUntyped    NameRole = "untyped"    // undetermined, untyped, or a form word
+	RoleGeneration NameRole = "generation" // Jr., Sr., III: compared separately
+	RoleIgnored    NameRole = "ignored"    // titles, surname particles
 )
 
-// nameRoles is a NameValue's typed parts grouped by what they mean for
-// matching. Words are normalized (resolve.NormalizeForm) and split.
-type nameRoles struct {
-	surnames []string // surname parts; surname_prefix ("van") is not compared
-	given    []string // given names, then initials, in part order
-	nicks    []string // nicknames: alternatives to the first given name
-	suffixes []string // Jr., Sr., III — differing suffixes suggest different people
+// WesternPartRoles maps the product part types (namevalues) to roles. Types
+// missing from a map are untyped.
+var WesternPartRoles = map[string]NameRole{
+	namevalues.PartTypeSurname:       RoleFamily,
+	namevalues.PartTypeGiven:         RoleGiven,
+	namevalues.PartTypeInitial:       RoleGiven,
+	namevalues.PartTypeNick:          RoleNick,
+	namevalues.PartTypeSuffix:        RoleGeneration,
+	namevalues.PartTypePrefix:        RoleIgnored,
+	namevalues.PartTypeSurnamePrefix: RoleIgnored,
+	namevalues.PartTypeUndetermined:  RoleUntyped,
+	"":                               RoleUntyped,
 }
 
-func (r nameRoles) structured() bool { return len(r.surnames) > 0 || len(r.given) > 0 }
+// Defaults for NameComparer. Weights are relative: what a matched word of
+// that role earns, and what an unmatched one costs.
+const (
+	defaultFamilyWeight     = 1.5
+	defaultFirstGivenWeight = 1
+	defaultOtherGivenWeight = 0.5
+	defaultNickWeight       = 0.3
+	defaultUntypedWeight    = 1
+	defaultCrossRole        = 0.5
+	defaultUntypedAffinity  = 0.8
+	defaultNickAffinity     = 0.9
+	defaultGivenOnlyFactor  = 0.5
+	defaultSuffixConflict   = 0.3
+)
 
-// rolesOf groups typed parts by role. prefix (titles) and undetermined or
-// untyped parts carry no role.
-func rolesOf(n *namevalues.Value) nameRoles {
-	var r nameRoles
+// nameWord is one comparable word of a name.
+type nameWord struct {
+	text   string
+	role   NameRole
+	weight float64
+}
+
+// nameWords splits a name into weighted, role-tagged words. Parts give the
+// roles; a name whose parts yield no comparable word is read from its form
+// as untyped words. Generation words come back separately.
+func (c NameComparer) nameWords(n *namevalues.Value) (words []nameWord, generation []string) {
+	roles := c.PartRoles
+	if roles == nil {
+		roles = WesternPartRoles
+	}
+	firstGiven := true
 	for _, p := range n.Parts {
-		words := splitWords(p.Value)
-		switch p.Type {
-		case namevalues.PartTypeSurname:
-			r.surnames = append(r.surnames, words...)
-		case namevalues.PartTypeGiven, namevalues.PartTypeInitial:
-			r.given = append(r.given, words...)
-		case namevalues.PartTypeNick:
-			r.nicks = append(r.nicks, words...)
-		case namevalues.PartTypeSuffix:
-			r.suffixes = append(r.suffixes, strings.Join(words, " "))
+		role, ok := roles[p.Type]
+		if !ok {
+			role = RoleUntyped
+		}
+		for _, w := range splitWords(p.Value) {
+			switch role {
+			case RoleIgnored:
+			case RoleGeneration:
+				generation = append(generation, w)
+			default:
+				words = append(words, nameWord{text: w, role: role, weight: c.weight(role, firstGiven)})
+				if role == RoleGiven {
+					firstGiven = false
+				}
+			}
 		}
 	}
-	return r
+	if len(words) == 0 {
+		for _, w := range splitWords(n.Form) {
+			words = append(words, nameWord{text: w, role: RoleUntyped, weight: c.weight(RoleUntyped, false)})
+		}
+	}
+	return words, generation
+}
+
+func (c NameComparer) weight(role NameRole, firstGiven bool) float64 {
+	switch role {
+	case RoleFamily:
+		return orDefault(c.FamilyWeight, defaultFamilyWeight)
+	case RoleGiven:
+		if firstGiven {
+			return orDefault(c.FirstGivenWeight, defaultFirstGivenWeight)
+		}
+		return orDefault(c.OtherGivenWeight, defaultOtherGivenWeight)
+	case RoleNick:
+		return orDefault(c.NickWeight, defaultNickWeight)
+	}
+	return orDefault(c.UntypedWeight, defaultUntypedWeight)
+}
+
+// affinity is how far two words' roles agree: 1 for the same role, less when
+// the types differ.
+func (c NameComparer) affinity(a, b NameRole) float64 {
+	switch {
+	case a == b:
+		return 1
+	case a == RoleUntyped || b == RoleUntyped:
+		return orDefault(c.UntypedAffinity, defaultUntypedAffinity)
+	case (a == RoleNick && b == RoleGiven) || (a == RoleGiven && b == RoleNick):
+		return orDefault(c.NickAffinity, defaultNickAffinity)
+	}
+	return orDefault(c.CrossRole, defaultCrossRole)
 }
 
 func splitWords(s string) []string {
@@ -57,105 +132,89 @@ func splitWords(s string) []string {
 	return strings.Split(n, " ")
 }
 
-// compareStructured scores two names by role when both have typed surname or
-// given parts; ok is false otherwise (the caller falls back to form).
+// compareNames scores two names over all their words, whatever their types.
 //
-//   - Surname and given name are scored separately and blended by
-//     surnameShare (default 0.6 surname, 0.4 given). A role only one side
-//     has counts as half credit: "Robins" alone resembles "James Robins"
-//     but less than "James Robins" does. A role neither has is left out,
-//     so "James" against "James" is 1.
-//   - Given names: the first given name (or a nickname, either side) counts
-//     most; the rest, initials included, refine it. "J." ~ "James" is half
-//     a match; "James K." ~ "James" is close.
-//   - When both have surnames and they share nothing, the given-name match
-//     counts at givenOnlyFactor (default half): a surname can change at
-//     marriage, but a shared "James" alone is weak.
-//   - Different suffixes on both sides (Jr. vs Sr.) multiply the result by
-//     suffixConflict (default 0.3): likely father and son.
-func (c NameComparer) compareStructured(a, b *namevalues.Value, floor float64) (float64, bool) {
-	ra, rb := rolesOf(a), rolesOf(b)
-	if !ra.structured() || !rb.structured() {
+// Every word may pair with any word of the other name (one-to-one, the best
+// pairing). A pair earns word similarity × role affinity × the two words'
+// weights, and the score is the earned share of both names' total weight. So
+// the same words in the same roles score 1; the same words typed differently
+// (a surname against a given name, a typed part against a form word) still
+// connect, discounted; and an unmatched word costs its weight.
+//
+// Two rules sit on top:
+//   - When both names have family words and none of them resembles any word
+//     of the other name, the score is scaled by GivenOnlyFactor: a shared
+//     "James" alone is weak, though a surname can change at marriage.
+//   - When both carry generation words (Jr., Sr.) and share none, the score
+//     is scaled by SuffixConflict: likely father and son.
+func (c NameComparer) compareNames(a, b *namevalues.Value) (float64, bool) {
+	floor := orDefault(c.FuzzyFloor, defaultFuzzyFloor)
+	wa, ga := c.nameWords(a)
+	wb, gb := c.nameWords(b)
+	if len(wa) == 0 || len(wb) == 0 {
 		return 0, false
 	}
-	surnameShare := orDefault(c.SurnameShare, defaultSurnameShare)
-	surname := roleScore(ra.surnames, rb.surnames)
-	given := roleScore(ra.given, rb.given)
-	if surname.both {
-		surname.sim = wordDice(ra.surnames, rb.surnames, floor, false)
-	}
-	if given.both {
-		given.sim = givenSimilarity(ra, rb, floor)
-		if surname.both && surname.sim == 0 {
-			given.sim *= orDefault(c.GivenOnlyFactor, defaultGivenOnlyFactor)
+	sim := make([][]float64, len(wa))
+	earned := make([][]float64, len(wa))
+	for i, x := range wa {
+		sim[i] = make([]float64, len(wb))
+		earned[i] = make([]float64, len(wb))
+		for j, y := range wb {
+			sim[i][j] = wordSimilarity(x.text, y.text, floor, true)
+			earned[i][j] = sim[i][j] * c.affinity(x.role, y.role) * (x.weight + y.weight)
 		}
 	}
-	// A role neither name has is left out and the other takes its share.
-	var sim float64
-	switch {
-	case surname.neither:
-		sim = given.sim
-	case given.neither:
-		sim = surname.sim
-	default:
-		sim = surnameShare*surname.sim + (1-surnameShare)*given.sim
+	var total float64
+	for _, w := range wa {
+		total += w.weight
 	}
-	if len(ra.suffixes) > 0 && len(rb.suffixes) > 0 && !sharesAny(ra.suffixes, rb.suffixes) {
-		sim *= orDefault(c.SuffixConflict, defaultSuffixConflict)
+	for _, w := range wb {
+		total += w.weight
 	}
-	return sim, true
+	s := bestPairing(earned) / total
+	if familyConflict(wa, wb, sim) {
+		s *= orDefault(c.GivenOnlyFactor, defaultGivenOnlyFactor)
+	}
+	if len(ga) > 0 && len(gb) > 0 && !sharesAny(ga, gb) {
+		s *= orDefault(c.SuffixConflict, defaultSuffixConflict)
+	}
+	return math.Min(s, 1), true
 }
 
-// role is one role's comparison: both names have it (sim to be computed),
-// only one does (half credit), or neither (left out of the blend).
-type role struct {
-	sim           float64
-	both, neither bool
-}
-
-func roleScore(a, b []string) role {
-	switch {
-	case len(a) > 0 && len(b) > 0:
-		return role{both: true}
-	case len(a) == 0 && len(b) == 0:
-		return role{neither: true}
-	}
-	return role{sim: unknownRoleCredit}
-}
-
-// givenSimilarity weighs the first given name (or any nickname as an
-// alternative to it) at firstGivenShare and the whole given set the rest.
-func givenSimilarity(a, b nameRoles, floor float64) float64 {
-	firsts := func(r nameRoles) []string { return append([]string{r.given[0]}, r.nicks...) }
-	var first float64
-	for _, x := range firsts(a) {
-		for _, y := range firsts(b) {
-			if s := wordSimilarity(x, y, floor, true); s > first {
-				first = s
+// familyConflict: both names have family words, and no family word on
+// either side resembles any word of the other name.
+func familyConflict(wa, wb []nameWord, sim [][]float64) bool {
+	var hasA, hasB bool
+	for i, x := range wa {
+		if x.role != RoleFamily {
+			continue
+		}
+		hasA = true
+		for j := range wb {
+			if sim[i][j] > 0 {
+				return false
 			}
 		}
 	}
-	return firstGivenShare*first + (1-firstGivenShare)*wordDice(a.given, b.given, floor, true)
+	for j, y := range wb {
+		if y.role != RoleFamily {
+			continue
+		}
+		hasB = true
+		for i := range wa {
+			if sim[i][j] > 0 {
+				return false
+			}
+		}
+	}
+	return hasA && hasB
 }
 
-// wordDice is the Dice overlap of two word lists under their best one-to-one
-// pairing: 2 × (sum of paired word similarities) / (total words). The
-// pairing is the exact maximum, so the result is symmetric.
+// wordDice is the Dice overlap of two unweighted word lists under their best
+// one-to-one pairing (free text).
 func wordDice(wa, wb []string, floor float64, initials bool) float64 {
 	if len(wa) == 0 || len(wb) == 0 {
 		return 0
-	}
-	return 2 * bestPairing(wa, wb, floor, initials) / float64(len(wa)+len(wb))
-}
-
-// maxPairedWords bounds the exact search (2^n states over the shorter list);
-// longer lists pair greedily by best score first. Names never get close.
-const maxPairedWords = 12
-
-// bestPairing is the largest total similarity over one-to-one word pairings.
-func bestPairing(wa, wb []string, floor float64, initials bool) float64 {
-	if len(wa) < len(wb) {
-		wa, wb = wb, wa
 	}
 	score := make([][]float64, len(wa))
 	for i, x := range wa {
@@ -164,17 +223,36 @@ func bestPairing(wa, wb []string, floor float64, initials bool) float64 {
 			score[i][j] = wordSimilarity(x, y, floor, initials)
 		}
 	}
-	if len(wb) > maxPairedWords {
-		return greedyPairing(score)
+	return 2 * bestPairing(score) / float64(len(wa)+len(wb))
+}
+
+// maxPairedWords bounds the exact search (2^n states over the shorter side);
+// longer lists pair greedily by best score first. Names never get close.
+const maxPairedWords = 12
+
+// bestPairing is the largest total over one-to-one pairings of rows with
+// columns. Exact, so it does not depend on which side is the row.
+func bestPairing(score [][]float64) float64 {
+	if len(score) == 0 || len(score[0]) == 0 {
+		return 0
 	}
-	// best[mask] = best total with the shorter list's words in mask used.
-	best := make([]float64, 1<<len(wb))
-	for i := range wa {
+	rows, cols := len(score), len(score[0])
+	at := func(i, j int) float64 { return score[i][j] }
+	if rows < cols {
+		rows, cols = cols, rows
+		at = func(i, j int) float64 { return score[j][i] }
+	}
+	if cols > maxPairedWords {
+		return greedyPairing(rows, cols, at)
+	}
+	// best[mask] = best total with the shorter side's words in mask used.
+	best := make([]float64, 1<<cols)
+	for i := 0; i < rows; i++ {
 		next := append([]float64(nil), best...)
 		for mask, v := range best {
-			for j := range wb {
-				if mask&(1<<j) == 0 && score[i][j] > 0 {
-					if t := v + score[i][j]; t > next[mask|1<<j] {
+			for j := 0; j < cols; j++ {
+				if s := at(i, j); mask&(1<<j) == 0 && s > 0 {
+					if t := v + s; t > next[mask|1<<j] {
 						next[mask|1<<j] = t
 					}
 				}
@@ -189,20 +267,20 @@ func bestPairing(wa, wb []string, floor float64, initials bool) float64 {
 	return top
 }
 
-func greedyPairing(score [][]float64) float64 {
+func greedyPairing(rows, cols int, at func(i, j int) float64) float64 {
 	type pair struct {
 		i, j int
 		s    float64
 	}
 	var pairs []pair
-	for i := range score {
-		for j, s := range score[i] {
-			if s > 0 {
+	for i := 0; i < rows; i++ {
+		for j := 0; j < cols; j++ {
+			if s := at(i, j); s > 0 {
 				pairs = append(pairs, pair{i, j, s})
 			}
 		}
 	}
-	sort.Slice(pairs, func(a, b int) bool { return pairs[a].s > pairs[b].s })
+	sort.SliceStable(pairs, func(a, b int) bool { return pairs[a].s > pairs[b].s })
 	usedI, usedJ := map[int]bool{}, map[int]bool{}
 	var total float64
 	for _, p := range pairs {

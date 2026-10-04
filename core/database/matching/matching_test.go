@@ -168,7 +168,7 @@ func TestForSubjectPersons(t *testing.T) {
 	if res.Kind != "person" || !res.Profiled {
 		t.Fatalf("%+v", res)
 	}
-	want := fmt.Sprintf("[%s=11.0 %s=7.4 %s=4.0]", exact.Entity.Ref, variant.Entity.Ref, surname.Entity.Ref)
+	want := fmt.Sprintf("[%s=11.0 %s=9.3 %s=5.0]", exact.Entity.Ref, variant.Entity.Ref, surname.Entity.Ref)
 	if refs(res.Matches) != want {
 		t.Fatalf("got %s, want %s", refs(res.Matches), want)
 	}
@@ -199,7 +199,7 @@ func TestForSubjectPersons(t *testing.T) {
 		must(t, err)
 		res, err := matching.ForSubject(f.db, james.ID, matching.Options{})
 		must(t, err)
-		if want := fmt.Sprintf("[%s=7.4 %s=4.0]", variant.Entity.Ref, surname.Entity.Ref); refs(res.Matches) != want {
+		if want := fmt.Sprintf("[%s=9.3 %s=5.0]", variant.Entity.Ref, surname.Entity.Ref); refs(res.Matches) != want {
 			t.Fatalf("got %s, want %s", refs(res.Matches), want)
 		}
 	})

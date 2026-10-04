@@ -647,7 +647,7 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 | --- | --- |
 | **In** | Pure Go, table-driven (~50+ cases): surname merge, initial expansion, normalization, given-name stream, `form` fallback. Plugged into the resolver for `name` values; cache version bump. |
 | **Depends on** | S9-05 |
-| **Note** | S9-10 shipped role-based name comparison for matching (`core/match/names.go`: surname, given with initials and nicknames, and suffix; `form` only as the fallback). Build the reconciler's "same name" on that role grouping and those word rules, so clusters and match scores agree. The resolver's cluster key and the cache `sort_key` still use `form` until then. |
+| **Note** | S9-10 shipped word-by-word name comparison for matching (`core/match/names.go`): part types map to roles, any word can pair with any word, and differing roles discount rather than block. Build the reconciler's "same name" on the same words, roles and word rules, so clusters and match scores agree. The resolver's cluster key and the cache `sort_key` still use `form` until then. Accent differences are not merged here: they show as separate clusters and are left to manual reconciliation (decided; see [`ideas/international-names.md`](../../ideas/international-names.md)). |
 
 #### S9-14 — Provenance ranking + polarity
 

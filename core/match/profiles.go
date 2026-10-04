@@ -66,7 +66,8 @@ func DefaultProfile(kind string) (Profile, bool) {
 					Neutral: map[string]bool{"unknown": true, "indeterminate": true},
 				}, Weight: 1, Contradiction: 8},
 			},
-			// "Mary Robins" ~ "James Robins" is 10 × 0.4 = 4: shown, low.
+			// "Mary Robins" ~ "James Robins" is 10 × 0.55 = 5.5 typed (5 as
+			// forms): shown, low. "James Smith" is 10 × 0.2 = 2: hidden.
 			MinScore: 3,
 		}, true
 	case "event":
