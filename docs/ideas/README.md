@@ -26,6 +26,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`identity-claim-review.md`](identity-claim-review.md)
 - [`international-names.md`](international-names.md)
 - [`name-matching-enhancements.md`](name-matching-enhancements.md)
+- [`evidence-graph-drag-performance.md`](evidence-graph-drag-performance.md)
 
 ## Archived
 
