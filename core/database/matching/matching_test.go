@@ -90,6 +90,16 @@ func named(form string) value {
 	}
 }
 
+// namedParts files a name whose form is written surname-first and whose
+// parts say which word is which.
+func namedParts(form, given, surname string) value {
+	return func(f *fixture, s subjects.Subject) observations.Input {
+		return observations.Input{SubjectID: s.ID, PropertyID: f.props["name"].ID, Name: &namevalues.Value{Form: form, Parts: []namevalues.Part{
+			{Idx: 0, Value: given, Type: namevalues.PartTypeGiven}, {Idx: 1, Value: surname, Type: namevalues.PartTypeSurname},
+		}}}
+	}
+}
+
 func termed(prop, key string) value {
 	return func(f *fixture, s subjects.Subject) observations.Input {
 		term, err := propertyterms.Lookup(f.c, f.props[prop].ID, key, propertyterms.OriginProvenencia)
@@ -213,6 +223,21 @@ func TestForSubjectPersons(t *testing.T) {
 			t.Fatalf("%+v", res)
 		}
 	})
+}
+
+// Parts travel from Observations into the probe and through the cache into
+// candidates, so structured comparison sees them on both sides.
+func TestForSubjectComparesNameParts(t *testing.T) {
+	f := newFixture(t)
+	same := f.handle("person", namedParts("James Robins", "James", "Robins"))
+	sibling := f.handle("person", namedParts("Mary Robins", "Mary", "Robins"))
+	f.handle("person", namedParts("James Smith", "James", "Smith")) // 10 × 0.2: below MinScore
+
+	res, err := matching.ForSubject(f.db, f.subject("person", namedParts("ROBINS, Jas.", "James", "Robins")).ID, matching.Options{})
+	must(t, err)
+	if want := fmt.Sprintf("[%s=10.0 %s=6.0]", same.Entity.Ref, sibling.Entity.Ref); refs(res.Matches) != want {
+		t.Fatalf("got %s, want %s", refs(res.Matches), want)
+	}
 }
 
 func TestForSubjectEventsAndPlaces(t *testing.T) {

@@ -38,11 +38,45 @@ A candidate is returned when its total reaches `MinScore`. Results are sorted by
 
 | Comparer | Value type | Similarity |
 | --- | --- | --- |
-| `NameComparer` | name | Same normalized form (the cache's name `sort_key`) scores 1. Otherwise `Partial` (0.8) × a Dice overlap of best-paired words. An equal word counts 1. An initial matching the word it begins counts 0.5. A near spelling (edit ratio ≥ `FuzzyFloor`, 0.8) counts its ratio. |
+| `NameComparer` | name | **By typed parts** when both names have a surname or given part (see below). Otherwise it falls back to `form`: the same normalized form scores 1, else `Partial` (0.8) × the overlap of best-paired words. |
 | `TextComparer` | text | Same as names, but with no initials and `Partial` 0.7. |
 | `TermComparer` | term (by key) | The same term scores 1, a different one 0. `Neutral` terms are not comparable. |
 | `DateComparer` | date | Same day 1. Same month 0.9. Same year 0.8, or 0.6 if both months are known and differ. Up to `Tolerance` years apart (default 2) falls off linearly. Beyond that it scores 0. ABT/BEF/AFT on either side doubles the tolerance. |
 | `IntegerComparer` | integer | Equal scores 1. Within `Tolerance` falls off linearly. Beyond it scores 0. |
+
+### Names are compared by parts, not by `form`
+
+`form` is the name as written, closer to a transcription. Typed parts are what can be computed on ([`structured-name-model.md`](structured-name-model.md)). When both names have typed parts, `NameComparer` compares them by role:
+
+| Role | Parts | Rule |
+| --- | --- | --- |
+| Surname | `surname` | Best-paired word overlap, so dual surnames partly match. `surname_prefix` ("van") is not compared. |
+| Given | `given`, `initial`, plus `nick` as an alternative first name | The first given name (or a nickname, on either side) counts 70%; the whole given set, initials included, counts 30%. |
+| Suffix | `suffix` | Both present and different (Jr. vs Sr.) multiplies the score by `SuffixConflict` (0.3). |
+
+- **Blending:** the surname is `SurnameShare` (0.6) of the score and the given name the rest. A role only one side has gets half credit.
+- **Surnames that share nothing:** the given-name match counts at `GivenOnlyFactor` (0.5). A surname can change at marriage, but a shared "James" alone is weak.
+- **Words** match when equal (1), as an initial and the word it begins (0.5), or as a near spelling at or above `FuzzyFloor` (0.8, edit-distance ratio).
+- **Titles and untyped parts** (`prefix`, `undetermined`, no type) carry no role.
+- **When it falls back to `form`:** a name with no surname or given part on either side.
+
+Worked examples, all scored by parts:
+
+| Pair | Score |
+| --- | --- |
+| James Robins vs James Robins (forms "ROBINS, Jas." and "James Robins") | 1 |
+| Robins (surname only) vs James Robins | 0.8 |
+| J. Robins vs James Robins | 0.8 |
+| Mary Robins vs James Robins | 0.6 |
+| James Robins Jr. vs James Robins Sr. | 0.3 |
+| James Smith vs James Robins | 0.2 |
+
+Not yet handled:
+- Nickname equivalence (Jim ↔ James) and phonetic matching.
+- Patronymics, and name changes as their own signals.
+- Culture-specific roles from name format profiles.
+
+**Where `form` still rules.** Resolver clustering and the cache name `sort_key` (so list order) key on normalized `form` until **S9-13**. List and card text shows `form` until the name-format work. Both are tracked there; matching does not depend on them.
 
 `match.ComparerFor(valueType)` gives the default comparer for any Property, so a profile can also weigh researcher-defined Properties.
 
@@ -57,7 +91,7 @@ These live in [`core/match/profiles.go`](../core/match/profiles.go). They are th
 | place | toponym 10 / 0 | 3 |
 
 Worked examples:
-- **Person:** "James Robins" against "Mary Robins" scores 10 × 0.4 = 4, which is shown but low. The same name with a different sex at birth scores 10 − 8 = 2, which is hidden.
+- **Person:** "James Robins" against "Mary Robins" scores 10 × 0.6 = 6 with typed parts (10 × 0.4 = 4 by form alone), which is shown but below the same name. The same name with a different sex at birth scores 10 − 8 = 2, which is hidden.
 - **Event:** the same event type alone (every birth) scores 4, which is hidden. The same type plus the same year scores 4 + 4.8.
 
 ## Configuring

@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/mendahu/provenencia/core/database/properties"
-	"github.com/mendahu/provenencia/core/resolve"
 )
 
 // Comparer judges two values of one Property. Similarity is 0…1: 1 is the
@@ -42,13 +41,28 @@ const (
 	defaultDateTolerance = 2
 )
 
-// NameComparer compares NameValue forms. The same normalized form (the
-// cache's name sort key: case, punctuation, and spacing ignored) is 1.
-// Otherwise the forms' words are paired — equal words, an initial against a
-// word it begins ("J." ~ "James", half credit), or near spellings ("Robins"
-// ~ "Robbins", by edit distance) — and the overlap is scaled by Partial.
+// NameComparer compares NameValues by their typed parts when both have
+// them (see compareStructured in names.go): surname against surname, given
+// names (with initials and nicknames) against given names, suffix against
+// suffix. form is a reading of the name as written, closer to a
+// transcription, so it is only the fallback for a name with no typed surname
+// or given part: the same normalized form is 1, otherwise shared words
+// (initials and near spellings included) scaled by Partial.
+//
+// Word matching throughout: an equal word is 1, an initial against a word it
+// begins ("J." ~ "James") 0.5, a near spelling ("Robins" ~ "Robbins") its
+// edit-distance ratio when at least FuzzyFloor.
 type NameComparer struct {
-	// Partial caps a non-identical name, 0…1. Default 0.8.
+	// SurnameShare is the surname's part of a structured score; the given
+	// name has the rest. Default 0.6.
+	SurnameShare float64
+	// GivenOnlyFactor scales the given-name match when both surnames are
+	// known and share nothing. Default 0.5.
+	GivenOnlyFactor float64
+	// SuffixConflict scales a structured score when both names carry
+	// suffixes and they differ (Jr. vs Sr.). Default 0.3.
+	SuffixConflict float64
+	// Partial caps a non-identical form in the fallback, 0…1. Default 0.8.
 	Partial float64
 	// FuzzyFloor is the least edit-distance ratio two words need to count as
 	// a spelling variant, 0…1. Default 0.8 (Robins ~ Robbins, not Mary ~ Mark);
@@ -60,8 +74,11 @@ func (c NameComparer) Compare(a, b Value) (float64, bool) {
 	if a.Name == nil || b.Name == nil {
 		return 0, false
 	}
-	return compareForms(a.Name.Form, b.Name.Form, orDefault(c.Partial, defaultNamePartial),
-		orDefault(c.FuzzyFloor, defaultFuzzyFloor), true)
+	floor := orDefault(c.FuzzyFloor, defaultFuzzyFloor)
+	if sim, ok := c.compareStructured(a.Name, b.Name, floor); ok {
+		return sim, true
+	}
+	return compareForms(a.Name.Form, b.Name.Form, orDefault(c.Partial, defaultNamePartial), floor, true)
 }
 
 // TextComparer compares free text the way names are compared, without
@@ -174,35 +191,17 @@ func (c IntegerComparer) Compare(a, b Value) (float64, bool) {
 }
 
 // compareForms is 1 for the same normalized form, else partial × the share
-// of words the two forms have in common (a Dice coefficient over best word
-// pairings). Empty forms are not comparable.
+// of words the two forms have in common (wordDice). Empty forms are not
+// comparable.
 func compareForms(a, b string, partial, fuzzyFloor float64, initials bool) (float64, bool) {
-	na, nb := resolve.NormalizeForm(a), resolve.NormalizeForm(b)
-	if na == "" || nb == "" {
+	wa, wb := splitWords(a), splitWords(b)
+	if len(wa) == 0 || len(wb) == 0 {
 		return 0, false
 	}
-	if na == nb {
+	if strings.Join(wa, " ") == strings.Join(wb, " ") {
 		return 1, true
 	}
-	wa, wb := strings.Split(na, " "), strings.Split(nb, " ")
-	used := make([]bool, len(wb))
-	var shared float64
-	for _, x := range wa {
-		bestJ, bestS := -1, 0.0
-		for j, y := range wb {
-			if used[j] {
-				continue
-			}
-			if s := wordSimilarity(x, y, fuzzyFloor, initials); s > bestS {
-				bestJ, bestS = j, s
-			}
-		}
-		if bestJ >= 0 {
-			used[bestJ] = true
-			shared += bestS
-		}
-	}
-	return partial * 2 * shared / float64(len(wa)+len(wb)), true
+	return partial * wordDice(wa, wb, fuzzyFloor, initials), true
 }
 
 // wordSimilarity: 1 for the same word, 0.5 for an initial and a word it
