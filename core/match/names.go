@@ -2,11 +2,8 @@ package match
 
 import (
 	"math"
-	"sort"
-	"strings"
 
 	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/resolve"
 )
 
 // NameRole is what a name part means for matching. Part types map to roles
@@ -36,6 +33,52 @@ var WesternPartRoles = map[string]NameRole{
 	namevalues.PartTypeSurnamePrefix: RoleIgnored,
 	namevalues.PartTypeUndetermined:  RoleUntyped,
 	"":                               RoleUntyped,
+}
+
+// NameComparer compares NameValues word by word, using part types as data
+// rather than as gates (compareNames in names.go). Each word carries a role
+// (from PartRoles) and a weight; any word may pair with any word of the other
+// name, discounted when their roles differ, so names entered in different
+// formats still connect. A name with no typed parts is read from its form as
+// untyped words.
+//
+// Word matching: an equal word is 1, an initial against a word it begins
+// ("J." ~ "James") 0.5, a near spelling ("Robins" ~ "Robbins") its
+// edit-distance ratio when at least FuzzyFloor.
+//
+// Nil settings take their defaults; set one with Set.
+type NameComparer struct {
+	// PartRoles maps part types to roles. Default WesternPartRoles; a name
+	// format profile may supply its own.
+	PartRoles map[string]NameRole
+
+	// Word weights by role. Defaults: family 1.5, first given 1, other given
+	// (middle names, initials) 0.5, nick 0.3, untyped 1.
+	FamilyWeight, FirstGivenWeight, OtherGivenWeight, NickWeight, UntypedWeight *float64
+
+	// Role affinities for pairs whose roles differ. Defaults: a typed word
+	// against an untyped one 0.8, a nickname against a given name 0.9, any
+	// other mismatch (a surname against a given name) 0.5.
+	UntypedAffinity, NickAffinity, CrossRole *float64
+
+	// GivenOnlyFactor scales the score when both names have family words and
+	// none resembles any word of the other name. Default 0.5.
+	GivenOnlyFactor *float64
+	// SuffixConflict scales the score when both names carry generation words
+	// (Jr., Sr.) and share none. Default 0.3.
+	SuffixConflict *float64
+	// FuzzyFloor is the least edit-distance ratio two words need to count as
+	// a spelling variant, 0…1. Default 0.8 (Robins ~ Robbins, not Mary ~ Mark);
+	// 1 turns fuzzy matching off. Short words may also differ by one added or
+	// dropped letter (Ann ~ Anne, Jon ~ John); see wordSimilarity.
+	FuzzyFloor *float64
+}
+
+func (c NameComparer) Compare(a, b Value) (float64, bool) {
+	if a.Name == nil || b.Name == nil {
+		return 0, false
+	}
+	return c.compareNames(a.Name, b.Name)
 }
 
 // Defaults for NameComparer. Weights are relative: what a matched word of
@@ -124,14 +167,6 @@ func (c NameComparer) affinity(a, b NameRole) float64 {
 	return setting(c.CrossRole, defaultCrossRole)
 }
 
-func splitWords(s string) []string {
-	n := resolve.NormalizeForm(s)
-	if n == "" {
-		return nil
-	}
-	return strings.Split(n, " ")
-}
-
 // compareNames scores two names over all their words, whatever their types.
 //
 // Every word may pair with any word of the other name (one-to-one, the best
@@ -211,88 +246,6 @@ func familyConflict(wa, wb []nameWord, floor float64) bool {
 		}
 	}
 	return hasA && hasB
-}
-
-// wordDice is the Dice overlap of two unweighted word lists under their best
-// one-to-one pairing (free text).
-func wordDice(wa, wb []string, floor float64, initials bool) float64 {
-	if len(wa) == 0 || len(wb) == 0 {
-		return 0
-	}
-	score := make([][]float64, len(wa))
-	for i, x := range wa {
-		score[i] = make([]float64, len(wb))
-		for j, y := range wb {
-			score[i][j] = wordSimilarity(x, y, floor, initials)
-		}
-	}
-	return 2 * bestPairing(score) / float64(len(wa)+len(wb))
-}
-
-// maxPairedWords bounds the exact search (2^n states over the shorter side);
-// longer lists pair greedily by best score first. Names never get close.
-const maxPairedWords = 12
-
-// bestPairing is the largest total over one-to-one pairings of rows with
-// columns. Exact, so it does not depend on which side is the row.
-func bestPairing(score [][]float64) float64 {
-	if len(score) == 0 || len(score[0]) == 0 {
-		return 0
-	}
-	rows, cols := len(score), len(score[0])
-	at := func(i, j int) float64 { return score[i][j] }
-	if rows < cols {
-		rows, cols = cols, rows
-		at = func(i, j int) float64 { return score[j][i] }
-	}
-	if cols > maxPairedWords {
-		return greedyPairing(rows, cols, at)
-	}
-	// best[mask] = best total with the shorter side's words in mask used.
-	best := make([]float64, 1<<cols)
-	for i := 0; i < rows; i++ {
-		next := append([]float64(nil), best...)
-		for mask, v := range best {
-			for j := 0; j < cols; j++ {
-				if s := at(i, j); mask&(1<<j) == 0 && s > 0 {
-					if t := v + s; t > next[mask|1<<j] {
-						next[mask|1<<j] = t
-					}
-				}
-			}
-		}
-		best = next
-	}
-	var top float64
-	for _, v := range best {
-		top = math.Max(top, v)
-	}
-	return top
-}
-
-func greedyPairing(rows, cols int, at func(i, j int) float64) float64 {
-	type pair struct {
-		i, j int
-		s    float64
-	}
-	var pairs []pair
-	for i := 0; i < rows; i++ {
-		for j := 0; j < cols; j++ {
-			if s := at(i, j); s > 0 {
-				pairs = append(pairs, pair{i, j, s})
-			}
-		}
-	}
-	sort.SliceStable(pairs, func(a, b int) bool { return pairs[a].s > pairs[b].s })
-	usedI, usedJ := map[int]bool{}, map[int]bool{}
-	var total float64
-	for _, p := range pairs {
-		if !usedI[p.i] && !usedJ[p.j] {
-			usedI[p.i], usedJ[p.j] = true, true
-			total += p.s
-		}
-	}
-	return total
 }
 
 func sharesAny(a, b []string) bool {

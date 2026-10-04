@@ -4,6 +4,17 @@ How Provenencia scores how much one thing resembles each canonical handle (a Per
 
 Code: [`core/match`](../core/match) (the algorithm) and [`core/database/matching`](../core/database/matching) (catalog adapter). Consumers: [`core/database/promotetargets`](../core/database/promotetargets).
 
+`core/match` has one file per concern, each with its own test file:
+
+| File | Holds |
+| --- | --- |
+| `match.go` | Values, candidates, `Score`, `Rank` |
+| `profiles.go` | Features, profiles, default profiles |
+| `compare.go` | The `Comparer` interface, `ComparerFor`, `Set`, and the simple comparers (text, term, integer) |
+| `names.go` | `NameComparer`: roles, weights, affinities, conflicts |
+| `dates.go` | `DateComparer`: spans, precision, tolerance |
+| `words.go` | Word handling shared by names and text: splitting, similarity, edit distance, best pairing |
+
 ## Shape
 
 ```text

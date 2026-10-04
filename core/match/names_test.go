@@ -164,6 +164,9 @@ var nameCases = []nameCase{
 	{"ignored", "different titles", NameComparer{}, nv("p=Rev.|g=James|s=Robins"), nv("p=Dr.|g=James|s=Robins"), 1},
 
 	// Names with no typed parts are read from their form as untyped words.
+	{"form", "spelling variant", NameComparer{}, formOnly("James Robbins"), formOnly("James Robins"), (2*U + robbins*2*U) / (4 * U)},
+	{"form", "not a variant", NameComparer{}, formOnly("Mary"), formOnly("Mark"), 0},
+	{"form", "fuzzy off", NameComparer{FuzzyFloor: Set(1.0)}, formOnly("Robbins"), formOnly("Robins"), 0},
 	{"form", "both form-only, same", NameComparer{}, formOnly("James Robins"), formOnly("james  robins."), 1},
 	{"form", "both form-only, reordered", NameComparer{}, formOnly("Robins, James"), formOnly("James Robins"), 1},
 	{"form", "both form-only, shared surname", NameComparer{}, formOnly("Mary Robins"), formOnly("James Robins"), 0.5},
