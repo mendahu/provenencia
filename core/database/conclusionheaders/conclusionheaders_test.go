@@ -162,3 +162,23 @@ func TestListPersonsQueryCountIsConstant(t *testing.T) {
 		t.Fatalf("queries: %d for 1 Person, %d for 51", one, many)
 	}
 }
+
+func TestPersonsByIDs(t *testing.T) {
+	f := newFixture(t)
+	_, _, mary := f.person("Mary Smith")
+	_, _, james := f.person("James Robins")
+	f.person("Ada Lovelace")
+	place, err := canonicalentities.Create(f.c, userID, canonicalentities.CreateInput{SubjectTypeID: f.typeID("place")})
+	must(t, err)
+	db, err := f.c.DB()
+	must(t, err)
+
+	got, err := conclusionheaders.PersonsByIDs(db, [][]byte{mary, james, mary, place.ID, make([]byte, 16)})
+	must(t, err)
+	if len(got) != 2 || got[0].Name.Form != "James Robins" || got[1].Name.Form != "Mary Smith" {
+		t.Fatalf("want James, Mary in list order: %+v", got)
+	}
+	if got, err := conclusionheaders.PersonsByIDs(db, nil); err != nil || got != nil {
+		t.Fatalf("no ids: %v %+v", err, got)
+	}
+}
