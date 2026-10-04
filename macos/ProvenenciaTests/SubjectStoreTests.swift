@@ -112,6 +112,75 @@ struct SubjectStoreTests {
         }
     }
 
+    @Test func promoteJoinsExistingHandleWithGradeAndArgument() async throws {
+        let store = storeWithPersonType()
+        store.subjectTypesByProject[projectDir]?.append(CatalogSubjectType(
+            id: "type-event", key: "event", origin: "provenencia", label: "Event",
+            description: "", refPrefix: "EVT", candidateRefPrefix: "CEV"
+        ))
+        func make(_ type: String) async throws -> CatalogSubject {
+            try await store.createSubject(
+                projectDir: projectDir, userID: "user-1", sourceID: sourceID,
+                subjectTypeID: type, label: "", description: "", placement: nil
+            )
+        }
+        let first = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: try await make(typeID).id)
+        let second = try await make(typeID)
+        let joined = try await store.promoteSubject(
+            projectDir: projectDir, userID: "user-1", subjectID: second.id,
+            entityID: first.entity.id, confidenceGradeID: "cg-high", argument: " Same name. "
+        )
+        #expect(joined.entity == first.entity)
+        #expect(joined.claim.confidenceGradeID == "cg-high" && joined.claim.argument == "Same name.")
+        #expect(store.membershipBySubject[second.id]?.entity.ref == first.entity.ref)
+
+        let event = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: try await make("type-event").id)
+        let james = try await make(typeID)
+        await #expect(throws: CoreInvokeError.self) {
+            _ = try await store.promoteSubject(
+                projectDir: projectDir, userID: "user-1", subjectID: james.id,
+                entityID: event.entity.id, confidenceGradeID: nil, argument: ""
+            )
+        }
+        #expect(store.membershipBySubject[james.id] == nil)
+
+        let grades = try await store.listClaimConfidenceGrades(projectDir: projectDir)
+        #expect(grades.map(\.key) == ["low_confidence", "moderate", "high_confidence"])
+    }
+
+    @Test func promoteTargetSuggestionsScoreExactThenSharedWord() async throws {
+        let store = storeWithPersonType()
+        var subjects: [String: String] = [:]
+        var observations: [CatalogObservation] = []
+        for (key, form) in [("exact", "James Robins"), ("shared", "Mary Robins"), ("other", "Ada Lovelace"), ("me", "james robins.")] {
+            let s = try await store.createSubject(
+                projectDir: projectDir, userID: "user-1", sourceID: sourceID,
+                subjectTypeID: typeID, label: "", description: "", placement: nil
+            )
+            subjects[key] = s.id
+            observations.append(CatalogObservation(
+                id: "o-\(key)", ref: "OBS-\(key)", citationID: "c1", subjectID: s.id, propertyID: "p-name",
+                polarity: "positive", valueText: form, valueInteger: nil, valueDateID: "",
+                valueNameID: "n-\(key)", nameForm: form, valueSubjectID: "", valueTermID: "",
+                propertyKey: "name", propertyLabel: "Name", propertyValueType: "name"
+            ))
+        }
+        store.observationsBySource[sourceID] = observations
+        var refs: [String: String] = [:]
+        for key in ["exact", "shared", "other"] {
+            refs[key] = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: subjects[key]!).entity.ref
+        }
+
+        let me = try #require(subjects["me"])
+        let got = try await store.listPromoteTargetSuggestions(projectDir: projectDir, subjectID: me, limit: 0)
+        #expect(got.map(\.entity.ref) == [refs["exact"], refs["shared"]])
+        #expect(got.map(\.score) == [10, 5])
+        #expect(got[0].person?.name?.form == "James Robins")
+        #expect(got[0].reasons.map(\.propertyKey) == ["name"])
+        let one = try await store.listPromoteTargetSuggestions(projectDir: projectDir, subjectID: me, limit: 1)
+        #expect(one.map(\.entity.ref) == [refs["exact"]])
+    }
+
     @Test func deletingPromotedSubjectNamesHandleThenClearsMembership() async throws {
         let store = storeWithPersonType()
         let subject = try await store.createSubject(

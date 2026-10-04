@@ -1164,10 +1164,17 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    func promoteSubject(projectDir: String, userID _: String, subjectID: String) async throws -> CatalogPromoteResult {
+    func promoteSubject(
+        projectDir: String,
+        userID _: String,
+        subjectID: String,
+        entityID: String?,
+        confidenceGradeID: String?,
+        argument: String
+    ) async throws -> CatalogPromoteResult {
         return try withState {
             markCatalogSessionHeld(projectDir)
-            recordedCalls.append("promoteSubject id=\(subjectID)")
+            recordedCalls.append("promoteSubject id=\(subjectID)" + (entityID.map { " entity=\($0)" } ?? ""))
             guard let subject = subjectsBySource.values.flatMap({ $0 }).first(where: { $0.id == subjectID }),
                   let type = subjectTypesByProject[projectDir]?.first(where: { $0.id == subject.subjectTypeID })
             else {
@@ -1179,17 +1186,30 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             if membershipBySubject[subjectID] != nil {
                 throw CoreInvokeError.coded(status: 1, code: "identityclaims.already_member", kind: .conflict, params: [])
             }
-            let entity = CatalogCanonicalEntity(
-                id: UUID().uuidString.lowercased(),
-                ref: "\(type.refPrefix)-FAKE\(membershipBySubject.count + 1)",
-                subjectTypeID: type.id,
-                label: ""
-            )
+            let entity: CatalogCanonicalEntity
+            if let entityID {
+                guard let existing = membershipBySubject.values.first(where: { $0.entity.id == entityID })?.entity else {
+                    throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
+                }
+                guard existing.subjectTypeID == type.id else {
+                    throw CoreInvokeError.coded(status: 1, code: "identityclaims.type_mismatch", kind: .user, params: [])
+                }
+                entity = existing
+            } else {
+                entity = CatalogCanonicalEntity(
+                    id: UUID().uuidString.lowercased(),
+                    ref: "\(type.refPrefix)-FAKE\(membershipBySubject.count + 1)",
+                    subjectTypeID: type.id,
+                    label: ""
+                )
+            }
             let claim = CatalogIdentityClaim(
                 id: UUID().uuidString.lowercased(),
                 subjectID: subjectID,
                 entityID: entity.id,
-                status: "accepted"
+                status: "accepted",
+                confidenceGradeID: confidenceGradeID,
+                argument: argument.trimmingCharacters(in: .whitespacesAndNewlines)
             )
             membershipBySubject[subjectID] = CatalogSubjectMembership(
                 subjectID: subjectID,
@@ -1198,6 +1218,74 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 kind: type.key
             )
             return CatalogPromoteResult(entity: entity, claim: claim)
+        }
+    }
+
+    /// A stand-in for core/match's person profile on written names (untyped words),
+    /// close enough for UI tests: the same folded name scores 10; a shared word of two
+    /// or more letters scores 5, as "Mary Robins" ~ "James Robins" does in Go.
+    func listPromoteTargetSuggestions(
+        projectDir: String,
+        subjectID: String,
+        limit: Int
+    ) async throws -> [CatalogPromoteTargetSuggestion] {
+        // A read: no `recordedCalls`.
+        return withState {
+            markCatalogSessionHeld(projectDir)
+            let own = membershipBySubject[subjectID]?.entity.id
+            let names = observationsBySource.values.flatMap { $0 }
+                .filter { $0.subjectID == subjectID && $0.propertyKey == "name" && !$0.nameForm.isEmpty }
+                .map { Self.foldName($0.nameForm) }
+            guard !names.isEmpty else { return [] }
+            let words = Set(names.flatMap(Self.nameWords))
+            let scored = personHeaders().compactMap { header -> CatalogPromoteTargetSuggestion? in
+                guard header.entity.id != own, let name = header.name.map({ Self.foldName($0.form) }) else { return nil }
+                let similarity: Double
+                if names.contains(name) {
+                    similarity = 1
+                } else if !words.isDisjoint(with: Self.nameWords(name)) {
+                    similarity = 0.5
+                } else {
+                    return nil
+                }
+                let reason = CatalogMatchReason(
+                    propertyKey: "name", propertyOrigin: "provenencia",
+                    similarity: similarity, contribution: 10 * similarity
+                )
+                return CatalogPromoteTargetSuggestion(
+                    entity: header.entity, score: 10 * similarity, reasons: [reason], person: header
+                )
+            }
+            let sorted = scored.sorted { a, b in
+                a.score != b.score ? a.score > b.score : a.entity.ref < b.entity.ref
+            }
+            return Array(sorted.prefix(limit > 0 ? limit : 10))
+        }
+    }
+
+    /// Mirrors resolve.NormalizeForm: dashes and slashes separate words; other
+    /// punctuation is dropped.
+    private static func foldName(_ form: String) -> String {
+        let spaced = String(form.lowercased().map { "-–—/".contains($0) ? " " : $0 })
+        return spaced
+            .filter { !$0.isPunctuation }
+            .split(whereSeparator: \.isWhitespace)
+            .map(String.init)
+            .joined(separator: " ")
+    }
+
+    private static func nameWords(_ folded: String) -> [String] {
+        folded.split(separator: " ").map(String.init).filter { $0.count >= 2 }
+    }
+
+    func listClaimConfidenceGrades(projectDir: String) async throws -> [CatalogClaimConfidenceGrade] {
+        return withState {
+            markCatalogSessionHeld(projectDir)
+            return [
+                CatalogClaimConfidenceGrade(id: "cg-low", key: "low_confidence", origin: "provenencia", label: "Low confidence", sortOrder: 1),
+                CatalogClaimConfidenceGrade(id: "cg-mod", key: "moderate", origin: "provenencia", label: "Moderate", sortOrder: 2),
+                CatalogClaimConfidenceGrade(id: "cg-high", key: "high_confidence", origin: "provenencia", label: "High confidence", sortOrder: 3),
+            ]
         }
     }
 

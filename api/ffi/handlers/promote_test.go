@@ -6,7 +6,14 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
+	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/subjects"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -181,6 +188,160 @@ func TestListSubjectMemberships(t *testing.T) {
 				return &engine.ListSubjectMembershipsRequest{ProjectDir: dir, SourceId: "nope"}
 			},
 			wantErr: true,
+		},
+	})
+}
+
+// personBeside creates another person Subject on the same Source as req's,
+// named by forms (one Observation each), and returns its id.
+func personBeside(t *testing.T, req *engine.PromoteSubjectRequest, forms ...string) string {
+	t.Helper()
+	first := uuid.MustParse(req.GetSubjectId())
+	userID := uuid.MustParse(req.GetUserId())
+	var id []byte
+	if err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		db, err := c.DB()
+		if err != nil {
+			return err
+		}
+		var sourceID, typeID []byte
+		if err := db.QueryRow(`SELECT source_id, subject_type_id FROM subjects WHERE id = ?`, first[:]).Scan(&sourceID, &typeID); err != nil {
+			return err
+		}
+		s, err := subjects.Create(c, userID[:], subjects.CreateInput{SourceID: sourceID, SubjectTypeID: typeID}, nil)
+		if err != nil {
+			return err
+		}
+		id = s.ID
+		if len(forms) == 0 {
+			return nil
+		}
+		name, err := properties.Lookup(c, "name", properties.OriginProvenencia)
+		if err != nil {
+			return err
+		}
+		art, err := artifacts.Create(c, userID[:], artifacts.CreateInput{SourceID: sourceID, Label: "Scan"})
+		if err != nil {
+			return err
+		}
+		var in []observations.Input
+		for _, form := range forms {
+			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: name.ID, Name: &namevalues.Value{Form: form}})
+		}
+		_, err = citations.CreateWithObservations(c, userID[:], citations.CreateInput{
+			ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
+		}, in)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return uuidString(id)
+}
+
+func promoteOK(t *testing.T, req *engine.PromoteSubjectRequest) *engine.PromoteSubjectResponse {
+	t.Helper()
+	out, err := PromoteSubject(marshalProto(t, req))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var resp engine.PromoteSubjectResponse
+	if err := proto.Unmarshal(out, &resp); err != nil {
+		t.Fatal(err)
+	}
+	return &resp
+}
+
+func TestPromoteSubjectJoin(t *testing.T) {
+	first := promotableSubject(t)
+	minted := promoteOK(t, first)
+
+	out, err := ListClaimConfidenceGrades(marshalProto(t, &engine.ListClaimConfidenceGradesRequest{ProjectDir: first.GetProjectDir()}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var grades engine.ListClaimConfidenceGradesResponse
+	if err := proto.Unmarshal(out, &grades); err != nil {
+		t.Fatal(err)
+	}
+	var keys []string
+	for _, g := range grades.GetGrades() {
+		keys = append(keys, g.GetKey())
+	}
+	if strings.Join(keys, ",") != "low_confidence,moderate,high_confidence" {
+		t.Fatalf("grades %v", keys)
+	}
+	high := grades.GetGrades()[2]
+
+	joined := promoteOK(t, &engine.PromoteSubjectRequest{
+		ProjectDir: first.GetProjectDir(), UserId: first.GetUserId(),
+		SubjectId: personBeside(t, first), EntityId: minted.Entity.GetId(),
+		ConfidenceGradeId: high.GetId(), Argument: "Same name and age.",
+	})
+	if joined.Entity.GetRef() != minted.Entity.GetRef() || joined.Claim.GetEntityId() != minted.Entity.GetId() {
+		t.Fatalf("joined %+v onto %+v", joined.Entity, minted.Entity)
+	}
+	if joined.Claim.GetConfidenceGradeId() != high.GetId() || joined.Claim.GetArgument() != "Same name and age." {
+		t.Fatalf("claim %+v", joined.Claim)
+	}
+
+	for name, req := range map[string]*engine.PromoteSubjectRequest{
+		"bad entity id": {ProjectDir: first.GetProjectDir(), UserId: first.GetUserId(), SubjectId: personBeside(t, first), EntityId: "nope"},
+		"bad grade id":  {ProjectDir: first.GetProjectDir(), UserId: first.GetUserId(), SubjectId: personBeside(t, first), ConfidenceGradeId: "nope"},
+	} {
+		if _, err := PromoteSubject(marshalProto(t, req)); err == nil {
+			t.Fatalf("%s accepted", name)
+		}
+	}
+}
+
+func TestListPromoteTargetSuggestions(t *testing.T) {
+	first := promotableSubject(t)
+	exact := promoteOK(t, &engine.PromoteSubjectRequest{
+		ProjectDir: first.GetProjectDir(), UserId: first.GetUserId(), SubjectId: personBeside(t, first, "James Robins"),
+	})
+	shared := promoteOK(t, &engine.PromoteSubjectRequest{
+		ProjectDir: first.GetProjectDir(), UserId: first.GetUserId(), SubjectId: personBeside(t, first, "Mary Robins"),
+	})
+	promoteOK(t, &engine.PromoteSubjectRequest{
+		ProjectDir: first.GetProjectDir(), UserId: first.GetUserId(), SubjectId: personBeside(t, first, "Ada Lovelace"),
+	})
+	james := personBeside(t, first, "James Robins")
+
+	runRPC(t, ListPromoteTargetSuggestions, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{name: "bad subject id", req: &engine.ListPromoteTargetSuggestionsRequest{ProjectDir: first.GetProjectDir(), SubjectId: "nope"}, wantErr: true},
+		{
+			name: "scored best first, with reasons and the person header",
+			req:  &engine.ListPromoteTargetSuggestionsRequest{ProjectDir: first.GetProjectDir(), SubjectId: james},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var resp engine.ListPromoteTargetSuggestionsResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				s := resp.GetSuggestions()
+				if len(s) != 2 || s[0].Entity.GetRef() != exact.Entity.GetRef() || s[1].Entity.GetRef() != shared.Entity.GetRef() {
+					t.Fatalf("%+v", s)
+				}
+				if s[0].GetScore() != 10 || s[0].GetPerson().GetName().GetForm() != "James Robins" || s[0].GetPerson().GetNameClusterCount() != 1 {
+					t.Fatalf("top %+v", s[0])
+				}
+				if r := s[0].GetReasons(); len(r) != 1 || r[0].GetPropertyKey() != "name" || r[0].GetSimilarity() != 1 || r[0].GetContribution() != 10 {
+					t.Fatalf("reasons %+v", r)
+				}
+			},
+		},
+		{
+			name: "limit",
+			req:  &engine.ListPromoteTargetSuggestionsRequest{ProjectDir: first.GetProjectDir(), SubjectId: james, Limit: 1},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var resp engine.ListPromoteTargetSuggestionsResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				if len(resp.GetSuggestions()) != 1 {
+					t.Fatalf("%+v", resp.GetSuggestions())
+				}
+			},
 		},
 	})
 }

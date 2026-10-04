@@ -31,7 +31,9 @@ import (
 
 // CacheVersion is bumped whenever resolution changes what the table would
 // hold; a stored version that differs rebuilds on open.
-const CacheVersion = 1
+//
+//	2: dashes and slashes separate words in name keys (S9-10).
+const CacheVersion = 2
 
 // batchSize bounds the handles per loader batch (and so the IN list length).
 const batchSize = 500

@@ -1,9 +1,10 @@
 // Package promote is the Identity Claim write behind Promote: one transaction
-// per promoted Subject. v1 mints a new handle of the Subject's type and files
-// an accepted claim with zero pins (a grounding claim).
+// per promoted Subject. A step either mints a new handle of the Subject's type
+// or joins an existing one, and files an accepted claim with zero pins.
 package promote
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 
@@ -27,19 +28,30 @@ var (
 // (participation, location, relationship) are filed by the walk (S9-28).
 var primaryKinds = map[string]bool{"person": true, "event": true, "place": true}
 
-// Input is one Promote step.
-type Input struct {
-	SubjectID []byte
+// PrimaryKind reports whether Promote starts from Subjects of this type.
+func PrimaryKind(key, origin string) bool {
+	return origin == subjecttypes.OriginProvenencia && primaryKinds[key]
 }
 
-// Result is the handle and the claim one step wrote.
+// Input is one Promote step. A nil EntityID mints a new handle; otherwise
+// the Subject joins that handle, which must be unmerged and of its type.
+type Input struct {
+	SubjectID         []byte
+	EntityID          []byte
+	ConfidenceGradeID []byte // nil = no grade
+	Argument          string
+}
+
+// Result is the handle and the claim one step wrote. On a join, Entity is
+// the existing handle.
 type Result struct {
 	Entity canonicalentities.Entity
 	Claim  identityclaims.Claim
 }
 
-// Save mints a handle of the Subject's type and files an accepted Identity
-// Claim onto it in one transaction, recorded as promote_subject.
+// Save files an accepted Identity Claim for the Subject in one transaction,
+// recorded as promote_subject: onto a newly minted handle of its type, or onto
+// in.EntityID. Joining writes the claim only.
 func Save(c *database.Catalog, userID []byte, in Input) (Result, error) {
 	db, err := c.DB()
 	if err != nil {
@@ -48,7 +60,7 @@ func Save(c *database.Catalog, userID []byte, in Input) (Result, error) {
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return Result{}, err
 	}
-	if len(in.SubjectID) != 16 {
+	if len(in.SubjectID) != 16 || (in.EntityID != nil && len(in.EntityID) != 16) {
 		return Result{}, ErrInvalid
 	}
 
@@ -69,7 +81,7 @@ func Save(c *database.Catalog, userID []byte, in Input) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	if st.Origin != subjecttypes.OriginProvenencia || !primaryKinds[st.Key] {
+	if !PrimaryKind(st.Key, st.Origin) {
 		return Result{}, ErrUnsupportedType
 	}
 	if _, err := identityclaims.AcceptedEntityForSubjectTx(tx, subject.ID); err == nil {
@@ -78,25 +90,40 @@ func Save(c *database.Catalog, userID []byte, in Input) (Result, error) {
 		return Result{}, err
 	}
 
-	entity, entityChange, err := canonicalentities.InsertTx(tx, canonicalentities.CreateInput{
-		SubjectTypeID: subject.SubjectTypeID,
-	})
-	if err != nil {
-		return Result{}, err
+	var (
+		entity  canonicalentities.Entity
+		changes []audit.Change
+	)
+	if in.EntityID == nil {
+		minted, change, err := canonicalentities.InsertTx(tx, canonicalentities.CreateInput{
+			SubjectTypeID: subject.SubjectTypeID,
+		})
+		if err != nil {
+			return Result{}, err
+		}
+		entity, changes = minted, append(changes, change)
+	} else {
+		entity, err = joinTarget(tx, in.EntityID, subject.SubjectTypeID)
+		if err != nil {
+			return Result{}, err
+		}
 	}
 	claim, claimChange, err := identityclaims.InsertTx(tx, identityclaims.CreateInput{
-		SubjectID: subject.ID,
-		EntityID:  entity.ID,
-		Status:    identityclaims.StatusAccepted,
+		SubjectID:         subject.ID,
+		EntityID:          entity.ID,
+		Status:            identityclaims.StatusAccepted,
+		ConfidenceGradeID: in.ConfidenceGradeID,
+		Argument:          in.Argument,
 	})
 	if err != nil {
 		return Result{}, err
 	}
+	changes = append(changes, claimChange)
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
 		ActionType: "promote_subject",
 		CreatedAt:  project.NowUTC(),
-		Changes:    []audit.Change{entityChange, claimChange},
+		Changes:    changes,
 	}); err != nil {
 		return Result{}, err
 	}
@@ -107,4 +134,23 @@ func Save(c *database.Catalog, userID []byte, in Input) (Result, error) {
 		return Result{}, err
 	}
 	return Result{Entity: entity, Claim: claim}, nil
+}
+
+// joinTarget loads an existing handle for a join. A missing or merged handle
+// is ErrInvalid; one of another type is identityclaims.ErrTypeMismatch.
+func joinTarget(tx *sql.Tx, entityID, subjectTypeID []byte) (canonicalentities.Entity, error) {
+	entity, err := canonicalentities.GetTx(tx, entityID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return canonicalentities.Entity{}, ErrInvalid
+	}
+	if err != nil {
+		return canonicalentities.Entity{}, err
+	}
+	if entity.MergedIntoID != nil {
+		return canonicalentities.Entity{}, ErrInvalid
+	}
+	if !bytes.Equal(entity.SubjectTypeID, subjectTypeID) {
+		return canonicalentities.Entity{}, identityclaims.ErrTypeMismatch
+	}
+	return entity, nil
 }

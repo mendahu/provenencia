@@ -24,14 +24,7 @@ func ListPersonHeaders(in []byte) ([]byte, error) {
 			return err
 		}
 		for _, h := range headers {
-			ph := &engine.PersonHeader{
-				Entity:           canonicalEntityProto(h.Entity),
-				NameClusterCount: int32(h.NameClusterCount),
-			}
-			if h.Name != nil {
-				ph.Name = valuecodec.NameToProto(*h.Name)
-			}
-			out.Headers = append(out.Headers, ph)
+			out.Headers = append(out.Headers, personHeaderProto(h))
 		}
 		return nil
 	})
@@ -39,4 +32,15 @@ func ListPersonHeaders(in []byte) ([]byte, error) {
 		return nil, err
 	}
 	return proto.Marshal(out)
+}
+
+func personHeaderProto(h conclusionheaders.PersonHeader) *engine.PersonHeader {
+	ph := &engine.PersonHeader{
+		Entity:           canonicalEntityProto(h.Entity),
+		NameClusterCount: int32(h.NameClusterCount),
+	}
+	if h.Name != nil {
+		ph.Name = valuecodec.NameToProto(*h.Name)
+	}
+	return ph
 }

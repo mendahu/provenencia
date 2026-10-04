@@ -12,6 +12,7 @@ package conclusionheaders
 import (
 	"database/sql"
 
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/valuecodec"
@@ -35,7 +36,8 @@ type PersonHeader struct {
 
 // Unmerged Person handles with their rank-1 name row and name cluster count,
 // named Persons first by name sort key, then by ref (R5).
-const sqlListPersons = `SELECT e.id, e.subject_type_id, e.ref, COALESCE(e.argument, ''), COALESCE(e.label, ''),
+const (
+	sqlPersonsSelect = `SELECT e.id, e.subject_type_id, e.ref, COALESCE(e.argument, ''), COALESCE(e.label, ''),
 		r.value_name,
 		(SELECT COUNT(*) FROM conclusion_resolved_values c
 			WHERE c.entity_id = e.id AND c.property_id = np.id) AS clusters
@@ -44,12 +46,29 @@ const sqlListPersons = `SELECT e.id, e.subject_type_id, e.ref, COALESCE(e.argume
 	LEFT JOIN properties np ON np.key = 'name' AND np.origin = 'provenencia'
 	LEFT JOIN conclusion_resolved_values r
 		ON r.entity_id = e.id AND r.property_id = np.id AND r.rank = 1
-	WHERE st.key = 'person' AND st.origin = 'provenencia' AND e.merged_into_id IS NULL
-	ORDER BY r.sort_key IS NULL, r.sort_key, e.ref COLLATE NOCASE`
+	WHERE st.key = 'person' AND st.origin = 'provenencia' AND e.merged_into_id IS NULL`
+	sqlPersonsOrder = ` ORDER BY r.sort_key IS NULL, r.sort_key, e.ref COLLATE NOCASE`
+	sqlListPersons  = sqlPersonsSelect + sqlPersonsOrder
+)
 
 // ListPersons returns every Person's header in list order, in one query.
 func ListPersons(q Querier) ([]PersonHeader, error) {
-	rows, err := q.Query(sqlListPersons)
+	return queryPersons(q, sqlListPersons)
+}
+
+// PersonsByIDs returns the headers of the given unmerged Persons in list
+// order, in one query. Unknown, merged, and non-Person ids are absent.
+func PersonsByIDs(q Querier, ids [][]byte) ([]PersonHeader, error) {
+	ids = database.UniqueBlobIDs(ids)
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return queryPersons(q, sqlPersonsSelect+` AND e.id IN (`+database.SQLInPlaceholders(len(ids))+`)`+sqlPersonsOrder,
+		database.BlobArgs(ids)...)
+}
+
+func queryPersons(q Querier, query string, args ...any) ([]PersonHeader, error) {
+	rows, err := q.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}

@@ -169,6 +169,40 @@ struct CatalogIdentityClaim: Sendable, Equatable, Identifiable {
     var subjectID: String
     var entityID: String
     var status: String
+    /// `nil` when the claim carries no confidence grade.
+    var confidenceGradeID: String? = nil
+    var argument: String = ""
+}
+
+/// One Property's part in a match score (core/match): its best similarity,
+/// 0…1, and the points it added (negative for a clear disagreement).
+struct CatalogMatchReason: Sendable, Equatable {
+    var propertyKey: String
+    var propertyOrigin: String
+    var similarity: Double
+    var contribution: Double
+}
+
+/// One existing handle a Subject could join in Promote, best first. `person`
+/// is the row header for Person handles; Events and Places carry the handle
+/// alone until their header composers land.
+struct CatalogPromoteTargetSuggestion: Sendable, Equatable, Identifiable {
+    var entity: CatalogCanonicalEntity
+    var score: Double
+    var reasons: [CatalogMatchReason]
+    var person: CatalogPersonHeader?
+
+    var id: String { entity.id }
+}
+
+/// One claim confidence grade (Low / Moderate / High): the scale on Identity
+/// Claims. Not Source credibility, though the shape matches.
+struct CatalogClaimConfidenceGrade: Sendable, Equatable, Identifiable {
+    var id: String
+    var key: String
+    var origin: String
+    var label: String
+    var sortOrder: Int
 }
 
 /// A view of one Subject's **accepted Identity Claim**: the claim and the handle
@@ -739,8 +773,24 @@ protocol GenealogyStore: Sendable {
         description: String
     ) async throws -> CatalogSubject
     func deleteSubject(projectDir: String, userID: String, subjectID: String) async throws
-    /// Promote v1: mint a handle of the Subject's type and file an accepted claim (one transaction).
-    func promoteSubject(projectDir: String, userID: String, subjectID: String) async throws -> CatalogPromoteResult
+    /// File an accepted claim for the Subject (one transaction): onto a new handle of its type when
+    /// `entityID` is `nil`, else onto that existing handle (same type, unmerged; claim only).
+    func promoteSubject(
+        projectDir: String,
+        userID: String,
+        subjectID: String,
+        entityID: String?,
+        confidenceGradeID: String?,
+        argument: String
+    ) async throws -> CatalogPromoteResult
+    /// Existing handles the Subject could join, best first: same type, scored by the type's match profile.
+    func listPromoteTargetSuggestions(
+        projectDir: String,
+        subjectID: String,
+        limit: Int
+    ) async throws -> [CatalogPromoteTargetSuggestion]
+    /// The claim confidence scale, in order.
+    func listClaimConfidenceGrades(projectDir: String) async throws -> [CatalogClaimConfidenceGrade]
     /// Accepted handle of every promoted Subject on one Source's Evidence graph.
     func listSubjectMemberships(projectDir: String, sourceID: String) async throws -> [CatalogSubjectMembership]
     /// Every unmerged Person as a row header, in list order (named by name, then by ref).
@@ -903,4 +953,18 @@ struct CatalogObservationDraft: Sendable {
     var valueSubjectID: String = ""
     var valueTermID: String = ""
     var notes: [String] = []
+}
+
+extension GenealogyStore {
+    /// Promote onto a new handle with no grade or argument (the graph card's Confirm).
+    func promoteSubject(projectDir: String, userID: String, subjectID: String) async throws -> CatalogPromoteResult {
+        try await promoteSubject(
+            projectDir: projectDir,
+            userID: userID,
+            subjectID: subjectID,
+            entityID: nil,
+            confidenceGradeID: nil,
+            argument: ""
+        )
+    }
 }

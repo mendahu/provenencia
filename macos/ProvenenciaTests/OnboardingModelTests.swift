@@ -493,7 +493,24 @@ private struct ThrowingStore: GenealogyStore {
         label _: String,
         description _: String
     ) async throws -> CatalogSubject { throw StoreBoom.boom }
-    func promoteSubject(projectDir _: String, userID _: String, subjectID _: String) async throws -> CatalogPromoteResult {
+    func promoteSubject(
+        projectDir _: String,
+        userID _: String,
+        subjectID _: String,
+        entityID _: String?,
+        confidenceGradeID _: String?,
+        argument _: String
+    ) async throws -> CatalogPromoteResult {
+        throw StoreBoom.boom
+    }
+    func listPromoteTargetSuggestions(
+        projectDir _: String,
+        subjectID _: String,
+        limit _: Int
+    ) async throws -> [CatalogPromoteTargetSuggestion] {
+        throw StoreBoom.boom
+    }
+    func listClaimConfidenceGrades(projectDir _: String) async throws -> [CatalogClaimConfidenceGrade] {
         throw StoreBoom.boom
     }
     func listSubjectMemberships(projectDir _: String, sourceID _: String) async throws -> [CatalogSubjectMembership] {

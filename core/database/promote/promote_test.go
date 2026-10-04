@@ -7,6 +7,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
+	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -125,6 +126,125 @@ func TestSave(t *testing.T) {
 			},
 		},
 		{
+			name: "join files a claim onto the existing handle without minting",
+			run: func(t *testing.T, c *database.Catalog, mk func(string) subjects.Subject) {
+				first, err := promote.Save(c, userID, promote.Input{SubjectID: mk("person").ID})
+				if err != nil {
+					t.Fatal(err)
+				}
+				second := mk("person")
+				res, err := promote.Save(c, userID, promote.Input{SubjectID: second.ID, EntityID: first.Entity.ID})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if string(res.Entity.ID) != string(first.Entity.ID) || res.Entity.Ref != first.Entity.Ref {
+					t.Fatalf("joined %+v, want %+v", res.Entity, first.Entity)
+				}
+				if string(res.Claim.SubjectID) != string(second.ID) || res.Claim.Status != identityclaims.StatusAccepted {
+					t.Fatalf("%+v", res.Claim)
+				}
+				members, err := identityclaims.AcceptedMembers(c, first.Entity.ID)
+				if err != nil || len(members) != 2 {
+					t.Fatalf("%v members=%d", err, len(members))
+				}
+				list, err := canonicalentities.ListByType(c, first.Entity.SubjectTypeID)
+				if err != nil || len(list) != 1 {
+					t.Fatalf("%v handles=%d", err, len(list))
+				}
+				if got := lastRevisionChanges(t, c); got != "promote_subject:identity_claim" {
+					t.Fatalf("revision %s", got)
+				}
+			},
+		},
+		{
+			name: "join onto another type's handle refused without writing",
+			run: func(t *testing.T, c *database.Catalog, mk func(string) subjects.Subject) {
+				event, err := promote.Save(c, userID, promote.Input{SubjectID: mk("event").ID})
+				if err != nil {
+					t.Fatal(err)
+				}
+				james := mk("person")
+				_, err = promote.Save(c, userID, promote.Input{SubjectID: james.ID, EntityID: event.Entity.ID})
+				if !errors.Is(err, identityclaims.ErrTypeMismatch) {
+					t.Fatalf("got %v", err)
+				}
+				if _, err := identityclaims.AcceptedEntityForSubject(c, james.ID); err == nil {
+					t.Fatal("claim written")
+				}
+			},
+		},
+		{
+			name: "join onto an unknown or merged handle invalid",
+			run: func(t *testing.T, c *database.Catalog, mk func(string) subjects.Subject) {
+				james := mk("person")
+				if _, err := promote.Save(c, userID, promote.Input{SubjectID: james.ID, EntityID: make([]byte, 16)}); !errors.Is(err, promote.ErrInvalid) {
+					t.Fatalf("unknown: %v", err)
+				}
+				if _, err := promote.Save(c, userID, promote.Input{SubjectID: james.ID, EntityID: []byte{1}}); !errors.Is(err, promote.ErrInvalid) {
+					t.Fatalf("short id: %v", err)
+				}
+				a, err := promote.Save(c, userID, promote.Input{SubjectID: mk("person").ID})
+				if err != nil {
+					t.Fatal(err)
+				}
+				b, err := promote.Save(c, userID, promote.Input{SubjectID: mk("person").ID})
+				if err != nil {
+					t.Fatal(err)
+				}
+				db, err := c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := db.Exec(`UPDATE canonical_entities SET merged_into_id = ? WHERE id = ?`, b.Entity.ID, a.Entity.ID); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := promote.Save(c, userID, promote.Input{SubjectID: james.ID, EntityID: a.Entity.ID}); !errors.Is(err, promote.ErrInvalid) {
+					t.Fatalf("merged: %v", err)
+				}
+			},
+		},
+		{
+			name: "confidence grade and argument land on the claim on both paths",
+			run: func(t *testing.T, c *database.Catalog, mk func(string) subjects.Subject) {
+				if err := claimconfidencegrades.Install(c); err != nil {
+					t.Fatal(err)
+				}
+				high, err := claimconfidencegrades.Lookup(c, "high_confidence", claimconfidencegrades.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				minted, err := promote.Save(c, userID, promote.Input{
+					SubjectID: mk("person").ID, ConfidenceGradeID: high.ID, Argument: "  Grounding entry.  ",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				joined, err := promote.Save(c, userID, promote.Input{
+					SubjectID: mk("person").ID, EntityID: minted.Entity.ID, ConfidenceGradeID: high.ID, Argument: "Same name and age.",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				for _, tc := range []struct {
+					claim identityclaims.Claim
+					arg   string
+				}{{minted.Claim, "Grounding entry."}, {joined.Claim, "Same name and age."}} {
+					got, err := identityclaims.Get(c, tc.claim.ID)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if string(got.ConfidenceGradeID) != string(high.ID) || got.Argument != tc.arg {
+						t.Fatalf("%+v", got)
+					}
+				}
+				if _, err := promote.Save(c, userID, promote.Input{
+					SubjectID: mk("person").ID, ConfidenceGradeID: make([]byte, 16),
+				}); !errors.Is(err, identityclaims.ErrInvalid) {
+					t.Fatalf("unknown grade: %v", err)
+				}
+			},
+		},
+		{
 			name: "bridge kinds unsupported in v1",
 			run: func(t *testing.T, c *database.Catalog, mk func(string) subjects.Subject) {
 				_, err := promote.Save(c, userID, promote.Input{SubjectID: mk("participation").ID})
@@ -152,6 +272,33 @@ func TestSave(t *testing.T) {
 			tt.run(t, c, mk)
 		})
 	}
+}
+
+// lastRevisionChanges is "action:entity_type,…" for the newest revision.
+func lastRevisionChanges(t *testing.T, c *database.Catalog) string {
+	t.Helper()
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows, err := db.Query(`SELECT t.action_type, ch.entity_type
+		FROM audit_changes ch JOIN audit_transactions t ON t.id = ch.audit_transaction_id
+		WHERE t.revision = (SELECT MAX(revision) FROM audit_transactions)
+		ORDER BY ch.entity_type`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var action string
+	var types []string
+	for rows.Next() {
+		var entityType string
+		if err := rows.Scan(&action, &entityType); err != nil {
+			t.Fatal(err)
+		}
+		types = append(types, entityType)
+	}
+	return action + ":" + strings.Join(types, ",")
 }
 
 func newCatalog(t *testing.T) (*database.Catalog, func(key string) subjects.Subject) {

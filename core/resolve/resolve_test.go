@@ -187,10 +187,13 @@ func TestNormalizeForm(t *testing.T) {
 		"J. Robins":         "j robins",
 		"O'Brien, Mary":     "obrien mary",
 		"ÉMILE\tZOLA":       "émile zola",
+		"Smith-Jones":       "smith jones",
+		"Mary–Ann / Polly":  "mary ann polly",
+		"-Robins-":          "robins",
 		"":                  "",
 	} {
-		if got := normalizeForm(in); got != want {
-			t.Errorf("normalizeForm(%q) = %q, want %q", in, got, want)
+		if got := NormalizeForm(in); got != want {
+			t.Errorf("NormalizeForm(%q) = %q, want %q", in, got, want)
 		}
 	}
 }

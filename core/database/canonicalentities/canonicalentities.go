@@ -164,6 +164,32 @@ func GetTx(tx *sql.Tx, id []byte) (Entity, error) {
 	return scanEntity(tx.QueryRow(sqlGet, id))
 }
 
+// GetManyTx returns the handles with the given ids, keyed by string(id), on
+// an existing connection or transaction: one query. Unknown ids are absent.
+func GetManyTx(q interface {
+	Query(query string, args ...any) (*sql.Rows, error)
+}, ids [][]byte) (map[string]Entity, error) {
+	ids = database.UniqueBlobIDs(ids)
+	out := make(map[string]Entity, len(ids))
+	if len(ids) == 0 {
+		return out, nil
+	}
+	rows, err := q.Query(`SELECT `+sqlColumns+` FROM canonical_entities WHERE id IN (`+
+		database.SQLInPlaceholders(len(ids))+`)`, database.BlobArgs(ids)...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		e, err := scanEntity(rows)
+		if err != nil {
+			return nil, err
+		}
+		out[string(e.ID)] = e
+	}
+	return out, rows.Err()
+}
+
 // GetByRef returns a handle by ref (PER-…), or sql.ErrNoRows.
 func GetByRef(c *database.Catalog, entityRef string) (Entity, error) {
 	db, err := c.DB()

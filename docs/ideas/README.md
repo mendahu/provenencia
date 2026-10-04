@@ -24,6 +24,8 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`share-packages.md`](share-packages.md)
 - [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md)
 - [`identity-claim-review.md`](identity-claim-review.md)
+- [`international-names.md`](international-names.md)
+- [`name-matching-enhancements.md`](name-matching-enhancements.md)
 
 ## Archived
 

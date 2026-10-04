@@ -114,6 +114,8 @@ enum CoreMethod {
     static let promoteSubject = Int32(Provenencia_Engine_V1_Method.promoteSubject.rawValue)
     static let listSubjectMemberships = Int32(Provenencia_Engine_V1_Method.listSubjectMemberships.rawValue)
     static let listPersonHeaders = Int32(Provenencia_Engine_V1_Method.listPersonHeaders.rawValue)
+    static let listPromoteTargetSuggestions = Int32(Provenencia_Engine_V1_Method.listPromoteTargetSuggestions.rawValue)
+    static let listClaimConfidenceGrades = Int32(Provenencia_Engine_V1_Method.listClaimConfidenceGrades.rawValue)
 }
 
 func provenenciaInvoke(method: Int32, request: Data) throws -> Data {

@@ -4,8 +4,10 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
+	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promotetargets"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"google.golang.org/protobuf/proto"
 )
@@ -23,15 +25,101 @@ func PromoteSubject(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	entityID, err := optionalID(req.GetEntityId())
+	if err != nil {
+		return nil, err
+	}
+	gradeID, err := optionalID(req.GetConfidenceGradeId())
+	if err != nil {
+		return nil, err
+	}
 	var out *engine.PromoteSubjectResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		res, err := promote.Save(c, userID, promote.Input{SubjectID: subjectID})
+		res, err := promote.Save(c, userID, promote.Input{
+			SubjectID:         subjectID,
+			EntityID:          entityID,
+			ConfidenceGradeID: gradeID,
+			Argument:          req.GetArgument(),
+		})
 		if err != nil {
 			return err
 		}
 		out = &engine.PromoteSubjectResponse{
 			Entity: canonicalEntityProto(res.Entity),
 			Claim:  identityClaimProto(res.Claim),
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
+}
+
+func ListPromoteTargetSuggestions(in []byte) ([]byte, error) {
+	var req engine.ListPromoteTargetSuggestionsRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("list_promote_target_suggestions", err)
+	}
+	subjectID, err := parseID(req.GetSubjectId())
+	if err != nil {
+		return nil, err
+	}
+	out := &engine.ListPromoteTargetSuggestionsResponse{}
+	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		db, err := c.DB()
+		if err != nil {
+			return err
+		}
+		got, err := promotetargets.Suggest(db, subjectID, int(req.GetLimit()))
+		if err != nil {
+			return err
+		}
+		for _, sg := range got {
+			ps := &engine.PromoteTargetSuggestion{
+				Entity: canonicalEntityProto(sg.Entity),
+				Score:  sg.Score,
+			}
+			for _, r := range sg.Reasons {
+				ps.Reasons = append(ps.Reasons, &engine.MatchReason{
+					PropertyKey:    r.Property.Key,
+					PropertyOrigin: r.Property.Origin,
+					Similarity:     r.Similarity,
+					Contribution:   r.Contribution,
+				})
+			}
+			if sg.Person != nil {
+				ps.Person = personHeaderProto(*sg.Person)
+			}
+			out.Suggestions = append(out.Suggestions, ps)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
+}
+
+func ListClaimConfidenceGrades(in []byte) ([]byte, error) {
+	var req engine.ListClaimConfidenceGradesRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("list_claim_confidence_grades", err)
+	}
+	out := &engine.ListClaimConfidenceGradesResponse{}
+	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		rows, err := claimconfidencegrades.List(c)
+		if err != nil {
+			return err
+		}
+		for _, g := range rows {
+			out.Grades = append(out.Grades, &engine.ClaimConfidenceGrade{
+				Id:        uuidString(g.ID),
+				Key:       g.Key,
+				Origin:    g.Origin,
+				Label:     g.Label,
+				SortOrder: int32(g.SortOrder),
+			})
 		}
 		return nil
 	})
@@ -88,9 +176,11 @@ func canonicalEntityProto(e canonicalentities.Entity) *engine.CanonicalEntity {
 
 func identityClaimProto(c identityclaims.Claim) *engine.IdentityClaim {
 	return &engine.IdentityClaim{
-		Id:        uuidString(c.ID),
-		SubjectId: uuidString(c.SubjectID),
-		EntityId:  uuidString(c.EntityID),
-		Status:    c.Status,
+		Id:                uuidString(c.ID),
+		SubjectId:         uuidString(c.SubjectID),
+		EntityId:          uuidString(c.EntityID),
+		Status:            c.Status,
+		ConfidenceGradeId: uuidString(c.ConfidenceGradeID),
+		Argument:          c.Argument,
 	}
 }
