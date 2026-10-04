@@ -41,7 +41,7 @@ A candidate is returned when its total reaches `MinScore`. Results are sorted by
 | `NameComparer` | name | **By typed parts** when both names have a surname or given part (see below). Otherwise it falls back to `form`: the same normalized form scores 1, else `Partial` (0.8) × the overlap of best-paired words. |
 | `TextComparer` | text | Same as names, but with no initials and `Partial` 0.7. |
 | `TermComparer` | term (by key) | The same term scores 1, a different one 0. `Neutral` terms are not comparable. |
-| `DateComparer` | date | Same day 1. Same month 0.9. Same year 0.8, or 0.6 if both months are known and differ. Up to `Tolerance` years apart (default 2) falls off linearly. Beyond that it scores 0. ABT/BEF/AFT on either side doubles the tolerance. |
+| `DateComparer` | date | Dates are spans of years. **Two points:** same day 1; same month 0.9; same year 0.8, or 0.6 if both months are known and differ. Up to `Tolerance` years apart (default 2) falls off linearly; beyond that scores 0. ABT doubles the tolerance. **A range (FROM/TO/BET) or a bound (BEF, AFT) on either side:** overlapping spans score 0.6 (consistent, not pinned). Spans apart fall off from 0.6 within the tolerance, and beyond it score 0, so BEF 1820 vs 1823 is a disagreement. |
 | `IntegerComparer` | integer | Equal scores 1. Within `Tolerance` falls off linearly. Beyond it scores 0. |
 
 ### Names: part types are data, not gates
@@ -71,6 +71,10 @@ A candidate is returned when its total reaches `MinScore`. Results are sorted by
 - **Surnames that share nothing:** when both names have family words and none resembles any word of the other name, the score is scaled by `GivenOnlyFactor` (0.5). A surname can change at marriage, but a shared "James" alone is weak. Swapped types are not a conflict.
 - **Generations:** when both names carry suffixes and share none (Jr. vs Sr.), the score is scaled by `SuffixConflict` (0.3).
 - **Words** match when equal (1), as an initial and the word it begins (0.5), or as a near spelling at or above `FuzzyFloor` (0.8, edit-distance ratio).
+  - A swap of two adjacent letters counts as one edit (Robnis ~ Robins).
+  - Words of three or more letters may also differ by one added or dropped letter (Ann ~ Anne, Jon ~ John: 0.75). A substituted letter in a short word is a different name (Mary ≠ Mark).
+- **Normalization:** dashes and slashes separate words (Smith-Jones ~ Smith Jones). Apostrophes join (O'Brien ~ OBrien).
+- **Surname conflict:** an initial doesn't count as resembling a surname, so "S." doesn't hide a Smith/Robins conflict.
   - An initial is a lone cased letter ("J").
   - A lone character in an uncased script (蒋, 王) is a whole word.
 - **No parts:** a name whose parts give no comparable word is read from its `form` as untyped words. This is the same rule, not a separate fallback.
@@ -106,12 +110,8 @@ Tests: [`core/match/names_test.go`](../core/match/names_test.go) has three layer
 When a seed finds a bug, shrink it into an exact-score case.
 
 Not yet handled:
-- Nickname equivalence (Jim ↔ James) and phonetic matching.
-- Accent folding: "José" vs "Jose" is not a match. Normalization keeps diacritics, and the two words are too short for the near-spelling floor.
-
-These, together with profile-driven roles for non-Western names (dual surnames, patronymics, name chains) and transliteration, are planned in [`ideas/international-names.md`](ideas/international-names.md).
-- Patronymics, and name changes as their own signals.
-- Culture-specific roles from name format profiles.
+- **Accents, scripts, non-Western structures, nicknames:** see [`ideas/international-names.md`](ideas/international-names.md).
+- **Abbreviations (Jas., Wm.), name frequency, spaced particles ("O Brien"), sound-alikes, name changes:** see [`ideas/name-matching-enhancements.md`](ideas/name-matching-enhancements.md), with the engine-level items (support weighting, derived features, researcher decisions).
 
 **Where `form` still rules.** Resolver clustering and the cache name `sort_key` (so list order) key on normalized `form` until **S9-13**. List and card text shows `form` until the name-format work. Both are tracked there; matching does not depend on them.
 
@@ -134,6 +134,7 @@ Worked examples:
 ## Configuring
 
 - **Per call:** `matching.Options{Profile: &p}` replaces the default profile. `Profile.With(feature)` copies a default and replaces or adds one Feature.
+- **Comparer settings** are pointers set with `match.Set`. Nil takes the default, and zero is a real value: `NameComparer{CrossRole: match.Set(0.0)}` makes types strict, and `DateComparer{Tolerance: match.Set(0)}` requires the same year.
 - **Shipped defaults:** edit `DefaultProfile`. Every consumer reads it unless it passes its own Profile.
 - **Not yet:** researcher-facing tuning, or profiles persisted per project. When that lands, `matching.start` is where a stored profile replaces the default.
 

@@ -1,6 +1,6 @@
 # International names: accents, scripts, and non-Western name structures
 
-**Status:** idea, not scheduled. This is the start of an internationalization plan for names. It touches matching ([`docs/matching.md`](../matching.md)), the name reconciler (S9-13), and the name-format work ([`structured-name-model.md`](../structured-name-model.md) §4).
+**Status:** idea, not scheduled. Other matching improvements (abbreviations, name frequency, support weighting, derived features) are in [`name-matching-enhancements.md`](name-matching-enhancements.md). This is the start of an internationalization plan for names. It touches matching ([`docs/matching.md`](../matching.md)), the name reconciler (S9-13), and the name-format work ([`structured-name-model.md`](../structured-name-model.md) §4).
 
 ## Why
 
