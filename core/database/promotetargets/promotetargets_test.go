@@ -87,79 +87,81 @@ func (f *fixture) handle(kind string, forms ...string) promote.Result {
 	return res
 }
 
-func (f *fixture) suggest(s subjects.Subject, limit int) []string {
+func (f *fixture) suggest(s subjects.Subject, limit int) []promotetargets.Suggestion {
 	f.t.Helper()
 	db, err := f.c.DB()
 	must(f.t, err)
 	got, err := promotetargets.Suggest(db, s.ID, limit)
 	must(f.t, err)
-	var refs []string
-	for _, h := range got.Persons {
-		refs = append(refs, h.Entity.Ref)
-	}
-	return refs
+	return got
 }
 
-func TestSuggest(t *testing.T) {
+func refsOf(got []promotetargets.Suggestion) string {
+	var refs []string
+	for _, s := range got {
+		refs = append(refs, s.Entity.Ref)
+	}
+	return fmt.Sprint(refs)
+}
+
+// Ranking itself is tested in core/match and core/database/matching; these
+// tests cover what Promote's picker gets.
+func TestSuggestPersons(t *testing.T) {
 	f := newFixture(t)
-	// Exact matches: one with a better-supported "james robins" cluster.
-	exactWeak := f.handle("person", "James Robins")
-	exactStrong := f.handle("person", "james robins", "James Robins.")
+	exact := f.handle("person", "James Robins")
 	shared := f.handle("person", "Mary Robins")
 	f.handle("person", "Ada Lovelace")
-	f.handle("person", "J. Smith") // an initial alone never suggests
-	f.handle("event")
 
-	james := f.subject("person", "James Robins", "J. Doe")
-	got := f.suggest(james, 0)
-	want := []string{exactStrong.Entity.Ref, exactWeak.Entity.Ref, shared.Entity.Ref}
-	if fmt.Sprint(got) != fmt.Sprint(want) {
-		t.Fatalf("got %v, want %v", got, want)
+	got := f.suggest(f.subject("person", "James Robins"), 0)
+	if want := fmt.Sprint([]string{exact.Entity.Ref, shared.Entity.Ref}); refsOf(got) != want {
+		t.Fatalf("got %s, want %s", refsOf(got), want)
 	}
+	top := got[0]
+	if top.Person == nil || top.Person.Name == nil || top.Person.Name.Form != "James Robins" {
+		t.Fatalf("person header %+v", top.Person)
+	}
+	if string(top.Entity.ID) != string(exact.Entity.ID) || top.Score != 10 {
+		t.Fatalf("%+v", top)
+	}
+	if len(top.Reasons) != 1 || top.Reasons[0].Property.Key != "name" || top.Reasons[0].Similarity != 1 {
+		t.Fatalf("reasons %+v", top.Reasons)
+	}
+	if got := f.suggest(f.subject("person", "James Robins"), 1); len(got) != 1 {
+		t.Fatalf("limit: %s", refsOf(got))
+	}
+}
 
-	t.Run("limit", func(t *testing.T) {
-		if got := f.suggest(james, 1); len(got) != 1 || got[0] != exactStrong.Entity.Ref {
-			t.Fatalf("%v", got)
-		}
-	})
+func TestSuggestDefaultLimit(t *testing.T) {
+	f := newFixture(t)
+	for i := 0; i < promotetargets.DefaultLimit+2; i++ {
+		f.handle("person", fmt.Sprintf("James Robins %d", i))
+	}
+	if got := f.suggest(f.subject("person", "James Robins"), 0); len(got) != promotetargets.DefaultLimit {
+		t.Fatalf("got %d", len(got))
+	}
+}
 
-	t.Run("the Subject's own handle is excluded", func(t *testing.T) {
-		_, err := promote.Save(f.c, userID, promote.Input{SubjectID: james.ID, EntityID: exactWeak.Entity.ID})
+func TestSuggestPlacesCarryTheHandleOnly(t *testing.T) {
+	f := newFixture(t)
+	st, err := subjecttypes.Lookup(f.c, "place", subjecttypes.OriginProvenencia)
+	must(t, err)
+	toponym, err := properties.Lookup(f.c, "toponym", properties.OriginProvenencia)
+	must(t, err)
+	place := func(name string) subjects.Subject {
+		s, err := subjects.Create(f.c, userID, subjects.CreateInput{SourceID: f.source.ID, SubjectTypeID: st.ID}, nil)
 		must(t, err)
-		got := f.suggest(james, 0)
-		want := []string{exactStrong.Entity.Ref, shared.Entity.Ref}
-		if fmt.Sprint(got) != fmt.Sprint(want) {
-			t.Fatalf("got %v, want %v", got, want)
-		}
-	})
-
-	t.Run("merged handles are excluded", func(t *testing.T) {
-		db, err := f.c.DB()
+		_, err = citations.CreateWithObservations(f.c, userID, citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator},
+			[]observations.Input{{SubjectID: s.ID, PropertyID: toponym.ID, ValueText: name, HasText: true}})
 		must(t, err)
-		_, err = db.Exec(`UPDATE canonical_entities SET merged_into_id = ? WHERE id = ?`, exactWeak.Entity.ID, shared.Entity.ID)
-		must(t, err)
-		got := f.suggest(f.subject("person", "Mary Robins"), 0)
-		if len(got) != 2 {
-			t.Fatalf("want the two James handles: %v", got)
-		}
-		for _, r := range got {
-			if r == shared.Entity.Ref {
-				t.Fatalf("merged handle suggested: %v", got)
-			}
-		}
-	})
+		return s
+	}
+	york, err := promote.Save(f.c, userID, promote.Input{SubjectID: place("York").ID})
+	must(t, err)
 
-	t.Run("a nameless Subject gets none", func(t *testing.T) {
-		if got := f.suggest(f.subject("person"), 0); len(got) != 0 {
-			t.Fatalf("%v", got)
-		}
-	})
-
-	t.Run("events and places get none yet", func(t *testing.T) {
-		if got := f.suggest(f.subject("event"), 0); len(got) != 0 {
-			t.Fatalf("%v", got)
-		}
-	})
+	got := f.suggest(place("york"), 0)
+	if len(got) != 1 || got[0].Entity.Ref != york.Entity.Ref || got[0].Person != nil {
+		t.Fatalf("%+v", got)
+	}
 }
 
 func TestSuggestRefusals(t *testing.T) {
@@ -174,23 +176,5 @@ func TestSuggestRefusals(t *testing.T) {
 	}
 	if _, err := promotetargets.Suggest(db, []byte{1}, 0); !errors.Is(err, promote.ErrInvalid) {
 		t.Fatalf("short id: %v", err)
-	}
-}
-
-func TestSuggestQueryCountIsConstant(t *testing.T) {
-	f := newFixture(t)
-	f.handle("person", "James Robins")
-	james := f.subject("person", "James Robins", "Jim Robins")
-	db, err := f.c.DB()
-	must(t, err)
-	one, err := promotetargets.SuggestQueryCount(db, james.ID)
-	must(t, err)
-	for i := 0; i < 50; i++ {
-		f.handle("person", fmt.Sprintf("James Robins %d", i), "Jim Robins")
-	}
-	many, err := promotetargets.SuggestQueryCount(db, james.ID)
-	must(t, err)
-	if many != one {
-		t.Fatalf("queries: %d for 1 handle, %d for 51", one, many)
 	}
 }

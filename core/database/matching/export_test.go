@@ -1,4 +1,4 @@
-package promotetargets
+package matching
 
 import "database/sql"
 
@@ -17,9 +17,9 @@ func (c *countingQuerier) QueryRow(query string, args ...any) *sql.Row {
 	return c.Querier.QueryRow(query, args...)
 }
 
-// SuggestQueryCount suggests targets and reports how many queries it took.
-func SuggestQueryCount(q Querier, subjectID []byte) (int, error) {
+// ForSubjectQueryCount runs ForSubject and reports how many queries it took.
+func ForSubjectQueryCount(q Querier, subjectID []byte) (int, error) {
 	cq := &countingQuerier{Querier: q}
-	_, err := Suggest(cq, subjectID, 0)
+	_, err := ForSubject(cq, subjectID, Options{})
 	return cq.n, err
 }
