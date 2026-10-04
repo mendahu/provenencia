@@ -19,6 +19,13 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Box-select and move multiple cards on the Evidence graph
+
+- **Date:** 2026-10-04
+- **Where:** Evidence graph
+- **Annoyance:** Cards grow as you add to them and outgrow their starting positions. Keeping the layout tidy means moving cards one at a time.
+- **Wanted:** Hold a hotkey, then click and drag to draw a selection box. Every card inside the box gets selected, and dragging any of them moves the whole group together.
+
 ### Structured date modal should open focused on Year
 
 - **Date:** 2026-10-04
