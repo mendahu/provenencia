@@ -108,13 +108,13 @@ private struct PromoteSuggestions: View {
     var body: some View {
         if let rows = handle.value {
             VStack(alignment: .leading, spacing: PVSpacing.space4) {
-                PVSectionHeader(title: L10n.Promote.suggested, meta: "\(rows.count)") {
+                PVSectionHeader(title: L10n.Promote.suggested, meta: "\(rows.count)", aside: {
                     if !rows.isEmpty {
                         Text(L10n.Promote.suggestedAside)
                             .font(PVFont.body(size: PVTypeScale.caption, italic: true))
                             .foregroundStyle(PVColor.textMuted)
                     }
-                }
+                })
                 if rows.isEmpty {
                     PVEmptyState(
                         icon: .userSearch,
