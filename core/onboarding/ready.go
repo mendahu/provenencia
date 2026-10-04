@@ -47,11 +47,12 @@ func createCatalog(parent, folder string) (*database.Catalog, error) {
 		_ = c.Close()
 		return nil, err
 	}
-	if err := searchindex.EnsureCatalog(c); err != nil {
+	// The cache first: the search index's handle documents read it.
+	if err := resolvedvalues.EnsureCatalog(c); err != nil {
 		_ = c.Close()
 		return nil, err
 	}
-	if err := resolvedvalues.EnsureCatalog(c); err != nil {
+	if err := searchindex.EnsureCatalog(c); err != nil {
 		_ = c.Close()
 		return nil, err
 	}
@@ -74,11 +75,12 @@ func OpenCatalog(projectDir string) (*database.Catalog, error) {
 		_ = c.Close()
 		return nil, err
 	}
-	if err := searchindex.EnsureCatalog(c); err != nil {
+	// The cache first: the search index's handle documents read it.
+	if err := resolvedvalues.EnsureCatalog(c); err != nil {
 		_ = c.Close()
 		return nil, err
 	}
-	if err := resolvedvalues.EnsureCatalog(c); err != nil {
+	if err := searchindex.EnsureCatalog(c); err != nil {
 		_ = c.Close()
 		return nil, err
 	}

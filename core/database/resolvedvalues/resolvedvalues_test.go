@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/apperr"
@@ -19,6 +20,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/resolvedvalues"
+	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -365,6 +367,35 @@ func (f *fixture) assertUpkeepEqualsRebuild(at string) {
 	if got, want := f.rows(), f.rebuiltSnapshot(); !reflect.DeepEqual(got, want) {
 		f.t.Fatalf("%s: upkeep has %d rows, rebuild %d", at, len(got), len(want))
 	}
+	// The handle search documents ride on the same upkeep (RecomputeTx), so
+	// they must equal a full search rebuild too.
+	db, err := f.c.DB()
+	must(f.t, err)
+	got := handleDocs(f.t, db)
+	tx, err := db.Begin()
+	must(f.t, err)
+	defer func() { _ = tx.Rollback() }()
+	must(f.t, searchindex.RebuildAll(tx))
+	if want := handleDocs(f.t, tx); !reflect.DeepEqual(got, want) {
+		f.t.Fatalf("%s: handle search docs differ from a rebuild:\n upkeep  %v\n rebuild %v", at, got, want)
+	}
+}
+
+// handleDocs is every person / event / place search document, as text.
+func handleDocs(t *testing.T, q resolvedvalues.Querier) []string {
+	t.Helper()
+	rows, err := q.Query(`SELECT kind, entity_id, display_ref, display_title, title, ref, secondary
+		FROM catalog_search_docs WHERE kind IN ('person', 'event', 'place') ORDER BY kind, entity_id`)
+	must(t, err)
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var kind, id, dref, dtitle, title, ref, secondary string
+		must(t, rows.Scan(&kind, &id, &dref, &dtitle, &title, &ref, &secondary))
+		out = append(out, strings.Join([]string{kind, id, dref, dtitle, title, ref, secondary}, "|"))
+	}
+	must(t, rows.Err())
+	return out
 }
 
 // Rebuild-equals-upkeep is the guard against silent upkeep misses (Gotcha 5).
@@ -546,6 +577,11 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 			}
 			if joins == 0 {
 				t.Fatal("sequence never joined an existing handle")
+			}
+			db, err := f.c.DB()
+			must(t, err)
+			if len(handleDocs(t, db)) == 0 {
+				t.Fatal("sequence never indexed a handle; the search comparison is not exercised")
 			}
 		})
 	}

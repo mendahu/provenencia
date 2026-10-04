@@ -25,6 +25,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/resolve"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
@@ -71,7 +72,10 @@ const (
 )
 
 // RecomputeTx rewrites the cached rows of the given handles from truth tables.
-// A handle with no members (or no cacheable values) ends with no rows.
+// A handle with no members (or no cacheable values) ends with no rows. The
+// handles' search documents are reprojected from the new rows in the same
+// transaction (searchindex.ReprojectHandles): every write that changes a
+// handle's values comes through here, so search can't drift from the cache.
 func RecomputeTx(q Querier, entityIDs [][]byte) error {
 	ids := database.UniqueBlobIDs(entityIDs)
 	for start := 0; start < len(ids); start += batchSize {
@@ -80,7 +84,7 @@ func RecomputeTx(q Querier, entityIDs [][]byte) error {
 			return err
 		}
 	}
-	return nil
+	return searchindex.ReprojectHandles(q, ids)
 }
 
 // RecomputeSubjectsTx recomputes the handles the given Subjects are accepted
@@ -133,7 +137,8 @@ func NeedsRebuild(q Querier) (bool, error) {
 }
 
 // EnsureCatalog rebuilds in one transaction when the cache is stale. Call it
-// on open, beside searchindex.EnsureCatalog.
+// on open before searchindex.EnsureCatalog, whose handle documents read the
+// cache.
 func EnsureCatalog(c *database.Catalog) error {
 	db, err := c.DB()
 	if err != nil {
