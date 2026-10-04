@@ -186,6 +186,7 @@ struct WorkspaceToolbar: View {
     /// Builds toolbar crumbs.
     /// Composer (S7-D4): `Sources › Evidence graph › Citation for {scope}` with a
     /// tappable Evidence graph segment back to the Source’s graph place.
+    /// Promote (S9-11): `Sources › Evidence graph › Promote {ref}`, the same way.
     static func breadcrumbItems(
         for location: WorkspaceLocation,
         goTo: @escaping (WorkspaceLocation) -> Void
@@ -207,7 +208,9 @@ struct WorkspaceToolbar: View {
             ),
         ]
 
-        if location.sourceSurface == .citationComposer, let sourceID = location.sourceId {
+        if location.sourceSurface == .citationComposer || location.sourceSurface == .promote,
+           let sourceID = location.sourceId
+        {
             let scope = location.title.flatMap { $0.nilIfEmpty }
                 ?? location.ref.flatMap { $0.nilIfEmpty }
                 ?? "…"
@@ -232,13 +235,23 @@ struct WorkspaceToolbar: View {
                     }
                 )
             )
-            items.append(
-                PVBreadcrumbItem(
-                    id: "composer-\(sourceID)",
-                    label: L10n.CitationComposer.breadcrumbCitationFor(scope: scope),
-                    action: nil
+            if location.sourceSurface == .promote {
+                items.append(
+                    PVBreadcrumbItem(
+                        id: "promote-\(sourceID)",
+                        label: L10n.Promote.breadcrumb(ref: location.ref.flatMap { $0.nilIfEmpty } ?? scope),
+                        action: nil
+                    )
                 )
-            )
+            } else {
+                items.append(
+                    PVBreadcrumbItem(
+                        id: "composer-\(sourceID)",
+                        label: L10n.CitationComposer.breadcrumbCitationFor(scope: scope),
+                        action: nil
+                    )
+                )
+            }
             return items
         }
 

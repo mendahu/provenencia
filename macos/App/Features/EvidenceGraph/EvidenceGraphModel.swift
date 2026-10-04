@@ -11,30 +11,6 @@ final class EvidenceGraphModel {
     }
 
     /// Snapshot of the subject a v1 Promote confirm names (`.pvConfirm(item:)`).
-    struct PromoteRequest: Identifiable, Equatable {
-        /// Subject id.
-        var id: String
-        var ref: String
-        var label: String
-        var kind: EvidencePrimaryKind
-        /// The new handle's ref prefix (`PER`), from the subject type.
-        var handleRefPrefix: String
-
-        /// v1 Promote confirm copy (S9-D8): names the subject and the kind of handle it creates.
-        var confirmCopy: PVConfirmCopy {
-            PVConfirmCopy(
-                title: L10n.EvidenceGraph.promoteConfirmTitle(kind: kind, ref: ref),
-                message: L10n.EvidenceGraph.promoteConfirmMessage(
-                    kind: kind,
-                    label: label,
-                    refPrefix: handleRefPrefix
-                ),
-                confirmLabel: L10n.string(L10n.EvidenceGraph.promoteConfirmAction(kind: kind)),
-                cancelLabel: L10n.string(L10n.EvidenceGraph.promoteCancel)
-            )
-        }
-    }
-
     let sourceID: String
     let session: WorkspaceSession
     let store: any GenealogyStore
@@ -75,10 +51,6 @@ final class EvidenceGraphModel {
     }
     var isDeleting: Bool { deleteImpact.isRunning }
     var deleteError: String? { deleteImpact.error }
-    /// v1 Promote confirm open for this subject (S9-04). S9-11 replaces it with the flow.
-    var pendingPromote: PromoteRequest?
-    var isPromoting = false
-    var promoteError: String?
     var pendingGridX: Int64 = 0
     var pendingGridY: Int64 = 0
     var draft = CreateDraft()
@@ -173,21 +145,16 @@ final class EvidenceGraphModel {
         }
     }
 
-    /// Sidebar counts; a Promote can add a Person, Event, or Place handle.
-    let catalogCounts: CatalogCounts?
-
     init(
         sourceID: String,
         session: WorkspaceSession,
         store: any GenealogyStore,
-        userID: String,
-        catalogCounts: CatalogCounts? = nil
+        userID: String
     ) {
         self.sourceID = sourceID
         self.session = session
         self.store = store
         self.userID = userID
-        self.catalogCounts = catalogCounts
     }
 
     /// Snapshot as loaded. Edges come from cited observations.
@@ -387,8 +354,7 @@ final class EvidenceGraphModel {
         case EvidenceSubjectCard.addPropertyActionID:
             return composerLocation(for: subjectID)
         case EvidenceSubjectCard.promoteActionID:
-            beginPromote(subjectID: subjectID)
-            return nil
+            return promoteLocation(for: subjectID)
         case EvidenceSubjectCard.openHandleActionID:
             return openHandle(subjectID: subjectID)
         default:
@@ -714,46 +680,22 @@ final class EvidenceGraphModel {
 
     // MARK: Promote (S9-04 v1)
 
-    /// Opens the v1 Promote confirm for an unpromoted primary. S9-11 swaps this
-    /// for the Promote flow; the card and its `promote` target stay the same.
-    func beginPromote(subjectID: String) {
+    /// The Promote place for an unpromoted primary (S9-11): the card's Promote
+    /// opens the flow, which files the subject and returns here. Nil for a
+    /// promoted or unknown subject.
+    func promoteLocation(for subjectID: String) -> WorkspaceLocation? {
         guard let placed = primary(in: currentSnapshot(), id: subjectID),
               placed.membership == nil
-        else { return }
-        let prefix = fieldsSnapshot?.types.first(where: { $0.id == placed.subject.subjectTypeID })?.refPrefix ?? ""
+        else { return nil }
         let label = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
-        promoteError = nil
-        pendingPromote = PromoteRequest(
-            id: placed.id,
-            ref: placed.subject.ref,
-            label: label.isEmpty ? placed.subject.ref : label,
+        return .promote(
+            sourceId: sourceID,
+            subjectId: placed.id,
             kind: placed.kind,
-            handleRefPrefix: prefix
+            ref: placed.subject.ref,
+            title: label.isEmpty ? placed.subject.ref : label,
+            sourceTitle: resolvedSourceTitle()
         )
-    }
-
-    /// Mints the handle and accepted claim, then reloads this Source's graph so
-    /// the card's footer becomes its membership row. Errors keep the sheet open.
-    @discardableResult
-    func confirmPromote() async -> Bool {
-        guard let request = pendingPromote, !isPromoting else { return false }
-        isPromoting = true
-        defer { isPromoting = false }
-        do {
-            _ = try await store.promoteSubject(
-                projectDir: session.projectKey.projectDir,
-                userID: userID,
-                subjectID: request.id
-            )
-            session.apply(.promotedSubject(sourceId: sourceID))
-            promoteError = nil
-            pendingPromote = nil
-            await catalogCounts?.refreshAll()
-            return true
-        } catch {
-            promoteError = L10n.Errors.message(for: error)
-            return false
-        }
     }
 
     /// Location of a promoted subject's handle page. Persons open their page

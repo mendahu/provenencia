@@ -14108,30 +14108,6 @@
         }
       }
     },
-    "evidenceGraph.promote.cancel": {
-      "comment": "Cancel on the v1 Promote confirm; nothing is written",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Leave unpromoted"
-          }
-        }
-      }
-    },
-    "evidenceGraph.promote.firstMember": {
-      "comment": "Key-chip label on the Promote confirm naming the subject that grounds the new handle",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "First member"
-          }
-        }
-      }
-    },
     "evidenceGraph.subject.promoteAccessibility": {
       "comment": "VoiceOver for the Promote footer; arguments are the subject label and its candidate ref",
       "extractionState": "manual",
@@ -14176,114 +14152,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Promote to a place"
-          }
-        }
-      }
-    },
-    "evidenceGraph.promote.title.person": {
-      "comment": "v1 Promote confirm title; argument is the subject candidate ref",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Create a new Person from %@?"
-          }
-        }
-      }
-    },
-    "evidenceGraph.promote.title.event": {
-      "comment": "v1 Promote confirm title; argument is the subject candidate ref",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Create a new Event from %@?"
-          }
-        }
-      }
-    },
-    "evidenceGraph.promote.title.place": {
-      "comment": "v1 Promote confirm title; argument is the subject candidate ref",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Create a new Place from %@?"
-          }
-        }
-      }
-    },
-    "evidenceGraph.promote.message.person": {
-      "comment": "v1 Promote confirm consequence; arguments are the subject label and the new handle ref prefix (PER)",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ becomes the first member of a new Person, and its %2$@- ref is minted when you create it. The subject, its properties and its observations stay exactly as they are."
-          }
-        }
-      }
-    },
-    "evidenceGraph.promote.message.event": {
-      "comment": "v1 Promote confirm consequence; arguments are the subject label and the new handle ref prefix (PER)",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ becomes the first member of a new Event, and its %2$@- ref is minted when you create it. The subject, its properties and its observations stay exactly as they are."
-          }
-        }
-      }
-    },
-    "evidenceGraph.promote.message.place": {
-      "comment": "v1 Promote confirm consequence; arguments are the subject label and the new handle ref prefix (PER)",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ becomes the first member of a new Place, and its %2$@- ref is minted when you create it. The subject, its properties and its observations stay exactly as they are."
-          }
-        }
-      }
-    },
-    "evidenceGraph.promote.confirm.person": {
-      "comment": "Confirm button on the v1 Promote confirm",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Create Person"
-          }
-        }
-      }
-    },
-    "evidenceGraph.promote.confirm.event": {
-      "comment": "Confirm button on the v1 Promote confirm",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Create Event"
-          }
-        }
-      }
-    },
-    "evidenceGraph.promote.confirm.place": {
-      "comment": "Confirm button on the v1 Promote confirm",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Create Place"
           }
         }
       }
@@ -14356,6 +14224,798 @@
           "stringUnit": {
             "state": "translated",
             "value": "Open place %@"
+          }
+        }
+      }
+    },
+    "promote.eyebrow.person": {
+      "comment": "Promote place header eyebrow above the subject's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Promoting a person"
+          }
+        }
+      }
+    },
+    "promote.eyebrow.event": {
+      "comment": "Promote place header eyebrow above the subject's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Promoting an event"
+          }
+        }
+      }
+    },
+    "promote.eyebrow.place": {
+      "comment": "Promote place header eyebrow above the subject's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Promoting a place"
+          }
+        }
+      }
+    },
+    "promote.step.choose.person": {
+      "comment": "Promote step label and section title: choose where the subject goes",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a Person"
+          }
+        }
+      }
+    },
+    "promote.step.choose.event": {
+      "comment": "Promote step label and section title: choose where the subject goes",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose an Event"
+          }
+        }
+      }
+    },
+    "promote.step.choose.place": {
+      "comment": "Promote step label and section title: choose where the subject goes",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a Place"
+          }
+        }
+      }
+    },
+    "promote.step.compare": {
+      "comment": "Promote step label: compare the subject with an existing handle's members (S9-19)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compare"
+          }
+        }
+      }
+    },
+    "promote.step.claim": {
+      "comment": "Promote step label: status, confidence and argument (S9-12)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claim fields"
+          }
+        }
+      }
+    },
+    "promote.stepOf": {
+      "comment": "Promote step counter; 1 = current step number, 2 = number of steps",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Step %1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "promote.steps": {
+      "comment": "Accessibility label for the Promote step row",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Promote steps"
+          }
+        }
+      }
+    },
+    "promote.new.person": {
+      "comment": "Promote target choice: mint a new handle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Person"
+          }
+        }
+      }
+    },
+    "promote.new.event": {
+      "comment": "Promote target choice: mint a new handle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Event"
+          }
+        }
+      }
+    },
+    "promote.new.place": {
+      "comment": "Promote target choice: mint a new handle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Place"
+          }
+        }
+      }
+    },
+    "promote.new.description.person": {
+      "comment": "Promote target choice description; argument is the subject's name or ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start a new Person with %@ as its first member"
+          }
+        }
+      }
+    },
+    "promote.new.description.event": {
+      "comment": "Promote target choice description; argument is the subject's name or ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start a new Event with %@ as its first member"
+          }
+        }
+      }
+    },
+    "promote.new.description.place": {
+      "comment": "Promote target choice description; argument is the subject's name or ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start a new Place with %@ as its first member"
+          }
+        }
+      }
+    },
+    "promote.existing.person": {
+      "comment": "Promote target choice: join an existing handle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Existing Person"
+          }
+        }
+      }
+    },
+    "promote.existing.event": {
+      "comment": "Promote target choice: join an existing handle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Existing Event"
+          }
+        }
+      }
+    },
+    "promote.existing.place": {
+      "comment": "Promote target choice: join an existing handle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Existing Place"
+          }
+        }
+      }
+    },
+    "promote.existing.description.person": {
+      "comment": "Promote target choice description for joining an existing handle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Join a Person you already have. Its members are compared before you file"
+          }
+        }
+      }
+    },
+    "promote.existing.description.event": {
+      "comment": "Promote target choice description for joining an existing handle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Join an Event you already have. Its members are compared before you file"
+          }
+        }
+      }
+    },
+    "promote.existing.description.place": {
+      "comment": "Promote target choice description for joining an existing handle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Join a Place you already have. Its members are compared before you file"
+          }
+        }
+      }
+    },
+    "promote.choice.label": {
+      "comment": "Accessibility label for the Promote target choice; argument is the subject's name or ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Where %@ goes"
+          }
+        }
+      }
+    },
+    "promote.search.label.person": {
+      "comment": "Accessibility label for the Promote search field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search Persons"
+          }
+        }
+      }
+    },
+    "promote.search.label.event": {
+      "comment": "Accessibility label for the Promote search field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search Events"
+          }
+        }
+      }
+    },
+    "promote.search.label.place": {
+      "comment": "Accessibility label for the Promote search field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search Places"
+          }
+        }
+      }
+    },
+    "promote.search.placeholder.person": {
+      "comment": "Placeholder for the Promote search field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search Persons by name, dates or place"
+          }
+        }
+      }
+    },
+    "promote.search.placeholder.event": {
+      "comment": "Placeholder for the Promote search field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search Events by type, date or place"
+          }
+        }
+      }
+    },
+    "promote.search.placeholder.place": {
+      "comment": "Placeholder for the Promote search field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search Places by name"
+          }
+        }
+      }
+    },
+    "promote.search.prompt.person": {
+      "comment": "Promote search list before anything is typed",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type to search Persons"
+          }
+        }
+      }
+    },
+    "promote.search.prompt.event": {
+      "comment": "Promote search list before anything is typed",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type to search Events"
+          }
+        }
+      }
+    },
+    "promote.search.prompt.place": {
+      "comment": "Promote search list before anything is typed",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type to search Places"
+          }
+        }
+      }
+    },
+    "promote.search.noMatch.person": {
+      "comment": "Promote search list when nothing matches; argument is the typed query",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Person matches “%@” — check the spelling, or choose New Person"
+          }
+        }
+      }
+    },
+    "promote.search.noMatch.event": {
+      "comment": "Promote search list when nothing matches; argument is the typed query",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Event matches “%@” — check the spelling, or choose New Event"
+          }
+        }
+      }
+    },
+    "promote.search.noMatch.place": {
+      "comment": "Promote search list when nothing matches; argument is the typed query",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Place matches “%@” — check the spelling, or choose New Place"
+          }
+        }
+      }
+    },
+    "promote.suggested": {
+      "comment": "Promote section title for suggested existing handles",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggested"
+          }
+        }
+      }
+    },
+    "promote.suggested.aside": {
+      "comment": "Promote suggested section aside: how suggestions are ranked",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ranked by name, dates, place and event type"
+          }
+        }
+      }
+    },
+    "promote.suggested.loading": {
+      "comment": "Promote suggested section while suggestions load",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finding suggestions…"
+          }
+        }
+      }
+    },
+    "promote.suggested.failed": {
+      "comment": "Promote suggested section when suggestions fail to load",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggestions couldn’t be loaded"
+          }
+        }
+      }
+    },
+    "promote.suggested.empty.title.person": {
+      "comment": "Promote empty suggestions title; argument is the subject's name or ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Person resembles %@ yet"
+          }
+        }
+      }
+    },
+    "promote.suggested.empty.title.event": {
+      "comment": "Promote empty suggestions title; argument is the subject's name or ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Event resembles %@ yet"
+          }
+        }
+      }
+    },
+    "promote.suggested.empty.title.place": {
+      "comment": "Promote empty suggestions title; argument is the subject's name or ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Place resembles %@ yet"
+          }
+        }
+      }
+    },
+    "promote.suggested.empty.message.person": {
+      "comment": "Promote empty suggestions message",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search above, or choose New Person to start one"
+          }
+        }
+      }
+    },
+    "promote.suggested.empty.message.event": {
+      "comment": "Promote empty suggestions message",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search above, or choose New Event to start one"
+          }
+        }
+      }
+    },
+    "promote.suggested.empty.message.place": {
+      "comment": "Promote empty suggestions message",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search above, or choose New Place to start one"
+          }
+        }
+      }
+    },
+    "promote.members.one": {
+      "comment": "Member count of a handle, singular",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld member"
+          }
+        }
+      }
+    },
+    "promote.members.other": {
+      "comment": "Member count of a handle, plural",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld members"
+          }
+        }
+      }
+    },
+    "promote.row.accessibility": {
+      "comment": "Accessibility label for a Promote candidate row; 1 = title, 2 = member count, 3 = ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@, %3$@"
+          }
+        }
+      }
+    },
+    "promote.hint.choose.person": {
+      "comment": "Promote footer hint before a target is chosen",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a Person to continue"
+          }
+        }
+      }
+    },
+    "promote.hint.choose.event": {
+      "comment": "Promote footer hint before a target is chosen",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose an Event to continue"
+          }
+        }
+      }
+    },
+    "promote.hint.choose.place": {
+      "comment": "Promote footer hint before a target is chosen",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a Place to continue"
+          }
+        }
+      }
+    },
+    "promote.hint.new.person": {
+      "comment": "Promote footer hint for a new handle (interim until the claim step, S9-12)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A new Person is filed when you press Next"
+          }
+        }
+      }
+    },
+    "promote.hint.new.event": {
+      "comment": "Promote footer hint for a new handle (interim until the claim step, S9-12)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A new Event is filed when you press Next"
+          }
+        }
+      }
+    },
+    "promote.hint.new.place": {
+      "comment": "Promote footer hint for a new handle (interim until the claim step, S9-12)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A new Place is filed when you press Next"
+          }
+        }
+      }
+    },
+    "promote.hint.existing": {
+      "comment": "Promote footer hint for an existing handle (interim until compare, S9-19); 1 = subject name, 2 = handle ref, 3 = member count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ will join %2$@ and its %3$@"
+          }
+        }
+      }
+    },
+    "promote.done": {
+      "comment": "Promote footer: leave the flow",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        }
+      }
+    },
+    "promote.next": {
+      "comment": "Promote footer: save this step and continue",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next"
+          }
+        }
+      }
+    },
+    "promote.leave.title": {
+      "comment": "Promote leave guard title; argument is the subject's name or ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leave Promote without filing %@?"
+          }
+        }
+      }
+    },
+    "promote.leave.message.existing": {
+      "comment": "Promote leave guard message; 1 = chosen handle ref, 2 = subject ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your choice of %1$@ is not saved, and %2$@ stays unpromoted."
+          }
+        }
+      }
+    },
+    "promote.leave.message.new.person": {
+      "comment": "Promote leave guard message for a new handle; argument is the subject ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your choice of a new Person is not saved, and %@ stays unpromoted."
+          }
+        }
+      }
+    },
+    "promote.leave.message.new.event": {
+      "comment": "Promote leave guard message for a new handle; argument is the subject ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your choice of a new Event is not saved, and %@ stays unpromoted."
+          }
+        }
+      }
+    },
+    "promote.leave.message.new.place": {
+      "comment": "Promote leave guard message for a new handle; argument is the subject ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your choice of a new Place is not saved, and %@ stays unpromoted."
+          }
+        }
+      }
+    },
+    "promote.leave.message.unchosen": {
+      "comment": "Promote leave guard message when Existing is picked but no handle chosen; argument is the subject ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing is filed, and %@ stays unpromoted."
+          }
+        }
+      }
+    },
+    "promote.leave.confirm": {
+      "comment": "Promote leave guard: leave",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leave Promote"
+          }
+        }
+      }
+    },
+    "promote.leave.cancel": {
+      "comment": "Promote leave guard: stay",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep promoting"
+          }
+        }
+      }
+    },
+    "promote.breadcrumb": {
+      "comment": "Toolbar breadcrumb for the Promote place; argument is the subject ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Promote %@"
           }
         }
       }

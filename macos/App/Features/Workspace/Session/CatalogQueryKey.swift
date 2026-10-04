@@ -18,6 +18,8 @@ enum CatalogQueryKey: Hashable, Sendable {
     case sourceGraphProgress(project: ProjectKey)
     /// Every Person header, composed from the resolved-values cache (S9-07).
     case personsList(project: ProjectKey)
+    /// Existing handles a Subject could join in Promote, best first (S9-11).
+    case promoteTargets(project: ProjectKey, subjectId: String)
 
     /// Case identity without associated payload — used by `CatalogQueryRegistry` specs.
     enum Kind: Hashable, Sendable {
@@ -35,6 +37,7 @@ enum CatalogQueryKey: Hashable, Sendable {
         case citationsByArtifact
         case sourceGraphProgress
         case personsList
+        case promoteTargets
     }
 
     var kind: Kind {
@@ -67,6 +70,8 @@ enum CatalogQueryKey: Hashable, Sendable {
             return .sourceGraphProgress
         case .personsList:
             return .personsList
+        case .promoteTargets:
+            return .promoteTargets
         }
     }
 
@@ -85,7 +90,8 @@ enum CatalogQueryKey: Hashable, Sendable {
              .propertyTerms(let project, _),
              .citationsByArtifact(let project, _),
              .sourceGraphProgress(let project),
-             .personsList(let project):
+             .personsList(let project),
+             .promoteTargets(let project, _):
             project
         }
     }

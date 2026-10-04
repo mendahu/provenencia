@@ -35,8 +35,7 @@ struct WorkspaceDestinationHost: View {
                     sourceID: sourceID,
                     session: session,
                     store: store,
-                    userID: userID,
-                    catalogCounts: catalogCounts
+                    userID: userID
                 )
             }
         case .sourceCitationComposer:
@@ -46,6 +45,17 @@ struct WorkspaceDestinationHost: View {
                     session: session,
                     store: store,
                     userID: userID
+                )
+                .id(entry.identityKey)
+            }
+        case .sourcePromote:
+            if let entry = PromoteEntry(location: navigation.currentLocation) {
+                PromoteView(
+                    entry: entry,
+                    session: session,
+                    store: store,
+                    userID: userID,
+                    catalogCounts: catalogCounts
                 )
                 .id(entry.identityKey)
             }
@@ -98,7 +108,7 @@ struct WorkspaceDestinationHost: View {
     /// Mirrors the host `switch` for unit tests (which view family mounts).
     static func destinationKind(for presentation: WorkspacePresentationID) -> WorkspaceDestinationKind {
         switch presentation {
-        case .sourcesList, .sourcePage, .sourceGraph, .sourceCitationComposer:
+        case .sourcesList, .sourcePage, .sourceGraph, .sourceCitationComposer, .sourcePromote:
             return .sources
         case .metadata:
             return .metadata

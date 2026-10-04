@@ -100,9 +100,10 @@ struct EvidenceCanvasCardContent {
             }
         }
         .accessibilityAction(named: Text(verbatim: card.text.footerActionName ?? "")) {
-            if placed.membership == nil {
-                model.beginPromote(subjectID: placed.id)
-            } else if let location = model.openHandle(subjectID: placed.id) {
+            if let location = placed.membership == nil
+                ? model.promoteLocation(for: placed.id)
+                : model.openHandle(subjectID: placed.id)
+            {
                 navigation.go(to: location)
             }
         }

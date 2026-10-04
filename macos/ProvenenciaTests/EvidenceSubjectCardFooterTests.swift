@@ -90,16 +90,4 @@ struct EvidenceSubjectCardFooterTests {
         #expect(EvidenceSubjectCard.footerAccessibilityActionName(for: placed(cited: true, promoted: true))
             == L10n.EvidenceGraph.openHandleAccessibility(kind: .person, ref: "PER-7KD45"))
     }
-
-    @Test func confirmCopyNamesTheKindOfHandle() {
-        let request = EvidenceGraphModel.PromoteRequest(
-            id: "s2", ref: "CEV-D2M8Q", label: "Enumeration, 1871", kind: .event, handleRefPrefix: "EVT"
-        )
-        let copy = request.confirmCopy
-        #expect(copy.title == L10n.EvidenceGraph.promoteConfirmTitle(kind: .event, ref: "CEV-D2M8Q"))
-        #expect(copy.title.contains("Event"))
-        #expect(copy.message.contains("Enumeration, 1871") && copy.message.contains("EVT-"))
-        #expect(copy.confirm == L10n.string(L10n.EvidenceGraph.promoteConfirmAction(kind: .event)))
-        #expect(copy.cancel == L10n.string(L10n.EvidenceGraph.promoteCancel))
-    }
 }

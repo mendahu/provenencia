@@ -8,6 +8,8 @@ enum SourceSurface: String, Codable, Sendable, Equatable {
     case graph
     /// Citation composer place (Add property / connect handoff / edit citation).
     case citationComposer
+    /// Promote flow place (S9-11): file `subjectId` onto a new or existing handle.
+    case promote
 }
 
 /// Result of reconciling a destination model to a navigation `WorkspaceLocation`.

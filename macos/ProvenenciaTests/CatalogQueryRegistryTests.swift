@@ -596,6 +596,7 @@ struct CatalogQueryRegistryTests {
             .key(.sourceWorkspace(project: project, sourceId: "s1")),
             .key(.sourceGraph(project: project, sourceId: "s1")),
             .key(.personsList(project: project)),
+            .allCached(.promoteTargets),
         ])
         // Adding vocabulary touches only the list that owns it — the Source
         // page reads that list rather than carrying its own copy.
@@ -645,6 +646,7 @@ struct CatalogQueryRegistryTests {
             .key(.propertiesWorkspace(project: project)),
             .allCached(.citationsByArtifact),
             .key(.personsList(project: project)),
+            .allCached(.promoteTargets),
         ])
         #expect(registry.invalidations(by: .deletedSubject(sourceId: "s1"), project: project) == [
             .key(.sourceGraph(project: project, sourceId: "s1")),
@@ -652,12 +654,14 @@ struct CatalogQueryRegistryTests {
             .key(.propertiesWorkspace(project: project)),
             .allCached(.citationsByArtifact),
             .key(.personsList(project: project)),
+            .allCached(.promoteTargets),
         ])
         // A Promote changes that Source's graph cards (their membership row)
         // and every Conclusion key.
         #expect(registry.invalidations(by: .promotedSubject(sourceId: "s1"), project: project) == [
             .key(.sourceGraph(project: project, sourceId: "s1")),
             .key(.personsList(project: project)),
+            .allCached(.promoteTargets),
         ])
         #expect(registry.invalidations(by: .createdPropertyTerm(propertyId: "p1"), project: project) == [
             .key(.propertyTerms(project: project, propertyId: "p1")),
@@ -685,6 +689,7 @@ struct CatalogQueryRegistryTests {
         #expect(registry.invalidations(by: .mutatedSourceWorkspace(sourceId: "s1"), project: project) == [
             .key(.sourceWorkspace(project: project, sourceId: "s1")),
             .key(.personsList(project: project)),
+            .allCached(.promoteTargets),
         ])
         // Every Conclusion trigger stales the Persons list; nothing else does.
         for mutation in everyMutation {
