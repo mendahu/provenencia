@@ -25,7 +25,12 @@ struct CitationComposerConnectionRow: View {
                         .font(PVFont.body(size: PVTypeScale.caption))
                         .foregroundStyle(PVColor.textMuted)
                 } else if let _ = row.termProperty {
-                    PVField(label: termLabelResource) {
+                    HStack(alignment: .center, spacing: PVSpacing.space3) {
+                        Text(termLabelResource)
+                            .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
+                            .foregroundStyle(PVColor.textSecondary)
+                            .fixedSize()
+                            .accessibilityHidden(true)
                         PVComboBox(
                             selection: termBinding,
                             options: termOptions,
