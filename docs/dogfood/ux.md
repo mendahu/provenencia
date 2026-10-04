@@ -25,6 +25,7 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 - **Where:** Evidence graph
 - **Annoyance:** Subject cards grow as you add to them and outgrow their starting positions. Keeping the layout tidy means moving them one at a time.
 - **Wanted:** Hold a hotkey, then click and drag to draw a selection box. Every Subject card inside the box gets selected, and dragging any of them moves the whole group together.
+  - A toolbar button also arms box-select, for people who don't know the hotkey. The button shows the hotkey (label or tooltip) so it's easy to discover.
 
 ### Structured date modal should open focused on Year
 
